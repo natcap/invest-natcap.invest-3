@@ -6,10 +6,9 @@ import sys, string, os, arcgisscripting, math, time, datetime, re, invest_core.u
 
 gp = arcgisscripting.create()
 
-testParameter = gp.GetParameterAsText(0)
-lulc_uri      = gp.GetParameterAsText(1)
-pool_uri      = gp.GetParameterAsText(2)
-output_uri    = gp.GetParameterAsText(3)
+lulc_uri      = gp.GetParameterAsText(0)
+pool_uri      = gp.GetParameterAsText(1)
+output_uri    = gp.GetParameterAsText(2)
 
 lulc_dictionary   = {'uri'  : lulc_uri,
                      'type' :'gdal',
