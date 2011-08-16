@@ -2,6 +2,9 @@ import numpy as np
 #from osgeo import *
 #import carbon_core
 import os
+from osgeo import *
+#import gdal
+#from gdalconst import *
 
 environList = os.environ['PATH'].split(';')
 environList.insert(0, r'C:\gdalwin32-1.6\bin')
@@ -21,7 +24,8 @@ def carbon_uri(in_args):
         else:
             out_args[key] = value
 
-#        out_args['driver'] = dst_ds = osgeo.gdal.driver.Create(in_args['lulc']['uri'], 10, 10, 1, gdal.GDT_Byte)
+        driver = gdal.GetDriverByName('AIG')
+        out_args['driver'] = dst_ds = driver.Create(in_args['lulc']['uri'], 10, 10, 1, gdal.GDT_Byte)
     #invoke core function
 #    carbon_core.carbon_core(out_args)
 
