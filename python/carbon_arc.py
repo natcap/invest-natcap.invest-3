@@ -2,7 +2,7 @@
 #
 #Extract the arguments of the Geoprocessing Object to a Python Dictionary
 
-import sys, string, os, arcgisscripting, math, time, datetime, re, invest_core.uri_carbon
+import sys, string, os, arcgisscripting, math, time, datetime, re, invest_core.carbon_uri
 
 gp = arcgisscripting.create()
 
@@ -30,4 +30,4 @@ def carbon_arc(gp):
                  'carbon_pools' : pool_dictionary,
                  'output' : output_dictionary}
 
-    uri_carbon(arguments)
+    carbon_uri(arguments)
