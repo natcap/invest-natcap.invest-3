@@ -1,7 +1,15 @@
 import numpy as np
-from osgeo import *
-import carbon_core
+#from osgeo import *
+#import carbon_core
+import os
 
+environList = os.environ['PATH'].split(';')
+environList.insert(0, r'C:\gdalwin32-1.6\bin')
+os.environ['PATH'] = ';'.join(environList)
+
+#import gdal
+#import osgeo.gdal
+#from osgeo import gdal
 
 def carbon_uri(in_args):
     #preprocess in_args
@@ -9,12 +17,13 @@ def carbon_uri(in_args):
     for key, value in in_args.iteritems():
         if type(value) == 'dict':
             #probably need to process a gdal object hee
-            out_args[key] = dst_ds = driver.Create(value[uri], 10, 10, 1, gdal.GDT_Byte)
+            out_args[key] = dst_ds = driver.Create(value['uri'], 10, 10, 1, gdal.GDT_Byte)
         else:
             out_args[key] = value
 
+#        out_args['driver'] = dst_ds = osgeo.gdal.driver.Create(in_args['lulc']['uri'], 10, 10, 1, gdal.GDT_Byte)
     #invoke core function
-    carbon_core.carbon_core(out_args)
+#    carbon_core.carbon_core(out_args)
 
     #process any return result (save to disk)
     print 'TODO: save stuff'
