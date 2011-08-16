@@ -1,4 +1,7 @@
 from numpy import *
+import gdal
+
+
 
 def carbon(args):
   #args is a dictionary
@@ -7,8 +10,11 @@ def carbon(args):
   #output file URI should also have been passed with args
   #The purpose of this function is to assemble calls to the various carbon components into a conhesive result
 
-  #convert the GDAL object's dataset to an array
-  lulc = gdal.convertToArray(args['lulc'])
+  #convert the passed GDAL object to a 2D array
+  gdalObj = args['lulc'].GetRasterBand(1)
+  cols = args['lulc'].RasterXSize
+  rows = args['lulc'].RasterYSize
+  lulc = gdalObj.ReadAsArray(0,0,cols, rows) 
 
   #get the carbon pools
   pools = args['carbon_pool']
