@@ -1,5 +1,5 @@
 from numpy import *
-import gdal
+from osgeo import *
 
 
 
