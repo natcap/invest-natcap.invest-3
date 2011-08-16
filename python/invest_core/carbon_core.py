@@ -1,6 +1,13 @@
 from numpy import *
-import gdal
-
+try:
+    from osgeo import ogr, gdal
+    from osgeo.gdalconst import *
+    import numpy
+    use_numeric = False
+except ImportError:
+    import ogr, gdal
+    from gdalconst import *
+    import Numeric
 
 
 def carbon_core(args):
