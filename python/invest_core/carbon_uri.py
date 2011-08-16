@@ -1,6 +1,6 @@
 import numpy as np
 import gdal
-import carbon
+import carbon_core
 
 
 def carbon_uri(in_args):
@@ -14,7 +14,7 @@ def carbon_uri(in_args):
             out_args[key] = value
 
     #invoke core function
-    carbon.carbon(args)
+    carbon_core.carbon_core(args)
 
     #process any return result (save to disk)
     print 'TODO: save stuff'
