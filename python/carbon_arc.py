@@ -1,4 +1,4 @@
-#carbon.py
+#carbon_arc.py
 #
 #Extract the arguments of the Geoprocessing Object to a Python Dictionary
 
@@ -10,7 +10,7 @@ def getParameters(index, gp):
     return gp.GetParameterAsText(index)
 
 
-def carbon(gp):
+def carbon_arc(gp):
     lulc_uri = gp.GetParameterAsText(0)
     pool_uri = gp.GetParameterAsText(1)
     output_uri = gp.GetParameterAsText(2)

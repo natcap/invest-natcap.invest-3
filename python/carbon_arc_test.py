@@ -9,11 +9,11 @@ class TestArcCarbonUI(unittest.TestCase):
     self.gp.SetParameterAsText(0, 'file://example/lulc_uri')
     self.gp.SetParameterAsText(1, 'file://example/pool_uri')
     self.gp.SetParameterAsText(2, 'file://example/output_uri')
-    carbon.carbon(gp)
+    carbon_arc.carbon_arc(gp)
     #check the result of carbon, so check to see if the output file exists and that its contents are correct
-    assertTrue(False, "We'll fix this") 
+    assertTrue(False, "We'll fix this")
 #    self.assertEqual(carbon.getParameter(0, self.gp), 'file://example/lulc_uri')
 #    self.assertEqual(carbon.getParameter(1, self.gp), 'file://example/pool_uri')
 #    self.assertEqual(carbon.getParameter(2, self.gp), 'file://example/output_ur')
-    
+
 
