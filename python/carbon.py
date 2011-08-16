@@ -6,9 +6,6 @@ import sys, string, os, arcgisscripting, math, time, datetime, re, invest_core.u
 
 gp = arcgisscripting.create()
 
-def getParameters(index, gp)
-  return gp.GetParameterAsText(index)
-
 
 def carbon(gp):
         lulc_uri      = gp.GetParameterAsText(0)
@@ -31,3 +28,4 @@ def carbon(gp):
                      'output' : output_dictionary}
 
         uri_carbon(arguments)
+
