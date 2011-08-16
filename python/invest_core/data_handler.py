@@ -1,6 +1,7 @@
 # Some tracer code to see how urlllib and gdal work together
 
 from urllib import urlopen
+from dbfpy import dbf
 
 try:
     from osgeo import ogr, gdal
@@ -12,28 +13,18 @@ except ImportError:
     from gdalconst import *
     import Numeric
 
-def open(url):
-    try:
-        urlopen(url)
-        print 'Opened %s' % url
-    except IOError as (errno, strerror):
-        print "I/O error({0}): {1}: {2}".format(errno, strerror, url)
+def open(datatype_dict):
+    if datatype_dict['type'] == 'gdal':
+        return gdal_open(datatype_dict['uri'])
+    if datatype_dict['type'] == 'dbf':
+        return dbf_open(datatype_dict['uri'])
 
-def gdalprocess(file):
+def gdal_open(filename):
     gdal.AllRegister()
-    raster = gdal.Open(file, GA_ReadOnly)
+    raster = gdal.Open(filename, GA_ReadOnly)
     if raster is None:
         raise Exception, 'Could not open image'
-    else:
-        print 'Successfully loaded %s' % file
-        print raster.GetDescription()
-        print raster.GetMetadata()
-        print "rows: {0} col: {1} bands: {2}".format(raster.RasterXSize,raster.RasterYSize,raster.RasterCount)
+    return raster
 
-if __name__ == "__main__":
-    file = "../../lulc_samp_cur/" 
-    print 'load gdal'
-    gdalprocess(file)
-    print 'load url'
-    open(file)
-    
+def dbf_open(filename):
+    return dbf.Dbf(filename, True)
