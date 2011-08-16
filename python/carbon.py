@@ -6,28 +6,28 @@ import sys, string, os, arcgisscripting, math, time, datetime, re, invest_core.u
 
 gp = arcgisscripting.create()
 
-def getParameters(index, gp)
-  return gp.GetParameterAsText(index)
+def getParameters(index, gp):
+    return gp.GetParameterAsText(index)
 
 
 def carbon(gp):
-        lulc_uri      = gp.GetParameterAsText(0)
-        pool_uri      = gp.GetParameterAsText(1)
-        output_uri    = gp.GetParameterAsText(2)
+    lulc_uri = gp.GetParameterAsText(0)
+    pool_uri = gp.GetParameterAsText(1)
+    output_uri = gp.GetParameterAsText(2)
 
-        lulc_dictionary   = {'uri'  : lulc_uri,
-                             'type' :'gdal',
-                             'input': True}
+    lulc_dictionary = {'uri'  : lulc_uri,
+                         'type' :'gdal',
+                         'input': True}
 
-        pool_dictionary   = {'uri'  : pool_uri}
+    pool_dictionary = {'uri'  : pool_uri}
 
-        output_dictionary = {'uri'  : output_uri,
-                             'type' : 'gdal',
-                             'input': False}
+    output_dictionary = {'uri'  : output_uri,
+                         'type' : 'gdal',
+                         'input': False}
 
 
-        arguments = {'lulc': lulc_dictionary,
-                     'carbon_pools' : pool_dictionary,
-                     'output' : output_dictionary}
+    arguments = {'lulc': lulc_dictionary,
+                 'carbon_pools' : pool_dictionary,
+                 'output' : output_dictionary}
 
-        uri_carbon(arguments)
+    uri_carbon(arguments)
