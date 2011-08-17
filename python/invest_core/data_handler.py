@@ -13,10 +13,19 @@ except ImportError:
     from gdalconst import *
     import Numeric
 
-def open(datatype_dict):
-    if datatype_dict['type'] == 'gdal':
+def open(data):
+    """Attempts to open the data object and return a reasonable object if it
+    is a dictionary.  Otherwise returns the original object.
+    
+    LIST OF DATA TYPES:
+    -gdal
+    -dbf"""
+
+    if not isinstance(datatype_dict, dict):
+        return data
+    if data['type'] == 'gdal':
         return gdal_open(datatype_dict['uri'])
-    if datatype_dict['type'] == 'dbf':
+    if data['type'] == 'dbf':
         return dbf_open(datatype_dict['uri'])
 
 def gdal_open(filename):
