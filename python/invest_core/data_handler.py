@@ -24,12 +24,12 @@ def open(data):
     if not isinstance(data, dict):
         return data
     if data['type'] == 'gdal':
-        return gdal_open(data['uri'])
+        return gdal.open(data['uri'], GA_ReadOnly)
     if data['type'] == 'dbf':
-        return dbf_open(data['uri'])
+        return dbf.open(data['uri'], GA_ReadOnly)
 
 def close(data):
-    pass
+    
 
 def gdal_open(filename):
     gdal.AllRegister()
