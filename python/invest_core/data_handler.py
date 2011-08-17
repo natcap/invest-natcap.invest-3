@@ -24,12 +24,15 @@ def open(data):
     if not isinstance(data, dict):
         return data
     if data['type'] == 'gdal':
-        return gdal_open(data['uri'])
+        return gdal.open(data['uri'], GA_ReadOnly)
     if data['type'] == 'dbf':
-        return dbf_open(data['uri'])
+        return Dbf().openFile(data['uri'], readOnly=1)
 
 def close(data):
-    pass
+    if isinstance(data, GDALDataset):
+        return None #close the dataset
+    else:
+        return data
 
 def gdal_open(filename):
     gdal.AllRegister()

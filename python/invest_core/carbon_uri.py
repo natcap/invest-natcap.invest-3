@@ -11,7 +11,7 @@ environList.insert(0, r'C:\gdalwin32-1.6\bin')
 os.environ['PATH'] = ';'.join(environList)
 
 #import gdal
-#import osgeo.gdal
+import osgeo.gdal
 #from osgeo import gdal
 
 def carbon_uri(in_args):
