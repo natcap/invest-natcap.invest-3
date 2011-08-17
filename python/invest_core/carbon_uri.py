@@ -27,7 +27,7 @@ def carbon_uri(in_args):
         driver = gdal.GetDriverByName('AIG')
         out_args['driver'] = dst_ds = driver.Create(in_args['lulc']['uri'], 10, 10, 1, gdal.GDT_Byte)
     #invoke core function
-#    carbon_core.carbon_core(out_args)
+#    carbon_core.execute(out_args)
 
     #process any return result (save to disk)
     print 'TODO: save stuff'
