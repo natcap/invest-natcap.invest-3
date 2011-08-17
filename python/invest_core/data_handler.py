@@ -25,7 +25,7 @@ def open(data):
         return data
     if data['type'] == 'gdal':
         return gdal.open(data['uri'], GA_ReadOnly)
-    if data['type'] == 'dbf':i
+    if data['type'] == 'dbf':
         return Dbf().openFile(data['uri'], readOnly=1)
 
 def close(data):
