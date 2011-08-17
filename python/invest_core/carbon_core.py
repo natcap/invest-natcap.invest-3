@@ -10,7 +10,7 @@ except ImportError:
     import Numeric
 
 
-def carbon_core(args):
+def execute(args):
   #args is a dictionary
   #GDAL URI is handled before this function is called, so GDAL object should be passed with args
   #carbon pool should have been processed from its file into a dictionary, passed with args
