@@ -21,12 +21,12 @@ def open(data):
     -gdal
     -dbf"""
 
-    if not isinstance(datatype_dict, dict):
+    if not isinstance(data, dict):
         return data
     if data['type'] == 'gdal':
-        return gdal_open(datatype_dict['uri'])
+        return gdal_open(data['uri'])
     if data['type'] == 'dbf':
-        return dbf_open(datatype_dict['uri'])
+        return dbf_open(data['uri'])
 
 def close(data):
     pass
