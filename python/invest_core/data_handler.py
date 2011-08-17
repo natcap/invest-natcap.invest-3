@@ -28,6 +28,9 @@ def open(data):
     if data['type'] == 'dbf':
         return dbf_open(datatype_dict['uri'])
 
+def close(data):
+    pass
+
 def gdal_open(filename):
     gdal.AllRegister()
     raster = gdal.Open(filename, GA_ReadOnly)
