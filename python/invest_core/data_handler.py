@@ -29,7 +29,10 @@ def open(data):
         return Dbf().openFile(data['uri'], readOnly=1)
 
 def close(data):
-    
+    if isinstance(data, GDALDataset):
+        return None #close the dataset
+    else:
+        return data
 
 def gdal_open(filename):
     gdal.AllRegister()
