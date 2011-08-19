@@ -7,9 +7,13 @@ try:
         if 'ArcGIS' not in p:
             newpath += p + ';'
     os.environ['PATH'] = newpath
-    print("\n".join(sorted(os.environ['PATH'].split(';'))))
+    #print("\n".join(sorted(os.environ['PATH'].split(';'))))
     import sys
-    print("\n".join(sorted(sys.path)))
+    sys.path.insert(0, "C:\\OSGeo4W\\bin")
+    print("\n".join(sys.path))
+
+    print("\n".join(sorted(os.environ.keys())))
+    print(os.environ['GDAL_DATA'])
     from osgeo import gdal
     raw_input('Imported! (Press enter)')
 except Exception, e:
