@@ -13,7 +13,8 @@ try:
     print("\n".join(sys.path))
 
     print("\n".join(sorted(os.environ.keys())))
-    print(os.environ['GDAL_DATA'])
+    print(os.getcwd())
+    os.chdir('C:\\Windows')
     from osgeo import gdal
     raw_input('Imported! (Press enter)')
 except Exception, e:
