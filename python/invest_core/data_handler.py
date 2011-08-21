@@ -24,9 +24,13 @@ def open(data):
     if not isinstance(data, dict):
         return data
     if data['type'] == 'gdal':
-        return gdal.Open(data['uri'], GA_ReadOnly)
+        if data['input'] == False:
+            return data
+        else:
+            return gdal_open(data['uri'])
     if data['type'] == 'dbf':
-        return dbf.Dbf(data['uri'], readOnly=1)
+        return dbf_open(data['uri'])
+    
 
 def close(data):
     if isinstance(data, osgeo.gdal.Dataset):
@@ -42,4 +46,9 @@ def gdal_open(filename):
     return raster
 
 def dbf_open(filename):
-    return dbf.Dbf(filename, True)
+    return dbf.Dbf(filename, readOnly=1)
+
+
+def gdal_create(filename, width, height, nBands, driver):
+    driver = gdal.GetDriverByName(driver)
+    return driver.create(filename, width, hright, nbands, GDT_Byte)
