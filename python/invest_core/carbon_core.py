@@ -1,4 +1,5 @@
 from numpy import *
+import data_handler
 import osgeo.gdal
 from dbfpy import dbf
 
@@ -8,10 +9,9 @@ def execute(args):
     #carbon pool should have been processed from its file into a dictionary, passed with args
     #output file URI should also have been passed with args
     #The purpose of this function is to assemble calls to the various carbon components into a conhesive result
-
-    cols = args['lulc'].RasterXSize
+    
     lulc = args['lulc'].GetRasterBand(1)
-
+    
     #get the carbon pools as an array that we can use
     #The new array uses key -> value pairings as you would expect,
     #where key = LULC index and value = sum of all carbon pools for that key
@@ -22,12 +22,16 @@ def execute(args):
         for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
             sum = sum + pools[i][field]
         poolsArray[pools[i]['LULC']] = sum
-    
-    
+ 
+    driver       = args['lulc'].GetDriver().ShortName
+    cols         = args['lulc'].RasterXSize
+    rows         = args['lulc'].RasterYSize
+    projection   = args['lulc'].GetProjection()
+    geoTransform = args['lulc'].GetGeoTransform()
+    output = data_handler.create(args['output','uri'], cols, rows, 1, driver)
 
-    #initialize an output array
-    #it's the same dimensions as the lulc
-    output = zeros(lulc.shape)
+    output.SetProjection(projection)
+    output.SetGeoTransform(geoTransform)   
 
     for i in range(rows):
         data = lulc.ReadAsArray(0, i, cols, 1)
