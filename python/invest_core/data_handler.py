@@ -23,6 +23,8 @@ def open(data):
 
     if not isinstance(data, dict):
         return data
+    if not 'type' in data:
+        return data
     if data['type'] == 'gdal':
         if data['input'] == False:
             return data
