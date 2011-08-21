@@ -26,7 +26,7 @@ def open(data):
     if data['type'] == 'gdal':
         return gdal.Open(data['uri'], GA_ReadOnly)
     if data['type'] == 'dbf':
-        return Dbf().openFile(data['uri'], readOnly=1)
+        return dbf.Dbf(data['uri'], readOnly=1)
 
 def close(data):
     if isinstance(data, osgeo.gdal.Dataset):
