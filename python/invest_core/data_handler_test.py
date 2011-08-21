@@ -20,6 +20,14 @@ class TestDataHandler(unittest.TestCase):
                            'type': 'gdal',
                            'input': True})
         pass
+    
+    def test_close(self):
+        """Test to close a dataset"""
+        data = data_handler.open({'uri'  : '../../lulc_samp_cur',
+                           'type': 'gdal',
+                           'input': True})
+        data_handler.close(data)
+        pass
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestDataHandler)
