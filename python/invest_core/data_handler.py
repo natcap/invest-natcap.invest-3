@@ -2,7 +2,7 @@
 
 from urllib import urlopen
 from dbfpy import dbf
-
+import osgeo
 try:
     from osgeo import ogr, gdal
     from osgeo.gdalconst import *
@@ -29,7 +29,7 @@ def open(data):
         return Dbf().openFile(data['uri'], readOnly=1)
 
 def close(data):
-    if isinstance(data, GDALDataset):
+    if isinstance(data, osgeo.gdal.Dataset):
         return None #close the dataset
     else:
         return data
