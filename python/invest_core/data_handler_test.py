@@ -14,11 +14,18 @@ class TestDataHandler(unittest.TestCase):
                            'input': True})
         pass
 
-    def test_raster(self):
-        """Test to load a raster file."""
+    def test_input_raster(self):
+        """Test to load an input raster file."""
         data_handler.open({'uri'  : '../../lulc_samp_cur',
                            'type': 'gdal',
                            'input': True})
+        pass
+    
+    def test_output_raster(self):
+        """Test to load an output raster file."""
+        data_handler.open({'uri'  : '../../carbon_output',
+                           'type': 'gdal',
+                           'input': False})
         pass
     
     def test_close(self):
