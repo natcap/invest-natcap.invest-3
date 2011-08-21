@@ -13,13 +13,14 @@ except ImportError:
     import Numeric
 
 class TestCarbonCore(unittest.TestCase):
-    def test_carbon_cpre_smoke(self):
+    def test_carbon_core_smoke(self):
         """Smoke test for carbon_core function.  Shouldn't crash with
         zero length inputs"""
+        driver = gdal.GetDriverByName("AIG")
         args = { 'lulc': driver.Create(None, 0, 0, 1, gdal.GDT_Byte),
                 'carbon_pool': {},
                 'carbon_map_output': driver.Create(None, 0, 0, 1, gdal.GDT_Byte)}
-        carbon_core.carbon_core(args)
+        carbon_core.execute(args)
         pass
 
 if __name__ == '__main__':
