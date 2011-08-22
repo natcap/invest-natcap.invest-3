@@ -23,9 +23,15 @@ class TestCarbonCore(unittest.TestCase):
                 'carbon_pool': dbf.Dbf('../../test_blank_dbf', new=True),
                 'output': driver.Create('../../test_blank_output', 1, 1, 1, gdal.GDT_Byte)}
         carbon_core.execute(args)
-        os.remove('../../test_blank_input')
-        os.remove('../../test_bank_dbf')
-        os.remove('../../test_blank_output')
+        pass
+
+    def test_carbon_core_with_inputs(self):
+        driver = gdal.GetDriverByName("GTIFF")
+        lulc = gdal.Open('../../lulc_samp_cur', GA_ReadOnly)
+        args = { 'lulc': lulc,
+                'carbon_pool': dbf.Dbf('../../carbon_pools_samp.dbf'),
+                'output': driver.Create('../../test_real_output', lulc.RasterXSize, lulc.RasterYSize, 1, gdal.GDT_Byte)}
+        carbon_core.execute(args)
         pass
 
 if __name__ == '__main__':
