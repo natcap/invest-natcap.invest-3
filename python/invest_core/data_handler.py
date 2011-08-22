@@ -53,4 +53,4 @@ def dbf_open(filename):
 
 def gdal_create(filename, width, height, nBands, driver):
     driver = gdal.GetDriverByName(driver)
-    return driver.create(filename, width, hright, nbands, GDT_Byte)
+    return driver.create(filename, width, height, nBands, GDT_Byte)
