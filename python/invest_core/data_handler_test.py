@@ -23,9 +23,15 @@ class TestDataHandler(unittest.TestCase):
     
     def test_output_raster(self):
         """Test to load an output raster file."""
-        data_handler.open({'uri'  : '../../carbon_output',
+        lulc = data_handler.open({'uri'  : '../../lulc_samp_cur',
                            'type': 'gdal',
-                           'input': False})
+                           'input': True,})
+        
+        output = {'uri'  : '../../carbon_output_map',
+                  'type' : 'gdal',
+                  'input': False,}
+        
+        data_handler.mimic(lulc, output)
         pass
     
     def test_close(self):

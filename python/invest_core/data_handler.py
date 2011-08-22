@@ -52,8 +52,8 @@ def dbf_open(filename):
 
 
 def gdal_create(data):
-    driver = gdal.GetDriverByName(data['driver'])
-    out_ds = driver.create(data['uri'], data['cols'], data['rows'], 1, GDT_Byte)
+    driver = gdal.GetDriverByName("GTiff")
+    out_ds = driver.Create(data['uri'], data['cols'], data['rows'], 1, gdal.GDT_Byte)
     out_ds.SetProjection(data['projection'])
     return out_ds
 
