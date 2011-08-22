@@ -27,7 +27,7 @@ def open(data):
         return data
     if data['type'] == 'gdal':
         if data['input'] == False:
-            return data
+            return gdal_create(data)
         else:
             return gdal_open(data['uri'])
     if data['type'] == 'dbf':
@@ -51,6 +51,19 @@ def dbf_open(filename):
     return dbf.Dbf(filename, readOnly=1)
 
 
-def gdal_create(filename, width, height, nBands, driver):
-    driver = gdal.GetDriverByName(driver)
-    return driver.create(filename, width, height, nBands, GDT_Byte)
+def gdal_create(data):
+    driver = gdal.GetDriverByName(data['driver'])
+    out_ds = driver.create(data['uri'], data['cols'], data['rows'], 1, GDT_Byte)
+    out_ds.SetProjection(data['projection'])
+    return out_ds
+
+def mimic(example, output):
+    if isinstance(example, osgeo.gdal.Dataset):
+        output['driver']    = example.GetDriver().ShortName
+        output['cols']      = example.RasterXSize
+        output['rows']      = example.RasterYSize
+        output['projection']= example.GetProjection()
+        
+        return open(output)
+        
+        

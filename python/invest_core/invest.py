@@ -15,7 +15,10 @@ def execute(model, args):
 
     #process the args for input
     for key, value in args.items():
-        args[key] = data_handler.open(value)
+        if (key != 'output'):
+            args[key] = data_handler.open(value)
+    
+    args['output'] = data_handler.mimic(args['lulc'], args['output'])
         
     #execute the well known name 'execute' that exists in all invest plugins
     module.execute(args)
