@@ -33,7 +33,8 @@ class TestDataHandler(unittest.TestCase):
         data = data_handler.open({'uri'  : '../../lulc_samp_cur',
                            'type': 'gdal',
                            'input': True})
-        data_handler.close(data)
+        data = data_handler.close(data)
+        self.assertEqual(data, None) #a closed dataset == None
         pass
 
 if __name__ == '__main__':
