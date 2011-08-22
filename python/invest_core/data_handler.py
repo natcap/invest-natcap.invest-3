@@ -20,7 +20,7 @@ def open(data):
     LIST OF DATA TYPES:
     -gdal
     -dbf"""
-
+    
     if not isinstance(data, dict):
         return data
     if not 'type' in data:

@@ -14,8 +14,9 @@ def execute(model, args):
     module = imp.load_source(model, model + '_core.py')
 
     #process the args for input
-    map(data_handler.open, args)
-
+    for key, value in args.items():
+        args[key] = data_handler.open(value)
+        
     #execute the well known name 'execute' that exists in all invest plugins
     module.execute(args)
 
