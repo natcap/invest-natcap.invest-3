@@ -24,12 +24,7 @@ def execute(args):
             sum = sum + pools[i][field]
         poolsArray[pools[i]['LULC']] = sum
  
-    driver       = args['lulc'].GetDriver().ShortName
-    cols         = args['lulc'].RasterXSize
-    rows         = args['lulc'].RasterYSize
-    projection   = args['lulc'].GetProjection()
-    geoTransform = args['lulc'].GetGeoTransform()
-    output = data_handler.gdal_create(args['output','uri'], cols, rows, 1, driver)
+    output = args['output']
 
     output.SetProjection(projection)
     output.SetGeoTransform(geoTransform)   
