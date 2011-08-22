@@ -26,7 +26,7 @@ def execute(args):
  
     output = args['output']
 
-    for i in range(rows):
-        data = lulc.ReadAsArray(0, i, cols, 1)
-        carbon_seq(data, poolsArray, output)
+    for i in range(args['lulc'].RasterXSize):
+        data = lulc.ReadAsArray(0, i, args['lulc'].RasterYSize, 1)
+        carbon_seq.execute(data, poolsArray, output)
 
