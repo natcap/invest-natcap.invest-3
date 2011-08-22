@@ -20,7 +20,7 @@ def execute(model, args):
     module.execute(args)
 
     #process the args for output
-    map(data_handler.close, iter(args.viewvalues()))
+    map(data_handler.close, args)
 
 def supportedModels():
     """returns an array of InVEST model names"""
