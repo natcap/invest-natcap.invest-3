@@ -26,9 +26,6 @@ def execute(args):
  
     output = args['output']
 
-    output.SetProjection(projection)
-    output.SetGeoTransform(geoTransform)   
-
     for i in range(rows):
         data = lulc.ReadAsArray(0, i, cols, 1)
         carbon_seq(data, poolsArray, output)
