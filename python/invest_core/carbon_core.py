@@ -1,5 +1,6 @@
 from numpy import *
 import data_handler
+import carbon_seq
 import osgeo.gdal
 from dbfpy import dbf
 
@@ -28,7 +29,7 @@ def execute(args):
     rows         = args['lulc'].RasterYSize
     projection   = args['lulc'].GetProjection()
     geoTransform = args['lulc'].GetGeoTransform()
-    output = data_handler.create(args['output','uri'], cols, rows, 1, driver)
+    output = data_handler.gdal_create(args['output','uri'], cols, rows, 1, driver)
 
     output.SetProjection(projection)
     output.SetGeoTransform(geoTransform)   
