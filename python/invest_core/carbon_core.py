@@ -17,19 +17,19 @@ def execute(args):
     #The new array uses key -> value pairings as you would expect,
     #where key = LULC index and value = sum of all carbon pools for that key
     pools = args['carbon_pool'] #pools is a dbf object
-    poolsArray = np.array([])
+    poolsDict = {}
     for i in range(pools.recordCount):
         sum = 0
         for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
             sum = sum + pools[i][field]
-        poolsArray[pools[i]['LULC']] = sum
+        poolsDict[pools[i]['LULC']] = sum
  
     output = args['output'].GetRasterBand(1)
 
     for i in range(args['lulc'].RasterXSize):
         data = lulc.ReadAsArray(0, i, args['lulc'].RasterYSize, 1)
         
-        out_array = carbon_seq.execute(data, poolsArray, np.array([]))
+        out_array = carbon_seq.execute(data, poolsDict, np.array([]))
         
         output.WriteArray(out_array, 0, i)
 
