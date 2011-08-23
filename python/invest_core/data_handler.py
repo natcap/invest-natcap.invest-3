@@ -55,6 +55,7 @@ def gdal_create(data):
     driver = gdal.GetDriverByName("GTiff")
     out_ds = driver.Create(data['uri'], data['cols'], data['rows'], 1, gdal.GDT_Byte)
     out_ds.SetProjection(data['projection'])
+    out_ds.SetGeoTransform(data['geotransform'])
     return out_ds
 
 def mimic(example, output):
@@ -63,6 +64,7 @@ def mimic(example, output):
         output['cols']      = example.RasterXSize
         output['rows']      = example.RasterYSize
         output['projection']= example.GetProjection()
+        output['geotransform'] = example.GetGeoTransform()
         
         return open(output)
         

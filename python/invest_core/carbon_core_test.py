@@ -1,5 +1,6 @@
 import unittest
 import carbon_core
+import data_handler
 import numpy as np
 import os
 from dbfpy import dbf
@@ -28,9 +29,11 @@ class TestCarbonCore(unittest.TestCase):
     def test_carbon_core_with_inputs(self):
         driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../lulc_samp_cur', GA_ReadOnly)
+        out_dict = {'uri':'../../test_real_output.tif', 'input':False, 'type': 'gdal'}
+        output = data_handler.mimic(lulc, out_dict)
         args = { 'lulc': lulc,
                 'carbon_pool': dbf.Dbf('../../carbon_pools_samp.dbf'),
-                'output': driver.Create('../../test_real_output.tif', lulc.RasterXSize, lulc.RasterYSize, 1, gdal.GDT_Byte)}
+                'output': output}
         carbon_core.execute(args)
         pass
 
