@@ -5,12 +5,11 @@ import numpy as np
 #output is a numpy array
 
 def execute(lulc, pools, output):
-    lulc_dimensions = list(lulc.shape) #convert to a list to access dimensions by index
     #iterate through the array and map the pool values to the output array 
-    for x in range(0, lulc_dimensions[1]):
+    for x in range(0, lulc.shape[1]):
         index = lulc[0][x]
         if (index != 255):
-            output[x] = pools[index]
+            output[0][x] = pools[index]
 
     return output
 
