@@ -8,8 +8,11 @@ def execute(lulc, pools, output):
     #iterate through the array and map the pool values to the output array 
     for x in range(0, lulc.shape[1]):
         index = lulc[0][x]
-        if (index != 255):
+        if (index == 255):
+            output[0][x] = 255
+        else:
             output[0][x] = pools[index]
+        
 
     return output
 
