@@ -9,7 +9,9 @@ def execute(lulc, pools, output):
     #iterate through the array and map the pool values to the output array 
     for x in range(0, lulc_dimensions[0]):
         for y in range(0, lulc_dimensions[1]):
-            output[x][y] = pools[lulc[x][y]]
+            index = lulc[x][y]
+            if index != 255:
+                output[x][y] = pools[index]
 
     return output
 
