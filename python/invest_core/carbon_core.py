@@ -14,15 +14,13 @@ def execute(args):
     lulc = args['lulc'].GetRasterBand(1)
     
     pools = build_pools_dict(args['carbon_pool'])
- 
-    output = args['output'].GetRasterBand(1)
     
     working_array = np.zeros((1,lulc.XSize))
 
     for i in range(1, lulc.YSize):
         data = lulc.ReadAsArray(1, i, lulc.XSize-1, 1)
         out_array = carbon_seq.execute(data, pools, working_array)
-        output.WriteArray(out_array, 0, i)
+        args['output'].GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def build_pools_dict(dbf):
     """Build a dict for the carbon pool data accessible for each lulc classification."""
