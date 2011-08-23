@@ -30,7 +30,7 @@ class TestCarbonCore(unittest.TestCase):
         lulc = gdal.Open('../../lulc_samp_cur', GA_ReadOnly)
         args = { 'lulc': lulc,
                 'carbon_pool': dbf.Dbf('../../carbon_pools_samp.dbf'),
-                'output': driver.Create('../../test_real_output', lulc.RasterXSize, lulc.RasterYSize, 1, gdal.GDT_Byte)}
+                'output': driver.Create('../../test_real_output.tif', lulc.RasterXSize, lulc.RasterYSize, 1, gdal.GDT_Byte)}
         carbon_core.execute(args)
         pass
 
