@@ -1,13 +1,21 @@
 #carbon_arc.py
 #
 #Extract the arguments of the Geoprocessing Object to a Python Dictionary
-import sys, arcgisscripting
-sys.path.append('Z:\projects\invest3x\python\invest_core\\')
-#sys.path.append('C:\Python26\ArcGIS10.0\lib\site-packages\osgeo\\')
+import os, sys
+import arcgisscripting
+#os.chdir('Z:\projects\invest3x\python')
+sys.path.append('Z:\\projects\\invest3x\\python')
+#os.chdir('Z:\\')
+os.chdir('Z:\\projects\\invest3x\\python')
+import invest_core
+
+os.chdir('C:\\')
+
+
 
 gp = arcgisscripting.create()
 gp.addmessage(sys.path)
-import carbon_uri
+
 def carbon_arc(gp):
     lulc_uri = gp.GetParameterAsText(0)
     pool_uri = gp.GetParameterAsText(1)
@@ -30,6 +38,6 @@ def carbon_arc(gp):
                  'output' : output_dictionary}
     gp.addmessage('Processing')
 
-    carbon_uri.carbon_uri(arguments)
+    invest_core.invest.execute('carbon', arguments)
 
 carbon_arc(gp)
