@@ -36,7 +36,7 @@ def open(data):
 
 def close(data):
     if isinstance(data, osgeo.gdal.Dataset):
-        return None #close the dataset
+        return data = None #close the dataset
     else:
         return data
 

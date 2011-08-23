@@ -35,6 +35,7 @@ class TestCarbonCore(unittest.TestCase):
                 'carbon_pool': dbf.Dbf('../../carbon_pools_samp.dbf'),
                 'output': output}
         carbon_core.execute(args)
+        output = data_handler.close(output)
         pass
 
 if __name__ == '__main__':
