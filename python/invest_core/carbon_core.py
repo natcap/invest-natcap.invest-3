@@ -13,7 +13,7 @@ def execute(args):
     
     lulc = args['lulc'].GetRasterBand(1)
     
-    pools = build_pools_dict(args['carbon_pool'])
+    pools = build_pools_dict(args['carbon_pools'])
     
     working_array = np.zeros((1,lulc.XSize))
 

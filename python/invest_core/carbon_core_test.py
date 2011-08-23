@@ -21,7 +21,7 @@ class TestCarbonCore(unittest.TestCase):
         zero length inputs"""
         driver = gdal.GetDriverByName("GTIFF")
         args = { 'lulc': driver.Create('../../test_blank_input', 1, 1, 1, gdal.GDT_Byte),
-                'carbon_pool': dbf.Dbf('../../test_blank_dbf', new=True),
+                'carbon_pools': dbf.Dbf('../../test_blank_dbf', new=True),
                 'output': driver.Create('../../test_blank_output', 1, 1, 1, gdal.GDT_Byte)}
         carbon_core.execute(args)
         pass
@@ -32,7 +32,7 @@ class TestCarbonCore(unittest.TestCase):
         out_dict = {'uri':'../../test_real_output.tif', 'input':False, 'type': 'gdal'}
         output = data_handler.mimic(lulc, out_dict)
         args = { 'lulc': lulc,
-                'carbon_pool': dbf.Dbf('../../carbon_pools_samp.dbf'),
+                'carbon_pools': dbf.Dbf('../../carbon_pools_samp.dbf'),
                 'output': output}
         carbon_core.execute(args)
         output = data_handler.close(output)
