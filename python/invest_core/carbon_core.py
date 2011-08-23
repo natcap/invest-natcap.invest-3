@@ -26,8 +26,8 @@ def execute(args):
  
     output = args['output'].GetRasterBand(1)
 
-    for i in range(args['lulc'].RasterXSize):
-        data = lulc.ReadAsArray(0, i, args['lulc'].RasterYSize, 1)
+    for i in range(1, lulc.YSize):
+        data = lulc.ReadAsArray(1, i, lulc.XSize-1, 1)
         
         out_array = carbon_seq.execute(data, poolsDict, np.array([]))
         
