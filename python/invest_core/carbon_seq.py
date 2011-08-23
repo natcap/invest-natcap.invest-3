@@ -9,7 +9,7 @@ def execute(lulc, pools, output):
     for x in range(0, lulc.shape[1]):
         index = lulc[0][x]
         if (index == 255):
-            output[0][x] = 255
+            output[0][x] = None
         else:
             output[0][x] = pools[index]
         
