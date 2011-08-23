@@ -3,6 +3,7 @@
 from urllib import urlopen
 from dbfpy import dbf
 import osgeo
+
 try:
     from osgeo import ogr, gdal
     from osgeo.gdalconst import *
@@ -37,6 +38,8 @@ def open(data):
 def close(data):
     if isinstance(data, osgeo.gdal.Dataset):
         return None #close the dataset
+    elif isinstance(data, dbf.Dbf):
+        data.close()
     else:
         return data
 
