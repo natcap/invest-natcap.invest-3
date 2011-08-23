@@ -16,8 +16,8 @@ def execute(args):
     pools = build_pools_dict(args['carbon_pool'])
  
     output = args['output'].GetRasterBand(1)
-
-    working_array = np.empty((1,lulc.XSize))
+    
+    working_array = np.zeros((1,lulc.XSize))
 
     for i in range(1, lulc.YSize):
         data = lulc.ReadAsArray(1, i, lulc.XSize-1, 1)
