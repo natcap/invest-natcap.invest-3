@@ -34,7 +34,9 @@ class TestDataHandler(unittest.TestCase):
                   'type' : 'gdal',
                   'input': False,}
         
-        data_handler.mimic(lulc, output)
+        output = data_handler.mimic(lulc, output)
+        self.assertEqual(lulc.RasterXSize, output.RasterXSize, "Input and output raster widths differ")
+        self.assertEqual(lulc.RasterYSize, output.RasterYSize, "Input and output raster heights differ")        
         pass
     
     def test_dataset_close(self):
