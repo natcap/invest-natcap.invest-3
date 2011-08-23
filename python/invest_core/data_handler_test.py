@@ -17,9 +17,11 @@ class TestDataHandler(unittest.TestCase):
 
     def test_input_raster(self):
         """Test to load an input raster file."""
-        data_handler.open({'uri'  : '../../lulc_samp_cur',
+        lulc = data_handler.open({'uri'  : '../../lulc_samp_cur',
                            'type': 'gdal',
                            'input': True})
+        self.assertEqual(lulc.RasterXSize, 1325, "Different widths found")
+        self.assertEqual(lulc.RasterYSize, 1889, "Different heights found")
         pass
     
     def test_output_raster(self):
