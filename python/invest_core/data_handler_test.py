@@ -34,7 +34,7 @@ class TestDataHandler(unittest.TestCase):
         data_handler.mimic(lulc, output)
         pass
     
-    def test_close(self):
+    def test_dataset_close(self):
         """Test to close a dataset"""
         data = data_handler.open({'uri'  : '../../lulc_samp_cur',
                            'type': 'gdal',
@@ -42,7 +42,16 @@ class TestDataHandler(unittest.TestCase):
         data = data_handler.close(data)
         self.assertEqual(data, None) #a closed dataset == None
         pass
-
+    
+    def test_dbf_close(self):
+        """Test to close a dbf file"""
+        db = data_handler.open({'uri':'../../carbon_pools_samp.dbf',
+                                 'type': 'dbf',
+                                 'input': True})
+        data_handler.close(db)
+        self.assertEqual(db.closed, True)
+        pass
+    
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestDataHandler)
     unittest.TextTestRunner(verbosity=2).run(suite)
