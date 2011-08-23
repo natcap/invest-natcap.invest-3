@@ -12,7 +12,7 @@ class TestDataHandler(unittest.TestCase):
         db = data_handler.open({'uri'  : '../../carbon_pools_samp.dbf',
                            'type': 'dbf',
                            'input': True})
-        self.assertEqual(db.record_count, 66)
+        self.assertEqual(db.recordCount, 66)
         pass
 
     def test_input_raster(self):
