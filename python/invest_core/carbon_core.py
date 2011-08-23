@@ -13,23 +13,23 @@ def execute(args):
     
     lulc = args['lulc'].GetRasterBand(1)
     
-    #get the carbon pools as an array that we can use
-    #The new array uses key -> value pairings as you would expect,
-    #where key = LULC index and value = sum of all carbon pools for that key
-    pools = args['carbon_pool'] #pools is a dbf object
-    poolsDict = {}
-    for i in range(pools.recordCount):
-        sum = 0
-        for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
-            sum = sum + pools[i][field]
-        poolsDict[pools[i]['LULC']] = sum
+    pools = build_pools_dict(args['carbon_pool'])
  
     output = args['output'].GetRasterBand(1)
 
+    working_array = np.empty((1,lulc.XSize))
+
     for i in range(1, lulc.YSize):
         data = lulc.ReadAsArray(1, i, lulc.XSize-1, 1)
-        
-        out_array = carbon_seq.execute(data, poolsDict, np.array([]))
-        
+        out_array = carbon_seq.execute(data, pools, working_array)
         output.WriteArray(out_array, 0, i)
 
+def build_pools_dict(dbf):
+    """Build a dict for the carbon pool data accessible for each lulc classification."""
+    poolsDict = {}
+    for i in range(dbf.recordCount):
+        sum = 0
+        for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
+            sum = sum + dbf[i][field]
+        poolsDict[dbf[i]['LULC']] = sum
+    return poolsDict
