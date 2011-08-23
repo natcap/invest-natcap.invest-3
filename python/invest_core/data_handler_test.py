@@ -9,9 +9,10 @@ class TestDataHandler(unittest.TestCase):
 
     def test_dbf(self):
         """Test to load a dbf file."""
-        data_handler.open({'uri'  : '../../carbon_pools_samp.dbf',
+        db = data_handler.open({'uri'  : '../../carbon_pools_samp.dbf',
                            'type': 'dbf',
                            'input': True})
+        self.assertEqual(db.record_count, 66)
         pass
 
     def test_input_raster(self):
