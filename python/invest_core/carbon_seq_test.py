@@ -7,7 +7,7 @@ class TestCarbonSeq(unittest.TestCase):
     def test_carbon_seq_smoke(self):
         """Smoke test for carbon_seq function.  Shouldn't crash with
         zero length inputs"""
-        lulc = np.array([])
+        lulc = np.zeros((1, 0))
         pools = {}
         output = np.empty(lulc.size)
         carbon_seq.execute(lulc, pools, output)
