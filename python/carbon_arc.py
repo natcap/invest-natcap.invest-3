@@ -1,5 +1,11 @@
 #carbon_arc.py
-import os, sys, subprocess, json
+import os, sys, subprocess
+
+try:
+    import json
+except ImportError:
+    import invest_core.simplejson as json
+
 import arcgisscripting
 gp = arcgisscripting.create()
 
@@ -28,8 +34,9 @@ arguments = {'lulc': lulc_dictionary,
 
 gp.AddMessage('Starting carbon model')
 process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
-                            'python\invest.py', 'carbon',
-                            json.dumps(arguments)])
+                            'python\\invest_core\\invest.py',
+                            'carbon', json.dumps(arguments)])
+raw_input('Done at arc level')
 gp.AddMessage('Waiting')
 process.wait()
 gp.AddMessage('Done')

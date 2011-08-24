@@ -1,6 +1,10 @@
 """InVEST main plugin interface module"""
 
-import imp, sys, json
+import imp, sys
+try:
+    import json
+except ImportError:
+    import simplejson as json
 import data_handler
 
 def execute(model, args):
@@ -17,9 +21,9 @@ def execute(model, args):
     for key, value in args.items():
         if (key != 'output'):
             args[key] = data_handler.open(value)
-    
+
     args['output'] = data_handler.mimic(args['lulc'], args['output'])
-        
+
     #execute the well known name 'execute' that exists in all invest plugins
     module.execute(args)
 
