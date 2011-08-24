@@ -37,7 +37,13 @@ class TestCarbonCore(unittest.TestCase):
         carbon_core.execute(args)
         output = data_handler.close(output)
         pass
-
+    
+    def test_build_pools(self):
+        db = dbf.Dbf('../../carbon_pools_samp.dbf', readOnly=1)
+        pools = carbon_core.build_pools_dict(db)
+        self.assertEqual(db.recordCount, len(pools), 'some records were lost in conversion')
+        pass
+    
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonCore)
     unittest.TextTestRunner(verbosity=2).run(suite)
