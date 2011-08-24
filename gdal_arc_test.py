@@ -3,6 +3,8 @@ import arcgisscripting
 gp = arcgisscripting.create()
 import subprocess
 
+gp.AddMessage(os.path.dirname(os.path.realpath(__file__)))
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 gp.AddMessage(os.getcwd())
 
 gp.AddMessage('Starting subprocess')
