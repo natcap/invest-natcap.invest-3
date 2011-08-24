@@ -4,4 +4,4 @@ PATH=%OSGEO4W_ROOT%\bin;%PATH%
 for %%f in (%OSGEO4W_ROOT%\etc\ini\*.bat) do call %%f
 @echo on
 
-%OSGEO4W_ROOT%\bin\python.exe %1
+%OSGEO4W_ROOT%\bin\python.exe %1 %2 %3
