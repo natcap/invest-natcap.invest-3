@@ -10,16 +10,14 @@ def execute(args):
     #carbon pool should have been processed from its file into a dictionary, passed with args
     #output file URI should also have been passed with args
     #The purpose of this function is to assemble calls to the various carbon components into a conhesive result
-    
+
     lulc = args['lulc'].GetRasterBand(1)
-    
+
     pools = build_pools_dict(args['carbon_pools'])
-    
-    working_array = np.zeros((1,lulc.XSize))
 
     for i in range(1, lulc.YSize):
-        data = lulc.ReadAsArray(1, i, lulc.XSize-1, 1)
-        out_array = carbon_seq.execute(data, pools, working_array)
+        data = lulc.ReadAsArray(1, i, lulc.XSize - 1, 1)
+        out_array = carbon_seq.execute(data, pools)
         args['output'].GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def build_pools_dict(dbf):
