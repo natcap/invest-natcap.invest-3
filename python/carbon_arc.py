@@ -36,7 +36,7 @@ gp.AddMessage('Starting carbon model')
 process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
                             'python\\invest_core\\invest.py',
                             'carbon', json.dumps(arguments)])
-raw_input('Done at arc level')
 gp.AddMessage('Waiting')
 process.wait()
+raw_input('Done at arc level')
 gp.AddMessage('Done')
