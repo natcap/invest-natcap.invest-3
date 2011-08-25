@@ -1,6 +1,4 @@
-import carbon
 import unittest
-import unittest2 #necessary for testing on Python 2.6, included with Arc
 import arcgisscripting
 
 class TestArcCarbonUI(unittest.TestCase):
@@ -9,11 +7,36 @@ class TestArcCarbonUI(unittest.TestCase):
     self.gp.SetParameterAsText(0, 'file://example/lulc_uri')
     self.gp.SetParameterAsText(1, 'file://example/pool_uri')
     self.gp.SetParameterAsText(2, 'file://example/output_uri')
-    carbon_arc.carbon_arc(gp)
-    #check the result of carbon, so check to see if the output file exists and that its contents are correct
-    assertTrue(False, "We'll fix this")
-#    self.assertEqual(carbon.getParameter(0, self.gp), 'file://example/lulc_uri')
-#    self.assertEqual(carbon.getParameter(1, self.gp), 'file://example/pool_uri')
-#    self.assertEqual(carbon.getParameter(2, self.gp), 'file://example/output_ur')
 
+    lulc_uri = gp.GetParameterAsText(0)
+    pool_uri = gp.GetParameterAsText(1)
+    output_uri = gp.GetParameterAsText(2)
 
+    lulc_dictionary = {'uri'  : lulc_uri,
+                       'type' :'gdal',
+                       'input': True}
+
+    pool_dictionary = {'uri'  : pool_uri,
+                       'type': 'dbf',
+                       'input': True}
+
+    output_dictionary = {'uri'  : output_uri,
+                         'type' : 'gdal',
+                         'input': False}
+
+    arguments = {'lulc': lulc_dictionary,
+                 'carbon_pools' : pool_dictionary,
+                 'output' : output_dictionary}
+
+    gp.AddMessage('Starting carbon model')
+
+    process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
+                                'python\\invest_core\\invest.py',
+                                'carbon_core', json.dumps(arguments)])
+    gp.AddMessage('Waiting')
+    process.wait()
+    gp.AddMessage('Done')
+
+if __name__ == '__main__':
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestArcCarbonUI)
+    unittest.TextTestRunner(verbosity=2).run(suite)
