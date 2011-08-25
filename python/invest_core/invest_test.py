@@ -19,11 +19,11 @@ class TestInvest(unittest.TestCase):
         arguments = {'lulc': lulc_dictionary,
                      'carbon_pools' : pool_dictionary,
                      'output' : output_dictionary}
-        
-        invest.execute('carbon', arguments)
+
+        invest.execute('carbon_core', arguments)
         pass
-    
-    
+
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvest)
     unittest.TextTestRunner(verbosity=2).run(suite)

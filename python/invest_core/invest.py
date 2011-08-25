@@ -1,6 +1,6 @@
 """InVEST main plugin interface module"""
 
-import imp, sys
+import imp, sys, os
 try:
     import json
 except ImportError:
@@ -15,7 +15,8 @@ def execute(model, args):
     args - either a JSON string or dictionary object of arguments"""
 
     #load the module
-    module = imp.load_source(model, model + '_core.py')
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    module = imp.load_source(model, model + '.py')
 
     #process the args for input
     for key, value in args.items():
