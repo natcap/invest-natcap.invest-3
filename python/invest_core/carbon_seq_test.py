@@ -9,8 +9,7 @@ class TestCarbonSeq(unittest.TestCase):
         zero length inputs"""
         lulc = np.zeros((1, 0))
         pools = {}
-        output = np.empty(lulc.size)
-        carbon_seq.execute(lulc, pools, output)
+        carbon_seq.execute(lulc, pools)
 
     def test_1D_array(self):
         """Test of carbon_seq against a 1D input/output array"""
@@ -24,10 +23,8 @@ class TestCarbonSeq(unittest.TestCase):
                  1: 4.4,
                  2: 5.5}
 
-        output = np.zeros((1, length))
-
         #run carbon_seq
-        output = carbon_seq.execute(lulc, pools, output)
+        output = carbon_seq.execute(lulc, pools)
 
         #verify the contents of output against pool and lulc data
         for x in range(lulc.shape[1]):
