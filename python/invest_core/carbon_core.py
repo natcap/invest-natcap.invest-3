@@ -2,6 +2,7 @@ import numpy as np
 import data_handler
 import carbon_seq
 import osgeo.gdal
+import osgeo.osr as osr
 from dbfpy import dbf
 
 def execute(args):
@@ -11,8 +12,15 @@ def execute(args):
     #output file URI should also have been passed with args
     #The purpose of this function is to assemble calls to the various carbon components into a conhesive result
 
-    lulc = args['lulc'].GetRasterBand(1)
+    #Get area of pixel
+    srs = osr.SpatialReference()
+    srs.SetProjection(args['lulc'].GetProjection())
+    linearUnits = srs.GetLinearUnits()
+    geotransform = args['lulc'].GetGeoTransform()
+    area = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
+    print srs.GetLinearUnitsName(), srs.GetLinearUnits(), area, geotransform
 
+    lulc = args['lulc'].GetRasterBand(1)
     pools = build_pools_dict(args['carbon_pools'])
 
     for i in range(1, lulc.YSize):
