@@ -1,10 +1,9 @@
 import unittest
-import invest_core
 
 def suite():
-    tests = ['invest_core.carbon_seq_test',
-             'invest_core.carbon_core_test',
-             'invest_core.data_handler_test']
+    tests = ['carbon_seq_test',
+             'carbon_core_test',
+             'data_handler_test']
     suite = unittest.TestLoader().loadTestsFromNames(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
