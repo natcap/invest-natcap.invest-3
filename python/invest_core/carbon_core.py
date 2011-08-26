@@ -17,6 +17,8 @@ def execute(args):
 
     lulc = args['lulc'].GetRasterBand(1)
 
+    args['output'].GetRasterBand(1).SetNoDataValue(-1.0)
+
     for i in range(1, lulc.YSize):
         data = lulc.ReadAsArray(1, i, lulc.XSize - 1, 1)
         out_array = carbon_seq.execute(data, pools)
