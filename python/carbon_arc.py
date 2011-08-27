@@ -14,7 +14,7 @@ gp.AddMessage(os.getcwd())
 
 lulc_uri = gp.GetParameterAsText(0)
 pool_uri = gp.GetParameterAsText(1)
-output_uri = gp.GetParameterAsText(2)
+output_folder = gp.GetParameterAsText(2)
 
 lulc_dictionary = {'uri'  : lulc_uri,
                    'type' :'gdal',
@@ -24,7 +24,7 @@ pool_dictionary = {'uri'  : pool_uri,
                    'type': 'dbf',
                    'input': True}
 
-output_dictionary = {'uri'  : output_uri,
+output_dictionary = {'uri'  : output_uri + 'carbon_output_map.tif',
                      'type' : 'gdal',
                      'input': False}
 
