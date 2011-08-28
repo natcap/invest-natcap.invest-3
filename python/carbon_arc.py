@@ -26,6 +26,7 @@ pool_dictionary = {'uri'  : pool_uri,
 
 output_dictionary = {'uri'  : output_uri + 'carbon_output_map.tif',
                      'type' : 'gdal',
+                     'dataType':gdal.GDT_Float32,
                      'input': False}
 
 arguments = {'lulc': lulc_dictionary,
