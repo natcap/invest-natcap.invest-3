@@ -33,10 +33,10 @@ class TestInvest(unittest.TestCase):
         self.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
 
         for i in range(1, outputBand.YSize):
-           outArray = outputBand.ReadAsArray(1, i, outputBand.XSize-1, 1)
-           i2Array = invest2Band.ReadAsArray(1, i, outputBand.Xsize-1, 1)
-           for j in range(1, output.XSize):
-             self.assertEqual(outArray[0][j], i2Array[0][j], "Unequal pixel values detected")
+            outArray = outputBand.ReadAsArray(1, i, outputBand.XSize-1, 1)
+            i2Array = invest2Band.ReadAsArray(1, i, outputBand.XSize-1, 1)
+            for j in range(1, outputBand.XSize-1):
+                self.assertEqual(outArray[0][j], i2Array[0][j], "Unequal pixel values detected")
         pass
 
 
