@@ -32,6 +32,7 @@ class TestDataHandler(unittest.TestCase):
         
         output = {'uri'  : '../../carbon_output_map',
                   'type' : 'gdal',
+                  'dataType' : gdal.GDT_Float32,
                   'input': False,}
         
         output = data_handler.mimic(lulc, output)
