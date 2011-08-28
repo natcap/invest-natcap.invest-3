@@ -1,5 +1,6 @@
 import unittest
 import invest
+from osgeo import gdal
 
 class TestInvest(unittest.TestCase):
     def test_carbon_model(self):
@@ -14,6 +15,7 @@ class TestInvest(unittest.TestCase):
 
         output_dictionary = {'uri'  : '../../carbon_output_map.tif',
                              'type' : 'gdal',
+                             'dataType': gdal.GDT_Float32,
                              'input': False}
 
         arguments = {'lulc': lulc_dictionary,
