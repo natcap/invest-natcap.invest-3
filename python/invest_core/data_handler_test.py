@@ -58,7 +58,23 @@ class TestDataHandler(unittest.TestCase):
         data_handler.close(db)
         self.assertEqual(db.closed, True)
         pass
-    
+
+    def test_verify_gdal_data_type(self):
+        lulc = data_handler.open({'uri'  : '../../lulc_samp_cur',
+                           'type': 'gdal',
+                           'input': True,})
+        output = {'uri'  : '../../carbon_output_map',
+                  'type' : 'gdal',
+                  'input': False}
+
+        for x in range(1, 11):
+            output['dataType'] = x
+            file = data_handler.mimic(lulc, output)
+            self.assertEqual(x, file.GetRasterBand(1).DataType)
+            file = None
+        pass
+
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestDataHandler)
     unittest.TextTestRunner(verbosity=2).run(suite)
