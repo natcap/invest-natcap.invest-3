@@ -1,6 +1,5 @@
 #carbon_arc.py
 import os, sys, subprocess
-from osgeo import gdal
 
 try:
     import json
@@ -25,9 +24,27 @@ pool_dictionary = {'uri'  : pool_uri,
                    'type': 'dbf',
                    'input': True}
 
+
+#Data type codes (from http://www.gdal.org/gdal_8h.html):
+# Enter one of these codes as the 'dataType' dict entry.  This will determine
+# the data type of the output file.
+#
+# 0  = GDT_Unknown
+# 1  = GDT_Byte
+# 2  = GDT_UInt16
+# 3  = GDT_Int16
+# 4  = GDT_UInt32
+# 5  = GDT_Int32
+# 6  = GDT_Float32
+# 7  = GDT_Float64
+# 8  = GDT_CInt16
+# 9  = GDT_CInt32
+# 10 = GDT_CFloat32
+# 11 = GDT_CFloat64
+
 output_dictionary = {'uri'  : output_uri + 'carbon_output_map.tif',
                      'type' : 'gdal',
-                     'dataType':gdal.GDT_Float32,
+                     'dataType': 6,
                      'input': False}
 
 arguments = {'lulc': lulc_dictionary,
