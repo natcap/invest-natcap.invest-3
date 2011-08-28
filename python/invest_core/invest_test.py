@@ -24,15 +24,17 @@ class TestInvest(unittest.TestCase):
 
         invest.execute('carbon_core', arguments)
 
-        output = gdal.Open(output_dictionary['uri']).GetRasterBand(1)
-        invest2 = gdal.Open('../../invest2CarbonOutput').GetRasterBand(1)
+        output = gdal.Open(output_dictionary['uri'])
+        outputBand = output.GetRasterBand(1)
+        invest2 = gdal.Open('../../carbon_output_map.tif')
+        invest2Band = invest2.GetRasterBand(1)
 
-        self.assertEqual(output.XSize, invest2.XSize, "Dimensions differ: output=" + str(output.XSize) + ", i2output = " + str(invest2.XSize))
-        self.assertEqual(output.YSize, invest2.YSize, "Dimensions differ: output=" + str(output.YSize) + ", i2output = " + str(invest2.YSize))
+        self.assertEqual(outputBand.XSize, invest2Band.XSize, "Dimensions differ: output=" + str(outputBand.XSize) + ", i2output = " + str(invest2Band.XSize))
+        self.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
 
-        for i in range(1, output.YSize):
-           outArray = output.GetRasterBand(1)
-           i2Array = invest2.GetRasterBand(1)
+        for i in range(1, outputBand.YSize):
+           outArray = outputBand.ReadAsArray(1, i, outputBand.XSize-1, 1)
+           i2Array = invest2Band.ReadAsArray(1, i, outputBand.Xsize-1, 1)
            for j in range(1, output.XSize):
              self.assertEqual(outArray[0][j], i2Array[0][j], "Unequal pixel values detected")
         pass
