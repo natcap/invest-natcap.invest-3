@@ -1,5 +1,6 @@
 #carbon_arc.py
 import os, sys, subprocess
+from osgeo import gdal
 
 try:
     import json

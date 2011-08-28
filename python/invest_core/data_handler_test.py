@@ -1,5 +1,6 @@
 import unittest
 import data_handler
+from osgeo import gdal
 
 class TestDataHandler(unittest.TestCase):
     def test_smoke(self):
