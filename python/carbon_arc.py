@@ -54,9 +54,21 @@ arguments = {'lulc': lulc_dictionary,
 
 gp.AddMessage('Starting carbon model')
 
-process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
-                            'python\\invest_core\\invest.py',
-                            'carbon_core', json.dumps(arguments)])
+#process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
+#                            'python\\invest_core\\invest.py',
+#                            'carbon_core', json.dumps(arguments)])
 gp.AddMessage('Waiting')
-process.wait()
+#process.wait()
+
+gp.overwriteoutput = 1
+
+gp.AddToolbox("C:\Program Files\ArcGIS\Desktop10.0\ArcToolbox\Toolboxes\Data Management Tools.tbx")
+output_layer = "buffer_layer"
+output_buffer = "output_buffer"
+
+gp.Buffer_analysis('C:\\Users\\jadoug06\\Desktop\\lulc_samp_cur', output_layer, "1 DecimalDegrees", "FULL", "ROUND", "NONE", "")
+
+#gp.MakeFeatureLayer(output_buffer, output_layer)
+#gp.SetParameterAsText(0, output_layer)
+
 gp.AddMessage('Done')
