@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xml:lang="en"><Esri><CreaDate>20110828</CreaDate><CreaTime>18241500</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><DataProperties><lineage><Process ToolSource="C:\Program Files\ArcGIS\Desktop10.0\ArcToolbox\Toolboxes\Spatial Analyst Tools.tbx\SingleOutputMapAlgebra" Date="20110828" Time="182415">SingleOutputMapAlgebra Sum(C:\InVEST_2.1.0\Carbon\intermediate\c4pools,C:\InVEST_2.1.0\Carbon\intermediate\C_HWP_Cur) C:\InVEST_2.1.0\Carbon\Output\tot_C_cur #</Process></lineage></DataProperties></Esri></metadata>
