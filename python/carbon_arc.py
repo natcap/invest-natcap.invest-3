@@ -43,7 +43,7 @@ pool_dictionary = {'uri'  : pool_uri,
 # 10 = GDT_CFloat32
 # 11 = GDT_CFloat64
 
-output_dictionary = {'uri'  : output_dir + output_filename,
+output_dictionary = {'uri'  : output_dir + '\\' + output_filename,
                      'type' : 'gdal',
                      'dataType': 6,
                      'input': False}
