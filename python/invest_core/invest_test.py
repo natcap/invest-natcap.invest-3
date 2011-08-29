@@ -27,19 +27,23 @@ class TestInvest(unittest.TestCase):
         output = gdal.Open(output_dictionary['uri'])
         outputBand = output.GetRasterBand(1)
         obnodata = outputBand.GetNoDataValue()
+        print obnodata
         
         invest2 = gdal.Open('../../tot_c_cur')
         invest2Band = invest2.GetRasterBand(1)
         i2bnodata = invest2Band.GetNoDataValue()
+        print i2bnodata
 
         self.assertEqual(outputBand.XSize, invest2Band.XSize, "Dimensions differ: output=" + str(outputBand.XSize) + ", i2output = " + str(invest2Band.XSize))
         self.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
 
-        for i in range(1, outputBand.YSize):
+        for i in range(0, outputBand.YSize):
             outArray = outputBand.ReadAsArray(1, i, outputBand.XSize-1, 1)
             i2Array = invest2Band.ReadAsArray(1, i, outputBand.XSize-1, 1)
-            for j in range(1, outputBand.XSize-1):
-                if (outArray[0][j] != obnodata) and (i2Array[0][j] != i2bnodata):
+            for j in range(0, outputBand.XSize-1):
+                if (i2Array[0][j] == i2bnodata):
+                    self.assertEqual(outArray[0][j], obnodata, "Should have found nodata pixel (value == " + str(obnodata) + ") in output raster at row " + str(i) + " index " + str(j) + ", but found " + str(outArray[0][j]) + " instead")
+                else:
                     self.assertEqual(outArray[0][j], i2Array[0][j], "Unequal pixel values detected at row " + str(i) + " index " + str(j) + ":" + str(outArray[0][j]) + " " + str(i2Array[0][j]))
         pass
 
