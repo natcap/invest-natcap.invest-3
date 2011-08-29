@@ -1,5 +1,5 @@
 import unittest
-import invest
+#import invest
 from osgeo import gdal
 
 class TestInvest(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestInvest(unittest.TestCase):
                      'carbon_pools' : pool_dictionary,
                      'output' : output_dictionary}
 
-        invest.execute('carbon_core', arguments)
+#        invest.execute('carbon_core', arguments)
 
         output = gdal.Open(output_dictionary['uri'])
         outputBand = output.GetRasterBand(1)
