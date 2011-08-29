@@ -13,7 +13,7 @@ class TestInvest(unittest.TestCase):
                            'type' : 'dbf',
                            'input': True}
 
-        output_dictionary = {'uri'  : '../../carbon_output_map.tif',
+        output_dictionary = {'uri'  : '../../carbon_output/out.tif',
                              'type' : 'gdal',
                              'dataType': gdal.GDT_Float32,
                              'input': False}
