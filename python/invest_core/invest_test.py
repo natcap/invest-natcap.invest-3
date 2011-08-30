@@ -22,11 +22,11 @@ class TestInvest(unittest.TestCase):
                      'carbon_pools' : pool_dictionary,
                      'output' : output_dictionary}
 
-#        invest_core.execute('carbon_core', arguments)
+        invest_core.execute('carbon_core', arguments)
 
-        output = gdal.Open(output_dictionary['uri'], 0)
+        output = gdal.Open('../../carbon_output/out.png', 0)
         outputBand = output.GetRasterBand(1)
-        obnodata = output.GetRasterBand(1).GetNoDataValue()
+        obnodata = outputBand.GetNoDataValue()
         print obnodata
         
         invest2 = gdal.Open('../../tot_c_cur', 0)
@@ -34,6 +34,7 @@ class TestInvest(unittest.TestCase):
         i2bnodata = invest2Band.GetNoDataValue()
         print i2bnodata
 
+        self.assertIsNot(obnodata, None, "Output nodata value read as None")
         self.assertEqual(outputBand.XSize, invest2Band.XSize, "Dimensions differ: output=" + str(outputBand.XSize) + ", i2output = " + str(invest2Band.XSize))
         self.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
 
