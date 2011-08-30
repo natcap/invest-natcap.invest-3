@@ -13,7 +13,7 @@ class TestInvest(unittest.TestCase):
                            'type' : 'dbf',
                            'input': True}
 
-        output_dictionary = {'uri'  : '../../carbon_output/out.tif',
+        output_dictionary = {'uri'  : '../../carbon_output/out.png',
                              'type' : 'gdal',
                              'dataType': gdal.GDT_Float32,
                              'input': False}
@@ -22,14 +22,14 @@ class TestInvest(unittest.TestCase):
                      'carbon_pools' : pool_dictionary,
                      'output' : output_dictionary}
 
-        invest_core.execute('carbon_core', arguments)
+#        invest_core.execute('carbon_core', arguments)
 
-        output = gdal.Open(output_dictionary['uri'])
+        output = gdal.Open(output_dictionary['uri'], 0)
         outputBand = output.GetRasterBand(1)
-        obnodata = outputBand.GetNoDataValue()
+        obnodata = output.GetRasterBand(1).GetNoDataValue()
         print obnodata
         
-        invest2 = gdal.Open('../../tot_c_cur')
+        invest2 = gdal.Open('../../tot_c_cur', 0)
         invest2Band = invest2.GetRasterBand(1)
         i2bnodata = invest2Band.GetNoDataValue()
         print i2bnodata

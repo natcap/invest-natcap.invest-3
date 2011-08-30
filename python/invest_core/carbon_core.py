@@ -15,7 +15,7 @@ def execute(args):
     area = pixelArea(args['lulc'])
 
     lulc = args['lulc'].GetRasterBand(1)
-    args['output'].GetRasterBand(1).SetNoDataValue(-1.0)
+    #args['output'].GetRasterBand(1).SetNoDataValue(-1.0)
 
     inNoData = lulc.GetNoDataValue()
     outNoData = args['output'].GetRasterBand(1).GetNoDataValue() 
