@@ -59,7 +59,7 @@ def gdal_create(data):
     out_ds = driver.Create(data['uri'], data['cols'], data['rows'], 1, data['dataType'])
     out_ds.SetProjection(data['projection'])
     out_ds.SetGeoTransform(data['geotransform'])
-    out_ds.GetRasterBand(1).SetNoDataValue(-1.0)
+    out_ds.GetRasterBand(1).SetNoDataValue(-5.0)
     return out_ds
 
 def mimic(example, output):
