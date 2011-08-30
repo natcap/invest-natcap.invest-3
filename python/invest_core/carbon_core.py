@@ -13,11 +13,16 @@ def execute(args):
     #The purpose of this function is to assemble calls to the various carbon components into a conhesive result
 
     area = pixelArea(args['lulc'])
-    pools = build_pools_dict(args['carbon_pools'], area)
 
     lulc = args['lulc'].GetRasterBand(1)
-
     args['output'].GetRasterBand(1).SetNoDataValue(-1.0)
+
+    inNoData = lulc.GetNoDataValue()
+    outNoData = args['output'].GetRasterBand(1).GetNoDataValue() 
+    
+    pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
+
+
 
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize - 1, 1)
@@ -39,7 +44,7 @@ def pixelArea(dataset):
     areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
     return areaMeters / (10 ** 4) #convert m^2 to Ha
 
-def build_pools_dict(dbf, area):
+def build_pools_dict(dbf, area, inNoData, outNoData):
     """Build a dict for the carbon pool data accessible for each lulc classification.
     
         dbf - the database file describing pools
@@ -47,7 +52,7 @@ def build_pools_dict(dbf, area):
     
         returns a dictionary calculating total carbon sequestered per lulc type"""
 
-    poolsDict = {}
+    poolsDict = {inNoData: outNoData}
     for i in range(dbf.recordCount):
         sum = 0
         for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
