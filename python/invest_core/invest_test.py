@@ -1,5 +1,5 @@
 import unittest
-import invest
+import invest_core
 from osgeo import gdal
 
 class TestInvest(unittest.TestCase):
