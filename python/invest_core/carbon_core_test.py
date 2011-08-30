@@ -41,7 +41,13 @@ class TestCarbonCore(unittest.TestCase):
     def test_build_pools(self):
         db = dbf.Dbf('../../carbon_pools_samp.dbf', readOnly=1)
         pools = carbon_core.build_pools_dict(db, 1, -1, 255)
-        self.assertEqual(db.recordCount, len(pools)+1, 'some records were lost in conversion')
+        numRecords = db.recordCount
+        poolsLen = len(pools)
+        
+        #adding one extra value to the expected length of the pools dict
+        #Extra entry represents the nodata value.
+        self.assertEqual(numRecords+1, poolsLen, 'Expected ' + str(numRecords) + 
+                         ' records in the pools dict, but found ' + str(poolsLen) + ' instead')
         pass
 
 if __name__ == '__main__':
