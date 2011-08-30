@@ -40,8 +40,8 @@ class TestCarbonCore(unittest.TestCase):
 
     def test_build_pools(self):
         db = dbf.Dbf('../../carbon_pools_samp.dbf', readOnly=1)
-        pools = carbon_core.build_pools_dict(db, 1)
-        self.assertEqual(db.recordCount, len(pools), 'some records were lost in conversion')
+        pools = carbon_core.build_pools_dict(db, 1, -1, 255)
+        self.assertEqual(db.recordCount, len(pools)+1, 'some records were lost in conversion')
         pass
 
 if __name__ == '__main__':
