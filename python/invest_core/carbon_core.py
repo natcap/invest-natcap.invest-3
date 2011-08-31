@@ -28,6 +28,10 @@ def execute(args):
         data = lulc.ReadAsArray(0, i, lulc.XSize - 1, 1)
         out_array = carbon_seq.execute(data, pools)
         args['output'].GetRasterBand(1).WriteArray(out_array, 0, i)
+        
+    args['output'] = None
+    
+    
 
 def pixelArea(dataset):
     """Calculates the pixel area of the given dataset.
