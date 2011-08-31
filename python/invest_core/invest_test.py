@@ -51,7 +51,7 @@ class TestInvest(unittest.TestCase):
                          'carbon_pools' : pool_dictionary,
                          'output' : output_dictionary}
     
-#            invest_core.execute('carbon_core', arguments)
+            invest_core.execute('carbon_core', arguments)
     
             assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
             pass
@@ -87,8 +87,12 @@ class TestInvest(unittest.TestCase):
             pass
         
         
-            
-
+        def test_open_gdal_file(self):
+            a = gdal.Open('../../carbon_output/out.tif')
+            b = a.GetRasterBand(1)
+            c = b.GetNoDataValue()
+            print c
+            pass
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvest)
