@@ -2,7 +2,7 @@ import unittest
 import invest_core
 from osgeo import gdal
 
-def assert_raster_equality(firstUri, secondUri):
+def assert_raster_equality(unit, firstUri, secondUri):
     output = gdal.Open(firstUri, 0)
     outputBand = output.GetRasterBand(1)
     obnodata = outputBand.GetNoDataValue()
@@ -13,18 +13,18 @@ def assert_raster_equality(firstUri, secondUri):
     i2bnodata = invest2Band.GetNoDataValue()
     print i2bnodata
 
-    self.assertIsNot(obnodata, None, "Output nodata value read as None")
-    self.assertEqual(outputBand.XSize, invest2Band.XSize, "Dimensions differ: output=" + str(outputBand.XSize) + ", i2output = " + str(invest2Band.XSize))
-    self.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
+    unit.assertIsNot(obnodata, None, "Output nodata value read as None")
+    unit.assertEqual(outputBand.XSize, invest2Band.XSize, "Dimensions differ: output=" + str(outputBand.XSize) + ", i2output = " + str(invest2Band.XSize))
+    unit.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
 
     for i in range(0, outputBand.YSize):
         outArray = outputBand.ReadAsArray(1, i, outputBand.XSize-1, 1)
         i2Array = invest2Band.ReadAsArray(1, i, outputBand.XSize-1, 1)
         for j in range(0, outputBand.XSize-1):
             if (i2Array[0][j] == i2bnodata):
-                self.assertEqual(outArray[0][j], obnodata, "Should have found nodata pixel (value == " + str(obnodata) + ") in output raster at row " + str(i) + " index " + str(j) + ", but found " + str(outArray[0][j]) + " instead")
+                unit.assertEqual(outArray[0][j], obnodata, "Should have found nodata pixel (value == " + str(obnodata) + ") in output raster at row " + str(i) + " index " + str(j) + ", but found " + str(outArray[0][j]) + " instead")
             else:
-                self.assertEqual(outArray[0][j], i2Array[0][j], "Unequal pixel values detected at row " + str(i) + " index " + str(j) + ":" + str(outArray[0][j]) + " " + str(i2Array[0][j]))
+                unit.assertEqual(outArray[0][j], i2Array[0][j], "Unequal pixel values detected at row " + str(i) + " index " + str(j) + ":" + str(outArray[0][j]) + " " + str(i2Array[0][j]))
 
 
 
@@ -53,7 +53,7 @@ class TestInvest(unittest.TestCase):
     
             invest_core.execute('carbon_core', arguments)
     
-            assert_raster_equality(output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
+            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
             pass
 
 
@@ -83,7 +83,7 @@ class TestInvest(unittest.TestCase):
 
             invest_core.execute('carbon_core', arguments)
             
-            assert_raster_equality(output_dictionary['uri'], '../../test_data/tot_c_cur_int')
+            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
             pass
         
         
