@@ -3,7 +3,7 @@ import invest_core
 from osgeo import gdal
 
 def assert_raster_equality(unit, firstUri, secondUri):
-    output = gdal.Open(firstUri, 0)
+    output = gdal.Open('../../test_data/carbon_regression.tif', 0)
     outputBand = output.GetRasterBand(1)
     obnodata = outputBand.GetNoDataValue()
     print obnodata
@@ -88,7 +88,7 @@ class TestInvest(unittest.TestCase):
         
         
         def test_open_gdal_file(self):
-            a = gdal.Open('../../carbon_output/out.tif')
+            a = gdal.Open('../../carbon_output/out.tif', 0)
             b = a.GetRasterBand(1)
             c = b.GetNoDataValue()
             self.assertIsNotNone(c, "NodataValue read as None.")
