@@ -6,12 +6,10 @@ def assert_raster_equality(unit, firstUri, secondUri):
     output = gdal.Open(firstUri, 0)
     outputBand = output.GetRasterBand(1)
     obnodata = outputBand.GetNoDataValue()
-    print obnodata
     
     invest2 = gdal.Open(secondUri, 0)
     invest2Band = invest2.GetRasterBand(1)
     i2bnodata = invest2Band.GetNoDataValue()
-    print i2bnodata
 
     unit.assertIsNot(obnodata, None, "Output nodata value read as None")
     unit.assertEqual(outputBand.XSize, invest2Band.XSize, "Dimensions differ: output=" + str(outputBand.XSize) + ", i2output = " + str(invest2Band.XSize))
