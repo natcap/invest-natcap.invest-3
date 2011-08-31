@@ -25,7 +25,7 @@ def execute(args):
 
 
     for i in range(0, lulc.YSize):
-        data = lulc.ReadAsArray(0, i, lulc.XSize - 1, 1)
+        data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_seq.execute(data, pools)
         args['output'].GetRasterBand(1).WriteArray(out_array, 0, i)
         
