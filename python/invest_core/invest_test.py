@@ -1,6 +1,7 @@
 import unittest
 import invest_core
 from osgeo import gdal
+from decimal import Decimal
 
 def assert_raster_equality(unit, firstUri, secondUri):
     output = gdal.Open(firstUri, 0)
@@ -22,7 +23,10 @@ def assert_raster_equality(unit, firstUri, secondUri):
             if (i2Array[0][j] == i2bnodata):
                 unit.assertEqual(outArray[0][j], obnodata, "Should have found nodata pixel (value == " + str(obnodata) + ") in output raster at row " + str(i) + " index " + str(j) + ", but found " + str(outArray[0][j]) + " instead")
             else:
-                unit.assertEqual(outArray[0][j], i2Array[0][j], "Unequal pixel values detected at row " + str(i) + " index " + str(j) + ":" + str(outArray[0][j]) + " " + str(i2Array[0][j]))
+                a = Decimal(float(outArray[0][j]))
+                b = Decimal(float(i2Array[0][j]))
+                unit.assertEqual(a, b, "Unequal pixel values detected at row " +
+                                  str(i) + " index " + str(j) + ":" + str(a) + " " + str(b))
 
 
 
@@ -31,7 +35,8 @@ def assert_raster_equality(unit, firstUri, secondUri):
 class TestInvest(unittest.TestCase):
    
         def test_carbon_model_regression(self):
-            """Test to run Carbon model on sample data"""
+            """Regression Test to run Carbon model using sample data.  
+            Results will be compared with a raster that is known to be accurate."""
             lulc_dictionary = {'uri'  : '../../lulc_samp_cur',
                                'type' :'gdal',
                                'input': True}
