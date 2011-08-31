@@ -91,7 +91,7 @@ class TestInvest(unittest.TestCase):
             a = gdal.Open('../../carbon_output/out.tif')
             b = a.GetRasterBand(1)
             c = b.GetNoDataValue()
-            print c
+            self.assertIsNotNone(c, "NodataValue read as None.")
             pass
 
 if __name__ == '__main__':
