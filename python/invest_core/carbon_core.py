@@ -52,7 +52,7 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
     
         returns a dictionary calculating total carbon sequestered per lulc type"""
 
-    poolsDict = {inNoData: outNoData}
+    poolsDict = {int(inNoData): outNoData}
     for i in range(dbf.recordCount):
         sum = 0
         for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
