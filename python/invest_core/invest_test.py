@@ -23,10 +23,11 @@ def assert_raster_equality(unit, firstUri, secondUri):
             if (i2Array[0][j] == i2bnodata):
                 unit.assertEqual(outArray[0][j], obnodata, "Should have found nodata pixel (value == " + str(obnodata) + ") in output raster at row " + str(i) + " index " + str(j) + ", but found " + str(outArray[0][j]) + " instead")
             else:
-                a = Decimal(float(outArray[0][j]))
-                b = Decimal(float(i2Array[0][j]))
-                unit.assertEqual(a, b, "Unequal pixel values detected at row " +
+                a = outArray[0][j]
+                b = i2Array[0][j]
+                unit.assertAlmostEqual(a, b, 5, "Unequal pixel values detected at row " +
                                   str(i) + " index " + str(j) + ":" + str(a) + " " + str(b))
+
 
 
 
