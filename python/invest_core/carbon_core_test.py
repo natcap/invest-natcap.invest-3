@@ -20,9 +20,15 @@ class TestCarbonCore(unittest.TestCase):
         """Smoke test for carbon_core function.  Shouldn't crash with
         zero length inputs"""
         driver = gdal.GetDriverByName("GTIFF")
-        args = { 'lulc': driver.Create('../../test_blank_input', 1, 1, 1, gdal.GDT_Byte),
-                'carbon_pools': dbf.Dbf('../../test_blank_dbf', new=True),
-                'output': driver.Create('../../test_blank_output', 1, 1, 1, gdal.GDT_Byte)}
+        lulc =  driver.Create('../../test_data/test_blank_input', 1, 1, 1, gdal.GDT_Byte)
+        lulc.GetRasterBand(1).SetNoDataValue(-1.0)
+
+        output =  driver.Create('../../test_data/test_blank_output', 1, 1, 1, gdal.GDT_Byte)
+        output.GetRasterBand(1).SetNoDataValue(-1.0)
+
+        args = { 'lulc':lulc,
+                'carbon_pools': dbf.Dbf('../../test_data/test_blank_dbf', new=True),
+                'output': output}
         carbon_core.execute(args)
         pass
 
