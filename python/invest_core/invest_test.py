@@ -12,7 +12,7 @@ def assert_raster_equality(unit, firstUri, secondUri):
     invest2Band = invest2.GetRasterBand(1)
     i2bnodata = invest2Band.GetNoDataValue()
 
-    unit.assertIsNot(obnodata, None, "Output nodata value read as None")
+    unit.assertNotEqual(obnodata, None, "Output nodata value read as None")
     unit.assertEqual(outputBand.XSize, invest2Band.XSize, "Dimensions differ: output=" + str(outputBand.XSize) + ", i2output = " + str(invest2Band.XSize))
     unit.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
 
