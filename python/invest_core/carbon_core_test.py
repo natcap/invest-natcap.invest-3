@@ -33,6 +33,7 @@ class TestCarbonCore(unittest.TestCase):
         pass
 
     def test_carbon_core_with_inputs(self):
+        """Test carbon_core using realistic inputs."""
         driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../lulc_samp_cur', GA_ReadOnly)
         out_dict = {'uri':'../../carbon_output/test_real_output.tif',
@@ -48,6 +49,7 @@ class TestCarbonCore(unittest.TestCase):
         pass
 
     def test_build_pools(self):
+        """Verify the correct construction of the pools dict"""
         db = dbf.Dbf('../../test_data/carbon_pools_float.dbf', readOnly=1)
         pools = carbon_core.build_pools_dict(db, 1, -1, 255)
         numRecords = db.recordCount
