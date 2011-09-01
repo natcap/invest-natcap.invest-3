@@ -91,12 +91,6 @@ class TestInvest(unittest.TestCase):
             pass
         
         
-        def test_open_gdal_file(self):
-            a = gdal.Open('../../carbon_output/out.tif', 0)
-            b = a.GetRasterBand(1)
-            c = b.GetNoDataValue()
-            self.assertIsNotNone(c, "NodataValue read as None.")
-            pass
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvest)
