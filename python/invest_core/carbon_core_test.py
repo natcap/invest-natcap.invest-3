@@ -35,10 +35,13 @@ class TestCarbonCore(unittest.TestCase):
     def test_carbon_core_with_inputs(self):
         driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../lulc_samp_cur', GA_ReadOnly)
-        out_dict = {'uri':'../../test_real_output.tif', 'input':False, 'type': 'gdal'}
+        out_dict = {'uri':'../../carbon_output/test_real_output.tif',
+                    'input':False,
+                    'type': 'gdal',
+                    'dataType': 6}
         output = data_handler.mimic(lulc, out_dict)
         args = { 'lulc': lulc,
-                'carbon_pools': dbf.Dbf('../../carbon_pools_samp.dbf'),
+                'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'output': output}
         carbon_core.execute(args)
         output = data_handler.close(output)
