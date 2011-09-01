@@ -10,7 +10,7 @@ class TestDataHandler(unittest.TestCase):
 
     def test_dbf(self):
         """Test to load a dbf file."""
-        db = data_handler.open({'uri'  : '../../carbon_pools_samp.dbf',
+        db = data_handler.open({'uri'  : '../../test_data/carbon_pools_float.dbf',
                            'type': 'dbf',
                            'input': True})
         self.assertEqual(db.recordCount, 66)
@@ -52,7 +52,7 @@ class TestDataHandler(unittest.TestCase):
     
     def test_dbf_close(self):
         """Test to close a dbf file"""
-        db = data_handler.open({'uri':'../../carbon_pools_samp.dbf',
+        db = data_handler.open({'uri':'../../test_data/carbon_pools_float.dbf',
                                  'type': 'dbf',
                                  'input': True})
         data_handler.close(db)
