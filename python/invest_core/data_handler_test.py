@@ -4,7 +4,7 @@ from osgeo import gdal
 
 class TestDataHandler(unittest.TestCase):
     def test_smoke(self):
-        """Smoke test.  Shouldn't crash with empty map."""
+        """Smoke test for data_handler.open.  Shouldn't crash with empty map."""
         data_handler.open({})
         pass
 
@@ -60,6 +60,7 @@ class TestDataHandler(unittest.TestCase):
         pass
 
     def test_verify_gdal_data_type(self):
+        """Test that the output file dataType is set correctly."""
         lulc = data_handler.open({'uri'  : '../../lulc_samp_cur',
                            'type': 'gdal',
                            'input': True,})
