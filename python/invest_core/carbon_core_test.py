@@ -39,7 +39,7 @@ class TestCarbonCore(unittest.TestCase):
         pass
 
     def test_build_pools(self):
-        db = dbf.Dbf('../../carbon_pools_samp.dbf', readOnly=1)
+        db = dbf.Dbf('../../test_data/carbon_pools_float.dbf', readOnly=1)
         pools = carbon_core.build_pools_dict(db, 1, -1, 255)
         numRecords = db.recordCount
         poolsLen = len(pools)
