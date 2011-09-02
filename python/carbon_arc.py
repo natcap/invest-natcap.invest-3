@@ -43,10 +43,30 @@ pool_dictionary = {'uri'  : pool_uri,
 # 10 = GDT_CFloat32
 # 11 = GDT_CFloat64
 
-output_dictionary = {'uri'  : output_dir + '\\' + output_filename,
+output_cur_seq = {'uri'  : output_dir + '\\current_sequestration.tif',
                      'type' : 'gdal',
                      'dataType': 6,
                      'input': False}
+
+output_fut_seq = {'uri'  : output_dir + '\\future_sequestration.tif',
+                     'type' : 'gdal',
+                     'dataType': 6,
+                     'input': False}
+
+output_delta_seq = {'uri'  : output_dir + '\\delta_sequestration.tif',
+                     'type' : 'gdal',
+                     'dataType': 6,
+                     'input': False}
+
+output_valuation = {'uri'  : output_dir + '\\valuation.tif',
+                     'type' : 'gdal',
+                     'dataType': 6,
+                     'input': False}
+
+output_dictionary = {'cur_seq': output_cur_seq,
+                     'fut_seq': output_fut_seq,
+                     'delta_seq':output_delta_seq,
+                     'valuation':output_valuation}
 
 arguments = {'lulc': lulc_dictionary,
              'carbon_pools' : pool_dictionary,
@@ -60,13 +80,13 @@ gp.AddMessage('Starting carbon model')
 gp.AddMessage('Waiting')
 #process.wait()
 
-gp.overwriteoutput = 1
+#gp.overwriteoutput = 1
 
-gp.AddToolbox("C:\Program Files\ArcGIS\Desktop10.0\ArcToolbox\Toolboxes\Data Management Tools.tbx")
-output_layer = "buffer_layer"
-output_buffer = "output_buffer"
+#gp.AddToolbox("C:\Program Files\ArcGIS\Desktop10.0\ArcToolbox\Toolboxes\Data Management Tools.tbx")
+#output_layer = "buffer_layer"
+#output_buffer = "output_buffer"
 
-gp.Buffer_analysis('C:\\Users\\jadoug06\\Desktop\\lulc_samp_cur', output_layer, "1 DecimalDegrees", "FULL", "ROUND", "NONE", "")
+#gp.Buffer_analysis('C:\\Users\\jadoug06\\Desktop\\lulc_samp_cur', output_layer, "1 DecimalDegrees", "FULL", "ROUND", "NONE", "")
 
 #gp.MakeFeatureLayer(output_buffer, output_layer)
 #gp.SetParameterAsText(0, output_layer)
