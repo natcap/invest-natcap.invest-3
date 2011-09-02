@@ -21,8 +21,10 @@ def execute(args):
                             args['seq_cur'] and args['seq_fut']
         args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
                             value of sequestered carbon.
+        args['calc_value'] - is a Boolean
         
         returns nothing"""
+
 
     area = pixelArea(args['lulc_cur'])
 
