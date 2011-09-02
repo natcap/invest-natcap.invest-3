@@ -6,11 +6,15 @@ import osgeo.osr as osr
 from dbfpy import dbf
 
 def execute(args):
-    #args is a dictionary
-    #GDAL URI is handled before this function is called, so GDAL object should be passed with args
-    #carbon pool should have been processed from its file into a dictionary, passed with args
-    #output file URI should also have been passed with args
-    #The purpose of this function is to assemble calls to the various carbon components into a conhesive result
+    """Executes the basic carbon model that maps a carbon pool dataset to a
+        LULC raster.
+    
+        args - is a dictionary with at least the following entries:
+        args['lulc'] - is a GDAL raster dataset
+        args['carbon_pools'] - is a dictionary that maps LULC type to Mg/Ha of carbon
+        args['output'] - a GDAL raster dataset for outputing the sequestered carbon
+        
+        returns nothing"""
 
     area = pixelArea(args['lulc'])
 
@@ -29,7 +33,7 @@ def execute(args):
 def pixelArea(dataset):
     """Calculates the pixel area of the given dataset.
     
-        dataset - GDAL raster
+        dataset - GDAL dataset
     
         returns area in Ha of each pixel in dataset"""
 
