@@ -26,9 +26,9 @@ class TestCarbonCore(unittest.TestCase):
         output =  driver.Create('../../test_data/test_blank_output', 1, 1, 1, gdal.GDT_Byte)
         output.GetRasterBand(1).SetNoDataValue(-1.0)
 
-        args = { 'lulc':lulc,
+        args = { 'lulc_cur':lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/test_blank_dbf', new=True),
-                'output': output}
+                'seq_cur': output}
         carbon_core.execute(args)
         pass
 
@@ -41,9 +41,9 @@ class TestCarbonCore(unittest.TestCase):
                     'type': 'gdal',
                     'dataType': 6}
         output = data_handler.mimic(lulc, out_dict)
-        args = { 'lulc': lulc,
+        args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
-                'output': output}
+                'seq_cur': output}
         carbon_core.execute(args)
         output = data_handler.close(output)
         pass
