@@ -47,7 +47,11 @@ def sequester(args):
 
 
 def valuate(args):
-    return None
+    pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
+    
+    processRaster(pools, args['lulc_cur'], args['seq_cur'])
+    processRaster(pools, args['lulc_fut'], args['seq_fut'])
+    
 
 def processRaster(pools, outputRaster, inputRaster):
     lulc = inputRaster.GetRasterBand(1)
