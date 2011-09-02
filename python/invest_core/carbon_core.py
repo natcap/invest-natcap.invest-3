@@ -6,43 +6,29 @@ import osgeo.osr as osr
 from dbfpy import dbf
 
 def execute(args):
-    #args is a dictionary
-    #GDAL URI is handled before this function is called, so GDAL object should be passed with args
-    #carbon pool should have been processed from its file into a dictionary, passed with args
-    #output file URI should also have been passed with args
-    #The purpose of this function is to assemble calls to the various carbon components into a conhesive result
+    """Executes the basic carbon model that maps a carbon pool dataset to a
+        LULC raster.
+    
+        args - is a dictionary with at least the following entries:
+        args['lulc'] - is a GDAL raster dataset
+        args['carbon_pools'] - is a dictionary that maps LULC type to Mg/Ha of carbon
+        args['output'] - a GDAL raster dataset for outputing the sequestered carbon
+        
+        returns nothing"""
 
     area = pixelArea(args['lulc'])
 
     lulc = args['lulc'].GetRasterBand(1)
-    #args['output'].GetRasterBand(1).SetNoDataValue(-1.0)
 
     inNoData = lulc.GetNoDataValue()
-    outNoData = args['output'].GetRasterBand(1).GetNoDataValue() 
-    
+    outNoData = args['output'].GetRasterBand(1).GetNoDataValue()
+
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
-    processRaster(pools, args['output'], args['lulc'])
-    
-    args['output'] = None
-    
-    
-def processRaster(pools, outputRaster, inputRaster):
-    """Runs carbon_seq on each line of the input raster.
-        
-        pools - dict mapping an lulc index to the amount of carbon sequestered.
-        outputRaster - GDAL dataset
-        inputRaster - GDAL dataset
-        
-        This function does not return an object, but does write the output of carbon_seq
-        to disk."""
-        
-    lulc = inputRaster.GetRasterBand(1)
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_seq.execute(data, pools)
-        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
-        
+        args['output'].GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def pixelArea(dataset):
     """Calculates the pixel area of the given dataset.
@@ -64,8 +50,8 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
     
         dbf - the database file describing pools
         area - the area in Ha of each pixel
-        inNoData - the nodata value of the input raster
-        outNoData - the nodata value of the output raster
+        inNoData - the no data value for the input map
+        outNoData - the no data value for the output map
     
         returns a dictionary calculating total carbon sequestered per lulc type"""
 
