@@ -17,7 +17,12 @@ lulc_cur_uri = gp.GetParameterAsText(1)
 pool_uri = gp.GetParameterAsText(2)
 lulc_fut_uri = gp.GetParameterAsText(3)
 valuation = gp.GetParameterAsText(4)
-gp.AddMessage(valuation)
+
+if valuation == 'true':
+    args['calc_value'] = True
+else:
+    args['calc_value'] = False
+
 lulc_cur_dict = {'uri'  : lulc_cur_uri,
                    'type' :'gdal',
                    'input': True}
