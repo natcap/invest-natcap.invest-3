@@ -16,8 +16,13 @@ lulc_uri = gp.GetParameterAsText(0)
 pool_uri = gp.GetParameterAsText(1)
 output_filename = gp.GetParameterAsText(2)
 output_dir = gp.GetParameterAsText(3)
+valuation = gp.GetParameterAsText(4)
+gp.AddMessage(valuation)
+lulc_cur_dict = {'uri'  : lulc_cur_uri,
+                   'type' :'gdal',
+                   'input': True}
 
-lulc_dictionary = {'uri'  : lulc_uri,
+lulc_fut_dict = {'uri'  : lulc_fut_uri,
                    'type' :'gdal',
                    'input': True}
 
@@ -43,34 +48,33 @@ pool_dictionary = {'uri'  : pool_uri,
 # 10 = GDT_CFloat32
 # 11 = GDT_CFloat64
 
-output_cur_seq = {'uri'  : output_dir + '\\current_sequestration.tif',
+output_cur_seq = {'uri'  : output_dir + '\\tot_C_cur.tif',
                      'type' : 'gdal',
                      'dataType': 6,
                      'input': False}
 
-output_fut_seq = {'uri'  : output_dir + '\\future_sequestration.tif',
+output_fut_seq = {'uri'  : output_dir + '\\tot_C_fut.tif',
                      'type' : 'gdal',
                      'dataType': 6,
                      'input': False}
 
-output_delta_seq = {'uri'  : output_dir + '\\delta_sequestration.tif',
+output_delta_seq = {'uri'  : output_dir + '\\sequest.tif',
                      'type' : 'gdal',
                      'dataType': 6,
                      'input': False}
 
-output_valuation = {'uri'  : output_dir + '\\valuation.tif',
+output_valuation = {'uri'  : output_dir + '\\value_seq.tif',
                      'type' : 'gdal',
                      'dataType': 6,
                      'input': False}
 
-output_dictionary = {'cur_seq': output_cur_seq,
-                     'fut_seq': output_fut_seq,
-                     'delta_seq':output_delta_seq,
-                     'valuation':output_valuation}
-
-arguments = {'lulc': lulc_dictionary,
+arguments = {'lulc_cur': lulc_cur_dict,
+             'lulc_fut': lulc_fut_dict,
              'carbon_pools' : pool_dictionary,
-             'output' : output_dictionary}
+             'seq_cur' : output_cur_seq,
+             'seq_fut' : output_fut_seq,
+             'seq_delta' : output_delta_seq,
+             'seq_value' : output_valuation}
 
 gp.AddMessage('Starting carbon model')
 
