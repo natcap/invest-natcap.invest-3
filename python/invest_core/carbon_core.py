@@ -15,28 +15,21 @@ def execute(args):
     area = pixelArea(args['lulc'])
 
     lulc = args['lulc'].GetRasterBand(1)
-    #args['output'].GetRasterBand(1).SetNoDataValue(-1.0)
 
     inNoData = lulc.GetNoDataValue()
-    outNoData = args['output'].GetRasterBand(1).GetNoDataValue() 
-    
+    outNoData = args['output'].GetRasterBand(1).GetNoDataValue()
+
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
-
-
 
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_seq.execute(data, pools)
         args['output'].GetRasterBand(1).WriteArray(out_array, 0, i)
-        
-    args['output'] = None
-    
-    
 
 def pixelArea(dataset):
     """Calculates the pixel area of the given dataset.
     
-        dataset - GDAL dataset
+        dataset - GDAL raster
     
         returns area in Ha of each pixel in dataset"""
 
@@ -53,6 +46,8 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
     
         dbf - the database file describing pools
         area - the area in Ha of each pixel
+        inNoData - the no data value for the input map
+        outNoData - the no data value for the output map
     
         returns a dictionary calculating total carbon sequestered per lulc type"""
 
