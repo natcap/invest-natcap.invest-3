@@ -19,11 +19,12 @@ def execute(model, args):
     module = imp.load_source(model, model + '.py')
 
     #process the args for input
-    for key, value in args.items():
-        if (key != 'output'):
-            args[key] = data_handler.open(value)
+    for key in ('lulc_cur', 'lulc_fut', 'carbon_pools'):
+        args[key] = data_handler.open(value)
 
-    args['output'] = data_handler.mimic(args['lulc'], args['output'])
+    #process the args for output
+    for key in ('seq_cur', 'seq_fut', 'seq_delta', 'seq_value'):
+        args[key] = data_handler.mimic(args['lulc_cur'], args[key])
 
     #execute the well known name 'execute' that exists in all invest plugins
     module.execute(args)
