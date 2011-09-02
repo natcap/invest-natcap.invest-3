@@ -33,10 +33,15 @@ def execute(args):
 
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
+    processRaster(pools, args['lulc_cur'], args['seq_cur'])
+
+def processRaster(pools, outputRaster, inputRaster):
+    lulc = inputRaster.GetRasterBand(1)
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_seq.execute(data, pools)
-        args['seq_cur'].GetRasterBand(1).WriteArray(out_array, 0, i)
+        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
+
 
 def pixelArea(dataset):
     """Calculates the pixel area of the given dataset.
