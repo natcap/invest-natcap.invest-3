@@ -12,7 +12,7 @@ def execute(args):
         args - is a dictionary with at least the following entries:
         args['lulc_cur'] - is a GDAL raster dataset
         args['lulc_fut'] - is a GDAL raster dataset
-        args['carbon_pools'] - is a dictionary that maps LULC type to Mg/Ha of carbon
+        args['carbon_pools'] - is a DBF dataset mapping carbon sequestration numbers to lulc classifications.
         args['seq_cur'] - a GDAL raster dataset for outputing the sequestered carbon
                           based on the current lulc
         args['seq_fut'] - a GDAL raster dataset for outputing the sequestered carbon
@@ -21,21 +21,33 @@ def execute(args):
                             args['seq_cur'] and args['seq_fut']
         args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
                             value of sequestered carbon.
-        args['calc_value'] - is a Boolean
+        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
         
         returns nothing"""
 
+    if args['calc_value']:
+        valuate(args)
+    else:
+        sequester(args)
+    
 
-    area = pixelArea(args['lulc_cur'])
+def sequester(args):
+    """Executes the carbon sequestration model only.
+    
+        args - is a dictionary with at least the following entries:
+        args['lulc_cur'] - is a GDAL raster dataset
+        args['seq_cur'] - is a GDAL raster dataset
+        args['carbon_pools'] - is a DBF dataset mapping sequestration numbers to lulc classifications
+        
+        returns a constructed pools dict mapping lulc types to total carbon sequestered per type (Mg/Ha)"""
 
-    lulc = args['lulc_cur'].GetRasterBand(1)
-
-    inNoData = lulc.GetNoDataValue()
-    outNoData = args['seq_cur'].GetRasterBand(1).GetNoDataValue()
-
-    pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
+    pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
 
     processRaster(pools, args['lulc_cur'], args['seq_cur'])
+
+
+def valuate(args):
+    return None
 
 def processRaster(pools, outputRaster, inputRaster):
     lulc = inputRaster.GetRasterBand(1)
@@ -59,6 +71,15 @@ def pixelArea(dataset):
     #take absolute value since sometimes negative widths/heights
     areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
     return areaMeters / (10 ** 4) #convert m^2 to Ha
+
+def build_pools(dbf, inputRaster, outputRaster):
+    area = pixelArea(inputRaster)
+    lulc = inputRaster.GetRasterBand(1)
+    
+    inNoData = lulc.GetNoDataValue()
+    outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
+    
+    return build_pools_dict(dbf, area, inNoData, outNoData)
 
 def build_pools_dict(dbf, area, inNoData, outNoData):
     """Build a dict for the carbon pool data accessible for each lulc classification.
