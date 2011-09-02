@@ -10,25 +10,33 @@ def execute(args):
         LULC raster.
     
         args - is a dictionary with at least the following entries:
-        args['lulc'] - is a GDAL raster dataset
+        args['lulc_cur'] - is a GDAL raster dataset
+        args['lulc_fut'] - is a GDAL raster dataset
         args['carbon_pools'] - is a dictionary that maps LULC type to Mg/Ha of carbon
-        args['output'] - a GDAL raster dataset for outputing the sequestered carbon
+        args['seq_cur'] - a GDAL raster dataset for outputing the sequestered carbon
+                          based on the current lulc
+        args['seq_fut'] - a GDAL raster dataset for outputing the sequestered carbon
+                          based on the future lulc
+        args['seq_delta'] - a GDAL raster dataset for outputing the difference between
+                            args['seq_cur'] and args['seq_fut']
+        args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
+                            value of sequestered carbon.
         
         returns nothing"""
 
-    area = pixelArea(args['lulc'])
+    area = pixelArea(args['lulc_cur'])
 
-    lulc = args['lulc'].GetRasterBand(1)
+    lulc = args['lulc_cur'].GetRasterBand(1)
 
     inNoData = lulc.GetNoDataValue()
-    outNoData = args['output'].GetRasterBand(1).GetNoDataValue()
+    outNoData = args['seq_cur'].GetRasterBand(1).GetNoDataValue()
 
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_seq.execute(data, pools)
-        args['output'].GetRasterBand(1).WriteArray(out_array, 0, i)
+        args['seq_cur'].GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def pixelArea(dataset):
     """Calculates the pixel area of the given dataset.
