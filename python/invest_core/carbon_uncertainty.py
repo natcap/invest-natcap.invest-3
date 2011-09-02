@@ -46,7 +46,7 @@ def build_uncertainty_pools_dict(dbf, poolType, area, inNoData, outNoData):
     poolsDict = {int(inNoData): outNoData}
     for i in range(dbf.recordCount):
         sum = 0
-        for field in [ x + poolType for x in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD')]:
+        for field in [ x + '_' + poolType for x in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD')]:
             sum += dbf[i][field]
         poolsDict[dbf[i]['LULC']] = sum * area
     return poolsDict
