@@ -1,3 +1,6 @@
+import carbon_core
+import carbon_seq
+
 def execute(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
         LULC raster.
@@ -13,6 +16,7 @@ def execute(args):
         
         returns nothing"""
 
+    area = carbon_core.pixelArea(args['lulc'])
     lulc = args['lulc'].GetRasterBand(1)
     inNoData = lulc.GetNoDataValue()
     outNoData = args['output'].GetRasterBand(1).GetNoDataValue()
@@ -27,7 +31,7 @@ def execute(args):
     for rowNumber in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, rowNumber, lulc.XSize, 1)
         #create a seq map for each pooltype 
-        for poolType, index in poolTypes:
+        for poolType, index in poolTypes.iteritems():
             out_array = carbon_seq.execute(data, pools[poolType])
             args['output'].GetRasterBand(index).WriteArray(out_array, 0, rowNumber)
 
@@ -46,7 +50,7 @@ def build_uncertainty_pools_dict(dbf, poolType, area, inNoData, outNoData):
     poolsDict = {int(inNoData): outNoData}
     for i in range(dbf.recordCount):
         sum = 0
-        for field in [ x + poolType for x in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD')]:
+        for field in [ x + '_' + poolType for x in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD')]:
             sum += dbf[i][field]
         poolsDict[dbf[i]['LULC']] = sum * area
     return poolsDict
