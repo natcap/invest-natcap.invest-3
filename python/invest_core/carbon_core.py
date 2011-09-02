@@ -28,6 +28,15 @@ def execute(args):
     
     
 def processRaster(pools, outputRaster, inputRaster):
+    """Runs carbon_seq on each line of the input raster.
+        
+        pools - dict mapping an lulc index to the amount of carbon sequestered.
+        outputRaster - GDAL dataset
+        inputRaster - GDAL dataset
+        
+        This function does not return an object, but does write the output of carbon_seq
+        to disk."""
+        
     lulc = inputRaster.GetRasterBand(1)
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
@@ -55,6 +64,8 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
     
         dbf - the database file describing pools
         area - the area in Ha of each pixel
+        inNoData - the nodata value of the input raster
+        outNoData - the nodata value of the output raster
     
         returns a dictionary calculating total carbon sequestered per lulc type"""
 
