@@ -23,14 +23,16 @@ class TestCarbonUncertainty(unittest.TestCase):
         lulc = driver.Create('../../test_data/test_blank_input', 1, 1, 1, gdal.GDT_Byte)
         lulc.GetRasterBand(1).SetNoDataValue(-1.0)
 
-        output = driver.Create('../../test_data/test_blank_output', 1, 1, 1, gdal.GDT_Byte)
-        output.GetRasterBand(1).SetNoDataValue(-1.0)
+        output = driver.Create('../../test_data/test_blank_output', 1, 1, 3, gdal.GDT_Byte)
+        for x in [1, 2, 3]: output.GetRasterBand(x).SetNoDataValue(-1.0)
 
         args = { 'lulc':lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/test_blank_dbf', new=True),
                 'output': output}
         carbon_uncertainty.execute(args)
-        pass
+
+        #This is how GDAL closes its datasets in python
+        output = None
 
     def test_carbon_uncertainty_with_inputs(self):
         """Test carbon_uncertainty using realistic inputs."""
@@ -40,13 +42,18 @@ class TestCarbonUncertainty(unittest.TestCase):
                     'input':False,
                     'type': 'gdal',
                     'dataType': 6}
-        output = data_handler.mimic(lulc, out_dict)
+        output = driver.Create('../../carbon_output/uncertainty_sequestration.tif',
+                               lulc.XSize, lulc.YSize, 3, gdal.GDT_Float32)
+        print output
+        output.SetGeoTransform(lulc.GetGeoTransform())
+        output.SetProjection(lulc.GetSpatialReference())
         args = { 'lulc': lulc,
-                'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
+                'carbon_pools': dbf.Dbf('../../uncertain_carbon_pools_samp.dbf'),
                 'output': output}
         carbon_uncertainty.execute(args)
-        output = data_handler.close(output)
-        pass
+
+        #This is how GDAL closes its datasets in python
+        output = None
 
     def test_build_uncertainty_pools(self):
         """Verify the correct construction of the pools dict"""
@@ -60,7 +67,6 @@ class TestCarbonUncertainty(unittest.TestCase):
             #Extra entry represents the nodata value.
             self.assertEqual(numRecords + 1, poolsLen, 'Expected ' + str(numRecords / 3) +
                              ' records in the pools dict, but found ' + str(poolsLen) + ' instead')
-        pass
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonUncertainty)
