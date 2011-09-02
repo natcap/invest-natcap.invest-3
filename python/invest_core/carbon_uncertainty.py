@@ -1,4 +1,5 @@
 import carbon_core
+import carbon_seq
 
 def execute(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
