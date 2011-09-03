@@ -14,9 +14,11 @@ gp.AddMessage(os.getcwd())
 
 output_dir = gp.GetParameterAsText(0)
 lulc_cur_uri = gp.GetParameterAsText(1)
-pool_uri = gp.GetParameterAsText(2)
-lulc_fut_uri = gp.GetParameterAsText(3)
-valuation = gp.GetParameterAsText(4)
+lulc_cur_year = gp.GetParameter(2) 
+pool_uri = gp.GetParameterAsText(3)
+lulc_fut_uri = gp.GetParameterAsText(4)
+lulc_fut_year = gp.GetParameter(5)
+valuation = gp.GetParameterAsText(6)
 
 if valuation == 'true':
     args['calc_value'] = True
@@ -79,7 +81,9 @@ arguments = {'lulc_cur': lulc_cur_dict,
              'seq_cur' : output_cur_seq,
              'seq_fut' : output_fut_seq,
              'seq_delta' : output_delta_seq,
-             'seq_value' : output_valuation}
+             'seq_value' : output_valuation,
+             'lulc_cur_year' : lulc_cur_year,
+             'lulc_fut_year' : lulc_fut_year}
 
 gp.AddMessage('Starting carbon model')
 
