@@ -22,6 +22,8 @@ def execute(args):
         args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
                             value of sequestered carbon.
         args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
+        args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
+        args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
         
         returns nothing"""
 
@@ -47,12 +49,14 @@ def sequester(args):
 
 
 def valuate(args):
+    numYears = args['lulc_cur_year'] - args['lulc_fut_year']
+    
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
     
     rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
     rasterSeq(pools, args['lulc_fut'], args['seq_fut'])
     rasterDiff(args['lulc_cur'], args['lulc_fut'], args['seq_delta'])
-    
+    rasterValue(args['lulc_cur'], args['seq_value'], args['c_value'], args['discount'], numYears)
     
     
 def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, numYears):
