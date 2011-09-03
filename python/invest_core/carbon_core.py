@@ -51,6 +51,22 @@ def valuate(args):
     
     rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
     rasterSeq(pools, args['lulc_fut'], args['seq_fut'])
+    rasterDiff(args['lulc_cur'], args['lulc_fut'], args['seq_delta'])
+    
+    
+    
+def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, numYears):
+    lulc = inputRaster.GetRasterBand(1)
+    
+    multiplier = 0
+    for n in range(numYears-1):
+        multiplier += 1/(((1+rateOfChange)^n)(1+discount)^n)
+    
+    for i in range(0, lulc.YSize):
+        data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
+        out_array = carbon_value.execute(data, numYears, carbonValue, multiplier)
+        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
+        
     
 
 def rasterSeq(pools, inputRaster, outputRaster):
@@ -60,13 +76,13 @@ def rasterSeq(pools, inputRaster, outputRaster):
         out_array = carbon_seq.execute(data, pools)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
-def rasterDiff(pools, lulc_cur, lulc_fut, outputRaster):
+def rasterDiff(lulc_cur, lulc_fut, outputRaster):
     lulc_cur_band = lulc_cur.GetRasterBand(1)
     lulc_fut_band = lulc_fut.GetRasterBand(1)
     for i in range(0, lulc_cur_band.YSize):
         cur_data = lulc_cur_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
         fut_data = lulc_fut_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
-        out_array = carbon_seq.execute(pools, cur_data, fut_data)
+        out_array = carbon_diff.execute(cur_data, fut_data)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def pixelArea(dataset):
