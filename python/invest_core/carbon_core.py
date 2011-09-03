@@ -41,7 +41,7 @@ def sequester(args):
         args['seq_cur'] - is a GDAL raster dataset
         args['carbon_pools'] - is a DBF dataset mapping sequestration numbers to lulc classifications
         
-        returns a constructed pools dict mapping lulc types to total carbon sequestered per type (Mg/Ha)"""
+        No return value."""
 
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
 
@@ -49,6 +49,12 @@ def sequester(args):
 
 
 def valuate(args):
+    """Executes the economic valuation model.
+        
+        args is a dictionary with all of the options detailed in execute()
+        
+        No return value"""
+        
     numYears = args['lulc_cur_year'] - args['lulc_fut_year']
     
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
@@ -60,6 +66,18 @@ def valuate(args):
     
     
 def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, numYears):
+    """iterates through the rows in a raster and applies the carbon valuation model
+        to all values.
+        
+        inputRaster - is a GDAL raster dataset
+        outputRaster - is a GDAL raster dataset for outputing the value of carbon sequestered
+        carbonValue - is a float representing the price of carbon per metric ton
+        discount - is a float representing the market discount rate for Carbon
+        rateOfChange - is a float representing the annual rate of change in the price of Carbon.
+        numYears - an int representing the number of years between current and future land cover maps
+        
+        No return value."""
+        
     lulc = inputRaster.GetRasterBand(1)
     
     multiplier = 0
