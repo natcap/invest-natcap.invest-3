@@ -43,23 +43,31 @@ def sequester(args):
 
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
 
-    processRaster(pools, args['lulc_cur'], args['seq_cur'])
+    rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
 
 
 def valuate(args):
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
     
-    processRaster(pools, args['lulc_cur'], args['seq_cur'])
-    processRaster(pools, args['lulc_fut'], args['seq_fut'])
+    rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
+    rasterSeq(pools, args['lulc_fut'], args['seq_fut'])
     
 
-def processRaster(pools, outputRaster, inputRaster):
+def rasterSeq(pools, inputRaster, outputRaster):
     lulc = inputRaster.GetRasterBand(1)
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_seq.execute(data, pools)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
+def rasterDiff(pools, lulc_cur, lulc_fut, outputRaster):
+    lulc_cur_band = lulc_cur.GetRasterBand(1)
+    lulc_fut_band = lulc_fut.GetRasterBand(1)
+    for i in range(0, lulc_cur_band.YSize):
+        cur_data = lulc_cur_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
+        fut_data = lulc_fut_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
+        out_array = carbon_seq.execute(pools, cur_data, fut_data)
+        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def pixelArea(dataset):
     """Calculates the pixel area of the given dataset.
