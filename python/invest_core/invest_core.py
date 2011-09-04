@@ -20,7 +20,7 @@ def execute(model, args):
 
     #process the args for input
     for key in ('lulc_cur', 'lulc_fut', 'carbon_pools'):
-        args[key] = data_handler.open(value)
+        args[key] = data_handler.open(args[key])
 
     #process the args for output
     for key in ('seq_cur', 'seq_fut', 'seq_delta', 'seq_value'):
