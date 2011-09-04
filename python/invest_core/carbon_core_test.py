@@ -28,7 +28,8 @@ class TestCarbonCore(unittest.TestCase):
 
         args = { 'lulc_cur':lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/test_blank_dbf', new=True),
-                'seq_cur': output}
+                'seq_cur': output,
+                'calc_value' : False}
         carbon_core.execute(args)
         pass
 
