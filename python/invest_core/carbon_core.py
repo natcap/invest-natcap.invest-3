@@ -94,6 +94,15 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
     
 
 def rasterSeq(pools, inputRaster, outputRaster):
+    """Iterate through the rows in a raster and map carbon sequestration values
+        to the output raster.
+        
+        pools - a python dict mapping lulc indices to sequestration data
+        inputRaster - a GDAL raster dataset
+        outputRaster - a GDAL raster dataset
+        
+        No return value."""
+        
     lulc = inputRaster.GetRasterBand(1)
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
