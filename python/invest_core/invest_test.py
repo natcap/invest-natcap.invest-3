@@ -1,7 +1,7 @@
 import unittest
 import invest_core
 from osgeo import gdal
-from decimal import Decimal
+import os
 
 def assert_raster_equality(unit, firstUri, secondUri):
     output = gdal.Open(firstUri, 0)
@@ -46,7 +46,7 @@ class TestInvest(unittest.TestCase):
                                'type' : 'dbf',
                                'input': True}
     
-            output_dictionary = {'uri'  : '../../carbon_output/out.tif',
+            output_dictionary = {'uri'  : '../../carbon_output/test_carbon_output.tif',
                                  'type' : 'gdal',
                                  'dataType': gdal.GDT_Float32,
                                  'input': False}
@@ -58,6 +58,7 @@ class TestInvest(unittest.TestCase):
             invest_core.execute('carbon_core', arguments)
     
             assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
+            os.remove(output_dictionary['uri'])
             pass
 
 
@@ -76,7 +77,7 @@ class TestInvest(unittest.TestCase):
                                'type' : 'dbf',
                                'input': True}
             
-            output_dictionary = {'uri'  : '../../carbon_output/out.tif',
+            output_dictionary = {'uri'  : '../../carbon_output/test_carbon_output.tif',
                                  'type' : 'gdal',
                                  'dataType': gdal.GDT_Float32,
                                  'input': False}
@@ -88,6 +89,7 @@ class TestInvest(unittest.TestCase):
             invest_core.execute('carbon_core', arguments)
             
             assert_raster_equality(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
+            os.remove(output_dictionary['uri'])
             pass
         
         
