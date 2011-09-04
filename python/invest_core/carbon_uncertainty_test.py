@@ -23,7 +23,7 @@ class TestCarbonUncertainty(unittest.TestCase):
         lulc = driver.Create('../../test_data/test_blank_input', 1, 1, 1, gdal.GDT_Byte)
         lulc.GetRasterBand(1).SetNoDataValue(-1.0)
 
-        output = driver.Create('../../test_data/test_blank_output', 1, 1, 3, gdal.GDT_Byte)
+        output = driver.Create('../../test_data/test_blank_output', 1, 1, 4, gdal.GDT_Float32)
         for x in [1, 2, 3]: output.GetRasterBand(x).SetNoDataValue(-1.0)
 
         args = { 'lulc':lulc,
@@ -44,7 +44,7 @@ class TestCarbonUncertainty(unittest.TestCase):
                     'dataType': 6}
         output = driver.Create('../../uncertainty_sequestration.tif',
                                lulc.GetRasterBand(1).XSize,
-                               lulc.GetRasterBand(1).YSize, 3, gdal.GDT_Float32)
+                               lulc.GetRasterBand(1).YSize, 4, gdal.GDT_Float32)
         print output
         output.SetGeoTransform(lulc.GetGeoTransform())
         args = { 'lulc': lulc,
