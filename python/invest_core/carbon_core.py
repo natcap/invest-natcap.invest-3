@@ -116,6 +116,7 @@ def rasterDiff(seq_cur, seq_fut, outputRaster):
         seq_cur - a GDAL raster dataset
         seq_fut - a GDAL raster dataset
         outputRaster - a GDAL raster dataset"""
+        
     lulc_cur_band = seq_cur.GetRasterBand(1)
     lulc_fut_band = seq_fut.GetRasterBand(1)
     for i in range(0, lulc_cur_band.YSize):
@@ -140,6 +141,15 @@ def pixelArea(dataset):
     return areaMeters / (10 ** 4) #convert m^2 to Ha
 
 def build_pools(dbf, inputRaster, outputRaster):
+    """Extract the nodata values from the input and output rasters and build
+        the carbon pools dict.
+        
+        dbf - an open DBF dataset
+        inputRaster - a GDAL dataset (representing an LULC)
+        outputRaster - a GDAL dataset
+        
+        returns a dictionary calculating total carbon sequestered per lulc type.
+        """
     area = pixelArea(inputRaster)
     lulc = inputRaster.GetRasterBand(1)
     
