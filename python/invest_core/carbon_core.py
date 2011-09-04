@@ -26,6 +26,7 @@ def execute(args):
         args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
         args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
         args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
+        args['c_value'] - a float.  Represents the price of carbon in US Dollars.
         
         returns nothing"""
 
