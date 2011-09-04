@@ -24,8 +24,29 @@ def execute(args):
     #This maps pool types to band numbers
     poolTypes = {'L':1, 'A':2, 'H':3}
     pools = {}
+    
+    uncertaintyRank = None
+    
     for poolType in poolTypes:
         pools[poolType] = build_uncertainty_pools_dict(args['carbon_pools'], poolType, area, inNoData, outNoData)
+        maxValue,minValue = max(pools[poolType].values()), min(pools[poolType].values())
+        if minValue == None:
+            minValue = 0
+        
+        #create uncertainty dictionary with most recent dictionary as reference for keys
+        if uncertaintyRank == None:
+            uncertaintyRank = {}.fromkeys(pools[poolType].keys(),0.0)
+        
+        print maxValue,minValue
+            
+        #rank each pooltype
+        for type,value in pools[poolType].iteritems():
+            if maxValue != minValue and value != None:
+                uncertaintyRank[type] += (value-minValue)/(maxValue-minValue)/len(poolTypes)
+    
+    #add the uncertainty pool so it gets iterated over on the map step
+    poolTypes['uncertainty'] = 4
+    pools['uncertainty'] = uncertaintyRank
 
     #map each row in the lulc raster
     for rowNumber in range(0, lulc.YSize):
@@ -34,6 +55,7 @@ def execute(args):
         for poolType, index in poolTypes.iteritems():
             out_array = carbon_seq.execute(data, pools[poolType])
             args['output'].GetRasterBand(index).WriteArray(out_array, 0, rowNumber)
+            
 
 def build_uncertainty_pools_dict(dbf, poolType, area, inNoData, outNoData):
     """Build a dict for the carbon pool data accessible for each lulc classification.
