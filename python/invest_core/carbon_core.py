@@ -1,6 +1,8 @@
 import numpy as np
 import data_handler
 import carbon_seq
+import carbon_diff
+import carbon_value
 import osgeo.gdal
 import osgeo.osr as osr
 from dbfpy import dbf
