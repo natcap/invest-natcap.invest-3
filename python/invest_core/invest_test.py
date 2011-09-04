@@ -93,6 +93,54 @@ class TestInvest(unittest.TestCase):
             pass
         
         
+        def test_carbon_valuation(self):
+            """Verify that the carbon valuation model passes successfully"""
+            
+            lulc_cur = {'uri'  : '../../lulc_samp_cur',
+                               'type' :'gdal',
+                               'input': True}
+            lulc_fut = {'uri'  : '../../test_data/lulc_samp_fut',
+                               'type' :'gdal',
+                               'input': True}
+
+            pool_dictionary = {'uri'  : '../../test_data/carbon_pools_int.dbf',
+                               'type' : 'dbf',
+                               'input': True}
+            
+            seq_cur = {'uri'  : '../../carbon_output/test_carbon_output.tif',
+                                'type' : 'gdal',
+                                'dataType': gdal.GDT_Float32,
+                                'input': False}
+            
+            seq_fut = {'uri'  : '../../carbon_output/test_carbon_output.tif',
+                                 'type' : 'gdal',
+                                 'dataType': gdal.GDT_Float32,
+                                 'input': False}
+            
+            seq_delta = {'uri'  : '../../carbon_output/test_carbon_output.tif',
+                                 'type' : 'gdal',
+                                 'dataType': gdal.GDT_Float32,
+                                 'input': False}
+            
+            seq_value = {'uri'  : '../../carbon_output/test_carbon_output.tif',
+                                 'type' : 'gdal',
+                                 'dataType': gdal.GDT_Float32,
+                                 'input': False}
+            
+            arguments = {'lulc_cur': lulc_cur,
+                     'carbon_pools' : pool_dictionary,
+                     'seq_cur' : seq_cur,
+                     'seq_fut' : seq_fut,
+                     'seq_delta' : seq_delta,
+                     'seq_value' : seq_value,
+                     'calc_value' : True,
+                     'lulc_cur_year' : 2000,
+                     'lulc_fut_year' : 2030}
+            
+            invest_core.execute('carbon_core', arguments)
+            pass
+        
+        
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvest)
