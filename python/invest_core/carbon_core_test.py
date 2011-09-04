@@ -20,32 +20,40 @@ class TestCarbonCore(unittest.TestCase):
         """Smoke test for carbon_core function.  Shouldn't crash with
         zero length inputs"""
         driver = gdal.GetDriverByName("GTIFF")
-        lulc =  driver.Create('../../test_data/test_blank_input', 1, 1, 1, gdal.GDT_Byte)
+        lulc_path = '../../test_data/test_blank_input'
+        lulc =  driver.Create(lulc_path, 1, 1, 1, gdal.GDT_Byte)
         lulc.GetRasterBand(1).SetNoDataValue(-1.0)
 
-        output =  driver.Create('../../test_data/test_blank_output', 1, 1, 1, gdal.GDT_Byte)
+        output_path = '../../test_data/test_blank_output'
+        output =  driver.Create(output_path, 1, 1, 1, gdal.GDT_Byte)
         output.GetRasterBand(1).SetNoDataValue(-1.0)
 
         args = { 'lulc_cur':lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/test_blank_dbf', new=True),
-                'seq_cur': output}
+                'seq_cur': output,
+                'calc_value' : False}
         carbon_core.execute(args)
+        os.remove(lulc_path)
+        os.remove(output_path)
         pass
 
     def test_carbon_core_with_inputs(self):
         """Test carbon_core using realistic inputs."""
         driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../lulc_samp_cur', GA_ReadOnly)
-        out_dict = {'uri':'../../carbon_output/test_real_output.tif',
+        out_dict = {'uri':'../../test_real_output.tif',
                     'input':False,
                     'type': 'gdal',
                     'dataType': 6}
         output = data_handler.mimic(lulc, out_dict)
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
-                'seq_cur': output}
+                'seq_cur': output,
+                'calc_value' : False}
+
         carbon_core.execute(args)
         output = data_handler.close(output)
+        os.remove(out_dict['uri'])
         pass
 
     def test_build_pools(self):

@@ -1,6 +1,8 @@
 import numpy as np
 import data_handler
 import carbon_seq
+import carbon_diff
+import carbon_value
 import osgeo.gdal
 import osgeo.osr as osr
 from dbfpy import dbf
@@ -61,7 +63,7 @@ def valuate(args):
     
     rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
     rasterSeq(pools, args['lulc_fut'], args['seq_fut'])
-    rasterDiff(args['lulc_cur'], args['lulc_fut'], args['seq_delta'])
+    rasterDiff(args['seq_cur'], args['seq_fut'], args['seq_delta'])
     rasterValue(args['lulc_cur'], args['seq_value'], args['c_value'], args['discount'], numYears)
     
     
@@ -92,15 +94,31 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
     
 
 def rasterSeq(pools, inputRaster, outputRaster):
+    """Iterate through the rows in a raster and map carbon sequestration values
+        to the output raster.
+        
+        pools - a python dict mapping lulc indices to sequestration data
+        inputRaster - a GDAL raster dataset
+        outputRaster - a GDAL raster dataset
+        
+        No return value."""
+        
     lulc = inputRaster.GetRasterBand(1)
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_seq.execute(data, pools)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
-def rasterDiff(lulc_cur, lulc_fut, outputRaster):
-    lulc_cur_band = lulc_cur.GetRasterBand(1)
-    lulc_fut_band = lulc_fut.GetRasterBand(1)
+def rasterDiff(seq_cur, seq_fut, outputRaster):
+    """Iterate through the rows in the two sequestration rasters and calculate the 
+        difference in each pixel.  Maps the difference to the output raster.
+        
+        seq_cur - a GDAL raster dataset
+        seq_fut - a GDAL raster dataset
+        outputRaster - a GDAL raster dataset"""
+        
+    lulc_cur_band = seq_cur.GetRasterBand(1)
+    lulc_fut_band = seq_fut.GetRasterBand(1)
     for i in range(0, lulc_cur_band.YSize):
         cur_data = lulc_cur_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
         fut_data = lulc_fut_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
@@ -123,6 +141,15 @@ def pixelArea(dataset):
     return areaMeters / (10 ** 4) #convert m^2 to Ha
 
 def build_pools(dbf, inputRaster, outputRaster):
+    """Extract the nodata values from the input and output rasters and build
+        the carbon pools dict.
+        
+        dbf - an open DBF dataset
+        inputRaster - a GDAL dataset (representing an LULC)
+        outputRaster - a GDAL dataset
+        
+        returns a dictionary calculating total carbon sequestered per lulc type.
+        """
     area = pixelArea(inputRaster)
     lulc = inputRaster.GetRasterBand(1)
     
