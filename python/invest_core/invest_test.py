@@ -107,27 +107,28 @@ class TestInvest(unittest.TestCase):
                                'type' : 'dbf',
                                'input': True}
             
-            seq_cur = {'uri'  : '../../carbon_output/test_carbon_output.tif',
+            seq_cur = {'uri'  : '../../carbon_output/test_seq_cur.tif',
                                 'type' : 'gdal',
                                 'dataType': gdal.GDT_Float32,
                                 'input': False}
             
-            seq_fut = {'uri'  : '../../carbon_output/test_carbon_output.tif',
+            seq_fut = {'uri'  : '../../carbon_output/test_seq_fut.tif',
                                  'type' : 'gdal',
                                  'dataType': gdal.GDT_Float32,
                                  'input': False}
             
-            seq_delta = {'uri'  : '../../carbon_output/test_carbon_output.tif',
+            seq_delta = {'uri'  : '../../carbon_output/test_seq_delta.tif',
                                  'type' : 'gdal',
                                  'dataType': gdal.GDT_Float32,
                                  'input': False}
             
-            seq_value = {'uri'  : '../../carbon_output/test_carbon_output.tif',
+            seq_value = {'uri'  : '../../carbon_output/test_carbon_value.tif',
                                  'type' : 'gdal',
                                  'dataType': gdal.GDT_Float32,
                                  'input': False}
             
             arguments = {'lulc_cur': lulc_cur,
+                         'lulc_fut': lulc_fut,
                      'carbon_pools' : pool_dictionary,
                      'seq_cur' : seq_cur,
                      'seq_fut' : seq_fut,
