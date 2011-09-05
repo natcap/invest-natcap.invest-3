@@ -23,7 +23,7 @@ def execute(model, args):
     inKeys = ['lulc_cur', 'carbon_pools']
     if args['calc_value'] == True:
         outKeys += ['seq_fut', 'seq_delta', 'seq_value']
-        inKeys += ['luc_fut']
+        inKeys += ['lulc_fut']
 
     #process the args for input
     for key in (inKeys):
