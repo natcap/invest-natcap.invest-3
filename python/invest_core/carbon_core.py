@@ -70,7 +70,9 @@ def valuate(args):
     rasterDiff(args['seq_cur'], args['seq_fut'], args['seq_delta'])
     
     rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], args['rate_change'], numYears)
-    args['seq_value'] = None #close the dataset
+    
+    for dataset in ('seq_value', 'seq_delta', 'seq_cur', 'seq_fut'):
+        args[dataset] = None
     
     
     

@@ -147,10 +147,11 @@ class TestInvest(unittest.TestCase):
                      'rate_change' : 0.04}
             
             invest_core.execute('carbon_core', arguments)
+                            
+            assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
             
             for dict in (seq_cur, seq_fut, seq_delta, seq_value):
                 os.remove(dict['uri'])
-                
             pass
         
         
