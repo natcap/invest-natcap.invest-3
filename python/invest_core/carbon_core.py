@@ -6,6 +6,7 @@ import carbon_value
 import osgeo.gdal
 import osgeo.osr as osr
 from dbfpy import dbf
+from math import exp
 
 def execute(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -60,7 +61,7 @@ def valuate(args):
         
         No return value"""
         
-    numYears = args['lulc_cur_year'] - args['lulc_fut_year']
+    numYears = float(args['lulc_fut_year'] - args['lulc_cur_year'])
     
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
     
@@ -70,7 +71,9 @@ def valuate(args):
     rasterDiff(args['seq_cur'], args['seq_fut'], args['seq_delta'])
     
     rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], args['rate_change'], numYears)
-    args['seq_value'] = None #close the dataset
+    
+    for dataset in ('seq_value', 'seq_delta', 'seq_cur', 'seq_fut'):
+        args[dataset] = None
     
     
     
@@ -89,9 +92,10 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
         
     lulc = inputRaster.GetRasterBand(1)
     
-    multiplier = 0
-    for n in range(numYears-1):
-        multiplier += 1/(((1+rateOfChange)^n)(1+discount)^n)
+    multiplier = 0.
+    #for n in np.arange(0, numYears-1., 1.0):
+    for n in range(int(numYears)-1):
+        multiplier += 1./(((1.+rateOfChange)**n)*(1.+discount)**n)
     
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
