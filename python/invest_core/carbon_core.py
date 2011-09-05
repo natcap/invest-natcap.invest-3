@@ -49,7 +49,7 @@ def sequester(args):
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
 
     rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
-
+    args['seq_cur'] = None #close the dataset
 
 def valuate(args):
     """Executes the economic valuation model.
@@ -64,6 +64,8 @@ def valuate(args):
     
     rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
     rasterSeq(pools, args['lulc_fut'], args['seq_fut'])
+    args['seq_cur'], args['seq_fut'] = None #close the datasets
+    
     rasterDiff(args['seq_cur'], args['seq_fut'], args['seq_delta'])
     rasterValue(args['lulc_cur'], args['seq_value'], args['c_value'], args['discount'], numYears)
     
@@ -109,6 +111,7 @@ def rasterSeq(pools, inputRaster, outputRaster):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_seq.execute(data, pools)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
+    
 
 def rasterDiff(seq_cur, seq_fut, outputRaster):
     """Iterate through the rows in the two sequestration rasters and calculate the 
