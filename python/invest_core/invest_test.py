@@ -86,9 +86,10 @@ class TestInvest(unittest.TestCase):
                                  'dataType': gdal.GDT_Float32,
                                  'input': False}
 
-            arguments = {'lulc': lulc_dictionary,
+            arguments = {'lulc_cur': lulc_dictionary,
                      'carbon_pools' : pool_dictionary,
-                     'output' : output_dictionary}
+                     'seq_cur' : output_dictionary,
+                     'calc_value' : False}
 
             invest_core.execute('carbon_core', arguments)
             
