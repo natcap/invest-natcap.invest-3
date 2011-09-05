@@ -90,6 +90,7 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
         
         No return value."""
         
+    nodataDict = build_nodata_dict(inputRaster, outputRaster)
     lulc = inputRaster.GetRasterBand(1)
     
     multiplier = 0.
@@ -99,7 +100,7 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
     
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
-        out_array = carbon_value.execute(data, numYears, carbonValue, multiplier)
+        out_array = carbon_value.execute(nodataDict, data, numYears, carbonValue, multiplier)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
         
     

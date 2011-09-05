@@ -1,7 +1,7 @@
 from numpy import *
 import numpy as np
 
-def execute(data, numYears, carbonValue, multiplier):
+def execute(nodata, data, numYears, carbonValue, multiplier):
     """iterate through the array and calculate the economic value of sequestered carbon.
         Map the values to the output array.
         
@@ -11,8 +11,11 @@ def execute(data, numYears, carbonValue, multiplier):
         multiplier - a float"""
         
     def mapValue(x):
-        #caluclate the pixel-specific value of carbon for this simulation
-        return carbonValue*(x/numYears)*multiplier 
+        if x == nodata['cur']:
+            return nodata['fut']
+        else:
+            #calculate the pixel-specific value of carbon for this simulation
+            return carbonValue*(x/numYears)*multiplier 
     
     if data.size > 0:
         mapFun = np.vectorize(mapValue)
