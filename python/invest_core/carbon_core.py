@@ -128,13 +128,14 @@ def rasterDiff(seq_cur, seq_fut, outputRaster):
         seq_cur - a GDAL raster dataset
         seq_fut - a GDAL raster dataset
         outputRaster - a GDAL raster dataset"""
-        
+    
+    nodataDict = build_nodata_dict(seq_cur, outputRaster)
     lulc_cur_band = seq_cur.GetRasterBand(1)
     lulc_fut_band = seq_fut.GetRasterBand(1)
     for i in range(0, lulc_cur_band.YSize):
         cur_data = lulc_cur_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
         fut_data = lulc_fut_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
-        out_array = carbon_diff.execute(cur_data, fut_data)
+        out_array = carbon_diff.execute(nodataDict, cur_data, fut_data)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def pixelArea(dataset):
@@ -151,6 +152,13 @@ def pixelArea(dataset):
     #take absolute value since sometimes negative widths/heights
     areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
     return areaMeters / (10 ** 4) #convert m^2 to Ha
+
+def build_nodata_dict(inputRaster, outputRaster):
+    inNoData = inputRaster.GetRasterBand(1).GetNoDataValue()
+    outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
+    
+    nodata = {'cur': inNoData, 'fut': outNoData}
+    return nodata
 
 def build_pools(dbf, inputRaster, outputRaster):
     """Extract the nodata values from the input and output rasters and build
