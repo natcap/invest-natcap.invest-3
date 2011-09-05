@@ -6,6 +6,7 @@ import carbon_value
 import osgeo.gdal
 import osgeo.osr as osr
 from dbfpy import dbf
+from math import exp
 
 def execute(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -92,8 +93,9 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
     lulc = inputRaster.GetRasterBand(1)
     
     multiplier = 0.
-    for n in range(numYears-1.):
-        multiplier += 1./(((1.+rateOfChange)^n)(1.+discount)^n)
+    #for n in np.arange(0, numYears-1., 1.0):
+    for n in range(int(numYears)-1):
+        multiplier += 1./(((1.+rateOfChange)**n)*(1.+discount)**n)
     
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
