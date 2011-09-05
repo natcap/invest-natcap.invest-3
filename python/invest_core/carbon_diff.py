@@ -9,7 +9,7 @@ def execute(nodata, lulc_cur, lulc_fut):
         if a == nodata['cur']:
             return nodata['fut']
         else:
-            return a-b
+            return b-a
     
     if lulc_cur.size > 0:
         mapFun = np.vectorize(mapDiff)

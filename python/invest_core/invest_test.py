@@ -142,7 +142,7 @@ class TestInvest(unittest.TestCase):
                      'calc_value' : True,
                      'lulc_cur_year' : 2000,
                      'lulc_fut_year' : 2030,
-                     'c_value' : 43,
+                     'c_value' : 43.0,
                      'discount' : 0.07,
                      'rate_change' : 0.0}
             
@@ -150,8 +150,8 @@ class TestInvest(unittest.TestCase):
                             
             assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
             
-            for dict in (seq_cur, seq_fut, seq_delta, seq_value):
-                os.remove(dict['uri'])
+#            for dict in (seq_cur, seq_fut, seq_delta, seq_value):
+#                os.remove(dict['uri'])
             pass
         
         
