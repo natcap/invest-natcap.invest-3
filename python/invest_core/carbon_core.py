@@ -64,7 +64,6 @@ def valuate(args):
     
     rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
     rasterSeq(pools, args['lulc_fut'], args['seq_fut'])
-    args['seq_cur'], args['seq_fut'] = None #close the datasets
     
     rasterDiff(args['seq_cur'], args['seq_fut'], args['seq_delta'])
     args['seq_delta'] = None #close the dataset
