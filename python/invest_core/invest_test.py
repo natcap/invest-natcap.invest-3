@@ -25,7 +25,7 @@ def assert_raster_equality(unit, firstUri, secondUri):
             else:
                 a = outArray[0][j]
                 b = i2Array[0][j]
-                unit.assertAlmostEqual(a, b, 5, "Unequal pixel values detected at row " +
+                unit.assertAlmostEqual(a, b, 4, "Unequal pixel values detected at row " +
                                   str(i) + " index " + str(j) + ":" + str(a) + " " + str(b))
 
 

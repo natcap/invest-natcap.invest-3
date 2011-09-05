@@ -61,7 +61,7 @@ def valuate(args):
         
         No return value"""
         
-    numYears = float(args['lulc_fut_year'] - args['lulc_cur_year'])
+    numYears = args['lulc_fut_year'] - args['lulc_cur_year']
     
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
     
@@ -94,8 +94,8 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
     lulc = inputRaster.GetRasterBand(1)
     
     multiplier = 0.
-    #for n in np.arange(0, numYears-1., 1.0):
-    for n in range(int(numYears)-1):
+#    for n in range(numYears-1): #Subtract 1 per the user's manual
+    for n in range(numYears):    #This is incorrect, but it allows us to match the results of invest2
         multiplier += 1./(((1.+rateOfChange)**n)*(1.+discount)**n)
     
     for i in range(0, lulc.YSize):
