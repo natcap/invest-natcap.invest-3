@@ -18,12 +18,19 @@ def execute(model, args):
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     module = imp.load_source(model, model + '.py')
 
+    #build up lists of the necessary files for this model
+    outKeys = ['seq_cur']
+    inKeys = ['lulc_cur', 'carbon_pools']
+    if args['calc_value'] == True:
+        outKeys += ['seq_fut', 'seq_delta', 'seq_value']
+        inKeys += ['luc_fut']
+
     #process the args for input
-    for key in ('lulc_cur', 'lulc_fut', 'carbon_pools'):
+    for key in (inKeys):
         args[key] = data_handler.open(args[key])
 
     #process the args for output
-    for key in ('seq_cur', 'seq_fut', 'seq_delta', 'seq_value'):
+    for key in (outKeys):
         args[key] = data_handler.mimic(args['lulc_cur'], args[key])
 
     #execute the well known name 'execute' that exists in all invest plugins
