@@ -45,7 +45,6 @@ class TestCarbonUncertainty(unittest.TestCase):
         output = driver.Create('../../uncertainty_sequestration.tif',
                                lulc.GetRasterBand(1).XSize,
                                lulc.GetRasterBand(1).YSize, 4, gdal.GDT_Float32)
-        print output
         output.SetGeoTransform(lulc.GetGeoTransform())
         args = { 'lulc': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/uncertain_carbon_pools_samp.dbf'),

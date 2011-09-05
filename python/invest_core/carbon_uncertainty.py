@@ -37,8 +37,6 @@ def execute(args):
         if uncertaintyRank == None:
             uncertaintyRank = {}.fromkeys(pools[poolType].keys(),0.0)
         
-        print maxValue,minValue
-            
         #rank each pooltype
         for type,value in pools[poolType].iteritems():
             if maxValue != minValue and value != None:
