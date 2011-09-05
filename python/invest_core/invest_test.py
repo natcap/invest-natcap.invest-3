@@ -142,9 +142,9 @@ class TestInvest(unittest.TestCase):
                      'calc_value' : True,
                      'lulc_cur_year' : 2000,
                      'lulc_fut_year' : 2030,
-                     'c_value' : 3.67,
+                     'c_value' : 43,
                      'discount' : 0.07,
-                     'rate_change' : 0.04}
+                     'rate_change' : 0.0}
             
             invest_core.execute('carbon_core', arguments)
                             
