@@ -48,7 +48,7 @@ class TestCarbonUncertainty(unittest.TestCase):
         print output
         output.SetGeoTransform(lulc.GetGeoTransform())
         args = { 'lulc': lulc,
-                'carbon_pools': dbf.Dbf('../../uncertain_carbon_pools_samp.dbf'),
+                'carbon_pools': dbf.Dbf('../../test_data/uncertain_carbon_pools_samp.dbf'),
                 'output': output}
         carbon_uncertainty.execute(args)
 
@@ -57,7 +57,7 @@ class TestCarbonUncertainty(unittest.TestCase):
 
     def test_build_uncertainty_pools(self):
         """Verify the correct construction of the pools dict"""
-        db = dbf.Dbf('../../uncertain_carbon_pools_samp.dbf', readOnly=1)
+        db = dbf.Dbf('../../test_data/uncertain_carbon_pools_samp.dbf', readOnly=1)
         for type in ['L', 'A', 'H']:
             pools = carbon_uncertainty.build_uncertainty_pools_dict(db, type, 1, -1, 255)
             numRecords = db.recordCount
