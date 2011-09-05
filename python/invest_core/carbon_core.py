@@ -67,7 +67,11 @@ def valuate(args):
     args['seq_cur'], args['seq_fut'] = None #close the datasets
     
     rasterDiff(args['seq_cur'], args['seq_fut'], args['seq_delta'])
-    rasterValue(args['lulc_cur'], args['seq_value'], args['c_value'], args['discount'], numYears)
+    args['seq_delta'] = None #close the dataset
+    
+    rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], numYears)
+    args['seq_value'] = None #close the dataset
+    
     
     
 def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, numYears):
