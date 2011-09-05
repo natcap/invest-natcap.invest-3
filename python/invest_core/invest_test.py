@@ -51,9 +51,13 @@ class TestInvest(unittest.TestCase):
                                  'dataType': gdal.GDT_Float32,
                                  'input': False}
     
-            arguments = {'lulc': lulc_dictionary,
+            arguments = {'lulc_cur': lulc_dictionary,
+                         'lulc_fut': None,
                          'carbon_pools' : pool_dictionary,
-                         'output' : output_dictionary}
+                         'seq_cur' : output_dictionary,
+                         'seq_fut' : None,
+                         'seq_delta': None,
+                         'calc_value' : False}
     
             invest_core.execute('carbon_core', arguments)
     
@@ -136,7 +140,10 @@ class TestInvest(unittest.TestCase):
                      'seq_value' : seq_value,
                      'calc_value' : True,
                      'lulc_cur_year' : 2000,
-                     'lulc_fut_year' : 2030}
+                     'lulc_fut_year' : 2030,
+                     'c_value' : 3.67,
+                     'discount' : 0.07,
+                     'rate_change' : 0.04}
             
             invest_core.execute('carbon_core', arguments)
             pass

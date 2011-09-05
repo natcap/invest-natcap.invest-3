@@ -27,6 +27,8 @@ def execute(args):
         args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
         args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
         args['c_value'] - a float.  Represents the price of carbon in US Dollars.
+        args['discount'] - a float.  Represents the annual discount in the price of carbon
+        args['rate_change'] - a float.  Represents the rate of change in the price of carbon
         
         returns nothing"""
 
@@ -66,9 +68,8 @@ def valuate(args):
     rasterSeq(pools, args['lulc_fut'], args['seq_fut'])
     
     rasterDiff(args['seq_cur'], args['seq_fut'], args['seq_delta'])
-    args['seq_delta'] = None #close the dataset
     
-    rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], numYears)
+    rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], args['rate_change'], numYears)
     args['seq_value'] = None #close the dataset
     
     
