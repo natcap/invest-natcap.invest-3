@@ -1,6 +1,7 @@
 import carbon_core
 import carbon_uncertainty
 import carbon_seq
+import numpy as np
 
 def execute(args):
     """Runs a scenario based uncertainty model for two LULC maps.  Output
@@ -46,14 +47,24 @@ def execute(args):
         pools[poolType] = carbon_uncertainty.build_uncertainty_pools_dict(
             args['carbon_pools'], poolType, area, inNoData, outNoData)
 
+    bandRanges = {1: None,
+                  2: None,
+                  3: None}
+
     #map each row in the lulc raster
     for rowNumber in range(0, lulcCurrent.YSize):
         dataCurrent = lulcCurrent.ReadAsArray(0, rowNumber, lulcCurrent.XSize, 1)
         dataFuture = lulcFuture.ReadAsArray(0, rowNumber, lulcFuture.XSize, 1)
-        #create a seq map for each pooltype 
-        for poolType, index in poolTypes.iteritems():
-            sequesteredCurrent = carbon_seq.execute(dataCurrent, pools[poolType])
-            sequesteredFuture = carbon_seq.execute(dataFuture, pools[poolType])
+        #create a seqestration map for high-low, low-high, and average-average
+        for poolTypeA, poolTypeB, outputIndex in [('L', 'H', 1), ('H', 'L', 2), ('A', 'A', 3)]:
+            sequesteredCurrent = carbon_seq.execute(dataCurrent, pools[poolTypeA])
+            sequesteredFuture = carbon_seq.execute(dataFuture, pools[poolTypeB])
             sequesteredChange = sequesteredCurrent - sequesteredFuture
-            args['output'].GetRasterBand(index).WriteArray(sequesteredChange,
+            if not bandRanges[outputIndex]:
+                bandRanges[outputIndex] = (np.min(sequesteredChange), np.max(sequesteredChange))
+            else:
+                bandRanges[outputIndex] = (min(np.min(sequesteredChange), bandRanges[outputIndex][0]),
+                                       max(np.max(sequesteredChange), bandRanges[outputIndex][1]))
+            args['output'].GetRasterBand(outputIndex).WriteArray(sequesteredChange,
                                                            0, rowNumber)
+
