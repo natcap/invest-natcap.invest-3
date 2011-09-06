@@ -20,11 +20,6 @@ lulc_fut_uri = gp.GetParameterAsText(4)
 lulc_fut_year = gp.GetParameter(5)
 valuation = gp.GetParameterAsText(6)
 
-if valuation == 'true':
-    args['calc_value'] = True
-else:
-    args['calc_value'] = False
-
 lulc_cur_dict = {'uri'  : lulc_cur_uri,
                    'type' :'gdal',
                    'input': True}
@@ -85,11 +80,16 @@ arguments = {'lulc_cur': lulc_cur_dict,
              'lulc_cur_year' : lulc_cur_year,
              'lulc_fut_year' : lulc_fut_year}
 
+if valuation == 'true':
+    arguments['calc_value'] = True
+else:
+    arguments['calc_value'] = False
+
 gp.AddMessage('Starting carbon model')
 
-#process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
-#                            'python\\invest_core\\invest.py',
-#                            'carbon_core', json.dumps(arguments)])
+process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
+                            'python\\invest_core\\invest.py',
+                            'carbon_core', json.dumps(arguments)])
 gp.AddMessage('Waiting')
 #process.wait()
 
