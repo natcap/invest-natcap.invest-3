@@ -20,6 +20,21 @@ lulc_fut_uri = gp.GetParameterAsText(4)
 lulc_fut_year = gp.GetParameter(5)
 valuation = gp.GetParameterAsText(6)
 
+
+#build up the JSON dictionary for saving to disk.
+json_dict = {'output_dir': output_dir,
+             'lulc_cur_uri': lulc_cur_uri,
+             'lulc_cur_year': lulc_cur_year,
+             'pool_uri': pool_uri,
+             'lulc_fut_uri': lulc_fut_uri,
+             'lulc_fut_year': lulc_fut_year,
+             'valuation': valuation }
+
+args_file = open('carbon_args.json', 'w')
+args_file.writelines(json.dumps(json_dict))
+args_file.close()
+
+
 lulc_cur_dict = {'uri'  : lulc_cur_uri,
                    'type' :'gdal',
                    'input': True}
