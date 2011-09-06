@@ -18,38 +18,38 @@ class TestDataHandler(unittest.TestCase):
 
     def test_input_raster(self):
         """Test to load an input raster file."""
-        lulc = data_handler.open({'uri'  : '../../lulc_samp_cur',
+        lulc = data_handler.open({'uri'  : '../../test_data/lulc_samp_cur',
                            'type': 'gdal',
                            'input': True})
         self.assertEqual(lulc.RasterXSize, 1325, "Different widths found")
         self.assertEqual(lulc.RasterYSize, 1889, "Different heights found")
         pass
-    
+
     def test_output_raster(self):
         """Test to load an output raster file."""
-        lulc = data_handler.open({'uri'  : '../../lulc_samp_cur',
+        lulc = data_handler.open({'uri'  : '../../test_data/lulc_samp_cur',
                            'type': 'gdal',
-                           'input': True,})
-        
+                           'input': True, })
+
         output = {'uri'  : '../../carbon_output_map',
                   'type' : 'gdal',
                   'dataType' : gdal.GDT_Float32,
-                  'input': False,}
-        
+                  'input': False, }
+
         output = data_handler.mimic(lulc, output)
         self.assertEqual(lulc.RasterXSize, output.RasterXSize, "Input and output raster widths differ")
-        self.assertEqual(lulc.RasterYSize, output.RasterYSize, "Input and output raster heights differ")        
+        self.assertEqual(lulc.RasterYSize, output.RasterYSize, "Input and output raster heights differ")
         pass
-    
+
     def test_dataset_close(self):
         """Test to close a dataset"""
-        data = data_handler.open({'uri'  : '../../lulc_samp_cur',
+        data = data_handler.open({'uri'  : '../../test_data/lulc_samp_cur',
                            'type': 'gdal',
                            'input': True})
         data = data_handler.close(data)
         self.assertEqual(data, None) #a closed dataset == None
         pass
-    
+
     def test_dbf_close(self):
         """Test to close a dbf file"""
         db = data_handler.open({'uri':'../../test_data/carbon_pools_float.dbf',
@@ -61,9 +61,9 @@ class TestDataHandler(unittest.TestCase):
 
     def test_verify_gdal_data_type(self):
         """Test that the output file dataType is set correctly."""
-        lulc = data_handler.open({'uri'  : '../../lulc_samp_cur',
+        lulc = data_handler.open({'uri'  : '../../test_data/lulc_samp_cur',
                            'type': 'gdal',
-                           'input': True,})
+                           'input': True, })
         output = {'uri'  : '../../carbon_output_map',
                   'type' : 'gdal',
                   'input': False}
