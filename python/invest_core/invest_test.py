@@ -38,7 +38,7 @@ class TestInvest(unittest.TestCase):
         def test_carbon_model_regression(self):
             """Regression Test to run Carbon model using sample data.  
             Results will be compared with a raster that is known to be accurate."""
-            lulc_dictionary = {'uri'  : '../../lulc_samp_cur',
+            lulc_dictionary = {'uri'  : '../../test_data/lulc_samp_cur',
                                'type' :'gdal',
                                'input': True}
     
@@ -73,7 +73,7 @@ class TestInvest(unittest.TestCase):
                 
                 Uses the modified pools dbf, where all values are ints."""
                 
-            lulc_dictionary = {'uri'  : '../../lulc_samp_cur',
+            lulc_dictionary = {'uri'  : '../../test_data/lulc_samp_cur',
                                'type' :'gdal',
                                'input': True}
 
@@ -101,7 +101,7 @@ class TestInvest(unittest.TestCase):
         def test_carbon_valuation(self):
             """Verify that the carbon valuation model passes successfully"""
             
-            lulc_cur = {'uri'  : '../../lulc_samp_cur',
+            lulc_cur = {'uri'  : '../../test_data/lulc_samp_cur',
                                'type' :'gdal',
                                'input': True}
             lulc_fut = {'uri'  : '../../test_data/lulc_samp_fut',
@@ -150,8 +150,8 @@ class TestInvest(unittest.TestCase):
                             
             assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
             
-#            for dict in (seq_cur, seq_fut, seq_delta, seq_value):
-#                os.remove(dict['uri'])
+            for dict in (seq_cur, seq_fut, seq_delta, seq_value):
+                os.remove(dict['uri'])
             pass
         
         

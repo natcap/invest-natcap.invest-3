@@ -33,8 +33,15 @@ class TestCarbonCore(unittest.TestCase):
                 'seq_cur': output,
                 'calc_value' : False}
         carbon_core.execute(args)
-        os.remove(lulc_path)
+        
+        #close the two created datasets and dbf file.
+        lulc = None
+        output = None
+        data_handler.close(args['carbon_pools'])
+        
         os.remove(output_path)
+        os.remove('../../test_data/test_blank_dbf')
+        os.remove(lulc_path)
         pass
 
     def test_carbon_core_with_inputs(self):

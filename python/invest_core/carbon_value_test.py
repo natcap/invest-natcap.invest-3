@@ -8,10 +8,10 @@ class TestCarbonValue(unittest.TestCase):
         #setup the three args to carbon_seq
         length = 100
         lulc = np.ones((1, length))
-
+        nodata = {'cur': -1, 'fut': -1}
 
         #run carbon_value
-        output = carbon_value.execute(lulc, 3, 2.0, 4.0)
+        output = carbon_value.execute(nodata, lulc, 3, 2.0, 4.0)
 
         #verify the output data was calculated and mapped correctly
         #Each value should equal 2.66666666666
