@@ -21,11 +21,11 @@ class TestCarbonCore(unittest.TestCase):
         zero length inputs"""
         driver = gdal.GetDriverByName("GTIFF")
         lulc_path = '../../test_data/test_blank_input'
-        lulc =  driver.Create(lulc_path, 1, 1, 1, gdal.GDT_Byte)
+        lulc = driver.Create(lulc_path, 1, 1, 1, gdal.GDT_Byte)
         lulc.GetRasterBand(1).SetNoDataValue(-1.0)
 
         output_path = '../../test_data/test_blank_output'
-        output =  driver.Create(output_path, 1, 1, 1, gdal.GDT_Byte)
+        output = driver.Create(output_path, 1, 1, 1, gdal.GDT_Byte)
         output.GetRasterBand(1).SetNoDataValue(-1.0)
 
         args = { 'lulc_cur':lulc,
@@ -40,7 +40,7 @@ class TestCarbonCore(unittest.TestCase):
     def test_carbon_core_with_inputs(self):
         """Test carbon_core using realistic inputs."""
         driver = gdal.GetDriverByName("GTIFF")
-        lulc = gdal.Open('../../lulc_samp_cur', GA_ReadOnly)
+        lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         out_dict = {'uri':'../../test_real_output.tif',
                     'input':False,
                     'type': 'gdal',
@@ -62,10 +62,10 @@ class TestCarbonCore(unittest.TestCase):
         pools = carbon_core.build_pools_dict(db, 1, -1, 255)
         numRecords = db.recordCount
         poolsLen = len(pools)
-        
+
         #adding one extra value to the expected length of the pools dict
         #Extra entry represents the nodata value.
-        self.assertEqual(numRecords+1, poolsLen, 'Expected ' + str(numRecords) + 
+        self.assertEqual(numRecords + 1, poolsLen, 'Expected ' + str(numRecords) +
                          ' records in the pools dict, but found ' + str(poolsLen) + ' instead')
         pass
 

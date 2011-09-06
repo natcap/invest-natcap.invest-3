@@ -37,7 +37,7 @@ class TestCarbonUncertainty(unittest.TestCase):
     def test_carbon_uncertainty_with_inputs(self):
         """Test carbon_uncertainty using realistic inputs."""
         driver = gdal.GetDriverByName("GTIFF")
-        lulc = gdal.Open('../../lulc_samp_cur', GA_ReadOnly)
+        lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         out_dict = {'uri':'../../carbon_output/test_real_output.tif',
                     'input':False,
                     'type': 'gdal',
