@@ -60,11 +60,28 @@ def execute(args):
             sequesteredCurrent = carbon_seq.execute(dataCurrent, pools[poolTypeA])
             sequesteredFuture = carbon_seq.execute(dataFuture, pools[poolTypeB])
             sequesteredChange = sequesteredCurrent - sequesteredFuture
+            #build up the min/max dictionary for each band
             if not bandRanges[outputIndex]:
                 bandRanges[outputIndex] = (np.min(sequesteredChange), np.max(sequesteredChange))
             else:
                 bandRanges[outputIndex] = (min(np.min(sequesteredChange), bandRanges[outputIndex][0]),
                                        max(np.max(sequesteredChange), bandRanges[outputIndex][1]))
-            args['output'].GetRasterBand(outputIndex).WriteArray(sequesteredChange,
-                                                           0, rowNumber)
 
+            args['output'].GetRasterBand(outputIndex).WriteArray(sequesteredChange, 0, rowNumber)
+
+    #create the output percentile band
+    def convertToPercent(x, min, max):
+        if min == max:
+            return 0
+        return (x - min) / (max - min)
+    percentileMapper = np.vectorize(convertToPercent)
+
+    for rowNumber in range(lulcCurrent.YSize):
+        outputRow = args['output'].GetRasterBand(1).ReadAsArray(0, rowNumber,
+                                                    lulcCurrent.XSize, 1)
+        outputPercentile = percentileMapper(outputRow, bandRanges[1][0], bandRanges[1][1])
+        for i in [2, 3]:
+            outputPercentile = np.minimum(outputPercentile,
+                    percentileMapper(args['output'].GetRasterBand(i).ReadAsArray(0,
+                    rowNumber, lulcCurrent.XSize, 1), bandRanges[i][0], bandRanges[i][1]))
+        args['output'].GetRasterBand(4).WriteArray(outputPercentile, 0, rowNumber)
