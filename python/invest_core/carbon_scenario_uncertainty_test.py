@@ -15,7 +15,7 @@ class TestCarbonScenarioUncertainty(unittest.TestCase):
         lulc_cur.GetRasterBand(1).SetNoDataValue(-1.0)
 
         output = driver.Create('../../test_data/test_blank_output', 1, 1, 4, gdal.GDT_Float32)
-        for x in [1, 2, 3, 4]: output.GetRasterBand(x).SetNoDataValue(-1.0)
+        for x in [1, 2, 3, 4]: output.GetRasterBand(x).SetNoDataValue(0.0)
 
         args = { 'lulc_cur':lulc_cur,
                 'lulc_fut':lulc_cur,
@@ -34,8 +34,10 @@ class TestCarbonScenarioUncertainty(unittest.TestCase):
         output = driver.Create('../../uncertainty_sequestration_scenario.tif',
                                lulc_cur.GetRasterBand(1).XSize,
                                lulc_cur.GetRasterBand(1).YSize, 4, gdal.GDT_Float32)
-        output.SetGeoTransform(lulc.GetGeoTransform())
-        args = { 'lulc': lulc,
+        for x in [1, 2, 3, 4 ]: output.GetRasterBand(x).SetNoDataValue(0.0)
+        output.SetGeoTransform(lulc_cur.GetGeoTransform())
+        args = { 'lulc_cur': lulc_cur,
+                'lulc_fut': lulc_fut,
                 'carbon_pools': dbf.Dbf('../../test_data/uncertain_carbon_pools_samp.dbf'),
                 'output': output}
         carbon_scenario_uncertainty.execute(args)

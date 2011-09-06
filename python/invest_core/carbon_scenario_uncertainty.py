@@ -47,7 +47,7 @@ def execute(args):
             args['carbon_pools'], poolType, area, inNoData, outNoData)
 
     #map each row in the lulc raster
-    for rowNumber in range(0, lulc.YSize):
+    for rowNumber in range(0, lulcCurrent.YSize):
         dataCurrent = lulcCurrent.ReadAsArray(0, rowNumber, lulcCurrent.XSize, 1)
         dataFuture = lulcFuture.ReadAsArray(0, rowNumber, lulcFuture.XSize, 1)
         #create a seq map for each pooltype 
