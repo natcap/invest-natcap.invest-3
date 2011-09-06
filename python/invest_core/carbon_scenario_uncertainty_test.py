@@ -12,10 +12,12 @@ class TestCarbonScenarioUncertainty(unittest.TestCase):
         zero length inputs"""
         driver = gdal.GetDriverByName("GTIFF")
         lulc_cur = driver.Create('../../test_data/test_blank_input', 1, 1, 1, gdal.GDT_Byte)
-        lulc_cur.GetRasterBand(1).SetNoDataValue(-1.0)
+        lulc_cur.GetRasterBand(1).SetNoDataValue(255)
 
         output = driver.Create('../../test_data/test_output/test_blank_output', 1, 1, 4, gdal.GDT_Float32)
-        for x in [1, 2, 3, 4]: output.GetRasterBand(x).SetNoDataValue(0.0)
+        for x in [1, 2, 3]:
+            output.GetRasterBand(x).SetNoDataValue(0.0)
+        output.GetRasterBand(4).SetNoDataValue(-1.0)
 
         args = { 'lulc_cur':lulc_cur,
                 'lulc_fut':lulc_cur,
@@ -34,7 +36,8 @@ class TestCarbonScenarioUncertainty(unittest.TestCase):
         output = driver.Create('../../test_data/test_output/uncertainty_sequestration_scenario.tif',
                                lulc_cur.GetRasterBand(1).XSize,
                                lulc_cur.GetRasterBand(1).YSize, 4, gdal.GDT_Float32)
-        for x in [1, 2, 3, 4 ]: output.GetRasterBand(x).SetNoDataValue(0.0)
+        for x in [1, 2, 3]: output.GetRasterBand(x).SetNoDataValue(0.0)
+        output.GetRasterBand(4).SetNoDataValue(-1.0)
         output.SetGeoTransform(lulc_cur.GetGeoTransform())
         args = { 'lulc_cur': lulc_cur,
                 'lulc_fut': lulc_fut,
