@@ -1,5 +1,6 @@
 #carbon_arc.py
 import os, sys, subprocess
+import getpass
 
 try:
     import json
@@ -30,7 +31,7 @@ json_dict = {'output_dir': output_dir,
              'lulc_fut_year': lulc_fut_year,
              'valuation': valuation }
 
-args_file = open('carbon_args.json', 'w')
+args_file = open('C:\Users\\' + getpass.getuser() + '\My Documents\ArcGIS\carbon_args.json', 'w')
 args_file.writelines(json.dumps(json_dict))
 args_file.close()
 
