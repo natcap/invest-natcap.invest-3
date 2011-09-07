@@ -23,7 +23,8 @@ class TestCarbonScenarioUncertainty(unittest.TestCase):
                 'lulc_fut':lulc_cur,
                 'carbon_pools': dbf.Dbf('../../test_data/test_output/test_blank_dbf', new=True),
                 'output_seq': output_seq,
-                'output_map': output_map}
+                'output_map': output_map,
+                'percentile': 0.1}
         carbon_scenario_uncertainty.execute(args)
 
         #This is how GDAL closes its datasets in python
@@ -48,7 +49,8 @@ class TestCarbonScenarioUncertainty(unittest.TestCase):
                 'lulc_fut': lulc_fut,
                 'carbon_pools': dbf.Dbf('../../test_data/uncertain_carbon_pools_samp.dbf'),
                 'output_seq': output_seq,
-                'output_map': output_map}
+                'output_map': output_map,
+                'percentile': 0.3}
         carbon_scenario_uncertainty.execute(args)
 
         #This is how GDAL closes its datasets in python
