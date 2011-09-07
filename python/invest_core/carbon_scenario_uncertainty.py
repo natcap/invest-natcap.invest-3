@@ -53,8 +53,7 @@ def execute(args):
             args['carbon_pools'], poolType, area, inNoData, outNoData)
 
     def singleSelector(a, b, c):
-        if c == 0: return 0
-        if c < 0: return max(a, b)
+        if c == 0: return outNoData
         return min(a, b)
 
     vectorSelector = np.vectorize(singleSelector)
