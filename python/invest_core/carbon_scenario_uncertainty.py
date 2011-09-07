@@ -47,41 +47,26 @@ def execute(args):
         pools[poolType] = carbon_uncertainty.build_uncertainty_pools_dict(
             args['carbon_pools'], poolType, area, inNoData, outNoData)
 
-    bandRanges = {1: None,
-                  2: None,
-                  3: None}
+    def singleSelector(a,b,c):
+        if c == 0: return 0
+        if c<0: return max(a,b)
+        return min(a,b)
+    
+    vectorSelector = np.vectorize(singleSelector)
 
     #map each row in the lulc raster
     for rowNumber in range(0, lulcCurrent.YSize):
         dataCurrent = lulcCurrent.ReadAsArray(0, rowNumber, lulcCurrent.XSize, 1)
         dataFuture = lulcFuture.ReadAsArray(0, rowNumber, lulcFuture.XSize, 1)
         #create a seqestration map for high-low, low-high, and average-average
-        for poolTypeA, poolTypeB, outputIndex in [('L', 'H', 1), ('H', 'L', 2), ('A', 'A', 3)]:
+        sequesteredChangeArray = []
+        for poolTypeA, poolTypeB in [('L', 'H'), ('H', 'L'), ('A', 'A')]:
             sequesteredCurrent = carbon_seq.execute(dataCurrent, pools[poolTypeA])
             sequesteredFuture = carbon_seq.execute(dataFuture, pools[poolTypeB])
             sequesteredChange = sequesteredCurrent - sequesteredFuture
-            #build up the min/max dictionary for each band
-            if not bandRanges[outputIndex]:
-                bandRanges[outputIndex] = (np.min(sequesteredChange), np.max(sequesteredChange))
-            else:
-                bandRanges[outputIndex] = (min(np.min(sequesteredChange), bandRanges[outputIndex][0]),
-                                       max(np.max(sequesteredChange), bandRanges[outputIndex][1]))
-
-            args['output'].GetRasterBand(outputIndex).WriteArray(sequesteredChange, 0, rowNumber)
-
-    #create the output percentile band
-    def convertToPercent(x, min, max):
-        if min == max:
-            return 0
-        return (x - min) / (max - min)
-    percentileMapper = np.vectorize(convertToPercent)
-
-    for rowNumber in range(lulcCurrent.YSize):
-        outputRow = args['output'].GetRasterBand(1).ReadAsArray(0, rowNumber,
-                                                    lulcCurrent.XSize, 1)
-        outputPercentile = percentileMapper(outputRow, bandRanges[1][0], bandRanges[1][1])
-        for i in [2, 3]:
-            outputPercentile = np.minimum(outputPercentile,
-                    percentileMapper(args['output'].GetRasterBand(i).ReadAsArray(0,
-                    rowNumber, lulcCurrent.XSize, 1), bandRanges[i][0], bandRanges[i][1]))
-        args['output'].GetRasterBand(4).WriteArray(outputPercentile, 0, rowNumber)
+            sequesteredChangeArray.append(sequesteredChange)
+ 
+        #Output the min value of l-h or h-l if average is >=0 or max value if < 0
+        args['output'].GetRasterBand(1).WriteArray(vectorSelector(sequesteredChangeArray[0],
+                                                                  sequesteredChangeArray[1],
+                                                                  sequesteredChangeArray[2]), 0, rowNumber)
