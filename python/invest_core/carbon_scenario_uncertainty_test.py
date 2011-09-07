@@ -14,13 +14,16 @@ class TestCarbonScenarioUncertainty(unittest.TestCase):
         lulc_cur = driver.Create('../../test_data/test_blank_input', 1, 1, 1, gdal.GDT_Byte)
         lulc_cur.GetRasterBand(1).SetNoDataValue(255)
 
-        output = driver.Create('../../test_data/test_output/test_blank_output', 1, 1, 1, gdal.GDT_Float32)
-        output.GetRasterBand(1).SetNoDataValue(0)
+        output_seq = driver.Create('../../test_data/test_output/test_blank_output', 1, 1, 1, gdal.GDT_Float32)
+        output_map = driver.Create('../../test_data/test_output/test_blank_output_map', 1, 1, 1, gdal.GDT_Byte)
+        output_seq.GetRasterBand(1).SetNoDataValue(0)
+        output_map.GetRasterBand(1).SetNoDataValue(255)
 
         args = { 'lulc_cur':lulc_cur,
                 'lulc_fut':lulc_cur,
                 'carbon_pools': dbf.Dbf('../../test_data/test_output/test_blank_dbf', new=True),
-                'output': output}
+                'output_seq': output_seq,
+                'output_map': output_map}
         carbon_scenario_uncertainty.execute(args)
 
         #This is how GDAL closes its datasets in python
@@ -31,15 +34,21 @@ class TestCarbonScenarioUncertainty(unittest.TestCase):
         driver = gdal.GetDriverByName("GTIFF")
         lulc_cur = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         lulc_fut = gdal.Open('../../test_data/lulc_samp_fut', GA_ReadOnly)
-        output = driver.Create('../../test_data/test_output/uncertainty_sequestration_scenario.tif',
+        output_seq = driver.Create('../../test_data/test_output/uncertainty_sequestration.tif',
                                lulc_cur.GetRasterBand(1).XSize,
                                lulc_cur.GetRasterBand(1).YSize, 1, gdal.GDT_Float32)
-        output.GetRasterBand(1).SetNoDataValue(0)
-        output.SetGeoTransform(lulc_cur.GetGeoTransform())
+        output_seq.GetRasterBand(1).SetNoDataValue(0)
+        output_seq.SetGeoTransform(lulc_cur.GetGeoTransform())
+        output_map = driver.Create('../../test_data/test_output/uncertainty_colormap.tif',
+                               lulc_cur.GetRasterBand(1).XSize,
+                               lulc_cur.GetRasterBand(1).YSize, 1, gdal.GDT_Byte)
+        output_map.GetRasterBand(1).SetNoDataValue(255)
+        output_map.SetGeoTransform(lulc_cur.GetGeoTransform())
         args = { 'lulc_cur': lulc_cur,
                 'lulc_fut': lulc_fut,
                 'carbon_pools': dbf.Dbf('../../test_data/uncertain_carbon_pools_samp.dbf'),
-                'output': output}
+                'output_seq': output_seq,
+                'output_map': output_map}
         carbon_scenario_uncertainty.execute(args)
 
         #This is how GDAL closes its datasets in python

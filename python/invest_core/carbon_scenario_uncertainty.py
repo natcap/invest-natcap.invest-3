@@ -2,6 +2,7 @@ import carbon_core
 import carbon_uncertainty
 import carbon_seq
 import numpy as np
+from osgeo import gdal
 
 def execute(args):
     """Runs a scenario based uncertainty model for two LULC maps.  Output
@@ -35,7 +36,7 @@ def execute(args):
     lulcCurrent = args['lulc_cur'].GetRasterBand(1)
     lulcFuture = args['lulc_fut'].GetRasterBand(1)
     inNoData = lulcCurrent.GetNoDataValue()
-    outNoData = args['output'].GetRasterBand(1).GetNoDataValue()
+    outNoData = args['output_seq'].GetRasterBand(1).GetNoDataValue()
 
     #This maps pool types to band numbers
     poolTypes = {'L':1, 'A':2, 'H':3}
@@ -67,6 +68,38 @@ def execute(args):
             sequesteredChangeArray.append(sequesteredChange)
  
         #Output the min value of l-h or h-l if average is >=0 or max value if < 0
-        args['output'].GetRasterBand(1).WriteArray(vectorSelector(sequesteredChangeArray[0],
-                                                                  sequesteredChangeArray[1],
-                                                                  sequesteredChangeArray[2]), 0, rowNumber)
+        args['output_seq'].GetRasterBand(1).WriteArray(vectorSelector(sequesteredChangeArray[0],
+                                                                      sequesteredChangeArray[1],
+                                                                      sequesteredChangeArray[2]), 0, rowNumber)
+        
+    #create colorband
+    band = args['output_seq'].GetRasterBand(1)
+    minSeq = band.GetMinimum()
+    maxSeq = band.GetMinimum()
+    if minSeq is None or maxSeq is None:
+        (minSeq,maxSeq) = band.ComputeRasterMinMax()
+
+
+    steps = 11
+    mid = steps/2
+    def mapIndexFun(x):
+        if x == 0: return 255
+        if x < 0:
+            return int((minSeq-x)/minSeq*mid)
+        return int(steps-(maxSeq-x)/maxSeq*mid)
+    
+    #Make a simple color table that ranges from red to green
+    colorTable = gdal.ColorTable()
+    negColor = (255,0,0)
+    posColor = (100,255,0)
+    for i in range(mid):
+        frac = 1-float(i)/mid
+        colorTable.SetColorEntry(i,(int(negColor[0]*frac),int(negColor[1]*frac),int(negColor[2]*frac)))
+        colorTable.SetColorEntry(steps-i,(int(posColor[0]*frac),int(posColor[1]*frac),int(posColor[2]*frac)))
+    colorTable.SetColorEntry(mid,(0,0,0))
+    args['output_map'].GetRasterBand(1).SetColorTable(colorTable)
+    
+    maxIndex = np.vectorize(mapIndexFun)
+    for rowNumber in range(0, band.YSize):
+        seqRow = band.ReadAsArray(0, rowNumber, band.XSize, 1)
+        args['output_map'].GetRasterBand(1).WriteArray(maxIndex(seqRow),0,rowNumber)
