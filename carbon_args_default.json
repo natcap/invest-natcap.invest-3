@@ -1,0 +1,1 @@
+{"pool_uri": "\\test_data\\carbon_pools_int.dbf", "lulc_fut_year": 2030, "lulc_cur_year": 2000, "lulc_fut_uri": "\\test_data\\lulc_samp_fut", "output_dir": "\\carbon_output", "lulc_cur_uri": "\\test_data\\lulc_samp_cur", "valuation": ""}
