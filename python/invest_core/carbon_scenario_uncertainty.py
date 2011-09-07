@@ -6,8 +6,8 @@ from osgeo import gdal
 
 def execute(args):
     """Runs a scenario based uncertainty model for two LULC maps.  Output
-        is a 4 band raster for 3 bands indicating carbon sequestration
-        change for low, average, and high measurements.  Fourth band is
+        is a 4 output_seq raster for 3 bands indicating carbon sequestration
+        change for low, average, and high measurements.  Fourth output_seq is
         the minimum percentage ranking of each pixel in each of the
         three scenarios.
     
@@ -21,18 +21,13 @@ def execute(args):
         args['percentile'] - cuts the output to be the top and bottom
                              percentile of sequestered carbon based on
                              the uncertainty scenarios
-        args['output'] - a 4 band GDAL raster dataset for outputting the change
-                            in sequestered carbon for low, average, and high
-                            carbon pool measurements.  The 4th band indicates
-                            the minimum rank of that pixel in terms of total
-                            carbon sequestered across each of the 3 low, avg,
-                            high scenarios.  It is a rough measurement of
-                            the uncertainty of the measurement.  For example,
-                            a value of .9 would indicate that in the 3 scenarios
-                            the amount of carbon sequestered ranked at least 
-                            in the top 90% of all 3 scenarios which would
-                            indicate a high amount of certainty.
-        
+        args['output_seq'] - a GDAL raster dataset for outputting the conservative
+                            amount of carbon sequestered.
+        args['output_map'] - a colorized map indicating the regions of
+                            output_seq that fall into the percentile
+                            ranges given in args['percentile'].  Green
+                            is carbon sequestered increase and red is a
+                            decrease.
         
         returns nothing"""
 
@@ -42,7 +37,7 @@ def execute(args):
     inNoData = lulcCurrent.GetNoDataValue()
     outNoData = args['output_seq'].GetRasterBand(1).GetNoDataValue()
 
-    #This maps pool types to band numbers
+    #This maps pool types to output_seq numbers
     poolTypes = {'L':1, 'A':2, 'H':3}
     pools = {}
 
@@ -84,28 +79,10 @@ def execute(args):
                                               sequesteredChangeArray[1],
                                               sequesteredChangeArray[2]), 0, rowNumber)
 
-    #Cutoff output_seq based on percentile cutoff
-    def percentileCutoff(val, percentCutoff, max, min):
-        if max == min: return val
-        p = (val - min) / (max - min)
-        if p < percentCutoff or p > 1 - percentCutoff:
-            return val
-        return outNoData
-    percentileCutoffFun = np.vectorize(percentileCutoff)
-    for rowNumber in range(output_seq.YSize):
-        rowData = output_seq.ReadAsArray(0, rowNumber, output_seq.XSize, 1)
-        output_seq.WriteArray(percentileCutoffFun(rowData, args['percentile'],
-                              maxMin[0], maxMin[1]), 0, rowNumber)
-
     #create colorband
-    band = args['output_seq'].GetRasterBand(1)
-    minSeq = band.GetMinimum()
-    maxSeq = band.GetMinimum()
-    if minSeq is None or maxSeq is None:
-        (minSeq, maxSeq) = band.ComputeRasterMinMax()
+    (minSeq, maxSeq) = output_seq.ComputeRasterMinMax()
 
-
-    steps = 11
+    steps = 31
     mid = steps / 2
     def mapIndexFun(x):
         if x == 0: return 255
@@ -124,7 +101,19 @@ def execute(args):
     colorTable.SetColorEntry(mid, (0, 0, 0))
     args['output_map'].GetRasterBand(1).SetColorTable(colorTable)
 
+    #Cutoff output_seq based on percentile cutoff
+    def percentileCutoff(val, percentCutoff, max, min):
+        if max == min: return val
+        p = (val - min) / (max - min)
+        if p < percentCutoff or p > 1 - percentCutoff:
+            return val
+        return outNoData
+    percentileCutoffFun = np.vectorize(percentileCutoff)
+
     maxIndex = np.vectorize(mapIndexFun)
-    for rowNumber in range(0, band.YSize):
-        seqRow = band.ReadAsArray(0, rowNumber, band.XSize, 1)
+    for rowNumber in range(0, output_seq.YSize):
+        seqRow = output_seq.ReadAsArray(0, rowNumber, output_seq.XSize, 1)
+        #select only those elements which lie within the range percentile
+        seqRow = percentileCutoffFun(seqRow, args['percentile'], maxMin[0], maxMin[1])
+        #map them to colors
         args['output_map'].GetRasterBand(1).WriteArray(maxIndex(seqRow), 0, rowNumber)
