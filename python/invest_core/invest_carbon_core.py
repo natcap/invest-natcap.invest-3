@@ -3,7 +3,9 @@
 import imp, sys, os
 import simplejson as json
 import carbon_scenario_uncertainty
-
+from osgeo import gdal
+from osgeo.gdalconst import *
+from dbfpy import dbf
 
 def execute(args):
     """This function invokes the carbon uncertainty model given uri
@@ -11,6 +13,7 @@ def execute(args):
     
     args - a dictionary object of arguments"""
 
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
     driver = gdal.GetDriverByName("GTIFF")
     lulc_cur = gdal.Open(args['lulc_cur_uri'], GA_ReadOnly)
     lulc_fut = gdal.Open(args['lulc_fut_uri'], GA_ReadOnly)
@@ -44,4 +47,4 @@ if __name__ == '__main__':
     print sys.argv
     modulename, json_args = sys.argv
     args = json.loads(json_args)
-    execute(model, args)
+    execute(args)
