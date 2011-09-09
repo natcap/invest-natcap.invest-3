@@ -1,7 +1,7 @@
 #carbon_arc.py
 import os, sys, subprocess
 import getpass
-import invest_core.simplejson as json
+import json
 
 import arcgisscripting
 gp = arcgisscripting.create()
