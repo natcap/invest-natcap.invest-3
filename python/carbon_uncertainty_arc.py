@@ -13,7 +13,7 @@ arguments = {'output_dir': gp.GetParameterAsText(0),
              'lulc_cur_uri': gp.GetParameterAsText(1),
              'lulc_fut_uri': gp.GetParameterAsText(2),
              'carbon_pools_uri': gp.GetParameterAsText(3),
-             'percentile': gp.GetParameterAsText(4)}
+             'percentile': float(gp.GetParameterAsText(4))}
 
 args_file = open('C:\Users\\' + getpass.getuser() + '\My Documents\ArcGIS\carbon_uncertainty_args.json', 'w')
 args_file.writelines(json.dumps(arguments))
