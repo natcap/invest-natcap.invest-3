@@ -4,7 +4,9 @@ import carbon_seq
 import carbon_diff
 import carbon_value
 import osgeo.gdal
+from osgeo import gdal
 import osgeo.osr as osr
+from osgeo import ogr
 from dbfpy import dbf
 from math import exp
 
@@ -52,6 +54,26 @@ def sequester(args):
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
 
     rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
+    
+    if args['hwp_cur_shape']:
+        source_ds = ogr.GetDriverByName("Memory").CopyDataSource(args['hwp_cur_shape'], "")
+        source_layer = source_ds.GetLayer(0)
+        source_srs = source_layer.GetSpatialRef()
+        
+        #make a field
+        field_def = ogr.FieldDefn("__FID", ogr.OFTInteger)
+        source_layer.CreateField(field_def)
+        source_layer_def = source_layer.GetLayerDefn()
+        field_index = source_layer_def.GetFieldIndex("__FID")
+        
+        for feature in source_layer:
+            feature.SetField(field_index, feature.GetFID)
+            source_layer.SetFeature(feature)
+            
+        gdal.RasterizeLayer(args['seq_cur'], (1,1,1), source_layer,
+                            options=["ATTRIBUTE=%s" % "__FID"])
+            
+    
     args['seq_cur'] = None #close the dataset
 
 def valuate(args):
