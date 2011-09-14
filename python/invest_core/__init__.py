@@ -5,4 +5,4 @@ import carbon_seq
 import carbon_uri
 import data_handler_test
 import data_handler
-import invest_core
+import invest
