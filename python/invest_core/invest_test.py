@@ -2,6 +2,8 @@ import unittest
 import invest_core
 from osgeo import gdal
 import os
+from numpy import *
+import numpy as np
 
 def assert_raster_equality(unit, firstUri, secondUri):
     output = gdal.Open(firstUri, 0)
@@ -29,7 +31,31 @@ def assert_raster_equality(unit, firstUri, secondUri):
                                   str(i) + " index " + str(j) + ":" + str(a) + " " + str(b))
 
 
+def assert_raster_equality_vec(unit, firstUri, secondUri):
+    output = gdal.Open(firstUri, 0)
+    outputBand = output.GetRasterBand(1)
+    obnodata = outputBand.GetNoDataValue()
+    
+    invest2 = gdal.Open(secondUri, 0)
+    invest2Band = invest2.GetRasterBand(1)
+    i2bnodata = invest2Band.GetNoDataValue()
 
+    unit.assertNotEqual(obnodata, None, "Output nodata value read as None")
+    unit.assertEqual(outputBand.XSize, invest2Band.XSize, "Dimensions differ: output=" + str(outputBand.XSize) + ", i2output = " + str(invest2Band.XSize))
+    unit.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
+
+    for i in range(0, outputBand.YSize):
+        outArray = outputBand.ReadAsArray(1, i, outputBand.XSize-1, 1)
+        i2Array = invest2Band.ReadAsArray(1, i, outputBand.XSize-1, 1)
+
+        def checkEqual(a, b):
+            if b == i2bnodata:
+                unit.assertEqual(a, obnodata)
+            else:
+                unit.assertAlmostEqual(a, b, 4)
+                
+        fastCheck = np.vectorize(checkEqual)
+        fastCheck(outArray, i2Array)
 
 
 
@@ -61,7 +87,8 @@ class TestInvest(unittest.TestCase):
     
             invest_core.execute('carbon_core', arguments)
     
-            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
+#            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
+            assert_raster_equality_vec(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
             os.remove(output_dictionary['uri'])
             pass
 
@@ -93,7 +120,8 @@ class TestInvest(unittest.TestCase):
 
             invest_core.execute('carbon_core', arguments)
             
-            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
+#            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
+            assert_raster_equality_vec(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
             os.remove(output_dictionary['uri'])
             pass
         
@@ -148,7 +176,8 @@ class TestInvest(unittest.TestCase):
             
             invest_core.execute('carbon_core', arguments)
                             
-            assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
+#            assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
+            assert_raster_equality_vec(self, seq_value['uri'], '../../test_data/val_seq_int')
             
             for dict in (seq_cur, seq_fut, seq_delta, seq_value):
                 os.remove(dict['uri'])
