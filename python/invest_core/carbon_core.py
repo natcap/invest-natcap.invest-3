@@ -56,37 +56,25 @@ def sequester(args):
     rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
     
     if args['hwp_cur_shape']:
-        #source_ds = ogr.GetDriverByName("Memory").CopyDataSource(args['hwp_cur_shape'], "")
-        source_ds = args['hwp_cur_shape']
+        #create a new raster in memory.
+        source_ds = ogr.GetDriverByName("Memory").CopyDataSource(args['hwp_cur_shape'], "")
         source_layer = source_ds.GetLayerByName('harv_samp_cur')
-        source_srs = source_layer.GetSpatialRef()
         
+        #make a field for the polygon ID
+        field_def = ogr.FieldDefn("__FID", ogr.OFTReal)
+        source_layer.CreateField(field_def)
+        source_layer_def = source_layer.GetLayerDefn()
+        field_index = source_layer_def.GetFieldIndex("__FID")
         
+        #Loop through all features, set __FID field to the feature ID
+        for feature in source_layer:
+            fid = feature.GetFID()
+            feature.SetField("__FID", fid)
+            source_layer.SetFeature(feature)
         
-#        for feat in source_layer:  
-##            print feat.GetFID()  
-#            feat_defn = source_layer.GetLayerDefn()
-#            for i in range(feat_defn.GetFieldCount()):
-#                field_defn = feat_defn.GetFieldDefn(i)
-##                print feat.GetField(i)
-#            
-#        
-#        
-#        #make a field
-#        field_def = ogr.FieldDefn("__FID", ogr.OFTReal)
-#        source_layer.CreateField(field_def)
-#        source_layer_def = source_layer.GetLayerDefn()
-#        field_index = source_layer_def.GetFieldIndex("__FID")
-#        
-#
-#        for feature in source_layer:
-#            feat = ogr.Feature(source_layer.GetLayerDefn())
-#            fid = feat.GetFID()
-#            feat.SetField("__FID", 95)
-#            source_layer.CreateFeature(feat)
-            
+        #Burn the field IDs into the output raster.
         gdal.RasterizeLayer(args['seq_cur'],[1], source_layer,
-                             options=['ATTRIBUTE=Cut_cur'])
+                             options=['ATTRIBUTE=__FID'])
             
     
     args['seq_cur'] = None #close the dataset
