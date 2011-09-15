@@ -57,17 +57,17 @@ def sequester(args):
     
     if args['hwp_cur_shape']:
         source_ds = ogr.GetDriverByName("Memory").CopyDataSource(args['hwp_cur_shape'], "")
-        source_layer = source_ds.GetLayer(0)
+        source_layer = source_ds.GetLayerByName('harv_samp_cur')
         source_srs = source_layer.GetSpatialRef()
         
         
         
         for feat in source_layer:  
-            print feat.GetFID()  
+#            print feat.GetFID()  
             feat_defn = source_layer.GetLayerDefn()
             for i in range(feat_defn.GetFieldCount()):
                 field_defn = feat_defn.GetFieldDefn(i)
-                print feat.GetField(i)
+#                print feat.GetField(i)
             
         
         
@@ -77,18 +77,15 @@ def sequester(args):
         source_layer_def = source_layer.GetLayerDefn()
         field_index = source_layer_def.GetFieldIndex("__FID")
         
-        a = ()
-        seq=()
+
         for feature in source_layer:
-            fid = feature.GetFID()
-            a = a + (fid,)
-            seq = seq + (1,)
-            feature.SetField(field_index-1, fid)
-            source_layer.SetFeature(feature)
+            feat = ogr.Feature(source_layer.GetLayerDefn())
+            fid = feat.GetFID()
+            feat.SetField("__FID", 95)
+            source_layer.CreateFeature(feat)
             
-        gdal.RasterizeLayer(args['seq_cur'],seq, source_layer,
-                                burn_values=a)#,
-                            #options=['BURN_VALUE_FROM=Start_date'])
+        gdal.RasterizeLayer(args['seq_cur'],[1,1,1], source_layer,
+                            options = ["ATTRIBUTE=Freq_cur"])
             
     
     args['seq_cur'] = None #close the dataset
