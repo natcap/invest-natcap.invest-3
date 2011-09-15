@@ -60,18 +60,35 @@ def sequester(args):
         source_layer = source_ds.GetLayer(0)
         source_srs = source_layer.GetSpatialRef()
         
+        
+        
+        for feat in source_layer:  
+            print feat.GetFID()  
+            feat_defn = source_layer.GetLayerDefn()
+            for i in range(feat_defn.GetFieldCount()):
+                field_defn = feat_defn.GetFieldDefn(i)
+                print feat.GetField(i)
+            
+        
+        
         #make a field
-        field_def = ogr.FieldDefn("__FID", ogr.OFTInteger)
+        field_def = ogr.FieldDefn("__FID", ogr.OFTReal)
         source_layer.CreateField(field_def)
         source_layer_def = source_layer.GetLayerDefn()
         field_index = source_layer_def.GetFieldIndex("__FID")
         
+        a = ()
+        seq=()
         for feature in source_layer:
-            feature.SetField(field_index, feature.GetFID)
+            fid = feature.GetFID()
+            a = a + (fid,)
+            seq = seq + (1,)
+            feature.SetField(field_index-1, fid)
             source_layer.SetFeature(feature)
             
-        gdal.RasterizeLayer(args['seq_cur'], (1,1,1), source_layer,
-                            options=["ATTRIBUTE=%s" % "__FID"])
+        gdal.RasterizeLayer(args['seq_cur'],seq, source_layer,
+                                burn_values=a)#,
+                            #options=['BURN_VALUE_FROM=Start_date'])
             
     
     args['seq_cur'] = None #close the dataset
