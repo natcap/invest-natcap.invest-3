@@ -19,10 +19,10 @@ def execute(model, args):
     module = imp.load_source(model, model + '.py')
 
     #build up lists of the necessary files for this model
-    outKeys = ['seq_cur']
+    outKeys = ['storage_cur']
     inKeys = ['lulc_cur', 'carbon_pools']
     if args['calc_value'] == True:
-        outKeys += ['seq_fut', 'seq_delta', 'seq_value']
+        outKeys += ['storage_fut', 'seq_delta', 'seq_value']
         inKeys += ['lulc_fut']
 
     #process the args for input

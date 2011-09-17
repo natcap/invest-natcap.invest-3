@@ -80,8 +80,8 @@ class TestInvest(unittest.TestCase):
             arguments = {'lulc_cur': lulc_dictionary,
                          'lulc_fut': None,
                          'carbon_pools' : pool_dictionary,
-                         'seq_cur' : output_dictionary,
-                         'seq_fut' : None,
+                         'storage_cur' : output_dictionary,
+                         'storage_fut' : None,
                          'seq_delta': None,
                          'calc_value' : False}
     
@@ -115,7 +115,7 @@ class TestInvest(unittest.TestCase):
 
             arguments = {'lulc_cur': lulc_dictionary,
                      'carbon_pools' : pool_dictionary,
-                     'seq_cur' : output_dictionary,
+                     'storage_cur' : output_dictionary,
                      'calc_value' : False}
 
             invest_core.execute('carbon_core', arguments)
@@ -140,12 +140,12 @@ class TestInvest(unittest.TestCase):
                                'type' : 'dbf',
                                'input': True}
             
-            seq_cur = {'uri'  : '../../carbon_output/test_seq_cur.tif',
+            storage_cur = {'uri'  : '../../carbon_output/test_seq_cur.tif',
                                 'type' : 'gdal',
                                 'dataType': gdal.GDT_Float32,
                                 'input': False}
             
-            seq_fut = {'uri'  : '../../carbon_output/test_seq_fut.tif',
+            storage_fut = {'uri'  : '../../carbon_output/test_seq_fut.tif',
                                  'type' : 'gdal',
                                  'dataType': gdal.GDT_Float32,
                                  'input': False}
@@ -163,8 +163,8 @@ class TestInvest(unittest.TestCase):
             arguments = {'lulc_cur': lulc_cur,
                          'lulc_fut': lulc_fut,
                      'carbon_pools' : pool_dictionary,
-                     'seq_cur' : seq_cur,
-                     'seq_fut' : seq_fut,
+                     'storage_cur' : storage_cur,
+                     'storage_fut' : storage_fut,
                      'seq_delta' : seq_delta,
                      'seq_value' : seq_value,
                      'calc_value' : True,
@@ -179,7 +179,7 @@ class TestInvest(unittest.TestCase):
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
             assert_raster_equality_vec(self, seq_value['uri'], '../../test_data/val_seq_int')
             
-            for dict in (seq_cur, seq_fut, seq_delta, seq_value):
+            for dict in (storage_cur, storage_fut, seq_delta, seq_value):
                 os.remove(dict['uri'])
             pass
         

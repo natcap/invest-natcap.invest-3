@@ -30,7 +30,7 @@ class TestCarbonCore(unittest.TestCase):
 
         args = { 'lulc_cur':lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/test_blank_dbf', new=True),
-                'seq_cur': output,
+                'storage_cur': output,
                 'calc_value' : False,
                 'hwp_cur_shape' : ''}
         
@@ -57,7 +57,7 @@ class TestCarbonCore(unittest.TestCase):
         output = data_handler.mimic(lulc, out_dict)
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
-                'seq_cur': output,
+                'storage_cur': output,
                 'calc_value' : False,
                 'hwp_cur_shape' : ''}
 
@@ -77,7 +77,7 @@ class TestCarbonCore(unittest.TestCase):
         output = data_handler.mimic(lulc, out_dict)
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
-                'seq_cur': output,
+                'storage_cur': output,
                 'calc_value' : False,
                 'hwp_cur_shape': ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp')}
 

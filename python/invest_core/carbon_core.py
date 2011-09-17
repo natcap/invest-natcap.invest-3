@@ -18,12 +18,12 @@ def execute(args):
         args['lulc_cur'] - is a GDAL raster dataset
         args['lulc_fut'] - is a GDAL raster dataset
         args['carbon_pools'] - is a DBF dataset mapping carbon sequestration numbers to lulc classifications.
-        args['seq_cur'] - a GDAL raster dataset for outputing the sequestered carbon
+        args['storage_cur'] - a GDAL raster dataset for outputing the sequestered carbon
                           based on the current lulc
-        args['seq_fut'] - a GDAL raster dataset for outputing the sequestered carbon
+        args['storage_fut'] - a GDAL raster dataset for outputing the sequestered carbon
                           based on the future lulc
         args['seq_delta'] - a GDAL raster dataset for outputing the difference between
-                            args['seq_cur'] and args['seq_fut']
+                            args['storage_cur'] and args['storage_fut']
         args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
                             value of sequestered carbon.
         args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
@@ -46,14 +46,14 @@ def sequester(args):
     
         args - is a dictionary with at least the following entries:
         args['lulc_cur'] - is a GDAL raster dataset
-        args['seq_cur'] - is a GDAL raster dataset
+        args['storage_cur'] - is a GDAL raster dataset
         args['carbon_pools'] - is a DBF dataset mapping sequestration numbers to lulc classifications
         
         No return value."""
 
-    pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
+    pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['storage_cur'])
 
-    rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
+    rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
     
     if args['hwp_cur_shape']:
         #create a new raster in memory.
@@ -73,11 +73,11 @@ def sequester(args):
             source_layer.SetFeature(feature)
         
         #Burn the field IDs into the output raster.
-        gdal.RasterizeLayer(args['seq_cur'],[1], source_layer,
+        gdal.RasterizeLayer(args['storage_cur'],[1], source_layer,
                              options=['ATTRIBUTE=__FID'])
             
     
-    args['seq_cur'] = None #close the dataset
+    args['storage_cur'] = None #close the dataset
 
 def valuate(args):
     """Executes the economic valuation model.
@@ -88,16 +88,16 @@ def valuate(args):
         
     numYears = args['lulc_fut_year'] - args['lulc_cur_year']
     
-    pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['seq_cur'])
+    pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['storage_cur'])
     
-    rasterSeq(pools, args['lulc_cur'], args['seq_cur'])
-    rasterSeq(pools, args['lulc_fut'], args['seq_fut'])
+    rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
+    rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
     
-    rasterDiff(args['seq_cur'], args['seq_fut'], args['seq_delta'])
+    rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
     
     rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], args['rate_change'], numYears)
     
-    for dataset in ('seq_value', 'seq_delta', 'seq_cur', 'seq_fut'):
+    for dataset in ('seq_value', 'seq_delta', 'storage_cur', 'storage_fut'):
         args[dataset] = None
     
     
@@ -147,17 +147,17 @@ def rasterSeq(pools, inputRaster, outputRaster):
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
     
 
-def rasterDiff(seq_cur, seq_fut, outputRaster):
+def rasterDiff(storage_cur, storage_fut, outputRaster):
     """Iterate through the rows in the two sequestration rasters and calculate the 
         difference in each pixel.  Maps the difference to the output raster.
         
-        seq_cur - a GDAL raster dataset
-        seq_fut - a GDAL raster dataset
+        storage_cur - a GDAL raster dataset
+        storage_fut - a GDAL raster dataset
         outputRaster - a GDAL raster dataset"""
     
-    nodataDict = build_nodata_dict(seq_cur, outputRaster)
-    lulc_cur_band = seq_cur.GetRasterBand(1)
-    lulc_fut_band = seq_fut.GetRasterBand(1)
+    nodataDict = build_nodata_dict(storage_cur, outputRaster)
+    lulc_cur_band = storage_cur.GetRasterBand(1)
+    lulc_fut_band = storage_fut.GetRasterBand(1)
     for i in range(0, lulc_cur_band.YSize):
         cur_data = lulc_cur_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
         fut_data = lulc_fut_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
