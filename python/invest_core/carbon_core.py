@@ -35,6 +35,12 @@ def execute(args):
         
         returns nothing"""
 
+    #Calculate the per pixel carbon storage due to lulc pools
+    area = pixelArea(args['lulc_cur'])
+    inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
+    outNoData = args['storage_cur'].GetRasterBand(1).GetNoDataValue()
+    pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
+
     if args['calc_value']:
         valuate(args)
     else:
