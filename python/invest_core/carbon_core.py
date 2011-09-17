@@ -53,6 +53,10 @@ def execute(args):
 
     if args['calc_value']:
         valuate(args)
+        
+    #close datasets (is this really necessary?)
+    for dataset in ('seq_value', 'seq_delta', 'storage_cur', 'storage_fut'):
+        if dataset in args: args[dataset] = None
 
 def harvestProducts(args):
     """Adds carbon due to harvested wood products
@@ -92,13 +96,8 @@ def valuate(args):
         No return value"""
         
     numYears = args['lulc_fut_year'] - args['lulc_cur_year']
-    
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['storage_cur'])
-    
     rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], args['rate_change'], numYears)
-    
-    for dataset in ('seq_value', 'seq_delta', 'storage_cur', 'storage_fut'):
-        args[dataset] = None
     
 def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, numYears):
     """iterates through the rows in a raster and applies the carbon valuation model
@@ -125,8 +124,6 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_value.execute(nodataDict, data, numYears, carbonValue, multiplier)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
-        
-    
 
 def rasterSeq(pools, inputRaster, outputRaster):
     """Iterate through the rows in a raster and map carbon sequestration values
@@ -143,7 +140,6 @@ def rasterSeq(pools, inputRaster, outputRaster):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_seq.execute(data, pools)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
-    
 
 def rasterDiff(storage_cur, storage_fut, outputRaster):
     """Iterate through the rows in the two sequestration rasters and calculate the 
