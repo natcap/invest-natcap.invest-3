@@ -31,8 +31,7 @@ class TestCarbonCore(unittest.TestCase):
         args = { 'lulc_cur':lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/test_blank_dbf', new=True),
                 'storage_cur': output,
-                'calc_value' : False,
-                'hwp_cur_shape' : ''}
+                'calc_value' : False}
         
         carbon_core.execute(args)
         
@@ -58,8 +57,7 @@ class TestCarbonCore(unittest.TestCase):
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'storage_cur': output,
-                'calc_value' : False,
-                'hwp_cur_shape' : ''}
+                'calc_value' : False}
 
         carbon_core.execute(args)
         output = data_handler.close(output)

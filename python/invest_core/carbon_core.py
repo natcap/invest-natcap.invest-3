@@ -46,14 +46,14 @@ def execute(args):
     if 'lulc_fut' in args:
         rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
 
+    if 'hwp_cur_shape' in args:
+        harvestProducts(args)
+
     if args['calc_value']:
         valuate(args)
-    else:
-        sequester(args)
-    
 
-def sequester(args):
-    """Executes the carbon sequestration model only.
+def harvestProducts(args):
+    """Adds carbon due to harvested wood products
     
         args - is a dictionary with at least the following entries:
         args['lulc_cur'] - is a GDAL raster dataset
@@ -61,30 +61,26 @@ def sequester(args):
         args['carbon_pools'] - is a DBF dataset mapping sequestration numbers to lulc classifications
         
         No return value."""
-
-    if args['hwp_cur_shape']:
-        #create a new raster in memory.
-        source_ds = ogr.GetDriverByName("Memory").CopyDataSource(args['hwp_cur_shape'], "")
-        source_layer = source_ds.GetLayerByName('harv_samp_cur')
         
-        #make a field for the polygon ID
-        field_def = ogr.FieldDefn("__FID", ogr.OFTReal)
-        source_layer.CreateField(field_def)
-        source_layer_def = source_layer.GetLayerDefn()
-        field_index = source_layer_def.GetFieldIndex("__FID")
-        
-        #Loop through all features, set __FID field to the feature ID
-        for feature in source_layer:
-            fid = feature.GetFID()
-            feature.SetField("__FID", fid)
-            source_layer.SetFeature(feature)
-        
-        #Burn the field IDs into the output raster.
-        gdal.RasterizeLayer(args['storage_cur'],[1], source_layer,
-                             options=['ATTRIBUTE=__FID'])
-            
+    #create a new raster in memory.
+    source_ds = ogr.GetDriverByName("Memory").CopyDataSource(args['hwp_cur_shape'], "")
+    source_layer = source_ds.GetLayerByName('harv_samp_cur')
     
-    args['storage_cur'] = None #close the dataset
+    #make a field for the polygon ID
+    field_def = ogr.FieldDefn("__FID", ogr.OFTReal)
+    source_layer.CreateField(field_def)
+    source_layer_def = source_layer.GetLayerDefn()
+    field_index = source_layer_def.GetFieldIndex("__FID")
+    
+    #Loop through all features, set __FID field to the feature ID
+    for feature in source_layer:
+        fid = feature.GetFID()
+        feature.SetField("__FID", fid)
+        source_layer.SetFeature(feature)
+    
+    #Burn the field IDs into the output raster.
+    gdal.RasterizeLayer(args['storage_cur'],[1], source_layer,
+                         options=['ATTRIBUTE=__FID'])
 
 def valuate(args):
     """Executes the economic valuation model.
