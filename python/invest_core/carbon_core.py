@@ -64,25 +64,42 @@ def harvestProducts(args):
         
         No return value."""
         
-    #create a new raster in memory.
-    source_ds = ogr.GetDriverByName("Memory").CopyDataSource(args['hwp_cur_shape'], "")
-    source_layer = source_ds.GetLayerByName('harv_samp_cur')
+    #Make a copy of the 
+    calculated_carbon_ds = ogr.GetDriverByName("Memory").\
+                    CopyDataSource(args['hwp_cur_shape'], "")
+    calculated_carbon_layer = calculated_carbon_ds.GetLayerByName('harv_samp_cur')
+    hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
+    calculated_carbon_layer.CreateField(hwp_def)
     
-    #make a field for the polygon ID
-    field_def = ogr.FieldDefn("__FID", ogr.OFTReal)
-    source_layer.CreateField(field_def)
-    source_layer_def = source_layer.GetLayerDefn()
-    field_index = source_layer_def.GetFieldIndex("__FID")
+    #calculate hwp pools per feature
+    for feature in calculated_carbon_layer:
+        #First initialize by index
+        fieldArgs = {'Cut_cur' : feature.GetFieldIndex('Cut_cur'),
+                     'Start_date' : feature.GetFieldIndex('Start_date'),
+                     'Freq_cur' : feature.GetFieldIndex('Freq_cur'),
+                     'Decay_cur' : feature.GetFieldIndex('Decay_cur'),
+                     'C_den_cur' : feature.GetFieldIndex('C_den_cur'),
+                     'BCEF_cur' : feature.GetFieldIndex('BCEF_cur')}
+        #Then lookup values
+        for key,index in fieldArgs.iteritems():
+            fieldArgs[key] = feature.GetField(index)
+        
+        #This is where the actual carbon pool calculation should go.
+        #What's given below is only an example and is totally wrong.
+        #It should be whatever equation 1 works out to from the user's guide
+        hwpCarbonPool = fieldArgs['Cut_cur']+fieldArgs['Start_date']
+        hwpIndex = feature.GetFieldIndex('hwp_pool')
+        feature.SetField(hwpIndex,hwpCarbonPool)
+        calculated_carbon_layer.SetFeature(feature)
     
-    #Loop through all features, set __FID field to the feature ID
-    for feature in source_layer:
-        fid = feature.GetFID()
-        feature.SetField("__FID", fid)
-        source_layer.SetFeature(feature)
-    
-    #Burn the field IDs into the output raster.
-    gdal.RasterizeLayer(args['storage_cur'],[1], source_layer,
-                         options=['ATTRIBUTE=__FID'])
+    #Burn the hwp pools into the output raster.
+    #This is wrong too, all rasterize layer does is to overwrite values
+    #in the original layer.  we need 2 layers, the original and the hwp
+    #raster which is 0 everywhere except on the calculated_carbon_layer.
+    #can we copy storage_cur, set values to 0, rasterize calculated_carbon_layer
+    #to it, then add the two to final storage_cur like we do in sequestration operation
+    gdal.RasterizeLayer(args['storage_cur'],[1], calculated_carbon_layer,
+                         options=['ATTRIBUTE=hwp_pool'])
 
 def valuate(args):
     """Executes the economic valuation model.
