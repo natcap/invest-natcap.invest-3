@@ -45,6 +45,8 @@ def execute(args):
     rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
     if 'lulc_fut' in args:
         rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
+        #calculate sequestration
+        rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
 
     if 'hwp_cur_shape' in args:
         harvestProducts(args)
@@ -93,14 +95,10 @@ def valuate(args):
     
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['storage_cur'])
     
-    rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
-    
     rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], args['rate_change'], numYears)
     
     for dataset in ('seq_value', 'seq_delta', 'storage_cur', 'storage_fut'):
         args[dataset] = None
-    
-    
     
 def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, numYears):
     """iterates through the rows in a raster and applies the carbon valuation model
