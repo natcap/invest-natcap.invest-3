@@ -41,6 +41,11 @@ def execute(args):
     outNoData = args['storage_cur'].GetRasterBand(1).GetNoDataValue()
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
+    #calculate carbon storage
+    rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
+    if 'lulc_fut' in args:
+        rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
+
     if args['calc_value']:
         valuate(args)
     else:
@@ -57,10 +62,6 @@ def sequester(args):
         
         No return value."""
 
-    pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['storage_cur'])
-
-    rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
-    
     if args['hwp_cur_shape']:
         #create a new raster in memory.
         source_ds = ogr.GetDriverByName("Memory").CopyDataSource(args['hwp_cur_shape'], "")
@@ -95,9 +96,6 @@ def valuate(args):
     numYears = args['lulc_fut_year'] - args['lulc_cur_year']
     
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['storage_cur'])
-    
-    rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
-    rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
     
     rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
     
