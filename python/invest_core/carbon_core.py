@@ -64,35 +64,38 @@ def harvestProducts(args):
         
         No return value."""
         
-    #Make a copy of the 
+    #Make a copy of the hwp_cur_shape shape so we can write to it
     calculated_carbon_ds = ogr.GetDriverByName("Memory").\
                     CopyDataSource(args['hwp_cur_shape'], "")
     calculated_carbon_layer = calculated_carbon_ds.GetLayerByName('harv_samp_cur')
+    
+    #Create a hardwood products pool that will get calculated later
     hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
     calculated_carbon_layer.CreateField(hwp_def)
     
     #calculate hwp pools per feature
     for feature in calculated_carbon_layer:
-        #First initialize by index
+        #First initialize the fields by index
         fieldArgs = {'Cut_cur' : feature.GetFieldIndex('Cut_cur'),
                      'Start_date' : feature.GetFieldIndex('Start_date'),
                      'Freq_cur' : feature.GetFieldIndex('Freq_cur'),
                      'Decay_cur' : feature.GetFieldIndex('Decay_cur'),
                      'C_den_cur' : feature.GetFieldIndex('C_den_cur'),
                      'BCEF_cur' : feature.GetFieldIndex('BCEF_cur')}
-        #Then lookup values
+        
+        #Then replace the indices with actual values
         for key,index in fieldArgs.iteritems():
             fieldArgs[key] = feature.GetField(index)
         
-        #This is where the actual carbon pool calculation should go.
-        #What's given below is only an example and is totally wrong.
-        #It should be whatever equation 1 works out to from the user's guide
+        #This is where the carbon pool calculation should go.
+        #What's given below is only an example of what is possible and is otherwise
+        #totally wrong.  The actual equation should be #1 from the carbon user's guide
         hwpCarbonPool = fieldArgs['Cut_cur']+fieldArgs['Start_date']
         hwpIndex = feature.GetFieldIndex('hwp_pool')
         feature.SetField(hwpIndex,hwpCarbonPool)
         calculated_carbon_layer.SetFeature(feature)
     
-    #Burn the hwp pools into the output raster.
+    #Now burn the hwp pools into the output raster.
     #This is wrong too, all rasterize layer does is to overwrite values
     #in the original layer.  we need 2 layers, the original and the hwp
     #raster which is 0 everywhere except on the calculated_carbon_layer.
