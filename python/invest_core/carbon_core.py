@@ -54,10 +54,6 @@ def execute(args):
     if args['calc_value']:
         valuate(args)
         
-    #close datasets (is this really necessary?)
-    for dataset in ('seq_value', 'seq_delta', 'storage_cur', 'storage_fut'):
-        if dataset in args: args[dataset] = None
-
 def harvestProducts(args):
     """Adds carbon due to harvested wood products
     
