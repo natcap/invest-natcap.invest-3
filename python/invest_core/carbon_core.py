@@ -104,13 +104,23 @@ def harvestProducts(args):
         feature.SetField(hwpIndex,hwpCarbonPool)
         calculated_carbon_layer.SetFeature(feature)
     
+        #Make a new raster in memory for burning in the HWP values.
+        driver = gdal.GetDriverByName("MEM")
+        hwp_ds = driver.Create("temp.tif", args['lulc_cur'].RasterXSize,
+                                args['lulc_cur'].RasterYSize, 1, gdal.GDT_CFloat32)
+        hwp_ds.SetProjection(args['lulc_cur'].GetProjection())
+        hwp_ds.SetGeoTransform(args['lulc_cur'].GetGeoTransform())
+        hwp_ds.GetRasterBand(1).SetNoDataValue(-5.0)
+
+    
+    
     #Now burn the hwp pools into the output raster.
     #This is wrong too, all rasterize layer does is to overwrite values
     #in the original layer.  we need 2 layers, the original and the hwp
     #raster which is 0 everywhere except on the calculated_carbon_layer.
     #can we copy storage_cur, set values to 0, rasterize calculated_carbon_layer
     #to it, then add the two to final storage_cur like we do in sequestration operation
-    gdal.RasterizeLayer(args['storage_cur'],[1], calculated_carbon_layer,
+    gdal.RasterizeLayer(hwp_ds,[1], calculated_carbon_layer,
                          options=['ATTRIBUTE=hwp_pool'])
 
 def valuate(args):
