@@ -3,6 +3,7 @@ import data_handler
 import carbon_seq
 import carbon_diff
 import carbon_value
+import carbon_add
 import osgeo.gdal
 from osgeo import gdal
 import osgeo.osr as osr
@@ -104,24 +105,24 @@ def harvestProducts(args):
         feature.SetField(hwpIndex,hwpCarbonPool)
         calculated_carbon_layer.SetFeature(feature)
     
-        #Make a new raster in memory for burning in the HWP values.
-        driver = gdal.GetDriverByName("MEM")
-        hwp_ds = driver.Create("temp.tif", args['lulc_cur'].RasterXSize,
-                                args['lulc_cur'].RasterYSize, 1, gdal.GDT_CFloat32)
-        hwp_ds.SetProjection(args['lulc_cur'].GetProjection())
-        hwp_ds.SetGeoTransform(args['lulc_cur'].GetGeoTransform())
-        hwp_ds.GetRasterBand(1).SetNoDataValue(-5.0)
+    #Make a new raster in memory for burning in the HWP values.
+    driver = gdal.GetDriverByName("MEM")
+    hwp_ds = driver.Create("temp.tif", args['lulc_cur'].RasterXSize,
+                            args['lulc_cur'].RasterYSize, 1, gdal.GDT_Float32)
+    hwp_ds.SetProjection(args['lulc_cur'].GetProjection())
+    hwp_ds.SetGeoTransform(args['lulc_cur'].GetGeoTransform())
+    hwp_ds.GetRasterBand(1).SetNoDataValue(-5.0)
 
     
     
-    #Now burn the hwp pools into the output raster.
-    #This is wrong too, all rasterize layer does is to overwrite values
-    #in the original layer.  we need 2 layers, the original and the hwp
-    #raster which is 0 everywhere except on the calculated_carbon_layer.
-    #can we copy storage_cur, set values to 0, rasterize calculated_carbon_layer
-    #to it, then add the two to final storage_cur like we do in sequestration operation
+    #Now burn the hwp pools into the HWP raster in memory.
     gdal.RasterizeLayer(hwp_ds,[1], calculated_carbon_layer,
                          options=['ATTRIBUTE=hwp_pool'])
+    
+    #Add the HWP raster to the storage raster, write the sum to the
+    #storage raster.
+    rasterAdd(args['storage_cur'], hwp_ds, args['storage_cur'])
+    
 
 def valuate(args):
     """Executes the economic valuation model.
@@ -191,6 +192,23 @@ def rasterDiff(storage_cur, storage_fut, outputRaster):
         cur_data = lulc_cur_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
         fut_data = lulc_fut_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
         out_array = carbon_diff.execute(nodataDict, cur_data, fut_data)
+        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
+
+def rasterAdd(storage_cur, hwpRaster, outputRaster):
+    """Iterate through the rows in the two sequestration rasters and calculate the 
+        sum of each pixel.  Maps the sum to the output raster.
+        
+        storage_cur - a GDAL raster dataset
+        hwpRaster - a GDAL raster dataset
+        outputRaster - a GDAL raster dataset"""
+    
+    nodataDict = build_nodata_dict(storage_cur, outputRaster)
+    storage_band = storage_cur.GetRasterBand(1)
+    hwp_band = hwpRaster.GetRasterBand(1)
+    for i in range(0, storage_band.YSize):
+        cur_data = storage_band.ReadAsArray(0, i, storage_band.XSize, 1)
+        fut_data = hwp_band.ReadAsArray(0, i, storage_band.XSize, 1)
+        out_array = carbon_add.execute(nodataDict, cur_data, fut_data)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def pixelArea(dataset):
