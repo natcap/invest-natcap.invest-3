@@ -77,7 +77,8 @@ class TestCarbonCore(unittest.TestCase):
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'storage_cur': output,
                 'calc_value' : False,
-                'hwp_cur_shape': ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp')}
+                'hwp_cur_shape': ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
+                'lulc_cur_year' : 2000}
 
         
 

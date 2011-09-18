@@ -8,7 +8,7 @@ from osgeo import gdal
 import osgeo.osr as osr
 from osgeo import ogr
 from dbfpy import dbf
-from math import exp
+import math
 
 def execute(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -87,10 +87,19 @@ def harvestProducts(args):
         for key,index in fieldArgs.iteritems():
             fieldArgs[key] = feature.GetField(index)
         
-        #This is where the carbon pool calculation should go.
-        #What's given below is only an example of what is possible and is otherwise
-        #totally wrong.  The actual equation should be #1 from the carbon user's guide
-        hwpCarbonPool = fieldArgs['Cut_cur']+fieldArgs['Start_date']
+
+        #Apply equation #1 from the carbon user's guide
+        limit = math.ceil((1.0/((args['lulc_cur_year']-fieldArgs['Start_date'])\
+                                /fieldArgs['Freq_cur'])))
+        sum = 0
+        for t in range(int(limit)):
+            w = math.log(2)/fieldArgs['Decay_cur']
+            m = args['lulc_cur_year'] - fieldArgs['Start_date'] \
+                    - (t*fieldArgs['Freq_cur'])
+            sum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
+            
+        #set the HWP carbon pool for this feature.
+        hwpCarbonPool = fieldArgs['Cut_cur']*sum
         hwpIndex = feature.GetFieldIndex('hwp_pool')
         feature.SetField(hwpIndex,hwpCarbonPool)
         calculated_carbon_layer.SetFeature(feature)
