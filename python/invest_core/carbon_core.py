@@ -15,8 +15,8 @@ def execute(args):
         LULC raster.
     
         args - is a dictionary with at least the following entries:
-        args['lulc_cur'] - is a GDAL raster dataset
-        args['lulc_fut'] - is a GDAL raster dataset
+        args['storage_raster'] - is a GDAL raster dataset
+        args['hwp_raster'] - is a GDAL raster dataset
         args['carbon_pools'] - is a DBF dataset mapping carbon sequestration numbers to lulc classifications.
         args['storage_cur'] - a GDAL raster dataset for outputing the sequestered carbon
                           based on the current lulc
@@ -27,8 +27,8 @@ def execute(args):
         args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
                             value of sequestered carbon.
         args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
-        args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
-        args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
+        args['lulc_cur_year'] - is an int.  Represents the year of storage_raster
+        args['lulc_fut_year'] - is an int.  Represents the year of hwp_raster
         args['c_value'] - a float.  Represents the price of carbon in US Dollars.
         args['discount'] - a float.  Represents the annual discount in the price of carbon
         args['rate_change'] - a float.  Represents the rate of change in the price of carbon
@@ -36,15 +36,15 @@ def execute(args):
         returns nothing"""
 
     #Calculate the per pixel carbon storage due to lulc pools
-    area = pixelArea(args['lulc_cur'])
-    inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
+    area = pixelArea(args['storage_raster'])
+    inNoData = args['storage_raster'].GetRasterBand(1).GetNoDataValue()
     outNoData = args['storage_cur'].GetRasterBand(1).GetNoDataValue()
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
     #calculate carbon storage
-    rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
-    if 'lulc_fut' in args:
-        rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
+    rasterSeq(pools, args['storage_raster'], args['storage_cur'])
+    if 'hwp_raster' in args:
+        rasterSeq(pools, args['hwp_raster'], args['storage_fut'])
         #calculate sequestration
         rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
 
@@ -63,7 +63,7 @@ def harvestProducts(args):
         args['carbon_pools'] - is a DBF dataset mapping sequestration numbers to lulc classifications
         
         No return value."""
-        
+    
     #Make a copy of the hwp_cur_shape shape so we can write to it
     calculated_carbon_ds = ogr.GetDriverByName("Memory").\
                     CopyDataSource(args['hwp_cur_shape'], "")
@@ -104,13 +104,22 @@ def harvestProducts(args):
         feature.SetField(hwpIndex,hwpCarbonPool)
         calculated_carbon_layer.SetFeature(feature)
     
+    #Make a new raster in memory for burning in the HWP values.
+    driver = gdal.GetDriverByName("MEM")
+    hwp_ds = driver.Create("temp.tif", args['lulc_cur'].RasterXSize,
+                            args['lulc_cur'].RasterYSize, 1, gdal.GDT_CFloat32)
+    hwp_ds.SetProjection(args['lulc_cur'].GetProjection())
+    hwp_ds.SetGeoTransform(args['lulc_cur'].GetGeoTransform())
+    hwp_ds.GetRasterBand(1).SetNoDataValue(-5.0)
+    
+    
     #Now burn the hwp pools into the output raster.
     #This is wrong too, all rasterize layer does is to overwrite values
     #in the original layer.  we need 2 layers, the original and the hwp
     #raster which is 0 everywhere except on the calculated_carbon_layer.
     #can we copy storage_cur, set values to 0, rasterize calculated_carbon_layer
     #to it, then add the two to final storage_cur like we do in sequestration operation
-    gdal.RasterizeLayer(args['storage_cur'],[1], calculated_carbon_layer,
+    gdal.RasterizeLayer(hwp_ds,[1], calculated_carbon_layer,
                          options=['ATTRIBUTE=hwp_pool'])
 
 def valuate(args):
