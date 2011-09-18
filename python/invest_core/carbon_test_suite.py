@@ -2,6 +2,7 @@ import unittest
 
 def suite():
     tests = ['carbon_seq_test',
+             'carbon_add_test',
              'carbon_diff_test',
              'carbon_value_test',
              'carbon_core_test',
