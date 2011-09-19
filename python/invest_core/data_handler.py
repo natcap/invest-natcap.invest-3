@@ -33,6 +33,8 @@ def open(data):
             return gdal_open(data['uri'])
     if data['type'] == 'dbf':
         return dbf_open(data['uri'])
+    if data['type'] == 'ogr':
+        return ogr.Open(data['uri'])
     
 
 def close(data):
