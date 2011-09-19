@@ -96,12 +96,10 @@ def harvestProducts(args):
         #Apply equation #1 from the carbon user's guide
         limit = math.ceil((1.0/((args['lulc_cur_year']-fieldArgs['Start_date'])\
                                 /fieldArgs['Freq_cur'])))
-        sum = 0
-        for t in range(int(limit)):
-            w = math.log(2)/fieldArgs['Decay_cur']
-            m = args['lulc_cur_year'] - fieldArgs['Start_date'] \
-                    - (t*fieldArgs['Freq_cur'])
-            sum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
+        
+        sum = calcFeatureHWP(limit, fieldArgs['Decay_cur'],
+                              args['lulc_cur_year'], fieldArgs['Start_date'],
+                              fieldArgs['Freq_cur'])
             
         #set the HWP carbon pool for this feature.
         hwpCarbonPool = fieldArgs['Cut_cur']*sum
@@ -127,6 +125,25 @@ def harvestProducts(args):
     #storage raster.
     rasterAdd(args['storage_cur'], hwp_ds, args['storage_cur'])
     
+
+def calcFeatureHWP(limit, decay, refYear, startDate, freq):
+    """Apply equation 2 from the user's guide
+    
+        limit - a number
+        decay - a number
+        refYear - the reference year (an int)
+        startDate - the start date of the current harvest pattern
+        freq - the number of times this parcel has been harvested
+        
+        returns a float"""
+        
+    sum = 0
+    for t in range(int(limit)):
+        w = math.log(2)/decay
+        m = refYear - startDate - (t*freq)
+        sum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
+
+    return sum
 
 def valuate(args):
     """Executes the economic valuation model.
