@@ -163,6 +163,16 @@ def makeMemRaster(example):
     return hwp_ds
 
 def iterFeatures(layer, suffix, yrCur, yrFut=None, avg=None):
+    """Iterate over all features in the provided layer, calculate HWP.
+    
+        layer - an OGR layer
+        suffix - a String, either 'cur' or 'fut'
+        yrCur - an int
+        yrFut - an int (required for future HWP contexts)
+        avg - an int (required for future HWP contexts)
+        
+        no return value"""
+        
     #calculate hwp pools per feature for the future scenario
     for feature in layer:
         #First initialize the fields by index
