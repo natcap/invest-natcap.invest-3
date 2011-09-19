@@ -78,7 +78,6 @@ class TestInvest(unittest.TestCase):
                                  'input': False}
     
             arguments = {'lulc_cur': lulc_dictionary,
-                         'lulc_fut': None,
                          'carbon_pools' : pool_dictionary,
                          'storage_cur' : output_dictionary,
                          'storage_fut' : None,
@@ -199,7 +198,8 @@ class TestInvest(unittest.TestCase):
                                 'dataType': gdal.GDT_Float32,
                                 'input': False}
             
-            hwp_cur = {'uri' : '../../test_data/harv_samp_cur/harv_samp_cur.shp'}
+            hwp_cur = {'uri' : '../../test_data/harv_samp_cur/harv_samp_cur.shp',
+                       'type' : 'ogr'}
             
             arguments = {'lulc_cur': lulc_cur,
                      'carbon_pools' : pool_dictionary,
@@ -213,9 +213,7 @@ class TestInvest(unittest.TestCase):
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/carbon_hwp_cur_regression.tif')
             assert_raster_equality_vec(self, storage_cur['uri'],
                                         '../../test_data/carbon_hwp_cur_regression.tif')
-            
-            for dict in (storage_cur):
-                os.remove(dict['uri'])
+            os.remove(storage_cur['uri'])
             pass
 
 
