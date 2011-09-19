@@ -50,7 +50,10 @@ def execute(args):
         rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
 
     if 'hwp_cur_shape' in args:
-        CurrentHarvestProducts(args)
+        if 'hwp_fut_shape' not in args:
+            currentHarvestProducts(args)
+        else:
+            futureHarvestProducts(args)
 
     if args['calc_value']:
         valuate(args)
@@ -59,7 +62,7 @@ def execute(args):
     for key in args:
         args[key] = None
         
-def CurrentHarvestProducts(args):
+def currentHarvestProducts(args):
     """Adds carbon due to harvested wood products
     
         args - is a dictionary with at least the following entries:
@@ -92,7 +95,7 @@ def CurrentHarvestProducts(args):
     #storage raster.
     rasterAdd(args['storage_cur'], hwp_ds, args['storage_cur'])
     
-def FutureHarvestProducts(args):
+def futureHarvestProducts(args):
     """Adds carbon due to harvested wood products in a future scenario
     
         args - is a dictionary with at least the following entries:
@@ -120,72 +123,27 @@ def FutureHarvestProducts(args):
     avg = math.floor((args['lulc_fut_year'] - args['lulc_cur_year'])/2.0)
             
     #calculate hwp pools per feature for the current hwp scenario
-    for feature in calculated_cur_carbon_layer:
-        #First initialize the fields by index
-        fieldArgs = {'Cut_cur' : feature.GetFieldIndex('Cut_cur'),
-                     'Start_date' : feature.GetFieldIndex('Start_date'),
-                     'Freq_cur' : feature.GetFieldIndex('Freq_cur'),
-                     'Decay_cur' : feature.GetFieldIndex('Decay_cur'),
-                     'C_den_cur' : feature.GetFieldIndex('C_den_cur'),
-                     'BCEF_cur' : feature.GetFieldIndex('BCEF_cur')}
-        
-        #Then replace the indices with actual values
-        for key,index in fieldArgs.iteritems():
-            fieldArgs[key] = feature.GetField(index)
-        
-        #Apply the first term of equation #5 from the carbon user's guide
-        limit = math.ceil((1.0/((avg-fieldArgs['Start_date'])\
-                                /fieldArgs['Freq_cur'])))
-        
-        sum = calcFeatureHWP(limit, fieldArgs['Decay_cur'],
-                              args['lulc_cur_year'], fieldArgs['Start_date'],
-                              fieldArgs['Freq_cur'])
-            
-        #set the HWP carbon pool for this feature.
-        hwpCarbonPool = fieldArgs['Cut_cur']*sum
-        hwpIndex = feature.GetFieldIndex('hwp_pool')
-        feature.SetField(hwpIndex,hwpCarbonPool)
-        calculated_fut_carbon_layer.SetFeature(feature)
- 
+    iterFeatures(calculated_cur_carbon_layer, 'cur', args['lulc_cur_year'],
+                 args['lulc_fut_year'], avg)
     
     #calculate hwp pools per feature for the future scenario
-    for feature in calculated_fut_carbon_layer:
-        #First initialize the fields by index
-        fieldArgs = {'Cut_fut' : feature.GetFieldIndex('Cut_fut'),
-                     'Freq_fut' : feature.GetFieldIndex('Freq_fut'),
-                     'Decay_fut' : feature.GetFieldIndex('Decay_fut'),
-                     'C_den_fut' : feature.GetFieldIndex('C_den_fut'),
-                     'BCEF_fut' : feature.GetFieldIndex('BCEF_fut')}
-        
-        #Then replace the indices with actual values
-        for key,index in fieldArgs.iteritems():
-            fieldArgs[key] = feature.GetField(index)
-        
-
-        #Apply equation #1 from the carbon user's guide
-        limit = math.ceil((1.0/((args['lulc_cur_year']-fieldArgs['Start_date'])\
-                                /fieldArgs['Freq_fut'])))
-        
-        sum = calcFeatureHWP(limit, fieldArgs['Decay_fut'],
-                              args['lulc_cur_year'], fieldArgs['Start_date'],
-                              fieldArgs['Freq_fut'])
-            
-        #set the HWP carbon pool for this feature.
-        hwpCarbonPool = fieldArgs['Cut_fut']*sum
-        hwpIndex = feature.GetFieldIndex('hwp_pool')
-        feature.SetField(hwpIndex,hwpCarbonPool)
-        calculated_fut_carbon_layer.SetFeature(feature)
+    iterFeatures(calculated_fut_carbon_layer, 'fut', args['lulc_cur_year'],
+                  args['lulc_fut_year'], avg)
     
-    #Make a new raster in memory for burning in the HWP values.
-    hwp_ds = makeMemRaster(args['lulc_cur'])
-
-    #Now burn the hwp pools into the HWP raster in memory.
-    gdal.RasterizeLayer(hwp_ds,[1], calculated_fut_carbon_layer,
-                         options=['ATTRIBUTE=hwp_pool'])
+    for layer in [calculated_cur_carbon_layer, calculated_fut_carbon_layer]:
+        #Make a new raster in memory for burning in the HWP values.
+        hwp_ds = makeMemRaster(args['lulc_cur'])
     
-    #Add the HWP raster to the storage raster, write the sum to the
-    #storage raster.
-    rasterAdd(args['storage_cur'], hwp_ds, args['storage_cur'])
+        #Now burn the current hwp pools into the HWP raster in memory.
+        gdal.RasterizeLayer(hwp_ds,[1], layer,
+                             options=['ATTRIBUTE=hwp_pool'])
+        
+        #Add the HWP raster to the storage raster, write the sum to the
+        #storage raster.
+        rasterAdd(args['storage_cur'], hwp_ds, args['storage_cur'])
+        
+        #clear the temp dataset.
+        hwp_ds = None
 
 
 def makeMemRaster(example):
