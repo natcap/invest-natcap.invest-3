@@ -183,7 +183,41 @@ class TestInvest(unittest.TestCase):
                 os.remove(dict['uri'])
             pass
         
-        
+        def test_carbon_storage_hwp_regression(self):
+            """Verify the carbon storage model (with HWP) against known results"""
+                        
+            lulc_cur = {'uri'  : '../../test_data/lulc_samp_cur',
+                               'type' :'gdal',
+                               'input': True}
+
+            pool_dictionary = {'uri'  : '../../test_data/carbon_pools_int.dbf',
+                               'type' : 'dbf',
+                               'input': True}
+            
+            storage_cur = {'uri'  : '../../carbon_output/test_seq_cur.tif',
+                                'type' : 'gdal',
+                                'dataType': gdal.GDT_Float32,
+                                'input': False}
+            
+            hwp_cur = {'uri' : '../../test_data/harv_samp_cur/harv_samp_cur.shp'}
+            
+            arguments = {'lulc_cur': lulc_cur,
+                     'carbon_pools' : pool_dictionary,
+                     'storage_cur' : storage_cur,
+                     'hwp_cur_shape' : hwp_cur,
+                     'calc_value' : False,
+                     'lulc_cur_year' : 2000}
+            
+            invest_core.execute('carbon_core', arguments)
+                            
+#            assert_raster_equality(self, seq_value['uri'], '../../test_data/carbon_hwp_cur_regression.tif')
+            assert_raster_equality_vec(self, storage_cur['uri'],
+                                        '../../test_data/carbon_hwp_cur_regression.tif')
+            
+            for dict in (storage_cur):
+                os.remove(dict['uri'])
+            pass
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvest)
