@@ -79,8 +79,7 @@ def CurrentHarvestProducts(args):
     calculated_carbon_layer.CreateField(hwp_def)
     
     #calculate hwp pools per feature
-    iterFeatures(calculated_carbon_layer, 'cur', args['lulc_cur_year'],
-                 args['lulc_fut_year'])
+    iterFeatures(calculated_carbon_layer, 'cur', args['lulc_cur_year'])
     
     #Make a new raster in memory for burning in the HWP values.
     hwp_ds = makeMemRaster(args['lulc_cur'])
@@ -205,7 +204,7 @@ def makeMemRaster(example):
     
     return hwp_ds
 
-def iterFeatures(layer, suffix, yrCur, yrFut, avg=None):
+def iterFeatures(layer, suffix, yrCur, yrFut=None, avg=None):
     #calculate hwp pools per feature for the future scenario
     for feature in layer:
         #First initialize the fields by index
@@ -228,13 +227,15 @@ def iterFeatures(layer, suffix, yrCur, yrFut, avg=None):
             if avg == None: 
                 limit = math.ceil((1.0/((yrCur-fieldArgs['Start_date'])\
                                 /fieldArgs['Freq_cur'])))
+                endDate = yrCur
             #Calculate the sum of current HWP landscape in future context
             else:
                 limit = math.ceil((1.0/((avg - fieldArgs['Start_date'])\
                                 /fieldArgs['Freq_cur'])))
+                endDate = yrFut
                 
             decay = fieldArgs['Decay_cur']
-            refYear = fieldArgs['Start_date']
+            startDate = fieldArgs['Start_date']
             freq = fieldArgs['Freq_cur']
             
         #calcluate the sum of future HWP landscape in future context.
@@ -242,10 +243,12 @@ def iterFeatures(layer, suffix, yrCur, yrFut, avg=None):
             limit = math.ceil((1.0/((yrFut - avg)\
                                 /fieldArgs['Freq_fut'])))
             decay = fieldArgs['Decay_fut']
-            refYear = avg
+            startDate = avg
+            endDate = yrFut
             freq = fieldArgs['Freq_fut']
         
-        sum = calcFeatureHWP(limit, decay, refYear, yrFut, freq)
+        #calculate the feature's HWP carbon pool
+        sum = calcFeatureHWP(limit, decay, endDate, startDate, freq)
             
         #set the HWP carbon pool for this feature.
         hwpCarbonPool = fieldArgs['Cut_' + suffix]*sum
@@ -254,13 +257,13 @@ def iterFeatures(layer, suffix, yrCur, yrFut, avg=None):
         layer.SetFeature(feature)
 
 
-def calcFeatureHWP(limit, decay, refYear, yrFut, freq):
+def calcFeatureHWP(limit, decay, endDate, startDate, freq):
     """Apply equation 2 from the user's guide
     
         limit - a number
         decay - a number
-        refYear - the reference year (an int)
-        startDate - the start date of the current harvest pattern
+        startDate - the reference year (an int)
+        endDate - the start date of the current harvest pattern
         freq - the number of times this parcel has been harvested
         
         returns a float"""
@@ -268,7 +271,7 @@ def calcFeatureHWP(limit, decay, refYear, yrFut, freq):
     sum = 0
     for t in range(int(limit)):
         w = math.log(2)/decay
-        m = yrFut - refYear - (t*freq)
+        m =  endDate - startDate - (t*freq)
         sum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
 
     return sum
