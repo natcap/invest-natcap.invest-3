@@ -24,6 +24,9 @@ def execute(model, args):
     if args['calc_value'] == True:
         outKeys += ['storage_fut', 'seq_delta', 'seq_value']
         inKeys += ['lulc_fut']
+        
+    if 'hwp_cur_shape' in args:
+        inKeys += ['hwp_cur_shape']
 
     #process the args for input
     for key in (inKeys):
