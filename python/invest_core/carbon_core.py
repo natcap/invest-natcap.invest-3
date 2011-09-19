@@ -50,7 +50,7 @@ def execute(args):
         rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
 
     if 'hwp_cur_shape' in args:
-        harvestProducts(args)
+        CurrentHarvestProducts(args)
 
     if args['calc_value']:
         valuate(args)
@@ -59,7 +59,7 @@ def execute(args):
     for key in args:
         args[key] = None
         
-def harvestProducts(args):
+def CurrentHarvestProducts(args):
     """Adds carbon due to harvested wood products
     
         args - is a dictionary with at least the following entries:
@@ -108,15 +108,8 @@ def harvestProducts(args):
         calculated_carbon_layer.SetFeature(feature)
     
     #Make a new raster in memory for burning in the HWP values.
-    driver = gdal.GetDriverByName("MEM")
-    hwp_ds = driver.Create("temp.tif", args['lulc_cur'].RasterXSize,
-                            args['lulc_cur'].RasterYSize, 1, gdal.GDT_Float32)
-    hwp_ds.SetProjection(args['lulc_cur'].GetProjection())
-    hwp_ds.SetGeoTransform(args['lulc_cur'].GetGeoTransform())
-    hwp_ds.GetRasterBand(1).SetNoDataValue(-5.0)
+    hwp_ds = makeMemRaster(args['lulc_cur'])
 
-    
-    
     #Now burn the hwp pools into the HWP raster in memory.
     gdal.RasterizeLayer(hwp_ds,[1], calculated_carbon_layer,
                          options=['ATTRIBUTE=hwp_pool'])
@@ -125,6 +118,81 @@ def harvestProducts(args):
     #storage raster.
     rasterAdd(args['storage_cur'], hwp_ds, args['storage_cur'])
     
+def FutureHarvestProducts(args):
+    """Adds carbon due to harvested wood products in a future scenario
+    
+        args - is a dictionary with at least the following entries:
+        args['lulc_cur'] - is a GDAL raster dataset
+        args['storage_cur'] - is a GDAL raster dataset
+        args['carbon_pools'] - is a DBF dataset mapping sequestration numbers to lulc classifications
+        
+        No return value."""
+        
+    #Make a copy of the hwp_fut_shape shape so we can write to it
+    calculated_fut_carbon_ds = ogr.GetDriverByName("Memory").\
+                    CopyDataSource(args['hwp_fut_shape'], "")
+    calculated_fut_carbon_layer = calculated_fut_carbon_ds.GetLayerByName('harv_samp_fut')
+    
+    #Create a hardwood products pool that will get calculated later
+    hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
+    calculated_fut_carbon_layer.CreateField(hwp_def)
+    
+    #calculate hwp pools per feature
+    for feature in calculated_fut_carbon_layer:
+        #First initialize the fields by index
+        fieldArgs = {'Cut_fut' : feature.GetFieldIndex('Cut_fut'),
+                     'Start_date' : feature.GetFieldIndex('Start_date'),
+                     'Freq_fut' : feature.GetFieldIndex('Freq_fut'),
+                     'Decay_fut' : feature.GetFieldIndex('Decay_fut'),
+                     'C_den_fut' : feature.GetFieldIndex('C_den_fut'),
+                     'BCEF_fut' : feature.GetFieldIndex('BCEF_fut')}
+        
+        #Then replace the indices with actual values
+        for key,index in fieldArgs.iteritems():
+            fieldArgs[key] = feature.GetField(index)
+        
+
+        #Apply equation #1 from the carbon user's guide
+        limit = math.ceil((1.0/((args['lulc_cur_year']-fieldArgs['Start_date'])\
+                                /fieldArgs['Freq_fut'])))
+        
+        sum = calcFeatureHWP(limit, fieldArgs['Decay_fut'],
+                              args['lulc_cur_year'], fieldArgs['Start_date'],
+                              fieldArgs['Freq_fut'])
+            
+        #set the HWP carbon pool for this feature.
+        hwpCarbonPool = fieldArgs['Cut_fut']*sum
+        hwpIndex = feature.GetFieldIndex('hwp_pool')
+        feature.SetField(hwpIndex,hwpCarbonPool)
+        calculated_fut_carbon_layer.SetFeature(feature)
+    
+    #Make a new raster in memory for burning in the HWP values.
+    hwp_ds = makeMemRaster(args['lulc_cur'])
+
+    #Now burn the hwp pools into the HWP raster in memory.
+    gdal.RasterizeLayer(hwp_ds,[1], calculated_fut_carbon_layer,
+                         options=['ATTRIBUTE=hwp_pool'])
+    
+    #Add the HWP raster to the storage raster, write the sum to the
+    #storage raster.
+    rasterAdd(args['storage_cur'], hwp_ds, args['storage_cur'])
+
+
+def makeMemRaster(example):
+    """make a raster in memory based on the example raster
+    
+        example - a GDAL dataset
+        
+        returns a GDAL dataset"""
+        
+    driver = gdal.GetDriverByName("MEM")
+    hwp_ds = driver.Create("temp.tif", example.RasterXSize,
+                            example.RasterYSize, 1, gdal.GDT_Float32)
+    hwp_ds.SetProjection(example.GetProjection())
+    hwp_ds.SetGeoTransform(example.GetGeoTransform())
+    hwp_ds.GetRasterBand(1).SetNoDataValue(-5.0)
+    
+    return hwp_ds
 
 def calcFeatureHWP(limit, decay, refYear, startDate, freq):
     """Apply equation 2 from the user's guide
