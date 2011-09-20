@@ -2,7 +2,6 @@ import carbon_core_test
 import carbon_core
 import carbon_seq_test
 import carbon_seq
-import carbon_uri
 import data_handler_test
 import data_handler
 import invest
