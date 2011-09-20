@@ -1,5 +1,5 @@
 import unittest
-import carbon_core
+import carbon
 import data_handler
 import numpy as np
 import os
@@ -16,8 +16,8 @@ except ImportError:
     import Numeric
 
 class TestCarbonCore(unittest.TestCase):
-    def test_carbon_core_smoke(self):
-        """Smoke test for carbon_core function.  Shouldn't crash with
+    def test_carbon_smoke(self):
+        """Smoke test for carbon function.  Shouldn't crash with
         zero length inputs"""
         driver = gdal.GetDriverByName("GTIFF")
         lulc_path = '../../test_data/test_blank_input'
@@ -32,21 +32,21 @@ class TestCarbonCore(unittest.TestCase):
                 'carbon_pools': dbf.Dbf('../../test_data/test_blank_dbf', new=True),
                 'storage_cur': output,
                 'calc_value' : False}
-        
-        carbon_core.execute(args)
-        
+
+        carbon.execute(args)
+
         #close the two created datasets and dbf file.
         lulc = None
         output = None
         data_handler.close(args['carbon_pools'])
-        
+
         os.remove(output_path)
         os.remove('../../test_data/test_blank_dbf')
         os.remove(lulc_path)
         pass
 
-    def test_carbon_core_with_inputs(self):
-        """Test carbon_core using realistic inputs."""
+    def test_carbon_with_inputs(self):
+        """Test carbon using realistic inputs."""
         driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         out_dict = {'uri':'../../test_real_output.tif',
@@ -59,13 +59,13 @@ class TestCarbonCore(unittest.TestCase):
                 'storage_cur': output,
                 'calc_value' : False}
 
-        carbon_core.execute(args)
+        carbon.execute(args)
         output = data_handler.close(output)
         os.remove(out_dict['uri'])
         pass
 
-    def test_carbon_core_with_HWP_inputs(self):
-        """Test carbon_core using realistic inputs.  Includes HWP"""
+    def test_carbon_with_HWP_inputs(self):
+        """Test carbon using realistic inputs.  Includes HWP"""
         driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         out_dict = {'uri':'../../carbon_output/test_real_output_hwp.tif',
@@ -80,15 +80,15 @@ class TestCarbonCore(unittest.TestCase):
                 'hwp_cur_shape': ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
                 'lulc_cur_year' : 2000}
 
-        
 
-        carbon_core.execute(args)
+
+        carbon.execute(args)
         output = data_handler.close(output)
         #os.remove(out_dict['uri'])
         pass
 
-    def test_carbon_core_HWP_cur_fut(self):
-        """Test carbon_core with cur and fut HWP"""
+    def test_carbon_HWP_cur_fut(self):
+        """Test carbon with cur and fut HWP"""
         driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         out_dict = {'uri':'../../carbon_output/test_real_output_hwp.tif',
@@ -105,7 +105,7 @@ class TestCarbonCore(unittest.TestCase):
                 'lulc_cur_year' : 2000,
                 'lulc_fut_year' : 2030}
 
-        carbon_core.execute(args)
+        carbon.execute(args)
         output = data_handler.close(output)
         #os.remove(out_dict['uri'])
         pass
@@ -115,7 +115,7 @@ class TestCarbonCore(unittest.TestCase):
     def test_build_pools(self):
         """Verify the correct construction of the pools dict"""
         db = dbf.Dbf('../../test_data/carbon_pools_float.dbf', readOnly=1)
-        pools = carbon_core.build_pools_dict(db, 1, -1, 255)
+        pools = carbon.build_pools_dict(db, 1, -1, 255)
         numRecords = db.recordCount
         poolsLen = len(pools)
 
