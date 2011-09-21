@@ -326,7 +326,7 @@ def rasterAdd(storage_cur, hwpRaster, outputRaster):
     for i in range(0, storage_band.YSize):
         cur_data = storage_band.ReadAsArray(0, i, storage_band.XSize, 1)
         fut_data = hwp_band.ReadAsArray(0, i, storage_band.XSize, 1)
-        out_array = carbon_add.execute(nodataDict, cur_data, fut_data)
+        out_array = carbon_add(nodataDict, cur_data, fut_data)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def pixelArea(dataset):
@@ -430,4 +430,26 @@ def carbon_diff(nodata, firstArray, secondArray):
     
     if firstArray.size > 0:
         mapFun = np.vectorize(mapDiff)
+        return mapFun(firstArray, secondArray)
+
+def carbon_add(nodata, firstArray, secondArray):
+    """Creates a new array by returning the sum of the elements of the two input
+        arrays.  If a nodata value is detected in firstArray, the proper nodata
+        value for the new output array is returned.
+    
+        nodata - a dict: {'input': int, 'output' : int}
+        firstArray - a numpy array
+        secondarray - a numpy array
+        
+        return a new numpy array with the difference of the two input arrays
+        """
+    
+    def mapSum(a, b):
+        if a == nodata['input']:
+            return nodata['output']
+        else:
+            return a + b
+    
+    if firstArray.size > 0:
+        mapFun = np.vectorize(mapSum)
         return mapFun(firstArray, secondArray)
