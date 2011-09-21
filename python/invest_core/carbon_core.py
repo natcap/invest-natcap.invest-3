@@ -1,6 +1,5 @@
 import numpy as np
 import data_handler
-import carbon_seq
 import carbon_diff
 import carbon_value
 import carbon_add
@@ -294,7 +293,7 @@ def rasterSeq(pools, inputRaster, outputRaster):
     lulc = inputRaster.GetRasterBand(1)
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
-        out_array = carbon_seq.execute(data, pools)
+        out_array = carbon_seq(data, pools)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def rasterDiff(storage_cur, storage_fut, outputRaster):
@@ -388,3 +387,26 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
             sum += dbf[i][field]
         poolsDict[dbf[i]['LULC']] = sum * area
     return poolsDict
+
+def carbon_seq(array, dict):
+    """Creates a new array by maping the values stored in array from the
+         keys in dict to the values in dict.  If a value in array is not 
+         a key in dict it gets mapped to zero.
+        
+        array - 1numpy array
+        dict - a dictionary that maps elements of array to new values
+        
+        return a new numpy array with keys mapped from array to values in dict
+        """
+
+    def mapPool(x, dict):
+        if x in dict:
+            return dict[x]
+        else:
+            return 0
+
+    if array.size > 0:
+        mapFun = np.vectorize(mapPool)
+        return mapFun(array, dict)
+    else:
+        return []
