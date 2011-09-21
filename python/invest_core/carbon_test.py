@@ -15,7 +15,7 @@ except ImportError:
     from gdalconst import *
     import Numeric
 
-class TestCarbonCore(unittest.TestCase):
+class TestCarbon(unittest.TestCase):
     def test_carbon_smoke(self):
         """Smoke test for carbon function.  Shouldn't crash with
         zero length inputs"""
@@ -126,6 +126,6 @@ class TestCarbonCore(unittest.TestCase):
         pass
 
 if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonCore)
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbon)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
