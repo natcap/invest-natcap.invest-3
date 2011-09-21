@@ -43,6 +43,29 @@ class CarbonTestSuite(unittest.TestCase):
                             pools[lulc[0][x]],
                             'Pool data was not correctly transcribed')
 
+
+    def test_carbon_diff_smoke(self):
+        """Smoke test for the diff function."""
+        lulc1 = np.zeros((1,0))
+        lulc2 = np.zeros((1,0))
+        nodata = {'input': 0, 'output': 0} #set a nodata value
+        
+        carbon_core.carbon_diff(nodata, lulc1, lulc2)
+        pass
+    
+    def test_1D_arrays(self):
+        length = 100
+        lulc1 = np.zeros((1, length))
+        lulc2 = np.ones((1, length))
+        nodata = {'input': -2, 'output': -2} #set a nodata value
+        
+        #run carbon_diff
+        output = carbon_core.carbon_diff(nodata, lulc1, lulc2)
+
+        #verify the contents of output against pool and lulc data
+        for x in range(lulc1.shape[1]):
+            self.assertEqual(output[0][x], 1, 'Difference was not correctly calculated.')
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
     unittest.TextTestRunner(verbosity=2).run(suite)

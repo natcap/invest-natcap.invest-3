@@ -1,6 +1,5 @@
 import numpy as np
 import data_handler
-import carbon_diff
 import carbon_value
 import carbon_add
 import osgeo.gdal
@@ -310,7 +309,7 @@ def rasterDiff(storage_cur, storage_fut, outputRaster):
     for i in range(0, lulc_cur_band.YSize):
         cur_data = lulc_cur_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
         fut_data = lulc_fut_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
-        out_array = carbon_diff.execute(nodataDict, cur_data, fut_data)
+        out_array = carbon_diff(nodataDict, cur_data, fut_data)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def rasterAdd(storage_cur, hwpRaster, outputRaster):
@@ -349,7 +348,7 @@ def build_nodata_dict(inputRaster, outputRaster):
     inNoData = inputRaster.GetRasterBand(1).GetNoDataValue()
     outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
     
-    nodata = {'cur': inNoData, 'fut': outNoData}
+    nodata = {'input': inNoData, 'output': outNoData}
     return nodata
 
 def build_pools(dbf, inputRaster, outputRaster):
@@ -410,3 +409,25 @@ def carbon_seq(array, dict):
         return mapFun(array, dict)
     else:
         return []
+    
+def carbon_diff(nodata, firstArray, secondArray):
+    """Creates a new array by returning the difference of the elements in the
+        two input arrays.  If a nodata value is detected in the input array,
+        the proper nodata value for the output array is returned.
+        
+        nodata - a dict: {'input': int, 'output' : int}
+        firstArray - a numpy array
+        secondArray - a numpy array
+
+        return a new numpy array with the difference of the two input arrays
+        """
+    
+    def mapDiff(a, b):
+        if a == nodata['input']:
+            return nodata['output']
+        else:
+            return b-a
+    
+    if firstArray.size > 0:
+        mapFun = np.vectorize(mapDiff)
+        return mapFun(firstArray, secondArray)
