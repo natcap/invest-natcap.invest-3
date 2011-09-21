@@ -1,7 +1,5 @@
 import numpy as np
 import data_handler
-import carbon_value
-import carbon_add
 import osgeo.gdal
 from osgeo import gdal
 import osgeo.osr as osr
@@ -276,7 +274,7 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
     
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
-        out_array = carbon_value.execute(nodataDict, data, numYears, carbonValue, multiplier)
+        out_array = carbon_value(nodataDict, data, numYears, carbonValue, multiplier)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def rasterSeq(pools, inputRaster, outputRaster):
@@ -415,7 +413,7 @@ def carbon_diff(nodata, firstArray, secondArray):
         two input arrays.  If a nodata value is detected in the input array,
         the proper nodata value for the output array is returned.
         
-        nodata - a dict: {'input': int, 'output' : int}
+        nodata - a dict: {'input': some number, 'output' : some number}
         firstArray - a numpy array
         secondArray - a numpy array
 
@@ -437,7 +435,7 @@ def carbon_add(nodata, firstArray, secondArray):
         arrays.  If a nodata value is detected in firstArray, the proper nodata
         value for the new output array is returned.
     
-        nodata - a dict: {'input': int, 'output' : int}
+        nodata - a dict: {'input': some number, 'output' : some number}
         firstArray - a numpy array
         secondarray - a numpy array
         
@@ -453,3 +451,29 @@ def carbon_add(nodata, firstArray, secondArray):
     if firstArray.size > 0:
         mapFun = np.vectorize(mapSum)
         return mapFun(firstArray, secondArray)
+    
+def carbon_value(nodata, data, numYears, carbonValue, multiplier):
+    """iterate through the array and calculate the economic value of sequestered carbon.
+        Map the values to the output array.
+        
+        nodata - a dict: {'input': some number, 'output' : some number}
+        data - a numpy array
+        numYears - an int: the number of years the simulation covers
+        carbonValue - a float: the dollar value of carbon
+        multiplier - a float"""
+        
+    def mapValue(x):
+        if x == nodata['input']:
+            return nodata['output']
+        else:
+            #calculate the pixel-specific value of carbon for this simulation
+            return carbonValue*(x/numYears)*multiplier 
+    
+    if data.size > 0:
+        mapFun = np.vectorize(mapValue)
+        return mapFun(data)
+    else:
+        return []
+    
+    
+        
