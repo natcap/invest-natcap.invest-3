@@ -1,5 +1,5 @@
 import unittest
-import invest_core
+import invest
 from osgeo import gdal
 import os
 from numpy import *
@@ -64,31 +64,19 @@ class TestInvest(unittest.TestCase):
         def test_carbon_model_regression(self):
             """Regression Test to run Carbon model using sample data.  
             Results will be compared with a raster that is known to be accurate."""
-            lulc_dictionary = {'uri'  : '../../test_data/lulc_samp_cur',
-                               'type' :'gdal',
-                               'input': True}
     
-            pool_dictionary = {'uri'  : '../../test_data/carbon_pools_float.dbf',
-                               'type' : 'dbf',
-                               'input': True}
+            storage_cur = '../../carbon_output/test_carbon_output.tif'
     
-            output_dictionary = {'uri'  : '../../carbon_output/test_carbon_output.tif',
-                                 'type' : 'gdal',
-                                 'dataType': gdal.GDT_Float32,
-                                 'input': False}
-    
-            arguments = {'lulc_cur': lulc_dictionary,
-                         'carbon_pools' : pool_dictionary,
-                         'storage_cur' : output_dictionary,
-                         'storage_fut' : None,
-                         'seq_delta': None,
+            arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
+                         'carbon_pools' : '../../test_data/carbon_pools_float.dbf',
+                         'storage_cur' : storage_cur,
                          'calc_value' : False}
     
-            invest_core.execute('carbon_core', arguments)
+            invest.execute('carbon', arguments)
     
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
-            assert_raster_equality_vec(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
-            os.remove(output_dictionary['uri'])
+            assert_raster_equality_vec(self, storage_cur, '../../test_data/carbon_regression.tif' )
+            os.remove(storage_cur)
             pass
 
 
@@ -99,69 +87,32 @@ class TestInvest(unittest.TestCase):
                 
                 Uses the modified pools dbf, where all values are ints."""
                 
-            lulc_dictionary = {'uri'  : '../../test_data/lulc_samp_cur',
-                               'type' :'gdal',
-                               'input': True}
+            storage_cur = '../../carbon_output/test_carbon_output.tif'
 
-            pool_dictionary = {'uri'  : '../../test_data/carbon_pools_int.dbf',
-                               'type' : 'dbf',
-                               'input': True}
-            
-            output_dictionary = {'uri'  : '../../carbon_output/test_carbon_output.tif',
-                                 'type' : 'gdal',
-                                 'dataType': gdal.GDT_Float32,
-                                 'input': False}
-
-            arguments = {'lulc_cur': lulc_dictionary,
-                     'carbon_pools' : pool_dictionary,
-                     'storage_cur' : output_dictionary,
+            arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
+                     'carbon_pools' : '../../test_data/carbon_pools_int.dbf',
+                     'storage_cur' : storage_cur,
                      'calc_value' : False}
 
-            invest_core.execute('carbon_core', arguments)
+            invest.execute('carbon', arguments)
             
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
-            assert_raster_equality_vec(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
-            os.remove(output_dictionary['uri'])
+            assert_raster_equality_vec(self, storage_cur, '../../test_data/tot_c_cur_int')
+            os.remove(storage_cur)
             pass
         
         
         def test_carbon_valuation(self):
             """Verify that the carbon valuation model passes successfully"""
             
-            lulc_cur = {'uri'  : '../../test_data/lulc_samp_cur',
-                               'type' :'gdal',
-                               'input': True}
-            lulc_fut = {'uri'  : '../../test_data/lulc_samp_fut',
-                               'type' :'gdal',
-                               'input': True}
-
-            pool_dictionary = {'uri'  : '../../test_data/carbon_pools_int.dbf',
-                               'type' : 'dbf',
-                               'input': True}
+            storage_cur = '../../carbon_output/test_seq_cur.tif'
+            storage_fut = '../../carbon_output/test_seq_fut.tif'
+            seq_delta = '../../carbon_output/test_seq_delta.tif'
+            seq_value = '../../carbon_output/test_carbon_value.tif'
             
-            storage_cur = {'uri'  : '../../carbon_output/test_seq_cur.tif',
-                                'type' : 'gdal',
-                                'dataType': gdal.GDT_Float32,
-                                'input': False}
-            
-            storage_fut = {'uri'  : '../../carbon_output/test_seq_fut.tif',
-                                 'type' : 'gdal',
-                                 'dataType': gdal.GDT_Float32,
-                                 'input': False}
-            
-            seq_delta = {'uri'  : '../../carbon_output/test_seq_delta.tif',
-                                 'type' : 'gdal',
-                                 'dataType': gdal.GDT_Float32,
-                                 'input': False}
-            
-            seq_value = {'uri'  : '../../carbon_output/test_carbon_value.tif',
-                                 'type' : 'gdal',
-                                 'dataType': gdal.GDT_Float32,
-                                 'input': False}
-            
-            arguments = {'lulc_cur': lulc_cur,
-                         'lulc_fut': lulc_fut,
-                     'carbon_pools' : pool_dictionary,
+            arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
+                         'lulc_fut': '../../test_data/lulc_samp_fut',
+                     'carbon_pools' : '../../test_data/carbon_pools_int.dbf',
                      'storage_cur' : storage_cur,
                      'storage_fut' : storage_fut,
                      'seq_delta' : seq_delta,
@@ -173,47 +124,33 @@ class TestInvest(unittest.TestCase):
                      'discount' : 0.07,
                      'rate_change' : 0.0}
             
-            invest_core.execute('carbon_core', arguments)
+            invest.execute('carbon', arguments)
                             
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
-            assert_raster_equality_vec(self, seq_value['uri'], '../../test_data/val_seq_int')
+            assert_raster_equality_vec(self, seq_value, '../../test_data/val_seq_int')
             
-            for dict in (storage_cur, storage_fut, seq_delta, seq_value):
-                os.remove(dict['uri'])
+            for uri in (storage_cur, storage_fut, seq_delta, seq_value):
+                os.remove(uri)
             pass
         
         def test_carbon_storage_hwp_regression(self):
             """Verify the carbon storage model (with HWP) against known results"""
-                        
-            lulc_cur = {'uri'  : '../../test_data/lulc_samp_cur',
-                               'type' :'gdal',
-                               'input': True}
-
-            pool_dictionary = {'uri'  : '../../test_data/carbon_pools_int.dbf',
-                               'type' : 'dbf',
-                               'input': True}
             
-            storage_cur = {'uri'  : '../../carbon_output/test_seq_cur.tif',
-                                'type' : 'gdal',
-                                'dataType': gdal.GDT_Float32,
-                                'input': False}
+            storage_cur = '../../carbon_output/test_seq_cur.tif'
             
-            hwp_cur = {'uri' : '../../test_data/harv_samp_cur/harv_samp_cur.shp',
-                       'type' : 'ogr'}
-            
-            arguments = {'lulc_cur': lulc_cur,
-                     'carbon_pools' : pool_dictionary,
+            arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
+                     'carbon_pools' : '../../test_data/carbon_pools_int.dbf',
                      'storage_cur' : storage_cur,
-                     'hwp_cur_shape' : hwp_cur,
+                     'hwp_cur_shape' : '../../test_data/harv_samp_cur/harv_samp_cur.shp',
                      'calc_value' : False,
                      'lulc_cur_year' : 2000}
             
-            invest_core.execute('carbon_core', arguments)
+            invest.execute('carbon', arguments)
                             
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/carbon_hwp_cur_regression.tif')
-            assert_raster_equality_vec(self, storage_cur['uri'],
+            assert_raster_equality_vec(self, storage_cur,
                                         '../../test_data/carbon_hwp_cur_regression.tif')
-            os.remove(storage_cur['uri'])
+            os.remove(storage_cur)
             pass
 
 

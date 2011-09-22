@@ -37,23 +37,31 @@ def execute(args):
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     gdal.AllRegister()
     
-    lulc_cur = gdal.Open(args['lulc_cur'], gdal.GA_ReadOnly)
-    lulc_fut = gdal.Open(args['lulc_fut'], gdal.GA_ReadOnly)
+    #open the two required elements.
+    lulc_cur = gdal.Open(args['lulc_cur'], gdal.GA_ReadOnly)    
+    args['lulc_cur']      = lulc_cur
+    args['carbon_pools']  = dbf.Dbf(args['carbon_pools'])
     
-    args = {'lulc_cur'     : lulc_cur,
-            'lulc_fut'     : lulc_fut,
-            'carbon_pools' : dbf.Dbf(args['carbon_pools']),
-            'storage_cur'  : mimic(lulc_cur, args['storage_cur']),
-            'seq_delta'    : mimic(lulc_cur, args['seq_delta']),
-            'seq_value'    : mimic(lulc_cur, args['seq_value']),
-            'lulc_cur_year': args['lulc_cur_year'],
-            'lulc_fut_year': args['lulc_fut_year'],
-            'c_value'      : args['c_value'],
-            'discount'     : args['discount'],
-            'rate_change'  : args['rate_change'],
-            'hwp_cur_shape': ogr.Open(args['hwp_cur_shape']),
-            'hwp_fut_shape': ogr.Open(args['hwp_fut_shape'])}
+    #open the future LULC if it has been provided
+    if 'lulc_fut' in args:
+        args['lulc_fut'] = gdal.Open(args['lulc_fut'], gdal.GA_ReadOnly)
     
+    #open any necessary output datasets
+    for dataset in ('seq_delta', 'seq_value', 'storage_cur', 'storage_fut'):
+        if dataset in args:
+            args[dataset] = mimic(lulc_cur, args[dataset])
+    
+    #Set other values the user provides for valuation
+    for item in ('lulc_cur_year', 'lulc_fut_year', 'c_value', 'discount', 'rate_change'):
+        if item in args:
+            args[item] = args[item]
+    
+    #Open the harvest maps
+    for shape in ('hwp_cur_shape', 'hwp_fut_shape'):
+        if shape in args:
+            args[shape] = ogr.Open(args[shape])
+    
+    #run the carbon model.
     carbon_core.execute(args)
     
     #close all newly created datasets
