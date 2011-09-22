@@ -4,6 +4,7 @@ from osgeo import gdal
 import osgeo.osr as osr
 from osgeo import ogr
 from dbfpy import dbf
+import carbon
 import math
 
 def execute(args):
@@ -78,7 +79,7 @@ def currentHarvestProducts(args):
     iterFeatures(calculated_carbon_layer, 'cur', args['lulc_cur_year'])
     
     #Make a new raster in memory for burning in the HWP values.
-    hwp_ds = makeMemRaster(args['lulc_cur'])
+    hwp_ds = carbon.mimic(args['lulc_cur'], 'temp.tif', 'MEM')
 
     #Now burn the hwp pools into the HWP raster in memory.
     gdal.RasterizeLayer(hwp_ds,[1], calculated_carbon_layer,
@@ -125,7 +126,7 @@ def futureHarvestProducts(args):
     
     for layer in [calculated_cur_carbon_layer, calculated_fut_carbon_layer]:
         #Make a new raster in memory for burning in the HWP values.
-        hwp_ds = makeMemRaster(args['lulc_cur'])
+        hwp_ds = carbon.mimic(args['lulc_cur'], 'temp.tif', 'MEM')
     
         #Now burn the current hwp pools into the HWP raster in memory.
         gdal.RasterizeLayer(hwp_ds,[1], layer,
@@ -138,22 +139,6 @@ def futureHarvestProducts(args):
         #clear the temp dataset.
         hwp_ds = None
 
-
-def makeMemRaster(example):
-    """make a raster in memory based on the example raster
-    
-        example - a GDAL dataset
-        
-        returns a GDAL dataset"""
-        
-    driver = gdal.GetDriverByName("MEM")
-    hwp_ds = driver.Create("temp.tif", example.RasterXSize,
-                            example.RasterYSize, 1, gdal.GDT_Float32)
-    hwp_ds.SetProjection(example.GetProjection())
-    hwp_ds.SetGeoTransform(example.GetGeoTransform())
-    hwp_ds.GetRasterBand(1).SetNoDataValue(-5.0)
-    
-    return hwp_ds
 
 def iterFeatures(layer, suffix, yrCur, yrFut=None, avg=None):
     """Iterate over all features in the provided layer, calculate HWP.
