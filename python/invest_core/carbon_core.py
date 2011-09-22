@@ -52,10 +52,8 @@ def execute(args):
 
     if args['calc_value']:
         valuate(args)
-        
-    #close all datasets
-    for key in args:
-        args[key] = None
+
+
         
 def currentHarvestProducts(args):
     """Adds carbon due to harvested wood products

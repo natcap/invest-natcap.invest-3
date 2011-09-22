@@ -64,9 +64,12 @@ def execute(args):
     #run the carbon model.
     carbon_core.execute(args)
     
-    #close all newly created datasets
+    #close all newly created raster datasets
     for dataset in ('storage_cur', 'storage_fut', 'seq_delta', 'seq_value'):
         args[dataset] = None
+        
+    #close the pools DBF file
+    args['carbon_pools'].close()
     
     
 def mimic(example, outputURI):
