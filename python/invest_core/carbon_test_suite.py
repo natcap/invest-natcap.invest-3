@@ -4,7 +4,7 @@ import numpy as np
 import random
 import os
 from dbfpy import dbf
-
+import osgeo.osr as osr
 try:
     from osgeo import ogr, gdal
     from osgeo.gdalconst import *
@@ -229,6 +229,27 @@ class CarbonTestSuite(unittest.TestCase):
         #Extra entry represents the nodata value.
         self.assertEqual(numRecords + 1, poolsLen, 'Expected ' + str(numRecords) +
                          ' records in the pools dict, but found ' + str(poolsLen) + ' instead')
+        pass
+
+    
+    def test_carbon_core_pixel_area(self):
+        """Verify the correct output of carbon_core.pixelArea()"""
+        
+        dataset = gdal.Open('../../test_data/carbon_regression.tif', gdal.GA_ReadOnly)
+        
+        srs = osr.SpatialReference()
+        srs.SetProjection(dataset.GetProjection())
+        linearUnits = srs.GetLinearUnits()
+        geotransform = dataset.GetGeoTransform()
+        #take absolute value since sometimes negative widths/heights
+        areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
+        result = areaMeters / (10 ** 4) #convert m^2 to Ha
+        
+        #run pixelArea()
+        area = carbon_core.pixelArea(dataset)
+        
+        #assert the output of pixelArea against our calculation
+        self.assertEqual(result, area)
         pass
 
 
