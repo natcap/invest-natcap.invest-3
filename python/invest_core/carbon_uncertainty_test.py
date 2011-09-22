@@ -1,6 +1,5 @@
 import unittest
 import carbon_uncertainty
-import data_handler
 import numpy as np
 import os
 from dbfpy import dbf

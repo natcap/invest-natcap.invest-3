@@ -1,6 +1,5 @@
 import unittest
-import carbon_core
-import data_handler
+import carbon, carbon_core
 import numpy as np
 import os
 from dbfpy import dbf
@@ -38,7 +37,7 @@ class TestCarbonCore(unittest.TestCase):
         #close the two created datasets and dbf file.
         lulc = None
         output = None
-        data_handler.close(args['carbon_pools'])
+        args['carbon_pools'].close()
 
         os.remove(output_path)
         os.remove('../../test_data/test_blank_dbf')
@@ -53,14 +52,14 @@ class TestCarbonCore(unittest.TestCase):
                     'input':False,
                     'type': 'gdal',
                     'dataType': 6}
-        output = data_handler.mimic(lulc, out_dict)
+        output = carbon.mimic(lulc, out_dict)
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'storage_cur': output,
                 'calc_value' : False}
 
         carbon_core.execute(args)
-        output = data_handler.close(output)
+        output = None
         os.remove(out_dict['uri'])
         pass
 
@@ -72,7 +71,7 @@ class TestCarbonCore(unittest.TestCase):
                     'input':False,
                     'type': 'gdal',
                     'dataType': 6}
-        output = data_handler.mimic(lulc, out_dict)
+        output = carbon.mimic(lulc, out_dict)
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'storage_cur': output,
@@ -83,7 +82,7 @@ class TestCarbonCore(unittest.TestCase):
 
 
         carbon_core.execute(args)
-        output = data_handler.close(output)
+        output = None
         #os.remove(out_dict['uri'])
         pass
 
@@ -95,7 +94,7 @@ class TestCarbonCore(unittest.TestCase):
                     'input':False,
                     'type': 'gdal',
                     'dataType': 6}
-        output = data_handler.mimic(lulc, out_dict)
+        output = carbon.mimic(lulc, out_dict)
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'storage_cur': output,
@@ -106,7 +105,7 @@ class TestCarbonCore(unittest.TestCase):
                 'lulc_fut_year' : 2030}
 
         carbon_core.execute(args)
-        output = data_handler.close(output)
+        output = None
         #os.remove(out_dict['uri'])
         pass
 

@@ -1,9 +1,8 @@
 import unittest
-import carbon_core
+import carbon, carbon_core
 import numpy as np
 import random
 import os
-import data_handler
 from dbfpy import dbf
 
 try:
@@ -21,7 +20,6 @@ def suite():
              'carbon_diff_test',
              'carbon_value_test',
              'carbon_core_test',
-             'data_handler_test',
              'carbon_uncertainty_test',
              'carbon_scenario_uncertainty_test']
     suite = unittest.TestLoader().loadTestsFromNames(tests)
@@ -143,10 +141,10 @@ class CarbonTestSuite(unittest.TestCase):
 
         carbon_core.execute(args)
 
-        #close the two created datasets and dbf file.
+        #close the two created datasets and DBF file.
         lulc = None
         output = None
-        data_handler.close(args['carbon_pools'])
+        args['carbon_pools'].close()
 
         os.remove(output_path)
         os.remove('../../test_data/test_blank_dbf')
@@ -161,14 +159,14 @@ class CarbonTestSuite(unittest.TestCase):
                     'input':False,
                     'type': 'gdal',
                     'dataType': 6}
-        output = data_handler.mimic(lulc, out_dict)
+        output = carbon.mimic(lulc, out_dict['uri'])
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'storage_cur': output,
                 'calc_value' : False}
 
         carbon_core.execute(args)
-        output = data_handler.close(output)
+        output = None
         os.remove(out_dict['uri'])
         pass
 
@@ -180,7 +178,7 @@ class CarbonTestSuite(unittest.TestCase):
                     'input':False,
                     'type': 'gdal',
                     'dataType': 6}
-        output = data_handler.mimic(lulc, out_dict)
+        output = carbon.mimic(lulc, out_dict['uri'])
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'storage_cur': output,
@@ -191,7 +189,7 @@ class CarbonTestSuite(unittest.TestCase):
 
 
         carbon_core.execute(args)
-        output = data_handler.close(output)
+        output = None
         #os.remove(out_dict['uri'])
         pass
 
@@ -203,7 +201,7 @@ class CarbonTestSuite(unittest.TestCase):
                     'input':False,
                     'type': 'gdal',
                     'dataType': 6}
-        output = data_handler.mimic(lulc, out_dict)
+        output = carbon.mimic(lulc, out_dict['uri'])
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'storage_cur': output,
@@ -214,7 +212,7 @@ class CarbonTestSuite(unittest.TestCase):
                 'lulc_fut_year' : 2030}
 
         carbon_core.execute(args)
-        output = data_handler.close(output)
+        output = None
         #os.remove(out_dict['uri'])
         pass
 
