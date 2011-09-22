@@ -3,6 +3,7 @@ import carbon, carbon_core
 import numpy as np
 import random
 import os
+import math
 from dbfpy import dbf
 import osgeo.osr as osr
 try:
@@ -288,6 +289,10 @@ class CarbonTestSuite(unittest.TestCase):
         pass
 
     def test_carbon_core_build_nodata_dict(self):
+        """Assert that the nodata dict is being constructed properly
+            based on its two input rasters, which have potentially different
+            nodata values"""
+            
         inputRaster = gdal.Open('../../test_data/lulc_samp_cur')
         outputRaster = gdal.Open('../../test_data/carbon_regression.tif')
 
@@ -299,6 +304,30 @@ class CarbonTestSuite(unittest.TestCase):
         self.assertEqual(nodata_dict['input'], inNoData)
         self.assertEqual(nodata_dict['output'], outNoData)
         pass
+    
+    def test_carbon_core_calc_feature_hwp(self):
+        """Verify the correct output of calcFeatureHWP() against our own
+            calculation using the same numbers."""
+            
+        limit = 4
+        decay = 0.74
+        endDate = 2030
+        startDate = 2000
+        freq = 4
+        
+        #run calcFeatureHWP
+        result = carbon_core.calcFeatureHWP(limit, decay, endDate, startDate, freq)   
+                
+        #Calculate the result on our own
+        sum = 0
+        for t in range(int(limit)):
+            w = math.log(2)/decay
+            m =  endDate - startDate - (t*freq)
+            sum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
+    
+        #verify our output
+        self.assertEqual(result, sum)
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
