@@ -287,6 +287,18 @@ class CarbonTestSuite(unittest.TestCase):
         self.assertEqual(result, area)
         pass
 
+    def test_carbon_core_build_nodata_dict(self):
+        inputRaster = gdal.Open('../../test_data/lulc_samp_cur')
+        outputRaster = gdal.Open('../../test_data/carbon_regression.tif')
+
+        nodata_dict = carbon_core.build_nodata_dict(inputRaster, outputRaster)
+        
+        inNoData = inputRaster.GetRasterBand(1).GetNoDataValue()
+        outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
+        
+        self.assertEqual(nodata_dict['input'], inNoData)
+        self.assertEqual(nodata_dict['output'], outNoData)
+        pass
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
