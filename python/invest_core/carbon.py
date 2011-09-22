@@ -65,7 +65,7 @@ def execute(args):
     carbon_core.execute(args)
     
     #close all newly created datasets
-    for dataset in ('storage_cur', 'seq_delta', 'seq_value'):
+    for dataset in ('storage_cur', 'storage_fut', 'seq_delta', 'seq_value'):
         args[dataset] = None
     
     
