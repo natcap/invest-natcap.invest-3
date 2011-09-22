@@ -217,18 +217,53 @@ class CarbonTestSuite(unittest.TestCase):
         pass
 
 
-
     def test_carbon_core_build_pools(self):
-        """Verify the correct construction of the pools dict"""
+        """Verify the correct construction of the pools dict based on input
+            datasets.  Since carbon_core.build_pools calls 
+            carbon_core.build_pools_dict, this test will only verify that the
+            process works and that the correct number of records have been 
+            retained.  See test_carbon_core_build_pools_dict for per-record
+            testing of the correct dict construction."""
+            
         db = dbf.Dbf('../../test_data/carbon_pools_float.dbf', readOnly=1)
-        pools = carbon_core.build_pools_dict(db, 1, -1, 255)
+        raster1 = gdal.Open('../../test_data/lulc_samp_cur', gdal.GA_ReadOnly)
+        raster2 = gdal.Open('../../test_data/lulc_samp_fut', gdal.GA_ReadOnly)
+        
+        pools = carbon_core.build_pools(db, raster1, raster2)
         numRecords = db.recordCount
         poolsLen = len(pools)
 
         #adding one extra value to the expected length of the pools dict
         #Extra entry represents the nodata value.
         self.assertEqual(numRecords + 1, poolsLen, 'Expected ' + str(numRecords) +
-                         ' records in the pools dict, but found ' + str(poolsLen) + ' instead')
+            ' records in the pools dict, but found ' + str(poolsLen) + ' instead')
+
+        
+
+    def test_carbon_core_build_pools_dict(self):
+        """Verify the correct construction of the pools dict, including the 
+            provided nodata values.  This is done on a per-entry basis."""
+            
+        db = dbf.Dbf('../../test_data/carbon_pools_float.dbf', readOnly=1)
+        area = 1
+        inNoData = -1
+        outNoData = 255
+        pools = carbon_core.build_pools_dict(db, area, inNoData, outNoData)
+
+        #loop through dbf entries and verify the correct sum has been returned.
+        for i in range(db.recordCount):
+            sum = 0
+            for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
+                sum += db[i][field]
+            sum = sum * area
+            lulc_id = db[i]['LULC']
+            self.assertEqual(pools[lulc_id], sum)
+        
+        #assert the nodata value entry
+        self.assertEqual(pools[inNoData], outNoData)
+        
+        #close the DBF file.
+        db.close()
         pass
 
     
