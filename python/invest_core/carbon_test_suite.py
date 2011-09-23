@@ -26,6 +26,30 @@ def suite():
     suite = unittest.TestLoader().loadTestsFromNames(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
+def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
+    """Create a new raster with random int values.
+        
+        cols - an int, the number of columns in the output raster
+        rows - an int, the number of rows in the output raster
+        uri - a string for the path to the file
+        format - a string representing the GDAL format code such as 
+            'GTiff' or 'MEM'.  See http://gdal.org/formats_list.html for a
+            complete list of formats.
+            
+        returns a new dataset with random values."""
+        
+    driver = gdal.GetDriverByName(format)
+    dataset = driver.Create(uri, cols, rows, 1, gdal.GDT_Float32)
+    band = dataset.GetRasterBand(1)
+    
+    for i in range(0, band.YSize):
+        array = band.ReadAsArray(0, i, band.XSize, 1)
+        for j in range(0, band.XSize):
+            array[0][j] = random.randint(1, 10)
+        dataset.GetRasterBand(1).WriteArray(array, 0, i)
+
+    return dataset
+
 class CarbonTestSuite(unittest.TestCase):
     def test_carbon_seq_smoke(self):
         """Smoke test for carbon_seq function.  Shouldn't crash with
@@ -328,6 +352,33 @@ class CarbonTestSuite(unittest.TestCase):
         #verify our output
         self.assertEqual(result, sum)
 
+    def test_carbon_core_valuate(self):
+        
+        driver = gdal.GetDriverByName('MEM')
+        seq_value = driver.Create('temp.tif', 100, 100, 1, gdal.GDT_Float32)
+        
+        args = {'lulc_cur': gdal.Open('../../test_data/lulc_samp_cur',
+                                       gdal.GA_ReadOnly),
+                'storage_cur': gdal.Open('../../test_data/carbon_regression.tif',
+                                          gdal.GA_ReadOnly),
+                'seq_delta' : gdal.Open('../../test_data/randomInts100x100.tif'),
+                'seq_value' : seq_value,
+                'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_float.dbf'),
+                'lulc_fut_year': 2030,
+                'lulc_cur_year': 2000,
+                'c_value': 7.54,
+                'discount': 0.7,
+                'rate_change':0.8}
+        
+        carbon_core.valuate(args)
+        
+        #make a dictionary mapping all calculations for 1-10 (since all pixel 
+        #values on the seq_delta raster are between 1 and 10) to the number
+        #that should have been written to the output array.
+        #write a vectorize function to verify that the math had been performed 
+        #correctly.
+        
+        pass
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
