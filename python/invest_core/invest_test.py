@@ -21,7 +21,7 @@ def assert_raster_equality(unit, firstUri, secondUri):
     for i in range(0, outputBand.YSize):
         outArray = outputBand.ReadAsArray(0, i, outputBand.XSize, 1)
         i2Array = invest2Band.ReadAsArray(0, i, outputBand.XSize, 1)
-        for j in range(0, outputBand.XSize-1):
+        for j in range(0, outputBand.XSize):
             if (i2Array[0][j] == i2bnodata):
                 unit.assertEqual(outArray[0][j], obnodata, "Should have found nodata pixel (value == " + str(obnodata) + ") in output raster at row " + str(i) + " index " + str(j) + ", but found " + str(outArray[0][j]) + " instead")
             else:
