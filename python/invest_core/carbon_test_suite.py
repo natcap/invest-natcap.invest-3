@@ -1,5 +1,6 @@
 import unittest
 import carbon, carbon_core
+import invest_test
 import numpy as np
 import random
 import os
@@ -489,8 +490,25 @@ class CarbonTestSuite(unittest.TestCase):
         vectorize_dataset_equality_pools(self, raster1, outputRaster, valueDict)
         pass
     
-
-
+    def test_carbon_Core_rasterSeq(self):
+        """Verify the correct output of carbon_core.rasterSeq()"""
+        
+        #build up our poolsDict
+        poolsDict = {}
+        for i in range(1, 11):
+            poolsDict[i] = i*1.57
+        
+        driver = gdal.GetDriverByName('MEM')
+        outputRaster = driver.Create('temp.tif', 100, 100, 1, gdal.GDT_Float32)
+        inputRaster = gdal.Open('../../test_data/randomInts100x100.tif', gdal.GA_ReadOnly)
+        
+        #run caron_core.rasterSeq
+        carbon_core.rasterSeq(poolsDict, inputRaster, outputRaster)
+        
+        #verify the output of rasterSeq
+        vectorize_dataset_equality_pools(self, inputRaster, outputRaster, poolsDict)
+        pass
+        
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
     unittest.TextTestRunner(verbosity=2).run(suite)
