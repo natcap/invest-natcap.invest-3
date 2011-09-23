@@ -530,6 +530,59 @@ class CarbonTestSuite(unittest.TestCase):
         vectorize_dataset_equality_pools(self, raster1, outputRaster, poolsDict)
         pass
         
+    def test_carbon_core_iterFeatures_cur(self):
+        """Verify that iterFeatures correctly calculates HWP per layer.
+            IterFeatures has three modes of operation:
+            
+            1. suffix='cur',
+            2. suffix='cur', avg!=None
+            3. suffix='fut'
+            
+            This test will test the first mode, which would be invoked if the
+            user provided HWP data for the current scenario only."""
+        
+        #set up our arguments
+        hwp_shape = ogr.Open('../../test_data/harv_samp_cur')
+        hwp_mem_shape = ogr.GetDriverByName('Memory').CopyDataSource(hwp_shape, '')
+        hwp_layer = hwp_mem_shape.GetLayerByName('harv_samp_cur')
+        yrCur = 2000
+        #call carbon_core.iterFeatures
+        carbon_core.iterFeatures(hwp_layer, 'cur', yrCur)
+        
+        #Determine what values should have been stored per layer
+        for feature in hwp_layer:
+            #first, initialize layer fields by index
+            fieldArgs = {'Cut_' + suffix : feature.GetFieldIndex('Cut_' + suffix),
+                         'Freq_' + suffix : feature.GetFieldIndex('Freq_' + suffix),
+                         'Decay_' + suffix : feature.GetFieldIndex('Decay_' + suffix),
+                         'C_den_' + suffix : feature.GetFieldIndex('C_den_' + suffix),
+                         'BCEF_' + suffix : feature.GetFieldIndex('BCEF_' + suffix),
+                         'Start_date' : feature.GetFieldIndex('Start_date')}
+            
+            #then, replace the indices with actual items
+            for key,index in fieldArgs.iteritems():
+                fieldArgs[key] = feature.GetField(index)
+            
+            #set the parameters for the summation calculation
+            limit = math.ceil((1.0/((yrCur-fieldArgs['Start_date'])\
+                                    /fieldArgs['Freq_cur'])))
+            endDate = yrCur
+            decay = fieldArgs['Decay_cur']
+            startDate = fieldArgs['Start_date']
+            freq = fieldArgs['Freq_cur']
+            
+            #calculate the feature's HWP carbon pool
+            sum = calcFeatureHWP(limit, decay, endDate, startDate, freq)
+    
+            #set the HWP carbon pool for this feature.
+            hwpCarbonPool = fieldArgs['Cut_' + suffix]*sum
+            hwpIndex = feature.GetFieldIndex('hwp_pool')
+            
+            self.assertAlmostEqual(feature.GetField(hwpIndex), hwpCarbonPool, 6)
+            pass
+ 
+            
+            
         
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
