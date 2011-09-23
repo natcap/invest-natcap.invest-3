@@ -19,8 +19,8 @@ def assert_raster_equality(unit, firstUri, secondUri):
     unit.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
 
     for i in range(0, outputBand.YSize):
-        outArray = outputBand.ReadAsArray(1, i, outputBand.XSize-1, 1)
-        i2Array = invest2Band.ReadAsArray(1, i, outputBand.XSize-1, 1)
+        outArray = outputBand.ReadAsArray(0, i, outputBand.XSize, 1)
+        i2Array = invest2Band.ReadAsArray(0, i, outputBand.XSize, 1)
         for j in range(0, outputBand.XSize-1):
             if (i2Array[0][j] == i2bnodata):
                 unit.assertEqual(outArray[0][j], obnodata, "Should have found nodata pixel (value == " + str(obnodata) + ") in output raster at row " + str(i) + " index " + str(j) + ", but found " + str(outArray[0][j]) + " instead")
@@ -45,8 +45,8 @@ def assert_raster_equality_vec(unit, firstUri, secondUri):
     unit.assertEqual(outputBand.YSize, invest2Band.YSize, "Dimensions differ: output=" + str(outputBand.YSize) + ", i2output = " + str(invest2Band.YSize))
 
     for i in range(0, outputBand.YSize):
-        outArray = outputBand.ReadAsArray(1, i, outputBand.XSize-1, 1)
-        i2Array = invest2Band.ReadAsArray(1, i, outputBand.XSize-1, 1)
+        outArray = outputBand.ReadAsArray(0, i, outputBand.XSize, 1)
+        i2Array = invest2Band.ReadAsArray(0, i, outputBand.XSize, 1)
 
         def checkEqual(a, b):
             if b == i2bnodata:
