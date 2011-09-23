@@ -435,6 +435,40 @@ class CarbonTestSuite(unittest.TestCase):
         vectorize_dataset_equality_pools(self, args['seq_delta'], seq_value, valueDict)        
         pass
 
+    def test_carbon_core_rasterValue(self):
+        """Verify the correct output of carbon_core.rasterValue()"""
+        
+        #assemble arguments
+        driver = gdal.GetDriverByName('MEM')
+        outputRaster = driver.Create('temp.tif', 100, 100, 1, gdal.GDT_Float32)
+        inputRaster = gdal.Open('../../test_data/randomInts100x100.tif')
+        carbonValue = 7.54
+        discount = 0.7
+        rateOfChange = 0.7
+        numYears = 30
+        
+        #run carbon_core.rasterValue()
+        carbon_core.rasterValue(inputRaster, outputRaster, carbonValue, 
+                                discount, rateOfChange, numYears)
+        
+        #calculate the multiplier.
+        #This is based on the summation portion of equation 10.14
+        multiplier = 0.
+#        for n in range(numYears-1): #Subtract 1 per the user's manual
+        for n in range(numYears):    #This is wrong; allows us to match invest2
+            multiplier += 1./(((1.+rateOfChange)**n)*(1.+discount)**n)
+        
+        #build up a dictionary for the expected output of valuate()
+        valueDict = {}
+        for i in range(1,11):
+            carbon_stored = float(i)/numYears
+            valueDict[i] =carbonValue*carbon_stored*multiplier
+        
+        #Assert that rasterValue() wrote the correct values to outputRaster
+        vectorize_dataset_equality_pools(self, inputRaster, outputRaster, valueDict)
+        
+        pass
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
     unittest.TextTestRunner(verbosity=2).run(suite)
