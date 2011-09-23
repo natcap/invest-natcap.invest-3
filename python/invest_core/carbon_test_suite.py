@@ -50,6 +50,39 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
 
     return dataset
 
+def vectorize_dataset_equality_pools(unit, firstDS, secondDS, dict):
+    """Assert that the pixel values of secondDS match those of firstDS when
+        the input dict is mapped.
+        
+        unit - the 'self' object from the unittesting framework
+        firstDS - an open GDAL raster dataset
+        secondDS - an open GDAL raster dataset
+        dict - a dictionary mapping values of firstDS to what they should have
+            been recorded as in secondDS.
+            
+        no return value"""
+        
+    firstDSBand = firstDS.GetRasterBand(1)
+    secondDSBand = secondDS.GetRasterBand(1)
+    unit.assertEqual(firstDSBand.XSize, secondDSBand.XSize,
+                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
+                       ", second = " + str(secondDSBand.XSize))
+    unit.assertEqual(firstDSBand.YSize, secondDSBand.YSize,
+                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
+                      ", second = " + str(secondDSBand.YSize))
+
+    for i in range(0, firstDSBand.YSize):
+        firstArray = firstDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+        secondArray = secondDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+
+        def checkEqual(a, b):
+            """Assert that dict[a] == b"""
+            unit.assertAlmostEqual(dict[a], b, 6)
+                
+        fastCheck = np.vectorize(checkEqual)
+        fastCheck(firstArray, secondArray)
+
+
 class CarbonTestSuite(unittest.TestCase):
     def test_carbon_seq_smoke(self):
         """Smoke test for carbon_seq function.  Shouldn't crash with
@@ -353,10 +386,18 @@ class CarbonTestSuite(unittest.TestCase):
         self.assertEqual(result, sum)
 
     def test_carbon_core_valuate(self):
+        """Verify the correct output of carbon_core.valuate()
         
+            This test uses a small sample dataset with only ints as possible
+            input values.  This greatly limits the number of possible values
+            written to the MEM raster and allows us to check its values with
+            a constructed dict."""
+            
+        #create the memory-based output raster
         driver = gdal.GetDriverByName('MEM')
         seq_value = driver.Create('temp.tif', 100, 100, 1, gdal.GDT_Float32)
         
+        #set up our args dict for carbon_core.valuate()
         args = {'lulc_cur': gdal.Open('../../test_data/lulc_samp_cur',
                                        gdal.GA_ReadOnly),
                 'storage_cur': gdal.Open('../../test_data/carbon_regression.tif',
@@ -370,14 +411,28 @@ class CarbonTestSuite(unittest.TestCase):
                 'discount': 0.7,
                 'rate_change':0.8}
         
+        #run the valuate function
         carbon_core.valuate(args)
+
+        #calculate the number of years for use in the valuation equation
+        numYears = args['lulc_fut_year'] - args['lulc_cur_year']
+
+        #calculate the multiplier.
+        #This is based on the summation portion of equation 10.14
+        multiplier = 0.
+#        for n in range(numYears-1): #Subtract 1 per the user's manual
+        for n in range(numYears):    #This is wrong; allows us to match invest2
+            multiplier += 1./(((1.+args['rate_change'])**n)
+                              *(1.+args['discount'])**n)
         
-        #make a dictionary mapping all calculations for 1-10 (since all pixel 
-        #values on the seq_delta raster are between 1 and 10) to the number
-        #that should have been written to the output array.
-        #write a vectorize function to verify that the math had been performed 
-        #correctly.
+        #build up a dictionary for the expected output of valuate()
+        valueDict = {}
+        for i in range(1,11):
+            carbon_stored = float(i)/numYears
+            valueDict[i] = args['c_value']*carbon_stored*multiplier
         
+        #Assert that valuate() wrote the correct values to seq_value
+        vectorize_dataset_equality_pools(self, args['seq_delta'], seq_value, valueDict)        
         pass
 
 if __name__ == '__main__':
