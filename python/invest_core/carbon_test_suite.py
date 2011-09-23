@@ -45,7 +45,7 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
     for i in range(0, band.YSize):
         array = band.ReadAsArray(0, i, band.XSize, 1)
         for j in range(0, band.XSize):
-            array[0][j] = random.randint(1, 10)
+            array[0][j] = random.randint(1,10)
         dataset.GetRasterBand(1).WriteArray(array, 0, i)
 
     return dataset
@@ -466,8 +466,30 @@ class CarbonTestSuite(unittest.TestCase):
         
         #Assert that rasterValue() wrote the correct values to outputRaster
         vectorize_dataset_equality_pools(self, inputRaster, outputRaster, valueDict)
-        
         pass
+
+    def test_carbon_core_rasterDiff(self):
+        """Verify the correct output of carbon_core.rasterDiff()"""
+
+        #set up arguments        
+        driver = gdal.GetDriverByName('MEM')
+        outputRaster = driver.Create('temp.tif', 100, 100, 1, gdal.GDT_Float32)
+        raster1 = gdal.Open('../../test_data/randomInts100x100.tif', gdal.GA_ReadOnly)
+        raster2 = gdal.Open('../../test_data/constant4.67_100x100.tif', gdal.GA_ReadOnly)
+        
+        #run carbon_core.rasterDiff
+        carbon_core.rasterDiff(raster1, raster2, outputRaster)
+        
+        #set up our dict of rasterDiff's expected output
+        valueDict = {}
+        for i in range(1,11):
+            valueDict[i] = 4.67-i #4.67 is the value of every pixel in raster2
+
+        #Verify that rasterDiff() wrote the correct values to the outputRaster
+        vectorize_dataset_equality_pools(self, raster1, outputRaster, valueDict)
+        pass
+    
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
