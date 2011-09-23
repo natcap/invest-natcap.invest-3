@@ -490,7 +490,7 @@ class CarbonTestSuite(unittest.TestCase):
         vectorize_dataset_equality_pools(self, raster1, outputRaster, valueDict)
         pass
     
-    def test_carbon_Core_rasterSeq(self):
+    def test_carbon_core_rasterSeq(self):
         """Verify the correct output of carbon_core.rasterSeq()"""
         
         #build up our poolsDict
@@ -508,6 +508,28 @@ class CarbonTestSuite(unittest.TestCase):
         #verify the output of rasterSeq
         vectorize_dataset_equality_pools(self, inputRaster, outputRaster, poolsDict)
         pass
+    
+    def test_carbon_core_rasterAdd(self):
+        """Verify the output of carbon_core.rasterAdd()"""
+        
+        #Assemble our arguments
+        driver = gdal.GetDriverByName('MEM')
+        outputRaster = driver.Create('temp.tif', 100, 100, 1, gdal.GDT_Float32)
+        raster1 = gdal.Open('../../test_data/randomInts100x100.tif', gdal.GA_ReadOnly)
+        raster2 = gdal.Open('../../test_data/constant4.67_100x100.tif', gdal.GA_ReadOnly)
+        
+        #run carbon_core.rasterAdd()
+        carbon_core.rasterAdd(raster1, raster2, outputRaster)
+        
+        #build up our dict to verify the values in outputRaster
+        poolsDict = {}
+        for i in range(1, 11):
+            poolsDict[i] = i + 4.67 #All pixels in raster2 are of value 4.67
+            
+        #Assert that the outputRaster contains the values it should
+        vectorize_dataset_equality_pools(self, raster1, outputRaster, poolsDict)
+        pass
+        
         
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
