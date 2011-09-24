@@ -119,6 +119,10 @@ def futureHarvestProducts(args):
     #calculate hwp pools per feature for the current hwp scenario
     iterFeatures(calculated_cur_carbon_layer, 'cur', args['lulc_cur_year'],
                  args['lulc_fut_year'], avg)
+
+    for feature in calculated_cur_carbon_layer:
+        print feature.GetField(6)
+
     
     #calculate hwp pools per feature for the future scenario
     iterFeatures(calculated_fut_carbon_layer, 'fut', args['lulc_cur_year'],
@@ -138,7 +142,8 @@ def futureHarvestProducts(args):
         
         #clear the temp dataset.
         hwp_ds = None
-
+        
+       
 
 def iterFeatures(layer, suffix, yrCur, yrFut=None, avg=None):
     """Iterate over all features in the provided layer, calculate HWP.
@@ -153,7 +158,6 @@ def iterFeatures(layer, suffix, yrCur, yrFut=None, avg=None):
         
     #calculate hwp pools per feature for the future scenario
     for feature in layer:
-        #First initialize the fields by index
         fieldArgs = {'Cut_' + suffix : feature.GetFieldIndex('Cut_' + suffix),
                      'Freq_' + suffix : feature.GetFieldIndex('Freq_' + suffix),
                      'Decay_' + suffix : feature.GetFieldIndex('Decay_' + suffix),
@@ -198,9 +202,13 @@ def iterFeatures(layer, suffix, yrCur, yrFut=None, avg=None):
             
         #set the HWP carbon pool for this feature.
         hwpCarbonPool = fieldArgs['Cut_' + suffix]*sum
+#        print str(fieldArgs['Cut_' + suffix]) + ' | ' + str(sum) + ' | ' + str(hwpCarbonPool)
         hwpIndex = feature.GetFieldIndex('hwp_pool')
         feature.SetField(hwpIndex,hwpCarbonPool)
+#        print feature.GetField(hwpIndex)
         layer.SetFeature(feature)
+
+        
 
 
 def calcFeatureHWP(limit, decay, endDate, startDate, freq):
@@ -214,11 +222,11 @@ def calcFeatureHWP(limit, decay, endDate, startDate, freq):
         
         returns a float"""
         
-    sum = 0
+    sum = 0.0
     for t in range(int(limit)):
         w = math.log(2)/decay
         m =  endDate - startDate - (t*freq)
-        sum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
+        sum += ((1.-(math.e**(-w)))/(w*math.e**(m*w)))
 
     return sum
 
