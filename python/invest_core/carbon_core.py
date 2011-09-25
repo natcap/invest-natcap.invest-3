@@ -38,19 +38,25 @@ def execute(args):
     outNoData = args['storage_cur'].GetRasterBand(1).GetNoDataValue()
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
-    #calculate carbon storage
+    #calculate carbon storage for the current landscape
     rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
+    
     if 'lulc_fut' in args:
+        #calculate storage for the future landscape
         rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
-        #calculate sequestration
-        rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
 
+    #Calculate HWP pools
     if 'hwp_cur_shape' in args:
         if 'hwp_fut_shape' not in args:
             currentHarvestProducts(args)
         else:
             futureHarvestProducts(args)
 
+    if 'lulc_fut' in args:
+        #calculate seq. only after HWP has been added to the storage rasters
+        rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
+        
+    #value the carbon sequestered if the user requests
     if args['calc_value']:
         valuate(args)
 

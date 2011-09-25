@@ -153,6 +153,33 @@ class TestInvest(unittest.TestCase):
             os.remove(storage_cur)
             pass
 
+        def test_carbon_storage_hwp_fut_regression(self):
+            """Verify the carbon model (with cur+fut HWP) against known results"""
+            
+            storage_cur = '../../carbon_output/test_seq_cur1.tif'
+            storage_fut = '../../carbon_output/test_seq_fut1.tif'
+            seq_delta = '../../carbon_output/seq_delta1.tif'
+
+            arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
+                         'lulc_fut': '../../test_data/lulc_samp_fut',
+                         'carbon_pools' : '../../test_data/carbon_pools_float.dbf',
+                         'storage_cur' : storage_cur,
+                         'storage_fut' : storage_fut,
+                         'seq_delta'   : seq_delta,
+                         'hwp_cur_shape' : '../../test_data/harv_samp_cur/harv_samp_cur.shp',
+                         'hwp_fut_shape' : '../../test_data/harv_samp_fut/harv_samp_fut.shp',
+                         'calc_value' : False,
+                         'lulc_cur_year' : 2000,
+                         'lulc_fut_year' : 2030}
+            
+            invest.execute('carbon', arguments)
+                            
+            assert_raster_equality_vec(self, storage_fut,
+                                       '../../test_data/carbon_hwp_fut_regression.tif')
+            os.remove(storage_cur)
+            os.remove(storage_fut)
+            os.remove(seq_delta)
+            pass
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvest)
