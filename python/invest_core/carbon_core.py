@@ -62,7 +62,9 @@ def currentHarvestProducts(args):
         args - is a dictionary with at least the following entries:
         args['lulc_cur'] - is a GDAL raster dataset
         args['storage_cur'] - is a GDAL raster dataset
-        args['carbon_pools'] - is a DBF dataset mapping sequestration numbers to lulc classifications
+        args['hwp_cur_shape'] - an open OGR object
+        args['lulc_cur_year'] - an int
+        
         
         No return value."""
         

@@ -83,6 +83,36 @@ def vectorize_dataset_equality_pools(unit, firstDS, secondDS, dict):
         fastCheck = np.vectorize(checkEqual)
         fastCheck(firstArray, secondArray)
 
+def vectorize_dataset_equality(unit, firstDS, secondDS):
+    """Assert that the pixel values of secondDS match those of firstDS.
+        
+        unit - the 'self' object from the unittesting framework
+        firstDS - an open GDAL raster dataset
+        secondDS - an open GDAL raster dataset
+
+        no return value"""
+        
+    firstDSBand = firstDS.GetRasterBand(1)
+    secondDSBand = secondDS.GetRasterBand(1)
+    unit.assertEqual(firstDSBand.XSize, secondDSBand.XSize,
+                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
+                       ", second = " + str(secondDSBand.XSize))
+    unit.assertEqual(firstDSBand.YSize, secondDSBand.YSize,
+                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
+                      ", second = " + str(secondDSBand.YSize))
+
+    for i in range(0, firstDSBand.YSize):
+        firstArray = firstDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+        secondArray = secondDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+
+        def checkEqual(a, b):
+            """Assert that a == b to 6 decimal places"""
+            unit.assertAlmostEqual(a, b, 6)
+                
+        fastCheck = np.vectorize(checkEqual)
+        fastCheck(firstArray, secondArray)
+
+
 
 class CarbonTestSuite(unittest.TestCase):
     def test_carbon_seq_smoke(self):
@@ -765,13 +795,35 @@ class CarbonTestSuite(unittest.TestCase):
             index = feature.GetFieldIndex('hwp_pool')
             self.assertAlmostEqual(feature.GetField(index), featureDict[fid], 8)
         
-        hwp_shape = None
-        
         #remove working files.
         for ext in ('dbf', 'prj', 'shp', 'shx'):
             os.remove('./testShapeFut/harv_samp_fut.' + ext)
             
         os.removedirs('./testShapeFut')
+        pass
+    
+    def test_currentHarvestProducts(self):
+        """Verify that currentHarvestProducts() produces the correct results.
+            This is accomplished by a regression test against 
+            test_data/currentHWP_regression.tif."""
+        
+        #Create a working copy of the existing storage (regression) raster
+        storage_orig = gdal.Open('../../test_data/carbon_regression.tif', gdal.GA_ReadOnly)
+        driver = gdal.GetDriverByName('MEM')
+        storage_mod = driver.CreateCopy('temp.tif', storage_orig, 0)
+        
+        #set up arguments
+        args = {'lulc_cur' : gdal.Open('../../test_data/lulc_samp_cur', gdal.GA_ReadOnly),
+                'storage_cur' : storage_mod,
+                'hwp_cur_shape' : ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
+                'lulc_cur_year' : 2000}
+        
+        #run currentHarvestProducts()
+        carbon_core.currentHarvestProducts(args)
+        
+        #verify that the output is corrent
+        example = gdal.Open('../../test_data/currentHWP_regression.tif')
+        vectorize_dataset_equality(self, example, storage_mod)
         pass
             
         
