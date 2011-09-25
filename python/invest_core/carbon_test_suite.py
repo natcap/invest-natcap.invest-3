@@ -604,10 +604,10 @@ class CarbonTestSuite(unittest.TestCase):
             self.assertAlmostEqual(feature.GetField(index), featureDict[fid], 8)
         
         #remove working files.
-#        for ext in ('dbf', 'prj', 'shp', 'shx'):
-#            os.remove('./testMemShape/harv_samp_cur.' + ext)
-#            
-#        os.removedirs('./testMemShape')
+        for ext in ('dbf', 'prj', 'shp', 'shx'):
+            os.remove('./testMemShape/harv_samp_cur.' + ext)
+            
+        os.removedirs('./testMemShape')
         pass
  
     def test_carbon_core_iterFeatures_cur_avg(self):
@@ -686,10 +686,10 @@ class CarbonTestSuite(unittest.TestCase):
             self.assertAlmostEqual(feature.GetField(index), featureDict[fid], 8)
         
         #remove working files.
-#        for ext in ('dbf', 'prj', 'shp', 'shx'):
-#            os.remove('./testShapeCur/harv_samp_cur.' + ext)
-#            
-#        os.removedirs('./testShapeCur')
+        for ext in ('dbf', 'prj', 'shp', 'shx'):
+            os.remove('./testShapeCur/harv_samp_cur.' + ext)
+            
+        os.removedirs('./testShapeCur')
         pass
              
     def test_carbon_core_iterFeatures_fut(self):
@@ -763,16 +763,15 @@ class CarbonTestSuite(unittest.TestCase):
         for fid in featureDict:
             feature = hwp_layer.GetFeature(fid)   
             index = feature.GetFieldIndex('hwp_pool')
-            print str(feature.GetField(index)) + ' | ' + str(feature.GetField(index))
             self.assertAlmostEqual(feature.GetField(index), featureDict[fid], 8)
         
         hwp_shape = None
         
         #remove working files.
-#        for ext in ('dbf', 'prj', 'shp', 'shx'):
-#            os.remove('./testShapeFut/harv_samp_fut.' + ext)
-#            
-#        os.removedirs('./testShapeFut')
+        for ext in ('dbf', 'prj', 'shp', 'shx'):
+            os.remove('./testShapeFut/harv_samp_fut.' + ext)
+            
+        os.removedirs('./testShapeFut')
         pass
             
         
