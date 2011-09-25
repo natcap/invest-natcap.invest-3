@@ -610,8 +610,8 @@ class CarbonTestSuite(unittest.TestCase):
         os.removedirs('./testMemShape')
         pass
  
-def test_carbon_core_iterFeatures_cur_avg(self):
-        """Verify that iterFeatures correctly calculates HWP per layer.
+    def test_carbon_core_iterFeatures_cur_avg(self):
+        """Verify that iterFeatures correctly calculates HWP per layer with avg
             IterFeatures has three modes of operation:
             
             1. suffix='cur',
@@ -624,16 +624,30 @@ def test_carbon_core_iterFeatures_cur_avg(self):
             future context."""
         
         #set up our arguments
-        hwp_shape = ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp')
-        hwp_mem_shape = ogr.GetDriverByName('Memory').CopyDataSource(hwp_shape, '')
-        hwp_layer = hwp_mem_shape.GetLayerByName('harv_samp_cur')
+        shapeURI = '../../test_data/harv_samp_cur/harv_samp_cur.shp'
+        hwp_shape = ogr.Open(shapeURI)
+        ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(hwp_shape, 'testShape')
         yrCur = 2000
         yrFut = 2030
         avg = math.floor((yrFut-yrCur)/2.)
+        
+        #Open the copied file
+        hwp_shape = ogr.Open('testShape', 1)
+        hwp_layer = hwp_shape.GetLayerByName('harv_samp_cur')
+        
+        #Create a hardwood products pool that will get calculated later
+        hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
+        hwp_layer.CreateField(hwp_def)
+        
         #call carbon_core.iterFeatures
         carbon_core.iterFeatures(hwp_layer, 'cur', yrCur, yrFut, avg)
         
+        #reopen the original shapefile
+        copied_shape = ogr.Open(shapeURI)
+        hwp_layer = copied_shape.GetLayerByName('harv_samp_cur')
+        
         #Determine what values should have been stored per layer
+        featureDict = {}
         for feature in hwp_layer:
             #first, initialize layer fields by index
             fieldArgs = {'Cut_cur' : feature.GetFieldIndex('Cut_cur'),
@@ -657,15 +671,26 @@ def test_carbon_core_iterFeatures_cur_avg(self):
             
             #calculate the feature's HWP carbon pool
             sum = carbon_core.calcFeatureHWP(limit, decay, endDate, startDate, freq)
-            print sum
-    
+
             #set the HWP carbon pool for this feature.
-            hwpCarbonPool = fieldArgs['Cut_cur']*sum
-            print hwpCarbonPool
-            hwpIndex = feature.GetFieldIndex('hwp_pool')
+            featureDict[feature.GetFID()] = fieldArgs['Cut_cur']*sum
             
-            self.assertAlmostEqual(feature.GetField(hwpIndex), hwpCarbonPool, 6)
-            pass
+        #reopen the shapefile that contains calculated HWP values
+        hwp_shape = ogr.Open('./testShape')
+        hwp_layer = hwp_shape.GetLayerByName('harv_samp_cur')
+
+        #Assert that HWP values stored in the shapefile match our dict entries
+        for fid in featureDict:
+            feature = hwp_layer.GetFeature(fid)   
+            index = feature.GetFieldIndex('hwp_pool')
+            self.assertAlmostEqual(feature.GetField(index), featureDict[fid], 8)
+        
+        #remove working files.
+        for ext in ('dbf', 'prj', 'shp', 'shx'):
+            os.remove('./testShape/harv_samp_cur.' + ext)
+            
+        os.removedirs('./testShape')
+        pass
              
             
         
