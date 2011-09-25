@@ -535,7 +535,7 @@ class CarbonTestSuite(unittest.TestCase):
             IterFeatures has three modes of operation:
             
             1. suffix='cur',
-            2. suffix='cur', avg!=None
+            2. suffix='cur', yrFut!=None
             3. suffix='fut'
             
             This test will test the first mode, which would be invoked if the
@@ -604,10 +604,10 @@ class CarbonTestSuite(unittest.TestCase):
             self.assertAlmostEqual(feature.GetField(index), featureDict[fid], 8)
         
         #remove working files.
-        for ext in ('dbf', 'prj', 'shp', 'shx'):
-            os.remove('./testMemShape/harv_samp_cur.' + ext)
-            
-        os.removedirs('./testMemShape')
+#        for ext in ('dbf', 'prj', 'shp', 'shx'):
+#            os.remove('./testMemShape/harv_samp_cur.' + ext)
+#            
+#        os.removedirs('./testMemShape')
         pass
  
     def test_carbon_core_iterFeatures_cur_avg(self):
@@ -615,7 +615,7 @@ class CarbonTestSuite(unittest.TestCase):
             IterFeatures has three modes of operation:
             
             1. suffix='cur',
-            2. suffix='cur', avg!=None
+            2. suffix='cur', yrFut!=None
             3. suffix='fut'
             
             This test will test the second mode, which would be invoked if the
@@ -629,7 +629,6 @@ class CarbonTestSuite(unittest.TestCase):
         ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(hwp_shape, 'testShapeCur')
         yrCur = 2000
         yrFut = 2030
-        avg = math.floor((yrFut-yrCur)/2.)
         
         #Open the copied file
         hwp_shape = ogr.Open('testShapeCur', 1)
@@ -640,7 +639,7 @@ class CarbonTestSuite(unittest.TestCase):
         hwp_layer.CreateField(hwp_def)
         
         #call carbon_core.iterFeatures
-        carbon_core.iterFeatures(hwp_layer, 'cur', yrCur, yrFut, avg)
+        carbon_core.iterFeatures(hwp_layer, 'cur', yrCur, yrFut)
         
         #reopen the original shapefile
         copied_shape = ogr.Open(shapeURI)
@@ -648,6 +647,7 @@ class CarbonTestSuite(unittest.TestCase):
         
         #Determine what values should have been stored per layer
         featureDict = {}
+        avg = math.floor((yrFut + yrCur)/2.0)
         for feature in hwp_layer:
             #first, initialize layer fields by index
             fieldArgs = {'Cut_cur' : feature.GetFieldIndex('Cut_cur'),
@@ -686,10 +686,10 @@ class CarbonTestSuite(unittest.TestCase):
             self.assertAlmostEqual(feature.GetField(index), featureDict[fid], 8)
         
         #remove working files.
-        for ext in ('dbf', 'prj', 'shp', 'shx'):
-            os.remove('./testShapeCur/harv_samp_cur.' + ext)
-            
-        os.removedirs('./testShapeCur')
+#        for ext in ('dbf', 'prj', 'shp', 'shx'):
+#            os.remove('./testShapeCur/harv_samp_cur.' + ext)
+#            
+#        os.removedirs('./testShapeCur')
         pass
              
     def test_carbon_core_iterFeatures_fut(self):
@@ -697,7 +697,7 @@ class CarbonTestSuite(unittest.TestCase):
             IterFeatures has three modes of operation:
             
             1. suffix='cur',
-            2. suffix='cur', avg!=None
+            2. suffix='cur', yrFut!=None
             3. suffix='fut'
             
             This test will test the third mode, which would be invoked if the
@@ -710,7 +710,6 @@ class CarbonTestSuite(unittest.TestCase):
         ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(hwp_shape, 'testShapeFut')
         yrCur = 2000
         yrFut = 2030
-        avg = math.floor((yrFut-yrCur)/2.)
         
         #Open the copied file
         hwp_shape = ogr.Open('testShapeFut', 1)
@@ -721,7 +720,7 @@ class CarbonTestSuite(unittest.TestCase):
         hwp_layer.CreateField(hwp_def)
         
         #call carbon_core.iterFeatures
-        carbon_core.iterFeatures(hwp_layer, 'fut', yrCur, yrFut, avg)
+        carbon_core.iterFeatures(hwp_layer, 'fut', yrCur, yrFut)
         
         #reopen the original shapefile
         copied_shape = ogr.Open(shapeURI)
@@ -729,6 +728,7 @@ class CarbonTestSuite(unittest.TestCase):
         
         #Determine what values should have been stored per layer
         featureDict = {}
+        avg = math.floor((yrFut + yrCur)/2.0)
         for feature in hwp_layer:
             #first, initialize layer fields by index
             fieldArgs = {'Cut_fut' : feature.GetFieldIndex('Cut_fut'),
@@ -763,7 +763,10 @@ class CarbonTestSuite(unittest.TestCase):
         for fid in featureDict:
             feature = hwp_layer.GetFeature(fid)   
             index = feature.GetFieldIndex('hwp_pool')
+            print str(feature.GetField(index)) + ' | ' + str(feature.GetField(index))
             self.assertAlmostEqual(feature.GetField(index), featureDict[fid], 8)
+        
+        hwp_shape = None
         
         #remove working files.
 #        for ext in ('dbf', 'prj', 'shp', 'shx'):

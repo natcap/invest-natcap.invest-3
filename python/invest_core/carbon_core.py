@@ -113,12 +113,9 @@ def futureHarvestProducts(args):
         hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
         layer.CreateField(hwp_def)
     
-    #calculate the mean num of years over the study for later use
-    avg = math.floor((args['lulc_fut_year'] - args['lulc_cur_year'])/2.0)
-            
     #calculate hwp pools per feature for the current hwp scenario
     iterFeatures(calculated_cur_carbon_layer, 'cur', args['lulc_cur_year'],
-                 args['lulc_fut_year'], avg)
+                 args['lulc_fut_year'])
 
     for feature in calculated_cur_carbon_layer:
         print feature.GetField(6)
@@ -126,7 +123,7 @@ def futureHarvestProducts(args):
     
     #calculate hwp pools per feature for the future scenario
     iterFeatures(calculated_fut_carbon_layer, 'fut', args['lulc_cur_year'],
-                  args['lulc_fut_year'], avg)
+                  args['lulc_fut_year'])
     
     for layer in [calculated_cur_carbon_layer, calculated_fut_carbon_layer]:
         #Make a new raster in memory for burning in the HWP values.
@@ -145,16 +142,19 @@ def futureHarvestProducts(args):
         
        
 
-def iterFeatures(layer, suffix, yrCur, yrFut=None, avg=None):
+def iterFeatures(layer, suffix, yrCur, yrFut=None):
     """Iterate over all features in the provided layer, calculate HWP.
     
         layer - an OGR layer
         suffix - a String, either 'cur' or 'fut'
         yrCur - an int
         yrFut - an int (required for future HWP contexts)
-        avg - an int (required for future HWP contexts)
         
         no return value"""
+    
+    #calculate average for use in future contexts if a yrFut is given
+    if yrFut != None:    
+        avg = math.floor((yrFut + yrCur)/2.0)
         
     #calculate hwp pools per feature for the future scenario
     for feature in layer:
@@ -174,7 +174,7 @@ def iterFeatures(layer, suffix, yrCur, yrFut=None, avg=None):
         #Set a couple variables based on the input parameters
         if suffix == 'cur':
             #if no future scenario is provided, calc the sum on its own
-            if avg == None: 
+            if yrFut == None: 
                 limit = math.ceil((1.0/((yrCur-fieldArgs['Start_date'])\
                                 /fieldArgs['Freq_cur'])))
                 endDate = yrCur
