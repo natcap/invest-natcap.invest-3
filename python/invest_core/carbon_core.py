@@ -65,7 +65,6 @@ def currentHarvestProducts(args):
         args['hwp_cur_shape'] - an open OGR object
         args['lulc_cur_year'] - an int
         
-        
         No return value."""
         
     #Make a copy of the hwp_cur_shape shape so we can write to it
@@ -97,7 +96,10 @@ def futureHarvestProducts(args):
         args - is a dictionary with at least the following entries:
         args['lulc_cur'] - is a GDAL raster dataset
         args['storage_cur'] - is a GDAL raster dataset
-        args['carbon_pools'] - is a DBF dataset mapping sequestration numbers to lulc classifications
+        args['hwp_cur_shape'] - an open OGR object
+        args['hwp_fut_shape'] - an open OGR object
+        args['lulc_cur_year'] - an int
+        args['lulc_fut_year'] - an int
         
         No return value."""
     #Make a copy of the hwp_cur_shape shape so we can write to it
