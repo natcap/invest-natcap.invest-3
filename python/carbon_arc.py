@@ -36,63 +36,17 @@ args_file.writelines(json.dumps(json_dict))
 args_file.close()
 
 
-lulc_cur_dict = {'uri'  : lulc_cur_uri,
-                   'type' :'gdal',
-                   'input': True}
-
-lulc_fut_dict = {'uri'  : lulc_fut_uri,
-                   'type' :'gdal',
-                   'input': True}
-
-pool_dictionary = {'uri'  : pool_uri,
-                   'type': 'dbf',
-                   'input': True}
-
-
-#Data type codes (from http://www.gdal.org/gdal_8h.html):
-# Enter one of these codes as the 'dataType' dict entry.  This will determine
-# the data type of the output file.
-#
-# 0  = GDT_Unknown
-# 1  = GDT_Byte
-# 2  = GDT_UInt16
-# 3  = GDT_Int16
-# 4  = GDT_UInt32
-# 5  = GDT_Int32
-# 6  = GDT_Float32
-# 7  = GDT_Float64
-# 8  = GDT_CInt16
-# 9  = GDT_CInt32
-# 10 = GDT_CFloat32
-# 11 = GDT_CFloat64
-
-output_cur_seq = {'uri'  : output_dir + '\\tot_C_cur.tif',
-                     'type' : 'gdal',
-                     'dataType': 6,
-                     'input': False}
-
-output_storage_fut = {'uri'  : output_dir + '\\tot_C_fut.tif',
-                     'type' : 'gdal',
-                     'dataType': 6,
-                     'input': False}
-
-output_delta_seq = {'uri'  : output_dir + '\\sequest.tif',
-                     'type' : 'gdal',
-                     'dataType': 6,
-                     'input': False}
-
-output_valuation = {'uri'  : output_dir + '\\value_seq.tif',
-                     'type' : 'gdal',
-                     'dataType': 6,
-                     'input': False}
-
-arguments = {'lulc_cur': lulc_cur_dict,
-             'lulc_fut': lulc_fut_dict,
-             'carbon_pools' : pool_dictionary,
-             'storage_cur' : output_cur_seq,
-             'storage_fut' : output_storage_fut,
-             'seq_delta' : output_delta_seq,
-             'seq_value' : output_valuation,
+arguments = {'lulc_cur': lulc_cur_uri,
+             'lulc_fut': lulc_fut_uri,
+             'carbon_pools' : pool_uri,
+             'storage_cur' : output_dir + '\\tot_C_cur.tif',
+             'storage_fut' : output_dir + '\\tot_C_fut.tif',
+             'seq_delta' : output_dir + '\\sequest.tif',
+             'seq_value' : output_dir + '\\value_seq.tif',
+             'biomass_cur' : output_dir + '\\bio_hwp_cur.tif',
+             'biomass_fut' : output_dir + '\\bio_hwp_fut.tif',
+             'volume_cur'  : output_dir + '\\vol_hwp_cur.tif',
+             'volume_fut'  : output_dir + '\\vol_hwp_fut.tif',
              'lulc_cur_year' : lulc_cur_year,
              'lulc_fut_year' : lulc_fut_year}
 
