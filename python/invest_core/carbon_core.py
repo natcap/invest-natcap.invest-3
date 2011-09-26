@@ -23,6 +23,14 @@ def execute(args):
                             args['storage_cur'] and args['storage_fut']
         args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
                             value of sequestered carbon.
+        args['biomass_cur'] - a GDAL raster dataset for outputing the biomass 
+            of harvested HWP parcels on the current landscape
+        args['biomass_fut'] - a GDAL raster dataset for outputing the biomass 
+            of harvested HWP parcels on the future landscape
+        args['volume_cur'] - a GDAL raster dataset for outputing the volume of 
+            HWP on the current landscape
+        args['volume_fut'] - a GDAL raster dataset for outputing the volume of 
+            HWP on the future landscape
         args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
         args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
         args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
@@ -60,6 +68,32 @@ def execute(args):
     if args['calc_value']:
         valuate(args)
 
+def harvestProductInfo(args):
+    """Calculates biomass and volume of harvested wood products in a parcel.
+        Values are calculated per parcel and burned into the appropriate raster
+        dataset specified in the args dict.
+        
+        args - is a dictionary with at least the following entries:
+        args['biomass_cur'] - an open GDAL raster dataset
+        args['volume_cur'] - an open GDAL raster dataset
+        args['hwp_cur_shape'] - an open OGR dataset
+        
+        The following arguments are optional and may be processed if necessary:
+        args['biomass_fut'] - an open GDAL raster dataset
+        args['volume_fut'] - an open GDAL raster dataset
+        args['hwp_fut_shape'] - an open OGR dataset
+        
+        No return value"""
+    
+    #for each shape (if the shape is provided in args:    
+        #Make a copy of the appropriate shape in memory
+        #add a biomass and volume field to the shape
+        #do the appropriate math, write to the appropriate fields.
+        #burn the biomass values into the biomass raster
+        #burn the volume values into the values raster.
+        
+        
+    return
 
         
 def currentHarvestProducts(args):
