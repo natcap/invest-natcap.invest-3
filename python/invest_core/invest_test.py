@@ -70,6 +70,7 @@ class TestInvest(unittest.TestCase):
             arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
                          'carbon_pools' : '../../test_data/carbon_pools_float.dbf',
                          'storage_cur' : storage_cur,
+                         'output_dir' : '../../carbon_output',
                          'calc_value' : False}
     
             invest.execute('carbon', arguments)
@@ -92,6 +93,7 @@ class TestInvest(unittest.TestCase):
             arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
                      'carbon_pools' : '../../test_data/carbon_pools_int.dbf',
                      'storage_cur' : storage_cur,
+                     'output_dir' : '../../carbon_output',
                      'calc_value' : False}
 
             invest.execute('carbon', arguments)
@@ -117,6 +119,7 @@ class TestInvest(unittest.TestCase):
                      'storage_fut' : storage_fut,
                      'seq_delta' : seq_delta,
                      'seq_value' : seq_value,
+                     'output_dir' : '../../carbon_output',
                      'calc_value' : True,
                      'lulc_cur_year' : 2000,
                      'lulc_fut_year' : 2030,
@@ -142,6 +145,7 @@ class TestInvest(unittest.TestCase):
                      'carbon_pools' : '../../test_data/carbon_pools_int.dbf',
                      'storage_cur' : storage_cur,
                      'hwp_cur_shape' : '../../test_data/harv_samp_cur/harv_samp_cur.shp',
+                     'output_dir' : '../../carbon_output',
                      'calc_value' : False,
                      'lulc_cur_year' : 2000}
             
@@ -168,6 +172,7 @@ class TestInvest(unittest.TestCase):
                          'seq_delta'   : seq_delta,
                          'hwp_cur_shape' : '../../test_data/harv_samp_cur/harv_samp_cur.shp',
                          'hwp_fut_shape' : '../../test_data/harv_samp_fut/harv_samp_fut.shp',
+                         'output_dir' : '../../carbon_output',
                          'calc_value' : False,
                          'lulc_cur_year' : 2000,
                          'lulc_fut_year' : 2030}
