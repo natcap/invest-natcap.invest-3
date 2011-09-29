@@ -45,6 +45,16 @@ def execute(args):
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     gdal.AllRegister()
     
+    #specify generated URIs
+    defaultURI = {'storage_cur' : args['output_dir'] + '\\tot_C_cur.tif',
+                  'storage_fut' : args['output_dir'] + '\\tot_C_fut.tif',
+                  'seq_delta' : args['output_dir'] + '\\sequest.tif',
+                  'seq_value' : args['output_dir'] + '\\value_seq.tif',
+                  'biomass_cur' : args['output_dir'] + '\\bio_hwp_cur.tif',
+                  'biomass_fut' : args['output_dir'] + '\\bio_hwp_fut.tif',
+                  'volume_cur'  : args['output_dir'] + '\\vol_hwp_cur.tif',
+                  'volume_fut'  : args['output_dir'] + '\\vol_hwp_fut.tif',}
+    
     #open the two required elements.
     lulc_cur = gdal.Open(args['lulc_cur'], gdal.GA_ReadOnly)    
     args['lulc_cur']      = lulc_cur
@@ -54,11 +64,13 @@ def execute(args):
     if 'lulc_fut' in args:
         args['lulc_fut'] = gdal.Open(args['lulc_fut'], gdal.GA_ReadOnly)
     
-    #open any necessary output datasets
+    #open any necessary output datasets, using user-provided URI if it exists
     for dataset in ('seq_delta', 'seq_value', 'storage_cur', 'storage_fut',
                     'biomass_cur', 'biomass_fut', 'volume_cur', 'volume_fut'):
         if dataset in args:
             args[dataset] = mimic(lulc_cur, args[dataset])
+        else:
+            args[dataset] = mimic(lulc_cur, defaultURI[dataset])
     
     #Set other values the user provides for valuation
     for item in ('lulc_cur_year', 'lulc_fut_year', 'c_value', 'discount', 'rate_change'):

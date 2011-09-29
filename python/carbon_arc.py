@@ -39,14 +39,7 @@ args_file.close()
 arguments = {'lulc_cur': lulc_cur_uri,
              'lulc_fut': lulc_fut_uri,
              'carbon_pools' : pool_uri,
-             'storage_cur' : output_dir + '\\tot_C_cur.tif',
-             'storage_fut' : output_dir + '\\tot_C_fut.tif',
-             'seq_delta' : output_dir + '\\sequest.tif',
-             'seq_value' : output_dir + '\\value_seq.tif',
-             'biomass_cur' : output_dir + '\\bio_hwp_cur.tif',
-             'biomass_fut' : output_dir + '\\bio_hwp_fut.tif',
-             'volume_cur'  : output_dir + '\\vol_hwp_cur.tif',
-             'volume_fut'  : output_dir + '\\vol_hwp_fut.tif',
+             'output_dir' : output_dir,
              'lulc_cur_year' : lulc_cur_year,
              'lulc_fut_year' : lulc_fut_year}
 
