@@ -46,14 +46,14 @@ def execute(args):
     gdal.AllRegister()
     
     #specify generated URIs
-    defaultURI = {'storage_cur' : args['output_dir'] + '\\tot_C_cur.tif',
-                  'storage_fut' : args['output_dir'] + '\\tot_C_fut.tif',
-                  'seq_delta' : args['output_dir'] + '\\sequest.tif',
-                  'seq_value' : args['output_dir'] + '\\value_seq.tif',
-                  'biomass_cur' : args['output_dir'] + '\\bio_hwp_cur.tif',
-                  'biomass_fut' : args['output_dir'] + '\\bio_hwp_fut.tif',
-                  'volume_cur'  : args['output_dir'] + '\\vol_hwp_cur.tif',
-                  'volume_fut'  : args['output_dir'] + '\\vol_hwp_fut.tif',}
+    defaultURI = {'storage_cur' : args['output_dir'] + os.sep + 'tot_C_cur.tif',
+                  'storage_fut' : args['output_dir'] + os.sep + 'tot_C_fut.tif',
+                  'seq_delta' : args['output_dir'] + os.sep + 'sequest.tif',
+                  'seq_value' : args['output_dir'] + os.sep + 'value_seq.tif',
+                  'biomass_cur' : args['output_dir'] + os.sep + 'bio_hwp_cur.tif',
+                  'biomass_fut' : args['output_dir'] + os.sep + 'bio_hwp_fut.tif',
+                  'volume_cur'  : args['output_dir'] + os.sep + 'vol_hwp_cur.tif',
+                  'volume_fut'  : args['output_dir'] + os.sep + 'vol_hwp_fut.tif',}
     
     #open the two required elements.
     lulc_cur = gdal.Open(args['lulc_cur'], gdal.GA_ReadOnly)    
