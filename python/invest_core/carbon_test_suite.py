@@ -852,6 +852,53 @@ class CarbonTestSuite(unittest.TestCase):
         vectorize_dataset_equality(self, example, storage_mod)
         pass
            
+    def test_carbon_execute_default_filepaths(self):
+        """Verify datasets exist at the appropriate filepaths.
+            
+            Verify that a user-specified filepath appears in the filesystem,
+            and that a datset at the default filepath also appears in the 
+            correct place."""
+
+        #set output directory
+        output_dir = '../../carbon_output'
+        
+        #ensure no file exists at the default storage_cur path
+        default_path = output_dir + os.sep + 'tot_C_cur.tif'
+        
+        if os.path.exists(default_path):
+            os.remove(default_path)
+            
+        #set the filepath for storage_cur
+        storage_cur = '../../carbon_output/storage_cur.tif'
+        
+        args = {'lulc_cur' : '../../test_data/lulc_samp_cur',
+                'storage_cur' : storage_cur,
+                'carbon_pools' : '../../test_data/carbon_pools_float.dbf',
+                'output_dir' : output_dir,
+                'lulc_fut' : '../../test_data/lulc_samp_fut',
+                'calc_value' : False}
+    
+        carbon.execute(args)
+        
+        #try to open storage_cur file, the URI to which we manually set.
+        storage_cur_raster = gdal.Open(storage_cur, gdal.GA_ReadOnly)
+        
+        #if the file exists, storage_cur_raster should not be None
+        self.assertNotEqual(storage_cur_raster, None)
+        
+        #try to open the storage_fut file, the URI to which is set to default
+        storage_fut_raster = gdal.Open(output_dir + os.sep + 'tot_C_fut.tif')
+        
+        #if the file exists, storage_fut_raster should not be None
+        self.assertNotEqual(storage_fut_raster, None)
+
+        #this file should not exist, so default_cur_exists should be False
+        default_cur_exists = os.path.exists(default_path)
+        self.assertEqual(default_cur_exists, False)
+        
+        #delete all datasets created
+        for filename in ('storage_cur.tif', 'tot_C_fut.tif', 'sequest.tif'):
+            os.remove(output_dir + os.sep + filename)
         
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
