@@ -284,7 +284,6 @@ class CarbonTestSuite(unittest.TestCase):
 
     def test_carbon_core_HWP_cur_fut(self):
         """Test carbon_core with cur and fut HWP"""
-        driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         out_dict = {'uri':'../../carbon_output/test_real_output_hwp.tif',
                     'input':False,
@@ -297,6 +296,10 @@ class CarbonTestSuite(unittest.TestCase):
                 'calc_value' : False,
                 'hwp_cur_shape': ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
                 'hwp_fut_shape': ogr.Open('../../test_data/harv_samp_fut/harv_samp_fut.shp'),
+                'biomass_cur' : carbon.mimic(lulc, '../../carbon_output/biomass_cur.tif'),
+                'biomass_fut' : carbon.mimic(lulc, '../../carbon_output/biomass_fut.tif'),
+                'volume_cur' : carbon.mimic(lulc, '../../carbon_output/volume_cur.tif'),
+                'volume_fut' : carbon.mimic(lulc, '../../carbon_output/volume_fut.tif'),
                 'lulc_cur_year' : 2000,
                 'lulc_fut_year' : 2030}
 
@@ -900,6 +903,37 @@ class CarbonTestSuite(unittest.TestCase):
         for filename in ('storage_cur.tif', 'tot_C_fut.tif', 'sequest.tif'):
             os.remove(output_dir + os.sep + filename)
         
+    def test_harvestProductInfo(self):
+        """Verify that harvestProductInfo produces the correct results
+            This is verified by a regression test."""
+        
+        #Create a working copy of the existing storage (regression) raster
+        storage_orig = gdal.Open('../../test_data/carbon_regression.tif', gdal.GA_ReadOnly)
+        driver = gdal.GetDriverByName('MEM')
+        storage_mod_cur = driver.CreateCopy('temp0.tif', storage_orig, 0)
+        storage_mod_fut = driver.CreateCopy('temp1.tif', storage_orig, 0)
+        
+        lulc = gdal.Open('../../test_data/lulc_samp_cur', gdal.GA_ReadOnly)
+        
+        #set up arguments
+        args = {'lulc_cur' : lulc,
+                'storage_cur' : storage_mod_cur,
+                'carbon_pools' : dbf.Dbf('../../test_data/carbon_pools_float.dbf'),
+                'lulc_fut' : gdal.Open('../../test_data/lulc_samp_fut', gdal.GA_ReadOnly),
+                'hwp_cur_shape' : ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
+                'hwp_fut_shape' : ogr.Open('../../test_data/harv_samp_fut/harv_samp_fut.shp'),
+                'lulc_cur_year' : 2000,
+                'lulc_fut_year' : 2030,
+                'storage_fut' : storage_mod_fut,
+                'seq_delta' : carbon.mimic(lulc, '../../carbon_output/seq_delta.tif'),
+                'calc_value' : False,
+                'biomass_cur' : carbon.mimic(lulc, '../../carbon_output/biomass_cur.tif'),
+                'biomass_fut' : carbon.mimic(lulc, '../../carbon_output/biomass_fut.tif'),
+                'volume_cur' : carbon.mimic(lulc, '../../carbon_output/volume_cur.tif'),
+                'volume_fut' : carbon.mimic(lulc, '../../carbon_output/volume_fut.tif')}
+ 
+        carbon_core.harvestProductInfo(args)
+    
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
     unittest.TextTestRunner(verbosity=2).run(suite)

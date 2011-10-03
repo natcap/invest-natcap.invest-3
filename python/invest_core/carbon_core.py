@@ -59,6 +59,7 @@ def execute(args):
             currentHarvestProducts(args)
         else:
             futureHarvestProducts(args)
+            harvestProductInfo(args)
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
@@ -85,14 +86,73 @@ def harvestProductInfo(args):
         
         No return value"""
     
-    #for each shape (if the shape is provided in args:    
+    #for each shape (if the shape is provided in args:
+    for timeframe in ('cur', 'fut'):
+        harvestMap = 'hwp_' + timeframe + '_shape'
+        layer = 'harv_samp_' + timeframe
+        
         #Make a copy of the appropriate shape in memory
+        copiedDS = ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(args[harvestMap], timeframe)
+        copiedLayer = copiedDS.GetLayerByName(layer)
+        
         #add a biomass and volume field to the shape
-        #do the appropriate math, write to the appropriate fields.
+        bio_def = ogr.FieldDefn('biomass', ogr.OFTReal)
+        vol_def = ogr.FieldDefn('volume' , ogr.OFTReal)
+        copiedLayer.CreateField(bio_def)
+        copiedLayer.CreateField(vol_def)
+        
+        for feature in copiedLayer:
+            fieldArgs = {'Cut_' + timeframe : feature.GetFieldIndex('Cut_' + timeframe),
+                         'Freq_' + timeframe : feature.GetFieldIndex('Freq_' + timeframe),
+                         'Decay_' + timeframe : feature.GetFieldIndex('Decay_' + timeframe),
+                         'C_den_' + timeframe : feature.GetFieldIndex('C_den_' + timeframe),
+                         'BCEF_' + timeframe : feature.GetFieldIndex('BCEF_' + timeframe)}
+
+            if timeframe == 'cur':
+                fieldArgs['Start_date'] = feature.GetFieldIndex('Start_date')
+                
+            for key,index in fieldArgs.iteritems():
+                fieldArgs[key] = feature.GetField(index)
+                
+            #do the appropriate math, write to the appropriate fields.
+            avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
+            if timeframe == 'cur':
+                if fieldArgs['Freq_cur'] != 0.0:
+                    volumeSpan = math.ceil((avg-fieldArgs['Start_date'])
+                                       /fieldArgs['Freq_cur'])
+                else:
+                    volumeSpan = 0.0
+                biomassSpan = volumeSpan
+            else:
+                if fieldArgs['Freq_fut'] != 0.0:
+                    volumeSpan = math.ceil(args['lulc_fut_year']-
+                                       (avg/fieldArgs['Freq_fut']))
+                else:
+                    volumeSpan = 0.0
+                biomassSpan = math.ceil((args['lulc_fut_year']-avg)
+                                        /fieldArgs['Freq_fut'])
+                
+            biomass = fieldArgs['Cut_' + timeframe] *\
+                    biomassSpan * (1.0/fieldArgs['C_den_' + timeframe])
+                    
+            volume = fieldArgs['Cut_' + timeframe] *\
+                    volumeSpan * (1.0/fieldArgs['C_den_' + timeframe])*\
+                    (1.0/fieldArgs['BCEF_' + timeframe])    
+            
+            biomassIndex = feature.GetFieldIndex('biomass')
+            feature.SetField(biomassIndex, biomass)
+            
+            volumeIndex = feature.GetFieldIndex('volume')
+            feature.SetField(volumeIndex, volume)
+            
         #burn the biomass values into the biomass raster
+        gdal.RasterizeLayer(args['biomass_' + timeframe], [1], copiedLayer,
+                            options=['ATTRIBUTE=biomass'])
+    
         #burn the volume values into the values raster.
-        
-        
+        gdal.RasterizeLayer(args['volume_' + timeframe], [1], copiedLayer,
+                            options=['ATTRIBUTE=volume'])            
+            
     return
 
         
