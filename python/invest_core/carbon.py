@@ -41,29 +41,30 @@ def execute(args):
             price of carbon
         
         returns nothing."""
-        
+
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     gdal.AllRegister()
-    
+
     #specify generated URIs
-    defaultURI = {'storage_cur' : args['output_dir'] + os.sep + 'tot_C_cur.tif',
-                  'storage_fut' : args['output_dir'] + os.sep + 'tot_C_fut.tif',
-                  'seq_delta' : args['output_dir'] + os.sep + 'sequest.tif',
-                  'seq_value' : args['output_dir'] + os.sep + 'value_seq.tif',
-                  'biomass_cur' : args['output_dir'] + os.sep + 'bio_hwp_cur.tif',
-                  'biomass_fut' : args['output_dir'] + os.sep + 'bio_hwp_fut.tif',
-                  'volume_cur'  : args['output_dir'] + os.sep + 'vol_hwp_cur.tif',
-                  'volume_fut'  : args['output_dir'] + os.sep + 'vol_hwp_fut.tif',}
-    
+    directoryPrefix = args['output_dir'] + os.sep
+    defaultURI = {'storage_cur' : directoryPrefix + 'tot_C_cur.tif',
+                  'storage_fut' : directoryPrefix + 'tot_C_fut.tif',
+                  'seq_delta' : directoryPrefix + 'sequest.tif',
+                  'seq_value' : directoryPrefix + 'value_seq.tif',
+                  'biomass_cur' : directoryPrefix + 'bio_hwp_cur.tif',
+                  'biomass_fut' : directoryPrefix + 'bio_hwp_fut.tif',
+                  'volume_cur'  : directoryPrefix + 'vol_hwp_cur.tif',
+                  'volume_fut'  : directoryPrefix + 'vol_hwp_fut.tif', }
+
     #open the two required elements.
-    lulc_cur = gdal.Open(args['lulc_cur'], gdal.GA_ReadOnly)    
-    args['lulc_cur']      = lulc_cur
-    args['carbon_pools']  = dbf.Dbf(args['carbon_pools'])
-    
+    lulc_cur = gdal.Open(args['lulc_cur'], gdal.GA_ReadOnly)
+    args['lulc_cur'] = lulc_cur
+    args['carbon_pools'] = dbf.Dbf(args['carbon_pools'])
+
     #open the future LULC if it has been provided
     if 'lulc_fut' in args:
         args['lulc_fut'] = gdal.Open(args['lulc_fut'], gdal.GA_ReadOnly)
-    
+
     #open any necessary output datasets, using user-provided URI if it exists
     for dataset in ('seq_delta', 'seq_value', 'storage_cur', 'storage_fut',
                     'biomass_cur', 'biomass_fut', 'volume_cur', 'volume_fut'):
@@ -71,28 +72,28 @@ def execute(args):
             args[dataset] = mimic(lulc_cur, args[dataset])
         else:
             args[dataset] = mimic(lulc_cur, defaultURI[dataset])
-    
+
     #Set other values the user provides for valuation
     for item in ('lulc_cur_year', 'lulc_fut_year', 'c_value', 'discount', 'rate_change'):
         if item in args:
             args[item] = args[item]
-    
+
     #Open the harvest maps
     for shape in ('hwp_cur_shape', 'hwp_fut_shape'):
         if shape in args:
             args[shape] = ogr.Open(args[shape])
-    
+
     #run the carbon model.
     carbon_core.execute(args)
-    
+
     #close all newly created raster datasets
     for dataset in ('storage_cur', 'storage_fut', 'seq_delta', 'seq_value'):
         args[dataset] = None
-        
+
     #close the pools DBF file
     args['carbon_pools'].close()
-    
-    
+
+
 def mimic(example, outputURI, format='GTiff'):
     """Create a new, empty GDAL raster dataset with the spatial references and
         geotranforms of the example GDAL raster dataset.
@@ -105,16 +106,16 @@ def mimic(example, outputURI, format='GTiff'):
             as 'GTiff' or 'MEM'
         
         returns a new GDAL raster dataset."""
-        
-    cols         = example.RasterXSize
-    rows         = example.RasterYSize
-    projection   = example.GetProjection()
+
+    cols = example.RasterXSize
+    rows = example.RasterYSize
+    projection = example.GetProjection()
     geotransform = example.GetGeoTransform()
-    
+
     driver = gdal.GetDriverByName(format)
     new_ds = driver.Create(outputURI, cols, rows, 1, gdal.GDT_Float32)
     new_ds.SetProjection(projection)
     new_ds.SetGeoTransform(geotransform)
     new_ds.GetRasterBand(1).SetNoDataValue(-5.0)
-    
+
     return new_ds
