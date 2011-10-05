@@ -6,3 +6,6 @@ Hello doug, here's an edit to the same file that we'll probably have to merge.
 
 I'm just adding another line or two here,
 so that we can commit a couple more changes.
+
+Oh, and of course we're adding these various notes so that we can try to 
+resolve the conflicting commits over on Doug's machine.
