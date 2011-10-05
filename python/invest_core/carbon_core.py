@@ -92,10 +92,9 @@ def harvestProductInfo(args):
         layer = 'harv_samp_' + timeframe
         
         #Make a copy of the appropriate shape in memory
-        ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(args[harvestMap], timeframe)
+        copiedDS = ogr.GetDriverByName('Memory').CopyDataSource(args[harvestMap], timeframe)
         
         #open the copied file
-        copiedDS = ogr.Open(timeframe, True)
         copiedLayer = copiedDS.GetLayerByName(layer)
         
         #add a biomass and volume field to the shape
