@@ -4,5 +4,6 @@ changing things
 
 Hello doug, here's an edit to the same file that we'll probably have to merge.
 
+
 I now have a working copy!
 Do you really? Or do you just think you do!?
