@@ -94,7 +94,7 @@ def execute(args):
     args['carbon_pools'].close()
 
 
-def mimic(example, outputURI, format='GTiff'):
+def mimic(example, outputURI, format='GTiff', nodata=-5.0):
     """Create a new, empty GDAL raster dataset with the spatial references and
         geotranforms of the example GDAL raster dataset.
         
@@ -104,7 +104,9 @@ def mimic(example, outputURI, format='GTiff'):
             output raster.  See http://gdal.org/formats_list.html for a list
             of available formats.  This parameter expects the format code, such
             as 'GTiff' or 'MEM'
-        
+        nodata='-5.0 - a number that will be set as the nodata value for the 
+            output raster
+                
         returns a new GDAL raster dataset."""
 
     cols = example.RasterXSize
@@ -116,6 +118,6 @@ def mimic(example, outputURI, format='GTiff'):
     new_ds = driver.Create(outputURI, cols, rows, 1, gdal.GDT_Float32)
     new_ds.SetProjection(projection)
     new_ds.SetGeoTransform(geotransform)
-    new_ds.GetRasterBand(1).SetNoDataValue(-5.0)
+    new_ds.GetRasterBand(1).SetNoDataValue(nodata)
 
     return new_ds
