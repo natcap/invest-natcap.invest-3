@@ -92,7 +92,10 @@ def harvestProductInfo(args):
         layer = 'harv_samp_' + timeframe
         
         #Make a copy of the appropriate shape in memory
-        copiedDS = ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(args[harvestMap], timeframe)
+        ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(args[harvestMap], timeframe)
+        
+        #open the copied file
+        copiedDS = ogr.Open(timeframe, True)
         copiedLayer = copiedDS.GetLayerByName(layer)
         
         #add a biomass and volume field to the shape
@@ -114,7 +117,7 @@ def harvestProductInfo(args):
             for key,index in fieldArgs.iteritems():
                 fieldArgs[key] = feature.GetField(index)
                 
-            #do the appropriate math, write to the appropriate fields.
+            #do the appropriate math based on the timeframe
             avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
             if timeframe == 'cur':
                 if fieldArgs['Freq_cur'] != 0.0:
@@ -131,19 +134,27 @@ def harvestProductInfo(args):
                     volumeSpan = 0.0
                 biomassSpan = math.ceil((args['lulc_fut_year']-avg)
                                         /fieldArgs['Freq_fut'])
-                
+            
+            #calculate biomass for this parcel
             biomass = fieldArgs['Cut_' + timeframe] *\
                     biomassSpan * (1.0/fieldArgs['C_den_' + timeframe])
                     
+            #calculate volume for this parcel
             volume = fieldArgs['Cut_' + timeframe] *\
                     volumeSpan * (1.0/fieldArgs['C_den_' + timeframe])*\
                     (1.0/fieldArgs['BCEF_' + timeframe])    
             
+            #set biomass field
             biomassIndex = feature.GetFieldIndex('biomass')
             feature.SetField(biomassIndex, biomass)
             
+            #set volume field
             volumeIndex = feature.GetFieldIndex('volume')
             feature.SetField(volumeIndex, volume)
+            
+            #save the field modifications to the layer.
+            copiedLayer.SetFeature(feature)
+            
             
         #burn the biomass values into the biomass raster
         gdal.RasterizeLayer(args['biomass_' + timeframe], [1], copiedLayer,
