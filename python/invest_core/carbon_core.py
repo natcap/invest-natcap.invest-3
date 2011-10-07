@@ -103,6 +103,10 @@ def harvestProductInfo(args):
         copiedLayer.CreateField(bio_def)
         copiedLayer.CreateField(vol_def)
         
+        #create a temporary mask raster for this shapefile
+        maskRaster = carbon.mimic(args['lulc_cur'], 'mask.tif', 'MEM', -1.0)
+        gdal.RasterizeLayer(maskRaster, [1], copiedLayer, burn_values=[1])
+        
         for feature in copiedLayer:
             fieldArgs = {'Cut_' + timeframe : feature.GetFieldIndex('Cut_' + timeframe),
                          'Freq_' + timeframe : feature.GetFieldIndex('Freq_' + timeframe),
@@ -155,14 +159,21 @@ def harvestProductInfo(args):
             copiedLayer.SetFeature(feature)
             
             
-        #burn the biomass values into the biomass raster
-        gdal.RasterizeLayer(args['biomass_' + timeframe], [1], copiedLayer,
+        #burn the biomass values into a temp biomass raster
+        bioTempRaster = carbon.mimic(args['lulc_cur'], '', 'MEM', -1.0)
+        gdal.RasterizeLayer(bioTempRaster, [1], copiedLayer,
                             options=['ATTRIBUTE=biomass'])
     
-        #burn the volume values into the values raster.
-        gdal.RasterizeLayer(args['volume_' + timeframe], [1], copiedLayer,
+        #burn the volume values into a temp volume raster.
+        volTempRaster = carbon.mimic(args['lulc_cur'], '', 'MEM', -1.0)
+        gdal.RasterizeLayer(volTempRaster, [1], copiedLayer,
                             options=['ATTRIBUTE=volume'])            
-            
+        
+        #apply the mask for this shapefile, save to the biomass raster
+        rasterMask(bioTempRaster, maskRaster, args['biomass_' + timeframe])
+
+        #apply the mask for this shapefile, save to the volume raster
+        rasterMask(volTempRaster, maskRaster, args['volume_' + timeframe])      
     return
 
         
@@ -431,6 +442,23 @@ def rasterAdd(storage_cur, hwpRaster, outputRaster):
         out_array = carbon_add(nodataDict, cur_data, fut_data)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
+def rasterMask(inputRaster, maskRaster, outputRaster):
+    """Iterate through each pixel. Return the pixel of inputRaster if the mask
+        is 1 at that pixel.  Return nodata if not.
+        
+        storage_cur - a GDAL raster dataset
+        hwpRaster - a GDAL raster dataset
+        outputRaster - a GDAL raster dataset"""
+    
+    nodataDict = build_nodata_dict(inputRaster, outputRaster)
+    input_band = inputRaster.GetRasterBand(1)
+    mask_band = maskRaster.GetRasterBand(1)
+    for i in range(0, input_band.YSize):
+        in_data = input_band.ReadAsArray(0, i, input_band.XSize, 1)
+        mask_data = mask_band.ReadAsArray(0, i, mask_band.XSize, 1)
+        out_array = carbon_mask(nodataDict, in_data, mask_data)
+        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
+
 def pixelArea(dataset):
     """Calculates the pixel area of the given dataset.
     
@@ -579,5 +607,26 @@ def carbon_value(nodata, data, numYears, carbonValue, multiplier):
     else:
         return []
     
+def carbon_mask(nodata, input, mask):
+    """Iterate through inputArray and return its value only if the value of mask
+        is 1.  Otherwise, return the nodata value of the output array.
+        
+        nodata - a dict: {'input': some number, 'output' : some number}
+        input - a numpy array
+        mask - a numpy array, with values of either 0 or 1"""
+        
+    def mapMask(x, y):
+        if y == 0.0:
+            return nodata['output']
+        else:
+            return x
+    
+    if input.size > 0:
+        mapFun = np.vectorize(mapMask)
+        return mapFun(input, mask)
+    else:
+        return []
+    
+
     
         
