@@ -109,12 +109,6 @@ def harvestProductInfo(args):
         
         for feature in copiedLayer:
             fieldArgs = getFields(feature)
-
-            if timeframe == 'cur':
-                fieldArgs['Start_date'] = feature.GetFieldIndex('Start_date')
-                
-            for key,index in fieldArgs.iteritems():
-                fieldArgs[key] = feature.GetField(index)
                 
             #do the appropriate math based on the timeframe
             avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
