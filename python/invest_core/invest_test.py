@@ -139,7 +139,7 @@ class TestInvest(unittest.TestCase):
         def test_carbon_storage_hwp_regression(self):
             """Verify the carbon storage model (with HWP) against known results"""
             
-        storage_cur = '../../carbon_output/test_seq_cur.tif'
+            storage_cur = '../../carbon_output/test_seq_cur.tif'
             
             arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
                      'carbon_pools' : '../../test_data/carbon_pools_int.dbf',
