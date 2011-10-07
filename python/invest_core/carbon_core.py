@@ -123,18 +123,12 @@ def harvestProductInfo(args):
             #do the appropriate math based on the timeframe
             avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
             if timeframe == 'cur':
-                if fieldArgs['Freq_cur'] != 0.0:
-                    volumeSpan = math.ceil((avg-fieldArgs['Start_date'])
+                volumeSpan = math.ceil((avg-fieldArgs['Start_date'])
                                        /fieldArgs['Freq_cur'])
-                else:
-                    volumeSpan = 0.0
                 biomassSpan = volumeSpan
             else:
-                if fieldArgs['Freq_fut'] != 0.0:
-                    volumeSpan = math.ceil(args['lulc_fut_year']-
+                volumeSpan = math.ceil(args['lulc_fut_year']-
                                        (avg/fieldArgs['Freq_fut']))
-                else:
-                    volumeSpan = 0.0
                 biomassSpan = math.ceil((args['lulc_fut_year']-avg)
                                         /fieldArgs['Freq_fut'])
             
