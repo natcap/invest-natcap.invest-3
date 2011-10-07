@@ -98,10 +98,9 @@ def harvestProductInfo(args):
         copiedLayer = copiedDS.GetLayerByName(layer)
         
         #add a biomass and volume field to the shape
-        bio_def = ogr.FieldDefn('biomass', ogr.OFTReal)
-        vol_def = ogr.FieldDefn('volume' , ogr.OFTReal)
-        copiedLayer.CreateField(bio_def)
-        copiedLayer.CreateField(vol_def)
+        for fieldname in ('biomass', 'volume'):
+            field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
+            copiedLayer.CreateField(field_def)
         
         #create a temporary mask raster for this shapefile
         maskRaster = carbon.mimic(args['lulc_cur'], 'mask.tif', 'MEM', -1.0)
@@ -131,33 +130,20 @@ def harvestProductInfo(args):
                     volumeSpan * (1.0/fieldArgs['C_den_' + timeframe])*\
                     (1.0/fieldArgs['BCEF_' + timeframe])    
             
-            #set biomass field
-            biomassIndex = feature.GetFieldIndex('biomass')
-            feature.SetField(biomassIndex, biomass)
-            
-            #set volume field
-            volumeIndex = feature.GetFieldIndex('volume')
-            feature.SetField(volumeIndex, volume)
-            
+            #set biomass and volume fields
+            for fieldName, value in (('biomass', biomass), ('volume', volume)):
+                index = feature.GetFieldIndex(fieldName)
+                feature.SetField(index, value)
+
             #save the field modifications to the layer.
             copiedLayer.SetFeature(feature)
             
-            
-        #burn the biomass values into a temp biomass raster
-        bioTempRaster = carbon.mimic(args['lulc_cur'], '', 'MEM', -1.0)
-        gdal.RasterizeLayer(bioTempRaster, [1], copiedLayer,
-                            options=['ATTRIBUTE=biomass'])
-    
-        #burn the volume values into a temp volume raster.
-        volTempRaster = carbon.mimic(args['lulc_cur'], '', 'MEM', -1.0)
-        gdal.RasterizeLayer(volTempRaster, [1], copiedLayer,
-                            options=['ATTRIBUTE=volume'])            
-        
-        #apply the mask for this shapefile, save to the biomass raster
-        rasterMask(bioTempRaster, maskRaster, args['biomass_' + timeframe])
-
-        #apply the mask for this shapefile, save to the volume raster
-        rasterMask(volTempRaster, maskRaster, args['volume_' + timeframe])      
+        #Burn values into temp raster, apply mask, save to args dict.
+        for fieldName in ('biomass', 'volume'):
+            tempRaster = carbon.mimic(args['lulc_cur'], '', 'MEM', -1.0)
+            gdal.RasterizeLayer(tempRaster, [1], copiedLayer,
+                            options=['ATTRIBUTE=' + fieldName])
+            rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
     return
 
         
