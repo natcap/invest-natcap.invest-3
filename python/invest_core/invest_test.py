@@ -139,7 +139,7 @@ class TestInvest(unittest.TestCase):
         def test_carbon_storage_hwp_regression(self):
             """Verify the carbon storage model (with HWP) against known results"""
             
-            storage_cur = '../../carbon_output/test_seq_cur.tif'
+        storage_cur = '../../carbon_output/test_seq_cur.tif'
             
             arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
                      'carbon_pools' : '../../test_data/carbon_pools_int.dbf',
@@ -163,7 +163,11 @@ class TestInvest(unittest.TestCase):
             storage_cur = '../../carbon_output/test_seq_cur1.tif'
             storage_fut = '../../carbon_output/test_seq_fut1.tif'
             seq_delta = '../../carbon_output/seq_delta1.tif'
-
+            biomass_cur = '../../carbon_output/bio_cur.tif'
+            biomass_fut = '../../carbon_output/bio_fut.tif'
+            volume_cur = '../../carbon_output/vol_cur.tif'
+            volume_fut = '../../carbon_output/vol_fut.tif'
+            
             arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
                          'lulc_fut': '../../test_data/lulc_samp_fut',
                          'carbon_pools' : '../../test_data/carbon_pools_float.dbf',
@@ -175,15 +179,27 @@ class TestInvest(unittest.TestCase):
                          'output_dir' : '../../carbon_output',
                          'calc_value' : False,
                          'lulc_cur_year' : 2000,
-                         'lulc_fut_year' : 2030}
-            
+                         'lulc_fut_year' : 2030,
+                         'biomass_cur' : biomass_cur,
+                         'biomass_fut' : biomass_fut,
+                         'volume_cur' : volume_cur,
+                         'volume_fut' : volume_fut}
+             
             invest.execute('carbon', arguments)
                             
             assert_raster_equality_vec(self, storage_fut,
                                        '../../test_data/carbon_hwp_fut_regression.tif')
-            os.remove(storage_cur)
-            os.remove(storage_fut)
-            os.remove(seq_delta)
+            assert_raster_equality_vec(self, biomass_cur,
+                                       '../../test_data/carbon_bio_cur_regression.tif')            
+            assert_raster_equality_vec(self, biomass_fut,
+                                       '../../test_data/carbon_bio_fut_regression.tif')
+            assert_raster_equality_vec(self, volume_cur,
+                                       '../../test_data/carbon_vol_cur_regression.tif')
+            assert_raster_equality_vec(self, volume_fut,
+                                       '../../test_data/carbon_vol_fut_regression.tif')
+            for uri in (storage_cur, storage_fut, seq_delta, biomass_cur, 
+                        biomass_fut, volume_cur, volume_fut):
+                os.remove(uri)
             pass
 
 if __name__ == '__main__':

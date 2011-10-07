@@ -87,8 +87,10 @@ def execute(args):
     carbon_core.execute(args)
 
     #close all newly created raster datasets
-    for dataset in ('storage_cur', 'storage_fut', 'seq_delta', 'seq_value'):
-        args[dataset] = None
+    for dataset in ('storage_cur', 'storage_fut', 'seq_delta', 'seq_value',
+                    'biomass_cur', 'biomass_fut', 'volume_cur', 'volume_fut'):
+        if dataset in args:
+            args[dataset] = None
 
     #close the pools DBF file
     args['carbon_pools'].close()
