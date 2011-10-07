@@ -267,18 +267,7 @@ def iterFeatures(layer, suffix, yrCur, yrFut=None):
         
     #calculate hwp pools per feature for the future scenario
     for feature in layer:
-        fieldArgs = {'Cut_' + suffix : feature.GetFieldIndex('Cut_' + suffix),
-                     'Freq_' + suffix : feature.GetFieldIndex('Freq_' + suffix),
-                     'Decay_' + suffix : feature.GetFieldIndex('Decay_' + suffix),
-                     'C_den_' + suffix : feature.GetFieldIndex('C_den_' + suffix),
-                     'BCEF_' + suffix : feature.GetFieldIndex('BCEF_' + suffix)}
-        
-        if suffix == 'cur':
-            fieldArgs['Start_date'] = feature.GetFieldIndex('Start_date')
-            
-        #Then replace the indices with actual values
-        for key,index in fieldArgs.iteritems():
-            fieldArgs[key] = feature.GetField(index)
+        fieldArgs = getFields(feature)
         
         #Set a couple variables based on the input parameters
         if suffix == 'cur':
