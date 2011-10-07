@@ -108,11 +108,7 @@ def harvestProductInfo(args):
         gdal.RasterizeLayer(maskRaster, [1], copiedLayer, burn_values=[1])
         
         for feature in copiedLayer:
-            fieldArgs = {'Cut_' + timeframe : feature.GetFieldIndex('Cut_' + timeframe),
-                         'Freq_' + timeframe : feature.GetFieldIndex('Freq_' + timeframe),
-                         'Decay_' + timeframe : feature.GetFieldIndex('Decay_' + timeframe),
-                         'C_den_' + timeframe : feature.GetFieldIndex('C_den_' + timeframe),
-                         'BCEF_' + timeframe : feature.GetFieldIndex('BCEF_' + timeframe)}
+            fieldArgs = getFields(feature)
 
             if timeframe == 'cur':
                 fieldArgs['Start_date'] = feature.GetFieldIndex('Start_date')
@@ -328,7 +324,24 @@ def iterFeatures(layer, suffix, yrCur, yrFut=None):
         layer.SetFeature(feature)
 
         
-
+def getFields(feature):
+    """Return a dict with all fields in the given feature.
+        
+        feature - an OGR feature.
+        
+        Returns an assembled python dict with a mapping of 
+        fieldname -> fieldvalue"""
+        
+    fields = {}
+    for i in range(feature.GetFieldCount()):
+        field_def = feature.GetFieldDefnRef(i)
+        name = field_def.GetNameRef()
+        value = feature.GetField(i)
+        fields[name] = value
+        
+    return fields
+        
+    
 
 def calcFeatureHWP(limit, decay, endDate, startDate, freq):
     """Apply equation 2 from the user's guide
