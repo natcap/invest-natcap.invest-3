@@ -193,34 +193,21 @@ def futureHarvestProducts(args):
         args['lulc_fut_year'] - an int
         
         No return value."""
-    #Make a copy of the hwp_cur_shape shape so we can write to it
-    calculated_cur_carbon_ds = ogr.GetDriverByName("Memory").\
-                    CopyDataSource(args['hwp_cur_shape'], "")
-    calculated_cur_carbon_layer = calculated_cur_carbon_ds.GetLayerByName('harv_samp_cur')
+ 
+    for timeframe in ['cur', 'fut']:
+        #make a copy of the necessary shape
+        src_dataset = args['hwp_' + timeframe + '_shape']
+        dataset = ogr.GetDriverByName('Memory').CopyDataSource(src_dataset, '')
+        layer = dataset.GetLayerByName('harv_samp_' + timeframe)
         
-    #Make a copy of the hwp_fut_shape shape so we can write to it
-    calculated_fut_carbon_ds = ogr.GetDriverByName("Memory").\
-                    CopyDataSource(args['hwp_fut_shape'], "")
-    calculated_fut_carbon_layer = calculated_fut_carbon_ds.GetLayerByName('harv_samp_fut')
-    
-    #Create a hardwood products pool in both shapes that will get calculated later
-    for layer in [calculated_cur_carbon_layer, calculated_fut_carbon_layer]:
+        #create a new field for HWP calculations
         hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
         layer.CreateField(hwp_def)
-    
-    #calculate hwp pools per feature for the current hwp scenario
-    iterFeatures(calculated_cur_carbon_layer, 'cur', args['lulc_cur_year'],
-                 args['lulc_fut_year'])
 
-    for feature in calculated_cur_carbon_layer:
-        print feature.GetField(6)
+        #calculate hwp pools per feature for the timeframe
+        iterFeatures(layer, timeframe, args['lulc_cur_year'],
+                     args['lulc_fut_year'])
 
-    
-    #calculate hwp pools per feature for the future scenario
-    iterFeatures(calculated_fut_carbon_layer, 'fut', args['lulc_cur_year'],
-                  args['lulc_fut_year'])
-    
-    for layer in [calculated_cur_carbon_layer, calculated_fut_carbon_layer]:
         #Make a new raster in memory for burning in the HWP values.
         hwp_ds = carbon.mimic(args['lulc_cur'], 'temp.tif', 'MEM')
     
@@ -286,10 +273,8 @@ def iterFeatures(layer, suffix, yrCur, yrFut=None):
             
         #set the HWP carbon pool for this feature.
         hwpCarbonPool = fieldArgs['Cut_' + suffix]*sum
-#        print str(fieldArgs['Cut_' + suffix]) + ' | ' + str(sum) + ' | ' + str(hwpCarbonPool)
         hwpIndex = feature.GetFieldIndex('hwp_pool')
         feature.SetField(hwpIndex,hwpCarbonPool)
-#        print feature.GetField(hwpIndex)
         layer.SetFeature(feature)
 
         
