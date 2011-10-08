@@ -933,7 +933,28 @@ class CarbonTestSuite(unittest.TestCase):
                 'volume_fut' : carbon.mimic(lulc, '../../carbon_output/volume_fut.tif')}
  
         carbon_core.harvestProductInfo(args)
+        
+    def test_getFields(self):
+        """Verify that getFields() produces the correct results."""
+        
+        dataset = ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp', 0)
+        layer = dataset.GetLayerByName('harv_samp_cur')
+        feature = layer.GetFeature(3)
+        
+        #this dict contains the known contents of feature ID 3
+        referenceDict = {'C_den_cur': 0.5,
+                          'Freq_cur': 5,
+                          'BCEF_cur': 1.0,
+                          'Cut_cur': 12.199999809299999, 
+                          'Decay_cur': 11, 
+                          'Start_date': 1946}
+        
+        outputDict = carbon_core.getFields(feature)
     
+        for key, value in outputDict.iteritems():
+            self.assertEqual(referenceDict[key], outputDict[key])
+        
+        
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
     unittest.TextTestRunner(verbosity=2).run(suite)
