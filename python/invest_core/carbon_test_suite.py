@@ -954,7 +954,34 @@ class CarbonTestSuite(unittest.TestCase):
         for key, value in outputDict.iteritems():
             self.assertEqual(referenceDict[key], outputDict[key])
         
+    def test_carbon_mask_smoke(self):    
+        """Smoke test for the mask function."""
+        lulc1 = np.zeros((1,0))
+        lulc2 = np.zeros((1,0))
+        nodata = {'input': 0, 'output': 0} #set a nodata value
         
+        carbon_core.carbon_mask(nodata, lulc1, lulc2)
+        pass
+
+    def test_carbon_mask_1D_arrays(self):
+        """Verify the output of carbon_mask with a 100-length array"""
+        length = 100
+        data = np.random.random_integers(1, 6, (1, length))
+        mask = np.random.random_integers(0, 1, (1, length))
+        nodata = {'input': -2, 'output': -2} #set a nodata value
+        
+        #run carbon_mask
+        output = carbon_core.carbon_mask(nodata, data, mask)
+
+        #verify the contents of output against pool and lulc data
+        for x in range(data.shape[1]):
+            currentValue = output[0][x]
+            if currentValue == -2:
+                self.assertEqual(mask[0][x], 0)
+            else:
+                self.assertEqual(currentValue, data[0][x])
+
+    
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(CarbonTestSuite)
     unittest.TextTestRunner(verbosity=2).run(suite)
