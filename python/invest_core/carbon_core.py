@@ -436,6 +436,13 @@ def pixelArea(dataset):
     return areaMeters / (10 ** 4) #convert m^2 to Ha
 
 def build_nodata_dict(inputRaster, outputRaster):
+    """Get the nodata values from the two input rasters, return them in a dict.
+    
+        inputRaster - a GDAL raster dataset
+        outputRaster - a GDAL raster dataset
+        
+        returns a dict: {'input': number, 'output': number}
+        """
     inNoData = inputRaster.GetRasterBand(1).GetNoDataValue()
     outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
     
