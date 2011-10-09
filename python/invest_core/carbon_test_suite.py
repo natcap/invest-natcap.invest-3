@@ -46,7 +46,7 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
     for i in range(0, band.YSize):
         array = band.ReadAsArray(0, i, band.XSize, 1)
         for j in range(0, band.XSize):
-            array[0][j] = random.randint(1,10)
+            array[0][j] = random.randint(0,1)
         dataset.GetRasterBand(1).WriteArray(array, 0, i)
 
     return dataset
@@ -82,6 +82,45 @@ def vectorize_dataset_equality_pools(unit, firstDS, secondDS, dict):
                 
         fastCheck = np.vectorize(checkEqual)
         fastCheck(firstArray, secondArray)
+
+def vectorize_dataset_equality_mask(unit, firstDS, secondDS, mask):
+    """Assert that the pixel values of firstDS have been masked correctly.
+        
+        unit - the 'self' object from the unittesting framework
+        firstDS - an open GDAL raster dataset
+        secondDS - an open GDAL raster dataset
+        mask - an open GDAL raster dataset
+
+        no return value"""
+        
+    firstDSBand = firstDS.GetRasterBand(1)
+    secondDSBand = secondDS.GetRasterBand(1)
+    maskBand = mask.GetRasterBand(1)
+    unit.assertEqual(firstDSBand.XSize, maskBand.XSize,
+                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
+                       ", second = " + str(maskBand.XSize))
+    unit.assertEqual(firstDSBand.YSize, maskBand.YSize,
+                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
+                      ", second = " + str(maskBand.YSize))
+
+
+    nodata = carbon_core.build_nodata_dict(firstDS, secondDS)
+    print nodata
+
+    for i in range(0, firstDSBand.YSize):
+        inputArray = firstDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+        outputArray = secondDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+        maskArray = maskBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+
+        def checkMask(a, b, c):
+            if b == nodata['output']:
+                unit.assertEqual(c, 0)
+            else:
+                unit.assertAlmostEqual(a, b, 6)
+                
+        fastCheck = np.vectorize(checkMask)
+        fastCheck(inputArray, outputArray, maskArray)
+
 
 def vectorize_dataset_equality(unit, firstDS, secondDS):
     """Assert that the pixel values of secondDS match those of firstDS.
@@ -561,6 +600,24 @@ class CarbonTestSuite(unittest.TestCase):
             
         #Assert that the outputRaster contains the values it should
         vectorize_dataset_equality_pools(self, raster1, outputRaster, poolsDict)
+        pass
+        
+    def test_carbon_core_rasterMask(self):
+        """Verify the output of carbon_core.rasterMask()"""
+        
+        #Assemble our arguments
+        driver = gdal.GetDriverByName('MEM')
+        outputRaster = driver.Create('temp.tif', 100, 100, 1, gdal.GDT_Float32)
+        outputRaster.GetRasterBand(1).SetNoDataValue(-5.0)
+        inputRaster = gdal.Open('../../test_data/randomInts100x100.tif', gdal.GA_ReadOnly)
+        inputRaster.GetRasterBand(1).SetNoDataValue(-5.0)
+        mask = gdal.Open('../../test_data/mask100x100.tif', gdal.GA_ReadOnly)
+        
+        #run carbon_core.rasterAdd()
+        carbon_core.rasterMask(inputRaster, mask, outputRaster)
+                    
+        #Assert that the outputRaster contains the values it should
+        vectorize_dataset_equality_mask(self, inputRaster, outputRaster, mask)
         pass
         
     def test_carbon_core_iterFeatures_cur(self):
