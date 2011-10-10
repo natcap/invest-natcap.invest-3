@@ -51,6 +51,45 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
 
     return dataset
 
+
+def assertTwoDatasets(unit, firstDS, secondDS, checkEqual, dict=None):
+    firstDSBand = firstDS.GetRasterBand(1)
+    secondDSBand = secondDS.GetRasterBand(1)
+    unit.assertEqual(firstDSBand.XSize, secondDSBand.XSize,
+                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
+                       ", second = " + str(secondDSBand.XSize))
+    unit.assertEqual(firstDSBand.YSize, secondDSBand.YSize,
+                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
+                      ", second = " + str(secondDSBand.YSize))
+
+    for i in range(0, firstDSBand.YSize):
+        firstArray = firstDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+        secondArray = secondDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+                
+        fastCheck = np.vectorize(checkEqual)
+        fastCheck(firstArray, secondArray)
+
+
+def assertThreeDatasets(unit, firstDS, secondDS, thirdDS, checkMask, nodata):
+    firstDSBand = firstDS.GetRasterBand(1)
+    secondDSBand = secondDS.GetRasterBand(1)
+    maskBand = thirdDS.GetRasterBand(1)
+    unit.assertEqual(firstDSBand.XSize, maskBand.XSize,
+                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
+                       ", second = " + str(maskBand.XSize))
+    unit.assertEqual(firstDSBand.YSize, maskBand.YSize,
+                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
+                      ", second = " + str(maskBand.YSize))
+
+    for i in range(0, firstDSBand.YSize):
+        inputArray = firstDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+        outputArray = secondDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+        maskArray = maskBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+                
+        fastCheck = np.vectorize(checkMask)
+        fastCheck(inputArray, outputArray, maskArray)
+
+
 def vectorize_dataset_equality_pools(unit, firstDS, secondDS, dict):
     """Assert that the pixel values of secondDS match those of firstDS when
         the input dict is mapped.
@@ -63,25 +102,11 @@ def vectorize_dataset_equality_pools(unit, firstDS, secondDS, dict):
             
         no return value"""
         
-    firstDSBand = firstDS.GetRasterBand(1)
-    secondDSBand = secondDS.GetRasterBand(1)
-    unit.assertEqual(firstDSBand.XSize, secondDSBand.XSize,
-                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
-                       ", second = " + str(secondDSBand.XSize))
-    unit.assertEqual(firstDSBand.YSize, secondDSBand.YSize,
-                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
-                      ", second = " + str(secondDSBand.YSize))
-
-    for i in range(0, firstDSBand.YSize):
-        firstArray = firstDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
-        secondArray = secondDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
-
-        def checkEqual(a, b):
-            """Assert that dict[a] == b"""
-            unit.assertAlmostEqual(dict[a], b, 6)
-                
-        fastCheck = np.vectorize(checkEqual)
-        fastCheck(firstArray, secondArray)
+    def checkEqual(a, b):
+        """Assert that dict[a] == b"""
+        unit.assertAlmostEqual(dict[a], b, 6)
+        
+    assertTwoDatasets(unit, firstDS, secondDS, checkEqual, dict)
 
 def vectorize_dataset_equality_mask(unit, firstDS, secondDS, mask):
     """Assert that the pixel values of firstDS have been masked correctly.
@@ -92,34 +117,17 @@ def vectorize_dataset_equality_mask(unit, firstDS, secondDS, mask):
         mask - an open GDAL raster dataset
 
         no return value"""
-        
-    firstDSBand = firstDS.GetRasterBand(1)
-    secondDSBand = secondDS.GetRasterBand(1)
-    maskBand = mask.GetRasterBand(1)
-    unit.assertEqual(firstDSBand.XSize, maskBand.XSize,
-                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
-                       ", second = " + str(maskBand.XSize))
-    unit.assertEqual(firstDSBand.YSize, maskBand.YSize,
-                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
-                      ", second = " + str(maskBand.YSize))
-
 
     nodata = carbon_core.build_nodata_dict(firstDS, secondDS)
-    print nodata
 
-    for i in range(0, firstDSBand.YSize):
-        inputArray = firstDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
-        outputArray = secondDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
-        maskArray = maskBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
+    def checkMask(a, b, c):
+        if b == nodata['output']:
+            unit.assertEqual(c, 0)
+        else:
+            unit.assertAlmostEqual(a, b, 6)
+    
+    assertThreeDatasets(unit, firstDS, secondDS, mask, checkMask, nodata)
 
-        def checkMask(a, b, c):
-            if b == nodata['output']:
-                unit.assertEqual(c, 0)
-            else:
-                unit.assertAlmostEqual(a, b, 6)
-                
-        fastCheck = np.vectorize(checkMask)
-        fastCheck(inputArray, outputArray, maskArray)
 
 
 def vectorize_dataset_equality(unit, firstDS, secondDS):
@@ -130,26 +138,12 @@ def vectorize_dataset_equality(unit, firstDS, secondDS):
         secondDS - an open GDAL raster dataset
 
         no return value"""
+
+    def checkEqual(a, b):
+        """Assert that a == b to 6 decimal places"""
+        unit.assertAlmostEqual(a, b, 6)
         
-    firstDSBand = firstDS.GetRasterBand(1)
-    secondDSBand = secondDS.GetRasterBand(1)
-    unit.assertEqual(firstDSBand.XSize, secondDSBand.XSize,
-                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
-                       ", second = " + str(secondDSBand.XSize))
-    unit.assertEqual(firstDSBand.YSize, secondDSBand.YSize,
-                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
-                      ", second = " + str(secondDSBand.YSize))
-
-    for i in range(0, firstDSBand.YSize):
-        firstArray = firstDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
-        secondArray = secondDSBand.ReadAsArray(0, i, firstDSBand.XSize, 1)
-
-        def checkEqual(a, b):
-            """Assert that a == b to 6 decimal places"""
-            unit.assertAlmostEqual(a, b, 6)
-                
-        fastCheck = np.vectorize(checkEqual)
-        fastCheck(firstArray, secondArray)
+    assertTwoDatasets(unit, firstDS, secondDS, checkEqual)
 
 
 

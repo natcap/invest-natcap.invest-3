@@ -408,7 +408,7 @@ def rasterMask(inputRaster, maskRaster, outputRaster):
         is 1 at that pixel.  Return nodata if not.
         
         storage_cur - a GDAL raster dataset
-        hwpRaster - a GDAL raster dataset
+        maskRaster - a GDAL raster dataset
         outputRaster - a GDAL raster dataset"""
     
     nodataDict = build_nodata_dict(inputRaster, outputRaster)
