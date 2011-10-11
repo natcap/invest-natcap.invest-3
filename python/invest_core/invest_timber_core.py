@@ -2,7 +2,7 @@
 
 import imp, sys, os
 import simplejson as json
-import carbon_scenario_uncertainty
+import timber
 from osgeo import gdal
 from osgeo.gdalconst import *
 import numpy
@@ -17,7 +17,7 @@ def execute(args):
     args['output_dir'] - The file location where the output will be written
     args['lulc_cur_uri'] - The shape file location
     args['plant_prod_uri'] - The attribute table location
-    args['market_discount_rate'] - The market discount rate as a string
+    args['market_disc_rate'] - The market discount rate as a string
     """
 
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -25,8 +25,10 @@ def execute(args):
     output_seq = ogr.GetDriverByName("Memory").\
                     CopyDataSource(args['lulc_cur_uri'], "")
     lulc_cur = ogr.Open(args['lulc_cur_uri'])
+    timber_layer = lulc_cur.GetLayerByName("lulc_cur_uri")
   
-    args = { 'lulc_cur': lulc_cur,
+    args = { 'tp_shape': lulc_cur,
+            'tp_lyr': timber_layer,
             'plant_prod': dbf.Dbf(args['plant_prod_uri']),
             'output_seq': output_seq,
             'mdr': args['market_discount_rate']}
@@ -34,7 +36,7 @@ def execute(args):
     timber.execute(args)
 
     #This is how GDAL closes its datasets in python
-    lulc_cur = None
+    
     output_seq = None
 
 #This part is for command line invocation and allows json objects to be passed
