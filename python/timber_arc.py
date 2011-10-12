@@ -19,7 +19,7 @@ arguments = {'output_dir': gp.GetParameterAsText(0),
              'plant_prod_uri': gp.GetParameterAsText(2),
              'market_disc_rate': float(gp.GetParameterAsText(3))}
 
-args_file = open('C:\Users\\' + getpass.getuser() + '\My Documents\ArcGIS\timber_args.json', 'w')
+args_file = open('C:\Users\\' + getpass.getuser() + '\My Documents\ArcGIS\\timber_args.json', 'w')
 args_file.writelines(json.dumps(arguments))
 args_file.close()
 
