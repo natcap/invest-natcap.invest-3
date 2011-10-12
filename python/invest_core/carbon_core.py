@@ -57,9 +57,9 @@ def execute(args):
     if 'hwp_cur_shape' in args:
         harvestProductInfo(args)
         if 'hwp_fut_shape' not in args:
-            currentHarvestProducts(args)
+            harvestProducts(args, ('cur',))
         else:
-            futureHarvestProducts(args)
+            harvestProducts(args, ('cur', 'fut'))
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
@@ -150,54 +150,23 @@ def harvestProductInfo(args):
             rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
     return
 
-def currentHarvestProducts(args):
-    """Adds carbon due to harvested wood products
-    
-        args - is a dictionary with at least the following entries:
-        args['lulc_cur'] - is a GDAL raster dataset
-        args['storage_cur'] - is a GDAL raster dataset
-        args['hwp_cur_shape'] - an open OGR object
-        args['lulc_cur_year'] - an int
-        
-        No return value."""
-        
-    #Make a copy of the hwp_cur_shape shape so we can write to it
-    calculated_carbon_ds = ogr.GetDriverByName("Memory").\
-                    CopyDataSource(args['hwp_cur_shape'], "")
-    calculated_carbon_layer = calculated_carbon_ds.GetLayerByName('harv_samp_cur')
-    
-    #Create a hardwood products pool that will get calculated later
-    hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
-    calculated_carbon_layer.CreateField(hwp_def)
-    
-    #calculate hwp pools per feature
-    iterFeatures(calculated_carbon_layer, 'cur', args['lulc_cur_year'])
-    
-    #Make a new raster in memory for burning in the HWP values.
-    hwp_ds = carbon.mimic(args['lulc_cur'], 'temp.tif', 'MEM')
 
-    #Now burn the hwp pools into the HWP raster in memory.
-    gdal.RasterizeLayer(hwp_ds,[1], calculated_carbon_layer,
-                         options=['ATTRIBUTE=hwp_pool'])
-    
-    #Add the HWP raster to the storage raster, write the sum to the
-    #storage raster.
-    rasterAdd(args['storage_cur'], hwp_ds, args['storage_cur'])
-    
-def futureHarvestProducts(args):
+def harvestProducts(args, timespan):
     """Adds carbon due to harvested wood products in a future scenario
     
         args - is a dictionary with at least the following entries:
         args['lulc_cur'] - is a GDAL raster dataset
         args['storage_cur'] - is a GDAL raster dataset
+        args['storage_fut'] - in a GDAL raster dataset
         args['hwp_cur_shape'] - an open OGR object
         args['hwp_fut_shape'] - an open OGR object
         args['lulc_cur_year'] - an int
         args['lulc_fut_year'] - an int
         
+        timespan - a list or array with the possible values 'cur' and 'fut'
         No return value."""
  
-    for timeframe in ['cur', 'fut']:
+    for timeframe in timespan:
         #make a copy of the necessary shape
         src_dataset = args['hwp_' + timeframe + '_shape']
         dataset = ogr.GetDriverByName('Memory').CopyDataSource(src_dataset, '')
@@ -208,8 +177,11 @@ def futureHarvestProducts(args):
         layer.CreateField(hwp_def)
 
         #calculate hwp pools per feature for the timeframe
-        iterFeatures(layer, timeframe, args['lulc_cur_year'],
-                     args['lulc_fut_year'])
+        if len(timespan) == 2:
+            iterFeatures(layer, timeframe, args['lulc_cur_year'],
+                          args['lulc_fut_year'])
+        else:
+            iterFeatures(layer, timeframe, args['lulc_cur_year'])
 
         #Make a new raster in memory for burning in the HWP values.
         hwp_ds = carbon.mimic(args['lulc_cur'], 'temp.tif', 'MEM')
@@ -220,12 +192,11 @@ def futureHarvestProducts(args):
         
         #Add the HWP raster to the storage raster, write the sum to the
         #storage raster.
-        rasterAdd(args['storage_cur'], hwp_ds, args['storage_cur'])
+        rasterAdd(args['storage_' + timeframe], hwp_ds, args['storage_' +  timeframe])
         
         #clear the temp dataset.
         hwp_ds = None
         
-       
 
 def iterFeatures(layer, suffix, yrCur, yrFut=None):
     """Iterate over all features in the provided layer, calculate HWP.
