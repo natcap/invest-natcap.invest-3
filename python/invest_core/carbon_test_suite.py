@@ -872,8 +872,8 @@ class CarbonTestSuite(unittest.TestCase):
                 'hwp_cur_shape' : ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
                 'lulc_cur_year' : 2000}
         
-        #run currentHarvestProducts()
-        carbon_core.currentHarvestProducts(args)
+        #run harvestProducts()
+        carbon_core.harvestProducts(args, ('cur',))
         
         #verify that the output is corrent
         example = gdal.Open('../../test_data/currentHWP_regression.tif')
@@ -888,22 +888,24 @@ class CarbonTestSuite(unittest.TestCase):
         #Create a working copy of the existing storage (regression) raster
         storage_orig = gdal.Open('../../test_data/carbon_regression.tif', gdal.GA_ReadOnly)
         driver = gdal.GetDriverByName('MEM')
-        storage_mod = driver.CreateCopy('temp.tif', storage_orig, 0)
+        storage_cur = driver.CreateCopy('temp.tif', storage_orig, 0)
+        storage_fut = driver.CreateCopy('temp.tif', storage_orig, 0)
         
         #set up arguments
         args = {'lulc_cur' : gdal.Open('../../test_data/lulc_samp_cur', gdal.GA_ReadOnly),
-                'storage_cur' : storage_mod,
+                'storage_cur' : storage_cur,
+                'storage_fut' : storage_fut,
                 'hwp_cur_shape' : ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
                 'hwp_fut_shape' : ogr.Open('../../test_data/harv_samp_fut/harv_samp_fut.shp'),
                 'lulc_cur_year' : 2000,
                 'lulc_fut_year' : 2030}
         
-        #run currentHarvestProducts()
-        carbon_core.currentHarvestProducts(args)
+        #run harvestProducts()
+        carbon_core.harvestProducts(args, ('cur', 'fut'))
         
         #verify that the output is corrent
         example = gdal.Open('../../test_data/futureHWP_regression.tif')
-        vectorize_dataset_equality(self, example, storage_mod)
+        vectorize_dataset_equality(self, example, storage_fut)
         pass
            
     def test_carbon_execute_default_filepaths(self):
