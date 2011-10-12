@@ -19,7 +19,6 @@ def execute(args):
     driver = gdal.GetDriverByName("GTiff")
     lulc_cur = gdal.Open(args['lulc_cur_uri'], GA_ReadOnly)
     lulc_fut = gdal.Open(args['lulc_fut_uri'], GA_ReadOnly)
-    print lulc_cur, lulc_fut
     output_seq = driver.Create(args['output_dir'] + '\uncertainty_sequestration.tif',
                            lulc_cur.GetRasterBand(1).XSize,
                            lulc_cur.GetRasterBand(1).YSize, 1, gdal.GDT_Float32)
@@ -50,7 +49,6 @@ def execute(args):
 #as the argument dictionary
 if __name__ == '__main__':
 
-    print sys.argv
     modulename, json_args = sys.argv
     args = json.loads(json_args)
     execute(args)
