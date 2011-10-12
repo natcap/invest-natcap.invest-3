@@ -55,11 +55,11 @@ def execute(args):
 
     #Calculate HWP pools
     if 'hwp_cur_shape' in args:
+        harvestProductInfo(args)
         if 'hwp_fut_shape' not in args:
             currentHarvestProducts(args)
         else:
             futureHarvestProducts(args)
-            harvestProductInfo(args)
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
@@ -68,6 +68,7 @@ def execute(args):
     #value the carbon sequestered if the user requests
     if args['calc_value']:
         valuate(args)
+
 
 def harvestProductInfo(args):
     """Calculates biomass and volume of harvested wood products in a parcel.
@@ -86,8 +87,17 @@ def harvestProductInfo(args):
         
         No return value"""
     
-    #for each shape (if the shape is provided in args:
-    for timeframe in ('cur', 'fut'):
+    
+    if 'hwp_fut_shape' in args:
+        timeframeList = ('cur', 'fut')
+        avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
+    else:
+        timeframeList = ('cur', )
+        avg = args['lulc_cur_year']
+    
+    
+    #for each shape (if the shape is provided in args):
+    for timeframe in timeframeList:
         harvestMap = 'hwp_' + timeframe + '_shape'
         layer = 'harv_samp_' + timeframe
         
@@ -110,25 +120,19 @@ def harvestProductInfo(args):
             fieldArgs = getFields(feature)
                 
             #do the appropriate math based on the timeframe
-            avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
             if timeframe == 'cur':
-                volumeSpan = math.ceil((avg-fieldArgs['Start_date'])
+                timeSpan = math.ceil((avg-fieldArgs['Start_date'])
                                        /fieldArgs['Freq_cur'])
-                biomassSpan = volumeSpan
             else:
-                volumeSpan = math.ceil(args['lulc_fut_year']-
-                                       (avg/fieldArgs['Freq_fut']))
-                biomassSpan = math.ceil((args['lulc_fut_year']-avg)
-                                        /fieldArgs['Freq_fut'])
+                timeSpan = math.ceil((args['lulc_fut_year']-avg)
+                                     /fieldArgs['Freq_fut'])
             
-            #calculate biomass for this parcel
+            #calculate biomass for this parcel (equation 10.8)
             biomass = fieldArgs['Cut_' + timeframe] *\
-                    biomassSpan * (1.0/fieldArgs['C_den_' + timeframe])
+                    timeSpan * (1.0/fieldArgs['C_den_' + timeframe])
                     
-            #calculate volume for this parcel
-            volume = fieldArgs['Cut_' + timeframe] *\
-                    volumeSpan * (1.0/fieldArgs['C_den_' + timeframe])*\
-                    (1.0/fieldArgs['BCEF_' + timeframe])    
+            #calculate volume for this parcel (equation 10.11)
+            volume = biomass * (1.0/fieldArgs['BCEF_' + timeframe])    
             
             #set biomass and volume fields
             for fieldName, value in (('biomass', biomass), ('volume', volume)):
@@ -146,7 +150,6 @@ def harvestProductInfo(args):
             rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
     return
 
-        
 def currentHarvestProducts(args):
     """Adds carbon due to harvested wood products
     
@@ -306,15 +309,15 @@ def calcFeatureHWP(limit, decay, endDate, startDate, freq):
         endDate - the start date of the current harvest pattern
         freq - the number of times this parcel has been harvested
         
-        returns a float"""
+        returns a float (rounded down to the nearest integer)"""
         
-    sum = 0.0
+    hwpSum = 0.0
     for t in range(int(limit)):
         w = math.log(2)/decay
         m =  endDate - startDate - (t*freq)
-        sum += ((1.-(math.e**(-w)))/(w*math.e**(m*w)))
+        hwpSum += ((1.-(math.e**(-w)))/(w*math.e**(m*w)))
 
-    return sum
+    return math.floor(hwpSum)
 
 def valuate(args):
     """Executes the economic valuation model.
