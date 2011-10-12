@@ -429,7 +429,7 @@ class CarbonTestSuite(unittest.TestCase):
         self.assertEqual(nodata_dict['output'], outNoData)
         pass
     
-    def test_carbon_core_calc_feature_hwp(self):
+    def test_calcFeatureHWP(self):
         """Verify the correct output of calcFeatureHWP() against our own
             calculation using the same numbers."""
             
@@ -449,6 +449,7 @@ class CarbonTestSuite(unittest.TestCase):
             m =  endDate - startDate - (t*freq)
             sum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
     
+        sum = math.floor(sum)
         #verify our output
         self.assertEqual(result, sum)
 
