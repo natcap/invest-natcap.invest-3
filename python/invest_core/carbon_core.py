@@ -124,8 +124,8 @@ def harvestProductInfo(args):
                 timeSpan = math.ceil((avg-fieldArgs['Start_date'])
                                        /fieldArgs['Freq_cur'])
             else:
-                timeSpan = math.ceil(args['lulc_fut_year']-
-                                       (avg/fieldArgs['Freq_fut']))
+                timeSpan = math.ceil((args['lulc_fut_year']-avg)
+                                     /fieldArgs['Freq_fut'])
             
             #calculate biomass for this parcel (equation 10.8)
             biomass = fieldArgs['Cut_' + timeframe] *\
