@@ -112,23 +112,18 @@ def harvestProductInfo(args):
             #do the appropriate math based on the timeframe
             avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
             if timeframe == 'cur':
-                volumeSpan = math.ceil((avg-fieldArgs['Start_date'])
+                timeSpan = math.ceil((avg-fieldArgs['Start_date'])
                                        /fieldArgs['Freq_cur'])
-                biomassSpan = volumeSpan
             else:
-                volumeSpan = math.ceil(args['lulc_fut_year']-
+                timeSpan = math.ceil(args['lulc_fut_year']-
                                        (avg/fieldArgs['Freq_fut']))
-                biomassSpan = math.ceil((args['lulc_fut_year']-avg)
-                                        /fieldArgs['Freq_fut'])
             
-            #calculate biomass for this parcel
+            #calculate biomass for this parcel (equation 10.8)
             biomass = fieldArgs['Cut_' + timeframe] *\
-                    biomassSpan * (1.0/fieldArgs['C_den_' + timeframe])
+                    timeSpan * (1.0/fieldArgs['C_den_' + timeframe])
                     
-            #calculate volume for this parcel
-            volume = fieldArgs['Cut_' + timeframe] *\
-                    volumeSpan * (1.0/fieldArgs['C_den_' + timeframe])*\
-                    (1.0/fieldArgs['BCEF_' + timeframe])    
+            #calculate volume for this parcel (equation 10.11)
+            volume = biomass * (1.0/fieldArgs['BCEF_' + timeframe])    
             
             #set biomass and volume fields
             for fieldName, value in (('biomass', biomass), ('volume', volume)):
