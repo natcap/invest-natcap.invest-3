@@ -306,15 +306,15 @@ def calcFeatureHWP(limit, decay, endDate, startDate, freq):
         endDate - the start date of the current harvest pattern
         freq - the number of times this parcel has been harvested
         
-        returns a float"""
+        returns a float (rounded down to the nearest integer)"""
         
-    sum = 0.0
+    hwpSum = 0.0
     for t in range(int(limit)):
         w = math.log(2)/decay
         m =  endDate - startDate - (t*freq)
-        sum += ((1.-(math.e**(-w)))/(w*math.e**(m*w)))
+        hwpSum += ((1.-(math.e**(-w)))/(w*math.e**(m*w)))
 
-    return sum
+    return math.floor(hwpSum)
 
 def valuate(args):
     """Executes the economic valuation model.
