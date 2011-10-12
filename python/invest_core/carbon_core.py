@@ -55,11 +55,11 @@ def execute(args):
 
     #Calculate HWP pools
     if 'hwp_cur_shape' in args:
+        harvestProductInfo(args)
         if 'hwp_fut_shape' not in args:
             currentHarvestProducts(args)
         else:
             futureHarvestProducts(args)
-            harvestProductInfo(args)
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
@@ -68,6 +68,7 @@ def execute(args):
     #value the carbon sequestered if the user requests
     if args['calc_value']:
         valuate(args)
+
 
 def harvestProductInfo(args):
     """Calculates biomass and volume of harvested wood products in a parcel.
@@ -86,8 +87,17 @@ def harvestProductInfo(args):
         
         No return value"""
     
-    #for each shape (if the shape is provided in args:
-    for timeframe in ('cur', 'fut'):
+    
+    if 'hwp_fut_shape' in args:
+        timeframeList = ('cur', 'fut')
+        avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
+    else:
+        timeframeList = ('cur', )
+        avg = args['lulc_cur_year']
+    
+    
+    #for each shape (if the shape is provided in args):
+    for timeframe in timeframeList:
         harvestMap = 'hwp_' + timeframe + '_shape'
         layer = 'harv_samp_' + timeframe
         
@@ -110,7 +120,6 @@ def harvestProductInfo(args):
             fieldArgs = getFields(feature)
                 
             #do the appropriate math based on the timeframe
-            avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
             if timeframe == 'cur':
                 timeSpan = math.ceil((avg-fieldArgs['Start_date'])
                                        /fieldArgs['Freq_cur'])
@@ -141,7 +150,6 @@ def harvestProductInfo(args):
             rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
     return
 
-        
 def currentHarvestProducts(args):
     """Adds carbon due to harvested wood products
     
