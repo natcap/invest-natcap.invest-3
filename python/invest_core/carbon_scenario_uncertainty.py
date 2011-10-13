@@ -1,6 +1,6 @@
 import carbon_core
 import carbon_uncertainty
-import carbon_seq
+#import carbon_seq
 import numpy as np
 from osgeo import gdal
 
@@ -62,8 +62,8 @@ def execute(args):
         #create a seqestration map for high-low, low-high, and average-average
         sequesteredChangeArray = []
         for poolTypeA, poolTypeB in [('L', 'H'), ('H', 'L'), ('A', 'A')]:
-            sequesteredCurrent = carbon_seq.execute(dataCurrent, pools[poolTypeA])
-            sequesteredFuture = carbon_seq.execute(dataFuture, pools[poolTypeB])
+            sequesteredCurrent = carbon_core.carbon_seq(dataCurrent, pools[poolTypeA])
+            sequesteredFuture = carbon_core.carbon_seq(dataFuture, pools[poolTypeB])
             sequesteredChange = sequesteredCurrent - sequesteredFuture
 
             if maxMin is None:
