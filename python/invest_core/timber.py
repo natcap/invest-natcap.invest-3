@@ -19,8 +19,8 @@ def execute(args):
     args['plant_prod_uri'] - The attribute table location
     args['market_disc_rate'] - The market discount rate as a string
     """
-
-    org.AllRegister()
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    ogr.AllRegister()
     output_seq = ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(args['timber_shp_uri'], "")
     timber_shp = ogr.Open(args['timber_shp_uri'])
     timber_layer = timber_shp.GetLayerByName("timber_shp_uri")

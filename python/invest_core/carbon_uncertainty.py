@@ -1,5 +1,5 @@
 import carbon_core
-import carbon_seq
+#import carbon_seq
 
 def execute(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -51,7 +51,7 @@ def execute(args):
         data = lulc.ReadAsArray(0, rowNumber, lulc.XSize, 1)
         #create a seq map for each pooltype 
         for poolType, index in poolTypes.iteritems():
-            out_array = carbon_seq.execute(data, pools[poolType])
+            out_array = carbon_core.carbon_seq(data, pools[poolType])
             args['output'].GetRasterBand(index).WriteArray(out_array, 0, rowNumber)
             
 

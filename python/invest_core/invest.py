@@ -12,7 +12,7 @@ def execute(model, args):
     returns nothing"""
 
     #load the module
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))    
     module = imp.load_source(model, model + '.py')
 
     #execute the well known name 'execute' that exists in all invest plugins
