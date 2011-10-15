@@ -216,37 +216,41 @@ def iterFeatures(layer, suffix, yrCur, yrFut=None):
     for feature in layer:
         fieldArgs = getFields(feature)
         
-        #Set a couple variables based on the input parameters
-        if suffix == 'cur':
-            #if no future scenario is provided, calc the sum on its own
-            if yrFut == None: 
-                limit = math.ceil((1.0/((yrCur-fieldArgs['Start_date'])\
-                                /fieldArgs['Freq_cur'])))
-                endDate = yrCur
-            #Calculate the sum of current HWP landscape in future context
-            else:
-                limit = math.ceil((1.0/((avg - fieldArgs['Start_date'])\
-                                /fieldArgs['Freq_cur'])))
-                endDate = yrFut
+        #If 'cut_' is not specified, assume the parcel hasn't been harvested
+        if fieldArgs['Cut_' + suffix] != 0:
+            #Set a couple variables based on the input parameters
+            if suffix == 'cur':
+                #if no future scenario is provided, calc the sum on its own
+                if yrFut == None: 
+                    limit = math.ceil(((yrCur-fieldArgs['Start_date'])\
+                                    /fieldArgs['Freq_cur'])) - 1.0
+                    endDate = yrCur
+                #Calculate the sum of current HWP landscape in future context
+                else:
+                    limit = math.ceil(((avg - fieldArgs['Start_date'])\
+                                    /fieldArgs['Freq_cur'])) - 1.0
+                    endDate = yrFut
+                    
+                decay = fieldArgs['Decay_cur']
+                startDate = fieldArgs['Start_date']
+                freq = fieldArgs['Freq_cur']
                 
-            decay = fieldArgs['Decay_cur']
-            startDate = fieldArgs['Start_date']
-            freq = fieldArgs['Freq_cur']
+            #calcluate the sum of future HWP landscape in future context.
+            else:
+                limit = math.ceil(((yrFut - avg)\
+                                    /fieldArgs['Freq_fut'])) - 1.0
+                decay = fieldArgs['Decay_fut']
+                startDate = avg
+                endDate = yrFut
+                freq = fieldArgs['Freq_fut']
             
-        #calcluate the sum of future HWP landscape in future context.
+            #calculate the feature's HWP carbon pool
+            hwpsum = calcFeatureHWP(limit, decay, endDate, startDate, freq)
+            hwpCarbonPool = fieldArgs['Cut_' + suffix]*hwpsum
         else:
-            limit = math.ceil((1.0/((yrFut - avg)\
-                                /fieldArgs['Freq_fut'])))
-            decay = fieldArgs['Decay_fut']
-            startDate = avg
-            endDate = yrFut
-            freq = fieldArgs['Freq_fut']
-        
-        #calculate the feature's HWP carbon pool
-        sum = calcFeatureHWP(limit, decay, endDate, startDate, freq)
+            hwpCarbonPool = 0.0
             
         #set the HWP carbon pool for this feature.
-        hwpCarbonPool = fieldArgs['Cut_' + suffix]*sum
         hwpIndex = feature.GetFieldIndex('hwp_pool')
         feature.SetField(hwpIndex,hwpCarbonPool)
         layer.SetFeature(feature)
@@ -282,13 +286,17 @@ def calcFeatureHWP(limit, decay, endDate, startDate, freq):
         
         returns a float (rounded down to the nearest integer)"""
         
-    hwpSum = 0.0
-    for t in range(int(limit)):
-        w = math.log(2)/decay
-        m =  endDate - startDate - (t*freq)
-        hwpSum += ((1.-(math.e**(-w)))/(w*math.e**(m*w)))
 
-    return math.floor(hwpSum)
+    hwpSum = 0.0
+    w = math.log(2)/decay
+    daterange = endDate - startDate
+    numerator = 1.0-(math.pow(math.e,((-1)*w)))
+    for t in range(int(limit)):
+        m = daterange - (t*freq)
+        denominator = w*(math.pow(math.e,(m*w)))
+        hwpSum += (numerator/denominator)
+
+    return hwpSum
 
 def valuate(args):
     """Executes the economic valuation model.

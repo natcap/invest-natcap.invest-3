@@ -160,8 +160,8 @@ class TestInvest(unittest.TestCase):
         def test_carbon_storage_hwp_fut_regression(self):
             """Verify the carbon model (with cur+fut HWP) against known results"""
             
-            storage_cur = '../../carbon_output/test_seq_cur1.tif'
-            storage_fut = '../../carbon_output/test_seq_fut1.tif'
+            storage_cur = '../../carbon_output/test_seq_cur.tif'
+            storage_fut = '../../carbon_output/test_seq_fut.tif'
             seq_delta = '../../carbon_output/seq_delta1.tif'
             biomass_cur = '../../carbon_output/bio_cur.tif'
             biomass_fut = '../../carbon_output/bio_fut.tif'

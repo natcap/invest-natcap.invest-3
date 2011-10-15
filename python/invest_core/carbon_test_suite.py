@@ -442,15 +442,14 @@ class CarbonTestSuite(unittest.TestCase):
         result = carbon_core.calcFeatureHWP(limit, decay, endDate, startDate, freq)   
                 
         #Calculate the result on our own
-        sum = 0
+        hwpsum = 0
         for t in range(int(limit)):
             w = math.log(2)/decay
             m =  endDate - startDate - (t*freq)
-            sum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
+            hwpsum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
     
-        sum = math.floor(sum)
         #verify our output
-        self.assertEqual(result, sum)
+        self.assertEqual(result, hwpsum)
 
     def test_carbon_core_valuate(self):
         """Verify the correct output of carbon_core.valuate()
@@ -664,8 +663,8 @@ class CarbonTestSuite(unittest.TestCase):
                 fieldArgs[key] = feature.GetField(index)
             
             #set the parameters for the summation calculation
-            limit = math.ceil((1.0/((yrCur-fieldArgs['Start_date'])\
-                                    /fieldArgs['Freq_cur'])))
+            limit = math.ceil(((yrCur-fieldArgs['Start_date'])\
+                                    /fieldArgs['Freq_cur'])) - 1.0
             endDate = yrCur
             decay = fieldArgs['Decay_cur']
             startDate = fieldArgs['Start_date']
@@ -746,8 +745,8 @@ class CarbonTestSuite(unittest.TestCase):
                 fieldArgs[key] = feature.GetField(index)
             
             #set the parameters for the summation calculation
-            limit = math.ceil((1.0/((avg - fieldArgs['Start_date'])\
-                                /fieldArgs['Freq_cur'])))
+            limit = math.ceil(((avg - fieldArgs['Start_date'])\
+                                /fieldArgs['Freq_cur'])) - 1.0
             endDate = yrFut
             decay = fieldArgs['Decay_cur']
             startDate = fieldArgs['Start_date']
@@ -826,8 +825,8 @@ class CarbonTestSuite(unittest.TestCase):
                 fieldArgs[key] = feature.GetField(index)
             
             #set the parameters for the summation calculation
-            limit = math.ceil((1.0/((yrFut - avg)\
-                                /fieldArgs['Freq_fut'])))
+            limit = math.ceil(((yrFut - avg)\
+                                /fieldArgs['Freq_fut'])) - 1.0
             decay = fieldArgs['Decay_fut']
             startDate = avg
             endDate = yrFut
