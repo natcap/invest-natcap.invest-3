@@ -294,7 +294,6 @@ class CarbonTestSuite(unittest.TestCase):
 
     def test_carbon_core_with_HWP_inputs(self):
         """Test carbon using realistic inputs.  Includes HWP"""
-        driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         storage = '../../carbon_output/test_real_output_hwp.tif'
         bio_cur = '../../carbon_output/test_biomass_cur.tif'
@@ -312,7 +311,6 @@ class CarbonTestSuite(unittest.TestCase):
 
         for uri in (storage, bio_cur, vol_cur):
             os.remove(uri)
-
         pass
 
     def test_carbon_core_HWP_cur_fut(self):
@@ -362,8 +360,6 @@ class CarbonTestSuite(unittest.TestCase):
         self.assertEqual(numRecords + 1, poolsLen, 'Expected ' + str(numRecords) +
             ' records in the pools dict, but found ' + str(poolsLen) + ' instead')
 
-        
-
     def test_carbon_core_build_pools_dict(self):
         """Verify the correct construction of the pools dict, including the 
             provided nodata values.  This is done on a per-entry basis."""
@@ -389,7 +385,6 @@ class CarbonTestSuite(unittest.TestCase):
         #close the DBF file.
         db.close()
         pass
-
     
     def test_carbon_core_pixel_area(self):
         """Verify the correct output of carbon_core.pixelArea()"""
@@ -1004,7 +999,7 @@ class CarbonTestSuite(unittest.TestCase):
         outputDict = carbon_core.getFields(feature)
     
         for key, value in outputDict.iteritems():
-            self.assertEqual(referenceDict[key], outputDict[key])
+            self.assertEqual(referenceDict[key], value)
         
     def test_carbon_mask_smoke(self):    
         """Smoke test for the mask function."""
