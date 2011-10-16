@@ -951,7 +951,7 @@ class CarbonTestSuite(unittest.TestCase):
             os.remove(output_dir + os.sep + filename)
         invest_test.removeCreatedFiles()
         
-    def test_harvestProductInfo(self):
+    def test_harvestProductInfo_cur_fut(self):
         """Verify that harvestProductInfo produces the correct results
             This is verified by a regression test."""
         
@@ -982,8 +982,43 @@ class CarbonTestSuite(unittest.TestCase):
  
         carbon_core.harvestProductInfo(args)
         
+        vectorize_dataset_equality(self, args['biomass_cur'], gdal.Open('../../test_data/carbon_bio_cur_regression.tif'))
+        vectorize_dataset_equality(self, args['biomass_fut'], gdal.Open('../../test_data/carbon_bio_fut_regression.tif'))
+        vectorize_dataset_equality(self, args['volume_cur'], gdal.Open('../../test_data/carbon_vol_cur_regression.tif'))
+        vectorize_dataset_equality(self, args['volume_fut'], gdal.Open('../../test_data/carbon_vol_fut_regression.tif'))        
+
         for dataset in ('seq_delta.tif', 'biomass_cur.tif', 'volume_cur.tif',
                         'biomass_fut.tif', 'volume_fut.tif'):
+            os.remove('../../carbon_output/' + dataset)
+
+    def test_harvestProductInfo_cur(self):
+        """Verify that harvestProductInfo produces the correct results when 
+            operating strictly within a current context.
+            This is verified by a regression test."""
+        
+        #Create a working copy of the existing storage (regression) raster
+        storage_orig = gdal.Open('../../test_data/carbon_regression.tif', gdal.GA_ReadOnly)
+        driver = gdal.GetDriverByName('MEM')
+        storage_mod_cur = driver.CreateCopy('temp0.tif', storage_orig, 0)
+        
+        lulc = gdal.Open('../../test_data/lulc_samp_cur', gdal.GA_ReadOnly)
+        
+        #set up arguments
+        args = {'lulc_cur' : lulc,
+                'storage_cur' : storage_mod_cur,
+                'carbon_pools' : dbf.Dbf('../../test_data/carbon_pools_float.dbf'),
+                'hwp_cur_shape' : ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
+                'lulc_cur_year' : 2000,
+                'calc_value' : False,
+                'biomass_cur' : carbon.mimic(lulc, '../../carbon_output/biomass_curAAA.tif'),
+                'volume_cur' : carbon.mimic(lulc, '../../carbon_output/volume_curAAA.tif')}
+ 
+        carbon_core.harvestProductInfo(args)
+        
+        vectorize_dataset_equality(self, args['biomass_cur'], gdal.Open('../../test_data/carbon_bio_curOnly_regression.tif'))
+        vectorize_dataset_equality(self, args['volume_cur'], gdal.Open('../../test_data/carbon_vol_curOnly_regression.tif'))
+
+        for dataset in ('biomass_cur.tif', 'volume_cur.tif'):
             os.remove('../../carbon_output/' + dataset)
         
     def test_getFields(self):
