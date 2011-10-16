@@ -78,12 +78,25 @@ def checkRasterEqualityVec(firstUri, secondUri, unit=None):
         fastCheck = np.vectorize(checkEqual)
         fastCheck(outArray, i2Array)
  
-
+def removeCreatedFiles(outdir='../../carbon_output' + os.sep):
+    """Remove files created with the default filenames.
+    
+        outdir='../../carbon_output'+os.sep - the path to the output directory
+        
+        no return value."""
+        
+    for uri in ('tot_C_cur.tif', 'tot_C_fut.tif', 'sequest.tif', 'value_seq.tif', 
+                'bio_hwp_cur.tif', 'bio_hwp_fut.tif', 'vol_hwp_cur.tif',
+                'vol_hwp_fut.tif'):
+        filepath = outdir + uri
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        
 
 class TestInvest(unittest.TestCase):
    
         def test_carbon_model_regression(self):
-            """Regression Test to run Carbon model using sample data.  
+            """Regression Test to run Carbon model     using sample data.  
             Results will be compared with a raster that is known to be accurate."""
     
             storage_cur = '../../carbon_output/test_carbon_output.tif'
@@ -99,6 +112,8 @@ class TestInvest(unittest.TestCase):
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
             checkRasterEqualityVec(storage_cur, '../../test_data/carbon_regression.tif', self)
             os.remove(storage_cur)
+            
+            removeCreatedFiles()
             pass
 
 
@@ -122,6 +137,8 @@ class TestInvest(unittest.TestCase):
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
             checkRasterEqualityVec(storage_cur, '../../test_data/tot_c_cur_int', self)
             os.remove(storage_cur)
+
+            removeCreatedFiles()
             pass
         
         
@@ -155,6 +172,8 @@ class TestInvest(unittest.TestCase):
             
             for uri in (storage_cur, storage_fut, seq_delta, seq_value):
                 os.remove(uri)
+
+            removeCreatedFiles()
             pass
         
         def test_carbon_storage_hwp_regression(self):
@@ -175,7 +194,10 @@ class TestInvest(unittest.TestCase):
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/carbon_hwp_cur_regression.tif')
             checkRasterEqualityVec(storage_cur, '../../test_data/carbon_hwp_cur_regression.tif', self)
             os.remove(storage_cur)
-            pass
+            
+            #remove files created at default filepaths
+            removeCreatedFiles()
+
 
         def test_carbon_storage_hwp_fut_regression(self):
             """Verify the carbon model (with cur+fut HWP) against known results"""
@@ -215,6 +237,8 @@ class TestInvest(unittest.TestCase):
             for uri in (storage_cur, storage_fut, seq_delta, biomass_cur, 
                         biomass_fut, volume_cur, volume_fut):
                 os.remove(uri)
+
+            removeCreatedFiles()
             pass
 
 if __name__ == '__main__':
