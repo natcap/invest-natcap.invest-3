@@ -949,6 +949,7 @@ class CarbonTestSuite(unittest.TestCase):
         #delete all datasets created
         for filename in ('storage_cur.tif', 'tot_C_fut.tif', 'sequest.tif'):
             os.remove(output_dir + os.sep + filename)
+        invest_test.removeCreatedFiles()
         
     def test_harvestProductInfo(self):
         """Verify that harvestProductInfo produces the correct results
@@ -980,6 +981,10 @@ class CarbonTestSuite(unittest.TestCase):
                 'volume_fut' : carbon.mimic(lulc, '../../carbon_output/volume_fut.tif')}
  
         carbon_core.harvestProductInfo(args)
+        
+        for dataset in ('seq_delta.tif', 'biomass_cur.tif', 'volume_cur.tif',
+                        'biomass_fut.tif', 'volume_fut.tif'):
+            os.remove('../../carbon_output/' + dataset)
         
     def test_getFields(self):
         """Verify that getFields() produces the correct results."""
