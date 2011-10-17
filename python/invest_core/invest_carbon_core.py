@@ -12,13 +12,20 @@ def execute(args):
     """This function invokes the carbon model given URI inputs of files.
         
         args - a python dictionary with at the following possible entries:
+        
+        Required entries:
         args['lulc_cur'] - is a uri to a GDAL raster dataset
-        args['lulc_fut'] - is a uri to a GDAL raster dataset
         args['carbon_pools'] - is a uri to a DBF dataset mapping carbon 
             sequestration numbers to lulc classifications.
-        args['output_dir'] - a uri to the output directory.
         args['storage_cur'] - for outputing the sequestered carbon based on the 
             current lulc
+        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
+        args['calc_uncertainty'] - a Boolean.  True if we wish to calculate 
+            uncertainty in the carbon model.
+        args['output_dir'] - a uri to the output directory.
+            
+        Optional entries:
+        args['lulc_fut'] - is a uri to a GDAL raster dataset
         args['storage_fut'] - for outputing the sequestered carbon based on the 
             future lulc
         args['seq_delta'] - for outputing the difference between 
@@ -33,7 +40,6 @@ def execute(args):
             landscape
         args['volume_fut'] - for outputing the volume of HWP on the future
             landscape
-        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
         args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
         args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
         args['c_value'] - a float.  Represents the price of carbon in US Dollars.
@@ -68,30 +74,32 @@ def execute(args):
     lulc_cur = gdal.Open(args['lulc_cur'], gdal.GA_ReadOnly)
     args['lulc_cur'] = lulc_cur
     args['carbon_pools'] = dbf.Dbf(args['carbon_pools'])
+    makeRasters(('storage_cur',), defaultURI, args)
 
     #open the future LULC if it has been provided
     if 'lulc_fut' in args:
         args['lulc_fut'] = gdal.Open(args['lulc_fut'], gdal.GA_ReadOnly)
+        makeRasters(('storage_fut', 'seq_delta'), defaultURI, args)
 
-    #open any necessary output datasets, using user-provided URI if it exists
-    for dataset in ('seq_delta', 'seq_value', 'storage_cur', 'storage_fut',
-                    'biomass_cur', 'biomass_fut', 'volume_cur', 'volume_fut'):
-        if dataset in args:
-            args[dataset] = mimic(lulc_cur, args[dataset])
-        else:
-            args[dataset] = mimic(lulc_cur, defaultURI[dataset])
-    
-    #create the uncertainty sequestration raster        
-    args['output_seq'] = mimic(lulc_cur, defaultURI['output_seq'], nodata=0)
-    
-    #create the uncertainty colormap raster
-    args['output_map'] = mimic(lulc_cur, defaultURI['output_map'],
-                                nodata=255, datatype=gdal.GDT_Byte)
+    if args['calc_uncertainty'] == True:
+        #create the uncertainty sequestration raster        
+        args['output_seq'] = mimic(lulc_cur, defaultURI['output_seq'], nodata=0)
+        
+        #create the uncertainty colormap raster
+        args['output_map'] = mimic(lulc_cur, defaultURI['output_map'],
+                                    nodata=255, datatype=gdal.GDT_Byte)
 
     #Open the harvest maps
-    for shape in ('hwp_cur_shape', 'hwp_fut_shape'):
-        if shape in args:
-            args[shape] = ogr.Open(args[shape])
+    if 'hwp_cur_shape' in args:
+        args['hwp_cur_shape'] = ogr.Open(args['hwp_cur_shape'])
+        makeRasters(('biomass_cur', 'volume_cur'), defaultURI, args)
+        
+        if 'hwp_fut_shape' in args:
+            args['hwp_fut_shape'] = ogr.Open(args['hwp_fut_shape'])
+            makeRasters(('biomass_fut', 'volume_fut'), defaultURI, args)
+            
+    if args['calc_value'] == True:
+        makeRasters(('seq_value',), defaultURI, args)
 
     #run the carbon model.
     carbon.execute(args)
@@ -109,6 +117,23 @@ def execute(args):
     #close the pools DBF file
     args['carbon_pools'].close()
 
+
+def makeRasters(dsList, defaultURI, args):
+    """Create a new, blank raster at the correct URI for each raster in dsList.
+        
+        - dsList - a Python list or array of args dict keys to be created
+        - defaultURI - a Python dict mapping args keys of datasets to their
+            default URIs
+        - args - a python dictionary with possible entries specified in
+            invest_carbon_core.execute.  This function assumes that all entries
+            used in this function are strings representing the URI to the desired
+            dataset."""
+            
+    for dataset in dsList:
+        if dataset in args:
+            args[dataset] = mimic(args['lulc_cur'], args[dataset])
+        else:
+            args[dataset] = mimic(args['lulc_cur'], defaultURI[dataset])
 
 def mimic(example, outputURI, format='GTiff', nodata=-5.0, datatype=gdal.GDT_Float32):
     """Create a new, empty GDAL raster dataset with the spatial references and

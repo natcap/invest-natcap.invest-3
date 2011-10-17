@@ -20,7 +20,7 @@ pool_uri = gp.GetParameterAsText(3)
 lulc_fut_uri = gp.GetParameterAsText(4)
 lulc_fut_year = gp.GetParameter(5)
 valuation = gp.GetParameterAsText(6)
-
+uncertainty = 'false'
 
 #build up the JSON dictionary for saving to disk.
 json_dict = {'output_dir': output_dir,
@@ -47,6 +47,11 @@ if valuation == 'true':
     arguments['calc_value'] = True
 else:
     arguments['calc_value'] = False
+    
+if uncertainty == 'true':
+    arguments['calc_uncertainty'] = True
+else:
+    arguments['calc_uncertainty'] = False
 
 gp.AddMessage('Starting carbon model')
 
