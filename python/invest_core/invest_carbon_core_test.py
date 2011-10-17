@@ -3,11 +3,13 @@ import invest_carbon_core
 
 class TestInvestCarbonCore(unittest.TestCase):
     def test_carbon_uncertainty_model(self):
-        args = {'carbon_pools_uri': '../../test_data/uncertain_carbon_pools_samp.dbf',
-                'lulc_fut_uri': '../../test_data/lulc_samp_fut',
+        args = {'carbon_pools': '../../test_data/uncertain_carbon_pools_samp.dbf',
+                'lulc_fut': '../../test_data/lulc_samp_fut',
                 'percentile': 0.2,
                 'output_dir': '../../',
-                'lulc_cur_uri': '../../test_data/lulc_samp_cur'}
+                'lulc_cur': '../../test_data/lulc_samp_cur',
+                'calc_uncertainty' : False,
+                'calc_value': False}
 
         invest_carbon_core.execute(args)
 

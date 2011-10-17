@@ -105,12 +105,21 @@ class TestInvest(unittest.TestCase):
                          'carbon_pools' : '../../test_data/carbon_pools_float.dbf',
                          'storage_cur' : storage_cur,
                          'output_dir' : '../../carbon_output',
-                         'calc_value' : False}
+                         'calc_value' : False,
+                         'calc_uncertainty' : False}
     
             invest_carbon_core.execute(arguments)
     
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
             checkRasterEqualityVec(storage_cur, '../../test_data/carbon_regression.tif', self)
+            
+            #check that only the necessary files were created.
+            for file in ('tot_C_fut.tif', 'sequest.tif', 'value_seq.tif',
+                        'bio_hwp_cur.tif', 'bio_hwp_fut.tif', 'vol_hwp_cur.tif',
+                        'vol_hwp_fut.tif'):
+                exists = os.path.exists(arguments['output_dir'] + os.sep + file)
+                self.assertEqual(exists, False)
+                
             os.remove(storage_cur)
             
             removeCreatedFiles()
@@ -130,12 +139,21 @@ class TestInvest(unittest.TestCase):
                      'carbon_pools' : '../../test_data/carbon_pools_int.dbf',
                      'storage_cur' : storage_cur,
                      'output_dir' : '../../carbon_output',
-                     'calc_value' : False}
+                     'calc_value' : False,
+                     'calc_uncertainty' : False}
 
             invest_carbon_core.execute(arguments)
             
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
             checkRasterEqualityVec(storage_cur, '../../test_data/tot_c_cur_int', self)
+
+            #check that only the necessary files were created.
+            for file in ('tot_C_fut.tif', 'sequest.tif', 'value_seq.tif',
+                        'bio_hwp_cur.tif', 'bio_hwp_fut.tif', 'vol_hwp_cur.tif',
+                        'vol_hwp_fut.tif'):
+                exists = os.path.exists(arguments['output_dir'] + os.sep + file)
+                self.assertEqual(exists, False)
+            
             os.remove(storage_cur)
 
             removeCreatedFiles()
@@ -163,12 +181,19 @@ class TestInvest(unittest.TestCase):
                      'lulc_fut_year' : 2030,
                      'c_value' : 43.0,
                      'discount' : 0.07,
-                     'rate_change' : 0.0}
+                     'rate_change' : 0.0,
+                     'calc_uncertainty' : False}
             
             invest_carbon_core.execute(arguments)
                             
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
             checkRasterEqualityVec(seq_value, '../../test_data/val_seq_int', self)
+            
+            #check that only the necessary files were created.
+            for file in ('bio_hwp_cur.tif', 'bio_hwp_fut.tif', 'vol_hwp_cur.tif',
+                        'vol_hwp_fut.tif'):
+                exists = os.path.exists(arguments['output_dir'] + os.sep + file)
+                self.assertEqual(exists, False)
             
             for uri in (storage_cur, storage_fut, seq_delta, seq_value):
                 os.remove(uri)
@@ -187,12 +212,19 @@ class TestInvest(unittest.TestCase):
                      'hwp_cur_shape' : '../../test_data/harv_samp_cur/harv_samp_cur.shp',
                      'output_dir' : '../../carbon_output',
                      'calc_value' : False,
-                     'lulc_cur_year' : 2000}
+                     'lulc_cur_year' : 2000,
+                     'calc_uncertainty' : False}
             
             invest_carbon_core.execute(arguments)
                             
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/carbon_hwp_cur_regression.tif')
             checkRasterEqualityVec(storage_cur, '../../test_data/carbon_hwp_cur_regression.tif', self)
+
+            for file in ('vol_hwp_fut.tif', 'bio_hwp_fut.tif'):
+                exists = os.path.exists(arguments['output_dir'] + os.sep + file)
+                self.assertEqual(exists, False)
+
+            
             os.remove(storage_cur)
             
             #remove files created at default filepaths
@@ -225,7 +257,8 @@ class TestInvest(unittest.TestCase):
                          'biomass_cur' : biomass_cur,
                          'biomass_fut' : biomass_fut,
                          'volume_cur' : volume_cur,
-                         'volume_fut' : volume_fut}
+                         'volume_fut' : volume_fut,
+                         'calc_uncertainty' : False}
              
             invest_carbon_core.execute(arguments)
                             

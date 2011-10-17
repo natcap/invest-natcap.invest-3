@@ -926,7 +926,8 @@ class CarbonTestSuite(unittest.TestCase):
                 'carbon_pools' : '../../test_data/carbon_pools_float.dbf',
                 'output_dir' : output_dir,
                 'lulc_fut' : '../../test_data/lulc_samp_fut',
-                'calc_value' : False}
+                'calc_value' : False,
+                'calc_uncertainty' : False}
     
         invest_carbon_core.execute(args)
         
@@ -1010,8 +1011,8 @@ class CarbonTestSuite(unittest.TestCase):
                 'hwp_cur_shape' : ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
                 'lulc_cur_year' : 2000,
                 'calc_value' : False,
-                'biomass_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/biomass_curAAA.tif'),
-                'volume_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/volume_curAAA.tif')}
+                'biomass_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/biomass_cur.tif'),
+                'volume_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/volume_cur.tif')}
  
         carbon.harvestProductInfo(args)
         
