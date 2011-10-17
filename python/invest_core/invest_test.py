@@ -1,5 +1,5 @@
 import unittest
-import invest
+import invest_carbon_core
 from osgeo import gdal
 import os, sys
 from numpy import *
@@ -96,7 +96,7 @@ def removeCreatedFiles(outdir='../../carbon_output' + os.sep):
 class TestInvest(unittest.TestCase):
    
         def test_carbon_model_regression(self):
-            """Regression Test to run Carbon model     using sample data.  
+            """Regression Test to run Carbon model using sample data.  
             Results will be compared with a raster that is known to be accurate."""
     
             storage_cur = '../../carbon_output/test_carbon_output.tif'
@@ -107,7 +107,7 @@ class TestInvest(unittest.TestCase):
                          'output_dir' : '../../carbon_output',
                          'calc_value' : False}
     
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
     
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
             checkRasterEqualityVec(storage_cur, '../../test_data/carbon_regression.tif', self)
@@ -132,7 +132,7 @@ class TestInvest(unittest.TestCase):
                      'output_dir' : '../../carbon_output',
                      'calc_value' : False}
 
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
             
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
             checkRasterEqualityVec(storage_cur, '../../test_data/tot_c_cur_int', self)
@@ -165,7 +165,7 @@ class TestInvest(unittest.TestCase):
                      'discount' : 0.07,
                      'rate_change' : 0.0}
             
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
                             
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
             checkRasterEqualityVec(seq_value, '../../test_data/val_seq_int', self)
@@ -189,7 +189,7 @@ class TestInvest(unittest.TestCase):
                      'calc_value' : False,
                      'lulc_cur_year' : 2000}
             
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
                             
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/carbon_hwp_cur_regression.tif')
             checkRasterEqualityVec(storage_cur, '../../test_data/carbon_hwp_cur_regression.tif', self)
@@ -227,7 +227,7 @@ class TestInvest(unittest.TestCase):
                          'volume_cur' : volume_cur,
                          'volume_fut' : volume_fut}
              
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
                             
             checkRasterEqualityVec(storage_fut, '../../test_data/carbon_hwp_fut_regression.tif', self)
             checkRasterEqualityVec(biomass_cur,'../../test_data/carbon_bio_cur_regression.tif', self)            
