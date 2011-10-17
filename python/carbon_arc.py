@@ -51,8 +51,8 @@ else:
 gp.AddMessage('Starting carbon model')
 
 process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
-                            'python\\invest_core\\invest_core.py',
-                            'carbon_core', json.dumps(arguments)],
+                            'python\\invest_core\\invest_carbon_core.py',
+                            json.dumps(arguments)],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT).communicate()[0]
 

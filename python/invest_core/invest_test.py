@@ -1,5 +1,5 @@
 import unittest
-import invest
+import invest_carbon_core
 from osgeo import gdal
 import os, sys
 from numpy import *
@@ -31,7 +31,6 @@ def assert_raster_equality(unit, firstUri, secondUri):
                                   str(i) + " index " + str(j) + ":" + str(a) + " " + str(b))
 
 
-        
 def checkRasterEqualityVec(firstUri, secondUri, unit=None):
     """Check the equality of the two input rasters.
         If the unit is provided, equality can be asserted as part of an
@@ -79,7 +78,20 @@ def checkRasterEqualityVec(firstUri, secondUri, unit=None):
         fastCheck = np.vectorize(checkEqual)
         fastCheck(outArray, i2Array)
  
-
+def removeCreatedFiles(outdir='../../carbon_output' + os.sep):
+    """Remove files created with the default filenames.
+    
+        outdir='../../carbon_output'+os.sep - the path to the output directory
+        
+        no return value."""
+        
+    for uri in ('tot_C_cur.tif', 'tot_C_fut.tif', 'sequest.tif', 'value_seq.tif', 
+                'bio_hwp_cur.tif', 'bio_hwp_fut.tif', 'vol_hwp_cur.tif',
+                'vol_hwp_fut.tif'):
+        filepath = outdir + uri
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        
 
 class TestInvest(unittest.TestCase):
    
@@ -95,11 +107,13 @@ class TestInvest(unittest.TestCase):
                          'output_dir' : '../../carbon_output',
                          'calc_value' : False}
     
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
     
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/carbon_regression.tif' )
             checkRasterEqualityVec(storage_cur, '../../test_data/carbon_regression.tif', self)
             os.remove(storage_cur)
+            
+            removeCreatedFiles()
             pass
 
 
@@ -118,11 +132,13 @@ class TestInvest(unittest.TestCase):
                      'output_dir' : '../../carbon_output',
                      'calc_value' : False}
 
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
             
 #            assert_raster_equality(self, output_dictionary['uri'], '../../test_data/tot_c_cur_int')
             checkRasterEqualityVec(storage_cur, '../../test_data/tot_c_cur_int', self)
             os.remove(storage_cur)
+
+            removeCreatedFiles()
             pass
         
         
@@ -149,13 +165,15 @@ class TestInvest(unittest.TestCase):
                      'discount' : 0.07,
                      'rate_change' : 0.0}
             
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
                             
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/val_seq_int')
             checkRasterEqualityVec(seq_value, '../../test_data/val_seq_int', self)
             
             for uri in (storage_cur, storage_fut, seq_delta, seq_value):
                 os.remove(uri)
+
+            removeCreatedFiles()
             pass
         
         def test_carbon_storage_hwp_regression(self):
@@ -171,18 +189,21 @@ class TestInvest(unittest.TestCase):
                      'calc_value' : False,
                      'lulc_cur_year' : 2000}
             
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
                             
 #            assert_raster_equality(self, seq_value['uri'], '../../test_data/carbon_hwp_cur_regression.tif')
             checkRasterEqualityVec(storage_cur, '../../test_data/carbon_hwp_cur_regression.tif', self)
             os.remove(storage_cur)
-            pass
+            
+            #remove files created at default filepaths
+            removeCreatedFiles()
+
 
         def test_carbon_storage_hwp_fut_regression(self):
             """Verify the carbon model (with cur+fut HWP) against known results"""
             
-            storage_cur = '../../carbon_output/test_seq_cur1.tif'
-            storage_fut = '../../carbon_output/test_seq_fut1.tif'
+            storage_cur = '../../carbon_output/test_seq_cur.tif'
+            storage_fut = '../../carbon_output/test_seq_fut.tif'
             seq_delta = '../../carbon_output/seq_delta1.tif'
             biomass_cur = '../../carbon_output/bio_cur.tif'
             biomass_fut = '../../carbon_output/bio_fut.tif'
@@ -206,21 +227,18 @@ class TestInvest(unittest.TestCase):
                          'volume_cur' : volume_cur,
                          'volume_fut' : volume_fut}
              
-            invest.execute('carbon', arguments)
+            invest_carbon_core.execute(arguments)
                             
-            checkRasterEqualityVec(storage_fut,
-                                   '../../test_data/carbon_hwp_fut_regression.tif', self)
-            checkRasterEqualityVec(biomass_cur,
-                                   '../../test_data/carbon_bio_cur_regression.tif', self)            
-            checkRasterEqualityVec(biomass_fut,
-                                   '../../test_data/carbon_bio_fut_regression.tif', self)
-            checkRasterEqualityVec(volume_cur,
-                                   '../../test_data/carbon_vol_cur_regression.tif', self)
-            checkRasterEqualityVec(volume_fut,
-                                   '../../test_data/carbon_vol_fut_regression.tif', self)
+            checkRasterEqualityVec(storage_fut, '../../test_data/carbon_hwp_fut_regression.tif', self)
+            checkRasterEqualityVec(biomass_cur,'../../test_data/carbon_bio_cur_regression.tif', self)            
+            checkRasterEqualityVec(biomass_fut,'../../test_data/carbon_bio_fut_regression.tif', self)
+            checkRasterEqualityVec(volume_cur, '../../test_data/carbon_vol_cur_regression.tif', self)
+            checkRasterEqualityVec(volume_fut, '../../test_data/carbon_vol_fut_regression.tif', self)
             for uri in (storage_cur, storage_fut, seq_delta, biomass_cur, 
                         biomass_fut, volume_cur, volume_fut):
                 os.remove(uri)
+
+            removeCreatedFiles()
             pass
 
 if __name__ == '__main__':
@@ -235,7 +253,6 @@ if __name__ == '__main__':
     else:    
         suite = unittest.TestLoader().loadTestsFromTestCase(TestInvest)
         unittest.TextTestRunner(verbosity=2).run(suite)
-
 
 
     
