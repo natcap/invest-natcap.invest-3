@@ -22,36 +22,40 @@ def execute(args):
     plant_dict = args['plant_prod']
     plant_total = []
     for i in range(plant_dict.recordCount):
+        net_present_value = 0
         harvest_value = harvestValue(plant_dict[i]['Perc_harv'],plant_dict[i]['Price'],
                                      plant_dict[i]['Harv_mass'],plant_dict[i]['Harv_cost'],)
         summation_one = 0.0
         summation_two = 0.0
-        upper_limit = int(math.ceil(plant_dict[i]['T']/plant_dict[i]['Freq_harv'])-1)
-        lower_limit = 0.0
-        lower_limit2 = 0.0
+        upper_limit = int(math.floor(plant_dict[i]['T']/plant_dict[i]['Freq_harv']))
+        lower_limit = 1
+        lower_limit2 = 0
         upper_limit2 = plant_dict[i]['T'] - 1
         summation_one = summationOne(lower_limit, upper_limit, harvest_value, args['mdr'], plant_dict[i]['Freq_harv'])
         summation_two = summationTwo(lower_limit2, upper_limit2, plant_dict[i]['Maint_cost'], args['mdr'])
-        net_present_value = summation_one - summation_two
+        net_present_value = (summation_one - summation_two)
+        total_npv = net_present_value * plant_dict[i]['Parcl_area']
+        plant_total.append(total_npv)
         
-        plant_total.append(net_present_value)
+    return plant_total
         
 def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
     harvest_value = (perc_Harv/100.00)*((price*harv_Mass)-harv_Cost)
     return harvest_value
 
 def summationOne(lower, upper, harvest_value, mdr, freq_Harv):
-    summation = 0
+    summation = 0.0
     upper = upper + 1
     for num in range(lower, upper):
-            summation = summation + (harvest_value/((1.0+(mdr/100.00))**(freq_Harv*num)))
+            summation = summation + (harvest_value/((1.0+(mdr/100.00))**((freq_Harv*num)-1)))
             
     return summation
 
 def summationTwo(lower, upper, maint_Cost, mdr):
-    summation = 0
+    summation = 0.0
+    upper = upper + 1
     for num in range(lower, upper):
-            summation = summation + (maint_Cost/(1.0+((mdr/100.00)**num2)))
+            summation = summation + (maint_Cost/((1.0+(mdr/100.00))**num))
             
     return summation
 
