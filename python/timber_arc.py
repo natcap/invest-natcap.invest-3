@@ -1,12 +1,8 @@
 #timber_arc.py
 import os, sys, subprocess
 import getpass
+import json
 
-try:
-    import json
-except ImportError:
-    import invest_core.simplejson as json
-    
 import arcgisscripting
 gp = arcgisscripting.create()
 
@@ -24,10 +20,10 @@ args_file.writelines(json.dumps(arguments))
 args_file.close()
 
 gp.AddMessage('Starting timber model')
+gp.AddMessage(arguments['timber_shp_uri'])
 
 process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
-                            'python\\invest_core\\invest.py',
-                            'timber',
+                            'python\\invest_core\\invest_timber_core.py',
                             json.dumps(arguments)],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT).communicate()[0]
