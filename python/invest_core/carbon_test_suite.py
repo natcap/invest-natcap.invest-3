@@ -1,5 +1,5 @@
 import unittest
-import carbon, carbon_core
+import carbon, invest_carbon_core
 import invest_test
 import numpy as np
 import random
@@ -118,7 +118,7 @@ def vectorize_dataset_equality_mask(unit, firstDS, secondDS, mask):
 
         no return value"""
 
-    nodata = carbon_core.build_nodata_dict(firstDS, secondDS)
+    nodata = carbon.build_nodata_dict(firstDS, secondDS)
 
     def checkMask(a, b, c):
         if b == nodata['output']:
@@ -153,7 +153,7 @@ class CarbonTestSuite(unittest.TestCase):
         zero length inputs"""
         lulc = np.zeros((1, 0))
         pools = {}
-        carbon_core.carbon_seq(lulc, pools)
+        carbon.carbon_seq(lulc, pools)
 
     def test_carbon_seq_1D_array(self):
         """Test of carbon_seq against a 1D input/output array"""
@@ -168,7 +168,7 @@ class CarbonTestSuite(unittest.TestCase):
                  2: 5.5}
 
         #run carbon_seq
-        output = carbon_core.carbon_seq(lulc, pools)
+        output = carbon.carbon_seq(lulc, pools)
 
         #verify the contents of output against pool and lulc data
         for x in range(lulc.shape[1]):
@@ -183,7 +183,7 @@ class CarbonTestSuite(unittest.TestCase):
         lulc2 = np.zeros((1,0))
         nodata = {'input': 0, 'output': 0} #set a nodata value
         
-        carbon_core.carbon_diff(nodata, lulc1, lulc2)
+        carbon.carbon_diff(nodata, lulc1, lulc2)
         pass
     
     def test_carbon_diff_1D_arrays(self):
@@ -193,7 +193,7 @@ class CarbonTestSuite(unittest.TestCase):
         nodata = {'input': -2, 'output': -2} #set a nodata value
         
         #run carbon_diff
-        output = carbon_core.carbon_diff(nodata, lulc1, lulc2)
+        output = carbon.carbon_diff(nodata, lulc1, lulc2)
 
         #verify the contents of output against pool and lulc data
         for x in range(lulc1.shape[1]):
@@ -207,7 +207,7 @@ class CarbonTestSuite(unittest.TestCase):
         lulc2 = np.zeros((1,0))
         nodata = {'cur': 0, 'fut': 0} #set a nodata value
         
-        carbon_core.carbon_add(nodata, lulc1, lulc2)
+        carbon.carbon_add(nodata, lulc1, lulc2)
         pass
     
     def test_carbon_add_1D_arrays(self):
@@ -221,7 +221,7 @@ class CarbonTestSuite(unittest.TestCase):
         nodata = {'input': -2, 'output': -2} #set a nodata value
         
         #run carbon_add
-        output = carbon_core.carbon_add(nodata, lulc1, lulc2)
+        output = carbon.carbon_add(nodata, lulc1, lulc2)
 
         #verify the contents of output against pool and lulc data
         for x in range(lulc1.shape[1]):
@@ -236,7 +236,7 @@ class CarbonTestSuite(unittest.TestCase):
         nodata = {'input': -1, 'output': -1}
 
         #run carbon_value
-        output = carbon_core.carbon_value(nodata, lulc, 3, 2.0, 4.0)
+        output = carbon.carbon_value(nodata, lulc, 3, 2.0, 4.0)
 
         #verify the output data was calculated and mapped correctly
         #Each value should equal 2.66666666666
@@ -244,8 +244,8 @@ class CarbonTestSuite(unittest.TestCase):
             self.assertAlmostEqual(output[0][x],2.6666666666, 8)
 
 
-    def test_carbon_core_smoke(self):
-        """Smoke test for carbon_core function.  Shouldn't crash with
+    def test_carbon_smoke(self):
+        """Smoke test for carbon execute function.  Shouldn't crash with
         zero length inputs"""
         driver = gdal.GetDriverByName("GTIFF")
         lulc_path = '../../test_data/test_blank_input'
@@ -261,7 +261,7 @@ class CarbonTestSuite(unittest.TestCase):
                 'storage_cur': output,
                 'calc_value' : False}
 
-        carbon_core.execute(args)
+        carbon.execute(args)
 
         #close the two created datasets and DBF file.
         lulc = None
@@ -273,26 +273,26 @@ class CarbonTestSuite(unittest.TestCase):
         os.remove(lulc_path)
         pass
 
-    def test_carbon_core_with_inputs(self):
-        """Test carbon_core using realistic inputs."""
+    def test_carbon_with_inputs(self):
+        """Test carbon using realistic inputs."""
         driver = gdal.GetDriverByName("GTIFF")
         lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         out_dict = {'uri':'../../test_real_output.tif',
                     'input':False,
                     'type': 'gdal',
                     'dataType': 6}
-        output = carbon.mimic(lulc, out_dict['uri'])
+        output = invest_carbon_core.mimic(lulc, out_dict['uri'])
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
                 'storage_cur': output,
                 'calc_value' : False}
 
-        carbon_core.execute(args)
+        carbon.execute(args)
         output = None
         os.remove(out_dict['uri'])
         pass
 
-    def test_carbon_core_with_HWP_inputs(self):
+    def test_carbon_with_HWP_inputs(self):
         """Test carbon using realistic inputs.  Includes HWP"""
         lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         storage = '../../carbon_output/test_real_output_hwp.tif'
@@ -300,58 +300,58 @@ class CarbonTestSuite(unittest.TestCase):
         vol_cur = '../../carbon_output/test_volume_cur.tif'
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
-                'storage_cur': carbon.mimic(lulc, storage),
-                'biomass_cur' : carbon.mimic(lulc, bio_cur),
-                'volume_cur' : carbon.mimic(lulc, vol_cur),
+                'storage_cur': invest_carbon_core.mimic(lulc, storage),
+                'biomass_cur' : invest_carbon_core.mimic(lulc, bio_cur),
+                'volume_cur' : invest_carbon_core.mimic(lulc, vol_cur),
                 'calc_value' : False,
                 'hwp_cur_shape': ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
                 'lulc_cur_year' : 2000}
 
-        carbon_core.execute(args)
+        carbon.execute(args)
 
         for uri in (storage, bio_cur, vol_cur):
             os.remove(uri)
         pass
 
-    def test_carbon_core_HWP_cur_fut(self):
-        """Test carbon_core with cur and fut HWP"""
+    def test_carbon_HWP_cur_fut(self):
+        """Test carbon with cur and fut HWP"""
         lulc = gdal.Open('../../test_data/lulc_samp_cur', GA_ReadOnly)
         storage_cur = '../../carbon_output/test_real_output_hwp_cur.tif'
         storage_fut = '../../carbon_output/test_real_output_hwp_fut.tif'
         args = { 'lulc_cur': lulc,
                 'carbon_pools': dbf.Dbf('../../test_data/carbon_pools_int.dbf'),
-                'storage_cur': carbon.mimic(lulc, storage_cur),
-                'storage_fut' : carbon.mimic(lulc, storage_fut),
+                'storage_cur': invest_carbon_core.mimic(lulc, storage_cur),
+                'storage_fut' : invest_carbon_core.mimic(lulc, storage_fut),
                 'calc_value' : False,
                 'hwp_cur_shape': ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
                 'hwp_fut_shape': ogr.Open('../../test_data/harv_samp_fut/harv_samp_fut.shp'),
-                'biomass_cur' : carbon.mimic(lulc, '../../carbon_output/biomass_cur.tif'),
-                'biomass_fut' : carbon.mimic(lulc, '../../carbon_output/biomass_fut.tif'),
-                'volume_cur' : carbon.mimic(lulc, '../../carbon_output/volume_cur.tif'),
-                'volume_fut' : carbon.mimic(lulc, '../../carbon_output/volume_fut.tif'),
+                'biomass_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/biomass_cur.tif'),
+                'biomass_fut' : invest_carbon_core.mimic(lulc, '../../carbon_output/biomass_fut.tif'),
+                'volume_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/volume_cur.tif'),
+                'volume_fut' : invest_carbon_core.mimic(lulc, '../../carbon_output/volume_fut.tif'),
                 'lulc_cur_year' : 2000,
                 'lulc_fut_year' : 2030}
 
-        carbon_core.execute(args)
+        carbon.execute(args)
         
         for uri in (storage_cur, storage_fut):
             os.remove(uri)
         pass
 
 
-    def test_carbon_core_build_pools(self):
+    def test_carbon_build_pools(self):
         """Verify the correct construction of the pools dict based on input
-            datasets.  Since carbon_core.build_pools calls 
-            carbon_core.build_pools_dict, this test will only verify that the
+            datasets.  Since carbon.build_pools calls 
+            carbon.build_pools_dict, this test will only verify that the
             process works and that the correct number of records have been 
-            retained.  See test_carbon_core_build_pools_dict for per-record
+            retained.  See test_carbon_build_pools_dict for per-record
             testing of the correct dict construction."""
             
         db = dbf.Dbf('../../test_data/carbon_pools_float.dbf', readOnly=1)
         raster1 = gdal.Open('../../test_data/lulc_samp_cur', gdal.GA_ReadOnly)
         raster2 = gdal.Open('../../test_data/lulc_samp_fut', gdal.GA_ReadOnly)
         
-        pools = carbon_core.build_pools(db, raster1, raster2)
+        pools = carbon.build_pools(db, raster1, raster2)
         numRecords = db.recordCount
         poolsLen = len(pools)
 
@@ -360,7 +360,7 @@ class CarbonTestSuite(unittest.TestCase):
         self.assertEqual(numRecords + 1, poolsLen, 'Expected ' + str(numRecords) +
             ' records in the pools dict, but found ' + str(poolsLen) + ' instead')
 
-    def test_carbon_core_build_pools_dict(self):
+    def test_carbon_build_pools_dict(self):
         """Verify the correct construction of the pools dict, including the 
             provided nodata values.  This is done on a per-entry basis."""
             
@@ -368,7 +368,7 @@ class CarbonTestSuite(unittest.TestCase):
         area = 1
         inNoData = -1
         outNoData = 255
-        pools = carbon_core.build_pools_dict(db, area, inNoData, outNoData)
+        pools = carbon.build_pools_dict(db, area, inNoData, outNoData)
 
         #loop through dbf entries and verify the correct sum has been returned.
         for i in range(db.recordCount):
@@ -386,8 +386,8 @@ class CarbonTestSuite(unittest.TestCase):
         db.close()
         pass
     
-    def test_carbon_core_pixel_area(self):
-        """Verify the correct output of carbon_core.pixelArea()"""
+    def test_carbon_pixel_area(self):
+        """Verify the correct output of carbon.pixelArea()"""
         
         dataset = gdal.Open('../../test_data/carbon_regression.tif', gdal.GA_ReadOnly)
         
@@ -400,13 +400,13 @@ class CarbonTestSuite(unittest.TestCase):
         result = areaMeters / (10 ** 4) #convert m^2 to Ha
         
         #run pixelArea()
-        area = carbon_core.pixelArea(dataset)
+        area = carbon.pixelArea(dataset)
         
         #assert the output of pixelArea against our calculation
         self.assertEqual(result, area)
         pass
 
-    def test_carbon_core_build_nodata_dict(self):
+    def test_carbon_build_nodata_dict(self):
         """Assert that the nodata dict is being constructed properly
             based on its two input rasters, which have potentially different
             nodata values"""
@@ -414,7 +414,7 @@ class CarbonTestSuite(unittest.TestCase):
         inputRaster = gdal.Open('../../test_data/lulc_samp_cur')
         outputRaster = gdal.Open('../../test_data/carbon_regression.tif')
 
-        nodata_dict = carbon_core.build_nodata_dict(inputRaster, outputRaster)
+        nodata_dict = carbon.build_nodata_dict(inputRaster, outputRaster)
         
         inNoData = inputRaster.GetRasterBand(1).GetNoDataValue()
         outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
@@ -434,7 +434,7 @@ class CarbonTestSuite(unittest.TestCase):
         freq = 4
         
         #run calcFeatureHWP
-        result = carbon_core.calcFeatureHWP(limit, decay, endDate, startDate, freq)   
+        result = carbon.calcFeatureHWP(limit, decay, endDate, startDate, freq)   
                 
         #Calculate the result on our own
         hwpsum = 0
@@ -446,8 +446,8 @@ class CarbonTestSuite(unittest.TestCase):
         #verify our output
         self.assertEqual(result, hwpsum)
 
-    def test_carbon_core_valuate(self):
-        """Verify the correct output of carbon_core.valuate()
+    def test_carbon_valuate(self):
+        """Verify the correct output of carbon.valuate()
         
             This test uses a small sample dataset with only ints as possible
             input values.  This greatly limits the number of possible values
@@ -458,7 +458,7 @@ class CarbonTestSuite(unittest.TestCase):
         driver = gdal.GetDriverByName('MEM')
         seq_value = driver.Create('temp.tif', 100, 100, 1, gdal.GDT_Float32)
         
-        #set up our args dict for carbon_core.valuate()
+        #set up our args dict for carbon.valuate()
         args = {'lulc_cur': gdal.Open('../../test_data/lulc_samp_cur',
                                        gdal.GA_ReadOnly),
                 'storage_cur': gdal.Open('../../test_data/carbon_regression.tif',
@@ -473,7 +473,7 @@ class CarbonTestSuite(unittest.TestCase):
                 'rate_change':0.8}
         
         #run the valuate function
-        carbon_core.valuate(args)
+        carbon.valuate(args)
 
         #calculate the number of years for use in the valuation equation
         numYears = args['lulc_fut_year'] - args['lulc_cur_year']
@@ -496,8 +496,8 @@ class CarbonTestSuite(unittest.TestCase):
         vectorize_dataset_equality_pools(self, args['seq_delta'], seq_value, valueDict)        
         pass
 
-    def test_carbon_core_rasterValue(self):
-        """Verify the correct output of carbon_core.rasterValue()"""
+    def test_carbon_rasterValue(self):
+        """Verify the correct output of carbon.rasterValue()"""
         
         #assemble arguments
         driver = gdal.GetDriverByName('MEM')
@@ -508,8 +508,8 @@ class CarbonTestSuite(unittest.TestCase):
         rateOfChange = 0.7
         numYears = 30
         
-        #run carbon_core.rasterValue()
-        carbon_core.rasterValue(inputRaster, outputRaster, carbonValue, 
+        #run carbon.rasterValue()
+        carbon.rasterValue(inputRaster, outputRaster, carbonValue, 
                                 discount, rateOfChange, numYears)
         
         #calculate the multiplier.
@@ -529,8 +529,8 @@ class CarbonTestSuite(unittest.TestCase):
         vectorize_dataset_equality_pools(self, inputRaster, outputRaster, valueDict)
         pass
 
-    def test_carbon_core_rasterDiff(self):
-        """Verify the correct output of carbon_core.rasterDiff()"""
+    def test_carbon_rasterDiff(self):
+        """Verify the correct output of carbon.rasterDiff()"""
 
         #set up arguments        
         driver = gdal.GetDriverByName('MEM')
@@ -538,8 +538,8 @@ class CarbonTestSuite(unittest.TestCase):
         raster1 = gdal.Open('../../test_data/randomInts100x100.tif', gdal.GA_ReadOnly)
         raster2 = gdal.Open('../../test_data/constant4.67_100x100.tif', gdal.GA_ReadOnly)
         
-        #run carbon_core.rasterDiff
-        carbon_core.rasterDiff(raster1, raster2, outputRaster)
+        #run carbon.rasterDiff
+        carbon.rasterDiff(raster1, raster2, outputRaster)
         
         #set up our dict of rasterDiff's expected output
         valueDict = {}
@@ -550,8 +550,8 @@ class CarbonTestSuite(unittest.TestCase):
         vectorize_dataset_equality_pools(self, raster1, outputRaster, valueDict)
         pass
     
-    def test_carbon_core_rasterSeq(self):
-        """Verify the correct output of carbon_core.rasterSeq()"""
+    def test_carbon_rasterSeq(self):
+        """Verify the correct output of carbon.rasterSeq()"""
         
         #build up our poolsDict
         poolsDict = {}
@@ -563,14 +563,14 @@ class CarbonTestSuite(unittest.TestCase):
         inputRaster = gdal.Open('../../test_data/randomInts100x100.tif', gdal.GA_ReadOnly)
         
         #run caron_core.rasterSeq
-        carbon_core.rasterSeq(poolsDict, inputRaster, outputRaster)
+        carbon.rasterSeq(poolsDict, inputRaster, outputRaster)
         
         #verify the output of rasterSeq
         vectorize_dataset_equality_pools(self, inputRaster, outputRaster, poolsDict)
         pass
     
-    def test_carbon_core_rasterAdd(self):
-        """Verify the output of carbon_core.rasterAdd()"""
+    def test_carbon_rasterAdd(self):
+        """Verify the output of carbon.rasterAdd()"""
         
         #Assemble our arguments
         driver = gdal.GetDriverByName('MEM')
@@ -578,8 +578,8 @@ class CarbonTestSuite(unittest.TestCase):
         raster1 = gdal.Open('../../test_data/randomInts100x100.tif', gdal.GA_ReadOnly)
         raster2 = gdal.Open('../../test_data/constant4.67_100x100.tif', gdal.GA_ReadOnly)
         
-        #run carbon_core.rasterAdd()
-        carbon_core.rasterAdd(raster1, raster2, outputRaster)
+        #run carbon.rasterAdd()
+        carbon.rasterAdd(raster1, raster2, outputRaster)
         
         #build up our dict to verify the values in outputRaster
         poolsDict = {}
@@ -590,8 +590,8 @@ class CarbonTestSuite(unittest.TestCase):
         vectorize_dataset_equality_pools(self, raster1, outputRaster, poolsDict)
         pass
         
-    def test_carbon_core_rasterMask(self):
-        """Verify the output of carbon_core.rasterMask()"""
+    def test_carbon_rasterMask(self):
+        """Verify the output of carbon.rasterMask()"""
         
         #Assemble our arguments
         driver = gdal.GetDriverByName('MEM')
@@ -601,14 +601,14 @@ class CarbonTestSuite(unittest.TestCase):
         inputRaster.GetRasterBand(1).SetNoDataValue(-5.0)
         mask = gdal.Open('../../test_data/mask100x100.tif', gdal.GA_ReadOnly)
         
-        #run carbon_core.rasterAdd()
-        carbon_core.rasterMask(inputRaster, mask, outputRaster)
+        #run carbon.rasterAdd()
+        carbon.rasterMask(inputRaster, mask, outputRaster)
                     
         #Assert that the outputRaster contains the values it should
         vectorize_dataset_equality_mask(self, inputRaster, outputRaster, mask)
         pass
         
-    def test_carbon_core_iterFeatures_cur(self):
+    def test_carbon_iterFeatures_cur(self):
         """Verify that iterFeatures correctly calculates HWP per layer.
             IterFeatures has three modes of operation:
             
@@ -635,8 +635,8 @@ class CarbonTestSuite(unittest.TestCase):
         #set the year of current land use
         yrCur = 2000
         
-        #call carbon_core.iterFeatures using our copied shapefile
-        carbon_core.iterFeatures(temp_layer, 'cur', yrCur)
+        #call carbon.iterFeatures using our copied shapefile
+        carbon.iterFeatures(temp_layer, 'cur', yrCur)
         
         #reopen the OGR shapefile we used previously
         copied_shape = ogr.Open(shapeURI)
@@ -666,7 +666,7 @@ class CarbonTestSuite(unittest.TestCase):
             freq = fieldArgs['Freq_cur']
             
             #calculate the feature's HWP carbon pool
-            sum = carbon_core.calcFeatureHWP(limit, decay, endDate, startDate, freq)
+            sum = carbon.calcFeatureHWP(limit, decay, endDate, startDate, freq)
            
             #set the HWP carbon pool for this feature.
             featureDict[feature.GetFID()] = fieldArgs['Cut_cur']*sum
@@ -688,7 +688,7 @@ class CarbonTestSuite(unittest.TestCase):
         os.removedirs('./testMemShape')
         pass
  
-    def test_carbon_core_iterFeatures_cur_avg(self):
+    def test_carbon_iterFeatures_cur_avg(self):
         """Verify that iterFeatures correctly calculates HWP per layer with avg
             IterFeatures has three modes of operation:
             
@@ -716,8 +716,8 @@ class CarbonTestSuite(unittest.TestCase):
         hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
         hwp_layer.CreateField(hwp_def)
         
-        #call carbon_core.iterFeatures
-        carbon_core.iterFeatures(hwp_layer, 'cur', yrCur, yrFut)
+        #call carbon.iterFeatures
+        carbon.iterFeatures(hwp_layer, 'cur', yrCur, yrFut)
         
         #reopen the original shapefile
         copied_shape = ogr.Open(shapeURI)
@@ -748,7 +748,7 @@ class CarbonTestSuite(unittest.TestCase):
             freq = fieldArgs['Freq_cur']
             
             #calculate the feature's HWP carbon pool
-            sum = carbon_core.calcFeatureHWP(limit, decay, endDate, startDate, freq)
+            sum = carbon.calcFeatureHWP(limit, decay, endDate, startDate, freq)
 
             #set the HWP carbon pool for this feature.
             featureDict[feature.GetFID()] = fieldArgs['Cut_cur']*sum
@@ -770,7 +770,7 @@ class CarbonTestSuite(unittest.TestCase):
         os.removedirs('./testShapeCur')
         pass
              
-    def test_carbon_core_iterFeatures_fut(self):
+    def test_carbon_iterFeatures_fut(self):
         """Verify that iterFeatures correctly calculates future HWP per shape
             IterFeatures has three modes of operation:
             
@@ -797,8 +797,8 @@ class CarbonTestSuite(unittest.TestCase):
         hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
         hwp_layer.CreateField(hwp_def)
         
-        #call carbon_core.iterFeatures
-        carbon_core.iterFeatures(hwp_layer, 'fut', yrCur, yrFut)
+        #call carbon.iterFeatures
+        carbon.iterFeatures(hwp_layer, 'fut', yrCur, yrFut)
         
         #reopen the original shapefile
         copied_shape = ogr.Open(shapeURI)
@@ -828,7 +828,7 @@ class CarbonTestSuite(unittest.TestCase):
             freq = fieldArgs['Freq_fut']
             
             #calculate the feature's HWP carbon pool
-            sum = carbon_core.calcFeatureHWP(limit, decay, endDate, startDate, freq)
+            sum = carbon.calcFeatureHWP(limit, decay, endDate, startDate, freq)
 
             #set the HWP carbon pool for this feature.
             featureDict[feature.GetFID()] = fieldArgs['Cut_fut']*sum
@@ -867,7 +867,7 @@ class CarbonTestSuite(unittest.TestCase):
                 'lulc_cur_year' : 2000}
         
         #run harvestProducts()
-        carbon_core.harvestProducts(args, ('cur',))
+        carbon.harvestProducts(args, ('cur',))
         
         #verify that the output is corrent
         example = gdal.Open('../../test_data/currentHWP_regression.tif')
@@ -895,7 +895,7 @@ class CarbonTestSuite(unittest.TestCase):
                 'lulc_fut_year' : 2030}
         
         #run harvestProducts()
-        carbon_core.harvestProducts(args, ('cur', 'fut'))
+        carbon.harvestProducts(args, ('cur', 'fut'))
         
         #verify that the output is corrent
         example = gdal.Open('../../test_data/futureHWP_regression.tif')
@@ -928,7 +928,7 @@ class CarbonTestSuite(unittest.TestCase):
                 'lulc_fut' : '../../test_data/lulc_samp_fut',
                 'calc_value' : False}
     
-        carbon.execute(args)
+        invest_carbon_core.execute(args)
         
         #try to open storage_cur file, the URI to which we manually set.
         storage_cur_raster = gdal.Open(storage_cur, gdal.GA_ReadOnly)
@@ -973,14 +973,14 @@ class CarbonTestSuite(unittest.TestCase):
                 'lulc_cur_year' : 2000,
                 'lulc_fut_year' : 2030,
                 'storage_fut' : storage_mod_fut,
-                'seq_delta' : carbon.mimic(lulc, '../../carbon_output/seq_delta.tif'),
+                'seq_delta' : invest_carbon_core.mimic(lulc, '../../carbon_output/seq_delta.tif'),
                 'calc_value' : False,
-                'biomass_cur' : carbon.mimic(lulc, '../../carbon_output/biomass_cur.tif'),
-                'biomass_fut' : carbon.mimic(lulc, '../../carbon_output/biomass_fut.tif'),
-                'volume_cur' : carbon.mimic(lulc, '../../carbon_output/volume_cur.tif'),
-                'volume_fut' : carbon.mimic(lulc, '../../carbon_output/volume_fut.tif')}
+                'biomass_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/biomass_cur.tif'),
+                'biomass_fut' : invest_carbon_core.mimic(lulc, '../../carbon_output/biomass_fut.tif'),
+                'volume_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/volume_cur.tif'),
+                'volume_fut' : invest_carbon_core.mimic(lulc, '../../carbon_output/volume_fut.tif')}
  
-        carbon_core.harvestProductInfo(args)
+        carbon.harvestProductInfo(args)
         
         vectorize_dataset_equality(self, args['biomass_cur'], gdal.Open('../../test_data/carbon_bio_cur_regression.tif'))
         vectorize_dataset_equality(self, args['biomass_fut'], gdal.Open('../../test_data/carbon_bio_fut_regression.tif'))
@@ -1010,10 +1010,10 @@ class CarbonTestSuite(unittest.TestCase):
                 'hwp_cur_shape' : ogr.Open('../../test_data/harv_samp_cur/harv_samp_cur.shp'),
                 'lulc_cur_year' : 2000,
                 'calc_value' : False,
-                'biomass_cur' : carbon.mimic(lulc, '../../carbon_output/biomass_curAAA.tif'),
-                'volume_cur' : carbon.mimic(lulc, '../../carbon_output/volume_curAAA.tif')}
+                'biomass_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/biomass_curAAA.tif'),
+                'volume_cur' : invest_carbon_core.mimic(lulc, '../../carbon_output/volume_curAAA.tif')}
  
-        carbon_core.harvestProductInfo(args)
+        carbon.harvestProductInfo(args)
         
         vectorize_dataset_equality(self, args['biomass_cur'], gdal.Open('../../test_data/carbon_bio_curOnly_regression.tif'))
         vectorize_dataset_equality(self, args['volume_cur'], gdal.Open('../../test_data/carbon_vol_curOnly_regression.tif'))
@@ -1036,7 +1036,7 @@ class CarbonTestSuite(unittest.TestCase):
                           'Decay_cur': 11, 
                           'Start_date': 1946}
         
-        outputDict = carbon_core.getFields(feature)
+        outputDict = carbon.getFields(feature)
     
         for key, value in outputDict.iteritems():
             self.assertEqual(referenceDict[key], value)
@@ -1047,7 +1047,7 @@ class CarbonTestSuite(unittest.TestCase):
         lulc2 = np.zeros((1,0))
         nodata = {'input': 0, 'output': 0} #set a nodata value
         
-        carbon_core.carbon_mask(nodata, lulc1, lulc2)
+        carbon.carbon_mask(nodata, lulc1, lulc2)
         pass
 
     def test_carbon_mask_1D_arrays(self):
@@ -1058,7 +1058,7 @@ class CarbonTestSuite(unittest.TestCase):
         nodata = {'input': -2, 'output': -2} #set a nodata value
         
         #run carbon_mask
-        output = carbon_core.carbon_mask(nodata, data, mask)
+        output = carbon.carbon_mask(nodata, data, mask)
 
         #verify the contents of output against pool and lulc data
         for x in range(data.shape[1]):
