@@ -46,11 +46,46 @@ class TestTimber(unittest.TestCase):
         plant_dict = dbf.Dbf('../../test_data/timber/plant_table.dbf')
         harvest_value = timber.harvestValue(plant_dict[0]['Perc_harv'], plant_dict[0]['Price'], 
                                             plant_dict[0]['Harv_mass'], plant_dict[0]['Harv_cost'])
-        upper_limit = int(math.ceil(plant_dict[0]['T']/plant_dict[0]['Freq_harv'])-1)
         
-        summation = timber.summationOne(0, upper_limit, harvest_value, 7, plant_dict[0]['Freq_harv'])
-        summation_calculated = 18106.69902
-        self.assertAlmostEqual(summation_calculated, summation, 3)
+        upper_limit = int(math.floor(plant_dict[0]['T']/plant_dict[0]['Freq_harv']))
+        
+        summation = timber.summationOne(1, upper_limit, harvest_value, 7, plant_dict[0]['Freq_harv'])
+        summation_calculated = 0.0
+        for num in range(1, 6):
+            summation_calculated = summation_calculated + (9215/((1.07)**((10*num)-1)))
+        self.assertAlmostEqual(summation_calculated, summation, 15)
+        
+    def test_timber_summationTwo(self):
+        plant_dict = dbf.Dbf('../../test_data/timber/plant_table.dbf')
+        
+        upper_limit = int(plant_dict[0]['T']-1)
+        
+        summation = timber.summationTwo(0, upper_limit, plant_dict[0]['Maint_cost'], 7)
+        summation_calculated = 0.0
+        for num in range(0, 50):
+            summation_calculated = summation_calculated + (100/((1.07)**num))
+            
+        self.assertAlmostEqual(summation_calculated, summation, 15)
+        
+    def test_timber_netPresentValue(self):
+        plant_file = dbf.Dbf('../../test_data/timber/plant_table.dbf')
+        plant_dict = {'plant_prod':plant_file, 'mdr':7}
+        total_dict = timber.execute(plant_dict)
+        
+        summation_calculatedOne = 0.0
+        summation_calculatedTwo = 0.0
+        for num in range(1, 6):
+            summation_calculatedOne = summation_calculatedOne + (9215/((1.07)**((10*num)-1)))
+        
+        for num in range(0, 50):
+            summation_calculatedTwo = summation_calculatedTwo + (100/((1.07)**num))
+        
+        npv = summation_calculatedOne - summation_calculatedTwo
+        tnpv = npv * 1200
+        real_dict = (tnpv, 9579556.619, 30340425.432, 33555128.142, 520724.18, -5885248.892)
+        
+        for index, value in enumerate(total_dict):
+            self.assertAlmostEqual(real_dict[index], value, 3)
         
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestTimber)
