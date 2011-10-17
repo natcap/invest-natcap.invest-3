@@ -49,7 +49,7 @@ class TestTimber(unittest.TestCase):
         
         upper_limit = int(math.floor(plant_dict[0]['T']/plant_dict[0]['Freq_harv']))
         
-        summation = timber.summationOne(1, upper_limit, harvest_value, 7, plant_dict[0]['Freq_harv'])
+        summation = timber.summationOneAlt(1, upper_limit, harvest_value, 7, plant_dict[0]['Freq_harv'])
         summation_calculated = 0.0
         for num in range(1, 6):
             summation_calculated = summation_calculated + (9215/((1.07)**((10*num)-1)))
@@ -67,7 +67,7 @@ class TestTimber(unittest.TestCase):
             
         self.assertAlmostEqual(summation_calculated, summation, 15)
         
-    def test_timber_netPresentValue(self):
+    def test_timber_totalNetPresentValue(self):
         plant_file = dbf.Dbf('../../test_data/timber/plant_table.dbf')
         plant_dict = {'plant_prod':plant_file, 'mdr':7}
         total_dict = timber.execute(plant_dict)
