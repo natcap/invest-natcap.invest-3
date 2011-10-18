@@ -91,11 +91,12 @@ def execute(args):
 
     #Open the harvest maps
     if 'hwp_cur_shape' in args:
-        args['hwp_cur_shape'] = ogr.Open(args['hwp_cur_shape'])
+        fsencoding = sys.getfilesystemencoding()
+        args['hwp_cur_shape'] = ogr.Open(args['hwp_cur_shape'].encode(fsencoding))
         makeRasters(('biomass_cur', 'volume_cur'), defaultURI, args)
         
         if 'hwp_fut_shape' in args:
-            args['hwp_fut_shape'] = ogr.Open(args['hwp_fut_shape'])
+            args['hwp_fut_shape'] = ogr.Open(args['hwp_fut_shape'].encode(fsencoding))
             makeRasters(('biomass_fut', 'volume_fut'), defaultURI, args)
             
     if args['calc_value'] == True:

@@ -20,6 +20,11 @@ pool_uri = gp.GetParameterAsText(3)
 lulc_fut_uri = gp.GetParameterAsText(4)
 lulc_fut_year = gp.GetParameter(5)
 valuation = gp.GetParameterAsText(6)
+hwp_cur_shape = gp.GetParameterAsText(7)
+hwp_fut_shape = gp.GetParameterAsText(8)
+c_value = gp.GetParameterAsText(9)
+rate_change = gp.GetParameterAsText(10)
+discount = gp.GetParameterAsText(11)
 uncertainty = 'false'
 
 #build up the JSON dictionary for saving to disk.
@@ -29,7 +34,12 @@ json_dict = {'output_dir': output_dir,
              'pool_uri': pool_uri,
              'lulc_fut_uri': lulc_fut_uri,
              'lulc_fut_year': lulc_fut_year,
-             'valuation': valuation }
+             'valuation': valuation,
+             'hwp_cur_shape' : hwp_cur_shape,
+             'hwp_fut_shape' : hwp_fut_shape,
+             'c_value' : c_value,
+             'rate_change': rate_change,
+             'discount' : discount}
 
 args_file = open('C:\Users\\' + getpass.getuser() + '\My Documents\ArcGIS\carbon_args.json', 'w')
 args_file.writelines(json.dumps(json_dict))
@@ -41,7 +51,12 @@ arguments = {'lulc_cur': lulc_cur_uri,
              'carbon_pools' : pool_uri,
              'output_dir' : output_dir,
              'lulc_cur_year' : lulc_cur_year,
-             'lulc_fut_year' : lulc_fut_year}
+             'lulc_fut_year' : lulc_fut_year,
+             'hwp_cur_shape': hwp_cur_shape,
+             'hwp_fut_shape': hwp_fut_shape,
+             'c_value' : c_value,
+             'rate_change' : rate_change,
+             'discount' : discount}
 
 if valuation == 'true':
     arguments['calc_value'] = True
