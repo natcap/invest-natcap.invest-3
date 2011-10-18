@@ -1,4 +1,5 @@
 import unittest
+import imp, sys, os
 import timber
 import math
 import numpy as np
@@ -68,8 +69,16 @@ class TestTimber(unittest.TestCase):
         self.assertAlmostEqual(summation_calculated, summation, 15)
         
     def test_timber_totalNetPresentValue(self):
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
         plant_file = dbf.Dbf('../../test_data/timber/plant_table.dbf')
-        plant_dict = {'plant_prod':plant_file, 'mdr':7}
+        plant_shape = ogr.Open('../../test_data/timber/plantation.shp')
+        
+        ogr.GetDriverByName('ESRI Shapefile').\
+            CopyDataSource(plant_shape, '../../test_data/timber/timber_output' + os.sep)
+        timber_shp_copy = ogr.Open('../../test_data/timber/timber_output/plantation.shp')
+       
+        timber_layer = timber_shp_copy.GetLayerByName('plantation')
+        plant_dict = {'plant_prod':plant_file, 'mdr':7, 'timber_lyr': timber_layer, 'output_seq':timber_shp_copy}
         total_dict = timber.execute(plant_dict)
         
         summation_calculatedOne = 0.0

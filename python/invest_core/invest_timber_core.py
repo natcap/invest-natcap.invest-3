@@ -26,9 +26,9 @@ def execute(args):
     #timber_shp_file = args['timber_shp_uri']
     timber_shp = ogr.Open(args['timber_shp_uri'].encode(filesystemencoding))
     ogr.GetDriverByName('ESRI Shapefile').\
-        CopyDataSource(timber_shp, 'timber_shp_copy')
+        CopyDataSource(timber_shp, args['output_dir'] + os.sep + 'timber_shp_copy')
     timber_shp_copy = ogr.Open('./timber_shp_copy')
-    timber_layer = timber_shp.GetLayerByName("timber_shp_uri")
+    timber_layer = timber_shp.GetLayerByName('plantation')
   
     args = { 'timber_shape': timber_shp,
             'timber_lyr': timber_layer,

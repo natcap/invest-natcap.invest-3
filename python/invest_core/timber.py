@@ -1,4 +1,7 @@
 import numpy as np
+from osgeo import ogr
+from osgeo.gdalconst import *
+from dbfpy import dbf
 from osgeo import gdal
 import math
 
@@ -19,6 +22,13 @@ def execute(args):
         
         returns nothing"""
         
+
+    
+    field_def = ogr.FieldDefn('TNPV', ogr.OFTReal)
+    output_shape = args['output_seq']
+    layer = output_shape.GetLayerByName('plantation')
+    layer.CreateField(field_def)
+    feature = layer.GetFeature(0)
     plant_dict = args['plant_prod']
     plant_total = []
     for i in range(plant_dict.recordCount):
@@ -45,8 +55,14 @@ def execute(args):
             
         net_present_value = (summation_one - summation_two)
         total_npv = net_present_value * plant_dict[i]['Parcl_area']
+
+        index = feature.GetFieldIndex('TNPV')
+        feature.SetField(index, total_npv)       
+        
         plant_total.append(total_npv)
         
+    #save the field modifications to the layer.
+    layer.SetFeature(feature)
     return plant_total
         
 def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
