@@ -1,4 +1,5 @@
 import numpy as np
+import imp, sys, os
 from osgeo import ogr
 from osgeo.gdalconst import *
 from dbfpy import dbf
@@ -25,10 +26,25 @@ def execute(args):
 
     
     field_def = ogr.FieldDefn('TNPV', ogr.OFTReal)
-    output_shape = args['output_seq']
+    #output_shape = args['timber_shape']
+    ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(args['timber_shape'], '../../test_data/timber/timber_output' + os.sep)
+    output_shape = ogr.Open('../../test_data/timber/timber_output/plantation.shp')
     layer = output_shape.GetLayerByName('plantation')
+    
     layer.CreateField(field_def)
-    feature = layer.GetFeature(0)
+    
+    ###################
+    
+    
+    
+#    driverName = 'ESRI Shapefile'
+#    drv = org. GetDriverByName(driverName)
+#    ds = drv.CreateDataSource('point_out.shp')
+#    lyr = ds.CreateLayer('plantation', None, ogr.wkbPolygon)
+    
+    
+    
+    ##############
     plant_dict = args['plant_prod']
     plant_total = []
     for i in range(plant_dict.recordCount):
@@ -56,13 +72,17 @@ def execute(args):
         net_present_value = (summation_one - summation_two)
         total_npv = net_present_value * plant_dict[i]['Parcl_area']
 
+
+        feature = layer.GetFeature(i)
         index = feature.GetFieldIndex('TNPV')
-        feature.SetField(index, total_npv)       
+        #feature.SetField(index, total_npv)       
         
         plant_total.append(total_npv)
+        #layer.SetFeature(feature)
         
+        #feature.Destroy()
     #save the field modifications to the layer.
-    layer.SetFeature(feature)
+    
     return plant_total
         
 def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
