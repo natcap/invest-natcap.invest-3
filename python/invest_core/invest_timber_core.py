@@ -16,7 +16,7 @@ def execute(args):
     
     args['output_dir'] - The file location where the output will be written
     args['timber_shp_uri'] - The shape file location
-    args['plant_prod_uri'] - The attribute table location
+    args['plant_prod_uri'] - The DBF attribute table location
     args['market_disc_rate'] - The market discount rate as a string
     """
     os.chdir(os.path.dirname(os.path.realpath(__file__)))

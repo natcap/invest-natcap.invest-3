@@ -7,23 +7,20 @@ from osgeo import gdal
 import math
 
 def execute(args):
-    """Runs a scenario based uncertainty model for two LULC maps.  Output
-        is a 4 output_seq raster for 3 bands indicating carbon sequestration
-        change for low, average, and high measurements.  Fourth output_seq is
-        the minimum percentage ranking of each pixel in each of the
-        three scenarios.
+    """Executes the basic timber management model that calculates the Total Net Present Value and maps
+        it to an outputted shapefile.
     
         args - is a dictionary with at least the following entries:
-        args['timber_shape'] - is an open ogr shape file
-        args['timber_lyr'] - layer
-        args['plant_prod'] - is a dictionary of the shapefiles attributes
-        args['output_seq']: timber_shp_copy,
-        args['output_dir']: args['output_dir'],
-        args['mdr']
+        args['timber_shape']     - is a OGR shapefile.
+        args['timber_layer']     - is the layer which holds the polygon features.
+        args['timber_shp_copy']  - is a copy of the original OGR shapefile and will be used as the output with
+                                    with the new fields attached to the features.
+        args['output_dir']       - the directory where the output files should be saved.
+        args['mdr']              - the market discount rate.
+        args['plant_prod']       - the dbf file which has the attribute values of each timber parcel.
         
         returns nothing"""
         
-
     
     field_def = ogr.FieldDefn('TNPV', ogr.OFTReal)
     #output_shape = args['timber_shape']
@@ -73,7 +70,7 @@ def execute(args):
         total_npv = net_present_value * plant_dict[i]['Parcl_area']
 
 
-        feature = layer.GetFeature(i)
+        feature = layer.GetFeature(0)
         index = feature.GetFieldIndex('TNPV')
         #feature.SetField(index, total_npv)       
         
