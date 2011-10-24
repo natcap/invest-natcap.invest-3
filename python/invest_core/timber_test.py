@@ -35,7 +35,19 @@ class TestTimber(unittest.TestCase):
 #    def test_timber_with_inputs(self):
 #        """Test carbon_uncertainty using realistic inputs."""
 
-
+    def test_timber_getBiomass(self):
+        plant_dict = dbf.Dbf('../../test_data/timber/plant_table.dbf')
+        TBiomass = timber.getBiomass(plant_dict[0]['Parcl_area'], plant_dict[0]['Perc_harv'],
+                                     plant_dict[0]['Harv_mass'], plant_dict[0]['T'], plant_dict[0]['Freq_harv'])
+        calculatedBiomass = 90000
+        self.assertEqual(calculatedBiomass, TBiomass)
+        
+    def test_timber_getVolume(self):
+        plant_dict = dbf.Dbf('../../test_data/timber/plant_table.dbf')
+        TVolume = timber.getVolume(90000, plant_dict[0]['BCEF'])
+        calculatedVolume = 90000
+        self.assertEqual(calculatedVolume, TVolume)
+        
     def test_timber_harvestValue(self):
         plant_dict = dbf.Dbf('../../test_data/timber/plant_table.dbf')
         harvest_value = timber.harvestValue(plant_dict[0]['Perc_harv'], plant_dict[0]['Price'], 
@@ -71,14 +83,14 @@ class TestTimber(unittest.TestCase):
     def test_timber_totalNetPresentValue(self):
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
         plant_file = dbf.Dbf('../../test_data/timber/plant_table.dbf')
-        plant_shape = ogr.Open('../../test_data/timber/plantation.shp')
+        plant_shape = ogr.Open('../../test_data/timber/plantation.shp', 1)
         
         ogr.GetDriverByName('ESRI Shapefile').\
             CopyDataSource(plant_shape, '../../test_data/timber/timber_output' + os.sep)
-        timber_shp_copy = ogr.Open('../../test_data/timber/timber_output/plantation.shp')
+        timber_shp_copy = ogr.Open('../../test_data/timber/timber_output/plantation.shp', 1)
        
         timber_layer = timber_shp_copy.GetLayerByName('plantation')
-        plant_dict = {'plant_prod':plant_file, 'mdr':7, 'timber_lyr': timber_layer, 'output_seq':timber_shp_copy}
+        plant_dict = {'plant_prod':plant_file, 'mdr':7, 'timber_layer': timber_layer, 'timber_shp_copy': timber_shp_copy}
         total_dict = timber.execute(plant_dict)
         
         summation_calculatedOne = 0.0

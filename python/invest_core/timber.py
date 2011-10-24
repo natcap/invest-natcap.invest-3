@@ -22,26 +22,13 @@ def execute(args):
         returns nothing"""
         
     
-    field_def = ogr.FieldDefn('TNPV', ogr.OFTReal)
-    #output_shape = args['timber_shape']
-    ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(args['timber_shape'], '../../test_data/timber/timber_output' + os.sep)
-    output_shape = ogr.Open('../../test_data/timber/timber_output/plantation.shp')
-    layer = output_shape.GetLayerByName('plantation')
     
-    layer.CreateField(field_def)
-    
-    ###################
-    
-    
-    
-#    driverName = 'ESRI Shapefile'
-#    drv = org. GetDriverByName(driverName)
-#    ds = drv.CreateDataSource('point_out.shp')
-#    lyr = ds.CreateLayer('plantation', None, ogr.wkbPolygon)
-    
-    
-    
-    ##############
+#    output_shape = args['timber_shape']
+    layer = args['timber_layer']
+    for fieldname in ('TNPV', 'biomass', 'volume'):
+        field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
+        layer.CreateField(field_def)
+
     plant_dict = args['plant_prod']
     plant_total = []
     for i in range(plant_dict.recordCount):
@@ -65,19 +52,23 @@ def execute(args):
             lower_limit = 0
             summation_one = summationOne(lower_limit, upper_limit, harvest_value, args['mdr'], plant_dict[i]['Freq_harv'])
             summation_two = summationTwo(lower_limit2, upper_limit2, plant_dict[i]['Maint_cost'], args['mdr'])
-            
+         
+        biomass = getBiomass(plant_dict[i]['Parcl_area'], plant_dict[i]['Perc_harv'], plant_dict[i]['Harv_mass'],
+                                plant_dict[i]['T'], plant_dict[i]['Freq_harv'] )
+        volume = getVolume(biomass, plant_dict[i]['BCEF'])
         net_present_value = (summation_one - summation_two)
         total_npv = net_present_value * plant_dict[i]['Parcl_area']
 
 
-        feature = layer.GetFeature(0)
-        index = feature.GetFieldIndex('TNPV')
-        #feature.SetField(index, total_npv)       
+        feature = layer.GetFeature(i)
+        for field, value in (('TNPV', total_npv), ('biomass', biomass), ('volume', volume)):
+            index = feature.GetFieldIndex(field)
+            feature.SetField(index, value)       
         
         plant_total.append(total_npv)
-        #layer.SetFeature(feature)
+        layer.SetFeature(feature)
         
-        #feature.Destroy()
+        feature.Destroy()
     #save the field modifications to the layer.
     
     return plant_total
@@ -110,7 +101,13 @@ def summationTwo(lower, upper, maint_Cost, mdr):
             
     return summation
 
+def getBiomass(parcl_Area, perc_Harv, harv_Mass, T, freq_Harv):
+    TBiomass = parcl_Area * (perc_Harv/100.00) * harv_Mass * math.ceil(T/freq_Harv)
+    return TBiomass
 
+def getVolume(biomass, BCEF):
+    TVolume = biomass * (1.0/BCEF)
+    return TVolume
 
 #def build_plant_prod_dict(dbf, index):
 #    plant_dict = []
