@@ -11,21 +11,17 @@ def execute(args):
         it to an outputted shapefile.
     
         args - is a dictionary with at least the following entries:
-        args['timber_shape']     - is a OGR shapefile.
-        args['timber_layer']     - is the layer which holds the polygon features.
+        args['timber_layer']     - is the layer which holds the polygon features from the copied shapefile.
         args['timber_shp_copy']  - is a copy of the original OGR shapefile and will be used as the output with
                                     with the new fields attached to the features.
-        args['output_dir']       - the directory where the output files should be saved.
         args['mdr']              - the market discount rate.
         args['plant_prod']       - the dbf file which has the attribute values of each timber parcel.
         
         returns nothing"""
         
-    
-    
-#    output_shape = args['timber_shape']
+
     layer = args['timber_layer']
-    for fieldname in ('TNPV', 'biomass', 'volume'):
+    for fieldname in ('TNPV', 'TBiomass', 'TVolume'):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
 
@@ -39,6 +35,10 @@ def execute(args):
         upper_limit2 = plant_dict[i]['T'] - 1
         harvest_value = harvestValue(plant_dict[i]['Perc_harv'],plant_dict[i]['Price'],
                                      plant_dict[i]['Harv_mass'],plant_dict[i]['Harv_cost'],)
+        
+        #Frequency Harvest cannot be greater than the time period
+        if plant_dict[i]['Freq_harv'] > plant_dict[i]['T'] :
+           plant_dict[i]['Freq_harv'] = plant_dict[i]['T'] 
         
         if plant_dict[i]['Immed_harv']=='N':
             upper_limit = int(math.floor(plant_dict[i]['T']/plant_dict[i]['Freq_harv']))
@@ -61,7 +61,7 @@ def execute(args):
 
 
         feature = layer.GetFeature(i)
-        for field, value in (('TNPV', total_npv), ('biomass', biomass), ('volume', volume)):
+        for field, value in (('TNPV', total_npv), ('TBiomass', biomass), ('TVolume', volume)):
             index = feature.GetFieldIndex(field)
             feature.SetField(index, value)       
         
