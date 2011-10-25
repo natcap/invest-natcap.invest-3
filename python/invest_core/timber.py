@@ -5,22 +5,28 @@ from osgeo.gdalconst import *
 from dbfpy import dbf
 from osgeo import gdal
 import math
+import datetime
+from datetime import date
+from datetime import datetime
+import time
 
 def execute(args):
     """Executes the basic timber management model that calculates the Total Net Present Value and maps
         it to an outputted shapefile.
     
         args - is a dictionary with at least the following entries:
-        args['timber_layer']     - is the layer which holds the polygon features from the copied shapefile.
+        args['timber_shape_loc']
+        args['output_dir']
+        args['timber_layer_copy']     - is the layer which holds the polygon features from the copied shapefile.
         args['timber_shp_copy']  - is a copy of the original OGR shapefile and will be used as the output with
                                     with the new fields attached to the features.
         args['mdr']              - the market discount rate.
         args['plant_prod']       - the dbf file which has the attribute values of each timber parcel.
-        
+        args['plant_prod_loc']
         returns nothing"""
         
 
-    layer = args['timber_layer']
+    layer = args['timber_layer_copy']
     for fieldname in ('TNPV', 'TBiomass', 'TVolume'):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
@@ -70,7 +76,7 @@ def execute(args):
         
         feature.Destroy()
     #save the field modifications to the layer.
-    
+    textOut(args['timber_shape_loc'], args['output_dir'], args['mdr'], args['plant_prod_loc'])
     return plant_total
         
 def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
@@ -108,6 +114,31 @@ def getBiomass(parcl_Area, perc_Harv, harv_Mass, T, freq_Harv):
 def getVolume(biomass, BCEF):
     TVolume = biomass * (1.0/BCEF)
     return TVolume
+
+def textOut(timber_shape, output_dir, mdr, plant_prod):    
+    now = datetime.now()
+    date = now.strftime('%Y-%m-%d-%H-%M')
+    
+    text_array =["TIMBER MODEL PARAMETERS",
+                 "_______________________\n",
+                 "Date and Time: " + date,
+                 "Output Folder: " + output_dir,
+                 "Managed timber forest parcels: " + timber_shape,
+                 "Production table: " + plant_prod,
+                 "Market discount rate: " + str(mdr),
+                 "Script Location: " + os.path.dirname(sys.argv[0])+"\\"+os.path.basename(sys.argv[0])]
+    
+    
+    filename = output_dir+os.sep+"Timber_"+date+".txt"
+    file = open(filename, 'w')
+    
+    for value in text_array:
+        file.write(value + '\n')
+        file.write('\n')
+    
+    file.close()
+
+
 
 #def build_plant_prod_dict(dbf, index):
 #    plant_dict = []

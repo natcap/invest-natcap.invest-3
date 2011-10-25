@@ -2,10 +2,6 @@
 import os, sys, subprocess
 import getpass
 import json
-import datetime
-from datetime import date
-from datetime import datetime
-import time
 
 import arcgisscripting
 gp = arcgisscripting.create()
@@ -24,29 +20,6 @@ args_file.writelines(json.dumps(arguments))
 args_file.close()
 
 gp.AddMessage('Starting timber model')
-
-now = datetime.now()
-date = now.strftime('%Y-%m-%d-%H-%M')
-
-text_array =["TIMBER MODEL PARAMETERS",
-             "_______________________\n",
-             "Date and Time: "+ date,
-             "Output Folder: "+ arguments['output_dir'],
-             "Managed timber forest parcels: "+ arguments['timber_shp_uri'],
-             "Production table: "+ arguments['plant_prod_uri'],
-             "Market discount rate: "+ str(arguments['market_disc_rate']),
-             "Script Location: "+ os.path.dirname(sys.argv[0])+"\\"+os.path.basename(sys.argv[0])]
-
-
-filename = arguments['output_dir']+os.sep+"Timber_"+date+".txt"
-file = open(filename, 'w')
-
-for value in text_array:
-    file.write(value + '\n')
-    file.write('\n')
-
-file.close()
-
 
 process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
                             'python\\invest_core\\invest_timber_core.py',
