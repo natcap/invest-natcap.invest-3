@@ -1,8 +1,11 @@
 #timber_arc.py
 import os, sys, subprocess
 import getpass
-import json
-
+try:
+    import json
+except ImportError:
+    import invest_core.simplejson as json
+    
 import arcgisscripting
 gp = arcgisscripting.create()
 
@@ -27,16 +30,4 @@ process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT).communicate()[0]
 
-#gp.AddMessage(process)
 gp.AddMessage('Done')
-
-
-#
-#'header' : "TIMBER MODEL PARAMETERS",
-#             'spacer' : "_______________________\n",
-#             'dateAndTime' : "Date and Time: "+ date,
-#             'outputFolder' : "Output Folder: "+ arguments['output_dir'],
-#             'shapefileLocation' : "Managed timber forest parcels: "+ arguments['timber_shp_uri'],
-#             'productionTable' : "Production table: "+ arguments['plant_prod_uri'],
-#             'mdr' : "Market discount rate: "+ str(arguments['market_disc_rate']),
-#             'scriptLocation' : "Script Location: "+ os.path.dirname(sys.argv[0])+"\\"+os.path.basename(sys.argv[0])

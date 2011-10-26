@@ -1,14 +1,11 @@
 import numpy as np
 import imp, sys, os
 from osgeo import ogr
-from osgeo.gdalconst import *
-from dbfpy import dbf
-from osgeo import gdal
 import math
 import datetime
 from datetime import date
 from datetime import datetime
-import time
+
 
 def execute(args):
     """Executes the basic timber management model that calculates the Total Net Present Value and maps
@@ -26,8 +23,7 @@ def execute(args):
         args['plant_prod_loc']      - the location of the production table file.
         
         returns nothing"""
-        
-    plant_total = []
+
     layer = args['timber_layer_copy']
     mdr = float(args['mdr'])
     plant_prod_loc = args['plant_prod_loc']
@@ -37,10 +33,12 @@ def execute(args):
     
     mdr_perc = 1+(mdr/100.00)
     
+    #Create three new fields on the shapefile's polygon layer
     for fieldname in ('TNPV', 'TBiomass', 'TVolume'):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
     
+    #Run through each timber parcel in the table, calculating it's TNPV
     for i in range(plant_dict.recordCount):
         
         freq_Harv  = plant_dict[i]['Freq_harv']
@@ -76,28 +74,30 @@ def execute(args):
             upper_limit = int(math.floor(yr_per_freq))
             lower_limit = 1
             subtractor = 1.0
-            summation_one = summationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
-            summation_two = summationTwo(lower_limit2, upper_limit2, maint_Cost, mdr_perc)            
+            summation_one = npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
+            summation_two = npvSummationTwo(lower_limit2, upper_limit2, maint_Cost, mdr_perc)            
         else:
             upper_limit = int((math.ceil(yr_per_freq)-1.0))
             lower_limit = 0
-            summation_one = summationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
-            summation_two = summationTwo(lower_limit2, upper_limit2, maint_Cost, mdr_perc)
+            summation_one = npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
+            summation_two = npvSummationTwo(lower_limit2, upper_limit2, maint_Cost, mdr_perc)
         
         #Calculate Biomass
         biomass = getBiomass(parcl_Area, perc_Harv, harv_Mass, num_Years, freq_Harv)
-        
+        #Calculate Volume
         volume = getVolume(biomass, BCEF)
+        
         net_present_value = (summation_one - summation_two)
+        
         total_npv = net_present_value * parcl_Area
 
+        #Grab the polygon from the shapefile that is associated with the current timber parcel
         feature = layer.GetFeature(i)
-        
+        #For each new field set the corresponding value to the specific polygon
         for field, value in (('TNPV', total_npv), ('TBiomass', biomass), ('TVolume', volume)):
             index = feature.GetFieldIndex(field)
             feature.SetField(index, value)       
 
-#        plant_total.append(total_npv)
         #save the field modifications to the layer.
         layer.SetFeature(feature)
         
@@ -106,15 +106,13 @@ def execute(args):
     #Create the output file with the attributes used    
     textFileOut(timber_shape_loc, output_dir, mdr, plant_prod_loc)
 
-#    return plant_total
-
 #Calculates harvest value for parcel
 def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
     harvest_value = (perc_Harv/100.00)*((price*harv_Mass)-harv_Cost)
     return harvest_value
 
 #Calculates the first summation for the net present value of a parcel
-def summationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
+def npvSummationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
     summation = 0.0
     upper = upper + 1
     for num in range(lower, upper):
@@ -123,7 +121,7 @@ def summationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
     return summation
 
 #Calculates the second summation for the net present value of a parcel
-def summationTwo(lower, upper, maint_Cost, mdr_perc):
+def npvSummationTwo(lower, upper, maint_Cost, mdr_perc):
     summation = 0.0
     upper = upper + 1
     for num in range(lower, upper):

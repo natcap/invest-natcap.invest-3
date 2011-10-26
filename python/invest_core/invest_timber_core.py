@@ -4,19 +4,18 @@ import imp, sys, os
 import simplejson as json
 import timber
 from osgeo import ogr
-from osgeo.gdalconst import *
 import numpy
 from dbfpy import dbf
 
 def execute(args):
-    """This function invokes the timber model given uri
-    inputs of files.
+    """This function invokes the timber model given uri inputs of files.
     
-    args - a dictionary object of arguments    
-    args['output_dir'] - The file location where the output will be written
-    args['timber_shp_uri'] - The shape file location
-    args['plant_prod_uri'] - The DBF attribute table location
-    args['market_disc_rate'] - The market discount rate as a string
+    args - a dictionary object of arguments 
+       
+    args['output_dir']        - The file location where the outputs will be written
+    args['timber_shp_uri']    - The shape file location
+    args['plant_prod_uri']    - The DBF attribute table location
+    args['market_disc_rate']  - The market discount rate as a string
     
     """
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -25,21 +24,26 @@ def execute(args):
     timber_shp_file = args['timber_shp_uri']
     timber_shp = ogr.Open(args['timber_shp_uri'].encode(filesystemencoding), 1)
     
+    #Add the Output directory onto the given workspace
     output_source = args['output_dir']+os.sep+'Output'
-    temp = output_source + os.sep + 'plantation.shp'
-    if os.path.isfile(temp): 
-        os.remove(temp)
+    shape_copy_source = output_source + os.sep + 'plantation.shp'
+    
+    #Overwrite any current output if the workspace is the same
+    if os.path.isfile(shape_copy_source): 
+        os.remove(shape_copy_source)
         os.remove(output_source+os.sep+'plantation.dbf')
         os.remove(output_source+os.sep+'plantation.prj')
         os.remove(output_source+os.sep+'plantation.shx')
-        
+    
+    #Copy the input shapefile into the designated output folder
     copy = ogr.GetDriverByName('ESRI Shapefile').\
         CopyDataSource(timber_shp, output_source)
 
+    #OGR closes datasources this way to make sure data gets flushed properly
     timber_shp.Destroy()
     copy.Destroy()    
    
-    timber_shp_copy = ogr.Open(temp.encode(filesystemencoding), 1)
+    timber_shp_copy = ogr.Open(shape_copy_source.encode(filesystemencoding), 1)
     timber_layer_copy = timber_shp_copy.GetLayerByName('plantation')
     
     args = {'timber_shape_loc':timber_shp_file,
@@ -52,9 +56,9 @@ def execute(args):
 
     timber.execute(args)
 
-    #This is how GDAL closes its datasets in python
+    #This is how OGR closes its datasources in python
     timber_shp_copy.Destroy()
-    #timber_layer_copy.Destroy()
+    
     #close the pools DBF file
     args['plant_prod'].close()
     copy = None
