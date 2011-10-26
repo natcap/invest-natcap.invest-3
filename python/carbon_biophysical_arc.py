@@ -1,11 +1,6 @@
 import os, sys, subprocess
 import getpass
-
-try:
-    import json
-except ImportError:
-    import invest_core.simplejson as json
-
+import invest_core.simplejson as json
 import arcgisscripting
 gp = arcgisscripting.create()
 
