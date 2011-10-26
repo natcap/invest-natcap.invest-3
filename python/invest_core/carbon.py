@@ -296,7 +296,7 @@ def calcFeatureHWP(limit, decay, endDate, startDate, freq):
         denominator = w*(math.pow(math.e,(m*w)))
         hwpSum += (numerator/denominator)
 
-    return hwpSum
+    return math.floor(hwpSum)
 
 def valuate(args):
     """Executes the economic valuation model.

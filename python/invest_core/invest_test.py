@@ -99,6 +99,9 @@ class TestInvest(unittest.TestCase):
             """Regression Test to run Carbon model using sample data.  
             Results will be compared with a raster that is known to be accurate."""
     
+            #clean up known files
+            removeCreatedFiles()
+            
             storage_cur = '../../carbon_output/test_carbon_output.tif'
     
             arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
@@ -118,7 +121,7 @@ class TestInvest(unittest.TestCase):
                         'bio_hwp_cur.tif', 'bio_hwp_fut.tif', 'vol_hwp_cur.tif',
                         'vol_hwp_fut.tif'):
                 exists = os.path.exists(arguments['output_dir'] + os.sep + file)
-                self.assertEqual(exists, False)
+                self.assertEqual(exists, False, file + " found at the output dir")
                 
             os.remove(storage_cur)
             
@@ -132,7 +135,9 @@ class TestInvest(unittest.TestCase):
             """Test the InVEST3 carbon model against the known output raster of InVEST2.1 carbon
                 
                 Uses the modified pools dbf, where all values are ints."""
-                
+            #clean up known files
+            removeCreatedFiles()
+
             storage_cur = '../../carbon_output/test_carbon_output.tif'
 
             arguments = {'lulc_cur': '../../test_data/lulc_samp_cur',
@@ -152,7 +157,7 @@ class TestInvest(unittest.TestCase):
                         'bio_hwp_cur.tif', 'bio_hwp_fut.tif', 'vol_hwp_cur.tif',
                         'vol_hwp_fut.tif'):
                 exists = os.path.exists(arguments['output_dir'] + os.sep + file)
-                self.assertEqual(exists, False)
+                self.assertEqual(exists, False, file + " found at the output dir")
             
             os.remove(storage_cur)
 
@@ -162,6 +167,9 @@ class TestInvest(unittest.TestCase):
         
         def test_carbon_valuation(self):
             """Verify that the carbon valuation model passes successfully"""
+
+            #clean up known files
+            removeCreatedFiles()
             
             storage_cur = '../../carbon_output/test_seq_cur.tif'
             storage_fut = '../../carbon_output/test_seq_fut.tif'
@@ -193,7 +201,7 @@ class TestInvest(unittest.TestCase):
             for file in ('bio_hwp_cur.tif', 'bio_hwp_fut.tif', 'vol_hwp_cur.tif',
                         'vol_hwp_fut.tif'):
                 exists = os.path.exists(arguments['output_dir'] + os.sep + file)
-                self.assertEqual(exists, False)
+                self.assertEqual(exists, False, file + " found at the output dir")
             
             for uri in (storage_cur, storage_fut, seq_delta, seq_value):
                 os.remove(uri)
@@ -203,6 +211,9 @@ class TestInvest(unittest.TestCase):
         
         def test_carbon_storage_hwp_regression(self):
             """Verify the carbon storage model (with HWP) against known results"""
+
+            #clean up known files
+            removeCreatedFiles()
             
             storage_cur = '../../carbon_output/test_seq_cur.tif'
             
@@ -233,6 +244,9 @@ class TestInvest(unittest.TestCase):
 
         def test_carbon_storage_hwp_fut_regression(self):
             """Verify the carbon model (with cur+fut HWP) against known results"""
+            
+            #clean up known files
+            removeCreatedFiles()
             
             storage_cur = '../../carbon_output/test_seq_cur.tif'
             storage_fut = '../../carbon_output/test_seq_fut.tif'
