@@ -96,23 +96,24 @@ def execute(args):
         for field, value in (('TNPV', total_npv), ('TBiomass', biomass), ('TVolume', volume)):
             index = feature.GetFieldIndex(field)
             feature.SetField(index, value)       
-        if i==3:
-            plant_total.append(summation_one)
-        else:
-            plant_total.append(total_npv)
+
+#        plant_total.append(total_npv)
+        #save the field modifications to the layer.
         layer.SetFeature(feature)
         
         feature.Destroy()
-    #save the field modifications to the layer.
-    
+        
+    #Create the output file with the attributes used    
     textFileOut(timber_shape_loc, output_dir, mdr, plant_prod_loc)
 
-    return plant_total
-        
+#    return plant_total
+
+#Calculates harvest value for parcel
 def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
     harvest_value = (perc_Harv/100.00)*((price*harv_Mass)-harv_Cost)
     return harvest_value
 
+#Calculates the first summation for the net present value of a parcel
 def summationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
     summation = 0.0
     upper = upper + 1
@@ -121,6 +122,7 @@ def summationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
                         
     return summation
 
+#Calculates the second summation for the net present value of a parcel
 def summationTwo(lower, upper, maint_Cost, mdr_perc):
     summation = 0.0
     upper = upper + 1
@@ -129,14 +131,17 @@ def summationTwo(lower, upper, maint_Cost, mdr_perc):
             
     return summation
 
+#Calculates the Biomass for a parcel
 def getBiomass(parcl_Area, perc_Harv, harv_Mass, T, freq_Harv):
     TBiomass = parcl_Area * (perc_Harv/100.00) * harv_Mass * math.ceil(T/freq_Harv)
     return TBiomass
 
+#Calculates the Volume for a parcel
 def getVolume(biomass, BCEF):
     TVolume = biomass * (1.0/BCEF)
     return TVolume
 
+#Creates a text file which saves the attributes to the Output folder
 def textFileOut(timber_shape, output_dir, mdr, plant_prod):    
     now = datetime.now()
     date = now.strftime('%Y-%m-%d-%H-%M')
@@ -160,9 +165,4 @@ def textFileOut(timber_shape, output_dir, mdr, plant_prod):
     
     file.close()
 
-
-
-#def build_plant_prod_dict(dbf, index):
-#    plant_dict = []
-#    for key in range(dbf.recordCount):
         
