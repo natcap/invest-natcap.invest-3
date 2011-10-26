@@ -1,4 +1,4 @@
-import os, sys, subprocess
+import os, subprocess
 import getpass
 import invest_core.simplejson as json
 import arcgisscripting
