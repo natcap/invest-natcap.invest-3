@@ -20,7 +20,6 @@ args_file.writelines(json.dumps(arguments))
 args_file.close()
 
 gp.AddMessage('Starting timber model')
-gp.AddMessage(arguments['timber_shp_uri'])
 
 process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
                             'python\\invest_core\\invest_timber_core.py',
@@ -30,3 +29,13 @@ process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
 
 gp.AddMessage(process)
 gp.AddMessage('Done')
+
+#
+#'header' : "TIMBER MODEL PARAMETERS",
+#             'spacer' : "_______________________\n",
+#             'dateAndTime' : "Date and Time: "+ date,
+#             'outputFolder' : "Output Folder: "+ arguments['output_dir'],
+#             'shapefileLocation' : "Managed timber forest parcels: "+ arguments['timber_shp_uri'],
+#             'productionTable' : "Production table: "+ arguments['plant_prod_uri'],
+#             'mdr' : "Market discount rate: "+ str(arguments['market_disc_rate']),
+#             'scriptLocation' : "Script Location: "+ os.path.dirname(sys.argv[0])+"\\"+os.path.basename(sys.argv[0])

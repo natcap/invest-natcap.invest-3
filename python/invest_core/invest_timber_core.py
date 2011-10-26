@@ -12,37 +12,52 @@ def execute(args):
     """This function invokes the timber model given uri
     inputs of files.
     
-    args - a dictionary object of arguments
-    
+    args - a dictionary object of arguments    
     args['output_dir'] - The file location where the output will be written
     args['timber_shp_uri'] - The shape file location
-    args['plant_prod_uri'] - The attribute table location
+    args['plant_prod_uri'] - The DBF attribute table location
     args['market_disc_rate'] - The market discount rate as a string
+    
     """
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     filesystemencoding = sys.getfilesystemencoding()
-    #ogr.AllRegister()
-    #timber_shp = ogr.Open('C:\InVEST_2.1.0\Timber\Input\plantation.shp')
-    #timber_shp_file = args['timber_shp_uri']
-    timber_shp = ogr.Open(args['timber_shp_uri'].encode(filesystemencoding))
-    ogr.GetDriverByName('ESRI Shapefile').\
-        CopyDataSource(timber_shp, 'timber_shp_copy')
-    timber_shp_copy = ogr.Open('./timber_shp_copy')
-    timber_layer = timber_shp.GetLayerByName("timber_shp_uri")
-  
-    args = { 'timber_shape': timber_shp,
-            'timber_lyr': timber_layer,
-            'plant_prod': dbf.Dbf(args['plant_prod_uri']),
-            'output_seq': timber_shp_copy,
+    
+    timber_shp_file = args['timber_shp_uri']
+    timber_shp = ogr.Open(args['timber_shp_uri'].encode(filesystemencoding), 1)
+    
+    output_source = args['output_dir']+os.sep+'plantation.shp'
+    
+    if os.path.isfile(output_source): 
+        os.remove(output_source)
+        os.remove(args['output_dir']+os.sep+'plantation.dbf')
+        os.remove(args['output_dir']+os.sep+'plantation.prj')
+        os.remove(args['output_dir']+os.sep+'plantation.shx')
+        
+    copy = ogr.GetDriverByName('ESRI Shapefile').\
+        CopyDataSource(timber_shp, args['output_dir'])
+
+    timber_shp.Destroy()
+    copy.Destroy()    
+   
+    timber_shp_copy = ogr.Open(output_source.encode(filesystemencoding), 1)
+    timber_layer_copy = timber_shp_copy.GetLayerByName('plantation')
+    
+    args = {'timber_shape_loc':timber_shp_file,
             'output_dir': args['output_dir'],
+            'timber_layer_copy': timber_layer_copy,
+            'plant_prod': dbf.Dbf(args['plant_prod_uri']),
+            'plant_prod_loc': args['plant_prod_uri'],
+            'timber_shp_copy': timber_shp_copy,
             'mdr': args['market_disc_rate']}
 
     timber.execute(args)
 
     #This is how GDAL closes its datasets in python
-    
-    output_seq = None
 
+    copy = None
+    timber_shp = None
+    timber_shp_copy = None
+    timber_layer_copy = None
 
 
 

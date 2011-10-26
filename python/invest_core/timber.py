@@ -1,24 +1,36 @@
 import numpy as np
+import imp, sys, os
+from osgeo import ogr
+from osgeo.gdalconst import *
+from dbfpy import dbf
 from osgeo import gdal
 import math
+import datetime
+from datetime import date
+from datetime import datetime
+import time
 
 def execute(args):
-    """Runs a scenario based uncertainty model for two LULC maps.  Output
-        is a 4 output_seq raster for 3 bands indicating carbon sequestration
-        change for low, average, and high measurements.  Fourth output_seq is
-        the minimum percentage ranking of each pixel in each of the
-        three scenarios.
+    """Executes the basic timber management model that calculates the Total Net Present Value and maps
+        it to an outputted shapefile.
     
         args - is a dictionary with at least the following entries:
-        args['timber_shape'] - is an open ogr shape file
-        args['timber_lyr'] - layer
-        args['plant_prod'] - is a dictionary of the shapefiles attributes
-        args['output_seq']: timber_shp_copy,
-        args['output_dir']: args['output_dir'],
-        args['mdr']
-        
+        args['timber_shape_loc']
+        args['output_dir']
+        args['timber_layer_copy']     - is the layer which holds the polygon features from the copied shapefile.
+        args['timber_shp_copy']  - is a copy of the original OGR shapefile and will be used as the output with
+                                    with the new fields attached to the features.
+        args['mdr']              - the market discount rate.
+        args['plant_prod']       - the dbf file which has the attribute values of each timber parcel.
+        args['plant_prod_loc']
         returns nothing"""
         
+
+    layer = args['timber_layer_copy']
+    for fieldname in ('TNPV', 'TBiomass', 'TVolume'):
+        field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
+        layer.CreateField(field_def)
+
     plant_dict = args['plant_prod']
     plant_total = []
     for i in range(plant_dict.recordCount):
@@ -29,6 +41,10 @@ def execute(args):
         upper_limit2 = plant_dict[i]['T'] - 1
         harvest_value = harvestValue(plant_dict[i]['Perc_harv'],plant_dict[i]['Price'],
                                      plant_dict[i]['Harv_mass'],plant_dict[i]['Harv_cost'],)
+        
+        #Frequency Harvest cannot be greater than the time period
+        if plant_dict[i]['Freq_harv'] > plant_dict[i]['T'] :
+           plant_dict[i]['Freq_harv'] = plant_dict[i]['T'] 
         
         if plant_dict[i]['Immed_harv']=='N':
             upper_limit = int(math.floor(plant_dict[i]['T']/plant_dict[i]['Freq_harv']))
@@ -42,11 +58,25 @@ def execute(args):
             lower_limit = 0
             summation_one = summationOne(lower_limit, upper_limit, harvest_value, args['mdr'], plant_dict[i]['Freq_harv'])
             summation_two = summationTwo(lower_limit2, upper_limit2, plant_dict[i]['Maint_cost'], args['mdr'])
-            
+         
+        biomass = getBiomass(plant_dict[i]['Parcl_area'], plant_dict[i]['Perc_harv'], plant_dict[i]['Harv_mass'],
+                                plant_dict[i]['T'], plant_dict[i]['Freq_harv'] )
+        volume = getVolume(biomass, plant_dict[i]['BCEF'])
         net_present_value = (summation_one - summation_two)
         total_npv = net_present_value * plant_dict[i]['Parcl_area']
-        plant_total.append(total_npv)
+
+
+        feature = layer.GetFeature(i)
+        for field, value in (('TNPV', total_npv), ('TBiomass', biomass), ('TVolume', volume)):
+            index = feature.GetFieldIndex(field)
+            feature.SetField(index, value)       
         
+        plant_total.append(total_npv)
+        layer.SetFeature(feature)
+        
+        feature.Destroy()
+    #save the field modifications to the layer.
+    textOut(args['timber_shape_loc'], args['output_dir'], args['mdr'], args['plant_prod_loc'])
     return plant_total
         
 def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
@@ -76,6 +106,37 @@ def summationTwo(lower, upper, maint_Cost, mdr):
             summation = summation + (maint_Cost/((1.0+(mdr/100.00))**num))
             
     return summation
+
+def getBiomass(parcl_Area, perc_Harv, harv_Mass, T, freq_Harv):
+    TBiomass = parcl_Area * (perc_Harv/100.00) * harv_Mass * math.ceil(T/freq_Harv)
+    return TBiomass
+
+def getVolume(biomass, BCEF):
+    TVolume = biomass * (1.0/BCEF)
+    return TVolume
+
+def textOut(timber_shape, output_dir, mdr, plant_prod):    
+    now = datetime.now()
+    date = now.strftime('%Y-%m-%d-%H-%M')
+    
+    text_array =["TIMBER MODEL PARAMETERS",
+                 "_______________________\n",
+                 "Date and Time: " + date,
+                 "Output Folder: " + output_dir,
+                 "Managed timber forest parcels: " + timber_shape,
+                 "Production table: " + plant_prod,
+                 "Market discount rate: " + str(mdr),
+                 "Script Location: " + os.path.dirname(sys.argv[0])+"\\"+os.path.basename(sys.argv[0])]
+    
+    
+    filename = output_dir+os.sep+"Timber_"+date+".txt"
+    file = open(filename, 'w')
+    
+    for value in text_array:
+        file.write(value + '\n')
+        file.write('\n')
+    
+    file.close()
 
 
 
