@@ -57,28 +57,39 @@ class TestTimber(unittest.TestCase):
         
     def test_timber_summationOne(self):
         plant_dict = dbf.Dbf('../../test_data/timber/input/plant_table.dbf')
-        harvest_value = timber.harvestValue(plant_dict[0]['Perc_harv'], plant_dict[0]['Price'], 
-                                            plant_dict[0]['Harv_mass'], plant_dict[0]['Harv_cost'])
+        i = 3
+        harvest_value = timber.harvestValue(plant_dict[i]['Perc_harv'], plant_dict[i]['Price'], 
+                                            plant_dict[i]['Harv_mass'], plant_dict[i]['Harv_cost'])
+        subtractor = 0
+        lower_limit = 0
+        upper_limit = 0
+        mdr_perc = 1+(7/100.00)
         
-        upper_limit = int(math.floor(plant_dict[0]['T']/plant_dict[0]['Freq_harv']))
+        if plant_dict[i]['Immed_harv']=='N':
+            upper_limit = int(math.floor(plant_dict[i]['T']/plant_dict[i]['Freq_harv']))
+            lower_limit = 1
+            subtractor = 1
+        else:
+            upper_limit = int(math.ceil((plant_dict[i]['T']/plant_dict[i]['Freq_harv'])-1.0))
+            lower_limit = 0
         
-        summation = timber.summationOneAlt(1, upper_limit, harvest_value, 7, plant_dict[0]['Freq_harv'])
+        summation = timber.summationOne(lower_limit, upper_limit, harvest_value, mdr_perc, plant_dict[i]['Freq_harv'], subtractor)
         summation_calculated = 0.0
-        for num in range(1, 6):
-            summation_calculated = summation_calculated + (9215/((1.07)**((10*num)-1)))
+        for num in range(lower_limit, upper_limit+1):
+            summation_calculated = summation_calculated + (harvest_value/((1.07)**((6*num)-0)))
         self.assertAlmostEqual(summation_calculated, summation, 15)
         
     def test_timber_summationTwo(self):
         plant_dict = dbf.Dbf('../../test_data/timber/input/plant_table.dbf')
         
         upper_limit = int(plant_dict[0]['T']-1)
-        
-        summation = timber.summationTwo(0, upper_limit, plant_dict[0]['Maint_cost'], 7)
+        mdr_perc = 1+(7/100.00)
+        summation = timber.summationTwo(0, upper_limit, plant_dict[0]['Maint_cost'], mdr_perc)
         summation_calculated = 0.0
         for num in range(0, 50):
             summation_calculated = summation_calculated + (100/((1.07)**num))
             
-        self.assertAlmostEqual(summation_calculated, summation, 15)
+        self.assertAlmostEqual(20, summation, 15)
         
     def test_timber_totalNetPresentValue(self):
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -90,8 +101,20 @@ class TestTimber(unittest.TestCase):
         timber_shp_copy = ogr.Open('../../test_data/timber/output/plantation.shp', 1)
        
         timber_layer = timber_shp_copy.GetLayerByName('plantation')
-        plant_dict = {'plant_prod':plant_file, 'mdr':7, 'timber_layer': timber_layer, 'timber_shp_copy': timber_shp_copy}
+        
+        plant_dict = {'timber_shape_loc': '../../test_data/timber/input/plantation.shp',
+                      'output_dir': '../../test_data/timber/output',
+                      'plant_prod_loc': '../../test_data/timber/input/plant_table.dbf',
+                      'plant_prod':plant_file, 
+                      'mdr':7.0, 
+                      'timber_layer_copy': timber_layer, 
+                      }
+        
         total_dict = timber.execute(plant_dict)
+        
+        timber_shp_copy = None
+        plant_shape = None
+        plant_file.close()
         
         summation_calculatedOne = 0.0
         summation_calculatedTwo = 0.0

@@ -25,25 +25,25 @@ def execute(args):
     timber_shp_file = args['timber_shp_uri']
     timber_shp = ogr.Open(args['timber_shp_uri'].encode(filesystemencoding), 1)
     
-    output_source = args['output_dir']+os.sep+'plantation.shp'
-    
-    if os.path.isfile(output_source): 
-        os.remove(output_source)
-        os.remove(args['output_dir']+os.sep+'plantation.dbf')
-        os.remove(args['output_dir']+os.sep+'plantation.prj')
-        os.remove(args['output_dir']+os.sep+'plantation.shx')
+    output_source = args['output_dir']+os.sep+'Output'
+    temp = output_source + os.sep + 'plantation.shp'
+    if os.path.isfile(temp): 
+        os.remove(temp)
+        os.remove(output_source+os.sep+'plantation.dbf')
+        os.remove(output_source+os.sep+'plantation.prj')
+        os.remove(output_source+os.sep+'plantation.shx')
         
     copy = ogr.GetDriverByName('ESRI Shapefile').\
-        CopyDataSource(timber_shp, args['output_dir'])
+        CopyDataSource(timber_shp, output_source)
 
     timber_shp.Destroy()
     copy.Destroy()    
    
-    timber_shp_copy = ogr.Open(output_source.encode(filesystemencoding), 1)
+    timber_shp_copy = ogr.Open(temp.encode(filesystemencoding), 1)
     timber_layer_copy = timber_shp_copy.GetLayerByName('plantation')
     
     args = {'timber_shape_loc':timber_shp_file,
-            'output_dir': args['output_dir'],
+            'output_dir': output_source,
             'timber_layer_copy': timber_layer_copy,
             'plant_prod': dbf.Dbf(args['plant_prod_uri']),
             'plant_prod_loc': args['plant_prod_uri'],
@@ -53,7 +53,10 @@ def execute(args):
     timber.execute(args)
 
     #This is how GDAL closes its datasets in python
-
+    timber_shp_copy.Destroy()
+    #timber_layer_copy.Destroy()
+    #close the pools DBF file
+    args['plant_prod'].close()
     copy = None
     timber_shp = None
     timber_shp_copy = None

@@ -15,95 +15,117 @@ def execute(args):
         it to an outputted shapefile.
     
         args - is a dictionary with at least the following entries:
-        args['timber_shape_loc']
-        args['output_dir']
-        args['timber_layer_copy']     - is the layer which holds the polygon features from the copied shapefile.
-        args['timber_shp_copy']  - is a copy of the original OGR shapefile and will be used as the output with
-                                    with the new fields attached to the features.
-        args['mdr']              - the market discount rate.
-        args['plant_prod']       - the dbf file which has the attribute values of each timber parcel.
-        args['plant_prod_loc']
+        
+        args['timber_shape_loc']    - the location of the input shapefile
+        args['output_dir']          - the workspace where the outputs will be saved.
+        args['timber_layer_copy']   - is the layer which holds the polygon features from the copied shapefile.
+        args['timber_shp_copy']     - is a copy of the original OGR shapefile and will be used as the output with
+                                        with the new fields attached to the features.
+        args['mdr']                 - the market discount rate.
+        args['plant_prod']          - the dbf file which has the attribute values of each timber parcel.
+        args['plant_prod_loc']      - the location of the production table file.
+        
         returns nothing"""
         
-
+    plant_total = []
     layer = args['timber_layer_copy']
+    mdr = float(args['mdr'])
+    plant_prod_loc = args['plant_prod_loc']
+    plant_dict = args['plant_prod']
+    timber_shape_loc = args['timber_shape_loc']
+    output_dir = args['output_dir']
+    
+    mdr_perc = 1+(mdr/100.00)
+    
     for fieldname in ('TNPV', 'TBiomass', 'TVolume'):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
-
-    plant_dict = args['plant_prod']
-    plant_total = []
+    
     for i in range(plant_dict.recordCount):
+        
+        freq_Harv  = plant_dict[i]['Freq_harv']
+        num_Years  = float(plant_dict[i]['T'])
+        harv_Mass  = plant_dict[i]['Harv_mass']
+        harv_Cost  = plant_dict[i]['Harv_cost']
+        price      = plant_dict[i]['Price']
+        maint_Cost = plant_dict[i]['Maint_cost']
+        BCEF       = plant_dict[i]['BCEF']
+        parcl_Area = plant_dict[i]['Parcl_area']
+        perc_Harv  = plant_dict[i]['Perc_harv']
+        immed_Harv = plant_dict[i]['Immed_harv']
+           
         net_present_value = 0
         summation_one = 0.0
         summation_two = 0.0
+        lower_limit = 0
+        upper_limit = 0
         lower_limit2 = 0
-        upper_limit2 = plant_dict[i]['T'] - 1
-        harvest_value = harvestValue(plant_dict[i]['Perc_harv'],plant_dict[i]['Price'],
-                                     plant_dict[i]['Harv_mass'],plant_dict[i]['Harv_cost'],)
+        upper_limit2 = num_Years - 1
+        subtractor = 0.0
+        yr_per_freq = num_Years/freq_Harv
+        
+        #Calculate the harvest value for parcel x
+        harvest_value = harvestValue(perc_Harv, price, harv_Mass, harv_Cost)
         
         #Frequency Harvest cannot be greater than the time period
-        if plant_dict[i]['Freq_harv'] > plant_dict[i]['T'] :
-           plant_dict[i]['Freq_harv'] = plant_dict[i]['T'] 
+        if freq_Harv > num_Years :
+           freq_Harv = num_Years 
         
-        if plant_dict[i]['Immed_harv']=='N':
-            upper_limit = int(math.floor(plant_dict[i]['T']/plant_dict[i]['Freq_harv']))
+        #Check to see if immediate harvest will occur
+        if immed_Harv == 'N':
+            upper_limit = int(math.floor(yr_per_freq))
             lower_limit = 1
-            summation_one = summationOneAlt(lower_limit, upper_limit, harvest_value, args['mdr'], plant_dict[i]['Freq_harv'])
-            summation_two = summationTwo(lower_limit2, upper_limit2, plant_dict[i]['Maint_cost'], args['mdr'])
-
-            
+            subtractor = 1.0
+            summation_one = summationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
+            summation_two = summationTwo(lower_limit2, upper_limit2, maint_Cost, mdr_perc)            
         else:
-            upper_limit = int((math.ceil(float(plant_dict[i]['T'])/float(plant_dict[i]['Freq_harv'])))-1)
+            upper_limit = int((math.ceil(yr_per_freq)-1.0))
             lower_limit = 0
-            summation_one = summationOne(lower_limit, upper_limit, harvest_value, args['mdr'], plant_dict[i]['Freq_harv'])
-            summation_two = summationTwo(lower_limit2, upper_limit2, plant_dict[i]['Maint_cost'], args['mdr'])
-         
-        biomass = getBiomass(plant_dict[i]['Parcl_area'], plant_dict[i]['Perc_harv'], plant_dict[i]['Harv_mass'],
-                                plant_dict[i]['T'], plant_dict[i]['Freq_harv'] )
-        volume = getVolume(biomass, plant_dict[i]['BCEF'])
+            summation_one = summationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
+            summation_two = summationTwo(lower_limit2, upper_limit2, maint_Cost, mdr_perc)
+        
+        #Calculate Biomass
+        biomass = getBiomass(parcl_Area, perc_Harv, harv_Mass, num_Years, freq_Harv)
+        
+        volume = getVolume(biomass, BCEF)
         net_present_value = (summation_one - summation_two)
-        total_npv = net_present_value * plant_dict[i]['Parcl_area']
-
+        total_npv = net_present_value * parcl_Area
 
         feature = layer.GetFeature(i)
+        
         for field, value in (('TNPV', total_npv), ('TBiomass', biomass), ('TVolume', volume)):
             index = feature.GetFieldIndex(field)
             feature.SetField(index, value)       
-        
-        plant_total.append(total_npv)
+        if i==3:
+            plant_total.append(summation_one)
+        else:
+            plant_total.append(total_npv)
         layer.SetFeature(feature)
         
         feature.Destroy()
     #save the field modifications to the layer.
-    textOut(args['timber_shape_loc'], args['output_dir'], args['mdr'], args['plant_prod_loc'])
+    
+    textFileOut(timber_shape_loc, output_dir, mdr, plant_prod_loc)
+
     return plant_total
         
 def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
     harvest_value = (perc_Harv/100.00)*((price*harv_Mass)-harv_Cost)
     return harvest_value
 
-def summationOne(lower, upper, harvest_value, mdr, freq_Harv):
+def summationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
     summation = 0.0
     upper = upper + 1
     for num in range(lower, upper):
-            summation = summation + (harvest_value/((1.0+(mdr/100.00))**(freq_Harv*num)))
-            
+            summation = summation + (harvest_value/(mdr_perc**((freq_Harv*num)-subtractor)))
+                        
     return summation
 
-def summationOneAlt(lower, upper, harvest_value, mdr, freq_Harv):
+def summationTwo(lower, upper, maint_Cost, mdr_perc):
     summation = 0.0
     upper = upper + 1
     for num in range(lower, upper):
-            summation = summation + (harvest_value/((1.0+(mdr/100.00))**((freq_Harv*num)-1)))
-            
-    return summation
-
-def summationTwo(lower, upper, maint_Cost, mdr):
-    summation = 0.0
-    upper = upper + 1
-    for num in range(lower, upper):
-            summation = summation + (maint_Cost/((1.0+(mdr/100.00))**num))
+            summation = summation + (maint_Cost/(mdr_perc**num))
             
     return summation
 
@@ -115,7 +137,7 @@ def getVolume(biomass, BCEF):
     TVolume = biomass * (1.0/BCEF)
     return TVolume
 
-def textOut(timber_shape, output_dir, mdr, plant_prod):    
+def textFileOut(timber_shape, output_dir, mdr, plant_prod):    
     now = datetime.now()
     date = now.strftime('%Y-%m-%d-%H-%M')
     

@@ -27,8 +27,9 @@ process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT).communicate()[0]
 
-gp.AddMessage(process)
+#gp.AddMessage(process)
 gp.AddMessage('Done')
+
 
 #
 #'header' : "TIMBER MODEL PARAMETERS",
