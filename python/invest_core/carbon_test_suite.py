@@ -444,7 +444,7 @@ class CarbonTestSuite(unittest.TestCase):
             hwpsum += ((1-(math.e**(-w)))/(w*math.e**(m*w)))
     
         #verify our output
-        self.assertEqual(result, hwpsum)
+        self.assertEqual(result, math.floor(hwpsum))
 
     def test_carbon_valuate(self):
         """Verify the correct output of carbon.valuate()
