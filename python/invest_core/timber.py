@@ -58,7 +58,7 @@ def execute(args):
         lower_limit = 0
         upper_limit = 0
         lower_limit2 = 0
-        upper_limit2 = num_Years - 1
+        upper_limit2 = int(num_Years - 1)
         subtractor = 0.0
         yr_per_freq = num_Years/freq_Harv
         
