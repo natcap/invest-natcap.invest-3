@@ -105,6 +105,67 @@ class TestTimber(unittest.TestCase):
             
         self.assertAlmostEqual(summation_calculated, summation, 15)
         
+    def test_timber_smoke(self):
+        dbf_path = '../../test_data/timber/test.dbf'
+        shp_path = '../../test_data/timber/'
+        os.mkdir('../../test_data/timber/Output')
+        
+        db = dbf.Dbf(dbf_path, new=True)
+        db.addField( ('OID', 'N', 1), ('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1), ('Parcel_ID', 'N', 1),
+                     ('Parcl_area', 'N', 4), ('Perc_harv', 'N', 2), ('Harv_mass', 'N', 3), 
+                     ('Freq_harv', 'N', 2), ('Maint_cost', 'N', 3), ('Harv_cost', 'N', 3), ('Immed_harv', 'C', 1))
+        rec = db.newRecord()
+        rec['OID'] = 0
+        rec['PRICE'] = 1
+        rec['T'] = 5
+        rec['BCEF'] = 1
+        rec['Parcel_ID'] = 1
+        rec['Parcl_area'] = 1
+        rec['Perc_harv'] = 1
+        rec['Harv_mass'] = 1
+        rec['Freq_harv'] = 1
+        rec['Maint_cost'] = 1
+        rec['Harv_cost'] = 1
+        rec['Immed_harv'] = 'N'
+        rec.store()
+        db.close()
+        
+        driverName = "ESRI Shapefile"
+        drv = ogr.GetDriverByName(driverName)
+        ds = drv.CreateDataSource(shp_path)
+        lyr = ds.CreateLayer('plantation', None, ogr.wkbUnknown)
+        feat = ogr.Feature(lyr.GetLayerDefn())
+        lyr.CreateFeature(feat)
+        feat.Destroy()
+        
+        ds = None
+        
+        timber_shp_copy = ogr.Open('../../test_data/timber/plantation.shp', 1)
+        timber_layer_copy = timber_shp_copy.GetLayerByName('plantation')
+        
+        db = dbf.Dbf(dbf_path)
+        
+        args= {'timber_shape_loc': shp_path,
+               'output_dir': '../../test_data/timber/Output',
+               'plant_prod_loc': dbf_path,
+               'plant_prod':db, 
+               'mdr':7, 
+               'timber_layer_copy': timber_layer_copy,
+               'timber_shp_copy': timber_shp_copy 
+               }
+        
+        timber.execute(args)
+
+        db.close()
+        timber_shp_copy = None
+        
+        os.remove(dbf_path)
+        os.remove('../../test_data/timber/plantation.shp')
+        os.remove('../../test_data/timber/plantation.shx')
+        os.remove('../../test_data/timber/plantation.dbf')
+        
+        pass
+        
     def test_timber_with_inputs(self):
         plant_file = dbf.Dbf('../../test_data/timber/input/plant_table.dbf')
         plant_shape = ogr.Open('../../test_data/timber/input/plantation.shp', 1)
