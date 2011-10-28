@@ -5,8 +5,7 @@ import math
 import numpy as np
 from dbfpy import dbf
 
-from osgeo import ogr, gdal
-from osgeo.gdalconst import *
+from osgeo import ogr
 
 class TestTimber(unittest.TestCase):
 

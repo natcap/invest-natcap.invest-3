@@ -17,7 +17,7 @@ def execute(args):
     args['plant_prod_uri']    - The DBF attribute table location
     args['market_disc_rate']  - The market discount rate as a string
     
-    """
+    """    
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     filesystemencoding = sys.getfilesystemencoding()
     
@@ -41,7 +41,7 @@ def execute(args):
 
     #OGR closes datasources this way to make sure data gets flushed properly
     timber_shp.Destroy()
-    copy.Destroy()    
+    copy.Destroy()
    
     timber_shp_copy = ogr.Open(shape_copy_source.encode(filesystemencoding), 1)
     timber_layer_copy = timber_shp_copy.GetLayerByName('plantation')

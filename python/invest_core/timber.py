@@ -87,8 +87,7 @@ def execute(args):
         #Calculate Volume
         volume = getVolume(biomass, BCEF)
         
-        net_present_value = (summation_one - summation_two)
-        
+        net_present_value = (summation_one - summation_two)        
         total_npv = net_present_value * parcl_Area
 
         #Grab the polygon from the shapefile that is associated with the current timber parcel
