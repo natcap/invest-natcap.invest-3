@@ -1,9 +1,10 @@
+import os, sys
 import unittest
-import numpy as np
-import os
-from dbfpy import dbf
-from osgeo import ogr, gdal
-from osgeo.gdalconst import *
+
+#Add current directory and parent path for import tests
+cmd_folder = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, cmd_folder + '/../')
+
 import carbon_biophysical
 
 class TestCarbonBiophysical(unittest.TestCase):
