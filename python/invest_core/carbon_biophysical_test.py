@@ -17,7 +17,9 @@ class TestCarbonBiophysical(unittest.TestCase):
         args['calculate_hwp'] = False
         args['calc_uncertainty'] = False
         args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
-        args['carbon_pools_uri'] = '../../carbon_pools_float.dbf'
+        args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
+
+        carbon_biophysical.execute(args)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)

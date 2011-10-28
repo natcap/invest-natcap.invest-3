@@ -97,7 +97,6 @@ def execute(args):
     #to have range columns in them, but no need to check at this level.
     biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'])
 
-
     #At this point all inputs are loaded into biophysicalArgs.  The 
     #biophysical model also needs temporary and output files to do its
     #calculation.  These are calculated next.
@@ -118,7 +117,7 @@ def execute(args):
 
     #If we calculate uncertainty, we need to generate the colorized map that
     #Highlights the percentile ranges
-    if args['calculate_uncertainty']:
+    if args['calc_uncertainty']:
         outputURIs['uncertainty_percentile_map'] = outputDirectoryPrefix + \
             'uncertainty_colormap.tif'
 
@@ -137,18 +136,20 @@ def execute(args):
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
     for datasetName, datasetPath in outputURIs.iteritems():
-        biophysicalArgs[datasetName] = newRasterFromBase(args['lulc_cur'],
-            datasetPath, 'GTiff', -5.0, gdal.GDT_Float32)
+        biophysicalArgs[datasetName] = \
+            newRasterFromBase(biophysicalArgs['lulc_cur'], datasetPath,
+                              'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the carbon model.
     #carbon.execute(biophysicalArgs)
+
+    #close the pools DBF file
+    biophysicalArgs['carbon_pools'].close()
 
     #close all newly created raster datasets (is this required?)
     for dataset in biophysicalArgs:
         biophysicalArgs[dataset] = None
 
-    #close the pools DBF file
-    args['carbon_pools'].close()
 
 
 def newRasterFromBase(base, outputURI, format, nodata, datatype):
