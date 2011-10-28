@@ -25,3 +25,7 @@ syntax: regexp
 ^carbon_output_map$
 syntax: regexp
 ^uncertainty_sequestration\.tif$
+syntax: regexp
+^\.settings$
+syntax: regexp
+^\.hgignore$
