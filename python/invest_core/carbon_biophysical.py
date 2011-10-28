@@ -1,8 +1,8 @@
-"""InVEST main plugin interface module"""
+"""InVEST Carbon Modle file handler module"""
 
-import imp, sys, os
+import sys, os
 import simplejson as json
-import carbon
+import carbon_core
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 import numpy
