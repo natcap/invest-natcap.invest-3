@@ -25,26 +25,28 @@ def execute(args):
     timber_shp = ogr.Open(args['timber_shp_uri'].encode(filesystemencoding), 1)
     
     #Add the Output directory onto the given workspace
-    output_source = args['output_dir']+os.sep+'Output'
-    shape_copy_source = output_source + os.sep + 'plantation.shp'
+    output_source = args['output_dir']+os.sep+'Output/'
+    if not os.path.isdir(output_source):
+        os.mkdir(output_source)
+    shape_copy_source = output_source + 'timber.shp'
     
     #Overwrite any current output if the workspace is the same
     if os.path.isfile(shape_copy_source): 
         os.remove(shape_copy_source)
-        os.remove(output_source+os.sep+'plantation.dbf')
-        os.remove(output_source+os.sep+'plantation.prj')
-        os.remove(output_source+os.sep+'plantation.shx')
+#        os.remove(output_source+os.sep+'timber.dbf')
+#        os.remove(output_source+os.sep+'timber.prj')
+#        os.remove(output_source+os.sep+'timber.shx')
     
     #Copy the input shapefile into the designated output folder
     copy = ogr.GetDriverByName('ESRI Shapefile').\
-        CopyDataSource(timber_shp, output_source)
+        CopyDataSource(timber_shp, output_source+'timber.shp')
 
     #OGR closes datasources this way to make sure data gets flushed properly
     timber_shp.Destroy()
     copy.Destroy()
    
     timber_shp_copy = ogr.Open(shape_copy_source.encode(filesystemencoding), 1)
-    timber_layer_copy = timber_shp_copy.GetLayerByName('plantation')
+    timber_layer_copy = timber_shp_copy.GetLayerByName('timber')
     
     args = {'timber_shape_loc':timber_shp_file,
             'output_dir': output_source,
