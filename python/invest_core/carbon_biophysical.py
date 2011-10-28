@@ -62,6 +62,8 @@ def execute(args):
         
         returns nothing."""
 
+    #This ensures we are not in Arc's python directory so that when
+    #we import gdal stuff we don't get the wrong GDAL version.
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     gdal.AllRegister()
 
