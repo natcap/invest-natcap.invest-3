@@ -67,9 +67,47 @@ def execute(args):
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     gdal.AllRegister()
 
-    #specify generated URIs
-    directoryPrefix = args['output_dir'] + os.sep
-    defaultURI = {'storage_cur' : directoryPrefix + 'tot_C_cur.tif',
+    #define biophysical model inputs
+    biophysicalArgs = {}
+
+    #Uncertainty percentage is required if calculating uncertainty
+    if args['calc_uncertainty']:
+        biophysicalArgs['uncertainty_percentile'] = \
+            args['uncertainty_percentile']
+
+    #lulc_cur is always required
+    biophysicalArgs['lulc_cur'] = gdal.Open(args['lulc_cur_uri'],
+                                            gdal.GA_ReadOnly)
+
+    #a future lulc is only required if sequestering or hwp calculating
+    if args['calculate_sequestration'] or args['calculate_hwp']:
+        biophysicalArgs['lulc_fut'] = gdal.Open(args['lulc_fut_uri'],
+                                            gdal.GA_ReadOnly)
+
+    #Years and harvest shapes are required if doing HWP calculation
+    if args['calculate_hwp']:
+        for x in ['lulc_cur_year', 'lulc_fut_year']:
+            biophysicalArgs[x] = args[x]
+        for x in ['hwp_cur_shape', 'hwp_fut_shape']:
+            biophysicalArgs[x] = args[x + '_uri']
+
+    #Always need carbon pools, if uncertainty calculation they also need
+    #to have range columns in them.  No need to check that in file handler 
+    #though
+    biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'])
+
+
+
+
+
+    #Create GIS objects for input and output
+    outputDirectoryName = 'Output'
+    directoryPrefix = args['workspace_dir'] + os.sep + outputDirectoryName
+
+    defaultURI = {'storage_cur' : directoryPrefix + 'tot_C_cur.tif'}
+
+
+
                   'storage_fut' : directoryPrefix + 'tot_C_fut.tif',
                   'seq_delta' : directoryPrefix + 'sequest.tif',
                   'seq_value' : directoryPrefix + 'value_seq.tif',
@@ -80,10 +118,7 @@ def execute(args):
                   'output_seq' : directoryPrefix + 'uncertainty_sequestration.tif',
                   'output_map' : directoryPrefix + 'uncertainty_colormap.tif'}
 
-    #open the two required elements.
-    lulc_cur = gdal.Open(args['lulc_cur'], gdal.GA_ReadOnly)
-    args['lulc_cur'] = lulc_cur
-    args['carbon_pools'] = dbf.Dbf(args['carbon_pools'])
+
     makeRasters(('storage_cur',), defaultURI, args)
 
     #open the future LULC if it has been provided
