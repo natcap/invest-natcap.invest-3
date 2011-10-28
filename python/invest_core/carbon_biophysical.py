@@ -137,7 +137,8 @@ def execute(args):
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
     for datasetName, datasetPath in outputURIs.iteritems():
-        biophysicalArgs[datasetName] = mimic(args['lulc_cur'], datasetPath)
+        biophysicalArgs[datasetName] = mimic(args['lulc_cur'], datasetPath,
+                                             'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the carbon model.
     #carbon.execute(biophysicalArgs)
@@ -150,19 +151,22 @@ def execute(args):
     args['carbon_pools'].close()
 
 
-def mimic(base, outputURI, format='GTiff', nodata= -5.0, datatype=gdal.GDT_Float32):
-    """Create a new, empty GDAL raster dataset with the spatial references and
-        geotranforms of the base GDAL raster dataset.
+def mimic(base, outputURI, format, nodata, datatype):
+    """Create a new, empty GDAL raster dataset with the spatial references,
+        dimensions and geotranforms of the base GDAL raster dataset.
         
-        base - a GDAL raster dataset
+        base - a the GDAL raster dataset to base output size, and transforms on
         outputURI - a string URI to the new output raster dataset.
-        format='GTiff' - a string representing the GDAL file format of the 
+        format - a string representing the GDAL file format of the 
             output raster.  See http://gdal.org/formats_list.html for a list
             of available formats.  This parameter expects the format code, such
             as 'GTiff' or 'MEM'
-        nodata='-5.0 - a number that will be set as the nodata value for the 
-            output raster
-        datatype=gdal.GDT_Float32 - the datatype of the raster.
+        nodata - a value that will be set as the nodata value for the 
+            output raster.  Should be the same type as 'datatype'
+        datatype - the pixel datatype of the output raster, for example 
+            gdal.GDT_Float32.  See the following header file for supported 
+            pixel types:
+            http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
                 
         returns a new GDAL raster dataset."""
 
@@ -172,12 +176,12 @@ def mimic(base, outputURI, format='GTiff', nodata= -5.0, datatype=gdal.GDT_Float
     geotransform = base.GetGeoTransform()
 
     driver = gdal.GetDriverByName(format)
-    new_ds = driver.Create(outputURI, cols, rows, 1, datatype)
-    new_ds.SetProjection(projection)
-    new_ds.SetGeoTransform(geotransform)
-    new_ds.GetRasterBand(1).SetNoDataValue(nodata)
+    newRaster = driver.Create(outputURI, cols, rows, 1, datatype)
+    newRaster.SetProjection(projection)
+    newRaster.SetGeoTransform(geotransform)
+    newRaster.GetRasterBand(1).SetNoDataValue(nodata)
 
-    return new_ds
+    return newRaster
 
 def uncertainty(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
