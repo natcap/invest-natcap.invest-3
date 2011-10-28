@@ -150,28 +150,11 @@ def execute(args):
     args['carbon_pools'].close()
 
 
-def makeRasters(dsList, defaultURI, args):
-    """Create a new, blank raster at the correct URI for each raster in dsList.
-        
-        - dsList - a Python list or array of args dict keys to be created
-        - defaultURI - a Python dict mapping args keys of datasets to their
-            default URIs
-        - args - a python dictionary with possible entries specified in
-            invest_carbon_core.execute.  This function assumes that all entries
-            used in this function are strings representing the URI to the desired
-            dataset."""
-
-    for dataset in dsList:
-        if dataset in args:
-            args[dataset] = mimic(args['lulc_cur'], args[dataset])
-        else:
-            args[dataset] = mimic(args['lulc_cur'], defaultURI[dataset])
-
-def mimic(example, outputURI, format='GTiff', nodata= -5.0, datatype=gdal.GDT_Float32):
+def mimic(base, outputURI, format='GTiff', nodata= -5.0, datatype=gdal.GDT_Float32):
     """Create a new, empty GDAL raster dataset with the spatial references and
-        geotranforms of the example GDAL raster dataset.
+        geotranforms of the base GDAL raster dataset.
         
-        example - a GDAL raster dataset
+        base - a GDAL raster dataset
         outputURI - a string URI to the new output raster dataset.
         format='GTiff' - a string representing the GDAL file format of the 
             output raster.  See http://gdal.org/formats_list.html for a list
@@ -183,10 +166,10 @@ def mimic(example, outputURI, format='GTiff', nodata= -5.0, datatype=gdal.GDT_Fl
                 
         returns a new GDAL raster dataset."""
 
-    cols = example.RasterXSize
-    rows = example.RasterYSize
-    projection = example.GetProjection()
-    geotransform = example.GetGeoTransform()
+    cols = base.RasterXSize
+    rows = base.RasterYSize
+    projection = base.GetProjection()
+    geotransform = base.GetGeoTransform()
 
     driver = gdal.GetDriverByName(format)
     new_ds = driver.Create(outputURI, cols, rows, 1, datatype)
