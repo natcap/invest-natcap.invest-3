@@ -7,17 +7,19 @@ gp = arcgisscripting.create()
 os.chdir(os.path.dirname(os.path.realpath(__file__)) + "\\..\\")
 gp.AddMessage(os.getcwd())
 
+#These args and names are defined on the following spreadsheet:
+#https://docs.google.com/spreadsheet/ccc?key=0AqZtsmcgQETMdEREZV9NV3l6Wk5Mc0NFZGFaQ3JRUUE
 args_dict = {
     'calculate_sequestration': gp.GetParameterAsText(0),
     'calculate_hwp' : gp.GetParameterAsText(1),
-    'output_dir': gp.GetParameterAsText(2),
+    'workspace_dir': gp.GetParameterAsText(2),
     'lulc_cur_uri': gp.GetParameterAsText(3),
     'lulc_fut_uri': gp.GetParameterAsText(4),
     'lulc_cur_year': gp.GetParameterAsText(5),
     'lulc_fut_year': gp.GetParameterAsText(6),
-    'pool_uri': gp.GetParameterAsText(7),
-    'hwp_cur_shape' : gp.GetParameterAsText(8),
-    'hwp_fut_shape' : gp.GetParameterAsText(9)
+    'carbon_pools_uri': gp.GetParameterAsText(7),
+    'hwp_cur_shape_uri' : gp.GetParameterAsText(8),
+    'hwp_fut_shape_uri' : gp.GetParameterAsText(9)
     }
 
 #Save user inputs from the previous run
