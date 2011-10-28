@@ -137,8 +137,8 @@ def execute(args):
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
     for datasetName, datasetPath in outputURIs.iteritems():
-        biophysicalArgs[datasetName] = mimic(args['lulc_cur'], datasetPath,
-                                             'GTiff', -5.0, gdal.GDT_Float32)
+        biophysicalArgs[datasetName] = newRasterFromBase(args['lulc_cur'],
+            datasetPath, 'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the carbon model.
     #carbon.execute(biophysicalArgs)
@@ -151,7 +151,7 @@ def execute(args):
     args['carbon_pools'].close()
 
 
-def mimic(base, outputURI, format, nodata, datatype):
+def newRasterFromBase(base, outputURI, format, nodata, datatype):
     """Create a new, empty GDAL raster dataset with the spatial references,
         dimensions and geotranforms of the base GDAL raster dataset.
         
