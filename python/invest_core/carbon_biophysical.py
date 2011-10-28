@@ -15,48 +15,36 @@ def execute(args):
         log, warning, or error messages to stdout.
         
         args - a python dictionary with at the following possible entries:
-        
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-            
         args['calculate_sequestration'] - a boolean, True if sequestration
             is to be calculated.  Infers that args['lulc_fut_uri'] should be 
             set.
-            
         args['calculate_hwp'] - a boolean, True if harvested wood product
             calcuation is to be done.  Also implies a sequestration 
             calculation.  Thus args['lulc_fut_uri'], args['hwp_cur_shape_uri'],
             args['hwp_fut_shape_uri'], args['lulc_cur_year'], and 
             args['lulc_fut_year'] should be set.
-            
         args['calc_uncertainty'] - a Boolean.  True if we wish to calculate 
             uncertainty in the carbon model.  Implies that carbon pools should
             have value ranges
-            
         args['uncertainty_percentile'] - the percentile cutoff desired for 
             uncertainty calculations (required if args['calc_uncertainty'] is 
             True) 
-            
         args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
-            
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (required
          if calculating sequestration or HWP)
-         
         args['lulc_cur_year'] - An integer representing the year of lulc_cur 
             used in HWP calculation (required if args['calculate_hwp'] is True)
-            
         args['lulc_fut_year'] - An integer representing the year of  lulc_fut
             used in HWP calculation (required if args['calculate_hwp'] is True)
-            
         args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
             storage density to the lulc classifications specified in the
             lulc rasters.  If args['calc_uncertainty'] is True the columns
             should have additional information about min, avg, and max carbon
             pool measurements. 
-            
         args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood 
             calculation (required if args['calculate_hwp'] is True) 
-            
         args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood 
             calculation (required if args['calculate_hwp'] is True)
         
