@@ -98,56 +98,53 @@ def execute(args):
     biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'])
 
 
+    #At this point all inputs are loaded into biophysicalArgs.  The 
+    #biophysical model also needs temporary and output files to do its
+    #calculation.  These are calculated next.
 
-    #Create GIS objects for input and output
-    outputDirectoryName = 'Output'
-    directoryPrefix = args['workspace_dir'] + os.sep + outputDirectoryName
+    #These lines sets up the output directory structure for the workspace
+    outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output'
+    intermediateDirectoryPrefix = args['workspace_dir'] + os.sep + \
+        'Intermediate'
 
-    defaultURI = {'storage_cur' : directoryPrefix + 'tot_C_cur.tif'}
+    #This defines a dictionary that links output/temporary GDAL/OAL objects
+    #to their locations on disk.  Helpful for creating the objects in the next 
+    #step
+    outputURIs = {}
+    outputURIs['tot_C_cur'] = outputDirectoryPrefix + 'tot_C_cur.tif'
+    if args['calculate_sequestration'] or args['calculate_hwp']:
+        outputURIs['tot_C_fut'] = outputDirectoryPrefix + 'tot_C_fut.tif'
+        outputURIs['sequest'] = outputDirectoryPrefix + 'sequest.tif'
 
+    #If we calculate uncertainty, we need to generate the colorized map that
+    #Highlights the percentile ranges
+    if args['calculate_uncertainty']:
+        outputURIs['uncertainty_percentile_map'] = outputDirectoryPrefix + \
+            'uncertainty_colormap.tif'
 
+    #If we're doing a HWP calculation, we need temporary rasters to hold the
+    #HWP pools
+    if args['calculate_hwp']:
+        outputURIs['bio_hwp_cur'] = intermediateDirectoryPrefix + \
+            'bio_hwp_cur.tif'
+        outputURIs['bio_hwp_fut'] = intermediateDirectoryPrefix + \
+            'bio_hwp_fut.tif'
+        outputURIs['vol_hwp_cur'] = intermediateDirectoryPrefix + \
+            'vol_hwp_cur.tif'
+        outputURIs['vol_hwp_fut'] = intermediateDirectoryPrefix + \
+            'vol_hwp_fut.tif'
 
-                  'storage_fut' : directoryPrefix + 'tot_C_fut.tif',
-                  'seq_delta' : directoryPrefix + 'sequest.tif',
-                  'seq_value' : directoryPrefix + 'value_seq.tif',
-                  'biomass_cur' : directoryPrefix + 'bio_hwp_cur.tif',
-                  'biomass_fut' : directoryPrefix + 'bio_hwp_fut.tif',
-                  'volume_cur'  : directoryPrefix + 'vol_hwp_cur.tif',
-                  'volume_fut'  : directoryPrefix + 'vol_hwp_fut.tif',
-                  'output_seq' : directoryPrefix + 'uncertainty_sequestration.tif',
-                  'output_map' : directoryPrefix + 'uncertainty_colormap.tif'}
-
-
-    makeRasters(('storage_cur',), defaultURI, args)
-
-    #open the future LULC if it has been provided
-    if 'lulc_fut' in args:
-        args['lulc_fut'] = gdal.Open(args['lulc_fut'], gdal.GA_ReadOnly)
-        makeRasters(('storage_fut', 'seq_delta'), defaultURI, args)
-
-    if args['calc_uncertainty'] == True:
-        #create the uncertainty sequestration raster        
-        args['output_seq'] = mimic(lulc_cur, defaultURI['output_seq'], nodata=0)
-
-        #create the uncertainty colormap raster
-        args['output_map'] = mimic(lulc_cur, defaultURI['output_map'],
-                                    nodata=255, datatype=gdal.GDT_Byte)
-
-    if args['calc_value'] == True:
-        makeRasters(('seq_value',), defaultURI, args)
+    #Create the output and intermediate rasters to be the same size/format as
+    #the base LULC
+    for datasetName, datasetPath in outputURIs.iteritems():
+        biophysicalArgs[datasetName] = mimic(args['lulc_cur'], datasetPath)
 
     #run the carbon model.
-    carbon.execute(args)
+    #carbon.execute(biophysicalArgs)
 
-    #run the carbon uncertainty code
-#   carbon_scenario_uncertainty.execute(args)
-
-    #close all newly created raster datasets
-    for dataset in ('storage_cur', 'storage_fut', 'seq_delta', 'seq_value',
-                    'biomass_cur', 'biomass_fut', 'volume_cur', 'volume_fut',
-                    'output_seq', 'output_map'):
-        if dataset in args:
-            args[dataset] = None
+    #close all newly created raster datasets (is this required?)
+    for dataset in biophysicalArgs:
+        biophysicalArgs[dataset] = None
 
     #close the pools DBF file
     args['carbon_pools'].close()
