@@ -128,10 +128,10 @@ def execute(args):
             newRasterFromBase(biophysicalArgs['lulc_cur'], datasetPath,
                               'GTiff', -5.0, gdal.GDT_Float32)
 
-    #run the carbon model.
-    #carbon.execute(biophysicalArgs)
+    #run the biophysical part of the carbon model.
+    carbon.biophysical(biophysicalArgs)
 
-    #close the pools DBF file
+    #close the pools DBF file (is this required?)
     biophysicalArgs['carbon_pools'].close()
 
     #close all newly created raster datasets (is this required?)

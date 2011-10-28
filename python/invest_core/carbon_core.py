@@ -7,7 +7,7 @@ from dbfpy import dbf
 import invest_carbon_core
 import math
 
-def execute(args):
+def biophysical(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
         LULC raster.
     
