@@ -7,7 +7,7 @@ from dbfpy import dbf
 import invest_carbon_core
 import math
 
-def execute(args):
+def biophysical(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
         LULC raster.
     
@@ -48,7 +48,7 @@ def execute(args):
 
     #calculate carbon storage for the current landscape
     rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
-    
+
     if 'lulc_fut' in args:
         #calculate storage for the future landscape
         rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
@@ -64,7 +64,7 @@ def execute(args):
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
         rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
-        
+
     #value the carbon sequestered if the user requests
     if args['calc_value']:
         valuate(args)
@@ -86,54 +86,54 @@ def harvestProductInfo(args):
         args['hwp_fut_shape'] - an open OGR dataset
         
         No return value"""
-    
-    
+
+
     if 'hwp_fut_shape' in args:
         timeframeList = ('cur', 'fut')
-        avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year'])/2.0)
+        avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year']) / 2.0)
     else:
-        timeframeList = ('cur', )
+        timeframeList = ('cur',)
         avg = args['lulc_cur_year']
-    
-    
+
+
     #for each shape (if the shape is provided in args):
     for timeframe in timeframeList:
         harvestMap = 'hwp_' + timeframe + '_shape'
         layer = 'harv_samp_' + timeframe
-        
+
         #Make a copy of the appropriate shape in memory
         copiedDS = ogr.GetDriverByName('Memory').CopyDataSource(args[harvestMap], timeframe)
-        
+
         #open the copied file
         copiedLayer = copiedDS.GetLayerByName(layer)
-        
+
         #add a biomass and volume field to the shape
         for fieldname in ('biomass', 'volume'):
             field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
             copiedLayer.CreateField(field_def)
-        
+
         #create a temporary mask raster for this shapefile
         maskRaster = invest_carbon_core.mimic(args['lulc_cur'], 'mask.tif', 'MEM', -1.0)
         gdal.RasterizeLayer(maskRaster, [1], copiedLayer, burn_values=[1])
-        
+
         for feature in copiedLayer:
             fieldArgs = getFields(feature)
-                
+
             #do the appropriate math based on the timeframe
             if timeframe == 'cur':
-                timeSpan = math.ceil((avg-fieldArgs['Start_date'])
-                                       /fieldArgs['Freq_cur'])
+                timeSpan = math.ceil((avg - fieldArgs['Start_date'])
+                                       / fieldArgs['Freq_cur'])
             else:
-                timeSpan = math.ceil((args['lulc_fut_year']-avg)
-                                     /fieldArgs['Freq_fut'])
-            
+                timeSpan = math.ceil((args['lulc_fut_year'] - avg)
+                                     / fieldArgs['Freq_fut'])
+
             #calculate biomass for this parcel (equation 10.8)
-            biomass = fieldArgs['Cut_' + timeframe] *\
-                    timeSpan * (1.0/fieldArgs['C_den_' + timeframe])
-                    
+            biomass = fieldArgs['Cut_' + timeframe] * \
+                    timeSpan * (1.0 / fieldArgs['C_den_' + timeframe])
+
             #calculate volume for this parcel (equation 10.11)
-            volume = biomass * (1.0/fieldArgs['BCEF_' + timeframe])    
-            
+            volume = biomass * (1.0 / fieldArgs['BCEF_' + timeframe])
+
             #set biomass and volume fields
             for fieldName, value in (('biomass', biomass), ('volume', volume)):
                 index = feature.GetFieldIndex(fieldName)
@@ -141,7 +141,7 @@ def harvestProductInfo(args):
 
             #save the field modifications to the layer.
             copiedLayer.SetFeature(feature)
-            
+
         #Burn values into temp raster, apply mask, save to args dict.
         for fieldName in ('biomass', 'volume'):
             tempRaster = invest_carbon_core.mimic(args['lulc_cur'], '', 'MEM', -1.0)
@@ -165,13 +165,13 @@ def harvestProducts(args, timespan):
         
         timespan - a list or array with the possible values 'cur' and 'fut'
         No return value."""
- 
+
     for timeframe in timespan:
         #make a copy of the necessary shape
         src_dataset = args['hwp_' + timeframe + '_shape']
         dataset = ogr.GetDriverByName('Memory').CopyDataSource(src_dataset, '')
         layer = dataset.GetLayerByName('harv_samp_' + timeframe)
-        
+
         #create a new field for HWP calculations
         hwp_def = ogr.FieldDefn("hwp_pool", ogr.OFTReal)
         layer.CreateField(hwp_def)
@@ -185,18 +185,18 @@ def harvestProducts(args, timespan):
 
         #Make a new raster in memory for burning in the HWP values.
         hwp_ds = invest_carbon_core.mimic(args['lulc_cur'], 'temp.tif', 'MEM')
-    
+
         #Now burn the current hwp pools into the HWP raster in memory.
-        gdal.RasterizeLayer(hwp_ds,[1], layer,
+        gdal.RasterizeLayer(hwp_ds, [1], layer,
                              options=['ATTRIBUTE=hwp_pool'])
-        
+
         #Add the HWP raster to the storage raster, write the sum to the
         #storage raster.
-        rasterAdd(args['storage_' + timeframe], hwp_ds, args['storage_' +  timeframe])
-        
+        rasterAdd(args['storage_' + timeframe], hwp_ds, args['storage_' + timeframe])
+
         #clear the temp dataset.
         hwp_ds = None
-        
+
 
 def iterFeatures(layer, suffix, yrCur, yrFut=None):
     """Iterate over all features in the provided layer, calculate HWP.
@@ -207,55 +207,55 @@ def iterFeatures(layer, suffix, yrCur, yrFut=None):
         yrFut - an int (required for future HWP contexts)
         
         no return value"""
-    
+
     #calculate average for use in future contexts if a yrFut is given
-    if yrFut != None:    
-        avg = math.floor((yrFut + yrCur)/2.0)
-        
+    if yrFut != None:
+        avg = math.floor((yrFut + yrCur) / 2.0)
+
     #calculate hwp pools per feature for the future scenario
     for feature in layer:
         fieldArgs = getFields(feature)
-        
+
         #If 'cut_' is not specified, assume the parcel hasn't been harvested
         if fieldArgs['Cut_' + suffix] != 0:
             #Set a couple variables based on the input parameters
             if suffix == 'cur':
                 #if no future scenario is provided, calc the sum on its own
-                if yrFut == None: 
-                    limit = math.ceil(((yrCur-fieldArgs['Start_date'])\
-                                    /fieldArgs['Freq_cur'])) - 1.0
+                if yrFut == None:
+                    limit = math.ceil(((yrCur - fieldArgs['Start_date'])\
+                                    / fieldArgs['Freq_cur'])) - 1.0
                     endDate = yrCur
                 #Calculate the sum of current HWP landscape in future context
                 else:
                     limit = math.ceil(((avg - fieldArgs['Start_date'])\
-                                    /fieldArgs['Freq_cur'])) - 1.0
+                                    / fieldArgs['Freq_cur'])) - 1.0
                     endDate = yrFut
-                    
+
                 decay = fieldArgs['Decay_cur']
                 startDate = fieldArgs['Start_date']
                 freq = fieldArgs['Freq_cur']
-                
+
             #calcluate the sum of future HWP landscape in future context.
             else:
                 limit = math.ceil(((yrFut - avg)\
-                                    /fieldArgs['Freq_fut'])) - 1.0
+                                    / fieldArgs['Freq_fut'])) - 1.0
                 decay = fieldArgs['Decay_fut']
                 startDate = avg
                 endDate = yrFut
                 freq = fieldArgs['Freq_fut']
-            
+
             #calculate the feature's HWP carbon pool
             hwpsum = calcFeatureHWP(limit, decay, endDate, startDate, freq)
-            hwpCarbonPool = fieldArgs['Cut_' + suffix]*hwpsum
+            hwpCarbonPool = fieldArgs['Cut_' + suffix] * hwpsum
         else:
             hwpCarbonPool = 0.0
-            
+
         #set the HWP carbon pool for this feature.
         hwpIndex = feature.GetFieldIndex('hwp_pool')
-        feature.SetField(hwpIndex,hwpCarbonPool)
+        feature.SetField(hwpIndex, hwpCarbonPool)
         layer.SetFeature(feature)
 
-        
+
 def getFields(feature):
     """Return a dict with all fields in the given feature.
         
@@ -263,17 +263,17 @@ def getFields(feature):
         
         Returns an assembled python dict with a mapping of 
         fieldname -> fieldvalue"""
-        
+
     fields = {}
     for i in range(feature.GetFieldCount()):
         field_def = feature.GetFieldDefnRef(i)
         name = field_def.GetNameRef()
         value = feature.GetField(i)
         fields[name] = value
-        
+
     return fields
-        
-    
+
+
 
 def calcFeatureHWP(limit, decay, endDate, startDate, freq):
     """Apply equation 2 from the user's guide
@@ -285,16 +285,16 @@ def calcFeatureHWP(limit, decay, endDate, startDate, freq):
         freq - the number of times this parcel has been harvested
         
         returns a float (rounded down to the nearest integer)"""
-        
+
 
     hwpSum = 0.0
-    w = math.log(2)/decay
+    w = math.log(2) / decay
     daterange = endDate - startDate
-    numerator = 1.0-(math.pow(math.e,((-1)*w)))
+    numerator = 1.0 - (math.pow(math.e, ((-1) * w)))
     for t in range(int(limit)):
-        m = daterange - (t*freq)
-        denominator = w*(math.pow(math.e,(m*w)))
-        hwpSum += (numerator/denominator)
+        m = daterange - (t * freq)
+        denominator = w * (math.pow(math.e, (m * w)))
+        hwpSum += (numerator / denominator)
 
     return math.floor(hwpSum)
 
@@ -304,11 +304,11 @@ def valuate(args):
         args is a dictionary with all of the options detailed in execute()
         
         No return value"""
-        
+
     numYears = args['lulc_fut_year'] - args['lulc_cur_year']
     pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['storage_cur'])
     rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], args['rate_change'], numYears)
-    
+
 def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, numYears):
     """iterates through the rows in a raster and applies the carbon valuation model
         to all values.
@@ -321,15 +321,15 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
         numYears - an int representing the number of years between current and future land cover maps
         
         No return value."""
-        
+
     nodataDict = build_nodata_dict(inputRaster, outputRaster)
     lulc = inputRaster.GetRasterBand(1)
-    
+
     multiplier = 0.
 #    for n in range(numYears-1): #Subtract 1 per the user's manual
     for n in range(numYears):    #This is incorrect, but it allows us to match the results of invest2
-        multiplier += 1./(((1.+rateOfChange)**n)*(1.+discount)**n)
-    
+        multiplier += 1. / (((1. + rateOfChange) ** n) * (1. + discount) ** n)
+
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
         out_array = carbon_value(nodataDict, data, numYears, carbonValue, multiplier)
@@ -344,7 +344,7 @@ def rasterSeq(pools, inputRaster, outputRaster):
         outputRaster - a GDAL raster dataset
         
         No return value."""
-        
+
     lulc = inputRaster.GetRasterBand(1)
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
@@ -358,7 +358,7 @@ def rasterDiff(storage_cur, storage_fut, outputRaster):
         storage_cur - a GDAL raster dataset
         storage_fut - a GDAL raster dataset
         outputRaster - a GDAL raster dataset"""
-    
+
     nodataDict = build_nodata_dict(storage_cur, outputRaster)
     lulc_cur_band = storage_cur.GetRasterBand(1)
     lulc_fut_band = storage_fut.GetRasterBand(1)
@@ -375,7 +375,7 @@ def rasterAdd(storage_cur, hwpRaster, outputRaster):
         storage_cur - a GDAL raster dataset
         hwpRaster - a GDAL raster dataset
         outputRaster - a GDAL raster dataset"""
-    
+
     nodataDict = build_nodata_dict(storage_cur, outputRaster)
     storage_band = storage_cur.GetRasterBand(1)
     hwp_band = hwpRaster.GetRasterBand(1)
@@ -392,7 +392,7 @@ def rasterMask(inputRaster, maskRaster, outputRaster):
         storage_cur - a GDAL raster dataset
         maskRaster - a GDAL raster dataset
         outputRaster - a GDAL raster dataset"""
-    
+
     nodataDict = build_nodata_dict(inputRaster, outputRaster)
     input_band = inputRaster.GetRasterBand(1)
     mask_band = maskRaster.GetRasterBand(1)
@@ -427,7 +427,7 @@ def build_nodata_dict(inputRaster, outputRaster):
         """
     inNoData = inputRaster.GetRasterBand(1).GetNoDataValue()
     outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
-    
+
     nodata = {'input': inNoData, 'output': outNoData}
     return nodata
 
@@ -443,10 +443,10 @@ def build_pools(dbf, inputRaster, outputRaster):
         """
     area = pixelArea(inputRaster)
     lulc = inputRaster.GetRasterBand(1)
-    
+
     inNoData = lulc.GetNoDataValue()
     outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
-    
+
     return build_pools_dict(dbf, area, inNoData, outNoData)
 
 def build_pools_dict(dbf, area, inNoData, outNoData):
@@ -489,7 +489,7 @@ def carbon_seq(array, dict):
         return mapFun(array, dict)
     else:
         return []
-    
+
 def carbon_diff(nodata, firstArray, secondArray):
     """Creates a new array by returning the difference of the elements in the
         two input arrays.  If a nodata value is detected in the input array,
@@ -501,13 +501,13 @@ def carbon_diff(nodata, firstArray, secondArray):
 
         return a new numpy array with the difference of the two input arrays
         """
-    
+
     def mapDiff(a, b):
         if a == nodata['input']:
             return nodata['output']
         else:
-            return b-a
-    
+            return b - a
+
     if firstArray.size > 0:
         mapFun = np.vectorize(mapDiff)
         return mapFun(firstArray, secondArray)
@@ -523,17 +523,17 @@ def carbon_add(nodata, firstArray, secondArray):
         
         return a new numpy array with the difference of the two input arrays
         """
-    
+
     def mapSum(a, b):
         if a == nodata['input']:
             return nodata['output']
         else:
             return a + b
-    
+
     if firstArray.size > 0:
         mapFun = np.vectorize(mapSum)
         return mapFun(firstArray, secondArray)
-    
+
 def carbon_value(nodata, data, numYears, carbonValue, multiplier):
     """iterate through the array and calculate the economic value of sequestered carbon.
         Map the values to the output array.
@@ -543,20 +543,20 @@ def carbon_value(nodata, data, numYears, carbonValue, multiplier):
         numYears - an int: the number of years the simulation covers
         carbonValue - a float: the dollar value of carbon
         multiplier - a float"""
-        
+
     def mapValue(x):
         if x == nodata['input']:
             return nodata['output']
         else:
             #calculate the pixel-specific value of carbon for this simulation
-            return carbonValue*(x/numYears)*multiplier 
-    
+            return carbonValue * (x / numYears) * multiplier
+
     if data.size > 0:
         mapFun = np.vectorize(mapValue)
         return mapFun(data)
     else:
         return []
-    
+
 def carbon_mask(nodata, input, mask):
     """Iterate through inputArray and return its value only if the value of mask
         is 1.  Otherwise, return the nodata value of the output array.
@@ -564,19 +564,206 @@ def carbon_mask(nodata, input, mask):
         nodata - a dict: {'input': some number, 'output' : some number}
         input - a numpy array
         mask - a numpy array, with values of either 0 or 1"""
-        
+
     def mapMask(x, y):
         if y == 0.0:
             return nodata['output']
         else:
             return x
-    
+
     if input.size > 0:
         mapFun = np.vectorize(mapMask)
         return mapFun(input, mask)
     else:
         return []
-    
 
+
+
+def uncertainty(args):
+    """Executes the basic carbon model that maps a carbon pool dataset to a
+        LULC raster.
     
+        args - is a dictionary with at least the following entries:
+        args['lulc'] - is a GDAL raster dataset
+        args['carbon_pools'] - is an uncertainty dictionary that maps LULC type
+                               to Mg/Ha of carbon where the field names are
+                               appended by 'L', 'A', or 'H', for low, average, 
+                               and high measurements.
+        args['output'] - a GDAL raster dataset for outputing the sequestered carbon
+                         contains 3 bands for low, average, and high
         
+        returns nothing"""
+
+    area = carbon_core.pixelArea(args['lulc'])
+    lulc = args['lulc'].GetRasterBand(1)
+    inNoData = lulc.GetNoDataValue()
+    outNoData = args['output'].GetRasterBand(1).GetNoDataValue()
+
+    #This maps pool types to band numbers
+    poolTypes = {'L':1, 'A':2, 'H':3}
+    pools = {}
+
+    uncertaintyRank = None
+
+    for poolType in poolTypes:
+        pools[poolType] = build_uncertainty_pools_dict(args['carbon_pools'], poolType, area, inNoData, outNoData)
+        maxValue, minValue = max(pools[poolType].values()), min(pools[poolType].values())
+        if minValue == None:
+            minValue = 0
+
+        #create uncertainty dictionary with most recent dictionary as reference for keys
+        if uncertaintyRank == None:
+            uncertaintyRank = {}.fromkeys(pools[poolType].keys(), 0.0)
+
+        #rank each pooltype
+        for type, value in pools[poolType].iteritems():
+            if maxValue != minValue and value != None:
+                uncertaintyRank[type] += (value - minValue) / (maxValue - minValue) / len(poolTypes)
+
+    #add the uncertainty pool so it gets iterated over on the map step
+    poolTypes['uncertainty'] = 4
+    pools['uncertainty'] = uncertaintyRank
+
+    #map each row in the lulc raster
+    for rowNumber in range(0, lulc.YSize):
+        data = lulc.ReadAsArray(0, rowNumber, lulc.XSize, 1)
+        #create a seq map for each pooltype 
+        for poolType, index in poolTypes.iteritems():
+            out_array = carbon_core.carbon_seq(data, pools[poolType])
+            args['output'].GetRasterBand(index).WriteArray(out_array, 0, rowNumber)
+
+
+def build_uncertainty_pools_dict(dbf, poolType, area, inNoData, outNoData):
+    """Build a dict for the carbon pool data accessible for each lulc classification.
+    
+        dbf - the database file describing pools
+        poolType - one of 'L', 'A', or 'H' indicating low average or high
+                   pool data
+        area - the area in Ha of each pixel
+        inNoData - the no data value for the input map
+        outNoData - the no data value for the output map
+    
+        returns a dictionary calculating total carbon sequestered per lulc type"""
+
+    poolsDict = {int(inNoData): outNoData}
+    for i in range(dbf.recordCount):
+        sum = 0
+        for field in [ x + '_' + poolType for x in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD')]:
+            sum += dbf[i][field]
+        poolsDict[dbf[i]['LULC']] = sum * area
+    return poolsDict
+
+def carbon_scenario_uncertainty(args):
+    """Runs a scenario based uncertainty model for two LULC maps.  Output
+        is a 4 output_seq raster for 3 bands indicating carbon sequestration
+        change for low, average, and high measurements.  Fourth output_seq is
+        the minimum percentage ranking of each pixel in each of the
+        three scenarios.
+    
+        args - is a dictionary with at least the following entries:
+        args['lulc_cur'] - is a GDAL raster dataset for current LULC
+        args['lulc_fut'] - is a GDAL raster dataset for future LULC
+        args['carbon_pools'] - is an uncertainty dictionary that maps LULC type
+                               to Mg/Ha of carbon where the field names are
+                               appended by 'L', 'A', or 'H', for low, average, 
+                               and high measurements.
+        args['percentile'] - cuts the output to be the top and bottom
+                             percentile of sequestered carbon based on
+                             the uncertainty scenarios
+        args['output_seq'] - a GDAL raster dataset for outputting the conservative
+                            amount of carbon sequestered.
+        args['output_map'] - a colorized map indicating the regions of
+                            output_seq that fall into the percentile
+                            ranges given in args['percentile'].  Green
+                            is carbon sequestered increase and red is a
+                            decrease.
+        
+        returns nothing"""
+
+    area = carbon_core.pixelArea(args['lulc_cur'])
+    lulcCurrent = args['lulc_cur'].GetRasterBand(1)
+    lulcFuture = args['lulc_fut'].GetRasterBand(1)
+    inNoData = lulcCurrent.GetNoDataValue()
+    outNoData = args['output_seq'].GetRasterBand(1).GetNoDataValue()
+
+    #This maps pool types to output_seq numbers
+    poolTypes = {'L':1, 'A':2, 'H':3}
+    pools = {}
+
+    uncertaintyRank = None
+
+    for poolType in poolTypes:
+        pools[poolType] = carbon_uncertainty.build_uncertainty_pools_dict(
+            args['carbon_pools'], poolType, area, inNoData, outNoData)
+
+    def singleSelector(a, b, c):
+        if c == 0: return outNoData
+        return min(a, b)
+
+    vectorSelector = np.vectorize(singleSelector)
+
+    maxMin = None
+    output_seq = args['output_seq'].GetRasterBand(1)
+    #map each row in the lulc raster
+    for rowNumber in range(lulcCurrent.YSize):
+        dataCurrent = lulcCurrent.ReadAsArray(0, rowNumber, lulcCurrent.XSize, 1)
+        dataFuture = lulcFuture.ReadAsArray(0, rowNumber, lulcFuture.XSize, 1)
+        #create a seqestration map for high-low, low-high, and average-average
+        sequesteredChangeArray = []
+        for poolTypeA, poolTypeB in [('L', 'H'), ('H', 'L'), ('A', 'A')]:
+            sequesteredCurrent = carbon_core.carbon_seq(dataCurrent, pools[poolTypeA])
+            sequesteredFuture = carbon_core.carbon_seq(dataFuture, pools[poolTypeB])
+            sequesteredChange = sequesteredCurrent - sequesteredFuture
+
+            if maxMin is None:
+                maxMin = (np.max(sequesteredChange), np.min(sequesteredChange))
+            else:
+                maxMin = (max(np.max(sequesteredChange), maxMin[0]),
+                      min(np.min(sequesteredChange), maxMin[1]))
+
+            sequesteredChangeArray.append(sequesteredChange)
+
+        #Output the min value of l-h or h-l if average is >=0 or max value if < 0
+        output_seq.WriteArray(vectorSelector(sequesteredChangeArray[0],
+                                              sequesteredChangeArray[1],
+                                              sequesteredChangeArray[2]), 0, rowNumber)
+
+    #create colorband
+    (minSeq, maxSeq) = output_seq.ComputeRasterMinMax()
+
+    steps = 31
+    mid = steps / 2
+    def mapIndexFun(x):
+        if x == 0: return 255
+        if x < 0:
+            return int((minSeq - x) / minSeq * mid)
+        return int(steps - (maxSeq - x) / maxSeq * mid)
+
+    #Make a simple color table that ranges from red to green
+    colorTable = gdal.ColorTable()
+    negColor = (255, 0, 0)
+    posColor = (100, 255, 0)
+    for i in range(mid):
+        frac = 1 - float(i) / mid
+        colorTable.SetColorEntry(i, (int(negColor[0] * frac), int(negColor[1] * frac), int(negColor[2] * frac)))
+        colorTable.SetColorEntry(steps - i, (int(posColor[0] * frac), int(posColor[1] * frac), int(posColor[2] * frac)))
+    colorTable.SetColorEntry(mid, (0, 0, 0))
+    args['output_map'].GetRasterBand(1).SetColorTable(colorTable)
+
+    #Cutoff output_seq based on percentile cutoff
+    def percentileCutoff(val, percentCutoff, max, min):
+        if max == min: return val
+        p = (val - min) / (max - min)
+        if p < percentCutoff or p > 1 - percentCutoff:
+            return val
+        return outNoData
+    percentileCutoffFun = np.vectorize(percentileCutoff)
+
+    maxIndex = np.vectorize(mapIndexFun)
+    for rowNumber in range(0, output_seq.YSize):
+        seqRow = output_seq.ReadAsArray(0, rowNumber, output_seq.XSize, 1)
+        #select only those elements which lie within the range percentile
+        seqRow = percentileCutoffFun(seqRow, args['percentile'], maxMin[0], maxMin[1])
+        #map them to colors
+        args['output_map'].GetRasterBand(1).WriteArray(maxIndex(seqRow), 0, rowNumber)
+

@@ -15,48 +15,36 @@ def execute(args):
         log, warning, or error messages to stdout.
         
         args - a python dictionary with at the following possible entries:
-        
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-            
         args['calculate_sequestration'] - a boolean, True if sequestration
             is to be calculated.  Infers that args['lulc_fut_uri'] should be 
             set.
-            
         args['calculate_hwp'] - a boolean, True if harvested wood product
             calcuation is to be done.  Also implies a sequestration 
             calculation.  Thus args['lulc_fut_uri'], args['hwp_cur_shape_uri'],
             args['hwp_fut_shape_uri'], args['lulc_cur_year'], and 
             args['lulc_fut_year'] should be set.
-            
         args['calc_uncertainty'] - a Boolean.  True if we wish to calculate 
             uncertainty in the carbon model.  Implies that carbon pools should
             have value ranges
-            
         args['uncertainty_percentile'] - the percentile cutoff desired for 
             uncertainty calculations (required if args['calc_uncertainty'] is 
             True) 
-            
         args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
-            
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (required
          if calculating sequestration or HWP)
-         
         args['lulc_cur_year'] - An integer representing the year of lulc_cur 
             used in HWP calculation (required if args['calculate_hwp'] is True)
-            
         args['lulc_fut_year'] - An integer representing the year of  lulc_fut
             used in HWP calculation (required if args['calculate_hwp'] is True)
-            
         args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
             storage density to the lulc classifications specified in the
             lulc rasters.  If args['calc_uncertainty'] is True the columns
             should have additional information about min, avg, and max carbon
             pool measurements. 
-            
         args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood 
             calculation (required if args['calculate_hwp'] is True) 
-            
         args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood 
             calculation (required if args['calculate_hwp'] is True)
         
@@ -97,7 +85,6 @@ def execute(args):
     #to have range columns in them, but no need to check at this level.
     biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'])
 
-
     #At this point all inputs are loaded into biophysicalArgs.  The 
     #biophysical model also needs temporary and output files to do its
     #calculation.  These are calculated next.
@@ -118,7 +105,7 @@ def execute(args):
 
     #If we calculate uncertainty, we need to generate the colorized map that
     #Highlights the percentile ranges
-    if args['calculate_uncertainty']:
+    if args['calc_uncertainty']:
         outputURIs['uncertainty_percentile_map'] = outputDirectoryPrefix + \
             'uncertainty_colormap.tif'
 
@@ -137,253 +124,53 @@ def execute(args):
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
     for datasetName, datasetPath in outputURIs.iteritems():
-        biophysicalArgs[datasetName] = mimic(args['lulc_cur'], datasetPath)
+        biophysicalArgs[datasetName] = \
+            newRasterFromBase(biophysicalArgs['lulc_cur'], datasetPath,
+                              'GTiff', -5.0, gdal.GDT_Float32)
 
-    #run the carbon model.
-    #carbon.execute(biophysicalArgs)
+    #run the biophysical part of the carbon model.
+    carbon.biophysical(biophysicalArgs)
+
+    #close the pools DBF file (is this required?)
+    biophysicalArgs['carbon_pools'].close()
 
     #close all newly created raster datasets (is this required?)
     for dataset in biophysicalArgs:
         biophysicalArgs[dataset] = None
 
-    #close the pools DBF file
-    args['carbon_pools'].close()
 
 
-def makeRasters(dsList, defaultURI, args):
-    """Create a new, blank raster at the correct URI for each raster in dsList.
+def newRasterFromBase(base, outputURI, format, nodata, datatype):
+    """Create a new, empty GDAL raster dataset with the spatial references,
+        dimensions and geotranforms of the base GDAL raster dataset.
         
-        - dsList - a Python list or array of args dict keys to be created
-        - defaultURI - a Python dict mapping args keys of datasets to their
-            default URIs
-        - args - a python dictionary with possible entries specified in
-            invest_carbon_core.execute.  This function assumes that all entries
-            used in this function are strings representing the URI to the desired
-            dataset."""
-
-    for dataset in dsList:
-        if dataset in args:
-            args[dataset] = mimic(args['lulc_cur'], args[dataset])
-        else:
-            args[dataset] = mimic(args['lulc_cur'], defaultURI[dataset])
-
-def mimic(example, outputURI, format='GTiff', nodata= -5.0, datatype=gdal.GDT_Float32):
-    """Create a new, empty GDAL raster dataset with the spatial references and
-        geotranforms of the example GDAL raster dataset.
-        
-        example - a GDAL raster dataset
+        base - a the GDAL raster dataset to base output size, and transforms on
         outputURI - a string URI to the new output raster dataset.
-        format='GTiff' - a string representing the GDAL file format of the 
+        format - a string representing the GDAL file format of the 
             output raster.  See http://gdal.org/formats_list.html for a list
             of available formats.  This parameter expects the format code, such
             as 'GTiff' or 'MEM'
-        nodata='-5.0 - a number that will be set as the nodata value for the 
-            output raster
-        datatype=gdal.GDT_Float32 - the datatype of the raster.
+        nodata - a value that will be set as the nodata value for the 
+            output raster.  Should be the same type as 'datatype'
+        datatype - the pixel datatype of the output raster, for example 
+            gdal.GDT_Float32.  See the following header file for supported 
+            pixel types:
+            http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
                 
         returns a new GDAL raster dataset."""
 
-    cols = example.RasterXSize
-    rows = example.RasterYSize
-    projection = example.GetProjection()
-    geotransform = example.GetGeoTransform()
+    cols = base.RasterXSize
+    rows = base.RasterYSize
+    projection = base.GetProjection()
+    geotransform = base.GetGeoTransform()
 
     driver = gdal.GetDriverByName(format)
-    new_ds = driver.Create(outputURI, cols, rows, 1, datatype)
-    new_ds.SetProjection(projection)
-    new_ds.SetGeoTransform(geotransform)
-    new_ds.GetRasterBand(1).SetNoDataValue(nodata)
+    newRaster = driver.Create(outputURI, cols, rows, 1, datatype)
+    newRaster.SetProjection(projection)
+    newRaster.SetGeoTransform(geotransform)
+    newRaster.GetRasterBand(1).SetNoDataValue(nodata)
 
-    return new_ds
-
-def uncertainty(args):
-    """Executes the basic carbon model that maps a carbon pool dataset to a
-        LULC raster.
-    
-        args - is a dictionary with at least the following entries:
-        args['lulc'] - is a GDAL raster dataset
-        args['carbon_pools'] - is an uncertainty dictionary that maps LULC type
-                               to Mg/Ha of carbon where the field names are
-                               appended by 'L', 'A', or 'H', for low, average, 
-                               and high measurements.
-        args['output'] - a GDAL raster dataset for outputing the sequestered carbon
-                         contains 3 bands for low, average, and high
-        
-        returns nothing"""
-
-    area = carbon_core.pixelArea(args['lulc'])
-    lulc = args['lulc'].GetRasterBand(1)
-    inNoData = lulc.GetNoDataValue()
-    outNoData = args['output'].GetRasterBand(1).GetNoDataValue()
-
-    #This maps pool types to band numbers
-    poolTypes = {'L':1, 'A':2, 'H':3}
-    pools = {}
-
-    uncertaintyRank = None
-
-    for poolType in poolTypes:
-        pools[poolType] = build_uncertainty_pools_dict(args['carbon_pools'], poolType, area, inNoData, outNoData)
-        maxValue, minValue = max(pools[poolType].values()), min(pools[poolType].values())
-        if minValue == None:
-            minValue = 0
-
-        #create uncertainty dictionary with most recent dictionary as reference for keys
-        if uncertaintyRank == None:
-            uncertaintyRank = {}.fromkeys(pools[poolType].keys(), 0.0)
-
-        #rank each pooltype
-        for type, value in pools[poolType].iteritems():
-            if maxValue != minValue and value != None:
-                uncertaintyRank[type] += (value - minValue) / (maxValue - minValue) / len(poolTypes)
-
-    #add the uncertainty pool so it gets iterated over on the map step
-    poolTypes['uncertainty'] = 4
-    pools['uncertainty'] = uncertaintyRank
-
-    #map each row in the lulc raster
-    for rowNumber in range(0, lulc.YSize):
-        data = lulc.ReadAsArray(0, rowNumber, lulc.XSize, 1)
-        #create a seq map for each pooltype 
-        for poolType, index in poolTypes.iteritems():
-            out_array = carbon_core.carbon_seq(data, pools[poolType])
-            args['output'].GetRasterBand(index).WriteArray(out_array, 0, rowNumber)
-
-
-def build_uncertainty_pools_dict(dbf, poolType, area, inNoData, outNoData):
-    """Build a dict for the carbon pool data accessible for each lulc classification.
-    
-        dbf - the database file describing pools
-        poolType - one of 'L', 'A', or 'H' indicating low average or high
-                   pool data
-        area - the area in Ha of each pixel
-        inNoData - the no data value for the input map
-        outNoData - the no data value for the output map
-    
-        returns a dictionary calculating total carbon sequestered per lulc type"""
-
-    poolsDict = {int(inNoData): outNoData}
-    for i in range(dbf.recordCount):
-        sum = 0
-        for field in [ x + '_' + poolType for x in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD')]:
-            sum += dbf[i][field]
-        poolsDict[dbf[i]['LULC']] = sum * area
-    return poolsDict
-
-def carbon_scenario_uncertainty(args):
-    """Runs a scenario based uncertainty model for two LULC maps.  Output
-        is a 4 output_seq raster for 3 bands indicating carbon sequestration
-        change for low, average, and high measurements.  Fourth output_seq is
-        the minimum percentage ranking of each pixel in each of the
-        three scenarios.
-    
-        args - is a dictionary with at least the following entries:
-        args['lulc_cur'] - is a GDAL raster dataset for current LULC
-        args['lulc_fut'] - is a GDAL raster dataset for future LULC
-        args['carbon_pools'] - is an uncertainty dictionary that maps LULC type
-                               to Mg/Ha of carbon where the field names are
-                               appended by 'L', 'A', or 'H', for low, average, 
-                               and high measurements.
-        args['percentile'] - cuts the output to be the top and bottom
-                             percentile of sequestered carbon based on
-                             the uncertainty scenarios
-        args['output_seq'] - a GDAL raster dataset for outputting the conservative
-                            amount of carbon sequestered.
-        args['output_map'] - a colorized map indicating the regions of
-                            output_seq that fall into the percentile
-                            ranges given in args['percentile'].  Green
-                            is carbon sequestered increase and red is a
-                            decrease.
-        
-        returns nothing"""
-
-    area = carbon_core.pixelArea(args['lulc_cur'])
-    lulcCurrent = args['lulc_cur'].GetRasterBand(1)
-    lulcFuture = args['lulc_fut'].GetRasterBand(1)
-    inNoData = lulcCurrent.GetNoDataValue()
-    outNoData = args['output_seq'].GetRasterBand(1).GetNoDataValue()
-
-    #This maps pool types to output_seq numbers
-    poolTypes = {'L':1, 'A':2, 'H':3}
-    pools = {}
-
-    uncertaintyRank = None
-
-    for poolType in poolTypes:
-        pools[poolType] = carbon_uncertainty.build_uncertainty_pools_dict(
-            args['carbon_pools'], poolType, area, inNoData, outNoData)
-
-    def singleSelector(a, b, c):
-        if c == 0: return outNoData
-        return min(a, b)
-
-    vectorSelector = np.vectorize(singleSelector)
-
-    maxMin = None
-    output_seq = args['output_seq'].GetRasterBand(1)
-    #map each row in the lulc raster
-    for rowNumber in range(lulcCurrent.YSize):
-        dataCurrent = lulcCurrent.ReadAsArray(0, rowNumber, lulcCurrent.XSize, 1)
-        dataFuture = lulcFuture.ReadAsArray(0, rowNumber, lulcFuture.XSize, 1)
-        #create a seqestration map for high-low, low-high, and average-average
-        sequesteredChangeArray = []
-        for poolTypeA, poolTypeB in [('L', 'H'), ('H', 'L'), ('A', 'A')]:
-            sequesteredCurrent = carbon_core.carbon_seq(dataCurrent, pools[poolTypeA])
-            sequesteredFuture = carbon_core.carbon_seq(dataFuture, pools[poolTypeB])
-            sequesteredChange = sequesteredCurrent - sequesteredFuture
-
-            if maxMin is None:
-                maxMin = (np.max(sequesteredChange), np.min(sequesteredChange))
-            else:
-                maxMin = (max(np.max(sequesteredChange), maxMin[0]),
-                      min(np.min(sequesteredChange), maxMin[1]))
-
-            sequesteredChangeArray.append(sequesteredChange)
-
-        #Output the min value of l-h or h-l if average is >=0 or max value if < 0
-        output_seq.WriteArray(vectorSelector(sequesteredChangeArray[0],
-                                              sequesteredChangeArray[1],
-                                              sequesteredChangeArray[2]), 0, rowNumber)
-
-    #create colorband
-    (minSeq, maxSeq) = output_seq.ComputeRasterMinMax()
-
-    steps = 31
-    mid = steps / 2
-    def mapIndexFun(x):
-        if x == 0: return 255
-        if x < 0:
-            return int((minSeq - x) / minSeq * mid)
-        return int(steps - (maxSeq - x) / maxSeq * mid)
-
-    #Make a simple color table that ranges from red to green
-    colorTable = gdal.ColorTable()
-    negColor = (255, 0, 0)
-    posColor = (100, 255, 0)
-    for i in range(mid):
-        frac = 1 - float(i) / mid
-        colorTable.SetColorEntry(i, (int(negColor[0] * frac), int(negColor[1] * frac), int(negColor[2] * frac)))
-        colorTable.SetColorEntry(steps - i, (int(posColor[0] * frac), int(posColor[1] * frac), int(posColor[2] * frac)))
-    colorTable.SetColorEntry(mid, (0, 0, 0))
-    args['output_map'].GetRasterBand(1).SetColorTable(colorTable)
-
-    #Cutoff output_seq based on percentile cutoff
-    def percentileCutoff(val, percentCutoff, max, min):
-        if max == min: return val
-        p = (val - min) / (max - min)
-        if p < percentCutoff or p > 1 - percentCutoff:
-            return val
-        return outNoData
-    percentileCutoffFun = np.vectorize(percentileCutoff)
-
-    maxIndex = np.vectorize(mapIndexFun)
-    for rowNumber in range(0, output_seq.YSize):
-        seqRow = output_seq.ReadAsArray(0, rowNumber, output_seq.XSize, 1)
-        #select only those elements which lie within the range percentile
-        seqRow = percentileCutoffFun(seqRow, args['percentile'], maxMin[0], maxMin[1])
-        #map them to colors
-        args['output_map'].GetRasterBand(1).WriteArray(maxIndex(seqRow), 0, rowNumber)
-
+    return newRaster
 
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
