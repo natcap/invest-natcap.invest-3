@@ -67,7 +67,8 @@ def execute(args):
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     gdal.AllRegister()
 
-    #define biophysical model inputs
+    #Load and copy relevant inputs from args into a dictionary that
+    #can be passed to the biophysical core model
     biophysicalArgs = {}
 
     #Uncertainty percentage is required if calculating uncertainty
@@ -88,15 +89,13 @@ def execute(args):
     if args['calculate_hwp']:
         for x in ['lulc_cur_year', 'lulc_fut_year']:
             biophysicalArgs[x] = args[x]
+        fsencoding = sys.getfilesystemencoding()
         for x in ['hwp_cur_shape', 'hwp_fut_shape']:
-            biophysicalArgs[x] = args[x + '_uri']
+            biophysicalArgs[x] = ogr.Open(args[x + '_uri'].encode(fsencoding))
 
     #Always need carbon pools, if uncertainty calculation they also need
-    #to have range columns in them.  No need to check that in file handler 
-    #though
+    #to have range columns in them, but no need to check at this level.
     biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'])
-
-
 
 
 
@@ -133,16 +132,6 @@ def execute(args):
         #create the uncertainty colormap raster
         args['output_map'] = mimic(lulc_cur, defaultURI['output_map'],
                                     nodata=255, datatype=gdal.GDT_Byte)
-
-    #Open the harvest maps
-    if 'hwp_cur_shape' in args:
-        fsencoding = sys.getfilesystemencoding()
-        args['hwp_cur_shape'] = ogr.Open(args['hwp_cur_shape'].encode(fsencoding))
-        makeRasters(('biomass_cur', 'volume_cur'), defaultURI, args)
-
-        if 'hwp_fut_shape' in args:
-            args['hwp_fut_shape'] = ogr.Open(args['hwp_fut_shape'].encode(fsencoding))
-            makeRasters(('biomass_fut', 'volume_fut'), defaultURI, args)
 
     if args['calc_value'] == True:
         makeRasters(('seq_value',), defaultURI, args)
