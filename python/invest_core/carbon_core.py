@@ -68,11 +68,11 @@ def biophysical(args):
     #Create carbon pool dictionary with appropriate values to handle
     #nodata in the input and nodata in the output
     inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
-    outNoData = args['storage_cur'].GetRasterBand(1).GetNoDataValue()
+    outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
     #calculate carbon storage for the current landscape
-    rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
+    rasterSeq(pools, args['lulc_cur'], args['tot_C_cur'])
 
     if 'lulc_fut' in args:
         #calculate storage for the future landscape
