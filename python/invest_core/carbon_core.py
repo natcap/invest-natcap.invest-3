@@ -10,34 +10,57 @@ import math
 def biophysical(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
         LULC raster.
-    
+
         args - is a dictionary with at least the following entries:
-        args['lulc_cur'] - is a GDAL raster dataset
-        args['lulc_fut'] - is a GDAL raster dataset
-        args['carbon_pools'] - is a DBF dataset mapping carbon sequestration numbers to lulc classifications.
-        args['storage_cur'] - a GDAL raster dataset for outputing the sequestered carbon
-                          based on the current lulc
-        args['storage_fut'] - a GDAL raster dataset for outputing the sequestered carbon
-                          based on the future lulc
-        args['seq_delta'] - a GDAL raster dataset for outputing the difference between
-                            args['storage_cur'] and args['storage_fut']
-        args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
-                            value of sequestered carbon.
-        args['biomass_cur'] - a GDAL raster dataset for outputing the biomass 
-            of harvested HWP parcels on the current landscape
-        args['biomass_fut'] - a GDAL raster dataset for outputing the biomass 
-            of harvested HWP parcels on the future landscape
-        args['volume_cur'] - a GDAL raster dataset for outputing the volume of 
-            HWP on the current landscape
-        args['volume_fut'] - a GDAL raster dataset for outputing the volume of 
-            HWP on the future landscape
-        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
-        args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
-        args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
-        args['c_value'] - a float.  Represents the price of carbon in US Dollars.
-        args['discount'] - a float.  Represents the annual discount in the price of carbon
-        args['rate_change'] - a float.  Represents the rate of change in the price of carbon
-        
+        args['calculate_sequestration'] - a boolean, True if sequestration
+            is to be calculated.
+        args['calculate_hwp'] - a boolean, True if harvested wood product
+            calcuation is to be done.  Also implies a sequestration 
+            calculation.
+        args['calc_uncertainty'] - a Boolean.  True if we wish to calculate 
+            uncertainty in the carbon model.  Implies that carbon pools should
+            have value ranges.
+        args['uncertainty_percentile'] - a float indicating upper and lower
+            percentiles of sequestration to output (required if calculating 
+            uncertainty)
+        args['lulc_cur'] - is a GDAL raster representing the current land 
+            use/land cover map (required)
+        args['lulc_fut'] - is a GDAL raster dataset representing the future 
+            land use/land cover map (required if doing sequestration, HWP, or
+            uncertainty calculations)
+        args['carbon_pools'] - is a DBF dataset mapping carbon storage density
+            to lulc classifications in input LULC rasters.  If 
+            args['calc_uncertainty'] is True the columns should have additional
+            information about min, avg, and max carbon pool measurements.
+            (required if doing sequestration, HWP, or uncertainty)
+        args['hwp_cur_shape'] - OAL shapefile representing harvest rates on 
+            current lulc (required if calculating HWP)
+        args['hwp_fut_shape'] - OAL shapefile representing harvest rates on 
+            future lulc (required if calculating HWP)
+        args['lulc_cur_year'] - an int represents the year of lulc_cur 
+            
+        args['lulc_fut_year'] - an int represents the year of lulc_fut
+            (required if calculating HWP)
+        args['tot_C_cur'] - an output GDAL raster dataset representing total 
+            carbon stored on the current lulc, must be same dimensions as 
+            lulc_cur (required)
+        args['tot_C_fut'] - an output GDAL raster dataset representing total 
+            carbon stored on the future lulc must be same dimensions as 
+            lulc_cur (required, if doing sequestration, uncertainty, or HWP)
+        args['sequest'] - an output GDAL raster dataset representing carbon 
+            sequestration and emissions between current and future landscapes
+            (required, if doing sequestration, uncertainty, or HWP)
+        args['c_hwp_cur'] - an output GDAL raster dataset representing 
+            carbon stored in harvested wood products for current land cover 
+            (required if doing HWP)
+        args['c_hwp_fut'] - an output GDAL raster dataset representing 
+            carbon stored in harvested wood products for futureland cover 
+            (required if doing HWP)
+        args['uncertainty_percentile_map'] - an output GDAL raster highlighting
+            the low and high percentile regions based on the value of 
+            'uncertainty_percentile' from the 'sequest' output (required if
+            calculating uncertainty)
+            
         returns nothing"""
 
     #Calculate the per pixel carbon storage due to lulc pools

@@ -59,6 +59,11 @@ def execute(args):
     #can be passed to the biophysical core model
     biophysicalArgs = {}
 
+    #Copy the calculation modes to the biophysical arguments
+    for mode in ['calc_uncertainty', 'calculate_hwp',
+                 'calculate_sequestration']:
+        biophysicalArgs[mode] = args[mode]
+
     #Uncertainty percentage is required if calculating uncertainty
     if args['calc_uncertainty']:
         biophysicalArgs['uncertainty_percentile'] = \
@@ -110,11 +115,12 @@ def execute(args):
     for key in outputRasters:
         outputURIs[key] = outputDirectoryPrefix + key + '.tif'
 
+    intermediateRasters = ['storage_cur']
+
     #If we're doing a HWP calculation, we need temporary rasters to hold the
     #HWP pools, name them the same as the key but add a .tif extension
     if args['calculate_hwp']:
-        for key in ['bio_hwp_cur', 'bio_hwp_fut', 'vol_hwp_cur',
-                    'vol_hwp_fut']:
+        for key in ['c_hwp_cur', 'c_hwp_fut']:
             outputURIs[key] = intermediateDirectoryPrefix + key + ".tif"
 
     #Create the output and intermediate rasters to be the same size/format as
