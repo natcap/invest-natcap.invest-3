@@ -98,6 +98,9 @@ def execute(args):
     outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output' + os.sep
     intermediateDirectoryPrefix = args['workspace_dir'] + os.sep + \
         'Intermediate' + os.sep
+    for d in [outputDirectoryPrefix, intermediateDirectoryPrefix]:
+        if not os.path.exists(d):
+            os.makedirs(d)
 
     #This defines a dictionary that links output/temporary GDAL/OAL objects
     #to their locations on disk.  Helpful for creating the objects in the next 
