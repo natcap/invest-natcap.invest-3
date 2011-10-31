@@ -150,35 +150,6 @@ def vectorize_dataset_equality(unit, firstDS, secondDS):
 class CarbonTestSuite(unittest.TestCase):
 
 
-    def test_carbon_smoke(self):
-        """Smoke test for carbon execute function.  Shouldn't crash with
-        zero length inputs"""
-        driver = gdal.GetDriverByName("GTIFF")
-        lulc_path = '../../test_data/test_blank_input'
-        lulc = driver.Create(lulc_path, 1, 1, 1, gdal.GDT_Byte)
-        lulc.GetRasterBand(1).SetNoDataValue(-1.0)
-
-        output_path = '../../test_data/test_blank_output'
-        output = driver.Create(output_path, 1, 1, 1, gdal.GDT_Byte)
-        output.GetRasterBand(1).SetNoDataValue(-1.0)
-
-        args = { 'lulc_cur':lulc,
-                'carbon_pools': dbf.Dbf('../../test_data/test_blank_dbf', new=True),
-                'storage_cur': output,
-                'calc_value' : False}
-
-        carbon.execute(args)
-
-        #close the two created datasets and DBF file.
-        lulc = None
-        output = None
-        args['carbon_pools'].close()
-
-        os.remove(output_path)
-        os.remove('../../test_data/test_blank_dbf')
-        os.remove(lulc_path)
-        pass
-
     def test_carbon_with_inputs(self):
         """Test carbon using realistic inputs."""
         driver = gdal.GetDriverByName("GTIFF")
