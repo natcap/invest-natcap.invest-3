@@ -6,84 +6,54 @@ import datetime
 from datetime import date
 from datetime import datetime
 
-
 def execute(args):
     """Executes the basic timber management model that calculates the Total Net Present Value and maps
         it to an outputted shapefile.
     
         args - is a dictionary with at least the following entries:
         
-        args['timber_shape_loc']    - the location of the input shapefile
+        args['timber_shape_loc']    - the location of the input shapefile.
         args['output_dir']          - the workspace where the outputs will be saved.
         args['timber_layer_copy']   - is the layer which holds the polygon features from the copied shapefile.
-        args['timber_shp_copy']     - is a copy of the original OGR shapefile and will be used as the output with
-                                        with the new fields attached to the features.
         args['mdr']                 - the market discount rate.
-        args['plant_prod']          - the dbf file which has the attribute values of each timber parcel.
-        args['plant_prod_loc']      - the location of the production table file.
+        args['attr_table']          - the dbf file which has the polygon attribute values of each timber parcel.
+        args['attr_table_loc']      - the location of the polygon attribute table.
         
         returns nothing"""
 
+    #Set constant variables from arguments
     layer = args['timber_layer_copy']
     mdr = float(args['mdr'])
-    plant_prod_loc = args['plant_prod_loc']
-    plant_dict = args['plant_prod']
+    attr_table_loc = args['attr_table_loc']
+    attr_table = args['attr_table']
     timber_shape_loc = args['timber_shape_loc']
     output_dir = args['output_dir']
-    
+    #Set constant variables
     mdr_perc = 1+(mdr/100.00)
+    sumTwo_lowerLimit = 0
     
     #Create three new fields on the shapefile's polygon layer
     for fieldname in ('TNPV', 'TBiomass', 'TVolume'):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
-        
-    ################
+    #Loop through each feature (polygon) in the shapefile layer
     for feat in layer:
-        parcl_index = feat.GetFieldIndex('Parcl_ID')
-        parcl_value = feat.GetField(parcl_index)
-        id = 0
-        pid = plant_dict[id]['Parcel_ID']
-        #Make sure referring to the same polygon by comparing Parcl_ID's
-        while parcl_value != pid:
-            id+=1
-            pid = plant_dict[id]['Parcel_ID']        
+        #Get the correct polygon attributes to be calculated by matching the feature's polygons Parcl_ID
+        #with the attribute tables polygons Parcel_ID
+        attr_row = getAttributeRow(feat, attr_table)
         
-        plant_row = plant_dict[id]
-        
-        freq_Harv  = plant_row['Freq_harv']
-        num_Years  = float(plant_row['T'])
-        harv_Mass  = plant_row['Harv_mass']
-        harv_Cost  = plant_row['Harv_cost']
-        price      = plant_row['Price']
-        maint_Cost = plant_row['Maint_cost']
-        BCEF       = plant_row['BCEF']
-        parcl_Area = plant_row['Parcl_area']
-        perc_Harv  = plant_row['Perc_harv']
-        immed_Harv = plant_row['Immed_harv']
-    ###############
-    
-    #Run through each timber parcel in the table, calculating it's TNPV
-#    for i in range(plant_dict.recordCount):
-#        
-#        freq_Harv  = plant_dict[i]['Freq_harv']
-#        num_Years  = float(plant_dict[i]['T'])
-#        harv_Mass  = plant_dict[i]['Harv_mass']
-#        harv_Cost  = plant_dict[i]['Harv_cost']
-#        price      = plant_dict[i]['Price']
-#        maint_Cost = plant_dict[i]['Maint_cost']
-#        BCEF       = plant_dict[i]['BCEF']
-#        parcl_Area = plant_dict[i]['Parcl_area']
-#        perc_Harv  = plant_dict[i]['Perc_harv']
-#        immed_Harv = plant_dict[i]['Immed_harv']
-           
-        net_present_value = 0
-        summation_one = 0.0
-        summation_two = 0.0
-        lower_limit = 0
-        upper_limit = 0
-        lower_limit2 = 0
-        upper_limit2 = int(num_Years - 1)
+        freq_Harv  = attr_row['Freq_harv']
+        num_Years  = float(attr_row['T'])
+        harv_Mass  = attr_row['Harv_mass']
+        harv_Cost  = attr_row['Harv_cost']
+        price      = attr_row['Price']
+        maint_Cost = attr_row['Maint_cost']
+        BCEF       = attr_row['BCEF']
+        parcl_Area = attr_row['Parcl_area']
+        perc_Harv  = attr_row['Perc_harv']
+        immed_Harv = attr_row['Immed_harv']
+
+        sumTwo_upperLimit = int(num_Years - 1)
         subtractor = 0.0
         yr_per_freq = num_Years/freq_Harv
         
@@ -95,17 +65,17 @@ def execute(args):
            freq_Harv = num_Years 
         
         #Check to see if immediate harvest will occur
-        if immed_Harv == 'N':
-            upper_limit = int(math.floor(yr_per_freq))
-            lower_limit = 1
+        if immed_Harv.upper() == 'N' or 'NO':
+            sumOne_upperLimit = int(math.floor(yr_per_freq))
+            sumOne_lowerLimit = 1
             subtractor = 1.0
-            summation_one = npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
-            summation_two = npvSummationTwo(lower_limit2, upper_limit2, maint_Cost, mdr_perc)            
-        else:
-            upper_limit = int((math.ceil(yr_per_freq)-1.0))
-            lower_limit = 0
-            summation_one = npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
-            summation_two = npvSummationTwo(lower_limit2, upper_limit2, maint_Cost, mdr_perc)
+            summation_one = npvSummationOne(sumOne_lowerLimit, sumOne_upperLimit, harvest_value, mdr_perc, freq_Harv, subtractor)
+            summation_two = npvSummationTwo(sumTwo_lowerLimit, sumTwo_upperLimit, maint_Cost, mdr_perc)            
+        elif immed_Harv.upper() == 'Y' or 'YES':
+            sumOne_upperLimit = int((math.ceil(yr_per_freq)-1.0))
+            sumOne_lowerLimit = 0
+            summation_one = npvSummationOne(sumOne_lowerLimit, sumOne_upperLimit, harvest_value, mdr_perc, freq_Harv, subtractor)
+            summation_two = npvSummationTwo(sumTwo_lowerLimit, sumTwo_upperLimit, maint_Cost, mdr_perc)
         
         #Calculate Biomass
         biomass = getBiomass(parcl_Area, perc_Harv, harv_Mass, num_Years, freq_Harv)
@@ -115,20 +85,30 @@ def execute(args):
         net_present_value = (summation_one - summation_two)        
         total_npv = net_present_value * parcl_Area
 
-        #Grab the polygon from the shapefile that is associated with the current timber parcel
-        #feature = layer.GetFeature(parcl_index)
         #For each new field set the corresponding value to the specific polygon
         for field, value in (('TNPV', total_npv), ('TBiomass', biomass), ('TVolume', volume)):
             index = feat.GetFieldIndex(field)
             feat.SetField(index, value)       
 
         #save the field modifications to the layer.
-        layer.SetFeature(feat)
-        
+        layer.SetFeature(feat)        
         feat.Destroy()
         
     #Create the output file with the attributes used    
-    textFileOut(timber_shape_loc, output_dir, mdr, plant_prod_loc)
+    textFileOut(timber_shape_loc, output_dir, mdr, attr_table_loc)
+
+def getAttributeRow(feat, attr_table):
+    parcl_index = feat.GetFieldIndex('Parcl_ID')
+    parcl_id = feat.GetField(parcl_index)
+    table_index = 0
+    table_id = attr_table[table_index]['Parcel_ID']
+        
+    #Make sure referring to the same polygon by comparing Parcl_ID's
+    while parcl_id != table_id:
+        table_index += 1
+        table_id = attr_table[table_index]['Parcel_ID']
+                    
+    return attr_table[table_index]
 
 #Calculates harvest value for parcel
 def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
@@ -176,8 +156,7 @@ def textFileOut(timber_shape, output_dir, mdr, plant_prod):
                  "Production table: " + plant_prod,
                  "Market discount rate: " + str(mdr),
                  "Script Location: " + os.path.dirname(sys.argv[0])+"\\"+os.path.basename(sys.argv[0])]
-    
-    
+      
     filename = output_dir+os.sep+"Timber_"+date+".txt"
     file = open(filename, 'w')
     
@@ -187,4 +166,19 @@ def textFileOut(timber_shape, output_dir, mdr, plant_prod):
     
     file.close()
 
-        
+
+    #Run through each timber parcel in the table, calculating it's TNPV
+#    for i in range(plant_dict.recordCount):
+#        
+#        freq_Harv  = plant_dict[i]['Freq_harv']
+#        num_Years  = float(plant_dict[i]['T'])
+#        harv_Mass  = plant_dict[i]['Harv_mass']
+#        harv_Cost  = plant_dict[i]['Harv_cost']
+#        price      = plant_dict[i]['Price']
+#        maint_Cost = plant_dict[i]['Maint_cost']
+#        BCEF       = plant_dict[i]['BCEF']
+#        parcl_Area = plant_dict[i]['Parcl_area']
+#        perc_Harv  = plant_dict[i]['Perc_harv']
+#        immed_Harv = plant_dict[i]['Immed_harv']      
+
+#        feature = layer.GetFeature(parcl_index)

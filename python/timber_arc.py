@@ -14,8 +14,8 @@ gp.AddMessage(os.getcwd())
 
 #build up the JSON dictionary for saving previously used parameters to disk.
 arguments = {'output_dir': gp.GetParameterAsText(0),
-             'timber_shp_uri': gp.GetParameterAsText(1),
-             'plant_prod_uri': gp.GetParameterAsText(2),
+             'timber_shape_uri': gp.GetParameterAsText(1),
+             'attr_table_uri': gp.GetParameterAsText(2),
              'market_disc_rate': float(gp.GetParameterAsText(3))}
 
 args_file = open('C:\Users\\' + getpass.getuser() + '\My Documents\ArcGIS\\timber_args.json', 'w')

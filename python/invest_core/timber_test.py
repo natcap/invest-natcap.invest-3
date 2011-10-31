@@ -181,11 +181,10 @@ class TestTimber(unittest.TestCase):
         #Arguments to be past to the model
         args= {'timber_shape_loc': shp_path,
                'output_dir': smoke_path,
-               'plant_prod_loc': dbf_path,
-               'plant_prod':db, 
+               'attr_table_loc': dbf_path,
+               'attr_table':db, 
                'mdr':7, 
-               'timber_layer_copy': lyr,
-               'timber_shp_copy': ds 
+               'timber_layer_copy': lyr 
                }
         
         timber.execute(args)
@@ -218,22 +217,21 @@ class TestTimber(unittest.TestCase):
         """Test timber model with real inputs.  Compare copied and modified shapefile with valid
             shapefile that was created from the same inputs"""
         
-        plant_file = dbf.Dbf('../../test_data/timber/input/plant_table.dbf')
-        plant_shape = ogr.Open('../../test_data/timber/input/plantation.shp', 1)
+        attr_table = dbf.Dbf('../../test_data/timber/input/plant_table.dbf')
+        test_shape = ogr.Open('../../test_data/timber/input/plantation.shp', 1)
         
         ogr.GetDriverByName('ESRI Shapefile').\
-            CopyDataSource(plant_shape, '../../test_data/timber/Output' + os.sep)
+            CopyDataSource(test_shape, '../../test_data/timber/Output' + os.sep)
             
-        timber_shp_copy = ogr.Open('../../test_data/timber/output/plantation.shp', 1)       
-        timber_layer_copy = timber_shp_copy.GetLayerByName('plantation')
+        timber_shape_copy = ogr.Open('../../test_data/timber/output/plantation.shp', 1)       
+        timber_layer_copy = timber_shape_copy.GetLayerByName('plantation')
         
         args= {'timber_shape_loc': '../../test_data/timber/input/plantation.shp',
                'output_dir': '../../test_data/timber/Output',
-               'plant_prod_loc': '../../test_data/timber/input/plant_table.dbf',
-               'plant_prod':plant_file, 
+               'attr_table_loc': '../../test_data/timber/input/plant_table.dbf',
+               'attr_table':attr_table, 
                'mdr':7, 
-               'timber_layer_copy': timber_layer_copy,
-               'timber_shp_copy': timber_shp_copy 
+               'timber_layer_copy': timber_layer_copy
                }
         
         timber.execute(args)
@@ -251,9 +249,9 @@ class TestTimber(unittest.TestCase):
                 self.assertEqual(field_value, field_value2)
         
         valid_output_shape = None
-        timber_shp_copy = None
-        plant_shape = None
-        plant_file.close()
+        timber_shape_copy = None
+        test_shape = None
+        attr_table.close()
         
         textFileList = os.listdir('../../test_data/timber/Output/')
         
