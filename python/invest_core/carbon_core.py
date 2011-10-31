@@ -37,7 +37,6 @@ def biophysical(args):
         args['hwp_fut_shape'] - OAL shapefile representing harvest rates on 
             future lulc (required if calculating HWP)
         args['lulc_cur_year'] - an int represents the year of lulc_cur 
-            
         args['lulc_fut_year'] - an int represents the year of lulc_fut
             (required if calculating HWP)
         args['tot_C_cur'] - an output GDAL raster dataset representing total 
@@ -89,10 +88,6 @@ def biophysical(args):
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
         rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
-
-    #value the carbon sequestered if the user requests
-    if args['calc_value']:
-        valuate(args)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
