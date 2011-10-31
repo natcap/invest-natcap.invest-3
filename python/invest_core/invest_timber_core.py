@@ -49,7 +49,7 @@ def execute(args):
             'output_dir': output_source,
             'timber_layer_copy': timber_layer_copy,
             'attr_table': dbf.Dbf(args['attr_table_uri']),
-            'attr_table_loc': args['plant_prod_uri'],
+            'attr_table_loc': args['attr_table_uri'],
             'mdr': args['market_disc_rate']}
 
     timber.execute(args)
