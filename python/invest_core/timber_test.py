@@ -223,7 +223,7 @@ class TestTimber(unittest.TestCase):
         ogr.GetDriverByName('ESRI Shapefile').\
             CopyDataSource(test_shape, '../../test_data/timber/Output' + os.sep)
             
-        timber_shape_copy = ogr.Open('../../test_data/timber/output/plantation.shp', 1)       
+        timber_shape_copy = ogr.Open('../../test_data/timber/Output/plantation.shp', 1)       
         timber_layer_copy = timber_shape_copy.GetLayerByName('plantation')
         
         args= {'timber_shape_loc': '../../test_data/timber/input/plantation.shp',
@@ -236,8 +236,8 @@ class TestTimber(unittest.TestCase):
         
         timber.execute(args)
         
-        valid_output_shape = ogr.Open('../../test_data/timber/output/plantation.shp')
-        valid_output_layer = valid_output_shape.GetLayerByName('plantation')
+        valid_output_shape = ogr.Open('../../test_data/timber/output/timber.shp')
+        valid_output_layer = valid_output_shape.GetLayerByName('timber')
         
         #Compare two shapefiles to make sure values correspond correctly
         for feat, feat2 in zip(valid_output_layer, timber_layer_copy):
