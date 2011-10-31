@@ -19,8 +19,8 @@ class TestInvestCarbonCore(unittest.TestCase):
                                                 (443, 953, 2, 1.0),
                                                 (719, 211, 12, 111.5)]:
             #Create a blank xDim x yDim raster
-            lulc = driver.Create('../../../test_data/test_blank_input', xDim, yDim, 1,
-                                 gdal.GDT_Byte)
+            lulc = driver.Create('../../../test_data/test_blank_input', xDim,
+                                 yDim, 1, gdal.GDT_Byte)
             lulc.GetRasterBand(1).SetNoDataValue(inNoData)
             #Fill raster with nodata 
             lulc.GetRasterBand(1).Fill(lulc.GetRasterBand(1).GetNoDataValue())
@@ -84,14 +84,16 @@ class TestInvestCarbonCore(unittest.TestCase):
     def test_carbon_pixel_area(self):
         """Verify the correct output of carbon.pixelArea()"""
 
-        dataset = gdal.Open('../../../test_data/carbon_regression.tif', gdal.GA_ReadOnly)
+        dataset = gdal.Open('../../../test_data/carbon_regression.tif',
+                            gdal.GA_ReadOnly)
 
         srs = osr.SpatialReference()
         srs.SetProjection(dataset.GetProjection())
         linearUnits = srs.GetLinearUnits()
         geotransform = dataset.GetGeoTransform()
         #take absolute value since sometimes negative widths/heights
-        areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
+        areaMeters = abs(geotransform[1] * geotransform[5] *
+                         (linearUnits ** 2))
         result = areaMeters / (10 ** 4) #convert m^2 to Ha
 
         #run pixelArea()
@@ -99,6 +101,70 @@ class TestInvestCarbonCore(unittest.TestCase):
 
         #assert the output of pixelArea against our calculation
         self.assertEqual(result, area)
+
+    def test_carbon_diff_smoke(self):
+        """Smoke test for the diff function."""
+        lulc1 = np.zeros((1, 0))
+        lulc2 = np.zeros((1, 0))
+        nodata = {'input': 0, 'output': 0} #set a nodata value
+
+        carbon_core.carbon_diff(nodata, lulc1, lulc2)
+
+    def test_carbon_diff_1D_arrays(self):
+        length = 100
+        lulc1 = np.zeros((1, length))
+        lulc2 = np.ones((1, length))
+        nodata = {'input':-2, 'output':-2} #set a nodata value
+
+        #run carbon_diff
+        output = carbon_core.carbon_diff(nodata, lulc1, lulc2)
+
+        #verify the contents of output against pool and lulc data
+        for x in range(lulc1.shape[1]):
+            self.assertEqual(output[0][x], 1, 'Difference was not correctly \
+                calculated.')
+
+    def test_carbon_add_smoke(self):
+        """Smoke test for the diff function."""
+        lulc1 = np.zeros((1, 0))
+        lulc2 = np.zeros((1, 0))
+        nodata = {'cur': 0, 'fut': 0} #set a nodata value
+
+        carbon_core.carbon_add(nodata, lulc1, lulc2)
+
+    def test_carbon_add_1D_arrays(self):
+        """Testing adding of 2 carbon arrays"""
+        length = 100
+        lulc1 = np.zeros((1, length))
+        lulc2 = np.zeros((1, length))
+        for x in range(length):
+            lulc1[0][x] = 15.0 * random.random()
+            lulc2[0][x] = 10.0 * random.random()
+
+        nodata = {'input':-2, 'output':-2} #set a nodata value
+
+        #run carbon_add
+        output = carbon_core.carbon_add(nodata, lulc1, lulc2)
+
+        #verify the contents of output against pool and lulc data
+        for x in range(lulc1.shape[1]):
+            self.assertEqual(output[0][x], lulc1[0][x] + lulc2[0][x],
+                             'Sum was not correctly calculated.')
+
+    def test_carbon_value_1D_array(self):
+        """Test of carbon_value against a 1D input/output array"""
+        #setup the three args to carbon_seq
+        length = 100
+        lulc = np.ones((1, length))
+        nodata = {'input':-1, 'output':-1}
+
+        #run carbon_value
+        output = carbon_core.carbon_value(nodata, lulc, 3, 2.0, 4.0)
+
+        #verify the output data was calculated and mapped correctly
+        #Each value should equal 2.66666666666
+        for x in range(lulc.shape[1]):
+            self.assertAlmostEqual(output[0][x], 2.6666666666, 8)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCarbonCore)
