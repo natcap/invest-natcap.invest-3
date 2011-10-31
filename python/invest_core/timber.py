@@ -23,14 +23,14 @@ def execute(args):
         
         returns nothing"""
 
-    #Set some constant variables
+    #Set constant variables from arguments
     layer = args['timber_layer_copy']
     mdr = float(args['mdr'])
     plant_prod_loc = args['plant_prod_loc']
     plant_dict = args['plant_prod']
     timber_shape_loc = args['timber_shape_loc']
     output_dir = args['output_dir']
-    
+    #Set constant variables
     mdr_perc = 1+(mdr/100.00)
     lower_limit2 = 0
     
