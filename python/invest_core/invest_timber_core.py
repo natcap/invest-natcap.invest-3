@@ -28,18 +28,16 @@ def execute(args):
     output_source = args['output_dir']+os.sep+'Output/'
     if not os.path.isdir(output_source):
         os.mkdir(output_source)
+        
     shape_copy_source = output_source + 'timber.shp'
     
-    #Overwrite any current output if the workspace is the same
+    #If there is already an existing shapefile with the same name and path, delete it
     if os.path.isfile(shape_copy_source): 
         os.remove(shape_copy_source)
-#        os.remove(output_source+os.sep+'timber.dbf')
-#        os.remove(output_source+os.sep+'timber.prj')
-#        os.remove(output_source+os.sep+'timber.shx')
     
     #Copy the input shapefile into the designated output folder
     copy = ogr.GetDriverByName('ESRI Shapefile').\
-        CopyDataSource(timber_shp, output_source+'timber.shp')
+        CopyDataSource(timber_shp, shape_copy_source)
 
     #OGR closes datasources this way to make sure data gets flushed properly
     timber_shp.Destroy()
