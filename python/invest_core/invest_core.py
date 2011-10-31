@@ -1,3 +1,6 @@
+"""This module contains general purpose geoprocessing functions useful for
+    the InVEST toolset"""
+
 import numpy as np
 
 def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
