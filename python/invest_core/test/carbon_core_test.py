@@ -3,7 +3,7 @@ cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../')
 import carbon_core
 import unittest
-from osgeo import ogr, gdal
+from osgeo import ogr, gdal, osr
 from osgeo.gdalconst import *
 from dbfpy import dbf
 import numpy as np
@@ -80,6 +80,25 @@ class TestInvestCarbonCore(unittest.TestCase):
         for x in xrange(xDim):
             for y in xrange(yDim):
                 self.assertAlmostEqual(pools[array[y][x]], data[y][x])
+
+    def test_carbon_pixel_area(self):
+        """Verify the correct output of carbon.pixelArea()"""
+
+        dataset = gdal.Open('../../../test_data/carbon_regression.tif', gdal.GA_ReadOnly)
+
+        srs = osr.SpatialReference()
+        srs.SetProjection(dataset.GetProjection())
+        linearUnits = srs.GetLinearUnits()
+        geotransform = dataset.GetGeoTransform()
+        #take absolute value since sometimes negative widths/heights
+        areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
+        result = areaMeters / (10 ** 4) #convert m^2 to Ha
+
+        #run pixelArea()
+        area = carbon_core.pixelArea(dataset)
+
+        #assert the output of pixelArea against our calculation
+        self.assertEqual(result, area)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCarbonCore)
