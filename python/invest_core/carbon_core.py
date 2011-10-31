@@ -5,6 +5,7 @@ import osgeo.osr as osr
 from osgeo import ogr
 from dbfpy import dbf
 import math
+import invest_core
 
 def biophysical(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -86,9 +87,9 @@ def biophysical(args):
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
-        rasterDiff(args['tot_C_fut'].GetRasterBand(1),
-                   args['tot_C_cur'].GetRasterBand(1),
-                   args['sequest'].GetRasterBand(1))
+        invest_core.rasterDiff(args['tot_C_fut'].GetRasterBand(1),
+                               args['tot_C_cur'].GetRasterBand(1),
+                               args['sequest'].GetRasterBand(1))
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
