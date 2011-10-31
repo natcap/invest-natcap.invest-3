@@ -37,7 +37,6 @@ def biophysical(args):
         args['hwp_fut_shape'] - OAL shapefile representing harvest rates on 
             future lulc (required if calculating HWP)
         args['lulc_cur_year'] - an int represents the year of lulc_cur 
-            
         args['lulc_fut_year'] - an int represents the year of lulc_fut
             (required if calculating HWP)
         args['tot_C_cur'] - an output GDAL raster dataset representing total 
@@ -72,27 +71,22 @@ def biophysical(args):
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
     #calculate carbon storage for the current landscape
-    rasterSeq(pools, args['lulc_cur'], args['tot_C_cur'])
+    calculateCarbonStorage(pools, args['lulc_cur'], args['tot_C_cur'])
 
+    #if lulc_fut is present it means that sequestration needs to be calculated
+    #calculate the future storage as well
     if 'lulc_fut' in args:
         #calculate storage for the future landscape
-        rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
+        calculateCarbonStorage(pools, args['lulc_fut'], args['tot_C_fut'])
 
-    #Calculate HWP pools
+    #Calculate HWP pools if a HWP shape is present
     if 'hwp_cur_shape' in args:
         harvestProductInfo(args)
-        if 'hwp_fut_shape' not in args:
-            harvestProducts(args, ('cur',))
-        else:
-            harvestProducts(args, ('cur', 'fut'))
+        harvestProducts(args, ('cur', 'fut'))
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
-        rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
-
-    #value the carbon sequestered if the user requests
-    if args['calc_value']:
-        valuate(args)
+        rasterDiff(args['storage_cur'], args['storage_fut'], args['sequest'])
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -394,20 +388,20 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
         out_array = carbon_value(nodataDict, data, numYears, carbonValue, multiplier)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
-def rasterSeq(pools, inputRaster, outputRaster):
-    """Iterate through the rows in a raster and map carbon sequestration values
+def calculateCarbonStorage(pools, inputRaster, outputRaster):
+    """Iterate through the rows in an LULC raster and map carbon storage values
         to the output raster.
         
-        pools - a python dict mapping lulc indices to sequestration data
-        inputRaster - a GDAL raster dataset
-        outputRaster - a GDAL raster dataset
+        pools - a python dict mapping lulc indices to carbon storage/pixel
+        inputRaster - a GDAL raster dataset representing lulc 
+        outputRaster - a GDAL raster dataset representing carbon storage
         
         No return value."""
 
     lulc = inputRaster.GetRasterBand(1)
     for i in range(0, lulc.YSize):
         data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
-        out_array = carbon_seq(data, pools)
+        out_array = mapValues(data, pools)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
 def rasterDiff(storage_cur, storage_fut, outputRaster):
@@ -526,7 +520,7 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
         poolsDict[dbf[i]['LULC']] = sum * area
     return poolsDict
 
-def carbon_seq(array, dict):
+def mapValues(array, dict):
     """Creates a new array by maping the values stored in array from the
          keys in dict to the values in dict.  If a value in array is not 
          a key in dict it gets mapped to zero.
