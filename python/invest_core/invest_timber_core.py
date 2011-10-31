@@ -13,16 +13,15 @@ def execute(args):
     args - a dictionary object of arguments 
        
     args['output_dir']        - The file location where the outputs will be written
-    args['timber_shp_uri']    - The shape file location
-    args['plant_prod_uri']    - The DBF attribute table location
+    args['timber_shape_uri']  - The shape file location
+    args['attr_table_uri']    - The DBF polygon attribute table location
     args['market_disc_rate']  - The market discount rate as a string
     
     """    
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     filesystemencoding = sys.getfilesystemencoding()
     
-    timber_shp_file = args['timber_shp_uri']
-    timber_shp = ogr.Open(args['timber_shp_uri'].encode(filesystemencoding), 1)
+    timber_shape = ogr.Open(args['timber_shape_uri'].encode(filesystemencoding), 1)
     
     #Add the Output directory onto the given workspace
     output_source = args['output_dir']+os.sep+'Output/'
@@ -37,21 +36,20 @@ def execute(args):
     
     #Copy the input shapefile into the designated output folder
     copy = ogr.GetDriverByName('ESRI Shapefile').\
-        CopyDataSource(timber_shp, shape_copy_source)
+        CopyDataSource(timber_shape, shape_copy_source)
 
     #OGR closes datasources this way to make sure data gets flushed properly
-    timber_shp.Destroy()
+    timber_shape.Destroy()
     copy.Destroy()
    
-    timber_shp_copy = ogr.Open(shape_copy_source.encode(filesystemencoding), 1)
-    timber_layer_copy = timber_shp_copy.GetLayerByName('timber')
+    timber_shape_copy = ogr.Open(shape_copy_source.encode(filesystemencoding), 1)
+    timber_layer_copy = timber_shape_copy.GetLayerByName('timber')
     
-    args = {'timber_shape_loc':timber_shp_file,
+    args = {'timber_shape_loc':args['timber_shape_uri'],
             'output_dir': output_source,
             'timber_layer_copy': timber_layer_copy,
-            'plant_prod': dbf.Dbf(args['plant_prod_uri']),
-            'plant_prod_loc': args['plant_prod_uri'],
-            'timber_shp_copy': timber_shp_copy,
+            'attr_table': dbf.Dbf(args['attr_table_uri']),
+            'attr_table_loc': args['plant_prod_uri'],
             'mdr': args['market_disc_rate']}
 
     timber.execute(args)
@@ -59,11 +57,11 @@ def execute(args):
     #This is how OGR closes its datasources in python
     timber_shp_copy.Destroy()
     
-    #close the pools DBF file
-    args['plant_prod'].close()
+    #close the polygon attribute table DBF file and wipe datasources
+    args['attr_table'].close()
     copy = None
-    timber_shp = None
-    timber_shp_copy = None
+    timber_shape = None
+    timber_shape_copy = None
     timber_layer_copy = None
 
 
