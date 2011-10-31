@@ -4,10 +4,97 @@ import osgeo.gdal
 import osgeo.osr as osr
 from osgeo import ogr
 from dbfpy import dbf
-import invest_carbon_core
 import math
 
 def biophysical(args):
+    """Executes the basic carbon model that maps a carbon pool dataset to a
+        LULC raster.
+
+        args - is a dictionary with at least the following entries:
+        args['calculate_sequestration'] - a boolean, True if sequestration
+            is to be calculated.
+        args['calculate_hwp'] - a boolean, True if harvested wood product
+            calcuation is to be done.  Also implies a sequestration 
+            calculation.
+        args['calc_uncertainty'] - a Boolean.  True if we wish to calculate 
+            uncertainty in the carbon model.  Implies that carbon pools should
+            have value ranges.
+        args['uncertainty_percentile'] - a float indicating upper and lower
+            percentiles of sequestration to output (required if calculating 
+            uncertainty)
+        args['lulc_cur'] - is a GDAL raster representing the current land 
+            use/land cover map (required)
+        args['lulc_fut'] - is a GDAL raster dataset representing the future 
+            land use/land cover map (required if doing sequestration, HWP, or
+            uncertainty calculations)
+        args['carbon_pools'] - is a DBF dataset mapping carbon storage density
+            to lulc classifications in input LULC rasters.  If 
+            args['calc_uncertainty'] is True the columns should have additional
+            information about min, avg, and max carbon pool measurements.
+            (required if doing sequestration, HWP, or uncertainty)
+        args['hwp_cur_shape'] - OAL shapefile representing harvest rates on 
+            current lulc (required if calculating HWP)
+        args['hwp_fut_shape'] - OAL shapefile representing harvest rates on 
+            future lulc (required if calculating HWP)
+        args['lulc_cur_year'] - an int represents the year of lulc_cur 
+            
+        args['lulc_fut_year'] - an int represents the year of lulc_fut
+            (required if calculating HWP)
+        args['tot_C_cur'] - an output GDAL raster dataset representing total 
+            carbon stored on the current lulc, must be same dimensions as 
+            lulc_cur (required)
+        args['tot_C_fut'] - an output GDAL raster dataset representing total 
+            carbon stored on the future lulc must be same dimensions as 
+            lulc_cur (required, if doing sequestration, uncertainty, or HWP)
+        args['sequest'] - an output GDAL raster dataset representing carbon 
+            sequestration and emissions between current and future landscapes
+            (required, if doing sequestration, uncertainty, or HWP)
+        args['c_hwp_cur'] - an output GDAL raster dataset representing 
+            carbon stored in harvested wood products for current land cover 
+            (required if doing HWP)
+        args['c_hwp_fut'] - an output GDAL raster dataset representing 
+            carbon stored in harvested wood products for futureland cover 
+            (required if doing HWP)
+        args['uncertainty_percentile_map'] - an output GDAL raster highlighting
+            the low and high percentile regions based on the value of 
+            'uncertainty_percentile' from the 'sequest' output (required if
+            calculating uncertainty)
+            
+        returns nothing"""
+
+    #Calculate the per pixel carbon storage due to lulc pools
+    area = pixelArea(args['lulc_cur'])
+
+    #Create carbon pool dictionary with appropriate values to handle
+    #nodata in the input and nodata in the output
+    inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
+    outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
+    pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
+
+    #calculate carbon storage for the current landscape
+    rasterSeq(pools, args['lulc_cur'], args['tot_C_cur'])
+
+    if 'lulc_fut' in args:
+        #calculate storage for the future landscape
+        rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
+
+    #Calculate HWP pools
+    if 'hwp_cur_shape' in args:
+        harvestProductInfo(args)
+        if 'hwp_fut_shape' not in args:
+            harvestProducts(args, ('cur',))
+        else:
+            harvestProducts(args, ('cur', 'fut'))
+
+    if 'lulc_fut' in args:
+        #calculate seq. only after HWP has been added to the storage rasters
+        rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
+
+    #value the carbon sequestered if the user requests
+    if args['calc_value']:
+        valuate(args)
+
+def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
         LULC raster.
     
@@ -40,35 +127,7 @@ def biophysical(args):
         
         returns nothing"""
 
-    #Calculate the per pixel carbon storage due to lulc pools
-    area = pixelArea(args['lulc_cur'])
-    inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
-    outNoData = args['storage_cur'].GetRasterBand(1).GetNoDataValue()
-    pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
-
-    #calculate carbon storage for the current landscape
-    rasterSeq(pools, args['lulc_cur'], args['storage_cur'])
-
-    if 'lulc_fut' in args:
-        #calculate storage for the future landscape
-        rasterSeq(pools, args['lulc_fut'], args['storage_fut'])
-
-    #Calculate HWP pools
-    if 'hwp_cur_shape' in args:
-        harvestProductInfo(args)
-        if 'hwp_fut_shape' not in args:
-            harvestProducts(args, ('cur',))
-        else:
-            harvestProducts(args, ('cur', 'fut'))
-
-    if 'lulc_fut' in args:
-        #calculate seq. only after HWP has been added to the storage rasters
-        rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
-
-    #value the carbon sequestered if the user requests
-    if args['calc_value']:
-        valuate(args)
-
+    pass
 
 def harvestProductInfo(args):
     """Calculates biomass and volume of harvested wood products in a parcel.

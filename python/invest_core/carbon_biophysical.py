@@ -59,6 +59,11 @@ def execute(args):
     #can be passed to the biophysical core model
     biophysicalArgs = {}
 
+    #Copy the calculation modes to the biophysical arguments
+    for mode in ['calc_uncertainty', 'calculate_hwp',
+                 'calculate_sequestration']:
+        biophysicalArgs[mode] = args[mode]
+
     #Uncertainty percentage is required if calculating uncertainty
     if args['calc_uncertainty']:
         biophysicalArgs['uncertainty_percentile'] = \
@@ -98,38 +103,38 @@ def execute(args):
     #to their locations on disk.  Helpful for creating the objects in the next 
     #step
     outputURIs = {}
-    outputURIs['tot_C_cur'] = outputDirectoryPrefix + 'tot_C_cur.tif'
-    if args['calculate_sequestration'] or args['calculate_hwp']:
-        outputURIs['tot_C_fut'] = outputDirectoryPrefix + 'tot_C_fut.tif'
-        outputURIs['sequest'] = outputDirectoryPrefix + 'sequest.tif'
 
-    #If we calculate uncertainty, we need to generate the colorized map that
-    #Highlights the percentile ranges
+    #make a list of all the rasters that we need to create, it's dependant
+    #on what calculation mode we're in (sequestration, HWP, uncertainty, etc.)
+    outputRasters = ['tot_C_cur']
+    if args['calculate_sequestration'] or args['calculate_hwp']:
+        outputRasters.extend(['tot_C_fut', 'sequest'])
     if args['calc_uncertainty']:
-        outputURIs['uncertainty_percentile_map'] = outputDirectoryPrefix + \
-            'uncertainty_colormap.tif'
+        outputRasters.append('uncertainty_percentile_map')
+    #build the URIs for the output rasters in a single loop
+    for key in outputRasters:
+        outputURIs[key] = outputDirectoryPrefix + key + '.tif'
+
+    intermediateRasters = ['storage_cur']
 
     #If we're doing a HWP calculation, we need temporary rasters to hold the
-    #HWP pools
+    #HWP pools, name them the same as the key but add a .tif extension
     if args['calculate_hwp']:
-        outputURIs['bio_hwp_cur'] = intermediateDirectoryPrefix + \
-            'bio_hwp_cur.tif'
-        outputURIs['bio_hwp_fut'] = intermediateDirectoryPrefix + \
-            'bio_hwp_fut.tif'
-        outputURIs['vol_hwp_cur'] = intermediateDirectoryPrefix + \
-            'vol_hwp_cur.tif'
-        outputURIs['vol_hwp_fut'] = intermediateDirectoryPrefix + \
-            'vol_hwp_fut.tif'
+        for key in ['c_hwp_cur', 'c_hwp_fut']:
+            outputURIs[key] = intermediateDirectoryPrefix + key + ".tif"
 
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
-    for datasetName, datasetPath in outputURIs.iteritems():
-        biophysicalArgs[datasetName] = \
-            newRasterFromBase(biophysicalArgs['lulc_cur'], datasetPath,
+    for rasterName, rasterPath in outputURIs.iteritems():
+        biophysicalArgs[rasterName] = \
+            newRasterFromBase(biophysicalArgs['lulc_cur'], rasterPath,
                               'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the biophysical part of the carbon model.
-    carbon.biophysical(biophysicalArgs)
+    carbon_core.biophysical(biophysicalArgs)
+
+    #Clean up the GDAL/OAL datasets.  This may not be necessary, but examples
+    #online show it
 
     #close the pools DBF file (is this required?)
     biophysicalArgs['carbon_pools'].close()
@@ -137,8 +142,6 @@ def execute(args):
     #close all newly created raster datasets (is this required?)
     for dataset in biophysicalArgs:
         biophysicalArgs[dataset] = None
-
-
 
 def newRasterFromBase(base, outputURI, format, nodata, datatype):
     """Create a new, empty GDAL raster dataset with the spatial references,
@@ -175,7 +178,6 @@ def newRasterFromBase(base, outputURI, format, nodata, datatype):
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
 if __name__ == '__main__':
-
     modulename, json_args = sys.argv
     args = json.loads(json_args)
     execute(args)
