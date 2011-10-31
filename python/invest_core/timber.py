@@ -37,6 +37,7 @@ def execute(args):
     for fieldname in ('TNPV', 'TBiomass', 'TVolume'):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
+        
     ################
     for feat in layer:
         parcl_index = feat.GetFieldIndex('Parcl_ID')
@@ -61,6 +62,7 @@ def execute(args):
         perc_Harv  = plant_row['Perc_harv']
         immed_Harv = plant_row['Immed_harv']
     ###############
+    
     #Run through each timber parcel in the table, calculating it's TNPV
 #    for i in range(plant_dict.recordCount):
 #        

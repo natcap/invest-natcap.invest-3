@@ -207,11 +207,11 @@ class TestTimber(unittest.TestCase):
         db.close()
         
         #Remove the generated output from the smoke test
-#        if os.path.isdir(smoke_path):
-#            textFileList = os.listdir(smoke_path)
-#            for file in textFileList:
-#                os.remove(smoke_path+file)
-#            os.rmdir(smoke_path)
+        if os.path.isdir(smoke_path):
+            textFileList = os.listdir(smoke_path)
+            for file in textFileList:
+                os.remove(smoke_path+file)
+            os.rmdir(smoke_path)
    
 
     def test_timber_with_inputs(self):
