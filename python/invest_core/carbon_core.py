@@ -73,17 +73,16 @@ def biophysical(args):
     #calculate carbon storage for the current landscape
     calculateCarbonStorage(pools, args['lulc_cur'], args['tot_C_cur'])
 
+    #if lulc_fut is present it means that sequestration needs to be calculated
+    #calculate the future storage as well
     if 'lulc_fut' in args:
         #calculate storage for the future landscape
-        calculateCarbonStorage(pools, args['lulc_fut'], args['storage_fut'])
+        calculateCarbonStorage(pools, args['lulc_fut'], args['tot_C_fut'])
 
-    #Calculate HWP pools
+    #Calculate HWP pools if a HWP shape is present
     if 'hwp_cur_shape' in args:
         harvestProductInfo(args)
-        if 'hwp_fut_shape' not in args:
-            harvestProducts(args, ('cur',))
-        else:
-            harvestProducts(args, ('cur', 'fut'))
+        harvestProducts(args, ('cur', 'fut'))
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
