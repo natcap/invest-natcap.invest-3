@@ -37,20 +37,45 @@ def execute(args):
     for fieldname in ('TNPV', 'TBiomass', 'TVolume'):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
+        
+    ################
+    for feat in layer:
+        parcl_index = feat.GetFieldIndex('Parcl_ID')
+        parcl_value = feat.GetField(parcl_index)
+        id = 0
+        pid = plant_dict[id]['Parcel_ID']
+        #Make sure referring to the same polygon by comparing Parcl_ID's
+        while parcl_value != pid:
+            id+=1
+            pid = plant_dict[id]['Parcel_ID']        
+        
+        plant_row = plant_dict[id]
+        
+        freq_Harv  = plant_row['Freq_harv']
+        num_Years  = float(plant_row['T'])
+        harv_Mass  = plant_row['Harv_mass']
+        harv_Cost  = plant_row['Harv_cost']
+        price      = plant_row['Price']
+        maint_Cost = plant_row['Maint_cost']
+        BCEF       = plant_row['BCEF']
+        parcl_Area = plant_row['Parcl_area']
+        perc_Harv  = plant_row['Perc_harv']
+        immed_Harv = plant_row['Immed_harv']
+    ###############
     
     #Run through each timber parcel in the table, calculating it's TNPV
-    for i in range(plant_dict.recordCount):
-        
-        freq_Harv  = plant_dict[i]['Freq_harv']
-        num_Years  = float(plant_dict[i]['T'])
-        harv_Mass  = plant_dict[i]['Harv_mass']
-        harv_Cost  = plant_dict[i]['Harv_cost']
-        price      = plant_dict[i]['Price']
-        maint_Cost = plant_dict[i]['Maint_cost']
-        BCEF       = plant_dict[i]['BCEF']
-        parcl_Area = plant_dict[i]['Parcl_area']
-        perc_Harv  = plant_dict[i]['Perc_harv']
-        immed_Harv = plant_dict[i]['Immed_harv']
+#    for i in range(plant_dict.recordCount):
+#        
+#        freq_Harv  = plant_dict[i]['Freq_harv']
+#        num_Years  = float(plant_dict[i]['T'])
+#        harv_Mass  = plant_dict[i]['Harv_mass']
+#        harv_Cost  = plant_dict[i]['Harv_cost']
+#        price      = plant_dict[i]['Price']
+#        maint_Cost = plant_dict[i]['Maint_cost']
+#        BCEF       = plant_dict[i]['BCEF']
+#        parcl_Area = plant_dict[i]['Parcl_area']
+#        perc_Harv  = plant_dict[i]['Perc_harv']
+#        immed_Harv = plant_dict[i]['Immed_harv']
            
         net_present_value = 0
         summation_one = 0.0
@@ -91,16 +116,16 @@ def execute(args):
         total_npv = net_present_value * parcl_Area
 
         #Grab the polygon from the shapefile that is associated with the current timber parcel
-        feature = layer.GetFeature(i)
+        #feature = layer.GetFeature(parcl_index)
         #For each new field set the corresponding value to the specific polygon
         for field, value in (('TNPV', total_npv), ('TBiomass', biomass), ('TVolume', volume)):
-            index = feature.GetFieldIndex(field)
-            feature.SetField(index, value)       
+            index = feat.GetFieldIndex(field)
+            feat.SetField(index, value)       
 
         #save the field modifications to the layer.
-        layer.SetFeature(feature)
+        layer.SetFeature(feat)
         
-        feature.Destroy()
+        feat.Destroy()
         
     #Create the output file with the attributes used    
     textFileOut(timber_shape_loc, output_dir, mdr, plant_prod_loc)
