@@ -72,13 +72,15 @@ def biophysical(args):
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
     #calculate carbon storage for the current landscape
-    calculateCarbonStorage(pools, args['lulc_cur'], args['tot_C_cur'])
+    calculateCarbonStorage(pools, args['lulc_cur'].GetRasterBand(1),
+                           args['tot_C_cur'].GetRasterBand(1))
 
     #if lulc_fut is present it means that sequestration needs to be calculated
     #calculate the future storage as well
     if 'lulc_fut' in args:
         #calculate storage for the future landscape
-        calculateCarbonStorage(pools, args['lulc_fut'], args['tot_C_fut'])
+        calculateCarbonStorage(pools, args['lulc_fut'].GetRasterBand(1),
+                               args['tot_C_fut'].GetRasterBand(1))
 
     #Calculate HWP pools if a HWP shape is present
     if 'hwp_cur_shape' in args:
@@ -391,21 +393,26 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
         out_array = carbon_value(nodataDict, data, numYears, carbonValue, multiplier)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
-def calculateCarbonStorage(pools, inputRaster, outputRaster):
+def calculateCarbonStorage(pools, lulcRasterBand, storageRasterBand):
     """Iterate through the rows in an LULC raster and map carbon storage values
         to the output raster.
         
         pools - a python dict mapping lulc indices to carbon storage/pixel
-        inputRaster - a GDAL raster dataset representing lulc 
-        outputRaster - a GDAL raster dataset representing carbon storage
+        lulcRasterBand - a GDAL raster dataset representing lulc 
+        storageRasterBand - a GDAL raster dataset representing carbon storage
         
         No return value."""
 
-    lulc = inputRaster.GetRasterBand(1)
-    for i in range(0, lulc.YSize):
-        data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
-        out_array = mapValues(data, pools)
-        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
+    #Vectorize an operation that maps pixel values to carbon storage values
+    def mapPool(x, dict):
+        return dict[x]
+    mapFun = np.vectorize(mapPool)
+
+    #Iterate through lulc and map storage to the storage raster band
+    for i in range(0, lulcRasterBand.YSize):
+        data = lulcRasterBand.ReadAsArray(0, i, lulcRasterBand.XSize, 1)
+        out_array = mapFun(data, pools)
+        storageRasterBand.WriteArray(out_array, 0, i)
 
 def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
     """Iterate through the rows in the two sequestration rasters and calculate 
@@ -549,29 +556,6 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
             sum += dbf[i][field]
         poolsDict[dbf[i]['LULC']] = sum * area
     return poolsDict
-
-def mapValues(array, dict):
-    """Creates a new array by maping the values stored in array from the
-         keys in dict to the values in dict.  If a value in array is not 
-         a key in dict it gets mapped to zero.
-        
-        array - 1numpy array
-        dict - a dictionary that maps elements of array to new values
-        
-        return a new numpy array with keys mapped from array to values in dict
-        """
-
-    def mapPool(x, dict):
-        if x in dict:
-            return dict[x]
-        else:
-            return 0
-
-    if array.size > 0:
-        mapFun = np.vectorize(mapPool)
-        return mapFun(array, dict)
-    else:
-        return []
 
 def carbon_add(nodata, firstArray, secondArray):
     """Creates a new array by returning the sum of the elements of the two input
