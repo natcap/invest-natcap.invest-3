@@ -110,16 +110,11 @@ def execute(args):
             'uncertainty_colormap.tif'
 
     #If we're doing a HWP calculation, we need temporary rasters to hold the
-    #HWP pools
+    #HWP pools, name them the same as the key but add a .tif extension
     if args['calculate_hwp']:
-        outputURIs['bio_hwp_cur'] = intermediateDirectoryPrefix + \
-            'bio_hwp_cur.tif'
-        outputURIs['bio_hwp_fut'] = intermediateDirectoryPrefix + \
-            'bio_hwp_fut.tif'
-        outputURIs['vol_hwp_cur'] = intermediateDirectoryPrefix + \
-            'vol_hwp_cur.tif'
-        outputURIs['vol_hwp_fut'] = intermediateDirectoryPrefix + \
-            'vol_hwp_fut.tif'
+        for key in ['bio_hwp_cur', 'bio_hwp_fut', 'vol_hwp_cur',
+                    'vol_hwp_fut']:
+            outputURIs[key] = intermediateDirectoryPrefix + key + ".tif"
 
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
