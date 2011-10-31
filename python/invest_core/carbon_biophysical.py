@@ -98,16 +98,17 @@ def execute(args):
     #to their locations on disk.  Helpful for creating the objects in the next 
     #step
     outputURIs = {}
-    outputURIs['tot_C_cur'] = outputDirectoryPrefix + 'tot_C_cur.tif'
-    if args['calculate_sequestration'] or args['calculate_hwp']:
-        outputURIs['tot_C_fut'] = outputDirectoryPrefix + 'tot_C_fut.tif'
-        outputURIs['sequest'] = outputDirectoryPrefix + 'sequest.tif'
 
-    #If we calculate uncertainty, we need to generate the colorized map that
-    #Highlights the percentile ranges
+    #make a list of all the rasters that we need to create, it's dependant
+    #on what calculation mode we're in (sequestration, HWP, uncertainty, etc.)
+    outputRasters = ['tot_C_cur']
+    if args['calculate_sequestration'] or args['calculate_hwp']:
+        outputRasters.extend(['tot_C_fut', 'sequest'])
     if args['calc_uncertainty']:
-        outputURIs['uncertainty_percentile_map'] = outputDirectoryPrefix + \
-            'uncertainty_colormap.tif'
+        outputRasters.append('uncertainty_percentile_map')
+    #build the URIs for the output rasters in a single loop
+    for key in outputRasters:
+        outputURIs[key] = outputDirectoryPrefix + key + '.tif'
 
     #If we're doing a HWP calculation, we need temporary rasters to hold the
     #HWP pools, name them the same as the key but add a .tif extension
@@ -118,9 +119,9 @@ def execute(args):
 
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
-    for datasetName, datasetPath in outputURIs.iteritems():
-        biophysicalArgs[datasetName] = \
-            newRasterFromBase(biophysicalArgs['lulc_cur'], datasetPath,
+    for rasterName, rasterPath in outputURIs.iteritems():
+        biophysicalArgs[rasterName] = \
+            newRasterFromBase(biophysicalArgs['lulc_cur'], rasterPath,
                               'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the biophysical part of the carbon model.
