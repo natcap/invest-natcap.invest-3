@@ -131,14 +131,15 @@ def execute(args):
     #run the biophysical part of the carbon model.
     carbon.biophysical(biophysicalArgs)
 
+    #Clean up the GDAL/OAL datasets.  This may not be necessary, but examples
+    #online show it
+
     #close the pools DBF file (is this required?)
     biophysicalArgs['carbon_pools'].close()
 
     #close all newly created raster datasets (is this required?)
     for dataset in biophysicalArgs:
         biophysicalArgs[dataset] = None
-
-
 
 def newRasterFromBase(base, outputURI, format, nodata, datatype):
     """Create a new, empty GDAL raster dataset with the spatial references,
@@ -175,7 +176,6 @@ def newRasterFromBase(base, outputURI, format, nodata, datatype):
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
 if __name__ == '__main__':
-
     modulename, json_args = sys.argv
     args = json.loads(json_args)
     execute(args)
