@@ -86,7 +86,7 @@ def biophysical(args):
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
-        rasterDiff(args['storage_cur'], args['storage_fut'], args['seq_delta'])
+        rasterDiff(args['storage_cur'], args['storage_fut'], args['sequest'])
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
