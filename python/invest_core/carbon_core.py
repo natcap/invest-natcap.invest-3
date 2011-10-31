@@ -86,7 +86,9 @@ def biophysical(args):
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
-        rasterDiff(args['tot_C_fut'], args['tot_C_cur'], args['sequest'])
+        rasterDiff(args['tot_C_fut'].GetRasterBand(1),
+                   args['tot_C_cur'].GetRasterBand(1),
+                   args['sequest'].GetRasterBand(1))
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -404,22 +406,49 @@ def calculateCarbonStorage(pools, inputRaster, outputRaster):
         out_array = mapValues(data, pools)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
-def rasterDiff(storage_cur, storage_fut, outputRaster):
-    """Iterate through the rows in the two sequestration rasters and calculate the 
-        difference in each pixel.  Maps the difference to the output raster.
+def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
+    """Iterate through the rows in the two sequestration rasters and calculate 
+        the difference in each pixel.  Maps the difference to the output 
+        raster.
         
-        storage_cur - a GDAL raster dataset
-        storage_fut - a GDAL raster dataset
-        outputRaster - a GDAL raster dataset"""
+        rasterBandA - a GDAL raster band
+        rasterBandB - a GDAL raster band
+        outputRasterBand - a GDAL raster band with the elementwise value of 
+            rasterBandA-rasterBandB
+            
+        returns nothing"""
 
-    nodataDict = build_nodata_dict(storage_cur, outputRaster)
-    lulc_cur_band = storage_cur.GetRasterBand(1)
-    lulc_fut_band = storage_fut.GetRasterBand(1)
-    for i in range(0, lulc_cur_band.YSize):
-        cur_data = lulc_cur_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
-        fut_data = lulc_fut_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
-        out_array = carbon_diff(nodataDict, cur_data, fut_data)
-        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
+    #Build an operation that does pixel difference unless one of the inputs
+    #is a nodata value
+    noDataA = rasterBandA.GetNoDataValue()
+    noDataB = rasterBandB.GetNoDataValue()
+
+    def noDataDiff(a, b):
+        #a is nodata if and only if b is nodata
+        if a == noDataA:
+            return noDataB
+        else:
+            return a - b
+
+    vectorizeOp(rasterBandA, rasterBandB, noDataDiff, outputRasterBand)
+
+def vectorizeOp(rasterBandA, rasterBandB, op, outBand):
+    """Applies the function 'op' over rasterBandA and rasterBandB
+    
+        rasterBandA - a GDAL raster
+        rasterBandB - a GDAL raster of the same dimensions as rasterBandA
+        op- a function that that takes 2 arguments and returns 1 value
+        outBand - the result of vectorizing op over rasterbandA and 
+            rasterBandB
+            
+        returns nothing"""
+
+    vOp = np.vectorize(op)
+    for i in range(0, rasterBandA.YSize):
+        dataA = rasterBandA.ReadAsArray(0, i, rasterBandA.XSize, 1)
+        dataB = rasterBandB.ReadAsArray(0, i, rasterBandB.XSize, 1)
+        out_array = vOp(dataA, dataB)
+        outBand.WriteArray(out_array, 0, i)
 
 def rasterAdd(storage_cur, hwpRaster, outputRaster):
     """Iterate through the rows in the two sequestration rasters and calculate the 
@@ -542,28 +571,6 @@ def mapValues(array, dict):
         return mapFun(array, dict)
     else:
         return []
-
-def carbon_diff(nodata, firstArray, secondArray):
-    """Creates a new array by returning the difference of the elements in the
-        two input arrays.  If a nodata value is detected in the input array,
-        the proper nodata value for the output array is returned.
-        
-        nodata - a dict: {'input': some number, 'output' : some number}
-        firstArray - a numpy array
-        secondArray - a numpy array
-
-        return a new numpy array with the difference of the two input arrays
-        """
-
-    def mapDiff(a, b):
-        if a == nodata['input']:
-            return nodata['output']
-        else:
-            return b - a
-
-    if firstArray.size > 0:
-        mapFun = np.vectorize(mapDiff)
-        return mapFun(firstArray, secondArray)
 
 def carbon_add(nodata, firstArray, secondArray):
     """Creates a new array by returning the sum of the elements of the two input
