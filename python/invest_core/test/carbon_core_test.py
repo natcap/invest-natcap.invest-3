@@ -43,23 +43,24 @@ class TestInvestCarbonCore(unittest.TestCase):
             sum = np.sum(data, dtype=np.float64)
             self.assertAlmostEqual(sum, xDim * yDim * outNodata)
 
-    def test_carbon_seq_1D_array(self):
+    def test_carbon_storage(self):
         """Test of calculateCarbonStorage against a random LULC array, includes tests on nodata values"""
 
-        xDim, yDim = (277, 109)
+        #picked some largish x and y dimensions that are prime numbers
+        xDim, yDim = (710, 569)
         driver = gdal.GetDriverByName("GTIFF")
         lulc = driver.Create('../../../test_data/test_input', xDim, yDim, 1,
                                  gdal.GDT_Byte)
-        #Made up carbon pools
+
+        #Made up carbon pools, last entry is the nodata value
         pools = {0: 4.3, 1: 4.3, 2: 5.7, 3: 10.0, 4:-255.0}
 
-        lulc.GetRasterBand(1).SetNoDataValue(4)
+        lulc.GetRasterBand(1).SetNoDataValue(len(pools) - 1)
 
         #Set the seed so it always has the same "random" output
         np.random.seed(123456)
 
-
-        #Make a random lulc that consists of lulc types 0..2
+        #Make a random lulc that consists of lulc types 0..lenth of pools
         array = np.random.random_integers(0, len(pools) - 1, size=(yDim, xDim))
 
         lulc.GetRasterBand(1).WriteArray(array, 0, 0)
@@ -71,7 +72,9 @@ class TestInvestCarbonCore(unittest.TestCase):
 
         carbon_core.calculateCarbonStorage(pools, lulc, tot_C_cur)
 
-        #verify the contents of output against pool and lulc data
+        #verify the contents of output against pool and lulc data, since
+        #pools include nodata value (last one) we should also end up testing
+        #those values
         data = tot_C_cur.GetRasterBand(1).ReadAsArray(0, 0,
                 tot_C_cur.RasterXSize, tot_C_cur.RasterYSize)
         for x in xrange(xDim):
