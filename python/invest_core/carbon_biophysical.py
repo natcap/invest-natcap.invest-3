@@ -125,7 +125,7 @@ def execute(args):
                               'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the biophysical part of the carbon model.
-    carbon.biophysical(biophysicalArgs)
+    carbon_core.biophysical(biophysicalArgs)
 
     #Clean up the GDAL/OAL datasets.  This may not be necessary, but examples
     #online show it
