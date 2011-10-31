@@ -84,7 +84,10 @@ def biophysical(args):
 
     #Calculate HWP pools if a HWP shape is present
     if 'hwp_cur_shape' in args:
-        harvestProductInfo(args)
+        harvestProductInfo(args['hwp_cur_shape'], args['hwp_fut_shape'],
+                           args['lulc_cur_year'], args['lulc_fut_year'],
+                           args['c_hwp_cur'].GetRasterBand(1),
+                           args['c_hwp_fut'].GetRasterBand(1))
         harvestProducts(args, ('cur', 'fut'))
 
     if 'lulc_fut' in args:
@@ -93,119 +96,76 @@ def biophysical(args):
                                args['tot_C_cur'].GetRasterBand(1),
                                args['sequest'].GetRasterBand(1))
 
-def valuation(args):
-    """Executes the basic carbon model that maps a carbon pool dataset to a
-        LULC raster.
-    
-        args - is a dictionary with at least the following entries:
-        args['lulc_cur'] - is a GDAL raster dataset
-        args['lulc_fut'] - is a GDAL raster dataset
-        args['carbon_pools'] - is a DBF dataset mapping carbon sequestration numbers to lulc classifications.
-        args['storage_cur'] - a GDAL raster dataset for outputing the sequestered carbon
-                          based on the current lulc
-        args['storage_fut'] - a GDAL raster dataset for outputing the sequestered carbon
-                          based on the future lulc
-        args['seq_delta'] - a GDAL raster dataset for outputing the difference between
-                            args['storage_cur'] and args['storage_fut']
-        args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
-                            value of sequestered carbon.
-        args['biomass_cur'] - a GDAL raster dataset for outputing the biomass 
-            of harvested HWP parcels on the current landscape
-        args['biomass_fut'] - a GDAL raster dataset for outputing the biomass 
-            of harvested HWP parcels on the future landscape
-        args['volume_cur'] - a GDAL raster dataset for outputing the volume of 
-            HWP on the current landscape
-        args['volume_fut'] - a GDAL raster dataset for outputing the volume of 
-            HWP on the future landscape
-        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
-        args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
-        args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
-        args['c_value'] - a float.  Represents the price of carbon in US Dollars.
-        args['discount'] - a float.  Represents the annual discount in the price of carbon
-        args['rate_change'] - a float.  Represents the rate of change in the price of carbon
-        
-        returns nothing"""
-
-    pass
-
-def harvestProductInfo(args):
+def harvestProductInfo(hwp_cur_shape, hwp_fut_shape, lulc_cur_year,
+                       lulc_fut_year, c_hwp_cur, c_hwp_fut):
     """Calculates biomass and volume of harvested wood products in a parcel.
         Values are calculated per parcel and burned into the appropriate raster
         dataset specified in the args dict.
         
-        args - is a dictionary with at least the following entries:
-        args['biomass_cur'] - an open GDAL raster dataset
-        args['volume_cur'] - an open GDAL raster dataset
-        args['hwp_cur_shape'] - an open OGR dataset
-        
-        The following arguments are optional and may be processed if necessary:
-        args['biomass_fut'] - an open GDAL raster dataset
-        args['volume_fut'] - an open GDAL raster dataset
-        args['hwp_fut_shape'] - an open OGR dataset
+        hwp_cur_shape - oal shapefile indicating current harvest map
+        hwp_fut_shape - oal shapefile indicating current harvest map
+        lulc_cur_year - year of current lulc map
+        lulc_fut_year - year of future lulc map
+        c_hwp_cur - an output GDAL rasterband representing 
+            carbon stored in harvested wood products for current land cover 
+        c_hwp_fut - an output GDAL rasterband representing 
+            carbon stored in harvested wood products for future land cover 
         
         No return value"""
 
-
-    if 'hwp_fut_shape' in args:
-        timeframeList = ('cur', 'fut')
-        avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year']) / 2.0)
-    else:
-        timeframeList = ('cur',)
-        avg = args['lulc_cur_year']
-
+    avgYear = math.ceil((lulc_cur_year + lulc_fut_year) / 2.0)
 
     #for each shape (if the shape is provided in args):
-    for timeframe in timeframeList:
-        harvestMap = 'hwp_' + timeframe + '_shape'
-        layer = 'harv_samp_' + timeframe
+    for harvestMap, layerName in [(hwp_cur_shape, 'harv_samp_cur'),
+                       (hwp_fut_shape, 'harv_samp_fut')]:
 
         #Make a copy of the appropriate shape in memory
-        copiedDS = ogr.GetDriverByName('Memory').CopyDataSource(args[harvestMap], timeframe)
+        copiedDS = ogr.GetDriverByName('Memory').CopyDataSource(harvestMap, '')
 
         #open the copied file
-        copiedLayer = copiedDS.GetLayerByName(layer)
+        copiedLayer = copiedDS.GetLayerByName(layerName)
 
         #add a biomass and volume field to the shape
         for fieldname in ('biomass', 'volume'):
             field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
             copiedLayer.CreateField(field_def)
 
-        #create a temporary mask raster for this shapefile
-        maskRaster = invest_carbon_core.mimic(args['lulc_cur'], 'mask.tif', 'MEM', -1.0)
-        gdal.RasterizeLayer(maskRaster, [1], copiedLayer, burn_values=[1])
-
-        for feature in copiedLayer:
-            fieldArgs = getFields(feature)
-
-            #do the appropriate math based on the timeframe
-            if timeframe == 'cur':
-                timeSpan = math.ceil((avg - fieldArgs['Start_date'])
-                                       / fieldArgs['Freq_cur'])
-            else:
-                timeSpan = math.ceil((args['lulc_fut_year'] - avg)
-                                     / fieldArgs['Freq_fut'])
-
-            #calculate biomass for this parcel (equation 10.8)
-            biomass = fieldArgs['Cut_' + timeframe] * \
-                    timeSpan * (1.0 / fieldArgs['C_den_' + timeframe])
-
-            #calculate volume for this parcel (equation 10.11)
-            volume = biomass * (1.0 / fieldArgs['BCEF_' + timeframe])
-
-            #set biomass and volume fields
-            for fieldName, value in (('biomass', biomass), ('volume', volume)):
-                index = feature.GetFieldIndex(fieldName)
-                feature.SetField(index, value)
-
-            #save the field modifications to the layer.
-            copiedLayer.SetFeature(feature)
-
-        #Burn values into temp raster, apply mask, save to args dict.
-        for fieldName in ('biomass', 'volume'):
-            tempRaster = invest_carbon_core.mimic(args['lulc_cur'], '', 'MEM', -1.0)
-            gdal.RasterizeLayer(tempRaster, [1], copiedLayer,
-                            options=['ATTRIBUTE=' + fieldName])
-            rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
+#        #create a temporary mask raster for this shapefile
+#        maskRaster = invest_carbon_core.mimic(args['lulc_cur'], 'mask.tif', 'MEM', -1.0)
+#        gdal.RasterizeLayer(maskRaster, [1], copiedLayer, burn_values=[1])
+#
+#        for feature in copiedLayer:
+#            fieldArgs = getFields(feature)
+#
+#            #do the appropriate math based on the timeframe
+#            if timeframe == 'cur':
+#                timeSpan = math.ceil((avg - fieldArgs['Start_date'])
+#                                       / fieldArgs['Freq_cur'])
+#            else:
+#                timeSpan = math.ceil((args['lulc_fut_year'] - avg)
+#                                     / fieldArgs['Freq_fut'])
+#
+#            #calculate biomass for this parcel (equation 10.8)
+#            biomass = fieldArgs['Cut_' + timeframe] * \
+#                    timeSpan * (1.0 / fieldArgs['C_den_' + timeframe])
+#
+#            #calculate volume for this parcel (equation 10.11)
+#            volume = biomass * (1.0 / fieldArgs['BCEF_' + timeframe])
+#
+#            #set biomass and volume fields
+#            for fieldName, value in (('biomass', biomass), ('volume', volume)):
+#                index = feature.GetFieldIndex(fieldName)
+#                feature.SetField(index, value)
+#
+#            #save the field modifications to the layer.
+#            copiedLayer.SetFeature(feature)
+#
+#        #Burn values into temp raster, apply mask, save to args dict.
+#        for fieldName in ('biomass', 'volume'):
+#            tempRaster = invest_carbon_core.mimic(args['lulc_cur'], '', 'MEM', -1.0)
+#            gdal.RasterizeLayer(tempRaster, [1], copiedLayer,
+#                            options=['ATTRIBUTE=' + fieldName])
+#            rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
     return
 
 
@@ -812,3 +772,38 @@ def carbon_scenario_uncertainty(args):
         #map them to colors
         args['output_map'].GetRasterBand(1).WriteArray(maxIndex(seqRow), 0, rowNumber)
 
+
+def valuation(args):
+    """Executes the basic carbon model that maps a carbon pool dataset to a
+        LULC raster.
+    
+        args - is a dictionary with at least the following entries:
+        args['lulc_cur'] - is a GDAL raster dataset
+        args['lulc_fut'] - is a GDAL raster dataset
+        args['carbon_pools'] - is a DBF dataset mapping carbon sequestration numbers to lulc classifications.
+        args['storage_cur'] - a GDAL raster dataset for outputing the sequestered carbon
+                          based on the current lulc
+        args['storage_fut'] - a GDAL raster dataset for outputing the sequestered carbon
+                          based on the future lulc
+        args['seq_delta'] - a GDAL raster dataset for outputing the difference between
+                            args['storage_cur'] and args['storage_fut']
+        args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
+                            value of sequestered carbon.
+        args['biomass_cur'] - a GDAL raster dataset for outputing the biomass 
+            of harvested HWP parcels on the current landscape
+        args['biomass_fut'] - a GDAL raster dataset for outputing the biomass 
+            of harvested HWP parcels on the future landscape
+        args['volume_cur'] - a GDAL raster dataset for outputing the volume of 
+            HWP on the current landscape
+        args['volume_fut'] - a GDAL raster dataset for outputing the volume of 
+            HWP on the future landscape
+        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
+        args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
+        args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
+        args['c_value'] - a float.  Represents the price of carbon in US Dollars.
+        args['discount'] - a float.  Represents the annual discount in the price of carbon
+        args['rate_change'] - a float.  Represents the rate of change in the price of carbon
+        
+        returns nothing"""
+
+    pass
