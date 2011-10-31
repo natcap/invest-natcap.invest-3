@@ -6,7 +6,6 @@ import datetime
 from datetime import date
 from datetime import datetime
 
-
 def execute(args):
     """Executes the basic timber management model that calculates the Total Net Present Value and maps
         it to an outputted shapefile.
@@ -95,13 +94,13 @@ def execute(args):
            freq_Harv = num_Years 
         
         #Check to see if immediate harvest will occur
-        if immed_Harv == 'N':
+        if immed_Harv.upper() == 'N' or 'NO':
             upper_limit = int(math.floor(yr_per_freq))
             lower_limit = 1
             subtractor = 1.0
             summation_one = npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
             summation_two = npvSummationTwo(lower_limit2, upper_limit2, maint_Cost, mdr_perc)            
-        else:
+        elif immed_Harv.upper() == 'Y' or 'YES':
             upper_limit = int((math.ceil(yr_per_freq)-1.0))
             lower_limit = 0
             summation_one = npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
