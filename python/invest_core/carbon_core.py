@@ -4,7 +4,6 @@ import osgeo.gdal
 import osgeo.osr as osr
 from osgeo import ogr
 from dbfpy import dbf
-import invest_carbon_core
 import math
 
 def biophysical(args):
@@ -65,6 +64,9 @@ def biophysical(args):
 
     #Calculate the per pixel carbon storage due to lulc pools
     area = pixelArea(args['lulc_cur'])
+
+    #Create carbon pool dictionary with appropriate values to handle
+    #nodata in the input and nodata in the output
     inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
     outNoData = args['storage_cur'].GetRasterBand(1).GetNoDataValue()
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
