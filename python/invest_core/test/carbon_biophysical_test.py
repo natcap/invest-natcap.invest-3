@@ -37,6 +37,24 @@ sequestration on lulc maps."""
 
         carbon_biophysical.execute(args)
 
+    def test_carbon_biophysical_sequestration_hwp(self):
+        """Test for carbon_biophysical function running with sample input to do \
+sequestration and harvested wood products on lulc maps."""
+
+        args = {}
+        args['workspace_dir'] = '../../carbon_output'
+        args['calculate_sequestration'] = True
+        args['calculate_hwp'] = True
+        args['calc_uncertainty'] = False
+        args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
+        args['lulc_fut_uri'] = "../../test_data/lulc_samp_fut"
+        args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
+        args['lulc_cur_year'] = 2000
+        args['lulc_fut_year'] = 2030
+        args['hwp_cur_shape_uri'] = "../../test_data/harv_samp_cur"
+        args['hwp_fut_shape_uri'] = "../../test_data/harv_samp_fut"
+
+        carbon_biophysical.execute(args)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)
