@@ -72,7 +72,7 @@ def execute(args):
             summation_two = npvSummationTwo(sumTwo_lowerLimit, sumTwo_upperLimit, maint_Cost, mdr_perc)
 
         #Calculate Biomass
-        biomass = parcl_Area * (perc_Harv / 100.00) * harv_Mass * math.ceil(T / freq_Harv)
+        biomass = parcl_Area * (perc_Harv / 100.00) * harv_Mass * math.ceil(num_Years / freq_Harv)
         #Calculate Volume
         volume = biomass * (1.0 / BCEF)
 
