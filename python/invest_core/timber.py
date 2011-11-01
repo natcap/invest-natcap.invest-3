@@ -58,10 +58,6 @@ def execute(args):
         #Calculate the harvest value for parcel x
         harvest_value = (perc_Harv / 100.00) * ((price * harv_Mass) - harv_Cost)
 
-        #Frequency Harvest cannot be greater than the time period
-        if freq_Harv > num_Years :
-           freq_Harv = num_Years
-
         #Check to see if immediate harvest will occur
         if immed_Harv.upper() == 'N' or 'NO':
             sumOne_upperLimit = int(math.floor(yr_per_freq))
