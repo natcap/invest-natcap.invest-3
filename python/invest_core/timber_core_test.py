@@ -249,15 +249,6 @@ class TestTimber(unittest.TestCase):
                 field_value2 = feat2.GetField(field_index2)
                 self.assertAlmostEqual(field_value, field_value2, 2)
         
-#        #Compare two shapefiles to make sure values correspond correctly
-#        for feat, feat2 in zip(valid_output_layer, timber_layer_copy):
-#            for field in ('TNPV', 'TBiomass', 'TVolume'):
-#                field_index = feat.GetFieldIndex(field)
-#                field_value = feat.GetField(field_index)
-#                field_index2 = feat2.GetFieldIndex(field)
-#                field_value2 = feat2.GetField(field_index2)
-#                self.assertEqual(field_value, field_value2)
-        
         valid_output_shape = None
         timber_shape_copy = None
         test_shape = None
