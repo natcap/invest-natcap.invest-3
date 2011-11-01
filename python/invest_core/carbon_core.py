@@ -87,8 +87,9 @@ def biophysical(args):
         harvestProductInfo(args['hwp_cur_shape'], args['hwp_fut_shape'],
                            args['lulc_cur_year'], args['lulc_fut_year'],
                            args['c_hwp_cur'].GetRasterBand(1),
-                           args['c_hwp_fut'].GetRasterBand(1))
-        harvestProducts(args, ('cur', 'fut'))
+                           args['c_hwp_fut'].GetRasterBand(1),
+                           args['lulc_cur'])
+        #harvestProducts(args, ('cur', 'fut'))
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
@@ -97,7 +98,7 @@ def biophysical(args):
                                args['sequest'].GetRasterBand(1))
 
 def harvestProductInfo(hwp_cur_shape, hwp_fut_shape, lulc_cur_year,
-                       lulc_fut_year, c_hwp_cur, c_hwp_fut):
+                       lulc_fut_year, c_hwp_cur, c_hwp_fut, baseRaster):
     """Calculates biomass and volume of harvested wood products in a parcel.
         Values are calculated per parcel and burned into the appropriate raster
         dataset specified in the args dict.
@@ -110,14 +111,17 @@ def harvestProductInfo(hwp_cur_shape, hwp_fut_shape, lulc_cur_year,
             carbon stored in harvested wood products for current land cover 
         c_hwp_fut - an output GDAL rasterband representing 
             carbon stored in harvested wood products for future land cover 
+        baseRaster - a GDAL raster dataset that defines the size and projection
+            of output c_hwp_cur and c_hwp_fut
         
         No return value"""
 
     avgYear = math.ceil((lulc_cur_year + lulc_fut_year) / 2.0)
 
     #for each shape (if the shape is provided in args):
-    for harvestMap, layerName in [(hwp_cur_shape, 'harv_samp_cur'),
-                       (hwp_fut_shape, 'harv_samp_fut')]:
+    for harvestMap, layerName, timeframe in \
+        [(hwp_cur_shape, 'harv_samp_cur', 'cur'),
+         (hwp_fut_shape, 'harv_samp_fut', 'fut')]:
 
         #Make a copy of the appropriate shape in memory
         copiedDS = ogr.GetDriverByName('Memory').CopyDataSource(harvestMap, '')
@@ -130,42 +134,45 @@ def harvestProductInfo(hwp_cur_shape, hwp_fut_shape, lulc_cur_year,
             field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
             copiedLayer.CreateField(field_def)
 
-#        #create a temporary mask raster for this shapefile
-#        maskRaster = invest_carbon_core.mimic(args['lulc_cur'], 'mask.tif', 'MEM', -1.0)
-#        gdal.RasterizeLayer(maskRaster, [1], copiedLayer, burn_values=[1])
-#
-#        for feature in copiedLayer:
-#            fieldArgs = getFields(feature)
-#
-#            #do the appropriate math based on the timeframe
-#            if timeframe == 'cur':
-#                timeSpan = math.ceil((avg - fieldArgs['Start_date'])
-#                                       / fieldArgs['Freq_cur'])
-#            else:
-#                timeSpan = math.ceil((args['lulc_fut_year'] - avg)
-#                                     / fieldArgs['Freq_fut'])
-#
-#            #calculate biomass for this parcel (equation 10.8)
-#            biomass = fieldArgs['Cut_' + timeframe] * \
-#                    timeSpan * (1.0 / fieldArgs['C_den_' + timeframe])
-#
-#            #calculate volume for this parcel (equation 10.11)
-#            volume = biomass * (1.0 / fieldArgs['BCEF_' + timeframe])
-#
-#            #set biomass and volume fields
-#            for fieldName, value in (('biomass', biomass), ('volume', volume)):
-#                index = feature.GetFieldIndex(fieldName)
-#                feature.SetField(index, value)
-#
-#            #save the field modifications to the layer.
-#            copiedLayer.SetFeature(feature)
-#
-#        #Burn values into temp raster, apply mask, save to args dict.
-#        for fieldName in ('biomass', 'volume'):
-#            tempRaster = invest_carbon_core.mimic(args['lulc_cur'], '', 'MEM', -1.0)
-#            gdal.RasterizeLayer(tempRaster, [1], copiedLayer,
-#                            options=['ATTRIBUTE=' + fieldName])
-#            rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
+        #create a temporary mask raster for this shapefile
+        maskRaster = invest_core.newRasterFromBase(baseRaster, 'mask.tif',
+                                              'MEM', -1.0, gdal.GDT_CFloat32)
+        gdal.RasterizeLayer(maskRaster, [1], copiedLayer, burn_values=[1])
+
+        for feature in copiedLayer:
+            fieldArgs = getFields(feature)
+
+            #do the appropriate math based on the timeframe
+            if timeframe == 'cur':
+                timeSpan = math.ceil((avgYear - fieldArgs['Start_date'])
+                                       / fieldArgs['Freq_cur'])
+            else:
+                timeSpan = math.ceil((lulc_fut_year - avgYear)
+                                     / fieldArgs['Freq_fut'])
+
+            #calculate biomass for this parcel (equation 10.8)
+            biomass = fieldArgs['Cut_' + timeframe] * \
+                    timeSpan * (1.0 / fieldArgs['C_den_' + timeframe])
+
+            #calculate volume for this parcel (equation 10.11)
+            volume = biomass * (1.0 / fieldArgs['BCEF_' + timeframe])
+
+            #set biomass and volume fields
+            for fieldName, value in (('biomass', biomass), ('volume', volume)):
+                index = feature.GetFieldIndex(fieldName)
+                feature.SetField(index, value)
+
+            #save the field modifications to the layer.
+            copiedLayer.SetFeature(feature)
+
+        #Burn values into temp raster, apply mask, save to args dict.
+        for fieldName in ('biomass', 'volume'):
+            tempRaster = invest_core.newRasterFromBase(baseRaster, '', 'MEM',
+                                                   - 1.0, gdal.GDT_CFloat32)
+            gdal.RasterizeLayer(tempRaster, [1], copiedLayer,
+                            options=['ATTRIBUTE=' + fieldName])
+            #Figure out how to do entire calculation here
+            #rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
     return
 
 
@@ -202,7 +209,8 @@ def harvestProducts(args, timespan):
             iterFeatures(layer, timeframe, args['lulc_cur_year'])
 
         #Make a new raster in memory for burning in the HWP values.
-        hwp_ds = invest_carbon_core.mimic(args['lulc_cur'], 'temp.tif', 'MEM')
+        hwp_ds = invest_core.newRasterFromBase(args['lulc_cur'], 'temp.tif',
+                           'MEM', -1.0, gdal.GDT_Float32)
 
         #Now burn the current hwp pools into the HWP raster in memory.
         gdal.RasterizeLayer(hwp_ds, [1], layer,
