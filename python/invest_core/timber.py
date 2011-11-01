@@ -101,9 +101,9 @@ def getAttributeRow(feat, attr_table):
 
     #Example of how to build lookup table so we don't have to loop through 
     #table linearly
-    parcelIdLookup = {} # this
-    while parcl_id != table_id: #this
-        parcelIdLookup[attr_table[table_index]['Parcel_ID']] = table_index #and this
+    #parcelIdLookup = {} # this
+    #while parcl_id != table_id: #this
+    #    parcelIdLookup[attr_table[table_index]['Parcel_ID']] = table_index #and this
 
     while parcl_id != table_id:
         table_index += 1
