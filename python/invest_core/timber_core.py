@@ -31,18 +31,15 @@ def execute(args):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
         
-    #Example of how to build lookup table so we don't have to loop through 
-    #table linearly
-    parcelIdLookup = {} # this
-    for i in range(attr_table.recordCount): #this
-        parcelIdLookup[attr_table[i]['Parcel_ID']] = attr_table[i] #and this
+    #Build a lookup table mapping the Parcel_IDs and corresponding row index
+    parcelIdLookup = {}
+    for i in range(attr_table.recordCount):
+        parcelIdLookup[attr_table[i]['Parcel_ID']] = attr_table[i]
         
     #Loop through each feature (polygon) in the shapefile layer
     for feat in layer:
-        #Get the correct polygon attributes to be calculated by matching the feature's polygons Parcl_ID
-        #with the attribute tables polygons Parcel_ID
-#        attr_row = getAttributeRow(feat, attr_table)
-    
+        #Get the correct polygon attributes to be calculated by matching the feature's polygon Parcl_ID
+        #with the attribute tables polygon Parcel_ID
         parcl_index = feat.GetFieldIndex('Parcl_ID')
         parcl_id = feat.GetField(parcl_index)
         attr_row = parcelIdLookup[parcl_id]
@@ -95,26 +92,6 @@ def execute(args):
         #save the field modifications to the layer.
         layer.SetFeature(feat)
         feat.Destroy()
-
-#def getAttributeRow(feat, attr_table):
-#    parcl_index = feat.GetFieldIndex('Parcl_ID')
-#    parcl_id = feat.GetField(parcl_index)
-#    table_index = 0
-#    table_id = attr_table[table_index]['Parcel_ID']
-#
-#    #Make sure referring to the same polygon by comparing Parcl_ID's
-#
-#    #Example of how to build lookup table so we don't have to loop through 
-#    #table linearly
-#    parcelIdLookup = {} # this
-#    while parcl_id != table_id: #this
-#        parcelIdLookup[attr_table[table_index]['Parcel_ID']] = table_index #and this
-
-#    while parcl_id != table_id:
-#        table_index += 1
-#        table_id = attr_table[table_index]['Parcel_ID']
-#
-#    return attr_table[table_index]
 
 #Calculates the first summation for the net present value of a parcel
 def npvSummationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
