@@ -59,13 +59,13 @@ def execute(args):
         harvest_value = (perc_Harv / 100.00) * ((price * harv_Mass) - harv_Cost)
 
         #Check to see if immediate harvest will occur
-        if immed_Harv.upper() == 'N' or 'NO':
+        if immed_Harv.upper() == 'N' or immed_Harv.upper() == 'NO':
             sumOne_upperLimit = int(math.floor(yr_per_freq))
             sumOne_lowerLimit = 1
             subtractor = 1.0
             summation_one = npvSummationOne(sumOne_lowerLimit, sumOne_upperLimit, harvest_value, mdr_perc, freq_Harv, subtractor)
             summation_two = npvSummationTwo(sumTwo_lowerLimit, sumTwo_upperLimit, maint_Cost, mdr_perc)
-        elif immed_Harv.upper() == 'Y' or 'YES':
+        elif immed_Harv.upper() == 'Y' or immed_Harv.upper() == 'YES':
             sumOne_upperLimit = int((math.ceil(yr_per_freq) - 1.0))
             sumOne_lowerLimit = 0
             summation_one = npvSummationOne(sumOne_lowerLimit, sumOne_upperLimit, harvest_value, mdr_perc, freq_Harv, subtractor)
