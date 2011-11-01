@@ -45,11 +45,8 @@ def execute(args):
     timber_shape_copy = ogr.Open(shape_copy_source.encode(filesystemencoding), 1)
     timber_layer_copy = timber_shape_copy.GetLayerByName('timber')
     
-    args = {'timber_shape_loc':args['timber_shape_uri'],
-            'output_dir': output_source,
-            'timber_layer_copy': timber_layer_copy,
+    args = {'timber_layer_copy': timber_layer_copy,
             'attr_table': dbf.Dbf(args['attr_table_uri']),
-            'attr_table_loc': args['attr_table_uri'],
             'mdr': args['market_disc_rate']}
 
     timber_core.execute(args)
