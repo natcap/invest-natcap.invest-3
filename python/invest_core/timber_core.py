@@ -12,12 +12,9 @@ def execute(args):
     
         args - is a dictionary with at least the following entries:
         
-        args['timber_shape_loc']    - the location of the input shapefile.
-        args['output_dir']          - the workspace where the outputs will be saved.
         args['timber_layer_copy']   - is the layer which holds the polygon features from the copied shapefile.
         args['mdr']                 - the market discount rate.
         args['attr_table']          - the dbf file which has the polygon attribute values of each timber parcel.
-        args['attr_table_loc']      - the location of the polygon attribute table.
         
         returns nothing"""
 
@@ -88,9 +85,6 @@ def execute(args):
         layer.SetFeature(feat)
         feat.Destroy()
 
-    #Create the output file with the attributes used    
-    textFileOut(args['timber_shape_loc'], args['output_dir'], mdr, args['attr_table_loc'])
-
 def getAttributeRow(feat, attr_table):
     parcl_index = feat.GetFieldIndex('Parcl_ID')
     parcl_id = feat.GetField(parcl_index)
@@ -128,43 +122,3 @@ def npvSummationTwo(lower, upper, maint_Cost, mdr_perc):
             summation = summation + (maint_Cost / (mdr_perc ** num))
 
     return summation
-
-#Creates a text file which saves the attributes to the Output folder
-def textFileOut(timber_shape, output_dir, mdr, plant_prod):
-    now = datetime.now()
-    date = now.strftime('%Y-%m-%d-%H-%M')
-
-    text_array = ["TIMBER MODEL PARAMETERS",
-                 "_______________________\n",
-                 "Date and Time: " + date,
-                 "Output Folder: " + output_dir,
-                 "Managed timber forest parcels: " + timber_shape,
-                 "Production table: " + plant_prod,
-                 "Market discount rate: " + str(mdr),
-                 "Script Location: " + os.path.dirname(sys.argv[0]) + "\\" + os.path.basename(sys.argv[0])]
-
-    filename = output_dir + os.sep + "Timber_" + date + ".txt"
-    file = open(filename, 'w')
-
-    for value in text_array:
-        file.write(value + '\n')
-        file.write('\n')
-
-    file.close()
-
-
-    #Run through each timber parcel in the table, calculating it's TNPV
-#    for i in range(plant_dict.recordCount):
-#        
-#        freq_Harv  = plant_dict[i]['Freq_harv']
-#        num_Years  = float(plant_dict[i]['T'])
-#        harv_Mass  = plant_dict[i]['Harv_mass']
-#        harv_Cost  = plant_dict[i]['Harv_cost']
-#        price      = plant_dict[i]['Price']
-#        maint_Cost = plant_dict[i]['Maint_cost']
-#        BCEF       = plant_dict[i]['BCEF']
-#        parcl_Area = plant_dict[i]['Parcl_area']
-#        perc_Harv  = plant_dict[i]['Perc_harv']
-#        immed_Harv = plant_dict[i]['Immed_harv']      
-
-#        feature = layer.GetFeature(parcl_index)
