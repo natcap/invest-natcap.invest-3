@@ -61,8 +61,6 @@ def execute(args):
     timber_shape_copy = None
     timber_layer_copy = None
 
-
-
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
 if __name__ == '__main__':
