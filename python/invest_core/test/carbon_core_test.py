@@ -70,7 +70,8 @@ class TestInvestCarbonCore(unittest.TestCase):
             xDim, yDim, 1, gdal.GDT_Float64)
         tot_C_cur.GetRasterBand(1).SetNoDataValue(-255.0)
 
-        carbon_core.calculateCarbonStorage(pools, lulc, tot_C_cur)
+        carbon_core.calculateCarbonStorage(pools, lulc.GetRasterBand(1),
+                                           tot_C_cur.GetRasterBand(1))
 
         #verify the contents of output against pool and lulc data, since
         #pools include nodata value (last one) we should also end up testing
