@@ -84,7 +84,7 @@ def biophysical(args):
 
     #Calculate HWP pools if a HWP shape is present
     if 'hwp_cur_shape' in args:
-        harvestProductInfo(args['hwp_cur_shape'], args['hwp_fut_shape'],
+        calculateHWPStorage(args['hwp_cur_shape'], args['hwp_fut_shape'],
                            args['lulc_cur_year'], args['lulc_fut_year'],
                            args['c_hwp_cur'].GetRasterBand(1),
                            args['c_hwp_fut'].GetRasterBand(1),
@@ -97,20 +97,19 @@ def biophysical(args):
                                args['tot_C_cur'].GetRasterBand(1),
                                args['sequest'].GetRasterBand(1))
 
-def harvestProductInfo(hwp_cur_shape, hwp_fut_shape, lulc_cur_year,
-                       lulc_fut_year, c_hwp_cur, c_hwp_fut, baseRaster):
-    """Calculates biomass and volume of harvested wood products in a parcel.
-        Values are calculated per parcel and burned into the appropriate raster
-        dataset specified in the args dict.
+def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year,
+                       c_hwp_cur, bio_hwp_cur, vol_hwp_cur, baseRaster):
+    """Calculates carbon storage, hwp biomass and volume due to harvested wood 
+        products in parcels on current landscape.
         
         hwp_cur_shape - oal shapefile indicating current harvest map
-        hwp_fut_shape - oal shapefile indicating current harvest map
         lulc_cur_year - year of current lulc map
-        lulc_fut_year - year of future lulc map
         c_hwp_cur - an output GDAL rasterband representing 
             carbon stored in harvested wood products for current land cover 
-        c_hwp_fut - an output GDAL rasterband representing 
-            carbon stored in harvested wood products for future land cover 
+        bio_hwp_cur - an output GDAL rasterband representing 
+            carbon stored in harvested wood products for current land cover
+        vol_hwp_cur - an output GDAL rasterband representing 
+            carbon stored in harvested wood products for current land cover
         baseRaster - a GDAL raster dataset that defines the size and projection
             of output c_hwp_cur and c_hwp_fut
         
@@ -301,28 +300,32 @@ def getFields(feature):
 
 
 
-def calcFeatureHWP(limit, decay, endDate, startDate, freq):
-    """Apply equation 2 from the user's guide
-    
+def carbonStoredinHWPFromParcel(carbonPerCut, harvestYears, harvestFreq, decay):
+    """This is the summation equation that appears in equations 1, 5, 6, and 7
+        from the user's guide
+        
+        carbonPerCut - The amount of carbon removed from a parcel during a
+            harvest period
+        harvestYears - The number of years to calculate the harvest over
+        harvestFreq - How many harvests occur per year
+        decay - the rate at which carbon is decaying from HWP harvested from
+            parcels
         limit - a number
         decay - a number
         startDate - the reference year (an int)
         endDate - the start date of the current harvest pattern
         freq - the number of times this parcel has been harvested
         
-        returns a float (rounded down to the nearest integer)"""
+        returns a float indicating the amount of carbon stored in HWP harvested
+            from that parcel"""
 
+    omega = math.log(2) / decay
+    carbonSum = 0.0
 
-    hwpSum = 0.0
-    w = math.log(2) / decay
-    daterange = endDate - startDate
-    numerator = 1.0 - (math.pow(math.e, ((-1) * w)))
-    for t in range(int(limit)):
-        m = daterange - (t * freq)
-        denominator = w * (math.pow(math.e, (m * w)))
-        hwpSum += (numerator / denominator)
-
-    return math.floor(hwpSum)
+    for t in xrange(math.ceil(harvestYears / harvestFreq)):
+        carbonSum += math.floor((1 - math.exp(-omega)) / (omega *
+            math.exp(harvestYears - t * harvestFreq) * omega))
+    return math.floor(carbonSum) * carbonPerCut
 
 def valuate(args):
     """Executes the economic valuation model.
