@@ -56,7 +56,7 @@ def execute(args):
         yr_per_freq = num_Years / freq_Harv
 
         #Calculate the harvest value for parcel x
-        harvest_value = harvestValue(perc_Harv, price, harv_Mass, harv_Cost)
+        harvest_value = (perc_Harv / 100.00) * ((price * harv_Mass) - harv_Cost)
 
         #Frequency Harvest cannot be greater than the time period
         if freq_Harv > num_Years :
@@ -114,11 +114,6 @@ def getAttributeRow(feat, attr_table):
         table_id = attr_table[table_index]['Parcel_ID']
 
     return attr_table[table_index]
-
-#Calculates harvest value for parcel
-def harvestValue(perc_Harv, price, harv_Mass, harv_Cost):
-    harvest_value = (perc_Harv / 100.00) * ((price * harv_Mass) - harv_Cost)
-    return harvest_value
 
 #Calculates the first summation for the net present value of a parcel
 def npvSummationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
