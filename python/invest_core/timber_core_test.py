@@ -212,6 +212,11 @@ class TestTimber(unittest.TestCase):
                 os.remove(smoke_path+file)
             os.rmdir(smoke_path)
    
+    def test_timber_ByHand(self):
+        
+        
+        
+        self.assertEqual(0, 0)
 
     def test_timber_with_inputs(self):
         """Test timber model with real inputs.  Compare copied and modified shapefile with valid
