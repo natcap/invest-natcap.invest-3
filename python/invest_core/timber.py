@@ -2,7 +2,7 @@
 
 import imp, sys, os
 import simplejson as json
-import timber
+import timber_core
 from osgeo import ogr
 import numpy
 from dbfpy import dbf

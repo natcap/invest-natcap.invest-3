@@ -25,7 +25,7 @@ args_file.close()
 gp.AddMessage('Starting timber model')
 
 process = subprocess.Popen(['OSGeo4W\\gdal_python_exec.bat',
-                            'python\\invest_core\\invest_timber_core.py',
+                            'python\\invest_core\\timber.py',
                             json.dumps(arguments)],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT).communicate()[0]
