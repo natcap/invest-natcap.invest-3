@@ -73,7 +73,7 @@ class TestTimber(unittest.TestCase):
         subtractor = 1
         
         summationCalculatedByHand = 6986.000492
-        summation = timber.npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
+        summation = timber_core.npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
     
         summationCalculated = 0.0
         for num in range(lower_limit, upper_limit+1):
@@ -96,7 +96,7 @@ class TestTimber(unittest.TestCase):
         subtractor = 0
         
         summationCalculatedByHand = 7475.020526
-        summation = timber.npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
+        summation = timber_core.npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
         
         summationCalculated = 0.0
         for num in range(lower_limit, upper_limit+1):
@@ -115,7 +115,7 @@ class TestTimber(unittest.TestCase):
         mdr_perc = 1.07
         
         summationCalculatedByHand = 362.4316044
-        summation = timber.npvSummationTwo(lower_limit, upper_limit, maint_Cost, mdr_perc)
+        summation = timber_core.npvSummationTwo(lower_limit, upper_limit, maint_Cost, mdr_perc)
         
         summationCalculated = 0.0
         for num in range(0, 4):
