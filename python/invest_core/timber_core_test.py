@@ -236,7 +236,7 @@ class TestTimber(unittest.TestCase):
         
         timber_core.execute(args)
         
-        valid_output_shape = ogr.Open('../../test_data/timber/output/timber.shp')
+        valid_output_shape = ogr.Open('../../test_data/timber/sample_output/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
         num_features = valid_output_layer.GetFeatureCount()
         for i in range(num_features):
