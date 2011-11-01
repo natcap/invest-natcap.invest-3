@@ -55,7 +55,7 @@ def execute(args):
     timber.execute(args)
 
     #This is how OGR closes its datasources in python
-    timber_shp_copy.Destroy()
+    timber_shape_copy.Destroy()
     
     #close the polygon attribute table DBF file and wipe datasources
     args['attr_table'].close()

@@ -24,10 +24,7 @@ def execute(args):
     #Set constant variables from arguments
     layer = args['timber_layer_copy']
     mdr = float(args['mdr'])
-    attr_table_loc = args['attr_table_loc']
     attr_table = args['attr_table']
-    timber_shape_loc = args['timber_shape_loc']
-    output_dir = args['output_dir']
     #Set constant variables
     mdr_perc = 1+(mdr/100.00)
     sumTwo_lowerLimit = 0
@@ -54,6 +51,7 @@ def execute(args):
         immed_Harv = attr_row['Immed_harv']
 
         sumTwo_upperLimit = int(num_Years - 1)
+        #Variable used in npv summation one equation as a distinguisher between two immed_harv possibilities
         subtractor = 0.0
         yr_per_freq = num_Years/freq_Harv
         
@@ -95,7 +93,7 @@ def execute(args):
         feat.Destroy()
         
     #Create the output file with the attributes used    
-    textFileOut(timber_shape_loc, output_dir, mdr, attr_table_loc)
+    textFileOut(args['timber_shape_loc'], args['output_dir'], mdr, args['attr_table_loc'])
 
 def getAttributeRow(feat, attr_table):
     parcl_index = feat.GetFieldIndex('Parcl_ID')
