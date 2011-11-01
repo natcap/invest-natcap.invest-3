@@ -98,7 +98,7 @@ def npvSummationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor
     summation = 0.0
     upper = upper + 1
     for num in range(lower, upper):
-            summation = summation + (harvest_value / (mdr_perc ** ((freq_Harv * num) - subtractor)))
+        summation = summation + (harvest_value / (mdr_perc ** ((freq_Harv * num) - subtractor)))
 
     return summation
 
@@ -107,6 +107,6 @@ def npvSummationTwo(lower, upper, maint_Cost, mdr_perc):
     summation = 0.0
     upper = upper + 1
     for num in range(lower, upper):
-            summation = summation + (maint_Cost / (mdr_perc ** num))
+        summation = summation + (maint_Cost / (mdr_perc ** num))
 
     return summation
