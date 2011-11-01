@@ -1,5 +1,5 @@
 import unittest
-import invest_timber_core
+import timber
 
 class TestInvestTimberCore(unittest.TestCase):
     def test_timber_model(self):
@@ -8,7 +8,7 @@ class TestInvestTimberCore(unittest.TestCase):
                 'attr_table_uri': '../../test_data/timber/input/plant_table.dbf',
                 'market_disc_rate': 7}
 
-        invest_timber_core.execute(args)
+        timber.execute(args)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestTimberCore)
