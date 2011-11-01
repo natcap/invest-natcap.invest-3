@@ -52,7 +52,7 @@ def execute(args):
             'attr_table_loc': args['attr_table_uri'],
             'mdr': args['market_disc_rate']}
 
-    timber.execute(args)
+    timber_core.execute(args)
 
     #This is how OGR closes its datasources in python
     timber_shape_copy.Destroy()
