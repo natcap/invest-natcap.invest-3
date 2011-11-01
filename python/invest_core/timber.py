@@ -74,7 +74,7 @@ def execute(args):
         #Calculate Biomass
         biomass = parcl_Area * (perc_Harv / 100.00) * harv_Mass * math.ceil(T / freq_Harv)
         #Calculate Volume
-        volume = getVolume(biomass, BCEF)
+        volume = biomass * (1.0 / BCEF)
 
         net_present_value = (summation_one - summation_two)
         total_npv = net_present_value * parcl_Area
@@ -128,11 +128,6 @@ def npvSummationTwo(lower, upper, maint_Cost, mdr_perc):
             summation = summation + (maint_Cost / (mdr_perc ** num))
 
     return summation
-
-#Calculates the Volume for a parcel
-def getVolume(biomass, BCEF):
-    TVolume = biomass * (1.0 / BCEF)
-    return TVolume
 
 #Creates a text file which saves the attributes to the Output folder
 def textFileOut(timber_shape, output_dir, mdr, plant_prod):
