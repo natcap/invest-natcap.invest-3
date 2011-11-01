@@ -34,7 +34,7 @@ def execute(args):
     #Example of how to build lookup table so we don't have to loop through 
     #table linearly
     parcelIdLookup = {} # this
-    for i in range(attr_table.recordCount()): #this
+    for i in range(attr_table.recordCount): #this
         parcelIdLookup[attr_table[i]['Parcel_ID']] = attr_table[i] #and this
         
     #Loop through each feature (polygon) in the shapefile layer

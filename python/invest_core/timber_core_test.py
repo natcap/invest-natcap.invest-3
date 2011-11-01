@@ -239,7 +239,7 @@ class TestTimber(unittest.TestCase):
         valid_output_shape = ogr.Open('../../test_data/timber/output/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
         
-        for i in range(valid_output_layer.recordCount()):
+        for i in range(valid_output_layer.recordCount):
             feat = valid_output.layer.getFeature(i)
             feat2 = timber_layer_copy.getFeature(i)
             for field in ('TNPV', 'TBiomass', 'TVolume'):
