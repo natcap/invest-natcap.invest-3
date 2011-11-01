@@ -5,6 +5,7 @@ import osgeo.osr as osr
 from osgeo import ogr
 from dbfpy import dbf
 import math
+import invest_core
 
 def biophysical(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -71,136 +72,100 @@ def biophysical(args):
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
     #calculate carbon storage for the current landscape
-    calculateCarbonStorage(pools, args['lulc_cur'], args['tot_C_cur'])
+    calculateCarbonStorage(pools, args['lulc_cur'].GetRasterBand(1),
+                           args['tot_C_cur'].GetRasterBand(1))
 
     #if lulc_fut is present it means that sequestration needs to be calculated
     #calculate the future storage as well
     if 'lulc_fut' in args:
         #calculate storage for the future landscape
-        calculateCarbonStorage(pools, args['lulc_fut'], args['tot_C_fut'])
+        calculateCarbonStorage(pools, args['lulc_fut'].GetRasterBand(1),
+                               args['tot_C_fut'].GetRasterBand(1))
 
     #Calculate HWP pools if a HWP shape is present
     if 'hwp_cur_shape' in args:
-        harvestProductInfo(args)
+        harvestProductInfo(args['hwp_cur_shape'], args['hwp_fut_shape'],
+                           args['lulc_cur_year'], args['lulc_fut_year'],
+                           args['c_hwp_cur'].GetRasterBand(1),
+                           args['c_hwp_fut'].GetRasterBand(1))
         harvestProducts(args, ('cur', 'fut'))
 
     if 'lulc_fut' in args:
         #calculate seq. only after HWP has been added to the storage rasters
-        rasterDiff(args['storage_cur'], args['storage_fut'], args['sequest'])
+        invest_core.rasterDiff(args['tot_C_fut'].GetRasterBand(1),
+                               args['tot_C_cur'].GetRasterBand(1),
+                               args['sequest'].GetRasterBand(1))
 
-def valuation(args):
-    """Executes the basic carbon model that maps a carbon pool dataset to a
-        LULC raster.
-    
-        args - is a dictionary with at least the following entries:
-        args['lulc_cur'] - is a GDAL raster dataset
-        args['lulc_fut'] - is a GDAL raster dataset
-        args['carbon_pools'] - is a DBF dataset mapping carbon sequestration numbers to lulc classifications.
-        args['storage_cur'] - a GDAL raster dataset for outputing the sequestered carbon
-                          based on the current lulc
-        args['storage_fut'] - a GDAL raster dataset for outputing the sequestered carbon
-                          based on the future lulc
-        args['seq_delta'] - a GDAL raster dataset for outputing the difference between
-                            args['storage_cur'] and args['storage_fut']
-        args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
-                            value of sequestered carbon.
-        args['biomass_cur'] - a GDAL raster dataset for outputing the biomass 
-            of harvested HWP parcels on the current landscape
-        args['biomass_fut'] - a GDAL raster dataset for outputing the biomass 
-            of harvested HWP parcels on the future landscape
-        args['volume_cur'] - a GDAL raster dataset for outputing the volume of 
-            HWP on the current landscape
-        args['volume_fut'] - a GDAL raster dataset for outputing the volume of 
-            HWP on the future landscape
-        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
-        args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
-        args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
-        args['c_value'] - a float.  Represents the price of carbon in US Dollars.
-        args['discount'] - a float.  Represents the annual discount in the price of carbon
-        args['rate_change'] - a float.  Represents the rate of change in the price of carbon
-        
-        returns nothing"""
-
-    pass
-
-def harvestProductInfo(args):
+def harvestProductInfo(hwp_cur_shape, hwp_fut_shape, lulc_cur_year,
+                       lulc_fut_year, c_hwp_cur, c_hwp_fut):
     """Calculates biomass and volume of harvested wood products in a parcel.
         Values are calculated per parcel and burned into the appropriate raster
         dataset specified in the args dict.
         
-        args - is a dictionary with at least the following entries:
-        args['biomass_cur'] - an open GDAL raster dataset
-        args['volume_cur'] - an open GDAL raster dataset
-        args['hwp_cur_shape'] - an open OGR dataset
-        
-        The following arguments are optional and may be processed if necessary:
-        args['biomass_fut'] - an open GDAL raster dataset
-        args['volume_fut'] - an open GDAL raster dataset
-        args['hwp_fut_shape'] - an open OGR dataset
+        hwp_cur_shape - oal shapefile indicating current harvest map
+        hwp_fut_shape - oal shapefile indicating current harvest map
+        lulc_cur_year - year of current lulc map
+        lulc_fut_year - year of future lulc map
+        c_hwp_cur - an output GDAL rasterband representing 
+            carbon stored in harvested wood products for current land cover 
+        c_hwp_fut - an output GDAL rasterband representing 
+            carbon stored in harvested wood products for future land cover 
         
         No return value"""
 
-
-    if 'hwp_fut_shape' in args:
-        timeframeList = ('cur', 'fut')
-        avg = math.ceil((args['lulc_cur_year'] + args['lulc_fut_year']) / 2.0)
-    else:
-        timeframeList = ('cur',)
-        avg = args['lulc_cur_year']
-
+    avgYear = math.ceil((lulc_cur_year + lulc_fut_year) / 2.0)
 
     #for each shape (if the shape is provided in args):
-    for timeframe in timeframeList:
-        harvestMap = 'hwp_' + timeframe + '_shape'
-        layer = 'harv_samp_' + timeframe
+    for harvestMap, layerName in [(hwp_cur_shape, 'harv_samp_cur'),
+                       (hwp_fut_shape, 'harv_samp_fut')]:
 
         #Make a copy of the appropriate shape in memory
-        copiedDS = ogr.GetDriverByName('Memory').CopyDataSource(args[harvestMap], timeframe)
+        copiedDS = ogr.GetDriverByName('Memory').CopyDataSource(harvestMap, '')
 
         #open the copied file
-        copiedLayer = copiedDS.GetLayerByName(layer)
+        copiedLayer = copiedDS.GetLayerByName(layerName)
 
         #add a biomass and volume field to the shape
         for fieldname in ('biomass', 'volume'):
             field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
             copiedLayer.CreateField(field_def)
 
-        #create a temporary mask raster for this shapefile
-        maskRaster = invest_carbon_core.mimic(args['lulc_cur'], 'mask.tif', 'MEM', -1.0)
-        gdal.RasterizeLayer(maskRaster, [1], copiedLayer, burn_values=[1])
-
-        for feature in copiedLayer:
-            fieldArgs = getFields(feature)
-
-            #do the appropriate math based on the timeframe
-            if timeframe == 'cur':
-                timeSpan = math.ceil((avg - fieldArgs['Start_date'])
-                                       / fieldArgs['Freq_cur'])
-            else:
-                timeSpan = math.ceil((args['lulc_fut_year'] - avg)
-                                     / fieldArgs['Freq_fut'])
-
-            #calculate biomass for this parcel (equation 10.8)
-            biomass = fieldArgs['Cut_' + timeframe] * \
-                    timeSpan * (1.0 / fieldArgs['C_den_' + timeframe])
-
-            #calculate volume for this parcel (equation 10.11)
-            volume = biomass * (1.0 / fieldArgs['BCEF_' + timeframe])
-
-            #set biomass and volume fields
-            for fieldName, value in (('biomass', biomass), ('volume', volume)):
-                index = feature.GetFieldIndex(fieldName)
-                feature.SetField(index, value)
-
-            #save the field modifications to the layer.
-            copiedLayer.SetFeature(feature)
-
-        #Burn values into temp raster, apply mask, save to args dict.
-        for fieldName in ('biomass', 'volume'):
-            tempRaster = invest_carbon_core.mimic(args['lulc_cur'], '', 'MEM', -1.0)
-            gdal.RasterizeLayer(tempRaster, [1], copiedLayer,
-                            options=['ATTRIBUTE=' + fieldName])
-            rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
+#        #create a temporary mask raster for this shapefile
+#        maskRaster = invest_carbon_core.mimic(args['lulc_cur'], 'mask.tif', 'MEM', -1.0)
+#        gdal.RasterizeLayer(maskRaster, [1], copiedLayer, burn_values=[1])
+#
+#        for feature in copiedLayer:
+#            fieldArgs = getFields(feature)
+#
+#            #do the appropriate math based on the timeframe
+#            if timeframe == 'cur':
+#                timeSpan = math.ceil((avg - fieldArgs['Start_date'])
+#                                       / fieldArgs['Freq_cur'])
+#            else:
+#                timeSpan = math.ceil((args['lulc_fut_year'] - avg)
+#                                     / fieldArgs['Freq_fut'])
+#
+#            #calculate biomass for this parcel (equation 10.8)
+#            biomass = fieldArgs['Cut_' + timeframe] * \
+#                    timeSpan * (1.0 / fieldArgs['C_den_' + timeframe])
+#
+#            #calculate volume for this parcel (equation 10.11)
+#            volume = biomass * (1.0 / fieldArgs['BCEF_' + timeframe])
+#
+#            #set biomass and volume fields
+#            for fieldName, value in (('biomass', biomass), ('volume', volume)):
+#                index = feature.GetFieldIndex(fieldName)
+#                feature.SetField(index, value)
+#
+#            #save the field modifications to the layer.
+#            copiedLayer.SetFeature(feature)
+#
+#        #Burn values into temp raster, apply mask, save to args dict.
+#        for fieldName in ('biomass', 'volume'):
+#            tempRaster = invest_carbon_core.mimic(args['lulc_cur'], '', 'MEM', -1.0)
+#            gdal.RasterizeLayer(tempRaster, [1], copiedLayer,
+#                            options=['ATTRIBUTE=' + fieldName])
+#            rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
     return
 
 
@@ -388,38 +353,70 @@ def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, 
         out_array = carbon_value(nodataDict, data, numYears, carbonValue, multiplier)
         outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
 
-def calculateCarbonStorage(pools, inputRaster, outputRaster):
+def calculateCarbonStorage(pools, lulcRasterBand, storageRasterBand):
     """Iterate through the rows in an LULC raster and map carbon storage values
         to the output raster.
         
         pools - a python dict mapping lulc indices to carbon storage/pixel
-        inputRaster - a GDAL raster dataset representing lulc 
-        outputRaster - a GDAL raster dataset representing carbon storage
+        lulcRasterBand - a GDAL raster dataset representing lulc 
+        storageRasterBand - a GDAL raster dataset representing carbon storage
         
         No return value."""
 
-    lulc = inputRaster.GetRasterBand(1)
-    for i in range(0, lulc.YSize):
-        data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
-        out_array = mapValues(data, pools)
-        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
+    #Vectorize an operation that maps pixel values to carbon storage values
+    def mapPool(x, dict):
+        return dict[x]
+    mapFun = np.vectorize(mapPool)
 
-def rasterDiff(storage_cur, storage_fut, outputRaster):
-    """Iterate through the rows in the two sequestration rasters and calculate the 
-        difference in each pixel.  Maps the difference to the output raster.
+    #Iterate through lulc and map storage to the storage raster band
+    for i in range(0, lulcRasterBand.YSize):
+        data = lulcRasterBand.ReadAsArray(0, i, lulcRasterBand.XSize, 1)
+        out_array = mapFun(data, pools)
+        storageRasterBand.WriteArray(out_array, 0, i)
+
+def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
+    """Iterate through the rows in the two sequestration rasters and calculate 
+        the difference in each pixel.  Maps the difference to the output 
+        raster.
         
-        storage_cur - a GDAL raster dataset
-        storage_fut - a GDAL raster dataset
-        outputRaster - a GDAL raster dataset"""
+        rasterBandA - a GDAL raster band
+        rasterBandB - a GDAL raster band
+        outputRasterBand - a GDAL raster band with the elementwise value of 
+            rasterBandA-rasterBandB
+            
+        returns nothing"""
 
-    nodataDict = build_nodata_dict(storage_cur, outputRaster)
-    lulc_cur_band = storage_cur.GetRasterBand(1)
-    lulc_fut_band = storage_fut.GetRasterBand(1)
-    for i in range(0, lulc_cur_band.YSize):
-        cur_data = lulc_cur_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
-        fut_data = lulc_fut_band.ReadAsArray(0, i, lulc_cur_band.XSize, 1)
-        out_array = carbon_diff(nodataDict, cur_data, fut_data)
-        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
+    #Build an operation that does pixel difference unless one of the inputs
+    #is a nodata value
+    noDataA = rasterBandA.GetNoDataValue()
+    noDataB = rasterBandB.GetNoDataValue()
+
+    def noDataDiff(a, b):
+        #a is nodata if and only if b is nodata
+        if a == noDataA:
+            return noDataB
+        else:
+            return a - b
+
+    vectorizeOp(rasterBandA, rasterBandB, noDataDiff, outputRasterBand)
+
+def vectorizeOp(rasterBandA, rasterBandB, op, outBand):
+    """Applies the function 'op' over rasterBandA and rasterBandB
+    
+        rasterBandA - a GDAL raster
+        rasterBandB - a GDAL raster of the same dimensions as rasterBandA
+        op- a function that that takes 2 arguments and returns 1 value
+        outBand - the result of vectorizing op over rasterbandA and 
+            rasterBandB
+            
+        returns nothing"""
+
+    vOp = np.vectorize(op)
+    for i in range(0, rasterBandA.YSize):
+        dataA = rasterBandA.ReadAsArray(0, i, rasterBandA.XSize, 1)
+        dataB = rasterBandB.ReadAsArray(0, i, rasterBandB.XSize, 1)
+        out_array = vOp(dataA, dataB)
+        outBand.WriteArray(out_array, 0, i)
 
 def rasterAdd(storage_cur, hwpRaster, outputRaster):
     """Iterate through the rows in the two sequestration rasters and calculate the 
@@ -519,51 +516,6 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
             sum += dbf[i][field]
         poolsDict[dbf[i]['LULC']] = sum * area
     return poolsDict
-
-def mapValues(array, dict):
-    """Creates a new array by maping the values stored in array from the
-         keys in dict to the values in dict.  If a value in array is not 
-         a key in dict it gets mapped to zero.
-        
-        array - 1numpy array
-        dict - a dictionary that maps elements of array to new values
-        
-        return a new numpy array with keys mapped from array to values in dict
-        """
-
-    def mapPool(x, dict):
-        if x in dict:
-            return dict[x]
-        else:
-            return 0
-
-    if array.size > 0:
-        mapFun = np.vectorize(mapPool)
-        return mapFun(array, dict)
-    else:
-        return []
-
-def carbon_diff(nodata, firstArray, secondArray):
-    """Creates a new array by returning the difference of the elements in the
-        two input arrays.  If a nodata value is detected in the input array,
-        the proper nodata value for the output array is returned.
-        
-        nodata - a dict: {'input': some number, 'output' : some number}
-        firstArray - a numpy array
-        secondArray - a numpy array
-
-        return a new numpy array with the difference of the two input arrays
-        """
-
-    def mapDiff(a, b):
-        if a == nodata['input']:
-            return nodata['output']
-        else:
-            return b - a
-
-    if firstArray.size > 0:
-        mapFun = np.vectorize(mapDiff)
-        return mapFun(firstArray, secondArray)
 
 def carbon_add(nodata, firstArray, secondArray):
     """Creates a new array by returning the sum of the elements of the two input
@@ -820,3 +772,38 @@ def carbon_scenario_uncertainty(args):
         #map them to colors
         args['output_map'].GetRasterBand(1).WriteArray(maxIndex(seqRow), 0, rowNumber)
 
+
+def valuation(args):
+    """Executes the basic carbon model that maps a carbon pool dataset to a
+        LULC raster.
+    
+        args - is a dictionary with at least the following entries:
+        args['lulc_cur'] - is a GDAL raster dataset
+        args['lulc_fut'] - is a GDAL raster dataset
+        args['carbon_pools'] - is a DBF dataset mapping carbon sequestration numbers to lulc classifications.
+        args['storage_cur'] - a GDAL raster dataset for outputing the sequestered carbon
+                          based on the current lulc
+        args['storage_fut'] - a GDAL raster dataset for outputing the sequestered carbon
+                          based on the future lulc
+        args['seq_delta'] - a GDAL raster dataset for outputing the difference between
+                            args['storage_cur'] and args['storage_fut']
+        args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
+                            value of sequestered carbon.
+        args['biomass_cur'] - a GDAL raster dataset for outputing the biomass 
+            of harvested HWP parcels on the current landscape
+        args['biomass_fut'] - a GDAL raster dataset for outputing the biomass 
+            of harvested HWP parcels on the future landscape
+        args['volume_cur'] - a GDAL raster dataset for outputing the volume of 
+            HWP on the current landscape
+        args['volume_fut'] - a GDAL raster dataset for outputing the volume of 
+            HWP on the future landscape
+        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
+        args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
+        args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
+        args['c_value'] - a float.  Represents the price of carbon in US Dollars.
+        args['discount'] - a float.  Represents the annual discount in the price of carbon
+        args['rate_change'] - a float.  Represents the rate of change in the price of carbon
+        
+        returns nothing"""
+
+    pass
