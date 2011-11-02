@@ -9,15 +9,16 @@ def execute(args):
     
         args - is a dictionary with at least the following entries:
         
-        args['timber_layer_copy']   - is the layer which holds the polygon features from the copied shapefile.
-        args['mdr']                 - the market discount rate.
-        args['attr_table']          - the dbf file which has the polygon attribute values of each timber parcel.
+        args['timber_shape']   - an OGR shapefile which holds a polygon layer representing timber parcels.
+        args['mdr']            - the market discount rate as a float.
+        args['attr_table']     - the dbf file which has the polygon attribute values of timber_shape.
         
         returns nothing"""
 
     #Set constant variables from arguments
-    layer = args['timber_layer_copy']
-    mdr = float(args['mdr'])
+    timber_shape = args['timber_shape']
+    layer = timber_shape.GetLayerByName('timber')
+    mdr = args['mdr']
     attr_table = args['attr_table']
     #Set constant variables
     mdr_perc = 1 + (mdr / 100.00)

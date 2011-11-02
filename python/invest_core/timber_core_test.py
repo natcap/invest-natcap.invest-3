@@ -178,15 +178,15 @@ class TestTimber(unittest.TestCase):
                      ('Parcl_area', 'N', 4), ('Perc_harv', 'N', 2), ('Harv_mass', 'N', 3), 
                      ('Freq_harv', 'N', 2), ('Maint_cost', 'N', 3), ('Harv_cost', 'N', 3), ('Immed_harv', 'C', 1))
         rec = db.newRecord()
-        rec['PRICE'] = 450
-        rec['T'] = 10
+        rec['PRICE'] = 400
+        rec['T'] = 4
         rec['BCEF'] = 1
         rec['Parcel_ID'] = 1
-        rec['Parcl_area'] = 850
+        rec['Parcl_area'] = 800
         rec['Perc_harv'] = 10.0
         rec['Harv_mass'] = 100
-        rec['Freq_harv'] = 5
-        rec['Maint_cost'] = 50
+        rec['Freq_harv'] = 2
+        rec['Maint_cost'] = 100
         rec['Harv_cost'] = 100
         rec['Immed_harv'] = 'Y'
         rec.store()
@@ -199,10 +199,10 @@ class TestTimber(unittest.TestCase):
         num_Years = db[0]['T']
         freq_Harv = db[0]['Freq_harv']
         BCEF = db[0]['BCEF']
-        #Calculate Biomass and Volume
-        calculatedBiomass = parcl_Area * (perc_Harv/100) * harv_Mass * math.ceil(num_Years/freq_Harv)
-        calculatedVolume = calculatedBiomass * (1/BCEF)
-
+        #Calculate Biomass,Volume, and TNPV by hand to 3 decimal places.
+        calculatedBiomass = 16000
+        calculatedVolume = 16000
+        TNPV = 5690070.821
         #Create our own shapefile with multiple polygons to run through the model
         driverName = "ESRI Shapefile"
         drv = ogr.GetDriverByName(driverName)
@@ -235,10 +235,10 @@ class TestTimber(unittest.TestCase):
         timber_core.execute(args)        
         #Compare Biomass and Volume calculations
         feat = lyr.GetFeature(0)
-        for field, value in (('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
+        for field, value in (('TNPV', TNPV), ('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
             field_index = feat.GetFieldIndex(field)
             field_value = feat.GetField(field_index)
-            self.assertAlmostEqual(value, field_value, 6)        
+            self.assertAlmostEqual(value, field_value, 2)        
         
         #This is how OGR closes its datasources
         ds = None
