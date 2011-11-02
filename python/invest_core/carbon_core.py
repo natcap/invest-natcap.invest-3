@@ -55,6 +55,10 @@ def biophysical(args):
         args['c_hwp_fut'] - an output GDAL raster dataset representing 
             carbon stored in harvested wood products for futureland cover 
             (required if doing HWP)
+        args['bio_hwp_cur'] - an output GDAL raster dataset representing
+            biomass of harvested wood products in current land cover
+        args['vol_hwp_cur'] - an output GDAL raster dataset representing
+            volume of harvested wood products in current land cover
         args['uncertainty_percentile_map'] - an output GDAL raster highlighting
             the low and high percentile regions based on the value of 
             'uncertainty_percentile' from the 'sequest' output (required if
@@ -71,6 +75,12 @@ def biophysical(args):
     outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
     pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
 
+    #Calculate HWP pools if a HWP shape is present
+    if 'hwp_cur_shape' in args:
+        calculateHWPStorageCur(args['hwp_cur_shape'], args['lulc_cur_year'],
+                               args['c_hwp_cur'], args['bio_hwp_cur'],
+                               args['vol_hwp_cur'])
+
     #calculate carbon storage for the current landscape
     calculateCarbonStorage(pools, args['lulc_cur'].GetRasterBand(1),
                            args['tot_C_cur'].GetRasterBand(1))
@@ -82,13 +92,6 @@ def biophysical(args):
         calculateCarbonStorage(pools, args['lulc_fut'].GetRasterBand(1),
                                args['tot_C_fut'].GetRasterBand(1))
 
-    #Calculate HWP pools if a HWP shape is present
-    if 'hwp_cur_shape' in args:
-        calculateHWPStorageCur(args['hwp_cur_shape'],
-                           args['lulc_cur_year'],
-                           args['c_hwp_cur'],
-                           None,
-                           None)
         #harvestProducts(args, ('cur', 'fut'))
 
     if 'lulc_fut' in args:
@@ -166,9 +169,12 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
     #burn values to a raster
     #tempRaster = invest_core.newRasterFromBase(c_hwp_cur, 'c_hwp_pool.tif',
     #                                           'GTiff', -1.0, gdal.GDT_Float32)
-    c_hwp_cur.GetRasterBand(1).Fill(c_hwp_cur.GetRasterBand(1).GetNoDataValue())
-    gdal.RasterizeLayer(c_hwp_cur, [1], hwp_shape_layer_copy,
-                            options=['ATTRIBUTE=c_hwp_cur_pool'])
+    for raster, attributeName in [(c_hwp_cur, 'c_hwp_cur_pool'),
+                                  (bio_hwp_cur, 'bio_hwp_cur'),
+                                  (vol_hwp_cur, 'vol_hwp_cur')]:
+        raster.GetRasterBand(1).Fill(raster.GetRasterBand(1).GetNoDataValue())
+        gdal.RasterizeLayer(raster, [1], hwp_shape_layer_copy,
+                                options=['ATTRIBUTE=' + attributeName])
 
 #    avgYear = math.ceil((lulc_cur_year + lulc_fut_year) / 2.0)
 #
