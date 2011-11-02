@@ -213,12 +213,36 @@ class TestTimber(unittest.TestCase):
             os.rmdir(smoke_path)
    
     def test_timber_ByHand(self):
+                
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
         dir_path = '../../test_data/timber/Test/'
-        if not os.path.isdir(smoke_path):
+        if not os.path.isdir(dir_path):
             os.mkdir('../../test_data/timber/Test')
         shp_path = '../../test_data/timber/Test/'
+        dbf_path = '../../test_data/timber/Test/test.dbf'
+        #Create our own dbf file with basic attributes for one polygon
+        db = dbf.Dbf(dbf_path, new=True)
+        db.addField( ('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1), ('Parcel_ID', 'N', 1),
+                     ('Parcl_area', 'N', 4), ('Perc_harv', 'N', 2), ('Harv_mass', 'N', 3), 
+                     ('Freq_harv', 'N', 2), ('Maint_cost', 'N', 3), ('Harv_cost', 'N', 3), ('Immed_harv', 'C', 1))
+        rec = db.newRecord()
+        rec['PRICE'] = 450
+        rec['T'] = 10
+        rec['BCEF'] = 1
+        rec['Parcel_ID'] = 1
+        rec['Parcl_area'] = 850
+        rec['Perc_harv'] = 10.0
+        rec['Harv_mass'] = 100
+        rec['Freq_harv'] = 5
+        rec['Maint_cost'] = 50
+        rec['Harv_cost'] = 100
+        rec['Immed_harv'] = 'Y'
+        rec.store()
+        db.close()
         
+        calculatedBiomass = parcl_Area * (perc_Harv/100) * harv_Mass * math.ceil(num_Years/freq_Harv)
+        calculatedVolume = biomass * (1/BCEF)
+
         #Create our own shapefile with multiple polygons to run through the model
         driverName = "ESRI Shapefile"
         drv = ogr.GetDriverByName(driverName)
@@ -230,18 +254,47 @@ class TestTimber(unittest.TestCase):
         field_defn = ogr.FieldDefn('Parcl_ID', ogr.OFTInteger )
         lyr.CreateField(field_defn)
         
-        for i in range(1,4):
-            feat = ogr.Feature(lyr.GetLayerDefn())
-            lyr.CreateFeature(feat)
-            index = feat.GetFieldIndex('Parcl_ID')
-            feat.SetField(index, i)       
+#        for i in range(1,4):
+        feat = ogr.Feature(lyr.GetLayerDefn())
+        lyr.CreateFeature(feat)
+        index = feat.GetFieldIndex('Parcl_ID')
+        feat.SetField(index, 1)       
     
-            #save the field modifications to the layer.
-            lyr.SetFeature(feat)
-            feat.Destroy()
+        #save the field modifications to the layer.
+        lyr.SetFeature(feat)
+        feat.Destroy()
         
+        db = dbf.Dbf(dbf_path)
+
+        #Arguments to be past to the model
+        args= {'timber_shape_loc': shp_path,
+               'output_dir': dir_path,
+               'attr_table_loc': dbf_path,
+               'attr_table':db, 
+               'mdr':7, 
+               'timber_layer_copy': lyr 
+               }
         
-        self.assertEqual(0, 0)
+        timber_core.execute(args)
+        
+                
+        feat = lyr.GetFeature(0)
+        for field, value in ( ('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
+            field_index = feat.GetFieldIndex(field)
+            field_value = feat.GetField(field_index)
+            self.assertAlmostEqual(value, field_value, 6)        
+        
+        #This is how OGR closes its datasources
+        ds = None
+        db.close()
+        
+        #Remove the generated output from the smoke test
+        if os.path.isdir(dir_path):
+            textFileList = os.listdir(dir_path)
+            for file in textFileList:
+                os.remove(dir_path+file)
+            os.rmdir(dir_path)
+
 
     def test_timber_with_inputs(self):
         """Test timber model with real inputs.  Compare copied and modified shapefile with valid
