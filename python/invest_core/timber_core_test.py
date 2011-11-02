@@ -242,7 +242,7 @@ class TestTimber(unittest.TestCase):
         
         db = dbf.Dbf(dbf_path)
         parcl_Area = db[0]['Parcl_area']
-        perc_Harv = db[0]['Perc_harv']
+        perc_Harv = float(db[0]['Perc_harv'])
         harv_Mass = db[0]['Harv_mass']
         num_Years = db[0]['T']
         freq_Harv = db[0]['Freq_harv']
@@ -333,7 +333,7 @@ class TestTimber(unittest.TestCase):
         num_features_copy  = timber_layer_copy.GetFeatureCount()
         self.assertEqual(num_features_valid, num_features_copy)
         if num_features_valid == num_features_copy:
-            for i in range(num_features):
+            for i in range(num_features_valid):
                 feat = valid_output_layer.GetFeature(i)
                 feat2 = timber_layer_copy.GetFeature(i)
                 for field in ('TNPV', 'TBiomass', 'TVolume'):
