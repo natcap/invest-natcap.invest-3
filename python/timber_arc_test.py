@@ -11,13 +11,11 @@ class TestTimberArc(unittest.TestCase):
         
         gp.AddMessage('Running tests ...')
         process = subprocess.Popen(['..\\..\\OSGeo4W\\gdal_python_exec_test.bat',
-                                    'timber_test.py'],
+                                    'timber_core_test.py'],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT,).communicate()[0]
         
         gp.AddMessage(process)
-
-
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestTimberArc)

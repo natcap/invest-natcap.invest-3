@@ -2,9 +2,6 @@ import numpy as np
 import imp, sys, os
 from osgeo import ogr
 import math
-import datetime
-from datetime import date
-from datetime import datetime
 
 def execute(args):
     """Executes the basic timber management model that calculates the Total Net Present Value and maps
