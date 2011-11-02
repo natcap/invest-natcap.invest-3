@@ -77,6 +77,7 @@ class TestTimber(unittest.TestCase):
             basic input requirements"""
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
         smoke_path = '../../test_data/timber/Smoke/'
+
         if not os.path.isdir(smoke_path):
             os.mkdir('../../test_data/timber/Smoke')
         #Define the paths for the sample input/output files
@@ -243,7 +244,7 @@ class TestTimber(unittest.TestCase):
         ds = None
         db.close()
         
-        #Remove the generated output from the smoke test
+        #Remove the generated output from the BioVol test
         if os.path.isdir(dir_path):
             textFileList = os.listdir(dir_path)
             for file in textFileList:
@@ -276,9 +277,11 @@ class TestTimber(unittest.TestCase):
         
         valid_output_shape = ogr.Open('../../test_data/timber/sample_output/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
+        
         num_features_valid = valid_output_layer.GetFeatureCount()
         num_features_copy  = timber_layer_copy.GetFeatureCount()
         self.assertEqual(num_features_valid, num_features_copy)
+        
         if num_features_valid == num_features_copy:
             for i in range(num_features_valid):
                 feat = valid_output_layer.GetFeature(i)
