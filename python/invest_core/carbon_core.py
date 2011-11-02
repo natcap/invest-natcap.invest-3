@@ -149,7 +149,7 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
 
             #Calculate the carbon pool due to decaying HWP over the timeSpan
             featureCarbonPool = \
-                carbonStoredinHWPFromParcel(fieldArgs['C_den_cur'],
+                carbonPoolinHWPFromParcel(fieldArgs['C_den_cur'],
                 timeSpan, fieldArgs['Freq_cur'], fieldArgs['Decay_cur'])
 
             #Next lines caculate biomass and volume of harvested wood
@@ -237,7 +237,7 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
 #            #rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
     return
 
-def carbonStoredinHWPFromParcel(carbonPerCut, harvestYears, harvestFreq, decay):
+def carbonPoolinHWPFromParcel(carbonPerCut, harvestYears, harvestFreq, decay):
     """This is the summation equation that appears in equations 1, 5, 6, and 7
         from the user's guide
         
