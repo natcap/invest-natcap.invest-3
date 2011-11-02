@@ -67,19 +67,19 @@ def biophysical(args):
         returns nothing"""
 
     #Calculate the per pixel carbon storage due to lulc pools
-    area = pixelArea(args['lulc_cur'])
+    pixelArea = pixelArea(args['lulc_cur'])
 
     #Create carbon pool dictionary with appropriate values to handle
     #nodata in the input and nodata in the output
     inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
     outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
-    pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
+    pools = build_pools_dict(args['carbon_pools'], pixelArea, inNoData, outNoData)
 
     #Calculate HWP pools if a HWP shape is present
     if 'hwp_cur_shape' in args:
         calculateHWPStorageCur(args['hwp_cur_shape'], args['lulc_cur_year'],
                                args['c_hwp_cur'], args['bio_hwp_cur'],
-                               args['vol_hwp_cur'])
+                               args['vol_hwp_cur'], pixelArea)
 
     #calculate carbon storage for the current landscape
     calculateCarbonStorage(pools, args['lulc_cur'].GetRasterBand(1),
@@ -101,7 +101,7 @@ def biophysical(args):
                                args['sequest'].GetRasterBand(1))
 
 def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
-                           bio_hwp_cur, vol_hwp_cur):
+                           bio_hwp_cur, vol_hwp_cur, pixelArea):
     """Calculates carbon storage, hwp biomass and volume due to harvested wood 
         products in parcels on current landscape.
         
@@ -113,6 +113,8 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
             carbon stored in harvested wood products for current land cover
         vol_hwp_cur - an output GDAL rasterband representing 
             carbon stored in harvested wood products for current land cover
+        pixelArea - area of a pixel to calculate exact carbon/volume/biomass
+            amounts
         
         No return value"""
 
@@ -245,11 +247,6 @@ def carbonStoredinHWPFromParcel(carbonPerCut, harvestYears, harvestFreq, decay):
         harvestFreq - How many years between harvests
         decay - the rate at which carbon is decaying from HWP harvested from
             parcels
-        limit - a number
-        decay - a number
-        startDate - the reference year (an int)
-        endDate - the start date of the current harvest pattern
-        freq - the number of times this parcel has been harvested
         
         returns a float indicating the amount of carbon stored in HWP harvested
             from that parcel"""
