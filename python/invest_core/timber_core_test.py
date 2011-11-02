@@ -4,62 +4,10 @@ import timber_core
 import math
 import numpy as np
 from dbfpy import dbf
-
 from osgeo import ogr
 
 class TestTimber(unittest.TestCase):
 
-#    def test_timber_getBiomass(self):
-#        """Biomass equation test with defined inputs.  Hand calculated value and 
-#            calculated value compared with models equation """
-#        parcl_Area = 1200
-#        perc_Harv = 10.0
-#        harv_Mass = 150
-#        num_Years = 50.0
-#        freq_Harv = 10
-#        
-#        TBiomass = timber.getBiomass(parcl_Area, perc_Harv, harv_Mass, num_Years, freq_Harv)
-#        
-#        calculatedBiomassByHand = 90000
-#        
-#        calculatedBiomass = parcl_Area * (perc_Harv/100) * harv_Mass * math.ceil(num_Years/freq_Harv)
-#        
-#        self.assertEqual(calculatedBiomassByHand, TBiomass)
-#        self.assertEqual(calculatedBiomass, TBiomass)
-#        
-#    def test_timber_getVolume(self):
-#        """Volume equation test with defined inputs.  Hand calculated value and 
-#            calculated value compared with models equation """
-#        biomass = 90000
-#        BCEF = 1.0
-#        
-#        TVolume = timber.getVolume(biomass, BCEF)
-#        
-#        calculatedVolumeByHand = 90000
-#        
-#        calculatedVolume = biomass * (1/BCEF)
-#        
-#        self.assertEqual(calculatedVolumeByHand, TVolume)
-#        self.assertEqual(calculatedVolume, TVolume)
-#        
-#    def test_timber_harvestValue(self):
-#        """Harvest Value test with basic inputs.  Hand calculated value and calculated
-#            value compared against models equation"""
-#        parcl_Area = 1200
-#        perc_Harv = 10.0
-#        harv_Mass = 150
-#        harv_Cost = 100
-#        price = 615
-#        
-#        harvest_value = timber.harvestValue(perc_Harv, price, harv_Mass, harv_Cost)
-#        
-#        harvestValueCalculatedByHand = 9215.00
-#        
-#        harvestValueCalculated = (perc_Harv/100)*((price*harv_Mass)-harv_Cost)
-#        
-#        self.assertEqual(harvestValueCalculatedByHand, harvest_value)
-#        self.assertEqual(harvestValueCalculated, harvest_value)
-        
     def test_timber_summationOne_NotImmedHarv(self):
         """Test of the first summation in the Net Present Value equation when 
             immediate harvest is NO. Using known inputs.  Calculated value and Hand Calculations
@@ -129,11 +77,12 @@ class TestTimber(unittest.TestCase):
             basic input requirements"""
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
         smoke_path = '../../test_data/timber/Smoke/'
+
         if not os.path.isdir(smoke_path):
             os.mkdir('../../test_data/timber/Smoke')
         #Define the paths for the sample input/output files
         dbf_path = '../../test_data/timber/Smoke/test.dbf'
-        shp_path = '../../test_data/timber/Smoke/'
+        shp_path = '../../test_data/timber/Smoke'
 
         
         #Create our own dbf file with basic attributes for one polygon
@@ -212,14 +161,17 @@ class TestTimber(unittest.TestCase):
                 os.remove(smoke_path+file)
             os.rmdir(smoke_path)
    
-    def test_timber_ByHand(self):
-                
+    def test_timber_BioVol(self):
+        """Biomass and Volume test for timber model.  Creates an attribute table and shapefile
+        with set values.  Compares calculated Biomass and Volume with that from running the
+        shapefile through the model. """
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
         dir_path = '../../test_data/timber/Test/'
         if not os.path.isdir(dir_path):
             os.mkdir('../../test_data/timber/Test')
-        shp_path = '../../test_data/timber/Test/'
+        shp_path = '../../test_data/timber/Test'
         dbf_path = '../../test_data/timber/Test/test.dbf'
+        
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
         db.addField( ('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1), ('Parcel_ID', 'N', 1),
@@ -239,9 +191,17 @@ class TestTimber(unittest.TestCase):
         rec['Immed_harv'] = 'Y'
         rec.store()
         db.close()
-        
+        #Set some variable needed for Biomass/Volume calculations from created attr. table.
+        db = dbf.Dbf(dbf_path)
+        parcl_Area = db[0]['Parcl_area']
+        perc_Harv = float(db[0]['Perc_harv'])
+        harv_Mass = db[0]['Harv_mass']
+        num_Years = db[0]['T']
+        freq_Harv = db[0]['Freq_harv']
+        BCEF = db[0]['BCEF']
+        #Calculate Biomass and Volume
         calculatedBiomass = parcl_Area * (perc_Harv/100) * harv_Mass * math.ceil(num_Years/freq_Harv)
-        calculatedVolume = biomass * (1/BCEF)
+        calculatedVolume = calculatedBiomass * (1/BCEF)
 
         #Create our own shapefile with multiple polygons to run through the model
         driverName = "ESRI Shapefile"
@@ -254,7 +214,6 @@ class TestTimber(unittest.TestCase):
         field_defn = ogr.FieldDefn('Parcl_ID', ogr.OFTInteger )
         lyr.CreateField(field_defn)
         
-#        for i in range(1,4):
         feat = ogr.Feature(lyr.GetLayerDefn())
         lyr.CreateFeature(feat)
         index = feat.GetFieldIndex('Parcl_ID')
@@ -264,8 +223,6 @@ class TestTimber(unittest.TestCase):
         lyr.SetFeature(feat)
         feat.Destroy()
         
-        db = dbf.Dbf(dbf_path)
-
         #Arguments to be past to the model
         args= {'timber_shape_loc': shp_path,
                'output_dir': dir_path,
@@ -275,11 +232,10 @@ class TestTimber(unittest.TestCase):
                'timber_layer_copy': lyr 
                }
         
-        timber_core.execute(args)
-        
-                
+        timber_core.execute(args)        
+        #Compare Biomass and Volume calculations
         feat = lyr.GetFeature(0)
-        for field, value in ( ('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
+        for field, value in (('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
             field_index = feat.GetFieldIndex(field)
             field_value = feat.GetField(field_index)
             self.assertAlmostEqual(value, field_value, 6)        
@@ -288,7 +244,7 @@ class TestTimber(unittest.TestCase):
         ds = None
         db.close()
         
-        #Remove the generated output from the smoke test
+        #Remove the generated output from the BioVol test
         if os.path.isdir(dir_path):
             textFileList = os.listdir(dir_path)
             for file in textFileList:
@@ -304,7 +260,7 @@ class TestTimber(unittest.TestCase):
         test_shape = ogr.Open('../../test_data/timber/input/plantation.shp', 1)
         
         ogr.GetDriverByName('ESRI Shapefile').\
-            CopyDataSource(test_shape, '../../test_data/timber/Output' + os.sep)
+            CopyDataSource(test_shape, '../../test_data/timber/Output')
             
         timber_shape_copy = ogr.Open('../../test_data/timber/Output/plantation.shp', 1)       
         timber_layer_copy = timber_shape_copy.GetLayerByName('plantation')
@@ -321,16 +277,21 @@ class TestTimber(unittest.TestCase):
         
         valid_output_shape = ogr.Open('../../test_data/timber/sample_output/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
-        num_features = valid_output_layer.GetFeatureCount()
-        for i in range(num_features):
-            feat = valid_output_layer.GetFeature(i)
-            feat2 = timber_layer_copy.GetFeature(i)
-            for field in ('TNPV', 'TBiomass', 'TVolume'):
-                field_index = feat.GetFieldIndex(field)
-                field_value = feat.GetField(field_index)
-                field_index2 = feat2.GetFieldIndex(field)
-                field_value2 = feat2.GetField(field_index2)
-                self.assertAlmostEqual(field_value, field_value2, 2)
+        
+        num_features_valid = valid_output_layer.GetFeatureCount()
+        num_features_copy  = timber_layer_copy.GetFeatureCount()
+        self.assertEqual(num_features_valid, num_features_copy)
+        
+        if num_features_valid == num_features_copy:
+            for i in range(num_features_valid):
+                feat = valid_output_layer.GetFeature(i)
+                feat2 = timber_layer_copy.GetFeature(i)
+                for field in ('TNPV', 'TBiomass', 'TVolume'):
+                    field_index = feat.GetFieldIndex(field)
+                    field_value = feat.GetField(field_index)
+                    field_index2 = feat2.GetFieldIndex(field)
+                    field_value2 = feat2.GetField(field_index2)
+                    self.assertAlmostEqual(field_value, field_value2, 2)
         
         valid_output_shape = None
         timber_shape_copy = None
