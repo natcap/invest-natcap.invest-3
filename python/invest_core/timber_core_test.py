@@ -213,7 +213,32 @@ class TestTimber(unittest.TestCase):
             os.rmdir(smoke_path)
    
     def test_timber_ByHand(self):
+        #Set the path for the test inputs/outputs and check to make sure the directory does not exist
+        dir_path = '../../test_data/timber/Test/'
+        if not os.path.isdir(smoke_path):
+            os.mkdir('../../test_data/timber/Test')
+        shp_path = '../../test_data/timber/Test/'
         
+        #Create our own shapefile with multiple polygons to run through the model
+        driverName = "ESRI Shapefile"
+        drv = ogr.GetDriverByName(driverName)
+        ds = drv.CreateDataSource(shp_path)
+        lyr = ds.CreateLayer('timber', None, ogr.wkbPolygon)
+        
+        #Creating a field because OGR will not allow an empty feature, it will default by putting FID_1
+        #as a field.  OGR will also self create the FID and Shape field.
+        field_defn = ogr.FieldDefn('Parcl_ID', ogr.OFTInteger )
+        lyr.CreateField(field_defn)
+        
+        for i in range(1,4):
+            feat = ogr.Feature(lyr.GetLayerDefn())
+            lyr.CreateFeature(feat)
+            index = feat.GetFieldIndex('Parcl_ID')
+            feat.SetField(index, i)       
+    
+            #save the field modifications to the layer.
+            lyr.SetFeature(feat)
+            feat.Destroy()
         
         
         self.assertEqual(0, 0)
