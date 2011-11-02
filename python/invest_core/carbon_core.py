@@ -85,6 +85,12 @@ def biophysical(args):
     calculateCarbonStorage(pools, args['lulc_cur'].GetRasterBand(1),
                            args['tot_C_cur'].GetRasterBand(1))
 
+    #Add the current hwp carbon storage to tot_C_cur
+    if 'c_hwp_cur' in args:
+        invest_core.rasterAdd(args['tot_C_cur'].GetRasterBand(1),
+                              args['c_hwp_cur'].GetRasterBand(1),
+                              args['tot_C_cur'].GetRasterBand(1))
+
     #if lulc_fut is present it means that sequestration needs to be calculated
     #calculate the future storage as well
     if 'lulc_fut' in args:

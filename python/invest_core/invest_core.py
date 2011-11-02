@@ -30,6 +30,30 @@ def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
 
     vectorizeOp(rasterBandA, rasterBandB, noDataDiff, outputRasterBand)
 
+def rasterAdd(rasterBandA, rasterBandB, outputRasterBand):
+    """Iterate through the rows in the two rasters and calculate 
+        the sum in each pixel.  Maps the sum to the output 
+        raster.
+        
+        rasterBandA - a GDAL raster band
+        rasterBandB - a GDAL raster band
+        outputRasterBand - a GDAL raster band with the elementwise value of 
+            rasterBandA+rasterBandB
+            
+        returns nothing"""
+
+    #Build an operation that does pixel difference unless one of the inputs
+    #is a nodata value
+    noDataA = rasterBandA.GetNoDataValue()
+    noDataB = rasterBandB.GetNoDataValue()
+
+    def noDataAdd(a, b):
+        #a is nodata if and only if b is nodata
+            return a + b
+
+    vectorizeOp(rasterBandA, rasterBandB, noDataAdd, outputRasterBand)
+
+
 def vectorizeOp(rasterBandA, rasterBandB, op, outBand):
     """Applies the function 'op' over rasterBandA and rasterBandB
     
