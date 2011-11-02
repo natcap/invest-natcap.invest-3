@@ -82,7 +82,7 @@ class TestTimber(unittest.TestCase):
             os.mkdir('../../test_data/timber/Smoke')
         #Define the paths for the sample input/output files
         dbf_path = '../../test_data/timber/Smoke/test.dbf'
-        shp_path = '../../test_data/timber/Smoke/'
+        shp_path = '../../test_data/timber/Smoke'
 
         
         #Create our own dbf file with basic attributes for one polygon
@@ -169,7 +169,7 @@ class TestTimber(unittest.TestCase):
         dir_path = '../../test_data/timber/Test/'
         if not os.path.isdir(dir_path):
             os.mkdir('../../test_data/timber/Test')
-        shp_path = '../../test_data/timber/Test/'
+        shp_path = '../../test_data/timber/Test'
         dbf_path = '../../test_data/timber/Test/test.dbf'
         
         #Create our own dbf file with basic attributes for one polygon
@@ -260,7 +260,7 @@ class TestTimber(unittest.TestCase):
         test_shape = ogr.Open('../../test_data/timber/input/plantation.shp', 1)
         
         ogr.GetDriverByName('ESRI Shapefile').\
-            CopyDataSource(test_shape, '../../test_data/timber/Output' + os.sep)
+            CopyDataSource(test_shape, '../../test_data/timber/Output')
             
         timber_shape_copy = ogr.Open('../../test_data/timber/Output/plantation.shp', 1)       
         timber_layer_copy = timber_shape_copy.GetLayerByName('plantation')
