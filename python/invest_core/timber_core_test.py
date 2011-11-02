@@ -212,7 +212,7 @@ class TestTimber(unittest.TestCase):
                 os.remove(smoke_path+file)
             os.rmdir(smoke_path)
    
-    def test_timber_ByHand(self):
+    def test_timber_BioVol(self):
                 
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
         dir_path = '../../test_data/timber/Test/'
@@ -240,8 +240,16 @@ class TestTimber(unittest.TestCase):
         rec.store()
         db.close()
         
+        db = dbf.Dbf(dbf_path)
+        parcl_Area = db[0]['Parcl_area']
+        perc_Harv = db[0]['Perc_harv']
+        harv_Mass = db[0]['Harv_mass']
+        num_Years = db[0]['T']
+        freq_Harv = db[0]['Freq_harv']
+        BCEF = db[0]['BCEF']
+        
         calculatedBiomass = parcl_Area * (perc_Harv/100) * harv_Mass * math.ceil(num_Years/freq_Harv)
-        calculatedVolume = biomass * (1/BCEF)
+        calculatedVolume = calculatedBiomass * (1/BCEF)
 
         #Create our own shapefile with multiple polygons to run through the model
         driverName = "ESRI Shapefile"
@@ -264,7 +272,7 @@ class TestTimber(unittest.TestCase):
         lyr.SetFeature(feat)
         feat.Destroy()
         
-        db = dbf.Dbf(dbf_path)
+        
 
         #Arguments to be past to the model
         args= {'timber_shape_loc': shp_path,
