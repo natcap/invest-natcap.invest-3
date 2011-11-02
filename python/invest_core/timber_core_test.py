@@ -213,13 +213,16 @@ class TestTimber(unittest.TestCase):
             os.rmdir(smoke_path)
    
     def test_timber_BioVol(self):
-                
+        """Biomass and Volume test for timber model.  Creates an attribute table and shapefile
+        with set values.  Compares calculated Biomass and Volume with that from running the
+        shapefile through the model. """
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
         dir_path = '../../test_data/timber/Test/'
         if not os.path.isdir(dir_path):
             os.mkdir('../../test_data/timber/Test')
         shp_path = '../../test_data/timber/Test/'
         dbf_path = '../../test_data/timber/Test/test.dbf'
+        
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
         db.addField( ('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1), ('Parcel_ID', 'N', 1),
@@ -239,7 +242,7 @@ class TestTimber(unittest.TestCase):
         rec['Immed_harv'] = 'Y'
         rec.store()
         db.close()
-        
+        #Set some variable needed for Biomass/Volume calculations from created attr. table.
         db = dbf.Dbf(dbf_path)
         parcl_Area = db[0]['Parcl_area']
         perc_Harv = float(db[0]['Perc_harv'])
@@ -247,7 +250,7 @@ class TestTimber(unittest.TestCase):
         num_Years = db[0]['T']
         freq_Harv = db[0]['Freq_harv']
         BCEF = db[0]['BCEF']
-        
+        #Calculate Biomass and Volume
         calculatedBiomass = parcl_Area * (perc_Harv/100) * harv_Mass * math.ceil(num_Years/freq_Harv)
         calculatedVolume = calculatedBiomass * (1/BCEF)
 
@@ -262,7 +265,6 @@ class TestTimber(unittest.TestCase):
         field_defn = ogr.FieldDefn('Parcl_ID', ogr.OFTInteger )
         lyr.CreateField(field_defn)
         
-#        for i in range(1,4):
         feat = ogr.Feature(lyr.GetLayerDefn())
         lyr.CreateFeature(feat)
         index = feat.GetFieldIndex('Parcl_ID')
@@ -272,8 +274,6 @@ class TestTimber(unittest.TestCase):
         lyr.SetFeature(feat)
         feat.Destroy()
         
-        
-
         #Arguments to be past to the model
         args= {'timber_shape_loc': shp_path,
                'output_dir': dir_path,
@@ -283,11 +283,10 @@ class TestTimber(unittest.TestCase):
                'timber_layer_copy': lyr 
                }
         
-        timber_core.execute(args)
-        
-                
+        timber_core.execute(args)        
+        #Compare Biomass and Volume calculations
         feat = lyr.GetFeature(0)
-        for field, value in ( ('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
+        for field, value in (('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
             field_index = feat.GetFieldIndex(field)
             field_value = feat.GetField(field_index)
             self.assertAlmostEqual(value, field_value, 6)        
