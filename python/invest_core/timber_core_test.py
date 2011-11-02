@@ -321,16 +321,19 @@ class TestTimber(unittest.TestCase):
         
         valid_output_shape = ogr.Open('../../test_data/timber/sample_output/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
-        num_features = valid_output_layer.GetFeatureCount()
-        for i in range(num_features):
-            feat = valid_output_layer.GetFeature(i)
-            feat2 = timber_layer_copy.GetFeature(i)
-            for field in ('TNPV', 'TBiomass', 'TVolume'):
-                field_index = feat.GetFieldIndex(field)
-                field_value = feat.GetField(field_index)
-                field_index2 = feat2.GetFieldIndex(field)
-                field_value2 = feat2.GetField(field_index2)
-                self.assertAlmostEqual(field_value, field_value2, 2)
+        num_features_valid = valid_output_layer.GetFeatureCount()
+        num_features_copy  = timber_layer_copy.GetFeatureCount()
+        self.assertEqual(num_features_valid, num_features_copy)
+        if num_features_valid == num_features_copy:
+            for i in range(num_features):
+                feat = valid_output_layer.GetFeature(i)
+                feat2 = timber_layer_copy.GetFeature(i)
+                for field in ('TNPV', 'TBiomass', 'TVolume'):
+                    field_index = feat.GetFieldIndex(field)
+                    field_value = feat.GetField(field_index)
+                    field_index2 = feat2.GetFieldIndex(field)
+                    field_value2 = feat2.GetField(field_index2)
+                    self.assertAlmostEqual(field_value, field_value2, 2)
         
         valid_output_shape = None
         timber_shape_copy = None
