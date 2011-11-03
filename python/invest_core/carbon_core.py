@@ -76,21 +76,23 @@ def biophysical(args):
     pools = build_pools_dict(args['carbon_pools'], cellArea, inNoData,
                              outNoData)
 
-    #Calculate HWP pools if a HWP shape is present
-    if 'hwp_cur_shape' in args:
-        calculateHWPStorageCur(args['hwp_cur_shape'], args['lulc_cur_year'],
-                               args['c_hwp_cur'], args['bio_hwp_cur'],
-                               args['vol_hwp_cur'], cellArea)
 
     #calculate carbon storage for the current landscape
     calculateCarbonStorage(pools, args['lulc_cur'].GetRasterBand(1),
                            args['tot_C_cur'].GetRasterBand(1))
 
-    #Add the current hwp carbon storage to tot_C_cur
-    if 'c_hwp_cur' in args:
+    #Calculate HWP pools if a HWP shape is present
+    if 'hwp_cur_shape' in args:
+        calculateHWPStorageCur(args['hwp_cur_shape'], args['lulc_cur_year'],
+                               args['c_hwp_cur'], args['bio_hwp_cur'],
+                               args['vol_hwp_cur'], cellArea)
+        #Add the current hwp carbon storage to tot_C_cur
         invest_core.rasterAdd(args['tot_C_cur'].GetRasterBand(1),
                               args['c_hwp_cur'].GetRasterBand(1),
                               args['tot_C_cur'].GetRasterBand(1))
+
+    if 'c_hwp_fut' in args:
+        pass
 
     #if lulc_fut is present it means that sequestration needs to be calculated
     #calculate the future storage as well
