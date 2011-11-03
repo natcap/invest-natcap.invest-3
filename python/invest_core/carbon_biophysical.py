@@ -124,7 +124,7 @@ def execute(args):
     #If we're doing a HWP calculation, we need temporary rasters to hold the
     #HWP pools, name them the same as the key but add a .tif extension
     if args['calculate_hwp']:
-        for key in ['c_hwp_cur', 'c_hwp_fut']:
+        for key in ['c_hwp_cur', 'c_hwp_fut', 'bio_hwp_cur', 'vol_hwp_cur']:
             outputURIs[key] = intermediateDirectoryPrefix + key + ".tif"
 
     #Create the output and intermediate rasters to be the same size/format as

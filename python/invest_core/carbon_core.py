@@ -55,6 +55,10 @@ def biophysical(args):
         args['c_hwp_fut'] - an output GDAL raster dataset representing 
             carbon stored in harvested wood products for futureland cover 
             (required if doing HWP)
+        args['bio_hwp_cur'] - an output GDAL raster dataset representing
+            biomass of harvested wood products in current land cover
+        args['vol_hwp_cur'] - an output GDAL raster dataset representing
+            volume of harvested wood products in current land cover
         args['uncertainty_percentile_map'] - an output GDAL raster highlighting
             the low and high percentile regions based on the value of 
             'uncertainty_percentile' from the 'sequest' output (required if
@@ -63,17 +67,30 @@ def biophysical(args):
         returns nothing"""
 
     #Calculate the per pixel carbon storage due to lulc pools
-    area = pixelArea(args['lulc_cur'])
+    cellArea = pixelArea(args['lulc_cur'])
 
     #Create carbon pool dictionary with appropriate values to handle
     #nodata in the input and nodata in the output
     inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
     outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
-    pools = build_pools_dict(args['carbon_pools'], area, inNoData, outNoData)
+    pools = build_pools_dict(args['carbon_pools'], cellArea, inNoData,
+                             outNoData)
+
+    #Calculate HWP pools if a HWP shape is present
+    if 'hwp_cur_shape' in args:
+        calculateHWPStorageCur(args['hwp_cur_shape'], args['lulc_cur_year'],
+                               args['c_hwp_cur'], args['bio_hwp_cur'],
+                               args['vol_hwp_cur'], cellArea)
 
     #calculate carbon storage for the current landscape
     calculateCarbonStorage(pools, args['lulc_cur'].GetRasterBand(1),
                            args['tot_C_cur'].GetRasterBand(1))
+
+    #Add the current hwp carbon storage to tot_C_cur
+    if 'c_hwp_cur' in args:
+        invest_core.rasterAdd(args['tot_C_cur'].GetRasterBand(1),
+                              args['c_hwp_cur'].GetRasterBand(1),
+                              args['tot_C_cur'].GetRasterBand(1))
 
     #if lulc_fut is present it means that sequestration needs to be calculated
     #calculate the future storage as well
@@ -82,13 +99,6 @@ def biophysical(args):
         calculateCarbonStorage(pools, args['lulc_fut'].GetRasterBand(1),
                                args['tot_C_fut'].GetRasterBand(1))
 
-    #Calculate HWP pools if a HWP shape is present
-    if 'hwp_cur_shape' in args:
-        calculateHWPStorageCur(args['hwp_cur_shape'],
-                           args['lulc_cur_year'],
-                           args['c_hwp_cur'],
-                           None,
-                           None)
         #harvestProducts(args, ('cur', 'fut'))
 
     if 'lulc_fut' in args:
@@ -98,44 +108,48 @@ def biophysical(args):
                                args['sequest'].GetRasterBand(1))
 
 def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
-                           bio_hwp_cur, vol_hwp_cur):
-    """Calculates carbon storage, hwp biomass and volume due to harvested wood 
-        products in parcels on current landscape.
+                           bio_hwp_cur, vol_hwp_cur, pixelArea):
+    """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due to 
+        harvested wood products in parcels on current landscape.
         
         hwp_cur_shape - oal shapefile indicating current harvest map
         lulc_cur_year - year of current lulc map
-        c_hwp_cur - an output GDAL rasterband representing 
-            carbon stored in harvested wood products for current land cover 
-        bio_hwp_cur - an output GDAL rasterband representing 
-            carbon stored in harvested wood products for current land cover
-        vol_hwp_cur - an output GDAL rasterband representing 
-            carbon stored in harvested wood products for current land cover
+        c_hwp_cur - an output GDAL rasterband representing  carbon stored in 
+            harvested wood products for current land cover 
+        bio_hwp_cur - an output GDAL rasterband representing carbon stored in 
+            harvested wood products for current land cover
+        vol_hwp_cur - an output GDAL rasterband representing carbon stored in
+             harvested wood products for current land cover
+        pixelArea - area of a pixel to calculate exact 
+            carbon/volumePerPixel/biomassPerPixel amounts
         
         No return value"""
 
     #Create a temporary shapefile to hold values of per feature carbon pools
-    #HWP biomass and volume, will be used later to rasterize those values to  
-    #output rasters
+    #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize 
+    #those values to output rasters
 
-    hwp_shape_copy = ogr.GetDriverByName('Memory').CopyDataSource(hwp_cur_shape, '')
+    hwp_shape_copy = \
+        ogr.GetDriverByName('Memory').CopyDataSource(hwp_cur_shape, '')
     hwp_shape_layer_copy = hwp_shape_copy.GetLayerByName('harv_samp_cur')
 
-    #Create fields in the layers to hold hardwood product pools, biomass and 
-    #volume
+    #Create fields in the layers to hold hardwood product pools, 
+    #biomassPerPixel and volumePerPixel
     carbonPoolNames = ['c_hwp_cur_pool', 'bio_hwp_cur', 'vol_hwp_cur']
     for x in carbonPoolNames:
         field_def = ogr.FieldDefn(x, ogr.OFTReal)
         hwp_shape_layer_copy.CreateField(field_def)
 
-    #Visit each feature and calculate the carbon pool, biomass, and volume
-    #of that parcel
+    #Visit each feature and calculate the carbon pool, biomassPerPixel, and 
+    #volumePerPixel of that parcel
     for feature in hwp_shape_layer_copy:
         #This makes a convient dictionary to access fields in the feature
         #later in the code
         fieldArgs = getFields(feature)
 
         #If start date and/or the amount of carbon per cut is zero, it doesn't
-        #make sense to do any calculation on carbon pools or biomass/volume
+        #make sense to do any calculation on carbon pools or 
+        #biomassPerPixel/volumePerPixel
         if fieldArgs['Start_date'] != 0 and fieldArgs['Cut_cur'] != 0:
             #This is defined in the user's manual as part of equation 1,
             #basically the amount of time wood has been harvested on the
@@ -143,32 +157,36 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
             timeSpan = lulc_cur_year - fieldArgs['Start_date']
 
             #Calculate the carbon pool due to decaying HWP over the timeSpan
-            featureCarbonPool = \
-                carbonStoredinHWPFromParcel(fieldArgs['C_den_cur'],
-                timeSpan, fieldArgs['Freq_cur'], fieldArgs['Decay_cur'])
+            featureCarbonStoragePerPixel = pixelArea * \
+                carbonPoolinHWPFromParcel(fieldArgs['C_den_cur'], timeSpan,
+                                          fieldArgs['Freq_cur'],
+                                          fieldArgs['Decay_cur'])
 
-            #Next lines caculate biomass and volume of harvested wood
-            numberOfHarvests = math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
-            biomass = fieldArgs['Cut_cur'] * timeSpan / float(fieldArgs['C_den_cur'])
-            volume = biomass / fieldArgs['BCEF_cur']
+            #Next lines caculate biomassPerPixel and volumePerPixel of 
+            #harvested wood
+            numberOfHarvests = \
+                math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
+            biomassPerPixel = fieldArgs['Cut_cur'] * timeSpan * pixelArea / \
+                float(fieldArgs['C_den_cur'])
+            volumePerPixel = biomassPerPixel / fieldArgs['BCEF_cur']
 
-
-            #Copy biomass and carbon pools to the temporary feature for 
+            #Copy biomassPerPixel and carbon pools to the temporary feature for
             #rasterization of the entire layer later
-            for field, value in zip(carbonPoolNames, [featureCarbonPool,
-                                                      biomass, volume]):
+            for field, value in zip(carbonPoolNames,
+                                    [featureCarbonStoragePerPixel,
+                                     biomassPerPixel, volumePerPixel]):
                 feature.SetField(feature.GetFieldIndex(field), value)
 
-            #This saves the changes made to feature back to the temporary
-            #shape layer
+            #This saves the changes made to feature back to the shape layer
             hwp_shape_layer_copy.SetFeature(feature)
 
     #burn values to a raster
-    #tempRaster = invest_core.newRasterFromBase(c_hwp_cur, 'c_hwp_pool.tif',
-    #                                           'GTiff', -1.0, gdal.GDT_Float32)
-    c_hwp_cur.GetRasterBand(1).Fill(c_hwp_cur.GetRasterBand(1).GetNoDataValue())
-    gdal.RasterizeLayer(c_hwp_cur, [1], hwp_shape_layer_copy,
-                            options=['ATTRIBUTE=c_hwp_cur_pool'])
+    for raster, attributeName in [(c_hwp_cur, 'c_hwp_cur_pool'),
+                                  (bio_hwp_cur, 'bio_hwp_cur'),
+                                  (vol_hwp_cur, 'vol_hwp_cur')]:
+        raster.GetRasterBand(1).Fill(raster.GetRasterBand(1).GetNoDataValue())
+        gdal.RasterizeLayer(raster, [1], hwp_shape_layer_copy,
+                                options=['ATTRIBUTE=' + attributeName])
 
 #    avgYear = math.ceil((lulc_cur_year + lulc_fut_year) / 2.0)
 #
@@ -183,8 +201,8 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
 #        #open the copied file
 #        copiedLayer = copiedDS.GetLayerByName(layerName)
 #
-#        #add a biomass and volume field to the shape
-#        for fieldname in ('biomass', 'volume'):
+#        #add a biomassPerPixel and volumePerPixel field to the shape
+#        for fieldname in ('biomassPerPixel', 'volumePerPixel'):
 #            field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
 #            copiedLayer.CreateField(field_def)
 #
@@ -204,15 +222,15 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
 #                timeSpan = math.ceil((lulc_fut_year - avgYear)
 #                                     / fieldArgs['Freq_fut'])
 #
-#            #calculate biomass for this parcel (equation 10.8)
-#            biomass = fieldArgs['Cut_' + timeframe] * \
+#            #calculate biomassPerPixel for this parcel (equation 10.8)
+#            biomassPerPixel = fieldArgs['Cut_' + timeframe] * \
 #                    timeSpan * (1.0 / fieldArgs['C_den_' + timeframe])
 #
-#            #calculate volume for this parcel (equation 10.11)
-#            volume = biomass * (1.0 / fieldArgs['BCEF_' + timeframe])
+#            #calculate volumePerPixel for this parcel (equation 10.11)
+#            volumePerPixel = biomassPerPixel * (1.0 / fieldArgs['BCEF_' + timeframe])
 #
-#            #set biomass and volume fields
-#            for fieldName, value in (('biomass', biomass), ('volume', volume)):
+#            #set biomassPerPixel and volumePerPixel fields
+#            for fieldName, value in (('biomassPerPixel', biomassPerPixel), ('volumePerPixel', volumePerPixel)):
 #                index = feature.GetFieldIndex(fieldName)
 #                feature.SetField(index, value)
 #
@@ -220,7 +238,7 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
 #            copiedLayer.SetFeature(feature)
 #
 #        #Burn values into temp raster, apply mask, save to args dict.
-#        for fieldName in ('biomass', 'volume'):
+#        for fieldName in ('biomassPerPixel', 'volumePerPixel'):
 #            tempRaster = invest_core.newRasterFromBase(baseRaster, '', 'MEM',
 #                                                   - 1.0, gdal.GDT_CFloat32)
 #            gdal.RasterizeLayer(tempRaster, [1], copiedLayer,
@@ -229,7 +247,7 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
 #            #rasterMask(tempRaster, maskRaster, args[fieldName + '_' + timeframe])
     return
 
-def carbonStoredinHWPFromParcel(carbonPerCut, harvestYears, harvestFreq, decay):
+def carbonPoolinHWPFromParcel(carbonPerCut, harvestYears, harvestFreq, decay):
     """This is the summation equation that appears in equations 1, 5, 6, and 7
         from the user's guide
         
@@ -239,11 +257,6 @@ def carbonStoredinHWPFromParcel(carbonPerCut, harvestYears, harvestFreq, decay):
         harvestFreq - How many years between harvests
         decay - the rate at which carbon is decaying from HWP harvested from
             parcels
-        limit - a number
-        decay - a number
-        startDate - the reference year (an int)
-        endDate - the start date of the current harvest pattern
-        freq - the number of times this parcel has been harvested
         
         returns a float indicating the amount of carbon stored in HWP harvested
             from that parcel"""
