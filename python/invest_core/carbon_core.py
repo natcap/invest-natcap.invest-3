@@ -129,7 +129,7 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
     #HWP biomassPerPixel and volumePerPixel, will be used later to rasterize 
     #those values to output rasters
 
-    hwp_shape_copy =
+    hwp_shape_copy = \
         ogr.GetDriverByName('Memory').CopyDataSource(hwp_cur_shape, '')
     hwp_shape_layer_copy = hwp_shape_copy.GetLayerByName('harv_samp_cur')
 
@@ -164,7 +164,7 @@ def calculateHWPStorageCur(hwp_cur_shape, lulc_cur_year, c_hwp_cur,
 
             #Next lines caculate biomassPerPixel and volumePerPixel of 
             #harvested wood
-            numberOfHarvests =
+            numberOfHarvests = \
                 math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
             biomassPerPixel = fieldArgs['Cut_cur'] * timeSpan * pixelArea / \
                 float(fieldArgs['C_den_cur'])
