@@ -185,7 +185,7 @@ def calculateHWPStorage(hwp_shape, lulc_cur_year, c_hwp,
             #This saves the changes made to feature back to the shape layer
             hwp_shape_layer_copy.SetFeature(feature)
 
-    #burn values to a raster
+    #burn all the attribute values to a raster
     for attributeName, raster  in zip(carbonPoolNames,
                                       [c_hwp, bio_hwp, vol_hwp]):
         raster.GetRasterBand(1).Fill(raster.GetRasterBand(1).GetNoDataValue())
