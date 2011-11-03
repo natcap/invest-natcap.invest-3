@@ -59,6 +59,10 @@ def biophysical(args):
             biomass of harvested wood products in current land cover
         args['vol_hwp_cur'] - an output GDAL raster dataset representing
             volume of harvested wood products in current land cover
+        args['bio_hwp_fut'] - an output GDAL raster dataset representing
+            biomass of harvested wood products in future land cover
+        args['vol_hwp_fut'] - an output GDAL raster dataset representing
+            volume of harvested wood products in future land cover
         args['uncertainty_percentile_map'] - an output GDAL raster highlighting
             the low and high percentile regions based on the value of 
             'uncertainty_percentile' from the 'sequest' output (required if
@@ -91,8 +95,24 @@ def biophysical(args):
                               args['c_hwp_cur'].GetRasterBand(1),
                               args['tot_C_cur'].GetRasterBand(1))
 
-    if 'c_hwp_fut' in args:
-        pass
+    if 'lulc_fut' in args:
+        #calculate carbon storage for the future landscape if it exists
+        if 'lulc_fut' in args:
+            calculateCarbonStorage(pools, args['lulc_fut'].GetRasterBand(1),
+                                   args['tot_C_fut'].GetRasterBand(1))
+
+        #Calculate a future HWP pool if a future landcover map is present, 
+        #this means that a sequestration scenario is happening, so a current 
+        #and/or future harvest map could add an additional pool to the future 
+        #storage map
+        harvestMaps = {}
+        if 'hwp_cur_shape' in args:
+            harvestMaps['cur'] = args['hwp_cur_shape']
+        if 'hwp_fut_shape' in args:
+            harvestMaps['fut'] = args['hwp_fut_shape']
+        calculateHWPStorageFut(harvestMaps, args['c_hwp_fut'],
+            args['bio_hwp_fut'], args['vol_hwp_fut'], cellArea,
+            args['lulc_cur_year'], args['lulc_fut_year'])
 
     #if lulc_fut is present it means that sequestration needs to be calculated
     #calculate the future storage as well
@@ -109,8 +129,32 @@ def biophysical(args):
                                args['tot_C_cur'].GetRasterBand(1),
                                args['sequest'].GetRasterBand(1))
 
-def calculateHWPStorageCur(hwp_shape, c_hwp,
-                           bio_hwp, vol_hwp, pixelArea, yr_cur):
+def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
+                           yr_cur, yr_fut):
+    """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due to 
+        harvested wood products in parcels on current landscape.
+        
+        hwpShapes - a dictionary containing the current and/or future harvest
+            maps (or nothing)
+            hwpShapes['cur'] - oal shapefile indicating harvest map from the
+                current landscape
+            hwpShapes['fut'] - oal shapefile indicating harvest map from the
+                future landscape
+        c_hwp - an output GDAL rasterband representing  carbon stored in 
+            harvested wood products for current calculation 
+        bio_hwp - an output GDAL rasterband representing carbon stored in 
+            harvested wood products for land cover under interest
+        vol_hwp - an output GDAL rasterband representing carbon stored in
+             harvested wood products for land cover under interest
+        pixelArea - area of a pixel to calculate exact 
+            carbon/volumePerPixel/biomassPerPixel amounts
+        yr_cur - year of the current landcover map
+        yr_fut - year of the current landcover map
+        
+        No return value"""
+    pass
+def calculateHWPStorageCur(hwp_shape, c_hwp, bio_hwp, vol_hwp, pixelArea,
+                           yr_cur):
     """Calculates carbon storage, hwp biomassPerPixel and volumePerPixel due to 
         harvested wood products in parcels on current landscape.
         
