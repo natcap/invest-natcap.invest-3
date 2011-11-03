@@ -90,7 +90,8 @@ def execute(args):
         #save the field modifications to the layer.
         layer.SetFeature(feat)
         feat.Destroy()
-
+    timber_shape = None
+    layer = None
 #Calculates the first summation for the net present value of a parcel
 def npvSummationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
     summation = 0.0

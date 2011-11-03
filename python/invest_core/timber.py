@@ -28,7 +28,7 @@ def execute(args):
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
         
-    shape_source = output_source + 'timber.shp'
+    shape_source = output_dir + 'timber.shp'
     
     #If there is already an existing shapefile with the same name and path, delete it
     if os.path.isfile(shape_source): 

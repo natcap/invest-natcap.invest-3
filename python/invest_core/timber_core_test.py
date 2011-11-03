@@ -109,7 +109,7 @@ class TestTimber(unittest.TestCase):
         driverName = "ESRI Shapefile"
         drv = ogr.GetDriverByName(driverName)
         ds = drv.CreateDataSource(shp_path)
-        lyr = ds.CreateLayer('plantation', None, ogr.wkbPolygon)
+        lyr = ds.CreateLayer('timber', None, ogr.wkbPolygon)
         
         #Creating a field because OGR will not allow an empty feature, it will default by putting FID_1
         #as a field.  OGR will also self create the FID and Shape field.
@@ -128,12 +128,9 @@ class TestTimber(unittest.TestCase):
         db = dbf.Dbf(dbf_path)
 
         #Arguments to be past to the model
-        args= {'timber_shape_loc': shp_path,
-               'output_dir': smoke_path,
-               'attr_table_loc': dbf_path,
+        args= {'timber_shape': ds,
                'attr_table':db, 
                'mdr':7, 
-               'timber_layer_copy': lyr 
                }
         
         timber_core.execute(args)
@@ -202,7 +199,7 @@ class TestTimber(unittest.TestCase):
         #Calculate Biomass,Volume, and TNPV by hand to 3 decimal places.
         calculatedBiomass = 16000
         calculatedVolume = 16000
-        TNPV = 5690070.821
+        TNPV = 5690071.137
         #Create our own shapefile with multiple polygons to run through the model
         driverName = "ESRI Shapefile"
         drv = ogr.GetDriverByName(driverName)
@@ -224,12 +221,9 @@ class TestTimber(unittest.TestCase):
         feat.Destroy()
         
         #Arguments to be past to the model
-        args= {'timber_shape_loc': shp_path,
-               'output_dir': dir_path,
-               'attr_table_loc': dbf_path,
+        args= {'timber_shape': ds,
                'attr_table':db, 
                'mdr':7, 
-               'timber_layer_copy': lyr 
                }
         
         timber_core.execute(args)        
@@ -242,13 +236,18 @@ class TestTimber(unittest.TestCase):
         
         #This is how OGR closes its datasources
         ds = None
+        lyr = None
         db.close()
         
         #Remove the generated output from the BioVol test
         if os.path.isdir(dir_path):
             textFileList = os.listdir(dir_path)
+            i = 0
             for file in textFileList:
-                os.remove(dir_path+file)
+                if i==0:
+                    i = 1
+                else:
+                    os.remove(dir_path+file)
             os.rmdir(dir_path)
 
 
@@ -259,18 +258,22 @@ class TestTimber(unittest.TestCase):
         attr_table = dbf.Dbf('../../test_data/timber/input/plant_table.dbf')
         test_shape = ogr.Open('../../test_data/timber/input/plantation.shp', 1)
         
-        ogr.GetDriverByName('ESRI Shapefile').\
-            CopyDataSource(test_shape, '../../test_data/timber/Output')
-            
-        timber_shape_copy = ogr.Open('../../test_data/timber/Output/plantation.shp', 1)       
-        timber_layer_copy = timber_shape_copy.GetLayerByName('plantation')
+        #Add the Output directory onto the given workspace
+        output_dir = '../../test_data/timber'+os.sep+'Output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
         
-        args= {'timber_shape_loc': '../../test_data/timber/input/plantation.shp',
-               'output_dir': '../../test_data/timber/Output',
-               'attr_table_loc': '../../test_data/timber/input/plant_table.dbf',
+        shape_source = output_dir + 'timber.shp'
+        
+        ogr.GetDriverByName('ESRI Shapefile').\
+            CopyDataSource(test_shape, shape_source)
+            
+        timber_output_shape = ogr.Open('../../test_data/timber/Output/timber.shp', 1)       
+        timber_output_layer = timber_output_shape.GetLayerByName('timber')
+        
+        args= {'timber_shape': timber_output_shape,
                'attr_table':attr_table, 
                'mdr':7, 
-               'timber_layer_copy': timber_layer_copy
                }
         
         timber_core.execute(args)
@@ -279,13 +282,13 @@ class TestTimber(unittest.TestCase):
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
         
         num_features_valid = valid_output_layer.GetFeatureCount()
-        num_features_copy  = timber_layer_copy.GetFeatureCount()
+        num_features_copy  = timber_output_layer.GetFeatureCount()
         self.assertEqual(num_features_valid, num_features_copy)
         
         if num_features_valid == num_features_copy:
             for i in range(num_features_valid):
                 feat = valid_output_layer.GetFeature(i)
-                feat2 = timber_layer_copy.GetFeature(i)
+                feat2 = timber_output_layer.GetFeature(i)
                 for field in ('TNPV', 'TBiomass', 'TVolume'):
                     field_index = feat.GetFieldIndex(field)
                     field_value = feat.GetField(field_index)
@@ -294,8 +297,9 @@ class TestTimber(unittest.TestCase):
                     self.assertAlmostEqual(field_value, field_value2, 2)
         
         valid_output_shape = None
-        timber_shape_copy = None
+        timber_output_shape = None
         test_shape = None
+        timber_output_layer = None
         attr_table.close()
         
         textFileList = os.listdir('../../test_data/timber/Output/')
