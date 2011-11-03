@@ -19,7 +19,7 @@ class TestTimber(unittest.TestCase):
         upper_limit = int(math.floor(num_Years/freq_Harv))
         lower_limit = 1
         subtractor = 1
-        
+        #Calculated value by hand:
         summationCalculatedByHand = 6986.000492
         summation = timber_core.npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
     
@@ -42,7 +42,7 @@ class TestTimber(unittest.TestCase):
         upper_limit = int(math.ceil((num_Years/freq_Harv)-1.0))
         lower_limit = 0
         subtractor = 0
-        
+        #Calculated value by hand:
         summationCalculatedByHand = 7475.020526
         summation = timber_core.npvSummationOne(lower_limit, upper_limit, harvest_value, mdr_perc, freq_Harv, subtractor)
         
@@ -61,7 +61,7 @@ class TestTimber(unittest.TestCase):
         upper_limit = 3
         maint_Cost = 100
         mdr_perc = 1.07
-        
+        #Calculated value by hand:
         summationCalculatedByHand = 362.4316044
         summation = timber_core.npvSummationTwo(lower_limit, upper_limit, maint_Cost, mdr_perc)
         
@@ -77,14 +77,11 @@ class TestTimber(unittest.TestCase):
             basic input requirements"""
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
         smoke_path = '../../test_data/timber/Smoke/'
-
         if not os.path.isdir(smoke_path):
             os.mkdir('../../test_data/timber/Smoke')
         #Define the paths for the sample input/output files
         dbf_path = '../../test_data/timber/Smoke/test.dbf'
-        shp_path = '../../test_data/timber/Smoke'
-
-        
+        shp_path = '../../test_data/timber/Smoke'        
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
         db.addField( ('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1), ('Parcel_ID', 'N', 1),
@@ -146,8 +143,9 @@ class TestTimber(unittest.TestCase):
             field_index = feat.GetFieldIndex(field)
             field_value = feat.GetField(field_index)
             self.assertAlmostEqual(value, field_value, 6)        
-        
-        #This is how OGR closes its datasources
+                
+        #This is how OGR closes and flushes its datasources
+        ds.Destroy()
         ds = None
         db.close()
         
@@ -163,11 +161,11 @@ class TestTimber(unittest.TestCase):
         with set values.  Compares calculated Biomass and Volume with that from running the
         shapefile through the model. """
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
-        dir_path = '../../test_data/timber/Test/'
+        dir_path = '../../test_data/timber/BioVolTest/'
         if not os.path.isdir(dir_path):
-            os.mkdir('../../test_data/timber/Test')
-        shp_path = '../../test_data/timber/Test'
-        dbf_path = '../../test_data/timber/Test/test.dbf'
+            os.mkdir('../../test_data/timber/BioVolTest')
+        shp_path = '../../test_data/timber/BioVolTest'
+        dbf_path = '../../test_data/timber/BioVolTest/test.dbf'
         
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
@@ -188,19 +186,12 @@ class TestTimber(unittest.TestCase):
         rec['Immed_harv'] = 'Y'
         rec.store()
         db.close()
-        #Set some variable needed for Biomass/Volume calculations from created attr. table.
-        db = dbf.Dbf(dbf_path)
-        parcl_Area = db[0]['Parcl_area']
-        perc_Harv = float(db[0]['Perc_harv'])
-        harv_Mass = db[0]['Harv_mass']
-        num_Years = db[0]['T']
-        freq_Harv = db[0]['Freq_harv']
-        BCEF = db[0]['BCEF']
+
         #Calculate Biomass,Volume, and TNPV by hand to 3 decimal places.
         calculatedBiomass = 16000
         calculatedVolume = 16000
         TNPV = 5690071.137
-        #Create our own shapefile with multiple polygons to run through the model
+        #Create our own shapefile with a polygon to run through the model
         driverName = "ESRI Shapefile"
         drv = ogr.GetDriverByName(driverName)
         ds = drv.CreateDataSource(shp_path)
@@ -227,14 +218,15 @@ class TestTimber(unittest.TestCase):
                }
         
         timber_core.execute(args)        
-        #Compare Biomass and Volume calculations
+        #Compare Biomass, Volume, and TNPV calculations
         feat = lyr.GetFeature(0)
         for field, value in (('TNPV', TNPV), ('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
             field_index = feat.GetFieldIndex(field)
             field_value = feat.GetField(field_index)
             self.assertAlmostEqual(value, field_value, 2)        
-        
-        #This is how OGR closes its datasources
+                
+        #This is how OGR closes and flushes its datasources
+        ds.Destroy()
         ds = None
         lyr = None
         db.close()
@@ -242,19 +234,14 @@ class TestTimber(unittest.TestCase):
         #Remove the generated output from the BioVol test
         if os.path.isdir(dir_path):
             textFileList = os.listdir(dir_path)
-            i = 0
             for file in textFileList:
-                if i==0:
-                    i = 1
-                else:
-                    os.remove(dir_path+file)
+                os.remove(dir_path+file)
             os.rmdir(dir_path)
-
 
     def test_timber_with_inputs(self):
         """Test timber model with real inputs.  Compare copied and modified shapefile with valid
-            shapefile that was created from the same inputs"""
-        
+            shapefile that was created from the same inputs.  Regression test."""
+        #Open table and shapefile
         attr_table = dbf.Dbf('../../test_data/timber/input/plant_table.dbf')
         test_shape = ogr.Open('../../test_data/timber/input/plantation.shp', 1)
         
@@ -280,11 +267,11 @@ class TestTimber(unittest.TestCase):
         
         valid_output_shape = ogr.Open('../../test_data/timber/sample_output/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
-        
+        #Check that the number of features (polygons) are the same between shapefiles
         num_features_valid = valid_output_layer.GetFeatureCount()
         num_features_copy  = timber_output_layer.GetFeatureCount()
         self.assertEqual(num_features_valid, num_features_copy)
-        
+        #If number of features are equal, compare each shapefiles 3 fields
         if num_features_valid == num_features_copy:
             for i in range(num_features_valid):
                 feat = valid_output_layer.GetFeature(i)
@@ -295,15 +282,16 @@ class TestTimber(unittest.TestCase):
                     field_index2 = feat2.GetFieldIndex(field)
                     field_value2 = feat2.GetField(field_index2)
                     self.assertAlmostEqual(field_value, field_value2, 2)
-        
+        #This is how OGR cleans up and flushes datasources
+        test_shape.Destroy()
+        timber_output_shape.Destroy()
         valid_output_shape = None
         timber_output_shape = None
         test_shape = None
         timber_output_layer = None
         attr_table.close()
-        
+        #Delete all the generated files and directory
         textFileList = os.listdir('../../test_data/timber/Output/')
-        
         if os.path.isdir('../../test_data/timber/Output/'):
             for file in textFileList:
                 os.remove('../../test_data/timber/Output/'+file)

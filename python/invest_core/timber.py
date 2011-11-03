@@ -8,14 +8,17 @@ import numpy
 from dbfpy import dbf
 
 def execute(args):
-    """This function invokes the timber model given uri inputs of files.
+    """This function invokes the timber model given uri inputs specified by the user guide.
     
     args - a dictionary object of arguments 
        
-    args['output_dir']        - The file location where the outputs will be written
-    args['timber_shape_uri']  - The shape file describing timber parcels with fields as described in the user guide.
-    args['attr_table_uri']    - The DBF polygon attribute table location with fields that describe polygons in timber_shape_uri.
-    args['market_disc_rate']  - The market discount rate as a float
+    args['output_dir']        - The file location where the outputs will 
+                                be written (Required)
+    args['timber_shape_uri']  - The shape file describing timber parcels with 
+                                fields as described in the user guide (Required)
+    args['attr_table_uri']    - The DBF polygon attribute table location with 
+                                fields that describe polygons in timber_shape_uri (Required)
+    args['market_disc_rate']  - The market discount rate as a float (Required, Default: 7)
     
     """    
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -50,10 +53,10 @@ def execute(args):
 
     timber_core.execute(args)
 
-    #This is how OGR closes its datasources in python
+    #OGR closes datasources this way to make sure data gets flushed properly
     timber_output_shape.Destroy()
     
-    #close the polygon attribute table DBF file and wipe datasources
+    #Close the polygon attribute table DBF file and wipe datasources
     args['attr_table'].close()
     copy = None
     timber_shape = None

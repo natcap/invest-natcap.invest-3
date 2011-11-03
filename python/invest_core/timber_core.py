@@ -9,18 +9,22 @@ def execute(args):
     
         args - is a dictionary with at least the following entries:
         
-        args['timber_shape']   - an OGR shapefile which holds a polygon layer representing timber parcels.
+        args['timber_shape']   - an OGR shapefile which holds a polygon layer 
+                                 representing timber parcels.  Has a Parcl_ID field 
+                                 which corresponds to Parcel_ID field in attr_table
         args['mdr']            - the market discount rate as a float.
-        args['attr_table']     - the dbf file which has the polygon attribute values of timber_shape.
+        args['attr_table']     - the DBF file which has the polygon attribute values 
+                                 of timber_shape. Has a Parcel_ID field that matches
+                                 relative polygons to Parcl_ID field in timber_shape
         
         returns nothing"""
-
-    #Set constant variables from arguments
+    #Retrieve the layer of the shapefile which contains the polygons
     timber_shape = args['timber_shape']
     layer = timber_shape.GetLayerByName('timber')
+    #Set constant variables from arguments
     mdr = args['mdr']
     attr_table = args['attr_table']
-    #Set constant variables
+    #Set constant variables for calculations
     mdr_perc = 1 + (mdr / 100.00)
     sumTwo_lowerLimit = 0
 
@@ -41,7 +45,7 @@ def execute(args):
         parcl_index = feat.GetFieldIndex('Parcl_ID')
         parcl_id = feat.GetField(parcl_index)
         attr_row = parcelIdLookup[parcl_id]
-
+        #Set polygon attribute values from row
         freq_Harv = attr_row['Freq_harv']
         num_Years = float(attr_row['T'])
         harv_Mass = attr_row['Harv_mass']
@@ -61,7 +65,7 @@ def execute(args):
         #Calculate the harvest value for parcel x
         harvest_value = (perc_Harv / 100.00) * ((price * harv_Mass) - harv_Cost)
 
-        #Check to see if immediate harvest will occur
+        #Check to see if immediate harvest will occur and act accordingly
         if immed_Harv.upper() == 'N' or immed_Harv.upper() == 'NO':
             sumOne_upperLimit = int(math.floor(yr_per_freq))
             sumOne_lowerLimit = 1
@@ -90,8 +94,7 @@ def execute(args):
         #save the field modifications to the layer.
         layer.SetFeature(feat)
         feat.Destroy()
-    timber_shape = None
-    layer = None
+
 #Calculates the first summation for the net present value of a parcel
 def npvSummationOne(lower, upper, harvest_value, mdr_perc, freq_Harv, subtractor):
     summation = 0.0
