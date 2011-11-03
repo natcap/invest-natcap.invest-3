@@ -12,7 +12,10 @@ def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
         rasterBandA - a GDAL raster band
         rasterBandB - a GDAL raster band
         outputRasterBand - a GDAL raster band with the elementwise value of 
-            rasterBandA-rasterBandB
+            rasterBandA-rasterBandB.  If either rasterBandA and rasterBandB
+            have nodata values, a nodata out is written, otherwise if just 
+            one or the other rasters has a nodata value, it is treated as a 0
+            and the difference is calculated
             
         returns nothing"""
 
@@ -20,11 +23,16 @@ def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
     #is a nodata value
     noDataA = rasterBandA.GetNoDataValue()
     noDataB = rasterBandB.GetNoDataValue()
+    noDataOut = outputRasterBand.GetNoDataValue()
 
     def noDataDiff(a, b):
-        #a is nodata if and only if b is nodata
         if a == noDataA:
-            return noDataB
+            if b == noDataB:
+                return noDataOut
+            else:
+                return -b
+        elif b == noDataB:
+            return a
         else:
             return a - b
 
@@ -33,26 +41,38 @@ def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
 def rasterAdd(rasterBandA, rasterBandB, outputRasterBand):
     """Iterate through the rows in the two rasters and calculate 
         the sum in each pixel.  Maps the sum to the output 
-        raster.
+        raster. 
         
         rasterBandA - a GDAL raster band
         rasterBandB - a GDAL raster band
         outputRasterBand - a GDAL raster band with the elementwise value of 
-            rasterBandA+rasterBandB
+            rasterBandA+rasterBandB. If either rasterBandA and rasterBandB
+            have nodata values, a nodata out is written, otherwise if just 
+            one or the other rasters has a nodata value, it is treated as a 0
+            and the difference is calculated
             
         returns nothing"""
 
     #Build an operation that does pixel difference unless one of the inputs
     #is a nodata value
+    #Build an operation that does pixel difference unless one of the inputs
+    #is a nodata value
     noDataA = rasterBandA.GetNoDataValue()
     noDataB = rasterBandB.GetNoDataValue()
+    noDataOut = outputRasterBand.GetNoDataValue()
 
     def noDataAdd(a, b):
-        #a is nodata if and only if b is nodata
+        if a == noDataA:
+            if b == noDataB:
+                return noDataOut
+            else:
+                return b
+        elif b == noDataB:
+            return a
+        else:
             return a + b
 
     vectorizeOp(rasterBandA, rasterBandB, noDataAdd, outputRasterBand)
-
 
 def vectorizeOp(rasterBandA, rasterBandB, op, outBand):
     """Applies the function 'op' over rasterBandA and rasterBandB
