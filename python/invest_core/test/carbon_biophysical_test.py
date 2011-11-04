@@ -1,5 +1,6 @@
 import os, sys
 import unittest
+import invest_test_core
 
 #Add current directory and parent path for import tests
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
@@ -55,6 +56,12 @@ sequestration and harvested wood products on lulc maps."""
         args['hwp_fut_shape_uri'] = "../../test_data/harv_samp_fut"
 
         carbon_biophysical.execute(args)
+
+        #assert that '../../test_data/tot_C_cur.tif' equals
+        #../../carbon_output/Output/tot_C_cur.tif
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Output/tot_C_cur.tif",
+            '../../test_data/tot_C_cur.tif')
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)
