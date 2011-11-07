@@ -19,6 +19,9 @@ def execute(args):
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
         args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
+        args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
+            storage density to the lulc classifications specified in the
+            lulc rasters. (required) 
         args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
          if calculating sequestration)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur 
@@ -27,13 +30,10 @@ def execute(args):
         args['lulc_fut_year'] - An integer representing the year of  lulc_fut
             used in HWP calculation (required if args contains a 
             'lulc_fut_uri' key)
-        args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
-            storage density to the lulc classifications specified in the
-            lulc rasters. 
         args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood 
-            calculation (required if args['calculate_hwp'] is True) 
+            calculation (optional, include if calculating current lulc hwp) 
         args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood 
-            calculation (required if args['calculate_hwp'] is True)
+            calculation (optional, include if calculating future lulc hwp)
         
         returns nothing."""
 
