@@ -51,7 +51,7 @@ def execute(args):
                                             gdal.GA_ReadOnly)
 
     #a future lulc is only required if sequestering or hwp calculating
-    if 'lulc_fut' in args:
+    if 'lulc_fut_uri' in args:
         biophysicalArgs['lulc_fut'] = gdal.Open(args['lulc_fut_uri'],
                                             gdal.GA_ReadOnly)
 
@@ -60,7 +60,7 @@ def execute(args):
         if x in args: biophysicalArgs[x] = args[x]
     fsencoding = sys.getfilesystemencoding()
     for x in ['hwp_cur_shape', 'hwp_fut_shape']:
-        if x in args:
+        if x + '_uri' in args:
             biophysicalArgs[x] = ogr.Open(args[x + '_uri'].encode(fsencoding))
 
     #Always need carbon pools, if uncertainty calculation they also need
