@@ -18,40 +18,42 @@ def biophysical(args):
             land use/land cover map (required if doing sequestration, HWP, or
             uncertainty calculations)
         args['carbon_pools'] - is a DBF dataset mapping carbon storage density
-            to lulc classifications in input LULC rasters.  If 
-            args['calc_uncertainty'] is True the columns should have additional
-            information about min, avg, and max carbon pool measurements.
-            (required if doing sequestration, HWP, or uncertainty)
+            to lulc classifications in input LULC rasters.
         args['hwp_cur_shape'] - OAL shapefile representing harvest rates on 
             current lulc (required if calculating HWP)
         args['hwp_fut_shape'] - OAL shapefile representing harvest rates on 
             future lulc (required if calculating HWP)
         args['lulc_cur_year'] - an int represents the year of lulc_cur 
+            (required if there's an hwp shape)
         args['lulc_fut_year'] - an int represents the year of lulc_fut
-            (required if calculating HWP)
+            (required if calculating future HWP)
         args['tot_C_cur'] - an output GDAL raster dataset representing total 
             carbon stored on the current lulc, must be same dimensions as 
             lulc_cur (required)
         args['tot_C_fut'] - an output GDAL raster dataset representing total 
             carbon stored on the future lulc must be same dimensions as 
-            lulc_cur (required, if doing sequestration, uncertainty, or HWP)
+            lulc_cur (required if doing sequestration)
         args['sequest'] - an output GDAL raster dataset representing carbon 
             sequestration and emissions between current and future landscapes
-            (required, if doing sequestration, uncertainty, or HWP)
+            (required, if doing sequestration)
         args['c_hwp_cur'] - an output GDAL raster dataset representing 
             carbon stored in harvested wood products for current land cover 
-            (required if doing HWP)
+            (required if doing current HWP calculation)
         args['c_hwp_fut'] - an output GDAL raster dataset representing 
             carbon stored in harvested wood products for futureland cover 
-            (required if doing HWP)
+            (required if doing future HWP calculation)
         args['bio_hwp_cur'] - an output GDAL raster dataset representing
             biomass of harvested wood products in current land cover
+            (required if calculating HWP on a current landscape)
         args['vol_hwp_cur'] - an output GDAL raster dataset representing
             volume of harvested wood products in current land cover
+            (required if calculating HWP on a current landscape)
         args['bio_hwp_fut'] - an output GDAL raster dataset representing
             biomass of harvested wood products in future land cover
+            (required if calculating HWP on a future landscape)
         args['vol_hwp_fut'] - an output GDAL raster dataset representing
             volume of harvested wood products in future land cover
+            (required if calculating HWP on a current landscape)
             
         returns nothing"""
 
