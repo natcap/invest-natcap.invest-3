@@ -12,17 +12,6 @@ def biophysical(args):
         LULC raster.
 
         args - is a dictionary with at least the following entries:
-        args['calculate_sequestration'] - a boolean, True if sequestration
-            is to be calculated.
-        args['calculate_hwp'] - a boolean, True if harvested wood product
-            calcuation is to be done.  Also implies a sequestration 
-            calculation.
-        args['calc_uncertainty'] - a Boolean.  True if we wish to calculate 
-            uncertainty in the carbon model.  Implies that carbon pools should
-            have value ranges.
-        args['uncertainty_percentile'] - a float indicating upper and lower
-            percentiles of sequestration to output (required if calculating 
-            uncertainty)
         args['lulc_cur'] - is a GDAL raster representing the current land 
             use/land cover map (required)
         args['lulc_fut'] - is a GDAL raster dataset representing the future 
@@ -63,10 +52,6 @@ def biophysical(args):
             biomass of harvested wood products in future land cover
         args['vol_hwp_fut'] - an output GDAL raster dataset representing
             volume of harvested wood products in future land cover
-        args['uncertainty_percentile_map'] - an output GDAL raster highlighting
-            the low and high percentile regions based on the value of 
-            'uncertainty_percentile' from the 'sequest' output (required if
-            calculating uncertainty)
             
         returns nothing"""
 
@@ -110,9 +95,10 @@ def biophysical(args):
             harvestMaps['cur'] = args['hwp_cur_shape']
         if 'hwp_fut_shape' in args:
             harvestMaps['fut'] = args['hwp_fut_shape']
-        calculateHWPStorageFut(harvestMaps, args['c_hwp_fut'],
-            args['bio_hwp_fut'], args['vol_hwp_fut'], cellArea,
-            args['lulc_cur_year'], args['lulc_fut_year'])
+        if 'c_hwp_fut' in args:
+            calculateHWPStorageFut(harvestMaps, args['c_hwp_fut'],
+                args['bio_hwp_fut'], args['vol_hwp_fut'], cellArea,
+                args['lulc_cur_year'], args['lulc_fut_year'])
 
     #if lulc_fut is present it means that sequestration needs to be calculated
     #calculate the future storage as well
