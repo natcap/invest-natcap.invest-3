@@ -2,7 +2,7 @@
 
 import sys, os
 import simplejson as json
-import waveEnergy_core
+import waveEnergy_biophysical_core
 import invest_core
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
@@ -12,44 +12,24 @@ from dbfpy import dbf
 from xlrd import open_workbook
 
 def execute(args):
-    """This function invokes the carbon model given URI inputs of files.
+    """This function invokes the wave energy model given URI inputs of files.
         It will do filehandling and open/create appropriate objects to 
-        pass to the core carbon biophysical processing function.  It may write
+        pass to the core wave energy biophysical processing function.  It may write
         log, warning, or error messages to stdout.
         
         args - a python dictionary with at the following possible entries:
-        args['workspace_dir'] - a uri to the directory that will write output
-            and other temporary files during calculation. (required)
-        args['wave_base_data_uri'] - a boolean, True if sequestration
-            is to be calculated.  Infers that args['lulc_fut_uri'] should be 
-            set.
-        args['analysis_area_uri'] - a boolean, True if harvested wood product
-            calcuation is to be done.  Also implies a sequestration 
-            calculation.  Thus args['lulc_fut_uri'], args['hwp_cur_shape_uri'],
-            args['AOI_uri'], args['lulc_cur_year'], and 
-            args['machine_perf_uri'] should be set.
-        args['AOI_uri'] - a Boolean.  True if we wish to calculate 
-            uncertainty in the carbon model.  Implies that carbon pools should
-            have value ranges
-        args['machine_perf_uri'] - the percentile cutoff desired for 
-            uncertainty calculations (required if args['calc_uncertainty'] is 
-            True) 
-        args['machine_param_uri'] - is a uri to a GDAL raster dataset (required)
-        args['dem_uri'] - is a uri to a GDAL raster dataset (required
-         if calculating sequestration or HWP)
-        args['calculate_valuation'] - An integer representing the year of lulc_cur 
-            used in HWP calculation (required if args['calculate_hwp'] is True)
-        args['landgridpts_uri'] - An integer representing the year of  lulc_fut
-            used in HWP calculation (required if args['calculate_hwp'] is True)
-        args['machine_econ_uri'] - is a uri to a DBF dataset mapping carbon 
-            storage density to the lulc classifications specified in the
-            lulc rasters.  If args['calc_uncertainty'] is True the columns
-            should have additional information about min, avg, and max carbon
-            pool measurements. 
-        args['number_machines'] - Current shapefile uri for harvested wood 
-            calculation (required if args['calculate_hwp'] is True) 
-        args['projection'] - Future shapefile uri for harvested wood 
-            calculation (required if args['calculate_hwp'] is True)
+        args['workspace_dir'] - 
+        args['wave_base_data_uri'] - 
+        args['analysis_area_uri'] - 
+        args['AOI_uri'] - 
+        args['machine_perf_uri'] - 
+        args['machine_param_uri'] - 
+        args['dem_uri'] - 
+        args['calculate_valuation'] - 
+        args['landgridpts_uri'] - 
+        args['machine_econ_uri'] - 
+        args['number_machines'] - 
+        args['projection'] - 
         
         returns nothing."""
 
@@ -57,17 +37,31 @@ def execute(args):
     #we import gdal stuff we don't get the wrong GDAL version.
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     gdal.AllRegister()
-
-    machine_perf = open_workbook(args['machine_perf_uri'])
-    machine_param = open_workbook(args['machine_param_uri'])
     
-    arguments = {'output_dir': gp.GetParameterAsText(0),
-             'wave_base_data_uri': gp.GetParameterAsText(1),
-             'analysis_area_uri': gp.GetParameterAsText(2),
-             'AOI_uri': gp.GetParameterAsText(3),
-             'machine_perf_uri': float(gp.GetParameterAsText(4)),
-             'machine_param_uri': gp.GetParameterAsText(5),
-             'dem_uri': gp.GetParameterAsText(6),
+    perfPathList = args['machine_perf_uri'].rsplit(os.sep, 1)
+    perfPathWkbook = perfPathList[0]
+    perfWkshtList = perfPathList[1].split('$')
+    perfWksht = perfWkshtList[0]
+    
+    paramPathList = args['machine_param_uri'].rsplit(os.sep, 1)
+    paramPathWkbook = paramPathList[0]
+    paramWkshtList = paramPathList[1].split('$')
+    paramWksht = paramWkshtList[0]
+    
+    machine_perfSheet = open_workbook(perfPathWkbook).sheet_by_name(perfWksht)
+    machine_paramSheet= open_workbook(paramPathWkbook).sheet_by_name(paramWksht)
+        
+    wave_base_data = 1
+    analysis_area = 1
+    AOI = 1
+    dem = 1
+    
+    arguments = {'wave_base_data': wave_base_data,
+             'analysis_area': analysis_area,
+             'AOI': AOI,
+             'machine_perf': machine_perfSheet,
+             'machine_param': machine_paramSheet,
+             'dem': dem,
 #             'valuation': gp.GetParameterAsText(7),
 #             'landgridpts_uri': gp.GetParameterAsText(8),
 #             'machine_econ_uri': gp.GetParameterAsText(9),
@@ -75,4 +69,4 @@ def execute(args):
 #             'projection_uri': gp.GetParameterAsText(11)
             }
     
-    waveEnergy_core.execute(arguments)
+    waveEnergy_biophysical_core.biophysical(arguments)
