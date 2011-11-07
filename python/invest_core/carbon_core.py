@@ -169,8 +169,8 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
 
         #Create fields in the layers to hold hardwood product pools, 
         #biomassPerPixel and volumePerPixel
-        for x in calculatedAttributeNames:
-            field_def = ogr.FieldDefn(x, ogr.OFTReal)
+        for fieldName in calculatedAttributeNames:
+            field_def = ogr.FieldDefn(fieldName, ogr.OFTReal)
             hwp_shape_layer_copy.CreateField(field_def)
 
         #Visit each feature and calculate the carbon pool, biomassPerPixel, and 
@@ -198,7 +198,7 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                 #Claculate biomassPerPixel and volumePerPixel of harvested wood
                 numberOfHarvests = \
                     math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
-                biomassPerPixel = fieldArgs['Cut_cur'] * timeSpan * \
+                biomassPerPixel = fieldArgs['Cut_cur'] * numberOfHarvests * \
                     pixelArea / float(fieldArgs['C_den_cur'])
                 volumePerPixel = biomassPerPixel / fieldArgs['BCEF_cur']
 
@@ -227,8 +227,8 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
 
         #Create fields in the layers to hold hardwood product pools, 
         #biomassPerPixel and volumePerPixel
-        for x in calculatedAttributeNames:
-            field_def = ogr.FieldDefn(x, ogr.OFTReal)
+        for fieldName in calculatedAttributeNames:
+            field_def = ogr.FieldDefn(fieldName, ogr.OFTReal)
             hwp_shape_layer_copy.CreateField(field_def)
 
         #Visit each feature and calculate the carbon pool, biomassPerPixel, and 
@@ -256,7 +256,7 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                 #Claculate biomassPerPixel and volumePerPixel of harvested wood
                 numberOfHarvests = \
                     math.ceil(timeSpan / float(fieldArgs['Freq_fut']))
-                biomassPerPixel = fieldArgs['Cut_fut'] * timeSpan * \
+                biomassPerPixel = fieldArgs['Cut_fut'] * numberOfHarvests * \
                     pixelArea / float(fieldArgs['C_den_fut'])
                 volumePerPixel = biomassPerPixel / fieldArgs['BCEF_fut']
 
@@ -343,7 +343,7 @@ def calculateHWPStorageCur(hwp_shape, c_hwp, bio_hwp, vol_hwp, pixelArea,
             #harvested wood
             numberOfHarvests = \
                 math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
-            biomassPerPixel = fieldArgs['Cut_cur'] * timeSpan * \
+            biomassPerPixel = fieldArgs['Cut_cur'] * numberOfHarvests * \
                 pixelArea / float(fieldArgs['C_den_cur'])
             volumePerPixel = biomassPerPixel / fieldArgs['BCEF_cur']
 
