@@ -18,36 +18,22 @@ def execute(args):
         args - a python dictionary with at the following possible entries:
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['calculate_sequestration'] - a boolean, True if sequestration
-            is to be calculated.  Infers that args['lulc_fut_uri'] should be 
-            set.
-        args['calculate_hwp'] - a boolean, True if harvested wood product
-            calcuation is to be done.  Also implies a sequestration 
-            calculation.  Thus args['lulc_fut_uri'], args['hwp_cur_shape_uri'],
-            args['hwp_fut_shape_uri'], args['lulc_cur_year'], and 
-            args['lulc_fut_year'] should be set.
-        args['calc_uncertainty'] - a Boolean.  True if we wish to calculate 
-            uncertainty in the carbon model.  Implies that carbon pools should
-            have value ranges
-        args['uncertainty_percentile'] - the percentile cutoff desired for 
-            uncertainty calculations (required if args['calc_uncertainty'] is 
-            True) 
         args['lulc_cur_uri'] - is a uri to a GDAL raster dataset (required)
-        args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (required
-         if calculating sequestration or HWP)
-        args['lulc_cur_year'] - An integer representing the year of lulc_cur 
-            used in HWP calculation (required if args['calculate_hwp'] is True)
-        args['lulc_fut_year'] - An integer representing the year of  lulc_fut
-            used in HWP calculation (required if args['calculate_hwp'] is True)
         args['carbon_pools_uri'] - is a uri to a DBF dataset mapping carbon 
             storage density to the lulc classifications specified in the
-            lulc rasters.  If args['calc_uncertainty'] is True the columns
-            should have additional information about min, avg, and max carbon
-            pool measurements. 
+            lulc rasters. (required) 
+        args['lulc_fut_uri'] - is a uri to a GDAL raster dataset (optional
+         if calculating sequestration)
+        args['lulc_cur_year'] - An integer representing the year of lulc_cur 
+            used in HWP calculation (required if args contains a 
+            'hwp_cur_shape_uri', or 'hwp_fut_shape_uri' key)
+        args['lulc_fut_year'] - An integer representing the year of  lulc_fut
+            used in HWP calculation (required if args contains a 
+            'hwp_fut_shape_uri' key)
         args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood 
-            calculation (required if args['calculate_hwp'] is True) 
+            calculation (optional, include if calculating current lulc hwp) 
         args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood 
-            calculation (required if args['calculate_hwp'] is True)
+            calculation (optional, include if calculating future lulc hwp)
         
         returns nothing."""
 
@@ -60,31 +46,21 @@ def execute(args):
     #can be passed to the biophysical core model
     biophysicalArgs = {}
 
-    #Copy the calculation modes to the biophysical arguments
-    for mode in ['calc_uncertainty', 'calculate_hwp',
-                 'calculate_sequestration']:
-        biophysicalArgs[mode] = args[mode]
-
-    #Uncertainty percentage is required if calculating uncertainty
-    if args['calc_uncertainty']:
-        biophysicalArgs['uncertainty_percentile'] = \
-            args['uncertainty_percentile']
-
     #lulc_cur is always required
     biophysicalArgs['lulc_cur'] = gdal.Open(args['lulc_cur_uri'],
                                             gdal.GA_ReadOnly)
 
     #a future lulc is only required if sequestering or hwp calculating
-    if args['calculate_sequestration'] or args['calculate_hwp']:
+    if 'lulc_fut_uri' in args:
         biophysicalArgs['lulc_fut'] = gdal.Open(args['lulc_fut_uri'],
                                             gdal.GA_ReadOnly)
 
     #Years and harvest shapes are required if doing HWP calculation
-    if args['calculate_hwp']:
-        for x in ['lulc_cur_year', 'lulc_fut_year']:
-            biophysicalArgs[x] = args[x]
-        fsencoding = sys.getfilesystemencoding()
-        for x in ['hwp_cur_shape', 'hwp_fut_shape']:
+    for x in ['lulc_cur_year', 'lulc_fut_year']:
+        if x in args: biophysicalArgs[x] = args[x]
+    fsencoding = sys.getfilesystemencoding()
+    for x in ['hwp_cur_shape', 'hwp_fut_shape']:
+        if x + '_uri' in args:
             biophysicalArgs[x] = ogr.Open(args[x + '_uri'].encode(fsencoding))
 
     #Always need carbon pools, if uncertainty calculation they also need
@@ -111,10 +87,8 @@ def execute(args):
     #make a list of all the rasters that we need to create, it's dependant
     #on what calculation mode we're in (sequestration, HWP, uncertainty, etc.)
     outputRasters = ['tot_C_cur']
-    if args['calculate_sequestration'] or args['calculate_hwp']:
+    if 'lulc_fut_uri' in args:
         outputRasters.extend(['tot_C_fut', 'sequest'])
-    if args['calc_uncertainty']:
-        outputRasters.append('uncertainty_percentile_map')
     #build the URIs for the output rasters in a single loop
     for key in outputRasters:
         outputURIs[key] = outputDirectoryPrefix + key + '.tif'
@@ -123,9 +97,11 @@ def execute(args):
 
     #If we're doing a HWP calculation, we need temporary rasters to hold the
     #HWP pools, name them the same as the key but add a .tif extension
-    if args['calculate_hwp']:
-        for key in ['c_hwp_cur', 'c_hwp_fut', 'bio_hwp_cur', 'vol_hwp_cur',
-                    'bio_hwp_fut', 'vol_hwp_fut']:
+    if 'hwp_cur_shape_uri' in args:
+        for key in ['c_hwp_cur', 'bio_hwp_cur', 'vol_hwp_cur']:
+            outputURIs[key] = intermediateDirectoryPrefix + key + ".tif"
+    if 'hwp_fut_shape_uri' in args:
+        for key in ['c_hwp_fut', 'bio_hwp_fut', 'vol_hwp_fut']:
             outputURIs[key] = intermediateDirectoryPrefix + key + ".tif"
 
     #Create the output and intermediate rasters to be the same size/format as

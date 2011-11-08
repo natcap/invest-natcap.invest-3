@@ -9,34 +9,28 @@ sys.path.insert(0, cmd_folder + '/../')
 import carbon_biophysical
 
 class TestCarbonBiophysical(unittest.TestCase):
-#    def test_carbon_biophysical_smoke(self):
-#        """Smoke test for carbon_biophysical function.  Shouldn't crash with \
+    def test_carbon_biophysical_smoke(self):
+        """Smoke test for carbon_biophysical function.  Shouldn't crash with \
 #zero length inputs"""
-#
-#        args = {}
-#        args['workspace_dir'] = '../../carbon_output'
-#        args['calculate_sequestration'] = False
-#        args['calculate_hwp'] = False
-#        args['calc_uncertainty'] = False
-#        args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
-#        args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
-#
-#        carbon_biophysical.execute(args)
-#
-#    def test_carbon_biophysical_sequestration(self):
-#        """Test for carbon_biophysical function running with sample input to do \
-#sequestration on lulc maps."""
-#
-#        args = {}
-#        args['workspace_dir'] = '../../carbon_output'
-#        args['calculate_sequestration'] = True
-#        args['calculate_hwp'] = False
-#        args['calc_uncertainty'] = False
-#        args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
-#        args['lulc_fut_uri'] = "../../test_data/lulc_samp_fut"
-#        args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
-#
-#        carbon_biophysical.execute(args)
+
+        args = {}
+        args['workspace_dir'] = '../../carbon_output'
+        args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
+        args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
+
+        carbon_biophysical.execute(args)
+
+    def test_carbon_biophysical_sequestration(self):
+        """Test for carbon_biophysical function running with sample input to do \
+sequestration on lulc maps."""
+
+        args = {}
+        args['workspace_dir'] = '../../carbon_output'
+        args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
+        args['lulc_fut_uri'] = "../../test_data/lulc_samp_fut"
+        args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
+
+        carbon_biophysical.execute(args)
 
     def test_carbon_biophysical_sequestration_hwp(self):
         """Test for carbon_biophysical function running with sample input to do \
@@ -44,9 +38,6 @@ sequestration and harvested wood products on lulc maps."""
 
         args = {}
         args['workspace_dir'] = '../../carbon_output'
-        args['calculate_sequestration'] = True
-        args['calculate_hwp'] = True
-        args['calc_uncertainty'] = False
         args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
         args['lulc_fut_uri'] = "../../test_data/lulc_samp_fut"
         args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
@@ -61,7 +52,39 @@ sequestration and harvested wood products on lulc maps."""
         #../../carbon_output/Output/tot_C_cur.tif
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Output/tot_C_cur.tif",
-            '../../test_data/tot_C_cur.tif')
+            '../../test_data/tot_C_cur_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Output/tot_C_fut.tif",
+            '../../test_data/tot_C_fut_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Output/sequest.tif",
+            '../../test_data/sequest_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/bio_hwp_cur.tif",
+            '../../test_data/bio_hwp_cur_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/bio_hwp_fut.tif",
+            '../../test_data/bio_hwp_fut_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/c_hwp_cur.tif",
+            '../../test_data/c_hwp_cur_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/c_hwp_fut.tif",
+            '../../test_data/c_hwp_fut_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/vol_hwp_cur.tif",
+            '../../test_data/vol_hwp_cur_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/vol_hwp_fut.tif",
+            '../../test_data/vol_hwp_fut_regression.tif')
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)

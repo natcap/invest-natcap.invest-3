@@ -9,161 +9,52 @@ import numpy
 from dbfpy import dbf
 
 def execute(args):
-    """This function invokes the carbon model given URI inputs of files.
+    """This function calculates carbon sequestration valuation.
         
-        args - a python dictionary with at the following possible entries:
+        args - a python dictionary with at the following *required* entries:
         
-        Required entries:
-        args['lulc_cur'] - is a uri to a GDAL raster dataset
-        args['carbon_pools'] - is a uri to a DBF dataset mapping carbon 
-            sequestration numbers to lulc classifications.
-        args['storage_cur'] - for outputing the sequestered carbon based on the 
-            current lulc
-        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
-        args['calc_uncertainty'] - a Boolean.  True if we wish to calculate 
-            uncertainty in the carbon model.
-        args['output_dir'] - a uri to the output directory.
-            
-        Optional entries:
-        args['lulc_fut'] - is a uri to a GDAL raster dataset
-        args['storage_fut'] - for outputing the sequestered carbon based on the 
-            future lulc
-        args['seq_delta'] - for outputing the difference between 
-            args['storage_cur'] and args['storage_fut']
-        args['seq_value'] - for outputing the monetary gain or loss in value 
-            of sequestered carbon. 
-        args['biomass_cur'] - for outputing the biomass of harvested HWP
-            parcels on the current landscape
-        args['biomass_fut'] - for outputing the biomass of harvested HWP
-            parcels on the future landscape
-        args['volume_cur'] - for outputing the volume of HWP on the current
-            landscape
-        args['volume_fut'] - for outputing the volume of HWP on the future
-            landscape
-        args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
-        args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
-        args['c_value'] - a float.  Represents the price of carbon in US Dollars.
-        args['discount'] - a float.  Represents the annual discount in the 
-            price of carbon
-        args['rate_change'] - a float.  Represents the rate of change in the 
-            price of carbon
-        args['uncertain_seq'] - a URI to a GDAL raster dataset
-        args['uncertain_cm'] - a URI to a GDAL raster dataset
-        args['percentile'] - the percentile cutoff desired for uncertainty
-            calculations
+        args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
+            amount of carbon sequestered
+        args['V'] - value of a sequestered ton of carbon in dollars per metric
+            ton
+        args['r'] - the market discount rate in terms of a percentage
+        args['c'] - the annual rate of change in the price of carbon
+        args['yr_cur'] - the year at which the sequestration measurement 
+            started
+        args['yr_fut'] - the year at which the sequestration measurement ended
         
         returns nothing."""
 
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     gdal.AllRegister()
-    
-    #specify generated URIs
-    directoryPrefix = args['output_dir'] + os.sep
-    defaultURI = {'storage_cur' : directoryPrefix + 'tot_C_cur.tif',
-                  'storage_fut' : directoryPrefix + 'tot_C_fut.tif',
-                  'seq_delta' : directoryPrefix + 'sequest.tif',
-                  'seq_value' : directoryPrefix + 'value_seq.tif',
-                  'biomass_cur' : directoryPrefix + 'bio_hwp_cur.tif',
-                  'biomass_fut' : directoryPrefix + 'bio_hwp_fut.tif',
-                  'volume_cur'  : directoryPrefix + 'vol_hwp_cur.tif',
-                  'volume_fut'  : directoryPrefix + 'vol_hwp_fut.tif', 
-                  'output_seq' : directoryPrefix + 'uncertainty_sequestration.tif',
-                  'output_map' : directoryPrefix + 'uncertainty_colormap.tif'}
 
-    #open the two required elements.
-    lulc_cur = gdal.Open(args['lulc_cur'], gdal.GA_ReadOnly)
-    args['lulc_cur'] = lulc_cur
-    args['carbon_pools'] = dbf.Dbf(args['carbon_pools'])
-    makeRasters(('storage_cur',), defaultURI, args)
+    #Load and copy relevant inputs from args into a dictionary that
+    #can be passed to the valuation core model
+    valuationlArgs = {}
 
-    #open the future LULC if it has been provided
-    if 'lulc_fut' in args:
-        args['lulc_fut'] = gdal.Open(args['lulc_fut'], gdal.GA_ReadOnly)
-        makeRasters(('storage_fut', 'seq_delta'), defaultURI, args)
+    valuationlArgs['sequest'] = \
+        gdal.Open(args['sequest_uri'], gdal.GA_ReadOnly)
 
-    if args['calc_uncertainty'] == True:
-        #create the uncertainty sequestration raster        
-        args['output_seq'] = mimic(lulc_cur, defaultURI['output_seq'], nodata=0)
-        
-        #create the uncertainty colormap raster
-        args['output_map'] = mimic(lulc_cur, defaultURI['output_map'],
-                                    nodata=255, datatype=gdal.GDT_Byte)
+    for key in args:
+        if key != 'sequest_uri':
+            valuationArgs[key] = args[key]
 
-    #Open the harvest maps
-    if 'hwp_cur_shape' in args:
-        fsencoding = sys.getfilesystemencoding()
-        args['hwp_cur_shape'] = ogr.Open(args['hwp_cur_shape'].encode(fsencoding))
-        makeRasters(('biomass_cur', 'volume_cur'), defaultURI, args)
-        
-        if 'hwp_fut_shape' in args:
-            args['hwp_fut_shape'] = ogr.Open(args['hwp_fut_shape'].encode(fsencoding))
-            makeRasters(('biomass_fut', 'volume_fut'), defaultURI, args)
-            
-    if args['calc_value'] == True:
-        makeRasters(('seq_value',), defaultURI, args)
+    #These lines sets up the output directory structure for the workspace
+    outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output' + os.sep
+    if not os.path.exists(outputDirectoryPrefix):
+        os.makedirs(outputDirectoryPrefix)
 
-    #run the carbon model.
-    carbon.execute(args)
-    
-    #run the carbon uncertainty code
-#   carbon_scenario_uncertainty.execute(args)
+    #This defines the sequestration output raster.  Notice the 1e38 value as
+    #nodata.  This is something very large that should be outside the range
+    #of reasonable valuation values.
+    outputURI = outputDirectoryPrefix + "value_seq.tif"
 
-    #close all newly created raster datasets
-    for dataset in ('storage_cur', 'storage_fut', 'seq_delta', 'seq_value',
-                    'biomass_cur', 'biomass_fut', 'volume_cur', 'volume_fut',
-                    'output_seq', 'output_map'):
-        if dataset in args:
-            args[dataset] = None
+    valuationArgs['value_seq'] = \
+        invest_core.newRasterFromBase(valuationArgs['sequest'],
+              outputURI, 'GTiff', 1e38, gdal.GDT_Float32)
 
-    #close the pools DBF file
-    args['carbon_pools'].close()
-
-
-def makeRasters(dsList, defaultURI, args):
-    """Create a new, blank raster at the correct URI for each raster in dsList.
-        
-        - dsList - a Python list or array of args dict keys to be created
-        - defaultURI - a Python dict mapping args keys of datasets to their
-            default URIs
-        - args - a python dictionary with possible entries specified in
-            invest_carbon_core.execute.  This function assumes that all entries
-            used in this function are strings representing the URI to the desired
-            dataset."""
-            
-    for dataset in dsList:
-        if dataset in args:
-            args[dataset] = mimic(args['lulc_cur'], args[dataset])
-        else:
-            args[dataset] = mimic(args['lulc_cur'], defaultURI[dataset])
-
-def mimic(example, outputURI, format='GTiff', nodata=-5.0, datatype=gdal.GDT_Float32):
-    """Create a new, empty GDAL raster dataset with the spatial references and
-        geotranforms of the example GDAL raster dataset.
-        
-        example - a GDAL raster dataset
-        outputURI - a string URI to the new output raster dataset.
-        format='GTiff' - a string representing the GDAL file format of the 
-            output raster.  See http://gdal.org/formats_list.html for a list
-            of available formats.  This parameter expects the format code, such
-            as 'GTiff' or 'MEM'
-        nodata='-5.0 - a number that will be set as the nodata value for the 
-            output raster
-        datatype=gdal.GDT_Float32 - the datatype of the raster.
-                
-        returns a new GDAL raster dataset."""
-
-    cols = example.RasterXSize
-    rows = example.RasterYSize
-    projection = example.GetProjection()
-    geotransform = example.GetGeoTransform()
-
-    driver = gdal.GetDriverByName(format)
-    new_ds = driver.Create(outputURI, cols, rows, 1, datatype)
-    new_ds.SetProjection(projection)
-    new_ds.SetGeoTransform(geotransform)
-    new_ds.GetRasterBand(1).SetNoDataValue(nodata)
-
-    return new_ds
+    #run the valuation part of the carbon model.
+    carbon_core.valuation(valuationArgs)
 
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
