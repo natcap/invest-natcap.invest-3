@@ -184,8 +184,14 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                 #Claculate biomassPerPixel and volumePerPixel of harvested wood
                 numberOfHarvests = \
                     math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
-                biomassPerPixel = fieldArgs['Cut_cur'] * numberOfHarvests * \
-                    pixelArea / float(fieldArgs['C_den_cur'])
+                biomassInFeature = fieldArgs['Cut_cur'] * numberOfHarvests / \
+                    float(fieldArgs['C_den_cur'])
+
+                #convert m^2 to Ha
+                areaOfFeatureInHa = feature.GetGeometryRef().GetArea() / \
+                    (10 ** 4)
+                biomassPerPixel = biomassInFeature / areaOfFeatureInHa * \
+                    pixelArea
                 volumePerPixel = biomassPerPixel / fieldArgs['BCEF_cur']
 
                 #Copy biomassPerPixel and carbon pools to the temporary feature for
@@ -242,8 +248,16 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                 #Claculate biomassPerPixel and volumePerPixel of harvested wood
                 numberOfHarvests = \
                     math.ceil(timeSpan / float(fieldArgs['Freq_fut']))
-                biomassPerPixel = fieldArgs['Cut_fut'] * numberOfHarvests * \
-                    pixelArea / float(fieldArgs['C_den_fut'])
+
+                biomassInFeature = fieldArgs['Cut_fut'] * numberOfHarvests / \
+                    float(fieldArgs['C_den_fut'])
+
+                #convert m^2 to Ha
+                areaOfFeatureInHa = feature.GetGeometryRef().GetArea() / \
+                    (10 ** 4)
+                biomassPerPixel = biomassInFeature / areaOfFeatureInHa * \
+                    pixelArea
+
                 volumePerPixel = biomassPerPixel / fieldArgs['BCEF_fut']
 
                 #Copy biomassPerPixel and carbon pools to the temporary feature for
@@ -331,8 +345,15 @@ def calculateHWPStorageCur(hwp_shape, c_hwp, bio_hwp, vol_hwp, pixelArea,
             #harvested wood
             numberOfHarvests = \
                 math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
-            biomassPerPixel = fieldArgs['Cut_cur'] * numberOfHarvests * \
-                pixelArea / float(fieldArgs['C_den_cur'])
+
+            biomassInFeature = fieldArgs['Cut_cur'] * numberOfHarvests / \
+                float(fieldArgs['C_den_cur'])
+
+            #convert m^2 to Ha
+            areaOfFeatureInHa = feature.GetGeometryRef().GetArea() / (10 ** 4)
+            biomassPerPixel = biomassInFeature / areaOfFeatureInHa * \
+                pixelArea
+
             volumePerPixel = biomassPerPixel / fieldArgs['BCEF_cur']
 
             #Copy biomassPerPixel and carbon pools to the temporary feature for
@@ -831,7 +852,7 @@ def valuation(args):
         args['yr_cur'] - the year at which the sequestration measurement 
             started
         args['yr_fut'] - the year at which the sequestration measurement ended
-        args['value_seq'] - a single  
+        args['value_seq'] - a single band output GDAL   
         
         returns nothing"""
 
