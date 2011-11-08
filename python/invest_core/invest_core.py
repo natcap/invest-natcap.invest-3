@@ -125,7 +125,7 @@ def newRasterFromBase(base, outputURI, format, nodata, datatype):
     return newRaster
 
 def pixelArea(dataset):
-    """Calculates the pixel area of the given dataset.
+    """Calculates the pixel area of the given dataset in Ha.
     
         dataset - GDAL dataset
     
