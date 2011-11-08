@@ -1,3 +1,5 @@
+"URI level tests for the carbon valuation module"
+
 import os, sys
 import unittest
 import invest_test_core

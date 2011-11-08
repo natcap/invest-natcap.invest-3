@@ -1,12 +1,8 @@
-"""InVEST main plugin interface module"""
+"""InVEST valuation interface module.  Informally known as the URI level."""
 
-import imp, sys, os
+import sys, os
 import simplejson as json
-import carbon
-from osgeo import gdal, ogr
-from osgeo.gdalconst import *
-import numpy
-from dbfpy import dbf
+from osgeo import gdal
 import invest_core
 import carbon_core
 
