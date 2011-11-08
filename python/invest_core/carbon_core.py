@@ -850,7 +850,7 @@ def valuation(args):
     n = args['yr_fut'] - args['yr_cur'] - 1
     ratio = 1.0 / ((1 + args['r'] / 100.0) * (1 + args['c'] / 100.0))
     valuationConstant = args['V'] / (args['yr_fut'] - args['yr_cur']) * \
-        (1.0 - r ** (n + 1)) / (1.0 - r)
+        (1.0 - ratio ** (n + 1)) / (1.0 - ratio)
 
     def valueOp(sequest):
         return sequest * valuationConstant
