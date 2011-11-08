@@ -1,5 +1,6 @@
 import unittest
 import timber
+import os
 
 class TestInvestTimberCore(unittest.TestCase):
     def test_timber_model(self):
@@ -9,6 +10,13 @@ class TestInvestTimberCore(unittest.TestCase):
                 'market_disc_rate': 7}
 
         timber.execute(args)
+
+        #Delete all the generated files and directory
+        if os.path.isdir('../../test_data/timber/Output/'):
+            textFileList = os.listdir('../../test_data/timber/Output/')        
+            for file in textFileList:
+                os.remove('../../test_data/timber/Output/'+file)
+            os.rmdir('../../test_data/timber/Output/')
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestTimberCore)
