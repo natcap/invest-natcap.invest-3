@@ -176,7 +176,7 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
 
                 #Calculate the carbon pool due to decaying HWP over the timeSpan
                 featureCarbonStoragePerPixel = pixelArea * \
-                    carbonPoolinHWPFromParcel(fieldArgs['C_den_cur'],
+                    carbonPoolinHWPFromParcel(fieldArgs['Cut_cur'],
                                               timeSpan, startYears,
                                               fieldArgs['Freq_cur'],
                                               fieldArgs['Decay_cur'])
@@ -238,7 +238,7 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
 
                 #Calculate the carbon pool due to decaying HWP over the timeSpan
                 featureCarbonStoragePerPixel = pixelArea * \
-                    carbonPoolinHWPFromParcel(fieldArgs['C_den_fut'],
+                    carbonPoolinHWPFromParcel(fieldArgs['Cut_fut'],
                                               timeSpan, startYears,
                                               fieldArgs['Freq_fut'],
                                               fieldArgs['Decay_fut'])
@@ -330,7 +330,7 @@ def calculateHWPStorageCur(hwp_shape, c_hwp, bio_hwp, vol_hwp, pixelArea,
 
             #Calculate the carbon pool due to decaying HWP over the timeSpan
             featureCarbonStoragePerPixel = pixelArea * \
-                carbonPoolinHWPFromParcel(fieldArgs['C_den_cur'],
+                carbonPoolinHWPFromParcel(fieldArgs['Cut_cur'],
                                           timeSpan, startYears,
                                           fieldArgs['Freq_cur'],
                                           fieldArgs['Decay_cur'])
