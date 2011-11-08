@@ -202,7 +202,11 @@ class DynamicUI(DynamicGroup):
         for id, element in self.allElements.iteritems():
             if isinstance(element, DynamicPrimitive):
                 if 'args_id' in element.attributes:
-                    self.outputDict[element.attributes['args_id']] = element.value()
+                    if 'dataType' in element.attributes:
+                        value = int(element.value())
+                    else:
+                        value = str(element.value())
+                    self.outputDict[element.attributes['args_id']] = value
 
     def updateRequirementNotification(self, numUnsatisfied=None):
         if numUnsatisfied == None:
@@ -242,7 +246,7 @@ class DynamicUI(DynamicGroup):
         """Quit the UI, returning to the main() function"""
         self.saveLastRun()
         self.assembleOutputDict()
-        QtCore.QCoreApplication.instance().quit()
+        QtCore.QCoreApplication.instance().exit()
     
     def closeEvent(self, event):
         sys.exit(0)
@@ -520,6 +524,8 @@ def validate(jsonObject):
                                 "optional" : True},
                     "validText": {"type": "string",
                                   "optional": True},
+                    "dataType": {"type" : "string",
+                                 "optional": True},
                     "requiredIf":{"type": "array",
                                   "optional": True,
                                   "items": {"type": "string"}
@@ -599,7 +605,7 @@ def main(json_args):
     validate(json_args)
     ui = DynamicUI(json_args)
     result = app.exec_()
-    
+
     try:
         model = imp.load_source('module', ui.attributes['targetScript'])
         model.execute(ui.outputDict)
