@@ -7,6 +7,8 @@ from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 import numpy
 from dbfpy import dbf
+import invest_core
+import carbon_core
 
 def execute(args):
     """This function calculates carbon sequestration valuation.
@@ -32,9 +34,9 @@ def execute(args):
 
     #Load and copy relevant inputs from args into a dictionary that
     #can be passed to the valuation core model
-    valuationlArgs = {}
+    valuationArgs = {}
 
-    valuationlArgs['sequest'] = \
+    valuationArgs['sequest'] = \
         gdal.Open(args['sequest_uri'], gdal.GA_ReadOnly)
 
     for key in args:
