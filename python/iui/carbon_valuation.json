@@ -1,0 +1,64 @@
+{
+    "id": "window",
+    "label": "Valuation of Carbon Sequestration",
+    "targetScript": "../invest_core/carbon_valuation.py",
+    "modelName": "carbon_valuation",
+    "height": 400,
+    "width": 500,
+    "elements": [
+        {
+            "id": "valuation_list",
+            "type": "list",
+            "elements": [
+                {
+                    "id":"sequest_uri",
+                    "type": "file",
+                    "label": "Carbon sequestration raster",
+                    "required": true,
+                    "args_id": "sequest_uri",
+                    "defaultText": "raster"
+                },
+                {
+                    "id": "value",
+                    "args_id": "V",
+                    "type": "text",
+                    "label": "Value of Carbon (USD/metric ton)",
+                    "required": true,
+                    "validText": "[0-9]+\\.[0-9][0-9]"
+                },
+                {
+                    "id": "discount_rate",
+                    "args_id": "r",
+                    "type": "text",
+                    "label": "Market discount in price of Carbon (%)",
+                    "required": true,
+                    "validText": "[1]?[0-9][0-9]"
+                },    
+                {
+                    "id": "rate_change",
+                    "args_id": "c",
+                    "type": "text",
+                    "label": "Annual rate of change in price of Carbon",
+                    "required": true,
+                    "validText": "[0-9]+\\.[0-9][0-9]"
+                },
+                {
+                    "id": "yr_cur",
+                    "args_id": "yr_cur",
+                    "type": "text",
+                    "label": "Start year of sequestration measurement",
+                    "required": true,
+                    "validText": "[0-9]+"
+                },            
+                {
+                    "id": "yr_fut",
+                    "args_id": "yr_fut",
+                    "type": "text",
+                    "label": "Final year of sequestration measurement",
+                    "required": true,
+                    "validText": "[0-9]+"
+                }
+            ]
+        }    
+    ] 
+}
