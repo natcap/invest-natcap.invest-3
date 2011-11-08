@@ -293,8 +293,8 @@ class TestTimber(unittest.TestCase):
         timber_output_layer = None
         attr_table.close()
         #Delete all the generated files and directory
-        textFileList = os.listdir('../../test_data/timber/Output/')
         if os.path.isdir('../../test_data/timber/Output/'):
+            textFileList = os.listdir('../../test_data/timber/Output/')        
             for file in textFileList:
                 os.remove('../../test_data/timber/Output/'+file)
             os.rmdir('../../test_data/timber/Output/')
