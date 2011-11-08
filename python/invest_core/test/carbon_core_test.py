@@ -44,7 +44,8 @@ class TestInvestCarbonCore(unittest.TestCase):
             self.assertAlmostEqual(sum, xDim * yDim * outNodata)
 
     def test_carbon_storage(self):
-        """Test of calculateCarbonStorage against a random LULC array, includes tests on nodata values"""
+        """Test of calculateCarbonStorage against a random LULC array, includes
+             tests on nodata values"""
 
         #picked some largish x and y dimensions that are prime numbers
         xDim, yDim = (710, 569)
@@ -81,76 +82,6 @@ class TestInvestCarbonCore(unittest.TestCase):
         for x in xrange(xDim):
             for y in xrange(yDim):
                 self.assertAlmostEqual(pools[array[y][x]], data[y][x])
-
-    def test_carbon_pixel_area(self):
-        """Verify the correct output of carbon.pixelArea()"""
-
-        dataset = gdal.Open('../../../test_data/carbon_regression.tif',
-                            gdal.GA_ReadOnly)
-
-        srs = osr.SpatialReference()
-        srs.SetProjection(dataset.GetProjection())
-        linearUnits = srs.GetLinearUnits()
-        geotransform = dataset.GetGeoTransform()
-        #take absolute value since sometimes negative widths/heights
-        areaMeters = abs(geotransform[1] * geotransform[5] *
-                         (linearUnits ** 2))
-        result = areaMeters / (10 ** 4) #convert m^2 to Ha
-
-        #run pixelArea()
-        area = carbon_core.pixelArea(dataset)
-
-        #assert the output of pixelArea against our calculation
-        self.assertEqual(result, area)
-
-    def test_carbon_diff_smoke(self):
-        """Smoke test for the diff function."""
-        lulc1 = np.zeros((1, 0))
-        lulc2 = np.zeros((1, 0))
-        nodata = {'input': 0, 'output': 0} #set a nodata value
-
-        carbon_core.carbon_diff(nodata, lulc1, lulc2)
-
-    def test_carbon_diff_1D_arrays(self):
-        length = 100
-        lulc1 = np.zeros((1, length))
-        lulc2 = np.ones((1, length))
-        nodata = {'input':-2, 'output':-2} #set a nodata value
-
-        #run carbon_diff
-        output = carbon_core.carbon_diff(nodata, lulc1, lulc2)
-
-        #verify the contents of output against pool and lulc data
-        for x in range(lulc1.shape[1]):
-            self.assertEqual(output[0][x], 1, 'Difference was not correctly \
-                calculated.')
-
-    def test_carbon_add_smoke(self):
-        """Smoke test for the diff function."""
-        lulc1 = np.zeros((1, 0))
-        lulc2 = np.zeros((1, 0))
-        nodata = {'cur': 0, 'fut': 0} #set a nodata value
-
-        carbon_core.carbon_add(nodata, lulc1, lulc2)
-
-    def test_carbon_add_1D_arrays(self):
-        """Testing adding of 2 carbon arrays"""
-        length = 100
-        lulc1 = np.zeros((1, length))
-        lulc2 = np.zeros((1, length))
-        for x in range(length):
-            lulc1[0][x] = 15.0 * random.random()
-            lulc2[0][x] = 10.0 * random.random()
-
-        nodata = {'input':-2, 'output':-2} #set a nodata value
-
-        #run carbon_add
-        output = carbon_core.carbon_add(nodata, lulc1, lulc2)
-
-        #verify the contents of output against pool and lulc data
-        for x in range(lulc1.shape[1]):
-            self.assertEqual(output[0][x], lulc1[0][x] + lulc2[0][x],
-                             'Sum was not correctly calculated.')
 
     def test_carbon_value_1D_array(self):
         """Test of carbon_value against a 1D input/output array"""
