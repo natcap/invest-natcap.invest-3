@@ -852,13 +852,14 @@ def valuation(args):
     valuationConstant = args['V'] / (args['yr_fut'] - args['yr_cur']) * \
         (1.0 - ratio ** (n + 1)) / (1.0 - ratio)
 
-    noData = args['sequest'].GetRasterBand(1).GetNoDataValue()
+    noDataIn = args['sequest'].GetRasterBand(1).GetNoDataValue()
+    noDataOut = args['value_seq'].GetRasterBand(1).GetNoDataValue()
 
     def valueOp(sequest):
-        if sequest != noData:
+        if sequest != noDataIn:
             return sequest * valuationConstant
         else:
-            return noData
+            return noDataOut
 
     invest_core.vectorize1ArgOp(args['sequest'].GetRasterBand(1), valueOp,
                                 args['value_seq'].GetRasterBand(1))
