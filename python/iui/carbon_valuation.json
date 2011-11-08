@@ -12,7 +12,7 @@
             "elements": [
                 {
                     "id":"sequest_uri",
-                    "type": "file",
+                    "type": "folder",
                     "label": "Carbon sequestration raster",
                     "required": true,
                     "args_id": "sequest_uri",
@@ -24,6 +24,7 @@
                     "type": "text",
                     "label": "Value of Carbon (USD/metric ton)",
                     "required": true,
+                    "dataType": "float",
                     "validText": "[0-9]+\\.[0-9][0-9]"
                 },
                 {
@@ -32,6 +33,7 @@
                     "type": "text",
                     "label": "Market discount in price of Carbon (%)",
                     "required": true,
+                    "dataType": "int",
                     "validText": "[1]?[0-9][0-9]"
                 },    
                 {
@@ -40,6 +42,7 @@
                     "type": "text",
                     "label": "Annual rate of change in price of Carbon",
                     "required": true,
+                    "dataType": "float",
                     "validText": "[0-9]+\\.[0-9][0-9]"
                 },
                 {
@@ -48,6 +51,7 @@
                     "type": "text",
                     "label": "Start year of sequestration measurement",
                     "required": true,
+                    "dataType": "int",
                     "validText": "[0-9]+"
                 },            
                 {
@@ -56,6 +60,7 @@
                     "type": "text",
                     "label": "Final year of sequestration measurement",
                     "required": true,
+                    "dataType": "int",
                     "validText": "[0-9]+"
                 }
             ]
