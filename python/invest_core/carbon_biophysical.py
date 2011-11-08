@@ -26,10 +26,10 @@ def execute(args):
          if calculating sequestration)
         args['lulc_cur_year'] - An integer representing the year of lulc_cur 
             used in HWP calculation (required if args contains a 
-            'hwp_cur_shape_uri', or 'lulc_fut_uri' key)
+            'hwp_cur_shape_uri', or 'hwp_fut_shape_uri' key)
         args['lulc_fut_year'] - An integer representing the year of  lulc_fut
             used in HWP calculation (required if args contains a 
-            'lulc_fut_uri' key)
+            'hwp_fut_shape_uri' key)
         args['hwp_cur_shape_uri'] - Current shapefile uri for harvested wood 
             calculation (optional, include if calculating current lulc hwp) 
         args['hwp_fut_shape_uri'] - Future shapefile uri for harvested wood 

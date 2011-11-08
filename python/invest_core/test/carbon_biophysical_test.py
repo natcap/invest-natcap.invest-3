@@ -54,7 +54,37 @@ sequestration and harvested wood products on lulc maps."""
             args['workspace_dir'] + "/Output/tot_C_cur.tif",
             '../../test_data/tot_C_cur_regression.tif')
 
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Output/tot_C_fut.tif",
+            '../../test_data/tot_C_fut_regression.tif')
 
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Output/sequest.tif",
+            '../../test_data/sequest_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/bio_hwp_cur.tif",
+            '../../test_data/bio_hwp_cur_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/bio_hwp_fut.tif",
+            '../../test_data/bio_hwp_fut_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/c_hwp_cur.tif",
+            '../../test_data/c_hwp_cur_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/c_hwp_fut.tif",
+            '../../test_data/c_hwp_fut_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/vol_hwp_cur.tif",
+            '../../test_data/vol_hwp_cur_regression.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + "/Intermediate/vol_hwp_fut.tif",
+            '../../test_data/vol_hwp_fut_regression.tif')
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)
