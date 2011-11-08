@@ -211,6 +211,8 @@ class TestTimber(unittest.TestCase):
         lyr.SetFeature(feat)
         feat.Destroy()
         
+        db = dbf.Dbf(dbf_path)
+        
         #Arguments to be past to the model
         args= {'timber_shape': ds,
                'attr_table':db, 
