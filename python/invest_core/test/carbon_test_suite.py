@@ -96,29 +96,6 @@ class CarbonTestSuite(unittest.TestCase):
         self.assertEqual(nodata_dict['output'], outNoData)
         pass
 
-    def test_calcFeatureHWP(self):
-        """Verify the correct output of calcFeatureHWP() against our own
-            calculation using the same numbers."""
-
-        limit = 4
-        decay = 0.74
-        endDate = 2030
-        startDate = 2000
-        freq = 4
-
-        #run calcFeatureHWP
-        result = carbon.calcFeatureHWP(limit, decay, endDate, startDate, freq)
-
-        #Calculate the result on our own
-        hwpsum = 0
-        for t in range(int(limit)):
-            w = math.log(2) / decay
-            m = endDate - startDate - (t * freq)
-            hwpsum += ((1 - (math.e ** (-w))) / (w * math.e ** (m * w)))
-
-        #verify our output
-        self.assertEqual(result, math.floor(hwpsum))
-
     def test_carbon_valuate(self):
         """Verify the correct output of carbon.valuate()
         
