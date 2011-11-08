@@ -14,7 +14,7 @@ class TestCarbonBiophysical(unittest.TestCase):
 #zero length inputs"""
 
         args = {}
-        args['workspace_dir'] = '../../carbon_output'
+        args['workspace_dir'] = '../../carbon_valuation_output'
         args['sequest_uri'] = '../../test_data/sequest_regression.tif'
         args['V'] = 43.0
         args['r'] = 7.0
