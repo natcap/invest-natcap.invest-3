@@ -175,15 +175,19 @@ class DynamicText(DynamicPrimitive):
 class ModelDialog(QtGui.QDialog):
     def __init__(self, uri, inputDict):
         super(ModelDialog, self).__init__()
-        
+
         self.setLayout(QtGui.QVBoxLayout())
+        
+        self.cancel = False
         
         self.setWindowTitle("Running the model")
         self.setGeometry(400, 400, 400, 200)
+        self.setMinimumWidth(200)
         
         self.statusAreaLabel = QtGui.QLabel('Messages:')
         self.statusArea = QtGui.QScrollArea()
         self.status = QtGui.QLabel()
+        self.status.setMinimumWidth(200)
         self.statusArea.setStyleSheet("QWidget { background-color: White }")
         self.statusArea.setWidget(self.status)
         self.layout().addWidget(self.statusAreaLabel)
@@ -196,6 +200,9 @@ class ModelDialog(QtGui.QDialog):
         
         self.runButton = QtGui.QPushButton('OK')
         self.cancelButton = QtGui.QPushButton('Cancel') 
+        
+        #disable the 'ok' button by default
+        self.runButton.setDisabled(True)
        
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()
@@ -211,18 +218,24 @@ class ModelDialog(QtGui.QDialog):
         
         self.thread = ModelThread(uri, inputDict)
         
+        self.thread.start()
         
         self.thread.finished.connect(self.threadFinished)
         
+        
+        
     def threadFinished(self):
-        self.status.setText(str(self.status.text()) + "fsinished!")
+        self.status.setText(str(self.status.text()) + "finished!")
         self.progressBar.setMaximum(1)
+        self.runButton.setDisabled(False)
         
     def okPressed(self):
         self.threadFinished()
+        self.accept()
         
     def closeWindow(self):
-        self.threadFinished()
+        self.cancel = True
+        self.done(0)
 
 class ModelThread(QtCore.QThread):
     def __init__(self, uri, inputDict):
@@ -326,7 +339,10 @@ class DynamicUI(DynamicGroup):
         self.assembleOutputDict()
         self.modelDialog = ModelDialog(self.attributes['targetScript'], self.outputDict)
         self.modelDialog.exec_()
-        QtCore.QCoreApplication.instance().exit()
+        print "returned to the program"
+        
+        if self.modelDialog.cancel == False:
+            QtCore.QCoreApplication.instance().exit()
     
     def closeEvent(self, event):
         sys.exit(0)
