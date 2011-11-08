@@ -184,14 +184,12 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                 #Claculate biomassPerPixel and volumePerPixel of harvested wood
                 numberOfHarvests = \
                     math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
-                biomassInFeature = fieldArgs['Cut_cur'] * numberOfHarvests / \
+                #The measure of biomass is in terms of Mg/ha
+                biomassInFeaturePerArea = fieldArgs['Cut_cur'] * numberOfHarvests / \
                     float(fieldArgs['C_den_cur'])
 
-                #convert m^2 to Ha
-                areaOfFeatureInHa = feature.GetGeometryRef().GetArea() / \
-                    (10 ** 4)
-                biomassPerPixel = biomassInFeature / areaOfFeatureInHa * \
-                    pixelArea
+
+                biomassPerPixel = biomassInFeaturePerArea * pixelArea
                 volumePerPixel = biomassPerPixel / fieldArgs['BCEF_cur']
 
                 #Copy biomassPerPixel and carbon pools to the temporary feature for
@@ -249,14 +247,10 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                 numberOfHarvests = \
                     math.ceil(timeSpan / float(fieldArgs['Freq_fut']))
 
-                biomassInFeature = fieldArgs['Cut_fut'] * numberOfHarvests / \
+                biomassInFeaturePerArea = fieldArgs['Cut_fut'] * numberOfHarvests / \
                     float(fieldArgs['C_den_fut'])
 
-                #convert m^2 to Ha
-                areaOfFeatureInHa = feature.GetGeometryRef().GetArea() / \
-                    (10 ** 4)
-                biomassPerPixel = biomassInFeature / areaOfFeatureInHa * \
-                    pixelArea
+                biomassPerPixel = biomassInFeaturePerArea * pixelArea
 
                 volumePerPixel = biomassPerPixel / fieldArgs['BCEF_fut']
 
@@ -349,10 +343,7 @@ def calculateHWPStorageCur(hwp_shape, c_hwp, bio_hwp, vol_hwp, pixelArea,
             biomassInFeature = fieldArgs['Cut_cur'] * numberOfHarvests / \
                 float(fieldArgs['C_den_cur'])
 
-            #convert m^2 to Ha
-            areaOfFeatureInHa = feature.GetGeometryRef().GetArea() / (10 ** 4)
-            biomassPerPixel = biomassInFeature / areaOfFeatureInHa * \
-                pixelArea
+            biomassPerPixel = biomassInFeature * pixelArea
 
             volumePerPixel = biomassPerPixel / fieldArgs['BCEF_cur']
 
@@ -386,8 +377,8 @@ def carbonPoolinHWPFromParcel(carbonPerCut, startYears, timeSpan, harvestFreq,
         decay - the rate at which carbon is decaying from HWP harvested from
             parcels
         
-        returns a float indicating the amount of carbon stored in HWP harvested
-            from that parcel"""
+        returns a float indicating the amount of carbon stored from HWP
+            harvested in units of Mg/ha"""
 
     carbonSum = 0.0
     omega = math.log(2) / decay
