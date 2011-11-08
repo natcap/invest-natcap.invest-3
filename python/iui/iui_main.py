@@ -222,18 +222,20 @@ class ModelDialog(QtGui.QDialog):
         
         self.thread.finished.connect(self.threadFinished)
         
-        
-        
     def threadFinished(self):
         self.status.setText(str(self.status.text()) + "finished!")
         self.progressBar.setMaximum(1)
         self.runButton.setDisabled(False)
+
+    def closeEvent(self, data=None):
+        self.closeWindow()
         
     def okPressed(self):
         self.threadFinished()
         self.accept()
         
     def closeWindow(self):
+        self.thread.__del__()
         self.cancel = True
         self.done(0)
 
@@ -241,17 +243,18 @@ class ModelThread(QtCore.QThread):
     def __init__(self, uri, inputDict):
         super(ModelThread, self).__init__()
         self.uri = uri
+        self.inputDict = inputDict
     
     def __del__(self):
+        self.terminate()
         #put code here to ensure the thread finishes processing when destroyed
         return
     
     def run(self):
         #this is called by the thread once the environment is set up.
         try:
-            print 'processing'
             model = imp.load_source('module', self.uri)
-            model.execute(inputDict)
+            model.execute(self.inputDict)
         except IOError:
             print "Error: Script provided in configuration file is invalid."
         
