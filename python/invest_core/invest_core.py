@@ -2,7 +2,7 @@
     the InVEST toolset"""
 
 import numpy as np
-from osgeo import gdal
+from osgeo import gdal, osr
 
 def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
     """Iterate through the rows in the two sequestration rasters and calculate 
@@ -123,3 +123,18 @@ def newRasterFromBase(base, outputURI, format, nodata, datatype):
     newRaster.GetRasterBand(1).SetNoDataValue(nodata)
 
     return newRaster
+
+def pixelArea(dataset):
+    """Calculates the pixel area of the given dataset.
+    
+        dataset - GDAL dataset
+    
+        returns area in Ha of each pixel in dataset"""
+
+    srs = osr.SpatialReference()
+    srs.SetProjection(dataset.GetProjection())
+    linearUnits = srs.GetLinearUnits()
+    geotransform = dataset.GetGeoTransform()
+    #take absolute value since sometimes negative widths/heights
+    areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
+    return areaMeters / (10 ** 4) #convert m^2 to Ha
