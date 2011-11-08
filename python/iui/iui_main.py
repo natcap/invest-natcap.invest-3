@@ -169,6 +169,79 @@ class DynamicText(DynamicPrimitive):
     
     def setValue(self, text):
         self.textField.setText(text)
+        
+        
+        
+class ModelDialog(QtGui.QDialog):
+    def __init__(self, uri, inputDict):
+        super(ModelDialog, self).__init__()
+        
+        self.setLayout(QtGui.QVBoxLayout())
+        
+        self.setWindowTitle("Running the model")
+        self.setGeometry(400, 400, 400, 200)
+        
+        self.statusAreaLabel = QtGui.QLabel('Messages:')
+        self.statusArea = QtGui.QScrollArea()
+        self.status = QtGui.QLabel()
+        self.statusArea.setStyleSheet("QWidget { background-color: White }")
+        self.statusArea.setWidget(self.status)
+        self.layout().addWidget(self.statusAreaLabel)
+        self.layout().addWidget(self.statusArea)
+        
+        self.progressBar = QtGui.QProgressBar()
+        self.progressBar.setMinimum(0)
+        self.progressBar.setMaximum(0)
+        self.layout().addWidget(self.progressBar)
+        
+        self.runButton = QtGui.QPushButton('OK')
+        self.cancelButton = QtGui.QPushButton('Cancel') 
+       
+        #create the buttonBox (a container for buttons)
+        self.buttonBox = QtGui.QDialogButtonBox()
+        self.buttonBox.addButton(self.runButton, 0)
+        self.buttonBox.addButton(self.cancelButton, 1)
+        
+        #connect the buttons to their functions.
+        self.runButton.clicked.connect(self.okPressed)
+        self.cancelButton.clicked.connect(self.closeWindow)
+
+        #add the buttonBox to the window.        
+        self.layout().addWidget(self.buttonBox)
+        
+        self.thread = ModelThread(uri, inputDict)
+        
+        
+        self.thread.finished.connect(self.threadFinished)
+        
+    def threadFinished(self):
+        self.status.setText(str(self.status.text()) + "fsinished!")
+        self.progressBar.setMaximum(1)
+        
+    def okPressed(self):
+        self.threadFinished()
+        
+    def closeWindow(self):
+        self.threadFinished()
+
+class ModelThread(QtCore.QThread):
+    def __init__(self, uri, inputDict):
+        super(ModelThread, self).__init__()
+        self.uri = uri
+    
+    def __del__(self):
+        #put code here to ensure the thread finishes processing when destroyed
+        return
+    
+    def run(self):
+        #this is called by the thread once the environment is set up.
+        try:
+            print 'processing'
+            model = imp.load_source('module', self.uri)
+            model.execute(inputDict)
+        except IOError:
+            print "Error: Script provided in configuration file is invalid."
+        
 
 class DynamicUI(DynamicGroup):
     def closeWindow(self):
@@ -251,6 +324,8 @@ class DynamicUI(DynamicGroup):
         """Quit the UI, returning to the main() function"""
         self.saveLastRun()
         self.assembleOutputDict()
+        self.modelDialog = ModelDialog(self.attributes['targetScript'], self.outputDict)
+        self.modelDialog.exec_()
         QtCore.QCoreApplication.instance().exit()
     
     def closeEvent(self, event):
@@ -611,11 +686,6 @@ def main(json_args):
     ui = DynamicUI(json_args)
     result = app.exec_()
 
-    try:
-        model = imp.load_source('module', ui.attributes['targetScript'])
-        model.execute(ui.outputDict)
-    except IOError:
-        print "Error: Script provided in configuration file is invalid."
         
 if __name__ == '__main__':
     modulename, json_args = sys.argv
