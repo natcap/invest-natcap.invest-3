@@ -32,6 +32,8 @@ class DynamicElement(QtGui.QWidget):
         
     def value(self):
         return None
+    
+
         
 class DynamicGroup(DynamicElement):
     def __init__(self, attributes, layout):
@@ -70,7 +72,6 @@ class DynamicGroup(DynamicElement):
                     print widget
                     print widget.textField.text()
 
-            
             self.elements.append(widget)
             i += 1
 
@@ -187,7 +188,16 @@ class DynamicUI(DynamicGroup):
         user_args_file.writelines(json.dumps(user_args))
         user_args_file.close()
         
-
+    def elementIsRequired(self, element):
+        if element.required:
+            return True
+        else:
+            if 'requiredIf' in element.attributes:
+                for item in element.attributes['requiredIf']:
+                    if self.allElements[item].isEnabled():
+                        return True
+            return False
+        
     def assembleOutputDict(self):
         for id, element in self.allElements.iteritems():
             if isinstance(element, DynamicPrimitive):
@@ -208,13 +218,14 @@ class DynamicUI(DynamicGroup):
         numVerified = 0 #the number of elements with satisfied requirement
         self.messageArea.setText("")
         for id, element in self.allElements.iteritems():
-            if element.required == True:
-                numRequired += 1
-                if element.requirementsMet() or self.isRequired(element):
-                    numVerified += 1
-                else:
-                    element.setBGcolor()
-                    
+            if isinstance(element, DynamicPrimitive):
+                if self.elementIsRequired(element):
+                    numRequired += 1
+                    if element.requirementsMet():
+                        numVerified += 1
+                    else:
+                        element.setBGcolor()
+                        
         return numRequired - numVerified
 
     def okPressed(self):
@@ -243,13 +254,7 @@ class DynamicUI(DynamicGroup):
         except IOError:
             self.lastRun = {}
             
-    def isRequired(self, elementObject):
-        if 'requiredIf' in elementObject.attributes:
-            for item in elementObject.attributes['requiredIf']:
-                if self.allElements[item].requirementsMet():
-                    return True
-        else:
-            return False
+
         
     def __init__(self, uri):
         super(DynamicUI, self).__init__(json.loads(uri), QtGui.QVBoxLayout())
@@ -484,9 +489,9 @@ class FileButton(QtGui.QPushButton):
         filename = ''
         
         if self.filetype =='file':
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '/')
+            filename = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '.')
         elif self.filetype == 'folder':
-            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select folder', '/')
+            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select folder', '.')
 
         #Set the value of the URIfield.
         if filename == '':
