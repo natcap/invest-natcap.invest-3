@@ -13,6 +13,8 @@ def execute(args):
         
         args - a python dictionary with at the following *required* entries:
         
+        args['workspace_dir'] - a uri to the directory that will write output
+            and other temporary files during calculation. (required)
         args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
             amount of carbon sequestered
         args['V'] - value of a sequestered ton of carbon in dollars per metric
