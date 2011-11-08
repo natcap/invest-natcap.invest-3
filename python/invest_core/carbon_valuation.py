@@ -55,7 +55,7 @@ def execute(args):
 
     valuationArgs['value_seq'] = \
         invest_core.newRasterFromBase(valuationArgs['sequest'],
-              outputURI, 'GTiff', 1e38, gdal.GDT_Float32)
+              outputURI, 'GTiff', -1e10, gdal.GDT_Float32)
 
     #run the valuation part of the carbon model.
     carbon_core.valuation(valuationArgs)
