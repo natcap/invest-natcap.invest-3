@@ -210,7 +210,7 @@ class DynamicUI(DynamicGroup):
         for id, element in self.allElements.iteritems():
             if element.required == True:
                 numRequired += 1
-                if element.requirementsMet():
+                if element.requirementsMet() or self.isRequired(element):
                     numVerified += 1
                 else:
                     element.setBGcolor()
@@ -242,6 +242,14 @@ class DynamicUI(DynamicGroup):
             self.lastRun = json.loads(open(user_args_uri).read())
         except IOError:
             self.lastRun = {}
+            
+    def isRequired(self, elementObject):
+        if 'requiredIf' in elementObject.attributes:
+            for item in elementObject.attributes['requiredIf']:
+                if self.allElements[item].requirementsMet():
+                    return True
+        else:
+            return False
         
     def __init__(self, uri):
         super(DynamicUI, self).__init__(json.loads(uri), QtGui.QVBoxLayout())
@@ -507,6 +515,10 @@ def validate(jsonObject):
                                 "optional" : True},
                     "validText": {"type": "string",
                                   "optional": True},
+                    "requiredIf":{"type": "array",
+                                  "optional": True,
+                                  "items": {"type": "string"}
+                                  }
                     }
                 }
 
