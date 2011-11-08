@@ -203,7 +203,12 @@ class DynamicUI(DynamicGroup):
             if isinstance(element, DynamicPrimitive):
                 if 'args_id' in element.attributes:
                     if 'dataType' in element.attributes:
-                        value = int(element.value())
+                        if element.attributes['dataType'] == 'int':
+                            value = int(element.value())
+                        elif element.attributes['dataType'] == 'float':
+                            value = float(element.value())
+                        else:
+                            value = str(element.value())                            
                     else:
                         value = str(element.value())
                     self.outputDict[element.attributes['args_id']] = value
@@ -283,7 +288,7 @@ class DynamicUI(DynamicGroup):
                     
     def addButtons(self):
         self.runButton = QtGui.QPushButton('OK')
-        self.cancelButton = QtGui.QPushButton('Cancel')
+        self.cancelButton = QtGui.QPushButton('Cancel') 
        
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()
