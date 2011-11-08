@@ -176,7 +176,7 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
 
                 #Calculate the carbon pool due to decaying HWP over the timeSpan
                 featureCarbonStoragePerPixel = pixelArea * \
-                    carbonPoolinHWPFromParcel(fieldArgs['C_den_cur'],
+                    carbonPoolinHWPFromParcel(fieldArgs['Cut_cur'],
                                               timeSpan, startYears,
                                               fieldArgs['Freq_cur'],
                                               fieldArgs['Decay_cur'])
@@ -184,8 +184,12 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                 #Claculate biomassPerPixel and volumePerPixel of harvested wood
                 numberOfHarvests = \
                     math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
-                biomassPerPixel = fieldArgs['Cut_cur'] * numberOfHarvests * \
-                    pixelArea / float(fieldArgs['C_den_cur'])
+                #The measure of biomass is in terms of Mg/ha
+                biomassInFeaturePerArea = fieldArgs['Cut_cur'] * numberOfHarvests / \
+                    float(fieldArgs['C_den_cur'])
+
+
+                biomassPerPixel = biomassInFeaturePerArea * pixelArea
                 volumePerPixel = biomassPerPixel / fieldArgs['BCEF_cur']
 
                 #Copy biomassPerPixel and carbon pools to the temporary feature for
@@ -234,7 +238,7 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
 
                 #Calculate the carbon pool due to decaying HWP over the timeSpan
                 featureCarbonStoragePerPixel = pixelArea * \
-                    carbonPoolinHWPFromParcel(fieldArgs['C_den_fut'],
+                    carbonPoolinHWPFromParcel(fieldArgs['Cut_fut'],
                                               timeSpan, startYears,
                                               fieldArgs['Freq_fut'],
                                               fieldArgs['Decay_fut'])
@@ -242,8 +246,12 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                 #Claculate biomassPerPixel and volumePerPixel of harvested wood
                 numberOfHarvests = \
                     math.ceil(timeSpan / float(fieldArgs['Freq_fut']))
-                biomassPerPixel = fieldArgs['Cut_fut'] * numberOfHarvests * \
-                    pixelArea / float(fieldArgs['C_den_fut'])
+
+                biomassInFeaturePerArea = fieldArgs['Cut_fut'] * numberOfHarvests / \
+                    float(fieldArgs['C_den_fut'])
+
+                biomassPerPixel = biomassInFeaturePerArea * pixelArea
+
                 volumePerPixel = biomassPerPixel / fieldArgs['BCEF_fut']
 
                 #Copy biomassPerPixel and carbon pools to the temporary feature for
@@ -322,7 +330,7 @@ def calculateHWPStorageCur(hwp_shape, c_hwp, bio_hwp, vol_hwp, pixelArea,
 
             #Calculate the carbon pool due to decaying HWP over the timeSpan
             featureCarbonStoragePerPixel = pixelArea * \
-                carbonPoolinHWPFromParcel(fieldArgs['C_den_cur'],
+                carbonPoolinHWPFromParcel(fieldArgs['Cut_cur'],
                                           timeSpan, startYears,
                                           fieldArgs['Freq_cur'],
                                           fieldArgs['Decay_cur'])
@@ -331,8 +339,12 @@ def calculateHWPStorageCur(hwp_shape, c_hwp, bio_hwp, vol_hwp, pixelArea,
             #harvested wood
             numberOfHarvests = \
                 math.ceil(timeSpan / float(fieldArgs['Freq_cur']))
-            biomassPerPixel = fieldArgs['Cut_cur'] * numberOfHarvests * \
-                pixelArea / float(fieldArgs['C_den_cur'])
+
+            biomassInFeature = fieldArgs['Cut_cur'] * numberOfHarvests / \
+                float(fieldArgs['C_den_cur'])
+
+            biomassPerPixel = biomassInFeature * pixelArea
+
             volumePerPixel = biomassPerPixel / fieldArgs['BCEF_cur']
 
             #Copy biomassPerPixel and carbon pools to the temporary feature for
@@ -365,8 +377,8 @@ def carbonPoolinHWPFromParcel(carbonPerCut, startYears, timeSpan, harvestFreq,
         decay - the rate at which carbon is decaying from HWP harvested from
             parcels
         
-        returns a float indicating the amount of carbon stored in HWP harvested
-            from that parcel"""
+        returns a float indicating the amount of carbon stored from HWP
+            harvested in units of Mg/ha"""
 
     carbonSum = 0.0
     omega = math.log(2) / decay
@@ -821,32 +833,17 @@ def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
         LULC raster.
     
-        args - is a dictionary with at least the following entries:
-        args['lulc_cur'] - is a GDAL raster dataset
-        args['lulc_fut'] - is a GDAL raster dataset
-        args['carbon_pools'] - is a DBF dataset mapping carbon sequestration numbers to lulc classifications.
-        args['storage_cur'] - a GDAL raster dataset for outputing the sequestered carbon
-                          based on the current lulc
-        args['storage_fut'] - a GDAL raster dataset for outputing the sequestered carbon
-                          based on the future lulc
-        args['seq_delta'] - a GDAL raster dataset for outputing the difference between
-                            args['storage_cur'] and args['storage_fut']
-        args['seq_value'] - a GDAL raster dataset for outputing the monetary gain or loss in
-                            value of sequestered carbon.
-        args['biomass_cur'] - a GDAL raster dataset for outputing the biomass 
-            of harvested HWP parcels on the current landscape
-        args['biomass_fut'] - a GDAL raster dataset for outputing the biomass 
-            of harvested HWP parcels on the future landscape
-        args['volume_cur'] - a GDAL raster dataset for outputing the volume of 
-            HWP on the current landscape
-        args['volume_fut'] - a GDAL raster dataset for outputing the volume of 
-            HWP on the future landscape
-        args['calc_value'] - is a Boolean.  True if we wish to perform valuation.
-        args['lulc_cur_year'] - is an int.  Represents the year of lulc_cur
-        args['lulc_fut_year'] - is an int.  Represents the year of lulc_fut
-        args['c_value'] - a float.  Represents the price of carbon in US Dollars.
-        args['discount'] - a float.  Represents the annual discount in the price of carbon
-        args['rate_change'] - a float.  Represents the rate of change in the price of carbon
+        args - is a dictionary with the following entries:
+        args['sequest'] - a single band GDAL raster dataset describing the
+            amount of carbon sequestered
+        args['V'] - value of a sequestered ton of carbon in dollars per metric
+            ton
+        args['r'] - the market discount rate in terms of a percentage
+        args['c'] - the annual rate of change in the price of carbon
+        args['yr_cur'] - the year at which the sequestration measurement 
+            started
+        args['yr_fut'] - the year at which the sequestration measurement ended
+        args['value_seq'] - a single band output GDAL   
         
         returns nothing"""
 
