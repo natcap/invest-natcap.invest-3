@@ -32,6 +32,8 @@ class DynamicElement(QtGui.QWidget):
         
     def value(self):
         return None
+    
+
         
 class DynamicGroup(DynamicElement):
     def __init__(self, attributes, layout):
@@ -70,7 +72,6 @@ class DynamicGroup(DynamicElement):
                     print widget
                     print widget.textField.text()
 
-            
             self.elements.append(widget)
             i += 1
 
@@ -187,12 +188,25 @@ class DynamicUI(DynamicGroup):
         user_args_file.writelines(json.dumps(user_args))
         user_args_file.close()
         
-
+    def elementIsRequired(self, element):
+        if element.required:
+            return True
+        else:
+            if 'requiredIf' in element.attributes:
+                for item in element.attributes['requiredIf']:
+                    if self.allElements[item].isEnabled():
+                        return True
+            return False
+        
     def assembleOutputDict(self):
         for id, element in self.allElements.iteritems():
             if isinstance(element, DynamicPrimitive):
                 if 'args_id' in element.attributes:
-                    self.outputDict[element.attributes['args_id']] = element.value()
+                    if 'dataType' in element.attributes:
+                        value = int(element.value())
+                    else:
+                        value = str(element.value())
+                    self.outputDict[element.attributes['args_id']] = value
 
     def updateRequirementNotification(self, numUnsatisfied=None):
         if numUnsatisfied == None:
@@ -208,13 +222,14 @@ class DynamicUI(DynamicGroup):
         numVerified = 0 #the number of elements with satisfied requirement
         self.messageArea.setText("")
         for id, element in self.allElements.iteritems():
-            if element.required == True:
-                numRequired += 1
-                if element.requirementsMet() or self.isRequired(element):
-                    numVerified += 1
-                else:
-                    element.setBGcolor()
-                    
+            if isinstance(element, DynamicPrimitive):
+                if self.elementIsRequired(element):
+                    numRequired += 1
+                    if element.requirementsMet():
+                        numVerified += 1
+                    else:
+                        element.setBGcolor()
+                        
         return numRequired - numVerified
 
     def okPressed(self):
@@ -231,7 +246,7 @@ class DynamicUI(DynamicGroup):
         """Quit the UI, returning to the main() function"""
         self.saveLastRun()
         self.assembleOutputDict()
-        QtCore.QCoreApplication.instance().quit()
+        QtCore.QCoreApplication.instance().exit()
     
     def closeEvent(self, event):
         sys.exit(0)
@@ -243,13 +258,7 @@ class DynamicUI(DynamicGroup):
         except IOError:
             self.lastRun = {}
             
-    def isRequired(self, elementObject):
-        if 'requiredIf' in elementObject.attributes:
-            for item in elementObject.attributes['requiredIf']:
-                if self.allElements[item].requirementsMet():
-                    return True
-        else:
-            return False
+
         
     def __init__(self, uri):
         super(DynamicUI, self).__init__(json.loads(uri), QtGui.QVBoxLayout())
@@ -484,9 +493,9 @@ class FileButton(QtGui.QPushButton):
         filename = ''
         
         if self.filetype =='file':
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '/')
+            filename = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '.')
         elif self.filetype == 'folder':
-            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select folder', '/')
+            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select folder', '.')
 
         #Set the value of the URIfield.
         if filename == '':
@@ -515,6 +524,8 @@ def validate(jsonObject):
                                 "optional" : True},
                     "validText": {"type": "string",
                                   "optional": True},
+                    "dataType": {"type" : "string",
+                                 "optional": True},
                     "requiredIf":{"type": "array",
                                   "optional": True,
                                   "items": {"type": "string"}
@@ -594,7 +605,7 @@ def main(json_args):
     validate(json_args)
     ui = DynamicUI(json_args)
     result = app.exec_()
-    
+
     try:
         model = imp.load_source('module', ui.attributes['targetScript'])
         model.execute(ui.outputDict)

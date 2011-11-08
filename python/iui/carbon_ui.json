@@ -48,6 +48,7 @@
 	                        "id" : "cur_lulc_year",
 	                        "type": "text",
 	                        "validText": "[0-9]+",
+	                        "dataType": "int",
 	                        "args_id": "lulc_cur_year",
 	                        "label": "Year of land cover",
 	                        "required": false,
@@ -62,7 +63,7 @@
             "id" : "fut_lulc_box",
             "type": "container",
             "collapsible": false,
-            "label": "View future land use/land cover parameters",
+            "label": "Future land use/land cover",
             "elements": [
             	{ 
             	    "id" : "fut_lulc_list",
@@ -81,6 +82,7 @@
 	                        "id" : "fut_lulc_year",
 	                        "type": "text",
 	                        "validText": "[0-9]+",
+	                        "dataType": "int",
 	                        "label": "Year of land cover",
 	                        "args_id": "lulc_fut_year",
 	                        "required": false,
