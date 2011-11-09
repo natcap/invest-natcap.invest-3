@@ -222,34 +222,16 @@ class ModelDialog(QtGui.QDialog):
         self.thread = ModelThread(uri, inputDict, self)
         self.thread.finished.connect(self.threadFinished)
     
-#        process = QtCore.QProcess(self)
-#        process.finished.connect(self.threadFinished)
-#        process.start(uri, json.dumps(inputDict))
-
-
-#        sys.stdout = StringIO()
-#        capturedText = cStringIO.StringIO()  
-#        sys.stderr = capturedText
-#        sys.stdout = capturedText 
-
         self.stdoutNotifier = StdoutNotifier(9874, QtCore.QSocketNotifier.Read, self)
-#        self.stderrNotifier = QtCore.QSocketNotifier(1123, QtCore.QSocketNotifier.Read)
 
         sys.stdout = self.stdoutNotifier
         sys.stderr = sys.stdout
         self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.write)
-#        self.connect(self.stderrNotifier, QtCore.SIGNAL("activated(int)"), self.write)       
-        
 
-        self.write("just about to start!\ntexttext")
-        print 'starting?'
         self.thread.start()
         
     
     def write(self, text):
-        #does this still work if I have newline characters in text variable?
-        
-#        self.statusArea.layout().addWidget(QtGui.QLabel(text))
         self.statusArea.insertPlainText(text)
         
     def threadFinished(self):
@@ -285,41 +267,17 @@ class ModelThread(QtCore.QThread):
         super(ModelThread, self).__init__()
         self.uri = uri
         self.inputDict = inputDict
-        self.manager = manager
-##        self.stdoutNotifier = QtCore.QSocketNotifier(9874, QtCore.QSocketNotifier.Read)
-#        self.stderrNotifier = QtCore.QSocketNotifier(1123, QtCore.QSocketNotifier.Read)
-#
-##        sys.stdout = self.stdoutNotifier
-#        sys.stderr = self.stderrNotifier
-##        self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.writeOut)
-#        self.connect(self.stderrNotifier, QtCore.SIGNAL("activated(int)"), self.writeErr)
-
 
     def __del__(self):
         self.terminate()
         #put code here to ensure the thread finishes processing when destroyed
         return
     
-    def writeOut(self):
-        self.write(self.stdoutNotifier)
-    
-    def writeErr(self):
-        self.write(self.stderrNotifier)
-    
-    def write(self, text):
-        self.manager.write(text)
-    
     def run(self):
         #this is called by the thread once the environment is set up.
         try:
             model = imp.load_source('module', self.uri)
             model.execute(self.inputDict)
-#            self.write(subprocess.Popen([self.uri,
-#                                json.dumps(inputDict)],
-#                                stdout=self.write,
-#                                stderr=subprocess.STDOUT).communicate()[0])
-#            process = QtCore.QProcess(self.manager)
-#            process.start(self.uri, json.dumps(self.inputDict))
         except IOError:
             return
         
