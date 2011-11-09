@@ -1,4 +1,5 @@
 import sys, os
+import cStringIO
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../invest_core')
@@ -185,11 +186,13 @@ class ModelDialog(QtGui.QDialog):
         self.setMinimumWidth(200)
         
         self.statusAreaLabel = QtGui.QLabel('Messages:')
-        self.statusArea = QtGui.QScrollArea()
-        self.status = QtGui.QLabel()
-        self.status.setMinimumWidth(200)
+        self.statusAreaScroll = QtGui.QScrollArea()
+        self.statusArea = QtGui.QPlainTextEdit()
+        self.statusArea.setReadOnly(True)
+#        self.statusArea.setLayout(QtGui.QVBoxLayout())
+#        self.statusArea.setMinimumWidth(200)
         self.statusArea.setStyleSheet("QWidget { background-color: White }")
-        self.statusArea.setWidget(self.status)
+        self.statusAreaScroll.setWidget(self.statusArea)
         self.layout().addWidget(self.statusAreaLabel)
         self.layout().addWidget(self.statusArea)
         
@@ -198,7 +201,7 @@ class ModelDialog(QtGui.QDialog):
         self.progressBar.setMaximum(0)
         self.layout().addWidget(self.progressBar)
         
-        self.runButton = QtGui.QPushButton('OK')
+        self.runButton = QtGui.QPushButton('Quit')
         self.cancelButton = QtGui.QPushButton('Cancel') 
         
         #disable the 'ok' button by default
@@ -216,14 +219,42 @@ class ModelDialog(QtGui.QDialog):
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
         
-        self.thread = ModelThread(uri, inputDict)
+        self.thread = ModelThread(uri, inputDict, self)
+        self.thread.finished.connect(self.threadFinished)
+    
+#        process = QtCore.QProcess(self)
+#        process.finished.connect(self.threadFinished)
+#        process.start(uri, json.dumps(inputDict))
+
+
+#        sys.stdout = StringIO()
+#        capturedText = cStringIO.StringIO()  
+#        sys.stderr = capturedText
+#        sys.stdout = capturedText 
+
+        self.stdoutNotifier = StdoutNotifier(9874, QtCore.QSocketNotifier.Read, self)
+#        self.stderrNotifier = QtCore.QSocketNotifier(1123, QtCore.QSocketNotifier.Read)
+
+        sys.stdout = self.stdoutNotifier
+#        sys.stderr = self.stderrNotifier
+        self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.write)
+#        self.connect(self.stderrNotifier, QtCore.SIGNAL("activated(int)"), self.write)       
         
+
+        self.write("just about to start!\ntexttext")
+        print 'starting?'
         self.thread.start()
         
-        self.thread.finished.connect(self.threadFinished)
+    
+    def write(self, text):
+        #does this still work if I have newline characters in text variable?
+        
+#        self.statusArea.layout().addWidget(QtGui.QLabel(text))
+        self.statusArea.insertPlainText(text)
         
     def threadFinished(self):
-        self.status.setText(str(self.status.text()) + "finished!")
+        print 'almost starting'
+        self.write('Completed.')
         self.progressBar.setMaximum(1)
         self.runButton.setDisabled(False)
 
@@ -239,24 +270,58 @@ class ModelDialog(QtGui.QDialog):
         self.cancel = True
         self.done(0)
 
+class StdoutNotifier(QtCore.QSocketNotifier):
+    def __init__(self, socket, type, parent):
+        super(StdoutNotifier, self).__init__(socket, type)
+        self.setParent(parent)
+        
+    def write(self, text):
+        self.parent().write(text)
+        
+
 class ModelThread(QtCore.QThread):
-    def __init__(self, uri, inputDict):
+#class ModelThread(QtCore.QProcess):
+    def __init__(self, uri, inputDict, manager):
         super(ModelThread, self).__init__()
         self.uri = uri
         self.inputDict = inputDict
-    
+        self.manager = manager
+##        self.stdoutNotifier = QtCore.QSocketNotifier(9874, QtCore.QSocketNotifier.Read)
+#        self.stderrNotifier = QtCore.QSocketNotifier(1123, QtCore.QSocketNotifier.Read)
+#
+##        sys.stdout = self.stdoutNotifier
+#        sys.stderr = self.stderrNotifier
+##        self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.writeOut)
+#        self.connect(self.stderrNotifier, QtCore.SIGNAL("activated(int)"), self.writeErr)
+
+
     def __del__(self):
         self.terminate()
         #put code here to ensure the thread finishes processing when destroyed
         return
+    
+    def writeOut(self):
+        self.write(self.stdoutNotifier)
+    
+    def writeErr(self):
+        self.write(self.stderrNotifier)
+    
+    def write(self, text):
+        self.manager.write(text)
     
     def run(self):
         #this is called by the thread once the environment is set up.
         try:
             model = imp.load_source('module', self.uri)
             model.execute(self.inputDict)
+#            self.write(subprocess.Popen([self.uri,
+#                                json.dumps(inputDict)],
+#                                stdout=self.write,
+#                                stderr=subprocess.STDOUT).communicate()[0])
+#            process = QtCore.QProcess(self.manager)
+#            process.start(self.uri, json.dumps(self.inputDict))
         except IOError:
-            print "Error: Script provided in configuration file is invalid."
+            return
         
 
 class DynamicUI(DynamicGroup):
@@ -341,6 +406,7 @@ class DynamicUI(DynamicGroup):
         self.saveLastRun()
         self.assembleOutputDict()
         self.modelDialog = ModelDialog(self.attributes['targetScript'], self.outputDict)
+        
         self.modelDialog.exec_()
         print "returned to the program"
         
