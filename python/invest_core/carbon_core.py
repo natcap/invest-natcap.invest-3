@@ -1,3 +1,7 @@
+"""Module that contains the core computational components for the carbon model
+    including the biophysical and valuation functions"""
+
+
 import numpy as np
 from osgeo import gdal, ogr
 from dbfpy import dbf

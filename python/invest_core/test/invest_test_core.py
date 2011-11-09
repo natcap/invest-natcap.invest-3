@@ -1,3 +1,6 @@
+"""Helper functions for doing unit tests like functions to test the equality
+    of entire rasters, etc."""
+
 import unittest
 from osgeo import gdal
 import numpy as np
