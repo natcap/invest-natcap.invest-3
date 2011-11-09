@@ -236,7 +236,7 @@ class ModelDialog(QtGui.QDialog):
 #        self.stderrNotifier = QtCore.QSocketNotifier(1123, QtCore.QSocketNotifier.Read)
 
         sys.stdout = self.stdoutNotifier
-#        sys.stderr = self.stderrNotifier
+        sys.stderr = sys.stdout
         self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.write)
 #        self.connect(self.stderrNotifier, QtCore.SIGNAL("activated(int)"), self.write)       
         
