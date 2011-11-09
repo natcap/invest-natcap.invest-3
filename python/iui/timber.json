@@ -1,0 +1,50 @@
+{
+    "id": "window",
+    "label": "Managed Timber Production and Valuation",
+    "targetScript": "../invest_core/timber.py",
+    "modelName": "timber",
+    "height": 400,
+    "width": 500,
+    "elements": [
+        {
+            "id": "timber_list",
+            "type": "list",
+            "elements": [
+                {
+                    "id":"output_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "required": true,
+                    "args_id": "output_dir",
+                    "defaultText": "Timber"
+                },
+                {
+                    "id": "shapefile",
+                    "args_id": "timber_shape_uri",
+                    "type": "file",
+                    "label": "Managed area map",
+                    "required": true,
+                    "defaultText": ""
+                },
+                {
+                    "id": "attr_table",
+                    "args_id": "attr_table_uri",
+                    "type": "file",
+                    "label": "Plantation production table",
+                    "required": true,
+                    "defaultText": ""
+                },    
+                {
+                    "id": "discount",
+                    "args_id": "market_disc_rate",
+                    "type": "text",
+                    "label": "Market discount rate (%)",
+                    "required": true,
+                    "dataType": "float",
+                    "validText": "100|([0-9][0-9])",
+                    "defaultText": "7"
+                }
+            ]
+        }    
+    ] 
+}
