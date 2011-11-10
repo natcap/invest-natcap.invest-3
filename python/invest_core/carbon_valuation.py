@@ -6,6 +6,12 @@ from osgeo import gdal
 import invest_core
 import carbon_core
 
+import logging
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+logger = logging.getLogger('carbon_valuation')
+
 def execute(args):
     """This function calculates carbon sequestration valuation.
         
@@ -32,6 +38,7 @@ def execute(args):
     #can be passed to the valuation core model
     valuationArgs = {}
 
+    logger.debug('loading %s', args['sequest_uri'])
     valuationArgs['sequest'] = \
         gdal.Open(args['sequest_uri'], gdal.GA_ReadOnly)
 
@@ -42,6 +49,7 @@ def execute(args):
     #These lines sets up the output directory structure for the workspace
     outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output' + os.sep
     if not os.path.exists(outputDirectoryPrefix):
+        logger.debug('creating directory %s', outputDirectoryPrefix)
         os.makedirs(outputDirectoryPrefix)
 
     #This defines the sequestration output raster.  Notice the 1e38 value as
@@ -49,12 +57,15 @@ def execute(args):
     #of reasonable valuation values.
     outputURI = outputDirectoryPrefix + "value_seq.tif"
 
+    logger.debug('creating value_seq output raster')
     valuationArgs['value_seq'] = \
         invest_core.newRasterFromBase(valuationArgs['sequest'],
               outputURI, 'GTiff', -1e10, gdal.GDT_Float32)
 
     #run the valuation part of the carbon model.
+    logger.info('starting sequestration valuation')
     carbon_core.valuation(valuationArgs)
+    logger.info('completed sequestration valuation')
 
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
