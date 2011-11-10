@@ -232,24 +232,82 @@ class DynamicGroup(DynamicElement):
             element.disable()
     
 class DynamicPrimitive(DynamicElement):
+    """DynamicPrimitive represents the class of all elements that can be listed
+        individually in the JSON file that themselves cannot group other 
+        elements.  As such, DynamicPrimitive is the superclass of all input 
+        elements.
+        
+        DynamicText and CheckBox inherit DynamicPrimitive, and FileEntry,
+        YearEntry inherit DynamicText (thus also inheriting DynamicPrimitive).
+        
+        There are two defining attributes of DynamicPrimitive:
+         - self.elements (a python Array)
+         - self.attributes['args_id'] (a string)
+         
+        self.elements is an array of the widgets that make up this element.  By
+        default, this is set to [self], implying that a subclass has at least 
+        one widget.  In cases where a subclass of DynamicPrimitive has multiple
+        widgets, the elements array is used to determine the order in which the 
+        elements are added to the GUI in DynamicGroup.createElements().
+        
+        self.attributes['args_id'] is an optional string provided by the user 
+        that enables the construction of an arguments dictionary in python that
+        will be passed to the specified python program.  The args_id must 
+        conform with the API specified by the desired model. 
+        """
+
     def __init__(self, attributes):
+        """Constructor for the DynamicPrimitive class.
+            Because DynamicPrimitive inherits DynamicElement, most of the obect
+            construction has been abstracted away to the DynamicElement 
+            constructor or to the superclass of DynamicElement, QWidget.
+            
+            attributes - a python dictionary with attributes for this element.
+                Attribute keys are defined in the JSON schema declaration in 
+                this python file.
+        
+            returns an instance of DynamicPrimitive"""
+            
         super(DynamicPrimitive, self).__init__(attributes)
-        self.attributes = attributes
+        
+        #create the elements array such that it only includes the present object
         self.elements = [self]
 
+        #if the user has provided an 'args_id' attribute, set self.args_id to it
         if "args_id" in attributes:
             self.args_id = attributes['args_id']
         else:
             self.args_id = None
             
     def getElementsDictionary(self):
+        """Assemble a python dictionary mapping this object's string ID to its
+            pointer.
+            
+            self.getElementsDictionary is called to build a flat dictionary of
+            all elements in the entire UI.  Considering that subclasses of 
+            DynamicPrimitive are the most atomic elements the user can control
+            in the JSON file, it follows that subclasses of DynamicPrimitive 
+            should return the most primitive such dictionary.
+            
+            returns a python dict mapping string ID -> this object's pointer."""
+            
         return {self.id : self}
     
     def enable(self):
+        """Loop through all widgets in self.elements and enable them via the
+            Qt API.
+            
+            returns nothing."""
+            
         for element in self.elements:
             element.setDisabled(False)
 
     def disable(self):
+        """Loop through all widgets in self.elements and disable them via the
+            Qt API.
+            
+            returns nothing."""
+            
         for element in self.elements:
             element.setDisabled(True)
             
