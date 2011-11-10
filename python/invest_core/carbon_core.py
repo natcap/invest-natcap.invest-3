@@ -684,6 +684,7 @@ def valuation(args):
         
         returns nothing"""
 
+    logger.debug('constructing valuation formula')
     n = args['yr_fut'] - args['yr_cur'] - 1
     ratio = 1.0 / ((1 + args['r'] / 100.0) * (1 + args['c'] / 100.0))
     valuationConstant = args['V'] / (args['yr_fut'] - args['yr_cur']) * \
@@ -698,5 +699,9 @@ def valuation(args):
         else:
             return noDataOut
 
+    logger.debug('finished constructing valuation formula')
+
+    logger.info('starting valuation of each pixel')
     invest_core.vectorize1ArgOp(args['sequest'].GetRasterBand(1), valueOp,
                                 args['value_seq'].GetRasterBand(1))
+    logger.info('finished valuation of each pixel')
