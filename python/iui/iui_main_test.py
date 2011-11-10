@@ -33,6 +33,15 @@ class TestDynamicElement(unittest.TestCase):
         
         self.assertEqual(element.enabledBy, attributes['enabledBy'])
     
+    def testGetRoot(self):
+        attributes = {}
+        DynamicUI = iui.DynamicUI('{}')
+        element = iui.DynamicElement(attributes)
+        
+        DynamicUI.layout().addWidget(element)
+        root = element.getRoot()
+        self.assertEqual(root, DynamicUI)    
+    
 if __name__ == '__main__':
     DynElementTests = unittest.TestLoader().loadTestsFromTestCase(TestDynamicElement)
     unittest.TextTestRunner(verbosity=2).run(DynElementTests)
