@@ -10,7 +10,9 @@ import jsonschema
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
-        UI Interpreter's related classes.
+        UI Interpreter's related classes.  It is not invoked directly by other
+        IUI classes, but is instead used as a base class for almost all classes
+        in the UI interpreter.
         
         DynamicElement serves as a base class for DynamicGroup and 
         DynamicPrimitive.  The functions and object data it declares are shared
@@ -77,17 +79,82 @@ class DynamicElement(QtGui.QWidget):
         else:
             return parent.getRoot()
         
+    def isEnabled(self):
+        """Retrieve the status of the self.enabled boolean attribute.
+            self.enabled is an attribute of the QtGui.QWidget object.
+            
+            returns a boolean"""
+        return self.enabled
+        
         
 class DynamicGroup(DynamicElement):
+    """Creates an object intended for grouping other elements together.
+    
+        DynamicGroup is a subclass of DynamicElement and thus inherits all 
+        attributes and functions of the DynamicElement class.
+        
+        DynamicUI, Container, CollapsibleContainer and List are all
+        subclasses of DynamicGroup.
+    
+        The DynamicGroup object allows other elements to be grouped together
+        using any arbitrary layout mechanism compatible with Qt.  If a custom
+        layout manager is used, it may be necessary to revisit the
+        DynamicGroup.createElements() function to define exactly how the
+        elements created are to be added to the new layout.
+        
+        As all possible grouping objects in this Interpreter subclass 
+        DynamicGroup, if a new widget is to be added, it must likewise be added
+        to the if-elif block in createElements.  The element will not be created
+        if there is no corresponding entry in createElements()
+        """
+        
     def __init__(self, attributes, layout):
+        """Constructor for the DynamicGroup class.
+            Most object construction has been abstracted to the DynamicElement
+            class.  The defining feature of a DynamicGroup from a DynamicElement
+            is that a DynamicGroup has a layout and can contain elements if
+            they have been defined by the user.
+        
+            attributes - a python dictionary with the attributes for this group
+                parsed from the user-defined JSON object.
+            layout - a layout mechanism compatible with Qt4 or a subclass of 
+                such a layout manager.
+        
+            returns an instance of DynamicGroup"""
+            
+        #create the object by initializing its superclass, DynamicElement.
         super(DynamicGroup, self).__init__(attributes)
+        
+        #set the layout for this group(a subclass of DynamicElement, which
+        #itself is a subclass of QtGui.QWidget) so that we can add widgets 
+        #as necessary.
         self.setLayout(layout)
         
+        #if the user has defined elements for this group, iterate through the 
+        #elements ductionary and create them.
         if 'elements' in attributes:
             self.createElements(attributes['elements'])
         
     def createElements(self, elementsArray):
+        """Create the elements defined in elementsArray as widgets within 
+            this current grouping widget.  All elements are created as widgets
+            within this grouping widget's layout.
+            
+            elementsArray - a python array of elements, where each element is a
+                python dictionary with string keys to each of its attributes as
+                defined in the input JSON file.
+                
+            no return value"""
+        
+        #We initialize a counter here to keep track of which row we occupy
+        # in this iteration of the loop.  Used excluseively when the layout
+        #manager is an instance of QtGui.QGridLayout(), as both the row and
+        #column indices are required in QGridLayout's addWidget() method.    
         i = 0
+        
+        #loop through all entries in the input elementsArray and create the 
+        #appropriate elements.  As new element classes are created, they must
+        #likewise be entered here to be created.
         for values in elementsArray:
             if values['type'] == 'checkbox':
                 widget = CheckBox(values)
@@ -105,7 +172,9 @@ class DynamicGroup(DynamicElement):
                 widget = FileEntry(values)
             elif values['type'] == 'text':
                 widget = YearEntry(values)
-
+            
+            #If an unusual layoutManager has been declared, it may be necessary 
+            #to add a new clause to this conditional block.
             if isinstance(self.layout(), QtGui.QGridLayout):
                 j = 0
                 for subElement in widget.elements:
@@ -113,17 +182,29 @@ class DynamicGroup(DynamicElement):
                     j += 1
             else:
                 self.layout().addWidget(widget)
-                if isinstance(widget, DynamicText):
-                    print widget
-                    print widget.textField.text()
 
+            #the self.elements array is used for maintaining a list of pointers
+            #to elements associated with this group.
             self.elements.append(widget)
             i += 1
 
     def getElementsDictionary(self):
-        """replacement for getTrackedElements"""
+        """Assemble a flat dictionary of all elements contained in this group.
+            
+            This function loops through the self.elements array and attempts to 
+            retrieve a dictionary for each sub-element.  If a sub-element
+            dictionary can be retrieved, it is concatenated with the existing 
+            dictionary.
+            
+            Such a flat dictionary structure is convenient for iterating over 
+            all elements in the UI.
+            
+            returns a python dictionary mapping widget id (a string) to an
+                element pointer."""
+                
         outputDict = {}
         for element in self.elements:
+            #Create an entry in the output dictionary for the current element
             outputDict[element.attributes['id']] = element
             try:
                 outputDict.update(element.getElementsDictionary())
@@ -133,16 +214,23 @@ class DynamicGroup(DynamicElement):
         return outputDict
     
     def enable(self):
+        """Enable all elements listed in the elements array (all elements 
+            created by createElements() are listed in the elements array).
+        
+            returns nothing"""
+            
         for element in self.elements:
             element.enable()
             
     def disable(self):
+        """Disable Enable all elements listed in the elements array (all elements 
+            created by createElements() are listed in the elements array).
+        
+            returns nothing"""
+            
         for element in self.elements:
             element.disable()
     
-    def isEnabled(self):
-        return self.enabled
-
 class DynamicPrimitive(DynamicElement):
     def __init__(self, attributes):
         super(DynamicPrimitive, self).__init__(attributes)
