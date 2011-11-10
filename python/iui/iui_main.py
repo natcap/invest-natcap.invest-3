@@ -1,8 +1,6 @@
-import sys, os
-import cStringIO
-import threading
+import sys, os, imp
 from PyQt4 import QtGui, QtCore
-import imp
+
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../invest_core')
@@ -11,31 +9,74 @@ import simplejson as json
 import jsonschema
 
 class DynamicElement(QtGui.QWidget):
+    """Create an object containing the skeleton of most functionality in the
+        UI Interpreter's related classes.
+        
+        DynamicElement serves as a base class for DynamicGroup and 
+        DynamicPrimitive.  The functions and object data it declares are shared
+        by all subclasses."""
+    
     def __init__(self, attributes):
+        """This is the constructor for the DynamicElement object.
+        
+            attributes - a Python dictionary with the attributes of the element
+                taken from the input JSON file.
+                
+            returns a DynamicElement object
+            """
+        
+        #DynamicElement inherits QtGui.QWidget, so we'll call the constructor
+        #for QWidget here.
         super(DynamicElement, self).__init__()
+
+        #save a copy of the user-defined attributes for this element.  Based
+        # on the specification of the JSON config file, the attributes array 
+        #may contain the attributes for other, to-be-created, elements.
         self.attributes = attributes
+        
+        #Self.root is a pointer to the root window of the user interface, which
+        # is an instance of the class DynamicUI.
+        #self.root is set after the GUI has been constructed to take advantage 
+        #of Qt's ability to keep track of the parent of an element. 
         self.root = None
+        
+        #We initialize self.required as False here, since some widgets may not
+        #actually be input elements.  This ensures that all widgets will be 
+        #marked optional unless specified by the user.
         self.required = False
+        
+        #If the user has specified an attribute 'enabledBy', we save it in the
+        #object.  Otherwise, we set it to None.  We do this to slightly simplify
+        #the enabling/disabling process in the DynamicUI class.
         self.setEnabledBy()
+        
+        #initialize the elements array in case the user has defined sub-elements
         self.elements = []
 
     def setEnabledBy(self):
+        """Sets the local variable self.enabledBy if one is provided in the
+            self.attributes dictionary.
+            
+            returns nothing"""
+            
         if 'enabledBy' in self.attributes:
             self.enabledBy = self.attributes['enabledBy']
         else:
             self.enabledBy = None
             
     def getRoot(self):
+        """Search up the Qt widget tree until we find the root element, which
+            is by definition an instance of the class DynamicUI.  A pointer to
+            the root is usually saved to the local object as self.root.
+            
+            returns a pointer to the instance of DynamicUI"""
+            
         parent = self.parentWidget()
         if isinstance(parent, DynamicUI):
             return parent
         else:
             return parent.getRoot()
         
-    def value(self):
-        return None
-    
-
         
 class DynamicGroup(DynamicElement):
     def __init__(self, attributes, layout):
@@ -410,12 +451,12 @@ class DynamicUI(DynamicGroup):
         self.addButtons()
         
         if 'width' in self.attributes:
-            width = attributes['width']
+            width = self.attributes['width']
         else:
             width = 400
             
         if 'height' in self.attributes:
-            height = attributes['height']
+            height = self.attributes['height']
         else:
             height = 400
         
