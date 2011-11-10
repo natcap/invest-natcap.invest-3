@@ -8,8 +8,10 @@ from osgeo import gdal, ogr
 from dbfpy import dbf
 
 import logging
-logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG,
-                    datefmt='%m/%d/%Y %I:%M:%S %p')
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s %(message)s', level=logging.DEBUG,
+                    datefmt='%m/%d/%Y %H:%M:%S ')
+
+logger = logging.getLogger('carbon_biophysical')
 
 def execute(args):
     """This function invokes the carbon model given URI inputs of files.
@@ -49,13 +51,13 @@ def execute(args):
     biophysicalArgs = {}
 
     #lulc_cur is always required
-    logging.debug('loading %s', args['lulc_cur_uri'])
+    logger.debug('loading %s', args['lulc_cur_uri'])
     biophysicalArgs['lulc_cur'] = gdal.Open(args['lulc_cur_uri'],
                                             gdal.GA_ReadOnly)
 
     #a future lulc is only required if sequestering or hwp calculating
     if 'lulc_fut_uri' in args:
-        logging.debug('loading %s', args['lulc_fut_uri'])
+        logger.debug('loading %s', args['lulc_fut_uri'])
         biophysicalArgs['lulc_fut'] = gdal.Open(args['lulc_fut_uri'],
                                             gdal.GA_ReadOnly)
 
@@ -66,12 +68,12 @@ def execute(args):
     for x in ['hwp_cur_shape', 'hwp_fut_shape']:
         uriName = x + '_uri'
         if uriName in args:
-            logging.debug('loading %s', args[uriName])
+            logger.debug('loading %s', args[uriName])
             biophysicalArgs[x] = ogr.Open(args[uriName].encode(fsencoding))
 
     #Always need carbon pools, if uncertainty calculation they also need
     #to have range columns in them, but no need to check at this level.
-    logging.debug('loading %s', args['carbon_pools_uri'])
+    logger.debug('loading %s', args['carbon_pools_uri'])
     biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'])
 
     #At this point all inputs are loaded into biophysicalArgs.  The 
@@ -84,7 +86,7 @@ def execute(args):
         'Intermediate' + os.sep
     for d in [outputDirectoryPrefix, intermediateDirectoryPrefix]:
         if not os.path.exists(d):
-            logging.debug('creating directory %s', d)
+            logger.debug('creating directory %s', d)
             os.makedirs(d)
 
     #This defines a dictionary that links output/temporary GDAL/OAL objects
@@ -115,15 +117,15 @@ def execute(args):
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
     for rasterName, rasterPath in outputURIs.iteritems():
-        logging.debug('creating output raster %s', rasterPath)
+        logger.debug('creating output raster %s', rasterPath)
         biophysicalArgs[rasterName] = \
             invest_core.newRasterFromBase(biophysicalArgs['lulc_cur'],
                               rasterPath, 'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the biophysical part of the carbon model.
-    logging.info('starting carbon biophysical model')
+    logger.info('starting carbon biophysical model')
     carbon_core.biophysical(biophysicalArgs)
-    logging.info('finished carbon biophysical model')
+    logger.info('finished carbon biophysical model')
 
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
