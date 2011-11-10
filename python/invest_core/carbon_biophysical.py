@@ -1,12 +1,10 @@
-"""InVEST Carbon Modle file handler module"""
+"""InVEST Carbon biophysical module at the "uri" level"""
 
 import sys, os
 import simplejson as json
 import carbon_core
 import invest_core
 from osgeo import gdal, ogr
-from osgeo.gdalconst import *
-import numpy
 from dbfpy import dbf
 
 def execute(args):

@@ -36,7 +36,7 @@ def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
         else:
             return a - b
 
-    vectorizeOp(rasterBandA, rasterBandB, noDataDiff, outputRasterBand)
+    vectorize2ArgOp(rasterBandA, rasterBandB, noDataDiff, outputRasterBand)
 
 def rasterAdd(rasterBandA, rasterBandB, outputRasterBand):
     """Iterate through the rows in the two rasters and calculate 
@@ -72,9 +72,9 @@ def rasterAdd(rasterBandA, rasterBandB, outputRasterBand):
         else:
             return a + b
 
-    vectorizeOp(rasterBandA, rasterBandB, noDataAdd, outputRasterBand)
+    vectorize2ArgOp(rasterBandA, rasterBandB, noDataAdd, outputRasterBand)
 
-def vectorizeOp(rasterBandA, rasterBandB, op, outBand):
+def vectorize2ArgOp(rasterBandA, rasterBandB, op, outBand):
     """Applies the function 'op' over rasterBandA and rasterBandB
     
         rasterBandA - a GDAL raster
@@ -91,6 +91,22 @@ def vectorizeOp(rasterBandA, rasterBandB, op, outBand):
         dataB = rasterBandB.ReadAsArray(0, i, rasterBandB.XSize, 1)
         out_array = vOp(dataA, dataB)
         outBand.WriteArray(out_array, 0, i)
+
+def vectorize1ArgOp(rasterBand, op, outBand):
+    """Applies the function 'op' over rasterBand and outputs to outBand
+    
+        rasterBand - a GDAL raster
+        op- a function that that takes 2 arguments and returns 1 value
+        outBand - the result of vectorizing op over rasterBand
+            
+        returns nothing"""
+
+    vOp = np.vectorize(op)
+    for i in range(0, rasterBand.YSize):
+        data = rasterBand.ReadAsArray(0, i, rasterBand.XSize, 1)
+        out_array = vOp(data)
+        outBand.WriteArray(out_array, 0, i)
+
 
 def newRasterFromBase(base, outputURI, format, nodata, datatype):
     """Create a new, empty GDAL raster dataset with the spatial references,

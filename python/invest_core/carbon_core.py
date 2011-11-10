@@ -1,8 +1,9 @@
+"""Module that contains the core computational components for the carbon model
+    including the biophysical and valuation functions"""
+
+
 import numpy as np
-from osgeo import gdal
-import osgeo.gdal
-import osgeo.osr as osr
-from osgeo import ogr
+from osgeo import gdal, ogr
 from dbfpy import dbf
 import math
 import invest_core
@@ -406,43 +407,6 @@ def getFields(feature):
 
     return fields
 
-def valuate(args):
-    """Executes the economic valuation model.
-        
-        args is a dictionary with all of the options detailed in execute()
-        
-        No return value"""
-
-    numYears = args['lulc_fut_year'] - args['lulc_cur_year']
-    pools = build_pools(args['carbon_pools'], args['lulc_cur'], args['storage_cur'])
-    rasterValue(args['seq_delta'], args['seq_value'], args['c_value'], args['discount'], args['rate_change'], numYears)
-
-def rasterValue(inputRaster, outputRaster, carbonValue, discount, rateOfChange, numYears):
-    """iterates through the rows in a raster and applies the carbon valuation model
-        to all values.
-        
-        inputRaster - is a GDAL raster dataset
-        outputRaster - is a GDAL raster dataset for outputing the value of carbon sequestered
-        carbonValue - is a float representing the price of carbon per metric ton
-        discount - is a float representing the market discount rate for Carbon
-        rateOfChange - is a float representing the annual rate of change in the price of Carbon.
-        numYears - an int representing the number of years between current and future land cover maps
-        
-        No return value."""
-
-    nodataDict = build_nodata_dict(inputRaster, outputRaster)
-    lulc = inputRaster.GetRasterBand(1)
-
-    multiplier = 0.
-#    for n in range(numYears-1): #Subtract 1 per the user's manual
-    for n in range(numYears):    #This is incorrect, but it allows us to match the results of invest2
-        multiplier += 1. / (((1. + rateOfChange) ** n) * (1. + discount) ** n)
-
-    for i in range(0, lulc.YSize):
-        data = lulc.ReadAsArray(0, i, lulc.XSize, 1)
-        out_array = carbon_value(nodataDict, data, numYears, carbonValue, multiplier)
-        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
-
 def calculateCarbonStorage(pools, lulcRasterBand, storageRasterBand):
     """Iterate through the rows in an LULC raster and map carbon storage values
         to the output raster.
@@ -464,99 +428,6 @@ def calculateCarbonStorage(pools, lulcRasterBand, storageRasterBand):
         out_array = mapFun(data, pools)
         storageRasterBand.WriteArray(out_array, 0, i)
 
-def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
-    """Iterate through the rows in the two sequestration rasters and calculate 
-        the difference in each pixel.  Maps the difference to the output 
-        raster.
-        
-        rasterBandA - a GDAL raster band
-        rasterBandB - a GDAL raster band
-        outputRasterBand - a GDAL raster band with the elementwise value of 
-            rasterBandA-rasterBandB
-            
-        returns nothing"""
-
-    #Build an operation that does pixel difference unless one of the inputs
-    #is a nodata value
-    noDataA = rasterBandA.GetNoDataValue()
-    noDataB = rasterBandB.GetNoDataValue()
-
-    def noDataDiff(a, b):
-        #a is nodata if and only if b is nodata
-        if a == noDataA:
-            return noDataB
-        else:
-            return a - b
-
-    vectorizeOp(rasterBandA, rasterBandB, noDataDiff, outputRasterBand)
-
-def vectorizeOp(rasterBandA, rasterBandB, op, outBand):
-    """Applies the function 'op' over rasterBandA and rasterBandB
-    
-        rasterBandA - a GDAL raster
-        rasterBandB - a GDAL raster of the same dimensions as rasterBandA
-        op- a function that that takes 2 arguments and returns 1 value
-        outBand - the result of vectorizing op over rasterbandA and 
-            rasterBandB
-            
-        returns nothing"""
-
-    vOp = np.vectorize(op)
-    for i in range(0, rasterBandA.YSize):
-        dataA = rasterBandA.ReadAsArray(0, i, rasterBandA.XSize, 1)
-        dataB = rasterBandB.ReadAsArray(0, i, rasterBandB.XSize, 1)
-        out_array = vOp(dataA, dataB)
-        outBand.WriteArray(out_array, 0, i)
-
-def rasterMask(inputRaster, maskRaster, outputRaster):
-    """Iterate through each pixel. Return the pixel of inputRaster if the mask
-        is 1 at that pixel.  Return nodata if not.
-        
-        storage_cur - a GDAL raster dataset
-        maskRaster - a GDAL raster dataset
-        outputRaster - a GDAL raster dataset"""
-
-    nodataDict = build_nodata_dict(inputRaster, outputRaster)
-    input_band = inputRaster.GetRasterBand(1)
-    mask_band = maskRaster.GetRasterBand(1)
-    for i in range(0, input_band.YSize):
-        in_data = input_band.ReadAsArray(0, i, input_band.XSize, 1)
-        mask_data = mask_band.ReadAsArray(0, i, mask_band.XSize, 1)
-        out_array = carbon_mask(nodataDict, in_data, mask_data)
-        outputRaster.GetRasterBand(1).WriteArray(out_array, 0, i)
-
-def build_nodata_dict(inputRaster, outputRaster):
-    """Get the nodata values from the two input rasters, return them in a dict.
-    
-        inputRaster - a GDAL raster dataset
-        outputRaster - a GDAL raster dataset
-        
-        returns a dict: {'input': number, 'output': number}
-        """
-    inNoData = inputRaster.GetRasterBand(1).GetNoDataValue()
-    outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
-
-    nodata = {'input': inNoData, 'output': outNoData}
-    return nodata
-
-def build_pools(dbf, inputRaster, outputRaster):
-    """Extract the nodata values from the input and output rasters and build
-        the carbon pools dict.
-        
-        dbf - an open DBF dataset
-        inputRaster - a GDAL dataset (representing an LULC)
-        outputRaster - a GDAL dataset
-        
-        returns a dictionary calculating total carbon sequestered per lulc type.
-        """
-    area = invest_core.pixelArea(inputRaster)
-    lulc = inputRaster.GetRasterBand(1)
-
-    inNoData = lulc.GetNoDataValue()
-    outNoData = outputRaster.GetRasterBand(1).GetNoDataValue()
-
-    return build_pools_dict(dbf, area, inNoData, outNoData)
-
 def build_pools_dict(dbf, area, inNoData, outNoData):
     """Build a dict for the carbon pool data accessible for each lulc classification.
     
@@ -574,71 +445,6 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
             sum += dbf[i][field]
         poolsDict[dbf[i]['LULC']] = sum * area
     return poolsDict
-
-def carbon_add(nodata, firstArray, secondArray):
-    """Creates a new array by returning the sum of the elements of the two input
-        arrays.  If a nodata value is detected in firstArray, the proper nodata
-        value for the new output array is returned.
-    
-        nodata - a dict: {'input': some number, 'output' : some number}
-        firstArray - a numpy array
-        secondarray - a numpy array
-        
-        return a new numpy array with the difference of the two input arrays
-        """
-
-    def mapSum(a, b):
-        if a == nodata['input']:
-            return nodata['output']
-        else:
-            return a + b
-
-    if firstArray.size > 0:
-        mapFun = np.vectorize(mapSum)
-        return mapFun(firstArray, secondArray)
-
-def carbon_value(nodata, data, numYears, carbonValue, multiplier):
-    """iterate through the array and calculate the economic value of sequestered carbon.
-        Map the values to the output array.
-        
-        nodata - a dict: {'input': some number, 'output' : some number}
-        data - a numpy array
-        numYears - an int: the number of years the simulation covers
-        carbonValue - a float: the dollar value of carbon
-        multiplier - a float"""
-
-    def mapValue(x):
-        if x == nodata['input']:
-            return nodata['output']
-        else:
-            #calculate the pixel-specific value of carbon for this simulation
-            return carbonValue * (x / numYears) * multiplier
-
-    if data.size > 0:
-        mapFun = np.vectorize(mapValue)
-        return mapFun(data)
-    else:
-        return []
-
-def carbon_mask(nodata, input, mask):
-    """Iterate through inputArray and return its value only if the value of mask
-        is 1.  Otherwise, return the nodata value of the output array.
-        
-        nodata - a dict: {'input': some number, 'output' : some number}
-        input - a numpy array
-        mask - a numpy array, with values of either 0 or 1"""
-
-    def mapMask(x, y):
-        if y == 0.0:
-            return nodata['output']
-        else:
-            return x
-
-    if input.size > 0:
-        mapFun = np.vectorize(mapMask)
-        return mapFun(input, mask)
-    else:
-        return []
 
 def uncertainty(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -828,7 +634,6 @@ def carbon_scenario_uncertainty(args):
         #map them to colors
         args['output_map'].GetRasterBand(1).WriteArray(maxIndex(seqRow), 0, rowNumber)
 
-
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
         LULC raster.
@@ -847,4 +652,19 @@ def valuation(args):
         
         returns nothing"""
 
-    pass
+    n = args['yr_fut'] - args['yr_cur'] - 1
+    ratio = 1.0 / ((1 + args['r'] / 100.0) * (1 + args['c'] / 100.0))
+    valuationConstant = args['V'] / (args['yr_fut'] - args['yr_cur']) * \
+        (1.0 - ratio ** (n + 1)) / (1.0 - ratio)
+
+    noDataIn = args['sequest'].GetRasterBand(1).GetNoDataValue()
+    noDataOut = args['value_seq'].GetRasterBand(1).GetNoDataValue()
+
+    def valueOp(sequest):
+        if sequest != noDataIn:
+            return sequest * valuationConstant
+        else:
+            return noDataOut
+
+    invest_core.vectorize1ArgOp(args['sequest'].GetRasterBand(1), valueOp,
+                                args['value_seq'].GetRasterBand(1))

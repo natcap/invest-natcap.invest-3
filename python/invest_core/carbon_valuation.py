@@ -1,18 +1,18 @@
-"""InVEST main plugin interface module"""
+"""InVEST valuation interface module.  Informally known as the URI level."""
 
-import imp, sys, os
+import sys, os
 import simplejson as json
-import carbon
-from osgeo import gdal, ogr
-from osgeo.gdalconst import *
-import numpy
-from dbfpy import dbf
+from osgeo import gdal
+import invest_core
+import carbon_core
 
 def execute(args):
     """This function calculates carbon sequestration valuation.
         
         args - a python dictionary with at the following *required* entries:
         
+        args['workspace_dir'] - a uri to the directory that will write output
+            and other temporary files during calculation. (required)
         args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
             amount of carbon sequestered
         args['V'] - value of a sequestered ton of carbon in dollars per metric
@@ -30,9 +30,9 @@ def execute(args):
 
     #Load and copy relevant inputs from args into a dictionary that
     #can be passed to the valuation core model
-    valuationlArgs = {}
+    valuationArgs = {}
 
-    valuationlArgs['sequest'] = \
+    valuationArgs['sequest'] = \
         gdal.Open(args['sequest_uri'], gdal.GA_ReadOnly)
 
     for key in args:
@@ -51,7 +51,7 @@ def execute(args):
 
     valuationArgs['value_seq'] = \
         invest_core.newRasterFromBase(valuationArgs['sequest'],
-              outputURI, 'GTiff', 1e38, gdal.GDT_Float32)
+              outputURI, 'GTiff', -1e10, gdal.GDT_Float32)
 
     #run the valuation part of the carbon model.
     carbon_core.valuation(valuationArgs)
