@@ -1,13 +1,14 @@
 import sys, os
 import cStringIO
+import threading
+from PyQt4 import QtGui, QtCore
+import imp
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../invest_core')
 
-from PyQt4 import QtGui, QtCore
 import simplejson as json
 import jsonschema
-import imp
 
 class DynamicElement(QtGui.QWidget):
     def __init__(self, attributes):
@@ -219,24 +220,26 @@ class ModelDialog(QtGui.QDialog):
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
         
-        self.thread = ModelThread(uri, inputDict, self)
-        self.thread.finished.connect(self.threadFinished)
-    
-        self.stdoutNotifier = StdoutNotifier(9874, QtCore.QSocketNotifier.Read, self)
+        self.stdoutNotifier = StdoutNotifier(0, QtCore.QSocketNotifier.Read, self)
 
         sys.stdout = self.stdoutNotifier
         sys.stderr = sys.stdout
         self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.write)
+        try:
+            model = imp.load_source('module', uri)
+            self.thread = ModelThread(model, inputDict)
+            self.thread.finished.connect(self.threadFinished)
+            self.thread.start()
+        except ImportError as e:
+            self.write("Error running the model: "+ str(e))
+            self.threadFinished()
 
-        self.thread.start()
-        
-    
+
     def write(self, text):
-        self.statusArea.insertPlainText(text)
+        self.statusArea.insertPlainText('\n' + text)
         
     def threadFinished(self):
-        print 'almost starting'
-        self.write('Completed.')
+        print 'Completed.'
         self.progressBar.setMaximum(1)
         self.runButton.setDisabled(False)
 
@@ -248,6 +251,9 @@ class ModelDialog(QtGui.QDialog):
         self.accept()
         
     def closeWindow(self):
+        self.stdoutNotifier = None
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
         self.thread.__del__()
         self.cancel = True
         self.done(0)
@@ -263,9 +269,9 @@ class StdoutNotifier(QtCore.QSocketNotifier):
 
 class ModelThread(QtCore.QThread):
 #class ModelThread(QtCore.QProcess):
-    def __init__(self, uri, inputDict, manager):
+    def __init__(self, model, inputDict):
         super(ModelThread, self).__init__()
-        self.uri = uri
+        self.model = model
         self.inputDict = inputDict
 
     def __del__(self):
@@ -275,11 +281,7 @@ class ModelThread(QtCore.QThread):
     
     def run(self):
         #this is called by the thread once the environment is set up.
-        try:
-            model = imp.load_source('module', self.uri)
-            model.execute(self.inputDict)
-        except IOError:
-            return
+        self.model.execute(self.inputDict)
         
 
 class DynamicUI(DynamicGroup):
@@ -366,8 +368,6 @@ class DynamicUI(DynamicGroup):
         self.modelDialog = ModelDialog(self.attributes['targetScript'], self.outputDict)
         
         self.modelDialog.exec_()
-        print "returned to the program"
-        
         if self.modelDialog.cancel == False:
             QtCore.QCoreApplication.instance().exit()
     
