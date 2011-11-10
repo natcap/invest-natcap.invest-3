@@ -13,7 +13,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         args = {}
         args['workspace_dir'] = '../../test_data/wave_Energy'
         args['wave_base_data_uri'] = '../../test_data/wave_Energy/samp_data/input/WaveData' 
-        args['analysis_area_uri'] = 'West Coast of North America and Hawaii' 
+        args['analysis_area_uri'] = '../../test_data/wave_Energy/samp_data/input/WaveData/NAmerica_WestCoast_4m.shp' 
         args['machine_perf_uri'] = '../../test_data/wave_Energy/samp_data/input/Machine_AquaBuOY.xls/AquaBuOY_performance$' 
         args['machine_param_uri'] = '../../test_data/wave_Energy/samp_data/input/Machine_AquaBuOY.xls/AquaBuOY_parameter$' 
         args['dem_uri'] = '../../test_data/wave_Energy/samp_data/input/global_dem'

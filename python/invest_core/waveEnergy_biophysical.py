@@ -36,6 +36,10 @@ def execute(args):
     #This ensures we are not in Arc's python directory so that when
     #we import gdal stuff we don't get the wrong GDAL version.
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    filesystemencoding = sys.getfilesystemencoding()
+    
+#    timber_shape = ogr.Open(args['timber_shape_uri'].encode(filesystemencoding), 1)
+    
     gdal.AllRegister()
     
     perfPathList = args['machine_perf_uri'].rsplit(os.sep, 1)
@@ -52,21 +56,21 @@ def execute(args):
     machine_paramSheet= open_workbook(paramPathWkbook).sheet_by_name(paramWksht)
         
     wave_base_data = 1
-    analysis_area = 1
+    analysis_area = ogr.Open(args['analysis_area_uri'].encode(filesystemencoding), 1)
     AOI = 1
-    dem = 1
-    
+    dem = gdal.Open(args['dem_uri'])
+        
     arguments = {'wave_base_data': wave_base_data,
-             'analysis_area': analysis_area,
-             'AOI': AOI,
-             'machine_perf': machine_perfSheet,
-             'machine_param': machine_paramSheet,
-             'dem': dem,
-#             'valuation': gp.GetParameterAsText(7),
-#             'landgridpts_uri': gp.GetParameterAsText(8),
-#             'machine_econ_uri': gp.GetParameterAsText(9),
-#             'number_machines': gp.GetParameterAsText(10),
-#             'projection_uri': gp.GetParameterAsText(11)
-            }
-    
+                 'analysis_area': analysis_area,
+                 'AOI': AOI,
+                 'machine_perf': machine_perfSheet,
+                 'machine_param': machine_paramSheet,
+                 'dem': dem,
+    #             'valuation': gp.GetParameterAsText(7),
+    #             'landgridpts_uri': gp.GetParameterAsText(8),
+    #             'machine_econ_uri': gp.GetParameterAsText(9),
+    #             'number_machines': gp.GetParameterAsText(10),
+    #             'projection_uri': gp.GetParameterAsText(11)
+                }
+        
     waveEnergy_biophysical_core.biophysical(arguments)
