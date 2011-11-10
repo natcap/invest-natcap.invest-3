@@ -186,14 +186,12 @@ class ModelDialog(QtGui.QDialog):
         self.setMinimumWidth(200)
         
         self.statusAreaLabel = QtGui.QLabel('Messages:')
-        self.statusAreaScroll = QtGui.QScrollArea()
         self.statusArea = QtGui.QPlainTextEdit()
         self.statusArea.setReadOnly(True)
 
         self.statusArea.setStyleSheet("QWidget { background-color: White }")
-        self.statusAreaScroll.setWidget(self.statusArea)
         self.layout().addWidget(self.statusAreaLabel)
-        self.layout().addWidget(self.statusAreaScroll)
+        self.layout().addWidget(self.statusArea)
         
         self.progressBar = QtGui.QProgressBar()
         self.progressBar.setMinimum(0)
