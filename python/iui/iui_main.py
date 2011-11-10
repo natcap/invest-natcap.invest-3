@@ -41,7 +41,9 @@ class DynamicGroup(DynamicElement):
     def __init__(self, attributes, layout):
         super(DynamicGroup, self).__init__(attributes)
         self.setLayout(layout)
-        self.createElements(attributes['elements'])
+        
+        if 'elements' in attributes:
+            self.createElements(attributes['elements'])
         
     def createElements(self, elementsArray):
         i = 0
@@ -394,12 +396,30 @@ class DynamicUI(DynamicGroup):
         self.initUI()
         
     def initUI(self):
-        self.setWindowTitle(self.attributes['label'])
-        self.getLastRun(self.attributes['modelName'])
+        try:
+            self.setWindowTitle(self.attributes['label'])
+        except KeyError:
+            self.setWindowTitle('InVEST')
+        
+        try:
+            self.getLastRun(self.attributes['modelName'])
+        except KeyError:
+            print 'Modelname required in config file to load last run\'s arguments'
+        
         self.initElements()
         self.addButtons()
         
-        self.setGeometry(400, 400, self.attributes['width'], self.attributes['height'])
+        if 'width' in self.attributes:
+            width = attributes['width']
+        else:
+            width = 400
+            
+        if 'height' in self.attributes:
+            height = attributes['height']
+        else:
+            height = 400
+        
+        self.setGeometry(400, 400, width, height)
         self.show()
                     
     def addButtons(self):
