@@ -181,21 +181,19 @@ class ModelDialog(QtGui.QDialog):
         self.setLayout(QtGui.QVBoxLayout())
         
         self.cancel = False
-        
         self.setWindowTitle("Running the model")
-        self.setGeometry(400, 400, 400, 200)
+        self.setGeometry(400, 400, 400, 400)
         self.setMinimumWidth(200)
         
         self.statusAreaLabel = QtGui.QLabel('Messages:')
         self.statusAreaScroll = QtGui.QScrollArea()
         self.statusArea = QtGui.QPlainTextEdit()
         self.statusArea.setReadOnly(True)
-#        self.statusArea.setLayout(QtGui.QVBoxLayout())
-#        self.statusArea.setMinimumWidth(200)
+
         self.statusArea.setStyleSheet("QWidget { background-color: White }")
         self.statusAreaScroll.setWidget(self.statusArea)
         self.layout().addWidget(self.statusAreaLabel)
-        self.layout().addWidget(self.statusArea)
+        self.layout().addWidget(self.statusAreaScroll)
         
         self.progressBar = QtGui.QProgressBar()
         self.progressBar.setMinimum(0)
@@ -231,6 +229,7 @@ class ModelDialog(QtGui.QDialog):
             self.thread.finished.connect(self.threadFinished)
             self.thread.start()
         except ImportError as e:
+            self.thread = None
             self.write("Error running the model: "+ str(e))
             self.threadFinished()
 
@@ -254,7 +253,8 @@ class ModelDialog(QtGui.QDialog):
         self.stdoutNotifier = None
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        self.thread.__del__()
+        if self.thread != None:
+            self.thread.__del__()
         self.cancel = True
         self.done(0)
 
