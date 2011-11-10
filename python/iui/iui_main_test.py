@@ -25,6 +25,13 @@ class TestDynamicElement(unittest.TestCase):
         self.assertEqual(element.enabledBy, None)
         self.assertEqual(element.elements, [])
     
+    def testSetEnabledBy(self):
+        """'enabledBy' attribute should be set locally if present in arg dict."""
+    
+        attributes = {'enabledBy': 'testElement'}
+        element = iui.DynamicElement(attributes)
+        
+        self.assertEqual(element.enabledBy, attributes['enabledBy'])
     
 if __name__ == '__main__':
     DynElementTests = unittest.TestLoader().loadTestsFromTestCase(TestDynamicElement)
