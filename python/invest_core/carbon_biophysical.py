@@ -125,16 +125,6 @@ def execute(args):
     carbon_core.biophysical(biophysicalArgs)
     logging.info('finished carbon biopysical model')
 
-    #Clean up the GDAL/OAL datasets.  This may not be necessary, but examples
-    #online show it
-
-    #close the pools DBF file (is this required?)
-    biophysicalArgs['carbon_pools'].close()
-
-    #close all newly created raster datasets (is this required?)
-    for dataset in biophysicalArgs:
-        biophysicalArgs[dataset] = None
-
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
 if __name__ == '__main__':
