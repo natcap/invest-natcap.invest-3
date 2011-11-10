@@ -8,8 +8,8 @@ from osgeo import gdal, ogr
 from dbfpy import dbf
 
 import logging
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s %(message)s', level=logging.DEBUG,
-                    datefmt='%m/%d/%Y %H:%M:%S ')
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 logger = logging.getLogger('carbon_biophysical')
 
