@@ -493,79 +493,138 @@ class DynamicText(DynamicPrimitive):
         
         
 class ModelDialog(QtGui.QDialog):
+    """ModelDialog is a class defining a modal window presented to the user
+        while the model is running.  This modal window prevents the user from
+        interacting with the main UI window while the model is processing and 
+        provides status updates for the model.
+        
+        This window is not configurable through the JSON configuration file."""    
+        
     def __init__(self, uri, inputDict):
+        """Constructor for the ModelDialog class.
+            
+            uri - a string URI to the script to be run
+            inputDict - a python dictionary of arguments to be passed to the 
+                model's execute function.
+        
+            returns an instance of ModelDialog."""
         super(ModelDialog, self).__init__()
 
+        #set window attributes
         self.setLayout(QtGui.QVBoxLayout())
-        
-        self.cancel = False
         self.setWindowTitle("Running the model")
         self.setGeometry(400, 400, 400, 400)
-        self.setMinimumWidth(200)
         
+        self.cancel = False
+
+        #create statusArea-related widgets for the window.        
         self.statusAreaLabel = QtGui.QLabel('Messages:')
         self.statusArea = QtGui.QPlainTextEdit()
         self.statusArea.setReadOnly(True)
 
+        #set the background color of the statusArea widget to be white.
         self.statusArea.setStyleSheet("QWidget { background-color: White }")
-        self.layout().addWidget(self.statusAreaLabel)
-        self.layout().addWidget(self.statusArea)
-        
+
+        #create an indeterminate progress bar.  According to the Qt 
+        #documentation, an indeterminate progress bar is created when a 
+        #QProgressBar's minimum and maximum are both set to 0.
         self.progressBar = QtGui.QProgressBar()
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(0)
+
+        #Add the new widgets to the window
+        self.layout().addWidget(self.statusAreaLabel)
+        self.layout().addWidget(self.statusArea)
         self.layout().addWidget(self.progressBar)
-        
+
+
+        #create Quit and Cancel buttons for the window        
         self.runButton = QtGui.QPushButton('Quit')
         self.cancelButton = QtGui.QPushButton('Cancel') 
         
-        #disable the 'ok' button by default
+        #disable the 'Quit' button by default
         self.runButton.setDisabled(True)
        
-        #create the buttonBox (a container for buttons)
+        #create the buttonBox (a container for buttons) and add the buttons to
+        #the buttonBox.
         self.buttonBox = QtGui.QDialogButtonBox()
         self.buttonBox.addButton(self.runButton, 0)
         self.buttonBox.addButton(self.cancelButton, 1)
         
-        #connect the buttons to their functions.
+        #connect the buttons to their callback functions.
         self.runButton.clicked.connect(self.okPressed)
         self.cancelButton.clicked.connect(self.closeWindow)
 
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
         
+        #set up an instance of StdoutNotifier to capture all stdout.
         self.stdoutNotifier = StdoutNotifier(0, QtCore.QSocketNotifier.Read, self)
 
+        #tell python to run all stdout and stderr through the StdoutNotifier.
         sys.stdout = self.stdoutNotifier
         sys.stderr = sys.stdout
+        
+        #When the notifier detects text in stdout, it should run the callback
+        #self.write.
         self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.write)
+        
+        #Run the model if possible.  If we encounter an error running the model,
+        #print the error message to the modal window.
         try:
             model = imp.load_source('module', uri)
             self.thread = ModelThread(model, inputDict)
+            
+            #when the thread is finished, run self.threadFinished.
             self.thread.finished.connect(self.threadFinished)
+            
+            #start the thread
             self.thread.start()
+            
         except ImportError as e:
             self.thread = None
             self.write("Error running the model: "+ str(e))
             self.threadFinished()
 
-
     def write(self, text):
+        """Write text to the statusArea.
+            
+            text - a string to be written to self.statusArea.
+            
+            returns nothing."""
+            
         self.statusArea.insertPlainText('\n' + text)
         
     def threadFinished(self):
-        print 'Completed.'
-        self.progressBar.setMaximum(1)
-        self.runButton.setDisabled(False)
+        """Notify the user that model processing has finished.
+        
+            returns nothing."""
+            
+        print 'Completed.' #prints a status message in the statusArea.
+        self.progressBar.setMaximum(1) #stops the progressbar.
+        self.runButton.setDisabled(False) #enables the runButton
 
     def closeEvent(self, data=None):
+        """When a closeEvent is detected, run self.closeWindow().
+        
+            returns nothing."""
+            
         self.closeWindow()
         
     def okPressed(self):
+        """When self.runButton is pressed, halt the statusbar and close the 
+            window with a siccessful status code.
+            
+            returns nothing."""
+            
         self.threadFinished()
-        self.accept()
+        self.accept() # this is a built-in Qt signal.
         
     def closeWindow(self):
+        """Close the window and ensure the thread has completed.
+        
+            returns nothing."""
+        
         self.stdoutNotifier = None
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
