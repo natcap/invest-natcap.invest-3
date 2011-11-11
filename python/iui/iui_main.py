@@ -396,7 +396,11 @@ class DynamicText(DynamicPrimitive):
         #notifications accordingly.
         if self.root.okpressed == True:
             self.root.updateRequirementNotification()
-            self.setBGcolor()
+            
+            if self.requirementsMet():
+                self.setBGcolorSatisfied(True)
+            else:
+                self.setBGcolorSatisfied(False)
         
         #This function attempts to enable or disable elements as appropriate.
         self.root.recursiveToggle(self.attributes['id'])
@@ -432,13 +436,15 @@ class DynamicText(DynamicPrimitive):
         else:
             return False
         
-    def setBGcolor(self):
-        """Check to see if the current element's requirements have been met.
-            If not, we color the background of the label red to signify an 
-            error.
+    def setBGcolorSatisfied(self, satisfied=True):
+        """Color the background of this element's label.
+            
+            satisfied=True - a boolean, indicating whether this element's
+                requirements have been satisfied.
             
             returns nothing"""
-        if self.requirementsMet():
+            
+        if satisfied:
             self.label.setStyleSheet("QWidget { background-color: None }")
         else:
             self.label.setStyleSheet("QWidget { background-color: Red }")
@@ -711,75 +717,181 @@ class ModelThread(QtCore.QThread):
 
 class DynamicUI(DynamicGroup):
     def closeWindow(self):
-        """exits the entire application, bypassing even the main() function"""
+        """Terminates the application.
+        
+            This function is called when the user closes the window by any of
+            Qt's recognized methods (often including closing the window via the
+            little x in the corner of the window and/or pressing the Esc key).
+        
+            returns nothing"""
         
         print 'Cancelled.'
         sys.exit(0)
 
     def saveLastRun(self):
+        """Saves the current values of all input elements to a JSON object on 
+            disc.
+            
+            returns nothing"""
+        
         user_args = {}
+        
+        #loop through all elements known to the UI, assemble into a dictionary
+        #with the mapping element ID -> element value
         for id, element in self.allElements.iteritems():
             if isinstance(element, DynamicPrimitive):
                 user_args[id] = str(element.value())
                 
+        #create a file in the current directory
         user_args_file = open(self.attributes['modelName'] +
                               '_args_lastrun.json', 'w')
+        
+        #save a json rendition of the arguments dictionary to the newly opened
+        #file
         user_args_file.writelines(json.dumps(user_args))
         user_args_file.close()
         
+        
     def elementIsRequired(self, element):
+        """Check to see if an element is required.
+        
+            An element is required if element.required == True or if the element
+            has a 'requiredIf' attribute and at least one of the elements in the 
+            'requiredIf' array is required.
+        
+            element - a pointer to an instance of DynamicElement.
+            
+            returns a boolean"""
+        
+        #if an element is declared to be required, it's always required    
         if element.required:
             return True
+        
+        #otherwise, we check to see if the element can be made required by other
+        #elements.  If so, we check on its status.  If not, the element is not
+        #required.
         else:
+            
+            #The 'requiredIf' element is optional, so if the attribute is
+            #provided, we need to check its array contents.
             if 'requiredIf' in element.attributes:
                 for item in element.attributes['requiredIf']:
+                    
+                    #if even one of the elements in the 'requiredIf' array is
+                    #enabled, the current element is required.
                     if self.allElements[item].isEnabled():
                         return True
+            
+            #if we find no elements making this element required, this element
+            #is optional.
             return False
         
     def assembleOutputDict(self):
+        """Assemble an output dictionary for use in the target model
+        
+            Saves a python dictionary to self.outputDict.  This dictionary has
+            the mapping: element args_id -> element value.  Values are converted
+            to their appropriate dataType where specified in the JSON config
+            file.
+        
+            returns nothing"""
+        
         for id, element in self.allElements.iteritems():
+
+            #All input elements are instances of DynamicPrimitive, so we ignore
+            #any elements not decended from DynamicPrimitive.
             if isinstance(element, DynamicPrimitive):
+
+                #The args_id element is optional in the JSON config file.  If
+                #provided, we use it to assemble the output dictionary
                 if 'args_id' in element.attributes:
+                    
+                    #if the user has specified a dataType in the JSON config,
+                    #ensure the data is casted appropriately.
                     if 'dataType' in element.attributes:
                         if element.attributes['dataType'] == 'int':
                             value = int(element.value())
                         elif element.attributes['dataType'] == 'float':
                             value = float(element.value())
                         else:
-                            value = str(element.value())                            
+                            value = str(element.value())     
+                    #If the user has not specified a dataType, cast from 
+                    #QtCore.QString to python string.                       
                     else:
                         value = str(element.value())
+                    
+                    #save the value to the output Dictionary.
                     self.outputDict[element.attributes['args_id']] = value
 
     def updateRequirementNotification(self, numUnsatisfied=None):
+        """Updates the QLabel at the bottom of the DynamicUI window to reflect
+            the number of required elements missing input.
+        
+            numUnsatisfied=None - an int.  An optional parameter for cases where
+                the number of unsatisfied elements is already calculated before
+                this method is called.
+            
+            returns nothing"""
+        
+        #if the user did not provide an input number of unsatisfied elements,
+        #fetch that number.    
         if numUnsatisfied == None:
             numUnsatisfied = self.countRequiredElements()
         
+        #update the message to reflect the number of unsatisfied elements.
         if numUnsatisfied > 0:
-            self.messageArea.setText(str(numUnsatisfied) + ' required elements missing input')
+            if numUnsatisfied == 1:
+                string = '1 required element'
+            else:
+                string = str(numUnsatisfied) + ' required elements'
+                
+            self.messageArea.setText(string + ' missing input')
         else:
             self.messageArea.setText("")
 
     def countRequiredElements(self):
+        """Count the number of required elements in self.allElements.
+        
+            An element is required if element.required == True or if the element
+            has a 'requiredIf' attribute and at least one of the elements in the 
+            'requiredIf' array is required.
+            
+            returns an int: the number of unsatisfied elements."""
+            
         numRequired = 0 #the number of elements found to be required
         numVerified = 0 #the number of elements with satisfied requirement
-        self.messageArea.setText("")
         for id, element in self.allElements.iteritems():
+            
+            #Instances of DynamicPrimitive are the only elements that can
+            #contain user input and thus the only elements that can effectively
+            #have required input.
             if isinstance(element, DynamicPrimitive):
+                
                 if self.elementIsRequired(element):
                     numRequired += 1
                     if element.requirementsMet():
+                        #if the element is satisfied, increment nunVerified
                         numVerified += 1
                     else:
-                        element.setBGcolor()
-                        
+                        #if the element is unsatisfied, color the label's 
+                        #background accordingly. 
+                        element.setBGcolorSatisfied(False)
+        
+        #return the number of unsatisfied required elements.
         return numRequired - numVerified
 
     def okPressed(self):
+        """A callback, run when the user presses the 'OK' button.
+        
+            returns nothing."""
+            
         self.okpressed = True
+        self.messageArea.setText("")
         numUnsatisfied = self.countRequiredElements()
         
+        #if some required element has not been satisfied, alert the user and 
+        #return to the UI.  Otherwise (if the user has provided all required
+        #inputs), run the model.
         if numUnsatisfied == 0:
             self.runProgram()
         else:
@@ -787,28 +899,54 @@ class DynamicUI(DynamicGroup):
             return #return to the previous state of the UI
 
     def runProgram(self):
-        """Quit the UI, returning to the main() function"""
+        """Assembles output, saves user's parameters and runs the model 
+            specified in the config file.
+        
+            returns nothing"""
+            
         self.saveLastRun()
         self.assembleOutputDict()
         self.modelDialog = ModelDialog(self.attributes['targetScript'], self.outputDict)
         
+        #Run the modelDialog.
         self.modelDialog.exec_()
+        
+        #if the user presses cancel (which sets modelDialog.cancel to True)
+        #we should return to the UI.  Otherwise, quit the application.
         if self.modelDialog.cancel == False:
             QtCore.QCoreApplication.instance().exit()
     
     def closeEvent(self, event):
+        """Terminates the application. This function is a Qt-defined callback 
+            for when the window is closed.
+            
+            returns nothing"""
+            
         sys.exit(0)
         
     def getLastRun(self, modelname):
+        """Retrieve the user's last run from the json file (if it exists).
+            The resulting dictionary is saved as self.lastRun.
+        
+            modelname - the string modelname specified in the JSON config file.
+            
+            returns nothing."""
+        
         user_args_uri = modelname + '_args_lastrun.json'
         try:
             self.lastRun = json.loads(open(user_args_uri).read())
         except IOError:
             self.lastRun = {}
             
-
-        
     def __init__(self, uri):
+        """Constructor for the DynamicUI class, a subclass of DynamicGroup.
+            DynamicUI loads all setting from a JSON object at the provided URI
+            and recursively creates all elements.
+            
+            uri - the string URI to the JSON configuration file.
+            
+            returns an instance of DynamicUI."""
+            
         super(DynamicUI, self).__init__(json.loads(uri), QtGui.QVBoxLayout())
         self.lastRun = {}
         self.messageArea = QtGui.QLabel('')
@@ -821,11 +959,20 @@ class DynamicUI(DynamicGroup):
         self.initUI()
         
     def initUI(self):
+        """Initialize the User Interface elements specific to this class.
+            Most elements are created with the call to super() in the __init__
+            function, element creation is handled in 
+            DynamicGroup.createElements().
+            
+            returns nothing"""
+        
+        #set the window's title
         try:
             self.setWindowTitle(self.attributes['label'])
         except KeyError:
             self.setWindowTitle('InVEST')
         
+        #attempt to get saved arguments from the user's last run
         try:
             self.getLastRun(self.attributes['modelName'])
         except KeyError:
@@ -845,9 +992,15 @@ class DynamicUI(DynamicGroup):
             height = 400
         
         self.setGeometry(400, 400, width, height)
+        
+        #reveal the assembled UI to the user
         self.show()
                     
     def addButtons(self):
+        """Assembles buttons and connects their callbacks.
+        
+            returns nothing."""
+            
         self.runButton = QtGui.QPushButton('OK')
         self.cancelButton = QtGui.QPushButton('Cancel') 
        
@@ -864,24 +1017,49 @@ class DynamicUI(DynamicGroup):
         self.layout().addWidget(self.buttonBox)
                     
     def initElements(self):
+        """Set the enabled/disabled state and text from the last run for all 
+            elements
+        
+            returns nothing"""
+            
         for elementID, elementObj in self.allElements.iteritems():
             try:
+                #If an item is enabled by an element, its id is stored at 
+                #element.enabledBy
                 controller = elementObj.enabledBy
                 if controller != None:
+                    #enable or disable all elements controlled by controller
+                    #depending on controller's state
                     if self.allElements[controller].isEnabled() == False:
                         elementObj.disable()
                     else:
                         elementObj.enable()
+                        
+                #Set the value for the current element from the user's last run.
                 if isinstance(elementObj, DynamicPrimitive):
                     if elementID in self.lastRun:
                         elementObj.setValue(self.lastRun[elementID])
+            
+            #print an error if it is encountered.  In rare cases, 
+            #element.enabledBy is not initialized properly.
             except AttributeError as e:
                 print e
 
     def recursiveToggle(self, controllingID):
+        """Enable or disable all objects enabledBy controllingID based on 
+            the state of the object identified by controllingID.
+            
+            controllingID - a string ID for an element.
+        
+            returns nothing"""
+            
         controller = self.allElements[controllingID]
         for id, object in self.allElements.iteritems():
             enabledBy = object.enabledBy
+        
+            #If the current object is controlled by the controller, enable or
+            #disable it and its dependents according to the state of the 
+            #controller.
             if enabledBy == controllingID:
                 if controller.isEnabled() == True:
                     object.enable()
@@ -890,15 +1068,29 @@ class DynamicUI(DynamicGroup):
                     object.disable()
                     self.recursiveSetState(id, False)
 
-    def recursiveSetState(self, controllingID, state = False):
-        """False means disable; true means enable"""
+    def recursiveSetState(self, controllingID, state=False):
+        """Set the state of all elements controlled by controllingID or any 
+            elements controlled by those elements, etc to the provided state.
+            
+            This function differs from recursiveToggle() in that the intention 
+            is to set a specific state, not simply to toggle the state.
+            
+            returns nothing"""
+
         controller = self.allElements[controllingID]
         for id, object in self.allElements.iteritems():
             enabledBy = object.enabledBy
             if enabledBy == controllingID:
+                
+                #Disable this element an all elements enabledBy/disabledBy this
+                #element.
                 if state == False:
                     object.disable()
                     self.recursiveSetState(id, False)
+                    
+                #If we are to enable this element, first check to see that its
+                #controller has been enabled.  If so, attempt to enable all
+                #elements controlled by this element.
                 else:
                     if controller.isEnabled() == True:
                         object.enable()
