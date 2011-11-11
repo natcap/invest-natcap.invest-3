@@ -1097,13 +1097,42 @@ class DynamicUI(DynamicGroup):
                         self.recursiveSetState(id, True)
 
 class Container(QtGui.QGroupBox, DynamicGroup):
+    """Class Container represents a QGroupBox (which is akin to the HTML widget
+        'fieldset'.  It has a Vertical layout, but may be subclassed if a 
+        different layout is needed."""
+        
     def __init__(self, attributes):
+        """Constructor for the Container class.
+            
+            attributes - a python dictionary containing all attributes of this
+                container, including its elements.  Elements are initialized in
+                DynamicGroup.createElements().
+                
+            returns an instance of Container."""
+            
         super(Container, self).__init__(attributes, QtGui.QVBoxLayout())
+        
+        #set the title of the container
         self.setTitle(attributes['label'])
 
 class CollapsibleContainer(Container):
+    """Class CollapsibleContainer is a container whose elements can be shown
+        and hidden at the whim of the user if the container's checkbox is
+        toggled."""
+        
     def __init__(self, attributes):
+        """Constructor for the CollapsibleContainer class.
+        
+            attributes - a python dictionary containing all attributes of this
+                container, including its elements.  Elements are initialized in 
+                DynamicGroup.createElements().
+                
+            returns an instance of CollapsibleContainer"""
+            
         super(CollapsibleContainer, self).__init__(attributes)
+        
+        #this attribute of QtGui.QGroupBox determines whether the container
+        #will sport a hide/reveal checkbox.
         self.setCheckable(True)
 
         #Uncheck and hide contained elements by default.
@@ -1111,9 +1140,15 @@ class CollapsibleContainer(Container):
         for element in self.elements:
             element.setVisible(False)
 
+        #connect the toggled() signal of the QGroupBox to its callback
         self.toggled.connect(self.toggleHiding)
 
     def toggleHiding(self):
+        """Show or hide all sub-elements of this collapsible container as
+            necessary.  This function is a callback for the toggled() signal.
+            
+            returns nothing."""
+            
         for element in self.elements:
             if element.isVisible() == True:
                 element.setVisible(False)
@@ -1121,7 +1156,18 @@ class CollapsibleContainer(Container):
                 element.setVisible(True)
 
 class GridList(DynamicGroup):
+    """Class GridList represents a DynamicGroup that has a QGridLayout as a 
+        layout manager."""
+        
     def __init__(self, attributes):
+        """Constructor for the GridList class.
+        
+            attributes -a python dictionary containing all attributes of this 
+                DynamicGroup, including the elements it contains.  Elements are
+                initialized in DynamicGroup.createElements().
+            
+            returns an instance of the GridList class."""
+            
         super(GridList, self).__init__(attributes, QtGui.QGridLayout())
         
         
