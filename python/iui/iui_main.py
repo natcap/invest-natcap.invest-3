@@ -608,7 +608,7 @@ class ModelDialog(QtGui.QDialog):
             
             returns nothing."""
             
-        self.statusArea.insertPlainText('\n' + text)
+        self.statusArea.insertPlainText(text)
         
     def threadFinished(self):
         """Notify the user that model processing has finished.
