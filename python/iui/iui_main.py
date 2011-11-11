@@ -668,19 +668,44 @@ class StdoutNotifier(QtCore.QSocketNotifier):
         
 
 class ModelThread(QtCore.QThread):
-#class ModelThread(QtCore.QProcess):
+    """The ModelThread class runs a model in a new QThread.
+    
+        It is necessary to offload this processing to a new thread to allow UI
+        processing to happen concurrently."""
+    
     def __init__(self, model, inputDict):
+        """Constructor for the ModelThread class.
+        
+            model - a python file or class imported via python's imp module
+            inputDict - a python dictionary: the input dictionary for the model
+            
+            returns an instanace of ModelThread"""
+        
         super(ModelThread, self).__init__()
         self.model = model
         self.inputDict = inputDict
 
     def __del__(self):
+        """Destructor for the ModelThread class
+            
+            If the thread object is destroyed, this method will be executed.
+            
+            returns nothing"""
+
+        #self.terminate() is a function inherited from QtCore.QThread.  It will
+        #foribly terminate the running process if called, a desired effect when
+        #the thread is destroyed.            
         self.terminate()
-        #put code here to ensure the thread finishes processing when destroyed
         return
     
     def run(self):
-        #this is called by the thread once the environment is set up.
+        """This method is our implementation of the thread's processing 
+            responsibilities.  The name itself is defined by Qt and is run when
+            start() is called on an instance of ModelThread.
+        
+            returns nothing"""
+
+        #run the model with the input dictionary as its argument.
         self.model.execute(self.inputDict)
         
 
