@@ -312,53 +312,182 @@ class DynamicPrimitive(DynamicElement):
             element.setDisabled(True)
             
 class DynamicText(DynamicPrimitive):
+    """Creates an object containing a label and a sigle-line text field for
+        user input.
+        
+        DynamicText is a subclass of DynamicPrimitive and thus inherits all its
+        methods and attributes.
+        
+        FileEntry and YearEntry inherit DynamicText.
+        
+        As the superclass to a number of text-based elements, DynamicText 
+        implements a number of text-only options, namely defaultText and 
+        validText.
+        """
+
     def __init__(self, attributes):
+        """Constructor for the DynamicText class.
+            The defining features for this class have primarily to do with user
+            interaction: a child of DynamicText can be required, can have
+            defaultText and can have valid text.
+            
+            attributes -a python dictionary of element attributes.
+
+            returns a constructed DynamicText object."""
+        
+        #create the object by initializing its superclass, DynamicElement.    
         super(DynamicText, self).__init__(attributes)
+        
+        #create the new Label widget and save it locally.  This label is 
+        #consistent across all included subclasses of DynamicText.
         self.label = QtGui.QLabel(attributes['label'])
+        
+        #create the new textField widget and save it locally.  This textfield
+        #is consistent across all included subclasses of DynamicText, though
+        #the way the textfield is used may differ from class to class.
         self.textField = QtGui.QLineEdit()
         
+        #All subclasses of DynamicText must contain at least these two elements.
+        self.elements = [self.label, self.textField]
+        
+        #Set self.required to the user's specification (could be True or False)
         if "required" in attributes:
             self.required = attributes['required']
             
+        #If the user has defined some default text for this text field, insert 
+        #it into the text field.
         if "defaultText" in attributes:
             self.textField.insert(attributes['defaultText'])
 
+        #If the user has defined a string regular expression of text the user is
+        #allowed to input, set that validator up with the setValidateField()
+        #function.
         if 'validText' in attributes:
             self.setValidateField(attributes['validText'])
+        
+        #Connect the textfield's textChanged signal to the toggle() function.
+        #This function will trigger any time the user changes the text in the
+        #textfield.
+        self.textField.textChanged.connect(self.toggle)
             
+    def toggle(self):
+        """Toggle all elements associated with this element's ID.
+            
+            This function has several purposes:
+              - It instructs the root element to update its requirement 
+                notification based on the current status of all elements
+              - It sets the backgroundColor of this object's label if its
+                completion requirements have not been met
+              - It instructs the root element to toggle all other elements 
+                appropriately.
+                
+            returns nothing."""
+            
+        #self.root is set to None by default, as the self.getRoot function 
+        #cannot operate until all widgets have been added to the main UI window.
+        #Since user interaction necessarily happens after the UI is constructed,
+        #this is a natural place to request a pointer to the root element if it
+        #has not already been set.
+        if self.root == None:
+            self.root = self.getRoot()   
+        
+        #If the user has already pressed the OK button and some text is updated,
+        #we need to check all other elements and update the main window 
+        #notifications accordingly.
+        if self.root.okpressed == True:
+            self.root.updateRequirementNotification()
+            self.setBGcolor()
+        
+        #This function attempts to enable or disable elements as appropriate.
+        self.root.recursiveToggle(self.attributes['id'])
+        
+                    
     def setValidateField(self, regexp):
-        """field is a QWidget to be set as the widget to be validated
-            regexp is a string representing the regexp to be evaluated"""
+        """Set input validation on the text field to conform with the input
+            regular expression.  Validation takes place continuously, so the 
+            user will be unable to enter text in this field unless it conforms
+            to the regexp.
+            
+            regexp - a string regular expression
+            
+            returns nothing"""
 
         regexpObj = QtCore.QRegExp(regexp)
         validator = QtGui.QRegExpValidator(regexpObj, self.textField)
         self.textField.setValidator(validator)
         
     def requirementsMet(self):
+        """Determine whether the textfield is considered 'complete'.
+            This is used to determine whether a dependent element should be
+            enabled or disabled and may need to be reimplemented for a subclass
+            as new text-based elements arise.
+            
+            As a basic form of completion, we assume that this field is 
+            satisfied when some text (any text) has been entered.
+            
+            returns a boolean"""
+            
         if len(self.value()) > 0:
             return True
         else:
             return False
         
     def setBGcolor(self):
+        """Check to see if the current element's requirements have been met.
+            If not, we color the background of the label red to signify an 
+            error.
+            
+            returns nothing"""
         if self.requirementsMet():
             self.label.setStyleSheet("QWidget { background-color: None }")
         else:
             self.label.setStyleSheet("QWidget { background-color: Red }")
         
     def parentWidget(self):
+        """Return the parent widget of one of the QWidgets of this object.
+        
+            Because DynamicText objects by definition have at least two widgets
+            which individually could be added to separate layouts of separate 
+            widgets, it is necessary to specify which local widget we wish to 
+            identify as having the parent.
+            
+            In this case, self.textField has been selected.
+            
+            returns a pointer to an instance of a QWidget."""
+            
         return self.textField.parentWidget()
         
     def isEnabled(self):
+        """Check to see if this element is 'enabled'.
+        
+            This status is commonly used to determine whether other fields 
+            should be enabled or disabled (to allow or prevent the user from 
+            interacting with the widget)
+        
+            This is tested by checking the length of the string entered into 
+            self.textField.  Specific implementations may differ as appropriate
+            to the subclass.
+            
+            returns a boolean."""
+            
         if len(self.textField.text()) > 0:
             return True
         else:
             return False
         
     def value(self):
+        """Fetch the value of the user's input, stored in self.textField.
+        
+            returns a string."""
         return self.textField.text()
     
     def setValue(self, text):
+        """Set the value of self.textField.
+        
+            text - a string, the text to be inserted into self.textField.
+            
+            returns nothing."""
+            
         self.textField.setText(text)
         
         
@@ -745,21 +874,6 @@ class FileEntry(DynamicText):
         self.button = FileButton('...', self.textField, attributes['type'])
         self.elements = [self.label, self.textField, self.button]
         
-        self.textField.textChanged.connect(self.toggle)
-            
-    def toggle(self):
-        if self.root == None:
-            self.root = self.getRoot()   
-        
-        if self.root.okpressed == True:
-            self.root.updateRequirementNotification()
-            self.setBGcolor()
-        
-        self.root.recursiveToggle(self.attributes['id'])
-        
-
-    
-    
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
         The YearEntry object consists of two objects: a label (QtGui.QLabel)
@@ -769,21 +883,9 @@ class YearEntry(DynamicText):
         super(YearEntry, self).__init__(attributes)
         self.elements = [self.label, self.textField]
 
-        self.textField.textChanged.connect(self.toggle)
-
         #set the min and max width to clarify that this entry should be a 4-digit year
         self.textField.setMaximumWidth(70)
         self.textField.setMinimumWidth(40)
-        
-    def toggle(self):
-        if self.root == None:
-            self.root = self.getRoot()   
-        
-        if self.root.okpressed == True:
-            self.root.updateRequirementNotification()
-            self.setBGcolor()
-        
-        self.root.recursiveToggle(self.attributes['id'])
 
 
 class FileButton(QtGui.QPushButton):
