@@ -568,9 +568,10 @@ class ModelDialog(QtGui.QDialog):
         
         #set up an instance of StdoutNotifier to capture all stdout.
         self.stdoutNotifier = StdoutNotifier(0, QtCore.QSocketNotifier.Read, self)
-
+        
         #tell python to run all stdout and stderr through the StdoutNotifier.
         sys.stdout = self.stdoutNotifier
+        
         sys.stderr = sys.stdout
         
         #When the notifier detects text in stdout, it should run the callback
@@ -592,6 +593,12 @@ class ModelDialog(QtGui.QDialog):
         except ImportError:
             self.thread = None
             self.write("Error running the model: "+ str(ImportError))
+            self.threadFinished()
+        except IOError:
+            self.thread.__del__()
+            self.thread = None
+            self.write('Error locating file: ' + str(uri))
+            self.write('current location: ' + str(os.getcwd()))
             self.threadFinished()
 
     def write(self, text):
