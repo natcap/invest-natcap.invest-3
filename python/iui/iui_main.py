@@ -3,7 +3,7 @@ import sys, os, imp
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 print cmd_folder
 sys.path.insert(0, cmd_folder + '/../invest_core')
-sys.path.insert(0, cmd_folder + '/../../OSGeo4W/lib/site-packages')
+sys.path.append(cmd_folder + '/../../OSGeo4W/lib/site-packages')
 
 from PyQt4 import QtGui, QtCore
 
