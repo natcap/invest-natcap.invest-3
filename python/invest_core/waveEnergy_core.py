@@ -8,6 +8,7 @@ from dbfpy import dbf
 import math
 import invest_core
 import sys
+
 def biophysical(args):
     """
     args['wave_base_data'] - a dictionary
@@ -40,11 +41,11 @@ def biophysical(args):
     
     x_res = int((x_max-x_min) / pixelSizeX)
     y_res = int((y_max-y_min) / pixelSizeY)
-    y_res = math.fabs(y_res)
+    y_res = int(math.fabs(y_res))
     cols = x_res
     rows = y_res
 
-    outputpath = '../../test_data/wave_Energy/newRaster4.tif'
+    outputpath = '../../test_data/wave_Energy/newRaster5.tif'
     driver = gdal.GetDriverByName(format)
     
     newRaster = driver.Create(outputpath, int(cols), int(rows), 1, gdal.GDT_Float32)
@@ -53,6 +54,12 @@ def biophysical(args):
     newRaster.SetGeoTransform((x_min, pixelSizeX, 0, y_max, 0, pixelSizeY))
     newRaster.GetRasterBand(1).SetNoDataValue(nodata)
     newRaster.GetRasterBand(1).Fill(nodata)
+    
+    
+    drv = gdal.GetDriverByName(format)
+    newGlobal = drv.CreateCopy('../../test_data/wave_Energy/newGlobal.tif', newRaster, 1)
+    scanline = global_dem.GetRasterBand(1).ReadAsArray(0,0,x_res,y_res)
+    newGlobal.GetRasterBand(1).WriteArray(scanline)
     
     raster = gdal.RasterizeLayer(newRaster, [1], layer, options=['ATTRIBUTE=' + 'HSAVG_M'])
 
