@@ -1172,13 +1172,17 @@ class GridList(DynamicGroup):
         
         
 class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
-    """This class represents the checkboxes used.  Because of the 
-        enable/disable requirement, this implementation is necessary.
-        
-        Arguments:
-        text - the string used for the checkbox's label."""
+    """This class represents a checkbox for our UI interpreter.  It has the 
+        ability to enable and disable other elements."""
          
     def __init__(self, attributes):
+        """Constructor for the CheckBox class.
+ 
+            attributes - a python dictionary containing all attributes of this 
+                checkbox as defined by the user in the json configuration file.
+            
+            returns an instance of CheckBox"""
+            
         super(CheckBox, self).__init__(attributes)
 
         #set the text of the checkbox
@@ -1188,18 +1192,35 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         self.toggled.connect(self.toggle)
         
     def toggle(self):
+        """Enable/disable all elements controlled by this element.
+        
+            returns nothing."""
+            
         if self.root == None:
             self.root = self.getRoot()   
         
         self.root.recursiveToggle(self.attributes['id'])
         
     def isEnabled(self):
+        """Check to see if this element is checked.
+        
+            returns a boolean"""
+            
         return self.isChecked()
     
     def value(self):
+        """Get the value of this checkbox.
+        
+            returns a boolean."""
         return self.isChecked()
     
     def setValue(self, value):
+        """Set the value of this element to value.
+            
+            value - a string or boolean representing
+            
+            returns nothing"""
+            
         if isinstance(value, unicode):
             if value == 'True':
                 value = True
@@ -1283,6 +1304,21 @@ class FileButton(QtGui.QPushButton):
 
 
 def validate(jsonObject):
+    """Validates a string containing a JSON object against our schema.  Uses the
+        JSONschema project to accomplish this. 
+        
+        jsonschema draft specification: 
+            http://tools.ietf.org/html/draft-zyp-json-schema-03
+            
+        jsonschema project sites:
+            http://json-schema.org/implementations.html
+            http://code.google.com/p/jsonschema/
+            
+        arguments:
+        jsonObject - a string containing a JSON object.
+        
+        returns nothing."""
+    
     data = json.loads(jsonObject)
     
     primitives = {"type" : "object",
