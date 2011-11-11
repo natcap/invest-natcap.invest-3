@@ -634,11 +634,36 @@ class ModelDialog(QtGui.QDialog):
         self.done(0)
 
 class StdoutNotifier(QtCore.QSocketNotifier):
+    """The QtCore.QSocketNotifier class allows us to listen for and receive
+        text written to a socket or file descriptor.  It is aware of a parent 
+        object to which text should be written."""
+        
     def __init__(self, socket, type, parent):
+        """Constructor for the StdoutNotifier class.
+        
+            socket - an int representing a socket number
+            type - an int represented by one of the following (from Qt docs):
+                Constant indentifier      Value    Description
+                -----------------------------------------------------------
+                QSocketNotifier.Read      0        There is data to be read
+                QSocketNotifier.Write     1        Data can be written
+                QSocketNotifier.Exception 2        An exception has occurred
+                
+            parent - a reference to the parent object.  The parent object must
+                have an implemented self.write() method.
+        
+            returns an instance of StdoutNotifier"""
+            
         super(StdoutNotifier, self).__init__(socket, type)
         self.setParent(parent)
         
     def write(self, text):
+        """Write text to the parent's write method.
+        
+            text - the python string to be written.
+            
+            returns nothing."""
+            
         self.parent().write(text)
         
 
