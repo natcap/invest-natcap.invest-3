@@ -23,8 +23,8 @@ class TestCarbonBiophysical(unittest.TestCase):
         carbon_biophysical.execute(args)
 
     def test_carbon_biophysical_sequestration(self):
-        """Test for carbon_biophysical function running with sample input to do \
-sequestration on lulc maps."""
+        """Test for carbon_biophysical function running with sample input to \
+do sequestration on lulc maps."""
 
         args = {}
         args['workspace_dir'] = '../../carbon_output'
@@ -35,8 +35,8 @@ sequestration on lulc maps."""
         carbon_biophysical.execute(args)
 
     def test_carbon_biophysical_sequestration_hwp(self):
-        """Test for carbon_biophysical function running with sample input to do \
-sequestration and harvested wood products on lulc maps."""
+        """Test for carbon_biophysical function running with sample input to \
+do sequestration and harvested wood products on lulc maps."""
 
         args = {}
         args['workspace_dir'] = '../../carbon_output'
