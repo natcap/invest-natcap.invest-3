@@ -44,8 +44,6 @@ class DynamicElement(QtGui.QWidget):
         #of Qt's ability to keep track of the parent of an element. 
         self.root = None
         
-        self.id = None
-        
         #We initialize self.required as False here, since some widgets may not
         #actually be input elements.  This ensures that all widgets will be 
         #marked optional unless specified by the user.
@@ -294,12 +292,8 @@ class DynamicPrimitive(DynamicElement):
             should return the most primitive such dictionary.
             
             returns a python dict mapping string ID -> this object's pointer."""
-        try:    
-            return {self.id : self}
-        except TypeError:
-            print TypeError
-            print 'self.id: ' + str(self.id)
-            return
+        
+        return {self.attributes['id'] : self}
     
     def enable(self):
         """Loop through all widgets in self.elements and enable them via the
