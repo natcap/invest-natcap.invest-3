@@ -1,9 +1,11 @@
 import sys, os, imp
-from PyQt4 import QtGui, QtCore
-
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
+print cmd_folder
 sys.path.insert(0, cmd_folder + '/../invest_core')
+sys.path.insert(0, cmd_folder + '/../../OSGeo4W/lib/site-packages')
+
+from PyQt4 import QtGui, QtCore
 
 import simplejson as json
 import jsonschema
@@ -41,6 +43,8 @@ class DynamicElement(QtGui.QWidget):
         #self.root is set after the GUI has been constructed to take advantage 
         #of Qt's ability to keep track of the parent of an element. 
         self.root = None
+        
+        self.id = None
         
         #We initialize self.required as False here, since some widgets may not
         #actually be input elements.  This ensures that all widgets will be 
@@ -290,8 +294,12 @@ class DynamicPrimitive(DynamicElement):
             should return the most primitive such dictionary.
             
             returns a python dict mapping string ID -> this object's pointer."""
-            
-        return {self.id : self}
+        try:    
+            return {self.id : self}
+        except TypeError:
+            print TypeError
+            print 'self.id: ' + str(self.id)
+            return
     
     def enable(self):
         """Loop through all widgets in self.elements and enable them via the
