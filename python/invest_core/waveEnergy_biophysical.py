@@ -2,7 +2,7 @@
 
 import sys, os
 import simplejson as json
-import waveEnergy_biophysical_core
+import waveEnergy_core
 import invest_core
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
@@ -101,4 +101,4 @@ def execute(args):
     #             'projection_uri': gp.GetParameterAsText(11)
                 }
         
-    waveEnergy_biophysical_core.biophysical(arguments)
+    waveEnergy_core.biophysical(arguments)
