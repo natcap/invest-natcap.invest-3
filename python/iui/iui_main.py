@@ -587,9 +587,9 @@ class ModelDialog(QtGui.QDialog):
             #start the thread
             self.thread.start()
             
-        except ImportError as e:
+        except ImportError:
             self.thread = None
-            self.write("Error running the model: "+ str(e))
+            self.write("Error running the model: "+ str(ImportError))
             self.threadFinished()
 
     def write(self, text):
@@ -1042,8 +1042,8 @@ class DynamicUI(DynamicGroup):
             
             #print an error if it is encountered.  In rare cases, 
             #element.enabledBy is not initialized properly.
-            except AttributeError as e:
-                print e
+            except AttributeError:
+                print str(AttributeError)
 
     def recursiveToggle(self, controllingID):
         """Enable or disable all objects enabledBy controllingID based on 
@@ -1408,9 +1408,9 @@ def validate(jsonObject):
               }
     try:
         jsonschema.validate(data, schema)
-    except ValueError as e:
-#        print e
-        print 'Error detected in your JSON syntax.\nExiting.'
+    except ValueError:
+        print 'Error detected in your JSON syntax: ' + str(ValueError)
+        print 'Exiting.'
         sys.exit()
 
 def main(json_args):
