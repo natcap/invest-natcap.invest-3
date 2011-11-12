@@ -37,7 +37,8 @@ def execute(args):
     #we import gdal stuff we don't get the wrong GDAL version.
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     filesystemencoding = sys.getfilesystemencoding()
-
+    biophysicalargs = {}
+    
     dict = {}
     arrayHeader = []
     arrayColumns = []
@@ -59,6 +60,8 @@ def execute(args):
     for array in dict.itervalues():
         machine_perf_twoDArray.append(array)
         
+    biophysical['machine_perf'] = machine_perf_twoDArray
+    
     machine_params = {}
     count = 0
     with open(args['machine_param_uri'], 'rb') as f:
@@ -66,9 +69,37 @@ def execute(args):
         for row in reader:
             machine_params[count] = row
             count = count + 1
+        biophysicalargs['machine_param'] = machine_params
 
     
     gdal.AllRegister()
+    
+    AOI = None
+    if 'AOI_uri' in args:
+        AOI = ogr.Open(args['AOI_uri'].encode(filesystemencoding))
+        biophysicalargs['AOI'] = AOI
+
+    if (AOI != None) and (args['calculate_valuation']):
+        with open(args['machine_econ_uri'], 'rb') as f:
+            machine_econ = {}
+            count = 0
+            reader = csv.DictReader(f)
+            for row in reader:
+                machine_econ[count] = row
+                count = count + 1
+            biophysicalargs['machine_econ'] = machine_econ
+    
+        with open(args['landgridpts_uri'], 'rb') as f:
+            landgridpts = {}
+            count = 0
+            reader = csv.DictReader(f)
+            for row in reader:
+                landgridpts[count] = row
+                count = count + 1
+            biophysicalargs['machine_econ'] = landgridpts
+            
+        
+        
     
 #    perfPathList = args['machine_perf_uri'].rsplit(os.sep, 1)
 #    perfPathWkbook = perfPathList[0]
