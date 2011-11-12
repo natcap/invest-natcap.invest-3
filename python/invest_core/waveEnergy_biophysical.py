@@ -11,6 +11,7 @@ from dbfpy import dbf
 
 from xlrd import open_workbook
 import csv
+
 def execute(args):
     """This function invokes the wave energy model given URI inputs of files.
         It will do filehandling and open/create appropriate objects to 
@@ -60,7 +61,7 @@ def execute(args):
     for array in dict.itervalues():
         machine_perf_twoDArray.append(array)
         
-    biophysical['machine_perf'] = machine_perf_twoDArray
+    biophysicalargs['machine_perf'] = machine_perf_twoDArray
     
     machine_params = {}
     count = 0
@@ -70,7 +71,33 @@ def execute(args):
             machine_params[count] = row
             count = count + 1
         biophysicalargs['machine_param'] = machine_params
-
+    #WaveDate information depends on analysis area
+    if args['analysis_area_uri'] == 'West Coast of North America and Hawaii':
+        analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp'
+        waveFile = open(args['wave_base_data_uri']+os.sep+'NAmerica_WestCoast_4m.txt')
+        biophysicalargs['wave_base_data'] = extrapolateWaveData(analysis_area_path, waveFile)
+        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
+        
+    elif args['analysis_area_uri'] == 'East Coast of North America and Puerto Rico':
+        analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp'
+        waveFile = open(args['wave_base_data_uri']+os.sep+'NAmerica_EastCoast_4m.txt')
+        biophysicalargs['wave_base_data'] = extrapolateWaveData(analysis_area_path, waveFile)
+        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
+        
+    elif args['analysis_area_uri'] == 'Global(Eastern Hemisphere)':
+        analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.shp'
+        waveFile = open(args['wave_base_data_uri']+os.sep+'Global_EastHemi_30m.txt')
+        biophysicalargs['wave_base_data'] = extrapolateWaveData(analysis_area_path, waveFile)
+        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
+        
+    elif args['analysis_area_uri'] == 'Global(Western Hemisphere)':
+        analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.shp'
+        waveFile = open(args['wave_base_data_uri']+os.sep+'Global_WestHemi_30m.txt')      
+        biophysicalargs['wave_base_data'] = extrapolateWaveData(analysis_area_path, waveFile)
+        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
+        
+    else:
+        print 'Analysis Area ERROR'
     
     gdal.AllRegister()
     
@@ -99,7 +126,29 @@ def execute(args):
             biophysicalargs['machine_econ'] = landgridpts
             
         
+    
+    
+    biophysicalargs['dem'] = gdal.Open(args['dem_uri'])
         
+    waveEnergy_core.biophysical(biophysicalargs)
+    
+def extrapolateWaveData(analysis_path, waveOpen):
+    analysis_area_path = analysis_path
+    waveFile = waveOpen
+    waveDict = {}
+    waveArray = []
+    key = ''
+    lineCount = 0
+    for line in waveFile:
+        lineCount = lineCount + 1
+        if line[0] == 'I':
+            key = line
+            waveArray = []
+        else:
+            waveArray.append(line)
+            waveDict[key] = waveArray
+    print lineCount
+    return waveDict
     
 #    perfPathList = args['machine_perf_uri'].rsplit(os.sep, 1)
 #    perfPathWkbook = perfPathList[0]
@@ -114,22 +163,16 @@ def execute(args):
 #    machine_perfSheet = open_workbook(perfPathWkbook).sheet_by_name(perfWksht)
 #    machine_paramSheet= open_workbook(paramPathWkbook).sheet_by_name(paramWksht)
         
-    wave_base_data = 1
-    analysis_area = ogr.Open(args['analysis_area_uri'].encode(filesystemencoding), 1)
-    AOI = 1
-    dem = gdal.Open(args['dem_uri'])
-        
-    arguments = {'wave_base_data': wave_base_data,
-                 'analysis_area': analysis_area,
-                 'AOI': AOI,
-                 'machine_perf': machine_perf_twoDArray,
-                 'machine_param': machine_params,
-                 'dem': dem,
+#    arguments = {'wave_base_data': wave_base_data,
+#                 'analysis_area': analysis_area,
+#                 'AOI': AOI,
+#                 'machine_perf': machine_perf_twoDArray,
+#                 'machine_param': machine_params,
+#                 'dem': dem,
     #             'valuation': gp.GetParameterAsText(7),
     #             'landgridpts_uri': gp.GetParameterAsText(8),
     #             'machine_econ_uri': gp.GetParameterAsText(9),
     #             'number_machines': gp.GetParameterAsText(10),
     #             'projection_uri': gp.GetParameterAsText(11)
-                }
+#                }
         
-    waveEnergy_core.biophysical(arguments)
