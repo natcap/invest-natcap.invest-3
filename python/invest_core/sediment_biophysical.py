@@ -8,7 +8,7 @@ sys.path.insert(0, cmd_folder)
 import simplejson as json
 import sediment_core
 from osgeo import gdal, ogr
-from dbfpy import dbf
+import csv
 
 import logging
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -64,7 +64,49 @@ def execute(args):
             logger.debug('creating directory %s', d)
             os.makedirs(d)
 
+    logger.info('Loading data sources')
 
+    #Load and copy relevant inputs from args into a dictionary that
+    #can be passed to the biophysical core model
+    biophysicalArgs = {}
+
+    #load rasters
+    for rasterName in ['dem', 'erosivity', 'erodibility', 'landuse']:
+        biophysicalArgs[rasterName] = gdal.Open(args[rasterName + '_uri'],
+                                                gdal.GA_ReadOnly)
+        logger.debug('load %s as: %s' % (args[rasterName + '_uri'],
+                                         biophysicalArgs[rasterName]))
+
+    #load shapefiles
+    for shapeFileName in ['watersheds', 'subwatersheds', 'reservoir_locations']:
+        fsencoding = sys.getfilesystemencoding()
+        uriName = shapeFileName + '_uri'
+        if uriName in args:
+            biophysicalArgs[shapeFileName] = \
+                ogr.Open(args[uriName].encode(fsencoding))
+            logger.debug('load %s as: %s' % (args[uriName],
+                                         biophysicalArgs[shapeFileName]))
+
+    #table
+    for x, idColumnName in [('reservoir_properties', 'id'),
+                            ('biophysical_table', 'lucode')]:
+        try:
+            uriName = x + '_uri'
+            logger.debug('load %s' % args[uriName])
+            file = open(args[uriName])
+            csvDictReader = csv.DictReader(open(args[x + '_uri']))
+            idTable = {}
+            for row in csvDictReader:
+                idTable[row[idColumnName]] = row
+            biophysicalArgs[x] = idTable
+        except IOError, e:
+            #Get here if file x is not found
+            logger.warning(e)
+
+    #primatives
+    for x in ['threshold_flow_accumulation', 'slope_threshold']:
+        biophysicalArgs[x] = args[x]
+        logger.debug('%s=%s' % (x, biophysicalArgs[x]))
 
     biophysicalArgs = {}
     logger.info('starting biophysical model')
