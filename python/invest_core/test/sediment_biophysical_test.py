@@ -30,7 +30,7 @@ do sequestration and harvested wood products on lulc maps."""
         args['reservoir_properties_uri'] = '%s/reservoir_prop' % baseDir
 
         #table
-        args['biophysical_table_uri'] = '%s/' % baseDir
+        args['biophysical_table_uri'] = '%s/biophysical_table.csv' % baseDir
 
         #primatives
         args['threshold_flow_accumulation'] = 1000
