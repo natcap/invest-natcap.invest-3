@@ -1,3 +1,7 @@
+"""Module that contains the core computational components for the timber 
+    model"""
+
+
 import numpy as np
 import imp, sys, os
 from osgeo import ogr
@@ -32,12 +36,12 @@ def execute(args):
     for fieldname in ('TNPV', 'TBiomass', 'TVolume'):
         field_def = ogr.FieldDefn(fieldname, ogr.OFTReal)
         layer.CreateField(field_def)
-        
+
     #Build a lookup table mapping the Parcel_IDs and corresponding row index
     parcelIdLookup = {}
     for i in range(attr_table.recordCount):
         parcelIdLookup[attr_table[i]['Parcel_ID']] = attr_table[i]
-        
+
     #Loop through each feature (polygon) in the shapefile layer
     for feat in layer:
         #Get the correct polygon attributes to be calculated by matching the feature's polygon Parcl_ID
