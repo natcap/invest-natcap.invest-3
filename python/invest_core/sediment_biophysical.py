@@ -1,9 +1,12 @@
 """InVEST Sediment biophysical module at the "uri" level"""
 
 import sys, os
+#Prepend current directory to search for correct GDAL library
+cmd_folder = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, cmd_folder)
+
 import simplejson as json
 import sediment_core
-import invest_core
 from osgeo import gdal, ogr
 from dbfpy import dbf
 
@@ -14,14 +17,54 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 logger = logging.getLogger('sediment_biophysical')
 
 def execute(args):
-    """This function invokes the carbon model given URI inputs of files.
-        It will do filehandling and open/create appropriate objects to 
-        pass to the core carbon biophysical processing function.  It may write
-        log, warning, or error messages to stdout.
+    """This function invokes the biophysical part of the sediment model given
+        URI inputs of files. It will do filehandling and open/create
+        appropriate objects to pass to the core sediment biophysical 
+        processing function.  It may write log, warning, or error messages to 
+        stdout.
         
         args - a python dictionary with at the following possible entries:
-        
+        args['workspace_dir'] - a uri to the directory that will write output
+            and other temporary files during calculation. (required)
+        args['dem_uri'] - a uri to a digital elevation raster file (required)
+        args['erosivity_uri'] - a uri to an input raster describing the 
+            rainfall eroisivity index (required)
+        args['erodibility_uri'] - a uri to an input raster describing soil 
+            erodibility (required)
+        args['landuse_uri'] - a uri to a land use/land cover raster whose
+            LULC indexes correspond to indexs in the biophysical table input.
+            Used for determining soil retention and other biophysical 
+            properties of the landscape.  (required)
+        args['watersheds_uri'] - a uri to an input shapefile of the watersheds
+            of interest as polygons. (required)
+        args['subwatersheds_uri'] - a uri to an input shapefile of the 
+            subwatersheds of interest that are contained in the
+            'watersheds_uri' shape provided as input. (required)
+        args['reservoir_locations_uri'] - a uri to an input shape file with 
+            points indicating reservoir locations with IDs. (optional)
+        args['reservoir_properties_uri'] - a uri to an input CSV table 
+            describing properties of input reservoirs provided in the 
+            reservoirs_uri shapefile (optional)
+        args['biophysical_table_uri'] - a uri to an input CSV file with 
+            biophysical information about each of the land use classes.
+        args['threshold_flow_accumulation'] - an integer describing the number
+            of upstream cells that must flow int a cell before it's considered
+            part of a stream.  required if 'v_stream_uri' is not provided.
+        args['slope_threshold'] - A percentage slope threshold as described in
+            the user's guide.
+            
         returns nothing."""
+
+    #Sets up the intermediate and output directory structure for the workspace
+    outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output' + os.sep
+    intermediateDirectoryPrefix = args['workspace_dir'] + os.sep + \
+        'Intermediate' + os.sep
+    for d in [outputDirectoryPrefix, intermediateDirectoryPrefix]:
+        if not os.path.exists(d):
+            logger.debug('creating directory %s', d)
+            os.makedirs(d)
+
+
 
     biophysicalArgs = {}
     logger.info('starting biophysical model')

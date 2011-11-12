@@ -1,4 +1,5 @@
-"""InVEST main plugin interface module"""
+"""InVEST Timber model at the "uri" level.  No separation between
+    biophysical and valuation since the model is so simple."""
 
 import imp, sys, os
 import simplejson as json
