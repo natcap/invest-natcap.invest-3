@@ -76,6 +76,9 @@ def execute(args):
                                                 gdal.GA_ReadOnly)
         logger.debug('load %s as: %s' % (args[rasterName + '_uri'],
                                          biophysicalArgs[rasterName]))
+    #check that they have the same projection
+    for rasterName in ['dem', 'erosivity', 'erodibility', 'landuse']:
+        logger.debug(biophysicalArgs[rasterName].GetProjection())
 
     #load shapefiles
     for shapeFileName in ['watersheds', 'subwatersheds', 'reservoir_locations']:

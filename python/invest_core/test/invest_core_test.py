@@ -79,6 +79,13 @@ class TestInvestCore(unittest.TestCase):
         #(it's 30x30 meters) so 0.09 Ha
         self.assertEqual(0.09, area)
 
+    def test_createRasterFromVectorExtents(self):
+        fsencoding = sys.getfilesystemencoding()
+        shp = ogr.Open('../../../sediment_test_data/subwatersheds.shp'.\
+                       encode(fsencoding))
+        raster = invest_core.createRasterFromVectorExtents(30, 30,
+                       gdal.GDT_Float32, -5.0, 'subwatershed.tif', shp)
+
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCore)
     unittest.TextTestRunner(verbosity=2).run(suite)
