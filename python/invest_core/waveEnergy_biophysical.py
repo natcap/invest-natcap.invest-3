@@ -151,8 +151,8 @@ def extrapolateWaveData(analysis_path, waveOpen):
         else:
             waveArray.append(line)
             waveDict[key] = waveArray
-    print lineCount
-    print waveDict[(56,112)]
+#    print lineCount
+#    print waveDict[(56,112)]
     return waveDict
     
 #    perfPathList = args['machine_perf_uri'].rsplit(os.sep, 1)
