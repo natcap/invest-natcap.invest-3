@@ -58,11 +58,11 @@ def biophysical(args):
     
     drv = gdal.GetDriverByName(format)
     newGlobal = drv.CreateCopy('../../test_data/wave_Energy/newGlobal.tif', newRaster, 1)
-    scanline = global_dem.GetRasterBand(1).ReadAsArray(0,0,x_res,y_res)
-    newGlobal.GetRasterBand(1).WriteArray(scanline)
+    newGlobal.GetRasterBand(1).SetNoDataValue(0)
+    newGlobal.GetRasterBand(1).Fill(0)
     
     raster = gdal.RasterizeLayer(newRaster, [1], layer, options=['ATTRIBUTE=' + 'HSAVG_M'])
-
+#    raster = gdal.RasterizeLayer(newGlobal, [1], layer, options=['BURN_VALUE_FROM=M'])
     #    performance_dict = getMachinePerf(args['machine_perf'])
     newRaster = None
 def getMachinePerf(machine_perf):
