@@ -45,6 +45,8 @@ def execute(args):
     arrayColumns = []
     machine_perf_twoDArray = []
     
+    #Create a dictionary of arrays which represent the rows
+    #Keep separate arrays for the row header and column header
     with open(args['machine_perf_uri'], 'rb') as f:
         reader = csv.reader(f)
         i = -1
@@ -57,12 +59,12 @@ def execute(args):
                 arrayColumns.append(row.pop(0))                
                 dict[i] = row
                 i = i + 1
-                
+    #Create 2D array by compiling rows of arrays from dict    
     for array in dict.itervalues():
         machine_perf_twoDArray.append(array)
         
     biophysicalargs['machine_perf'] = machine_perf_twoDArray
-    
+    #Create a dictionary of dictionaries where the inner dictionaries keys are the column fields.
     machine_params = {}
     count = 0
     with open(args['machine_param_uri'], 'rb') as f:
