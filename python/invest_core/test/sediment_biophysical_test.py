@@ -21,12 +21,12 @@ do sequestration and harvested wood products on lulc maps."""
         args['dem_uri'] = '%s/dem' % baseDir
         args['erosivity_uri'] = '%s/erosivity' % baseDir
         args['erodibility_uri'] = '%s/erodibility.tif' % baseDir
-        args['landuse_uri'] = '%s/landuse_90' % baseDir
+        args['landuse_uri'] = '%s/landuse_90.tif' % baseDir
 
         #shapefile
-        args['watersheds_uri'] = '%s/watersheds' % baseDir
-        args['subwatersheds_uri'] = '%s/subwatersheds' % baseDir
-        args['reservoir_locations_uri'] = '%s/reservoir_loc' % baseDir
+        args['watersheds_uri'] = '%s/watersheds.shp' % baseDir
+        args['subwatersheds_uri'] = '%s/subwatersheds.shp' % baseDir
+        args['reservoir_locations_uri'] = '%s/reservoir_loc.shp' % baseDir
         args['reservoir_properties_uri'] = '%s/reservoir_prop' % baseDir
 
         #table
