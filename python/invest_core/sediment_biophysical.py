@@ -52,7 +52,7 @@ def execute(args):
             part of a stream.  required if 'v_stream_uri' is not provided.
         args['slope_threshold'] - A percentage slope threshold as described in
             the user's guide.
-            
+
         returns nothing."""
 
     #Sets up the intermediate and output directory structure for the workspace
@@ -108,7 +108,10 @@ def execute(args):
         biophysicalArgs[x] = args[x]
         logger.debug('%s=%s' % (x, biophysicalArgs[x]))
 
-    biophysicalArgs = {}
+    #build output rasters
+    #first determine the minimum resolution of each of the input rasters
+
+
     logger.info('starting biophysical model')
     sediment_core.biophysical(biophysicalArgs)
     logger.info('finished biophysical model')
