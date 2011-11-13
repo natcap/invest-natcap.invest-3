@@ -2,6 +2,7 @@
     the InVEST toolset"""
 
 import numpy as np
+import math
 from osgeo import gdal, osr
 
 def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
@@ -154,3 +155,42 @@ def pixelArea(dataset):
     #take absolute value since sometimes negative widths/heights
     areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
     return areaMeters / (10 ** 4) #convert m^2 to Ha
+
+def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
+    """Create a blank raster based on a vector file extent.  This code is
+        adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
+    
+        xRes - the x resolution of the output dataset
+        yRes - the y resolution of the output dataset
+        format - gdal GDT pixel type
+        nodata - the output nodata value
+        rasterFile - URI to file location for raster
+        shp - vector shapefile to base extent of output raster on
+        
+        returns a blank raster whose bounds fit within `shp`s bounding box
+            and features are equivalent to the passed in data"""
+
+    #Determine the width and height of the tiff in pixels based on desired
+    #x and y resolution
+    shpExtent = shp.GetLayer(0).GetExtent()
+    tiff_width = int(math.ceil(abs(shpExtent[1] - shpExtent[0])) / xRes)
+    tiff_height = int(math.ceil(abs(shpExtent[3] - shpExtent[2])) / yRes)
+
+    driver = gdal.GetDriverByName('GTiff')
+    raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
+    raster.GetRasterBand(1).SetNoDataValue(1.0)
+
+    #Set the transform based on the hupper left corner and given pixel
+    #dimensions
+    raster_transform = [shpExtent[0], xRes, 0.0, shpExtent[3], 0.0, -yRes]
+    raster.SetGeoTransform(raster_transform)
+
+    #Use the same projection on the raster as the shapefile
+    srs = osr.SpatialReference()
+    srs.ImportFromWkt(shp.GetLayer(0).GetSpatialRef().__str__())
+    raster.SetProjection(srs.ExportToWkt())
+
+    #Initalize everything to nodata
+    raster.GetRasterBand(1).Fill(nodata)
+
+
