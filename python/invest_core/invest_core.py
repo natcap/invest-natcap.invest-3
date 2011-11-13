@@ -193,4 +193,21 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     #Initalize everything to nodata
     raster.GetRasterBand(1).Fill(nodata)
 
+def vectorizeRasters(bandList, op):
+    """Apply the numpy vectorized operation `op` on the rasters contained in
+        bandList where the arguments to `op` are brodcasted pixels from
+        each raster in bandList in the order they exist in the list
+        
+        bandList - list of bands
+        op - numpy vectorized operation, takes brodcasted pixels from bandList
+            in order and returns a new pixel
+        
+        returns a single band raster"""
 
+    matrixList = []
+    for band in bandList:
+        matrixList.append(band.ReadAsArray(0, 0, band.XSize, band.YSize))
+        outArray = op(*matrixList)
+        #write the array somewhere
+    #return the new raster
+    return None
