@@ -42,9 +42,9 @@ def execute(args):
     #Create the Output and Intermediate directories if they do not exist.
     outputDir = args['workspace_dir'] + os.sep + 'Output' + os.sep
     intermediateDir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
-    for dir in [outputDirectoryPrefix, intermediateDirectoryPrefix]:
-        if not os.path.exists(d):
-            os.makedirs(d)
+    for dir in [outputDir, intermediateDir]:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
         
     biophysicalargs = {}
     
