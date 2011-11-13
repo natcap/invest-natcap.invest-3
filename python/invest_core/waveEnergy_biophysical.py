@@ -144,12 +144,15 @@ def extrapolateWaveData(analysis_path, waveOpen):
     for line in waveFile:
         lineCount = lineCount + 1
         if line[0] == 'I':
-            key = line
+            iVal = int(line.split(',')[1])
+            jVal = int(line.split(',')[3])
+            key = (iVal, jVal)
             waveArray = []
         else:
             waveArray.append(line)
             waveDict[key] = waveArray
-    print lineCount
+#    print lineCount
+#    print waveDict[(56,112)]
     return waveDict
     
 #    perfPathList = args['machine_perf_uri'].rsplit(os.sep, 1)

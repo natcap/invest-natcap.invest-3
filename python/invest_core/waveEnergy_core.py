@@ -20,6 +20,7 @@ def biophysical(args):
         
     """
     filesystemencoding = sys.getfilesystemencoding()
+    #Shapefile of polygon that has the dimensions for providing the area of interest
     cutter_uri = '../../test_data/wave_Energy/samp_data/input/WaveData/WCNA_extract.shp'
     cutter = ogr.Open(cutter_uri.encode(filesystemencoding))
     cutterLayer = cutter.GetLayer(0)
@@ -44,7 +45,7 @@ def biophysical(args):
     y_res = int(math.fabs(y_res))
     cols = x_res
     rows = y_res
-
+    
     outputpath = '../../test_data/wave_Energy/newRaster5.tif'
     driver = gdal.GetDriverByName(format)
     
@@ -55,16 +56,16 @@ def biophysical(args):
     newRaster.GetRasterBand(1).SetNoDataValue(nodata)
     newRaster.GetRasterBand(1).Fill(nodata)
     
-    
+    #Make a duplicate copy of the global_dem to try and crop
     drv = gdal.GetDriverByName(format)
     newGlobal = drv.CreateCopy('../../test_data/wave_Energy/newGlobal.tif', newRaster, 1)
     newGlobal.GetRasterBand(1).SetNoDataValue(0)
     newGlobal.GetRasterBand(1).Fill(0)
-    
+    #Burn Height values from shapefile onto new raster
     raster = gdal.RasterizeLayer(newRaster, [1], layer, options=['ATTRIBUTE=' + 'HSAVG_M'])
-#    raster = gdal.RasterizeLayer(newGlobal, [1], layer, options=['BURN_VALUE_FROM=M'])
-    #    performance_dict = getMachinePerf(args['machine_perf'])
+
     newRaster = None
+
 def getMachinePerf(machine_perf):
     performance_dict = {}
     return performance_dict
