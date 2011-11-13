@@ -38,6 +38,14 @@ def execute(args):
     #we import gdal stuff we don't get the wrong GDAL version.
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     filesystemencoding = sys.getfilesystemencoding()
+    
+    #Create the Output and Intermediate directories if they do not exist.
+    outputDir = args['workspace_dir'] + os.sep + 'Output' + os.sep
+    intermediateDir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
+    for dir in [outputDirectoryPrefix, intermediateDirectoryPrefix]:
+        if not os.path.exists(d):
+            os.makedirs(d)
+        
     biophysicalargs = {}
     
     dict = {}
