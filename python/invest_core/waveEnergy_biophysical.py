@@ -55,18 +55,19 @@ def execute(args):
     
     #Create a dictionary of arrays which represent the rows
     #Keep separate arrays for the row header and column header
-    with open(args['machine_perf_uri'], 'rb') as f:
-        reader = csv.reader(f)
-        i = -1
-        for row in reader:
-            if i==-1:
-                arrayHeader = row
-                arrayHeader.pop(0)
-                i = 0
-            else:
-                arrayColumns.append(row.pop(0))                
-                dict[i] = row
-                i = i + 1
+    f = open(args['machine_perf_uri'])
+    reader = csv.reader(f)
+    i = -1
+    for row in reader:
+        if i==-1:
+            arrayHeader = row
+            arrayHeader.pop(0)
+            i = 0
+        else:
+            arrayColumns.append(row.pop(0))                
+            dict[i] = row
+            i = i + 1
+    f.close()
     #Create 2D array by compiling rows of arrays from dict    
     for array in dict.itervalues():
         machine_perf_twoDArray.append(array)
@@ -117,26 +118,14 @@ def execute(args):
         biophysicalargs['AOI'] = AOI
 
     if (AOI != None) and (args['calculate_valuation']):
-        with open(args['machine_econ_uri'], 'rb') as f:
-            machine_econ = {}
-            count = 0
+        for file, id in (('machine_econ', 'NAME'), ('landgridpts', 'ID')):
+            f = open(args[file+'_uri'])
+            dict = {}
             reader = csv.DictReader(f)
             for row in reader:
-                machine_econ[count] = row
-                count = count + 1
-            biophysicalargs['machine_econ'] = machine_econ
-    
-        with open(args['landgridpts_uri'], 'rb') as f:
-            landgridpts = {}
-            count = 0
-            reader = csv.DictReader(f)
-            for row in reader:
-                landgridpts[count] = row
-                count = count + 1
-            biophysicalargs['machine_econ'] = landgridpts
-            
-        
-    
+                dict[row[id]] = row
+            biophysicalargs[file] = dict
+            f.close()
     
     biophysicalargs['dem'] = gdal.Open(args['dem_uri'])
         
