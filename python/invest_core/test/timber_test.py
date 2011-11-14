@@ -17,11 +17,11 @@ class TestInvestTimberCore(unittest.TestCase):
         timber.execute(args)
 
         #Delete all the generated files and directory
-        if os.path.isdir('../../../test_data/timber/Output/'):
-            textFileList = os.listdir('../../../test_data/timber/Output/')
+        if os.path.isdir('../../test_data/timber/Output/'):
+            textFileList = os.listdir('../../test_data/timber/Output/')
             for file in textFileList:
-                os.remove('../../../test_data/timber/Output/' + file)
-            os.rmdir('../../../test_data/timber/Output/')
+                os.remove('../../test_data/timber/Output/' + file)
+            os.rmdir('../../test_data/timber/Output/')
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestTimberCore)
