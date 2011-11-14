@@ -68,7 +68,10 @@ def execute(args):
             dict[i] = row
             i = i + 1
     f.close()
-    #Create 2D array by compiling rows of arrays from dict    
+    #Create 2D array by compiling rows of arrays from dict
+    #Add on the row/col fields in same order as WW 3 text file
+    machine_perf_twoDArray.append(arrayColumns)
+    machine_perf_twoDArray.append(arrayHeader)
     for array in dict.itervalues():
         machine_perf_twoDArray.append(array)
         
