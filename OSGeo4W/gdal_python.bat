@@ -1,8 +1,8 @@
-@echo off
-set OSGEO4W_ROOT=C:\OSGeo4W
+#echo off
+set OSGEO4W_ROOT=.\OSGeo4W
 PATH=%OSGEO4W_ROOT%\bin;%PATH%
 for %%f in (%OSGEO4W_ROOT%\etc\ini\*.bat) do call %%f
 @echo on
 
-@C:\OSGeo4W\bin\python.exe
+%OSGEO4W_ROOT%\bin\python.exe
 
