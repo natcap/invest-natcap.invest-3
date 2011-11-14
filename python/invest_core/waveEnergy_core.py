@@ -32,31 +32,15 @@ def biophysical(args):
     layer = args['analysis_area'].GetLayer(0)
     
     #Create a new raster that has the values of the WWW shapefile
-#    source = cutterLayer.GetSpatialRef()
-#    projection = source.ExportToWkt()
-    
-#    x_min, x_max, y_min, y_max = cutterLayer.GetExtent()
+    #Get the resolution from the global dem
     geoform = global_dem.GetGeoTransform()
-    pixelSizeX = geoform[1]
-    pixelSizeY = geoform[5]
-#    
-#    x_res = int((x_max-x_min) / pixelSizeX)
-#    y_res = int((y_max-y_min) / pixelSizeY)
-#    y_res = int(math.fabs(y_res))
-#    cols = x_res
-#    rows = y_res
+    pixelSizeX = abs(geoform[1])
+    pixelSizeY = abs(geoform[5])
+
     
     outputpath = '../../test_data/wave_Energy/newRaster.tif'
-#    driver = gdal.GetDriverByName(format)
-#    
-#    newRaster = driver.Create(outputpath, int(cols), int(rows), 1, gdal.GDT_Float32)
-#    
-#    newRaster.SetProjection(projection)
-#    newRaster.SetGeoTransform((x_min, pixelSizeX, 0, y_max, 0, pixelSizeY))
-#    newRaster.GetRasterBand(1).SetNoDataValue(nodata)
-#    newRaster.GetRasterBand(1).Fill(nodata)
-#    
-    invest_core.createRasterFromVectorExtents(23, 23, 
+
+    invest_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY, 
                                               datatype, nodata, outputpath, cutter)
     
     #Make a duplicate copy of the global_dem to try and crop
