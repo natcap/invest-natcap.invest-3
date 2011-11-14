@@ -256,7 +256,9 @@ class TestTimber(unittest.TestCase):
         output_dir = '../../../test_data/timber' + os.sep + 'Output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
-
+        elif os.path.isfile(output_dir + 'timber.shp'):
+            os.remove(output_dir+'timber.shp')
+            
         shape_source = output_dir + 'timber.shp'
 
         ogr.GetDriverByName('ESRI Shapefile').\
