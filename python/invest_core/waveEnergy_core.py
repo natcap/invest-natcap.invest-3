@@ -61,11 +61,31 @@ def biophysical(args):
 #    #Burn Height values from shapefile onto new raster
 #    newRaster = None
 
-def interpolateWaveDate(machinePerf, waveBaseData):
+    interpolateWaveData(args['machine_perf'], args['wave_base_data'])
+    
+def interpolateWaveData(machinePerf, waveBaseData):
     #Trim down the waveBaseData based on the machinePerf rows/columns
     #and then interpolate if need be.
+    #Once interpolated and trimmed vectorize over two matrices returning
+    #and saving the output to a dictionary with key being I,J value
+    
     #A 2D array that will be vectorized with machinePerf
-    interpWaveDate = []
+    interpWaveData = []
+#    machineCol = machinePerf[0]
+#    machineRow = machinePerf[1]
+##    print machineCol
+##    print machineRow
+#    for key, pointData in waveBaseData.iteritems():
+#        waveCol = pointData[0]
+#        waveRow = pointData[1]
+#        newCol = []
+#        newRow = []
+#        lowBound = -1
+#        highBound = -1
+#        for index, num in enumerate(waveCol):
+#            if float(num) < machineCol
+#       
+#        
     
     return interpWaveData
     
