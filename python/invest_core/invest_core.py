@@ -193,4 +193,81 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     #Initalize everything to nodata
     raster.GetRasterBand(1).Fill(nodata)
 
+def calculateIntersectionRectangle(rasterList):
+    """Return a bounding box of the intersections of all the rasters in the
+        list.
+        
+        rasterList - a list of GDAL rasters in the same projection and 
+            coordinate system
+            
+        returns a 4 element list that bounds the intersection of all the 
+            rasters in rasterList.  [left, top, right, bottom]"""
 
+#Define the initial bounding box
+    gt = rasterList[0].GetGeoTransform()
+    #order is left, top, right, bottom of rasterbounds
+    boundingBox = [gt[0], gt[3], gt[0] * rasterList[0].RasterXSize,
+                   gt[3] + gt5 * rasterList[0].RasterYSize]
+
+    for band in rasterList:
+        #intersect the current bounding box with the one just read
+        gt = rasterList[0].GetGeoTransform()
+        rec = [gt[0], gt[3], gt[0] * rasterList[0].RasterXSize,
+               gt[3] + gt5 * rasterList[0].RasterYSize]
+        #This intersects rec with the current bounding box
+        boundingBox = [max(rec[0], boundingBox[0]),
+                       min(rec[1], boundingBox[1]),
+                       min(rec[2], boundingBox[2]),
+                       max(rec[3], boundingBox[3])]
+    return boundingBox
+
+def vectorizeRasters(rasterList, op):
+    """Apply the numpy vectorized operation `op` on the rasters contained in
+        rasterList where the arguments to `op` are brodcasted pixels from
+        each raster in rasterList in the order they exist in the list
+        
+        rasterList - list of rasters
+        op - numpy vectorized operation, takes brodcasted pixels from 
+            the first bands in rasterList in order and returns a new pixel
+        
+        returns a single band raster"""
+
+    aoiBox = calculateIntersectionRectangle(rasterList)
+    #create a new raster with the minimum resolution of rasterList and
+    #bounding box that contains aoiBox
+
+    #extract a matrix from each raster that's contained in the bounding box
+    #create a scipy.interpolate RectBivariateSpline for each one below is some
+    #biovariate spline tracer code
+
+#x,y=np.mgrid[0:5,0:5]
+#>>> x=np.array(range(5))
+#>>> y=np.array(range(5))
+#>>> x
+#array([0, 1, 2, 3, 4])
+#>>> y
+#array([0, 1, 2, 3, 4])
+#>>> scipy.interpolate.RectBivariateSpline(x,y,z)
+#<scipy.interpolate.fitpack2.RectBivariateSpline object at 0x108ebd0>
+#>>> newx=np.array(range(10))
+#>>> newx=newx/2.0
+#>>> newx
+#array([ 0. ,  0.5,  1. ,  1.5,  2. ,  2.5,  3. ,  3.5,  4. ,  4.5])
+#>>> x
+#array([0, 1, 2, 3, 4])
+#>>> newy=np.array(range(10))
+#>>> newy=newy/2.0
+#>>> interp=scipy.interpolate.RectBivariateSpline(x,y,z)
+#>>> interp.ev(newx,newy)
+#array([  2.06559327e-17,   1.00000000e+00,   2.00000000e+00,
+#         3.00000000e+00,   4.00000000e+00,   5.00000000e+00,
+#         6.00000000e+00,   7.00000000e+00,   8.00000000e+00,
+#         8.00000000e+00])
+
+    matrixList = []
+
+#        matrixList.append(band.ReadAsArray(0, 0, band.XSize, band.YSize))
+#        outArray = op(*matrixList)
+        #write the array somewhere
+    #return the new raster
+    return None
