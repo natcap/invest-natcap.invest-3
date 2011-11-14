@@ -478,7 +478,7 @@ class DynamicText(DynamicPrimitive):
             
             returns a boolean."""
             
-        if len(self.textField.text()) > 0:
+        if self.textField.isEnabled() == True:
             return True
         else:
             return False
@@ -788,7 +788,7 @@ class DynamicUI(DynamicGroup):
                     
                     #if even one of the elements in the 'requiredIf' array is
                     #enabled, the current element is required.
-                    if self.allElements[item].isEnabled():
+                    if self.allElements[item].requirementsMet():
                         return True
             
             #if we find no elements making this element required, this element
@@ -814,21 +814,24 @@ class DynamicUI(DynamicGroup):
                 #The args_id element is optional in the JSON config file.  If
                 #provided, we use it to assemble the output dictionary
                 if 'args_id' in element.attributes:
-                    
-                    #if the user has specified a dataType in the JSON config,
-                    #ensure the data is casted appropriately.
-                    if 'dataType' in element.attributes:
-                        if element.attributes['dataType'] == 'int':
-                            value = int(element.value())
-                        elif element.attributes['dataType'] == 'float':
-                            value = float(element.value())
+                    #We don't want to assemble disabled elements, as the model
+                    #may run differently given the presence or absence of 
+                    #elements
+                    if element.isEnabled() == True:
+                        #if the user has specified a dataType in the JSON config,
+                        #ensure the data is casted appropriately.
+                        if 'dataType' in element.attributes:
+                            if element.attributes['dataType'] == 'int':
+                                value = int(element.value())
+                            elif element.attributes['dataType'] == 'float':
+                                value = float(element.value())
+                            else:
+                                value = str(element.value())     
+                        #If the user has not specified a dataType, cast from 
+                        #QtCore.QString to python string.                       
                         else:
-                            value = str(element.value())     
-                    #If the user has not specified a dataType, cast from 
-                    #QtCore.QString to python string.                       
-                    else:
-                        value = str(element.value())
-                    
+                            value = str(element.value())
+                        
                     #save the value to the output Dictionary.
                     self.outputDict[element.attributes['args_id']] = value
 
