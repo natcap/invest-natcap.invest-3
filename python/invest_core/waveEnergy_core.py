@@ -37,11 +37,21 @@ def biophysical(args):
     pixelSizeX = abs(geoform[1])
     pixelSizeY = abs(geoform[5])
 
+    #Rasters which will be past (along with global_dem) to vectorize with wave power op.
+    waveHeightPath = '../../test_data/wave_Energy/waveHeight.tif'
+    wavePeriodPath = '../../test_data/wave_Energy/wavePeriod.tif'
+    #Create rasters bounded by shape file of analyis area
+    for path in (waveHeightPath, wavePeriodPath):
+        invest_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY, 
+                                              datatype, nodata, path, cutter)
+    #Open created rasters
+    waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
+    wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
+    #Rasterize the height and period values into respected rasters from shapefile
+    for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
+        raster.GetRasterBand(1).SetNoDataValue(nodata)
+        gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
     
-    outputpath = '../../test_data/wave_Energy/newRaster.tif'
-
-    invest_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY, 
-                                              datatype, nodata, outputpath, cutter)
     
     #Make a duplicate copy of the global_dem to try and crop
 #    drv = gdal.GetDriverByName(format)
@@ -49,8 +59,6 @@ def biophysical(args):
 #    newGlobal.GetRasterBand(1).SetNoDataValue(0)
 #    newGlobal.GetRasterBand(1).Fill(0)
 #    #Burn Height values from shapefile onto new raster
-#    raster = gdal.RasterizeLayer(newRaster, [1], layer, options=['ATTRIBUTE=' + 'HSAVG_M'])
-#
 #    newRaster = None
 
 def interpolateWaveDate(machinePerf, waveBaseData):
