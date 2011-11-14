@@ -87,6 +87,9 @@ class DynamicElement(QtGui.QWidget):
             
             returns a boolean"""
         return self.enabled
+    
+    def requirementsMet(self):
+        return True
         
         
 class DynamicGroup(DynamicElement):
@@ -478,10 +481,7 @@ class DynamicText(DynamicPrimitive):
             
             returns a boolean."""
             
-        if self.textField.isEnabled() == True:
-            return True
-        else:
-            return False
+        return self.textField.isEnabled()
         
     def value(self):
         """Fetch the value of the user's input, stored in self.textField.
@@ -832,8 +832,8 @@ class DynamicUI(DynamicGroup):
                         else:
                             value = str(element.value())
                         
-                    #save the value to the output Dictionary.
-                    self.outputDict[element.attributes['args_id']] = value
+                        #save the value to the output Dictionary.
+                        self.outputDict[element.attributes['args_id']] = value
 
     def updateRequirementNotification(self, numUnsatisfied=None):
         """Updates the QLabel at the bottom of the DynamicUI window to reflect
