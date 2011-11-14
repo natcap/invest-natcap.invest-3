@@ -173,8 +173,8 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     #Determine the width and height of the tiff in pixels based on desired
     #x and y resolution
     shpExtent = shp.GetLayer(0).GetExtent()
-    tiff_width = int(math.ceil(abs(shpExtent[1] - shpExtent[0])) / xRes)
-    tiff_height = int(math.ceil(abs(shpExtent[3] - shpExtent[2])) / yRes)
+    tiff_width = int(math.ceil(abs(shpExtent[1] - shpExtent[0]) / xRes))
+    tiff_height = int(math.ceil(abs(shpExtent[3] - shpExtent[2]) / yRes))
 
     driver = gdal.GetDriverByName('GTiff')
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
