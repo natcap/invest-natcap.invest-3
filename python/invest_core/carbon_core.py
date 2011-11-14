@@ -65,24 +65,24 @@ def biophysical(args):
 
     #Create carbon pool dictionary with appropriate values to handle
     #nodata in the input and nodata in the output
-    #logger.debug("building carbon pools")
+    print("building carbon pools")
     inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
     outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
     pools = build_pools_dict(args['carbon_pools'], cellArea, inNoData,
                              outNoData)
-    #logger.debug("built carbon pools")
+    print("built carbon pools")
 
 
     #calculate carbon storage for the current landscape
-    #logger.info('calculating carbon storage for the current landscape')
+    print('calculating carbon storage for the current landscape')
     calculateCarbonStorage(pools, args['lulc_cur'].GetRasterBand(1),
                            args['tot_C_cur'].GetRasterBand(1))
-    #logger.info('finished calculating carbon storage for the current \
-#landscape')
+    print('finished calculating carbon storage for the current \
+landscape')
 
     #Calculate HWP pools if a HWP shape is present
     if 'hwp_cur_shape' in args:
-        #logger.info('calculating HWP storage for the current landscape')
+        print('calculating HWP storage for the current landscape')
         calculateHWPStorageCur(args['hwp_cur_shape'], args['c_hwp_cur'],
                             args['bio_hwp_cur'], args['vol_hwp_cur'],
                             cellArea, args['lulc_cur_year'])
@@ -90,15 +90,15 @@ def biophysical(args):
         invest_core.rasterAdd(args['tot_C_cur'].GetRasterBand(1),
                               args['c_hwp_cur'].GetRasterBand(1),
                               args['tot_C_cur'].GetRasterBand(1))
-        #logger.info('finished HWP storage for the current landscape')
+        print('finished HWP storage for the current landscape')
 
     if 'lulc_fut' in args:
         #calculate carbon storage for the future landscape if it exists
-        #logger.info('calculating carbon storage for future landscape')
+        print('calculating carbon storage for future landscape')
         calculateCarbonStorage(pools, args['lulc_fut'].GetRasterBand(1),
                                args['tot_C_fut'].GetRasterBand(1))
-        #logger.info('finished calculating carbon storage for future \
-#landscape')
+        print('finished calculating carbon storage for future \
+landscape')
 
         #Calculate a future HWP pool if a future landcover map is present, 
         #this means that a sequestration scenario is happening, so a current 
@@ -110,7 +110,7 @@ def biophysical(args):
         if 'hwp_fut_shape' in args:
             harvestMaps['fut'] = args['hwp_fut_shape']
         if 'c_hwp_fut' in args:
-            #logger.info('calculating HWP storage for future landscape')
+            print('calculating HWP storage for future landscape')
             calculateHWPStorageFut(harvestMaps, args['c_hwp_fut'],
                 args['bio_hwp_fut'], args['vol_hwp_fut'], cellArea,
                 args['lulc_cur_year'], args['lulc_fut_year'])
@@ -118,14 +118,14 @@ def biophysical(args):
             invest_core.rasterAdd(args['tot_C_fut'].GetRasterBand(1),
                               args['c_hwp_fut'].GetRasterBand(1),
                               args['tot_C_fut'].GetRasterBand(1))
-            #logger.info('finished calculating HWP storage for future landscape')
+            print('finished calculating HWP storage for future landscape')
 
         #calculate seq. only after HWP has been added to the storage rasters
-        #logger.info('calculating carbon sequestration')
+        print('calculating carbon sequestration')
         invest_core.rasterDiff(args['tot_C_fut'].GetRasterBand(1),
                                args['tot_C_cur'].GetRasterBand(1),
                                args['sequest'].GetRasterBand(1))
-        #logger.info('finished calculating carbon sequestration')
+        print('finished calculating carbon sequestration')
 
 def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                            yr_cur, yr_fut):
@@ -684,7 +684,7 @@ def valuation(args):
         
         returns nothing"""
 
-    #logger.debug('constructing valuation formula')
+    print('constructing valuation formula')
     n = args['yr_fut'] - args['yr_cur'] - 1
     ratio = 1.0 / ((1 + args['r'] / 100.0) * (1 + args['c'] / 100.0))
     valuationConstant = args['V'] / (args['yr_fut'] - args['yr_cur']) * \
@@ -699,9 +699,9 @@ def valuation(args):
         else:
             return noDataOut
 
-    #logger.debug('finished constructing valuation formula')
+    print('finished constructing valuation formula')
 
-    #logger.info('starting valuation of each pixel')
+    print('starting valuation of each pixel')
     invest_core.vectorize1ArgOp(args['sequest'].GetRasterBand(1), valueOp,
                                 args['value_seq'].GetRasterBand(1))
-    #logger.info('finished valuation of each pixel')
+    print('finished valuation of each pixel')
