@@ -584,9 +584,9 @@ class ModelDialog(QtGui.QDialog):
         try:
 #            model = imp.load_source('module', uri)
             self.thread = QtCore.QProcess()
-            self.thread.setProcessChannelMode(QtCore.QProcess.MergedChannels)
-            self.connect(self.thread, QtCore.SIGNAL('readyReadStdout()'), self.readOutput)
-#            self.thread.readyReadStandardOutput.connect(self.readOutput)
+#            self.thread.setProcessChannelMode(QtCore.QProcess.MergedChannels)
+#            self.connect(self.thread, QtCore.SIGNAL('readyReadStdout()'), self.readOutput)
+            self.thread.readyReadStandardOutput.connect(self.readOutput)
             
             #when the thread is finished, run self.threadFinished.
             self.thread.finished.connect(self.threadFinished)
@@ -642,8 +642,8 @@ class ModelDialog(QtGui.QDialog):
         
     def readOutput(self):
         print "reading output"
-        self.write(self.thread.readLine())
-#        self.write(self.thread.readAllStandardOutput())
+#        self.write(self.thread.readLine())
+        self.write(self.thread.readAllStandardOutput())
         
     def threadFinished(self):
         """Notify the user that model processing has finished.
