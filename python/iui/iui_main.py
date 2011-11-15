@@ -521,7 +521,7 @@ class ModelDialog(QtGui.QDialog):
         #set window attributes
         self.setLayout(QtGui.QVBoxLayout())
         self.setWindowTitle("Running the model")
-        self.setGeometry(400, 400, 400, 400)
+        self.setGeometry(400, 400, 700, 400)
         
         self.cancel = False
 
@@ -566,55 +566,29 @@ class ModelDialog(QtGui.QDialog):
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
         
-        #set up an instance of StdoutNotifier to capture all stdout.
-#        self.stdoutNotifier = StdoutNotifier(0, QtCore.QSocketNotifier.Read, self)
-        
-        #tell python to run all stdout and stderr through the StdoutNotifier.
-#        sys.stdout = self.stdoutNotifier
-#        
-#        sys.stderr = sys.stdout
-        
-        #When the notifier detects text in stdout, it should run the callback
-        #self.write.
-        
-#        self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.write)
-        
         #Run the model if possible.  If we encounter an error running the model,
         #print the error message to the modal window.
         try:
-#            model = imp.load_source('module', uri)
             self.thread = QtCore.QProcess()
-#            self.thread.setProcessChannelMode(QtCore.QProcess.MergedChannels)
-#            self.connect(self.thread, QtCore.SIGNAL('readyReadStdout()'), self.readOutput)
             self.thread.readyReadStandardOutput.connect(self.readOutput)
             
             #when the thread is finished, run self.threadFinished.
             self.thread.finished.connect(self.threadFinished)
             
-            #start the thread
             list = QtCore.QStringList(uri)
             list.append(json.dumps(inputDict))
             
-#            self.stdoutchecker = ModelThread(self)
-            
             print os.getcwd()
             command = './OSGeo4W/gdal_python_exec.bat'
-            commandStr = str(command + uri +
-                              ' \'' + str(json.dumps(inputDict))) + '\''
-            print commandStr
             
             argslist = QtCore.QStringList()
             argslist.append(QtCore.QString(uri))
             argslist.append(QtCore.QString(json.dumps(inputDict)))
             
-#            self.thread.start(commandStr)
+            #start the thread
             self.thread.start(command, argslist)
-#            self.stdoutchecker.start()
             print self.thread.readAllStandardOutput()
-#            self.thread.execute(commandStr)
             print self.thread.exitCode()
-#            self.thread.execute(QtCore.QString('OSGeo4W/gdal_python_exec.bat'),
-#                                list)
 
 
             
@@ -650,7 +624,6 @@ class ModelDialog(QtGui.QDialog):
         
             returns nothing."""
             
-        print self.thread.readAllStandardOutput()
         print 'Completed.' #prints a status message in the statusArea.
         self.progressBar.setMaximum(1) #stops the progressbar.
         self.runButton.setDisabled(False) #enables the runButton
