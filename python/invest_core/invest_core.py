@@ -288,7 +288,7 @@ def vectorizeRasters(rasterList, op, rasterName=None):
         each raster in rasterList in the order they exist in the list
         
         rasterList - list of rasters
-        op - numpy vectorized operation, takes brodcasted pixels from 
+        op - numpy vectorized operation, takes broadcasted pixels from 
             the first bands in rasterList in order and returns a new pixel
         rasterName - the desired URI to the output raster.  If None then
             resulting raster is only mapped to MEM
@@ -300,6 +300,28 @@ def vectorizeRasters(rasterList, op, rasterName=None):
 
     #create a new raster with the minimum resolution of rasterList and
     #bounding box that contains aoiBox
+    #gt: left, pixelxwidth, pixelywidthforx, top, pixelxwidthfory, pixelywidth
+    #generally pixelywidthforx and pixelxwidthfory are zero for maps where 
+    #north is up if that's not the case for us, we'll have a few bugs to deal 
+    #with aoibox is left, top, right, bottom
+
+    #DEFINE THESE BASED ON MINIMUM PIXEL WIDTH/HEIGHT
+    pixelWidth = 0.1
+    pixelHeight = 0.1
+    nPixelsX = 0 #DEFINE THIS
+    nPixelsY = 0 #DEFINE THIS
+    #geotransform order: 
+    #1) left coordinate of top left corner
+    #2) pixel width in x direction
+    #3) pixel width in y direciton (usually zero)
+    #4) top coordinate of top left corner
+    #5) pixel height in x direction (usually zero)
+    #6) pixel height in y direction 
+    geotransform = [aoiBox[0], pixelWidth, 0.0, aoiBox[2], 0.0, pixelHeight]
+
+    newRaster(cols, rows, projection, geotransform, format, nodata, datatype,
+              bands, outputURI)
+
 
     #extract a matrix from each raster that's contained in the bounding box
     #create a scipy.interpolate RectBivariateSpline for each one below is some
