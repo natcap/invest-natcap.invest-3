@@ -7,7 +7,7 @@ from osgeo import ogr
 from dbfpy import dbf
 import math
 import invest_core
-import sys
+import sys, os
 
 def biophysical(args):
     """
@@ -66,7 +66,11 @@ def biophysical(args):
     clipShape(args['analysis_area'], args['AOI'])
     
 def clipShape(shapeToClip, bindingShape):
-    shape_source = '../../test_data/wave_Energy/samp_data/Intermediate'
+    shape_source = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
+    
+    if os.path.isfile(shape_source):
+        os.remove(shape_source)
+    
     #Copy the input shapefile into the designated output folder
 #    copiedShape = ogr.GetDriverByName('ESRI Shapefile').\
 #        CopyDataSource(shapeToClip, shape_source)
