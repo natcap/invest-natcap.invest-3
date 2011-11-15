@@ -129,16 +129,42 @@ def execute(args):
         print 'Analysis Area ERROR'
     
     gdal.AllRegister()
-#    print biophysicalargs['wave_base_data'][1]
-#    print arrayHeader
-#    print machine_perf_twoDArray
-    x = np.array(arrayHeader)
-    y = np.array(arrayColumns)
-    z = np.array(machine_perf_twoDArray)
-    newx = np.array(biophysicalargs['wave_base_data'][0])
-    newy = np.array(biophysicalargs['wave_base_data'][1])
+
+#    x = np.array(arrayHeader)
+#    y = np.array(arrayColumns)
+#    z = np.array(machine_perf_twoDArray)
+#    print x
+#    print y
+#    print z
+#    newx = np.array(biophysicalargs['wave_base_data'][0])
+#    newy = np.array(biophysicalargs['wave_base_data'][1])
+#    print newx
+#    print newy
+#    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
+#    print interpZ
+
+    x = np.array([0, 4, 6, 8])
+    y = np.array([0, 3.5, 5.5, 7.5])
+    z = np.array([[0., 0., 0., 0.],
+                  [0., 2., 4., 6.],
+                  [0., 4., 6., 8.],
+                  [0., 6., 8., 10.]])
+
+    newx = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 32])
+    newy = np.array([0, 1, 2, 3, 3.5, 4, 5, 5.5, 6, 7, 7.5, 8, 28])
+
+    interpz = invest_core.interpolateMatrix(x, y, z, newx, newy)
+    print interpz
     
-    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
+#    for xVal in x:
+#        for yVal in y:
+#            i = x.tolist().index(xVal)
+#            j = y.tolist().index(yVal)
+#            ii = newx.tolist().index(xVal)
+#            jj = newy.tolist().index(yVal)
+#            print "%s != %s" % (z[i][j], interpZ[ii][jj])
+    
+    
     
     AOI = None
     if 'AOI_uri' in args:
@@ -201,12 +227,10 @@ def extrapolateWaveData(analysis_path, waveOpen):
         else:
             waveArray.append(line.split(','))
             waveDict[key] = waveArray
-    print waveRow
     for i, val in enumerate(waveRow):
         waveRow[i] = float(val)
     for i, val in enumerate(waveCol):
         waveCol[i] = float(val)
-    print waveRow
     waveDict[0] = waveRow
     waveDict[1] = waveCol
 #    print lineCount
