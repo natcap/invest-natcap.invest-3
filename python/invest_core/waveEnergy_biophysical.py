@@ -55,20 +55,27 @@ def execute(args):
     
     #Create a dictionary of arrays which represent the rows
     #Keep separate arrays for the row header and column header
-    f = open(args['machine_perf_uri'])
-    reader = csv.reader(f)
-    i = -1
-    for row in reader:
-        if i==-1:
-            arrayHeader = row
-            arrayHeader.pop(0)
-            i = 0
-        else:
-            arrayColumns.append(row.pop(0))                
-            dict[i] = row
-            i = i + 1
-    f.close()
-    #Create 2D array by compiling rows of arrays from dict    
+    try:
+        f = open(args['machine_perf_uri'])
+        reader = csv.reader(f)
+        i = -1
+        for row in reader:
+            if i==-1:
+                arrayHeader = row
+                arrayHeader.pop(0)
+                i = 0
+            else:
+                arrayColumns.append(row.pop(0))                
+                dict[i] = row
+                i = i + 1
+        f.close()
+    except IOError, e:
+        print 'File I/O error' + e
+        
+    #Create 2D array by compiling rows of arrays from dict
+    #Add on the row/col fields in same order as WW 3 text file
+    machine_perf_twoDArray.append(arrayHeader)
+    machine_perf_twoDArray.append(arrayColumns)
     for array in dict.itervalues():
         machine_perf_twoDArray.append(array)
         
@@ -76,12 +83,16 @@ def execute(args):
     #Create a dictionary of dictionaries where the inner dictionaries keys are the column fields.
     machine_params = {}
     count = 0
-    with open(args['machine_param_uri'], 'rb') as f:
-        reader = csv.DictReader(f)
+    try:
+        machineParamFile = open(args['machine_param_uri'])
+        reader = csv.DictReader(machineParamFile)
         for row in reader:
             machine_params[count] = row
             count = count + 1
+        machineParamFile.close()
         biophysicalargs['machine_param'] = machine_params
+    except IOError, e:
+        print 'File I/O error' + e
     #WaveDate information depends on analysis area
     if args['analysis_area_uri'] == 'West Coast of North America and Hawaii':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp'
@@ -114,18 +125,25 @@ def execute(args):
     
     AOI = None
     if 'AOI_uri' in args:
-        AOI = ogr.Open(args['AOI_uri'].encode(filesystemencoding))
-        biophysicalargs['AOI'] = AOI
+        try:
+            AOI = ogr.Open(args['AOI_uri'].encode(filesystemencoding))
+            biophysicalargs['AOI'] = AOI
+            
+        except IOError, e:
+            print 'File I/O error' + e
 
-    if (AOI != None) and (args['calculate_valuation']):
+    if 'calculate_valuation' in args:
         for file, id in (('machine_econ', 'NAME'), ('landgridpts', 'ID')):
-            f = open(args[file+'_uri'])
-            dict = {}
-            reader = csv.DictReader(f)
-            for row in reader:
-                dict[row[id]] = row
-            biophysicalargs[file] = dict
-            f.close()
+            try:
+                f = open(args[file+'_uri'])
+                dict = {}
+                reader = csv.DictReader(f)
+                for row in reader:
+                    dict[row[id]] = row
+                biophysicalargs[file] = dict
+                f.close()
+            except IOError, e:
+                print 'File I/O error' + e
     
     biophysicalargs['dem'] = gdal.Open(args['dem_uri'])
         
@@ -146,7 +164,7 @@ def extrapolateWaveData(analysis_path, waveOpen):
             key = (iVal, jVal)
             waveArray = []
         else:
-            waveArray.append(line)
+            waveArray.append(line.split(','))
             waveDict[key] = waveArray
 #    print lineCount
 #    print waveDict[(56,112)]

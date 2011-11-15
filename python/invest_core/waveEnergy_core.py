@@ -7,7 +7,7 @@ from osgeo import ogr
 from dbfpy import dbf
 import math
 import invest_core
-import sys
+import sys, os
 
 def biophysical(args):
     """
@@ -32,40 +32,131 @@ def biophysical(args):
     layer = args['analysis_area'].GetLayer(0)
     
     #Create a new raster that has the values of the WWW shapefile
-    source = cutterLayer.GetSpatialRef()
-    projection = source.ExportToWkt()
-    
-    x_min, x_max, y_min, y_max = cutterLayer.GetExtent()
+    #Get the resolution from the global dem
     geoform = global_dem.GetGeoTransform()
-    pixelSizeX = geoform[1]
-    pixelSizeY = geoform[5]
+    pixelSizeX = abs(geoform[1])
+    pixelSizeY = abs(geoform[5])
+
+    #Rasters which will be past (along with global_dem) to vectorize with wave power op.
+    waveHeightPath = '../../test_data/wave_Energy/waveHeight.tif'
+    wavePeriodPath = '../../test_data/wave_Energy/wavePeriod.tif'
+    #Create rasters bounded by shape file of analyis area
+    for path in (waveHeightPath, wavePeriodPath):
+        invest_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY, 
+                                              datatype, nodata, path, cutter)
+    #Open created rasters
+    waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
+    wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
+    #Rasterize the height and period values into respected rasters from shapefile
+    for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
+        raster.GetRasterBand(1).SetNoDataValue(nodata)
+        gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
     
-    x_res = int((x_max-x_min) / pixelSizeX)
-    y_res = int((y_max-y_min) / pixelSizeY)
-    y_res = int(math.fabs(y_res))
-    cols = x_res
-    rows = y_res
-    
-    outputpath = '../../test_data/wave_Energy/newRaster5.tif'
-    driver = gdal.GetDriverByName(format)
-    
-    newRaster = driver.Create(outputpath, int(cols), int(rows), 1, gdal.GDT_Float32)
-    
-    newRaster.SetProjection(projection)
-    newRaster.SetGeoTransform((x_min, pixelSizeX, 0, y_max, 0, pixelSizeY))
-    newRaster.GetRasterBand(1).SetNoDataValue(nodata)
-    newRaster.GetRasterBand(1).Fill(nodata)
     
     #Make a duplicate copy of the global_dem to try and crop
-    drv = gdal.GetDriverByName(format)
-    newGlobal = drv.CreateCopy('../../test_data/wave_Energy/newGlobal.tif', newRaster, 1)
-    newGlobal.GetRasterBand(1).SetNoDataValue(0)
-    newGlobal.GetRasterBand(1).Fill(0)
-    #Burn Height values from shapefile onto new raster
-    raster = gdal.RasterizeLayer(newRaster, [1], layer, options=['ATTRIBUTE=' + 'HSAVG_M'])
+#    drv = gdal.GetDriverByName(format)
+#    newGlobal = drv.CreateCopy('../../test_data/wave_Energy/newGlobal.tif', newRaster, 1)
+#    newGlobal.GetRasterBand(1).SetNoDataValue(0)
+#    newGlobal.GetRasterBand(1).Fill(0)
+#    #Burn Height values from shapefile onto new raster
+#    newRaster = None
 
-    newRaster = None
+    interpolateWaveData(args['machine_perf'], args['wave_base_data'])
 
+    clipShape(args['analysis_area'], args['AOI'])
+    
+def clipShape(shapeToClip, bindingShape):
+    shape_source = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
+    
+    if os.path.isfile(shape_source):
+        os.remove(shape_source)
+    #Get the layer of points from the current point geometry shape
+    in_layer = shapeToClip.GetLayer(0)
+    #Get the layer definition which holds needed attribute values
+    in_defn = in_layer.GetLayerDefn()
+    #Get the layer of the polygon (binding) geometry shape
+    clip_layer = bindingShape.GetLayer(0)
+    #Create a new shapefile with similar properties of the current point geometry shape
+    shp_driver = ogr.GetDriverByName('ESRI Shapefile')
+    shp_ds = shp_driver.CreateDataSource(shape_source)
+    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), in_layer.GetSpatialRef(), in_defn.GetGeomType())
+    #Get the number of fields in the current point shapefile
+    in_field_count = in_defn.GetFieldCount()
+    #For every field, create a duplicate field and add it to the new shapefiles layer
+    for fld_index in range(in_field_count):
+        src_fd = in_defn.GetFieldDefn(fld_index)
+        
+        fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
+        fd.SetWidth(src_fd.GetWidth())
+        fd.SetPrecision(src_fd.GetPrecision())
+        shp_layer.CreateField(fd)
+    #Retrieve the binding polygon feature and get it's geometry reference
+    clip_feat = clip_layer.GetNextFeature()
+    clip_geom = clip_feat.GetGeometryRef()
+    #Get the spatial reference of the geometry to use in transforming
+    sourceSR = clip_geom.GetSpatialReference()
+    #Retrieve the current point shapes feature and get it's geometry reference
+    in_feat = in_layer.GetNextFeature()
+    geom = in_feat.GetGeometryRef()
+    #Get the spatial reference of the geometry to use in transforming
+    targetSR = geom.GetSpatialReference()
+    #Create a coordinate transformation
+    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
+    #Transform the polygon geometry into the same format as the point shape geometry
+    clip_geom.Transform(coordTrans)
+    #For all the features in the current point shape (for all the points)
+    #Check to see if they Intersect with the binding polygons geometry and
+    #if they do, then add all of the fields and values from that point to the new shape
+    while in_feat is not None:
+        geom = in_feat.GetGeometryRef()
+        #Intersection returns a new geometry if they intersect
+        geom = geom.Intersection(clip_geom)
+        if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
+            out_feat = ogr.Feature(feature_def = shp_layer.GetLayerDefn())
+            out_feat.SetFrom(in_feat)
+            out_feat.SetGeometryDirectly(geom)
+            
+            for fld_index2 in range(out_feat.GetFieldCount()):
+                src_field = in_feat.GetField(fld_index2)
+                out_feat.SetField(fld_index2, src_field)
+                
+            shp_layer.CreateFeature(out_feat)
+            out_feat.Destroy()
+            
+        in_feat.Destroy()
+        in_feat = in_layer.GetNextFeature()
+    
+    #Close shapefiles
+    clip_feat.Destroy()
+    bindingShape.Destroy()
+    shapeToClip.Destroy()
+    shp_ds.Destroy()
+def interpolateWaveData(machinePerf, waveBaseData):
+    #Trim down the waveBaseData based on the machinePerf rows/columns
+    #and then interpolate if need be.
+    #Once interpolated and trimmed vectorize over two matrices returning
+    #and saving the output to a dictionary with key being I,J value
+    
+    #A 2D array that will be vectorized with machinePerf
+    interpWaveData = []
+#    machineCol = machinePerf[0]
+#    machineRow = machinePerf[1]
+##    print machineCol
+##    print machineRow
+#    for key, pointData in waveBaseData.iteritems():
+#        waveCol = pointData[0]
+#        waveRow = pointData[1]
+#        newCol = []
+#        newRow = []
+#        lowBound = -1
+#        highBound = -1
+#        for index, num in enumerate(waveCol):
+#            if float(num) < machineCol
+#       
+#        
+    
+    return interpWaveData
+    
 def getMachinePerf(machine_perf):
     performance_dict = {}
     return performance_dict

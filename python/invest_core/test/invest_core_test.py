@@ -11,6 +11,31 @@ import numpy as np
 import random
 
 class TestInvestCore(unittest.TestCase):
+    def testinterpolateMatrix(self):
+        """Test the matrix interpolation function"""
+
+        #Create a non-trivial somewhat random matrix
+        x = np.array([-4.2, 3, 6, 10])
+        y = np.array([-9, 3, 6, 10])
+        z = np.array([[0., 0., 0., 0],
+           [0., 1., 1., 0.],
+           [-7.2, 3., 1.2, 0.],
+           [0., 4.9, 2.5, 0]])
+
+        newx = np.array([-4.2, 0, 2.5, 3, 5, 6, 7.5, 10, 15.2])
+        newy = np.array([-9, 0, 2.5, 3, 5, 6, 7.5, 10, 22.2])
+
+        interpz = invest_core.interpolateMatrix(x, y, z, newx, newy)
+
+        for xVal in x:
+            for yVal in y:
+                i = x.tolist().index(xVal)
+                j = y.tolist().index(yVal)
+                ii = newx.tolist().index(xVal)
+                jj = newy.tolist().index(yVal)
+                self.assertAlmostEquals(z[i][j], interpz[ii][jj], 5,
+                                        "%s != %s" % (z[i][j], interpz[ii][jj]))
+
     def testRasterDiff(self):
         driver = gdal.GetDriverByName("MEM")
 

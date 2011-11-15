@@ -2,6 +2,7 @@
     the InVEST toolset"""
 
 import numpy as np
+import scipy.interpolate
 import math
 from osgeo import gdal, osr
 
@@ -221,7 +222,40 @@ def calculateIntersectionRectangle(rasterList):
                        max(rec[3], boundingBox[3])]
     return boundingBox
 
-def vectorizeRasters(rasterList, op):
+def interpolateMatrix(x, y, z, newx, newy):
+    """Takes a matrix of values from a rectangular grid along with new 
+        coordinates and returns a matrix with those values interpolated along
+        the new axis points.
+        
+        x - an array of x points on the grid
+        y - an array of y points on the grid
+        z - the values on the grid
+        newx- the new x points for the interpolated grid
+        newy - the new y points for the interpolated grid
+        
+        returns a matrix of size len(newx)*len(newy) whose values are 
+            interpolated from z"""
+
+    #Create an interpolator for the 2D data.  Here's a reference
+    #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
+    interp = scipy.interpolate.RectBivariateSpline(x, y, z, kx=3, ky=3)
+
+    #Build a vectorized operation that will interpolate the points in the
+    #new matrix
+    def getInterpValue(x, y):
+        return interp(x, y)
+    op = np.vectorize(getInterpValue)
+
+    #create a grid of x and y positions for array broadcasting to the
+    #vectorized operation
+    xMesh = np.array([newx, ] * len(newx))
+    yMesh = np.array([newy, ] * len(newy)).transpose()
+
+    #transpose the result so it's in row major order; I think that's what
+    #we expect since we pass in the matrix as row major
+    return op(xMesh, yMesh).transpose()
+
+def vectorizeRasters(rasterList, op, rasterName=None):
     """Apply the numpy vectorized operation `op` on the rasters contained in
         rasterList where the arguments to `op` are brodcasted pixels from
         each raster in rasterList in the order they exist in the list
@@ -229,10 +263,15 @@ def vectorizeRasters(rasterList, op):
         rasterList - list of rasters
         op - numpy vectorized operation, takes brodcasted pixels from 
             the first bands in rasterList in order and returns a new pixel
+        rasterName - the desired URI to the output raster.  If None then
+            resulting raster is only mapped to MEM
         
         returns a single band raster"""
 
     aoiBox = calculateIntersectionRectangle(rasterList)
+
+
+
     #create a new raster with the minimum resolution of rasterList and
     #bounding box that contains aoiBox
 
