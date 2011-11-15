@@ -308,8 +308,8 @@ def vectorizeRasters(rasterList, op, rasterName=None):
     #DEFINE THESE BASED ON MINIMUM PIXEL WIDTH/HEIGHT
     pixelWidth = 0.1
     pixelHeight = 0.1
-    nPixelsX = 0 #DEFINE THIS
-    nPixelsY = 0 #DEFINE THIS
+    cols = 0 #DEFINE THIS
+    rows = 0 #DEFINE THIS
     #geotransform order: 
     #1) left coordinate of top left corner
     #2) pixel width in x direction
@@ -319,6 +319,13 @@ def vectorizeRasters(rasterList, op, rasterName=None):
     #6) pixel height in y direction 
     geotransform = [aoiBox[0], pixelWidth, 0.0, aoiBox[2], 0.0, pixelHeight]
 
+    projection = rasterList[0].GetProjection()
+
+    outputURI = ''
+    format = 'MEM'
+    if rasterName != None:
+        outputURI = rasterName
+        format = 'GTiff'
     newRaster(cols, rows, projection, geotransform, format, nodata, datatype,
               bands, outputURI)
 
