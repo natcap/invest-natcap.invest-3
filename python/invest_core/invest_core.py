@@ -233,20 +233,23 @@ def calculateIntersectionRectangle(rasterList):
 
 #Define the initial bounding box
     gt = rasterList[0].GetGeoTransform()
+    print gt
     #order is left, top, right, bottom of rasterbounds
-    boundingBox = [gt[0], gt[3], gt[0] * rasterList[0].RasterXSize,
-                   gt[3] + gt5 * rasterList[0].RasterYSize]
+    boundingBox = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
+                   gt[3] + gt[5] * rasterList[0].RasterYSize]
 
     for band in rasterList:
         #intersect the current bounding box with the one just read
-        gt = rasterList[0].GetGeoTransform()
-        rec = [gt[0], gt[3], gt[0] * rasterList[0].RasterXSize,
-               gt[3] + gt5 * rasterList[0].RasterYSize]
+        gt = band.GetGeoTransform()
+        print gt
+        rec = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
+               gt[3] + gt[5] * rasterList[0].RasterYSize]
         #This intersects rec with the current bounding box
         boundingBox = [max(rec[0], boundingBox[0]),
                        min(rec[1], boundingBox[1]),
                        min(rec[2], boundingBox[2]),
                        max(rec[3], boundingBox[3])]
+    print boundingBox
     return boundingBox
 
 def interpolateMatrix(x, y, z, newx, newy):
@@ -282,7 +285,8 @@ def interpolateMatrix(x, y, z, newx, newy):
     #we expect since we pass in the matrix as row major
     return op(xMesh, yMesh).transpose()
 
-def vectorizeRasters(rasterList, op, rasterName=None):
+def vectorizeRasters(rasterList, op, rasterName=None,
+                     datatype=gdal.GDT_Float32):
     """Apply the numpy vectorized operation `op` on the rasters contained in
         rasterList where the arguments to `op` are brodcasted pixels from
         each raster in rasterList in the order they exist in the list
@@ -292,10 +296,13 @@ def vectorizeRasters(rasterList, op, rasterName=None):
             the first bands in rasterList in order and returns a new pixel
         rasterName - the desired URI to the output raster.  If None then
             resulting raster is only mapped to MEM
+        datatype - the GDAL datatype of the output raster.  By default this
+            is a 32 bit float.
         
         returns a single band raster"""
 
     aoiBox = calculateIntersectionRectangle(rasterList)
+    print aoiBox
 
 
     #create a new raster with the minimum resolution of rasterList and
@@ -306,10 +313,10 @@ def vectorizeRasters(rasterList, op, rasterName=None):
     #with aoibox is left, top, right, bottom
 
     #DEFINE THESE BASED ON MINIMUM PIXEL WIDTH/HEIGHT
-    pixelWidth = 0.1
-    pixelHeight = 0.1
-    cols = 0 #DEFINE THIS
-    rows = 0 #DEFINE THIS
+    pixelWidth = 30
+    pixelHeight = -30
+    cols = 100 #DEFINE THIS
+    rows = 100 #DEFINE THIS
     #geotransform order: 
     #1) left coordinate of top left corner
     #2) pixel width in x direction
@@ -317,7 +324,7 @@ def vectorizeRasters(rasterList, op, rasterName=None):
     #4) top coordinate of top left corner
     #5) pixel height in x direction (usually zero)
     #6) pixel height in y direction 
-    geotransform = [aoiBox[0], pixelWidth, 0.0, aoiBox[2], 0.0, pixelHeight]
+    geotransform = [aoiBox[0], pixelWidth, 0.0, aoiBox[1], 0.0, pixelHeight]
 
     projection = rasterList[0].GetProjection()
 
@@ -326,9 +333,10 @@ def vectorizeRasters(rasterList, op, rasterName=None):
     if rasterName != None:
         outputURI = rasterName
         format = 'GTiff'
-    newRaster(cols, rows, projection, geotransform, format, nodata, datatype,
-              bands, outputURI)
-
+    nodata = 0
+    outRaster = newRaster(cols, rows, projection, geotransform, format,
+                          nodata, datatype, 1, outputURI)
+    outRaster.GetRasterBand(1).Fill(1)
 
     #extract a matrix from each raster that's contained in the bounding box
     #create a scipy.interpolate RectBivariateSpline for each one below is some
