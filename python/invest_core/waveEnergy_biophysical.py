@@ -74,11 +74,18 @@ def execute(args):
         
     #Create 2D array by compiling rows of arrays from dict
     #Add on the row/col fields in same order as WW 3 text file
-    machine_perf_twoDArray.append(arrayHeader)
-    machine_perf_twoDArray.append(arrayColumns)
+#    machine_perf_twoDArray.append(arrayHeader)
+#    machine_perf_twoDArray.append(arrayColumns)
     for array in dict.itervalues():
+        for index, val in enumerate(array):
+            array[index] = float(val)
         machine_perf_twoDArray.append(array)
-        
+    
+    for index, val in enumerate(arrayHeader):
+        arrayHeader[index] = float(val)
+    for index, val in enumerate(arrayColumns):
+        arrayColumns[index] = float(val)
+    
     biophysicalargs['machine_perf'] = machine_perf_twoDArray
     #Create a dictionary of dictionaries where the inner dictionaries keys are the column fields.
     machine_params = {}
@@ -122,6 +129,16 @@ def execute(args):
         print 'Analysis Area ERROR'
     
     gdal.AllRegister()
+#    print biophysicalargs['wave_base_data'][1]
+#    print arrayHeader
+#    print machine_perf_twoDArray
+    x = np.array(arrayHeader)
+    y = np.array(arrayColumns)
+    z = np.array(machine_perf_twoDArray)
+    newx = np.array(biophysicalargs['wave_base_data'][0])
+    newy = np.array(biophysicalargs['wave_base_data'][1])
+    
+    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
     
     AOI = None
     if 'AOI_uri' in args:
@@ -154,18 +171,44 @@ def extrapolateWaveData(analysis_path, waveOpen):
     waveFile = waveOpen
     waveDict = {}
     waveArray = []
+    waveRow = []
+    waveCol = []
     key = ''
     lineCount = 0
+    check = 0
+    rowcolGrab = False
     for line in waveFile:
-        lineCount = lineCount + 1
         if line[0] == 'I':
             iVal = int(line.split(',')[1])
             jVal = int(line.split(',')[3])
             key = (iVal, jVal)
             waveArray = []
+            rowcolGrab = True
+        elif rowcolGrab:
+            if lineCount == 0:
+                if check != -1:
+                    waveRow.append(line.split(','))
+                    waveRow = waveRow[0]
+                lineCount = lineCount + 1
+            elif lineCount == 1:
+                if check != -1:
+                    waveCol.append(line.split(','))
+                    waveCol = waveCol[0]
+                    check = -1
+                lineCount = 0
+                rowcolGrab = False
+                
         else:
             waveArray.append(line.split(','))
             waveDict[key] = waveArray
+    print waveRow
+    for i, val in enumerate(waveRow):
+        waveRow[i] = float(val)
+    for i, val in enumerate(waveCol):
+        waveCol[i] = float(val)
+    print waveRow
+    waveDict[0] = waveRow
+    waveDict[1] = waveCol
 #    print lineCount
 #    print waveDict[(56,112)]
     return waveDict
