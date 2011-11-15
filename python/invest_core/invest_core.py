@@ -2,6 +2,7 @@
     the InVEST toolset"""
 
 import numpy as np
+import scipy.interpolate
 import math
 from osgeo import gdal, osr
 
@@ -235,8 +236,16 @@ def interpolateMatrix(x, y, z, newx, newy):
         returns a matrix of size len(newx)*len(newy) whose values are 
             interpolated from z"""
 
-    return None
+    #nifty way to create mesh of x coordinates from this thread:
+    #http://stackoverflow.com/questions/1550130/cloning-row-or-column-vectors
+    interp = scipy.interpolate.RectBivariateSpline(x, y, z)
+    def getInterpValue(x, y):
+        return interp(x, y)
 
+    op = np.vectorize(getInterpValue)
+    xMesh = np.array([newx, ] * len(newx))
+    yMesh = np.array([newy, ] * len(newy)).transpose()
+    return op(xMesh, yMesh)
 
 def vectorizeRasters(rasterList, op, rasterName=None):
     """Apply the numpy vectorized operation `op` on the rasters contained in
