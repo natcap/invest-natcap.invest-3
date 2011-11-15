@@ -236,16 +236,24 @@ def interpolateMatrix(x, y, z, newx, newy):
         returns a matrix of size len(newx)*len(newy) whose values are 
             interpolated from z"""
 
-    #nifty way to create mesh of x coordinates from this thread:
-    #http://stackoverflow.com/questions/1550130/cloning-row-or-column-vectors
-    interp = scipy.interpolate.RectBivariateSpline(x, y, z)
+    #Create an interpolator for the 2D data.  Here's a reference
+    #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
+    interp = scipy.interpolate.RectBivariateSpline(x, y, z, kx=3, ky=3)
+
+    #Build a vectorized operation that will interpolate the points in the
+    #new matrix
     def getInterpValue(x, y):
         return interp(x, y)
-
     op = np.vectorize(getInterpValue)
+
+    #create a grid of x and y positions for array broadcasting to the
+    #vectorized operation
     xMesh = np.array([newx, ] * len(newx))
     yMesh = np.array([newy, ] * len(newy)).transpose()
-    return op(xMesh, yMesh)
+
+    #transpose the result so it's in row major order; I think that's what
+    #we expect since we pass in the matrix as row major
+    return op(xMesh, yMesh).transpose()
 
 def vectorizeRasters(rasterList, op, rasterName=None):
     """Apply the numpy vectorized operation `op` on the rasters contained in
