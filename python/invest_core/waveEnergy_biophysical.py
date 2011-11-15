@@ -132,7 +132,7 @@ def execute(args):
         except IOError, e:
             print 'File I/O error' + e
 
-    if (AOI != None) and (args['calculate_valuation']):
+    if 'calculate_valuation' in args:
         for file, id in (('machine_econ', 'NAME'), ('landgridpts', 'ID')):
             try:
                 f = open(args[file+'_uri'])
