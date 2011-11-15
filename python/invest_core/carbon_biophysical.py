@@ -13,6 +13,10 @@ from dbfpy import dbf
 
 #logger = logging.getLogger('carbon_biophysical')
 
+def update(text, variable=''):
+    print(text, variable)
+    sys.stdout.flush()
+
 def execute(args):
     """This function invokes the carbon model given URI inputs of files.
         It will do filehandling and open/create appropriate objects to 
@@ -58,6 +62,7 @@ def execute(args):
     #a future lulc is only required if sequestering or hwp calculating
     if 'lulc_fut_uri' in args:
         print('loading %s', args['lulc_fut_uri'])
+        sys.stdout.flush()
         biophysicalArgs['lulc_fut'] = gdal.Open(args['lulc_fut_uri'],
                                             gdal.GA_ReadOnly)
 
@@ -69,11 +74,13 @@ def execute(args):
         uriName = x + '_uri'
         if uriName in args:
             print('loading %s', args[uriName])
+            sys.stdout.flush()
             biophysicalArgs[x] = ogr.Open(args[uriName].encode(fsencoding))
 
     #Always need carbon pools, if uncertainty calculation they also need
     #to have range columns in them, but no need to check at this level.
     print('loading %s', args['carbon_pools_uri'])
+    sys.stdout.flush()
     biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'])
 
     #At this point all inputs are loaded into biophysicalArgs.  The 
@@ -117,13 +124,14 @@ def execute(args):
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
     for rasterName, rasterPath in outputURIs.iteritems():
-        print('creating output raster %s', rasterPath)
+        update('creating output raster %s', rasterPath)
         biophysicalArgs[rasterName] = \
             invest_core.newRasterFromBase(biophysicalArgs['lulc_cur'],
                               rasterPath, 'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the biophysical part of the carbon model.
     print('starting carbon biophysical model')
+    sys.stdout.flush()
     carbon_core.biophysical(biophysicalArgs)
     print('finished carbon biophysical model')
 

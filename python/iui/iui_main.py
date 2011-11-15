@@ -571,6 +571,7 @@ class ModelDialog(QtGui.QDialog):
         try:
             self.thread = QtCore.QProcess()
             self.thread.readyReadStandardOutput.connect(self.readOutput)
+            self.thread.readyReadStandardError.connect(self.readOutput)
             
             #when the thread is finished, run self.threadFinished.
             self.thread.finished.connect(self.threadFinished)
