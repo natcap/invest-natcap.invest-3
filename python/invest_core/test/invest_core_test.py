@@ -11,6 +11,19 @@ import numpy as np
 import random
 
 class TestInvestCore(unittest.TestCase):
+    def testinterpolateMatrix(self):
+        x = np.array([0, 3, 6, 10])
+        y = np.array([0, 3, 6, 10])
+        z = np.array([[0., 0., 0., 0],
+           [0., 1., 1., 0.],
+           [0., 1., 1., 0.],
+           [0., 0., 0., 0]])
+
+        newx = np.array([0, 2.5, 5, 7.5, 10])
+        newy = np.array([0, 2.5, 5, 7.5, 10])
+        interpz = invest_core.interpolateMatrix(x, y, z, newx, newy)
+        #self.assertAlmostEquals(1, interpz[2][2])
+
     def testRasterDiff(self):
         driver = gdal.GetDriverByName("MEM")
 
