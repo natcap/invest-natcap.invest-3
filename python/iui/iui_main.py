@@ -571,7 +571,7 @@ class ModelDialog(QtGui.QDialog):
         try:
             self.thread = QtCore.QProcess()
             self.thread.readyReadStandardOutput.connect(self.readOutput)
-            self.thread.readyReadStandardError.connect(self.readOutput)
+            self.thread.readyReadStandardError.connect(self.readError)
             
             #when the thread is finished, run self.threadFinished.
             self.thread.finished.connect(self.threadFinished)
@@ -619,7 +619,12 @@ class ModelDialog(QtGui.QDialog):
         print "reading output"
 #        self.write(self.thread.readLine())
         self.write(self.thread.readAllStandardOutput())
-        
+
+    def readError(self):
+        print "reading output"
+#        self.write(self.thread.readLine())
+        self.write(self.thread.readAllStandardError())
+                
     def threadFinished(self):
         """Notify the user that model processing has finished.
         
