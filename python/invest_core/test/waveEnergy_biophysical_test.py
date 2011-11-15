@@ -17,7 +17,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         args['machine_perf_uri'] = '../../test_data/wave_Energy/samp_data/input/Machine_AquaBuOYCSV.csv' 
         args['machine_param_uri'] = '../../test_data/wave_Energy/samp_data/input/Machine_AquaBuOYParamCSV.csv' 
         args['dem_uri'] = '../../test_data/wave_Energy/samp_data/input/global_dem'
-
+        args['AOI_uri'] = '../../test_data/wave_Energy/samp_data/input/AOI_WCVI.shp'
         waveEnergy_biophysical.execute(args)
         
 if __name__ == '__main__':

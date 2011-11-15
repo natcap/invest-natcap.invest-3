@@ -62,34 +62,69 @@ def biophysical(args):
 #    newRaster = None
 
     interpolateWaveData(args['machine_perf'], args['wave_base_data'])
-    clipShape()
+
+    clipShape(args['analysis_area'], args['AOI'])
     
 def clipShape(shapeToClip, bindingShape):
     shape_source = '../../test_data/wave_Energy/samp_data/Intermediate'
     #Copy the input shapefile into the designated output folder
-    copiedShape = ogr.GetDriverByName('ESRI Shapefile').\
-        CopyDataSource(shapeToClip, shape_source)
-    clip_feat = bindingShape.GetLayer(0).GetNextFeature()
-    clip_geom = clip_feat.GetGeometryRef().Clone()
+#    copiedShape = ogr.GetDriverByName('ESRI Shapefile').\
+#        CopyDataSource(shapeToClip, shape_source)
+    in_layer = shapeToClip.GetLayer(0)
+    in_defn = in_layer.GetLayerDefn()
+    clip_layer = bindingShape.GetLayer(0)
+
+    shp_driver = ogr.GetDriverByName('ESRI Shapefile')
+    shp_ds = shp_driver.CreateDataSource(shape_source)
+    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), geom_type = in_defn.GetGeomType(),
+                                   srs = in_layer.GetSpatialRef())
     
-    copied_feat = copiedShape.GetLayer(0).GetNextFeature()
-    while copied_feat is not None:
-        geom = copied_feat.GetGeometryRef().Clone()
-        geom = copied_feat.GetGeometryRef().Clone().Intersection(clip_geom)
+    in_field_count = in_defn.GetFieldCount()
+    
+    for fld_index in range(in_field_count):
+        src_fd = in_defn.GetFieldDefn(fld_index)
         
+        fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
+        fd.SetWidth(src_fd.GetWidth())
+        fd.SetPrecision(src_fd.GetPrecision())
+        shp_layer.CreateField(fd)
+
+    clip_feat = clip_layer.GetNextFeature()
+    clip_geom = clip_feat.GetGeometryRef()
+    sourceSR = clip_geom.GetSpatialReference()
+    
+    in_feat = in_layer.GetNextFeature()
+    geom = in_feat.GetGeometryRef()
+    targetSR = geom.GetSpatialReference()
+    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
+    clip_geom.Transform(coordTrans)
+#    print clip_geom
+#    print geom
+    while in_feat is not None:
+        geom = in_feat.GetGeometryRef()
+        geom = geom.Intersection(clip_geom)
+
         if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
-            out_feat = ogr.Feature(feature_def = copiedShape.GetLayer(0).GetLayerDefn())
-            out_feat.SetFrom(copied_feat)
+#            print geom.GetGeometryCount()
+#            print geom.GetPointCount()
+            out_feat = ogr.Feature(feature_def = shp_layer.GetLayerDefn())
+            out_feat.SetFrom(in_feat)
             out_feat.SetGeometryDirectly(geom)
             
+            for fld_index2 in range(out_feat.GetFieldCount()):
+                src_field = in_feat.GetField(fld_index2)
+                out_feat.SetField(fld_index2, src_field)
+                
+            shp_layer.CreateFeature(out_feat)
             out_feat.Destroy()
-        copied_feat.Destroy()
-        copied_feat = copiedShape.GetLayer(0).GetNextFeature()
+            
+        in_feat.Destroy()
+        in_feat = in_layer.GetNextFeature()
     
     clip_feat.Destroy()
     bindingShape.Destroy()
-    copiedShape.Destroy()
-    
+    shapeToClip.Destroy()
+    shp_ds.Destroy()
 def interpolateWaveData(machinePerf, waveBaseData):
     #Trim down the waveBaseData based on the machinePerf rows/columns
     #and then interpolate if need be.
