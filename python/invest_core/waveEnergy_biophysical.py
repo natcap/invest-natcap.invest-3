@@ -68,7 +68,10 @@ def execute(args):
             dict[i] = row
             i = i + 1
     f.close()
-    #Create 2D array by compiling rows of arrays from dict    
+    #Create 2D array by compiling rows of arrays from dict
+    #Add on the row/col fields in same order as WW 3 text file
+    machine_perf_twoDArray.append(arrayHeader)
+    machine_perf_twoDArray.append(arrayColumns)
     for array in dict.itervalues():
         machine_perf_twoDArray.append(array)
         
@@ -146,7 +149,7 @@ def extrapolateWaveData(analysis_path, waveOpen):
             key = (iVal, jVal)
             waveArray = []
         else:
-            waveArray.append(line)
+            waveArray.append(line.split(','))
             waveDict[key] = waveArray
 #    print lineCount
 #    print waveDict[(56,112)]
