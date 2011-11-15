@@ -62,11 +62,11 @@ def biophysical(args):
 #    newRaster = None
 
     interpolateWaveData(args['machine_perf'], args['wave_base_data'])
-
-    clipShape(args['analysis_area'], args['AOI'])
+    outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
+    clipShape(args['analysis_area'], args['AOI'], outputPath)
     
-def clipShape(shapeToClip, bindingShape):
-    shape_source = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
+def clipShape(shapeToClip, bindingShape, outputPath):
+    shape_source = outputPath
     
     if os.path.isfile(shape_source):
         os.remove(shape_source)
