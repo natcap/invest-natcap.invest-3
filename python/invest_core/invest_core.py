@@ -133,12 +133,39 @@ def newRasterFromBase(base, outputURI, format, nodata, datatype):
     rows = base.RasterYSize
     projection = base.GetProjection()
     geotransform = base.GetGeoTransform()
+    return newRaster(cols, rows, projection, geotransform, format, nodata,
+                     datatype, base.RasterCount, outputURI)
+
+def newRaster(cols, rows, projection, geotransform, format, nodata, datatype,
+              bands, outputURI):
+    """Create a new raster with the given properties.
+    
+        cols - number of pixel columns
+        rows - number of pixel rows
+        projection - the datum
+        geotransform - the coordinate system
+        format - a string representing the GDAL file format of the 
+            output raster.  See http://gdal.org/formats_list.html for a list
+            of available formats.  This parameter expects the format code, such
+            as 'GTiff' or 'MEM'
+        nodata - a value that will be set as the nodata value for the 
+            output raster.  Should be the same type as 'datatype'
+        datatype - the pixel datatype of the output raster, for example 
+            gdal.GDT_Float32.  See the following header file for supported 
+            pixel types:
+            http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
+        bands - the number of bands in the raster
+        outputURI - the file location for the outputed raster.  If format
+            is 'MEM' this can be an empty string
+            
+        returns a new GDAL raster with the parameters as described above"""
 
     driver = gdal.GetDriverByName(format)
-    newRaster = driver.Create(outputURI, cols, rows, 1, datatype)
+    newRaster = driver.Create(outputURI, cols, rows, bands, datatype)
     newRaster.SetProjection(projection)
     newRaster.SetGeoTransform(geotransform)
-    newRaster.GetRasterBand(1).SetNoDataValue(nodata)
+    for i in range(bands):
+        newRaster.GetRasterBand(i + 1).SetNoDataValue(nodata)
 
     return newRaster
 
@@ -271,37 +298,12 @@ def vectorizeRasters(rasterList, op, rasterName=None):
     aoiBox = calculateIntersectionRectangle(rasterList)
 
 
-
     #create a new raster with the minimum resolution of rasterList and
     #bounding box that contains aoiBox
 
     #extract a matrix from each raster that's contained in the bounding box
     #create a scipy.interpolate RectBivariateSpline for each one below is some
     #biovariate spline tracer code
-
-#x,y=np.mgrid[0:5,0:5]
-#>>> x=np.array(range(5))
-#>>> y=np.array(range(5))
-#>>> x
-#array([0, 1, 2, 3, 4])
-#>>> y
-#array([0, 1, 2, 3, 4])
-#>>> scipy.interpolate.RectBivariateSpline(x,y,z)
-#<scipy.interpolate.fitpack2.RectBivariateSpline object at 0x108ebd0>
-#>>> newx=np.array(range(10))
-#>>> newx=newx/2.0
-#>>> newx
-#array([ 0. ,  0.5,  1. ,  1.5,  2. ,  2.5,  3. ,  3.5,  4. ,  4.5])
-#>>> x
-#array([0, 1, 2, 3, 4])
-#>>> newy=np.array(range(10))
-#>>> newy=newy/2.0
-#>>> interp=scipy.interpolate.RectBivariateSpline(x,y,z)
-#>>> interp.ev(newx,newy)
-#array([  2.06559327e-17,   1.00000000e+00,   2.00000000e+00,
-#         3.00000000e+00,   4.00000000e+00,   5.00000000e+00,
-#         6.00000000e+00,   7.00000000e+00,   8.00000000e+00,
-#         8.00000000e+00])
 
     matrixList = []
 
