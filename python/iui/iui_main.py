@@ -567,35 +567,65 @@ class ModelDialog(QtGui.QDialog):
         self.layout().addWidget(self.buttonBox)
         
         #set up an instance of StdoutNotifier to capture all stdout.
-        self.stdoutNotifier = StdoutNotifier(0, QtCore.QSocketNotifier.Read, self)
+#        self.stdoutNotifier = StdoutNotifier(0, QtCore.QSocketNotifier.Read, self)
         
         #tell python to run all stdout and stderr through the StdoutNotifier.
-        sys.stdout = self.stdoutNotifier
-        
-        sys.stderr = sys.stdout
+#        sys.stdout = self.stdoutNotifier
+#        
+#        sys.stderr = sys.stdout
         
         #When the notifier detects text in stdout, it should run the callback
         #self.write.
-        self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.write)
+        
+#        self.connect(self.stdoutNotifier, QtCore.SIGNAL("activated(int)"), self.write)
         
         #Run the model if possible.  If we encounter an error running the model,
         #print the error message to the modal window.
         try:
-            model = imp.load_source('module', uri)
-            self.thread = ModelThread(model, inputDict)
+#            model = imp.load_source('module', uri)
+            self.thread = QtCore.QProcess()
+            self.thread.setProcessChannelMode(QtCore.QProcess.MergedChannels)
+            self.connect(self.thread, QtCore.SIGNAL('readyReadStdout()'), self.readOutput)
+#            self.thread.readyReadStandardOutput.connect(self.readOutput)
             
             #when the thread is finished, run self.threadFinished.
             self.thread.finished.connect(self.threadFinished)
             
             #start the thread
-            self.thread.start()
+            list = QtCore.QStringList(uri)
+            list.append(json.dumps(inputDict))
+            
+#            self.stdoutchecker = ModelThread(self)
+            
+            print os.getcwd()
+            command = './OSGeo4W/gdal_python_exec.bat'
+            commandStr = str(command + uri +
+                              ' \'' + str(json.dumps(inputDict))) + '\''
+            print commandStr
+            
+            argslist = QtCore.QStringList()
+            argslist.append(QtCore.QString(uri))
+            argslist.append(QtCore.QString(json.dumps(inputDict)))
+            
+#            self.thread.start(commandStr)
+            self.thread.start(command, argslist)
+#            self.stdoutchecker.start()
+            print self.thread.readAllStandardOutput()
+#            self.thread.execute(commandStr)
+            print self.thread.exitCode()
+#            self.thread.execute(QtCore.QString('OSGeo4W/gdal_python_exec.bat'),
+#                                list)
+
+
             
         except ImportError:
+            print 'Import error.'
             self.thread = None
             self.write("Error running the model: "+ str(ImportError))
             self.threadFinished()
         except IOError:
-            self.thread.__del__()
+            print 'IOError'
+            self.thread.terminate()
             self.thread = None
             self.write('Error locating file: ' + str(uri))
             self.write('current location: ' + str(os.getcwd()))
@@ -608,16 +638,23 @@ class ModelDialog(QtGui.QDialog):
             
             returns nothing."""
             
-        self.statusArea.insertPlainText(text)
+        self.statusArea.insertPlainText(QtCore.QString(text))
+        
+    def readOutput(self):
+        print "reading output"
+        self.write(self.thread.readLine())
+#        self.write(self.thread.readAllStandardOutput())
         
     def threadFinished(self):
         """Notify the user that model processing has finished.
         
             returns nothing."""
             
+        print self.thread.readAllStandardOutput()
         print 'Completed.' #prints a status message in the statusArea.
         self.progressBar.setMaximum(1) #stops the progressbar.
         self.runButton.setDisabled(False) #enables the runButton
+        self.stdoutNotifier=None
 
     def closeEvent(self, data=None):
         """When a closeEvent is detected, run self.closeWindow().
@@ -644,7 +681,7 @@ class ModelDialog(QtGui.QDialog):
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         if self.thread != None:
-            self.thread.__del__()
+            self.thread.terminate()
         self.cancel = True
         self.done(0)
 
@@ -672,14 +709,14 @@ class StdoutNotifier(QtCore.QSocketNotifier):
         super(StdoutNotifier, self).__init__(socket, type)
         self.setParent(parent)
         
-    def write(self, text):
-        """Write text to the parent's write method.
-        
-            text - the python string to be written.
-            
-            returns nothing."""
-            
-        self.parent().write(text)
+#    def write(self, text):
+#        """Write text to the parent's write method.
+#        
+#            text - the python string to be written.
+#            
+#            returns nothing."""
+#            
+#        self.parent().write(text)
         
 
 class ModelThread(QtCore.QThread):
@@ -688,7 +725,7 @@ class ModelThread(QtCore.QThread):
         It is necessary to offload this processing to a new thread to allow UI
         processing to happen concurrently."""
     
-    def __init__(self, model, inputDict):
+    def __init__(self, parent):
         """Constructor for the ModelThread class.
         
             model - a python file or class imported via python's imp module
@@ -697,8 +734,9 @@ class ModelThread(QtCore.QThread):
             returns an instanace of ModelThread"""
         
         super(ModelThread, self).__init__()
-        self.model = model
-        self.inputDict = inputDict
+#        self.model = model
+#        self.inputDict = inputDict
+        self.parent = parent
 
     def __del__(self):
         """Destructor for the ModelThread class
@@ -721,7 +759,8 @@ class ModelThread(QtCore.QThread):
             returns nothing"""
 
         #run the model with the input dictionary as its argument.
-        self.model.execute(self.inputDict)
+        while self.parent.cancel == False:
+            self.parent.write(self.parent.thread.readAllStandardOutput())
         
 
 class DynamicUI(DynamicGroup):
@@ -919,7 +958,7 @@ class DynamicUI(DynamicGroup):
         
         #Run the modelDialog.
         self.modelDialog.exec_()
-        
+        print 'returned to DynamicUI'
         #if the user presses cancel (which sets modelDialog.cancel to True)
         #we should return to the UI.  Otherwise, quit the application.
         if self.modelDialog.cancel == False:
