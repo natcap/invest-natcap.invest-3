@@ -70,21 +70,19 @@ def clipShape(shapeToClip, bindingShape):
     
     if os.path.isfile(shape_source):
         os.remove(shape_source)
-    
-    #Copy the input shapefile into the designated output folder
-#    copiedShape = ogr.GetDriverByName('ESRI Shapefile').\
-#        CopyDataSource(shapeToClip, shape_source)
+    #Get the layer of points from the current point geometry shape
     in_layer = shapeToClip.GetLayer(0)
+    #Get the layer definition which holds needed attribute values
     in_defn = in_layer.GetLayerDefn()
+    #Get the layer of the polygon (binding) geometry shape
     clip_layer = bindingShape.GetLayer(0)
-
+    #Create a new shapefile with similar properties of the current point geometry shape
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
     shp_ds = shp_driver.CreateDataSource(shape_source)
-    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), geom_type = in_defn.GetGeomType(),
-                                   srs = in_layer.GetSpatialRef())
-    
+    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), in_layer.GetSpatialRef(), in_defn.GetGeomType())
+    #Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()
-    
+    #For every field, create a duplicate field and add it to the new shapefiles layer
     for fld_index in range(in_field_count):
         src_fd = in_defn.GetFieldDefn(fld_index)
         
@@ -92,25 +90,28 @@ def clipShape(shapeToClip, bindingShape):
         fd.SetWidth(src_fd.GetWidth())
         fd.SetPrecision(src_fd.GetPrecision())
         shp_layer.CreateField(fd)
-
+    #Retrieve the binding polygon feature and get it's geometry reference
     clip_feat = clip_layer.GetNextFeature()
     clip_geom = clip_feat.GetGeometryRef()
+    #Get the spatial reference of the geometry to use in transforming
     sourceSR = clip_geom.GetSpatialReference()
-    
+    #Retrieve the current point shapes feature and get it's geometry reference
     in_feat = in_layer.GetNextFeature()
     geom = in_feat.GetGeometryRef()
+    #Get the spatial reference of the geometry to use in transforming
     targetSR = geom.GetSpatialReference()
+    #Create a coordinate transformation
     coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
+    #Transform the polygon geometry into the same format as the point shape geometry
     clip_geom.Transform(coordTrans)
-#    print clip_geom
-#    print geom
+    #For all the features in the current point shape (for all the points)
+    #Check to see if they Intersect with the binding polygons geometry and
+    #if they do, then add all of the fields and values from that point to the new shape
     while in_feat is not None:
         geom = in_feat.GetGeometryRef()
+        #Intersection returns a new geometry if they intersect
         geom = geom.Intersection(clip_geom)
-
         if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
-#            print geom.GetGeometryCount()
-#            print geom.GetPointCount()
             out_feat = ogr.Feature(feature_def = shp_layer.GetLayerDefn())
             out_feat.SetFrom(in_feat)
             out_feat.SetGeometryDirectly(geom)
@@ -125,6 +126,7 @@ def clipShape(shapeToClip, bindingShape):
         in_feat.Destroy()
         in_feat = in_layer.GetNextFeature()
     
+    #Close shapefiles
     clip_feat.Destroy()
     bindingShape.Destroy()
     shapeToClip.Destroy()
