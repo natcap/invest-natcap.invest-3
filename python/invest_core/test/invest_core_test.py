@@ -11,6 +11,16 @@ import numpy as np
 import random
 
 class TestInvestCore(unittest.TestCase):
+    def testvectorizeRasters(self):
+        r1 = gdal.Open('../../../test_data/lulc_samp_cur')
+        r2 = gdal.Open('../../../test_data/precip')
+
+        def op(a, b):
+            return a + b
+
+        invest_core.vectorizeRasters([r1, r2], op,
+            rasterName='rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
+
     def testinterpolateMatrix(self):
         """Test the matrix interpolation function"""
 
