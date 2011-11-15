@@ -62,6 +62,33 @@ def biophysical(args):
 #    newRaster = None
 
     interpolateWaveData(args['machine_perf'], args['wave_base_data'])
+    clipShape()
+    
+def clipShape(shapeToClip, bindingShape):
+    shape_source = '../../test_data/wave_Energy/samp_data/Intermediate'
+    #Copy the input shapefile into the designated output folder
+    copiedShape = ogr.GetDriverByName('ESRI Shapefile').\
+        CopyDataSource(shapeToClip, shape_source)
+    clip_feat = bindingShape.GetLayer(0).GetNextFeature()
+    clip_geom = clip_feat.GetGeometryRef().Clone()
+    
+    copied_feat = copiedShape.GetLayer(0).GetNextFeature()
+    while copied_feat is not None:
+        geom = copied_feat.GetGeometryRef().Clone()
+        geom = copied_feat.GetGeometryRef().Clone().Intersection(clip_geom)
+        
+        if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
+            out_feat = ogr.Feature(feature_def = copiedShape.GetLayer(0).GetLayerDefn())
+            out_feat.SetFrom(copied_feat)
+            out_feat.SetGeometryDirectly(geom)
+            
+            out_feat.Destroy()
+        copied_feat.Destroy()
+        copied_feat = copiedShape.GetLayer(0).GetNextFeature()
+    
+    clip_feat.Destroy()
+    bindingShape.Destroy()
+    copiedShape.Destroy()
     
 def interpolateWaveData(machinePerf, waveBaseData):
     #Trim down the waveBaseData based on the machinePerf rows/columns
