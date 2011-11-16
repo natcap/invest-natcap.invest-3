@@ -132,28 +132,7 @@ def clipShape(shapeToClip, bindingShape, outputPath):
     shapeToClip.Destroy()
     shp_ds.Destroy()
 def interpolateWaveData(machinePerf, waveBaseData):
-    #Trim down the waveBaseData based on the machinePerf rows/columns
-    #and then interpolate if need be.
-    #Once interpolated and trimmed vectorize over two matrices returning
-    #and saving the output to a dictionary with key being I,J value
     
-    #A 2D array that will be vectorized with machinePerf
-    interpWaveData = []
-#    machineCol = machinePerf[0]
-#    machineRow = machinePerf[1]
-##    print machineCol
-##    print machineRow
-#    for key, pointData in waveBaseData.iteritems():
-#        waveCol = pointData[0]
-#        waveRow = pointData[1]
-#        newCol = []
-#        newRow = []
-#        lowBound = -1
-#        highBound = -1
-#        for index, num in enumerate(waveCol):
-#            if float(num) < machineCol
-#       
-#        
     
     return interpWaveData
     
@@ -176,3 +155,30 @@ def npv():
         sum = sum + (B[num]-C[num])*((1+i)**(-1 * t))
         
     return npv
+
+def computeWaveEnergyCapacity(waveData, interpZ):
+    energyCap = {}
+    for key, val in waveData.iteritems():
+        if key != 0 and key != 1:
+            for index, array in enumerate(val):
+                for i, num in enumerate(array):
+                    array[i] = float(num)
+            tempArray = np.array(val)
+            multArray = np.multiply(tempArray, interpZ)
+            sum = np.sum(multArray)
+            energyCap[key] = sum
+            if key == (556, 496):
+                print interpZ
+                print multArray
+                print sum
+    print energyCap[(556,496)]
+    return energyCap 
+
+    x = np.array(arrayHeader)
+    y = np.array(arrayColumns)
+    z = np.array(machine_perf_twoDArray)
+    newx = np.array(biophysicalargs['wave_base_data'][0])
+    newy = np.array(biophysicalargs['wave_base_data'][1])
+    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
+
+    computeWaveEnergyCapacity(biophysicalargs['wave_base_data'], interpZ)

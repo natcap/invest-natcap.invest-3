@@ -74,6 +74,8 @@ def execute(args):
         
     #Create 2D array by compiling rows of arrays from dict
     #Add on the row/col fields in same order as WW 3 text file
+    machine_perf_twoDArray.append(arrayHeader)
+    machine_perf_twoDArray.append(arrayColumns)
     for array in dict.itervalues():
         for index, val in enumerate(array):
             array[index] = float(val)
@@ -127,15 +129,6 @@ def execute(args):
         print 'Analysis Area ERROR'
     
     gdal.AllRegister()
-
-    x = np.array(arrayHeader)
-    y = np.array(arrayColumns)
-    z = np.array(machine_perf_twoDArray)
-    newx = np.array(biophysicalargs['wave_base_data'][0])
-    newy = np.array(biophysicalargs['wave_base_data'][1])
-    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
-
-    computeWaveEnergyCapacity(biophysicalargs['wave_base_data'], interpZ)
     
     AOI = None
     if 'AOI_uri' in args:
@@ -162,30 +155,6 @@ def execute(args):
     biophysicalargs['dem'] = gdal.Open(args['dem_uri'])
         
     waveEnergy_core.biophysical(biophysicalargs)
-
-#    array1 = np.array([[2., 2., 2., 2],
-#           [2., 2., 2., 2.],
-#           [2, 2., 2, 2.],
-#           [2., 2, 2, 2]])
-#    array2 = np.array([[2., 2., 2., 2],
-#           [2., 2., 2., 2.],
-#           [2, 2., 2, 2.],
-#           [2., 2, 2, 2]])
-#    print np.sum(array2)
-
-def computeWaveEnergyCapacity(waveData, interpZ):
-    tempArray = []
-    energyCap = {}
-    for key, val in waveData.iteritems():
-        if key != 0 and key != 1:
-            for index, array in enumerate(val):
-                for i, num in enumerate(array):
-                    array[i] = float(num)
-            multArray = np.multiply(val, interpZ)
-            sum = np.sum(multArray)
-            energyCap[key] = sum
-#    print energyCap[(56,112)]
-    return energyCap 
 
 def extrapolateWaveData(analysis_path, waveOpen):
     analysis_area_path = analysis_path
@@ -218,7 +187,6 @@ def extrapolateWaveData(analysis_path, waveOpen):
                     check = -1
                 lineCount = 0
                 rowcolGrab = False
-                
         else:
             waveArray.append(line.split(','))
             waveDict[key] = waveArray
@@ -229,33 +197,5 @@ def extrapolateWaveData(analysis_path, waveOpen):
               
     waveDict[0] = waveRow
     waveDict[1] = waveCol
-#    print lineCount
-#    print waveDict[(56,112)]
     return waveDict
     
-#    perfPathList = args['machine_perf_uri'].rsplit(os.sep, 1)
-#    perfPathWkbook = perfPathList[0]
-#    perfWkshtList = perfPathList[1].split('$')
-#    perfWksht = perfWkshtList[0]
-#    
-#    paramPathList = args['machine_param_uri'].rsplit(os.sep, 1)
-#    paramPathWkbook = paramPathList[0]
-#    paramWkshtList = paramPathList[1].split('$')
-#    paramWksht = paramWkshtList[0]
-#    
-#    machine_perfSheet = open_workbook(perfPathWkbook).sheet_by_name(perfWksht)
-#    machine_paramSheet= open_workbook(paramPathWkbook).sheet_by_name(paramWksht)
-        
-#    arguments = {'wave_base_data': wave_base_data,
-#                 'analysis_area': analysis_area,
-#                 'AOI': AOI,
-#                 'machine_perf': machine_perf_twoDArray,
-#                 'machine_param': machine_params,
-#                 'dem': dem,
-    #             'valuation': gp.GetParameterAsText(7),
-    #             'landgridpts_uri': gp.GetParameterAsText(8),
-    #             'machine_econ_uri': gp.GetParameterAsText(9),
-    #             'number_machines': gp.GetParameterAsText(10),
-    #             'projection_uri': gp.GetParameterAsText(11)
-#                }
-        
