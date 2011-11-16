@@ -133,12 +133,39 @@ def newRasterFromBase(base, outputURI, format, nodata, datatype):
     rows = base.RasterYSize
     projection = base.GetProjection()
     geotransform = base.GetGeoTransform()
+    return newRaster(cols, rows, projection, geotransform, format, nodata,
+                     datatype, base.RasterCount, outputURI)
+
+def newRaster(cols, rows, projection, geotransform, format, nodata, datatype,
+              bands, outputURI):
+    """Create a new raster with the given properties.
+    
+        cols - number of pixel columns
+        rows - number of pixel rows
+        projection - the datum
+        geotransform - the coordinate system
+        format - a string representing the GDAL file format of the 
+            output raster.  See http://gdal.org/formats_list.html for a list
+            of available formats.  This parameter expects the format code, such
+            as 'GTiff' or 'MEM'
+        nodata - a value that will be set as the nodata value for the 
+            output raster.  Should be the same type as 'datatype'
+        datatype - the pixel datatype of the output raster, for example 
+            gdal.GDT_Float32.  See the following header file for supported 
+            pixel types:
+            http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
+        bands - the number of bands in the raster
+        outputURI - the file location for the outputed raster.  If format
+            is 'MEM' this can be an empty string
+            
+        returns a new GDAL raster with the parameters as described above"""
 
     driver = gdal.GetDriverByName(format)
-    newRaster = driver.Create(outputURI, cols, rows, 1, datatype)
+    newRaster = driver.Create(outputURI, cols, rows, bands, datatype)
     newRaster.SetProjection(projection)
     newRaster.SetGeoTransform(geotransform)
-    newRaster.GetRasterBand(1).SetNoDataValue(nodata)
+    for i in range(bands):
+        newRaster.GetRasterBand(i + 1).SetNoDataValue(nodata)
 
     return newRaster
 
@@ -206,20 +233,23 @@ def calculateIntersectionRectangle(rasterList):
 
 #Define the initial bounding box
     gt = rasterList[0].GetGeoTransform()
+    print gt
     #order is left, top, right, bottom of rasterbounds
-    boundingBox = [gt[0], gt[3], gt[0] * rasterList[0].RasterXSize,
-                   gt[3] + gt5 * rasterList[0].RasterYSize]
+    boundingBox = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
+                   gt[3] + gt[5] * rasterList[0].RasterYSize]
 
     for band in rasterList:
         #intersect the current bounding box with the one just read
-        gt = rasterList[0].GetGeoTransform()
-        rec = [gt[0], gt[3], gt[0] * rasterList[0].RasterXSize,
-               gt[3] + gt5 * rasterList[0].RasterYSize]
+        gt = band.GetGeoTransform()
+        print gt
+        rec = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
+               gt[3] + gt[5] * rasterList[0].RasterYSize]
         #This intersects rec with the current bounding box
         boundingBox = [max(rec[0], boundingBox[0]),
                        min(rec[1], boundingBox[1]),
                        min(rec[2], boundingBox[2]),
                        max(rec[3], boundingBox[3])]
+    print boundingBox
     return boundingBox
 
 def interpolateMatrix(x, y, z, newx, newy):
@@ -238,70 +268,79 @@ def interpolateMatrix(x, y, z, newx, newy):
 
     #Create an interpolator for the 2D data.  Here's a reference
     #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
-    interp = scipy.interpolate.RectBivariateSpline(x, y, z, kx=3, ky=3)
+    spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=3, ky=3)
 
     #Build a vectorized operation that will interpolate the points in the
     #new matrix
     def getInterpValue(x, y):
-        return interp(x, y)
+        return spl(x, y)
     op = np.vectorize(getInterpValue)
 
     #create a grid of x and y positions for array broadcasting to the
     #vectorized operation
-    xMesh = np.array([newx, ] * len(newx))
-    yMesh = np.array([newy, ] * len(newy)).transpose()
+    xMesh = np.array([newx, ] * len(newy))
+    yMesh = np.array([newy, ] * len(newx)).transpose()
 
     #transpose the result so it's in row major order; I think that's what
     #we expect since we pass in the matrix as row major
-    return op(xMesh, yMesh).transpose()
+    return op(xMesh, yMesh)
 
-def vectorizeRasters(rasterList, op, rasterName=None):
+def vectorizeRasters(rasterList, op, rasterName=None,
+                     datatype=gdal.GDT_Float32):
     """Apply the numpy vectorized operation `op` on the rasters contained in
         rasterList where the arguments to `op` are brodcasted pixels from
         each raster in rasterList in the order they exist in the list
         
         rasterList - list of rasters
-        op - numpy vectorized operation, takes brodcasted pixels from 
+        op - numpy vectorized operation, takes broadcasted pixels from 
             the first bands in rasterList in order and returns a new pixel
         rasterName - the desired URI to the output raster.  If None then
             resulting raster is only mapped to MEM
+        datatype - the GDAL datatype of the output raster.  By default this
+            is a 32 bit float.
         
         returns a single band raster"""
 
     aoiBox = calculateIntersectionRectangle(rasterList)
-
+    print aoiBox
 
 
     #create a new raster with the minimum resolution of rasterList and
     #bounding box that contains aoiBox
+    #gt: left, pixelxwidth, pixelywidthforx, top, pixelxwidthfory, pixelywidth
+    #generally pixelywidthforx and pixelxwidthfory are zero for maps where 
+    #north is up if that's not the case for us, we'll have a few bugs to deal 
+    #with aoibox is left, top, right, bottom
+
+    #DEFINE THESE BASED ON MINIMUM PIXEL WIDTH/HEIGHT
+    pixelWidth = 30
+    pixelHeight = -30
+    cols = 100 #DEFINE THIS
+    rows = 100 #DEFINE THIS
+    #geotransform order: 
+    #1) left coordinate of top left corner
+    #2) pixel width in x direction
+    #3) pixel width in y direciton (usually zero)
+    #4) top coordinate of top left corner
+    #5) pixel height in x direction (usually zero)
+    #6) pixel height in y direction 
+    geotransform = [aoiBox[0], pixelWidth, 0.0, aoiBox[1], 0.0, pixelHeight]
+
+    projection = rasterList[0].GetProjection()
+
+    outputURI = ''
+    format = 'MEM'
+    if rasterName != None:
+        outputURI = rasterName
+        format = 'GTiff'
+    nodata = 0
+    outRaster = newRaster(cols, rows, projection, geotransform, format,
+                          nodata, datatype, 1, outputURI)
+    outRaster.GetRasterBand(1).Fill(1)
 
     #extract a matrix from each raster that's contained in the bounding box
     #create a scipy.interpolate RectBivariateSpline for each one below is some
     #biovariate spline tracer code
-
-#x,y=np.mgrid[0:5,0:5]
-#>>> x=np.array(range(5))
-#>>> y=np.array(range(5))
-#>>> x
-#array([0, 1, 2, 3, 4])
-#>>> y
-#array([0, 1, 2, 3, 4])
-#>>> scipy.interpolate.RectBivariateSpline(x,y,z)
-#<scipy.interpolate.fitpack2.RectBivariateSpline object at 0x108ebd0>
-#>>> newx=np.array(range(10))
-#>>> newx=newx/2.0
-#>>> newx
-#array([ 0. ,  0.5,  1. ,  1.5,  2. ,  2.5,  3. ,  3.5,  4. ,  4.5])
-#>>> x
-#array([0, 1, 2, 3, 4])
-#>>> newy=np.array(range(10))
-#>>> newy=newy/2.0
-#>>> interp=scipy.interpolate.RectBivariateSpline(x,y,z)
-#>>> interp.ev(newx,newy)
-#array([  2.06559327e-17,   1.00000000e+00,   2.00000000e+00,
-#         3.00000000e+00,   4.00000000e+00,   5.00000000e+00,
-#         6.00000000e+00,   7.00000000e+00,   8.00000000e+00,
-#         8.00000000e+00])
 
     matrixList = []
 
