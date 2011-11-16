@@ -9,6 +9,10 @@ from osgeo.gdalconst import *
 from dbfpy import dbf
 import numpy as np
 import random
+import logging
+logger = logging.getLogger('invest_core_test')
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
     def testvectorizeRasters(self):
@@ -53,8 +57,10 @@ class TestInvestCore(unittest.TestCase):
 
         #print 'newx', newx
         #print 'newy', newy
+        logging.debug('calling interpolate matrix')
         interpz = invest_core.interpolateMatrix(x, y, z, newx, newy)
         #print 'interpz:', interpz
+        logging.debug('testing the result of interpolate matrix')
         assertEqualInterpPoints(x, y, newx, newy, z)
 
 
@@ -118,7 +124,7 @@ class TestInvestCore(unittest.TestCase):
     def test_carbon_pixel_area(self):
         """Verify the correct output of carbon.pixelArea()"""
 
-        dataset = gdal.Open('.. / .. / .. / test_data / carbon_regression.tif',
+        dataset = gdal.Open('../../../test_data/carbon_regression.tif',
                             gdal.GA_ReadOnly)
         area = invest_core.pixelArea(dataset)
 
