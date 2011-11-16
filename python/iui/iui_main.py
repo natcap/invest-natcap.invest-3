@@ -1,9 +1,12 @@
 import sys, os, imp
+import platform
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 print cmd_folder
 sys.path.insert(0, cmd_folder + '/../invest_core')
-sys.path.append(cmd_folder + '/../../OSGeo4W/lib/site-packages')
+
+if platform.system() == 'Windows':
+    sys.path.append(cmd_folder + '/../../OSGeo4W/lib/site-packages')
 
 from PyQt4 import QtGui, QtCore
 
@@ -586,7 +589,10 @@ class ModelDialog(QtGui.QDialog):
             
             #specify the path to the python executeable.  This is uniform across
             #all models at the moment.
-            command = './OSGeo4W/gdal_python_exec.bat'
+            if platform.system() == 'Windows':
+                command = './OSGeo4W/gdal_python_exec.bat'
+            else:
+                command = 'python'
 
             #create a QStringlist to hold the arguments to the QProcess.
             argslist = QtCore.QStringList()
@@ -1238,7 +1244,7 @@ class FileButton(QtGui.QPushButton):
     def __init__(self, text, URIfield, filetype='file'):
         super(FileButton, self).__init__()
         self.text = text
-        self.setIcon(QtGui.QIcon('./python/iui/document-open.png'))
+        self.setIcon(QtGui.QIcon('document-open.png'))
         self.URIfield = URIfield
         self.filetype = filetype
         
