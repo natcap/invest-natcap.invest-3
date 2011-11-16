@@ -189,15 +189,17 @@ def computeWaveEnergyCapacity(waveData, interpZ):
             multArray[:,periodMaxPos:]
         if heightMaxPos != -1:
             multArray[heightMaxPos:, :]
+        multArray = np.divide(multArray, 5.0)
         validArray = np.where(multArray>750, 750, multArray)
+        validArray = np.where(validArray<0, 0, validArray)
 #            def deviceConstraints(a, capmax, hmax, tmax):
                 
         sum = np.sum(validArray)
         energyCap[key] = sum
         if key == (556, 496):
-            print interpZ
-            print multArray
-#            print validArray
+#            print interpZ
+#            print multArray
+            print validArray
             print sum
     print energyCap[(556,496)]
     return energyCap 
