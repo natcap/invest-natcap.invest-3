@@ -290,6 +290,13 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         
         returns a single band raster"""
 
+    def minmag(*l):
+        """Function to determine the minimum number in terms of magnitude 
+            while preserving the sign."""
+        la = map(abs, l) #store magnitudes
+        v = min(map(abs, l)) #find minimum magnitude
+        return math.copysign(v, l[la.index(v)]) #put the sign back
+
     logger.debug('starting vectorizeRasters')
 
     #create a new raster with the minimum resolution of rasterList and
@@ -306,8 +313,8 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     pixelWidth, pixelHeight = gt[1], gt[5]
     for raster in rasterList:
         gt = raster.GetGeoTransform()
-        pixelWidth = min(pixelWidth, gt[1])
-        pixelHeight = min(pixelWidth, gt[5])
+        pixelWidth = minmag(pixelWidth, gt[1])
+        pixelHeight = minmag(pixelHeight, gt[5])
 
     logger.debug('min pixel width and height: %s %s' % (pixelWidth,
                                                         pixelHeight))
