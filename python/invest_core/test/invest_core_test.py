@@ -24,27 +24,39 @@ class TestInvestCore(unittest.TestCase):
     def testinterpolateMatrix(self):
         """Test the matrix interpolation function"""
 
+        def assertEqualInterpPoints(x, y, newx, newy, z):
+            for xVal in x:
+                for yVal in y:
+                    i = x.tolist().index(xVal)
+                    j = y.tolist().index(yVal)
+                    ii = newx.tolist().index(xVal)
+                    jj = newy.tolist().index(yVal)
+                    self.assertAlmostEquals(z[j][i], interpz[jj][ii], 5,
+                                    "z[%s][%s], interpz[%s][%s], %s != %s" %
+                                    (i, j, ii, jj, z[j][i], interpz[jj][ii]))
+
         #Create a non-trivial somewhat random matrix
-        x = np.array([-4.2, 3, 6, 10])
+        x = np.array([-4.2, 3, 6, 10, 11])
         y = np.array([-9, 3, 6, 10])
-        z = np.array([[0., 0., 0., 0],
-           [0., 1., 1., 0.],
-           [-7.2, 3., 1.2, 0.],
-           [0., 4.9, 2.5, 0]])
+        z = np.array([[0., 8., 11., 12.5, 0.0],
+           [0., 1., 1., 0., 0.],
+           [-7.2, 3., 1.2, 0., 0.],
+           [0., 4.9, 2.5, 0, 0.]])
+        #print z.shape
 
-        newx = np.array([-4.2, 0, 2.5, 3, 5, 6, 7.5, 10, 15.2])
-        newy = np.array([-9, 0, 2.5, 3, 5, 6, 7.5, 10, 22.2])
+        #print 'x', x
+        #print 'y', y
+        #print 'z', z
 
+        newx = np.array([-8.2, -4.2, 0, 2.5, 3, 5, 6, 7.5, 10, 11, 15.2, 100.0])
+        newy = np.array([-9, 0, 2.5, 3, 5, 6, 7.5, 10, 22.2, 100.0])
+
+        #print 'newx', newx
+        #print 'newy', newy
         interpz = invest_core.interpolateMatrix(x, y, z, newx, newy)
+        #print 'interpz:', interpz
+        assertEqualInterpPoints(x, y, newx, newy, z)
 
-        for xVal in x:
-            for yVal in y:
-                i = x.tolist().index(xVal)
-                j = y.tolist().index(yVal)
-                ii = newx.tolist().index(xVal)
-                jj = newy.tolist().index(yVal)
-                self.assertAlmostEquals(z[i][j], interpz[ii][jj], 5,
-                                        "%s != %s" % (z[i][j], interpz[ii][jj]))
 
     def testRasterDiff(self):
         driver = gdal.GetDriverByName("MEM")
@@ -106,7 +118,7 @@ class TestInvestCore(unittest.TestCase):
     def test_carbon_pixel_area(self):
         """Verify the correct output of carbon.pixelArea()"""
 
-        dataset = gdal.Open('../../../test_data/carbon_regression.tif',
+        dataset = gdal.Open('.. / .. / .. / test_data / carbon_regression.tif',
                             gdal.GA_ReadOnly)
         area = invest_core.pixelArea(dataset)
 

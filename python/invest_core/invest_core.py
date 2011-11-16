@@ -268,22 +268,22 @@ def interpolateMatrix(x, y, z, newx, newy):
 
     #Create an interpolator for the 2D data.  Here's a reference
     #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
-    interp = scipy.interpolate.RectBivariateSpline(x, y, z, kx=3, ky=3)
+    spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=3, ky=3)
 
     #Build a vectorized operation that will interpolate the points in the
     #new matrix
     def getInterpValue(x, y):
-        return interp(x, y)
+        return spl(x, y)
     op = np.vectorize(getInterpValue)
 
     #create a grid of x and y positions for array broadcasting to the
     #vectorized operation
-    xMesh = np.array([newx, ] * len(newx))
-    yMesh = np.array([newy, ] * len(newy)).transpose()
+    xMesh = np.array([newx, ] * len(newy))
+    yMesh = np.array([newy, ] * len(newx)).transpose()
 
     #transpose the result so it's in row major order; I think that's what
     #we expect since we pass in the matrix as row major
-    return op(xMesh, yMesh).transpose()
+    return op(xMesh, yMesh)
 
 def vectorizeRasters(rasterList, op, rasterName=None,
                      datatype=gdal.GDT_Float32):
