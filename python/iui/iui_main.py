@@ -847,6 +847,9 @@ class DynamicUI(DynamicGroup):
                         #if the element is unsatisfied, color the label's 
                         #background accordingly. 
                         element.setBGcolorSatisfied(False)
+                else:
+                    if isinstance(element, DynamicText):
+                        element.setBGcolorSatisfied(True)
         
         #return the number of unsatisfied required elements.
         return numRequired - numVerified
