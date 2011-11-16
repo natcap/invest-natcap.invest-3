@@ -767,7 +767,9 @@ class DynamicUI(DynamicGroup):
                     if element.isEnabled() == True:
                         #If the user has not specified a value for this element,
                         #we don't need to bother casting it to any other type.
-                        value = element.value()
+                        #element.value() returns a QString, so we need to cast
+                        #to a python string.
+                        value = str(element.value())
                         if value != '':
                             #if the user has specified a dataType in the JSON config,
                             #ensure the data is casted appropriately.
@@ -779,7 +781,7 @@ class DynamicUI(DynamicGroup):
                                 else:
                                     value = str(value)     
                             #If the user has not specified a dataType, cast from 
-                            #QtCore.QString to python string.                       
+                            #QtCore.QString to python string.                   
                             else:
                                 value = str(value)
                         
