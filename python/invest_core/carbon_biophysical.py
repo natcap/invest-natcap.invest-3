@@ -9,7 +9,7 @@ from dbfpy import dbf
 
 import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 logger = logging.getLogger('carbon_biophysical')
 
@@ -90,8 +90,8 @@ def execute(args):
             os.makedirs(d)
 
     #This defines a dictionary that links output/temporary GDAL/OAL objects
-    #to their locations on disk.  Helpful for creating the objects in the next 
-    #step
+    #to their locations on disk.  Helpful for creating the objects in the 
+    #next step
     outputURIs = {}
 
     #make a list of all the rasters that we need to create, it's dependant
