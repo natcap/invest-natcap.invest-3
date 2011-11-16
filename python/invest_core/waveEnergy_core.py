@@ -191,6 +191,9 @@ def computeWaveEnergyCapacity(waveData, interpZ):
             multArray[heightMaxPos:, :]
         multArray = np.divide(multArray, 5.0)
         validArray = np.where(multArray>750, 750, multArray)
+        #Since we are doing a cubic interpolation there is a possibility we
+        #will have negative values where they should be zero.  So here
+        #we drive any negative values to zero.
         validArray = np.where(validArray<0, 0, validArray)
 #            def deviceConstraints(a, capmax, hmax, tmax):
                 
