@@ -338,6 +338,12 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     outRaster.GetRasterBand(1).Fill(1)
 
     #extract a matrix from each raster that's contained in the bounding box
+    matrixList = []
+    for raster in rasterList:
+        gt = raster.GetGeoTransform()
+        band = raster.GetRasterBand(1)
+        xl = math.floor(band.XSize / (aoiBox[0] - gt[0]))
+         #matrixList.append(band.ReadAsArray(0, 0, band.XSize, band.YSize))
     #create a scipy.interpolate RectBivariateSpline for each one below is some
     #biovariate spline tracer code
 
