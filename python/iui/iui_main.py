@@ -1,9 +1,12 @@
 import sys, os, imp
+import platform
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 print cmd_folder
 sys.path.insert(0, cmd_folder + '/../invest_core')
-sys.path.append(cmd_folder + '/../../OSGeo4W/lib/site-packages')
+
+if platform.system() == 'Windows':
+    sys.path.append(cmd_folder + '/../../OSGeo4W/lib/site-packages')
 
 from PyQt4 import QtGui, QtCore
 
@@ -586,7 +589,10 @@ class ModelDialog(QtGui.QDialog):
             
             #specify the path to the python executeable.  This is uniform across
             #all models at the moment.
-            command = './OSGeo4W/gdal_python_exec.bat'
+            if platform.system() == 'Windows':
+                command = './OSGeo4W/gdal_python_exec.bat'
+            else:
+                command = 'python'
 
             #create a QStringlist to hold the arguments to the QProcess.
             argslist = QtCore.QStringList()
@@ -765,19 +771,25 @@ class DynamicUI(DynamicGroup):
                     #may run differently given the presence or absence of 
                     #elements
                     if element.isEnabled() == True:
-                        #if the user has specified a dataType in the JSON config,
-                        #ensure the data is casted appropriately.
-                        if 'dataType' in element.attributes:
-                            if element.attributes['dataType'] == 'int':
-                                value = int(element.value())
-                            elif element.attributes['dataType'] == 'float':
-                                value = float(element.value())
+                        #If the user has not specified a value for this element,
+                        #we don't need to bother casting it to any other type.
+                        #element.value() returns a QString, so we need to cast
+                        #to a python string.
+                        value = str(element.value())
+                        if value != '':
+                            #if the user has specified a dataType in the JSON config,
+                            #ensure the data is casted appropriately.
+                            if 'dataType' in element.attributes:
+                                if element.attributes['dataType'] == 'int':
+                                    value = int(value)
+                                elif element.attributes['dataType'] == 'float':
+                                    value = float(value)
+                                else:
+                                    value = str(value)     
+                            #If the user has not specified a dataType, cast from 
+                            #QtCore.QString to python string.                   
                             else:
-                                value = str(element.value())     
-                        #If the user has not specified a dataType, cast from 
-                        #QtCore.QString to python string.                       
-                        else:
-                            value = str(element.value())
+                                value = str(value)
                         
                         #save the value to the output Dictionary.
                         self.outputDict[element.attributes['args_id']] = value
@@ -1232,7 +1244,7 @@ class FileButton(QtGui.QPushButton):
     def __init__(self, text, URIfield, filetype='file'):
         super(FileButton, self).__init__()
         self.text = text
-        self.setIcon(QtGui.QIcon('./python/iui/document-open.png'))
+        self.setIcon(QtGui.QIcon('document-open.png'))
         self.URIfield = URIfield
         self.filetype = filetype
         
