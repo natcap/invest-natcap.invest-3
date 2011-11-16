@@ -191,13 +191,9 @@ def extrapolateWaveData(analysis_path, waveOpen):
             waveArray.append(line.split(','))
             waveDict[key] = waveArray
     for i, val in enumerate(waveRow):
-        if float(val) < 20.0: 
-            waveRow[i] = float(val)
-        else:
-            waveRow.pop(i)
+        waveRow[i] = float(val)
     for i, val in enumerate(waveCol):
-        if float(val) < 10.0: waveCol[i] = float(val)
-        else: waveCol.pop(i)
+        waveCol[i] = float(val)
         
     waveDict[0] = waveRow
     waveDict[1] = waveCol
