@@ -175,12 +175,17 @@ def execute(args):
 
 def computeWaveEnergyCapacity(waveData, interpZ):
     tempArray = []
+    energyCap = {}
     for key, val in waveData.iteritems():
-        if key != 0 or key != 1:
-            for index, num in enumerate(val):
-                val[index] = float(num)
+        if key != 0 and key != 1:
+            for index, array in enumerate(val):
+                for i, num in enumerate(array):
+                    array[i] = float(num)
             multArray = np.multiply(val, interpZ)
-    wave2DArray.append(array) 
+            sum = np.sum(multArray)
+            energyCap[key] = sum
+#    print energyCap[(56,112)]
+    return energyCap 
 
 def extrapolateWaveData(analysis_path, waveOpen):
     analysis_area_path = analysis_path
