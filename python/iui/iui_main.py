@@ -401,11 +401,12 @@ class DynamicText(DynamicPrimitive):
         if self.root.okpressed == True:
             self.root.updateRequirementNotification()
             
-            if self.requirementsMet():
-                self.setBGcolorSatisfied(True)
-            else:
-                self.setBGcolorSatisfied(False)
-        
+            if self.root.elementIsRequired(self):
+                if self.requirementsMet():
+                    self.setBGcolorSatisfied(True)
+                else:
+                    self.setBGcolorSatisfied(False)
+            
         #This function attempts to enable or disable elements as appropriate.
         self.root.recursiveToggle(self.attributes['id'])
         
@@ -449,9 +450,11 @@ class DynamicText(DynamicPrimitive):
             returns nothing"""
             
         if satisfied:
-            self.label.setStyleSheet("QWidget { background-color: None }")
+            self.label.setStyleSheet("QWidget { color: black }")
+            self.textField.setStyleSheet("QWidget {}")
         else:
-            self.label.setStyleSheet("QWidget { background-color: Red }")
+            self.label.setStyleSheet("QWidget { color: red }")
+            self.textField.setStyleSheet("QWidget { border: 1px solid red } ")
         
     def parentWidget(self):
         """Return the parent widget of one of the QWidgets of this object.
@@ -1196,7 +1199,7 @@ class FileEntry(DynamicText):
     def __init__(self, attributes):
         """initialize the object"""
         super(FileEntry, self).__init__(attributes)
-        self.button = FileButton('...', self.textField, attributes['type'])
+        self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.elements = [self.label, self.textField, self.button]
         
 class YearEntry(DynamicText):
@@ -1220,13 +1223,14 @@ class FileButton(QtGui.QPushButton):
         URIField.
         
         Arguments:
-        text - the string text of the QPushButton itself.
+        text - the string text title of the popup window.
         URIField - a QtGui.QLineEdit.  This object will receive the string URI
             from the QFileDialog."""
         
     def __init__(self, text, URIfield, filetype='file'):
         super(FileButton, self).__init__()
-        self.setText(text)
+        self.text = text
+        self.setIcon(QtGui.QIcon('./python/iui/document-open.png'))
         self.URIfield = URIfield
         self.filetype = filetype
         
@@ -1248,9 +1252,9 @@ class FileButton(QtGui.QPushButton):
         filename = ''
         
         if self.filetype =='file':
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Open file', '.')
+            filename = QtGui.QFileDialog.getOpenFileName(self, 'Select ' + self.text, '.')
         elif self.filetype == 'folder':
-            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select folder', '.')
+            filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
 
         #Set the value of the URIfield.
         if filename == '':
