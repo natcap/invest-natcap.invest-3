@@ -271,7 +271,7 @@ def interpolateMatrix(x, y, z, newx, newy):
     #Create an interpolator for the 2D data.  Here's a reference
     #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
     #not using interp2d because this bug: http://projects.scipy.org/scipy/ticket/898
-    spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=1, ky=1)
+    spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=3, ky=3)
     return spl(newx, newy).transpose()
 
 def vectorizeRasters(rasterList, op, rasterName=None,
