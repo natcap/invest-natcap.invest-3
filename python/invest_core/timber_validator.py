@@ -37,9 +37,11 @@ def execute(args, out):
     #Determine of output dir is writable
 
     #Search for inconsistencies in timber shape file
+    #ids in shape file must also exist in attr_table
 
     #Search for inconsistencies in attr_table
+    #Freq_harv <= T
 
-    #Inconsistencies in market discount rate
+    #Inconsistencies in market discount rate > 0, 
 
     out.append('this is a test error message from timber_validator')

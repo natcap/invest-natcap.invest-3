@@ -194,7 +194,7 @@ def extrapolateWaveData(analysis_path, waveOpen):
         waveRow[i] = float(val)
     for i, val in enumerate(waveCol):
         waveCol[i] = float(val)
-              
+        
     waveDict[0] = waveRow
     waveDict[1] = waveCol
     return waveDict

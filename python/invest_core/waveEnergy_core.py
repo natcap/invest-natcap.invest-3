@@ -19,6 +19,8 @@ def biophysical(args):
     args['dem'] - a GIS raster file
         
     """
+    captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
+    
     filesystemencoding = sys.getfilesystemencoding()
     #Shapefile of polygon that has the dimensions for providing the area of interest
     cutter_uri = '../../test_data/wave_Energy/samp_data/input/WaveData/WCNA_extract.shp'
@@ -61,7 +63,6 @@ def biophysical(args):
 #    #Burn Height values from shapefile onto new raster
 #    newRaster = None
 
-    interpolateWaveData(args['machine_perf'], args['wave_base_data'])
     outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
     clipShape(args['analysis_area'], args['AOI'], outputPath)
     
@@ -131,10 +132,6 @@ def clipShape(shapeToClip, bindingShape, outputPath):
     bindingShape.Destroy()
     shapeToClip.Destroy()
     shp_ds.Destroy()
-def interpolateWaveData(machinePerf, waveBaseData):
-    
-    
-    return interpWaveData
     
 def getMachinePerf(machine_perf):
     performance_dict = {}
@@ -156,29 +153,58 @@ def npv():
         
     return npv
 
+def captureWaveEnergy(waveData, machinePerf, machineParam):
+    x = np.array(machinePerf.pop(0))
+    y = np.array(machinePerf.pop(0))
+    z = np.array(machinePerf)
+    newx = np.array(waveData[0])
+    newy = np.array(waveData[1])
+    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
+    computeWaveEnergyCapacity(waveData, interpZ)
+
 def computeWaveEnergyCapacity(waveData, interpZ):
     energyCap = {}
+    waveRow = waveData.pop(0)
+    waveColumn = waveData.pop(1)
+    periodMax = 20 #Get value from machine_param
+    periodMaxPos = -1
+    heightMax = 10 #Get value from machine_param
+    heightMaxPos = -1
+    for i, v in enumerate(waveRow):
+        if v > periodMax and periodMaxPos != -1:
+            periodMaxPos = i
+    for i, v in enumerate(waveColumn):
+        if v > heightMax and heightMaxPos != -1:
+            heightMaxPos = i
+    
+    
     for key, val in waveData.iteritems():
-        if key != 0 and key != 1:
-            for index, array in enumerate(val):
-                for i, num in enumerate(array):
-                    array[i] = float(num)
-            tempArray = np.array(val)
-            multArray = np.multiply(tempArray, interpZ)
-            sum = np.sum(multArray)
-            energyCap[key] = sum
-            if key == (556, 496):
-                print interpZ
-                print multArray
-                print sum
+        for index, array in enumerate(val):
+            for i, num in enumerate(array):
+                array[i] = float(num)
+        tempArray = np.array(val)
+        multArray = np.multiply(tempArray, interpZ)
+        
+        if periodMaxPos != -1:
+            multArray[:,periodMaxPos:]
+        if heightMaxPos != -1:
+            multArray[heightMaxPos:, :]
+        multArray = np.divide(multArray, 5.0)
+        validArray = np.where(multArray>750, 750, multArray)
+        #Since we are doing a cubic interpolation there is a possibility we
+        #will have negative values where they should be zero.  So here
+        #we drive any negative values to zero.
+        validArray = np.where(validArray<0, 0, validArray)
+#            def deviceConstraints(a, capmax, hmax, tmax):
+                
+        sum = np.sum(validArray)
+        energyCap[key] = sum
+        if key == (556, 496):
+#            print interpZ
+#            print multArray
+            print validArray
+            print sum
     print energyCap[(556,496)]
     return energyCap 
 
-    x = np.array(arrayHeader)
-    y = np.array(arrayColumns)
-    z = np.array(machine_perf_twoDArray)
-    newx = np.array(biophysicalargs['wave_base_data'][0])
-    newy = np.array(biophysicalargs['wave_base_data'][1])
-    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
 
-    computeWaveEnergyCapacity(biophysicalargs['wave_base_data'], interpZ)
