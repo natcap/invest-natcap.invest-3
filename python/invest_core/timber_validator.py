@@ -1,4 +1,4 @@
-"""InVEST Timber model validator.  Checks that arguments to timber_biophysical
+"""InVEST Timber model validator.  Checks that arguments to timber module
     make sense.."""
 
 import imp, sys, os
@@ -42,4 +42,4 @@ def execute(args, out):
 
     #Inconsistencies in market discount rate
 
-    out.append('this is a test error message')
+    out.append('this is a test error message from timber_validator')

@@ -53,4 +53,4 @@ def execute(args, out):
 
     #Inconsistencies in market discount rate
 
-    out.append('this is a test error message from carbon_validator')
+    out.append('this is a test error message from carbon_bipohysical_validator')
