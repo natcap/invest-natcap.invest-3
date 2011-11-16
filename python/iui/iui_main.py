@@ -608,8 +608,7 @@ class ModelDialog(QtGui.QDialog):
             
             #start the QProcess
 #            self.modelProcess.start(command, argslist)
-            self.write('Validating inputs.\n')
-            self.validatorThread.start()
+
             
         except ImportError:
             self.modelProcess = None
@@ -632,6 +631,11 @@ class ModelDialog(QtGui.QDialog):
             self.write('Validation complete.\n')
             self.modelProcess.start(self.command, self.argslist)
 
+    def showEvent(self, data=None):
+        self.write('Validating inputs.\n')
+        self.validatorThread.start()
+        
+        
     def write(self, text):
         """Write text to the statusArea.
             
