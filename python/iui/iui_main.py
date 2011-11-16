@@ -1173,6 +1173,7 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         if self.root == None:
             self.root = self.getRoot()   
         
+        self.root.updateRequirementNotification()
         self.root.recursiveToggle(self.attributes['id'])
         
     def isEnabled(self):
