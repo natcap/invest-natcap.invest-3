@@ -19,6 +19,8 @@ def biophysical(args):
     args['dem'] - a GIS raster file
         
     """
+    captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
+    
     filesystemencoding = sys.getfilesystemencoding()
     #Shapefile of polygon that has the dimensions for providing the area of interest
     cutter_uri = '../../test_data/wave_Energy/samp_data/input/WaveData/WCNA_extract.shp'
@@ -61,7 +63,6 @@ def biophysical(args):
 #    #Burn Height values from shapefile onto new raster
 #    newRaster = None
 
-    interpolateWaveData(args['machine_perf'], args['wave_base_data'])
     outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
     clipShape(args['analysis_area'], args['AOI'], outputPath)
     
@@ -131,10 +132,6 @@ def clipShape(shapeToClip, bindingShape, outputPath):
     bindingShape.Destroy()
     shapeToClip.Destroy()
     shp_ds.Destroy()
-def interpolateWaveData(machinePerf, waveBaseData):
-    
-    
-    return interpWaveData
     
 def getMachinePerf(machine_perf):
     performance_dict = {}
@@ -156,6 +153,15 @@ def npv():
         
     return npv
 
+def captureWaveEnergy(waveData, machinePerf, machineParam):
+    x = np.array(machinePerf.pop(0))
+    y = np.array(machinePerf.pop(0))
+    z = np.array(machinePerf)
+    newx = np.array(waveData[0])
+    newy = np.array(waveData[1])
+    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
+    computeWaveEnergyCapacity(waveData, interpZ)
+
 def computeWaveEnergyCapacity(waveData, interpZ):
     energyCap = {}
     for key, val in waveData.iteritems():
@@ -165,6 +171,9 @@ def computeWaveEnergyCapacity(waveData, interpZ):
                     array[i] = float(num)
             tempArray = np.array(val)
             multArray = np.multiply(tempArray, interpZ)
+            
+#            def deviceConstraints(a, capmax, hmax, tmax):
+                
             sum = np.sum(multArray)
             energyCap[key] = sum
             if key == (556, 496):
@@ -174,11 +183,4 @@ def computeWaveEnergyCapacity(waveData, interpZ):
     print energyCap[(556,496)]
     return energyCap 
 
-    x = np.array(arrayHeader)
-    y = np.array(arrayColumns)
-    z = np.array(machine_perf_twoDArray)
-    newx = np.array(biophysicalargs['wave_base_data'][0])
-    newy = np.array(biophysicalargs['wave_base_data'][1])
-    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
 
-    computeWaveEnergyCapacity(biophysicalargs['wave_base_data'], interpZ)
