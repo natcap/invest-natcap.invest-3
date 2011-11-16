@@ -4,6 +4,9 @@
 import unittest
 from osgeo import gdal
 import numpy as np
+import logging
+logger = logging.getLogger('invest_core')
+
 def assertTwoDatasetEqualURI(unitTest, aUri, bUri):
     """Tests if datasets a and b are 'almost equal' to each other on a per
         pixel basis
