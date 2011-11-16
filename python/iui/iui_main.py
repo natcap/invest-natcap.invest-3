@@ -607,7 +607,7 @@ class ModelDialog(QtGui.QDialog):
             self.argslist = argslist
             
             #Start the thread immediately after opening this dialog.
-            QtCore.QTimer.singleShot(0, self.startValidation)
+            QtCore.QTimer.singleShot(50, self.startValidation)
 
         except ImportError:
             self.modelProcess = None
