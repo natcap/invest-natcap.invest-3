@@ -606,10 +606,9 @@ class ModelDialog(QtGui.QDialog):
             self.command = command
             self.argslist = argslist
             
-            #start the QProcess
-#            self.modelProcess.start(command, argslist)
+            #Start the thread immediately after opening this dialog.
+            QtCore.QTimer.singleShot(0, self.startValidation)
 
-            
         except ImportError:
             self.modelProcess = None
             self.write("Error running the model: "+ str(ImportError))
@@ -631,7 +630,15 @@ class ModelDialog(QtGui.QDialog):
             self.write('Validation complete.\n')
             self.modelProcess.start(self.command, self.argslist)
 
-    def showEvent(self, data=None):
+    def startValidation(self):
+        """Write a short status message to the notifications area and start
+            the input validation thread.
+            
+            This function is a callback and is called immediately after the 
+            modal window is shown.
+            
+            returns nothing"""
+            
         self.write('Validating inputs.\n')
         self.validatorThread.start()
         
@@ -921,6 +928,7 @@ class DynamicUI(DynamicGroup):
                                        self.attributes['modelName'])
         
         #Run the modelDialog.
+#        self.modelDialog.open()
         self.modelDialog.exec_()
 
         #if the user presses cancel (which sets modelDialog.cancel to True)
