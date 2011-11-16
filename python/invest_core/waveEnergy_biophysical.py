@@ -77,8 +77,15 @@ def execute(args):
     machine_perf_twoDArray.append(arrayHeader)
     machine_perf_twoDArray.append(arrayColumns)
     for array in dict.itervalues():
+        for index, val in enumerate(array):
+            array[index] = float(val)
         machine_perf_twoDArray.append(array)
-        
+    
+    for index, val in enumerate(arrayHeader):
+        arrayHeader[index] = float(val)
+    for index, val in enumerate(arrayColumns):
+        arrayColumns[index] = float(val)
+    
     biophysicalargs['machine_perf'] = machine_perf_twoDArray
     #Create a dictionary of dictionaries where the inner dictionaries keys are the column fields.
     machine_params = {}
@@ -148,51 +155,47 @@ def execute(args):
     biophysicalargs['dem'] = gdal.Open(args['dem_uri'])
         
     waveEnergy_core.biophysical(biophysicalargs)
-    
+
 def extrapolateWaveData(analysis_path, waveOpen):
     analysis_area_path = analysis_path
     waveFile = waveOpen
     waveDict = {}
     waveArray = []
+    waveRow = []
+    waveCol = []
     key = ''
     lineCount = 0
+    check = 0
+    rowcolGrab = False
     for line in waveFile:
-        lineCount = lineCount + 1
         if line[0] == 'I':
             iVal = int(line.split(',')[1])
             jVal = int(line.split(',')[3])
             key = (iVal, jVal)
             waveArray = []
+            rowcolGrab = True
+        elif rowcolGrab:
+            if lineCount == 0:
+                if check != -1:
+                    waveRow.append(line.split(','))
+                    waveRow = waveRow[0]
+                lineCount = lineCount + 1
+            elif lineCount == 1:
+                if check != -1:
+                    waveCol.append(line.split(','))
+                    waveCol = waveCol[0]
+                    check = -1
+                lineCount = 0
+                rowcolGrab = False
         else:
             waveArray.append(line.split(','))
             waveDict[key] = waveArray
-#    print lineCount
-#    print waveDict[(56,112)]
+    for i, val in enumerate(waveRow):
+        waveRow[i] = float(val)
+    for i, val in enumerate(waveCol):
+        waveCol[i] = float(val)
+              
+    waveDict[0] = waveRow
+    waveDict[1] = waveCol
     return waveDict
     
-#    perfPathList = args['machine_perf_uri'].rsplit(os.sep, 1)
-#    perfPathWkbook = perfPathList[0]
-#    perfWkshtList = perfPathList[1].split('$')
-#    perfWksht = perfWkshtList[0]
-#    
-#    paramPathList = args['machine_param_uri'].rsplit(os.sep, 1)
-#    paramPathWkbook = paramPathList[0]
-#    paramWkshtList = paramPathList[1].split('$')
-#    paramWksht = paramWkshtList[0]
-#    
-#    machine_perfSheet = open_workbook(perfPathWkbook).sheet_by_name(perfWksht)
-#    machine_paramSheet= open_workbook(paramPathWkbook).sheet_by_name(paramWksht)
-        
-#    arguments = {'wave_base_data': wave_base_data,
-#                 'analysis_area': analysis_area,
-#                 'AOI': AOI,
-#                 'machine_perf': machine_perf_twoDArray,
-#                 'machine_param': machine_params,
-#                 'dem': dem,
-    #             'valuation': gp.GetParameterAsText(7),
-    #             'landgridpts_uri': gp.GetParameterAsText(8),
-    #             'machine_econ_uri': gp.GetParameterAsText(9),
-    #             'number_machines': gp.GetParameterAsText(10),
-    #             'projection_uri': gp.GetParameterAsText(11)
-#                }
-        
