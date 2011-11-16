@@ -164,22 +164,23 @@ def captureWaveEnergy(waveData, machinePerf, machineParam):
 
 def computeWaveEnergyCapacity(waveData, interpZ):
     energyCap = {}
+    waveRow = waveData.pop(0)
+    waveColumn = waveData.pop(1)
     for key, val in waveData.iteritems():
-        if key != 0 and key != 1:
-            for index, array in enumerate(val):
-                for i, num in enumerate(array):
-                    array[i] = float(num)
-            tempArray = np.array(val)
-            multArray = np.multiply(tempArray, interpZ)
+        for index, array in enumerate(val):
+            for i, num in enumerate(array):
+                array[i] = float(num)
+        tempArray = np.array(val)
+        multArray = np.multiply(tempArray, interpZ)
             
 #            def deviceConstraints(a, capmax, hmax, tmax):
                 
-            sum = np.sum(multArray)
-            energyCap[key] = sum
-            if key == (556, 496):
-                print interpZ
-                print multArray
-                print sum
+        sum = np.sum(multArray)
+        energyCap[key] = sum
+        if key == (556, 496):
+            print interpZ
+            print multArray
+            print sum
     print energyCap[(556,496)]
     return energyCap 
 
