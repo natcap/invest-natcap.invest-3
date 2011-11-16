@@ -242,8 +242,11 @@ def calculateIntersectionRectangle(rasterList):
     for band in rasterList:
         #intersect the current bounding box with the one just read
         gt = band.GetGeoTransform()
-        rec = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
-               gt[3] + gt[5] * rasterList[0].RasterYSize]
+        logger.debug('geotransform on raster band %s %s' % (gt, band))
+        logger.debug('pixel x and y %s %s' % (band.RasterXSize,
+                                              band.RasterYSize))
+        rec = [gt[0], gt[3], gt[0] + gt[1] * band.RasterXSize,
+               gt[3] + gt[5] * band.RasterYSize]
         #This intersects rec with the current bounding box
         boundingBox = [max(rec[0], boundingBox[0]),
                        min(rec[1], boundingBox[1]),
@@ -310,7 +313,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     #with aoibox is left, top, right, bottom
     logger.debug('calculating the overlapping rectangles')
     aoiBox = calculateIntersectionRectangle(rasterList)
-
+    logger.debug('the aoi box: %s' % aoiBox)
     #determine the minimum pixel size
     gt = rasterList[0].GetGeoTransform()
     pixelWidth, pixelHeight = gt[1], gt[5]
@@ -323,8 +326,9 @@ def vectorizeRasters(rasterList, op, rasterName=None,
                                                         pixelHeight))
 
     #DEFINE THESE BASED ON MINIMUM PIXEL WIDTH/HEIGHT
-    cols = 100 #DEFINE THIS
-    rows = 100 #DEFINE THIS
+    cols = int(math.ceil((aoiBox[2] - aoiBox[0]) / pixelWidth))
+    rows = int(math.ceil((aoiBox[3] - aoiBox[1]) / pixelHeight))
+    logger.debug('number of pixel cols and rows %s %s' % (cols, rows))
     #geotransform order: 
     #1) left coordinate of top left corner
     #2) pixel width in x direction
