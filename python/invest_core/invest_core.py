@@ -270,7 +270,7 @@ def interpolateMatrix(x, y, z, newx, newy):
 
     #Create an interpolator for the 2D data.  Here's a reference
     #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp2d.html
-    spl = scipy.interpolate.interp2d(x, y, z, kind='cubic', fill_value=0.0)
+    spl = scipy.interpolate.interp2d(x, y, z, kind='linear', fill_value=0.0)
     return spl(newx, newy)
 
 def vectorizeRasters(rasterList, op, rasterName=None,
