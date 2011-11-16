@@ -765,19 +765,23 @@ class DynamicUI(DynamicGroup):
                     #may run differently given the presence or absence of 
                     #elements
                     if element.isEnabled() == True:
-                        #if the user has specified a dataType in the JSON config,
-                        #ensure the data is casted appropriately.
-                        if 'dataType' in element.attributes:
-                            if element.attributes['dataType'] == 'int':
-                                value = int(element.value())
-                            elif element.attributes['dataType'] == 'float':
-                                value = float(element.value())
+                        #If the user has not specified a value for this element,
+                        #we don't need to bother casting it to any other type.
+                        value = element.value()
+                        if value != '':
+                            #if the user has specified a dataType in the JSON config,
+                            #ensure the data is casted appropriately.
+                            if 'dataType' in element.attributes:
+                                if element.attributes['dataType'] == 'int':
+                                    value = int(value)
+                                elif element.attributes['dataType'] == 'float':
+                                    value = float(value)
+                                else:
+                                    value = str(value)     
+                            #If the user has not specified a dataType, cast from 
+                            #QtCore.QString to python string.                       
                             else:
-                                value = str(element.value())     
-                        #If the user has not specified a dataType, cast from 
-                        #QtCore.QString to python string.                       
-                        else:
-                            value = str(element.value())
+                                value = str(value)
                         
                         #save the value to the output Dictionary.
                         self.outputDict[element.attributes['args_id']] = value
