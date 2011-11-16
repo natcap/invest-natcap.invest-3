@@ -406,6 +406,8 @@ class DynamicText(DynamicPrimitive):
                     self.setBGcolorSatisfied(True)
                 else:
                     self.setBGcolorSatisfied(False)
+            else:
+                self.setBGcolorSatisfied(True)
             
         #This function attempts to enable or disable elements as appropriate.
         self.root.recursiveToggle(self.attributes['id'])
