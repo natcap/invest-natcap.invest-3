@@ -5,6 +5,8 @@ import numpy as np
 import scipy.interpolate
 import math
 from osgeo import gdal, osr
+import logging
+logger = logging.getLogger('invest_core')
 
 def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
     """Iterate through the rows in the two sequestration rasters and calculate 
@@ -231,9 +233,8 @@ def calculateIntersectionRectangle(rasterList):
         returns a 4 element list that bounds the intersection of all the 
             rasters in rasterList.  [left, top, right, bottom]"""
 
-#Define the initial bounding box
+    #Define the initial bounding box
     gt = rasterList[0].GetGeoTransform()
-    print gt
     #order is left, top, right, bottom of rasterbounds
     boundingBox = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
                    gt[3] + gt[5] * rasterList[0].RasterYSize]
@@ -241,7 +242,6 @@ def calculateIntersectionRectangle(rasterList):
     for band in rasterList:
         #intersect the current bounding box with the one just read
         gt = band.GetGeoTransform()
-        print gt
         rec = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
                gt[3] + gt[5] * rasterList[0].RasterYSize]
         #This intersects rec with the current bounding box
@@ -249,7 +249,6 @@ def calculateIntersectionRectangle(rasterList):
                        min(rec[1], boundingBox[1]),
                        min(rec[2], boundingBox[2]),
                        max(rec[3], boundingBox[3])]
-    print boundingBox
     return boundingBox
 
 def interpolateMatrix(x, y, z, newx, newy):
@@ -301,9 +300,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         
         returns a single band raster"""
 
-    aoiBox = calculateIntersectionRectangle(rasterList)
-    print aoiBox
-
+    logger.debug('starting vectorizeRasters')
 
     #create a new raster with the minimum resolution of rasterList and
     #bounding box that contains aoiBox
@@ -311,10 +308,21 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     #generally pixelywidthforx and pixelxwidthfory are zero for maps where 
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
+    logger.debug('calculating the overlapping rectangles')
+    aoiBox = calculateIntersectionRectangle(rasterList)
+
+    #determine the minimum pixel size
+    gt = rasterList[0].GetGeoTransform()
+    pixelWidth, pixelHeight = gt[1], gt[5]
+    for raster in rasterList:
+        gt = raster.GetGeoTransform()
+        pixelWidth = min(pixelWidth, gt[1])
+        pixelHeight = min(pixelWidth, gt[5])
+
+    logger.debug('min pixel width and height: %s %s' % (pixelWidth,
+                                                        pixelHeight))
 
     #DEFINE THESE BASED ON MINIMUM PIXEL WIDTH/HEIGHT
-    pixelWidth = 30
-    pixelHeight = -30
     cols = 100 #DEFINE THIS
     rows = 100 #DEFINE THIS
     #geotransform order: 
