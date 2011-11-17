@@ -54,7 +54,12 @@ def biophysical(args):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
     
-    
+    #Use Rich's function to get a 'clipped' version of the global_dem raster.
+#    def op(a):
+#        return a
+#    invest_core.vectorizeRasters([global_dem, wavePeriodRaster], op, 
+#                                 rasterName = '../../test_data/wave_Energy/clipDEM.tiff', datatype=gdal.GDT_Float32)
+#   
     #Make a duplicate copy of the global_dem to try and crop
 #    drv = gdal.GetDriverByName(format)
 #    newGlobal = drv.CreateCopy('../../test_data/wave_Energy/newGlobal.tif', newRaster, 1)
@@ -166,15 +171,15 @@ def computeWaveEnergyCapacity(waveData, interpZ):
     energyCap = {}
     waveRow = waveData.pop(0)
     waveColumn = waveData.pop(1)
-    periodMax = 20 #Get value from machine_param
+    periodMax = 17 #Get value from machine_param
     periodMaxPos = -1
-    heightMax = 10 #Get value from machine_param
+    heightMax = 5.5 #Get value from machine_param
     heightMaxPos = -1
     for i, v in enumerate(waveRow):
-        if v > periodMax and periodMaxPos != -1:
+        if v > periodMax and periodMaxPos == -1:
             periodMaxPos = i
     for i, v in enumerate(waveColumn):
-        if v > heightMax and heightMaxPos != -1:
+        if v > heightMax and heightMaxPos == -1:
             heightMaxPos = i
     
     
@@ -186,11 +191,11 @@ def computeWaveEnergyCapacity(waveData, interpZ):
         multArray = np.multiply(tempArray, interpZ)
         
         if periodMaxPos != -1:
-            multArray[:,periodMaxPos:]
+            multArray[:,periodMaxPos:] = 0
         if heightMaxPos != -1:
-            multArray[heightMaxPos:, :]
-        multArray = np.divide(multArray, 5.0)
-        validArray = np.where(multArray>750, 750, multArray)
+            multArray[heightMaxPos:, :] = 0
+        validArray = np.divide(multArray, 5.0)
+#        validArray = np.where(multArray>750, 750, multArray)
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero.  So here
         #we drive any negative values to zero.
@@ -199,11 +204,11 @@ def computeWaveEnergyCapacity(waveData, interpZ):
                 
         sum = np.sum(validArray)
         energyCap[key] = sum
-        if key == (556, 496):
+#        if key == (556, 496):
 #            print interpZ
 #            print multArray
-            print validArray
-            print sum
+#            print validArray
+#            print sum
     print energyCap[(556,496)]
     return energyCap 
 
