@@ -316,14 +316,14 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     outCols = int(math.ceil((aoiBox[2] - aoiBox[0]) / pixelWidth))
     outRows = int(math.ceil((aoiBox[3] - aoiBox[1]) / pixelHeight))
     logger.debug('number of pixel outCols and outRows %s %s' % (outCols, outRows))
-    #outGeotransform order: 
+    #outGt order: 
     #1) left coordinate of top left corner
     #2) pixel width in x direction
     #3) pixel width in y direciton (usually zero)
     #4) top coordinate of top left corner
     #5) pixel height in x direction (usually zero)
     #6) pixel height in y direction 
-    outGeotransform = [aoiBox[0], pixelWidth, 0.0, aoiBox[1], 0.0, pixelHeight]
+    outGt = [aoiBox[0], pixelWidth, 0.0, aoiBox[1], 0.0, pixelHeight]
 
     projection = rasterList[0].GetProjection()
 
@@ -333,16 +333,15 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         outputURI = rasterName
         format = 'GTiff'
     nodata = 0
-    outRaster = newRaster(outCols, outRows, projection, outGeotransform, format,
+    outRaster = newRaster(outCols, outRows, projection, outGt, format,
                           nodata, datatype, 1, outputURI)
     outBand = outRaster.GetRasterBand(1)
     outBand.Fill(0)
 
     #Determine the output raster's x and y range
-    outXRange = np.arange(outGeotransform[0], outGeotransform[0] + \
-                          outCols * outGeotransform[1], outGeotransform[1])
-    outYRange = np.arange(outGeotransform[3], outGeotransform[3] + \
-                          outRows * outGeotransform[5], outGeotransform[5])
+    outXRange = (np.arange(outCols,dtype=float) * outGt[1]) + outGt[0]
+    outYRange = (np.arange(outRows,dtype=float) * outGt[5]) + outGt[3]
+
     logger.debug('outXRange shape %s %s' % (outXRange.shape, outXRange))
     logger.debug('outYRange shape %s %s' % (outYRange.shape, outYRange))
     #create an interpolator for each raster band
@@ -352,8 +351,11 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         gt = raster.GetGeoTransform()
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-        xrange = np.arange(gt[0], gt[0] + band.XSize * gt[1], gt[1])
-        yrange = np.arange(gt[3], gt[3] + band.YSize * gt[5], gt[5])
+        logger.debug('bandXSize bandYSize %s %s' %(band.XSize, band.YSize))
+        xrange = (np.arange(band.XSize,dtype=float) * gt[1]) + gt[0]
+        logger.debug('gt[0] + band.XSize * gt[1] = %s' % (gt[0] + band.XSize * gt[1]))
+        logger.debug('xrange[-1] = %s' % xrange[-1])
+        yrange = (np.arange(band.YSize,dtype=float) * gt[5]) + gt[3]
         #This is probably true if north is up
         if gt[5] < 0:
             yrange = yrange[::-1]
