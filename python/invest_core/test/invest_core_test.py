@@ -16,6 +16,10 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
+    def testslopeCalculation(self):
+        dem = gdal.Open('../../../sediment_test_data/dem')
+        slope = invest_core.calculateSlope(dem)
+
     def testvectorizeRasters(self):
         r1 = gdal.Open('../../../test_data/lulc_samp_cur')
         r2 = gdal.Open('../../../test_data/precip')

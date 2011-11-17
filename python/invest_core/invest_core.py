@@ -339,11 +339,11 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     outBand.Fill(0)
 
     #Determine the output raster's x and y range
-    outXRange = (np.arange(outCols,dtype=float) * outGt[1]) + outGt[0]
-    outYRange = (np.arange(outRows,dtype=float) * outGt[5]) + outGt[3]
+    outXRange = (np.arange(outCols, dtype=float) * outGt[1]) + outGt[0]
+    outYRange = (np.arange(outRows, dtype=float) * outGt[5]) + outGt[3]
 
-    logger.debug('outXRange shape %s %s' % (outXRange.shape, outXRange))
-    logger.debug('outYRange shape %s %s' % (outYRange.shape, outYRange))
+    logger.debug('outXRange shape %s ' % (outXRange.shape))
+    logger.debug('outYRange shape %s ' % (outYRange.shape))
     #create an interpolator for each raster band
     matrixList = []
     for raster in rasterList:
@@ -351,24 +351,24 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         gt = raster.GetGeoTransform()
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-        logger.debug('bandXSize bandYSize %s %s' %(band.XSize, band.YSize))
-        xrange = (np.arange(band.XSize,dtype=float) * gt[1]) + gt[0]
+        logger.debug('bandXSize bandYSize %s %s' % (band.XSize, band.YSize))
+        xrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
         logger.debug('gt[0] + band.XSize * gt[1] = %s' % (gt[0] + band.XSize * gt[1]))
         logger.debug('xrange[-1] = %s' % xrange[-1])
-        yrange = (np.arange(band.YSize,dtype=float) * gt[5]) + gt[3]
+        yrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
         #This is probably true if north is up
         if gt[5] < 0:
             yrange = yrange[::-1]
             matrix = matrix[::-1]
-        logger.debug('xrange shape %s %s' % (xrange.shape, xrange))
-        logger.debug('yrange shape %s %s' % (yrange.shape, yrange))
-        logger.debug('matrix shape %s %s' % (matrix.shape, matrix))
+        logger.debug('xrange shape %s' % xrange.shape)
+        logger.debug('yrange shape %s' % yrange.shape)
+        logger.debug('matrix shape %s %s' % matrix.shape)
         #transposing matrix here since numpy 2d array order is matrix[y][x]
+        logger.debug('creating RectBivariateSpline interpolator')
         spl = scipy.interpolate.RectBivariateSpline(yrange, xrange,
                                                     matrix,
                                                     kx=1, ky=1)
-        logger.debug('interpolating with outXRange %s' % outXRange)
-        logger.debug('interpolating with outYRange %s' % outYRange)
+        logger.debug('interpolating')
         matrixList.append(spl(outYRange[::-1], outXRange)[::-1])
 
 
@@ -376,10 +376,23 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     logger.debug('applying operation on matrix stack')
     outMatrix = op(*matrixList)
     logger.debug('result of operation on matrix stack shape %s %s' %
-                 (outMatrix.shape, outMatrix))
+                 (outMatrix.shape))
     logger.debug('outmatrix size %s raster size %s %s'
                  % (outMatrix.shape, outBand.XSize, outBand.YSize))
     outBand.WriteArray(outMatrix, 0, 0)
 
     #return the new raster
     return outRaster
+
+
+def calculateSlope(dem):
+    """Calculates the slope of the given DEM in terms of percentage rise.
+        
+        dem - a single band raster of z values.  z units should be identical
+            to ground units.
+            
+        returns a raster of the same dimensions as dem whose elements are
+            percent slope (percent rise)"""
+
+    slope = newRasterFromBase(dem, 'slope.tif', 'GTiff', -1, gdal.GDT_Float32)
+
