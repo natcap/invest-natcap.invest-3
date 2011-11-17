@@ -1328,7 +1328,7 @@ class FileButton(QtGui.QPushButton):
     def __init__(self, text, URIfield, filetype='file'):
         super(FileButton, self).__init__()
         self.text = text
-        self.setIcon(QtGui.QIcon('document-open.png'))
+        self.setIcon(QtGui.QIcon(cmd_folder + '/document-open.png'))
         self.URIfield = URIfield
         self.filetype = filetype
         
