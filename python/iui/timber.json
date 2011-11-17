@@ -41,7 +41,7 @@
                     "label": "Market discount rate (%)",
                     "required": true,
                     "dataType": "float",
-                    "validText": "100|([0-9][0-9]?)",
+                    "validText": "-?([0-9]+)?\\.[0-9]+",
                     "defaultText": "7"
                 }
             ]
