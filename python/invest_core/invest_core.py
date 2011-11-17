@@ -337,20 +337,26 @@ def vectorizeRasters(rasterList, op, rasterName=None,
                           nodata, datatype, 1, outputURI)
     outRaster.GetRasterBand(1).Fill(1)
 
-    #extract a matrix from each raster that's contained in the bounding box
-    matrixList = []
+    #create an interpolator for each raster band
+    interpolatorList = []
     for raster in rasterList:
+        logging.debug('building interpolator for %s' % raster)
         gt = raster.GetGeoTransform()
         band = raster.GetRasterBand(1)
-        xl = math.floor(band.XSize / (aoiBox[0] - gt[0]))
-         #matrixList.append(band.ReadAsArray(0, 0, band.XSize, band.YSize))
-    #create a scipy.interpolate RectBivariateSpline for each one below is some
-    #biovariate spline tracer code
+        matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+        xrange = np.arange(gt[0], gt[0] + band.XSize * gt[1], gt[1])
+        yrange = np.arange(gt[3], gt[3] + band.YSize * gt[5], gt[5])
+        #This is probably true if north is up
+        if gt[5] < 0:
+            yrange = yrange[::-1]
+            matrix = matrix[::-1]
+        logger.debug('xrange shape %s %s' % (xrange.shape, xrange))
+        logger.debug('yrange shape %s %s' % (yrange.shape, yrange))
+        logger.debug('matrix shape %s %s' % (matrix.shape, matrix))
+        spl = scipy.interpolate.RectBivariateSpline(xrange, yrange,
+                                                    matrix.transpose(),
+                                                    kx=3, ky=3)
+        interpolatorList.append(spl)
 
-    matrixList = []
-
-#        matrixList.append(band.ReadAsArray(0, 0, band.XSize, band.YSize))
-#        outArray = op(*matrixList)
-        #write the array somewhere
     #return the new raster
     return None
