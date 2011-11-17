@@ -1095,6 +1095,12 @@ class DynamicUI(DynamicGroup):
             except AttributeError:
                 print str(AttributeError)
 
+            #if the parameters from the last run have been loaded, display a 
+            #status message
+            if self.lastRun != {}:
+                self.messageArea.setText('Parameters from your last run have \
+been loaded.')
+
     def recursiveToggle(self, controllingID):
         """Enable or disable all objects enabledBy controllingID based on 
             the state of the object identified by controllingID.
