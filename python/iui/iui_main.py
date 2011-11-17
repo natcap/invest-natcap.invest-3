@@ -623,7 +623,7 @@ class ModelDialog(QtGui.QDialog):
 
     def startQProcess(self):
         if len(self.errors) > 0:
-            self.write('Errors detected while validating inputs:\n')
+            self.write('\nERRORS:\n')
             for error in self.errors:
                 self.write(error + '\n')
             self.threadFinished()
