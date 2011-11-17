@@ -340,9 +340,9 @@ def vectorizeRasters(rasterList, op, rasterName=None,
 
     #Determine the output raster's x and y range
     outXRange = np.arange(outGeotransform[0], outGeotransform[0] + \
-                          outRows * outGeotransform[1], outGeotransform[1])
+                          outCols * outGeotransform[1], outGeotransform[1])
     outYRange = np.arange(outGeotransform[3], outGeotransform[3] + \
-                          outCols * outGeotransform[5], outGeotransform[5])
+                          outRows * outGeotransform[5], outGeotransform[5])
     logger.debug('outXRange shape %s %s' % (outXRange.shape, outXRange))
     logger.debug('outYRange shape %s %s' % (outYRange.shape, outYRange))
     #create an interpolator for each raster band
@@ -362,12 +362,12 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         logger.debug('yrange shape %s %s' % (yrange.shape, yrange))
         logger.debug('matrix shape %s %s' % (matrix.shape, matrix))
         #transposing matrix here since numpy 2d array order is matrix[y][x]
-        spl = scipy.interpolate.RectBivariateSpline(xrange, yrange,
-                                                    matrix.transpose(),
+        spl = scipy.interpolate.RectBivariateSpline(yrange, xrange,
+                                                    matrix,
                                                     kx=1, ky=1)
         logger.debug('interpolating with outXRange %s' % outXRange)
         logger.debug('interpolating with outYRange %s' % outYRange)
-        matrixList.append(spl(outXRange, outYRange[::-1]).transpose()[::-1])
+        matrixList.append(spl(outYRange[::-1], outXRange)[::-1])
 
 
     #invoke op with interpolated values that overlap the output raster
@@ -377,8 +377,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
                  (outMatrix.shape, outMatrix))
     logger.debug('outmatrix size %s raster size %s %s'
                  % (outMatrix.shape, outBand.XSize, outBand.YSize))
-    outBand.WriteArray(outMatrix.transpose(), 0, 0)
-    outRaster = None
+    outBand.WriteArray(outMatrix, 0, 0)
 
     #return the new raster
-    return None
+    return outRaster
