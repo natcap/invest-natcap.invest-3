@@ -1,7 +1,7 @@
 {
     "id": "window",
     "label": "Managed Timber Production and Valuation",
-    "targetScript": "../invest_core/timber.py",
+    "targetScript": "./python/invest_core/timber.py",
     "modelName": "timber",
     "height": 400,
     "width": 500,
