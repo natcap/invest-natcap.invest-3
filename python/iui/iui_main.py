@@ -625,7 +625,7 @@ class ModelDialog(QtGui.QDialog):
         if len(self.errors) > 0:
             self.write('Errors detected while validating inputs:\n')
             for error in self.errors:
-                self.write(error)
+                self.write(error + '\n')
             self.threadFinished()
         else:
             self.write('Validation complete.\n')
