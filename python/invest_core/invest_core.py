@@ -312,18 +312,18 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     logger.debug('min pixel width and height: %s %s' % (pixelWidth,
                                                         pixelHeight))
 
-    #DEFINE THESE BASED ON MINIMUM PIXEL WIDTH/HEIGHT
-    cols = int(math.ceil((aoiBox[2] - aoiBox[0]) / pixelWidth))
-    rows = int(math.ceil((aoiBox[3] - aoiBox[1]) / pixelHeight))
-    logger.debug('number of pixel cols and rows %s %s' % (cols, rows))
-    #geotransform order: 
+    #These define the output raster's columns and outRows
+    outCols = int(math.ceil((aoiBox[2] - aoiBox[0]) / pixelWidth))
+    outRows = int(math.ceil((aoiBox[3] - aoiBox[1]) / pixelHeight))
+    logger.debug('number of pixel outCols and outRows %s %s' % (outCols, outRows))
+    #outGeotransform order: 
     #1) left coordinate of top left corner
     #2) pixel width in x direction
     #3) pixel width in y direciton (usually zero)
     #4) top coordinate of top left corner
     #5) pixel height in x direction (usually zero)
     #6) pixel height in y direction 
-    geotransform = [aoiBox[0], pixelWidth, 0.0, aoiBox[1], 0.0, pixelHeight]
+    outGeotransform = [aoiBox[0], pixelWidth, 0.0, aoiBox[1], 0.0, pixelHeight]
 
     projection = rasterList[0].GetProjection()
 
@@ -333,12 +333,20 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         outputURI = rasterName
         format = 'GTiff'
     nodata = 0
-    outRaster = newRaster(cols, rows, projection, geotransform, format,
+    outRaster = newRaster(outCols, outRows, projection, outGeotransform, format,
                           nodata, datatype, 1, outputURI)
-    outRaster.GetRasterBand(1).Fill(1)
+    outBand = outRaster.GetRasterBand(1)
+    outBand.Fill(0)
 
+    #Determine the output raster's x and y range
+    outXRange = np.arange(outGeotransform[0], outGeotransform[0] + \
+                          outRows * outGeotransform[1], outGeotransform[1])
+    outYRange = np.arange(outGeotransform[3], outGeotransform[3] + \
+                          outCols * outGeotransform[5], outGeotransform[5])
+    logger.debug('outXRange shape %s %s' % (outXRange.shape, outXRange))
+    logger.debug('outYRange shape %s %s' % (outYRange.shape, outYRange))
     #create an interpolator for each raster band
-    interpolatorList = []
+    matrixList = []
     for raster in rasterList:
         logging.debug('building interpolator for %s' % raster)
         gt = raster.GetGeoTransform()
@@ -353,10 +361,24 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         logger.debug('xrange shape %s %s' % (xrange.shape, xrange))
         logger.debug('yrange shape %s %s' % (yrange.shape, yrange))
         logger.debug('matrix shape %s %s' % (matrix.shape, matrix))
+        #transposing matrix here since numpy 2d array order is matrix[y][x]
         spl = scipy.interpolate.RectBivariateSpline(xrange, yrange,
                                                     matrix.transpose(),
-                                                    kx=3, ky=3)
-        interpolatorList.append(spl)
+                                                    kx=1, ky=1)
+        logger.debug('interpolating with outXRange %s' % outXRange)
+        logger.debug('interpolating with outYRange %s' % outYRange)
+        matrixList.append(spl(outXRange, outYRange[::-1]).transpose()[::-1])
+
+
+    #invoke op with interpolated values that overlap the output raster
+    logger.debug('applying operation on matrix stack')
+    outMatrix = op(*matrixList)
+    logger.debug('result of operation on matrix stack shape %s %s' %
+                 (outMatrix.shape, outMatrix))
+    logger.debug('outmatrix size %s raster size %s %s'
+                 % (outMatrix.shape, outBand.XSize, outBand.YSize))
+    outBand.WriteArray(outMatrix.transpose(), 0, 0)
+    outRaster = None
 
     #return the new raster
     return None
