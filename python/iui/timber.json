@@ -16,7 +16,7 @@
                     "label": "Workspace",
                     "required": true,
                     "args_id": "output_dir",
-                    "defaultText": "Timber"
+                    "defaultText": "./output"
                 },
                 {
                     "id": "shapefile",
@@ -24,7 +24,7 @@
                     "type": "file",
                     "label": "Managed area map",
                     "required": true,
-                    "defaultText": ""
+                    "defaultText": "./test_data/timber/input/plantation.shp"
                 },
                 {
                     "id": "attr_table",
@@ -32,7 +32,7 @@
                     "type": "file",
                     "label": "Plantation production table",
                     "required": true,
-                    "defaultText": ""
+                    "defaultText": "./test_data/timber/input/plant_table.dbf"
                 },    
                 {
                     "id": "discount",
@@ -41,7 +41,7 @@
                     "label": "Market discount rate (%)",
                     "required": true,
                     "dataType": "float",
-                    "validText": "100|([0-9][0-9])",
+                    "validText": "100|([0-9][0-9]?)",
                     "defaultText": "7"
                 }
             ]

@@ -372,10 +372,11 @@ class DynamicText(DynamicPrimitive):
         if 'validText' in attributes:
             self.setValidateField(attributes['validText'])
         
-        #Connect the textfield's textChanged signal to the toggle() function.
+        #Connect the textfield's textEdited signal to the toggle() function.
         #This function will trigger any time the user changes the text in the
-        #textfield.
-        self.textField.textChanged.connect(self.toggle)
+        #textfield.  The signal textChanged() is not used because it is toggled
+        #even when the text is programmatically changed.
+        self.textField.textEdited.connect(self.toggle)
             
     def toggle(self):
         """Toggle all elements associated with this element's ID.
@@ -396,7 +397,7 @@ class DynamicText(DynamicPrimitive):
         #this is a natural place to request a pointer to the root element if it
         #has not already been set.
         if self.root == None:
-            self.root = self.getRoot()   
+            self.root = self.getRoot()
         
         #If the user has already pressed the OK button and some text is updated,
         #we need to check all other elements and update the main window 
@@ -515,7 +516,7 @@ class ModelDialog(QtGui.QDialog):
         
         This window is not configurable through the JSON configuration file."""    
         
-    def __init__(self, uri, inputDict):
+    def __init__(self, uri, inputDict, modelname):
         """Constructor for the ModelDialog class.
             
             uri - a string URI to the script to be run
@@ -576,6 +577,10 @@ class ModelDialog(QtGui.QDialog):
         #Run the model if possible.  If we encounter an error running the model,
         #print the error message to the modal window.
         try:
+            self.errors = []
+            self.validatorThread = processThread(modelname, inputDict, self.errors)
+            self.validatorThread.finished.connect(self.startQProcess)
+                
             #run the model as separate QProcess.
             self.modelProcess = QtCore.QProcess()
             
@@ -599,9 +604,12 @@ class ModelDialog(QtGui.QDialog):
             argslist.append(QtCore.QString(uri))
             argslist.append(QtCore.QString(json.dumps(inputDict)))
             
-            #start the QProcess
-            self.modelProcess.start(command, argslist)
+            self.command = command
+            self.argslist = argslist
             
+            #Start the thread immediately after opening this dialog.
+            QtCore.QTimer.singleShot(50, self.startValidation)
+
         except ImportError:
             self.modelProcess = None
             self.write("Error running the model: "+ str(ImportError))
@@ -613,6 +621,29 @@ class ModelDialog(QtGui.QDialog):
             self.write('current location: ' + str(os.getcwd()))
             self.threadFinished()
 
+    def startQProcess(self):
+        if len(self.errors) > 0:
+            self.write('Errors detected while validating inputs:\n')
+            for error in self.errors:
+                self.write(error)
+            self.threadFinished()
+        else:
+            self.write('Validation complete.\n')
+            self.modelProcess.start(self.command, self.argslist)
+
+    def startValidation(self):
+        """Write a short status message to the notifications area and start
+            the input validation thread.
+            
+            This function is a callback and is called immediately after the 
+            modal window is shown.
+            
+            returns nothing"""
+            
+        self.write('Validating inputs.\n')
+        self.validatorThread.start()
+        
+        
     def write(self, text):
         """Write text to the statusArea.
             
@@ -645,7 +676,7 @@ class ModelDialog(QtGui.QDialog):
         
             returns nothing."""
             
-        self.write('\n\nCompleted model.') #prints a status message in the statusArea.
+        self.write('\n\nComplete.') #prints a status message in the statusArea.
         self.progressBar.setMaximum(1) #stops the progressbar.
         self.runButton.setDisabled(False) #enables the runButton
         self.stdoutNotifier=None
@@ -676,6 +707,19 @@ class ModelDialog(QtGui.QDialog):
             self.modelProcess.terminate()
         self.cancel = True
         self.done(0)
+        
+class processThread(QtCore.QThread):
+    def __init__(self, modulename, inputDict, outputList=None):
+        super(processThread, self).__init__()
+        self.inputDict = inputDict
+        self.outputList = outputList
+        self.modulename = modulename
+        
+    def run(self):
+        model = imp.load_source('validator', 'python/invest_core/' + 
+                                self.modulename + '_validator.py')
+        self.outputList = model.execute(self.inputDict, self.outputList)
+        
 
 class DynamicUI(DynamicGroup):
     def closeWindow(self):
@@ -880,9 +924,12 @@ class DynamicUI(DynamicGroup):
             
         self.saveLastRun()
         self.assembleOutputDict()
-        self.modelDialog = ModelDialog(self.attributes['targetScript'], self.outputDict)
+        self.modelDialog = ModelDialog(self.attributes['targetScript'],
+                                       self.outputDict,
+                                       self.attributes['modelName'])
         
         #Run the modelDialog.
+#        self.modelDialog.open()
         self.modelDialog.exec_()
 
         #if the user presses cancel (which sets modelDialog.cancel to True)
@@ -1219,6 +1266,10 @@ class FileEntry(DynamicText):
         super(FileEntry, self).__init__(attributes)
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.elements = [self.label, self.textField, self.button]
+        
+        #expand the given relative path if provided
+        if 'defaultText' in self.attributes:
+            self.textField.setText(os.path.abspath(attributes['defaultText']))
         
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
