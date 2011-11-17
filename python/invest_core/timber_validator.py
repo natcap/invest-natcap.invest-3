@@ -41,31 +41,42 @@ def execute(args, out):
 
     #verify that the output directory parameter is indeed a folder
     #only returns true if args['output_dir'] exists and is a folder.
-    prefix = 'Output folder: '
+    prefix = 'Output folder: ' + args['output_dir']
     if not os.path.isdir(args['output_dir']):
-        out.append(prefix + args['output_dir'] + ' not found or is not a folder.')
+        out.append(prefix + ' not found or is not a folder.')
     else:
         #Determine if output dir is writable
         if not os.access(args['output_dir'], os.W_OK):
-            out.append(prefix + args['output_dir'] + ' must be writeable.')
+            out.append(prefix + ' must be writeable.')
     
     #verify that the timber shape file exists
     #if it does, try to open it with OGR.
-    prefix = 'Managed area map: '
+    prefix = 'Managed area map: ' + args['timber_shape_uri']
     filesystemencoding = sys.getfilesystemencoding()
     if not os.path.exists(args['timber_shape_uri']):
-        out.append(prefix + args['timber_shape_uri'] + ' could not be found')
+        out.append(prefix + ' could not be found')
         shape = None
     else:
         shape = ogr.Open(args['timber_shape_uri'].encode(filesystemencoding), 1)
         if not isinstance(shape, osgeo.ogr.DataSource):
-            out.append(prefix + args['timber_shape_uri'] + ' is not a \
-shapefile compatible with OGR.')
+            out.append(prefix + ' is not a shapefile compatible with OGR.')
             
+    #verify that the attribute table exists and can be opened by DBFpy
+    prefix = 'Plantation production table ' + args['attr_table_uri'] 
+    if not os.path.exists(args['attr_table_uri']):
+        out.append(prefix + ' does not exist')
+    else:
+        dbfFile = dbf.Dbf(args['attr_table_uri'])
+        if not isinstance(dbfFile, dbf.Dbf):
+            out.append(prefix + ' must be a dbf file')
  
 
     #Search for inconsistencies in timber shape file
     #ids in shape file must also exist in attr_table
+    layer = shape.GetLayerByName('timber')
+    for feature in layer:
+        parcel_index = feature.GetFieldIndex('Parcl_ID')
+        
 
     #Search for inconsistencies in attr_table
     #Freq_harv <= T
