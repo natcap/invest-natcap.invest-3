@@ -25,6 +25,16 @@ class TestInvestCore(unittest.TestCase):
         invest_core.vectorizeRasters([r1, r2], op,
             rasterName='rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
+    def testvectorizeRastersWaveEnergy(self):
+        r1 = gdal.Open('../../../test_data/wave_Energy/samp_data/input/global_dem')
+        r2 = gdal.Open('../../../test_data/wave_Energy/waveHeight.tif')
+
+        def op(a, b):
+            return a
+
+        invest_core.vectorizeRasters([r1, r2], op,
+            rasterName='../../../test_data/wave_Energy/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
+
     def testinterpolateMatrix(self):
         """Test the matrix interpolation function"""
 
