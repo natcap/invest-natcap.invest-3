@@ -372,10 +372,11 @@ class DynamicText(DynamicPrimitive):
         if 'validText' in attributes:
             self.setValidateField(attributes['validText'])
         
-        #Connect the textfield's textChanged signal to the toggle() function.
+        #Connect the textfield's textEdited signal to the toggle() function.
         #This function will trigger any time the user changes the text in the
-        #textfield.
-        self.textField.textChanged.connect(self.toggle)
+        #textfield.  The signal textChanged() is not used because it is toggled
+        #even when the text is programmatically changed.
+        self.textField.textEdited.connect(self.toggle)
             
     def toggle(self):
         """Toggle all elements associated with this element's ID.
@@ -396,7 +397,7 @@ class DynamicText(DynamicPrimitive):
         #this is a natural place to request a pointer to the root element if it
         #has not already been set.
         if self.root == None:
-            self.root = self.getRoot()   
+            self.root = self.getRoot()
         
         #If the user has already pressed the OK button and some text is updated,
         #we need to check all other elements and update the main window 
@@ -1265,6 +1266,10 @@ class FileEntry(DynamicText):
         super(FileEntry, self).__init__(attributes)
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.elements = [self.label, self.textField, self.button]
+        
+        #expand the given relative path if provided
+        if 'defaultText' in self.attributes:
+            self.textField.setText(os.path.abspath(attributes['defaultText']))
         
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
