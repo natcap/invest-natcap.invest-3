@@ -166,15 +166,16 @@ def computeWaveEnergyCapacity(waveData, interpZ):
     energyCap = {}
     waveRow = waveData.pop(0)
     waveColumn = waveData.pop(1)
-    periodMax = 20 #Get value from machine_param
+    periodMax = 17 #Get value from machine_param
     periodMaxPos = -1
-    heightMax = 10 #Get value from machine_param
+    heightMax = 5.5 #Get value from machine_param
     heightMaxPos = -1
     for i, v in enumerate(waveRow):
-        if v > periodMax and periodMaxPos != -1:
+        if v > periodMax and periodMaxPos == -1:
             periodMaxPos = i
+            print periodMaxPos
     for i, v in enumerate(waveColumn):
-        if v > heightMax and heightMaxPos != -1:
+        if v > heightMax and heightMaxPos == -1:
             heightMaxPos = i
     
     
@@ -186,11 +187,11 @@ def computeWaveEnergyCapacity(waveData, interpZ):
         multArray = np.multiply(tempArray, interpZ)
         
         if periodMaxPos != -1:
-            multArray[:,periodMaxPos:]
+            multArray[:,periodMaxPos:] = 0
         if heightMaxPos != -1:
-            multArray[heightMaxPos:, :]
-        multArray = np.divide(multArray, 5.0)
-        validArray = np.where(multArray>750, 750, multArray)
+            multArray[heightMaxPos:, :] = 0
+        validArray = np.divide(multArray, 5.0)
+#        validArray = np.where(multArray>750, 750, multArray)
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero.  So here
         #we drive any negative values to zero.
