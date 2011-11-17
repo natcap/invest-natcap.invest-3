@@ -778,7 +778,7 @@ class DynamicUI(DynamicGroup):
                 user_args[id] = str(element.value())
                 
         #create a file in the current directory
-        user_args_file = open(self.attributes['modelName'] +
+        user_args_file = open(cmd_folder + '/' + self.attributes['modelName'] +
                               '_args_lastrun.json', 'w')
         
         #save a json rendition of the arguments dictionary to the newly opened
@@ -982,7 +982,7 @@ class DynamicUI(DynamicGroup):
             
             returns nothing."""
         
-        user_args_uri = modelname + '_args_lastrun.json'
+        user_args_uri = cmd_folder + '/' + modelname + '_args_lastrun.json'
         try:
             self.lastRun = json.loads(open(user_args_uri).read())
         except IOError:
