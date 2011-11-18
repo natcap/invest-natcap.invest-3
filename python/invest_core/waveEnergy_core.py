@@ -59,7 +59,9 @@ def biophysical(args):
         return a
     invest_core.vectorizeRasters([global_dem, wavePeriodRaster], op, 
                                  rasterName = '../../test_data/wave_Energy/clipDEM.tiff', datatype=gdal.GDT_Float32)
-   
+    elevationRaster = gdal.Open('../../test_data/wave_Energy/clipDEM.tiff')
+    wavePowerPath = '../../test_data/wave_Energy'
+    wavePower(waveHeightRaster, wavePeriodRaster, elevationRaster, wavePowerPath)
     outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
     clipShape(args['analysis_area'], args['AOI'], outputPath)
     
@@ -134,9 +136,26 @@ def getMachinePerf(machine_perf):
     performance_dict = {}
     return performance_dict
 
-def wavePower():
-    P = ((p*g)/16)*(H**2)*waveGroupVelocity()
-    return P
+def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
+    heightBand = waveHeight.GetRasterBand(1)
+    periodBand = waveHeight.GetRasterBand(1)
+    elevationBand = elevation.GetRasterBand(1)
+    heightNoData = heightBand.GetNoDataValue()
+    periodNoData = periodBand.GetNoDataValue()
+    noDataOut = -1
+    p = 1028
+    g = 9.8
+    
+    def power(a, b, c):
+        if a==heightNoData or b==periodNoData:
+            return noDataOut
+        else:
+            tem = 2.0*math.pi / (b*.86)
+            k = tem**2 / (g*math.sqrt(math.sinh((tem**2)*(c/g))))
+            waveGroupVelocity = (1+((2*k*c)/math.sinh(2*k*c)) * (math.sqrt((g/k)*math.tanh(k*c))))/2
+            wp = ((b*g)/16)*(a**2)*waveGroupVelocity
+            return wp
+
 
 def waveGroupVelocity():
     return (1+((2*k*h)/math.sinh(2*k*h)) * (math.sqrt((g/k)*math.tanh(k*h))))/2
