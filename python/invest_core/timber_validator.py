@@ -41,13 +41,7 @@ def execute(args, out):
 
     #verify that the output directory parameter is indeed a folder
     #only returns true if args['output_dir'] exists and is a folder.
-    prefix = 'Output folder: ' + args['output_dir']
-    if not os.path.isdir(args['output_dir']):
-        out.append(prefix + ' not found or is not a folder.')
-    else:
-        #Determine if output dir is writable
-        if not os.access(args['output_dir'], os.W_OK):
-            out.append(prefix + ' must be writeable.')
+    validator_core.checkOutputDir(args['output_dir'], out)
     
     #verify that the timber shape file exists
     #if it does, try to open it with OGR.
