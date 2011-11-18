@@ -137,14 +137,12 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     g = 9.8
     
     def op(a, b, c):
-        if a==heightNoData or b==periodNoData:
-            return noDataOut
-        else:
-            tem = 2.0*math.pi / (b*.86)
-            k = tem**2 / (g*math.sqrt(math.sinh((tem**2)*(c/g))))
-            waveGroupVelocity = (1+((2*k*c)/math.sinh(2*k*c)) * (math.sqrt((g/k)*math.tanh(k*c))))/2
-            wp = ((b*g)/16)*(a**2)*waveGroupVelocity
-            return wp
+        c = np.absolute(c)
+        tem = 2.0*math.pi / (b*.86)
+        k = np.square(tem) / (g*np.sqrt(np.tanh((np.square(tem))*(c/g))))
+        waveGroupVelocity = ((1+((2*k*c)/np.sinh(2*k*c))) * (np.sqrt((g/k)*np.tanh(k*c))))/2
+        wp = (((p*g)/16)*(np.square(a))*waveGroupVelocity)/1000
+        return wp
     
     invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op, 
                                  rasterName = wavePowerPath, datatype=gdal.GDT_Float32)    
