@@ -96,8 +96,25 @@ in plantation production table')
         
 
     #Search for inconsistencies in attr_table
+    prefix = 'Plantation production table ' + args['attr_table_uri']    
+    if dbfFile != None:
+        #verify that required fields exist
+        for field in ['Price', 'T', 'BCEF', 'Parcel_ID', 'Parcl_area', 
+                      'Perc_harv', 'Harv_mass', 'Freq_harv', 'Maint_cost', 
+                      'Harv_cost', 'Immed_harv']:
+            if field.upper() not in dbfFile.fieldNames:
+                out.append(prefix + ': field ' + field + ' required, but not found')
+            
+        
+
+         
+
     #Freq_harv <= T
 
     #Inconsistencies in market discount rate > 0, 
 
 #    out.append('this is a test error message from timber_validator')
+
+
+
+
