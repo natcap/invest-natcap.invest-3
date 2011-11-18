@@ -275,7 +275,7 @@ def interpolateMatrix(x, y, z, newx, newy):
     return spl(newx, newy).transpose()
 
 def vectorizeRasters(rasterList, op, rasterName=None,
-                     datatype=gdal.GDT_Float32):
+                     datatype=gdal.GDT_Float32,):
     """Apply the numpy vectorized operation `op` on the rasters contained in
         rasterList where the arguments to `op` are brodcasted pixels from
         each raster in rasterList in the order they exist in the list
@@ -339,47 +339,120 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     outBand.Fill(0)
 
     #Determine the output raster's x and y range
-    outXRange = (np.arange(outCols,dtype=float) * outGt[1]) + outGt[0]
-    outYRange = (np.arange(outRows,dtype=float) * outGt[5]) + outGt[3]
+    outXRange = (np.arange(outCols, dtype=float) * outGt[1]) + outGt[0]
+    outYRange = (np.arange(outRows, dtype=float) * outGt[5]) + outGt[3]
 
-    logger.debug('outXRange shape %s %s' % (outXRange.shape, outXRange))
-    logger.debug('outYRange shape %s %s' % (outYRange.shape, outYRange))
+    logger.debug('outXRange shape %s ' % (outXRange.shape))
+    logger.debug('outYRange shape %s ' % (outYRange.shape))
     #create an interpolator for each raster band
     matrixList = []
+    nodataList = []
     for raster in rasterList:
         logging.debug('building interpolator for %s' % raster)
         gt = raster.GetGeoTransform()
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-        logger.debug('bandXSize bandYSize %s %s' %(band.XSize, band.YSize))
-        xrange = (np.arange(band.XSize,dtype=float) * gt[1]) + gt[0]
+        logger.debug('bandXSize bandYSize %s %s' % (band.XSize, band.YSize))
+        xrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
         logger.debug('gt[0] + band.XSize * gt[1] = %s' % (gt[0] + band.XSize * gt[1]))
         logger.debug('xrange[-1] = %s' % xrange[-1])
-        yrange = (np.arange(band.YSize,dtype=float) * gt[5]) + gt[3]
+        yrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
         #This is probably true if north is up
         if gt[5] < 0:
             yrange = yrange[::-1]
             matrix = matrix[::-1]
-        logger.debug('xrange shape %s %s' % (xrange.shape, xrange))
-        logger.debug('yrange shape %s %s' % (yrange.shape, yrange))
-        logger.debug('matrix shape %s %s' % (matrix.shape, matrix))
+        logger.debug('xrange shape %s' % xrange.shape)
+        logger.debug('yrange shape %s' % yrange.shape)
+        logger.debug('matrix shape %s %s' % matrix.shape)
         #transposing matrix here since numpy 2d array order is matrix[y][x]
+        logger.debug('creating RectBivariateSpline interpolator')
         spl = scipy.interpolate.RectBivariateSpline(yrange, xrange,
                                                     matrix,
                                                     kx=1, ky=1)
-        logger.debug('interpolating with outXRange %s' % outXRange)
-        logger.debug('interpolating with outYRange %s' % outYRange)
+        logger.debug('interpolating')
         matrixList.append(spl(outYRange[::-1], outXRange)[::-1])
+        nodataList.append(band.GetNoDataValue())
 
 
     #invoke op with interpolated values that overlap the output raster
     logger.debug('applying operation on matrix stack')
     outMatrix = op(*matrixList)
     logger.debug('result of operation on matrix stack shape %s %s' %
-                 (outMatrix.shape, outMatrix))
+                 (outMatrix.shape))
     logger.debug('outmatrix size %s raster size %s %s'
                  % (outMatrix.shape, outBand.XSize, outBand.YSize))
+
+    #Nodata out any values in outBand that have corresponding nodata values
+    #in the matrixList
+    for band, nodata in zip(matrixList, nodataList):
+        noDataIndex = band == nodata
+        outMatrix[noDataIndex] = outBand.GetNoDataValue()
+
     outBand.WriteArray(outMatrix, 0, 0)
 
     #return the new raster
     return outRaster
+
+
+def calculateSlope(dem, uri=''):
+    """Calculates the slopeMatrix of the given DEM in terms of percentage rise.
+        Here's a good reference for the algorithm:
+        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
+        
+        dem - a single band raster of z values.  z units should be identical
+            to ground units.
+        uri - optional argument if the user wishes to store the raster on disk
+            
+        returns a raster of the same dimensions as dem whose elements are
+            percent slopeMatrix (percent rise)"""
+
+    #Read the DEM directly into an array
+    demBand = dem.GetRasterBand(1)
+    demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
+    logger.debug('demBandMatrix size %s' % (demBandMatrix.size))
+
+    #Create an empty slope matrix
+    slopeMatrix = np.empty((demBand.YSize, demBand.XSize))
+    logger.debug('slopeMatrix size %s' % (slopeMatrix.size))
+
+    gp = dem.GetGeoTransform()
+    cellXSize = gp[1]
+    cellYSize = gp[5]
+    nodata = demBand.GetNoDataValue()
+    logger.info('starting pixelwise slope calculation')
+
+    def shift(M, x, y):
+        """Shifts M along the given x and y axis.
+            returns a shifted M"""
+        logger.debug('shifting by %s %s' % (x, y))
+        return np.roll(np.roll(M, x, axis=0), y, axis=1)
+
+    #Create shifted matrices for all the 8 corners of a pixel
+    offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
+               (-1, -1)]
+    pix = []
+    for p in offsets:
+        pix.append(shift(demBandMatrix, *p))
+
+    #Calculate the slope for each pixel, in parallel
+    dzdx = ((pix[2] + 2 * pix[4] + pix[7]) -
+            (pix[0] + 2 * pix[3] + pix[5])) / (8.0 * cellXSize)
+    dzdy = ((pix[5] + 2 * pix[6] + pix[7]) -
+            (pix[0] + 2 * pix[1] + pix[2])) / (8.0 * cellYSize)
+    slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
+
+    #Now, "nodata" out the points that used nodata from the demBandMatrix
+    noDataIndex = demBandMatrix == nodata
+    slopeMatrix[noDataIndex] = -1
+    for offset in offsets:
+        slopeMatrix[shift(noDataIndex, *offset)] = -1
+
+    #Create output raster
+    format = 'MEM'
+    if uri != '': format = 'GTiff'
+    logger.debug('create raster for slope')
+    slope = newRasterFromBase(dem, uri, format, -1, gdal.GDT_Float32)
+    slope.GetRasterBand(1).WriteArray(slopeMatrix, 0, 0)
+
+    return slope
+

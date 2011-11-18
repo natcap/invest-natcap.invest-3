@@ -54,20 +54,9 @@ def biophysical(args):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
     
-    #Use Rich's function to get a 'clipped' version of the global_dem raster.
-#    def op(a):
-#        return a
-#    invest_core.vectorizeRasters([global_dem, wavePeriodRaster], op, 
-#                                 rasterName = '../../test_data/wave_Energy/clipDEM.tiff', datatype=gdal.GDT_Float32)
-#   
-    #Make a duplicate copy of the global_dem to try and crop
-#    drv = gdal.GetDriverByName(format)
-#    newGlobal = drv.CreateCopy('../../test_data/wave_Energy/newGlobal.tif', newRaster, 1)
-#    newGlobal.GetRasterBand(1).SetNoDataValue(0)
-#    newGlobal.GetRasterBand(1).Fill(0)
-#    #Burn Height values from shapefile onto new raster
-#    newRaster = None
-
+    wavePowerPath = '../../test_data/wave_Energy/wp_kw.tif'
+    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath)
+    
     outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
     clipShape(args['analysis_area'], args['AOI'], outputPath)
     
@@ -138,14 +127,27 @@ def clipShape(shapeToClip, bindingShape, outputPath):
     shapeToClip.Destroy()
     shp_ds.Destroy()
     
-def getMachinePerf(machine_perf):
-    performance_dict = {}
-    return performance_dict
-
-def wavePower():
-    P = ((p*g)/16)*(H**2)*waveGroupVelocity()
-    return P
-
+def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
+    heightBand = waveHeight.GetRasterBand(1)
+    periodBand = waveHeight.GetRasterBand(1)
+    heightNoData = heightBand.GetNoDataValue()
+    periodNoData = periodBand.GetNoDataValue()
+    noDataOut = -1
+    p = 1028
+    g = 9.8
+    
+    def op(a, b, c):
+        if a==heightNoData or b==periodNoData:
+            return noDataOut
+        else:
+            tem = 2.0*math.pi / (b*.86)
+            k = tem**2 / (g*math.sqrt(math.sinh((tem**2)*(c/g))))
+            waveGroupVelocity = (1+((2*k*c)/math.sinh(2*k*c)) * (math.sqrt((g/k)*math.tanh(k*c))))/2
+            wp = ((b*g)/16)*(a**2)*waveGroupVelocity
+            return wp
+    
+    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op, 
+                                 rasterName = wavePowerPath, datatype=gdal.GDT_Float32)    
 def waveGroupVelocity():
     return (1+((2*k*h)/math.sinh(2*k*h)) * (math.sqrt((g/k)*math.tanh(k*h))))/2
 
@@ -210,6 +212,15 @@ def computeWaveEnergyCapacity(waveData, interpZ):
 #            print validArray
 #            print sum
     print energyCap[(556,496)]
+    copyCapturedWaveEnergyToShape(energyCap)
     return energyCap 
 
+def copyCapturedWaveEnergyToShape(energyCap):
+    energyCap = energyCap
+    
+    
+    
+    
+    
+    
 
