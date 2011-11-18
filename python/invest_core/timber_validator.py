@@ -83,14 +83,15 @@ def execute(args, out):
     #only check the existence of ids if both the shapefile and the dbf exist.
     if layer != None and dbfFile != None:
         for feature in layer:
-            parcel_index = feature.GetFieldIndex('Parcl_ID')
+            field_index = feature.GetFieldIndex('Parcl_ID')
+            parcel_index = feature.GetField(field_index)
             foundIndex = False
             for i in range(dbfFile.recordCount):
                 if dbfFile[i]['Parcel_ID'] == parcel_index:
                     foundIndex = True
                     break
         if foundIndex == False:
-            out.append('Parcel ID ' + parcel_index + 'not found\
+            out.append('Parcel ID ' + str(parcel_index) + ' not found \
 in plantation production table')
         
 
