@@ -32,7 +32,10 @@ def execute(args):
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
-    shape_source = output_dir + 'timber.shp'
+    #CopyDataSource expects a python string, yet some versions of json load a 
+    #'unicode' object from the dumped command line arguments.  The cast to a 
+    #python string here should ensure we are able to proceed.
+    shape_source = str(output_dir + 'timber.shp')
 
     #If there is already an existing shapefile with the same name and path, delete it
     if os.path.isfile(shape_source):
