@@ -6,6 +6,7 @@ import osgeo
 from osgeo import ogr
 import numpy
 from dbfpy import dbf
+import validator_core
 
 def execute(args, out):
     """This function invokes the timber model given uri inputs specified by 
@@ -32,10 +33,9 @@ def execute(args, out):
     out[:] = []
 
     #Ensure that all arguments exist
-    for argument in ['output_dir', 'timber_shape_uri', 'attr_table_uri',
-                     'market_disc_rate']:
-        if argument not in args:
-            out.append('Missing parameter: ' + argument)
+    argsList = ['output_dir', 'timber_shape_uri', 'attr_table_uri',
+                     'market_disc_rate']
+    validator_core.checkArgsKeys(args, argsList, out)
 
     #Ensure that arguments that are URIs are accessable
 
