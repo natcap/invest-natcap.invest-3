@@ -385,22 +385,26 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     return outRaster
 
 
-def calculateSlope(dem):
+def calculateSlope(dem, uri=''):
     """Calculates the slopeMatrix of the given DEM in terms of percentage rise.
         Here's a good reference for the algorithm:
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
         
         dem - a single band raster of z values.  z units should be identical
             to ground units.
+        uri - optional argument if the user wishes to store the raster on disk
             
         returns a raster of the same dimensions as dem whose elements are
             percent slopeMatrix (percent rise)"""
 
-    slope = newRasterFromBase(dem, 'slopeMatrix.tif', 'GTiff', -1, gdal.GDT_Float32)
+    #Read the DEM directly into an array
     demBand = dem.GetRasterBand(1)
     demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
-    slopeMatrix = np.zeros((demBand.YSize, demBand.XSize))
-    #logger.debug('slopeMatrix size %s' % (slopematrix.size))
+    logger.debug('demBandMatrix size %s' % (demBandMatrix.size))
+
+    #Create an empty slope matrix
+    slopeMatrix = np.empty((demBand.YSize, demBand.XSize))
+    logger.debug('slopeMatrix size %s' % (slopeMatrix.size))
 
     gp = dem.GetGeoTransform()
     cellXSize = gp[1]
@@ -410,53 +414,36 @@ def calculateSlope(dem):
 
     def shift(M, x, y):
         """Shifts M along the given x and y axis.
-        
             returns a shifted M"""
+        logger.debug('shifting by %s %s' % (x, y))
         return np.roll(np.roll(M, x, axis=0), y, axis=1)
 
     #Create shifted matrices for all the 8 corners of a pixel
-    a = shift(demBandMatrix, 1, 1)
-    b = shift(demBandMatrix, 0, 1)
-    c = shift(demBandMatrix, -1, 1)
-    d = shift(demBandMatrix, 1, 0)
-    e = shift(demBandMatrix, 0, 0)
-    f = shift(demBandMatrix, -1, 0)
-    g = shift(demBandMatrix, 1, -1)
-    h = shift(demBandMatrix, 0, -1)
-    i = shift(demBandMatrix, -1, -1)
+    offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
+               (-1, -1)]
+    pix = []
+    for p in offsets:
+        pix.append(shift(demBandMatrix, *p))
 
     #Calculate the slope for each pixel, in parallel
-    dzdx = ((c + 2 * f + i) - (a + 2 * d + g)) / (8.0 * cellXSize)
-    dzdy = ((g + 2 * h + i) - (a + 2 * b + c)) / (8 * cellYSize)
+    dzdx = ((pix[2] + 2 * pix[4] + pix[7]) -
+            (pix[0] + 2 * pix[3] + pix[5])) / (8.0 * cellXSize)
+    dzdy = ((pix[5] + 2 * pix[6] + pix[7]) -
+            (pix[0] + 2 * pix[1] + pix[2])) / (8.0 * cellYSize)
     slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
 
     #Now, "nodata" out the points that used nodata from the demBandMatrix
     noDataIndex = demBandMatrix == nodata
     slopeMatrix[noDataIndex] = -1
-    slopeMatrix[shift(noDataIndex, 1, 1)] = -1
-    slopeMatrix[shift(noDataIndex, -1, -1)] = -1
-    slopeMatrix[shift(noDataIndex, -1, 1)] = -1
-    slopeMatrix[shift(noDataIndex, 1, -1)] = -1
-    slopeMatrix[shift(noDataIndex, 0, 1)] = -1
-    slopeMatrix[shift(noDataIndex, 0, -1)] = -1
-    slopeMatrix[shift(noDataIndex, -1, 0)] = -1
-    slopeMatrix[shift(noDataIndex, 1, 0)] = -1
+    for offset in offsets:
+        slopeMatrix[shift(noDataIndex, *offset)] = -1
 
-
+    #Create output raster
+    format = 'MEM'
+    if uri != '': format = 'GTiff'
+    logger.debug('create raster for slope')
+    slope = newRasterFromBase(dem, uri, format, -1, gdal.GDT_Float32)
     slope.GetRasterBand(1).WriteArray(slopeMatrix, 0, 0)
 
+    return slope
 
-    #slope.GetRasterBand(1).WriteArray(dzdx, 0, 0)
-#    dzdy = (shift(demBandMatrix, -1, -1) +
-#        shift(demBandMatrix, 0, -1) * 2 +
-#        shift(demBandMatrix, 1, -1) -
-#        shift(demBandMatrix, -1, 1) -
-#        shift(demBandMatrix, 0, 1) * 2 -
-#        shift(demBandMatrix, 1, 1)) / (8.0 * cellYSize)
-#
-#    logger.debug('demBandMatrix: %s' % slopeMatrix)
-#    logger.debug('dzdx: %s' % dzdx)
-#    logger.debug('dzdy: %s' % dzdy)
-#
-#    slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
-#
