@@ -17,8 +17,12 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 class TestInvestCore(unittest.TestCase):
     def testslopeCalculation(self):
+        """Regression test for slope calculation"""
         dem = gdal.Open('../../../sediment_test_data/dem')
         slope = invest_core.calculateSlope(dem)
+        regressionSlope = \
+            gdal.Open('../../../sediment_test_data/slopeRegression.tif')
+        invest_test_core.assertTwoDatasetsEqual(self, slope, regressionSlope)
 
     def testvectorizeRasters(self):
         r1 = gdal.Open('../../../test_data/lulc_samp_cur')
