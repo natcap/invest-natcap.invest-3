@@ -56,6 +56,7 @@ def execute(args, out):
     if not os.path.exists(args['timber_shape_uri']):
         out.append(prefix + ' could not be found')
         shape = None
+        layer = None
     else:
         shape = ogr.Open(args['timber_shape_uri'].encode(filesystemencoding), 1)
         if not isinstance(shape, osgeo.ogr.DataSource):
@@ -110,22 +111,21 @@ in plantation production table')
         if all_fields_present:
             prefix = prefix + ': record '
             for i in range(dbfFile.recordCount):
-                prefix += str(i)
                 #verify that Freq_harv <= T
                 freq_harv = dbfFile[i]['Freq_harv']
                 T = dbfFile[i]['T']
                 if freq_harv > T:
-                    out.append(prefix + ': Freq_harv (' + freq_harv + ') cannot \
-be greater than T(' + T+ ')')
+                    out.append(prefix + str(i) + ': Freq_harv (' + freq_harv + 
+') cannot be greater than T(' + T+ ')')
                     
                 #ensure immed_harv is either Y or N
                 immed_harv = dbfFile[i]['Immed_harv']
-                if immed_harv != 'Y' or immed_harv != 'N':
-                    out.append(prefix + ': Immed_harv (' + immed_harv + ') \
-must be either Y or N.')
+                if immed_harv != str('Y').upper() and immed_harv != 'N':
+                    out.append(prefix + str(i) + ': Immed_harv (' + immed_harv +
+') must be either Y or N.')
                 
 
-    prefix = 'Market discount rate: ' + args['market_disc_rate']
+    prefix = 'Market discount rate: ' + str(args['market_disc_rate'])
     if args['market_disc_rate'] < 0:
         out.append(prefix + ': must be greater than or equal to 0')
 
