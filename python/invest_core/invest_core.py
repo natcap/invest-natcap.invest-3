@@ -386,13 +386,50 @@ def vectorizeRasters(rasterList, op, rasterName=None,
 
 
 def calculateSlope(dem):
-    """Calculates the slope of the given DEM in terms of percentage rise.
+    """Calculates the slopeMatrix of the given DEM in terms of percentage rise.
         
         dem - a single band raster of z values.  z units should be identical
             to ground units.
             
         returns a raster of the same dimensions as dem whose elements are
-            percent slope (percent rise)"""
+            percent slopeMatrix (percent rise)"""
 
-    slope = newRasterFromBase(dem, 'slope.tif', 'GTiff', -1, gdal.GDT_Float32)
+    slope = newRasterFromBase(dem, 'slopeMatrix.tif', 'GTiff', -1, gdal.GDT_Float32)
+    demBand = dem.GetRasterBand(1)
+    demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
+    slopeMatrix = np.zeros((demBand.YSize, demBand.XSize))
+    #logger.debug('slopeMatrix size %s' % (slopematrix.size))
 
+    gp = dem.GetGeoTransform()
+    cellXSize = gp[1]
+    cellYSize = gp[5]
+    nodata = demBand.GetNoDataValue()
+    logger.info('starting pixelwise slope calculation')
+
+    def slope(a, b, c, d, e, f, g, h, i):
+        if nodata not in [a, b, c, d, e, f, g, h, i]:
+            dzdx = ((c + 2 * f + x) - (a + 2 * d + g)) / (8.0 * cellXSize)
+            dzdy = ((g + 2 * h + i) - (a + 2 * b * c)) / (8.0 * cellYSize)
+            slopeMatrix[y][x] = np.sqrt(dzdx ** 2 + dzdy ** 2)
+        else:
+            slopeMatrix[y][x] = -1
+
+    for x in range(1, demBand.XSize - 1):
+        for y in range(1, demBand.YSize - 1):
+            a = demBandMatrix[y - 1][x - 1]
+            b = demBandMatrix[y - 1][x]
+            c = demBandMatrix[y - 1][x + 1]
+            d = demBandMatrix[y][x - 1]
+            e = demBandMatrix[y][x]
+            f = demBandMatrix[y][x + 1]
+            g = demBandMatrix[y + 1][x - 1]
+            h = demBandMatrix[y + 1][x]
+            i = demBandMatrix[y + 1][x + 1]
+            if nodata not in [a, b, c, d, e, f, g, h, i]:
+                dzdx = ((c + 2 * f + x) - (a + 2 * d + g)) / (8.0 * cellXSize)
+                dzdy = ((g + 2 * h + i) - (a + 2 * b * c)) / (8.0 * cellYSize)
+                slopeMatrix[y][x] = np.sqrt(dzdx ** 2 + dzdy ** 2)
+            else:
+                slopeMatrix[y][x] = -1
+
+    slope.GetRasterBand(1).WriteArray(slopeMatrix, 0, 0)
