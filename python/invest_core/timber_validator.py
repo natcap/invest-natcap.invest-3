@@ -99,21 +99,40 @@ in plantation production table')
     prefix = 'Plantation production table ' + args['attr_table_uri']    
     if dbfFile != None:
         #verify that required fields exist
+        all_fields_present = True
         for field in ['Price', 'T', 'BCEF', 'Parcel_ID', 'Parcl_area', 
                       'Perc_harv', 'Harv_mass', 'Freq_harv', 'Maint_cost', 
                       'Harv_cost', 'Immed_harv']:
             if field.upper() not in dbfFile.fieldNames:
                 out.append(prefix + ': field ' + field + ' required, but not found')
+                all_fields_present = False
             
-        
+        if all_fields_present:
+            prefix = prefix + ': record '
+            for i in range(dbfFile.recordCount):
+                prefix += str(i)
+                #verify that Freq_harv <= T
+                freq_harv = dbfFile[i]['Freq_harv']
+                T = dbfFile[i]['T']
+                if freq_harv > T:
+                    out.append(prefix + ': Freq_harv (' + freq_harv + ') cannot \
+be greater than T(' + T+ ')')
+                    
+                #ensure immed_harv is either Y or N
+                immed_harv = dbfFile[i]['Immed_harv']
+                if immed_harv != 'Y' or immed_harv != 'N':
+                    out.append(prefix + ': Immed_harv (' + immed_harv + ') \
+must be either Y or N.')
+                
 
-         
+    prefix = 'Market discount rate: ' + args['market_disc_rate']
+    if args['market_disc_rate'] < 0:
+        out.append(prefix + ': must be greater than or equal to 0')
 
-    #Freq_harv <= T
 
-    #Inconsistencies in market discount rate > 0, 
 
-#    out.append('this is a test error message from timber_validator')
+
+
 
 
 
