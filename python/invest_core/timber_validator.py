@@ -60,11 +60,17 @@ def execute(args, out):
         shape = ogr.Open(args['timber_shape_uri'].encode(filesystemencoding), 1)
         if not isinstance(shape, osgeo.ogr.DataSource):
             out.append(prefix + ' is not a shapefile compatible with OGR.')
+            layer = None
+        else:
+            layer = shape.GetLayerByName('plantation')
+            if not isinstance(layer, osgeo.ogr.Layer):
+                out.append(prefix + ': target layer must be titled \'plantation\'')
             
     #verify that the attribute table exists and can be opened by DBFpy
     prefix = 'Plantation production table ' + args['attr_table_uri'] 
     if not os.path.exists(args['attr_table_uri']):
         out.append(prefix + ' does not exist')
+        dbfFile = None
     else:
         dbfFile = dbf.Dbf(args['attr_table_uri'])
         if not isinstance(dbfFile, dbf.Dbf):
@@ -73,9 +79,19 @@ def execute(args, out):
 
     #Search for inconsistencies in timber shape file
     #ids in shape file must also exist in attr_table
-    layer = shape.GetLayerByName('timber')
-    for feature in layer:
-        parcel_index = feature.GetFieldIndex('Parcl_ID')
+    
+    #only check the existence of ids if both the shapefile and the dbf exist.
+    if layer != None and dbfFile != None:
+        for feature in layer:
+            parcel_index = feature.GetFieldIndex('Parcl_ID')
+            foundIndex = False
+            for i in range(dbfFile.recordCount):
+                if dbfFile[i]['Parcel_ID'] == parcel_index:
+                    foundIndex = True
+                    break
+        if foundIndex == False:
+            out.append('Parcel ID ' + parcel_index + 'not found\
+in plantation production table')
         
 
     #Search for inconsistencies in attr_table
