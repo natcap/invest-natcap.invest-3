@@ -601,7 +601,8 @@ class ModelDialog(QtGui.QDialog):
 
             #create a QStringlist to hold the arguments to the QProcess.
             argslist = QtCore.QStringList()
-            argslist.append(QtCore.QString(uri))
+            argslist.append(QtCore.QString(os.path.abspath(cmd_folder + 
+                            '/../../' + uri)))
             argslist.append(QtCore.QString(json.dumps(inputDict)))
             
             self.command = command
