@@ -832,6 +832,10 @@ class DynamicUI(DynamicGroup):
         
             returns nothing"""
         
+        #initialize the outputDict, in case it has been already written to
+        #in a previous run.
+        self.outputDict = {}
+        
         for id, element in self.allElements.iteritems():
 
             #All input elements are instances of DynamicPrimitive, so we ignore
