@@ -623,9 +623,9 @@ class ModelDialog(QtGui.QDialog):
 
     def startQProcess(self):
         if len(self.errors) > 0:
-            self.write('Errors detected while validating inputs:\n')
+            self.write('\nERRORS:\n')
             for error in self.errors:
-                self.write(error)
+                self.write(error + '\n')
             self.threadFinished()
         else:
             self.write('Validation complete.\n')
@@ -709,16 +709,45 @@ class ModelDialog(QtGui.QDialog):
         self.done(0)
         
 class processThread(QtCore.QThread):
-    def __init__(self, modulename, inputDict, outputList=None):
+    """Class processThread loads a python module from source and runs its
+        execute function with the provided inputDict as input and writes errors
+        to the python list outputList."""
+    
+    def __init__(self, modelname, inputDict, outputList):
+        """Constructor for the processThread class.
+        
+            modelname - the string name of the InVEST model being currently run.
+                        Used to get the correct validator file from source.
+            inputDict - A python dictionary of arguments to the validator.
+            outputList- A pointer to a python list.  Used for returning error
+                        messages to the modal window.
+                        
+            returns an instance of the processThread class."""
+            
         super(processThread, self).__init__()
         self.inputDict = inputDict
         self.outputList = outputList
-        self.modulename = modulename
+        self.modelname = modelname
         
     def run(self):
-        model = imp.load_source('validator', 'python/invest_core/' + 
-                                self.modulename + '_validator.py')
-        self.outputList = model.execute(self.inputDict, self.outputList)
+        """Imports the desired model's validator and execute it.  If an error is
+            detected, errors are appended to self.outputList.
+        
+            This is a custom implementation of the Qt-defined function run().
+            This function is invoked when self.start() is called.
+            
+            returns nothing"""
+            
+        #cmd_folder is declared at the very beginning of this file.  It 
+        #contains the absolute path to the current file (iui_main.py).
+        path = cmd_folder + '/../invest_core/' + self.modelname + '_validator.py'
+        try:
+            model = imp.load_source('validator', path)
+            self.outputList = model.execute(self.inputDict, self.outputList)
+        except IOError:
+            self.outputList.append('Could not locate validator at ' + 
+                                   os.path.abspath(path))
+            
         
 
 class DynamicUI(DynamicGroup):
@@ -749,7 +778,7 @@ class DynamicUI(DynamicGroup):
                 user_args[id] = str(element.value())
                 
         #create a file in the current directory
-        user_args_file = open(self.attributes['modelName'] +
+        user_args_file = open(cmd_folder + '/' + self.attributes['modelName'] +
                               '_args_lastrun.json', 'w')
         
         #save a json rendition of the arguments dictionary to the newly opened
@@ -953,7 +982,7 @@ class DynamicUI(DynamicGroup):
             
             returns nothing."""
         
-        user_args_uri = modelname + '_args_lastrun.json'
+        user_args_uri = cmd_folder + '/' + modelname + '_args_lastrun.json'
         try:
             self.lastRun = json.loads(open(user_args_uri).read())
         except IOError:
@@ -1065,6 +1094,12 @@ class DynamicUI(DynamicGroup):
             #element.enabledBy is not initialized properly.
             except AttributeError:
                 print str(AttributeError)
+
+            #if the parameters from the last run have been loaded, display a 
+            #status message
+            if self.lastRun != {}:
+                self.messageArea.setText('Parameters from your last run have \
+been loaded.')
 
     def recursiveToggle(self, controllingID):
         """Enable or disable all objects enabledBy controllingID based on 
@@ -1299,7 +1334,7 @@ class FileButton(QtGui.QPushButton):
     def __init__(self, text, URIfield, filetype='file'):
         super(FileButton, self).__init__()
         self.text = text
-        self.setIcon(QtGui.QIcon('document-open.png'))
+        self.setIcon(QtGui.QIcon(cmd_folder + '/document-open.png'))
         self.URIfield = URIfield
         self.filetype = filetype
         

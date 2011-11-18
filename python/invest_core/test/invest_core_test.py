@@ -10,17 +10,26 @@ from dbfpy import dbf
 import numpy as np
 import random
 import logging
+import math
 logger = logging.getLogger('invest_core_test')
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
+    def testslopeCalculation(self):
+        """Regression test for slope calculation"""
+        dem = gdal.Open('../../../sediment_test_data/dem')
+        slope = invest_core.calculateSlope(dem)
+        regressionSlope = \
+            gdal.Open('../../../sediment_test_data/slopeRegression.tif')
+        invest_test_core.assertTwoDatasetsEqual(self, slope, regressionSlope)
+
     def testvectorizeRasters(self):
         r1 = gdal.Open('../../../test_data/lulc_samp_cur')
         r2 = gdal.Open('../../../test_data/precip')
 
         def op(a, b):
-            return a + b
+            return np.sqrt(a ** 2 + b ** 2)
 
         invest_core.vectorizeRasters([r1, r2], op,
             rasterName='rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
@@ -30,7 +39,7 @@ class TestInvestCore(unittest.TestCase):
         r2 = gdal.Open('../../../test_data/wave_Energy/waveHeight.tif')
 
         def op(a, b):
-            return a
+            return np.sqrt(a ** 2 + b ** 2)
 
         invest_core.vectorizeRasters([r1, r2], op,
             rasterName='../../../test_data/wave_Energy/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)

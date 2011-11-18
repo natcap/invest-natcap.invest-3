@@ -1,7 +1,7 @@
 {
     "id": "window",
     "label": "Managed Timber Production and Valuation",
-    "targetScript": "../invest_core/timber.py",
+    "targetScript": "./python/invest_core/timber.py",
     "modelName": "timber",
     "height": 400,
     "width": 500,
@@ -41,7 +41,7 @@
                     "label": "Market discount rate (%)",
                     "required": true,
                     "dataType": "float",
-                    "validText": "100|([0-9][0-9]?)",
+                    "validText": "-?([0-9]+)?\\.[0-9]+",
                     "defaultText": "7"
                 }
             ]

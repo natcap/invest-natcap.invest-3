@@ -47,7 +47,7 @@
 	                    {
 	                        "id" : "cur_lulc_year",
 	                        "type": "text",
-	                        "validText": "[0-9]+",
+	                        "validText": "-?[0-9]+",
 	                        "dataType": "int",
 	                        "args_id": "lulc_cur_year",
 	                        "label": "Year of land cover",
@@ -83,7 +83,7 @@
 	                    {
 	                        "id" : "fut_lulc_year",
 	                        "type": "text",
-	                        "validText": "[0-9]+",
+	                        "validText": "-?[0-9]+",
 	                        "dataType": "int",
 	                        "label": "Year of land cover",
 	                        "args_id": "lulc_fut_year",
