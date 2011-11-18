@@ -60,8 +60,9 @@ def biophysical(args):
     invest_core.vectorizeRasters([global_dem, wavePeriodRaster], op, 
                                  rasterName = '../../test_data/wave_Energy/clipDEM.tiff', datatype=gdal.GDT_Float32)
     elevationRaster = gdal.Open('../../test_data/wave_Energy/clipDEM.tiff')
-    wavePowerPath = '../../test_data/wave_Energy'
-    wavePower(waveHeightRaster, wavePeriodRaster, elevationRaster, wavePowerPath)
+    wavePowerPath = '../../test_data/wave_Energy/wp_kw.tif'
+    wpOutputRaster = invest_core.newRasterFromBase(waveHeightRaster, wavePowerPath, format, nodata, datatype)
+    wavePower(waveHeightRaster, wavePeriodRaster, elevationRaster, wpOutputRaster)
     outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
     clipShape(args['analysis_area'], args['AOI'], outputPath)
     
@@ -132,14 +133,31 @@ def clipShape(shapeToClip, bindingShape, outputPath):
     shapeToClip.Destroy()
     shp_ds.Destroy()
     
-def getMachinePerf(machine_perf):
-    performance_dict = {}
-    return performance_dict
+def vectorize3ArgOp(rasterBandA, rasterBandB, rasterBandC, op, outBand):
+    """Applies the function 'op' over rasterBandA and rasterBandB
+    
+        rasterBandA - a GDAL raster
+        rasterBandB - a GDAL raster of the same dimensions as rasterBandA
+        op- a function that that takes 2 arguments and returns 1 value
+        outBand - the result of vectorizing op over rasterbandA and 
+            rasterBandB
+            
+        returns nothing"""
 
-def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
+    vOp = np.vectorize(op)
+    for i in range(0, rasterBandA.YSize):
+        dataA = rasterBandA.ReadAsArray(0, i, rasterBandA.XSize, 1)
+        dataB = rasterBandB.ReadAsArray(0, i, rasterBandB.XSize, 1)
+        dataC = rasterBandC.ReadAsArray(0, i, rasterBandC.XSize, 1)
+        print rasterBandA.XSize, rasterBandB.XSize, rasterBandC.XSize
+        out_array = vOp(dataA, dataB, dataC)
+        outBand.WriteArray(out_array, 0, i)
+
+def wavePower(waveHeight, wavePeriod, elevation, wavePowerRaster):
     heightBand = waveHeight.GetRasterBand(1)
     periodBand = waveHeight.GetRasterBand(1)
     elevationBand = elevation.GetRasterBand(1)
+    wpOutputBand = wavePowerRaster.GetRasterBand(1)
     heightNoData = heightBand.GetNoDataValue()
     periodNoData = periodBand.GetNoDataValue()
     noDataOut = -1
@@ -155,8 +173,9 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
             waveGroupVelocity = (1+((2*k*c)/math.sinh(2*k*c)) * (math.sqrt((g/k)*math.tanh(k*c))))/2
             wp = ((b*g)/16)*(a**2)*waveGroupVelocity
             return wp
-
-
+    
+    vectorize3ArgOp(heightBand, periodBand, elevationBand, power, wpOutputBand)
+    
 def waveGroupVelocity():
     return (1+((2*k*h)/math.sinh(2*k*h)) * (math.sqrt((g/k)*math.tanh(k*h))))/2
 
