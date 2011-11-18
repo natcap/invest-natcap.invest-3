@@ -60,14 +60,6 @@ def biophysical(args):
     invest_core.vectorizeRasters([global_dem, wavePeriodRaster], op, 
                                  rasterName = '../../test_data/wave_Energy/clipDEM.tiff', datatype=gdal.GDT_Float32)
    
-    #Make a duplicate copy of the global_dem to try and crop
-#    drv = gdal.GetDriverByName(format)
-#    newGlobal = drv.CreateCopy('../../test_data/wave_Energy/newGlobal.tif', newRaster, 1)
-#    newGlobal.GetRasterBand(1).SetNoDataValue(0)
-#    newGlobal.GetRasterBand(1).Fill(0)
-#    #Burn Height values from shapefile onto new raster
-#    newRaster = None
-
     outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
     clipShape(args['analysis_area'], args['AOI'], outputPath)
     
@@ -213,4 +205,12 @@ def computeWaveEnergyCapacity(waveData, interpZ):
     copyCapturedWaveEnergyToShape(energyCap)
     return energyCap 
 
+def copyCapturedWaveEnergyToShape(energyCap):
+    energyCap = energyCap
+    
+    
+    
+    
+    
+    
 
