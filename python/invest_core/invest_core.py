@@ -275,7 +275,7 @@ def interpolateMatrix(x, y, z, newx, newy):
     return spl(newx, newy).transpose()
 
 def vectorizeRasters(rasterList, op, rasterName=None,
-                     datatype=gdal.GDT_Float32):
+                     datatype=gdal.GDT_Float32,):
     """Apply the numpy vectorized operation `op` on the rasters contained in
         rasterList where the arguments to `op` are brodcasted pixels from
         each raster in rasterList in the order they exist in the list
@@ -346,6 +346,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     logger.debug('outYRange shape %s ' % (outYRange.shape))
     #create an interpolator for each raster band
     matrixList = []
+    nodataList = []
     for raster in rasterList:
         logging.debug('building interpolator for %s' % raster)
         gt = raster.GetGeoTransform()
@@ -370,6 +371,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
                                                     kx=1, ky=1)
         logger.debug('interpolating')
         matrixList.append(spl(outYRange[::-1], outXRange)[::-1])
+        nodataList.append(band.GetNoDataValue())
 
 
     #invoke op with interpolated values that overlap the output raster
@@ -379,6 +381,13 @@ def vectorizeRasters(rasterList, op, rasterName=None,
                  (outMatrix.shape))
     logger.debug('outmatrix size %s raster size %s %s'
                  % (outMatrix.shape, outBand.XSize, outBand.YSize))
+
+    #Nodata out any values in outBand that have corresponding nodata values
+    #in the matrixList
+    for band, nodata in zip(matrixList, nodataList):
+        noDataIndex = band == nodata
+        outMatrix[noDataIndex] = outBand.GetNoDataValue()
+
     outBand.WriteArray(outMatrix, 0, 0)
 
     #return the new raster
