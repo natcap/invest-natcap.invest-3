@@ -25,8 +25,8 @@
                     "label": "Value of Carbon (USD/metric ton)",
                     "required": true,
                     "dataType": "float",
-                    "validText": "[0-9]+\\.[0-9][0-9]",
-                    "defaultText": "3.67"
+                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                    "defaultText": "43.00"
                 },
                 {
                     "id": "discount_rate",
@@ -35,18 +35,18 @@
                     "label": "Market discount in price of Carbon (%)",
                     "required": true,
                     "dataType": "int",
-                    "validText": "[1]?[0-9][0-9]",
+                    "validText": "-?([0-9]+)?\\.[0-9]+",
                     "defaultText": "7"
                 },    
                 {
                     "id": "rate_change",
                     "args_id": "c",
                     "type": "text",
-                    "label": "Annual rate of change in price of Carbon",
+                    "label": "Annual rate of change in price of Carbon (%)",
                     "required": true,
                     "dataType": "float",
-                    "validText": "[0-9]+\\.[0-9][0-9]",
-                    "defaultText": "0.00"
+                    "validText": "-?([0-9]+)?\\.[0-9]+",
+                    "defaultText": "0"
                 },
                 {
                     "id": "yr_cur",
@@ -55,7 +55,7 @@
                     "label": "Start year of sequestration measurement",
                     "required": true,
                     "dataType": "int",
-                    "validText": "[0-9]+",
+                    "validText": "-?[0-9]+",
                     "defaultText": "2000"
                 },            
                 {
@@ -65,7 +65,7 @@
                     "label": "Final year of sequestration measurement",
                     "required": true,
                     "dataType": "int",
-                    "validText": "[0-9]+",
+                    "validText": "-?[0-9]+",
                     "defaultText": "2030"
                 }
             ]
