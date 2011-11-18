@@ -55,11 +55,11 @@ def biophysical(args):
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
     
     #Use Rich's function to get a 'clipped' version of the global_dem raster.
-#    def op(a):
-#        return a
-#    invest_core.vectorizeRasters([global_dem, wavePeriodRaster], op, 
-#                                 rasterName = '../../test_data/wave_Energy/clipDEM.tiff', datatype=gdal.GDT_Float32)
-#   
+    def op(a,b):
+        return a
+    invest_core.vectorizeRasters([global_dem, wavePeriodRaster], op, 
+                                 rasterName = '../../test_data/wave_Energy/clipDEM.tiff', datatype=gdal.GDT_Float32)
+   
     #Make a duplicate copy of the global_dem to try and crop
 #    drv = gdal.GetDriverByName(format)
 #    newGlobal = drv.CreateCopy('../../test_data/wave_Energy/newGlobal.tif', newRaster, 1)
@@ -210,6 +210,7 @@ def computeWaveEnergyCapacity(waveData, interpZ):
 #            print validArray
 #            print sum
     print energyCap[(556,496)]
+    copyCapturedWaveEnergyToShape(energyCap)
     return energyCap 
 
 
