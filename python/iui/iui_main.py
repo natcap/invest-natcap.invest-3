@@ -779,8 +779,8 @@ class DynamicUI(DynamicGroup):
                 user_args[id] = str(element.value())
                 
         #create a file in the current directory
-        user_args_file = open(cmd_folder + '/' + self.attributes['modelName'] +
-                              '_args_lastrun.json', 'w')
+        user_args_file = open(cmd_folder + '/cfg/' + self.attributes['modelName'] +
+                              '_lastrun_' + platform.node() + '.json', 'w')
         
         #save a json rendition of the arguments dictionary to the newly opened
         #file
@@ -983,7 +983,9 @@ class DynamicUI(DynamicGroup):
             
             returns nothing."""
         
-        user_args_uri = cmd_folder + '/' + modelname + '_args_lastrun.json'
+        user_args_uri = str(cmd_folder + '/cfg/' + modelname + '_lastrun_' + 
+                            platform.node() + '.json')
+        
         try:
             self.lastRun = json.loads(open(user_args_uri).read())
         except IOError:
@@ -1305,7 +1307,8 @@ class FileEntry(DynamicText):
         
         #expand the given relative path if provided
         if 'defaultText' in self.attributes:
-            self.textField.setText(os.path.abspath(attributes['defaultText']))
+            self.textField.setText(os.path.abspath(cmd_folder + '/../../' + 
+                                                   attributes['defaultText']))
         
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
