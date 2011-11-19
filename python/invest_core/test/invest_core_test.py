@@ -49,7 +49,7 @@ class TestInvestCore(unittest.TestCase):
             return np.sqrt(a ** 2 + b ** 2)
 
         invest_core.vectorizeRasters([r1, r2], op,
-            rasterName='../../../test_data/wave_Energy/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
+            rasterName='../../../test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testinterpolateMatrix(self):
         """Test the matrix interpolation function"""
