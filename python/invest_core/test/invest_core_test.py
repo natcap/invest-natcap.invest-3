@@ -39,7 +39,7 @@ class TestInvestCore(unittest.TestCase):
             return np.sqrt(a ** 2 + b ** 2)
 
         invest_core.vectorizeRasters([r1, r2], op,
-            rasterName='rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
+            rasterName='../../../test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testvectorizeRastersWaveEnergy(self):
         r1 = gdal.Open('../../../test_data/wave_Energy/samp_data/input/global_dem')
@@ -163,7 +163,7 @@ class TestInvestCore(unittest.TestCase):
         shp = ogr.Open('../../../sediment_test_data/subwatersheds.shp'.\
                        encode(fsencoding))
         raster = invest_core.createRasterFromVectorExtents(30, 30,
-                       gdal.GDT_Float32, -5.0, 'subwatershed.tif', shp)
+                       gdal.GDT_Float32, -5.0, '../../../test_out/subwatershed.tif', shp)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCore)
