@@ -2,9 +2,11 @@
     carbon_biophysical make sense."""
 
 import imp, sys, os
-from osgeo import ogr
+import osgeo
+from osgeo import ogr, gdal
 import numpy
 from dbfpy import dbf
+import validator_core
 
 def execute(args, out):
     """This function invokes the timber model given uri inputs specified by 
@@ -41,16 +43,80 @@ def execute(args, out):
     #Initialize out to be an empty list
     out[:] = []
 
-    #Ensure that all arguments exist
-
+    #Ensure that required arguments exist
+    #optional requirements handled by UI level
+    argsList =  ['workspace_dir', 'lulc_cur_uri', 'carbon_pools_uri',] 
+    validator_core.checkArgsKeys(args, argsList, out)
+    
     #Ensure that arguments that are URIs are accessable
+    #verify output directory is indeed a folder and is writeable
+    validator_core.checkOutputDir(args['workspace_dir'], out)
 
-    #Determine of output dir is writable
+    for key, label in [('lulc_cur_uri', 'Current LULC raster '),
+                       ('lulc_fut_uri', 'Future LULC raster ')]:
+        if key in args:
+            raster = gdal.Open(args[key])
+            if not isinstance(raster, osgeo.gdal.Dataset):
+                out.append(label + args[key] + ': Must be a raster dataset \
+that can be opened with GDAL.')
+
+                    
+    
+    #verify that the pools dbf exists and can be opened
+    prefix = 'Carbon pools table ' + args['carbon_pools_uri'] 
+    if not os.path.exists(args['carbon_pools_uri']):
+        out.append(prefix + ' does not exist')
+        dbfFile = None
+    else:
+        dbfFile = dbf.Dbf(args['carbon_pools_uri'])
+        if not isinstance(dbfFile, dbf.Dbf):
+            out.append(prefix + ' must be a dbf file')
+            
+    #verify that the carbon pools file has all five required attributes
+    for field in ['LULC', 'C_above', 'C_below', 'C_soil', 'C_dead']:
+        if field.upper() not in dbfFile.fieldNames:
+            out.append(prefix + ': missing field: ' + field )
+
 
     #Search for inconsistencies in timber shape file
-
-    #Search for inconsistencies in attr_table
+    #verify that all required attributes exist
+    filesystemencoding = sys.getfilesystemencoding()
+    for key, layername, time in [('hwp_cur_shape_uri', 'harv_samp_cur', 'Current'),
+                                 ('hwp_fut_shape_uri', 'harv_samp_fut', 'Future')]:
+        prefix = time + ' harvested wood products:' +  args[key]
+        if key in args:
+            #verify I can open the file
+            if not os.path.exists(args[key]):
+                out.append(prefix + ' could not be found')
+            else:
+                shape = ogr.Open(args[key].encode(filesystemencoding), 1)
+                if not isinstance(shape, osgeo.ogr.DataSource):
+                    out.append(prefix + ' is not a shapefile compatible with OGR')
+                else:
+                    layer = shape.GetLayerByName(layername)
+                    if not isinstance(layer, osgeo.ogr.Layer):
+                        out.append(prefix + ': target layer must be titled ' + layername)
+                    else:
+                        layer_def = layer.GetLayerDefn()
+                        if layername == 'harv_samp_cur':
+                            #verify that all required fields exist
+                            for field in ['Cut_cur', 'Start_date', 'Freq_cur',
+                                          'Decay_cur', 'C_den_cur', 'BCEF_cur']:
+                                index = layer_def.GetFieldIndex(field)
+                                if index == -1:
+                                    out.append(prefix + ': field ' + field + 'must exist')
+                                
+                        elif layername == 'harv_samp_fut':
+                            #verify that all required fields exist
+                            pass
+             
 
     #Inconsistencies in market discount rate
 
-    out.append('this is a test error message from carbon_bipohysical_validator')
+#    out.append('this is a test error message from carbon_bipohysical_validator')
+
+
+
+
+
+

@@ -6,6 +6,7 @@ import osgeo
 from osgeo import ogr
 import numpy
 from dbfpy import dbf
+import validator_core
 
 def execute(args, out):
     """This function invokes the timber model given uri inputs specified by 
@@ -32,22 +33,15 @@ def execute(args, out):
     out[:] = []
 
     #Ensure that all arguments exist
-    for argument in ['output_dir', 'timber_shape_uri', 'attr_table_uri',
-                     'market_disc_rate']:
-        if argument not in args:
-            out.append('Missing parameter: ' + argument)
+    argsList = ['output_dir', 'timber_shape_uri', 'attr_table_uri',
+                     'market_disc_rate']
+    validator_core.checkArgsKeys(args, argsList, out)
 
     #Ensure that arguments that are URIs are accessable
 
     #verify that the output directory parameter is indeed a folder
     #only returns true if args['output_dir'] exists and is a folder.
-    prefix = 'Output folder: ' + args['output_dir']
-    if not os.path.isdir(args['output_dir']):
-        out.append(prefix + ' not found or is not a folder.')
-    else:
-        #Determine if output dir is writable
-        if not os.access(args['output_dir'], os.W_OK):
-            out.append(prefix + ' must be writeable.')
+    validator_core.checkOutputDir(args['output_dir'], out)
     
     #verify that the timber shape file exists
     #if it does, try to open it with OGR.
