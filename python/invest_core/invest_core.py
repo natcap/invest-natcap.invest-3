@@ -456,3 +456,36 @@ def calculateSlope(dem, uri=''):
 
     return slope
 
+def flowDirection(dem, flow):
+    """Calculates the D8 pour point algorithm.  The output is a integer
+        raster whose values range from 1 to 255.  The values for each direction
+        from the center are:
+
+            +----------+
+            |32| 64|128|
+            ------------
+            |16|   | 1 |
+            ------------
+            | 8| 4 | 2 |
+            +----------+
+            
+        Defined by the following algorithm:  
+        - If a cell is lower than its eight neighbors, flow is defined toward
+          its lowest neighbor this cell. If multiple neighbors have the lowest 
+          value, the cell is still given this value, but flow is defined with 
+          one of the two methods explained below. This is used to filter out 
+          one-cell sinks, which are considered noise.
+        - If a cell has the same change in z-value in multiple directions the
+          algorithm breadth first searches outward cells until it finds a 
+          cell of lower evelvation.  The direction is assigned to be in the 
+          closest fitting direction.
+        - A cell at the edge of the surface raster will flow toward the inner
+          cell with the steepest drop in z-value. If the drop is less than or
+          equal to zero, the cell will flow out of the surface raster.
+          
+       dem - (input) a single band raster with elevation values
+       flow - (output) a single band integer raster of same dimensions as
+           dem.  After the function call it will have flow direction in it 
+       
+       returns a single band integer raster indicating flow direction"""
+

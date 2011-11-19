@@ -16,6 +16,13 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
+    def testflowDirection(self):
+        """Regression test for flow direction on a DEM"""
+        dem = gdal.Open('../../../sediment_test_data/dem')
+        flow = invest_core.newRasterFromBase(dem,
+            '../../../test_out/flow.tif', 'GTiff', 0, gdal.GDT_Byte)
+        slope = invest_core.flowDirection(dem, flow)
+
     def testslopeCalculation(self):
         """Regression test for slope calculation"""
         dem = gdal.Open('../../../sediment_test_data/dem')
