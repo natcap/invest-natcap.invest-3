@@ -26,7 +26,7 @@ class TestInvestCore(unittest.TestCase):
     def testslopeCalculation(self):
         """Regression test for slope calculation"""
         dem = gdal.Open('../../../sediment_test_data/dem')
-        slope = invest_core.calculateSlope(dem)
+        slope = invest_core.calculateSlope(dem, uri='../../../test_out/slope.tif')
         regressionSlope = \
             gdal.Open('../../../sediment_test_data/slopeRegression.tif')
         invest_test_core.assertTwoDatasetsEqual(self, slope, regressionSlope)
