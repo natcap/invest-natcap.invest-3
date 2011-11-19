@@ -8,6 +8,7 @@ from dbfpy import dbf
 import math
 import invest_core
 import sys, os
+import scipy
 
 def biophysical(args):
     """
@@ -145,13 +146,8 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
         return wp
     
     invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op, 
-                                 rasterName = wavePowerPath, datatype=gdal.GDT_Float32)    
-def waveGroupVelocity():
-    return (1+((2*k*h)/math.sinh(2*k*h)) * (math.sqrt((g/k)*math.tanh(k*h))))/2
-
-def waveNumber():
-    return (w**2)/(g*math.tanh((w**2)*(h/g)))
-
+                                 rasterName = wavePowerPath, datatype=gdal.GDT_Float32) 
+       
 def npv():
     for num in range(1, T+1):
         sum = sum + (B[num]-C[num])*((1+i)**(-1 * t))
