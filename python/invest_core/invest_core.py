@@ -3,6 +3,7 @@
 
 import numpy as np
 import scipy.interpolate
+import scipy.signal
 import math
 from osgeo import gdal, osr
 import logging
@@ -406,6 +407,7 @@ def calculateSlope(dem, uri=''):
         returns a raster of the same dimensions as dem whose elements are
             percent slopeMatrix (percent rise)"""
 
+    logger = logging.getLogger('calculateSlope')
     #Read the DEM directly into an array
     demBand = dem.GetRasterBand(1)
     demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
@@ -421,29 +423,33 @@ def calculateSlope(dem, uri=''):
     nodata = demBand.GetNoDataValue()
     logger.info('starting pixelwise slope calculation')
 
+    logger.debug('building kernels')
+    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
+    dzdyKernel = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64)
+    dzdxKernel = dzdyKernel.transpose().copy()
+    dzdyKernel /= (8 * cellYSize)
+    dzdxKernel /= (8 * cellXSize)
+
+    logger.debug('doing convolution')
+    dzdx = scipy.signal.convolve2d(demBandMatrix, dzdxKernel, 'same')
+    dzdy = scipy.signal.convolve2d(demBandMatrix, dzdyKernel, 'same')
+    slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
+
+    #Now, "nodata" out the points that used nodata from the demBandMatrix
+    noDataIndex = demBandMatrix == nodata
+    logger.debug('slopeMatrix and noDataIndex shape %s %s' %
+                 (slopeMatrix.shape, noDataIndex.shape))
+    slopeMatrix[noDataIndex] = -1
+
+    #No data out the pixels that used nodata values in calculating slope
     def shift(M, x, y):
         """Shifts M along the given x and y axis.
             returns a shifted M"""
         logger.debug('shifting by %s %s' % (x, y))
         return np.roll(np.roll(M, x, axis=0), y, axis=1)
 
-    #Create shifted matrices for all the 8 corners of a pixel
     offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
                (-1, -1)]
-    pix = []
-    for p in offsets:
-        pix.append(shift(demBandMatrix, *p))
-
-    #Calculate the slope for each pixel, in parallel
-    dzdx = ((pix[2] + 2 * pix[4] + pix[7]) -
-            (pix[0] + 2 * pix[3] + pix[5])) / (8.0 * cellXSize)
-    dzdy = ((pix[5] + 2 * pix[6] + pix[7]) -
-            (pix[0] + 2 * pix[1] + pix[2])) / (8.0 * cellYSize)
-    slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
-
-    #Now, "nodata" out the points that used nodata from the demBandMatrix
-    noDataIndex = demBandMatrix == nodata
-    slopeMatrix[noDataIndex] = -1
     for offset in offsets:
         slopeMatrix[shift(noDataIndex, *offset)] = -1
 
@@ -454,6 +460,8 @@ def calculateSlope(dem, uri=''):
     slope = newRasterFromBase(dem, uri, format, -1, gdal.GDT_Float32)
     slope.GetRasterBand(1).WriteArray(slopeMatrix, 0, 0)
 
+    rasterMin, rasterMax, mean, stdev = slope.GetRasterBand(1).ComputeStatistics(False)
+    slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
     return slope
 
 def flowDirection(dem, flow):
