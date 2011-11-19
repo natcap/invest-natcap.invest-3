@@ -489,3 +489,25 @@ def flowDirection(dem, flow):
        
        returns a single band integer raster indicating flow direction"""
 
+
+    demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
+                                                 dem.RasterYSize)
+    lowest = np.zeros(demMatrix.shape, dtype=np.int8)
+    flowMatrix = np.zeros(lowest.shape, dtype=np.int8)
+
+    def flowUpdate(lowest, current, flowLowest, currentFlow):
+        """ lowest - the value of the lowest elevation seen so far
+            current - the current elevation under consideration
+            flowLowest - the flow direciton to the lowest elevation seen
+                so far
+            currentFlow - the current flow direction under consideration"""
+        #logger.debug('inside flowUpdate lowest current %s %s' % (lowest, current))
+        if lowest > current:
+            return current, currentFlow
+        return lowest, flowLowest
+
+    op = np.vectorize(flowUpdate)
+    current = lowest.copy()
+    lowest, flowMatrix = op(lowest, demMatrix, flowMatrix, 1)
+
+    flow.GetRasterBand(1).WriteArray(flowMatrix, 0, 0)
