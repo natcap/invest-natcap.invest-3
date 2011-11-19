@@ -150,7 +150,7 @@ def extrapolateWaveData(waveFile):
         waveRow = []
         waveCol = []
         key = ''
-        lineCount = 0
+        rowcolIndicator = 0
         check = 0
         rowcolGrab = False
         for line in waveOpen:
@@ -161,21 +161,22 @@ def extrapolateWaveData(waveFile):
                 waveArray = []
                 rowcolGrab = True
             elif rowcolGrab:
-                if lineCount == 0:
+                if rowcolIndicator == 0:
                     if check != -1:
                         waveRow.append(line.split(','))
                         waveRow = waveRow[0]
-                    lineCount = lineCount + 1
-                elif lineCount == 1:
+                    rowcolIndicator = rowcolIndicator + 1
+                elif rowcolIndicator == 1:
                     if check != -1:
                         waveCol.append(line.split(','))
                         waveCol = waveCol[0]
                         check = -1
-                    lineCount = 0
+                    rowcolIndicator = 0
                     rowcolGrab = False
             else:
                 waveArray.append(line.split(','))
                 waveDict[key] = waveArray
+                
         for i, val in enumerate(waveRow):
             waveRow[i] = float(val)
         for i, val in enumerate(waveCol):
@@ -185,5 +186,6 @@ def extrapolateWaveData(waveFile):
         waveDict[0] = waveRow
         waveDict[1] = waveCol
         return waveDict
+    
     except IOError, e:
         print 'File I/O error' + e
