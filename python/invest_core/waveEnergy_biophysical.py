@@ -9,7 +9,6 @@ from osgeo.gdalconst import *
 import numpy as np
 from dbfpy import dbf
 
-from xlrd import open_workbook
 import csv
 
 def execute(args):
