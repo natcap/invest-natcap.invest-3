@@ -56,10 +56,10 @@ def biophysical(args):
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
     
     outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
-    aoiDictionary = clipShape(args['analysis_area'], args['AOI'], outputPath)
+    aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
     
     wavePowerPath = '../../test_data/wave_Energy/wp_kw.tif'
-    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath)
+    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
     
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
@@ -88,60 +88,58 @@ def clipShape(shapeToClip, bindingShape, outputPath):
         shp_layer.CreateField(fd)
     #Retrieve the binding polygon feature and get it's geometry reference
     clip_feat = clip_layer.GetNextFeature()
-    clip_geom = clip_feat.GetGeometryRef()
-    #Get the spatial reference of the geometry to use in transforming
-    sourceSR = clip_geom.GetSpatialReference()
-    #Retrieve the current point shapes feature and get it's geometry reference
-    in_feat = in_layer.GetNextFeature()
-    geom = in_feat.GetGeometryRef()
-    #Get the spatial reference of the geometry to use in transforming
-    targetSR = geom.GetSpatialReference()
-    #Create a coordinate transformation
-    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
-    #Transform the polygon geometry into the same format as the point shape geometry
-    clip_geom.Transform(coordTrans)
-    #For all the features in the current point shape (for all the points)
-    #Check to see if they Intersect with the binding polygons geometry and
-    #if they do, then add all of the fields and values from that point to the new shape
-    while in_feat is not None:
-        geom = in_feat.GetGeometryRef()
-        #Intersection returns a new geometry if they intersect
-        geom = geom.Intersection(clip_geom)
-        if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
-            out_feat = ogr.Feature(feature_def = shp_layer.GetLayerDefn())
-            out_feat.SetFrom(in_feat)
-            out_feat.SetGeometryDirectly(geom)
-            
-            aoiDictionary = {}
-            
-            for fld_index2 in range(out_feat.GetFieldCount()):
-                src_field = in_feat.GetField(fld_index2)
-                out_feat.SetField(fld_index2, src_field)
-            
-            I = 0
-            J = 0
-            long = 0
-            lati = 0
-            for field, var in (('I', I), ('J', J), ('LONG', long), ('LATI', lati)):
-                field_index = in_feat.GetFieldIndex(field)
-                var = in_feat.GetField(field_index)
-            
-            aoiDictionary[(I, J)] = [long, lati]
-                            
-            shp_layer.CreateFeature(out_feat)
-            out_feat.Destroy()
-            
-        in_feat.Destroy()
+    while clip_feat is not None:
+        clip_geom = clip_feat.GetGeometryRef()
+        #Get the spatial reference of the geometry to use in transforming
+        sourceSR = clip_geom.GetSpatialReference()
+        #Retrieve the current point shapes feature and get it's geometry reference
+        in_layer.ResetReading()
         in_feat = in_layer.GetNextFeature()
-    
+        geom = in_feat.GetGeometryRef()
+        #Get the spatial reference of the geometry to use in transforming
+        targetSR = geom.GetSpatialReference()
+        #Create a coordinate transformation
+        coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
+        #Transform the polygon geometry into the same format as the point shape geometry
+        clip_geom.Transform(coordTrans)
+        #For all the features in the current point shape (for all the points)
+        #Check to see if they Intersect with the binding polygons geometry and
+        #if they do, then add all of the fields and values from that point to the new shape
+        aoiDictionary = {}
+        while in_feat is not None:
+            geom = in_feat.GetGeometryRef()
+            #Intersection returns a new geometry if they intersect
+            geom = geom.Intersection(clip_geom)
+            if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
+                out_feat = ogr.Feature(feature_def = shp_layer.GetLayerDefn())
+                out_feat.SetFrom(in_feat)
+                out_feat.SetGeometryDirectly(geom)
+                            
+                for fld_index2 in range(out_feat.GetFieldCount()):
+                    src_field = in_feat.GetField(fld_index2)
+                    out_feat.SetField(fld_index2, src_field)
+                
+                itemArray = [0, 0, 0, 0]
+                for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3)):
+                    field_index = in_feat.GetFieldIndex(field)
+                    itemArray[var] = in_feat.GetField(field_index)
+                    
+                aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3]]
+                                
+                shp_layer.CreateFeature(out_feat)
+                out_feat.Destroy()
+                
+            in_feat.Destroy()
+            in_feat = in_layer.GetNextFeature()
+        clip_feat.Destroy()
+        clip_feat = clip_layer.GetNextFeature()
     #Close shapefiles
-    clip_feat.Destroy()
     bindingShape.Destroy()
     shapeToClip.Destroy()
     shp_ds.Destroy()
     return aoiDictionary
     
-def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
+def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     heightBand = waveHeight.GetRasterBand(1)
     periodBand = waveHeight.GetRasterBand(1)
     heightNoData = heightBand.GetNoDataValue()
@@ -166,6 +164,55 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     #      Somehow generate a new matrix off from the nonzero values
     #      matrix[np.nonzero(matrix)] will return array of values
     #      Then use those values for base interpolation
+    
+    raster = gdal.Open(wavePowerPath, GA_Update)
+    gt = raster.GetGeoTransform()
+    band = raster.GetRasterBand(1)
+    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
+    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
+    #This is probably true if north is up
+    if gt[5] < 0:
+        newyrange = newyrange[::-1]
+        matrix = matrix[::-1]
+        
+    xrange = []
+    yrange = []
+    print aoiDictionary[(578,513)]
+    
+    for key, val in aoiDictionary.iteritems():
+        xrange.append(float (val[1]))
+        yrange.append(float (val[0]))
+    
+    #print xrange
+    
+    xrange.sort()
+    yrange.sort()
+    prevx = 0
+    prevy = 0
+    x = []
+    y = []
+    for i, v in enumerate(xrange):
+        if v!=prevx:
+            x.append(v)
+        prevx = v
+    for i, v in enumerate(yrange):
+        if v!=prevy:
+            y.append(v)
+        prevy = v
+    xrange = np.array(x)
+    yrange = np.array(y)
+    print xrange.shape
+    print yrange.shape
+    print matrix.shape
+    #transposing matrix here since numpy 2d array order is matrix[y][x]
+    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange,
+                                                matrix,
+                                                kx=1, ky=1)
+    spl = spl(newyrange[::-1], newxrange)[::-1]
+
+    band.WriteArray(spl, 0, 0)
+
        
 def npv():
     for num in range(1, T+1):
