@@ -47,17 +47,19 @@ def biophysical(args):
     for path in (waveHeightPath, wavePeriodPath):
         invest_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY, 
                                               datatype, nodata, path, cutter)
+    
     #Open created rasters
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
+    
     #Rasterize the height and period values into respected rasters from shapefile
     for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
-    
+
     outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
     aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
-    
+        
     wavePowerPath = '../../test_data/wave_Energy/wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
     
@@ -175,45 +177,15 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     if gt[5] < 0:
         newyrange = newyrange[::-1]
         matrix = matrix[::-1]
-        
-    xrange = []
-    yrange = []
-    print aoiDictionary[(578,513)]
-    
-    for key, val in aoiDictionary.iteritems():
-        xrange.append(float (val[1]))
-        yrange.append(float (val[0]))
-    
-    #print xrange
-    
-    xrange.sort()
-    yrange.sort()
-    prevx = 0
-    prevy = 0
-    x = []
-    y = []
-    for i, v in enumerate(xrange):
-        if v!=prevx:
-            x.append(v)
-        prevx = v
-    for i, v in enumerate(yrange):
-        if v!=prevy:
-            y.append(v)
-        prevy = v
-    xrange = np.array(x)
-    yrange = np.array(y)
-    print xrange.shape
-    print yrange.shape
-    print matrix.shape
-    #transposing matrix here since numpy 2d array order is matrix[y][x]
-    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange,
+
+    spl = scipy.interpolate.RectBivariateSpline(newyrange, newxrange,
                                                 matrix,
                                                 kx=1, ky=1)
-    spl = spl(newyrange[::-1], newxrange)[::-1]
+    spl = spl(newyrange, newxrange)[::-1]
 
     band.WriteArray(spl, 0, 0)
 
-       
+    
 def npv():
     for num in range(1, T+1):
         sum = sum + (B[num]-C[num])*((1+i)**(-1 * t))
