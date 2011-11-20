@@ -147,6 +147,12 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     
     invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op, 
                                  rasterName = wavePowerPath, datatype=gdal.GDT_Float32) 
+    
+    #Need to interpolate raster outcome from above that plots wave power
+    #Idea: Get indices of nonzero values to make up original range
+    #      Somehow generate a new matrix off from the nonzero values
+    #      matrix[np.nonzero(matrix)] will return array of values
+    #      Then use those values for base interpolation
        
 def npv():
     for num in range(1, T+1):
