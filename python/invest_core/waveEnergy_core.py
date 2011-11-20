@@ -55,11 +55,11 @@ def biophysical(args):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
     
+    outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
+    aoiDictionary = clipShape(args['analysis_area'], args['AOI'], outputPath)
+    
     wavePowerPath = '../../test_data/wave_Energy/wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath)
-    
-    outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
-    clipShape(args['analysis_area'], args['AOI'], outputPath)
     
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
@@ -112,10 +112,22 @@ def clipShape(shapeToClip, bindingShape, outputPath):
             out_feat.SetFrom(in_feat)
             out_feat.SetGeometryDirectly(geom)
             
+            aoiDictionary = {}
+            
             for fld_index2 in range(out_feat.GetFieldCount()):
                 src_field = in_feat.GetField(fld_index2)
                 out_feat.SetField(fld_index2, src_field)
-                
+            
+            I = 0
+            J = 0
+            long = 0
+            lati = 0
+            for field, var in (('I', I), ('J', J), ('LONG', long), ('LATI', lati)):
+                field_index = in_feat.GetFieldIndex(field)
+                var = in_feat.GetField(field_index)
+            
+            aoiDictionary[(I, J)] = [long, lati]
+                            
             shp_layer.CreateFeature(out_feat)
             out_feat.Destroy()
             
@@ -127,6 +139,7 @@ def clipShape(shapeToClip, bindingShape, outputPath):
     bindingShape.Destroy()
     shapeToClip.Destroy()
     shp_ds.Destroy()
+    return aoiDictionary
     
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     heightBand = waveHeight.GetRasterBand(1)
