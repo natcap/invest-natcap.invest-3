@@ -209,6 +209,8 @@ def computeWaveEnergyCapacity(waveData, interpZ):
     copyCapturedWaveEnergyToShape(energyCap)
     return energyCap 
 
+#This function will hopefully take the dictionary of waveEnergyCapacity sums and
+#interpolate them and rasterize them.
 def copyCapturedWaveEnergyToShape(energyCap):
     energyCap = energyCap
     
