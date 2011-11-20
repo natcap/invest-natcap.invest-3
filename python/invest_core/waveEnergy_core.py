@@ -202,8 +202,7 @@ def computeWaveEnergyCapacity(waveData, interpZ):
         energyCap[key] = sum
 #        if key == (556, 496):
 #            print interpZ
-#            print multArray
-#            print validArray
+
 #            print sum
     print energyCap[(556,496)]
     copyCapturedWaveEnergyToShape(energyCap)
