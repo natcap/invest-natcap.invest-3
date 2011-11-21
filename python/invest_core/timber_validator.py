@@ -33,8 +33,10 @@ def execute(args, out):
     out[:] = []
 
     #Ensure that all arguments exist
-    argsList = ['output_dir', 'timber_shape_uri', 'attr_table_uri',
-                     'market_disc_rate']
+    argsList = [('output_dir', 'Workspace'), 
+                ('timber_shape_uri', 'Managed area map'), 
+                ('attr_table_uri', 'Plantation production table'),
+                ('market_disc_rate', 'Market discount rate')]
     validator_core.checkArgsKeys(args, argsList, out)
 
     #Ensure that arguments that are URIs are accessable
