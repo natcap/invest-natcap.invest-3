@@ -548,13 +548,17 @@ def flowDirection(dem, flow):
     return flow
 
 
-def flowAccumulation(flowDirection, flowAccumulation):
+def flowAccumulation(flowDirection, dem, flowAccumulation):
     """Creates a raster of accumulated flow to each cell.
     
         flowDirection - A raster showing direction of flow out of each cell
             This can be created with invest_core.flowDirection
+        dem - the elevation map.  Necessary for fast flow accumulation 
+            processing
         flowAccumulation - The output flow accumulation raster set
         
         returns nothing"""
+
+
     pass
 
