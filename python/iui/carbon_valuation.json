@@ -1,7 +1,7 @@
 {
     "id": "window",
     "label": "Valuation of Carbon Sequestration",
-    "targetScript": "../invest_core/carbon_valuation.py",
+    "targetScript": "./python/invest_core/carbon_valuation.py",
     "modelName": "carbon_valuation",
     "height": 400,
     "width": 500,
@@ -10,9 +10,16 @@
             "id": "valuation_list",
             "type": "list",
             "elements": [
+                {   "id": "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "required": true,
+                    "args_id": "workspace_dir",
+                    "defaultText": "./output/Output"
+                },
                 {
                     "id":"sequest_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Carbon sequestration raster",
                     "required": true,
                     "args_id": "sequest_uri",
