@@ -12,16 +12,43 @@ import random
 import logging
 import math
 logger = logging.getLogger('invest_core_test')
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
+    def testflowDirectionSimple(self):
+        """Regression test for flow direction on a DEM with an example
+        constructed by hand"""
+
+        driver = gdal.GetDriverByName("MEM")
+
+        #Create a 3x3 dem raster
+        dem = driver.Create('', 3, 3, 1, gdal.GDT_Float32)
+        dem.GetRasterBand(1).SetNoDataValue(-1.0)
+        dem.GetRasterBand(1).WriteArray(np.array([[902, 909, 918], [895, 904, 916], [893, 904, 918]]))
+
+        flow = invest_core.newRasterFromBase(dem,
+            '', 'MEM', 0, gdal.GDT_Byte)
+        flowDir = invest_core.flowDirection(dem, flow)
+        flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
+        self.assertEqual(128, flowMatrix[1][1],
+                         'Incorrect flow, should be 128 != %s' % flowMatrix[1][1])
+
+        dem.GetRasterBand(1).WriteArray(np.array([[190, 185, 181], [189, 185, 182], [189, 185, 182]]))
+        flow = invest_core.newRasterFromBase(dem,
+            '', 'MEM', 0, gdal.GDT_Byte)
+        flowDir = invest_core.flowDirection(dem, flow)
+        flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
+        self.assertEqual(8, flowMatrix[1][1],
+                         'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
+
+
     def testflowDirection(self):
         """Regression test for flow direction on a DEM"""
         dem = gdal.Open('../../../sediment_test_data/dem')
         flow = invest_core.newRasterFromBase(dem,
             '../../../test_out/flow.tif', 'GTiff', 0, gdal.GDT_Byte)
-        slope = invest_core.flowDirection(dem, flow)
+        flowDir = invest_core.flowDirection(dem, flow)
 
     def testslopeCalculation(self):
         """Regression test for slope calculation"""
