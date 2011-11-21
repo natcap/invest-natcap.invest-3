@@ -12,7 +12,7 @@ import random
 import logging
 import math
 logger = logging.getLogger('invest_core_test')
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
