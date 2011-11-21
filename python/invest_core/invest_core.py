@@ -559,6 +559,10 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
         
         returns nothing"""
 
+    logger = logging.getLogger('flowAccumulation')
+
+
+    logger.debug('initalizing temporary buffers')
     #Load the input flow into a numpy array
     flowDirectionMatrix = flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
         flowDirection.RasterXSize, flowDirection.RasterYSize)
@@ -567,33 +571,70 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
     accumulationMatrix = np.zeros(flowDirectionMatrix.shape)
     accumulationMatrix[:] = -1
 
-    def calculateFlow(i, j, accumulationMatrix):
-        if accumulationMatrix[j][i] != -1:
-            return
+    def calculateFlow(i, j):
+        workingList = [(i, j)]
+
         #consider neighbors who flow into j,i
-        candidates = [(i, j)]
         shiftIndexes = {1:(1, 0), 2:(1, 1), 4:(0, 1),
             8:(-1, 1), 16:(-1, 0), 32:(-1, -1),
             64:(0, -1), 128:(1, -1)}
-        for dir, xoffset, yoffset in shiftIndexes:
-            #Check to make sure we are in bounds and that the flow
-            #direction of the pixel under question flows into cell i,j
-            if xoffset >= 0 and xoffset < accumulationMatrix.shape[0] \
-                and yoffset >= 0 and\
-                yoffset < accumulationMatrix.shape[1] and \
-                flowDirectionMatrix[j + yoffset][i + xoffset] == dir:
-                #If so, calculate the flow accumulation to pixel i+xoffset 
-                #and j+yoffset, then look up the value and accumulate it in
-                #the accumulation matrix
-                calculateFlow(i + xoffset, j + yoffset)
-                accumulationMatrix[j][i] += 1 + \
-                    accumulationMatrix[j + yoffset][i + xoffset]
+        def upstreamCalculated(i, j):
+            return True
+            for dir in shiftIndexes:
+                xoffset, yoffset = shiftIndexes[dir]
+                #Check to make sure we are in bounds and that the flow
+                #direction of the pixel under question flows into cell i,j
+                ioffset = xoffset + i
+                joffset = yoffset + j
+                if ioffset >= 0 and ioffset < accumulationMatrix.shape[0] \
+                    and joffset >= 0 and\
+                    joffset < accumulationMatrix.shape[1] and \
+                    flowDirectionMatrix[joffset][ioffset] == dir:
+                    if accumulationMatrix[joffset][ioffset] == -1:
+                        #not calculated
+                        return False
+            return True
 
+
+        while len(workingList) != 0:
+            i, j = workingList.pop()
+            #are pixels upstream from (i,j) calculated? 
+            if upstreamCalculated(i, j):
+                accumulationMatrix[j][i] = 0.0
+                #Sum the upstream pixels for accumulation
+                for dir in shiftIndexes:
+                    xoffset, yoffset = shiftIndexes[dir]
+                    #Check to make sure we are in bounds and that the flow
+                    #direction of the pixel under question flows into cell i,j
+                    ioffset = xoffset + i
+                    joffset = yoffset + j
+                    if ioffset >= 0 and ioffset < accumulationMatrix.shape[0] \
+                        and joffset >= 0 and\
+                        joffset < accumulationMatrix.shape[1] and \
+                        flowDirectionMatrix[joffset][ioffset] == dir:
+                        accumulationMatrix[j][i] += 1 + accumulationMatrix[joffset][ioffset]
+            else:
+                #build up the working list with the pixels that aren't calculated
+                workingList.append((i, j))
+                for dir in shiftIndexes:
+                    xoffset, yoffset = shiftIndexes[dir]
+                    #Check to make sure we are in bounds and that the flow
+                    #direction of the pixel under question flows into cell i,j
+                    ioffset = xoffset + i
+                    joffset = yoffset + j
+                    if ioffset >= 0 and ioffset < accumulationMatrix.shape[0] \
+                        and joffset >= 0 and\
+                        joffset < accumulationMatrix.shape[1] and \
+                        flowDirectionMatrix[joffset][ioffset] == dir:
+                        workingList.append((ioffset, joffset))
 
     #Loop through all the pixels
+    logger.info('calculating flow accumulation')
     for i in range(accumulationMatrix.shape[0]):
+        logger.debug('on row %s of %s' % (i, accumulationMatrix.shape[0]))
         for j in range(accumulationMatrix.shape[1]):
-            calculateFlow(i, j, accumulationMatrix)
+            if accumulationMatrix[j][i] == -1:
+                calculateFlow(i, j)
 
     flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix, 0, 0)
 
