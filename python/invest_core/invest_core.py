@@ -520,17 +520,17 @@ def flowDirection(dem, flow):
     #Loop through all the flow directions searching for the lowest value
     for dir in [1, 2, 4, 8, 16, 32, 64, 128]:
         #Define the kernel based on the flow direction
+        logger.debug('Calculating flow for direction %s %s' %
+                     (dir, shiftIndexes[dir]))
         neighborElevation = shiftMatrix(demMatrix, *shiftIndexes[dir])
 
         #Search for areas where the neighbor elevations are equal to the current
         #this will indicate a flat region that needs to be cleaned up later
-        equalElevationIndexes = neighborElevation == lowest
-        logger.debug('lowest shape, equalElevationIndex shape, neighborElevationShape  %s %s %s' %
-                     (lowest.shape, equalElevationIndexes.shape, neighborElevation.shape))
-        lowest[equalElevationIndexes] = neighborElevation[equalElevationIndexes]
         #In those cases, add the direciton to the flow matrix since there are
         #multiple possible flow directions
-        flowMatrix[neighborElevation == lowest] = flowMatrix[neighborElevation == lowest] + dir
+        equalElevationIndexes = neighborElevation == lowest
+        lowest[equalElevationIndexes] = neighborElevation[equalElevationIndexes]
+        flowMatrix[equalElevationIndexes] = flowMatrix[equalElevationIndexes] + dir
 
         #Next indicate all the pixels where the neighbor pixel is lower than
         #the lowest seen so far
