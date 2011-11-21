@@ -514,8 +514,8 @@ def flowDirection(dem, flow):
     #This dictionary indicates how many pixels to shift over in x and y
     #depending on which power of 2 flow direction we're considering
     shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1),
-                    8:(1, -1), 16:(1, 0), 32:(1, -1),
-                    64:(0, -1), 128:(-1, -1)}
+                    8:(1, -1), 16:(1, 0), 32:(1, 1),
+                    64:(0, 1), 128:(-1, 1)}
 
     #Loop through all the flow directions searching for the lowest value
     for dir in [1, 2, 4, 8, 16, 32, 64, 128]:
@@ -546,3 +546,4 @@ def flowDirection(dem, flow):
     #0 flow in a pit, or multiple flows due to flat regions
 
     flow.GetRasterBand(1).WriteArray(flowMatrix, 0, 0)
+    return flow
