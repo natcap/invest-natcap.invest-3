@@ -16,10 +16,17 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
+    def testflowDirection(self):
+        """Regression test for flow direction on a DEM"""
+        dem = gdal.Open('../../../sediment_test_data/dem')
+        flow = invest_core.newRasterFromBase(dem,
+            '../../../test_out/flow.tif', 'GTiff', 0, gdal.GDT_Byte)
+        slope = invest_core.flowDirection(dem, flow)
+
     def testslopeCalculation(self):
         """Regression test for slope calculation"""
         dem = gdal.Open('../../../sediment_test_data/dem')
-        slope = invest_core.calculateSlope(dem)
+        slope = invest_core.calculateSlope(dem, uri='../../../test_out/slope.tif')
         regressionSlope = \
             gdal.Open('../../../sediment_test_data/slopeRegression.tif')
         invest_test_core.assertTwoDatasetsEqual(self, slope, regressionSlope)
@@ -32,7 +39,7 @@ class TestInvestCore(unittest.TestCase):
             return np.sqrt(a ** 2 + b ** 2)
 
         invest_core.vectorizeRasters([r1, r2], op,
-            rasterName='rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
+            rasterName='../../../test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testvectorizeRastersWaveEnergy(self):
         r1 = gdal.Open('../../../test_data/wave_Energy/samp_data/input/global_dem')
@@ -42,7 +49,7 @@ class TestInvestCore(unittest.TestCase):
             return np.sqrt(a ** 2 + b ** 2)
 
         invest_core.vectorizeRasters([r1, r2], op,
-            rasterName='../../../test_data/wave_Energy/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
+            rasterName='../../../test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testinterpolateMatrix(self):
         """Test the matrix interpolation function"""
@@ -156,7 +163,7 @@ class TestInvestCore(unittest.TestCase):
         shp = ogr.Open('../../../sediment_test_data/subwatersheds.shp'.\
                        encode(fsencoding))
         raster = invest_core.createRasterFromVectorExtents(30, 30,
-                       gdal.GDT_Float32, -5.0, 'subwatershed.tif', shp)
+                       gdal.GDT_Float32, -5.0, '../../../test_out/subwatershed.tif', shp)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCore)
