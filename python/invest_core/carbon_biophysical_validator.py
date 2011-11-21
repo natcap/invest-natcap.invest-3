@@ -44,14 +44,19 @@ def execute(args, out):
     out[:] = []
 
     #Ensure that required arguments exist
-    argsList =  ['workspace_dir', 'lulc_cur_uri', 'carbon_pools_uri',] 
+    argsList =  [('workspace_dir', 'workspace'), 
+                 ('lulc_cur_uri', 'Current LULC raster'), 
+                 ('carbon_pools_uri', 'Carbon pools')] 
     validator_core.checkArgsKeys(args, argsList, out)
     
     if 'hwp_cur_shape_uri' in args:
-        validator_core.checkArgsKeys(args, ['lulc_cur_year',], out)
+        argsList = [('lulc_fut_year', 'Year of future land cover'),
+                    ('lulc_cur_year', 'Year of current land cover')]
+        validator_core.checkArgsKeys(args, argsList, out)
         
     if 'hwp_fut_shape_uri' in args:
-        argsList = ['lulc_fut_uri', 'lulc_fut_year']
+        argsList = [('lulc_fut_uri', 'Future LULC raster'), 
+                    ('lulc_fut_year', 'Year of future land cover')]
         validator_core.checkArgsKeys(args, argsList, out)
         
     #Ensure that arguments that are URIs are accessable
