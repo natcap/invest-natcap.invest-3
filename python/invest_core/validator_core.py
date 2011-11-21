@@ -9,14 +9,15 @@ def checkArgsKeys(argsDict, argsList, outList):
         message to outList if not.
         
         argsDict - a python dictionary mapping string keys -> arbitrary values
-        argsList - a python list of keys to verify in argsDict
+        argsList - a python list of tuples containing keys to verify in argsDict
+                   and labels to print if the key is not present.
         outList  - a python list (for appending errors)
         
         returns nothing."""
         
-    for argument in argsList:
+    for argument, label in argsList:
         if argument not in argsDict:
-            outList.append('Missing parameter: ' + argument)
+            outList.append('Missing parameter: ' + label)
             
 def checkOutputDir(uri, out):
     """Verify that the given directory exists and is writeable.  Append error 
