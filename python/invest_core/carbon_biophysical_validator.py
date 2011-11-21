@@ -83,8 +83,8 @@ that can be opened with GDAL.')
     filesystemencoding = sys.getfilesystemencoding()
     for key, layername, time in [('hwp_cur_shape_uri', 'harv_samp_cur', 'Current'),
                                  ('hwp_fut_shape_uri', 'harv_samp_fut', 'Future')]:
-        prefix = time + ' harvested wood products:' +  args[key]
         if key in args:
+            prefix = time + ' harvested wood products:' +  args[key]
             #verify I can open the file
             if not os.path.exists(args[key]):
                 out.append(prefix + ' could not be found')
@@ -103,20 +103,23 @@ that can be opened with GDAL.')
                             for field in ['Cut_cur', 'Start_date', 'Freq_cur',
                                           'Decay_cur', 'C_den_cur', 'BCEF_cur']:
                                 index = layer_def.GetFieldIndex(field)
+                                #-1 is returned if the given field does not exist
                                 if index == -1:
                                     out.append(prefix + ': field ' + field + 'must exist')
                                 
                         elif layername == 'harv_samp_fut':
                             #verify that all required fields exist
+                            for field in ['Cut_fut', 'Freq_fut', 'Decay_fut',
+                                          'C_den_fut', 'BCEF_fut']:
+                                index = layer_def.GetFieldIndex(field)
+                                #-1 is returned if the given field does not exist
+                                if index == -1:
+                                    out.append(prefix + ': field ' + field + 'must exist')
                             pass
              
 
-    #Inconsistencies in market discount rate
-
-#    out.append('this is a test error message from carbon_bipohysical_validator')
-
-
-
-
-
+    #Inconsistencies in market discount rate.
+    #should be a number, either positive or negative
+    #Isn't this handled sufficiently by the UI?  It isn't possible to enter a 
+    #number that defies this requirement.
 
