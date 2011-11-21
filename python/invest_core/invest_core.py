@@ -394,6 +394,17 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     #return the new raster
     return outRaster
 
+#No data out the pixels that used nodata values in calculating slope
+def shiftMatrix(M, x, y):
+    """Shifts M along the given x and y axis.
+    
+        M - a 2D numpy array
+        x - the number of elements x-wise to shift M
+        y - the number of elements y-wise to shift M
+    
+        returns M rolled x and y elements along the x and y axis"""
+    logger.debug('shifting by %s %s' % (x, y))
+    return np.roll(np.roll(M, x, axis=0), y, axis=1)
 
 def calculateSlope(dem, uri=''):
     """Calculates the slopeMatrix of the given DEM in terms of percentage rise.
@@ -441,17 +452,10 @@ def calculateSlope(dem, uri=''):
                  (slopeMatrix.shape, noDataIndex.shape))
     slopeMatrix[noDataIndex] = -1
 
-    #No data out the pixels that used nodata values in calculating slope
-    def shift(M, x, y):
-        """Shifts M along the given x and y axis.
-            returns a shifted M"""
-        logger.debug('shifting by %s %s' % (x, y))
-        return np.roll(np.roll(M, x, axis=0), y, axis=1)
-
     offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
                (-1, -1)]
     for offset in offsets:
-        slopeMatrix[shift(noDataIndex, *offset)] = -1
+        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = -1
 
     #Create output raster
     format = 'MEM'
@@ -469,13 +473,13 @@ def flowDirection(dem, flow):
         raster whose values range from 1 to 255.  The values for each direction
         from the center are:
 
-            +----------+
-            |32| 64|128|
-            ------------
-            |16|   | 1 |
-            ------------
-            | 8| 4 | 2 |
-            +----------+
+            +---+---+---+
+            | 32| 64|128|
+            +---+---+---+
+            | 16|   | 1 |
+            + --+---+---+
+            | 8 | 4 | 2 |
+            +---+---+---+
             
         Defined by the following algorithm:  
         - If a cell is lower than its eight neighbors, flow is defined toward
@@ -497,25 +501,48 @@ def flowDirection(dem, flow):
        
        returns a single band integer raster indicating flow direction"""
 
-
+    logger = logging.getLogger('flowDirection')
     demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
                                                  dem.RasterYSize)
-    lowest = np.zeros(demMatrix.shape, dtype=np.int8)
+    #Make the lowest point seen so far the dem, that way we can spot the pits
+    #in a later step
+    lowest = demMatrix.copy()
+
+    #This matrix holds the flow direction value, initialize to zero
     flowMatrix = np.zeros(lowest.shape, dtype=np.int8)
 
-    def flowUpdate(lowest, current, flowLowest, currentFlow):
-        """ lowest - the value of the lowest elevation seen so far
-            current - the current elevation under consideration
-            flowLowest - the flow direciton to the lowest elevation seen
-                so far
-            currentFlow - the current flow direction under consideration"""
-        #logger.debug('inside flowUpdate lowest current %s %s' % (lowest, current))
-        if lowest > current:
-            return current, currentFlow
-        return lowest, flowLowest
+    #This dictionary indicates how many pixels to shift over in x and y
+    #depending on which power of 2 flow direction we're considering
+    shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1),
+                    8:(1, -1), 16:(1, 0), 32:(1, -1),
+                    64:(0, -1), 128:(-1, -1)}
 
-    op = np.vectorize(flowUpdate)
-    current = lowest.copy()
-    lowest, flowMatrix = op(lowest, demMatrix, flowMatrix, 1)
+    #Loop through all the flow directions searching for the lowest value
+    for dir in [1, 2, 4, 8, 16, 32, 64, 128]:
+        #Define the kernel based on the flow direction
+        neighborElevation = shiftMatrix(demMatrix, *shiftIndexes[dir])
+
+        #Search for areas where the neighbor elevations are equal to the current
+        #this will indicate a flat region that needs to be cleaned up later
+        equalElevationIndexes = neighborElevation == lowest
+        logger.debug('lowest shape, equalElevationIndex shape, neighborElevationShape  %s %s %s' %
+                     (lowest.shape, equalElevationIndexes.shape, neighborElevation.shape))
+        lowest[equalElevationIndexes] = neighborElevation[equalElevationIndexes]
+        #In those cases, add the direciton to the flow matrix since there are
+        #multiple possible flow directions
+        flowMatrix[neighborElevation == lowest] = flowMatrix[neighborElevation == lowest] + dir
+
+        #Next indicate all the pixels where the neighbor pixel is lower than
+        #the lowest seen so far
+        lowerIndex = neighborElevation < lowest
+
+        #Update the lowest elevation seen so far
+        lowest[lowerIndex] = neighborElevation[lowerIndex]
+        #and update the flow to point in the direction of that pixel
+        flowMatrix[lowerIndex] = dir
+
+
+    #now flow matrix has flows defined, but some might be ambiguous, like
+    #0 flow in a pit, or multiple flows due to flat regions
 
     flow.GetRasterBand(1).WriteArray(flowMatrix, 0, 0)
