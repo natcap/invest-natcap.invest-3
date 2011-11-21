@@ -593,33 +593,7 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
     #Loop through all the pixels
     for i in range(accumulationMatrix.shape[0]):
         for j in range(accumulationMatrix.shape[1]):
-            #If accumulation hasn't been calculated for i,j, calculate it now
-            if accumulationMatrix[j][i] == 0:
-                calculateFlow(i, j, accumulationMatrix)
-
-    #This dictionary indicates how many pixels to shift over in x and y
-    #depending on which power of 2 flow direction we're considering, we'll
-    #use it to mark all the pixels that have flow into them, so the offsets
-    #refer the to the direciton to push the current flow
-    shiftIndexes = {1:(1, 0), 2:(1, 1), 4:(0, 1),
-                    8:(-1, 1), 16:(-1, 0), 32:(-1, -1),
-                    64:(0, -1), 128:(1, -1)}
-
-    #Initalize the source matrix to Trues.  'source' refers to a pixel that
-    #has no inflow
-    sourceMatrix = np.empty(flowDirectionMatrix.shape, dtype=np.bool)
-    sourceMatrix[:] = True
-
-    #Loop through all the flow directions searching for the lowest value
-    for dir in shiftIndexes:
-        neighborFlow = shiftMatrix(flowDirectionMatrix, *shiftIndexes[dir])
-        #Any pixel that has the value of dir means it gets inflow from its
-        #neighbor.  It is not a source, mark it False
-        sourceMatrix[neighborFlow == dir] = False
-
-    #Mark all the sources to 1, leave the rest to 0 for testing purposes
-    accumulationMatrix[sourceMatrix] = 1.0
+            calculateFlow(i, j, accumulationMatrix)
 
     flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix, 0, 0)
-    pass
 
