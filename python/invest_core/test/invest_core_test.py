@@ -16,6 +16,17 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
+    def testflowAccumulation(self):
+        """Regression test for flowDirection accumulation on a DEM"""
+        dem = gdal.Open('../../../sediment_test_data/dem')
+        flowDirection = invest_core.newRasterFromBase(dem,
+            '../../../test_out/flowDirection.tif', 'GTiff', 0, gdal.GDT_Byte)
+        invest_core.flowDirection(dem, flowDirection)
+
+        accumulation = invest_core.newRasterFromBase(dem,
+            '../../../test_out/accumulation.tif', 'GTiff', 0, gdal.GDT_Float32)
+        invest_core.flowAccumulation(flowDirection, accumulation)
+
     def testflowDirectionSimple(self):
         """Regression test for flow direction on a DEM with an example
         constructed by hand"""
@@ -38,10 +49,9 @@ class TestInvestCore(unittest.TestCase):
         flow = invest_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
         flowDir = invest_core.flowDirection(dem, flow)
-        flow = flowDir.ReadAsArray(0, 0, 3, 3)
+        flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(8, flowMatrix[1][1],
                          'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
-
 
     def testflowDirection(self):
         """Regression test for flow direction on a DEM"""
