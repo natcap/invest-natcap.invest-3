@@ -518,7 +518,7 @@ def flowDirection(dem, flow):
                     64:(0, 1), 128:(-1, 1)}
 
     #Loop through all the flow directions searching for the lowest value
-    for dir in [1, 2, 4, 8, 16, 32, 64, 128]:
+    for dir in shiftIndexes:
         #Define the kernel based on the flow direction
         logger.debug('Calculating flow for direction %s %s' %
                      (dir, shiftIndexes[dir]))
