@@ -52,13 +52,13 @@ def execute(args):
 
     #lulc_cur is always required
     logger.debug('loading %s', args['lulc_cur_uri'])
-    biophysicalArgs['lulc_cur'] = gdal.Open(args['lulc_cur_uri'],
+    biophysicalArgs['lulc_cur'] = gdal.Open(str(args['lulc_cur_uri']),
                                             gdal.GA_ReadOnly)
 
     #a future lulc is only required if sequestering or hwp calculating
     if 'lulc_fut_uri' in args:
         logger.debug('loading %s', args['lulc_fut_uri'])
-        biophysicalArgs['lulc_fut'] = gdal.Open(args['lulc_fut_uri'],
+        biophysicalArgs['lulc_fut'] = gdal.Open(str(args['lulc_fut_uri']),
                                             gdal.GA_ReadOnly)
 
     #Years and harvest shapes are required if doing HWP calculation
