@@ -29,8 +29,8 @@ class TestInvestCore(unittest.TestCase):
 
         flow = invest_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
-        flowDir = invest_core.flowDirection(dem, flow)
-        flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
+        invest_core.flowDirection(dem, flow)
+        flowMatrix = flow.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(128, flowMatrix[1][1],
                          'Incorrect flow, should be 128 != %s' % flowMatrix[1][1])
 
@@ -38,7 +38,7 @@ class TestInvestCore(unittest.TestCase):
         flow = invest_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
         flowDir = invest_core.flowDirection(dem, flow)
-        flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
+        flow = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(8, flowMatrix[1][1],
                          'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
 
@@ -48,7 +48,7 @@ class TestInvestCore(unittest.TestCase):
         dem = gdal.Open('../../../sediment_test_data/dem')
         flow = invest_core.newRasterFromBase(dem,
             '../../../test_out/flow.tif', 'GTiff', 0, gdal.GDT_Byte)
-        flowDir = invest_core.flowDirection(dem, flow)
+        invest_core.flowDirection(dem, flow)
 
     def testslopeCalculation(self):
         """Regression test for slope calculation"""
