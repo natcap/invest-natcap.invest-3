@@ -499,7 +499,7 @@ def flowDirection(dem, flow):
        flow - (output) a single band integer raster of same dimensions as
            dem.  After the function call it will have flow direction in it 
        
-       returns a single band integer raster indicating flow direction"""
+       returns nothing"""
 
     logger = logging.getLogger('flowDirection')
     demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
@@ -541,9 +541,20 @@ def flowDirection(dem, flow):
         #and update the flow to point in the direction of that pixel
         flowMatrix[lowerIndex] = dir
 
-
     #now flow matrix has flows defined, but some might be ambiguous, like
     #0 flow in a pit, or multiple flows due to flat regions
 
     flow.GetRasterBand(1).WriteArray(flowMatrix, 0, 0)
     return flow
+
+
+def flowAccumulation(flowDirection, flowAccumulation):
+    """Creates a raster of accumulated flow to each cell.
+    
+        flowDirection - A raster showing direction of flow out of each cell
+            This can be created with invest_core.flowDirection
+        flowAccumulation - The output flow accumulation raster set
+        
+        returns nothing"""
+    pass
+
