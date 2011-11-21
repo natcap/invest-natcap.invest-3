@@ -5,6 +5,7 @@ import imp, sys, os
 from osgeo import ogr
 import numpy
 from dbfpy import dbf
+import validator_core
 
 def execute(args, out):
     """This function invokes the timber model given uri inputs specified by 
@@ -33,7 +34,15 @@ def execute(args, out):
     #Initialize out to be an empty list
     out[:] = []
 
-    #Ensure that all arguments exist
+    #Ensure that all arguments exist (all arguments are required)
+    argsList = [('workspace_dir', 'Workspace'),
+                ('sequest_uri' 'Carbon sequestration raster'), 
+                ('V', 'Value of Carbon'), 
+                ('r', 'Discount rate'), 
+                ('c', 'Annual rate of change in price of Carbon'), 
+                ('yr_cur', 'Start year of sequestration measurement'), 
+                ('yr_fut', 'Final year of sequestration measurement')]
+    validator_core.checkArgsKeys(args, argsList, out)
 
     #Ensure that arguments that are URIs are accessable
 
