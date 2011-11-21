@@ -44,10 +44,16 @@ def execute(args, out):
     out[:] = []
 
     #Ensure that required arguments exist
-    #optional requirements handled by UI level
     argsList =  ['workspace_dir', 'lulc_cur_uri', 'carbon_pools_uri',] 
     validator_core.checkArgsKeys(args, argsList, out)
     
+    if 'hwp_cur_shape_uri' in args:
+        validator_core.checkArgsKeys(args, ['lulc_cur_year',], out)
+        
+    if 'hwp_fut_shape_uri' in args:
+        argsList = ['lulc_fut_uri', 'lulc_fut_year']
+        validator_core.checkArgsKeys(args, argsList, out)
+        
     #Ensure that arguments that are URIs are accessable
     #verify output directory is indeed a folder and is writeable
     validator_core.checkOutputDir(args['workspace_dir'], out)
