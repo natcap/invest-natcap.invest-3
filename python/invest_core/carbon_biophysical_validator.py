@@ -83,8 +83,8 @@ that can be opened with GDAL.')
     filesystemencoding = sys.getfilesystemencoding()
     for key, layername, time in [('hwp_cur_shape_uri', 'harv_samp_cur', 'Current'),
                                  ('hwp_fut_shape_uri', 'harv_samp_fut', 'Future')]:
-        prefix = time + ' harvested wood products:' +  args[key]
         if key in args:
+            prefix = time + ' harvested wood products:' +  args[key]
             #verify I can open the file
             if not os.path.exists(args[key]):
                 out.append(prefix + ' could not be found')
