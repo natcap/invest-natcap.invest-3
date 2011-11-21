@@ -516,15 +516,19 @@ class ModelDialog(QtGui.QDialog):
         
         This window is not configurable through the JSON configuration file."""    
         
-    def __init__(self, uri, inputDict, modelname):
+    def __init__(self, root, uri, inputDict, modelname):
         """Constructor for the ModelDialog class.
             
+            root - a pointer to the parent window
             uri - a string URI to the script to be run
             inputDict - a python dictionary of arguments to be passed to the 
                 model's execute function.
+            modelname - a python string representing the name of the running model
         
             returns an instance of ModelDialog."""
         super(ModelDialog, self).__init__()
+
+        self.root = root
 
         #set window attributes
         self.setLayout(QtGui.QVBoxLayout())
@@ -630,6 +634,9 @@ class ModelDialog(QtGui.QDialog):
             self.threadFinished()
         else:
             self.write('Validation complete.\n')
+            self.root.saveLastRun()
+            self.write('Parameters saved to disk.\n')
+            self.write('\nRunning the model.')
             self.modelProcess.start(self.command, self.argslist)
 
     def startValidation(self):
@@ -956,9 +963,9 @@ class DynamicUI(DynamicGroup):
         
             returns nothing"""
             
-        self.saveLastRun()
         self.assembleOutputDict()
-        self.modelDialog = ModelDialog(self.attributes['targetScript'],
+        self.modelDialog = ModelDialog(self,
+                                       self.attributes['targetScript'],
                                        self.outputDict,
                                        self.attributes['modelName'])
         
