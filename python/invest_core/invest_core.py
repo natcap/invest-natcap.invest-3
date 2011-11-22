@@ -565,7 +565,9 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
     #Load the input flow into a numpy array
     flowDirectionMatrix = flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
         flowDirection.RasterXSize, flowDirection.RasterYSize)
-
+    gp = dem.GetGeoTransform()
+    cellXSize = gp[1]
+    cellYSize = gp[5]
     #Create the output flow, initalize to -1 as undefined
     accumulationMatrix = np.zeros(flowDirectionMatrix.shape)
     accumulationMatrix[:] = -1
@@ -598,7 +600,8 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
         logger = logging.getLogger('calculateFlow')
         while len(pixelsToProcess) > 0:
             i, j = pixelsToProcess.pop()
-            logger.debug('i,j=%s %s' % (i, j))
+            logger.debug('i,j=%s %s x,y=%s %s' % (i, j, gp[0] + cellXSize * i,
+                                                  gp[3] + cellYSize * j))
             #if p is calculated, skip its calculation
             if accumulationMatrix[j, i] != -1: continue
 
@@ -627,7 +630,9 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
                     accumulationMatrix[j, i] += 1 + accumulationMatrix[nj, ni]
 
     logger.info('calculating flow accumulation')
-    calculateFlow(deque([(500, 500)]))
+
+    for (x, y), value in np.ndenumerate(accumulationMatrix):
+        calculateFlow(deque([(x, y)]))
 
     flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix, 0, 0)
 
