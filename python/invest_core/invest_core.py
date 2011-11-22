@@ -7,6 +7,7 @@ import scipy.signal
 import math
 from osgeo import gdal, osr
 import logging
+from collections import deque
 logger = logging.getLogger('invest_core')
 
 def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
@@ -560,8 +561,6 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
         returns nothing"""
 
     logger = logging.getLogger('flowAccumulation')
-
-
     logger.debug('initalizing temporary buffers')
     #Load the input flow into a numpy array
     flowDirectionMatrix = flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
@@ -571,70 +570,64 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
     accumulationMatrix = np.zeros(flowDirectionMatrix.shape)
     accumulationMatrix[:] = -1
 
-    def calculateFlow(i, j):
-        workingList = [(i, j)]
+    def calculateInflowNeighbors(i, j):
+        """Returns a list of the neighboring pixels to i,j that are in bounds
+            and also flow into point i,j.  This information is inferred from
+            the flowDirectionMatrix"""
 
         #consider neighbors who flow into j,i
-        shiftIndexes = {1:(1, 0), 2:(1, 1), 4:(0, 1),
-            8:(-1, 1), 16:(-1, 0), 32:(-1, -1),
-            64:(0, -1), 128:(1, -1)}
-        def upstreamCalculated(i, j):
-            return True
-            for dir in shiftIndexes:
-                xoffset, yoffset = shiftIndexes[dir]
-                #Check to make sure we are in bounds and that the flow
-                #direction of the pixel under question flows into cell i,j
-                ioffset = xoffset + i
-                joffset = yoffset + j
-                if ioffset >= 0 and ioffset < accumulationMatrix.shape[0] \
-                    and joffset >= 0 and\
-                    joffset < accumulationMatrix.shape[1] and \
-                    flowDirectionMatrix[joffset][ioffset] == dir:
-                    if accumulationMatrix[joffset][ioffset] == -1:
-                        #not calculated
-                        return False
-            return True
+        shiftIndexes = {1:(1, 0), 2:(1, 1), 4:(0, 1), 8:(-1, 1), 16:(-1, 0),
+                        32:(-1, -1), 64:(0, -1), 128:(1, -1)}
+        neighbors = deque()
+        for dir, (io, jo) in shiftIndexes.iteritems():
+            pi = i + io
+            pj = j + jo
+            if pi >= 0 and pj >= 0 and pi < flowDirectionMatrix.shape[0] and \
+                pj < flowDirectionMatrix.shape[1]:
+                if flowDirectionMatrix[pj, pi] == dir:
+                    neighbors.append((pi, pj))
+        return neighbors
 
+    def calculateFlow(pixelsToProcess):
+        """Takes a list of pixels to calculate flow for, then does a 
+            dynamic style programming process of visiting and updating
+            each one as it needs processing.  Modified `accumulationMatrix`
+            during processing.
+            
+            pixelsToProcess - a collections.deque of (i,j) tuples"""
+        logger = logging.getLogger('calculateFlow')
+        while len(pixelsToProcess) > 0:
+            p = pixelsToProcess.pop()
+            logger.debug('p=%s %s' % (p))
+            #if p is calculated, skip its calculation
+            if accumulationMatrix[p] != -1: continue
 
-        while len(workingList) != 0:
-            i, j = workingList.pop()
-            #are pixels upstream from (i,j) calculated? 
-            if upstreamCalculated(i, j):
-                accumulationMatrix[j][i] = 0.0
-                #Sum the upstream pixels for accumulation
-                for dir in shiftIndexes:
-                    xoffset, yoffset = shiftIndexes[dir]
-                    #Check to make sure we are in bounds and that the flow
-                    #direction of the pixel under question flows into cell i,j
-                    ioffset = xoffset + i
-                    joffset = yoffset + j
-                    if ioffset >= 0 and ioffset < accumulationMatrix.shape[0] \
-                        and joffset >= 0 and\
-                        joffset < accumulationMatrix.shape[1] and \
-                        flowDirectionMatrix[joffset][ioffset] == dir:
-                        accumulationMatrix[j][i] += 1 + accumulationMatrix[joffset][ioffset]
+            #if any neighbors flow into p and are uncalculated, push p and
+            #neighbors on the stack
+            neighbors = calculateInflowNeighbors(*p)
+            incomplete = False
+            for n in neighbors:
+                #Turns out one of the neighbors is uncalculated
+                #Stop checking and process all later
+                if accumulationMatrix[n] == -1:
+                    incomplete = True
+                    break
+            #If one of the neighbors was uncalculated, push the pixel and 
+            #neighbors back on the processing list
+            if incomplete:
+                #Put p first, so it's not visited again until neighbors 
+                #are processed
+                pixelsToProcess.append(p)
+                pixelsToProcess.extend(neighbors)
             else:
-                #build up the working list with the pixels that aren't calculated
-                workingList.append((i, j))
-                for dir in shiftIndexes:
-                    xoffset, yoffset = shiftIndexes[dir]
-                    #Check to make sure we are in bounds and that the flow
-                    #direction of the pixel under question flows into cell i,j
-                    ioffset = xoffset + i
-                    joffset = yoffset + j
-                    if ioffset >= 0 and ioffset < accumulationMatrix.shape[0] \
-                        and joffset >= 0 and\
-                        joffset < accumulationMatrix.shape[1] and \
-                        flowDirectionMatrix[joffset][ioffset] == dir:
-                        workingList.append((ioffset, joffset))
+                #Otherwise, all the inflow neighbors are calculated so do the
+                #pixelflow calculation 
+                accumulationMatrix[p] = 0
+                for n in neighbors:
+                    accumulationMatrix[p] += 1 + accumulationMatrix[n]
 
-    #Loop through all the pixels
     logger.info('calculating flow accumulation')
-    for i in range(accumulationMatrix.shape[0]):
-        logger.debug('on row %s of %s' % (i, accumulationMatrix.shape[0]))
-        for j in range(accumulationMatrix.shape[1]):
-            if accumulationMatrix[j][i] == -1:
-                calculateFlow(i, j)
+    calculateFlow(deque([(500, 500)]))
 
     flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix, 0, 0)
 
