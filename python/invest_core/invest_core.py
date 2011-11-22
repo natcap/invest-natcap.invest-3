@@ -405,7 +405,7 @@ def shiftMatrix(M, x, y):
     
         returns M rolled x and y elements along the x and y axis"""
     logger.debug('shifting by %s %s' % (x, y))
-    return np.roll(np.roll(M, x, axis=0), y, axis=1)
+    return np.roll(np.roll(M, x, axis=1), y, axis=0)
 
 def calculateSlope(dem, uri=''):
     """Calculates the slopeMatrix of the given DEM in terms of percentage rise.
