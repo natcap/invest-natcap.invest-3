@@ -598,13 +598,13 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
         logger = logging.getLogger('calculateFlow')
         while len(pixelsToProcess) > 0:
             i, j = pixelsToProcess.pop()
-            logger.debug('p=%s %s' % (p))
+            logger.debug('i,j=%s %s' % (i, j))
             #if p is calculated, skip its calculation
             if accumulationMatrix[j, i] != -1: continue
 
             #if any neighbors flow into p and are uncalculated, push p and
             #neighbors on the stack
-            neighbors = calculateInflowNeighbors(*p)
+            neighbors = calculateInflowNeighbors(i, j)
             incomplete = False
             for ni, nj in neighbors:
                 #Turns out one of the neighbors is uncalculated
@@ -617,7 +617,7 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
             if incomplete:
                 #Put p first, so it's not visited again until neighbors 
                 #are processed
-                pixelsToProcess.append(p)
+                pixelsToProcess.append((i, j))
                 pixelsToProcess.extend(neighbors)
             else:
                 #Otherwise, all the inflow neighbors are calculated so do the
