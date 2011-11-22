@@ -576,14 +576,14 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
             the flowDirectionMatrix"""
 
         #consider neighbors who flow into j,i
-        shiftIndexes = {1:(1, 0), 2:(1, 1), 4:(0, 1), 8:(-1, 1), 16:(-1, 0),
-                        32:(-1, -1), 64:(0, -1), 128:(1, -1)}
+        shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1), 8:(1, -1), 16:(1, 0),
+                        32:(1, 1), 64:(0, 1), 128:(-1, 1)}
         neighbors = deque()
         for dir, (io, jo) in shiftIndexes.iteritems():
             pi = i + io
             pj = j + jo
-            if pi >= 0 and pj >= 0 and pi < flowDirectionMatrix.shape[0] and \
-                pj < flowDirectionMatrix.shape[1]:
+            if pi >= 0 and pj >= 0 and pj < flowDirectionMatrix.shape[0] and \
+                pi < flowDirectionMatrix.shape[1]:
                 if flowDirectionMatrix[pj, pi] == dir:
                     neighbors.append((pi, pj))
         return neighbors
@@ -597,19 +597,19 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
             pixelsToProcess - a collections.deque of (i,j) tuples"""
         logger = logging.getLogger('calculateFlow')
         while len(pixelsToProcess) > 0:
-            p = pixelsToProcess.pop()
+            i, j = pixelsToProcess.pop()
             logger.debug('p=%s %s' % (p))
             #if p is calculated, skip its calculation
-            if accumulationMatrix[p] != -1: continue
+            if accumulationMatrix[j, i] != -1: continue
 
             #if any neighbors flow into p and are uncalculated, push p and
             #neighbors on the stack
             neighbors = calculateInflowNeighbors(*p)
             incomplete = False
-            for n in neighbors:
+            for ni, nj in neighbors:
                 #Turns out one of the neighbors is uncalculated
                 #Stop checking and process all later
-                if accumulationMatrix[n] == -1:
+                if accumulationMatrix[nj, ni] == -1:
                     incomplete = True
                     break
             #If one of the neighbors was uncalculated, push the pixel and 
@@ -622,9 +622,9 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
             else:
                 #Otherwise, all the inflow neighbors are calculated so do the
                 #pixelflow calculation 
-                accumulationMatrix[p] = 0
+                accumulationMatrix[j, i] = 0
                 for n in neighbors:
-                    accumulationMatrix[p] += 1 + accumulationMatrix[n]
+                    accumulationMatrix[j, i] += 1 + accumulationMatrix[nj, ni]
 
     logger.info('calculating flow accumulation')
     calculateFlow(deque([(500, 500)]))
