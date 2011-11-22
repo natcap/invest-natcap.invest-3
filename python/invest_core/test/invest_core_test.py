@@ -24,7 +24,7 @@ class TestInvestCore(unittest.TestCase):
         invest_core.flowDirection(dem, flowDirection)
 
         accumulation = invest_core.newRasterFromBase(dem,
-            '../../../test_out/accumulation.tif', 'GTiff', 0, gdal.GDT_Float32)
+            '../../../test_out/accumulation.tif', 'GTiff', -1, gdal.GDT_Float32)
         invest_core.flowAccumulation(flowDirection, dem, accumulation)
 
     def testflowDirectionSimple(self):
@@ -42,16 +42,27 @@ class TestInvestCore(unittest.TestCase):
             '', 'MEM', 0, gdal.GDT_Byte)
         invest_core.flowDirection(dem, flow)
         flowMatrix = flow.ReadAsArray(0, 0, 3, 3)
-        self.assertEqual(128, flowMatrix[1][1],
-                         'Incorrect flow, should be 128 != %s' % flowMatrix[1][1])
+        self.assertEqual(8, flowMatrix[1][1],
+                         'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
 
         dem.GetRasterBand(1).WriteArray(np.array([[190, 185, 181], [189, 185, 182], [189, 185, 182]]))
         flow = invest_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
         flowDir = invest_core.flowDirection(dem, flow)
         flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
+        self.assertEqual(128, flowMatrix[1][1],
+                         'Incorrect flow, should be 128 != %s' % flowMatrix[1][1])
+
+        dem.GetRasterBand(1).WriteArray(np.array([[343, 343, 342],
+                                                      [340, 341, 343],
+                                                      [335, 338, 343]]))
+        flow = invest_core.newRasterFromBase(dem,
+            '', 'MEM', 0, gdal.GDT_Byte)
+        flowDir = invest_core.flowDirection(dem, flow)
+        flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(8, flowMatrix[1][1],
                          'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
+
 
     def testflowDirection(self):
         """Regression test for flow direction on a DEM"""

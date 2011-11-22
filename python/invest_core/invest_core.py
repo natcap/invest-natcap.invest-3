@@ -7,6 +7,7 @@ import scipy.signal
 import math
 from osgeo import gdal, osr
 import logging
+from collections import deque
 logger = logging.getLogger('invest_core')
 
 def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
@@ -404,7 +405,7 @@ def shiftMatrix(M, x, y):
     
         returns M rolled x and y elements along the x and y axis"""
     logger.debug('shifting by %s %s' % (x, y))
-    return np.roll(np.roll(M, x, axis=0), y, axis=1)
+    return np.roll(np.roll(M, x, axis=1), y, axis=0)
 
 def calculateSlope(dem, uri=''):
     """Calculates the slopeMatrix of the given DEM in terms of percentage rise.
@@ -499,8 +500,8 @@ def flowDirection(dem, flow):
        flow - (output) a single band integer raster of same dimensions as
            dem.  After the function call it will have flow direction in it 
        
-        returns nothing"""
-        
+       returns nothing"""
+
     logger = logging.getLogger('flowDirection')
     demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
                                                  dem.RasterYSize)
@@ -518,7 +519,7 @@ def flowDirection(dem, flow):
                     64:(0, 1), 128:(-1, 1)}
 
     #Loop through all the flow directions searching for the lowest value
-    for dir in [1, 2, 4, 8, 16, 32, 64, 128]:
+    for dir in shiftIndexes:
         #Define the kernel based on the flow direction
         logger.debug('Calculating flow for direction %s %s' %
                      (dir, shiftIndexes[dir]))
@@ -559,5 +560,79 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
         
         returns nothing"""
 
+    logger = logging.getLogger('flowAccumulation')
+    logger.debug('initalizing temporary buffers')
+    #Load the input flow into a numpy array
+    flowDirectionMatrix = flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
+        flowDirection.RasterXSize, flowDirection.RasterYSize)
+    gp = dem.GetGeoTransform()
+    cellXSize = gp[1]
+    cellYSize = gp[5]
+    #Create the output flow, initalize to -1 as undefined
+    accumulationMatrix = np.zeros(flowDirectionMatrix.shape)
+    accumulationMatrix[:] = -1
 
-    pass
+    def calculateInflowNeighbors(i, j):
+        """Returns a list of the neighboring pixels to i,j that are in bounds
+            and also flow into point i,j.  This information is inferred from
+            the flowDirectionMatrix"""
+
+        #consider neighbors who flow into j,i
+        shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1), 8:(1, -1), 16:(1, 0),
+                        32:(1, 1), 64:(0, 1), 128:(-1, 1)}
+        neighbors = deque()
+        for dir, (io, jo) in shiftIndexes.iteritems():
+            pi = i + io
+            pj = j + jo
+            if pi >= 0 and pj >= 0 and pj < flowDirectionMatrix.shape[0] and \
+                pi < flowDirectionMatrix.shape[1]:
+                if flowDirectionMatrix[pj, pi] == dir:
+                    neighbors.append((pi, pj))
+        return neighbors
+
+    def calculateFlow(pixelsToProcess):
+        """Takes a list of pixels to calculate flow for, then does a 
+            dynamic style programming process of visiting and updating
+            each one as it needs processing.  Modified `accumulationMatrix`
+            during processing.
+            
+            pixelsToProcess - a collections.deque of (i,j) tuples"""
+        logger = logging.getLogger('calculateFlow')
+        while len(pixelsToProcess) > 0:
+            i, j = pixelsToProcess.pop()
+            logger.debug('i,j=%s %s x,y=%s %s' % (i, j, gp[0] + cellXSize * i,
+                                                  gp[3] + cellYSize * j))
+            #if p is calculated, skip its calculation
+            if accumulationMatrix[j, i] != -1: continue
+
+            #if any neighbors flow into p and are uncalculated, push p and
+            #neighbors on the stack
+            neighbors = calculateInflowNeighbors(i, j)
+            incomplete = False
+            for ni, nj in neighbors:
+                #Turns out one of the neighbors is uncalculated
+                #Stop checking and process all later
+                if accumulationMatrix[nj, ni] == -1:
+                    incomplete = True
+                    break
+            #If one of the neighbors was uncalculated, push the pixel and 
+            #neighbors back on the processing list
+            if incomplete:
+                #Put p first, so it's not visited again until neighbors 
+                #are processed
+                pixelsToProcess.append((i, j))
+                pixelsToProcess.extend(neighbors)
+            else:
+                #Otherwise, all the inflow neighbors are calculated so do the
+                #pixelflow calculation 
+                accumulationMatrix[j, i] = 0
+                for n in neighbors:
+                    accumulationMatrix[j, i] += 1 + accumulationMatrix[nj, ni]
+
+    logger.info('calculating flow accumulation')
+
+    for (x, y), value in np.ndenumerate(accumulationMatrix):
+        calculateFlow(deque([(x, y)]))
+
+    flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix, 0, 0)
+
