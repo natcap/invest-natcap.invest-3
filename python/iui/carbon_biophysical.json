@@ -1,0 +1,132 @@
+{
+    "id" : "window",
+    "label": "Carbon Storage and Sequestration",
+    "targetScript" : "./python/invest_core/carbon_biophysical.py",
+    "modelName" : "carbon_biophysical",
+    "height": 400,
+    "width" : 500,
+    "elements": [
+        {
+            "id" : "calc_sequestration",
+            "type": "checkbox",
+            "label": "Calculate sequestration",
+            "required": false
+        },
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[       
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultText": "./output",
+                    "required": true
+                }
+            ]
+        },        
+        {
+            "id" : "cur_lulc_box",
+            "type": "container",
+            "collapsible" : false,
+            "label": "Current land use/land cover",
+            "elements": [
+            	{
+            	    "id" : "cur_lulc_list",
+	                "type" : "list",
+	                "elements":[
+	                    {
+	                       "id" : "cur_lulc_raster",
+                            "args_id" : "lulc_cur_uri",
+	                        "type": "file",
+	                        "label": "Raster location",
+                            "defaultText": "./test_data/lulc_samp_cur/hdr.adf",
+	                        "required": true
+	                    },
+	                    {
+	                        "id" : "cur_lulc_year",
+	                        "type": "text",
+	                        "validText": "-?[0-9]+",
+	                        "dataType": "int",
+	                        "args_id": "lulc_cur_year",
+	                        "label": "Year of land cover",
+	                        "required": false,
+	                        "enabledBy": "calc_sequestration",
+	                        "defaultText": "2000",
+	                        "requiredIf": ["cur_harvest_map", "fut_harvest_map"]
+	                    }
+	                ]
+                }
+            ]
+        },
+        {
+            "id" : "fut_lulc_box",
+            "type": "container",
+            "collapsible": false,
+            "label": "Future land use/land cover",
+            "elements": [
+            	{ 
+            	    "id" : "fut_lulc_list",
+                	"type" : "list",
+                	"elements" : [
+	                    {
+	                        "id" : "fut_lulc_raster",
+	                        "type": "file",
+	                        "label": "Raster location",
+	                        "args_id": "lulc_fut_uri",
+	                        "required": false,
+	                        "enabledBy": "calc_sequestration",
+                            "defaultText": "./test_data/lulc_samp_fut/hdr.adf",
+	                        "requiredIf": ["calc_sequestration"]
+	                    },
+	                    {
+	                        "id" : "fut_lulc_year",
+	                        "type": "text",
+	                        "validText": "-?[0-9]+",
+	                        "dataType": "int",
+	                        "label": "Year of land cover",
+	                        "args_id": "lulc_fut_year",
+	                        "required": false,
+	                        "defaultText": "2030",
+	                        "enabledBy": "calc_sequestration",
+	                        "requiredIf": ["fut_harvest_map"]
+	                    }
+	                ]
+                }
+            ]
+        },
+        {
+            "id" : "file_list",
+            "type" : "list",
+            "elements" : [
+                {
+                    "id" : "carbon_pools",
+                    "type": "file",
+                    "label": "Carbon pools",
+                    "defaultText": "./test_data/carbon_pools_float.dbf",
+                    "args_id": "carbon_pools_uri",
+                    "required": true
+                },
+                {
+                    "id" : "cur_harvest_map",
+                    "type": "file",
+                    "label": "Current harvest rate map",
+                    "args_id": "hwp_cur_shape_uri",
+                    "required": false,
+                    "defaultText": "./test_data/harv_samp_cur/harv_samp_cur.shp",
+                    "enabledBy": "calc_sequestration"
+                },
+                {
+                    "id" : "fut_harvest_map",
+                    "type": "file",
+                    "label": "Future harvest rate map",
+                    "args_id": "hwp_fut_shape_uri",
+                    "required": false,
+                    "defaultText": "./test_data/harv_samp_fut/harv_samp_fut.shp",
+                    "enabledBy": "calc_sequestration"
+                }
+            ]
+        }
+    ]
+}

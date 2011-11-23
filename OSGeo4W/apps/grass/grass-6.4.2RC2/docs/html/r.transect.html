@@ -1,0 +1,95 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.transect</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.transect</b></em>  - Outputs raster map layer values lying along user defined transect line(s).
+<h2>KEYWORDS</h2>
+raster, transect
+<h2>SYNOPSIS</h2>
+<b>r.transect</b><br>
+<b>r.transect help</b><br>
+<b>r.transect</b> [-<b>g</b>] <b>map</b>=<em>name</em> <b>line</b>=<em>east,north,azimuth,distance</em>[,<i>east,north,azimuth,distance</i>,...]  [<b>null</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-g</b></DT>
+<DD>Output easting and northing in first two columns of four column output</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>name</em></DT>
+<DD>Raster map to be queried</DD>
+
+<DT><b>line</b>=<em>east,north,azimuth,distance[,<i>east,north,azimuth,distance</i>,...]</em></DT>
+<DD>Transect definition</DD>
+
+<DT><b>null</b>=<em>string</em></DT>
+<DD>Char string to represent no data cell</DD>
+<DD>Default: <em>*</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+This program outputs, in ASCII, the values in a raster map
+which lie along one or more user-defined transect lines.
+The transects are described by their starting coordinates,
+azimuth, and distance. 
+
+<!-- The transects may be single-cell
+ wide lines, or multiple-cell wide lines.  The output, for
+ each transect, may be the values at each of the cells, or a
+ single aggregate value (e.g., average or median value). -->
+<p>
+
+The <b>line</b> parameter is a definition of (each) transect line,
+specified by the geographic coordinates of its starting point (<em>easting,
+northing</em>), the angle and direction of its travel (<em>azimuth</em>),
+and its distance (<em>distance</em>).
+
+<p>
+The <em>azimuth</em> is an angle, in degrees, measured to
+the east of north.  The <em>distance</em> is in map units
+(meters for a metered database, like UTM).
+<p>
+The <b>null</b> parameter can optionally be set to change the character
+string representing null values.
+
+<h2>NOTES</h2>
+
+This program is a front-end to the <em>
+<a href="r.profile.html">r.profile</a></em> program.  It simply converts the
+azimuth and distance to an ending coordinate and then runs <em>
+<a href="r.profile.html">r.profile</a></em>.
+
+There once were <b>width=</b> and <b>result=</b><em>raw|median|average</em>
+ options which are not currently implemented.
+
+<h2>SEE ALSO</h2>
+
+<em><a href="r.profile.html">r.profile</a></em>,
+<em><a href="gm_profile.html">gis.m: PROFILE TOOL</a></em>
+
+<h2>AUTHOR</h2>
+
+Michael Shapiro, U.S. Army Construction Engineering Research Laboratory
+
+<p><i>Last changed: $Date: 2008-05-16 21:09:06 +0200 (pá, 16 V 2008) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

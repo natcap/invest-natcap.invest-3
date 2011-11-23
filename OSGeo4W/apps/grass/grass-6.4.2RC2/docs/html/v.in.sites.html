@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.in.sites</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.in.sites</b></em>  - Converts a GRASS site_lists file into a vector map.
+<h2>KEYWORDS</h2>
+vector, import, sites
+<h2>SYNOPSIS</h2>
+<b>v.in.sites</b><br>
+<b>v.in.sites help</b><br>
+<b>v.in.sites</b> <b>input</b>=<em>string</em> <b>output</b>=<em>name</em>  [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>string</em></DT>
+<DD>Name of site input file</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output vector map</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.in.sites</em> converts GRASS site_lists file into vector format. 
+<em>Site_lists</em> file values are used as category values.
+
+<h2>NOTE</h2>
+
+The requirements of the site_lists file are standard 
+(i.e., a regular site_lists file format is required)
+
+<div class="code"><pre>
+name|test
+desc|Imported from points shapefile test.shp.
+time|3 Feb 2003 15:09:11 +0000
+3571629.904|5943214.399|#1
+3571323.64|5944517.464|#2 
+</pre></div>
+
+<b>Format example of old GRASS site_lists</b><br>
+<div class="code"><pre>
+easting|northing|[z|[d4|]...][#category_int] [ [@attr_text OR %flt] ... ]
+</pre></div>
+
+In case of a 3D sites file, the module generates a 3D vector map.
+Attributes are written into an attribute table.
+
+<h2>EXAMPLE</h2>
+<div class="code"><pre>
+v.in.sites in=sites_file out=vector_map
+</pre></div>
+
+<h2>AUTHOR</h2>
+
+R.L. Glenn, USDA, SCS, NHQ-CGIS <br>
+Radim Blazek, ITC-Irst, Trento, Italy
+
+<p><i>Last changed: $Date: 2006-01-02 15:44:52 +0100 (po, 02 I 2006) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

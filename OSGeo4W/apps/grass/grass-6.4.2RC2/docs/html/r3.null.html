@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r3.null</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r3.null</b></em>  - Explicitly create the 3D NULL-value bitmap file.
+<h2>KEYWORDS</h2>
+raster3d, voxel
+<h2>SYNOPSIS</h2>
+<b>r3.null</b><br>
+<b>r3.null help</b><br>
+<b>r3.null</b> <b>map</b>=<em>string</em>  [<b>setnull</b>=<em>val[-val]</em>[,<i>val[-val]</i>,...]]   [<b>null</b>=<em>float</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>string</em></DT>
+<DD>3d raster map for which to modify null values</DD>
+
+<DT><b>setnull</b>=<em>val[-val][,<i>val[-val]</i>,...]</em></DT>
+<DD>List of cell values to be set to NULL</DD>
+
+<DT><b>null</b>=<em>float</em></DT>
+<DD>The value to replace the null value by</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+Modifies the NULL values of a 3D raster map.
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="r.null.html">r.null</a>
+</em>
+
+<h2>AUTHORS</h2>
+Roman Waupotitsch, Michael Shapiro, 
+Helena Mitasova, Bill Brown, Lubos Mitas,
+Jaro Hofierka
+
+<p><i>Last changed: $Date: 2011-09-13 22:13:36 +0200 (út, 13 IX 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster3D.html">raster3D index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

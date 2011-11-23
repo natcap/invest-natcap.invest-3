@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.region</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.region</b></em>  - Sets the boundary definitions for a raster map.
+<h2>KEYWORDS</h2>
+raster, metadata
+<h2>SYNOPSIS</h2>
+<b>r.region</b><br>
+<b>r.region help</b><br>
+<b>r.region</b> [-<b>cd</b>] <b>map</b>=<em>name</em>  [<b>region</b>=<em>name</em>]   [<b>raster</b>=<em>name</em>]   [<b>vector</b>=<em>name</em>]   [<b>3dview</b>=<em>name</em>]   [<b>n</b>=<em>value</em>]   [<b>s</b>=<em>value</em>]   [<b>e</b>=<em>value</em>]   [<b>w</b>=<em>value</em>]   [<b>align</b>=<em>name</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-c</b></DT>
+<DD>Set from current region</DD>
+
+<DT><b>-d</b></DT>
+<DD>Set from default region</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>name</em></DT>
+<DD>Raster map to change</DD>
+
+<DT><b>region</b>=<em>name</em></DT>
+<DD>Set region from named region</DD>
+
+<DT><b>raster</b>=<em>name</em></DT>
+<DD>Set region to match this raster map</DD>
+
+<DT><b>vector</b>=<em>name</em></DT>
+<DD>Set region to match this vector map</DD>
+
+<DT><b>3dview</b>=<em>name</em></DT>
+<DD>Set region to match this 3dview file</DD>
+
+<DT><b>n</b>=<em>value</em></DT>
+<DD>Value for the northern edge (format dd:mm:ss{N|S})</DD>
+
+<DT><b>s</b>=<em>value</em></DT>
+<DD>Value for the southern edge (format dd:mm:ss{N|S})</DD>
+
+<DT><b>e</b>=<em>value</em></DT>
+<DD>Value for the eastern edge (format ddd:mm:ss{E|W})</DD>
+
+<DT><b>w</b>=<em>value</em></DT>
+<DD>Value for the western edge (format ddd:mm:ss{E|W})</DD>
+
+<DT><b>align</b>=<em>name</em></DT>
+<DD>Raster map to align to</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+The <em>r.region</em> program allows the user to manage the boundaries
+of a raster map. These boundaries can be set by the user directly
+and/or set from a region definition file (stored under the
+<kbd>windows</kbd> directory in the user's current mapset), a raster
+or vector map, or a 3dview file.
+<p>
+
+The <b>align</b> parameter allows to set the current resolution equal to
+that of the named raster map, and align the boundaries to a row and column
+edge in the named map.  Alignment only moves the existing boundaries outward
+to the edges of the next nearest cell in the named raster map -- not to the
+named map's edges.  To perform the latter function, use the
+<b>raster=</b><em>name</em> option.
+
+
+<h2>NOTES</h2>
+
+After all updates have been applied, the raster map's resolution
+settings are recomputed from the boundaries and the number of rows and
+columns in the raster map.
+
+<p>
+The n=<em>value</em> may also be specified as a
+function of its current value:  n=n+<em>value</em>
+increases the current northing, while n=n-<em>value</em>
+decreases it.  This is also true for s=<em>value</em>,
+e=<em>value</em>, and w=<em>value</em>.
+
+
+<h2>EXAMPLES</h2>
+
+Assign absolute coordinates to map:
+<div class="code"><pre>
+r.region map=mymap n=220750 s=220000 w=638300 e=639000
+</pre></div>
+
+Shift map (using offset, here by 100 map units in two directions):
+<div class="code"><pre>
+r.region map=mymap n=n+100 e=e+100 w=w+100 s=s+100
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+
+<em><a href="r.support.html">r.support</a></em><br>
+<em><a href="g.region.html">g.region</a></em>
+
+
+<h2>AUTHOR</h2>
+
+Glynn Clements
+
+<br>
+Based upon <em>g.region</em>
+
+<p>
+<i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

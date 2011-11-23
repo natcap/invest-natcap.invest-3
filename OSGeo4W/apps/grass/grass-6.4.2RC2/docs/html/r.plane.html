@@ -1,0 +1,100 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.plane</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.plane</b></em>  - Creates raster plane map given dip (inclination), aspect (azimuth) and one point.
+<h2>KEYWORDS</h2>
+raster, elevation
+<h2>SYNOPSIS</h2>
+<b>r.plane</b><br>
+<b>r.plane help</b><br>
+<b>r.plane</b> <b>name</b>=<em>string</em> <b>dip</b>=<em>float</em> <b>azimuth</b>=<em>float</em> <b>easting</b>=<em>float</em> <b>northing</b>=<em>float</em> <b>elevation</b>=<em>float</em> <b>type</b>=<em>string</em>  [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>name</b>=<em>string</em></DT>
+<DD>Name of raster plane to be created</DD>
+
+<DT><b>dip</b>=<em>float</em></DT>
+<DD>Dip of plane. Value must be between -90 and 90 degrees</DD>
+<DD>Default: <em>0.0</em></DD>
+
+<DT><b>azimuth</b>=<em>float</em></DT>
+<DD>Azimuth of the plane. Value must be between 0 and 360 degrees</DD>
+<DD>Default: <em>0.0</em></DD>
+
+<DT><b>easting</b>=<em>float</em></DT>
+<DD>Easting coordinate of a point on the plane</DD>
+
+<DT><b>northing</b>=<em>float</em></DT>
+<DD>Northing coordinate of a point on the plane</DD>
+
+<DT><b>elevation</b>=<em>float</em></DT>
+<DD>Elevation coordinate of a point on the plane</DD>
+
+<DT><b>type</b>=<em>string</em></DT>
+<DD>Type of the raster map to be created</DD>
+<DD>Options: <em>int,float,double</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>r.plane</em> creates a tilted plane raster map given user-specified
+parameters for inclination, azimuth, and the geographic location of a
+point on the plane.<br>
+The angle orientations of the <em>azimuth</em> parameter increase counter-clockwise,
+i.e., 0 degree = N, 45 degree = NW, 90 degree = W etc.
+<p>
+Increasing values of the <em>dip</em> parameter progressively lower (or dip) the northern
+half of the plane, and incline the southern half, assuming the <em>azimuth</em> parameter 
+is held constant at 0 degrees.
+
+
+<h2>NOTES</h2>
+<tt>g.region -c</tt> provides the easting and northing coordinates for
+the center of the current region.
+<p>
+<em>int</em> maps take less disk space than <em>float</em>s, which in turn
+take up less space than <em>double</em>s (but can be less exact).
+
+
+<h2>EXAMPLE</h2>
+
+A tilted plane in the North Carolina sample dataset region:
+
+<div class="code"><pre>
+g.region -d
+g.region -c
+r.plane myplane45 dip=45 az=90 east=527500.0 north=165000.0 \
+        elev=1000 type=float
+</pre></div>
+
+<h2>AUTHOR</h2>
+
+Unknown<br>
+Updated to GRASS 5.7 by Michael Barton, Arizona State University
+
+<p><i>Last changed: $Date: 2011-09-04 15:23:30 +0200 (ne, 04 IX 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.param.scale</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.param.scale</b></em>  - Extracts terrain parameters from a DEM.<BR>
+Uses a multi-scale approach by taking fitting quadratic parameters to any size window (via least squares).
+<h2>KEYWORDS</h2>
+raster, geomorphology
+<h2>SYNOPSIS</h2>
+<b>r.param.scale</b><br>
+<b>r.param.scale help</b><br>
+<b>r.param.scale</b> [-<b>c</b>] <b>input</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>s_tol</b>=<em>float</em>]   [<b>c_tol</b>=<em>float</em>]   [<b>size</b>=<em>integer</em>]   [<b>param</b>=<em>string</em>]   [<b>exp</b>=<em>float</em>]   [<b>zscale</b>=<em>float</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-c</b></DT>
+<DD>Constrain model through central window cell</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input raster map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Output raster layer containing morphometric parameter</DD>
+
+<DT><b>s_tol</b>=<em>float</em></DT>
+<DD>Slope tolerance that defines a 'flat' surface (degrees)</DD>
+<DD>Default: <em>1.0</em></DD>
+
+<DT><b>c_tol</b>=<em>float</em></DT>
+<DD>Curvature tolerance that defines 'planar' surface</DD>
+<DD>Default: <em>0.0001</em></DD>
+
+<DT><b>size</b>=<em>integer</em></DT>
+<DD>Size of processing window (odd number only, max: 69)</DD>
+<DD>Default: <em>3</em></DD>
+
+<DT><b>param</b>=<em>string</em></DT>
+<DD>Morphometric parameter in 'size' window to calculate</DD>
+<DD>Options: <em>elev,slope,aspect,profc,planc,longc,crosc,minic,maxic,feature</em></DD>
+<DD>Default: <em>elev</em></DD>
+
+<DT><b>exp</b>=<em>float</em></DT>
+<DD>Exponent for distance weighting (0.0-4.0)</DD>
+<DD>Default: <em>0.0</em></DD>
+
+<DT><b>zscale</b>=<em>float</em></DT>
+<DD>Vertical scaling factor</DD>
+<DD>Default: <em>1.0</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<b>r.param.scale</b> extracts terrain parameters from a DEM. Uses a
+multi-scale approach by fitting a bivariate quadratic polynomial to a given
+window size using least squares.
+
+<p>
+The module calculates the following parameters (terminology is from Wood,
+1996 with related terminology used in other GRASS modules listed in
+brackets):
+<ul>
+<li>
+<i>elev</i>: Generalised elevation value (for resampling purposes at different
+scale)</li>
+
+<li>
+<i>slope</i>: Magnitude of maximum gradient (steepest slope angle)</li>
+
+<li>
+<i>aspect</i>: Direction of maximum gradient (steepest slope direction=flow direction)</li>
+
+<li>
+<i>profc</i> or profile curvature (curvature intersecting with the plane
+defined by <i>Z</i> axis and maximum gradient direction). Positive values
+describe convex profile curvature, negative values concave profile
+curvature.</li>
+
+<li>
+<i>planc</i> or plan curvature (horizontal curvature, intersecting with
+the <i>XY</i> plane)</li>
+
+<li>
+<i>longc</i> or longitudinal curvature (profile curvature intersecting
+with the plane defined by the surface normal and maximum gradient direction)</li>
+
+<li>
+<i>crosc</i> or cross-sectional curvature (tangential curvature intersecting
+with the plane defined by the surface normal and a tangent to the contour
+- perpendicular to maximum gradient direction)</li>
+
+<li>
+<i>maxic</i> or maximum curvature (can be in any direction)</li>
+
+<li>
+<i>minic</i> or minimum curvature (in direction perpendicular to the direction
+of of maximum curvature)</li>
+
+<!--
+<li>
+<i>meanc</i> or mean curvature (average of maximum and minimum curvatures).</li>
+-->
+
+<li>
+<i>feature</i>: Morphometric features: peaks, ridges, passes, channels, pits and planes</li>
+</ul>
+
+<h2>NOTES</h2>
+In <i>r.param.scale</i> the direction of maximum gradient (considered
+downslope) is stored as (West is 0 degree, East is +/- 180 degree):
+
+<ul>
+<li>
+0..+180 degree from West to North to East</li>
+
+<li>
+0..-180 degree from West to South to East</li>
+</ul>
+
+Note that the aspect map is calculated differently from
+<a href="r.slope.aspect.html">r.slope.aspect</a>.
+
+<h2>Still to do</h2>
+
+Fix bug when `constrain through central cell' option selected. Create color
+tables for all output files (presently only on features).
+
+<h2>EXAMPLE</h2>
+
+The next commands will create a geomorphological map of the Spearfish region:
+
+<div class="code"><pre>
+g.region rast=elevation.10m -p
+r.param.scale in=elevation.10m output=morphology param=feature size=9
+d.mon x0
+d.rast.leg morphology
+</pre></div>
+
+<p>
+<center>
+<img src="r_param_scale_morph.jpg" alt="r.param.scale generated geomorphological map"><br>
+<i>Geomorphological map of a subregion in the Spearfish (SD) area</i>
+</center>
+
+
+<h2>SEE ALSO</h2>
+<!-- not ported to GRASS 6 due to non-GPLness of numerical recipes.
+<i><a href="d.param.scale.html">d.param.scale</a></i>
+-->
+<p>Java Code in
+<a href="http://www.geog.le.ac.uk/jwo/research/LandSerf">LandSerf</a>
+that implements the same procedure
+
+<h2>REFERENCE</h2>
+
+Wood, J. (1996): The Geomorphological characterisation of Digital Elevation
+Models. Diss., Department of Geography, University of Leicester, U.K.
+
+<br>online at:
+<br><a href="http://www.soi.city.ac.uk/~jwo/phd/">http://www.soi.city.ac.uk/~jwo/phd/</a>
+
+<h2>AUTHOR</h2>
+
+<address>
+<a href="MAILTO:jwo@le.ac.uk">jwo@le.ac.uk</a>
+- <a href="http://www.geog.le.ac.uk/assist/index.html">ASSIST's home</a></address>
+
+<p>Update to FP 3/2002: L. Potrich, M. Neteler, S. Menegon (ITC-irst)
+
+<p><i>Last changed: $Date: 2009-04-03 09:17:56 +0200 (pá, 03 IV 2009) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

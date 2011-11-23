@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: d.thematic.area</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>d.thematic.area</b></em>  - Displays a thematic vector area map in the active frame on the graphics monitor.
+<h2>KEYWORDS</h2>
+display, cartography
+<h2>SYNOPSIS</h2>
+<b>d.thematic.area</b><br>
+<b>d.thematic.area help</b><br>
+<b>d.thematic.area</b> [-<b>len</b>] <b>map</b>=<em>name</em> <b>column</b>=<em>string</em>  [<b>breaks</b>=<em>string</em>[,<i>string</i>,...]]   [<b>algorithm</b>=<em>string</em>]   [<b>nbclasses</b>=<em>integer</em>]  <b>colors</b>=<em>string</em>[,<i>string</i>,...]  [<b>layer</b>=<em>integer</em>]   [<b>where</b>=<em>sql_query</em>]   [<b>bwidth</b>=<em>integer</em>]   [<b>bcolor</b>=<em>string</em>]   [<b>render</b>=<em>string</em>]   [<b>legendfile</b>=<em>name</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-l</b></DT>
+<DD>Create legend information and send to stdout</DD>
+
+<DT><b>-e</b></DT>
+<DD>When printing legend info , include extended statistical info from classification algorithm</DD>
+
+<DT><b>-n</b></DT>
+<DD>Do not draw map, only output the legend</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>name</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>column</b>=<em>string</em></DT>
+<DD>Data to be classified: column name or expression</DD>
+
+<DT><b>breaks</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Class breaks, without minimum and maximum</DD>
+
+<DT><b>algorithm</b>=<em>string</em></DT>
+<DD>Algorithm to use for classification</DD>
+<DD>Options: <em>int,std,qua,equ,dis</em></DD>
+<DD><b>int</b>: simple intervals</DD>
+<DD><b>std</b>: standard deviations</DD>
+<DD><b>qua</b>: quantiles</DD>
+<DD><b>equ</b>: equiprobable (normal distribution)</DD>
+
+<DT><b>nbclasses</b>=<em>integer</em></DT>
+<DD>Number of classes to define</DD>
+
+<DT><b>colors</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Colors (one per class).</DD>
+
+<DT><b>layer</b>=<em>integer</em></DT>
+<DD>Layer number</DD>
+<DD>Layer number. If -1, all layers are displayed.</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>where</b>=<em>sql_query</em></DT>
+<DD>WHERE conditions of SQL statement without 'where' keyword</DD>
+<DD>Example: income &lt; 1000 and inhab &gt;= 10000</DD>
+
+<DT><b>bwidth</b>=<em>integer</em></DT>
+<DD>Boundary width</DD>
+<DD>Default: <em>0</em></DD>
+
+<DT><b>bcolor</b>=<em>string</em></DT>
+<DD>Boundary color</DD>
+<DD>Default: <em>black</em></DD>
+
+<DT><b>render</b>=<em>string</em></DT>
+<DD>Rendering method for filled polygons</DD>
+<DD>Options: <em>d,c,l</em></DD>
+<DD>Default: <em>l</em></DD>
+<DD><b>d</b>: use the display library basic functions (features: polylines)</DD>
+<DD><b>c</b>: use the display library clipping functions (features: clipping)</DD>
+<DD><b>l</b>: use the display library culling functions (features: culling, polylines)</DD>
+
+<DT><b>legendfile</b>=<em>name</em></DT>
+<DD>File in which to save d.graph instructions for legend display</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>d.thematic.area</em> draws thematic coropleth vector maps based on an attribute column or an expression involving several columns. It takes a number of class breaks (excluding the minimum and maximum values) and a list of colors to apply to the classes (has to be the number of class breaks + 1).
+
+The <em>-l</em> flag instructs the module to print legend information (class min | class max | number of observations in class | color) to standard output for futher use in graphical software. When given this flag with the <em>-n</em> flag, the module will only print the legend information without drawing the map.
+
+One can used <em>v.class</em> to supply class breaks for d.thematic.area (see example below);
+
+
+<h2>EXAMPLE</h2>
+
+<div class="code"><pre>
+d.thematic.area -l map=communes3 data=pop breaks=111393.250000,222785.500000,334177.750000 colors=255:0:0,0:255:0,0:0:255,0,0,0
+</pre></div>
+
+The following example uses a calculated attribute (density = pop/area) and v.class to calculate class breaks and feed them directly into d.thematic.area:
+<div class="code"><pre>
+d.thematic.area -l map=communes2 data=pop/area breaks=`v.class -g map=communes2 column=pop/area algo=std nbcla=5` colors=0:0:255,50:100:255,255:100:50,255:0:0,156:0:0
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em><a href="v.class.html">v.class</a></em>
+<em><a href="d.vect.html">d.vect</a></em>
+<em><a href="v.univar.html">v.univar</a></em>
+
+
+<h2>AUTHOR</h2>
+
+Moritz Lennert
+<HR>
+<P><a href="index.html">Main index</a> - <a href="display.html">display index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: d.slide.show</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>d.slide.show</b></em>  - Slide show of GRASS raster/vector maps.
+<h2>KEYWORDS</h2>
+display, slideshow
+<h2>SYNOPSIS</h2>
+<b>d.slide.show</b><br>
+<b>d.slide.show help</b><br>
+<b>d.slide.show</b> [-<b>v</b>]  [<b>prefix</b>=<em>string</em>]   [<b>across</b>=<em>integer</em>]   [<b>down</b>=<em>integer</em>]   [<b>mapsets</b>=<em>string</em>[,<i>string</i>,...]]   [<b>delay</b>=<em>integer</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-v</b></DT>
+<DD>Show vector maps rather than raster maps</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>prefix</b>=<em>string</em></DT>
+<DD>Map prefix. Specify character(s) to view selected maps only</DD>
+
+<DT><b>across</b>=<em>integer</em></DT>
+<DD>Map number show across the monitor</DD>
+
+<DT><b>down</b>=<em>integer</em></DT>
+<DD>Map number show down the monitor</DD>
+
+<DT><b>mapsets</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Mapsets to use. Specify multiple mapsets comma separated</DD>
+
+<DT><b>delay</b>=<em>integer</em></DT>
+<DD>Number of seconds to pause between slides</DD>
+<DD>Options: <em>0-60</em></DD>
+<DD>Default: <em>0</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+
+<em>d.slide.show</em> is a UNIX Bourne shell macro which
+clears the entire screen, creates a series of display
+frames on the graphics monitor, and displays in slideshow
+format each of the raster/vector map layers listed in the
+user-specified <em>mapsets</em>.  This is a shell script
+example which makes extensive use of GRASS and UNIX
+commands.  Users are encouraged to examine this macro and
+develop similar on-line demos using their own data files.
+
+<h2>EXAMPLE</h2>
+
+The following command sequence shows the available raster
+maps, saves the view to a PNG file and then converts it
+into a PDF file:
+
+<div class="code"><pre>
+# reset region:
+g.region -dp
+
+# open GRASS monitor with defined size:
+GRASS_WIDTH=800 GRASS_HEIGHT=1000 d.mon x0
+
+# we have around 40 maps in the Spearfish PERMANENT mapset:
+d.slide.show across=5 down=8 mapsets=PERMANENT
+
+# From Monitor to PNG to PDF:
+d.out.png out=spearfish_maps.png res=2
+
+convert spearfish_maps.png spearfish_maps.pdf
+xpdf spearfish_maps.pdf
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="d.erase.html">d.erase</a><br>
+<a href="d.frame.html">d.frame</a><br>
+<a href="d.text.html">d.text</a><br>
+<a href="g.mapsets.html">g.mapsets</a><br>
+<a href="xganim.html">xganim</a><br>
+</em>
+<br>
+
+<h2>AUTHOR</h2>
+James Westervelt, U.S.Army Construction Engineering 
+Research Laboratory
+<br>
+Vector update, fixes: Markus Neteler
+
+<p>
+<i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="display.html">display index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

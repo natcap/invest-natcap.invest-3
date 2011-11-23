@@ -1,0 +1,113 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.resamp.stats</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.resamp.stats</b></em>  - Resamples raster map layers to a coarser grid using aggregation.
+<h2>KEYWORDS</h2>
+raster, resample
+<h2>SYNOPSIS</h2>
+<b>r.resamp.stats</b><br>
+<b>r.resamp.stats help</b><br>
+<b>r.resamp.stats</b> [-<b>nw</b>] <b>input</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>method</b>=<em>string</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-n</b></DT>
+<DD>Propagate NULLs</DD>
+
+<DT><b>-w</b></DT>
+<DD>Weight according to area (slower)</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input raster map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output raster map</DD>
+
+<DT><b>method</b>=<em>string</em></DT>
+<DD>Aggregation method</DD>
+<DD>Options: <em>average,median,mode,minimum,maximum,quart1,quart3,perc90,sum,variance,stddev</em></DD>
+<DD>Default: <em>average</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<p>
+<em>r.resamp.stats</em> fills a grid cell (raster) matrix with
+aggregated values generated from a set of input layer data points.
+
+
+<p>
+Without the <em>-w</em> switch, the aggregate is computed over all of
+the input cells whose centers lie within the output cell.
+
+<p>
+With the <em>-w</em> switch, the aggregate uses the values from all
+input cells which intersect the output cell, weighted according to the
+proportion of the source cell which lies inside the output cell. This
+is slower, but produces a more accurate result.
+
+
+<h2>NOTES</h2>
+
+<p>
+Resampling modules (<em>r.resample, r.resamp.stats, r.resamp.interp,
+r.resamp.rst</em>) resample the map to match the current region settings.
+
+<p>
+The notion of weighting doesn't make any sense for the min and max
+aggregates. However, the <em>-w</em> flag still has significance in
+that, when multiple destination cells overlap a source cell, the
+source cell is included in the calculation of all of the destination
+cells.
+
+
+<h2>EXAMPLE</h2>
+
+<p>
+Resample elevation raster map to a lower resolution (from 6m to 20m;
+North Carolina sample dataset):
+
+
+<div class="code"><pre>
+g.region rast=el_D782_6m -p
+g.region res=20 -ap
+r.resamp.stats input=el_D782_6m output=el_D782_20m
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em><a href="g.region.html">g.region</a></em>,
+<em><a href="r.resample.html">r.resample</a></em>,
+<em><a href="r.resamp.rst.html">r.resamp.rst</a></em>
+<em><a href="r.resamp.interp.html">r.resamp.interp</a></em>
+
+<h2>AUTHOR</h2>
+
+Glynn Clements
+
+<p>
+<i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

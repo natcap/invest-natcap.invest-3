@@ -1,0 +1,115 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.median</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.median</b></em>  - Finds the median of values in a cover map within areas assigned the same category value in a user-specified base map.
+<h2>KEYWORDS</h2>
+raster, statistics
+<h2>SYNOPSIS</h2>
+<b>r.median</b><br>
+<b>r.median help</b><br>
+<b>r.median</b> <b>base</b>=<em>name</em> <b>cover</b>=<em>name</em> <b>output</b>=<em>name</em>  [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>base</b>=<em>name</em></DT>
+<DD>Name of base raster map</DD>
+
+<DT><b>cover</b>=<em>name</em></DT>
+<DD>Name of cover raster map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output raster map</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+
+<em>r.median</em> calculates the median category of data
+contained in a <b>cover</b> raster map layer for areas
+assigned the same category value in the user-specified
+<b>base</b> raster map layer.  These median values are
+stored in the new <b>output</b> map layer.
+
+<p>
+The <b>output</b> map is actually a <em>reclass</em> of the <b>base</b> map.
+
+The <b>base</b>  map is an existing raster map layer in the user's current
+mapset search path.  For each group of cells assigned the
+same category value in the <b>base</b> map, the median of
+the values assigned these cells in the <b>cover</b> map
+will be computed.
+
+<p>
+The <b>cover</b> map is an existing raster map layer containing the values
+to be used to compute the median within each category of the <b>base</b> map.
+
+
+<h2>NOTES</h2>
+
+The user should use the results of <em>r.median</em> with
+care.  Since this utility assigns a value to each cell
+which is based on global information (i.e., information at
+spatial locations other than just the location of the cell
+itself), the resultant map layer is only valid if the
+geographic region and mask settings are the same as they
+were at the time that the result map was created.
+
+<p>
+Results are affected by the current region settings and mask.
+
+<h2>EXAMPLE</h2>
+
+Median K-factor (erosion) for Spearfish fields:
+
+<div class="code"><pre>
+g.region rast=fields -p
+r.median base=fields cover=soils.Kfactor output=K.by.farm.median
+r.univar K.by.farm.median
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em><a href="g.region.html">g.region</a></em>,
+<em><a href="r.average.html">r.average</a></em>,
+<em><a href="r.category.html">r.category</a></em>,
+<em><a href="r.clump.html">r.clump</a></em>,
+<em><a href="r.describe.html">r.describe</a></em>,
+<em><a href="r.mapcalc.html">r.mapcalc</a></em>,
+<em><a href="r.mfilter.html">r.mfilter</a></em>,
+<em><a href="r.mode.html">r.mode</a></em>,
+<em><a href="r.neighbors.html">r.neighbors</a></em>,
+<em><a href="r.reclass.html">r.reclass</a></em>,
+<em><a href="r.statistics.html">r.statistics</a></em>,
+<em><a href="r.stats.html">r.stats</a></em>,
+<em><a href="r.univar.html">r.univar</a></em>
+
+<h2>AUTHOR</h2>
+
+Michael Shapiro,
+U.S.Army Construction Engineering Research Laboratory
+
+<p><i>Last changed: $Date: 2008-05-16 21:09:06 +0200 (pá, 16 V 2008) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

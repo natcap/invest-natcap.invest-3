@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.net.components</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.net.components</b></em>  - Computes strongly and weakly connected components in the network.
+<h2>KEYWORDS</h2>
+vector, network, components
+<h2>SYNOPSIS</h2>
+<b>v.net.components</b><br>
+<b>v.net.components help</b><br>
+<b>v.net.components</b> [-<b>a</b>] <b>input</b>=<em>name</em>  [<b>layer</b>=<em>integer</em>]  <b>output</b>=<em>name</em> <b>method</b>=<em>string</em>  [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-a</b></DT>
+<DD>Add points on nodes</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>layer</b>=<em>integer</em></DT>
+<DD>Layer number</DD>
+<DD>A single vector map can be connected to multiple database tables. This number determines which table to use.</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output vector map</DD>
+
+<DT><b>method</b>=<em>string</em></DT>
+<DD>Type of components</DD>
+<DD>Options: <em>weak,strong</em></DD>
+<DD><b>weak</b>: Weakly connected components</DD>
+<DD><b>strong</b>: Strongly connected components</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.net.components</em> computes the weakly and strongly connected components in a network.
+
+<h2>NOTES</h2>
+Two nodes, <em>u</em> and <em>v</em> are in the same strongly connected component if there are directed paths from <em>u</em> to <em>v</em> and from <em>v</em> to <em>u</em>. The nodes are in the same weakly connected component if, ignoring orientation of the edges, there is a path between them.<br>
+
+The type of components is specified by <b>method</b> parameter. Module creates a table and links it to the given <b>layer</b>. This table contains only two integer columns: <em>cat</em> and <em>comp</em>. If a point or both endpoints of a line belong to the same component then the point/line is written to the output map and appropriate information is stored in the table. If <b>-a</b> flag is set then new points are added on the nodes without points. These points have category numbers larger than any category used in the input map.    
+
+<h2>EXAMPLES</h2>
+
+Any road network should form a single strongly connected components. Otherwise,
+it is impossible to travel between some places.
+<div class="code"><pre>
+v.net.components input=roads output=roads_components method=strong
+</pre></div>
+<p>
+
+<div class="code"><pre>
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="v.category.html">v.category</a>,
+</em>
+
+<h2>AUTHORS</h2>
+
+Daniel Bundala, Google Summer of Code 2009, Student<br>
+Wolf Bergenheim, Mentor
+
+<p>
+<i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

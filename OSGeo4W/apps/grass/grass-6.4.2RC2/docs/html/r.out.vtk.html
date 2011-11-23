@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.out.vtk</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.out.vtk</b></em>  - Converts raster maps into the VTK-Ascii format
+<h2>KEYWORDS</h2>
+raster, export
+<h2>SYNOPSIS</h2>
+<b>r.out.vtk</b><br>
+<b>r.out.vtk help</b><br>
+<b>r.out.vtk</b> [-<b>pstvoc</b>] <b>input</b>=<em>name</em>[,<i>name</i>,...]  [<b>output</b>=<em>string</em>]   [<b>elevation</b>=<em>string</em>]   [<b>null</b>=<em>float</em>]   [<b>elevation2d</b>=<em>float</em>]   [<b>rgbmaps</b>=<em>string</em>[,<i>string</i>,...]]   [<b>vectormaps</b>=<em>string</em>[,<i>string</i>,...]]   [<b>elevscale</b>=<em>float</em>]   [<b>dp</b>=<em>integer</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-p</b></DT>
+<DD>Create VTK point data instead of VTK cell data (if no elevation map is given)</DD>
+
+<DT><b>-s</b></DT>
+<DD>Use structured grid for elevation (not recommended)</DD>
+
+<DT><b>-t</b></DT>
+<DD>Use polydata-trianglestrips for elevation grid creation</DD>
+
+<DT><b>-v</b></DT>
+<DD>Use polydata-vertices for elevation grid creation (to use with vtkDelauny2D)</DD>
+
+<DT><b>-o</b></DT>
+<DD>Scale factor effects the origin (if no elevation map is given)</DD>
+
+<DT><b>-c</b></DT>
+<DD>Correct the coordinates to fit the VTK-OpenGL precision</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name[,<i>name</i>,...]</em></DT>
+<DD>Name of input raster map(s)</DD>
+
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Name for VTK-ASCII output file</DD>
+
+<DT><b>elevation</b>=<em>string</em></DT>
+<DD>Elevation raster map</DD>
+
+<DT><b>null</b>=<em>float</em></DT>
+<DD>Value to represent no data cell</DD>
+<DD>Default: <em>-10.0</em></DD>
+
+<DT><b>elevation2d</b>=<em>float</em></DT>
+<DD>Elevation (if no elevation map is specified)</DD>
+<DD>Default: <em>0.0</em></DD>
+
+<DT><b>rgbmaps</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Three (r,g,b) raster maps to create rgb values [redmap,greenmap,bluemap]</DD>
+
+<DT><b>vectormaps</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Three (x,y,z) raster maps to create vector values [xmap,ymap,zmap]</DD>
+
+<DT><b>elevscale</b>=<em>float</em></DT>
+<DD>Scale factor for elevation</DD>
+<DD>Default: <em>1.0</em></DD>
+
+<DT><b>dp</b>=<em>integer</em></DT>
+<DD>Number of significant digits (floating point only)</DD>
+<DD>Options: <em>0-20</em></DD>
+<DD>Default: <em>12</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+Outputs <i>Raster</i> maps in <i>VTK-ASCII</i> format.  <i>Map's</i> are
+valid Raster map's in the current mapset.  <i>output</i> is the name of
+an VTK-ASCII file which will be written in the current working directory.
+If <i>output</i> is not specified then <b>stdout</b> is used.  
+The module is sensitive to region settings (set with g.region).
+<br>
+<br>
+Elevation, scaling, point/celldata, vector and RGB Data are supported.
+If the map is in LL projection, the elevation values will automatically scaled to 
+degrees. It is supposed that the elevation values are provided in meters. 
+If the elevation values are in a different unit than meters, use 
+the scale parameter to convert the units. 
+<br>
+<br>
+If no elevation map is given, the user can set the hight of the map by one value. 
+Point or cell data are available. Also scaling is supported for this elevation value. 
+The elevation value must be provided in meters.
+<br>
+<br>
+The RGB input requires three raster maps: red, green, blue  - in this order. 
+The maps must have values between 0 and 255, otherwise you will get lots of warnings
+and the values are set to 0.
+More than one RGB dataset (3 maps) is not supported. 
+<br>
+<br>
+The vector input requires three raster maps: x, y, z -- defining the vector coordinates  - in this order. 
+More than one vector dataset (3 maps) is not supported. 
+<h2>NOTES</h2>
+This filter generates: 
+<ul>
+<li><i>structured points</i> with <i>celldata</i> or <i>pointdata</i> if no elevationfile is given</li>
+
+<li><i>structured grid</i> (not recommendet) with <i>pointdata</i> if an elevationfile is given</li>
+<li><i>polydataset</i> with <i>pointdata</i> if an elevationfile is given (default)</li> 
+</ul>
+and puts this in a simple VTK-ASCII file. Nor XML or 
+binary output are supported. It is possible to choose more then one raster map
+to be written to the VTK-ASCII file. Each cell-/pointdata is named like the raster map it represents.
+You can visualize this file with the 
+<em><a href="http://www.vtk.org">VTK Toolkit</a></em>, 
+<em><a href="http://www.paraview.org">Paraview</a></em> and 
+<em><a href="http://mayavi.sourceforge.net">MayaVi</a></em> which are based on VTK.
+If you have a raster map with partly no data, use the threshold filter in paraview to 
+visualize the valid data. Just filter all data which is greater/lesser than the 
+chosen null value in the VTK-ASCII file.
+<br>
+If elevation map is chosen, a polygonal grid is created with <i>quads</i>, 
+but the user can choose also <i>triangle strips</i> or <i>vertices</i>. 
+These dataformats a documented at <em><a href="http://www.vtk.org">VTK Toolkit</a></em>.
+<br>
+<br>
+If the "-c" flag is used and the data should be visualised together with other data exported via *.out.vtk
+modules, be sure the "-c" flag was also set in these modules.
+But this will only work with data from the SAME location 
+(The reference point for the coordinates transformation is based on the center point of the default region).
+<br>
+<br>
+
+
+
+<h3>Difference between point- and celldata</h3>
+r.out.vtk can export raster cells with different representations.
+</ul>
+   <li>
+      <i>pointdata</i> -- the cells/values are represented by the center of the cell. 
+      Instead of cells, points are created. Each point can hold different values, 
+      but the user can only visualize one value at a time. These points can 
+      be connected in different ways.
+   </li>
+   <li>
+       <i>celldata</i> -- is only provided if no elevation map is given. 
+       The cells are created with the same hight and width as in GRASS. Each cell 
+       can hold different values, but the user can only visualize one value at a time. 
+   </li>
+</ul>
+<h2>EXAMPLE</h2>
+
+<h3>Simple Spearfish example</h3>
+
+<div class="code"><pre>
+#set a nice region
+g.region -d
+g.region n=4926970 s=4914857 w=591583 e=607793 res=50
+
+#export the data
+r.out.vtk input=elevation.10m,slope,aspect elevation=elevation.10m output=/tmp/out.vtk
+
+# visualize in paraview or other VTK viewer:
+paraview --data=/tmp/out.vtk
+</pre></div>
+
+<h3>Spearfish example with RGB data</h3>
+
+<div class="code"><pre>
+#set the region
+g.region -d
+g.region n=4926970 s=4914857 w=591583 e=607793 res=50
+
+#we are using r.in.onearth (available from the grass addon wiki) to create rgb data
+#get some satellite images with r.in.onearth
+r.in.onearth -l output=Sat tmband=Red
+r.in.onearth -l output=Sat tmband=IR1
+r.in.onearth -l output=Sat tmband=IR2
+
+#export the data
+r.out.vtk rgbmaps=SatLandsatTM_IR1,SatLandsatTM_IR2,SatLandsatTM_Red elevation=elevation.10m output=/tmp/out.vtk
+
+# visualize in paraview or other VTK viewer:
+paraview --data=/tmp/out.vtk
+</pre></div>
+
+<br>
+<h2>SEE ALSO</h2>
+
+<em><a href="r3.out.vtk.html">r3.out.vtk</a></em><br>
+<em><a href="r.out.ascii.html">r.out.ascii</a></em><br>
+<em><a href="g.region.html">g.region</a></em><br>
+
+<h2>AUTHORS</h2>
+Soeren Gebbert
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

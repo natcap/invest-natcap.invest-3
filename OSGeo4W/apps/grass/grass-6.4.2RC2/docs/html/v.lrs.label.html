@@ -1,0 +1,164 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.lrs.label</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.lrs.label</b></em>  - Create stationing from input lines, and linear reference system
+<h2>KEYWORDS</h2>
+vector, LRS, networking
+<h2>SYNOPSIS</h2>
+<b>v.lrs.label</b><br>
+<b>v.lrs.label help</b><br>
+<b>v.lrs.label</b> <b>input</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>llayer</b>=<em>integer</em>]   [<b>rsdriver</b>=<em>string</em>]   [<b>rsdatabase</b>=<em>string</em>]  <b>rstable</b>=<em>string</em>  [<b>labels</b>=<em>string</em>]   [<b>offset</b>=<em>string</em>[,<i>string</i>,...]]   [<b>xoffset</b>=<em>float</em>]   [<b>yoffset</b>=<em>float</em>]   [<b>reference</b>=<em>string</em>]   [<b>font</b>=<em>string</em>]   [<b>size</b>=<em>integer</em>]   [<b>color</b>=<em>string</em>]   [<b>width</b>=<em>integer</em>]   [<b>hcolor</b>=<em>string</em>]   [<b>hwidth</b>=<em>integer</em>]   [<b>background</b>=<em>string</em>]   [<b>border</b>=<em>string</em>]   [<b>opaque</b>=<em>string</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Input vector map containing lines</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Output vector map where stationing will be written</DD>
+
+<DT><b>llayer</b>=<em>integer</em></DT>
+<DD>Layer number</DD>
+<DD>Line layer</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>rsdriver</b>=<em>string</em></DT>
+<DD>Driver name for reference system table</DD>
+<DD>Default: <em>dbf</em></DD>
+
+<DT><b>rsdatabase</b>=<em>string</em></DT>
+<DD>Database name for reference system table</DD>
+<DD>Default: <em>$GISDBASE/$LOCATION_NAME/$MAPSET/dbf/</em></DD>
+
+<DT><b>rstable</b>=<em>string</em></DT>
+<DD>Name of the reference system table</DD>
+
+<DT><b>labels</b>=<em>string</em></DT>
+<DD>Label file</DD>
+
+<DT><b>offset</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>PM left, MP right, stationing left, stationing right offset</DD>
+<DD>Default: <em>50,100,25,25</em></DD>
+
+<DT><b>xoffset</b>=<em>float</em></DT>
+<DD>Offset label in label x-direction in map units</DD>
+<DD>Default: <em>25</em></DD>
+
+<DT><b>yoffset</b>=<em>float</em></DT>
+<DD>Offset label in label y-direction in map units</DD>
+<DD>Default: <em>5</em></DD>
+
+<DT><b>reference</b>=<em>string</em></DT>
+<DD>Reference position</DD>
+<DD>Options: <em>center,left,right,upper,lower</em></DD>
+<DD>Default: <em>center</em></DD>
+
+<DT><b>font</b>=<em>string</em></DT>
+<DD>Font</DD>
+<DD>Default: <em>standard</em></DD>
+
+<DT><b>size</b>=<em>integer</em></DT>
+<DD>Label size (in map-units)</DD>
+<DD>Options: <em>1-1000</em></DD>
+<DD>Default: <em>100</em></DD>
+
+<DT><b>color</b>=<em>string</em></DT>
+<DD>Text color</DD>
+<DD>Options: <em>aqua,black,blue,brown,cyan,gray,green,grey,indigo,magenta,orange,purple,red,violet,white,yellow</em></DD>
+<DD>Default: <em>black</em></DD>
+
+<DT><b>width</b>=<em>integer</em></DT>
+<DD>Line width of text</DD>
+<DD>Only for d.label output</DD>
+<DD>Options: <em>1-100</em></DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>hcolor</b>=<em>string</em></DT>
+<DD>Highlight color for text</DD>
+<DD>Only for d.label output</DD>
+<DD>Options: <em>none,aqua,black,blue,brown,cyan,gray,green,grey,indigo,magenta,orange,purple,red,violet,white,yellow</em></DD>
+<DD>Default: <em>none</em></DD>
+
+<DT><b>hwidth</b>=<em>integer</em></DT>
+<DD>Line width of highlight color</DD>
+<DD>Only for d.label output</DD>
+<DD>Options: <em>0-100</em></DD>
+<DD>Default: <em>0</em></DD>
+
+<DT><b>background</b>=<em>string</em></DT>
+<DD>Background color</DD>
+<DD>Options: <em>none,aqua,black,blue,brown,cyan,gray,green,grey,indigo,magenta,orange,purple,red,violet,white,yellow</em></DD>
+<DD>Default: <em>none</em></DD>
+
+<DT><b>border</b>=<em>string</em></DT>
+<DD>Border color</DD>
+<DD>Options: <em>none,aqua,black,blue,brown,cyan,gray,green,grey,indigo,magenta,orange,purple,red,violet,white,yellow</em></DD>
+<DD>Default: <em>none</em></DD>
+
+<DT><b>opaque</b>=<em>string</em></DT>
+<DD>Opaque to vector</DD>
+<DD>Only relevant if background color is selected</DD>
+<DD>Options: <em>yes,no</em></DD>
+<DD>Default: <em>yes</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.lrs.label</em> generates LRS labels for pretty-printing of a LRS.
+
+This example is written for the Spearfish dataset (it continues the example
+from <em>v.lrs.create</em>).
+<p>
+
+
+<div class="code"><pre>
+v.lrs.label route_lrs rstable=route_lrs output=route_lrs_labels \
+            labels=labels col=red size=50 xoffset=100
+
+g.region vect=route_lrs n=n+100 s=s-100 -p
+d.erase
+d.vect route_lrs
+d.vect route_lrs_labels col=grey type=line
+d.vect busstops disp=attr attr=cat size=10 bg=white lcol=green yref=bottom
+d.vect busstops icon=basic/circle fcol=green
+d.labels labels
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em><a HREF="lrs.html">LRS tutorial</a></em>,<br>
+<em><a HREF="http://gisws.media.osaka-cu.ac.jp/grass04/viewpaper.php?id=50">Introducing the Linear Reference System in GRASS</a></em>,<br>
+<em><a HREF="v.lrs.create.html">v.lrs.create</a></em>,
+<em><a HREF="v.lrs.segment.html">v.lrs.segment</a></em>,
+<em><a HREF="v.lrs.where.html">v.lrs.where</a></em>
+
+<h2>AUTHOR</h2>
+
+Radim Blazek, ITC-irst/MPA Solutions<br>
+Documentation update (based on above journal article and available fragments): Markus Neteler
+
+<p><i>Last changed: $Date: 2007-06-28 17:28:50 +0200 (čt, 28 VI 2007) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

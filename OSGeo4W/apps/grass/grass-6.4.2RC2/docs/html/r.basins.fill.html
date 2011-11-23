@@ -1,0 +1,105 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.basins.fill</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.basins.fill</b></em>  - Generates watershed subbasins raster map.
+<h2>KEYWORDS</h2>
+raster, hydrology
+<h2>SYNOPSIS</h2>
+<b>r.basins.fill</b><br>
+<b>r.basins.fill help</b><br>
+<b>r.basins.fill</b> <b>c_map</b>=<em>name</em> <b>t_map</b>=<em>name</em> <b>result</b>=<em>name</em> <b>number</b>=<em>integer</em>  [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>c_map</b>=<em>name</em></DT>
+<DD>Name of input coded stream network raster map</DD>
+
+<DT><b>t_map</b>=<em>name</em></DT>
+<DD>Name of input thinned ridge network raster map</DD>
+
+<DT><b>result</b>=<em>name</em></DT>
+<DD>Name for output raster map</DD>
+
+<DT><b>number</b>=<em>integer</em></DT>
+<DD>Number of passes through the dataset</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+
+<em>r.basins.fill</em>
+generates a raster map layer depicting subbasins, based 
+on input raster map layers for the coded stream network 
+(where each channel segment has been "coded" with a unique category value) 
+and for the ridges within a given watershed. 
+The raster map layer depicting ridges should include 
+the ridge which defines the perimeter of the watershed. 
+The coded stream network can be generated 
+as part of the 
+<em><a href="r.watershed.html">r.watershed</a></em> program, 
+but the map layer of ridges will need to be created by hand
+(for example, through digitizing done in <em><a href="v.digit.html">v.digit</a></em>).
+
+<p>
+
+The resulting output raster map layer will 
+code the subbasins with category values matching 
+those of the channel segments passing through them. 
+A user-supplied number of passes through the data is 
+made in an attempt to fill in these subbasins. 
+If the resulting map layer from this program appears to 
+have holes within a subbasin, the program should be 
+rerun with a higher number of passes. 
+<br><br>
+
+
+<h2>NOTES</h2>
+
+The current geographic region setting is ignored. 
+Instead, the geographic region for the entire input stream's 
+map layer is used. 
+
+<h2>SEE ALSO</h2>
+
+See Appendix A of the <b>GRASS</b> <a
+href="http://grass.osgeo.org/gdp/raster/r.watershed.ps">Tutorial:
+r.watershed</a> for further details on the combined use of
+<em>r.basins.fill</em> and <em><a href="r.watershed.html">r.watershed</a></em>.
+
+<em><a href="r.watershed.html">r.watershed</a></em>,
+<em><a href="v.digit.html">v.digit</a></em>
+
+<h2>AUTHORS</h2>
+
+Dale White, 
+Dept. of Geography, 
+Pennsylvania State University
+<br>
+Larry Band, Dept. of Geography, University of Toronto, Canada 
+
+<p>
+<i>Last changed: $Date: 2010-09-16 09:25:59 +0200 (čt, 16 IX 2010) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.univar.sh</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.univar.sh</b></em>  - Calculates univariate statistics on selected table column for a GRASS vector map.
+<h2>KEYWORDS</h2>
+vector, statistics
+<h2>SYNOPSIS</h2>
+<b>v.univar.sh</b><br>
+<b>v.univar.sh help</b><br>
+<b>v.univar.sh</b> [-<b>e</b>] <b>table</b>=<em>string</em> <b>column</b>=<em>string</em>  [<b>database</b>=<em>string</em>]   [<b>driver</b>=<em>string</em>]   [<b>where</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-e</b></DT>
+<DD>Extended statistics (quartiles and 90th percentile)</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>table</b>=<em>string</em></DT>
+<DD>Name of data table</DD>
+
+<DT><b>column</b>=<em>string</em></DT>
+<DD>Column on which to calculate statistics (must be numeric)</DD>
+
+<DT><b>database</b>=<em>string</em></DT>
+<DD>Database/directory for table</DD>
+
+<DT><b>driver</b>=<em>string</em></DT>
+<DD>Database driver</DD>
+
+<DT><b>where</b>=<em>string</em></DT>
+<DD>WHERE conditions of SQL statement without 'where' keyword</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+
+Calculates basic univariate statistics for numeric
+attributes in a data table. It will calculate minimum, maximum, range, mean,
+standard deviation, variance, coefficient of variation, quartiles, median,
+and 90th percentile. It is closely based on <em>r.univar.sh</em> and uses
+<em>db.select</em> to create a list values for statistical calculations.
+This script could be replaced by an updated <em>v.univar</em>.
+<p>
+
+<em>(GRASS Shell Script)</em>
+
+<h2>NOTES</h2>
+
+If the database and driver are not specified, the module will use the default
+values set in <em>db.connect</em>.
+
+
+<h2>EXAMPLE</h2>
+
+<div class="code"><pre>
+g.region rast=elevation.10m -p
+v.random out=samples n=100
+v.db.addtable samples col="heights double precision"
+v.what.rast samples rast=elevation.10m col=heights
+v.db.select samples
+
+v.univar.sh samples col=heights
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="r.univar.html">r.univar</a>,
+<a href="r.univar.sh.html">r.univar.sh</a>, 
+<a href="v.univar.html">v.univar,</a>,
+<a href="db.select.html">db.select</a>,
+<a href="d.vect.thematic.html">d.vect.thematic</a></em>
+
+<p> AUTHORS
+v.univar.sh: Michael Barton, Arizona State University
+<p>
+and authors of <em>r.univar.sh</em>
+<p>
+<i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

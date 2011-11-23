@@ -1,0 +1,160 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.in.db</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.in.db</b></em>  - Creates new vector (points) map from database table containing coordinates.
+<h2>KEYWORDS</h2>
+vector, import, database, points
+<h2>SYNOPSIS</h2>
+<b>v.in.db</b><br>
+<b>v.in.db help</b><br>
+<b>v.in.db</b> <b>table</b>=<em>name</em>  [<b>driver</b>=<em>name</em>]   [<b>database</b>=<em>name</em>]  <b>x</b>=<em>name</em> <b>y</b>=<em>name</em>  [<b>z</b>=<em>name</em>]  <b>key</b>=<em>name</em>  [<b>where</b>=<em>sql_query</em>]  <b>output</b>=<em>name</em>  [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>table</b>=<em>name</em></DT>
+<DD>Input table name</DD>
+
+<DT><b>driver</b>=<em>name</em></DT>
+<DD>Driver name</DD>
+<DD>Options: <em>dbf,odbc,ogr,pg,sqlite</em></DD>
+<DD>Default: <em>dbf</em></DD>
+
+<DT><b>database</b>=<em>name</em></DT>
+<DD>Database name</DD>
+<DD>Default: <em>$GISDBASE/$LOCATION_NAME/$MAPSET/dbf/</em></DD>
+
+<DT><b>x</b>=<em>name</em></DT>
+<DD>Name of column containing x coordinate</DD>
+
+<DT><b>y</b>=<em>name</em></DT>
+<DD>Name of column containing y coordinate</DD>
+
+<DT><b>z</b>=<em>name</em></DT>
+<DD>Name of column containing z coordinate</DD>
+
+<DT><b>key</b>=<em>name</em></DT>
+<DD>Name of column containing category number</DD>
+<DD>Must refer to an integer column</DD>
+
+<DT><b>where</b>=<em>sql_query</em></DT>
+<DD>WHERE conditions of SQL statement without 'where' keyword</DD>
+<DD>Example: income &lt; 1000 and inhab &gt;= 10000</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output vector map</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.in.db</em> 
+creates new vector (points) map from database table containing coordinates. 
+
+<h2>EXAMPLE</h2>
+
+<h3>1) Creating a map from PostgreSQL table:</h3>
+
+<div class="code"><pre>
+v.in.db driver=pg database="host=myserver.itc.it,dbname=mydb" \
+        table=pat_stazioni x=east y=north z=quota key=id output=pat_stazioni
+</pre></div>
+<p>
+If an ID column is not not present in the PostgreSQL table,
+a new column should be added. See <a href="grass-pg.html">pg</a> driver
+page for detail.
+
+<h3>2) Creating a map from PostGIS:</h3>
+
+To extract coordinate values from PostGIS, functions have to be used:
+<div class="code"><pre>
+v.in.db driver=pg database="host=myserver.itc.it,dbname=mydb" \
+        table=station x="x(geom)" y="y(geom)" z="z(geom)" key=id out=meteostations
+</pre></div>
+<p>
+If an ID column is not not present in the PostgreSQL table,
+a new column should be added. See <a href="grass-pg.html">pg</a> driver 
+page for detail.
+
+<h3>3) Import of a points table (x, y, z) from DBF file to vector points map:</h3>
+
+<div class="code"><pre>
+#create vector map from DBF table (here, 'idcol' contains unique row IDs, 'z' is optional):
+#the 'database' parameter is the directory where the DBF file is stored:
+v.in.db driver=dbf database=/home/user/tables/ table=pointsfile x=x y=y z=z \
+        key=idcol out=dtmpoints
+
+#check result:
+v.info dtmpoints
+v.info -c dtmpoints
+</pre></div>
+<p>
+If an ID column is missing in the DBF file, it has to be added beforehand, e.g. with OpenOffice.
+Alternatively, import the table with <em>db.in.ogr</em> into GRASS and then with <em>v.in.db</em>
+from the imported table (<em>db.in.ogr</em> optionally adds an unique ID column).
+
+<h3>4) Import of a points table (x, y, z) from SQLite file to vector points map:</h3>
+
+<div class="code"><pre>
+#create vector map from table in SQLITE database file (here, 'idcol' contains unique row IDs, 'z' is optional):
+#the 'database' parameter is the the SQLite database file with path:
+v.in.db driver=sqlite database=/home/user/tables/mysqlite.db table=pointsfile x=x y=y z=z \
+        key=idcol out=dtmpoints
+
+#check result:
+v.info dtmpoints
+v.info -c dtmpoints
+</pre></div>
+<p>
+If an ID column is missing in the table, it has to be added beforehand with 'sqlite3' or
+<em>db.execute</em>.
+
+
+<h3>5) Import of a points table (x, y, z) from DBF file to vector points map for selected points only:</h3>
+<p>
+The user can import only selected vector points from a table using the <em>where</em> parameter
+(see above for general DBF handling):<p>
+<div class="code"><pre>
+v.in.db driver=dbf  database=/home/user/tables/ table=pointsfile x=x y=y z=z \
+        key=idcol out=dtmpoints where="x NOT NULL and z > 100"
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="db.execute.html">db.execute</a>,
+<a href="db.in.ogr.html">db.in.ogr</a>,
+<a href="v.info.html">v.info</a>,
+<a href="v.in.ogr.html">v.in.ogr</a>,
+<a href="v.to.db.html">v.to.db</a>,<br>
+<a href="sql.html">SQL support in GRASS GIS</a>
+</em>
+
+
+<h2>AUTHOR</h2>
+
+Radim Blazek
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

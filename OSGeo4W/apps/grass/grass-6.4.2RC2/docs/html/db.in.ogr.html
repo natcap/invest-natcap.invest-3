@@ -1,0 +1,100 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: db.in.ogr</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>db.in.ogr</b></em>  - Imports attribute tables in various formats.
+<h2>KEYWORDS</h2>
+database, attribute table
+<h2>SYNOPSIS</h2>
+<b>db.in.ogr</b><br>
+<b>db.in.ogr help</b><br>
+<b>db.in.ogr</b> <b>dsn</b>=<em>name</em>  [<b>db_table</b>=<em>name</em>]   [<b>output</b>=<em>string</em>]   [<b>key</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>dsn</b>=<em>name</em></DT>
+<DD>Table file to be imported or DB connection string</DD>
+
+<DT><b>db_table</b>=<em>name</em></DT>
+<DD>Table name of SQL DB table</DD>
+
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Name for output table</DD>
+
+<DT><b>key</b>=<em>string</em></DT>
+<DD>Name for auto-generated unique key column</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>db.in.ogr</em> imports attribute tables in various formats as
+supported by the OGR driver on the local system (DBF, CSV,
+PostgreSQL, SQLite, MySQL, ODBC, etc.). Optionally a unique key (ID)
+column can be added to the table.
+
+<h2>NOTES</h2>
+
+
+<h2>EXAMPLES</h2>
+
+Import of a CSV table file:<br>
+Limited type recognition can be done for Integer, Real, String, Date, Time and DateTime
+columns through a descriptive file with same name as the CSV file, but .csvt extension
+(see details <a href="http://www.gdal.org/ogr/drv_csv.html">here</a>).
+<p>
+<div class="code"><pre>
+# NOTE: create koeppen_gridcode.csvt first for type recognition
+db.in.ogr dsn=koeppen_gridcode.csv output=koeppen_gridcode
+db.select koeppen_gridcode
+</pre></div>
+
+<p>
+Import of a DBF table with additional unique key column (e.g., needed for <em>v.in.db</em>):
+<p>
+<div class="code"><pre>
+db.in.ogr dsn=$HOME/mydata.dbf output=census_raleigh key=myid
+db.describe -c census_raleigh
+</pre></div>
+
+<p>
+Import of a SQLite table:
+<p>
+<div class="code"><pre>
+db.in.ogr dsn=$HOME/sqlite/sqlite.db db_table=census_raleigh output=census_raleigh
+</pre></div>
+
+<p>
+Import of a PostgreSQL table:
+<p>
+<div class="code"><pre>
+db.in.ogr dsn="PG:host=localhost dbname=ecad user=neteler" \
+          db_table=ecad_verona_tmean output=ecad_verona_tmean
+db.select ecad_verona_tmean
+db.describe -c ecad_verona_tmean
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+
+<em><a href="v.in.ogr.html">v.in.ogr</a></em><br>
+<em><a href="sql.html">GRASS SQL interface</a></em>
+
+<h2>AUTHOR</h2>
+
+Markus Neteler
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="database.html">database index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

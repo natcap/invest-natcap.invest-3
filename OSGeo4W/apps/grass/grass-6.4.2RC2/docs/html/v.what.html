@@ -1,0 +1,91 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.what</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.what</b></em>  - Queries a vector map layer at given locations.
+<h2>KEYWORDS</h2>
+vector, querying
+<h2>SYNOPSIS</h2>
+<b>v.what</b><br>
+<b>v.what help</b><br>
+<b>v.what</b> [-<b>dag</b>] <b>map</b>=<em>name</em>[,<i>name</i>,...]  [<b>east_north</b>=<em>east,north</em>[,<i>east,north</i>,...]]   [<b>distance</b>=<em>float</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-d</b></DT>
+<DD>Print topological information (debugging)</DD>
+
+<DT><b>-a</b></DT>
+<DD>Print attribute information</DD>
+
+<DT><b>-g</b></DT>
+<DD>Print the stats in shell script style</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>name[,<i>name</i>,...]</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>east_north</b>=<em>east,north[,<i>east,north</i>,...]</em></DT>
+<DD>Coordinates for query</DD>
+<DD>If not given reads from standard input</DD>
+
+<DT><b>distance</b>=<em>float</em></DT>
+<DD>Query threshold distance</DD>
+<DD>Default: <em>0</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.what</em>
+Outputs the category number value(s) associated with user-specified location(s) 
+in user-specified vector map layer(s).  This module was derived from the
+<em>d.what.vect</em> module by removing all interactive code and
+modification of the output for easy parsing. Using the <em>-g</em> flag permits to
+generate script style output which is easily parsable.
+<p>
+This module always reports standard acres, even when the location uses
+US Survey feet as the map unit.
+
+
+<h2>EXAMPLE</h2>
+
+Spearfish example:
+<div class="code"><pre>
+v.what fields east_north=599121.75,4922981.125
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="d.what.vect.html">d.what.vect</a>
+</em>
+
+
+<h2>AUTHOR</h2>
+
+Trevor Wiens<br>
+Edmonton, Alberta, Canada
+
+<p>
+<i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

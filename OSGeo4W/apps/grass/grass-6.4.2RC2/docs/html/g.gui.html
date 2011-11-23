@@ -1,0 +1,107 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: g.gui</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>g.gui</b></em>  - Launches a GRASS graphical user interface (GUI) session.
+<h2>KEYWORDS</h2>
+general, gui
+<h2>SYNOPSIS</h2>
+<b>g.gui</b><br>
+<b>g.gui help</b><br>
+<b>g.gui</b> [-<b>un</b>]  [<b>gui</b>=<em>string</em>]   [<b>workspace</b>=<em>name</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-u</b></DT>
+<DD>Update default GUI setting</DD>
+
+<DT><b>-n</b></DT>
+<DD>Do not launch GUI after updating the default GUI setting</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>gui</b>=<em>string</em></DT>
+<DD>GUI type</DD>
+<DD>Default value: GRASS_GUI if defined, otherwise wxpython</DD>
+<DD>Options: <em>wxpython,tcltk,oldtcltk,text</em></DD>
+<DD><b>wxpython</b>: wxPython based GUI - wxGUI</DD>
+<DD><b>tcltk</b>: Tcl/Tk based GUI - GIS Manager (gis.m)</DD>
+<DD><b>oldtcltk</b>: Old Tcl/Tk based GUI - Display Manager (d.m)</DD>
+<DD><b>text</b>: command line interface only</DD>
+
+<DT><b>workspace</b>=<em>name</em></DT>
+<DD>Name of workspace file</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<p>
+This program allows user to start a selected graphical user interface (GUI)
+from the command line prompt.
+
+<p>
+Currently three different GUIs are supported:
+
+<ul>
+<li><b>tcltk</b> - Current Tcl/Tk based GUI aka the <em>gis.m</em>
+    <a href="gis.m.html">GIS Manager</a></li>
+<li><b>oldtcltk</b> - Old Tcl/Tk based GUI aka the <em>d.m</em>
+    <a href="d.m.html">Display Manager</a></li>
+<li><b>wxpython</b> - New wxPython based GUI aka
+    <a href="wxGUI.html">wxGUI</a></li>
+</ul>
+
+If the <b>-u</b> update flag is given or the <em>g.gisenv</em>
+<tt>GRASS_GUI</tt> variable is missing, then the <tt>GRASS_GUI</tt>
+variable is permanently changed and the selected GUI will be used
+as the default UI from then on.
+
+
+<h2>NOTES</h2>
+
+Valid values for GRASS_GUI are <tt>text</tt>, <tt>tcltk</tt>,
+<tt>oldtcltk</tt>, and <tt>wxpython</tt>.
+
+<em>g.gisenv</em> variables are stored in the user's home directory
+in a hidden file called "<TT>.grassrc6</TT>". They are not shell environment
+variables and the "rc" file is not a classic UNIX run command file,
+it just contains persistent GRASS variables and is not executed.
+
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="wxGUI.html">wxPython based new generation GUI</a>,
+<a href="http://grass.gdf-hannover.de/wiki/WxPython-based_GUI_for_GRASS">wxGUI wiki-page</a><br>
+<a href="gis.m.html">Tcl/Tk based GIS Manager (gis.m)</a>,<br>
+<a href="d.m.html">Tcl/Tk based Display Manager (d.m)</a>,<br><br>
+<a href="g.gisenv.html">g.gisenv</a>, <a href="variables.html">GRASS variables list</a>
+</em>
+
+
+<h2>AUTHORS</h2>
+
+Martin Landa, FBK-irst, Trento, Italy<br>
+Hamish Bowman, Otago University, Dunedin, New Zealand (fine tuning)
+
+<p>
+<i>$Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="general.html">general index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

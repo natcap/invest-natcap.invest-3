@@ -1,0 +1,175 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.sunmask</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.sunmask</b></em>  - Calculates cast shadow areas from sun position and elevation raster map.<BR>
+Either exact sun position (A) is specified, or date/time to calculate the sun position (B) by r.sunmask itself.
+<h2>KEYWORDS</h2>
+raster, sun position
+<h2>SYNOPSIS</h2>
+<b>r.sunmask</b><br>
+<b>r.sunmask help</b><br>
+<b>r.sunmask</b> [-<b>zvsg</b>] <b>elevation</b>=<em>name</em>  [<b>output</b>=<em>name</em>]   [<b>altitude</b>=<em>float</em>]   [<b>azimuth</b>=<em>float</em>]   [<b>year</b>=<em>integer</em>]   [<b>month</b>=<em>integer</em>]   [<b>day</b>=<em>integer</em>]   [<b>hour</b>=<em>integer</em>]   [<b>minute</b>=<em>integer</em>]   [<b>second</b>=<em>integer</em>]   [<b>timezone</b>=<em>integer</em>]   [<b>east</b>=<em>value</em>]   [<b>north</b>=<em>value</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-z</b></DT>
+<DD>Don't ignore zero elevation</DD>
+
+<DT><b>-v</b></DT>
+<DD>Verbose output (also print out sun position etc.)</DD>
+
+<DT><b>-s</b></DT>
+<DD>Calculate sun position only and exit</DD>
+
+<DT><b>-g</b></DT>
+<DD>Print the sun position output in shell script style</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>elevation</b>=<em>name</em></DT>
+<DD>Name of elevation raster map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output raster map</DD>
+
+<DT><b>altitude</b>=<em>float</em></DT>
+<DD>Altitude of the sun above horizon, degrees (A)</DD>
+<DD>Options: <em>0-89.999</em></DD>
+
+<DT><b>azimuth</b>=<em>float</em></DT>
+<DD>Azimuth of the sun from the north, degrees (A)</DD>
+<DD>Options: <em>0-360</em></DD>
+
+<DT><b>year</b>=<em>integer</em></DT>
+<DD>Year (B)</DD>
+<DD>Options: <em>1950-2050</em></DD>
+
+<DT><b>month</b>=<em>integer</em></DT>
+<DD>Month (B)</DD>
+<DD>Options: <em>0-12</em></DD>
+
+<DT><b>day</b>=<em>integer</em></DT>
+<DD>Day (B)</DD>
+<DD>Options: <em>0-31</em></DD>
+
+<DT><b>hour</b>=<em>integer</em></DT>
+<DD>Hour (B)</DD>
+<DD>Options: <em>0-24</em></DD>
+
+<DT><b>minute</b>=<em>integer</em></DT>
+<DD>Minutes (B)</DD>
+<DD>Options: <em>0-60</em></DD>
+
+<DT><b>second</b>=<em>integer</em></DT>
+<DD>Seconds (B)</DD>
+<DD>Options: <em>0-60</em></DD>
+
+<DT><b>timezone</b>=<em>integer</em></DT>
+<DD>Timezone</DD>
+<DD>East positive, offset from GMT, also use to adjust daylight savings</DD>
+
+<DT><b>east</b>=<em>value</em></DT>
+<DD>Easting coordinate (point of interest)</DD>
+<DD>Default: map center</DD>
+
+<DT><b>north</b>=<em>value</em></DT>
+<DD>Northing coordinate (point of interest)</DD>
+<DD>Default: map center</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>r.sunmask</em> creates an output map layer based on an input elevation
+raster map layer and the sun position. The output map layer contains the
+cast shadow areas arising from sun shine and elevations. The user can define
+the sun position either directly or the module calculates it from given
+location and date/time parameters using the
+<a href=http://rredc.nrel.gov/>NREL</a> sun position algorithm. So either
+"A:"-parameters to specify the exact known sun position or "B:-parameters"
+to specify date/time for sun position calculation by r.sunmask itself have
+to be used.
+
+<p>
+The module performs sunset/sunrise checks and refraction correction for sun
+position calculation. Local coordinate systems are internally transformed to
+latitude/longitude for the SOLPOS algorithm. The elevation is not considered
+in the sunset/sunrise calculations.
+
+<h2>Notes</h2>
+
+r.sunmask and daylight savings: Rather than convert time to GMT, the solpos
+algorithm uses what is called Local Standard Time, which is generally
+defined politically as an offset from GMT.  So the key is the offset from
+GMT, which the solpos Time Zone parameter.  If the user specifies clock time
+(different for winter and summer), he/she would have to change the Time Zone
+parameter seasonally in r.sunmask (timezone parameter).
+<p>
+
+Note: In latitude/longitude locations the position coordinates pair
+(east/west) has to be specified in decimal degree (not D:M:S). If
+not specified, the map center's coordinates will be used.
+Also <em>g.region -l</em> displays the map center's coordinates.
+
+<p>
+Note for module usage with <em>-g</em> flag and calculations
+close to sunset/sunrise:
+
+<pre>
+ [...]
+ sunangleabovehorizont=0.434240
+ sunrise=07:59:19
+ sunset=16:25:17
+ Time (07:59:02) is before sunrise (07:59:19)!
+ WARNING: Nothing to calculate. Please verify settings.
+ No map calculation requested. Finished.
+</pre>
+
+In above calculation appears to be a mistake as
+the program indicates that we are before sunrise while
+the <i>sun angle above horizon</i> is already positive.
+The reason is that <i>sun angle above horizon</i> is
+calculated with correction for atmosphere refraction while
+<i>sunrise</i> and <i>sunset</i> are calculated <b>without</b>
+correction for atmosphere refraction. The output without 
+<em>-g</em> flag contains related indications.
+
+
+<h2>Acknowledgements</h2>
+Acknowledgements: National Renewable Energy Laboratory for their <a href=http://rredc.nrel.gov/solar/codes_algs/solpos/>SOLPOS 2.0</a> sun position
+algorithm.
+
+<h2>SEE ALSO</h2>
+<em>
+<a href="g.region.html">g.region</a>,
+<a href="r.sun.html">r.sun</a>,
+<a href="r.slope.aspect.html">r.slope.aspect</a>
+</em>
+
+<h2>AUTHOR</h2>
+Janne Soimasuo, Finland 1994<br>
+update to FP by Huidae Cho 2001<br>
+added solpos algorithm feature by Markus Neteler 2001
+
+<p><i>Last changed: $Date: 2008-05-16 21:09:06 +0200 (pá, 16 V 2008) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

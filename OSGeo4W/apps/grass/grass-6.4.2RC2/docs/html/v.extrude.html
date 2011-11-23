@@ -1,0 +1,116 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.extrude</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.extrude</b></em>  - Extrudes flat vector object to 3D with defined height.
+<h2>KEYWORDS</h2>
+vector, geometry, 3D
+<h2>SYNOPSIS</h2>
+<b>v.extrude</b><br>
+<b>v.extrude help</b><br>
+<b>v.extrude</b> [-<b>t</b>] <b>input</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>zshift</b>=<em>float</em>]   [<b>elevation</b>=<em>name</em>]   [<b>height</b>=<em>float</em>]   [<b>hcolumn</b>=<em>name</em>]   [<b>type</b>=<em>string</em>[,<i>string</i>,...]]   [<b>layer</b>=<em>integer</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-t</b></DT>
+<DD>Trace elevation</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input 2D vector map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name of resulting 3D vector map</DD>
+
+<DT><b>zshift</b>=<em>float</em></DT>
+<DD>Shifting value for z coordinates</DD>
+<DD>Default: <em>0</em></DD>
+
+<DT><b>elevation</b>=<em>name</em></DT>
+<DD>Elevation raster for height extraction</DD>
+
+<DT><b>height</b>=<em>float</em></DT>
+<DD>Fixed height for 3D vector objects</DD>
+
+<DT><b>hcolumn</b>=<em>name</em></DT>
+<DD>Name of attribute column with object heights</DD>
+
+<DT><b>type</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Feature type</DD>
+<DD>Options: <em>point,line,boundary,area</em></DD>
+<DD>Default: <em>point,line,boundary,area</em></DD>
+
+<DT><b>layer</b>=<em>integer</em></DT>
+<DD>Layer number</DD>
+<DD>A single vector map can be connected to multiple database tables. This number determines which table to use.</DD>
+<DD>Default: <em>1</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<p>
+<em>v.extrude</em> creates faces, kernels, volumes or 3D lines based
+on 2D vector objects, i.e. points become 3D vertical lines, lines to
+3D lines, boundaries to faces and areas to volumes (composition of
+faces and kernel).
+
+<p>
+If the flag <b>-t</b> is used then 3D vector objects follow the
+elevation model by using individual elevation values for the vertices
+and nodes. This can be useful for models of large objects (forest
+stands).
+
+<h2>EXAMPLES</h2>
+
+<h3>3D houses with fixed height</h3>
+
+<div class="code"><pre>
+v.extrude input=houses output=houses3D height=5 type=area
+</pre></div>
+
+<h3>3D houses with individual height</h3>
+
+<div class="code"><pre>
+v.extrude input=houses output=houses3D elevation=dem hcolumn=height type=area
+</pre></div>
+
+<h3>Convert 2D lines to 3D with fixed height</h3>
+<div class="code"><pre>
+v.extrude input=lines output=lines3D elevation=dem height=0 type=line
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="nviz.html">nviz</a>
+</em>
+
+<h2>AUTHOR</h2>
+
+Jachym Cepicky,<br>
+Updated by Martin Landa, FBK-irst, Italy
+
+<p>
+<i>Last changed: $Date: 2008-02-29 00:33:29 +0100 (pá, 29 II 2008) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

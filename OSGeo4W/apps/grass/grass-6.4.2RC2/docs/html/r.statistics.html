@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.statistics</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.statistics</b></em>  - Calculates category or object oriented statistics.
+<h2>KEYWORDS</h2>
+raster, statistics
+<h2>SYNOPSIS</h2>
+<b>r.statistics</b><br>
+<b>r.statistics help</b><br>
+<b>r.statistics</b> [-<b>c</b>] <b>base</b>=<em>name</em> <b>cover</b>=<em>name</em> <b>method</b>=<em>string</em>  [<b>output</b>=<em>name</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-c</b></DT>
+<DD>Cover values extracted from the category labels of the cover map</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>base</b>=<em>name</em></DT>
+<DD>Name of base raster map</DD>
+
+<DT><b>cover</b>=<em>name</em></DT>
+<DD>Name of cover raster map</DD>
+
+<DT><b>method</b>=<em>string</em></DT>
+<DD>Method of object-based statistic</DD>
+<DD>Options: <em>diversity,distribution,average,mode,median,avedev,stddev,variance,skewness,kurtosis,min,max,sum</em></DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Resultant raster map (not used with 'distribution')</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>r.statistics</em> is a tool to analyse exploratory statistics of a "cover
+layer" according to how it intersects with objects in a "base layer".  A
+variety of standard statistical measures are possible (called "zonal statistics"
+in some GIS). 
+
+All cells in the base layer are considered one object for the analysis.  For 
+some applications, one will first want to prepare the input data so that
+all areas of contiguous cell category values in the base layer are uniquely
+identified, which can be done with <em>r.clump</em>.
+<br>
+
+The available methods are the following (english - german):
+<ul>
+<li>distribution - Verteilung in Prozent</li>
+<li>average - Durchschnitt</li>
+<li>mode - Modalwert</li>
+<li>median - Median</li>
+<li>average deviation - Durchschnittliche Abweichung</li>
+<li>standard deviation - Standardabweichung</li>
+<li>variance - Varianz</li>
+<li>skewness - Schiefe der Verteilung</li>
+<li>kurtosis - Relative Abflachung (-) oder Zuspitzung (+)</li>
+<li>minimum - Minimum</li>
+<li>maximum - Maximum</li>
+<li>sum - Summe</li>
+</ul>
+
+The calculations will be performed on each area of data of the
+cover layers which fall within each unique value, or category, of the base layer.
+<p>
+Setting the <em>-c</em> flag the category lables of the covering raster
+layer will be used.  This is nice to avoid the GRASS limitation to interger
+in raster maps because using category values floating point numbers can be
+stored.
+
+<p>
+All calculations except "distribution" create an output layer.  The output 
+layer is a reclassified version of the base layer with identical
+category values, but modified category labels - the results of the calculations
+are stored in the category labels of the output layer.
+
+<p>
+For distributions, the output is printed to the user interface (stdout). 
+If an output file name was specified, it will be ignored. The result will 
+be a text table with three columns. 
+In the first column are the category values of the base layer (a), in the second
+column the associated value of the cover layers (b), and in the third column the
+percentage of area in that base layer category (a) that falls into that row's
+value in the cover layer(b). Example:
+
+<div class="code"><pre>
+1   124  23
+1   201  47
+1   273  30
+2   101  5
+2   152  16
+2   167  60
+2   187  19
+     .
+     .
+     .
+</pre></div>
+
+So for the first line in the output above, we see that 23% of the cells of the
+base layer category 1 have a value of 124 in the cover layer.
+
+To transfer the values stored as category labels into cell values,
+<em>r.mapcalc</em> can be used ('@' operator).
+
+<h2>EXAMPLES</h2>
+
+Calculation of average elevation of each field in the Spearfish region:
+
+<div class="code"><pre>
+r.statistics base=fields cover=elevation.dem out=elevstats method=average
+r.category elevstats
+r.mapcalc "fieldelev=@elevstats"
+r.univar fieldelev
+</pre></div>
+
+<h2>SEE ALSO</h2>
+<em>
+<a href="r.average.html">r.average</a>,
+<a href="r.clump.html">r.clump</a>,
+<a href="r.mode.html">r.mode</a>,
+<a href="r.median.html">r.median</a>,
+<a href="r.mapcalc.html">r.mapcalc</a>,
+<a href="r.neighbors.html">r.neighbors</a>,
+<a href="r.univar.html">r.univar</a>
+<a href="r.category.html">r.category</a>
+</em>
+
+<h2>AUTHOR</h2>
+Martin Schroeder, Geographisches Institut Heidelberg, Germany
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

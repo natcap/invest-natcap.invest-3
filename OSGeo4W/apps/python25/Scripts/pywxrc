@@ -1,0 +1,5 @@
+#!c:\OSGeo4W\bin\python.exe
+
+from wx.tools.pywxrc import main
+main()
+

@@ -1,0 +1,15 @@
+set ICON=%OSGEO4W_ROOT%\apps\grass\grass-6.4.2RC2\etc\gui\icons\grass.ico
+set BATCH=%OSGEO4W_ROOT%\bin\grass64.bat
+textreplace -std -t "%OSGEO4W_ROOT%"\bin\grass64.bat
+textreplace -std -t "%OSGEO4W_ROOT%"\bin\grass64
+textreplace -std -t "%OSGEO4W_ROOT%"\apps\grass\grass-6.4.2RC2\etc\fontcap
+
+mkdir "%OSGEO4W_STARTMENU%\GRASS GIS 6.4.2RC2" 
+xxmklink "%OSGEO4W_STARTMENU%\GRASS GIS 6.4.2RC2\GRASS GUI.lnk" "%BATCH%" "-wx" \ "Launch GRASS GIS 6.4.2RC2 with wxGUI" 1 "%ICON%" 
+xxmklink "%OSGEO4W_STARTMENU%\GRASS GIS 6.4.2RC2\GRASS Old TclTk GUI.lnk" "%BATCH%" "-tcltk" \ "Launch GRASS GIS 6.4.2RC2 with the old TclTk GUI" 1 "%ICON%" 
+xxmklink "%OSGEO4W_STARTMENU%\GRASS GIS 6.4.2RC2\GRASS Command Line.lnk" "%BATCH%" "-text" \ "Launch GRASS GIS 6.4.2RC2 in text mode" 1 "%ICON%" 
+
+xxmklink "%ALLUSERSPROFILE%\Desktop\GRASS GIS 6.4.2RC2.lnk" "%BATCH%" "-wx" \ "Launch GRASS GIS 6.4.2RC2 with wxGUI" 1 "%ICON%" 
+
+del "%OSGEO4W_ROOT%"\bin\grass64.bat.tmpl
+del "%OSGEO4W_ROOT%"\bin\grass64.tmpl

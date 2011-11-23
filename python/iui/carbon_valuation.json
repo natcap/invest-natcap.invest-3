@@ -1,0 +1,81 @@
+{
+    "id": "window",
+    "label": "Valuation of Carbon Sequestration",
+    "targetScript": "./python/invest_core/carbon_valuation.py",
+    "modelName": "carbon_valuation",
+    "height": 400,
+    "width": 500,
+    "elements": [
+        {
+            "id": "valuation_list",
+            "type": "list",
+            "elements": [
+                {   "id": "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "required": true,
+                    "args_id": "workspace_dir",
+                    "defaultText": "./output/Output"
+                },
+                {
+                    "id":"sequest_uri",
+                    "type": "file",
+                    "label": "Carbon sequestration raster",
+                    "required": true,
+                    "args_id": "sequest_uri",
+                    "defaultText": "./output/Output/sequest.tif"
+                },
+                {
+                    "id": "value",
+                    "args_id": "V",
+                    "type": "text",
+                    "label": "Value of Carbon (USD/metric ton)",
+                    "required": true,
+                    "dataType": "float",
+                    "validText": "[0-9]+(\\.[0-9][0-9])?",
+                    "defaultText": "43.00"
+                },
+                {
+                    "id": "discount_rate",
+                    "args_id": "r",
+                    "type": "text",
+                    "label": "Market discount in price of Carbon (%)",
+                    "required": true,
+                    "dataType": "int",
+                    "validText": "-?([0-9]+)?\\.[0-9]+",
+                    "defaultText": "7"
+                },    
+                {
+                    "id": "rate_change",
+                    "args_id": "c",
+                    "type": "text",
+                    "label": "Annual rate of change in price of Carbon (%)",
+                    "required": true,
+                    "dataType": "float",
+                    "validText": "-?([0-9]+)?\\.[0-9]+",
+                    "defaultText": "0"
+                },
+                {
+                    "id": "yr_cur",
+                    "args_id": "yr_cur",
+                    "type": "text",
+                    "label": "Start year of sequestration measurement",
+                    "required": true,
+                    "dataType": "int",
+                    "validText": "-?[0-9]+",
+                    "defaultText": "2000"
+                },            
+                {
+                    "id": "yr_fut",
+                    "args_id": "yr_fut",
+                    "type": "text",
+                    "label": "Final year of sequestration measurement",
+                    "required": true,
+                    "dataType": "int",
+                    "validText": "-?[0-9]+",
+                    "defaultText": "2030"
+                }
+            ]
+        }    
+    ] 
+}
