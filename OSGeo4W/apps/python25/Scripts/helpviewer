@@ -1,0 +1,4 @@
+#!c:\OSGeo4W\bin\python.exe
+
+from wx.tools.helpviewer import main
+main()

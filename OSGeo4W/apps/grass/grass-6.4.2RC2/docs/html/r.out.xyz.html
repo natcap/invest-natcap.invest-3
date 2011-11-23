@@ -1,0 +1,90 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.out.xyz</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.out.xyz</b></em>  - Export a raster map to a text file as x,y,z values based on cell centers.
+<h2>KEYWORDS</h2>
+raster, export
+<h2>SYNOPSIS</h2>
+<b>r.out.xyz</b><br>
+<b>r.out.xyz help</b><br>
+<b>r.out.xyz</b> <b>input</b>=<em>name</em>  [<b>output</b>=<em>name</em>]   [<b>fs</b>=<em>character</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input raster map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output file (if omitted or "-" output to stdout)</DD>
+
+<DT><b>fs</b>=<em>character</em></DT>
+<DD>Field separator</DD>
+<DD>Default: <em>|</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+The <em>r.out.xyz</em> module exports a raster map as a list of x,y,z
+values into an ASCII text file.
+<p>
+
+<h2>NOTES</h2>
+
+This module will not export x,y coordinates for raster cells containing
+a NULL value. This includes cells masked by a raster MASK.
+<p>
+This module, as all GRASS raster modules, will export cells based on the
+current region settings. See the <em>g.region</em> module for details.
+<p>
+The <em>r.out.ascii</em> module should be used to export an array (of
+size row x column) containing z values.
+<p>
+<em>r.out.xyz</em> is simply a front-end to "<tt>r.stats -1gn</tt>".
+
+<h2>EXAMPLE</h2>
+
+In this example, a LiDAR elevation map in the
+North Carolina sample dataset location is exported to CSV format.
+
+<div class="code"><pre>
+g.region rast=elev_lid792_1m -p
+r.out.xyz input=elev_lid792_1m output=elev_lid792_1m.csv fs=","
+</pre></div>
+
+<h2>TODO</h2>
+
+Implement this script as a <em>r.out.ascii</em> option?
+
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="g.region.html">g.region</a>,
+<a href="r.mask.html">r.mask</a>
+<a href="r.out.ascii.html">r.out.ascii</a>,
+<a href="r.stats.html">r.stats</a>
+</em>
+
+<h2>AUTHOR</h2>
+
+M. Hamish Bowman<br>
+<i>Dept. Marine Science<br>
+Otago University, New Zealand</i>
+
+<p>
+<i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

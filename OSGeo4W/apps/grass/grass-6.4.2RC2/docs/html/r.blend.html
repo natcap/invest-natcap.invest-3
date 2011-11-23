@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.blend</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.blend</b></em>  - Blends color components of two raster maps by a given ratio.
+<h2>KEYWORDS</h2>
+raster
+<h2>SYNOPSIS</h2>
+<b>r.blend</b><br>
+<b>r.blend help</b><br>
+<b>r.blend</b> <b>first</b>=<em>name</em> <b>second</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>percent</b>=<em>integer</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>first</b>=<em>name</em></DT>
+<DD>Name of first raster map for blending</DD>
+
+<DT><b>second</b>=<em>name</em></DT>
+<DD>Name of second raster map for blending</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Base name for red, green and blue output maps containing the blend</DD>
+
+<DT><b>percent</b>=<em>integer</em></DT>
+<DD>Percentage weight of first map for color blending</DD>
+<DD>Options: <em>0-99</em></DD>
+<DD>Default: <em>2</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>r.blend</em> blends color components of 2 raster maps by a
+specificed percentage of the first map.
+
+<h2>EXAMPLE</h2>
+
+Blending the aspect map with the elevation map for a shaded map
+(North Carolina sample dataset):
+<p>
+<div class="code"><pre>
+g.region rast=aspect -p
+r.blend first=aspect second=elevation output_prefix=elev_shade_blend
+d.mon x0
+d.rgb blue=elev_shade_blend.b green=elev_shade_blend.g red=elev_shade_blend.r
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="d.shadedmap.html">d.shadedmap</a>,
+<a href="g.region.html">g.region</a>,
+<a href="r.mapcalc.html">r.mapcalc</a>,
+<a href="r.colors.html">r.colors</a>,
+<a href="r.support.html">r.support</a>
+</em>
+
+<h2>AUTHOR</h2>
+
+Unknown: probably CERL<br>
+Updated to GRASS 5.7 by Michael Barton, Arizona State University
+
+<p>
+<i>Last changed: $Date: 2011-09-04 15:23:30 +0200 (ne, 04 IX 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.grow</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.grow</b></em>  - Generates a raster map layer with contiguous areas grown by one cell.
+<h2>KEYWORDS</h2>
+raster, geometry
+<h2>SYNOPSIS</h2>
+<b>r.grow</b><br>
+<b>r.grow help</b><br>
+<b>r.grow</b> [-<b>q</b>] <b>input</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>radius</b>=<em>float</em>]   [<b>metric</b>=<em>string</em>]   [<b>old</b>=<em>integer</em>]   [<b>new</b>=<em>integer</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-q</b></DT>
+<DD>Quiet</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input raster map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output raster map</DD>
+
+<DT><b>radius</b>=<em>float</em></DT>
+<DD>Radius of buffer in raster cells</DD>
+<DD>Default: <em>1.01</em></DD>
+
+<DT><b>metric</b>=<em>string</em></DT>
+<DD>Metric</DD>
+<DD>Options: <em>euclidean,maximum,manhattan</em></DD>
+<DD>Default: <em>euclidean</em></DD>
+
+<DT><b>old</b>=<em>integer</em></DT>
+<DD>Value to write for input cells which are non-NULL (-1 =&gt; NULL)</DD>
+
+<DT><b>new</b>=<em>integer</em></DT>
+<DD>Value to write for "grown" cells</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+
+<em>r.grow</em> adds cells around the perimeters of all areas
+in a user-specified raster map layer and stores the output in
+a new raster map layer. The user can use it to grow by one or
+more than one cell (by varying the size of the <b>radius</b>
+parameter), or like <em>r.buffer</em>, but with the
+option of preserving the original cells (similar to combining
+<em>r.buffer</em> and <em>r.patch</em>).
+
+
+<h2>NOTES</h2>
+The user has the option of specifying three different metrics which
+control the geometry in which grown cells are created, (controlled by
+the <b>metric</b> parameter): <i>Euclidean</i>, <i>Manhattan</i>, and 
+<i>Maximum</i>. 
+
+<p>
+
+The <i>Euclidean distance</i> or <i>Euclidean metric</i> is the "ordinary" distance 
+between two points that one would measure with a ruler, which can be 
+proven by repeated application of the Pythagorean theorem. 
+The formula is given by: 
+
+<div class="code"><pre>d(dx,dy) = sqrt(dx^2 + dy^2)</pre></div>
+
+Cells grown using this metric would form isolines of distance that are
+circular from a given point, with the distance given by the <b>radius</b>.
+
+<p>
+The <i>Manhattan metric</i>, or <i>Taxicab geometry</i>, is a form of geometry in 
+which the usual metric of Euclidean geometry is replaced by a new 
+metric in which the distance between two points is the sum of the (absolute) 
+differences of their coordinates. The name alludes to the grid layout of 
+most streets on the island of Manhattan, which causes the shortest path a 
+car could take between two points in the city to have length equal to the
+points' distance in taxicab geometry.
+The formula is given by:
+
+<div class="code"><pre>d(dx,dy) = abs(dx) + abs(dy)</pre></div>
+
+where cells grown using this metric would form isolines of distance that are
+rhombus-shaped from a given point. 
+
+<p>
+The <i>Maximum metric</i> is given by the formula
+
+<div class="code"><pre>d(dx,dy) = max(abs(dx),abs(dy))</pre></div>
+
+where the isolines of distance from a point are squares.
+
+<p>
+If there are two cells which are equal candidates to grow into an empty space, 
+<em>r.grow</em> will choose the northernmost candidate; if there are multiple 
+candidates with the same northing, the westernmost is chosen. 
+
+
+<h2>EXAMPLE</h2>
+
+You can shrink inwards by preparing an inverse map first, and then
+inverting the resulting grown map. For example:
+<div class="code"><pre>
+# Spearfish sample dataset
+
+MAP=fields
+g.region rast=$MAP
+r.mapcalc "inverse = if(isnull($MAP), 1, null())"
+r.grow in=inverse out=inverse.grown
+r.mapcalc "$MAP.shrunken = if(isnull(inverse.grown), $MAP, null())"
+r.colors $MAP.shrunken rast=$MAP
+g.remove inverse,inverse.grown
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+<em>
+<a href="r.buffer.html">r.buffer</a>,<br>
+<a href="r.grow.distance.html">r.grow.distance</a>,<br>
+<a href="r.patch.html">r.patch</a>
+</em>
+
+<p>
+<em><a href="http://en.wikipedia.org/wiki/Euclidean_metric">Wikipedia Entry: Euclidean Metric</a><br>
+<em><a href="http://en.wikipedia.org/wiki/Manhattan_metric">Wikipedia Entry: Manhattan Metric</a>
+
+
+<h2>AUTHORS</h2>
+
+Marjorie Larson, 
+U.S. Army Construction Engineering Research Laboratory
+<p>
+Glynn Clements
+
+<p>
+<i>Last changed: $Date: 2010-03-30 01:24:01 +0200 (út, 30 III 2010) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

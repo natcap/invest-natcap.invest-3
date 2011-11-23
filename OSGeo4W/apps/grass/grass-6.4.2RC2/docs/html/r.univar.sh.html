@@ -1,0 +1,72 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.univar.sh</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.univar.sh</b></em>  - calculates univariate statistics from a GRASS raster map
+<h2>KEYWORDS</h2>
+raster, statistics
+<h2>SYNOPSIS</h2>
+<b>r.univar.sh</b><br>
+<b>r.univar.sh help</b><br>
+<b>r.univar.sh</b> [-<b>e</b>] <b>map</b>=<em>string</em>  [<b>percentile</b>=<em>integer</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-e</b></DT>
+<DD>extended statistics (quartiles and percentile)</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>string</em></DT>
+<DD>Name of raster map</DD>
+
+<DT><b>percentile</b>=<em>integer</em></DT>
+<DD>Percentile to calculate (requires -e flag)</DD>
+<DD>Options: <em>0-100</em></DD>
+<DD>Default: <em>90</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+WARNING: <b>This module is superseded and will be removed in future versions of GRASS.
+Use the much faster <em><a href="r.univar.html">r.univar</a></em> instead.</b>
+<p>
+<em>r.univar</em> calculates univariate statistics of a raster map.  This
+includes the number of cells counted, mininum and maximum cell values,
+range, arithmetic mean, variance, standard deviation and coefficient of
+variation.
+
+Checking the 'extended statistics' box adds median, 1st and 3rd quartiles,
+and 90th percentile.
+
+
+<h2>SEE ALSO</h2>
+
+<em><a href="r.univar.html">r.univar</a></em>
+<em><a href="r.stats.html">r.stats</a></em>
+
+
+
+<h2>AUTHOR</h2>
+
+Markus Neteler, University of Hannover
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

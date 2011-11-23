@@ -1,0 +1,171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.in.gpsbabel</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.in.gpsbabel</b></em>  - Import waypoints, routes, and tracks from a GPS receiver or GPS download file into a vector map.
+<h2>KEYWORDS</h2>
+vector, import, GPS
+<h2>SYNOPSIS</h2>
+<b>v.in.gpsbabel</b><br>
+<b>v.in.gpsbabel help</b><br>
+<b>v.in.gpsbabel</b> [-<b>vwrtpk</b>]  [<b>input</b>=<em>string</em>]   [<b>output</b>=<em>string</em>]   [<b>format</b>=<em>string</em>]   [<b>proj</b>=<em>string</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-v</b></DT>
+<DD>Verbose mode</DD>
+
+<DT><b>-w</b></DT>
+<DD>Import waypoints</DD>
+
+<DT><b>-r</b></DT>
+<DD>Import routes</DD>
+
+<DT><b>-t</b></DT>
+<DD>Import track</DD>
+
+<DT><b>-p</b></DT>
+<DD>Force vertices of track or route data as points</DD>
+
+<DT><b>-k</b></DT>
+<DD>Do not attempt projection transform from WGS84</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>string</em></DT>
+<DD>Device or file used to import data</DD>
+<DD>Default: <em>/dev/gps</em></DD>
+
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Name for output vector map (omit for display to stdout)</DD>
+
+<DT><b>format</b>=<em>string</em></DT>
+<DD>Format of GPS input data (use gpsbabel supported formats)</DD>
+<DD>Default: <em>garmin</em></DD>
+
+<DT><b>proj</b>=<em>string</em></DT>
+<DD>Projection of input data (PROJ.4 style), if not set Lat/Lon WGS84 is assumed</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.in.gpsbabel</em> allows the user to import waypoint, route, and track
+data from a locally connected GPS receiver or a text file containing 
+GPS data of many common formats. Translation is done via the 
+<em><a href="http://www.gpsbabel.org">GPSBabel</a></em> program. 
+
+<p>
+This software is not intended as a primary means of navigation.
+
+<h2>NOTES</h2>
+
+<em>v.in.gpsbabel</em> automatically reprojects data using the 
+projection settings of the current location.
+
+The default input data projection is lat/lon WGS84. If your GPS outputs data
+using another projection or map datum, you may include the 
+<em><a href="http://trac.osgeo.org/proj/">PROJ.4</a></em>
+parameters defining your projection in the <b>proj</b> option and 
+<em>v.in.gpsbabel</em> will reproject your data accordingly.
+Great care must be taken to get these parameters correct!
+
+The automatic transform may be skipped by using the <b>-k</b> flag in which 
+case the data will be imported unprojected, as it appears in the <b>input</b>.
+
+<p>
+Route and Track data may be uploaded as a series of points by using the <b>-p</b> 
+flag, otherwise they will be imported as lines. You can run <em>v.in.gpsbabel</em>
+multiple times and merge the line and point vectors with the <em>v.patch</em>
+command if you want, but take care when merging dissimilar attribute tables.
+
+<h2>EXAMPLES</h2>
+
+<h3>GPS device connected via USB adapter</h3>
+
+Import waypoints, tracks, routes from /dev/ttyUSB0 and save
+to a GRASS vector map:
+<div class="code"><pre>
+v.in.gpsbabel -w input=/dev/ttyUSB0 format=garmin output=waypoints
+v.in.gpsbabel -t input=/dev/ttyUSB0 format=garmin output=tracks
+v.in.gpsbabel -r input=/dev/ttyUSB0 format=garmin output=routes
+</pre></div>
+
+<h3>GPS device connected via serial adapter</h3>
+
+Import waypoint data from a Garmin GPS connected at /dev/ttyS0 and save
+to a GRASS vector map named <i>waypoints</i>:
+<div class="code"><pre>
+v.in.gpsbabel -w input=/dev/ttyS0 format=garmin output=waypoints
+</pre></div>
+
+<h3>Import track data from a GPX</h3>
+
+Import track data from a GPX text file and save to a GRASS vector map 
+named <i>tracks</i>.
+<!-- (currently buggy) The gpxlogger program distributed with 
+<a href="http://gpsd.berlios.de/">GPSd</a> >2.30 is a good program for 
+creating these logs. -->
+<div class="code"><pre>
+v.in.gpsbabel -t input=gpslog.gpx format=gpx output=tracks
+</pre></div>
+
+<h3>Import route data from GPS connected at /dev/gps</h3>
+
+Import route data as a series of points from a Garmin GPS connected at 
+/dev/gps and save to a GRASS vector map named <i>routePoints</i>:
+<div class="code"><pre>
+v.in.gpsbabel -r -p file=/dev/gps format=garmin output=routePoints
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+<em>
+<a href="db.execute.html">db.execute</a>,
+<a href="v.in.ascii.html">v.in.ascii</a>,
+<a href="v.in.garmin.html">v.in.garmin</a>,
+<a href="v.db.connect.html">v.db.connect</a>,
+<a href="v.patch.html">v.patch</a>
+</em>
+
+<a href="http://www.gpsbabel.org">gpsbabel</a> from gpsbabel.org<br>
+cs2cs from <a href="http://trac.osgeo.org/proj/">PROJ.4</a>
+
+<h2>AUTHORS</h2>
+Claudio Porta and Lucio Davide Spano, students of Computer Science at
+University of Pisa (Italy).<br>
+Commission from Faunalia Pontedera (PI)<br><br>
+Based on <em>v.in.garmin</em> for GRASS 6.0 by Hamish Bowman<br>
+and <em>v.in.garmin.sh</em> for GRASS 5 by Andreas Lange
+<br>
+
+<!--
+When we tested the script with a Garmin GPS we noticed that importing waypoints 
+the <i>time</i> field is not correctly set. The data reported is 
+a default system time, while with a gpx text file this thing did not 
+happen. We believe that is a <i>gpsbabel</i> trouble in translating 
+from <i>garmin</i> to <i>xcsv</i> ... 
+-->
+
+<p>
+<i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

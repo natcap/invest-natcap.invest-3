@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: g.list</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>g.list</b></em>  - Lists available GRASS data base files of the user-specified data type.
+<h2>KEYWORDS</h2>
+general, map management
+<h2>SYNOPSIS</h2>
+<b>g.list</b><br>
+<b>g.list help</b><br>
+<b>g.list</b> [-<b>f</b>] <b>type</b>=<em>datatype</em>[,<i>datatype</i>,...]  [<b>mapset</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-f</b></DT>
+<DD>Verbose listing (also list map titles)</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>type</b>=<em>datatype[,<i>datatype</i>,...]</em></DT>
+<DD>Data type</DD>
+<DD>Options: <em>rast,rast3d,vect,oldvect,asciivect,icon,labels,sites,region,region3d,group,3dview</em></DD>
+
+<DT><b>mapset</b>=<em>string</em></DT>
+<DD>Mapset to list (default: current search path)</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>g.list</em> allows the user to list user-specified, available
+and accessible files from <em>mapsets</em> under the user's current location.
+
+<!--
+<h2>OPTIONS</h2>
+
+When invoked simply as <b>g.list</b>, the program prompts
+the user for the type of data to be listed from all
+<em>mapsets</em> in the user's current mapset search path.
+The user can list files from a mapset not listed in the
+current mapset search path by running the program
+non-interactively, specifying the (optional) flag setting
+and parameter values on the command line.  Program flag and
+parameters are described below.
+-->
+
+<h2>NOTES</h2>
+
+If unspecified, files of the specified <em>type</em> from all mapsets 
+in the user's current search path will be listed to standard output. To 
+find out which mapsets are in the cuurent search path, use 
+<em><a HREF="g.mapsets.html">'g.mapsets</a> -p'</em>.
+
+<p>
+If the <b>mapset</b> option is set to "." then only maps from the
+current mapset will be displayed.
+
+<p>
+If the user requests that files from a mapset to which
+access has been restricted (see
+<em><a HREF="g.access.html">g.access</a></em>)
+be listed, no files from this mapset will be listed.
+
+
+<h2>EXAMPLES</h2>
+
+List all raster maps:
+<br>
+<div class="code"><pre>
+   g.list type=rast
+</pre></div>
+
+<p>
+
+List all raster and vector maps from mapset &quot;user&quot;:
+<br>
+<div class="code"><pre>
+   g.list type=rast,vect mapset=user
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+
+<em><a HREF="g.access.html">g.access</a></em><br>
+<em><a HREF="g.mapsets.html">g.mapsets</a></em><br>
+<em><a HREF="g.mlist.html">g.mlist</a></em>
+
+
+<h2>AUTHOR</h2>
+
+Michael Shapiro,
+U.S.Army Construction Engineering 
+Research Laboratory
+
+<p>
+<i>Last changed: $Date: 2009-05-29 11:18:32 +0200 (pá, 29 V 2009) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="general.html">general index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

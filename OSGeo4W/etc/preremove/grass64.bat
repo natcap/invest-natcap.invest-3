@@ -1,0 +1,10 @@
+del "%OSGEO4W_STARTMENU%\GRASS GIS 6.4.2RC2\GRASS GUI.lnk"
+del "%OSGEO4W_STARTMENU%\GRASS GIS 6.4.2RC2\GRASS Old TclTk GUI.lnk"
+del "%OSGEO4W_STARTMENU%\GRASS GIS 6.4.2RC2\GRASS Command Line.lnk"
+rmdir "%OSGEO4W_STARTMENU%\GRASS GIS 6.4.2RC2" 
+
+del "%ALLUSERSPROFILE%\Desktop\GRASS GIS 6.4.2RC2.lnk"
+
+del "%OSGEO4W_ROOT%"\bin\grass64.bat
+del "%OSGEO4W_ROOT%"\bin\grass64  
+del "%OSGEO4W_ROOT%"\apps\grass\grass-6.4.2RC2\etc\fontcap 

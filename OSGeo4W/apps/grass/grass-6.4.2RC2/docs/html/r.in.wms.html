@@ -1,0 +1,272 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.in.wms</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.in.wms</b></em>  - Downloads and imports data from WMS servers.
+<h2>KEYWORDS</h2>
+wms
+<h2>SYNOPSIS</h2>
+<b>r.in.wms</b><br>
+<b>r.in.wms help</b><br>
+<b>r.in.wms</b> [-<b>ldockpg</b>]  [<b>output</b>=<em>string</em>]  <b>mapserver</b>=<em>string</em>  [<b>layers</b>=<em>string</em>[,<i>string</i>,...]]   [<b>styles</b>=<em>string</em>[,<i>string</i>,...]]   [<b>srs</b>=<em>string</em>]  <b>format</b>=<em>string</em>  [<b>wmsquery</b>=<em>string</em>]  <b>maxcols</b>=<em>integer</em> <b>maxrows</b>=<em>integer</em>  [<b>tileoptions</b>=<em>string</em>]   [<b>region</b>=<em>string</em>]   [<b>folder</b>=<em>string</em>]   [<b>wgetoptions</b>=<em>string</em>]   [<b>curloptions</b>=<em>string</em>]  <b>method</b>=<em>string</em>  [<b>cap_file</b>=<em>string</em>]   [<b>v</b>=<em>integer</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-l</b></DT>
+<DD>List available layers and exit</DD>
+
+<DT><b>-d</b></DT>
+<DD>Skip to downloading (to resume downloads faster)</DD>
+
+<DT><b>-o</b></DT>
+<DD>Don't request transparent data</DD>
+
+<DT><b>-c</b></DT>
+<DD>Clean existing data out of download directory</DD>
+
+<DT><b>-k</b></DT>
+<DD>Keep band numbers instead of using band color names</DD>
+
+<DT><b>-p</b></DT>
+<DD>Don't reproject the data, just patch it</DD>
+
+<DT><b>-g</b></DT>
+<DD>Use GET method instead of POST data method</DD>
+<DD>This may be needed to connect to servers which lack POST capability</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Name for output raster map</DD>
+
+<DT><b>mapserver</b>=<em>string</em></DT>
+<DD>Mapserver to request data from</DD>
+
+<DT><b>layers</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Layers to request from map server</DD>
+
+<DT><b>styles</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Styles to request from map server</DD>
+
+<DT><b>srs</b>=<em>string</em></DT>
+<DD>Source projection to request from server</DD>
+<DD>Default: <em>EPSG:4326</em></DD>
+
+<DT><b>format</b>=<em>string</em></DT>
+<DD>Image format requested from the server</DD>
+<DD>Options: <em>geotiff,tiff,jpeg,gif,png</em></DD>
+<DD>Default: <em>geotiff</em></DD>
+
+<DT><b>wmsquery</b>=<em>string</em></DT>
+<DD>Addition query options for server</DD>
+<DD>Default: <em>version=1.1.1</em></DD>
+
+<DT><b>maxcols</b>=<em>integer</em></DT>
+<DD>Maximum columns to request at a time</DD>
+<DD>Default: <em>1024</em></DD>
+
+<DT><b>maxrows</b>=<em>integer</em></DT>
+<DD>Maximum rows to request at a time</DD>
+<DD>Default: <em>1024</em></DD>
+
+<DT><b>tileoptions</b>=<em>string</em></DT>
+<DD>Additional options for r.tileset</DD>
+
+<DT><b>region</b>=<em>string</em></DT>
+<DD>Named region to request data for. Current region used if omitted</DD>
+
+<DT><b>folder</b>=<em>string</em></DT>
+<DD>Folder to save downloaded data to</DD>
+
+<DT><b>wgetoptions</b>=<em>string</em></DT>
+<DD>Additional options for wget</DD>
+<DD>Default: <em>-c -t 5 -nv</em></DD>
+
+<DT><b>curloptions</b>=<em>string</em></DT>
+<DD>Additional options for curl</DD>
+<DD>Default: <em>-C - --retry 5 -s -S</em></DD>
+
+<DT><b>method</b>=<em>string</em></DT>
+<DD>Reprojection method to use</DD>
+<DD>Options: <em>nearest,bilinear,cubic,cubicspline</em></DD>
+<DD>Default: <em>nearest</em></DD>
+
+<DT><b>cap_file</b>=<em>string</em></DT>
+<DD>Filename to save capabilities XML file to</DD>
+<DD>Requires list available layers flag</DD>
+
+<DT><b>v</b>=<em>integer</em></DT>
+<DD>Verbosity level</DD>
+<DD>Default: <em>1</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>r.in.wms</em> handles all of downloading and importing raster data
+from an <a href="http://www.opengeospatial.org/standards/wms">OGC
+WMS</a> web mapping server. It need only be told the desired data to
+collect (bounds and resolution) via a region, the server to get the
+data from, and the layer or layers to get. It downloads the data in
+tiles, reprojects it, imports it, and patches it back together.
+
+<h2>NOTES</h2>
+
+By default data is downloaded to <tt>$GISDBASE/wms_download</tt>. This can be changed
+by setting the <b>folder</b> option when using <em>r.in.wms</em>.
+
+<p>
+To understand the data you are getting it is necessary to look at the
+capabilities of the WMS server. This should be available via a capabilities
+request. This is an
+<a href="http://wms.jpl.nasa.gov/wms.cgi?request=GetCapabilities">example
+capabilities request to NASA's OnEarth server</a>.
+
+<p>
+<!--
+Some brain-dead servers will only talk to certain web browsers. You can
+fool these by adding <tt>- -user-agent=MSIE5.5</tt> to <b>wgetoptions</b>
+or for curl adding <tt>-A "MSIE5.5"</tt> to <b>curloptions</b>.
+-->
+Other brain-dead servers will not accept queries in the form of POST data.
+If you get an error try using the <b>-g</b> flag to force <em>r.in.wms</em>
+to send an atomic GET request instead.
+
+<h2>EXAMPLES</h2>
+
+<h3>General Get Capabilities Request</h3>
+
+A capabilities request like
+<a href="http://wms.jpl.nasa.gov/wms.cgi?request=GetCapabilities">http://wms.jpl.nasa.gov/wms.cgi?request=GetCapabilities</a>
+is where you should start. It tells you what data is offered, the projections
+it is in,  where to find meta data, resolutions, scales, and bounds for
+data, etc.
+
+E.g. lists the layers available from the NASA OnEarth server.
+
+<div class="code"><pre>
+r.in.wms mapserver=http://wms.jpl.nasa.gov/wms.cgi -l
+</pre></div>
+
+<h3>US NED Elevation from OnEarth server download (metric units)</h3>
+
+Set the resolution to 30 (assuming you're in metric units):
+<div class="code"><pre>
+g.region res=30 -ap
+r.in.wms -o output=elevation_meters mapserver=http://wms.jpl.nasa.gov/wms.cgi \
+         layers=us_ned styles=real
+</pre></div>
+
+Downloads real number meter elevation from OnEarth to cover the current
+region. Uses <b>-o</b> for opaque to get smaller download.
+
+<h3>US NED Elevation from OnEarth server download (feet units)</h3>
+
+Set the resolution to 90 (assuming you're in feet units) a save this
+region with a name; this makes resuming downloads possible or rather
+easier:
+
+<div class="code"><pre>
+g.region res=90 -ap
+g.region save=panhandle-90ft
+
+r.in.wms -o output=elevation_feet mapserver=http://wms.jpl.nasa.gov/wms.cgi \
+         layers=us_ned styles=feet_real region=panhandle-90ft
+</pre></div>
+
+Downloads real number feet elevation from OnEarth to cover the current
+region. Uses <b>-o</b> for opaque to get smaller download. Using a named
+region lets us resume later easily.
+
+<div class="code"><pre>
+r.in.wms -d output=elevation_feet mapserver=http://wms.jpl.nasa.gov/wms.cgi \
+         layers=us_ned styles=feet_real -o region=panhandle-90ft method=cubic
+</pre></div>
+
+Use flag <b>-d</b> to skip ahead to downloading. This could be used to try
+downloading again (if some files failed last time) or to import the data
+differently. Since downloaded files are remembered those already received
+successfully are not re-requested. In this case we are reimporting the
+data using the cubic interpolation method instead of nearest neighbor.
+
+<h3>LANDSAT from OnEarth server download</h3>
+
+Set the resolution to 30 meters for LANDSAT:
+<div class="code"><pre>
+g.region res=30 -ap
+r.in.wms layers=global_mosaic mapserver=http://wms.jpl.nasa.gov/wms.cgi \
+         output=wms_global_mosaic
+</pre></div>
+Downloads LANDSAT color scene.
+
+
+<h3>DRG from Terraserver server download</h3>
+
+Set the resolution to 1.2 meters for DRGs. Their native resolution is
+2.4 meters, so this is some pretty hefty oversampling:
+
+<div class="code"><pre>
+g.region res=1.2 -ap
+g.region save=drg-resolution
+
+r.in.wms output=terraserver-drg mapserver=http://terraserver.microsoft.com/ogcmap6.ashx \
+         layers=DRG region=drg-resolution format=jpeg srs=EPSG:26910
+</pre></div>
+
+Downloads digital raster graphics from Microsoft TerraServer. Note that
+srs will need to be changed to a projection that is appropriate for your
+region.
+
+
+<h2>REQUIRED PROGRAMS</h2>
+
+<em>r.in.wms</em> requires the following programs to work:
+
+<ul>
+<li>wget: An http download program, or
+<li>curl: Alternate http download program
+<li>bc: A calculator program
+<li>sed, grep: Unix string processing and search programs
+<li><a href="http://www.gdal.org">gdalwarp</a>: A reprojection tool,
+    needed only if data is projected into this location.
+<li><a href="http://ofb.net/~egnor/xml2/">xml2</a>: An xml parser.
+    Enables more accurate listing of layers on the server.
+</ul>
+
+
+<h2>SEE ALSO</h2>
+<em>
+<a href="r.tileset.html">r.tileset</a>,
+<a href="r.in.gdal.html">r.in.gdal</a>,
+<a href="r.patch.html">r.patch</a>,
+<a href="r.colors.html">r.colors</a>,
+<a href="r.composite.html">r.composite</a><br><br>
+<a href="v.in.wfs.html">v.in.wfs</a>
+</em>
+
+<h2>AUTHORS</h2>
+
+Soeren Gebbert, Jachym Cepicky, and Cedric Shock
+
+<p>
+<i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.out.mat</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.out.mat</b></em>  - Exports a GRASS raster to a binary MAT-File.
+<h2>KEYWORDS</h2>
+raster, export
+<h2>SYNOPSIS</h2>
+<b>r.out.mat</b><br>
+<b>r.out.mat help</b><br>
+<b>r.out.mat</b> [-<b>v</b>] <b>input</b>=<em>name</em> <b>output</b>=<em>string</em>  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-v</b></DT>
+<DD>Verbose mode</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input raster map</DD>
+
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Name for the output binary MAT-File</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>r.out.mat</em> will export a GRASS raster map to a MAT-File which can
+be loaded into Matlab or Octave for plotting or further analysis. 
+Attributes such as map title and bounds will also be exported into 
+additional array variables.<br>
+<br>
+Specifically, the following array variables are created:<br>
+</ul>
+  <li><b> map_data</b>
+  <li><b> map_name</b>
+  <li><b> map_title</b> (if it exists)
+  <li><b> map_northern_edge</b>
+  <li><b> map_southern_edge</b>
+  <li><b> map_eastern_edge</b>
+  <li><b> map_western_edge</b>
+</ul>
+
+<br>
+In addition, <em>r.out.mat</em> makes for a nice binary container format
+for transferring georeferenced maps around, even if you don't use Matlab 
+or Octave. 
+
+<h2>NOTES</h2>
+
+<em>r.out.mat</em> exports a Version 4 MAT-File. These files should 
+successfully load into more modern versions of Matlab and Octave 
+without any problems.<br><br>
+
+Everything should be Endian safe, so the resultant file can be simply 
+copied between different system architectures without binary translation.
+<br><br>
+
+As there is no IEEE value for <tt>NaN</tt> for integer maps, GRASS's null 
+value is used to represent it within these maps. You'll have to do something 
+like this to clean them once the map is loaded into Matlab:
+<pre>    map_data(find(map_data < -1e9)) = NaN;</pre>
+
+Null values in maps containing either floating point or double-precision 
+floating point data should translate into <tt>NaN</tt> values as expected.
+<br><br>
+
+
+<em>r.out.mat</em> must load the entire map into memory before writing, 
+therefore it might have problems with <i>huge</i> maps.
+(a 3000x4000 DCELL map uses about 100mb RAM)<br><br>
+
+GRASS defines its map bounds at the outer-edge of the bounding cells, not at
+the coordinates of their centroids. Thus, the following Matlab commands may 
+be used to determine the map's resolution information:
+<div class="code"><pre>
+    [rows cols] = size(map_data)
+    x_range = map_eastern_edge - map_western_edge
+    y_range = map_northern_edge - map_southern_edge
+    ns_res = y_range/rows
+    ew_res = x_range/cols
+</pre></div>
+<br>
+
+<h2>EXAMPLE</h2>
+
+In Matlab, plot with either:
+<div class="code"><pre>
+imagesc(map_data), axis equal, axis tight, colorbar
+</pre></div>
+
+or
+<div class="code"><pre>
+contourf(map_data, 24), axis ij, axis equal, axis tight, colorbar
+</pre></div>
+
+<br>
+
+<h2>TODO</h2>
+
+Add support for exporting map history, category information, color map, etc.
+<br>
+Option to export as a version 5 MAT-File, with map and support information 
+stored in a single structured array.
+
+<h2>SEE ALSO</h2>
+
+<i>
+<a href="r.in.mat.html">r.in.mat</a><br>
+<a href="r.out.ascii.html">r.out.ascii</a>, <a href="r.out.bin.html">r.out.bin</a><br>
+<a href="r.null.html">r.null</a><br>
+The <a href="http://www.octave.org">Octave</a> project
+</i>
+
+
+<h2>AUTHOR</h2>
+
+Hamish Bowman<br> <i>
+Department of Marine Science<br>
+University of Otago<br>
+New Zealand</i><br>
+
+<br>
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

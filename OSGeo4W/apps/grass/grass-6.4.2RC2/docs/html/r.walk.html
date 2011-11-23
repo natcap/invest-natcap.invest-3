@@ -1,0 +1,228 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.walk</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.walk</b></em>  - Outputs a raster map layer showing the anisotropic cumulative cost of moving between different geographic locations on an input elevation raster map layer whose cell category values represent elevation combined with an input raster map layer whose cell values represent friction cost.
+<h2>KEYWORDS</h2>
+raster, cost surface, cumulative costs
+<h2>SYNOPSIS</h2>
+<b>r.walk</b><br>
+<b>r.walk help</b><br>
+<b>r.walk</b> [-<b>knr</b>] <b>elevation</b>=<em>string</em> <b>friction</b>=<em>string</em> <b>output</b>=<em>string</em>  [<b>start_points</b>=<em>string</em>]   [<b>stop_points</b>=<em>string</em>]   [<b>coordinate</b>=<em>x,y</em>[,<i>x,y</i>,...]]   [<b>stop_coordinate</b>=<em>x,y</em>[,<i>x,y</i>,...]]   [<b>max_cost</b>=<em>integer</em>]   [<b>null_cost</b>=<em>float</em>]   [<b>percent_memory</b>=<em>integer</em>]   [<b>nseg</b>=<em>integer</em>]   [<b>walk_coeff</b>=<em>a,b,c,d</em>]   [<b>lambda</b>=<em>float</em>]   [<b>slope_factor</b>=<em>float</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-k</b></DT>
+<DD>Use the 'Knight's move'; slower, but more accurate</DD>
+
+<DT><b>-n</b></DT>
+<DD>Keep null values in output map</DD>
+
+<DT><b>-r</b></DT>
+<DD>Start with values in raster map</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>elevation</b>=<em>string</em></DT>
+<DD>Name of elevation input raster map</DD>
+
+<DT><b>friction</b>=<em>string</em></DT>
+<DD>Name of input raster map containing friction costs</DD>
+
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Name of raster map to contain results</DD>
+
+<DT><b>start_points</b>=<em>string</em></DT>
+<DD>Starting points vector map</DD>
+
+<DT><b>stop_points</b>=<em>string</em></DT>
+<DD>Stop points vector map</DD>
+
+<DT><b>coordinate</b>=<em>x,y[,<i>x,y</i>,...]</em></DT>
+<DD>The map E and N grid coordinates of a starting point (E,N)</DD>
+
+<DT><b>stop_coordinate</b>=<em>x,y[,<i>x,y</i>,...]</em></DT>
+<DD>The map E and N grid coordinates of a stopping point (E,N)</DD>
+
+<DT><b>max_cost</b>=<em>integer</em></DT>
+<DD>An optional maximum cumulative cost</DD>
+<DD>Default: <em>0</em></DD>
+
+<DT><b>null_cost</b>=<em>float</em></DT>
+<DD>Cost assigned to null cells. By default, null cells are excluded</DD>
+
+<DT><b>percent_memory</b>=<em>integer</em></DT>
+<DD>Percent of map to keep in memory</DD>
+<DD>Default: <em>100</em></DD>
+
+<DT><b>nseg</b>=<em>integer</em></DT>
+<DD>Number of the segment to create (segment library)</DD>
+<DD>Default: <em>4</em></DD>
+
+<DT><b>walk_coeff</b>=<em>a,b,c,d</em></DT>
+<DD>Coefficients for walking energy formula parameters a,b,c,d</DD>
+<DD>Default: <em>0.72,6.0,1.9998,-1.9998</em></DD>
+
+<DT><b>lambda</b>=<em>float</em></DT>
+<DD>Lambda coefficients for combining walking energy and friction cost</DD>
+<DD>Default: <em>1.0</em></DD>
+
+<DT><b>slope_factor</b>=<em>float</em></DT>
+<DD>Slope factor determines travel energy cost per height step</DD>
+<DD>Default: <em>-0.2125</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>r.walk</em> outputs a raster map layer showing the lowest
+cumulative cost of moving between each cell and the user-specified
+starting points. It uses an input elevation raster map layer whose
+cell category values represent elevation, combined with a second input
+raster map layer whose cell values represent friction costs.
+
+This function is similar to <em>r.cost</em>, but in addiction to a
+friction map, it considers an anisotropic travel time due to the
+different walking speed associated with downhill and uphill movements.
+<p>
+
+The formula from Aitken 1977/Langmuir 1984 (based on Naismith's rule
+for walking times) has been used to estimate the cost parameters of
+specific slope intervals:
+
+<p>
+T= [(a)*(Delta S)] + [(b)*(Delta H uphill)] + [(c)*(Delta H moderate downhill)] + [(d)*(Delta H steep downhill)]
+<p>
+where:<br>
+T is time of movement in seconds,<br>
+Delta S is the distance covered in meters,<br>
+Delta H is the altitude difference in meter.
+<p> 
+
+The a, b, c, d parameters take in account movement speed in the different
+conditions and are linked to:
+
+</ul>
+  <li>a: underfoot condition (a=1/walking_speed)</li>
+  <li>b: underfoot condition and cost associated to movement uphill</li>
+  <li>c: underfoot condition and cost associated to movement moderate downhill</li>
+  <li>d: underfoot condition and cost associated to movement steep downhill</li>
+</ul>
+
+It has been proved that moving downhill is favourable up to a specific
+slope value threshold, after that it becomes unfavourable. The default
+slope value threshold (slope factor) is -0.2125, corresponding to
+tan(-12), calibrated on human behaviour (&gt;5 and &lt;12
+degrees: moderate downhill; &gt;12 degrees: steep downhill). The
+default values for a, b, c, d are those proposed by Langmuir (0.72, 6.0,
+1.9998, -1.9998), based on man walking effort in standard
+conditions.<p>
+
+The lambda parameter of the linear equation combining movement and
+friction costs:<br>
+
+total cost = movement time cost + (lambda) * friction costs<br>
+must be set in the option section of <em>r.walk</em>.
+<p>
+
+For a more accurate result, the "knight's move" option can be used
+(although it is more time consuming). In the diagram below, the center
+location (O) represents a grid cell from which cumulative distances
+are calculated. Those neighbours marked with an x are always
+considered for cumulative cost updates. With the "knight's move"
+option, the neighbours marked with a K are also considered.
+
+<div class="code"><pre>
+  K   K 
+K x x x K
+  x O x
+K x x x K
+  K   K
+</pre></div>
+
+<p>
+The minimum cumulative costs are computed using Dijkstra's
+algorithm, that find an optimum solution (for more details see
+<em>r.cost</em>, that uses the same algorithm).
+<p>
+Once <em>r.walk</em> computes the cumulative cost map as a linear
+combination of friction cost (from friction map) and the altitude and
+distance covered (from the digital elevation model), <em>r.drain</em>
+can be used to find the minimum cost path.
+
+
+<h2>SEE ALSO</h2>
+
+<em><a href="r.cost.html">r.cost</a></em>,
+<em><a href="r.drain.html">r.drain</a></em>,
+<em><a href="r.in.ascii.html">r.in.ascii</a></em>,
+<em><a href="r.mapcalc.html">r.mapcalc</a></em>,
+<em><a href="r.out.ascii.html">r.out.ascii</a></em>
+
+
+<h2>REFERENCES</h2>
+
+<ul>
+<li>Aitken, R. 1977. Wilderness areas in Scotland. Unpublished Ph.D. thesis.
+ University of Aberdeen.
+<li> Steno Fontanari, University of Trento, Italy, Ingegneria per l'Ambiente e
+ il Territorio, 2000-2001.
+ Svilluppo di metodologie GIS per la determinazione dell'accessibilit&agrave;
+ territoriale come supporto alle decisioni nella gestione ambientale.
+<li>Langmuir, E. 1984. Mountaincraft and leadership. The Scottish
+ Sports Council/MLTB. Cordee, Leicester.
+</ul>
+
+<h2>AUTHORS</h2>
+
+<b>Based on r.cost written by :</b>
+<p>
+Antony Awaida,<br>
+Intelligent Engineering<br>
+Systems Laboratory,<br>
+M.I.T.<br>
+<br>
+James Westervelt,<br>
+U.S.Army Construction Engineering Research Laboratory
+
+<p>Updated for Grass 5<br>
+Pierre de Mouveaux (pmx@audiovu.com)
+
+<p>
+<b>Initial version of r.walk:</b>
+<p>
+Steno Fontanari, 2002
+
+<p>
+<b>Current version of r.walk:</b>
+<p>
+Franceschetti Simone, Sorrentino Diego, Mussi Fabiano and Pasolli Mattia<br>
+Correction by: Fontanari Steno, Napolitano Maurizio and  Flor Roberto<br>
+In collaboration with: Franchi Matteo, Vaglia Beatrice, Bartucca Luisa, Fava Valentina and Tolotti Mathias, 2004
+
+<p>
+<b>Updated for Grass 6.1</b>
+<p>
+Roberto Flor and Markus Neteler
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

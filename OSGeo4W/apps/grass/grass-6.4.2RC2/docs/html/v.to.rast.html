@@ -1,0 +1,198 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.to.rast</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.to.rast</b></em>  - Converts (rasterize) a vector map into a raster map.
+<h2>KEYWORDS</h2>
+vector, raster, conversion
+<h2>SYNOPSIS</h2>
+<b>v.to.rast</b><br>
+<b>v.to.rast help</b><br>
+<b>v.to.rast</b> <b>input</b>=<em>name</em>  [<b>layer</b>=<em>integer</em>]   [<b>type</b>=<em>string</em>[,<i>string</i>,...]]  <b>output</b>=<em>name</em> <b>use</b>=<em>string</em>  [<b>column</b>=<em>name</em>]   [<b>rgbcolumn</b>=<em>name</em>]   [<b>labelcolumn</b>=<em>name</em>]   [<b>value</b>=<em>float</em>]   [<b>rows</b>=<em>integer</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>layer</b>=<em>integer</em></DT>
+<DD>Layer number</DD>
+<DD>A single vector map can be connected to multiple database tables. This number determines which table to use.</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>type</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Feature type</DD>
+<DD>Options: <em>point,line,area</em></DD>
+<DD>Default: <em>point,line,area</em></DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output raster map</DD>
+
+<DT><b>use</b>=<em>string</em></DT>
+<DD>Source of raster values</DD>
+<DD>Options: <em>attr,cat,val,z,dir</em></DD>
+<DD>Default: <em>attr</em></DD>
+<DD><b>attr</b>: read values from attribute table</DD>
+<DD><b>cat</b>: use category values</DD>
+<DD><b>val</b>: use value specified by value option</DD>
+<DD><b>z</b>: use z coordinate (points or contours only)</DD>
+<DD><b>dir</b>: output as flow direction (lines only)</DD>
+
+<DT><b>column</b>=<em>name</em></DT>
+<DD>Name of column for 'attr' parameter (data type must be numeric)</DD>
+
+<DT><b>rgbcolumn</b>=<em>name</em></DT>
+<DD>Name of color definition column (with RRR:GGG:BBB entries)</DD>
+
+<DT><b>labelcolumn</b>=<em>name</em></DT>
+<DD>Name of column used as raster category labels</DD>
+
+<DT><b>value</b>=<em>float</em></DT>
+<DD>Raster value (for use=val)</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>rows</b>=<em>integer</em></DT>
+<DD>Number of rows to hold in memory</DD>
+<DD>Default: <em>4096</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.to.rast</em> transforms GRASS vector map layers into GRASS raster map
+layer format. Optionally, attributes can be converted into raster category
+labels.
+
+
+<h2>NOTES</h2>
+
+<em>v.to.rast</em> will only affect data in areas lying
+inside the boundaries of the current geographic region.
+Before running <em>v.to.rast</em>, the user should
+therefore ensure that the current geographic region is
+correctly set and that the region resolution is at the
+desired level.
+<p>
+Either the <em><b>column</b></em> parameter or the <em><b>value</b></em>
+parameter must be specified.  The <em><b>use</b></em> option may be 
+specified alone when using the <em>dir</em> option.
+<p>
+<em><b>use</b></em> options are:
+<ul>
+<li>
+<em>attr</em> - read values from attribute table (default)
+<li>
+<em>cat</em>  - read values from category
+<li>
+<em>val</em>  - use value specified by <em><b>value</b></em> option
+<li>
+<em>z</em>    - use z coordinate (points or contours only)
+<li>
+<em>dir</em>  - output as flow direction in degrees (lines only)
+</ul>
+<p>
+The <em><b>column</b></em> parameter uses an existing column from the vector map
+database table as the category value in the output raster map. Existing table 
+columns can be shown by using <em><a href="db.describe.html">db.describe</a></em>.
+<p>
+An empty raster map layer will be created if the vector map layer has not
+been assigned category/attribute labels (e.g., through use of 
+<a href="v.category.html">v.category option=add</a>). 
+<p>
+Otherwise:
+<ul>
+<li>
+Labeled areas and/or centroids will produce filled raster coverages with edges 
+that straddle the original area boundary <b>as long as the boundary is NOT 
+labeled</b>.
+<br>(Use <tt>v.category option=del type=boundary</tt> to remove.)
+<li>
+Labeled lines and boundaries will produce lines of raster cells which touch the 
+original vector line. This tends to be more aggressive than area-only conversions.
+<li>
+Points and orphaned centroids will be converted into single cells on the
+resultant raster map.
+</ul>
+<p>
+<p>
+<b>Flow directions</b> are given in degrees counterclockwise from east.
+<p>
+<p>
+Raster category labels are supported for all of <em>use=</em> except <em>use=z</em>.
+
+<h2>EXAMPLES</h2>
+
+<em>1. Convert a vector map and use column SPEED from attribute table</em><br>
+<div class="code"><pre>
+db.describe -c table=vect_map
+
+ncols:3
+Column 1: CAT
+Column 2: SPEED
+Column 3: WIDTH 
+</pre></div>
+
+<div class="code"><pre>
+v.to.rast in=vect_map out=raster_map col=SPEED
+</pre></div>
+
+<p>
+<p>
+<em>2. Calculate stream directions from a river vector map (Spearfish)</em><br>
+<div class="code"><pre>
+v.to.rast in=streams out=streamsdir use=dir
+</pre></div>
+
+
+<p>
+<p>
+<em>3. Convert a vector polygon map to raster including descriptive labels (Spearfish)</em><br>
+<div class="code"><pre>
+v.to.rast in=fields out=myfields use=attr col=cat labelcol=label
+r.category myfields
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+<em>
+<a href="db.describe.html">db.describe</a>,
+<a href="v.category.html">v.category</a>
+</em>
+<br>
+
+<h2>AUTHORS</h2>
+
+Original code: Michael Shapiro, U.S. Army Construction Engineering Research Laboratory
+<br>
+GRASS 6.0 updates: Radim Blazek, ITC-irst, Trento, Italy
+<br>
+Stream directions: Jaro Hofierka and Helena Mitasova
+<br>
+GRASS 6.3 code cleanup and label support: Brad Douglas
+<p>
+<p>
+<i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+
+
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

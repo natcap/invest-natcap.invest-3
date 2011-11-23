@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.to.3d</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.to.3d</b></em>  - Performs transformation of 2D vector features to 3D.
+<h2>KEYWORDS</h2>
+vector, transformation, 3D
+<h2>SYNOPSIS</h2>
+<b>v.to.3d</b><br>
+<b>v.to.3d help</b><br>
+<b>v.to.3d</b> [-<b>rt</b>] <b>input</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>type</b>=<em>string</em>[,<i>string</i>,...]]   [<b>height</b>=<em>float</em>]   [<b>layer</b>=<em>integer</em>]   [<b>column</b>=<em>name</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-r</b></DT>
+<DD>Reverse transformation; 3D vector features to 2D</DD>
+
+<DT><b>-t</b></DT>
+<DD>Do not copy table</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output vector map</DD>
+
+<DT><b>type</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Feature type</DD>
+<DD>Options: <em>point,line,boundary,centroid</em></DD>
+<DD>Default: <em>point,line,boundary,centroid</em></DD>
+
+<DT><b>height</b>=<em>float</em></DT>
+<DD>Fixed height for 3D vector features</DD>
+
+<DT><b>layer</b>=<em>integer</em></DT>
+<DD>Layer number</DD>
+<DD>A single vector map can be connected to multiple database tables. This number determines which table to use.</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>column</b>=<em>name</em></DT>
+<DD>Name of attribute column used for height</DD>
+<DD>Can be used for reverse transformation, to store height of points</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+The <em>v.to.3d</em> module is used to transform 2D vector features
+to 3D. Height (z-coordinate) of 3D vector features can be specified
+by <b>height</b> parameter as fixed value or by <b>column</b>
+parameter.
+
+<p>
+Flag <b>-r</b> enables to perform reverse transformation, i.e.,
+transform 3D vector to 2D by omitting z-coordinate.
+
+<h2> NOTES</h2>
+
+When transforming 2D vector features to 3D based on attribute, all
+NULL values are silently converted to height 0.0.
+
+<h2>EXAMPLES</h2>
+
+<h3>Transform 2D vector features to 3D</h3>
+
+<div class="code"><pre>
+# convert z-values from string to double
+v.db.addcol map=geodetic_pts columns="Z_VALUE_D double precision"
+v.db.update map=geodetic_pts column=Z_VALUE_D qcolumn=Z_VALUE
+v.db.select map=geodetic_pts columns=cat,Z_VALUE,Z_VALUE_
+
+# convert 2D vector point map to 3D based on attribute
+v.to.3d input=geodetic_pts out=geodetic_pts_3d column=Z_VALUE_D
+</pre></div>
+
+<h3>Transform 3D vector features to 2D</h3>
+
+<div class="code"><pre>
+v.to.3d -rt input=elev_lid792_bepts output=elev_lid_2d
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="v.transform.html">v.transform</a>,
+<a href="v.extrude.html">v.extrude</a>,
+<a href="v.drape.html">v.drape</a>
+</em>
+
+<h2>AUTHORS</h2>
+
+Martin Landa, CTU in Prague, Czech Republic
+
+<p>
+<i>Last changed: $Date: 2009-01-10 00:39:21 +0100 (so, 10 I 2009) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

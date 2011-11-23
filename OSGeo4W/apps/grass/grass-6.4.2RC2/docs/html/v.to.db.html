@@ -1,0 +1,282 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.to.db</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.to.db</b></em>  - Populates database values from vector features.
+<h2>KEYWORDS</h2>
+vector, database, attribute table
+<h2>SYNOPSIS</h2>
+<b>v.to.db</b><br>
+<b>v.to.db help</b><br>
+<b>v.to.db</b> [-<b>psc</b>] <b>map</b>=<em>name</em>  [<b>type</b>=<em>string</em>[,<i>string</i>,...]]   [<b>layer</b>=<em>integer</em>]   [<b>qlayer</b>=<em>integer</em>]  <b>option</b>=<em>string</em>  [<b>units</b>=<em>string</em>]   [<b>columns</b>=<em>name</em>[,<i>name</i>,...]]   [<b>qcolumn</b>=<em>name</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-p</b></DT>
+<DD>Print only</DD>
+
+<DT><b>-s</b></DT>
+<DD>Only print SQL statements</DD>
+
+<DT><b>-c</b></DT>
+<DD>In print mode prints totals for options: length,area,count</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>name</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>type</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Feature type</DD>
+<DD>For coor valid point/centroid, for length valid line/boundary</DD>
+<DD>Options: <em>point,line,boundary,centroid</em></DD>
+<DD>Default: <em>point,line,boundary,centroid</em></DD>
+
+<DT><b>layer</b>=<em>integer</em></DT>
+<DD>Layer number (write to)</DD>
+<DD>A single vector map can be connected to multiple database tables. This number determines which table to use.</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>qlayer</b>=<em>integer</em></DT>
+<DD>Query layer number (read from)</DD>
+<DD>A single vector map can be connected to multiple database tables. This number determines which table to use.</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>option</b>=<em>string</em></DT>
+<DD>Value to upload</DD>
+<DD>Options: <em>cat,area,compact,fd,perimeter,length,count,coor,start,end,sides,query,slope,sinuous,azimuth</em></DD>
+<DD><b>cat</b>: insert new row for each category if doesn't exist yet</DD>
+<DD><b>area</b>: area size</DD>
+<DD><b>compact</b>: compactness of an area, calculated as 
+              compactness = perimeter / (2 * sqrt(PI * area))</DD>
+<DD><b>fd</b>: fractal dimension of boundary defining a polygon, calculated as 
+              fd = 2 * (log(perimeter) / log(area))</DD>
+<DD><b>perimeter</b>: perimeter length of an area</DD>
+<DD><b>length</b>: line length</DD>
+<DD><b>count</b>: number of features for each category</DD>
+<DD><b>coor</b>: point coordinates, X,Y or X,Y,Z</DD>
+<DD><b>start</b>: line/boundary starting point coordinates, X,Y or X,Y,Z</DD>
+<DD><b>end</b>: line/boundary end point coordinates, X,Y or X,Y,Z</DD>
+<DD><b>sides</b>: categories of areas on the left and right side of the boundary, 'qlayer' is used for area category</DD>
+<DD><b>query</b>: result of a database query for all records of the geometry(or geometries) from table specified by 'qlayer' option</DD>
+<DD><b>slope</b>: slope steepness of vector line or boundary</DD>
+<DD><b>sinuous</b>: line sinuousity, calculated as line length / distance between end points</DD>
+<DD><b>azimuth</b>: line azimuth, calculated as angle between North direction and endnode direction at startnode</DD>
+
+<DT><b>units</b>=<em>string</em></DT>
+<DD>Units</DD>
+<DD>mi(les),f(eet),me(ters),k(ilometers),a(cres),h(ectares),r(adians),d(egrees)</DD>
+<DD>Options: <em>mi,miles,f,feet,me,meters,k,kilometers,a,acres,h,hectares,r,radians,d,degrees</em></DD>
+
+<DT><b>columns</b>=<em>name[,<i>name</i>,...]</em></DT>
+<DD>Name of attribute column(s)</DD>
+
+<DT><b>qcolumn</b>=<em>name</em></DT>
+<DD>Name of attribute column used for 'query' option</DD>
+<DD>E.g. 'cat', 'count(*)', 'sum(val)'</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.to.db</em> loads vector map features or metrics into a database
+table, or prints them (or the SQL queries used to obtain them) in a
+form of a human-readable report. For uploaded/printed category values
+'-1' is used for 'no category' and 'null'/'-' if category cannot be
+found or multiple categories were found. For line azimuths '-1' is used
+for closed lines (start equals end).
+
+<h2>NOTES</h2>
+The units <em>miles</em>, <em>feet</em>, <em>meters</em> and
+<em>kilometers</em> are square for <em>option=area</em>.
+<p>
+Feet and acre units are always reported in their common versions
+(i.e. the International Foot, exactly 5280 feet in a mile), even
+when the location's standard map unit is the US Survey foot.
+<p>
+When calculating perimeters in Latitude-Longitude locations, the geodesic
+distance between the vertices is used.
+<p>
+When using <em>option=coor</em> on a vector area map, 
+only coordinates of centroids with unique category will be reported.
+<p>
+Line azimuth is calculated as angle from the North direction to the line endnode
+direction at the line statnode. By default it's reported in decimal degrees (0-360, CW) but
+it also may be repored in radians with <em>unit=radians</em>. Azimuth value
+<b>-1</b> is used to report closed line with it's startnode and endnode being in
+same place. Azimuth values make sense only if every vector line has only one
+entry in database (unique CAT value).
+<p>
+If the module is apparently slow <em>and</em> the map attributes are
+stored in an external DBMS such as PostgreSQL, it is highly recommended
+to create an index on the key (category) column.
+<p>
+Uploading the vector map attributes to a database requires a table attached to
+a given input vector <em>layer</em>. The <b>print only</b> (<b>-p</b>) mode
+doesn't require a table. Use <em><a href="db.execute.html">db.execute</a></em>
+or <em><a href="v.db.addtable.html">v.db.addtable</a></em> to create a table if
+needed.
+<p>
+Updating the table has to be done column-wise. The <em>column</em> must be
+present in the table, except when using the <b>print only</b> (<b>-p</b>)
+mode. Use <em><a href="db.execute.html">db.execute</a></em> or
+<em><a href="v.db.addcol.html">v.db.addcol</a></em> to add new columns if
+needed.
+
+<h2>EXAMPLES</h2>
+
+<h3>Updating attribute tables</h3>
+
+Upload category numbers to attribute table (used for new map):<br>
+<div class="code"><pre>
+v.to.db map=soils type=centroid option=cat
+</pre></div>
+
+<p>
+Upload polygon areas to corresponding centroid record in the attribute table:<br>
+<div class="code"><pre>
+v.to.db map=soils type=centroid option=area col=area_size unit=h
+</pre></div>
+
+<p>
+Upload line lengths (in meters) of each vector line to attribute table
+(use <em>v.category</em> in case of missing categories):<br>
+<div class="code"><pre>
+v.to.db map=roads option=length type=line col=linelength units=me
+</pre></div>
+
+<p>
+Upload x and y coordinates from vector geometry to attribute table:<br>
+<div class="code"><pre>
+v.to.db map=pointsmap option=coor col=x,y
+</pre></div>
+
+<p>
+Upload x, y and z coordinates from vector geometry to attribute table:<br>
+<div class="code"><pre>
+v.to.db map=pointsmap option=coor col=x,y,z
+</pre></div>
+
+<p>
+Transfer attributes from a character column (with numeric contents) to a new
+integer column:<br>
+<div class="code"><pre>
+v.db.addcol usa_income_employment2002 col="FIPS_NUM integer"
+v.to.db usa_income_employment2002 option=query col=FIPS_NUM qcol=STATE_FIPS
+</pre></div>
+
+<p>
+Upload category numbers of left and right area, to an attribute table of
+boundaries common for the areas:<br>
+<div class="code"><pre>
+# add categories for boundaries of the input vector map, in layer 2:
+v.category soils out=mysoils layer=2 type=boundary option=add
+# add a table with columns named "left" and "right" to layer 2 of the input
+# vector map:
+v.db.addtable mysoils layer=2 col="left integer,right integer"
+# upload categories of left and right areas:
+v.to.db mysoils option=sides col=left,right layer=2
+# display the result:
+v.db.select mysoils layer=2
+</pre></div>
+
+<p>
+Compute D<sub>L</sub>, the Fractal Dimension (Mandelbrot, 1982), of the boundary defining a polygon based on the formula:
+<br><tt>
+D = 2 * (log perimeter) / (log area):<br>
+</tt>
+<div class="code"><pre>
+g.copy vect=soils,mysoils
+v.db.addcol mysoils col="d double precision"
+v.to.db mysoils option=fd column="d"
+
+g.region vect=mysoils res=50
+v.to.rast in=mysoils out=soils_fd type=area use=attr column=d
+r.colors map=soils_fd color=gyr
+
+d.mon x0
+d.rast.leg soils_fd
+d.vect mysoils type=boundary
+</pre></div>
+
+<h3>Printing reports</h3>
+
+Report x,y,z coordinates of points in the input vector map:<br>
+<div class="code"><pre>
+v.to.db -p bugsites option=coor type=point
+</pre></div>
+
+Report all area sizes of the input vector map:<br>
+<div class="code"><pre>
+v.to.db -p soils option=area type=boundary units=h
+</pre></div>
+
+<p>
+Report all area sizes of the input vector map, in hectares, sorted by category
+number (requires GNU <em>sort</em> utility installed):<br>
+<div class="code"><pre>
+v.to.db -p soils option=area type=boundary units=h | sort -n
+</pre></div>
+
+<p>
+Report all line lengths of the input vector map, in kilometers:<br>
+<div class="code"><pre>
+v.to.db -p roads option=length type=line units=k
+</pre></div>
+
+<p>
+Report number of features for each category in the input vector map:<br>
+<div class="code"><pre>
+v.to.db -p roads option=count type=line
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="d.what.vect.html">d.what.vect</a>,
+<a href="db.execute.html">db.execute</a>,
+<a href="v.category.html">v.category</a>,
+<a href="v.db.addtable.html">v.db.addtable</a>,
+<a href="v.db.addcol.html">v.db.addcol</a>,
+<a href="v.db.connect.html">v.db.connect</a>,
+<a href="v.distance.html">v.distance</a>,
+<a href="v.report.html">v.report</a>,
+<a href="v.univar.html">v.univar</a>,
+<a href="v.what.html">v.what</a>
+</em>
+
+
+<h2>REFERENCES</h2>
+
+</ul>
+  <li>Mandelbrot, B. B. (1982). The fractal geometry of nature. New York: W. H. Freeman.</li>
+  <li>Xu, Y. F. &amp; Sun, D. A. (2005). Geotechnique 55, No. 9, 691-695</li>
+</ul>
+
+
+<h2>AUTHOR</h2>
+
+Radim Blazek, ITC-irst, Trento, Italy<br>
+Line sinuousity implemented by Wolf Bergenheim
+
+<p>
+<i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

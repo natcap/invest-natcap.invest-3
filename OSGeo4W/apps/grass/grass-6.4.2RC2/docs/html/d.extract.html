@@ -1,0 +1,82 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: d.extract</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>d.extract</b></em>  - Selects and extracts vectors with mouse into new vector map.
+<h2>KEYWORDS</h2>
+display, vector
+<h2>SYNOPSIS</h2>
+<b>d.extract</b><br>
+<b>d.extract help</b><br>
+<b>d.extract</b> <b>input</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>type</b>=<em>string</em>[,<i>string</i>,...]]   [<b>color</b>=<em>string</em>]   [<b>hcolor</b>=<em>string</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output vector map</DD>
+
+<DT><b>type</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Feature type</DD>
+<DD>Options: <em>point,line,boundary,centroid,area,face</em></DD>
+<DD>Default: <em>point,line,boundary,centroid,area,face</em></DD>
+
+<DT><b>color</b>=<em>string</em></DT>
+<DD>Original line color</DD>
+<DD>Default: <em>black</em></DD>
+
+<DT><b>hcolor</b>=<em>string</em></DT>
+<DD>Highlight color</DD>
+<DD>Default: <em>red</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>d.extract</em> allows a user to graphically select vector objects from
+an existing vector map and creates a new map containing only the selected
+objects.
+
+<h2>EXAMPLE</h2>
+
+<h3>Graphically extract roads from a roads map:</h3>
+<div class="code"><pre>
+d.mon x0
+d.vect roads
+d.extract input=roads output=interstate
+</pre></div>
+
+
+<h2>SEE ALSO</h2>
+
+<em><a href="v.extract.html">v.extract</a></em>
+
+<h2>AUTHOR</h2>
+
+Radim Blazek, Markus Neteler
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="display.html">display index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

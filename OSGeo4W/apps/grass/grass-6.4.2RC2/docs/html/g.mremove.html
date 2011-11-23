@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: g.mremove</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>g.mremove</b></em>  - Removes data base element files from the user's current mapset.
+<h2>KEYWORDS</h2>
+general, map management
+<h2>SYNOPSIS</h2>
+<b>g.mremove</b><br>
+<b>g.mremove help</b><br>
+<b>g.mremove</b> [-<b>refb</b>]  [<b>rast</b>=<em>string</em>[,<i>string</i>,...]]   [<b>rast3d</b>=<em>string</em>[,<i>string</i>,...]]   [<b>vect</b>=<em>string</em>[,<i>string</i>,...]]   [<b>oldvect</b>=<em>string</em>[,<i>string</i>,...]]   [<b>asciivect</b>=<em>string</em>[,<i>string</i>,...]]   [<b>icon</b>=<em>string</em>[,<i>string</i>,...]]   [<b>labels</b>=<em>string</em>[,<i>string</i>,...]]   [<b>sites</b>=<em>string</em>[,<i>string</i>,...]]   [<b>region</b>=<em>string</em>[,<i>string</i>,...]]   [<b>region3d</b>=<em>string</em>[,<i>string</i>,...]]   [<b>group</b>=<em>string</em>[,<i>string</i>,...]]   [<b>3dview</b>=<em>string</em>[,<i>string</i>,...]]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-r</b></DT>
+<DD>Use basic regular expressions instead of wildcards</DD>
+
+<DT><b>-e</b></DT>
+<DD>Use extended regular expressions instead of wildcards</DD>
+
+<DT><b>-f</b></DT>
+<DD>Force removal (required for actual deletion of files)</DD>
+
+<DT><b>-b</b></DT>
+<DD>Remove base maps</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>rast</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>rast file(s) to be removed</DD>
+
+<DT><b>rast3d</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>rast3d file(s) to be removed</DD>
+
+<DT><b>vect</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>vect file(s) to be removed</DD>
+
+<DT><b>oldvect</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>oldvect file(s) to be removed</DD>
+
+<DT><b>asciivect</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>asciivect file(s) to be removed</DD>
+
+<DT><b>icon</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>icon file(s) to be removed</DD>
+
+<DT><b>labels</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>labels file(s) to be removed</DD>
+
+<DT><b>sites</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>sites file(s) to be removed</DD>
+
+<DT><b>region</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>region file(s) to be removed</DD>
+
+<DT><b>region3d</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>region3d file(s) to be removed</DD>
+
+<DT><b>group</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>group file(s) to be removed</DD>
+
+<DT><b>3dview</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>3dview file(s) to be removed</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>g.mremove</em> removes data files matching a pattern given by wildcards or POSIX Extended Regular Expressions.
+If the <b>-f</b> force flag is not given then nothing is removed, instead
+the list of selected file names is printed to <tt>stdout</tt>
+as a preview of the files to be deleted.
+
+<h2>EXAMPLE</h2>
+
+Delete all raster maps starting with "<tt>tmp_</tt>" in the current mapset:
+<div class="code"><pre>
+  g.mremove -f "tmp_*"
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em><a href="g.remove.html">g.remove</a></em>
+<p>
+<a href="http://en.wikipedia.org/wiki/Regular_expression">Regular expression</a> (from Wikipedia, the free encyclopedia)
+
+<h2>AUTHOR</h2>
+
+Huidae Cho<br>
+grass4u@gmail.com
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="general.html">general index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

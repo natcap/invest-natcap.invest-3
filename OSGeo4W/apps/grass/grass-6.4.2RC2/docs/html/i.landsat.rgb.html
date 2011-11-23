@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: i.landsat.rgb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>i.landsat.rgb</b></em>  - Performs auto-balancing of colors for LANDSAT images.
+<h2>KEYWORDS</h2>
+raster, imagery, colors
+<h2>SYNOPSIS</h2>
+<b>i.landsat.rgb</b><br>
+<b>i.landsat.rgb help</b><br>
+<b>i.landsat.rgb</b> [-<b>fpr</b>] <b>red</b>=<em>string</em> <b>green</b>=<em>string</em> <b>blue</b>=<em>string</em>  [<b>strength</b>=<em>float</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-f</b></DT>
+<DD>Extend colors to full range of data on each channel</DD>
+
+<DT><b>-p</b></DT>
+<DD>Preserve relative colors, adjust brightness only</DD>
+
+<DT><b>-r</b></DT>
+<DD>Reset to standard color range</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>red</b>=<em>string</em></DT>
+<DD>LANDSAT red channel</DD>
+
+<DT><b>green</b>=<em>string</em></DT>
+<DD>LANDSAT green channel</DD>
+
+<DT><b>blue</b>=<em>string</em></DT>
+<DD>LANDSAT blue channel</DD>
+
+<DT><b>strength</b>=<em>float</em></DT>
+<DD>Cropping intensity (upper brightness level)</DD>
+<DD>Options: <em>0-100</em></DD>
+<DD>Default: <em>98</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>i.landsat.rgb</em> auto-balances and enhances the color channels of a
+LANDSAT RGB image to provide a more natural color mixture. Only the color
+table of each image band is modified, the base data remains untouched.
+<p>
+The module works by calculating a histogram for each color channel and 
+removing an adjustable amount of outliers from either end before recalibrating
+the color scale with <em>r.colors</em>.
+<p>
+It will work with any 8-bit RGB imagery set and the script is easily modified
+to work with other datasets of greater band-depth.
+
+<h2>NOTES</h2>
+
+Depending on the image, it may or may not be advantageous to use the <b>-p</b>
+flag to preserve the relative color scaling. You will have to experiment
+with the different options to find a setting that works best for your
+particular imagery.
+<p>
+The <b>strength</b> option should generally be set in the 90-99 range. The
+lower the number, the more saturated the image becomes. It represents the
+percentage cut-off for the top end of the color histogram curve. The lower
+end is fixed at 2% of the area under the curve.
+<p>
+For quicker execution of this module on large images you can achieve largely
+similar results by switching to a coarser resolution before the running of
+the module (using <em>g.region</em>) and then back to the original resolution
+afterwards.
+
+
+<h2>EXAMPLE</h2>
+
+<div class="code"><pre>
+i.landsat.rgb red=tm.3 green=tm.2 blue=tm.1
+</pre></div>
+
+<h2>TODO</h2>
+
+The <b>strength</b> option requires further refinement.
+
+
+<h2>SEE ALSO</h2>
+
+<em><a href="d.rgb.html">d.rgb</a></em>,
+<em><a href="g.region.html">g.region</a></em>,
+<em><a href="i.oif.html">i.oif</a></em>,
+<em><a href="r.colors.html">r.colors</a></em>,
+<em><a href="r.composite.html">r.composite</a></em>,
+<em><a href="r.univar.html">r.univar</a></em>,
+
+
+<h2>AUTHORS</h2>
+
+Markus Neteler<br>
+M. Hamish Bowman, Dept. Marine Science, Otago University, New Zealand
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="imagery.html">imagery index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: db.select</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>db.select</b></em>  - Selects data from attribute table (performs SQL query statement(s)).
+<h2>KEYWORDS</h2>
+database, attribute table, SQL
+<h2>SYNOPSIS</h2>
+<b>db.select</b><br>
+<b>db.select help</b><br>
+<b>db.select</b> [-<b>cdvt</b>]  [<b>table</b>=<em>name</em>]   [<b>database</b>=<em>name</em>]   [<b>driver</b>=<em>name</em>]   [<b>sql</b>=<em>string</em>]   [<b>input</b>=<em>name</em>]   [<b>fs</b>=<em>character</em>]   [<b>vs</b>=<em>character</em>]   [<b>nv</b>=<em>string</em>]   [<b>output</b>=<em>name</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-c</b></DT>
+<DD>Do not include column names in output</DD>
+
+<DT><b>-d</b></DT>
+<DD>Describe query only (don't run it)</DD>
+
+<DT><b>-v</b></DT>
+<DD>Vertical output (instead of horizontal)</DD>
+
+<DT><b>-t</b></DT>
+<DD>Only test query, do not execute</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>table</b>=<em>name</em></DT>
+<DD>Table name</DD>
+
+<DT><b>database</b>=<em>name</em></DT>
+<DD>Database name</DD>
+<DD>Default: <em>$GISDBASE/$LOCATION_NAME/$MAPSET/dbf/</em></DD>
+
+<DT><b>driver</b>=<em>name</em></DT>
+<DD>Driver name</DD>
+<DD>Options: <em>dbf,odbc,ogr,pg,sqlite</em></DD>
+<DD>Default: <em>dbf</em></DD>
+
+<DT><b>sql</b>=<em>string</em></DT>
+<DD>SQL select statement</DD>
+<DD>For example: 'select * from rybniky where kapri = 'hodne'</DD>
+
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of file with sql statement</DD>
+
+<DT><b>fs</b>=<em>character</em></DT>
+<DD>Output field separator</DD>
+<DD>Default: <em>|</em></DD>
+
+<DT><b>vs</b>=<em>character</em></DT>
+<DD>Output vertical record separator</DD>
+
+<DT><b>nv</b>=<em>string</em></DT>
+<DD>Null value indicator</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output file (if omitted or "-" output to stdout)</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>db.select</em> prints result of selection from database 
+based on SQL statement read from input file or from standard input 
+to standard output.
+
+<h2>NOTE</h2>
+
+If parameters for database connection are already set with 
+<a href="db.connect.html">db.connect</a>, they are taken as default values and
+do not need to be spcified each time. Output will be displayed to stdout or can
+be directed to a file.
+
+<h2>EXAMPLES</h2>
+
+<div class="code"><pre>
+echo "select * from roads" | db.select 
+or
+ cat file.sql | db.select 
+or
+ db.select input=file.sql
+</pre></div>
+
+<p>
+
+<em>Select all from table roads</em><br>
+<div class="code"><pre>
+db.select -c driver=odbc database=g51test table=roads input=file.sql > result.csv
+</pre></div>
+
+<p>
+
+<em>Select some string attribute, exclude others:</em><br>
+<div class="code"><pre>
+echo "SELECT * FROM archsites WHERE str1 &lt;&gt; 'No Name'" | db.select
+</pre></div>
+
+<p>
+
+<em>Select some string attribute with ZERO length:</em><br>
+<div class="code"><pre>
+echo "SELECT * FROM archsites WHERE str1 IS NULL" | db.select
+</pre></div>
+
+<p>
+
+<em>Select coordinates from PostGIS table:</em><br>
+<div class="code"><pre>
+echo "SELECT x(geo),y(geo) FROM localizzazione" | db.select
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em><a href="sql.html">GRASS SQL interface</a>,
+<a href="db.connect.html">db.connect</a>,
+<a href="db.describe.html">db.describe</a>,
+<a href="db.drivers.html">db.drivers</a>,
+<a href="db.droptable.html">db.droptable</a>,
+<a href="db.execute.html">db.execute</a>,
+<a href="db.login.html">db.login</a>,
+<a href="db.tables.html">db.tables</a></em>
+
+
+<h2>AUTHOR</h2>
+?<br>
+Modifications: Radim Blazek, ITC-Irst, Trento, Italy
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+
+<HR>
+<P><a href="index.html">Main index</a> - <a href="database.html">database index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

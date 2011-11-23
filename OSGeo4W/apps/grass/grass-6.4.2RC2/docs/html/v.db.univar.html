@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.db.univar</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.db.univar</b></em>  - Calculates univariate statistics on selected table column for a GRASS vector map.
+<h2>KEYWORDS</h2>
+vector, statistics
+<h2>SYNOPSIS</h2>
+<b>v.db.univar</b><br>
+<b>v.db.univar help</b><br>
+<b>v.db.univar</b> [-<b>e</b>] <b>table</b>=<em>string</em> <b>column</b>=<em>string</em>  [<b>database</b>=<em>string</em>]   [<b>driver</b>=<em>string</em>]   [<b>where</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-e</b></DT>
+<DD>Extended statistics (quartiles and 90th percentile)</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>table</b>=<em>string</em></DT>
+<DD>Name of data table</DD>
+
+<DT><b>column</b>=<em>string</em></DT>
+<DD>Column on which to calculate statistics (must be numeric)</DD>
+
+<DT><b>database</b>=<em>string</em></DT>
+<DD>Database/directory for table</DD>
+
+<DT><b>driver</b>=<em>string</em></DT>
+<DD>Database driver</DD>
+
+<DT><b>where</b>=<em>string</em></DT>
+<DD>WHERE conditions of SQL statement without 'where' keyword</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.db.univar</em> calculates basic univariate statistics for numeric
+attributes in a data table. It will calculate minimum, maximum, range, mean,
+standard deviation, variance, coefficient of variation, quartiles, median, and
+90th percentile.
+It uses <em>db.select</em> to create list values for statistical calculations.
+
+<em>NOTES</em>
+
+If the database and driver are not specified, the default values set in
+<em>db.connect</em> will be used.
+
+<h2>EXAMPLE</h2>
+
+In this example, random points are sampled from the elevation map
+(North Carolina sample dataset) and univariate statistics performed:
+<div class="code"><pre>
+g.region rast=elevation -p
+v.random output=samples n=100
+v.db.addtable samples column="heights double precision"
+v.what.rast samples raster=elevation colum=heights
+v.db.select samples
+
+v.db.univar samples colum=heights
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="r.univar.html">r.univar</a>,
+<a href="v.univar.html">v.univar,</a>,
+<a href="db.select.html">db.select</a>,
+<a href="d.vect.thematic.html">d.vect.thematic</a>
+</em>
+
+<h2>AUTHOR</h2>
+ Michael Barton, Arizona State University
+<p>
+and authors of <em>r.univar.sh</em>
+
+<p>
+<i>Last changed: $Date: 2011-09-04 15:23:30 +0200 (ne, 04 IX 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

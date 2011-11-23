@@ -1,0 +1,75 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.in.sites.all</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.in.sites.all</b></em>  - Converts all old GRASS < Ver5.7 sites maps in current mapset to vector maps.
+<h2>KEYWORDS</h2>
+sites, vector, import
+<h2>SYNOPSIS</h2>
+<b>v.in.sites.all</b><br>
+<b>v.in.sites.all help</b><br>
+<b>v.in.sites.all</b> [-<b>r</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-r</b></DT>
+<DD>Run non-interactively</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h2>DESCRIPTION</h2>
+
+<em>v.in.sites.all</em> converts all GRASS 5.0/5.3/5.4 sites files in the current
+mapset into 6.0 vectors.
+
+<h2>NOTES</h2>
+
+Sites maps from 5.0/5.3/5.4 and vector maps from 6.0 do not interfere.
+They are stored in different directories, so you can use the same names.
+Old sites maps can be listed with <em>g.list sites</em>.
+<br>
+As this GRASS version uses SQL for attribute management, there are
+some <a href=sql.html>SQL restrictings concerning the file names</a>.
+This script changes dots (e.g. "foo.bar") in old vector map names into
+underline(s) (e.g. "foo_bar"). It also adds the extension '_points' to the
+new vector map name.
+
+<h2>EXAMPLE</h2>
+
+To convert all old vector maps in the current mapset to the new vector format:
+<br>
+<div class="code"><pre>
+v.in.sites.all -r
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="g.list.html">g.list</a>,
+<a href="v.in.sites.html">v.in.sites</a>
+</em>
+
+
+<h2>AUTHOR</h2>
+
+Markus Neteler, ITC-Irst, Trento, Italy
+
+<p>
+<i>Last changed: $Date: 2011-09-04 15:23:30 +0200 (ne, 04 IX 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

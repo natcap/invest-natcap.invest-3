@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.quant</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.quant</b></em>  - Produces the quantization file for a floating-point map.
+<h2>KEYWORDS</h2>
+raster, quantization
+<h2>SYNOPSIS</h2>
+<b>r.quant</b><br>
+<b>r.quant help</b><br>
+<b>r.quant</b> [-<b>tr</b>]  [<b>basemap</b>=<em>string</em>]  <b>input</b>=<em>string</em>[,<i>string</i>,...] <b>fprange</b>=<em>dmin,dmax</em> <b>range</b>=<em>min,max</em>  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-t</b></DT>
+<DD>Truncate floating point data</DD>
+
+<DT><b>-r</b></DT>
+<DD>Round floating point data</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>basemap</b>=<em>string</em></DT>
+<DD>Base map to take quant rules from</DD>
+<DD>Default: <em>NONE</em></DD>
+
+<DT><b>input</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Raster map(s) to be quantized</DD>
+
+<DT><b>fprange</b>=<em>dmin,dmax</em></DT>
+<DD>Floating point range: dmin,dmax</DD>
+<DD>Default: <em></em></DD>
+
+<DT><b>range</b>=<em>min,max</em></DT>
+<DD>Integer range: min,max</DD>
+<DD>Default: <em>1,255</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>r.quant</em> produces the quantization file for a floating-point map.
+<p>
+
+The <em>map</em> parameter defines the map for which the rules are to be
+created. If more than one map is specified, then this implies that the
+floating-point range is the miniumum and maximum of all the maps together,
+unless either basemap=map or fprange=min,max is specified.
+
+<h3> Quant rules </h3> 
+
+The quant rules have to be entered interactively.
+<p>
+If rules is specified, the input has the form: <p>
+
+              value1:value2:cat1:[cat2] <p>
+
+where value1 and value2 are floating point values and cat1 cand cat2 are
+integers. If cat2 is missing, it is taken to be equal to cat1. All values
+can be "*" which means infinity.
+
+<h2>NOTE</h2>
+It is an error for both basemap and fprange to be specified.
+
+<h2>SEE ALSO</h2>
+
+<em><a href="r.support.html">r.support</a></em>,
+<em><a href="r.null.html">r.null</a></em>
+
+<h2>AUTHOR</h2>
+
+Michael Shapiro, Olga Waupotitsch,
+U.S.Army Construction Engineering Research Laboratory
+
+<p><i>Last changed: $Date: 2010-02-28 02:56:22 +0100 (ne, 28 II 2010) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.overlay</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.overlay</b></em>  - Overlays two vector maps.
+<h2>KEYWORDS</h2>
+vector, geometry
+<h2>SYNOPSIS</h2>
+<b>v.overlay</b><br>
+<b>v.overlay help</b><br>
+<b>v.overlay</b> [-<b>t</b>] <b>ainput</b>=<em>name</em>  [<b>atype</b>=<em>string</em>[,<i>string</i>,...]]   [<b>alayer</b>=<em>integer</em>]  <b>binput</b>=<em>name</em>  [<b>btype</b>=<em>string</em>[,<i>string</i>,...]]   [<b>blayer</b>=<em>integer</em>]  <b>output</b>=<em>name</em>  [<b>operator</b>=<em>string</em>]   [<b>olayer</b>=<em>integer</em>[,<i>integer</i>,...]]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-t</b></DT>
+<DD>Do not create attribute table</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>ainput</b>=<em>name</em></DT>
+<DD>Name of input vector map (A)</DD>
+
+<DT><b>atype</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Feature type (vector map A)</DD>
+<DD>Feature type</DD>
+<DD>Options: <em>line,area</em></DD>
+<DD>Default: <em>area</em></DD>
+
+<DT><b>alayer</b>=<em>integer</em></DT>
+<DD>Layer number (vector map A)</DD>
+<DD>A single vector map can be connected to multiple database tables. This number determines which table to use.</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>binput</b>=<em>name</em></DT>
+<DD>Name of input vector map (B)</DD>
+
+<DT><b>btype</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Feature type (vector map B)</DD>
+<DD>Feature type</DD>
+<DD>Options: <em>area</em></DD>
+<DD>Default: <em>area</em></DD>
+
+<DT><b>blayer</b>=<em>integer</em></DT>
+<DD>Layer number (vector map B)</DD>
+<DD>A single vector map can be connected to multiple database tables. This number determines which table to use.</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output vector map</DD>
+
+<DT><b>operator</b>=<em>string</em></DT>
+<DD>Operator defines features written to output vector map</DD>
+<DD>Feature is written to output if the result of operation 'ainput operator binput' is true. Input feature is considered to be true, if category of given layer is defined.</DD>
+<DD>Options: <em>and,or,not,xor</em></DD>
+<DD>Default: <em>or</em></DD>
+<DD><b>and</b>: also known as 'intersection' in GIS</DD>
+<DD><b>or</b>: also known as 'union' in GIS (only for atype=area)</DD>
+<DD><b>not</b>: features from ainput not overlayed by features from binput</DD>
+<DD><b>xor</b>: features from either ainput or binput but not those from ainput overlayed by binput (only for atype=area)</DD>
+
+<DT><b>olayer</b>=<em>integer[,<i>integer</i>,...]</em></DT>
+<DD>Output layer for new category, ainput and binput</DD>
+<DD>If 0 or not given, the category is not written</DD>
+<DD>Default: <em>1,0,0</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.overlay</em> allows the user to overlay two vector area maps.
+<!-- This is outdated 
+There are 3 links attached to features in output map, 
+<ul>
+<li><b>field 1</b>: link to the new table, new table has 3 columns
+    </ul>
+        <li><b>cat</b> - key column linking rows to features
+        <li><b>cata</b> - category of <i>afield</i> from <i>ainput</i>
+        <li><b>catb</b> - category of <i>bfield</i> from <i>binput</i>
+    <ul>
+<li><b>field 2</b>: category of <i>afield</i> from <i>ainput</i>
+<li><b>field 3</b>: category of <i>bfield</i> from <i>binput</i>
+</ul>
+-->
+The resulting output map has a merged attribute-table. The origin column-names
+have a prefix (<em>a_</em> and <em>b_</em>) which results from the ainput- and binput-map.
+
+<h2>NOTES</h2>
+Currently only areas are supported for the operators <em>or</em> and <em>xor</em>! See also <a href="v.select.html">v.select</a>.
+
+The operator defines what kind of operation will be done. Features are written to output,
+if the result of an operation 'ainput operator binput' is true.
+<p>
+Attributes of the tables from ainput and binput are joined into a new table
+linked to the output maps new cat-column. 
+
+<!-- This is outdated
+<p>
+<div class="code"><pre>
+v.db.connect map=outputmap table=ainput.dbf field=2
+v.db.connect map=outputmap table=binput.dbf field=3
+
+</pre></div>
+
+<p>
+<b>Attention:</b> Removing the output map will also delete all tables linked to
+it! Therefore it is advisable to copy tables from ainput and binput first and
+connect the copied tables to the output map.-->
+
+<h2>EXAMPLE POLYGON TO POLYGON UNION</h2>
+<div class="code"><pre>
+v.overlay ainput=lake binput=province output=lakeXprovince operator=or
+</pre></div>
+
+<h2>EXAMPLE LINE TO POLYGON CLIPPING</h2>
+
+Using the North Carolina sample dataset, we clip the roads map to the area
+of city of Raleigh:
+<div class="code"><pre>
+g.region vect=zipcodes_wake
+
+# extract Raleigh city
+v.extract in=zipcodes_wake out=raleigh \
+            where="ZIPNAME = 'RALEIGH'"
+
+# clip road network to city polygon:
+v.overlay ainput=roadsmajor atype=line binput=raleigh \
+            out=roadsmajor_raleigh operator=and
+</pre></div>
+
+<center>
+<img src="v_overlay_area_lines.png" alt="GRASS v.overlay: Line to polygon clipping"><br>
+<table border=0 width=590>
+<tr><td><center>
+<i>v.overlay: Line to polygon clipping</i>
+</center></td></tr>
+</table>
+</center>
+
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="v.db.connect.html">v.db.connect</a>,
+<a href="v.select.html">v.select</a>,
+<a href="g.copy.html">g.copy</a></em>
+
+<h2>AUTHORS</h2>
+
+Radim Blazek, ITC-Irst, Trento, Italy
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

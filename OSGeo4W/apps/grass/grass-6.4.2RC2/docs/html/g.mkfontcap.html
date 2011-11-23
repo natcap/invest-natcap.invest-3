@@ -1,0 +1,102 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: g.mkfontcap</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>g.mkfontcap</b></em>  - Generates the font configuration file by scanning various directories for fonts
+<h2>KEYWORDS</h2>
+general
+<h2>SYNOPSIS</h2>
+<b>g.mkfontcap</b><br>
+<b>g.mkfontcap help</b><br>
+<b>g.mkfontcap</b> [-<b>os</b>]  [<b>extradirs</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-o</b></DT>
+<DD>Overwrite font configuration file if already existing</DD>
+
+<DT><b>-s</b></DT>
+<DD>Write font configuration file to standard output instead of $GISBASE/etc</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>extradirs</b>=<em>string</em></DT>
+<DD>Comma-separated list of extra directories to scan for Freetype-compatible fonts as well as the defaults (see documentation)</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<p>
+<em>g.mkfontcap</em> is a utilty to generate a GRASS font configuration file
+("fontcap") containing details of the fonts available on the current system.
+If <a href="http://freetype.sourceforge.net/">Freetype</a> is not installed,
+the font list will be limited to the set of Hershey stroke fonts supplied
+with GRASS. With Freetype enabled however, the module will recursively scan 
+all files within a predefined hierarchy to find Freetype-compatible scalable
+fonts. The list of directories scanned is currently:
+<div class="code"><pre>
+    /usr/lib/X11/fonts
+    /usr/share/X11/fonts
+    /usr/share/fonts
+    ${HOME}/Library/Fonts
+    /Library/Fonts
+    /System/Library/Fonts
+    ${WINDIR}/Fonts
+</pre></div>
+These correspond to directories where fonts can be found on some common
+operating systems. Extra directories to search can easily by added using the
+<em>extradirs</em> parameter, which accepts a comma-separated list. An extra
+directory may optionally contain an environment variable <em>at the start</em> 
+of the string, if enclosed in ${xxx} syntax (see examples above).
+
+<p>
+The module will normally write to the standard fontcap file location,
+<tt>$GISBASE/etc/fontcap</tt>. If the environment variable
+<strong>GRASS_FONT_CAP</strong> is set, the output will instead be written 
+to the file specified by that variable. This is useful if you don't have
+permission to modify <tt>$GISBASE/etc/fontcap</tt>: in this case you can
+use e.g.
+
+<div class="code"><pre>
+# use local file version instead of system copy
+GRASS_FONT_CAP=$HOME/.gfontcap
+export GRASS_FONT_CAP
+
+g.mkfontcap
+</pre></div>
+
+to create a personal copy and then to make GRASS use that file
+instead of the system copy.
+
+<p>
+The output list of fonts is sorted first by type (Stroke fonts first,
+followed by Freetype) and within each type by the short name of the font.
+
+<h2>SEE ALSO</h2>
+ 
+<em><a href="d.font.html">d.font</a></em>
+
+<h2>AUTHOR</h2>
+
+Paul Kelly
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="general.html">general index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

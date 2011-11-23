@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: d.geodesic</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>d.geodesic</b></em>  - Displays a geodesic line, tracing the shortest distance between two geographic points along a great circle, in a longitude/latitude data set.
+<h2>KEYWORDS</h2>
+display, distance
+<h2>SYNOPSIS</h2>
+<b>d.geodesic</b><br>
+<b>d.geodesic help</b><br>
+<b>d.geodesic</b>  [<b>coor</b>=<em>lon1,lat1,lon2,lat2</em>]   [<b>lcolor</b>=<em>string</em>]   [<b>tcolor</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>coor</b>=<em>lon1,lat1,lon2,lat2</em></DT>
+<DD>Starting and ending coordinates</DD>
+
+<DT><b>lcolor</b>=<em>string</em></DT>
+<DD>Line color</DD>
+<DD>Options: <em>red,orange,yellow,green,blue,indigo,violet,white,black,gray,brown,magenta,aqua,grey,cyan,purple</em></DD>
+<DD>Default: <em>black</em></DD>
+
+<DT><b>tcolor</b>=<em>string</em></DT>
+<DD>Text color or "none"</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>d.geodesic</em> displays a geodesic line in the active frame on the user's 
+graphics monitor. This is also known as the great circle line and traces the 
+shortest distance between two user-specified points on the curved surface of 
+a longitude/latitude data set. The two coordinate locations named must fall 
+within the boundaries of the user's current geographic region. 
+
+<h2>OPTIONS</h2>
+
+This program can be run either interactively or non-interactively. 
+If the user types <b>d.geodesic</b> on the command line and runs it without other program 
+parameters, the mouse will be activated; the user is asked to use 
+the mouse to indicate the starting and ending points of each geodesic line 
+to be drawn. The default line color (black) and text color (red) 
+will be used. 
+
+<p>
+Alternately, the user can specify the starting and ending coordinates 
+of the geodesic, line color, and text color on the command line, 
+and run the program non-interactively. 
+
+<p>
+Once the user indicates the starting and ending coordinates 
+of the geodesic, the line and its length (in miles) are displayed to 
+the user's graphics monitor. If the text color is set to <em>none</em>,
+the great circle distance is not displayed.
+
+<h2>EXAMPLE</h2>
+
+<div class="code"><pre>
+g.region vect=world_political -p
+d.mon wx0
+d.vect world_political type=area
+d.geodesic coor=55:58W,33:18S,26:43E,60:37N lcolor=red tcolor=violet
+</pre></div>
+
+<p>
+<center>
+<img src="d_geodesic.png" border=0><br>
+<i>Geodesic line (great circle line)</i>
+</center>
+
+<h2>NOTES</h2>
+
+This program works only with GRASS locations using a longitude/latitude 
+coordinate system. 
+
+<h2>SEE ALSO</h2>
+
+<em><a href="d.rhumbline.html">d.rhumbline</a></em>
+
+<h2>AUTHOR</h2>
+
+Michael Shapiro, U.S. Army Construction Engineering Research Laboratory
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="display.html">display index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

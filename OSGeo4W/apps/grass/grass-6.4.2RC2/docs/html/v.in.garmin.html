@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.in.garmin</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.in.garmin</b></em>  - Download waypoints, routes, and tracks from a Garmin GPS receiver into a vector map.
+<h2>KEYWORDS</h2>
+vector, import, GPS
+<h2>SYNOPSIS</h2>
+<b>v.in.garmin</b><br>
+<b>v.in.garmin help</b><br>
+<b>v.in.garmin</b> [-<b>vwrtpuzk</b>]  [<b>output</b>=<em>string</em>]   [<b>port</b>=<em>string</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-v</b></DT>
+<DD>Verbose mode</DD>
+
+<DT><b>-w</b></DT>
+<DD>Download Waypoints from GPS</DD>
+
+<DT><b>-r</b></DT>
+<DD>Download Routes from GPS</DD>
+
+<DT><b>-t</b></DT>
+<DD>Download Track from GPS</DD>
+
+<DT><b>-p</b></DT>
+<DD>Force import of track or route data as points</DD>
+
+<DT><b>-u</b></DT>
+<DD>Use gardump instead of gpstrans as the download program</DD>
+
+<DT><b>-z</b></DT>
+<DD>Import track in 3D (gardump only)</DD>
+
+<DT><b>-k</b></DT>
+<DD>Do not attempt projection transform from WGS84</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Name for output vector map (omit for display to stdout)</DD>
+
+<DT><b>port</b>=<em>string</em></DT>
+<DD>Port Garmin receiver is connected to</DD>
+<DD>Default: <em>/dev/gps</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.in.garmin</em> allows the user to import waypoint, route, and track
+ data from a locally connected Garmin GPS receiver via the 
+<em><a href="http://gpstrans.sourceforge.net">gpstrans</a></em>
+ program by Carsten Tschach or the
+<em><a href="http://www.snafu.org">gardump</a></em>
+ program by Marc Hyman. 
+
+<h2>NOTES</h2>
+If the GPS is set up to output WGS84 Lat/Lon, <em>v.in.garmin</em> will
+attempt to automatically transform the coordinates to the current projection.
+In all other cases, no checks are performed for datum, projection and format of data.
+You must check for yourself that your receiver, gpstrans and GRASS
+use the same map datum and projection.
+The automatic transform may be skipped by using the <b>-k</b> flag.
+
+<p>
+Route and Track data may be uploaded as points by using the <em>-p</em> flag, 
+otherwise they will be imported as a line. You can run <em>v.in.garmin</em>
+multiple times and merge the line and point vectors with the <em>v.patch</em>
+command if you want, but take care when merging dissimilar attribute tables.
+
+<p>
+Future versions of GRASS will use <em>gardump</em> as the default download
+program. It can talk to newer Garmin GPSs, while <em>gpstrans</em> seems to
+be mostly abandoned these days and only works with older GPSs. The current
+version of <em>gardump</em> (ver 2.5) will not yet talk to USB-only GPSs, but
+you can try the <em>v.in.gpsbabel</em> module for those. The <em>gardump</em>
+code has been tested with an older Garmin GPS 45 and a newer GPS V and is
+expected to work with everything in between.
+
+<p>
+Before running <em>v.in.garmin</em>, <em>gpstrans</em> should be set up 
+to output WGS84 latitude-longitude, as follows: <br>
+<tt>
+$ <b>gpstrans -s</b><br>
+datum:  100 (WGS84)<br>
+format: 2 - lat/lon  ddd.ddddd<br>
+</tt>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="db.execute.html">db.execute</a>,
+<a href="v.in.ascii.html">v.in.ascii</a>,
+<a href="v.in.gpsbabel.html">v.in.gpsbabel</a>,
+<a href="v.db.connect.html">v.db.connect</a>,
+<a href="v.patch.html">v.patch</a>
+</em>
+
+<p>
+<a href="http://gpstrans.sourceforge.net">gpstrans</a> manual<br>
+<a href="http://www.snafu.org">gardump</a> from the "garmin-utils" package<br>
+cs2cs from <a href="http://trac.osgeo.org/proj/">PROJ.4</a><br>
+The <tt>awk</tt> user manual
+
+<p>
+<h2>AUTHORS</h2>
+Based on <em>v.in.garmin.sh</em> for GRASS 5.0 by Andreas Lange
+<br>&nbsp;&nbsp;&nbsp;&nbsp;
+with bug fixes by Glynn Clements and Markus Neteler
+<br>Rewritten for GRASS 5.3 and 5.7 by Hamish Bowman
+<br><tt>gardump</tt> and 3D track support by Hamish Bowman
+<p>
+gpstrans was written by Carsten Tschach<br>
+gardump was written by Marc Hyman<br>
+
+<p>
+<i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

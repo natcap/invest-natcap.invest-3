@@ -1,0 +1,86 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.topidx</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.topidx</b></em>  - Creates topographic index map from elevation raster map.
+<h2>KEYWORDS</h2>
+raster, hydrology
+<h2>SYNOPSIS</h2>
+<b>r.topidx</b><br>
+<b>r.topidx help</b><br>
+<b>r.topidx</b> <b>input</b>=<em>name</em> <b>output</b>=<em>name</em>  [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Input elevation map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Output topographic index map</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>r.topidx</em> creates topographic index (wetness index), ln(a/tan(beta)), map from
+elevation map
+<p>
+where
+<dl>
+<dd>a: the area of the hillslope per unit contour length that drains through any point,
+<p>
+<dd>tan(beta): the local surface topographic slope (delta vertical) / (delta horizontal).
+</dl>
+<p>
+Input maps may have NULL values.  For example, if you have a MASK for
+a watershed (basin map from <em>r.water.outlet</em>), the
+following command will create a masked elevation map (belev):
+<div class="code"><pre>
+r.mapcalc "belev = if(isnull(basin), basin, elev)"
+</pre></div>
+<p>
+
+<em>r.stats -Anc</em> prints out averaged statistics for topographic index.
+
+<h2>SEE ALSO</h2>
+<em><a href="r.topmodel.html">r.topmodel</a></em>,
+<em><a href="r.water.outlet.html">r.water.outlet</a></em>,
+<em><a href="r.mapcalc.html">r.mapcalc</a></em>
+
+<h2>REFERENCE</h2>
+
+Moore, I.D., R.B. Grayson, and A.R. Ladson, 1991. Digital terrain
+modeling: A review of hydrological, geomorphological, and biological
+applications. Hydrol. Processes 5:3-30.
+
+<h2>AUTHORS</h2>
+Main algorithm sources are rewritten from GRIDATB.FOR.
+<br>
+Thanks to Keith Beven.
+<p>
+GRASS port by <a href=mailto:grass4u gmail com>Huidae Cho</a><br>
+Hydro Laboratory, Kyungpook National University, South Korea
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>
