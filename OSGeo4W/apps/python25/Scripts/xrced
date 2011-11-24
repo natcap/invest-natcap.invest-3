@@ -1,4 +1,0 @@
-#!c:\OSGeo4W\bin\python.exe
-
-from wx.tools.XRCed.xrced import main
-main()

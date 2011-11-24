@@ -1,5 +1,0 @@
-#!c:\OSGeo4W\bin\python.exe
-
-from wx.tools.img2py import main
-main()
-
