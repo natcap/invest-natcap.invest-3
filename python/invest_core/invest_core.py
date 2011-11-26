@@ -465,7 +465,14 @@ def calculateSlope(dem, uri=''):
     slope = newRasterFromBase(dem, uri, format, -1, gdal.GDT_Float32)
     slope.GetRasterBand(1).WriteArray(slopeMatrix, 0, 0)
 
-    rasterMin, rasterMax, mean, stdev = slope.GetRasterBand(1).ComputeStatistics(False)
+    raster = slope.GetRasterBand(1)
+
+    logger.debug('these are the band stats ' + str(raster.ComputeBandStats(False)))
+
+    rasterMin, rasterMax = raster.ComputeBandStats(False)
+    #make up stddev and mean
+    mean = (rasterMax + rasterMin) / 2.0
+    stdev = (rasterMax - mean) / 2.0
     slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
     return slope
 
