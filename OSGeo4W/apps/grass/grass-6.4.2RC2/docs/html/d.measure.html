@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: d.measure</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>d.measure</b></em>  - Measures the lengths and areas of features drawn by the user in the active display frame on the graphics monitor.
+<h2>KEYWORDS</h2>
+display, geometry
+<h2>SYNOPSIS</h2>
+<b>d.measure</b><br>
+<b>d.measure help</b><br>
+<b>d.measure</b> [-<b>smk</b>]  [<b>c1</b>=<em>string</em>]   [<b>c2</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-s</b></DT>
+<DD>Suppress clear screen</DD>
+
+<DT><b>-m</b></DT>
+<DD>Output in meters only</DD>
+
+<DT><b>-k</b></DT>
+<DD>Output in kilometers as well</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>c1</b>=<em>string</em></DT>
+<DD>Line color 1</DD>
+<DD>Options: <em>red,orange,yellow,green,blue,indigo,violet,white,black,gray,brown,magenta,aqua,grey,cyan,purple</em></DD>
+<DD>Default: <em>white</em></DD>
+
+<DT><b>c2</b>=<em>string</em></DT>
+<DD>Line color 2</DD>
+<DD>Options: <em>red,orange,yellow,green,blue,indigo,violet,white,black,gray,brown,magenta,aqua,grey,cyan,purple</em></DD>
+<DD>Default: <em>black</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>d.measure</em> provides the user with an interactive
+way to measure the lengths and areas of lines and polygons
+drawn by the user in the active frame on the graphics
+monitor.  Lines and polygons are drawn using a pointing
+device (mouse).  Each line segment is drawn in colors
+<b>c1</b> and <b>c2</b>.  A mouse button menu indicates
+that the user can find out the geographic coordinates of
+the cursor location, draw line segments between
+user-specified vertices, and quit <em>d.measure</em>. Lines
+and polygons are defined by the series of vertices marked
+by the user. If more than two successive vertices are
+drawn, <em>d.measure</em> prints the area encompassed
+(<em>d.measure</em> will assume the area is closed even if
+the user has not joined the first and last vertices).
+<!-- (not [currently] true!)  Line lengths are stated in the same units
+as those of the current LOCATION. In a XY-LOCATION, where no units are
+available, <em>d.measure</em> prints a warning and gives results without
+units. -->
+Areas can be stated in hectares, square miles, square meters and
+square kilometers.
+
+Lines and polygons drawn using <em>d.measure</em> will
+overlay (not overwrite) whatever display currently appears
+in the active frame on the graphics monitor.  The user can,
+for example, run 
+<em><a href="d.rast.html">d.rast</a></em> or 
+<em><a href="d.vect.html">d.vect</a></em> prior to running
+<em>d.measure</em>, and use raster and/or vector maps as a backdrop.
+
+<h2>NOTES</h2>
+
+<em>d.measure</em> uses all segments drawn by the user when computing area. 
+If the user draws an area within another area, the combined 
+area of both regions will be output. 
+
+<h2>TODO</h2>
+
+Output lengths in the same units as those of the current LOCATION as
+found in the <tt>PROJ_UNITS</tt> file (see <em>g.proj</em>).
+Volunteers are welcome for this task.
+
+<h2>SEE ALSO</h2>
+
+<em><a href="d.frame.html">d.frame</a></em><br>
+<em><a href="d.graph.html">d.graph</a></em><br>
+<em><a href="d.rast.html">d.rast</a></em><br>
+<em><a href="d.vect.html">d.vect</a></em><br>
+<em><a href="d.where.html">d.where</a></em><br>
+<em><a href="g.proj.html">g.proj</a></em>
+
+
+<h2>AUTHORS</h2>
+
+James Westervelt, 
+<br>
+Michael Shapiro, <br>
+U.S. Army Construction Engineering 
+Research Laboratory
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="display.html">display index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

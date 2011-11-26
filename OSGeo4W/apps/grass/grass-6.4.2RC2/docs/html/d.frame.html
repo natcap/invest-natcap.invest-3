@@ -1,0 +1,119 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: d.frame</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>d.frame</b></em>  - Manages display frames on the user's graphics monitor.
+<h2>KEYWORDS</h2>
+display, setup
+<h2>SYNOPSIS</h2>
+<b>d.frame</b><br>
+<b>d.frame help</b><br>
+<b>d.frame</b> [-<b>csepalD</b>]  [<b>frame</b>=<em>name</em>]   [<b>at</b>=<em>bottom,top,left,right</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-c</b></DT>
+<DD>Create a new frame</DD>
+
+<DT><b>-s</b></DT>
+<DD>Select a frame</DD>
+
+<DT><b>-e</b></DT>
+<DD>Remove all frames and erase the screen</DD>
+
+<DT><b>-p</b></DT>
+<DD>Print name of current frame</DD>
+
+<DT><b>-a</b></DT>
+<DD>Print names of all frames</DD>
+
+<DT><b>-l</b></DT>
+<DD>List map names displayed in GRASS monitor</DD>
+
+<DT><b>-D</b></DT>
+<DD>Debugging output</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>frame</b>=<em>name</em></DT>
+<DD>Frame to be created/selected</DD>
+
+<DT><b>at</b>=<em>bottom,top,left,right</em></DT>
+<DD>Where to place the frame, values in percent (implies -c)</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+This program manages display frames on the user's graphics
+monitor. Graphics are displayed in rectangular frames on whatever graphics
+monitor the user is currently directing GRASS display
+output to.  These frames are created and managed with this
+module. Note that GRASS frame contents <em>are not</em>
+retained when one frame covers another. You cannot
+shuffle frames from top to bottom and then back again.
+They simply define rectangular areas on the screen where
+subsequent drawing will occur.
+
+<h2>NOTES</h2>
+
+The coordinates for the <b>at=</b> option are stated in the form: 
+<em>bottom,top,left,right</em>. The lower-left corner of the graphics 
+monitor always is at location 0,0 while the monitor's upper-right 
+corner is always at 100,100 (the values are in percent). 
+<p>
+If <b>at=</b> options are not given during frame correction the
+user will be prompted to create the frame using the mouse.
+Likewise if a frame name is not given during frame selection, the user
+will be prompted to select an existing frame on the display monitor
+using the mouse.
+<p>
+If the user has created multiple display frames that overlap one another, 
+whatever the user displays in the active frame will overwrite 
+those portions of the underlying frame where these frames overlap. 
+<p>
+A frame by the name of <em>full_screen</em> is always present and may be
+selected at any time. This may be useful if you would like to de-select
+all user defined frames just before taking a screenshot.
+
+<h2>SEE ALSO</h2>
+<em>
+<a href="d.erase.html">d.erase</a><br>
+<a href="d.extend.html">d.extend</a><br>
+<a href="d.info.html">d.info</a><br>
+<a href="d.mon.html">d.mon</a><br>
+<a href="d.monsize.html">d.monsize</a><br>
+<a href="d.mvmon.html">d.mvmon</a><br>
+<a href="d.redraw.html">d.redraw</a><br>
+<a href="d.resize.html">d.resize</a><br>
+<a href="d.save.html">d.save</a><br>
+<a href="d.split.html">d.split</a><br>
+</em>
+
+<h2>AUTHOR</h2>
+
+James Westervelt, U.S. Army Construction Engineering 
+Research Laboratory
+<br>
+Michael Shapiro, U.S. Army Construction Engineering 
+Research Laboratory
+<p>
+<i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="display.html">display index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

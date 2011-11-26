@@ -1,0 +1,93 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.surf.random</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.surf.random</b></em>  - Produces a raster map of uniform random deviates whose range can be expressed by the user.
+<h2>KEYWORDS</h2>
+raster, random
+<h2>SYNOPSIS</h2>
+<b>r.surf.random</b><br>
+<b>r.surf.random help</b><br>
+<b>r.surf.random</b> [-<b>i</b>] <b>output</b>=<em>name</em>  [<b>min</b>=<em>integer</em>]   [<b>max</b>=<em>integer</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-i</b></DT>
+<DD>Create an integer raster map</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output raster map</DD>
+
+<DT><b>min</b>=<em>integer</em></DT>
+<DD>Minimum random value</DD>
+<DD>Default: <em>0</em></DD>
+
+<DT><b>max</b>=<em>integer</em></DT>
+<DD>Maximum random value</DD>
+<DD>Default: <em>100</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<b>r.surf.random</b> produces a raster map layer of uniform random deviates
+whose range can be expressed by the user. It is essentialy the same as
+<em>r.surf.gauss</em>, but uses a linear random number generator instead.
+It uses the random number generator drand48() or rand()<!-- cite? -->,
+depending on the user's platform.
+
+<p>
+<center>
+<img src="r_surf_random_hist.png" alt="r.surf.random map histogram"><br>
+<i>Histogram of map generated with r.surf.random</i>
+</center>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="r.surf.contour.html">r.surf.contour</a>,
+<a href="r.surf.fractal.html">r.surf.fractal</a>,
+<a href="r.surf.gauss.html">r.surf.gauss</a>,
+<a href="r.surf.idw.html">r.surf.idw</a>,
+<a href="r.surf.idw2.html">r.surf.idw2</a>,
+<a href="v.surf.rst.html">v.surf.rst</a>
+</em>
+
+<h2>AUTHOR</h2>
+
+Jo Wood<br>
+Midlands Regional Research Laboratory (ASSIST)<br>
+University of Leicester<br>
+<i>October 1991</i>
+<br>
+
+<!-- almost certainly no longer valid
+<address>jwo at le.ac.uk</address>
+
+<br><a href="http://www.geog.le.ac.uk/assist/index.html">ASSIST's home</a>
+-->
+
+<p>
+<i>Last changed: $Date: 2008-06-01 12:01:53 +0200 (ne, 01 VI 2008) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

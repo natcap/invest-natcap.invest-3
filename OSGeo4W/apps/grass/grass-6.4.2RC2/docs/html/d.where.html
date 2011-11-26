@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: d.where</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>d.where</b></em>  - Identifies the geographic coordinates associated with point locations in the active frame on the graphics monitor.
+<h2>KEYWORDS</h2>
+display, position, querying
+<h2>SYNOPSIS</h2>
+<b>d.where</b><br>
+<b>d.where help</b><br>
+<b>d.where</b> [-<b>1dlwf</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-1</b></DT>
+<DD>One mouse click only</DD>
+
+<DT><b>-d</b></DT>
+<DD>Output lat/long in decimal degree</DD>
+
+<DT><b>-l</b></DT>
+<DD>Output lat/long referenced to current ellipsoid</DD>
+
+<DT><b>-w</b></DT>
+<DD>Output lat/long referenced to WGS84 ellipsoid using datum transformation parameters defined in current location (if available)</DD>
+
+<DT><b>-f</b></DT>
+<DD>Output frame coordinates of current display monitor (percentage)</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h2>DESCRIPTION</h2>
+
+
+<em>d.where</em> is an <em>interactive</em> program that
+allows the user, using the pointing device (mouse), to
+identify the geographic coordinates associated with point
+locations within the current geographic region in the
+active display frame on the graphics monitor.
+
+<p>
+Each mouse click will output the easting and northing of the point
+currently located beneath the mouse pointer. 
+A mouse-button menu is presented so the user knows which
+mouse buttons to use. The output is always printed to the
+terminal screen; if the output is redirected into a file,
+it will be written to the file as well.
+
+<p>
+Mouse buttons:
+
+<pre>
+     Left:   where am i
+     Middle: draw to/from here
+     Right:  quit this
+</pre>
+
+The left mouse button prints the coordinates at the selected point,
+the middle mouse button allows to query two points (they are connected by a
+line for convenience). By using the right mouse button the module is left.
+
+
+<h2>NOTES</h2>
+
+This program uses the current geographic region setting and active frame. 
+It is not necessary, although useful, to have displayed a map in the current 
+frame before running <em>d.where</em>. The <b>-d</b> flag allows the user to
+optionally output latitude/longitude coordinates pair(s) in decimal degree
+rather than DD:MM:SS format. The <b>-w</b> flag is only valid
+if a datum is defined for the current location.
+
+If the <b>-f</b> flag is given the x,y frame coordinates of the active display 
+monitor will be returned (as a percentage, 0,0 is bottom left).
+
+
+<h2>SEE ALSO</h2>
+
+<em><a href="d.what.rast.html">d.what.rast</a></em><br>
+<em><a href="d.what.vect.html">d.what.vect</a></em><br>
+<em><a href="g.region.html">g.region</a></em><br>
+<em><a href="v.what.rast.html">v.what.rast</a></em><br>
+<em><a href="v.what.vect.html">v.what.vect</a></em>
+
+
+<h2>AUTHORS</h2>
+
+James Westervelt, <br>
+Michael Shapiro, <br>
+U.S. Army Construction Engineering 
+Research Laboratory
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="display.html">display index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.out.pov</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.out.pov</b></em>  - Converts to POV-Ray format, GRASS x,y,z -> POV-Ray x,z,y
+<h2>KEYWORDS</h2>
+vector, export
+<h2>SYNOPSIS</h2>
+<b>v.out.pov</b><br>
+<b>v.out.pov help</b><br>
+<b>v.out.pov</b> <b>input</b>=<em>name</em>  [<b>type</b>=<em>string</em>[,<i>string</i>,...]]  <b>output</b>=<em>string</em>  [<b>size</b>=<em>string</em>]   [<b>zmod</b>=<em>string</em>]   [<b>objmod</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>type</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Feature type</DD>
+<DD>Options: <em>point,centroid,line,boundary,area,face,kernel</em></DD>
+<DD>Default: <em>point,line,area,face</em></DD>
+
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Output file</DD>
+
+<DT><b>size</b>=<em>string</em></DT>
+<DD>Radius of sphere for points and tube for lines. May be also variable, e.g. grass_r.</DD>
+<DD>Default: <em>10</em></DD>
+
+<DT><b>zmod</b>=<em>string</em></DT>
+<DD>Modifier for z coordinates, this string is appended to each z coordinate.<br>		Examples: '*10', '+1000', '*10+100', '*exaggeration'</DD>
+<DD>Default: <em></em></DD>
+
+<DT><b>objmod</b>=<em>string</em></DT>
+<DD>Object modifier (OBJECT_MODIFIER in POV-Ray documentation).<br>		Example: "pigment { color red 0 green 1 blue 0 }"</DD>
+<DD>Default: <em></em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.out.pov</em> converts GRASS vector data to POV-Ray format (www.povray.com)
+
+<h2>EXAMPLE</h2>
+<div class="code"><pre>
+v.out.pov input=vector3d output=vector3d.pov objmod="pigment { color red 0 green 1 blue 0 }"
+</pre></div>
+
+The generated file can be included in an existing .pov file with the following statement:
+<div class="code"><pre>
+#include "vector3d.pov"
+</pre></div>
+
+<h2>REFERENCES</h2>
+
+<a href="http://www.povray.com">POV-Ray</a>
+
+
+<h2>SEE ALSO</h2>
+
+<em><a href="r.out.pov.html">r.out.pov</a></em>
+
+<h2>AUTHOR</h2>
+
+Radim Blazek, ITC-Irst, Trento, Italy
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

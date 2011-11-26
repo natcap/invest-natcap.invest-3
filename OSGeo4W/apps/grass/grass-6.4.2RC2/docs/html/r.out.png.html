@@ -1,0 +1,89 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.out.png</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.out.png</b></em>  - Export GRASS raster as non-georeferenced PNG image.
+<h2>KEYWORDS</h2>
+raster, export, png
+<h2>SYNOPSIS</h2>
+<b>r.out.png</b><br>
+<b>r.out.png help</b><br>
+<b>r.out.png</b> [-<b>qtw</b>] <b>input</b>=<em>name</em>  [<b>output</b>=<em>name</em>]   [<b>compression</b>=<em>integer</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-q</b></DT>
+<DD>Run quietly</DD>
+
+<DT><b>-t</b></DT>
+<DD>Make NULL cells transparent</DD>
+
+<DT><b>-w</b></DT>
+<DD>Output world file</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input raster map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for new PNG file (use out=- for stdout)</DD>
+<DD>Default: <em><rasterfilename>.png</em></DD>
+
+<DT><b>compression</b>=<em>integer</em></DT>
+<DD>Compression level of PNG file</DD>
+<DD>(0 = none, 1 = fastest, 9 = best)</DD>
+<DD>Options: <em>0-9</em></DD>
+<DD>Default: <em>6</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+
+<em>r.out.png</em> exports a GRASS raster map in non-georeferenced PNG image
+format, respecting the current region resolution and bounds.
+
+<p>
+Optionally the user can choose to export a World File to provide basic
+georeferencing support. When used with the transparency flag this can
+create images useful for KML, TMS, or WMS overlays. (e.g. for use in
+Google Earth or as OpenLayers tiles) If output is to stdout, the world 
+file will be called <tt>png_map.wld</tt>. 
+
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="r.out.gdal.html">r.out.gdal</a>,
+<a href="r.out.ppm.html">r.out.ppm</a>,
+<a href="r.out.tiff.html">r.out.tiff</a>,
+<a href="r.out.ascii.html">r.out.ascii</a>
+</em>
+
+
+<h2>AUTHORS</h2>
+
+Alex Shevlakov<br>
+Hamish Bowman
+
+<p>
+<i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: i.in.spotvgt</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>i.in.spotvgt</b></em>  - Import of SPOT VGT NDVI file into a raster map
+<h2>KEYWORDS</h2>
+raster, imagery, import
+<h2>SYNOPSIS</h2>
+<b>i.in.spotvgt</b><br>
+<b>i.in.spotvgt help</b><br>
+<b>i.in.spotvgt</b> [-<b>a</b>] <b>file</b>=<em>string</em>  [<b>rast</b>=<em>string</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-a</b></DT>
+<DD>Also import quality map (SM status map layer) and filter NDVI map</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>file</b>=<em>string</em></DT>
+<DD>existing SPOT VGT NDVI HDF file (0001_NDV.HDF)</DD>
+
+<DT><b>rast</b>=<em>string</em></DT>
+<DD>Name for output raster map</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>i.in.spotvgt</em> imports SPOT Vegetation (1km, global) NDVI data sets.
+After import the digital numbers (DN) are remapped to VEGETATION NDVI
+values and the NDVI color table is applied. The imported DN map is 
+removed after remapping.
+<p>
+Apparently missing raster cells due to bad pixel quality are reconstructed
+by the SPOT operating team in the NDVI file. The differences between the
+filtered (-a flag) and raw NDVI map should be compared.
+
+<h2>NOTES</h2>
+
+The SPOT VGT files are delivered in HDF4 (Hierarchical Data Format Release 4)
+format. It is required to have the GDAL libraries installed with HDF4 support.
+
+<h3>Export of entire world SPOT VGT maps</h3>
+
+When working with SPOT VGT with entire world extent, it is recommended
+to zoom to <i>w=180W</i> and <i>e=180E</i> instead of using the map
+extent for map export. These entire world SPOT VGT data are exceeding
+-180.0 degree which can lead to unhelpful large East-West coordinates in
+the exported file. It is also recommended to then use an export command
+which respects the user settings. Example:
+
+<div class="code"><pre>
+# import:
+i.in.spotvgt 0001_NDV.HDF
+
+# export:
+g.region w=180W e=180E n=75:00:16.071429N s=56:00:16.069919S res=0:00:32.142857 -p
+r.out.gdal 0001_NDV format=GTiff out=spotndvi.tif
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="r.in.gdal.html">r.in.gdal</a>,
+<a href="r.out.gdal.html">r.out.gdal</a>
+</em>
+
+<h2>REFERENCES</h2>
+
+<a href="http://free.vgt.vito.be/">SPOT Vegetation (1km, global) NDVI data set server</a><br>
+<a href="http://www.vgt.vito.be/faqnew/index.html">SPOT Vegetation FAQ</a><br>
+<a href="http://nieuw.vgt.vito.be/faq/FAQS/faq22.html">SPOT Vegetation Status Map (SM)</a> - Quality map
+
+<h2>AUTHOR</h2>
+
+Markus Neteler
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="imagery.html">imagery index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r3.to.rast</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r3.to.rast</b></em>  - Converts 3D raster maps to 2D raster maps
+<h2>KEYWORDS</h2>
+raster3d, voxel
+<h2>SYNOPSIS</h2>
+<b>r3.to.rast</b><br>
+<b>r3.to.rast help</b><br>
+<b>r3.to.rast</b> [-<b>mr</b>] <b>input</b>=<em>string</em> <b>output</b>=<em>string</em>  [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-m</b></DT>
+<DD>Use 3D raster mask (if exists) with input map</DD>
+
+<DT><b>-r</b></DT>
+<DD>Use the same resolution as the input 3D raster map for the 2D outputmaps, independent of the current region settings</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>string</em></DT>
+<DD>3D raster map(s) to be converted to 2D raster slices</DD>
+
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Basename for resultant raster slice maps</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+Converts one 3D raster map into several 2D raster maps (depends on depths). 
+If the 2D and 3D region settings are different, the 3D resolution will be 
+adjusted to the 2D resolution (the depths are not touched).
+The user can force <em>r3.to.rast</em> to use the 2D resolution of the input 
+3D raster map for the output maps, independently from the current region settings.
+
+<center>
+<img src=r3.to.rast.png border=0><br>
+<table border=0 width=700>
+<tr><td><center>
+<em>How r3.to.rast works</em>
+</center></td></tr>
+</table>
+</center>
+
+<h2>NOTES</h2>
+Every slice of the 3D raster map is copied to one 2D raster map. The maps
+are named like <b>output</b><em>_slicenumber</em>. Slices are counted from bottom
+to the top, so the bottom slice has number 1. 
+
+The number of slices is equal to the number of depths.
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="r3.cross.rast.html">r3.cross.rast</a>,
+<a href="r3.out.vtk.html">r3.out.vtk</a>,
+<a href="r3.out.ascii.html">r3.out.ascii</a>,
+<a href="g.region.html">g.region</a>
+</em>
+
+<h2>AUTHOR</h2>
+S&ouml;ren Gebbert
+
+<p><i>Last changed: $Date: 2011-09-13 22:13:36 +0200 (út, 13 IX 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster3D.html">raster3D index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

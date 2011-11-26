@@ -1,0 +1,110 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.db.addtable</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.db.addtable</b></em>  - Creates and connects a new attribute table to a given layer of an existing vector map.
+<h2>KEYWORDS</h2>
+vector, database, attribute table
+<h2>SYNOPSIS</h2>
+<b>v.db.addtable</b><br>
+<b>v.db.addtable help</b><br>
+<b>v.db.addtable</b> <b>map</b>=<em>name</em>  [<b>table</b>=<em>string</em>]   [<b>layer</b>=<em>integer</em>]   [<b>columns</b>=<em>name type</em>[,<i>name type</i>,...]]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>name</em></DT>
+<DD>Vector map for which to add new attribute table</DD>
+
+<DT><b>table</b>=<em>string</em></DT>
+<DD>Name of new attribute table (default: vector map name)</DD>
+
+<DT><b>layer</b>=<em>integer</em></DT>
+<DD>Layer where to add new attribute table</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>columns</b>=<em>name type[,<i>name type</i>,...]</em></DT>
+<DD>Name and type of the new column(s) (types depend on database backend, but all support VARCHAR(), INT, DOUBLE PRECISION and DATE)</DD>
+<DD>Default: <em>cat integer</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.db.addtable</em> creates and adds a new attribute table to a given vector
+map. It links the table to the specified layer of the vector map. If the vector
+map is not yet linked to any table, new a database link is established based on
+the MAPSET database settings (see <em>db.connect</em>).
+
+<h2>NOTES</h2>
+
+<em>v.db.addtable</em> is a front-end to <em>db.execute</em> to allow easier
+usage.
+
+v.db.addtable will only insert category values into the table for those features 
+which actually have a category value in the relevant layer. The use can add 
+category values automatically by using <em>v.category</em> or manually with 
+<em><a href="wxGUI.Vector_Digitizing_Tool.html">wxGUI vector digitizer</a></em>
+before running v.db.addtable. Or one can run v.db.addtable first
+and then use either a combinatino of <em>v.category</em> + <em>v.to.db</em> or 
+<em><a href="wxGUI.Vector_Digitizing_Tool.html">wxGUI vector digitizer</a></em>
+to add the relevant lines to the table.
+
+The supported types of columns depend on the database backend. However, all
+backends should support VARCHAR, INT, DOUBLE PRECISION and DATE.
+<p>
+The existing database connection(s) can be verified with <em>v.db.connect</em>.
+
+<h2>EXAMPLE</h2>
+
+Adding a new attribute table with a single column to default layer 1:<br>
+<div class="code"><pre>
+g.copy vect=roadsmajor,myroads
+v.db.addtable myroads columns="slope double precision"
+v.db.connect -p myroads
+v.info -c myroads
+</pre></div>
+
+<p>
+Adding a new attribute table with two columns to layer 2:<br>
+<div class="code"><pre>
+g.copy vect=roadsmajor,myroads
+v.db.addtable myroads columns="slope double precision, roadname varchar(15)" layer=2
+v.db.connect -p myroads
+v.info -c myroads
+v.info -c myroads layer=2
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="db.connect.html">db.connect</a>,
+<a href="db.droptable.html">db.droptable</a>,
+<a href="db.execute.html">db.execute</a>,
+<a href="v.db.addtable.html">v.db.addtable</a>,
+<a href="v.db.connect.html">v.db.connect</a>,
+<a href="v.db.dropcolumn.html">v.db.dropcolumn</a>,
+<a href="v.db.droptable.html">v.db.droptable</a>,
+<a href="v.db.select.html">v.db.select</a>,
+<a href="v.db.update.html">v.db.update</a><br>
+<a href="sql.html">GRASS SQL interface</a>
+</em>
+
+<h2>AUTHOR</h2>
+
+Markus Neteler
+
+<p>
+<i>Last changed: $Date: 2011-09-04 15:23:30 +0200 (ne, 04 IX 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

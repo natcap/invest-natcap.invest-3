@@ -1,0 +1,95 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.centroids</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.centroids</b></em>  - Adds missing centroids to closed boundaries.
+<h2>KEYWORDS</h2>
+vector, centroid, area
+<h2>SYNOPSIS</h2>
+<b>v.centroids</b><br>
+<b>v.centroids help</b><br>
+<b>v.centroids</b> <b>input</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>option</b>=<em>string</em>]   [<b>layer</b>=<em>integer</em>]   [<b>cat</b>=<em>integer</em>]   [<b>step</b>=<em>integer</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>input</b>=<em>name</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>Name for output vector map</DD>
+
+<DT><b>option</b>=<em>string</em></DT>
+<DD>Action to be taken</DD>
+<DD>Options: <em>add</em></DD>
+<DD>Default: <em>add</em></DD>
+
+<DT><b>layer</b>=<em>integer</em></DT>
+<DD>Layer number</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>cat</b>=<em>integer</em></DT>
+<DD>Category number starting value</DD>
+<DD>Default: <em>1</em></DD>
+
+<DT><b>step</b>=<em>integer</em></DT>
+<DD>Category increment</DD>
+<DD>Default: <em>1</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+GRASS defines vector areas as composite entities consisting of a set of
+closed boundaries and a centroid. The attribute information associated
+with that area is linked to the centroid. The <em>v.centroids</em> module
+adds centroids to closed boundaries in the <b>input</b> file and assigns a
+category number to them. The starting value as well as the increment size
+may be set using optional parameters. 
+<p>
+Multiple attributes may be linked to a single vector entity through
+numbered fields referred to as layers. Refer to <em>v.category</em>
+for more details, as <em>v.centroids</em> is simply a frontend to that
+module.
+<p>
+The boundary itself is often stored without any category reference as it
+can mark the border between two adjacent areas. Thus it would be ambiguous
+as to which feature the attribute would belong. In some cases it may, for
+example, represent a road between two parcels of land. In this case it
+is entirely appropriate for the boundary to contain category information.
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="v.category.html">v.category</a>
+</em>
+
+<h2>AUTHORS</h2>
+
+module: M. Hamish Bowman, Dept. Marine Science, Otago University, New Zealand
+<br>
+help page: Trevor Wiens
+
+<p>
+<i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

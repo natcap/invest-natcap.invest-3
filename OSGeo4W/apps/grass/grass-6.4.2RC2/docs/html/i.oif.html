@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: i.oif</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>i.oif</b></em>  - Calculates Optimum-Index-Factor table for LANDSAT TM bands 1-5, & 7
+<h2>KEYWORDS</h2>
+raster, imagery, statistics
+<h2>SYNOPSIS</h2>
+<b>i.oif</b><br>
+<b>i.oif help</b><br>
+<b>i.oif</b> [-<b>g</b>] <b>image1</b>=<em>string</em> <b>image2</b>=<em>string</em> <b>image3</b>=<em>string</em> <b>image4</b>=<em>string</em> <b>image5</b>=<em>string</em> <b>image7</b>=<em>string</em>  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-g</b></DT>
+<DD>Print in shell script style</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>image1</b>=<em>string</em></DT>
+<DD>LANDSAT TM band 1.</DD>
+
+<DT><b>image2</b>=<em>string</em></DT>
+<DD>LANDSAT TM band 2.</DD>
+
+<DT><b>image3</b>=<em>string</em></DT>
+<DD>LANDSAT TM band 3.</DD>
+
+<DT><b>image4</b>=<em>string</em></DT>
+<DD>LANDSAT TM band 4.</DD>
+
+<DT><b>image5</b>=<em>string</em></DT>
+<DD>LANDSAT TM band 5.</DD>
+
+<DT><b>image7</b>=<em>string</em></DT>
+<DD>LANDSAT TM band 7.</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>i.oif</em> calculates the Optimum Index Factor for LANDSAT TM bands 1,2,3,4,5 and 7.
+<p>
+The Optimum Index Factor is calculated to determine the band combination which
+shows the maximum information when combined into a composite image. The bands
+comprising the highest scoring combination from <em>i.oif</em> are used as the 
+three color channels required for <em>d.rgb</em> or <em>r.composite</em>.
+<p>
+The analysis is saved to a file in the current directory called "i.oif.result".
+
+<h2>NOTES</h2>
+
+Colour Composites in BGR order: important band combinations (example: 
+234 in BGR order means: B=2, G=3, R=4):
+
+<ul>
+<li> 123: near natural ("true") colour; however, because of correlation of
+the 3 bands in visible spectrum, this combination contains not much more
+info than is contained in single band.
+
+<li> 234: sensitive to green vegetation (portrayed as red), coniferous as
+distinctly darker red than deciduous forests. Roads and water bodies are clear.
+
+<li> 243: green vegetation is green but coniferous forests aren't as clear as
+the 234 combination.
+
+<li> 247: one of the best for info pertaining to forestry. Good for operation
+scale mapping of recent harvest areas and road construction.
+
+<li> 345: contains one band from each of the main reflective units (vis, nir,
+shortwave infra). Green vegetation is green and the shortwave band shows
+vegetational stress and mortality. Roads are less evident as band 3 is blue.
+
+<li> 347: similar to 345 but depicts burned areas better.
+<li> 354: appears more like a colour infrared photo.
+<li> 374: similar to 354.
+<li> 457: shows soil texture classes (clay, loam, sandy).
+</ul>
+
+<h2>EXAMPLE</h2>
+
+North Carolina sample dataset:
+<div class="code"><pre>
+g.region rast=lsat7_2002_10 -p
+i.oif image1=lsat7_2002_10 image2=lsat7_2002_20 image3=lsat7_2002_30 \
+      image4=lsat7_2002_40 image5=lsat7_2002_50 image7=lsat7_2002_70
+</pre></div>
+
+
+<h2>REFERENCE</h2>
+
+Jensen, 1996. Introductory digital image processing. Prentice Hall, p.98. ISBN 0-13-205840-5
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="d.rgb.html">d.rgb</a>,
+<a href="r.composite.html">r.composite</a>,
+<a href="r.covar.html">r.covar</a>,
+<a href="r.univar.html">r.univar</a>
+</em>
+
+<h2>AUTHOR</h2>
+
+Markus Neteler, ITC-Irst, Trento, Italy<br>
+Updated to GRASS 5.7 by Michael Barton, Arizona State University
+
+<p><i>Last changed: $Date: 2011-09-04 15:23:30 +0200 (ne, 04 IX 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="imagery.html">imagery index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

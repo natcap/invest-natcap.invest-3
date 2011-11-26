@@ -1,0 +1,172 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: d.grid</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>d.grid</b></em>  - Overlays a user-specified grid in the active display frame on the graphics monitor.
+<h2>KEYWORDS</h2>
+display, cartography
+<h2>SYNOPSIS</h2>
+<b>d.grid</b><br>
+<b>d.grid help</b><br>
+<b>d.grid</b> [-<b>gwcfnbt</b>] <b>size</b>=<em>value</em>  [<b>origin</b>=<em>easting,northing</em>]   [<b>color</b>=<em>name</em>]   [<b>bordercolor</b>=<em>name</em>]   [<b>textcolor</b>=<em>name</em>]   [<b>fontsize</b>=<em>integer</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-g</b></DT>
+<DD>Draw geographic grid (referenced to current ellipsoid)</DD>
+
+<DT><b>-w</b></DT>
+<DD>Draw geographic grid (referenced to WGS84 ellipsoid)</DD>
+
+<DT><b>-c</b></DT>
+<DD>Draw '+' marks instead of grid lines</DD>
+
+<DT><b>-f</b></DT>
+<DD>Draw fiducial marks instead of grid lines</DD>
+
+<DT><b>-n</b></DT>
+<DD>Disable grid drawing</DD>
+
+<DT><b>-b</b></DT>
+<DD>Disable border drawing</DD>
+
+<DT><b>-t</b></DT>
+<DD>Disable text drawing</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>size</b>=<em>value</em></DT>
+<DD>Size of grid to be drawn</DD>
+<DD>In map units or DDD:MM:SS format. Example: "1000" or "0:10"</DD>
+
+<DT><b>origin</b>=<em>easting,northing</em></DT>
+<DD>Lines of the grid pass through this coordinate</DD>
+<DD>Default: <em>0,0</em></DD>
+
+<DT><b>color</b>=<em>name</em></DT>
+<DD>Grid color</DD>
+<DD>Either a standard color name or R:G:B triplet</DD>
+<DD>Default: <em>gray</em></DD>
+
+<DT><b>bordercolor</b>=<em>name</em></DT>
+<DD>Border color</DD>
+<DD>Either a standard color name or R:G:B triplet</DD>
+<DD>Default: <em>black</em></DD>
+
+<DT><b>textcolor</b>=<em>name</em></DT>
+<DD>Text color</DD>
+<DD>Either a standard color name or R:G:B triplet</DD>
+<DD>Default: <em>gray</em></DD>
+
+<DT><b>fontsize</b>=<em>integer</em></DT>
+<DD>Font size for gridline coordinate labels</DD>
+<DD>Options: <em>1-72</em></DD>
+<DD>Default: <em>9</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>d.grid</em> overlays a grid of user-defined size and
+color in the active display frame on the graphics monitor.
+The grid can be created as a standard rectangular grid or
+a geographic grid. The grid will overlay, not overwrite,
+the contents of the active display frame.
+
+<p>
+
+<em>d.grid</em> can be run non-interactively or
+interactively.  If the user specifies the grid
+<em>size</em> and (optionally) the grid <em>color</em> on
+the command line the program will run non-interactively; if
+no grid <em>color</em> is given the default will be used.
+Alternately, the user may simply type <b>d.grid</b> on the
+command line; in this case, the program will prompt the
+user for parameter values using the standard GRASS graphical 
+user interface.
+
+
+<h2>NOTES</h2>
+
+<em>d.grid</em> will not erase grids already displayed in
+the active graphics display frame by previous invocations
+of <em>d.grid</em>; multiple invocations of <em>d.grid</em>
+will therefore result in the drawing of multiple grids
+inside the active graphics frame.  (A command like 
+<em><a href="d.erase.html">d.erase</a></em>, which erases the
+entire contents of the active display frame, must be run to
+erase previously drawn grids from the display frame.)
+
+<p>
+If the user provides a 
+<em>-g</em> flag a geographic (projected) grid 
+will be drawn. With the <em>-g</em> flag the <em>size</em> 
+argument accepts both decimal degrees and colon separated 
+ddd:mm:ss coordinates (eg. <tt>00:30:00</tt> for half of a degree).
+
+<p>
+A geographic grid cannot be drawn for a <em>latitude/longitude</em> 
+or <em>XY</em> projection.
+<p>
+Colors may be standard named GRASS colors (red, green, aqua, etc.) or
+a numerical R:G:B triplet, where component values range from 0-255.<br>
+<p>
+The grid drawing may be turned off by using the <em>-n</em> flag.<br>
+The border drawing may be turned off by using the <em>-b</em> flag.<br>
+The coordinate text may be turned off by using the <em>-t</em> flag.<br>
+
+
+<h2>EXAMPLES</h2>
+To draw a red geographic grid with 30 minute grid spacing run 
+either of the following:
+<PRE>
+  d.grid -g size=00:30:00 color=red
+</PRE>
+or
+<PRE>
+  d.grid -g size=0.5 color=255:0:0
+</PRE>
+To draw a blue standard rectangular grid at a 500 (meter) spacing run the following:
+<PRE>
+  d.grid size=500 color=blue
+</PRE>
+<br>
+
+<h2>SEE ALSO</h2>
+
+<em><a href="d.barscale.html">d.barscale</a></em><br>
+<em><a href="d.legend.html">d.legend</a></em><br>
+<em><a href="d.geodesic.html">d.geodesic</a></em><br>
+<em><a href="d.rhumbline.html">d.rhumbline</a></em><br>
+<em><a href="d.erase.html">d.erase</a></em><br>
+<em><a href="d.frame.html">d.frame</a></em><br>
+<em><a href="d.rast.html">d.rast</a></em><br>
+
+
+
+<h2>AUTHORS</h2>
+
+James Westervelt, U.S. Army Construction Engineering Research Laboratory<br>
+Geogrid support: Bob Covill<br>
+Border support: Markus Neteler<br>
+Text and RGB support: Hamish Bowman<br>
+
+<p><i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="display.html">display index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

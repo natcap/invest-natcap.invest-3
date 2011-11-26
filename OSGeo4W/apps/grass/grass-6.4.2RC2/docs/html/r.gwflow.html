@@ -1,0 +1,235 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.gwflow</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.gwflow</b></em>  - Numerical calculation program for transient, confined and unconfined groundwater flow in two dimensions.
+<h2>KEYWORDS</h2>
+raster, hydrology
+<h2>SYNOPSIS</h2>
+<b>r.gwflow</b><br>
+<b>r.gwflow help</b><br>
+<b>r.gwflow</b> [-<b>s</b>] <b>phead</b>=<em>name</em> <b>status</b>=<em>name</em> <b>hc_x</b>=<em>name</em> <b>hc_y</b>=<em>name</em>  [<b>q</b>=<em>name</em>]  <b>s</b>=<em>name</em>  [<b>r</b>=<em>name</em>]  <b>top</b>=<em>name</em> <b>bottom</b>=<em>name</em> <b>output</b>=<em>name</em>  [<b>velocity</b>=<em>name</em>]   [<b>type</b>=<em>string</em>]   [<b>river_bed</b>=<em>name</em>]   [<b>river_head</b>=<em>name</em>]   [<b>river_leak</b>=<em>name</em>]   [<b>drain_bed</b>=<em>name</em>]   [<b>drain_leak</b>=<em>name</em>]  <b>dt</b>=<em>float</em>  [<b>maxit</b>=<em>integer</em>]   [<b>error</b>=<em>float</em>]   [<b>solver</b>=<em>name</em>]   [<b>relax</b>=<em>float</em>]   [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-s</b></DT>
+<DD>Use a sparse matrix, only available with iterative solvers</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>phead</b>=<em>name</em></DT>
+<DD>The initial piezometric head in [m]</DD>
+
+<DT><b>status</b>=<em>name</em></DT>
+<DD>Boundary condition status, 0-inactive, 1-active, 2-dirichlet</DD>
+
+<DT><b>hc_x</b>=<em>name</em></DT>
+<DD>X-part of the hydraulic conductivity tensor in [m/s]</DD>
+
+<DT><b>hc_y</b>=<em>name</em></DT>
+<DD>Y-part of the hydraulic conductivity tensor in [m/s]</DD>
+
+<DT><b>q</b>=<em>name</em></DT>
+<DD>Water sources and sinks in [m^3/s]</DD>
+
+<DT><b>s</b>=<em>name</em></DT>
+<DD>Specific yield in [1/m]</DD>
+
+<DT><b>r</b>=<em>name</em></DT>
+<DD>Recharge map e.g: 6*10^-9 per cell in [m^3/s*m^2]</DD>
+
+<DT><b>top</b>=<em>name</em></DT>
+<DD>Top surface of the aquifer in [m]</DD>
+
+<DT><b>bottom</b>=<em>name</em></DT>
+<DD>Bottom surface of the aquifer in [m]</DD>
+
+<DT><b>output</b>=<em>name</em></DT>
+<DD>The map storing the numerical result [m]</DD>
+
+<DT><b>velocity</b>=<em>name</em></DT>
+<DD>Calculate the groundwater filter velocity vector field [m/s]<br>and write the x, and y components to maps named name_[xy]</DD>
+
+<DT><b>type</b>=<em>string</em></DT>
+<DD>The type of groundwater flow</DD>
+<DD>Options: <em>confined,unconfined</em></DD>
+<DD>Default: <em>confined</em></DD>
+
+<DT><b>river_bed</b>=<em>name</em></DT>
+<DD>The height of the river bed in [m]</DD>
+
+<DT><b>river_head</b>=<em>name</em></DT>
+<DD>Water level (head) of the river with leakage connection in [m]</DD>
+
+<DT><b>river_leak</b>=<em>name</em></DT>
+<DD>The leakage coefficient of the river bed in [1/s].</DD>
+
+<DT><b>drain_bed</b>=<em>name</em></DT>
+<DD>The height of the drainage bed in [m]</DD>
+
+<DT><b>drain_leak</b>=<em>name</em></DT>
+<DD>The leakage coefficient of the drainage bed in [1/s]</DD>
+
+<DT><b>dt</b>=<em>float</em></DT>
+<DD>The calculation time in seconds</DD>
+<DD>Default: <em>86400</em></DD>
+
+<DT><b>maxit</b>=<em>integer</em></DT>
+<DD>Maximum number of iteration used to solver the linear equation system</DD>
+<DD>Default: <em>100000</em></DD>
+
+<DT><b>error</b>=<em>float</em></DT>
+<DD>Error break criteria for iterative solvers (jacobi, sor, cg or bicgstab)</DD>
+<DD>Default: <em>0.0000000001</em></DD>
+
+<DT><b>solver</b>=<em>name</em></DT>
+<DD>The type of solver which should solve the symmetric linear equation system</DD>
+<DD>Options: <em>gauss,lu,cholesky,jacobi,sor,cg,bicgstab,pcg</em></DD>
+<DD>Default: <em>cg</em></DD>
+
+<DT><b>relax</b>=<em>float</em></DT>
+<DD>The relaxation parameter used by the jacobi and sor solver for speedup or stabilizing</DD>
+<DD>Default: <em>1</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+This numerical program calculates transient, confined and
+unconfined groundwater flow in two dimensions based on  
+raster maps and the current region resolution.
+All initial and boundary conditions must be provided as 
+raster maps.
+
+<p>
+<center>
+<img src=r_gwflow_concept.png border=0><br>
+<table border=0 width=700>
+<tr><td><center>
+<i>Workflow of r.gwflow</i>
+</center></td></tr>
+</table>
+</center>
+<p>
+
+<em>r.gwflow</em> calculates the piezometric head and optionally the 
+filter velocity field, based on the hydraulic conductivity and the piezometric head. 
+The vector components can be visualized with paraview if they are exported
+with <em>r.out.vtk</em>.
+<br>
+<br>
+The groundwater flow will always be calculated transient. 
+If you want to calculate stady state, set the timestep 
+to a large number (billions of seconds) or set the 
+specific yield/ effective porosity raster maps to zero.
+
+
+<h2>NOTES</h2>
+
+The groundwater flow calculation is based on Darcy's law and a 
+finite volume discretization. The solved groundwater flow partial 
+differential equation is of the following form:
+
+<p>
+(dh/dt)*Ss = Kxx * (d^2h/dx^2) + Kyy * (d^2h/dy^2) + q
+
+<ul>
+<li>h -- the piezometric head im [m]</li>
+<li>dt -- the time step for transient calculation in [s]</li>
+<li>S -- the specific yield [1/m]</li>
+<li>Kxx -- the hydraulic conductivity tensor part in x direction in [m/s]</li>
+<li>Kyy -- the hydraulic conductivity tensor part in y direction in [m/s]</li>
+<li>q - inner source in meter per second [1/s]</li>
+</ul>
+
+<br>
+<br>
+Two different boundary conditions are implemented, 
+the Dirichlet and Neumann conditions. By default the calculation area is surrounded by homogeneous Neumann boundary conditions.
+The calculation and boundary status of single cells must be set with a status map, 
+the following states are supportet:
+
+<ul>
+<li>0 == inactive - the cell with status 0 will not be calculated, active cells will have a no flow boundary to this cell</li>
+<li>1 == active - this cell is used for groundwater floaw calculation, inner sources and recharge can be defined for those cells</li>
+<li>2 == Dirichlet - cells of this type will have a fixed piezometric head value which do not change over the time </li>
+</ul>
+
+<br>
+<br>
+The groundwater flow equation can be solved with several solvers.
+Two iterative solvers with sparse and quadratic matrices support are implemented.
+The conjugate gradients (cg) method and the biconjugate gradients-stabilized (bicgstab) method. 
+Aditionally a direct Gauss solver and LU solver are available. Those direct solvers
+only work with normal quadratic matrices, so be careful using them with large maps 
+(maps of size 10.000 cells will need more than one gigabyte of RAM).
+Always prefer a sparse matrix solver.
+
+<h2>EXAMPLE</h2>
+Use this small script to create a working
+groundwater flow area and data. Make sure you are not in a lat/lon projection.
+
+<div class="code"><pre>
+# set the region accordingly
+g.region res=25 res3=25 t=100 b=0 n=1000 s=0 w=0 e=1000
+
+#now create the input raster maps for confined and unconfined aquifers
+r.mapcalc "phead=if(row() == 1 , 50, 40)"
+r.mapcalc "status=if(row() == 1 , 2, 1)"
+r.mapcalc "well=if(row() == 20 && col() == 20 , -0.001, 0)"
+r.mapcalc "hydcond=0.00025"
+r.mapcalc "recharge=0"
+r.mapcalc "top_conf=20.0"
+r.mapcalc "top_unconf=70.0"
+r.mapcalc "bottom=0.0"
+r.mapcalc "null=0.0"
+r.mapcalc "poros=0.15"
+r.mapcalc "syield=0.0001"
+
+#confined groundwater flow with cg solver and sparse matrix
+r.gwflow --o -s solver=cg top=top_conf bottom=bottom phead=phead status=status \
+hc_x=hydcond hc_y=hydcond q=well s=syield r=recharge output=gwresult_conf \
+dt=8640000 type=confined velocity=gwresult_conf_velocity
+
+#unconfined groundwater flow with cg solver and sparse matrix
+r.gwflow --o -s solver=cg top=top_unconf bottom=bottom phead=phead \
+status=status hc_x=hydcond hc_y=hydcond q=well s=poros r=recharge \
+output=gwresult_unconf dt=8640000 type=unconfined velocity=gwresult_unconf_velocity
+
+# The data can be visulaized with paraview when exported with r.out.vtk
+r.out.vtk -p in=gwresult_conf,status vector=gwresult_conf_velocity_x,gwresult_conf_velocity_y,null out=/tmp/gwdata_conf2d.vtk
+r.out.vtk -p elevation=gwresult_unconf in=gwresult_unconf,status vector=gwresult_unconf_velocity_x,gwresult_unconf_velocity_y,null out=/tmp/gwdata_unconf2d.vtk
+
+#now load the data into paraview
+paraview --data=/tmp/gwdata_conf2d.vtk &
+paraview --data=/tmp/gwdata_unconf2d.vtk &
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em><a href="r3.gwflow.html">r3.gwflow</a></em><br>
+<em><a href="r.out.vtk.html">r.out.vtk</a></em><br>
+
+<h2>AUTHOR</h2>
+Soeren Gebbert
+
+<p><i>Last changed: $Date: 2008-05-16 21:09:06 +0200 (pá, 16 V 2008) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.support</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.support</b></em>  - Updates vector map metadata.
+<h2>KEYWORDS</h2>
+vector, metadata
+<h2>SYNOPSIS</h2>
+<b>v.support</b><br>
+<b>v.support help</b><br>
+<b>v.support</b> [-<b>r</b>] <b>map</b>=<em>name</em>  [<b>organization</b>=<em>"phrase"</em>]   [<b>date</b>=<em>"datestring"</em>]   [<b>person</b>=<em>"phrase"</em>]   [<b>map_name</b>=<em>"phrase"</em>]   [<b>map_date</b>=<em>"datestring"</em>]   [<b>scale</b>=<em>integer</em>]   [<b>zone</b>=<em>integer</em>]   [<b>thresh</b>=<em>float</em>]   [<b>comment</b>=<em>"phrase"</em>]   [<b>cmdhist</b>=<em>"command"</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-r</b></DT>
+<DD>Replace comment instead of appending it</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>name</em></DT>
+<DD>Name of input vector map</DD>
+
+<DT><b>organization</b>=<em>"phrase"</em></DT>
+<DD>Organization where vector map was created</DD>
+
+<DT><b>date</b>=<em>"datestring"</em></DT>
+<DD>Date of vector map digitization (e.g., "15 Mar 2007")</DD>
+
+<DT><b>person</b>=<em>"phrase"</em></DT>
+<DD>Person who created vector map</DD>
+
+<DT><b>map_name</b>=<em>"phrase"</em></DT>
+<DD>Vector map title</DD>
+
+<DT><b>map_date</b>=<em>"datestring"</em></DT>
+<DD>Date when the source map was originally produced</DD>
+
+<DT><b>scale</b>=<em>integer</em></DT>
+<DD>Vector map scale number (e.g., 24000)</DD>
+
+<DT><b>zone</b>=<em>integer</em></DT>
+<DD>Vector map projection zone</DD>
+
+<DT><b>thresh</b>=<em>float</em></DT>
+<DD>Vector map digitizing threshold number (e.g., 0.5)</DD>
+
+<DT><b>comment</b>=<em>"phrase"</em></DT>
+<DD>Text to append to the comment line of the map's metadata file</DD>
+
+<DT><b>cmdhist</b>=<em>"command"</em></DT>
+<DD>Command line to store into vector map history file (used for vector scripts)</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.support</em> is used to set/update vector map metadata.
+
+<h2>EXAMPLE</h2>
+
+<div class="code"><pre>
+# update scale to 1:24000
+v.support myvectmap scale=24000
+
+# update organization
+v.support myvectmap organization="OSGeo labs"
+v.info myvectmap
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+	<a href="v.build.html">v.build</a>,
+        <a href="v.info.html">v.info</a>
+</em>
+
+<h2>AUTHOR</h2>
+
+Markus Neteler, Trento
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

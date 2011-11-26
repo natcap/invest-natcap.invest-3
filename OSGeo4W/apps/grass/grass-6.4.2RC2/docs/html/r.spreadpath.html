@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.spreadpath</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.spreadpath</b></em>  - Recursively traces the least cost path backwards to cells from which the cumulative cost was determined.
+<h2>KEYWORDS</h2>
+raster, fire
+<h2>SYNOPSIS</h2>
+<b>r.spreadpath</b><br>
+<b>r.spreadpath help</b><br>
+<b>r.spreadpath</b> [-<b>v</b>] <b>x_input</b>=<em>string</em> <b>y_input</b>=<em>string</em>  [<b>coordinate</b>=<em>x,y</em>[,<i>x,y</i>,...]]  <b>output</b>=<em>string</em>  [--<b>overwrite</b>]  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-v</b></DT>
+<DD>Run verbosely</DD>
+
+<DT><b>--overwrite</b></DT>
+<DD>Allow output files to overwrite existing files</DD>
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>x_input</b>=<em>string</em></DT>
+<DD>Name of raster map containing back-path easting information</DD>
+
+<DT><b>y_input</b>=<em>string</em></DT>
+<DD>Name of raster map containing back-path northing information</DD>
+
+<DT><b>coordinate</b>=<em>x,y[,<i>x,y</i>,...]</em></DT>
+<DD>The map E and N grid coordinates of starting points</DD>
+
+<DT><b>output</b>=<em>string</em></DT>
+<DD>Name of spread path raster map</DD>
+
+</DL>
+<H2>DESCRIPTION</H2>
+
+<EM>r.spreadpath</EM> recursively traces the least cost path backwards to
+the origin, given backlink information input map layers and target locations
+from where paths are to be traced. The backlink information map layers
+record each cell's backlink UTM northing (the y_input) and easting (the
+x_input) coordinates from which the cell's cumulative cost was determined.
+
+<P>
+
+The backlink inputs can be generated from another GRASS raster program
+<EM>r.spread</EM>. One of the major applications of <EM>r.spreadpath</EM>
+along with <EM>r.spread</EM> is to accurately find the least cost corridors
+and/or paths on a raster setting. More information on <EM>r.spread</EM> and
+<EM>r.spreadpath</EM> can be found in Xu (1994).
+
+<H2>Parameters:</H2>
+<DL>
+<DT><B>x_input=</B><EM>name</EM>
+<DD>Name of input raster map layer containing backlink UTM easting
+coordinates.
+
+<DT><B>y_input=</B><EM>name</EM>
+<DD>Name of input raster map layer containing backlink UTM northing coordinates.
+
+<DT><B>coordinate=</B><EM>x,y[,x,y,x,y, ...]</EM>
+<DD>Each x,y coordinate pair gives the easting and northing (respectively) geographic coordinates of a target point from which to backwards trace the least cost path. As many
+points as desired can be entered by the user.
+
+<DT><B>output=</B><EM>name</EM>
+<DD>Name of raster map layer to contain output. Also can be used as the map layer of the input target points. If so used, the input target point map will be overwritten by the output.
+</DL>
+
+<H2>SEE ALSO</H2>
+<EM><A HREF="r.spread.html">r.spread</A></EM>,
+<EM><A HREF="r.ros.html">r.ros</A></EM>
+
+
+<H2>REFERENCES</H2>
+Xu, Jianping, 1994, Simulating the spread of wildfires using a geographic
+information system and remote sensing, Ph. D. Dissertation, Rutgers University,
+New Brunswick, New Jersey.
+
+<H2>AUTHOR</H2>
+Jianping Xu and Richard G. Lathrop, Jr., Center for Remote Sensing and
+Spatial Analysis, Rutgers University.
+
+<p><i>Last changed: $Date: 2003-05-06 18:41:37 +0200 (út, 06 V 2003) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: v.db.reconnect.all</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>v.db.reconnect.all</b></em>  - Reconnects vectors to a new database.
+<h2>KEYWORDS</h2>
+vector, database, attribute table
+<h2>SYNOPSIS</h2>
+<b>v.db.reconnect.all</b><br>
+<b>v.db.reconnect.all help</b><br>
+<b>v.db.reconnect.all</b> <b>old_database</b>=<em>string</em> <b>new_database</b>=<em>string</em>  [<b>old_schema</b>=<em>string</em>]   [<b>new_schema</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>old_database</b>=<em>string</em></DT>
+<DD>Name of old database</DD>
+<DD>The database must be in form printed by v.db.connect -g, i.e. with substituted variables</DD>
+
+<DT><b>new_database</b>=<em>string</em></DT>
+<DD>Name of new database</DD>
+
+<DT><b>old_schema</b>=<em>string</em></DT>
+<DD>Old schema</DD>
+
+<DT><b>new_schema</b>=<em>string</em></DT>
+<DD>New schema</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>v.db.reconnect.all</em> changes database connection of all layers of
+all vectors in the current mapset from old_database to database. If a link
+does not match the old_database it is left untouched.
+
+<h2>NOTES</h2>
+
+The value of the <em>old_database</em> option needs to be the exact
+string which appears as the fourth field printed by
+<tt>v.db.connect -g</tt>, i.e. with substituted variables.
+
+
+<h2>AUTHOR</h2>
+Radim Blazek
+
+<p>
+<i>Last changed: $Date: 2011-09-04 15:23:30 +0200 (ne, 04 IX 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="vector.html">vector index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

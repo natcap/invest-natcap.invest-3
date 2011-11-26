@@ -1,0 +1,57 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: g.dirseps</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>g.dirseps</b></em>  - Internal GRASS utility for converting directory separator characters.<BR>
+Converts any directory separator characters in the input string to or from native host format, and writes the changed path to standard output. Useful in scripts for Windows compatibility.
+<h2>KEYWORDS</h2>
+general, map management
+<h2>SYNOPSIS</h2>
+<b>g.dirseps</b><br>
+<b>g.dirseps help</b><br>
+<b>g.dirseps</b> [-<b>hg</b>]  [<b>path</b>=<em>string</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-h</b></DT>
+<DD>Convert directory separators to native host format</DD>
+
+<DT><b>-g</b></DT>
+<DD>Convert directory separators to GRASS internal format</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>path</b>=<em>string</em></DT>
+<DD>Path to be converted (read from stdin if not specified)</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>g.dirseps</em> is an internal tool only. It copies input string
+to stdout, changing directory separator characters as specified by flags.
+It is used for interoperability between Unix and MS-Windows pathnames.
+
+<h2>AUTHOR</h2>
+
+Paul Kelly
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="general.html">general index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: g.findetc</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>g.findetc</b></em>  - Searches for GRASS support files.
+<h2>KEYWORDS</h2>
+general, map management
+<h2>SYNOPSIS</h2>
+<b>g.findetc</b><br>
+<b>g.findetc help</b><br>
+<b>g.findetc</b> <b>file</b>=<em>string</em>  [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>file</b>=<em>string</em></DT>
+<DD>Name of an file or directory</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>g.findetc</em> is designed for Bourne shell scripts that need to search
+for support data, programs and subfoldrs in any number of directories as
+specified in GRASS_ADDON_ETC, plus the GRASS application etc/ directory. This
+is designed for addon scripts that are installed outside the GRASS application
+directory, such as a user's home or a system addon directory.
+<p>
+
+<h2>OUTPUT</h2>
+
+<em>g.findetc</em> writes the full path to the file or directory to standard output
+
+<h2>SEE ALSO</h2>
+
+<em><a href="g.ask.html">g.ask</a></em><br>
+<em><a href="g.filename.html">g.filename</a></em><br>
+<em><a href="g.findfile.html">g.findfile</a></em><br>
+<em><a href="g.gisenv.html">g.gisenv</a></em><br>
+<em><a href="g.mapsets.html">g.mapsets</a></em><br>
+<em><a href="parser.html">parser</a></em>
+
+<h2>AUTHOR</h2>
+
+William Kyngesburye
+
+<p><i>Last changed: $Date: 2011-11-08 10:42:51 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="general.html">general index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

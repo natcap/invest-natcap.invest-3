@@ -1,0 +1,140 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: g.transform</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>g.transform</b></em>  - Computes a coordinate transformation based on the control points.
+<h2>KEYWORDS</h2>
+general, transformation, GCP
+<h2>SYNOPSIS</h2>
+<b>g.transform</b><br>
+<b>g.transform help</b><br>
+<b>g.transform</b> [-<b>srx</b>] <b>group</b>=<em>name</em> <b>order</b>=<em>integer</em>  [<b>format</b>=<em>string</em>[,<i>string</i>,...]]   [<b>coords</b>=<em>name</em>]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-s</b></DT>
+<DD>Display summary information</DD>
+
+<DT><b>-r</b></DT>
+<DD>Reverse transform of coords file or coeff. dump</DD>
+<DD>Target east,north coordinates to local x,y</DD>
+
+<DT><b>-x</b></DT>
+<DD>Display transform matrix coefficients</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>group</b>=<em>name</em></DT>
+<DD>Name of input imagery group</DD>
+
+<DT><b>order</b>=<em>integer</em></DT>
+<DD>Rectification polynomial order</DD>
+<DD>Options: <em>1-3</em></DD>
+
+<DT><b>format</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Output format</DD>
+<DD>Options: <em>idx,src,dst,fwd,rev,fxy,rxy,fd,rd</em></DD>
+<DD>Default: <em>fd,rd</em></DD>
+<DD><b>idx</b>: point index</DD>
+<DD><b>src</b>: source coordinates</DD>
+<DD><b>dst</b>: destination coordinates</DD>
+<DD><b>fwd</b>: forward coordinates (destination)</DD>
+<DD><b>rev</b>: reverse coordinates (source)</DD>
+<DD><b>fxy</b>: forward coordinates difference (destination)</DD>
+<DD><b>rxy</b>: reverse coordinates difference (source)</DD>
+<DD><b>fd</b>: forward error (destination)</DD>
+<DD><b>rd</b>: reverse error (source)</DD>
+
+<DT><b>coords</b>=<em>name</em></DT>
+<DD>File containing coordinates to transform ("-" to read from stdin)</DD>
+<DD>Local x,y coordinates to target east,north</DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+<em>g.transform</em> is an utility to compute transformation
+based upon GCPs and output error measurements.
+
+
+<h2>NOTES</h2>
+
+For coordinates given with the <b>coords</b> file option or fed from
+<tt>stdin</tt>, the input format is "x y" with one coordinate pair per
+line.
+
+<p>
+The transformations are:
+<p>
+order=1:
+<div class="code"><pre>
+    e = [E0 E1][1].[1]
+        [E2  0][e] [n]
+   
+    n = [N0 N1][1].[1]
+        [N2  0][e] [n]
+</pre></div>
+
+order=2:
+<div class="code"><pre>
+
+    e = [E0 E1 E3][1 ] [1 ]
+        [E2 E4  0][e ].[n ]
+        [E5  0  0][e&sup2;] [n&sup2;]
+   
+    n = [N0 N1 N3][1 ] [1 ]
+        [N2 N4  0][e ].[n ]
+        [N5  0  0][e&sup2;] [n&sup2;]
+</pre></div>
+
+order=3:
+<div class="code"><pre>
+
+    e = [E0 E1 E3 E6][1 ] [1 ]
+        [E2 E4 E7  0][e ].[n ]
+        [E5 E8  0  0][e&sup2;] [n&sup2;]
+        [E9  0  0  0][e&sup3;] [n&sup3;]
+   
+    n = [N0 N1 N3 N6][1 ] [1 ]
+        [N2 N4 N7  0][e ].[n ]
+        [N5 N8  0  0][e&sup2;] [n&sup2;]
+        [N9  0  0  0][e&sup3;] [n&sup3;]
+</pre></div>
+
+["." = dot-product, (AE).N = N'EA.]
+<p>
+In other words, order=1 and order=2 are equivalent to order=3 with
+the higher coefficients equal to zero.
+
+
+<h2>SEE ALSO</h2>
+
+<em><a href="i.rectify.html">i.rectify</a></em>
+
+
+<h2>AUTHORS</h2>
+
+Brian J. Buckley<br>
+Glynn Clements<br>
+Hamish Bowman
+
+<p>
+<i>Last changed: $Date: 2011-11-08 12:29:50 +0100 (út, 08 XI 2011) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="general.html">general index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>

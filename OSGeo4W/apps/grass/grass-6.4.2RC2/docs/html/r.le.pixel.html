@@ -1,0 +1,118 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.le.pixel</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+
+<img src="grass_logo.png" alt="GRASS logo"><hr align=center size=6 noshade>
+
+<h2>NAME</h2>
+<em><b>r.le.pixel</b></em>  - Contains a set of measures for attributes, diversity, texture, juxtaposition, and edge.
+<h2>KEYWORDS</h2>
+raster, landscape structure analysis, patch index
+<h2>SYNOPSIS</h2>
+<b>r.le.pixel</b><br>
+<b>r.le.pixel help</b><br>
+<b>r.le.pixel</b> [-<b>euz</b>] <b>map</b>=<em>string</em>  [<b>sam</b>=<em>string</em>]   [<b>reg</b>=<em>string</em>]   [<b>att</b>=<em>string</em>[,<i>string</i>,...]]   [<b>div</b>=<em>string</em>[,<i>string</i>,...]]   [<b>te1</b>=<em>string</em>]   [<b>te2</b>=<em>string</em>[,<i>string</i>,...]]   [<b>jux</b>=<em>string</em>[,<i>string</i>,...]]   [<b>edg</b>=<em>string</em>[,<i>string</i>,...]]   [--<b>verbose</b>]  [--<b>quiet</b>] 
+
+<h3>Flags:</h3>
+<DL>
+<DT><b>-e</b></DT>
+<DD>Output map 'edge' of edges given a '1' in r.le.para/edge file</DD>
+
+<DT><b>-u</b></DT>
+<DD>Output maps 'units_x' with sampling units for each scale x </DD>
+
+<DT><b>-z</b></DT>
+<DD>Output map 'zscores' with standardized scores</DD>
+
+<DT><b>--verbose</b></DT>
+<DD>Verbose module output</DD>
+<DT><b>--quiet</b></DT>
+<DD>Quiet module output</DD>
+</DL>
+
+<h3>Parameters:</h3>
+<DL>
+<DT><b>map</b>=<em>string</em></DT>
+<DD>Raster map to be analyzed</DD>
+
+<DT><b>sam</b>=<em>string</em></DT>
+<DD>Sampling method (choose only 1 method):<br>	w = whole map      u = units        m = moving window   r = regions</DD>
+<DD>Default: <em>w</em></DD>
+
+<DT><b>reg</b>=<em>string</em></DT>
+<DD>Name of regions map, only when sam = r; omit otherwise</DD>
+
+<DT><b>att</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>b1 = mn. pixel att.                 b2 = s.d. pixel att.<br>	b3 = min. pixel att.                b4 = max. pixel att.</DD>
+<DD>Options: <em>b1,b2,b3,b4</em></DD>
+
+<DT><b>div</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>d1 = richness      d2 = Shannon     d3 = dominance     d4 = inv. Simpson</DD>
+<DD>Options: <em>d1,d2,d3,d4</em></DD>
+
+<DT><b>te1</b>=<em>string</em></DT>
+<DD>Texture method (choose only 1 method):<br>	m1 = 2N-H          m2 = 2N-45       m3 = 2N-V          m4 = 2N-135<br>	m5 = 4N-HV         m6 = 4N-DIAG     m7 = 8N</DD>
+<DD>Options: <em>m1,m2,m3,m4,m5,m6,m7</em></DD>
+
+<DT><b>te2</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Texture measures (required if te1 was specified):<br>	t1 = contagion           t2 = ang. sec. mom.     t3 = inv. diff. mom.<br>	t4 = entropy             t5 = contrast</DD>
+<DD>Options: <em>t1,t2,t3,t4,t5</em></DD>
+
+<DT><b>jux</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>Juxtaposition measures (weight file in r.le.para needed):<br>	j1 = mn. juxtaposition              j2 = s.d. juxtaposition</DD>
+<DD>Options: <em>j1,j2</em></DD>
+
+<DT><b>edg</b>=<em>string[,<i>string</i>,...]</em></DT>
+<DD>e1 = sum of edges  e2 = sum of edges by type (need edge file: r.le.para)</DD>
+<DD>Options: <em>e1,e2</em></DD>
+
+</DL>
+<h2>DESCRIPTION</h2>
+
+The <em>r.le.pixel</em> module contains a set of measures for attributes,
+diversity, texture, juxtaposition, and edge.
+
+
+<h2>NOTES</h2>
+
+Full instructions can be found in the <b>r.le manual</b> (see "REFERENCES"
+section below) and the <em><a href="r.le.setup.html">r.le.setup</a></em>
+help page.
+
+
+<h2>REFERENCES</h2>
+
+Baker, W.L. and Y. Cai. 1992. The r.le programs for multiscale analysis of
+landscape structure using the GRASS geographical information system.
+Landscape Ecology 7(4):291-302.
+<p>
+The <A href="http://grass.osgeo.org/gdp/landscape/r_le_manual5.pdf"><i>r.le</i>
+manual: Quantitative analysis of landscape structures</a> (GRASS 5; 2001)
+
+<h2>SEE ALSO</h2>
+
+<em>
+<!-- <a href="r.le.dist.html">r.le.dist</a>,
+<a href="r.le.null.html">r.le.null</a>, -->
+<a href="r.le.patch.html">r.le.patch</a>,
+<!-- <a href="r.le.rename.html">r.le.rename</a>, -->
+<a href="r.le.setup.html">r.le.setup</a>, 
+<a href="r.le.trace.html">r.le.trace</a></em>
+
+<h2>AUTHOR</h2>
+
+William L. Baker Department of Geography and Recreation University of
+Wyoming Laramie, Wyoming 82071 U.S.A.
+
+<p>
+<i>Last changed: $Date: 2009-02-04 03:03:33 +0100 (st, 04 II 2009) $</i>
+<HR>
+<P><a href="index.html">Main index</a> - <a href="raster.html">raster index</a> - <a href="full_index.html">Full index</a></P>
+<P>&copy; 2003-2011 <a href="http://grass.osgeo.org">GRASS Development Team</a></p>
+</body>
+</html>
