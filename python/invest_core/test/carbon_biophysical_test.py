@@ -17,8 +17,8 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         args = {}
         args['workspace_dir'] = '../../carbon_output'
-        args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
-        args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
+        args['lulc_cur_uri'] = "../../carbon/input/lulc_samp_cur"
+        args['carbon_pools_uri'] = '../../carbon/input/carbon_pools_float.dbf'
 
         carbon_biophysical.execute(args)
 
@@ -28,9 +28,9 @@ do sequestration on lulc maps."""
 
         args = {}
         args['workspace_dir'] = '../../carbon_output'
-        args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
-        args['lulc_fut_uri'] = "../../test_data/lulc_samp_fut"
-        args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
+        args['lulc_cur_uri'] = "../../carbon/input/lulc_samp_cur"
+        args['lulc_fut_uri'] = "../../carbon/input/lulc_samp_fut"
+        args['carbon_pools_uri'] = '../../carbon/input/carbon_pools_float.dbf'
 
         carbon_biophysical.execute(args)
 
@@ -40,13 +40,13 @@ do sequestration and harvested wood products on lulc maps."""
 
         args = {}
         args['workspace_dir'] = '../../carbon_output'
-        args['lulc_cur_uri'] = "../../test_data/lulc_samp_cur"
-        args['lulc_fut_uri'] = "../../test_data/lulc_samp_fut"
-        args['carbon_pools_uri'] = '../../test_data/carbon_pools_float.dbf'
+        args['lulc_cur_uri'] = "../../carbon/input/lulc_samp_cur"
+        args['lulc_fut_uri'] = "../../carbon/input/lulc_samp_fut"
+        args['carbon_pools_uri'] = '../../carbon/input/carbon_pools_float.dbf'
         args['lulc_cur_year'] = 2000
         args['lulc_fut_year'] = 2030
-        args['hwp_cur_shape_uri'] = "../../test_data/harv_samp_cur"
-        args['hwp_fut_shape_uri'] = "../../test_data/harv_samp_fut"
+        args['hwp_cur_shape_uri'] = "../../carbon/input/harv_samp_cur"
+        args['hwp_fut_shape_uri'] = "../../carbon/input/harv_samp_fut"
 
         carbon_biophysical.execute(args)
 

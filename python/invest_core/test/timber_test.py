@@ -10,8 +10,8 @@ import timber
 class TestInvestTimberCore(unittest.TestCase):
     def test_timber_model(self):
         args = {'output_dir': '../../test_data/timber',
-                'timber_shape_uri': '../../test_data/timber/input/plantation.shp',
-                'attr_table_uri': '../../test_data/timber/input/plant_table.dbf',
+                'timber_shape_uri': '../../timber/input/plantation.shp',
+                'attr_table_uri': '../../timber/input/plant_table.dbf',
                 'market_disc_rate': 7}
 
         timber.execute(args)

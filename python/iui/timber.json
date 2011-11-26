@@ -24,7 +24,7 @@
                     "type": "file",
                     "label": "Managed area map",
                     "required": true,
-                    "defaultText": "./test_data/timber/input/plantation.shp"
+                    "defaultText": "./timber/input/plantation.shp"
                 },
                 {
                     "id": "attr_table",
@@ -32,7 +32,7 @@
                     "type": "file",
                     "label": "Plantation production table",
                     "required": true,
-                    "defaultText": "./test_data/timber/input/plant_table.dbf"
+                    "defaultText": "./timber/input/plant_table.dbf"
                 },    
                 {
                     "id": "discount",
