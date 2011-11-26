@@ -17,70 +17,6 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
-    def testflowAccumulation(self):
-        """Regression test for flowDirection accumulation on a DEM"""
-        self.fail('flow accumulation not implemented yet')
-        dem = gdal.Open('../../../sediment_test_data/dem')
-        flowDirection = invest_core.newRasterFromBase(dem,
-            '../../../test_out/flowDirection.tif', 'GTiff', 0, gdal.GDT_Byte)
-        invest_core.flowDirection(dem, flowDirection)
-
-        accumulation = invest_core.newRasterFromBase(dem,
-            '../../../test_out/accumulation.tif', 'GTiff', -1, gdal.GDT_Float32)
-        invest_core.flowAccumulation(flowDirection, dem, accumulation)
-
-    def testflowDirectionSimple(self):
-        """Regression test for flow direction on a DEM with an example
-        constructed by hand"""
-        self.fail('flow accumulation not implemented yet')
-        driver = gdal.GetDriverByName("MEM")
-
-        #Create a 3x3 dem raster
-        dem = driver.Create('', 3, 3, 1, gdal.GDT_Float32)
-        dem.GetRasterBand(1).SetNoDataValue(-1.0)
-        dem.GetRasterBand(1).WriteArray(np.array([[902, 909, 918], [895, 904, 916], [893, 904, 918]]))
-
-        flow = invest_core.newRasterFromBase(dem,
-            '', 'MEM', 0, gdal.GDT_Byte)
-        invest_core.flowDirection(dem, flow)
-        flowMatrix = flow.ReadAsArray(0, 0, 3, 3)
-        self.assertEqual(8, flowMatrix[1][1],
-                         'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
-
-        dem.GetRasterBand(1).WriteArray(np.array([[190, 185, 181], [189, 185, 182], [189, 185, 182]]))
-        flow = invest_core.newRasterFromBase(dem,
-            '', 'MEM', 0, gdal.GDT_Byte)
-        flowDir = invest_core.flowDirection(dem, flow)
-        flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
-        self.assertEqual(128, flowMatrix[1][1],
-                         'Incorrect flow, should be 128 != %s' % flowMatrix[1][1])
-
-        dem.GetRasterBand(1).WriteArray(np.array([[343, 343, 342],
-                                                      [340, 341, 343],
-                                                      [335, 338, 343]]))
-        flow = invest_core.newRasterFromBase(dem,
-            '', 'MEM', 0, gdal.GDT_Byte)
-        flowDir = invest_core.flowDirection(dem, flow)
-        flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
-        self.assertEqual(8, flowMatrix[1][1],
-                         'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
-
-
-    def testflowDirection(self):
-        """Regression test for flow direction on a DEM"""
-        dem = gdal.Open('../../../sediment_test_data/dem')
-        flow = invest_core.newRasterFromBase(dem,
-            '../../../test_out/flow.tif', 'GTiff', 0, gdal.GDT_Byte)
-        invest_core.flowDirection(dem, flow)
-
-    def testslopeCalculation(self):
-        """Regression test for slope calculation"""
-        dem = gdal.Open('../../../sediment_test_data/dem')
-        slope = invest_core.calculateSlope(dem, uri='../../../test_out/slope.tif')
-        regressionSlope = \
-            gdal.Open('../../../sediment_test_data/slopeRegression.tif')
-        invest_test_core.assertTwoDatasetsEqual(self, slope, regressionSlope)
-
     def testvectorizeRasters(self):
         r1 = gdal.Open('../../../test_data/lulc_samp_cur')
         r2 = gdal.Open('../../../test_data/precip')
@@ -207,13 +143,6 @@ class TestInvestCore(unittest.TestCase):
         #assert the output of pixelArea against the known value 
         #(it's 30x30 meters) so 0.09 Ha
         self.assertEqual(0.09, area)
-
-    def test_createRasterFromVectorExtents(self):
-        fsencoding = sys.getfilesystemencoding()
-        shp = ogr.Open('../../../sediment_test_data/subwatersheds.shp'.\
-                       encode(fsencoding))
-        raster = invest_core.createRasterFromVectorExtents(30, 30,
-                       gdal.GDT_Float32, -5.0, '../../../test_out/subwatershed.tif', shp)
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCore)
 unittest.TextTestRunner(verbosity=2).run(suite)
