@@ -7,12 +7,13 @@ import invest_test_core
 #Add current directory and parent path for import tests
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../')
+os.chdir(cmd_folder)
 
 import sediment_biophysical
 
 class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_regression(self):
-        """Test for carbon_biophysical function running with sample input to \
+        """Test for sediment_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
 
         args = {}
@@ -77,6 +78,6 @@ do sequestration and harvested wood products on lulc maps."""
 #            args['workspace_dir'] + "/Intermediate/vol_hwp_fut.tif",
 #            '../../test_data/vol_hwp_fut_regression.tif')
 
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestSedimentBiophysical)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+
+suite = unittest.TestLoader().loadTestsFromTestCase(TestSedimentBiophysical)
+unittest.TextTestRunner(verbosity=2).run(suite)

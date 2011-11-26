@@ -47,7 +47,5 @@ class TestCarbonBiophysical(unittest.TestCase):
             args['workspace_dir'] + "/Output/value_seq.tif",
             '../../test_data/value_seq_regression.tif')
 
-
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)
+unittest.TextTestRunner(verbosity=2).run(suite)

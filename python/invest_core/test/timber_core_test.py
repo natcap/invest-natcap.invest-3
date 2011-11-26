@@ -3,6 +3,7 @@ import sys, os
 #Add current directory and parent path for import tests
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../')
+os.chdir(cmd_folder)
 
 import unittest
 import timber_core
@@ -306,8 +307,6 @@ class TestTimber(unittest.TestCase):
                 os.remove('../../../test_data/timber/Output/' + file)
             os.rmdir('../../../test_data/timber/Output/')
 
-
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestTimber)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+suite = unittest.TestLoader().loadTestsFromTestCase(TestTimber)
+unittest.TextTestRunner(verbosity=2).run(suite)
 

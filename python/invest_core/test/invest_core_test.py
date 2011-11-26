@@ -1,6 +1,7 @@
 import os, sys
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../')
+os.chdir(cmd_folder)
 import invest_core
 import invest_test_core
 import unittest
@@ -18,6 +19,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestInvestCore(unittest.TestCase):
     def testflowAccumulation(self):
         """Regression test for flowDirection accumulation on a DEM"""
+        self.fail('flow accumulation not implemented yet')
         dem = gdal.Open('../../../sediment_test_data/dem')
         flowDirection = invest_core.newRasterFromBase(dem,
             '../../../test_out/flowDirection.tif', 'GTiff', 0, gdal.GDT_Byte)
@@ -30,7 +32,7 @@ class TestInvestCore(unittest.TestCase):
     def testflowDirectionSimple(self):
         """Regression test for flow direction on a DEM with an example
         constructed by hand"""
-
+        self.fail('flow accumulation not implemented yet')
         driver = gdal.GetDriverByName("MEM")
 
         #Create a 3x3 dem raster
@@ -213,6 +215,5 @@ class TestInvestCore(unittest.TestCase):
         raster = invest_core.createRasterFromVectorExtents(30, 30,
                        gdal.GDT_Float32, -5.0, '../../../test_out/subwatershed.tif', shp)
 
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCore)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCore)
+unittest.TextTestRunner(verbosity=2).run(suite)

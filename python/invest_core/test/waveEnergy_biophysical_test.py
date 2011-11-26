@@ -12,14 +12,13 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
     def test_waveEnergy_smoke(self):
         args = {}
         args['workspace_dir'] = '../../test_data/wave_Energy'
-        args['wave_base_data_uri'] = '../../test_data/wave_Energy/samp_data/input/WaveData' 
-        args['analysis_area_uri'] = 'West Coast of North America and Hawaii' 
-        args['machine_perf_uri'] = '../../test_data/wave_Energy/samp_data/input/Machine_AquaBuOYCSV.csv' 
-        args['machine_param_uri'] = '../../test_data/wave_Energy/samp_data/input/Machine_AquaBuOYParamCSV.csv' 
+        args['wave_base_data_uri'] = '../../test_data/wave_Energy/samp_data/input/WaveData'
+        args['analysis_area_uri'] = 'West Coast of North America and Hawaii'
+        args['machine_perf_uri'] = '../../test_data/wave_Energy/samp_data/input/Machine_AquaBuOYCSV.csv'
+        args['machine_param_uri'] = '../../test_data/wave_Energy/samp_data/input/Machine_AquaBuOYParamCSV.csv'
         args['dem_uri'] = '../../test_data/wave_Energy/samp_data/input/global_dem'
         args['AOI_uri'] = '../../test_data/wave_Energy/samp_data/input/AOI_WCVI.shp'
         waveEnergy_biophysical.execute(args)
-        
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestWaveEnergyBiophysical)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+
+suite = unittest.TestLoader().loadTestsFromTestCase(TestWaveEnergyBiophysical)
+unittest.TextTestRunner(verbosity=2).run(suite)
