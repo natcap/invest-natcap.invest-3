@@ -15,7 +15,7 @@
                     "label": "Workspace",
                     "required": true,
                     "args_id": "workspace_dir",
-                    "defaultText": "./output/Output"
+                    "defaultText": "./carbon/"
                 },
                 {
                     "id":"sequest_uri",
@@ -23,7 +23,7 @@
                     "label": "Carbon sequestration raster",
                     "required": true,
                     "args_id": "sequest_uri",
-                    "defaultText": "./output/Output/sequest.tif"
+                    "defaultText": "./carbon/Output/sequest.tif"
                 },
                 {
                     "id": "value",

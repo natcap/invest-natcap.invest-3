@@ -249,16 +249,16 @@ class TestTimber(unittest.TestCase):
         """Test timber model with real inputs.  Compare copied and modified shapefile with valid
             shapefile that was created from the same inputs.  Regression test."""
         #Open table and shapefile
-        attr_table = dbf.Dbf('../../../test_data/timber/input/plant_table.dbf')
-        test_shape = ogr.Open('../../../test_data/timber/input/plantation.shp', 1)
+        attr_table = dbf.Dbf('../../../timber/input/plant_table.dbf')
+        test_shape = ogr.Open('../../../timber/input/plantation.shp', 1)
 
         #Add the Output directory onto the given workspace
         output_dir = '../../../test_data/timber' + os.sep + 'Output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
         elif os.path.isfile(output_dir + 'timber.shp'):
-            os.remove(output_dir+'timber.shp')
-            
+            os.remove(output_dir + 'timber.shp')
+
         shape_source = output_dir + 'timber.shp'
 
         ogr.GetDriverByName('ESRI Shapefile').\
@@ -274,7 +274,7 @@ class TestTimber(unittest.TestCase):
 
         timber_core.execute(args)
 
-        valid_output_shape = ogr.Open('../../../test_data/timber/sample_output/timber.shp')
+        valid_output_shape = ogr.Open('../../../timber/sample_output/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
         #Check that the number of features (polygons) are the same between shapefiles
         num_features_valid = valid_output_layer.GetFeatureCount()
