@@ -3,6 +3,7 @@ import os, sys
 #Add current directory and parent path for import tests
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../')
+os.chdir(cmd_folder)
 
 import unittest
 import timber
