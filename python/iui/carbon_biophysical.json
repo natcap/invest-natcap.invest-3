@@ -15,13 +15,13 @@
         {
             "id" : "workspace_list",
             "type": "list",
-            "elements":[       
+            "elements":[
                 {
                     "id" : "workspace",
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultText": "./output",
+                    "defaultText": "./carbon",
                     "required": true
                 }
             ]
