@@ -213,6 +213,5 @@ class TestInvestCore(unittest.TestCase):
         raster = invest_core.createRasterFromVectorExtents(30, 30,
                        gdal.GDT_Float32, -5.0, '../../../test_out/subwatershed.tif', shp)
 
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCore)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCore)
+unittest.TextTestRunner(verbosity=2).run(suite)

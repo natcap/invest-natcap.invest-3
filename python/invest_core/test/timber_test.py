@@ -23,6 +23,5 @@ class TestInvestTimberCore(unittest.TestCase):
                 os.remove('../../test_data/timber/Output/' + file)
             os.rmdir('../../test_data/timber/Output/')
 
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestTimberCore)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestTimberCore)
+unittest.TextTestRunner(verbosity=2).run(suite)

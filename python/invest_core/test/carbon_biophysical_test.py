@@ -88,6 +88,5 @@ do sequestration and harvested wood products on lulc maps."""
             args['workspace_dir'] + "/Intermediate/vol_hwp_fut.tif",
             '../../test_data/vol_hwp_fut_regression.tif')
 
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)
+unittest.TextTestRunner(verbosity=2).run(suite)

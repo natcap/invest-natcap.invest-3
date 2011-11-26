@@ -257,8 +257,8 @@ class TestTimber(unittest.TestCase):
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
         elif os.path.isfile(output_dir + 'timber.shp'):
-            os.remove(output_dir+'timber.shp')
-            
+            os.remove(output_dir + 'timber.shp')
+
         shape_source = output_dir + 'timber.shp'
 
         ogr.GetDriverByName('ESRI Shapefile').\
@@ -306,8 +306,6 @@ class TestTimber(unittest.TestCase):
                 os.remove('../../../test_data/timber/Output/' + file)
             os.rmdir('../../../test_data/timber/Output/')
 
-
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestTimber)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+suite = unittest.TestLoader().loadTestsFromTestCase(TestTimber)
+unittest.TextTestRunner(verbosity=2).run(suite)
 
