@@ -32,31 +32,31 @@
             "collapsible" : false,
             "label": "Current land use/land cover",
             "elements": [
-            	{
-            	    "id" : "cur_lulc_list",
-	                "type" : "list",
-	                "elements":[
-	                    {
-	                       "id" : "cur_lulc_raster",
+                {
+                    "id" : "cur_lulc_list",
+                    "type" : "list",
+                    "elements":[
+                        {
+                           "id" : "cur_lulc_raster",
                             "args_id" : "lulc_cur_uri",
-	                        "type": "file",
-	                        "label": "Raster location",
+                            "type": "file",
+                            "label": "Raster location",
                             "defaultText": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
-	                        "required": true
-	                    },
-	                    {
-	                        "id" : "cur_lulc_year",
-	                        "type": "text",
-	                        "validText": "-?[0-9]+",
-	                        "dataType": "int",
-	                        "args_id": "lulc_cur_year",
-	                        "label": "Year of land cover",
-	                        "required": false,
-	                        "enabledBy": "calc_sequestration",
-	                        "defaultText": "2000",
-	                        "requiredIf": ["cur_harvest_map", "fut_harvest_map"]
-	                    }
-	                ]
+                            "required": true
+                        },
+                        {
+                            "id" : "cur_lulc_year",
+                            "type": "text",
+                            "validText": "-?[0-9]+",
+                            "dataType": "int",
+                            "args_id": "lulc_cur_year",
+                            "label": "Year of land cover",
+                            "required": false,
+                            "enabledBy": "calc_sequestration",
+                            "defaultText": "2000",
+                            "requiredIf": ["cur_harvest_map", "fut_harvest_map"]
+                        }
+                    ]
                 }
             ]
         },
@@ -66,33 +66,33 @@
             "collapsible": false,
             "label": "Future land use/land cover",
             "elements": [
-            	{ 
-            	    "id" : "fut_lulc_list",
-                	"type" : "list",
-                	"elements" : [
-	                    {
-	                        "id" : "fut_lulc_raster",
-	                        "type": "file",
-	                        "label": "Raster location",
-	                        "args_id": "lulc_fut_uri",
-	                        "required": false,
-	                        "enabledBy": "calc_sequestration",
+                { 
+                    "id" : "fut_lulc_list",
+                    "type" : "list",
+                    "elements" : [
+                        {
+                            "id" : "fut_lulc_raster",
+                            "type": "file",
+                            "label": "Raster location",
+                            "args_id": "lulc_fut_uri",
+                            "required": false,
+                            "enabledBy": "calc_sequestration",
                             "defaultText": "./base_data/terrestrial/lulc_samp_fut/hdr.adf",
-	                        "requiredIf": ["calc_sequestration"]
-	                    },
-	                    {
-	                        "id" : "fut_lulc_year",
-	                        "type": "text",
-	                        "validText": "-?[0-9]+",
-	                        "dataType": "int",
-	                        "label": "Year of land cover",
-	                        "args_id": "lulc_fut_year",
-	                        "required": false,
-	                        "defaultText": "2030",
-	                        "enabledBy": "calc_sequestration",
-	                        "requiredIf": ["fut_harvest_map"]
-	                    }
-	                ]
+                            "requiredIf": ["calc_sequestration"]
+                        },
+                        {
+                            "id" : "fut_lulc_year",
+                            "type": "text",
+                            "validText": "-?[0-9]+",
+                            "dataType": "int",
+                            "label": "Year of land cover",
+                            "args_id": "lulc_fut_year",
+                            "required": false,
+                            "defaultText": "2030",
+                            "enabledBy": "calc_sequestration",
+                            "requiredIf": ["fut_harvest_map"]
+                        }
+                    ]
                 }
             ]
         },
@@ -104,7 +104,7 @@
                     "id" : "carbon_pools",
                     "type": "file",
                     "label": "Carbon pools",
-                    "defaultText": "./carbon/input/carbon_pools.dbf",
+                    "defaultText": "./carbon/input/carbon_pools_samp.dbf",
                     "args_id": "carbon_pools_uri",
                     "required": true
                 },
@@ -114,7 +114,7 @@
                     "label": "Current harvest rate map",
                     "args_id": "hwp_cur_shape_uri",
                     "required": false,
-                    "defaultText": "./carbon/input/harv_samp_cur/harv_samp_cur.shp",
+                    "defaultText": "./carbon/input/harv_samp_cur.shp",
                     "enabledBy": "calc_sequestration"
                 },
                 {
@@ -123,7 +123,7 @@
                     "label": "Future harvest rate map",
                     "args_id": "hwp_fut_shape_uri",
                     "required": false,
-                    "defaultText": "./carbon/input/harv_samp_fut/harv_samp_fut.shp",
+                    "defaultText": "./carbon/input/harv_samp_fut.shp",
                     "enabledBy": "calc_sequestration"
                 }
             ]
