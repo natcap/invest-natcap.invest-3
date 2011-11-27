@@ -17,65 +17,6 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
-    def testvectorizeRasters(self):
-        r1 = gdal.Open('../../../test_data/lulc_samp_cur')
-        r2 = gdal.Open('../../../test_data/precip')
-
-        def op(a, b):
-            return np.sqrt(a ** 2 + b ** 2)
-
-        invest_core.vectorizeRasters([r1, r2], op,
-            rasterName='../../../test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
-
-    def testvectorizeRastersWaveEnergy(self):
-        r1 = gdal.Open('../../../test_data/wave_Energy/samp_data/input/global_dem')
-        r2 = gdal.Open('../../../test_data/wave_Energy/waveHeight.tif')
-
-        def op(a, b):
-            return np.sqrt(a ** 2 + b ** 2)
-
-        invest_core.vectorizeRasters([r1, r2], op,
-            rasterName='../../../test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
-
-    def testinterpolateMatrix(self):
-        """Test the matrix interpolation function"""
-
-        def assertEqualInterpPoints(x, y, newx, newy, z):
-            for xVal in x:
-                for yVal in y:
-                    i = x.tolist().index(xVal)
-                    j = y.tolist().index(yVal)
-                    ii = newx.tolist().index(xVal)
-                    jj = newy.tolist().index(yVal)
-                    self.assertAlmostEquals(z[j][i], interpz[jj][ii], 5,
-                                    "z[%s][%s], interpz[%s][%s], %s != %s" %
-                                    (i, j, ii, jj, z[j][i], interpz[jj][ii]))
-
-        #Create a non-trivial somewhat random matrix
-        x = np.array([-4.2, 3, 6, 10, 11])
-        y = np.array([-9, 3, 6, 10])
-        z = np.array([[0., 8., 11., 12.5, 0.0],
-           [0., 1., 1., 0., 0.],
-           [-7.2, 3., 1.2, 0., 0.],
-           [0., 4.9, 2.5, 0, 0.]])
-        #print z.shape
-
-        #print 'x', x
-        #print 'y', y
-        #print 'z', z
-
-        newx = np.array([-8.2, -4.2, 0, 2.5, 3, 5, 6, 7.5, 10, 11, 15.2, 100.0])
-        newy = np.array([-9, 0, 2.5, 3, 5, 6, 7.5, 10, 22.2, 100.0])
-
-        #print 'newx', newx
-        #print 'newy', newy
-        logging.debug('calling interpolate matrix')
-        interpz = invest_core.interpolateMatrix(x, y, z, newx, newy)
-        #print 'interpz:', interpz
-        logging.debug('testing the result of interpolate matrix')
-        assertEqualInterpPoints(x, y, newx, newy, z)
-
-
     def testRasterDiff(self):
         driver = gdal.GetDriverByName("MEM")
 
