@@ -4,5 +4,5 @@ from Cython.Distutils import build_ext
 
 setup(
     cmdclass={'build_ext': build_ext},
-    ext_modules=[Extension("routing_core", ["routing_core.pyx"])]
+    ext_modules=[Extension("invest_core", ["invest_core.pyx"])]
 )
