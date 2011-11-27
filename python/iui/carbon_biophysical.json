@@ -104,7 +104,7 @@
                     "id" : "carbon_pools",
                     "type": "file",
                     "label": "Carbon pools",
-                    "defaultText": "./carbon/input/carbon_pools.dbf",
+                    "defaultText": "./carbon/input/carbon_pools_samp.dbf",
                     "args_id": "carbon_pools_uri",
                     "required": true
                 },
