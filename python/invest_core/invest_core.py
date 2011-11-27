@@ -2,8 +2,6 @@
     the InVEST toolset"""
 
 import numpy as np
-import scipy.interpolate
-import scipy.signal
 import math
 from osgeo import gdal, osr
 import logging
