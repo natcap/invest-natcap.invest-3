@@ -12,6 +12,7 @@ import numpy as np
 import random
 import logging
 import math
+import routing_core
 logger = logging.getLogger('invest_core_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -19,20 +20,18 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestInvestCore(unittest.TestCase):
     def testflowAccumulation(self):
         """Regression test for flowDirection accumulation on a DEM"""
-        self.fail('flow accumulation not implemented yet')
         dem = gdal.Open('../../../sediment_test_data/dem')
         flowDirection = invest_core.newRasterFromBase(dem,
             '../../../test_out/flowDirection.tif', 'GTiff', 0, gdal.GDT_Byte)
-        invest_core.flowDirection(dem, flowDirection)
+        routing_core.flowDirection(dem, flowDirection)
 
         accumulation = invest_core.newRasterFromBase(dem,
             '../../../test_out/accumulation.tif', 'GTiff', -1, gdal.GDT_Float32)
-        invest_core.flowAccumulation(flowDirection, dem, accumulation)
+        routing_core.flowAccumulation(flowDirection, dem, accumulation)
 
     def testflowDirectionSimple(self):
         """Regression test for flow direction on a DEM with an example
         constructed by hand"""
-        self.fail('flow accumulation not implemented yet')
         driver = gdal.GetDriverByName("MEM")
 
         #Create a 3x3 dem raster
@@ -42,7 +41,7 @@ class TestInvestCore(unittest.TestCase):
 
         flow = invest_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
-        invest_core.flowDirection(dem, flow)
+        routing_core.flowDirection(dem, flow)
         flowMatrix = flow.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(8, flowMatrix[1][1],
                          'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
