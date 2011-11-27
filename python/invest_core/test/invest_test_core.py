@@ -41,20 +41,13 @@ def assertTwoDatasetsEqual(unitTest, a, b):
                          + str(a.RasterCount) +
                          ", b = " + str(b.RasterCount))
 
-    def checkEqual(a, b):
-        """Assert that a == b"""
-        unitTest.assertAlmostEqual(a, b)
-
-    assertArrayEqual = np.vectorize(checkEqual)
-
     for bandNumber in range(1, a.RasterCount + 1):
         bandA = a.GetRasterBand(bandNumber)
         bandB = b.GetRasterBand(bandNumber)
 
-        for i in range(bandA.YSize):
-            aArray = bandA.ReadAsArray(0, i, bandA.XSize, 1)
-            bArray = bandB.ReadAsArray(0, i, bandB.XSize, 1)
-            assertArrayEqual(aArray, bArray)
+        aArray = bandA.ReadAsArray(0, 0, bandA.XSize, bandA.YSize)
+        bArray = bandB.ReadAsArray(0, 0, bandB.XSize, bandB.YSize)
+        np.testing.assert_array_almost_equal(aArray, bArray)
 
 def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
     """Create a new raster with random int values.
