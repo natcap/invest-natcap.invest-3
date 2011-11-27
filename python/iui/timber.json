@@ -16,7 +16,7 @@
                     "label": "Workspace",
                     "required": true,
                     "args_id": "output_dir",
-                    "defaultText": "./output"
+                    "defaultText": "./timber"
                 },
                 {
                     "id": "shapefile",
