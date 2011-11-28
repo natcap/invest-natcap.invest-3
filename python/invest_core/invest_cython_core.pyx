@@ -3,6 +3,7 @@
 
 import numpy as np
 cimport numpy as np
+cimport cython
 import math
 from osgeo import gdal, osr
 import logging
@@ -253,6 +254,7 @@ def calculateSlope(dem, uri=''):
     slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
     return slope
 
+@cython.boundscheck(False)
 def flowDirection(dem, flow):
     """Calculates the D8 pour point algorithm.  The output is a integer
         raster whose values range from 1 to 255.  The values for each direction
@@ -286,38 +288,41 @@ def flowDirection(dem, flow):
        
        returns nothing"""
 
-    cdef np.int_t x, y, xo, yo, dcur, xdim, ydim, xmax, ymax, i, d
+    cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, d
     cdef np.float_t lowest, h
 
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
-    demMatrixTmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
-                                                 dem.RasterYSize).transpose()
+    demMatrixTmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,\
+        dem.RasterYSize).transpose()
 
+    #Incoming matrix type could be anything numerical.  Cast to a floating
+    #point for cython speed and because it's the most general form.
     cdef np.ndarray[np.float_t,ndim=2] demMatrix = demMatrixTmp.astype(np.float)
     demMatrix[:] = demMatrixTmp
-    xmax = demMatrix.shape[0]
-    ymax = demMatrix.shape[1]
+    
+    xmax, ymax = demMatrix.shape[0], demMatrix.shape[1]
     
     #This matrix holds the flow direction value, initialize to zero
-    cdef np.ndarray[np.int_t,ndim=2] flowMatrix = np.zeros([xmax,ymax], 
-                                                           dtype=np.int)
+    cdef np.ndarray[np.int_t,ndim=2] flowMatrix = \
+        np.zeros([xmax,ymax], dtype=np.int)
     
-    #This array indicates the integer flow direction based on whichpixel
+    #This array indicates the integer flow direction based on which pixel
     # to shift to.  The order is d,xo,yo eight times for 8 directions
     cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1,1, 0, 2,1, 1, 
         4,0, 1, 8,-1, 1, 16,-1, 0, 32,-1,-1, 64,0,-1, 128, 1,-1],dtype=np.int)
     #loop through each cell and skip any edge pixels
     for x in range(1,xmax-1):
         for y in range(1,ymax-1):
-            lowest = demMatrix[x,y]
+            #The lowest height seen so far, initialize to current pixel height
+            lowest = demMatrix[x,y] 
+            #The current flow direction, initalize to 0 for no direction
+            dcur = 0 
             #search the neighbors for the lowest pixel(s)
-            dcur = 0
             for i in range(8):
                 d = shiftIndexes[i*3]
-                xo = shiftIndexes[i*3+1]
-                yo = shiftIndexes[i*3+2]
-                h = demMatrix[x+xo,y+yo] #the height of the neighboring cell
+                #the height of the neighboring cell
+                h = demMatrix[x+shiftIndexes[i*3+1],y+shiftIndexes[i*3+2]] 
                 if h < lowest:
                     lowest = h
                     dcur = d
