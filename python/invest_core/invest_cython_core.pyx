@@ -285,6 +285,9 @@ def flowDirection(dem, flow):
        
        returns nothing"""
 
+    cdef int x, y, xo, yo, dcur, xdim, ydim
+    cdef float lowest, h
+
     demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
                                                  dem.RasterYSize)
     #GDal inverts x and y, so it's easier to transpose in and back out later
@@ -300,23 +303,22 @@ def flowDirection(dem, flow):
     shiftIndexes = {1:(1, 0), 2:(1, 1), 4:(0, 1), 8:(-1, 1), 16:(-1, 0), 
                     32:(-1, -1), 64:(0, -1), 128:(1, -1)}
     
-    #loop through each cell
-    for (x,y), lowest in np.ndenumerate(demMatrix):
-        #skip any edge pixels
-        if x == 0 or y == 0 or x == demMatrix.shape[0]-1 or \
-            y == demMatrix.shape[1]-1:
-            continue 
-        
-        #search the neighbors for the lowest pixel(s)
-        dcur = 0
-        for d, (xo,yo) in shiftIndexes.iteritems():
-            h = demMatrix[x+xo,y+yo] #the height of the neighboring cell
-            if h < lowest:
-                lowest = h
-                dcur = d
-            elif h == lowest:
-                dcur += d
-        flowMatrix[x,y] = dcur
+    #loop through each cell and skip any edge pixels
+    xdim = demMatrix.shape[0]-1
+    ydim = demMatrix.shape[1]-1
+    for x in range(1,xdim):
+        for y in range(1,ydim):
+            lowest = demMatrix[x,y]
+            #search the neighbors for the lowest pixel(s)
+            dcur = 0
+            for d, (xo,yo) in shiftIndexes.iteritems():
+                h = demMatrix[x+xo,y+yo] #the height of the neighboring cell
+                if h < lowest:
+                    lowest = h
+                    dcur = d
+                elif h == lowest:
+                    dcur += d
+            flowMatrix[x,y] = dcur
 
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
     return flow
