@@ -288,47 +288,38 @@ def flowDirection(dem, flow):
     logger = logging.getLogger('flowDirection')
     demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
                                                  dem.RasterYSize)
-    #Make the lowest point seen so far the dem, that way we can spot the pits
-    #in a later step
-    lowest = demMatrix.copy()
 
     #This matrix holds the flow direction value, initialize to zero
-    flowMatrix = np.zeros(lowest.shape, dtype=np.int8)
-
-    #This dictionary indicates how many pixels to shift over in x and y
-    #depending on which power of 2 flow direction we're considering
-    shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1),
-                    8:(1, -1), 16:(1, 0), 32:(1, 1),
-                    64:(0, 1), 128:(-1, 1)}
-
-    #Loop through all the flow directions searching for the lowest value
-    for dir in shiftIndexes:
-        #Define the kernel based on the flow direction
-        logger.debug('Calculating flow for direction %s %s' %
-                     (dir, shiftIndexes[dir]))
-        neighborElevation = shiftMatrix(demMatrix, *shiftIndexes[dir])
-
-        #Search for areas where the neighbor elevations are equal to the current
-        #this will indicate a flat region that needs to be cleaned up later
-        #In those cases, add the direciton to the flow matrix since there are
-        #multiple possible flow directions
-        equalElevationIndexes = neighborElevation == lowest
-        lowest[equalElevationIndexes] = neighborElevation[equalElevationIndexes]
-        flowMatrix[equalElevationIndexes] = flowMatrix[equalElevationIndexes] + dir
-
-        #Next indicate all the pixels where the neighbor pixel is lower than
-        #the lowest seen so far
-        lowerIndex = neighborElevation < lowest
-
-        #Update the lowest elevation seen so far
-        lowest[lowerIndex] = neighborElevation[lowerIndex]
-        #and update the flow to point in the direction of that pixel
-        flowMatrix[lowerIndex] = dir
-
-    #now flow matrix has flows defined, but some might be ambiguous, like
-    #0 flow in a pit, or multiple flows due to flat regions
+    flowMatrix = np.zeros(demMatrix.shape, dtype=np.int)
+    
+    #This dictionary indicates the integer flow direction based on which
+    #pixel to shift to
+    shiftIndexes = {1:(1, 0), 2:(1, 1), 4:(0, 1), 8:(-1, 1), 16:(-1, 0), 
+                    32:(-1, -1), 64:(0, -1), 128:(1, -1)}
+    
+    #loop through each cell
+    for (x,y), lowest in np.ndenumerate(demMatrix):
+        #skip any edge pixels
+        if x == 0 or y == 0 or x == demMatrix.shape[0]-1 or \
+            y == demMatrix.shape[1]-1:
+            continue 
+        
+        #search the neighbors for the lowest pixel(s)
+        dcur = 0
+        for d, (xo,yo) in shiftIndexes.iteritems():
+            h = demMatrix[x+xo,y+yo] #the height of the neighboring cell
+            #logger.debug('x %s y % xo %s yo %s lowest %s h %s dcur %s' % \
+            #             (x,y,xo,yo,lowest,h,dcur))
+            if h < lowest:
+                lowest = h
+                dcur = d
+            elif h == lowest:
+                dcur += d
+        #logger.debug('writing %s to [%s,%s]' %(dcur,x,y))
+        flowMatrix[x,y] = dcur
 
     flow.GetRasterBand(1).WriteArray(flowMatrix, 0, 0)
+    #logger.debug("flowMatrix = %s" % str(flowMatrix))
     return flow
 
 
