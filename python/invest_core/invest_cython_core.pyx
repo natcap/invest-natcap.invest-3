@@ -285,15 +285,11 @@ def flowDirection(dem, flow):
        
        returns nothing"""
 
-    logger = logging.getLogger('flowDirection')
     demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
                                                  dem.RasterYSize)
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
     demMatrix=demMatrix.transpose()
-    #logger.debug("xsize ysize %s %s shape %s " % (dem.RasterXSize,
-    #                                             dem.RasterYSize,
-    #                                             str(demMatrix.shape)))
     
     #This matrix holds the flow direction value, initialize to zero
     flowMatrix = np.zeros(demMatrix.shape, dtype=np.int)
@@ -315,18 +311,14 @@ def flowDirection(dem, flow):
         dcur = 0
         for d, (xo,yo) in shiftIndexes.iteritems():
             h = demMatrix[x+xo,y+yo] #the height of the neighboring cell
-            #logger.debug('x %s y % xo %s yo %s lowest %s h %s dcur %s' % \
-            #             (x,y,xo,yo,lowest,h,dcur))
             if h < lowest:
                 lowest = h
                 dcur = d
             elif h == lowest:
                 dcur += d
-        #logger.debug('writing %s to [%s,%s]' %(dcur,x,y))
         flowMatrix[x,y] = dcur
 
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
-    #logger.debug("flowMatrix = %s" % str(flowMatrix))
     return flow
 
 
