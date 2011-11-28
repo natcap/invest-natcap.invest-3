@@ -18,6 +18,16 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
+    def testflowDirection(self):
+        """Regression test for flow direction on a DEM"""
+        dem = gdal.Open('../../../sediment_test_data/dem')
+        flow = invest_cython_core.newRasterFromBase(dem,
+            '../../../test_out/flow.tif', 'GTiff', 0, gdal.GDT_Float32)
+        invest_cython_core.flowDirection(dem, flow)
+        regressionFlow = \
+            gdal.Open('../../../sediment_test_data/flowregression.tif')
+        invest_test_core.assertTwoDatasetsEqual(self, flow, regressionFlow)
+
     def testflowAccumulation(self):
         """Regression test for flowDirection accumulation on a DEM"""
         dem = gdal.Open('../../../sediment_test_data/dem')
@@ -74,15 +84,7 @@ class TestInvestCore(unittest.TestCase):
         self.assertEqual(4, flowMatrix[1][1],
                          'Incorrect flow, should be 4 != %s' % flowMatrix[1][1])
 
-    def testflowDirection(self):
-        """Regression test for flow direction on a DEM"""
-        dem = gdal.Open('../../../sediment_test_data/dem')
-        flow = invest_cython_core.newRasterFromBase(dem,
-            '../../../test_out/flow.tif', 'GTiff', 0, gdal.GDT_Byte)
-        invest_cython_core.flowDirection(dem, flow)
-        regressionFlow = \
-            gdal.Open('../../../sediment_test_data/flowregression.tif')
-        invest_test_core.assertTwoDatasetsEqual(self, flow, regressionFlow)
+
 
     def testslopeCalculation(self):
         """Regression test for slope calculation"""
