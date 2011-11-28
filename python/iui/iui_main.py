@@ -541,6 +541,7 @@ class ModelDialog(QtGui.QDialog):
         self.statusAreaLabel = QtGui.QLabel('Messages:')
         self.statusArea = QtGui.QPlainTextEdit()
         self.statusArea.setReadOnly(True)
+        self.statusArea.setCenterOnScroll(True)
 
         #set the background color of the statusArea widget to be white.
         self.statusArea.setStyleSheet("QWidget { background-color: White }")
