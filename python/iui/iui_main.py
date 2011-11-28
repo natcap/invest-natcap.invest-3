@@ -541,6 +541,7 @@ class ModelDialog(QtGui.QDialog):
         self.statusAreaLabel = QtGui.QLabel('Messages:')
         self.statusArea = QtGui.QPlainTextEdit()
         self.statusArea.setReadOnly(True)
+        self.cursor = self.statusArea.textCursor()
 
         #set the background color of the statusArea widget to be white.
         self.statusArea.setStyleSheet("QWidget { background-color: White }")
@@ -653,13 +654,16 @@ class ModelDialog(QtGui.QDialog):
         
         
     def write(self, text):
-        """Write text to the statusArea.
+        """Write text to the statusArea.  Also scrolls to the end of the text
+            region after writing to it.
             
             text - a string to be written to self.statusArea.
             
             returns nothing."""
             
         self.statusArea.insertPlainText(QtCore.QString(text))
+        self.cursor.movePosition(QtGui.QTextCursor.End)
+        self.statusArea.setTextCursor(self.cursor)
         
     def readOutput(self):
         """Write all available stdout from self.modelProcess, a QProcess, to the 

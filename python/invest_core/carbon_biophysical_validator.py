@@ -82,11 +82,11 @@ that can be opened with GDAL.')
         dbfFile = dbf.Dbf(args['carbon_pools_uri'])
         if not isinstance(dbfFile, dbf.Dbf):
             out.append(prefix + ' must be a dbf file')
-            
-    #verify that the carbon pools file has all five required attributes
-    for field in ['LULC', 'C_above', 'C_below', 'C_soil', 'C_dead']:
-        if field.upper() not in dbfFile.fieldNames:
-            out.append(prefix + ': missing field: ' + field )
+        else:            
+            #verify that the carbon pools file has all five required attributes
+            for field in ['LULC', 'C_above', 'C_below', 'C_soil', 'C_dead']:
+                if field.upper() not in dbfFile.fieldNames:
+                    out.append(prefix + ': missing field: ' + field )
 
 
     #Search for inconsistencies in timber shape file
