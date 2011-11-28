@@ -288,8 +288,11 @@ def flowDirection(dem, flow):
        
        returns nothing"""
 
-    cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, d
-    cdef np.float_t lowest, h
+    cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, d, nodataFlow
+    cdef np.float_t lowest, h, nodataDem
+
+    nodataDem = dem.GetRasterBand(1).GetNoDataValue()
+    nodataFlow = flow.GetRasterBand(1).GetNoDataValue()
 
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
@@ -315,7 +318,12 @@ def flowDirection(dem, flow):
     for x in range(1,xmax-1):
         for y in range(1,ymax-1):
             #The lowest height seen so far, initialize to current pixel height
-            lowest = demMatrix[x,y] 
+            lowest = demMatrix[x,y]
+            
+            if lowest == nodataDem:
+                flowMatrix[x,y] = nodataFlow
+                continue
+             
             #The current flow direction, initalize to 0 for no direction
             dcur = 0 
             #search the neighbors for the lowest pixel(s)
