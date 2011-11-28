@@ -2,6 +2,7 @@
     the InVEST toolset"""
 
 import numpy as np
+cimport numpy as np
 import math
 from osgeo import gdal, osr
 import logging
@@ -285,17 +286,19 @@ def flowDirection(dem, flow):
        
        returns nothing"""
 
-    cdef int x, y, xo, yo, dcur, xdim, ydim
+    cdef int x, y, xo, yo, dcur, xdim, ydim, xmax, ymax
     cdef float lowest, h
 
-    demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
+    cdef np.ndarray demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
                                                  dem.RasterYSize)
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
     demMatrix=demMatrix.transpose()
+    xmax = demMatrix.shape[0]
+    ymax = demMatrix.shape[1]
     
     #This matrix holds the flow direction value, initialize to zero
-    flowMatrix = np.zeros(demMatrix.shape, dtype=np.int)
+    flowMatrix = np.zeros([xmax,ymax], dtype=np.int)
     
     #This dictionary indicates the integer flow direction based on which
     #pixel to shift to.  It's complicated because "x" and "y" are inverted
@@ -304,10 +307,8 @@ def flowDirection(dem, flow):
                     32:(-1, -1), 64:(0, -1), 128:(1, -1)}
     
     #loop through each cell and skip any edge pixels
-    xdim = demMatrix.shape[0]-1
-    ydim = demMatrix.shape[1]-1
-    for x in range(1,xdim):
-        for y in range(1,ydim):
+    for x in range(1,xmax-1):
+        for y in range(1,ymax-1):
             lowest = demMatrix[x,y]
             #search the neighbors for the lowest pixel(s)
             dcur = 0
