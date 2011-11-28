@@ -286,33 +286,37 @@ def flowDirection(dem, flow):
        
        returns nothing"""
 
-    cdef int x, y, xo, yo, dcur, xdim, ydim, xmax, ymax
-    cdef float lowest, h
+    cdef np.int_t x, y, xo, yo, dcur, xdim, ydim, xmax, ymax, i, d
+    cdef np.float_t lowest, h
 
-    cdef np.ndarray demMatrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
-                                                 dem.RasterYSize)
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
-    demMatrix=demMatrix.transpose()
+    demMatrixTmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,
+                                                 dem.RasterYSize).transpose()
+
+    cdef np.ndarray[np.float_t,ndim=2] demMatrix = demMatrixTmp.astype(np.float)
+    demMatrix[:] = demMatrixTmp
     xmax = demMatrix.shape[0]
     ymax = demMatrix.shape[1]
     
     #This matrix holds the flow direction value, initialize to zero
-    flowMatrix = np.zeros([xmax,ymax], dtype=np.int)
+    cdef np.ndarray[np.int_t,ndim=2] flowMatrix = np.zeros([xmax,ymax], 
+                                                           dtype=np.int)
     
-    #This dictionary indicates the integer flow direction based on which
-    #pixel to shift to.  It's complicated because "x" and "y" are inverted
-    #on gdal arrays, so we invert the x and y offsets here
-    shiftIndexes = {1:(1, 0), 2:(1, 1), 4:(0, 1), 8:(-1, 1), 16:(-1, 0), 
-                    32:(-1, -1), 64:(0, -1), 128:(1, -1)}
-    
+    #This array indicates the integer flow direction based on whichpixel
+    # to shift to.  The order is d,xo,yo eight times for 8 directions
+    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1,1, 0, 2,1, 1, 
+        4,0, 1, 8,-1, 1, 16,-1, 0, 32,-1,-1, 64,0,-1, 128, 1,-1],dtype=np.int)
     #loop through each cell and skip any edge pixels
     for x in range(1,xmax-1):
         for y in range(1,ymax-1):
             lowest = demMatrix[x,y]
             #search the neighbors for the lowest pixel(s)
             dcur = 0
-            for d, (xo,yo) in shiftIndexes.iteritems():
+            for i in range(8):
+                d = shiftIndexes[i*3]
+                xo = shiftIndexes[i*3+1]
+                yo = shiftIndexes[i*3+2]
                 h = demMatrix[x+xo,y+yo] #the height of the neighboring cell
                 if h < lowest:
                     lowest = h
