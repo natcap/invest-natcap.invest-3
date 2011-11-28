@@ -37,7 +37,7 @@ class TestInvestCore(unittest.TestCase):
 
         accumulation = invest_cython_core.newRasterFromBase(dem,
             '../../../test_out/accumulation.tif', 'GTiff', -1, gdal.GDT_Float32)
-        invest_cython_core.flowAccumulation(flowDirection, dem, accumulation)
+        invest_cython_core.flowAccumulation(flowDirection, accumulation)
 
     def testflowDirectionSimple(self):
         """Regression test for flow direction on a DEM with an example
