@@ -342,13 +342,11 @@ def flowDirection(dem, flow):
     return flow
 
 
-def flowAccumulation(flowDirection, dem, flowAccumulation):
+def flowAccumulation(flowDirection, flowAccumulation):
     """Creates a raster of accumulated flow to each cell.
     
         flowDirection - A raster showing direction of flow out of each cell
             This can be created with invest_core.flowDirection
-        dem - the elevation map.  Necessary for fast flow accumulation 
-            processing
         flowAccumulation - The output flow accumulation raster set
         
         returns nothing"""
@@ -360,7 +358,9 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
     #on gdal arrays, so we invert the x and y offsets here
     flowDirectionMatrix = flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
         flowDirection.RasterXSize, flowDirection.RasterYSize).transpose()
-    gp = dem.GetGeoTransform()
+    nodataFlowDirection = flowDirection.GetRasterBand(1).GetNoDataValue()
+    nodataFlowAccumulation = flowAccumulation.GetRasterBand(1).GetNoDataValue()
+    gp = flowDirection.GetGeoTransform()
     cellXSize = gp[1]
     cellYSize = gp[5]
     #Create the output flow, initalize to -1 as undefined
@@ -384,6 +384,8 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
             #ensure that the offsets are within bounds of the matrix
             if pi >= 0 and pj >= 0 and pi < flowDirectionMatrix.shape[0] and \
                 pj < flowDirectionMatrix.shape[1]:
+                if flowDirectionMatrix[pi, pj] == nodataFlowDirection:
+                    continue
                 if flowDirectionMatrix[pi, pj] == dir:
                     neighbors.append((pi, pj))
         return neighbors
@@ -398,6 +400,11 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
         logger = logging.getLogger('calculateFlow')
         while len(pixelsToProcess) > 0:
             i, j = pixelsToProcess.pop()
+            #nodata out the values that don't need processing
+            if flowDirectionMatrix[i,j] == nodataFlowDirection:
+                accumulationMatrix[i, j] = nodataFlowAccumulation
+                continue
+            
             #if p is calculated, skip its calculation
             if accumulationMatrix[i, j] != -1: continue
 
@@ -422,7 +429,7 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
                 #Otherwise, all the inflow neighbors are calculated so do the
                 #pixelflow calculation 
                 accumulationMatrix[i, j] = 0
-                for n in neighbors:
+                for ni, nj in neighbors:
                     accumulationMatrix[i, j] += 1 + accumulationMatrix[ni, nj]
 
     logger.info('calculating flow accumulation')
@@ -430,7 +437,8 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
     lastx = -1
     for (x, y), value in np.ndenumerate(accumulationMatrix):
         if lastx != x:
-            logger.debug('x,y=%s %s' % (x, y))
+            logger.debug('percent complete %s\%' % 
+                         ((x+1.0)/accumulationMatrix.shape[0]))
             lastx=x
         calculateFlow(deque([(x, y)]))
 
