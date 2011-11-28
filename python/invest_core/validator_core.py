@@ -19,18 +19,22 @@ def checkArgsKeys(argsDict, argsList, outList):
         if argument not in argsDict:
             outList.append('Missing parameter: ' + label)
             
-def checkOutputDir(uri, out):
+def checkOutputDir(uri, out, mustExist=False):
     """Verify that the given directory exists and is writeable.  Append error 
         messages to output list if not.
         
         uri - a python string representing the uri to the target folder
         out - a python list (for appending errors)
+        mustExist=False - a boolean indicating whether the output directory must 
+            already exist in the filesystem.  Most models will create an output
+            directory if the provided URI does not exist.
         
         returns nothing."""
         
     prefix = 'Output folder: ' + uri
     if not os.path.isdir(uri):
-        out.append(prefix + ' not found or is not a folder.')
+        if mustExist == True:
+            out.append(prefix + ' not found or is not a folder.')
     else:
         #Determine if output dir is writable
         if not os.access(uri, os.W_OK):
