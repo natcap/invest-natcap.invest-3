@@ -8,7 +8,7 @@ import math
 from osgeo import gdal, osr
 import logging
 import scipy
-from collections import deque
+from queue import Queue
 logger = logging.getLogger('invest_cython_core')
 
 def newRasterFromBase(base, outputURI, format, nodata, datatype):
@@ -386,7 +386,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
             np.array([1,-1, 0, 2,-1, -1, 4, 0, -1, 8, 1, -1, 16, 1, 0,
                         32, 1, 1, 64, 0, 1, 128, -1, 1])
         cdef int pi, pj, dir, k
-        neighbors = deque()
+        neighbors = Queue()
         for k in range(8):
             dir = shiftIndexes[k*3]
             pi = i + shiftIndexes[k*3+1]
@@ -397,7 +397,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
                 if flowDirectionMatrix[pi, pj] == nodataFlowDirection:
                     continue
                 if flowDirectionMatrix[pi, pj] == dir:
-                    neighbors.append((pi, pj))
+                    neighbors.extend([pi, pj])
         return neighbors
 
     def calculateFlow(pixelsToProcess, 
@@ -412,7 +412,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
         cdef int i,j
         logger = logging.getLogger('calculateFlow')
         while len(pixelsToProcess) > 0:
-            i, j = pixelsToProcess.pop()
+            i, j = pixelsToProcess.pop(), pixelsToProcess.pop()
             #nodata out the values that don't need processing
             if flowDirectionMatrix[i,j] == nodataFlowDirection:
                 accumulationMatrix[i, j] = nodataFlowAccumulation
@@ -436,8 +436,9 @@ def flowAccumulation(flowDirection, flowAccumulation):
             if incomplete:
                 #Put p first, so it's not visited again until neighbors 
                 #are processed
-                pixelsToProcess.append((i, j))
-                pixelsToProcess.extend(neighbors)
+                pixelsToProcess.extend([i, j])
+                while (neighbors.size() > 0):
+                    pixelsToProcess.append(neighbors.pop())
             else:
                 #Otherwise, all the inflow neighbors are calculated so do the
                 #pixelflow calculation 
@@ -453,6 +454,6 @@ def flowAccumulation(flowDirection, flowAccumulation):
             logger.debug('percent complete %2.2f %%' % 
                          (100*(x+1.0)/accumulationMatrix.shape[0]))
             lastx=x
-        calculateFlow(deque([(x, y)]),accumulationMatrix,flowDirectionMatrix)
+        calculateFlow(Queue([x, y]),accumulationMatrix,flowDirectionMatrix)
 
     flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix.transpose(), 0, 0)
