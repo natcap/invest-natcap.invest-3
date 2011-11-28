@@ -49,7 +49,7 @@ class TestInvestCore(unittest.TestCase):
         dem.GetRasterBand(1).WriteArray(np.array([[190, 185, 181], [189, 185, 182], [189, 185, 182]]))
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
-        flowDir = invest_core.flowDirection(dem, flow)
+        flowDir = invest_cython_core.flowDirection(dem, flow)
         flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(128, flowMatrix[1][1],
                          'Incorrect flow, should be 128 != %s' % flowMatrix[1][1])
@@ -59,7 +59,7 @@ class TestInvestCore(unittest.TestCase):
                                                       [335, 338, 343]]))
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
-        flowDir = invest_core.flowDirection(dem, flow)
+        flowDir = invest_cython_core.flowDirection(dem, flow)
         flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(8, flowMatrix[1][1],
                          'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
