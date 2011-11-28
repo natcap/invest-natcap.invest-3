@@ -354,10 +354,12 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
         returns nothing"""
 
     logger = logging.getLogger('flowAccumulation')
-    logger.debug('initalizing temporary buffers')
+    logger.debug('initializing temporary buffers')
     #Load the input flow into a numpy array
+    #GDal inverts x and y, so it's easier to transpose in and back out later
+    #on gdal arrays, so we invert the x and y offsets here
     flowDirectionMatrix = flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
-        flowDirection.RasterXSize, flowDirection.RasterYSize)
+        flowDirection.RasterXSize, flowDirection.RasterYSize).transpose()
     gp = dem.GetGeoTransform()
     cellXSize = gp[1]
     cellYSize = gp[5]
@@ -370,16 +372,19 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
             and also flow into point i,j.  This information is inferred from
             the flowDirectionMatrix"""
 
-        #consider neighbors who flow into j,i
+        #consider neighbors who flow into i,j, so shift the pixels backwards.
+        #example: 1 means flow to the right, so check the pixel to the right
+        #to see if it flows into the current pixel, thus 1:(-1,0)
         shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1), 8:(1, -1), 16:(1, 0),
                         32:(1, 1), 64:(0, 1), 128:(-1, 1)}
         neighbors = deque()
         for dir, (io, jo) in shiftIndexes.iteritems():
             pi = i + io
             pj = j + jo
-            if pi >= 0 and pj >= 0 and pj < flowDirectionMatrix.shape[0] and \
-                pi < flowDirectionMatrix.shape[1]:
-                if flowDirectionMatrix[pj, pi] == dir:
+            #ensure that the offsets are within bounds of the matrix
+            if pi >= 0 and pj >= 0 and pi < flowDirectionMatrix.shape[0] and \
+                pj < flowDirectionMatrix.shape[1]:
+                if flowDirectionMatrix[pi, pj] == dir:
                     neighbors.append((pi, pj))
         return neighbors
 
@@ -394,7 +399,7 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
         while len(pixelsToProcess) > 0:
             i, j = pixelsToProcess.pop()
             #if p is calculated, skip its calculation
-            if accumulationMatrix[j, i] != -1: continue
+            if accumulationMatrix[i, j] != -1: continue
 
             #if any neighbors flow into p and are uncalculated, push p and
             #neighbors on the stack
@@ -403,7 +408,7 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
             for ni, nj in neighbors:
                 #Turns out one of the neighbors is uncalculated
                 #Stop checking and process all later
-                if accumulationMatrix[nj, ni] == -1:
+                if accumulationMatrix[ni, nj] == -1:
                     incomplete = True
                     break
             #If one of the neighbors was uncalculated, push the pixel and 
@@ -416,9 +421,9 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
             else:
                 #Otherwise, all the inflow neighbors are calculated so do the
                 #pixelflow calculation 
-                accumulationMatrix[j, i] = 0
+                accumulationMatrix[i, j] = 0
                 for n in neighbors:
-                    accumulationMatrix[j, i] += 1 + accumulationMatrix[nj, ni]
+                    accumulationMatrix[i, j] += 1 + accumulationMatrix[ni, nj]
 
     logger.info('calculating flow accumulation')
 
@@ -429,4 +434,4 @@ def flowAccumulation(flowDirection, dem, flowAccumulation):
             lastx=x
         calculateFlow(deque([(x, y)]))
 
-    flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix, 0, 0)
+    flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix.transpose(), 0, 0)
