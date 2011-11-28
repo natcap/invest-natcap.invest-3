@@ -3,7 +3,7 @@
 import sys, os
 import simplejson as json
 from osgeo import gdal
-import invest_core
+import invest_cython_core
 import carbon_core
 
 import logging
@@ -59,7 +59,7 @@ def execute(args):
 
     logger.debug('creating value_seq output raster')
     valuationArgs['value_seq'] = \
-        invest_core.newRasterFromBase(valuationArgs['sequest'],
+        invest_cython_core.newRasterFromBase(valuationArgs['sequest'],
               outputURI, 'GTiff', -1e10, gdal.GDT_Float32)
 
     #run the valuation part of the carbon model.

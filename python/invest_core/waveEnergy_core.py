@@ -7,6 +7,7 @@ from osgeo import ogr
 from dbfpy import dbf
 import math
 import invest_core
+import invest_cython_core
 import sys, os
 import scipy
 
@@ -21,19 +22,19 @@ def biophysical(args):
         
     """
     captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
-    
+
     filesystemencoding = sys.getfilesystemencoding()
     #Shapefile of polygon that has the dimensions for providing the area of interest
     cutter_uri = '../../test_data/wave_Energy/samp_data/input/WaveData/WCNA_extract.shp'
     cutter = ogr.Open(cutter_uri.encode(filesystemencoding))
     cutterLayer = cutter.GetLayer(0)
-    
+
     global_dem = args['dem']
     format = 'GTiff'
     nodata = -1
     datatype = gdal.GDT_Float32
     layer = args['analysis_area'].GetLayer(0)
-    
+
     #Create a new raster that has the values of the WWW shapefile
     #Get the resolution from the global dem
     geoform = global_dem.GetGeoTransform()
@@ -45,13 +46,13 @@ def biophysical(args):
     wavePeriodPath = '../../test_data/wave_Energy/wavePeriod.tif'
     #Create rasters bounded by shape file of analyis area
     for path in (waveHeightPath, wavePeriodPath):
-        invest_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY, 
+        invest_cython_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY,
                                               datatype, nodata, path, cutter)
-    
+
     #Open created rasters
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
-    
+
     #Rasterize the height and period values into respected rasters from shapefile
     for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
@@ -59,13 +60,13 @@ def biophysical(args):
 
     outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
     aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
-        
+
     wavePowerPath = '../../test_data/wave_Energy/wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
-    
+
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
-    
+
     if os.path.isfile(shape_source):
         os.remove(shape_source)
     #Get the layer of points from the current point geometry shape
@@ -83,7 +84,7 @@ def clipShape(shapeToClip, bindingShape, outputPath):
     #For every field, create a duplicate field and add it to the new shapefiles layer
     for fld_index in range(in_field_count):
         src_fd = in_defn.GetFieldDefn(fld_index)
-        
+
         fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
         fd.SetWidth(src_fd.GetWidth())
         fd.SetPrecision(src_fd.GetPrecision())
@@ -113,24 +114,24 @@ def clipShape(shapeToClip, bindingShape, outputPath):
             #Intersection returns a new geometry if they intersect
             geom = geom.Intersection(clip_geom)
             if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
-                out_feat = ogr.Feature(feature_def = shp_layer.GetLayerDefn())
+                out_feat = ogr.Feature(feature_def=shp_layer.GetLayerDefn())
                 out_feat.SetFrom(in_feat)
                 out_feat.SetGeometryDirectly(geom)
-                            
+
                 for fld_index2 in range(out_feat.GetFieldCount()):
                     src_field = in_feat.GetField(fld_index2)
                     out_feat.SetField(fld_index2, src_field)
-                
+
                 itemArray = [0, 0, 0, 0]
                 for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3)):
                     field_index = in_feat.GetFieldIndex(field)
                     itemArray[var] = in_feat.GetField(field_index)
-                    
+
                 aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3]]
-                                
+
                 shp_layer.CreateFeature(out_feat)
                 out_feat.Destroy()
-                
+
             in_feat.Destroy()
             in_feat = in_layer.GetNextFeature()
         clip_feat.Destroy()
@@ -140,7 +141,7 @@ def clipShape(shapeToClip, bindingShape, outputPath):
     shapeToClip.Destroy()
     shp_ds.Destroy()
     return aoiDictionary
-    
+
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     heightBand = waveHeight.GetRasterBand(1)
     periodBand = waveHeight.GetRasterBand(1)
@@ -149,24 +150,24 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     noDataOut = -1
     p = 1028
     g = 9.8
-    
+
     def op(a, b, c):
         c = np.absolute(c)
-        tem = 2.0*math.pi / (b*.86)
-        k = np.square(tem) / (g*np.sqrt(np.tanh((np.square(tem))*(c/g))))
-        waveGroupVelocity = ((1+((2*k*c)/np.sinh(2*k*c))) * (np.sqrt((g/k)*np.tanh(k*c))))/2
-        wp = (((p*g)/16)*(np.square(a))*waveGroupVelocity)/1000
+        tem = 2.0 * math.pi / (b * .86)
+        k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
+        waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * (np.sqrt((g / k) * np.tanh(k * c)))) / 2
+        wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
         return wp
-    
-    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op, 
-                                 rasterName = wavePowerPath, datatype=gdal.GDT_Float32) 
-    
+
+    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op,
+                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
+
     #Need to interpolate raster outcome from above that plots wave power
     #Idea: Get indices of nonzero values to make up original range
     #      Somehow generate a new matrix off from the nonzero values
     #      matrix[np.nonzero(matrix)] will return array of values
     #      Then use those values for base interpolation
-    
+
     raster = gdal.Open(wavePowerPath, GA_Update)
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
@@ -185,11 +186,11 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
 
     band.WriteArray(spl, 0, 0)
 
-    
+
 def npv():
-    for num in range(1, T+1):
-        sum = sum + (B[num]-C[num])*((1+i)**(-1 * t))
-        
+    for num in range(1, T + 1):
+        sum = sum + (B[num] - C[num]) * ((1 + i) ** (-1 * t))
+
     return npv
 
 def captureWaveEnergy(waveData, machinePerf, machineParam):
@@ -198,7 +199,7 @@ def captureWaveEnergy(waveData, machinePerf, machineParam):
     z = np.array(machinePerf)
     newx = np.array(waveData[0])
     newy = np.array(waveData[1])
-    interpZ = invest_core.interpolateMatrix(x, y, z, newx, newy)
+    interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
     computeWaveEnergyCapacity(waveData, interpZ)
 
 def computeWaveEnergyCapacity(waveData, interpZ):
@@ -215,17 +216,17 @@ def computeWaveEnergyCapacity(waveData, interpZ):
     for i, v in enumerate(waveColumn):
         if v > heightMax and heightMaxPos == -1:
             heightMaxPos = i
-    
-    
+
+
     for key, val in waveData.iteritems():
         for index, array in enumerate(val):
             for i, num in enumerate(array):
                 array[i] = float(num)
         tempArray = np.array(val)
         multArray = np.multiply(tempArray, interpZ)
-        
+
         if periodMaxPos != -1:
-            multArray[:,periodMaxPos:] = 0
+            multArray[:, periodMaxPos:] = 0
         if heightMaxPos != -1:
             multArray[heightMaxPos:, :] = 0
         validArray = np.divide(multArray, 5.0)
@@ -233,27 +234,27 @@ def computeWaveEnergyCapacity(waveData, interpZ):
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero.  So here
         #we drive any negative values to zero.
-        validArray = np.where(validArray<0, 0, validArray)
+        validArray = np.where(validArray < 0, 0, validArray)
 #            def deviceConstraints(a, capmax, hmax, tmax):
-                
+
         sum = np.sum(validArray)
         energyCap[key] = sum
 #        if key == (556, 496):
 #            print interpZ
 
 #            print sum
-    print energyCap[(556,496)]
+    print energyCap[(556, 496)]
     copyCapturedWaveEnergyToShape(energyCap)
-    return energyCap 
+    return energyCap
 
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and
 #interpolate them and rasterize them.
 def copyCapturedWaveEnergyToShape(energyCap):
     energyCap = energyCap
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
 

@@ -3,7 +3,7 @@
 import sys, os
 import simplejson as json
 import carbon_core
-import invest_core
+import invest_cython_core
 from osgeo import gdal, ogr
 from dbfpy import dbf
 
@@ -119,7 +119,7 @@ def execute(args):
     for rasterName, rasterPath in outputURIs.iteritems():
         logger.debug('creating output raster %s', rasterPath)
         biophysicalArgs[rasterName] = \
-            invest_core.newRasterFromBase(biophysicalArgs['lulc_cur'],
+            invest_cython_core.newRasterFromBase(biophysicalArgs['lulc_cur'],
                               rasterPath, 'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the biophysical part of the carbon model.

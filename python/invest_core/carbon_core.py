@@ -6,6 +6,7 @@ from osgeo import gdal, ogr
 from dbfpy import dbf
 import math
 import invest_core
+import invest_cython_core
 import logging
 
 logger = logging.getLogger('carbon_core')
@@ -61,7 +62,7 @@ def biophysical(args):
         returns nothing"""
 
     #Calculate the per pixel carbon storage due to lulc pools
-    cellArea = invest_core.pixelArea(args['lulc_cur'])
+    cellArea = invest_cython_core.pixelArea(args['lulc_cur'])
 
     #Create carbon pool dictionary with appropriate values to handle
     #nodata in the input and nodata in the output
@@ -283,7 +284,7 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                                           [c_hwp, bio_hwp, vol_hwp]):
             #we might have already written to the raster if we did a 'fut cur'
             #calculation, so rasterize to a temporary layer then add 'em
-            tempRaster = invest_core.newRasterFromBase(raster, '', 'MEM',
+            tempRaster = invest_cython_core.newRasterFromBase(raster, '', 'MEM',
                 raster.GetRasterBand(1).GetNoDataValue(), gdal.GDT_Float32)
             tempRaster.GetRasterBand(1).Fill(tempRaster.GetRasterBand(1).\
                                              GetNoDataValue())
