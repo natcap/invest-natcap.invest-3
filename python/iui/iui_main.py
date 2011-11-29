@@ -263,7 +263,14 @@ class DynamicPrimitive(DynamicElement):
         self.attributes['args_id'] is an optional string provided by the user 
         that enables the construction of an arguments dictionary in python that
         will be passed to the specified python program.  The args_id must 
-        conform with the API specified by the desired model. 
+        conform with the API specified by the desired model.
+        
+        Note that all implemented instances of DynamicPrimitive must implement
+        their own setValue(value) function, specific to the target QWidget.
+         - self.setValue(value) is a function that allows a developer to specify
+             the value of the current element, depending on how the value needs
+             to be set based on the class and class elements and the type of 
+             the value.
         """
 
     def __init__(self, attributes):
@@ -320,6 +327,15 @@ class DynamicPrimitive(DynamicElement):
             
         for element in self.elements:
             element.setDisabled(True)
+            
+    def resetValue(self):
+        """If a default value has been specified, reset this element to its
+            default.  Otherwise, leave the element alone.
+            
+            returns nothing."""
+            
+        if 'defaultValue' in self.attributes:
+            self.setValue(self.attributes['defaultValue'])
             
 class DynamicText(DynamicPrimitive):
     """Creates an object containing a label and a sigle-line text field for
@@ -975,13 +991,7 @@ class DynamicUI(DynamicGroup):
             
         for id, element in self.allElements.iteritems():
             if isinstance(element, DynamicPrimitive):
-                if 'defaultValue' in element.attributes:
-                    text = element.attributes['defaultValue']
-                    if element.attributes['type'] == 'file' or\
-                    element.attributes['type'] =='folder':
-                        element.setValue(os.path.abspath(invest_root+text))
-                    elif element.attributes['type'] == 'text':
-                        element.setValue(text)
+                element.resetValue()
 
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
@@ -1154,8 +1164,8 @@ class DynamicUI(DynamicGroup):
             
             #print an error if it is encountered.  In rare cases, 
             #element.enabledBy is not initialized properly.
-            except AttributeError:
-                print str(AttributeError)
+            except AttributeError as e:
+                print e.message
 
             #if the parameters from the last run have been loaded, display a 
             #status message
@@ -1345,8 +1355,8 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
                 value = True
             else:
                 value = False
-        elif isinstance(value, boolean):
-            self.setCheckState(value)
+                
+        self.setChecked(value)
              
     def requirementsMet(self):
         return self.value()
@@ -1366,7 +1376,20 @@ class FileEntry(DynamicText):
         
         #expand the given relative path if provided
         if 'defaultValue' in self.attributes:
-            self.textField.setText(os.path.abspath(invest_root + attributes['defaultValue']))
+            self.textField.setText(self.attributes['defaultValue'])
+    
+    def setValue(self, text):
+        """Set the value of the uri field.  If parameter 'text' is an absolute
+            path, set the textfield to its value.  If parameter 'text' is a 
+            relative path, set the textfield to be the absolute path of the
+            input text, relative to the invest root.
+            
+            returns nothing."""
+            
+        if os.path.isabs(text):
+            self.textField.setText(text)
+        else:
+            self.textField.setText(os.path.abspath(invest_root + text))
         
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
@@ -1458,7 +1481,7 @@ def validate(jsonObject):
                              "pattern": "^((file)|(folder)|(text)|(checkbox))$"},
                     "label": {"type": "string",
                               "optional": True},
-                    "defaultValue": {"type": "string",
+                    "defaultValue": {"type": ["string", "number", "boolean"],
                                     "optional": True},
                     "required":{"type": "boolean",
                                 "optional" : True},
