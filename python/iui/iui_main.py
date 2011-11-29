@@ -676,7 +676,7 @@ class ModelDialog(QtGui.QDialog):
             self.cursor.movePosition(QtGui.QTextCursor.End)
             self.statusArea.setTextCursor(self.cursor)
         else:
-            print text
+            print str(text).rstrip()
         
     def readOutput(self):
         """Write all available stdout from self.modelProcess, a QProcess, to the 
@@ -700,11 +700,14 @@ class ModelDialog(QtGui.QDialog):
         """Notify the user that model processing has finished.
         
             returns nothing."""
-            
         self.write('\n\nComplete.') #prints a status message in the statusArea.
-        self.progressBar.setMaximum(1) #stops the progressbar.
-        self.backButton.setDisabled(False) #enables the backButton
-        self.quitButton.setDisabled(False) #enables the quitButton
+        if self.printToStdOut:
+            self.closeWindow()
+            self.root.closeEvent()
+        else:
+            self.progressBar.setMaximum(1) #stops the progressbar.
+            self.backButton.setDisabled(False) #enables the backButton
+            self.quitButton.setDisabled(False) #enables the quitButton
 
         self.stdoutNotifier=None
 
@@ -734,6 +737,10 @@ class ModelDialog(QtGui.QDialog):
             self.modelProcess.terminate()
         self.cancel = True
         self.done(0)
+    
+    def showEvent(self, data):
+        if self.printToStdOut == True:
+            self.hide()
         
 class processThread(QtCore.QThread):
     """Class processThread loads a python module from source and runs its
@@ -1010,7 +1017,7 @@ class DynamicUI(DynamicGroup):
         if self.modelDialog.cancel == False:
             QtCore.QCoreApplication.instance().exit()
     
-    def closeEvent(self, event):
+    def closeEvent(self, event=None):
         """Terminates the application. This function is a Qt-defined callback 
             for when the window is closed.
             
@@ -1554,12 +1561,16 @@ def main(json_args, use_gui=True):
                          printToStdOut = True)
 #        sys.settrace(tracefunc)
         print 'about to start the thread'
-        md.validatorThread.finished.connect(md.startQProcess)
+        md.exec_()
+#        md.validatorThread.finished.connect(md.startQProcess)
+#        md.validatorThread.terminated.connect(md.startQProcess)
+
 #        md.validatorThread.start()
-        md.startValidation()
+#        md.startValidation()
         print 'finished main?'
-        time.sleep(1)
-        print 'slept'
+#        time.sleep(10)
+#        md.startQProcess()
+#        print 'slept'
         
 
 if __name__ == '__main__':
