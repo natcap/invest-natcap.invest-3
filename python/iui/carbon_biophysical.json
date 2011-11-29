@@ -10,6 +10,7 @@
             "id" : "calc_sequestration",
             "type": "checkbox",
             "label": "Calculate sequestration",
+            "defaultValue": false,
             "required": false
         },
         {
