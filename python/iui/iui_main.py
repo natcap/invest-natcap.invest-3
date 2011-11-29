@@ -560,21 +560,23 @@ class ModelDialog(QtGui.QDialog):
 
 
         #create Quit and Cancel buttons for the window        
-#        self.runButton = QtGui.QPushButton('Quit')
-        self.cancelButton = QtGui.QPushButton('Close') 
+        self.quitButton = QtGui.QPushButton('Quit')
+        self.backButton = QtGui.QPushButton('Back') 
         
         #disable the 'Back' button by default
-        self.cancelButton.setDisabled(True)
+        self.backButton.setDisabled(True)
+        self.quitButton.setDisabled(True)
        
         #create the buttonBox (a container for buttons) and add the buttons to
         #the buttonBox.
         self.buttonBox = QtGui.QDialogButtonBox()
-#        self.buttonBox.addButton(self.runButton, 0)
-        self.buttonBox.addButton(self.cancelButton, 1)
+        self.buttonBox.addButton(self.quitButton, 1)
+        self.buttonBox.addButton(self.backButton, 0)
         
         #connect the buttons to their callback functions.
 #        self.runButton.clicked.connect(self.okPressed)
-        self.cancelButton.clicked.connect(self.closeWindow)
+        self.backButton.clicked.connect(self.closeWindow)
+        self.quitButton.clicked.connect(sys.exit)
 
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
@@ -690,7 +692,9 @@ class ModelDialog(QtGui.QDialog):
             
         self.write('\n\nComplete.') #prints a status message in the statusArea.
         self.progressBar.setMaximum(1) #stops the progressbar.
-        self.cancelButton.setDisabled(False) #enables the runButton
+        self.backButton.setDisabled(False) #enables the backButton
+        self.quitButton.setDisabled(False) #enables the quitButton
+
         self.stdoutNotifier=None
 
     def closeEvent(self, data=None):
