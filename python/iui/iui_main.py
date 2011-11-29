@@ -5,9 +5,10 @@ import time
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../invest_core')
+invest_root = cmd_folder + '/../../'
 
 if platform.system() == 'Windows':
-    sys.path.append(cmd_folder + '/../../OSGeo4W/lib/site-packages')
+    sys.path.append(invest_root + 'OSGeo4W/lib/site-packages')
 
 from PyQt4 import QtGui, QtCore
 
@@ -614,8 +615,7 @@ class ModelDialog(QtGui.QDialog):
 
             #create a QStringlist to hold the arguments to the QProcess.
             argslist = QtCore.QStringList()
-            argslist.append(QtCore.QString(os.path.abspath(cmd_folder + 
-                            '/../../' + uri)))
+            argslist.append(QtCore.QString(os.path.abspath(invest_root + uri)))
             argslist.append(QtCore.QString(json.dumps(inputDict)))
             
             self.command = command
@@ -967,6 +967,21 @@ class DynamicUI(DynamicGroup):
         
         #return the number of unsatisfied required elements.
         return numRequired - numVerified
+
+    def resetParametersToDefaults(self):
+        """Reset all parameters to defaults provided in the configuration file.
+        
+            returns nothing"""
+            
+        for id, element in self.allElements.iteritems():
+            if isinstance(element, DynamicPrimitive):
+                if 'defaultText' in element.attributes:
+                    text = element.attributes['defaultText']
+                    if element.attributes['type'] == 'file' or\
+                    element.attributes['type'] =='folder':
+                        element.setValue(os.path.abspath(invest_root+text))
+                    elif element.attributes['type'] == 'text':
+                        element.setValue(text)
 
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
@@ -1351,8 +1366,7 @@ class FileEntry(DynamicText):
         
         #expand the given relative path if provided
         if 'defaultText' in self.attributes:
-            self.textField.setText(os.path.abspath(cmd_folder + '/../../' + 
-                                                   attributes['defaultText']))
+            self.textField.setText(os.path.abspath(invest_root + attributes['defaultText']))
         
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
@@ -1534,6 +1548,7 @@ def main(json_args, use_gui=True):
     if use_gui == True:
         result = app.exec_()
     else:
+        ui.resetParametersToDefaults()
         ui.assembleOutputDict()
         md = ModelDialog(ui,
                          ui.attributes['targetScript'],
