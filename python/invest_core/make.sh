@@ -1,3 +1,4 @@
 #!/bin/bash
-LDFLAGS="-L./clib" \
+INCLUDE="-I." \
+LDFLAGS="-L." \
     python ./setup.py build_ext --inplace
