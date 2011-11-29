@@ -4,7 +4,7 @@
 #define INITSIZE 64
 
 struct _Queue {
-  int *buf;
+  QueueValue *buf;
   int head;
   int tail;
   int size;
@@ -15,11 +15,27 @@ Queue *queue_new(void)
 {
   Queue *queue;
   queue = (Queue *) malloc(sizeof(Queue));
-  queue->buf = (int*)malloc(sizeof(int)*INITSIZE);
+  queue->buf = (QueueValue*)malloc(sizeof(QueueValue)*INITSIZE);
   queue->head = 0;
   queue->tail = 0;
   queue->size = 0;
   queue->buflen = INITSIZE;
   
   return queue;
+}
+
+void queue_free(Queue *queue) {
+  free(queue->buf);
+}
+
+Queue* queue_push_tail(Queue *queue, QueueValue data) {
+  return queue;
+}
+
+QueueValue queue_pop_head(Queue *queue) {
+  return 0;
+}
+
+int queue_size(Queue *queue) {
+  return queue->size;
 }
