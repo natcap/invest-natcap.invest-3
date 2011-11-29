@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "queue.h"
 
-#define INITSIZE 10
+#define INITSIZE 64
 
 struct _Queue {
   QueueValue *buf;
@@ -10,6 +10,16 @@ struct _Queue {
   int size;
   int buflen;
 };
+
+void _reallocateQueue(Queue* q) {
+  if (q->size == q->buflen) {
+    int ntocopy = ((q->size)-q->head);
+    q->buflen *= 2;
+    q->buf = (QueueValue*)realloc(q->buf,q->buflen*sizeof(QueueValue));
+    q->head = q->buflen-ntocopy;
+    memcpy(q->buf+q->head,q->buf+q->tail,sizeof(QueueValue)*ntocopy);
+  }
+}
 
 Queue *queue_new(void)
 {
@@ -29,6 +39,7 @@ void queue_free(Queue *queue) {
 }
 
 Queue* queue_push_tail(Queue *queue, QueueValue data) {
+  _reallocateQueue(queue);
   queue->buf[queue->tail] = data;
   queue->tail = (queue->tail+1)%queue->buflen;
   queue->size += 1;
