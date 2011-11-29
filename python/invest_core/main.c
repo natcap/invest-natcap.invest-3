@@ -1,6 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include "queue.h"
+#include "simplequeue.h"
 
 int main(int argc, char** argv) {
   Queue *q = queue_new();

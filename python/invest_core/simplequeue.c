@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "queue.h"
+#include "simplequeue.h"
 
 #define INITSIZE 64
 
