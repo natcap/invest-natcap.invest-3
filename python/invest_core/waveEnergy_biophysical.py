@@ -46,6 +46,9 @@ def execute(args):
             os.makedirs(dir)
         
     biophysicalargs = {}
+    biophysicalargs['workspace_dir'] = args['workspace_dir']
+    biophysicalargs['wave_data_dir'] = args['wave_base_data_uri']
+#    biophysicalargs['workspace_dir'] = args['workspace_dir']
     
     dict = [[],[]]
     arrayHeader = []
