@@ -4,7 +4,6 @@ import platform
 import time
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
-print cmd_folder
 sys.path.insert(0, cmd_folder + '/../invest_core')
 
 if platform.system() == 'Windows':
@@ -637,7 +636,6 @@ class ModelDialog(QtGui.QDialog):
             self.threadFinished()
 
     def startQProcess(self):
-        print 'started?'
         if len(self.errors) > 0:
             self.write('\nERRORS:\n')
             for error in self.errors:
@@ -759,13 +757,11 @@ class processThread(QtCore.QThread):
             returns an instance of the processThread class."""
         
         super(processThread, self).__init__()
-        print 'setting local variables'
         self.inputDict = inputDict
         self.outputList = outputList
         self.modelname = modelname
         
         self.path = cmd_folder + '/../invest_core/' + self.modelname + '_validator.py'
-        print os.path.abspath(self.path)
 
     def run(self):
         """Imports the desired model's validator and execute it.  If an error is
@@ -785,12 +781,6 @@ class processThread(QtCore.QThread):
         except IOError:
             self.outputList.append('Could not locate validator at ' + 
                                    os.path.abspath(path))
-        except AttributeError as e:
-            print 'ERROR!!! ', e.value
-        except ImportError as e:
-            print 'ERROR!!! ', e.value, '\n'
-        except:
-            print 'some other error occurred'
 
         #preventing the thread from terminating appears to prevent odd crashing
         self.setTerminationEnabled(True)
@@ -1536,15 +1526,6 @@ def validate(jsonObject):
         print 'Error detected in your JSON syntax: ' + str(ValueError)
         print 'Exiting.'
         sys.exit()
-
-def tracefunc(frame, event, arg, indent=[0]):
-    if event == 'call':
-        indent[0] += 2
-        print '-' * indent[0] + '> call function', os.path.basename(frame.f_code.co_filename), frame.f_code.co_name
-    elif event == 'return':
-        print '<' + '-' * indent[0], 'exit function',os.path.basename(frame.f_code.co_filename), frame.f_code.co_name
-        indent[0] -= 2
-    return tracefunc
         
 def main(json_args, use_gui=True):
     app = QtGui.QApplication(sys.argv)
@@ -1559,19 +1540,7 @@ def main(json_args, use_gui=True):
                          ui.outputDict,
                          ui.attributes['modelName'],
                          printToStdOut = True)
-#        sys.settrace(tracefunc)
-        print 'about to start the thread'
         md.exec_()
-#        md.validatorThread.finished.connect(md.startQProcess)
-#        md.validatorThread.terminated.connect(md.startQProcess)
-
-#        md.validatorThread.start()
-#        md.startValidation()
-        print 'finished main?'
-#        time.sleep(10)
-#        md.startQProcess()
-#        print 'slept'
-        
 
 if __name__ == '__main__':
     #Optparse module is deprecated since python 2.7.  Using here since OSGeo4W
