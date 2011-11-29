@@ -1073,8 +1073,8 @@ class DynamicUI(DynamicGroup):
         
             returns nothing."""
             
-        self.runButton = QtGui.QPushButton('OK')
-        self.cancelButton = QtGui.QPushButton('Cancel') 
+        self.runButton = QtGui.QPushButton('Run')
+        self.cancelButton = QtGui.QPushButton('Quit') 
        
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()
