@@ -397,7 +397,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
                 if flowDirectionMatrix[pi, pj] == nodataFlowDirection:
                     continue
                 if flowDirectionMatrix[pi, pj] == dir:
-                    neighbors.extend([pi, pj])
+                    neighbors.extend([pi, pj],2)
         return neighbors
 
     def calculateFlow(pixelsToProcess, 
@@ -412,7 +412,8 @@ def flowAccumulation(flowDirection, flowAccumulation):
         cdef int i,j
         logger = logging.getLogger('calculateFlow')
         while len(pixelsToProcess) > 0:
-            i, j = pixelsToProcess.pop(), pixelsToProcess.pop()
+            i = pixelsToProcess.pop()
+            j = pixelsToProcess.pop()
             #nodata out the values that don't need processing
             if flowDirectionMatrix[i,j] == nodataFlowDirection:
                 accumulationMatrix[i, j] = nodataFlowAccumulation
@@ -436,7 +437,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
             if incomplete:
                 #Put p first, so it's not visited again until neighbors 
                 #are processed
-                pixelsToProcess.extend([i, j])
+                pixelsToProcess.extend([i, j],2)
                 while (neighbors.size() > 0):
                     pixelsToProcess.append(neighbors.pop())
             else:
@@ -447,6 +448,10 @@ def flowAccumulation(flowDirection, flowAccumulation):
                     accumulationMatrix[i, j] += 1 + accumulationMatrix[ni, nj]
 
     logger.info('calculating flow accumulation')
+
+    q=Queue([1,2,3,4,3,2,1])
+    while (len(q)>0):
+        print q.pop()
 
     lastx = -1
     for (x, y), value in np.ndenumerate(accumulationMatrix):

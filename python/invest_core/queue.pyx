@@ -15,8 +15,9 @@ cdef class Queue:
     
     def __init__(self,values=None):
         cdef size_t i
-        for i in xrange(len(values)):
-            self.q.append(values[i])
+        if values != None:
+            for i in xrange(len(values)):
+                self.q.append(values[i])
     
     def __cinit__(self):
         pass
@@ -24,7 +25,7 @@ cdef class Queue:
     def __dealloc__(self):
         pass
 
-    cpdef append(self, int value):
+    cdef append(self, int value):
         self.q.append(value)
 
     cdef extend(self, int* values, size_t count):
@@ -38,11 +39,11 @@ cdef class Queue:
     def __size__(self):
         return len(self.q)
 
-    cdef int pop(self) except? -1:
-        return 1
+    cpdef int pop(self) except? -1:
+        return self.q.pop()
 
     def __bool__(self):
         return self.__size__() == 0
     
     def __len__(self):
-        return self.__size__() == 0
+        return self.__size__()
