@@ -11,7 +11,7 @@ if platform.system() == 'Windows':
 from PyQt4 import QtGui, QtCore
 
 import simplejson as json
-import jsonschema
+import jsonschema, warnings
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -1491,6 +1491,7 @@ def validate(jsonObject):
                 }
               }
     try:
+        warnings.simplefilter('ignore')
         jsonschema.validate(data, schema)
     except ValueError:
         print 'Error detected in your JSON syntax: ' + str(ValueError)
