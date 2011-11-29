@@ -12,6 +12,7 @@ from PyQt4 import QtGui, QtCore
 
 import simplejson as json
 import jsonschema, warnings
+from optparse import OptionParser
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -516,7 +517,7 @@ class ModelDialog(QtGui.QDialog):
         
         This window is not configurable through the JSON configuration file."""    
         
-    def __init__(self, root, uri, inputDict, modelname):
+    def __init__(self, root, uri, inputDict, modelname, printToStdOut=False):
         """Constructor for the ModelDialog class.
             
             root - a pointer to the parent window
@@ -524,11 +525,15 @@ class ModelDialog(QtGui.QDialog):
             inputDict - a python dictionary of arguments to be passed to the 
                 model's execute function.
             modelname - a python string representing the name of the running model
+            printToStdOut=False - a boolean indicating whether to print all 
+                output to stdout.  If False, output will be written to this 
+                modal window's statusArea widget.
         
             returns an instance of ModelDialog."""
         super(ModelDialog, self).__init__()
 
         self.root = root
+        self.printToStdOut = printToStdOut
 
         #set window attributes
         self.setLayout(QtGui.QVBoxLayout())
@@ -656,16 +661,19 @@ class ModelDialog(QtGui.QDialog):
         
         
     def write(self, text):
-        """Write text to the statusArea.  Also scrolls to the end of the text
-            region after writing to it.
+        """Write text.  If printing to the status area, also scrolls to the end 
+            of the text region after writing to it.  Otherwise, print to stdout.
             
             text - a string to be written to self.statusArea.
             
             returns nothing."""
-            
-        self.statusArea.insertPlainText(QtCore.QString(text))
-        self.cursor.movePosition(QtGui.QTextCursor.End)
-        self.statusArea.setTextCursor(self.cursor)
+        
+        if self.printToStdOut == False:
+            self.statusArea.insertPlainText(QtCore.QString(text))
+            self.cursor.movePosition(QtGui.QTextCursor.End)
+            self.statusArea.setTextCursor(self.cursor)
+        else:
+            print text
         
     def readOutput(self):
         """Write all available stdout from self.modelProcess, a QProcess, to the 
@@ -1502,16 +1510,32 @@ def validate(jsonObject):
         print 'Exiting.'
         sys.exit()
 
-def main(json_args):
+def main(json_args, use_gui=True):
     app = QtGui.QApplication(sys.argv)
     validate(json_args)
     ui = DynamicUI(json_args)
-    result = app.exec_()
-
+    if use_gui == True:
+        result = app.exec_()
+    else:
+        ui.assembleOutputDict()
+        md = ModelDialog(ui,
+                         ui.attributes['targetScript'],
+                         ui.outputDict,
+                         ui.attributes['modelName'],
+                         printToStdOut = True)
+        md.startValidation()
         
 if __name__ == '__main__':
-    modulename, json_args = sys.argv
+    #Optparse module is deprecated since python 2.7.  Using here since OSGeo4W
+    #is version 2.5.
+    parser = OptionParser()
+    parser.add_option('-t', '--test', action='store_false', default=True, dest='test')
+    (options, args) = parser.parse_args(sys.argv)
+
+    modulename, json_args = args
 
     args = open(json_args)
 
-    main(args.read())
+    main(args.read(), options.test)
+    
+    
