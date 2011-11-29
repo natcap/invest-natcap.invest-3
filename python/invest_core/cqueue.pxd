@@ -1,4 +1,4 @@
-cdef extern from "clib/queue.h":
+cdef extern from "simplequeue.h":
     ctypedef struct Queue:
         pass
     ctypedef int QueueValue
