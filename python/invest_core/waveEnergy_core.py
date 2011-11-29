@@ -125,6 +125,7 @@ def clipShape(shapeToClip, bindingShape, outputPath):
                     out_feat.SetField(fld_index2, src_field)
 
                 itemArray = [0, 0, 0, 0]
+                
                 for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3)):
                     field_index = in_feat.GetFieldIndex(field)
                     itemArray[var] = in_feat.GetField(field_index)
@@ -143,6 +144,62 @@ def clipShape(shapeToClip, bindingShape, outputPath):
     shapeToClip.Destroy()
     shp_ds.Destroy()
     return aoiDictionary
+
+def pointShapeToDict(shape):
+
+    shape_layer = shape.GetLayer(0)
+    shape_feat = shape_layer.GetNextFeature()
+
+    aoiDictionary = {}
+    xrangeLong = []
+    yrangeLat = []
+    while shape_feat is not None:
+
+        itemArray = [0, 0, 0, 0, 0, 0]
+        
+        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('HSAVG_M', 4), ('TPAVG_S', 5)):
+            field_index = in_feat.GetFieldIndex(field)
+            itemArray[var] = in_feat.GetField(field_index)
+
+        xrangeLong.append(itemArray[2])
+        yrangeLat.append(itemArray[3])
+        
+        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4], itemArray[5]]
+        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4], itemArray[5]]
+        
+        shape_feat.Destroy()
+        shape_feat = shape_layer.GetNextFeature()
+        
+    shape.Destroy()
+    
+    xrangeLongSorted = xrangeLong.sort()
+    yrangeLatSorted = yrangeLat.sort()
+    
+    xrangeLongNoDup = list(set(xrangeLongSorted))
+    yrangeLatNoDup = list(set(yrangeLatSorted))
+    
+    xrangeLongNP = np.array(xrangeLongNoDup)
+    yrangeLatNP = np.array(yrangeLatNoDup)
+    matrixHeight = []
+    matrixPeriod = []
+    for j in yrangeLatNP:
+        tmpHeight = []
+        tmpPeriod = []
+        for i in xrangeLongNP:
+            if latlongDict[(i,j)]:
+                tmpHeight.append(latlongDict[(i,j)][0])
+                tmpPeriod.append(latlongDict[(i,j)][1])
+            else:
+                tmpHeight.append(0)
+                tmpPeriod.append(0)
+        matrixHeight.append(tmpHeight)
+        matrixPeriod.append(tmpPeriod)
+        
+    matrixHeightNP = np.arrray(matrixHeight)
+    matrixPeriodNP = np.arrray(matrixPeriod)
+    
+    results = [xrangeLongNP, yrangeLatNP, matrixHeightNP, matrixPeriodNP]
+    return results
 
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     heightBand = waveHeight.GetRasterBand(1)
