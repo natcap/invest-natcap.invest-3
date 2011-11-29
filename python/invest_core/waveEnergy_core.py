@@ -19,13 +19,15 @@ def biophysical(args):
     args['machine_perf'] - a dictionary
     args['machine_param'] - a dictionary
     args['dem'] - a GIS raster file
+    args['workspace_dir'] - the workspace path
         
     """
     captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
-
+    workspaceDir = args['workspace_dir']
+    waveDataDir = args['wave_data_dir']
     filesystemencoding = sys.getfilesystemencoding()
     #Shapefile of polygon that has the dimensions for providing the area of interest
-    cutter_uri = '../../test_data/wave_Energy/samp_data/input/WaveData/WCNA_extract.shp'
+    cutter_uri = waveDataDir + os.sep + 'WCNA_extract.shp'
     cutter = ogr.Open(cutter_uri.encode(filesystemencoding))
     cutterLayer = cutter.GetLayer(0)
 
@@ -42,8 +44,8 @@ def biophysical(args):
     pixelSizeY = abs(geoform[5])
 
     #Rasters which will be past (along with global_dem) to vectorize with wave power op.
-    waveHeightPath = '../../test_data/wave_Energy/waveHeight.tif'
-    wavePeriodPath = '../../test_data/wave_Energy/wavePeriod.tif'
+    waveHeightPath = '../../test_data/wave_Energy/Intermediate/waveHeight.tif'
+    wavePeriodPath = '../../test_data/wave_Energy/Intermediate/wavePeriod.tif'
     #Create rasters bounded by shape file of analyis area
     for path in (waveHeightPath, wavePeriodPath):
         invest_cython_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY,
@@ -58,10 +60,10 @@ def biophysical(args):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
 
-    outputPath = '../../test_data/wave_Energy/samp_data/Intermediate/WaveData_clipZ.shp'
+    outputPath = '../../test_data/wave_Energy/Intermediate/WaveData_clipZ.shp'
     aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
 
-    wavePowerPath = '../../test_data/wave_Energy/wp_kw.tif'
+    wavePowerPath = '../../test_data/wave_Energy/Intermediate/wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
 
 def clipShape(shapeToClip, bindingShape, outputPath):
