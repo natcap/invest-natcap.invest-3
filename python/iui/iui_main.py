@@ -1,5 +1,7 @@
-import sys, os, imp
+import sys, imp
+import os
 import platform
+import time
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 print cmd_folder
@@ -747,12 +749,16 @@ class processThread(QtCore.QThread):
                         messages to the modal window.
                         
             returns an instance of the processThread class."""
-            
+        
         super(processThread, self).__init__()
+        print 'setting local variables'
         self.inputDict = inputDict
         self.outputList = outputList
         self.modelname = modelname
         
+        self.path = cmd_folder + '/../invest_core/' + self.modelname + '_validator.py'
+        print os.path.abspath(self.path)
+
     def run(self):
         """Imports the desired model's validator and execute it.  If an error is
             detected, errors are appended to self.outputList.
@@ -764,13 +770,27 @@ class processThread(QtCore.QThread):
             
         #cmd_folder is declared at the very beginning of this file.  It 
         #contains the absolute path to the current file (iui_main.py).
-        path = cmd_folder + '/../invest_core/' + self.modelname + '_validator.py'
         try:
-            model = imp.load_source('validator', path)
-            self.outputList = model.execute(self.inputDict, self.outputList)
+            self.setTerminationEnabled(False)
+            print 'trying'
+            print self.path
+            model = imp.load_source('validator', self.path)
+            print 'keep trying'
+            model.execute(self.inputDict, self.outputList)
+            print self.outputList
         except IOError:
             self.outputList.append('Could not locate validator at ' + 
                                    os.path.abspath(path))
+        except AttributeError as e:
+            print 'ERROR!!! ', e.value
+        except ImportError as e:
+            print 'ERROR!!! ', e.value, '\n'
+        except:
+            print 'some other error occurred'
+
+        #preventing the thread from terminating appears to prevent odd crashing
+        self.setTerminationEnabled(True)
+        print 'thread about finished?'
             
         
 
@@ -1510,6 +1530,15 @@ def validate(jsonObject):
         print 'Exiting.'
         sys.exit()
 
+def tracefunc(frame, event, arg, indent=[0]):
+    if event == 'call':
+        indent[0] += 2
+        print '-' * indent[0] + '> call function', os.path.basename(frame.f_code.co_filename), frame.f_code.co_name
+    elif event == 'return':
+        print '<' + '-' * indent[0], 'exit function',os.path.basename(frame.f_code.co_filename), frame.f_code.co_name
+        indent[0] -= 2
+    return tracefunc
+        
 def main(json_args, use_gui=True):
     app = QtGui.QApplication(sys.argv)
     validate(json_args)
@@ -1521,10 +1550,16 @@ def main(json_args, use_gui=True):
         md = ModelDialog(ui,
                          ui.attributes['targetScript'],
                          ui.outputDict,
-                         ui.attributes['modelName'],
+                         str(ui.attributes['modelName']),
                          printToStdOut = True)
-        md.startValidation()
+#        time.sleep(1)
+#        sys.settrace(tracefunc)
+        print 'about to start the thread'
+#        md.startValidation()
+        md.validatorThread.start()
+        time.sleep(1)
         
+
 if __name__ == '__main__':
     #Optparse module is deprecated since python 2.7.  Using here since OSGeo4W
     #is version 2.5.
