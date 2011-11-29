@@ -331,15 +331,15 @@ class DynamicText(DynamicPrimitive):
         FileEntry and YearEntry inherit DynamicText.
         
         As the superclass to a number of text-based elements, DynamicText 
-        implements a number of text-only options, namely defaultText and 
-        validText.
+        implements a text-only option, namely validText.  DynamicText also 
+        implements the attribute defaultValue.
         """
 
     def __init__(self, attributes):
         """Constructor for the DynamicText class.
             The defining features for this class have primarily to do with user
             interaction: a child of DynamicText can be required, can have
-            defaultText and can have valid text.
+            defaultValue and can have valid text.
             
             attributes -a python dictionary of element attributes.
 
@@ -366,8 +366,8 @@ class DynamicText(DynamicPrimitive):
             
         #If the user has defined some default text for this text field, insert 
         #it into the text field.
-        if "defaultText" in attributes:
-            self.textField.insert(attributes['defaultText'])
+        if "defaultValue" in attributes:
+            self.textField.insert(attributes['defaultValue'])
 
         #If the user has defined a string regular expression of text the user is
         #allowed to input, set that validator up with the setValidateField()
@@ -975,8 +975,8 @@ class DynamicUI(DynamicGroup):
             
         for id, element in self.allElements.iteritems():
             if isinstance(element, DynamicPrimitive):
-                if 'defaultText' in element.attributes:
-                    text = element.attributes['defaultText']
+                if 'defaultValue' in element.attributes:
+                    text = element.attributes['defaultValue']
                     if element.attributes['type'] == 'file' or\
                     element.attributes['type'] =='folder':
                         element.setValue(os.path.abspath(invest_root+text))
@@ -1365,8 +1365,8 @@ class FileEntry(DynamicText):
         self.elements = [self.label, self.textField, self.button]
         
         #expand the given relative path if provided
-        if 'defaultText' in self.attributes:
-            self.textField.setText(os.path.abspath(invest_root + attributes['defaultText']))
+        if 'defaultValue' in self.attributes:
+            self.textField.setText(os.path.abspath(invest_root + attributes['defaultValue']))
         
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
@@ -1458,7 +1458,7 @@ def validate(jsonObject):
                              "pattern": "^((file)|(folder)|(text)|(checkbox))$"},
                     "label": {"type": "string",
                               "optional": True},
-                    "defaultText": {"type": "string",
+                    "defaultValue": {"type": "string",
                                     "optional": True},
                     "required":{"type": "boolean",
                                 "optional" : True},

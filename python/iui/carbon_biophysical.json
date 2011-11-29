@@ -21,7 +21,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultText": "./carbon",
+                    "defaultValue": "./carbon",
                     "required": true
                 }
             ]
@@ -41,7 +41,7 @@
                             "args_id" : "lulc_cur_uri",
                             "type": "file",
                             "label": "Raster location",
-                            "defaultText": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
+                            "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
                             "required": true
                         },
                         {
@@ -53,7 +53,7 @@
                             "label": "Year of land cover",
                             "required": false,
                             "enabledBy": "calc_sequestration",
-                            "defaultText": "2000",
+                            "defaultValue": "2000",
                             "requiredIf": ["cur_harvest_map", "fut_harvest_map"]
                         }
                     ]
@@ -77,7 +77,7 @@
                             "args_id": "lulc_fut_uri",
                             "required": false,
                             "enabledBy": "calc_sequestration",
-                            "defaultText": "./base_data/terrestrial/lulc_samp_fut/hdr.adf",
+                            "defaultValue": "./base_data/terrestrial/lulc_samp_fut/hdr.adf",
                             "requiredIf": ["calc_sequestration"]
                         },
                         {
@@ -88,7 +88,7 @@
                             "label": "Year of land cover",
                             "args_id": "lulc_fut_year",
                             "required": false,
-                            "defaultText": "2030",
+                            "defaultValue": "2030",
                             "enabledBy": "calc_sequestration",
                             "requiredIf": ["fut_harvest_map"]
                         }
@@ -104,7 +104,7 @@
                     "id" : "carbon_pools",
                     "type": "file",
                     "label": "Carbon pools",
-                    "defaultText": "./carbon/input/carbon_pools_samp.dbf",
+                    "defaultValue": "./carbon/input/carbon_pools_samp.dbf",
                     "args_id": "carbon_pools_uri",
                     "required": true
                 },
@@ -114,7 +114,7 @@
                     "label": "Current harvest rate map",
                     "args_id": "hwp_cur_shape_uri",
                     "required": false,
-                    "defaultText": "./carbon/input/harv_samp_cur.shp",
+                    "defaultValue": "./carbon/input/harv_samp_cur.shp",
                     "enabledBy": "calc_sequestration"
                 },
                 {
@@ -123,7 +123,7 @@
                     "label": "Future harvest rate map",
                     "args_id": "hwp_fut_shape_uri",
                     "required": false,
-                    "defaultText": "./carbon/input/harv_samp_fut.shp",
+                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
                     "enabledBy": "calc_sequestration"
                 }
             ]
