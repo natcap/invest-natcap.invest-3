@@ -637,6 +637,7 @@ class ModelDialog(QtGui.QDialog):
             self.threadFinished()
 
     def startQProcess(self):
+        print 'started?'
         if len(self.errors) > 0:
             self.write('\nERRORS:\n')
             for error in self.errors:
@@ -772,12 +773,8 @@ class processThread(QtCore.QThread):
         #contains the absolute path to the current file (iui_main.py).
         try:
             self.setTerminationEnabled(False)
-            print 'trying'
-            print self.path
             model = imp.load_source('validator', self.path)
-            print 'keep trying'
             model.execute(self.inputDict, self.outputList)
-            print self.outputList
         except IOError:
             self.outputList.append('Could not locate validator at ' + 
                                    os.path.abspath(path))
@@ -790,7 +787,6 @@ class processThread(QtCore.QThread):
 
         #preventing the thread from terminating appears to prevent odd crashing
         self.setTerminationEnabled(True)
-        print 'thread about finished?'
             
         
 
@@ -1038,12 +1034,14 @@ class DynamicUI(DynamicGroup):
         except IOError:
             self.lastRun = {}
             
-    def __init__(self, uri):
+    def __init__(self, uri, use_gui):
         """Constructor for the DynamicUI class, a subclass of DynamicGroup.
             DynamicUI loads all setting from a JSON object at the provided URI
             and recursively creates all elements.
             
             uri - the string URI to the JSON configuration file.
+            use_gui - a boolean.  Determines whether the UI will be presented
+                to the user for interaction.  Necessary for testing.
             
             returns an instance of DynamicUI."""
             
@@ -1055,6 +1053,7 @@ class DynamicUI(DynamicGroup):
         self.outputDict = {}
         self.allElements = self.getElementsDictionary()
         self.layout().setSizeConstraint(QtGui.QLayout.SetMinimumSize)
+        self.use_gui = use_gui
         
         self.initUI()
         
@@ -1093,8 +1092,9 @@ class DynamicUI(DynamicGroup):
         
         self.setGeometry(400, 400, width, height)
         
-        #reveal the assembled UI to the user
-        self.show()
+        #reveal the assembled UI to the user, but only if not testing.
+        if self.use_gui:
+            self.show()
                     
     def addButtons(self):
         """Assembles buttons and connects their callbacks.
@@ -1542,7 +1542,7 @@ def tracefunc(frame, event, arg, indent=[0]):
 def main(json_args, use_gui=True):
     app = QtGui.QApplication(sys.argv)
     validate(json_args)
-    ui = DynamicUI(json_args)
+    ui = DynamicUI(json_args, use_gui)
     if use_gui == True:
         result = app.exec_()
     else:
@@ -1550,14 +1550,16 @@ def main(json_args, use_gui=True):
         md = ModelDialog(ui,
                          ui.attributes['targetScript'],
                          ui.outputDict,
-                         str(ui.attributes['modelName']),
+                         ui.attributes['modelName'],
                          printToStdOut = True)
-#        time.sleep(1)
 #        sys.settrace(tracefunc)
         print 'about to start the thread'
-#        md.startValidation()
-        md.validatorThread.start()
+        md.validatorThread.finished.connect(md.startQProcess)
+#        md.validatorThread.start()
+        md.startValidation()
+        print 'finished main?'
         time.sleep(1)
+        print 'slept'
         
 
 if __name__ == '__main__':
