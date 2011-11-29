@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include "queue.h"
 
-#define INITSIZE 64
+#define INITSIZE 10
 
 struct _Queue {
   QueueValue *buf;
@@ -29,11 +29,17 @@ void queue_free(Queue *queue) {
 }
 
 Queue* queue_push_tail(Queue *queue, QueueValue data) {
+  queue->buf[queue->tail] = data;
+  queue->tail = (queue->tail+1)%queue->buflen;
+  queue->size += 1;
   return queue;
 }
 
 QueueValue queue_pop_head(Queue *queue) {
-  return 0;
+  QueueValue v = queue->buf[queue->head];
+  queue->head = (queue->head+1)%queue->buflen;
+  queue->size -= 1;
+  return v;
 }
 
 int queue_size(Queue *queue) {
