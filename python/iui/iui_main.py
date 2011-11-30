@@ -1381,7 +1381,7 @@ class FileEntry(DynamicText):
         
         #expand the given relative path if provided
         if 'defaultValue' in self.attributes:
-            self.textField.setText(self.attributes['defaultValue'])
+            self.setValue(self.attributes['defaultValue'])
     
     def setValue(self, text):
         """Set the value of the uri field.  If parameter 'text' is an absolute
