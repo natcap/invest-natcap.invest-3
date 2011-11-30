@@ -26,6 +26,7 @@ def biophysical(args):
     """
     captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
     workspaceDir = args['workspace_dir']
+    interDir = workspaceDir + os.sep + 'Intermediate'
     waveDataDir = args['wave_data_dir']
     filesystemencoding = sys.getfilesystemencoding()
     
@@ -48,8 +49,8 @@ def biophysical(args):
     pixelSizeY = abs(geoform[5])
 
     #Rasters which will be past (along with global_dem) to vectorize with wave power op.
-    waveHeightPath = '../../test_data/wave_Energy/Intermediate/waveHeight.tif'
-    wavePeriodPath = '../../test_data/wave_Energy/Intermediate/wavePeriod.tif'
+    waveHeightPath = interDir + os.sep + 'waveHeight.tif'
+    wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
     #Create rasters bounded by shape file of analyis area
     for path in (waveHeightPath, wavePeriodPath):
         invest_cython_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY,
@@ -63,14 +64,14 @@ def biophysical(args):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
     
-    outputPath = '../../test_data/wave_Energy/Intermediate/WaveData_clipZ.shp'
+    outputPath = interDir + os.sep + 'WaveData_clipZ.shp'
     aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
 
     heightPeriodArray = pointShapeToDict(args['analysis_area'])
     interpolateHeight(heightPeriodArray, waveHeightRaster)
     interpolatePeriod(heightPeriodArray, wavePeriodRaster)
 
-    wavePowerPath = '../../test_data/wave_Energy/Intermediate/wp_kw.tif'
+    wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
 
 def clipShape(shapeToClip, bindingShape, outputPath):
