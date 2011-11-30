@@ -659,8 +659,13 @@ class ModelDialog(QtGui.QDialog):
             self.threadFinished()
         else:
             self.write('Validation complete.\n')
-            self.root.saveLastRun()
-            self.write('Parameters saved to disk.\n')
+            
+            if not self.printToStdOut:
+                self.root.saveLastRun()
+                self.write('Parameters saved to disk.\n')
+            else:
+                self.write('Testing mode: Parameters not saved to disk.\n')
+                
             self.write('\nRunning the model.')
             self.modelProcess.start(self.command, self.argslist)
 
