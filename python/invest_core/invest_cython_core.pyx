@@ -32,6 +32,9 @@ cdef class Queue:
     cpdef int pop(self):
         return cqueue.queue_pop_head(self._c_queue)
     
+    cpdef push(self, int x):
+        cqueue.queue_push_head(self._c_queue, x)
+    
     cpdef append(self, int x):
         cqueue.queue_push_tail(self._c_queue, x)
 

@@ -39,6 +39,14 @@ void queue_free(Queue *queue) {
   free(queue->buf);
 }
 
+Queue* queue_push_head(Queue *queue, QueueValue data) {
+  _reallocateQueue(queue);
+  queue->head = ((queue->head-1)%queue->buflen+queue->buflen) % queue->buflen;
+  queue->buf[queue->head] = data;
+  queue->size += 1;
+  return queue;
+}
+
 Queue* queue_push_tail(Queue *queue, QueueValue data) {
   _reallocateQueue(queue);
   queue->buf[queue->tail] = data;

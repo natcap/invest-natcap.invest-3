@@ -27,8 +27,17 @@ void queue_free(Queue *queue);
  *
  * @return a reference to @ref queue.
  */
-
 Queue* queue_push_tail(Queue *queue, QueueValue data);
+
+/**
+ * Add a value to the head of a queue.
+ *
+ * @param queue      The queue.
+ * @param data       The value to add.
+ *
+ * @return a reference to @ref queue.
+ */
+Queue* queue_push_head(Queue *queue, QueueValue data);
 
 /**
  * Remove a value from the head of a queue.
