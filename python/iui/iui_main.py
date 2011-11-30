@@ -1583,7 +1583,7 @@ def main(json_args, use_gui=True):
                          ui.outputDict,
                          ui.attributes['modelName'],
                          printToStdOut = True)
-        md.exec_()
+        app.exec_()
 
 if __name__ == '__main__':
     #Optparse module is deprecated since python 2.7.  Using here since OSGeo4W
