@@ -66,9 +66,12 @@ def execute(args, out):
     for key, label in [('lulc_cur_uri', 'Current LULC raster '),
                        ('lulc_fut_uri', 'Future LULC raster ')]:
         if key in args:
-            raster = gdal.Open(args[key])
-            if not isinstance(raster, osgeo.gdal.Dataset):
-                out.append(label + args[key] + ': Must be a raster dataset \
+            if not os.path.exists(args[key]):
+                out.append(label + args[key] + ': file not found')
+            else:
+                raster = gdal.Open(args[key])
+                if not isinstance(raster, osgeo.gdal.Dataset):
+                    out.append(label + args[key] + ': Must be a raster dataset \
 that can be opened with GDAL.')
 
                     

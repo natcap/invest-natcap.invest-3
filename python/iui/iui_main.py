@@ -5,9 +5,10 @@ import time
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../invest_core')
+invest_root = cmd_folder + '/../../'
 
 if platform.system() == 'Windows':
-    sys.path.append(cmd_folder + '/../../OSGeo4W/lib/site-packages')
+    sys.path.append(invest_root + 'OSGeo4W/lib/site-packages')
 
 from PyQt4 import QtGui, QtCore
 
@@ -262,7 +263,14 @@ class DynamicPrimitive(DynamicElement):
         self.attributes['args_id'] is an optional string provided by the user 
         that enables the construction of an arguments dictionary in python that
         will be passed to the specified python program.  The args_id must 
-        conform with the API specified by the desired model. 
+        conform with the API specified by the desired model.
+        
+        Note that all implemented instances of DynamicPrimitive must implement
+        their own setValue(value) function, specific to the target QWidget.
+         - self.setValue(value) is a function that allows a developer to specify
+             the value of the current element, depending on how the value needs
+             to be set based on the class and class elements and the type of 
+             the value.
         """
 
     def __init__(self, attributes):
@@ -320,6 +328,15 @@ class DynamicPrimitive(DynamicElement):
         for element in self.elements:
             element.setDisabled(True)
             
+    def resetValue(self):
+        """If a default value has been specified, reset this element to its
+            default.  Otherwise, leave the element alone.
+            
+            returns nothing."""
+            
+        if 'defaultValue' in self.attributes:
+            self.setValue(self.attributes['defaultValue'])
+            
 class DynamicText(DynamicPrimitive):
     """Creates an object containing a label and a sigle-line text field for
         user input.
@@ -330,15 +347,15 @@ class DynamicText(DynamicPrimitive):
         FileEntry and YearEntry inherit DynamicText.
         
         As the superclass to a number of text-based elements, DynamicText 
-        implements a number of text-only options, namely defaultText and 
-        validText.
+        implements a text-only option, namely validText.  DynamicText also 
+        implements the attribute defaultValue.
         """
 
     def __init__(self, attributes):
         """Constructor for the DynamicText class.
             The defining features for this class have primarily to do with user
             interaction: a child of DynamicText can be required, can have
-            defaultText and can have valid text.
+            defaultValue and can have valid text.
             
             attributes -a python dictionary of element attributes.
 
@@ -365,8 +382,8 @@ class DynamicText(DynamicPrimitive):
             
         #If the user has defined some default text for this text field, insert 
         #it into the text field.
-        if "defaultText" in attributes:
-            self.textField.insert(attributes['defaultText'])
+        if "defaultValue" in attributes:
+            self.textField.insert(attributes['defaultValue'])
 
         #If the user has defined a string regular expression of text the user is
         #allowed to input, set that validator up with the setValidateField()
@@ -614,8 +631,7 @@ class ModelDialog(QtGui.QDialog):
 
             #create a QStringlist to hold the arguments to the QProcess.
             argslist = QtCore.QStringList()
-            argslist.append(QtCore.QString(os.path.abspath(cmd_folder + 
-                            '/../../' + uri)))
+            argslist.append(QtCore.QString(os.path.abspath(invest_root + uri)))
             argslist.append(QtCore.QString(json.dumps(inputDict)))
             
             self.command = command
@@ -643,8 +659,13 @@ class ModelDialog(QtGui.QDialog):
             self.threadFinished()
         else:
             self.write('Validation complete.\n')
-            self.root.saveLastRun()
-            self.write('Parameters saved to disk.\n')
+            
+            if not self.printToStdOut:
+                self.root.saveLastRun()
+                self.write('Parameters saved to disk.\n')
+            else:
+                self.write('Testing mode: Parameters not saved to disk.\n')
+                
             self.write('\nRunning the model.')
             self.modelProcess.start(self.command, self.argslist)
 
@@ -968,6 +989,15 @@ class DynamicUI(DynamicGroup):
         #return the number of unsatisfied required elements.
         return numRequired - numVerified
 
+    def resetParametersToDefaults(self):
+        """Reset all parameters to defaults provided in the configuration file.
+        
+            returns nothing"""
+            
+        for id, element in self.allElements.iteritems():
+            if isinstance(element, DynamicPrimitive):
+                element.resetValue()
+
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
         
@@ -1139,8 +1169,8 @@ class DynamicUI(DynamicGroup):
             
             #print an error if it is encountered.  In rare cases, 
             #element.enabledBy is not initialized properly.
-            except AttributeError:
-                print str(AttributeError)
+            except AttributeError as e:
+                print e.message
 
             #if the parameters from the last run have been loaded, display a 
             #status message
@@ -1330,8 +1360,8 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
                 value = True
             else:
                 value = False
-        elif isinstance(value, boolean):
-            self.setCheckState(value)
+                
+        self.setChecked(value)
              
     def requirementsMet(self):
         return self.value()
@@ -1350,9 +1380,21 @@ class FileEntry(DynamicText):
         self.elements = [self.label, self.textField, self.button]
         
         #expand the given relative path if provided
-        if 'defaultText' in self.attributes:
-            self.textField.setText(os.path.abspath(cmd_folder + '/../../' + 
-                                                   attributes['defaultText']))
+        if 'defaultValue' in self.attributes:
+            self.textField.setText(self.attributes['defaultValue'])
+    
+    def setValue(self, text):
+        """Set the value of the uri field.  If parameter 'text' is an absolute
+            path, set the textfield to its value.  If parameter 'text' is a 
+            relative path, set the textfield to be the absolute path of the
+            input text, relative to the invest root.
+            
+            returns nothing."""
+            
+        if os.path.isabs(text):
+            self.textField.setText(text)
+        else:
+            self.textField.setText(os.path.abspath(invest_root + text))
         
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
@@ -1444,7 +1486,7 @@ def validate(jsonObject):
                              "pattern": "^((file)|(folder)|(text)|(checkbox))$"},
                     "label": {"type": "string",
                               "optional": True},
-                    "defaultText": {"type": "string",
+                    "defaultValue": {"type": ["string", "number", "boolean"],
                                     "optional": True},
                     "required":{"type": "boolean",
                                 "optional" : True},
@@ -1534,6 +1576,7 @@ def main(json_args, use_gui=True):
     if use_gui == True:
         result = app.exec_()
     else:
+        ui.resetParametersToDefaults()
         ui.assembleOutputDict()
         md = ModelDialog(ui,
                          ui.attributes['targetScript'],
