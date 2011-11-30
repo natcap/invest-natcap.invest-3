@@ -33,14 +33,19 @@ def biophysical(args):
     #Shapefile of polygon that has the dimensions for providing the area of interest
     if 'AOI' in args:
         cutter = args['AOI']
+        print 'AOI is cutter'
     else:
         cutter = args['analysis_area_extract']
+
+    outputPath = interDir + os.sep + 'WaveData_clipZ.shp'
+    aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
+    area_shape = ogr.Open(outputPath)
+    area_layer = area_shape.GetLayer(0)
 
     global_dem = args['dem']
     format = 'GTiff'
     nodata = -1
     datatype = gdal.GDT_Float32
-    layer = args['analysis_area'].GetLayer(0)
 
     #Create a new raster that has the values of the WWW shapefile
     #Get the resolution from the global dem
@@ -62,12 +67,9 @@ def biophysical(args):
     #Rasterize the height and period values into respected rasters from shapefile
     for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
-        gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
-    
-    outputPath = interDir + os.sep + 'WaveData_clipZ.shp'
-    aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
+        gdal.RasterizeLayer(raster, [1], area_layer, options=['ATTRIBUTE=' + prop])
 
-    heightPeriodArray = pointShapeToDict(args['analysis_area'])
+    heightPeriodArray = pointShapeToDict(area_shape)
     interpolateHeight(heightPeriodArray, waveHeightRaster)
     interpolatePeriod(heightPeriodArray, wavePeriodRaster)
 
@@ -148,7 +150,7 @@ def clipShape(shapeToClip, bindingShape, outputPath):
         clip_feat.Destroy()
         clip_feat = clip_layer.GetNextFeature()
     #Close shapefiles
-    bindingShape.Destroy()
+#    bindingShape.Destroy()
     shapeToClip.Destroy()
     shp_ds.Destroy()
     return aoiDictionary
