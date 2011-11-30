@@ -63,6 +63,7 @@ def biophysical(args):
     
     heightPeriodArray = pointShapeToDict(args['analysis_area'])
     interpolateHeight(heightPeriodArray, waveHeightRaster)
+    interpolatePeriod(heightPeriodArray, wavePeriodRaster)
     
     outputPath = '../../test_data/wave_Energy/Intermediate/WaveData_clipZ.shp'
     aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
@@ -234,6 +235,31 @@ def interpolateHeight(results, raster):
 #    spl = spl(newxrange, newyrange).transpose()
 
     band.WriteArray(spl, 0, 0)
+    
+def interpolatePeriod(results, raster):
+    xrange = results[0]
+    yrange = results[1]
+    matrixHeight = results[3]
+    
+    gt = raster.GetGeoTransform()
+    band = raster.GetRasterBand(1)
+    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
+    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
+    
+    #This is probably true if north is up
+    if gt[5] < 0:
+        print 'North is up'
+#        yrange = yrange[::-1]
+#        matrixHeight = matrixHeight[::-1]
+
+    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrixHeight, kx=1, ky=1)
+    spl = spl(newyrange[::-1], newxrange)[::-1]
+
+#    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
+#    spl = spl(newxrange, newyrange).transpose()
+
+    band.WriteArray(spl, 0, 0)
 
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     heightBand = waveHeight.GetRasterBand(1)
@@ -261,23 +287,23 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     #      matrix[np.nonzero(matrix)] will return array of values
     #      Then use those values for base interpolation
 
-    raster = gdal.Open(wavePowerPath, GA_Update)
-    gt = raster.GetGeoTransform()
-    band = raster.GetRasterBand(1)
-    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-    #This is probably true if north is up
-    if gt[5] < 0:
-        newyrange = newyrange[::-1]
-        matrix = matrix[::-1]
-
-    spl = scipy.interpolate.RectBivariateSpline(newyrange, newxrange,
-                                                matrix,
-                                                kx=1, ky=1)
-    spl = spl(newyrange, newxrange)[::-1]
-
-    band.WriteArray(spl, 0, 0)
+#    raster = gdal.Open(wavePowerPath, GA_Update)
+#    gt = raster.GetGeoTransform()
+#    band = raster.GetRasterBand(1)
+#    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+#    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
+#    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
+#    #This is probably true if north is up
+#    if gt[5] < 0:
+#        newyrange = newyrange[::-1]
+#        matrix = matrix[::-1]
+#
+#    spl = scipy.interpolate.RectBivariateSpline(newyrange, newxrange,
+#                                                matrix,
+#                                                kx=1, ky=1)
+#    spl = spl(newyrange, newxrange)[::-1]
+#
+#    band.WriteArray(spl, 0, 0)
 
 
 def npv():
