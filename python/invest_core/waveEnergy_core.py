@@ -54,12 +54,15 @@ def biophysical(args):
     #Open created rasters
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
-
     #Rasterize the height and period values into respected rasters from shapefile
     for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
 
+    
+    heightPeriodArray = pointShapeToDict(args['analysis_area'])
+    interpolateHeight(heightPeriodArray, waveHeightRaster)
+    
     outputPath = '../../test_data/wave_Energy/Intermediate/WaveData_clipZ.shp'
     aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
 
@@ -151,6 +154,7 @@ def pointShapeToDict(shape):
     shape_feat = shape_layer.GetNextFeature()
 
     aoiDictionary = {}
+    latlongDict = {}
     xrangeLong = []
     yrangeLat = []
     while shape_feat is not None:
@@ -158,9 +162,11 @@ def pointShapeToDict(shape):
         itemArray = [0, 0, 0, 0, 0, 0]
         
         for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('HSAVG_M', 4), ('TPAVG_S', 5)):
-            field_index = in_feat.GetFieldIndex(field)
-            itemArray[var] = in_feat.GetField(field_index)
-
+            field_index = shape_feat.GetFieldIndex(field)
+            itemArray[var] = shape_feat.GetField(field_index)
+            
+        itemArray[2] = round(itemArray[2], 6)
+        itemArray[3] = round(itemArray[3], 6)
         xrangeLong.append(itemArray[2])
         yrangeLat.append(itemArray[3])
         
@@ -172,11 +178,11 @@ def pointShapeToDict(shape):
         
     shape.Destroy()
     
-    xrangeLongSorted = xrangeLong.sort()
-    yrangeLatSorted = yrangeLat.sort()
+    xrangeLongNoDup = list(set(xrangeLong))
+    yrangeLatNoDup = list(set(yrangeLat))
     
-    xrangeLongNoDup = list(set(xrangeLongSorted))
-    yrangeLatNoDup = list(set(yrangeLatSorted))
+    xrangeLongNoDup.sort()
+    yrangeLatNoDup.sort()
     
     xrangeLongNP = np.array(xrangeLongNoDup)
     yrangeLatNP = np.array(yrangeLatNoDup)
@@ -186,7 +192,7 @@ def pointShapeToDict(shape):
         tmpHeight = []
         tmpPeriod = []
         for i in xrangeLongNP:
-            if latlongDict[(i,j)]:
+            if (i,j) in latlongDict:
                 tmpHeight.append(latlongDict[(i,j)][0])
                 tmpPeriod.append(latlongDict[(i,j)][1])
             else:
@@ -195,11 +201,45 @@ def pointShapeToDict(shape):
         matrixHeight.append(tmpHeight)
         matrixPeriod.append(tmpPeriod)
         
-    matrixHeightNP = np.arrray(matrixHeight)
-    matrixPeriodNP = np.arrray(matrixPeriod)
+    matrixHeightNP = np.array(matrixHeight)
+    matrixPeriodNP = np.array(matrixPeriod)
     
     results = [xrangeLongNP, yrangeLatNP, matrixHeightNP, matrixPeriodNP]
     return results
+
+def interpolateHeight(results, raster):
+    xrange = results[0]
+    yrange = results[1]
+    matrixHeight = results[2]
+    
+    print xrange.shape
+    print yrange.shape
+    print matrixHeight.shape
+    
+    gt = raster.GetGeoTransform()
+    band = raster.GetRasterBand(1)
+    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
+    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
+    
+    print newxrange.shape
+    print newyrange.shape
+    
+    #This is probably true if north is up
+    if gt[5] < 0:
+        newyrange = newyrange[::-1]
+        matrix = matrix[::-1]
+
+#    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange,
+#                                                matrixHeight,
+#                                                kx=1, ky=1)
+#    spl = spl(newyrange, newxrange)[::-1]
+
+    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
+    spl = spl(newxrange, newyrange).transpose()
+
+    band.WriteArray(spl, 0, 0)
+    print "AFTER INTERPOLATE"
 
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     heightBand = waveHeight.GetRasterBand(1)
