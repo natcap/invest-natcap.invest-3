@@ -15,7 +15,7 @@
                     "label": "Workspace",
                     "required": true,
                     "args_id": "workspace_dir",
-                    "defaultText": "./carbon/"
+                    "defaultValue": "./carbon/"
                 },
                 {
                     "id":"sequest_uri",
@@ -23,7 +23,7 @@
                     "label": "Carbon sequestration raster",
                     "required": true,
                     "args_id": "sequest_uri",
-                    "defaultText": "./carbon/Output/sequest.tif"
+                    "defaultValue": "./carbon/Output/sequest.tif"
                 },
                 {
                     "id": "value",
@@ -33,7 +33,7 @@
                     "required": true,
                     "dataType": "float",
                     "validText": "[0-9]+(\\.[0-9][0-9])?",
-                    "defaultText": "43.00"
+                    "defaultValue": "43.00"
                 },
                 {
                     "id": "discount_rate",
@@ -43,7 +43,7 @@
                     "required": true,
                     "dataType": "int",
                     "validText": "-?([0-9]+)?\\.[0-9]+",
-                    "defaultText": "7"
+                    "defaultValue": "7"
                 },    
                 {
                     "id": "rate_change",
@@ -53,7 +53,7 @@
                     "required": true,
                     "dataType": "float",
                     "validText": "-?([0-9]+)?\\.[0-9]+",
-                    "defaultText": "0"
+                    "defaultValue": "0"
                 },
                 {
                     "id": "yr_cur",
@@ -63,7 +63,7 @@
                     "required": true,
                     "dataType": "int",
                     "validText": "-?[0-9]+",
-                    "defaultText": "2000"
+                    "defaultValue": "2000"
                 },            
                 {
                     "id": "yr_fut",
@@ -73,7 +73,7 @@
                     "required": true,
                     "dataType": "int",
                     "validText": "-?[0-9]+",
-                    "defaultText": "2030"
+                    "defaultValue": "2030"
                 }
             ]
         }    

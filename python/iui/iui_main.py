@@ -1,17 +1,20 @@
-import sys, os, imp
+import sys, imp
+import os
 import platform
+import time
 
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
-print cmd_folder
 sys.path.insert(0, cmd_folder + '/../invest_core')
+invest_root = cmd_folder + '/../../'
 
 if platform.system() == 'Windows':
-    sys.path.append(cmd_folder + '/../../OSGeo4W/lib/site-packages')
+    sys.path.append(invest_root + 'OSGeo4W/lib/site-packages')
 
 from PyQt4 import QtGui, QtCore
 
 import simplejson as json
 import jsonschema, warnings
+from optparse import OptionParser
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -260,7 +263,14 @@ class DynamicPrimitive(DynamicElement):
         self.attributes['args_id'] is an optional string provided by the user 
         that enables the construction of an arguments dictionary in python that
         will be passed to the specified python program.  The args_id must 
-        conform with the API specified by the desired model. 
+        conform with the API specified by the desired model.
+        
+        Note that all implemented instances of DynamicPrimitive must implement
+        their own setValue(value) function, specific to the target QWidget.
+         - self.setValue(value) is a function that allows a developer to specify
+             the value of the current element, depending on how the value needs
+             to be set based on the class and class elements and the type of 
+             the value.
         """
 
     def __init__(self, attributes):
@@ -318,6 +328,15 @@ class DynamicPrimitive(DynamicElement):
         for element in self.elements:
             element.setDisabled(True)
             
+    def resetValue(self):
+        """If a default value has been specified, reset this element to its
+            default.  Otherwise, leave the element alone.
+            
+            returns nothing."""
+            
+        if 'defaultValue' in self.attributes:
+            self.setValue(self.attributes['defaultValue'])
+            
 class DynamicText(DynamicPrimitive):
     """Creates an object containing a label and a sigle-line text field for
         user input.
@@ -328,15 +347,15 @@ class DynamicText(DynamicPrimitive):
         FileEntry and YearEntry inherit DynamicText.
         
         As the superclass to a number of text-based elements, DynamicText 
-        implements a number of text-only options, namely defaultText and 
-        validText.
+        implements a text-only option, namely validText.  DynamicText also 
+        implements the attribute defaultValue.
         """
 
     def __init__(self, attributes):
         """Constructor for the DynamicText class.
             The defining features for this class have primarily to do with user
             interaction: a child of DynamicText can be required, can have
-            defaultText and can have valid text.
+            defaultValue and can have valid text.
             
             attributes -a python dictionary of element attributes.
 
@@ -363,8 +382,8 @@ class DynamicText(DynamicPrimitive):
             
         #If the user has defined some default text for this text field, insert 
         #it into the text field.
-        if "defaultText" in attributes:
-            self.textField.insert(attributes['defaultText'])
+        if "defaultValue" in attributes:
+            self.textField.insert(attributes['defaultValue'])
 
         #If the user has defined a string regular expression of text the user is
         #allowed to input, set that validator up with the setValidateField()
@@ -516,7 +535,7 @@ class ModelDialog(QtGui.QDialog):
         
         This window is not configurable through the JSON configuration file."""    
         
-    def __init__(self, root, uri, inputDict, modelname):
+    def __init__(self, root, uri, inputDict, modelname, printToStdOut=False):
         """Constructor for the ModelDialog class.
             
             root - a pointer to the parent window
@@ -524,11 +543,15 @@ class ModelDialog(QtGui.QDialog):
             inputDict - a python dictionary of arguments to be passed to the 
                 model's execute function.
             modelname - a python string representing the name of the running model
+            printToStdOut=False - a boolean indicating whether to print all 
+                output to stdout.  If False, output will be written to this 
+                modal window's statusArea widget.
         
             returns an instance of ModelDialog."""
         super(ModelDialog, self).__init__()
 
         self.root = root
+        self.printToStdOut = printToStdOut
 
         #set window attributes
         self.setLayout(QtGui.QVBoxLayout())
@@ -560,21 +583,23 @@ class ModelDialog(QtGui.QDialog):
 
 
         #create Quit and Cancel buttons for the window        
-#        self.runButton = QtGui.QPushButton('Quit')
-        self.cancelButton = QtGui.QPushButton('Close') 
+        self.quitButton = QtGui.QPushButton('Quit')
+        self.backButton = QtGui.QPushButton('Back') 
         
         #disable the 'Back' button by default
-        self.cancelButton.setDisabled(True)
+        self.backButton.setDisabled(True)
+        self.quitButton.setDisabled(True)
        
         #create the buttonBox (a container for buttons) and add the buttons to
         #the buttonBox.
         self.buttonBox = QtGui.QDialogButtonBox()
-#        self.buttonBox.addButton(self.runButton, 0)
-        self.buttonBox.addButton(self.cancelButton, 1)
+        self.buttonBox.addButton(self.quitButton, 1)
+        self.buttonBox.addButton(self.backButton, 0)
         
         #connect the buttons to their callback functions.
 #        self.runButton.clicked.connect(self.okPressed)
-        self.cancelButton.clicked.connect(self.closeWindow)
+        self.backButton.clicked.connect(self.closeWindow)
+        self.quitButton.clicked.connect(sys.exit)
 
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
@@ -606,8 +631,7 @@ class ModelDialog(QtGui.QDialog):
 
             #create a QStringlist to hold the arguments to the QProcess.
             argslist = QtCore.QStringList()
-            argslist.append(QtCore.QString(os.path.abspath(cmd_folder + 
-                            '/../../' + uri)))
+            argslist.append(QtCore.QString(os.path.abspath(invest_root + uri)))
             argslist.append(QtCore.QString(json.dumps(inputDict)))
             
             self.command = command
@@ -635,8 +659,13 @@ class ModelDialog(QtGui.QDialog):
             self.threadFinished()
         else:
             self.write('Validation complete.\n')
-            self.root.saveLastRun()
-            self.write('Parameters saved to disk.\n')
+            
+            if not self.printToStdOut:
+                self.root.saveLastRun()
+                self.write('Parameters saved to disk.\n')
+            else:
+                self.write('Testing mode: Parameters not saved to disk.\n')
+                
             self.write('\nRunning the model.')
             self.modelProcess.start(self.command, self.argslist)
 
@@ -654,16 +683,19 @@ class ModelDialog(QtGui.QDialog):
         
         
     def write(self, text):
-        """Write text to the statusArea.  Also scrolls to the end of the text
-            region after writing to it.
+        """Write text.  If printing to the status area, also scrolls to the end 
+            of the text region after writing to it.  Otherwise, print to stdout.
             
             text - a string to be written to self.statusArea.
             
             returns nothing."""
-            
-        self.statusArea.insertPlainText(QtCore.QString(text))
-        self.cursor.movePosition(QtGui.QTextCursor.End)
-        self.statusArea.setTextCursor(self.cursor)
+        
+        if self.printToStdOut == False:
+            self.statusArea.insertPlainText(QtCore.QString(text))
+            self.cursor.movePosition(QtGui.QTextCursor.End)
+            self.statusArea.setTextCursor(self.cursor)
+        else:
+            print str(text).rstrip()
         
     def readOutput(self):
         """Write all available stdout from self.modelProcess, a QProcess, to the 
@@ -687,10 +719,15 @@ class ModelDialog(QtGui.QDialog):
         """Notify the user that model processing has finished.
         
             returns nothing."""
-            
         self.write('\n\nComplete.') #prints a status message in the statusArea.
-        self.progressBar.setMaximum(1) #stops the progressbar.
-        self.cancelButton.setDisabled(False) #enables the runButton
+        if self.printToStdOut:
+            self.closeWindow()
+            self.root.closeEvent()
+        else:
+            self.progressBar.setMaximum(1) #stops the progressbar.
+            self.backButton.setDisabled(False) #enables the backButton
+            self.quitButton.setDisabled(False) #enables the quitButton
+
         self.stdoutNotifier=None
 
     def closeEvent(self, data=None):
@@ -719,6 +756,10 @@ class ModelDialog(QtGui.QDialog):
             self.modelProcess.terminate()
         self.cancel = True
         self.done(0)
+    
+    def showEvent(self, data):
+        if self.printToStdOut == True:
+            self.hide()
         
 class processThread(QtCore.QThread):
     """Class processThread loads a python module from source and runs its
@@ -735,12 +776,14 @@ class processThread(QtCore.QThread):
                         messages to the modal window.
                         
             returns an instance of the processThread class."""
-            
+        
         super(processThread, self).__init__()
         self.inputDict = inputDict
         self.outputList = outputList
         self.modelname = modelname
         
+        self.path = cmd_folder + '/../invest_core/' + self.modelname + '_validator.py'
+
     def run(self):
         """Imports the desired model's validator and execute it.  If an error is
             detected, errors are appended to self.outputList.
@@ -752,13 +795,16 @@ class processThread(QtCore.QThread):
             
         #cmd_folder is declared at the very beginning of this file.  It 
         #contains the absolute path to the current file (iui_main.py).
-        path = cmd_folder + '/../invest_core/' + self.modelname + '_validator.py'
         try:
-            model = imp.load_source('validator', path)
-            self.outputList = model.execute(self.inputDict, self.outputList)
+            self.setTerminationEnabled(False)
+            model = imp.load_source('validator', self.path)
+            model.execute(self.inputDict, self.outputList)
         except IOError:
             self.outputList.append('Could not locate validator at ' + 
                                    os.path.abspath(path))
+
+        #preventing the thread from terminating appears to prevent odd crashing
+        self.setTerminationEnabled(True)
             
         
 
@@ -943,6 +989,15 @@ class DynamicUI(DynamicGroup):
         #return the number of unsatisfied required elements.
         return numRequired - numVerified
 
+    def resetParametersToDefaults(self):
+        """Reset all parameters to defaults provided in the configuration file.
+        
+            returns nothing"""
+            
+        for id, element in self.allElements.iteritems():
+            if isinstance(element, DynamicPrimitive):
+                element.resetValue()
+
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
         
@@ -982,7 +1037,7 @@ class DynamicUI(DynamicGroup):
         if self.modelDialog.cancel == False:
             QtCore.QCoreApplication.instance().exit()
     
-    def closeEvent(self, event):
+    def closeEvent(self, event=None):
         """Terminates the application. This function is a Qt-defined callback 
             for when the window is closed.
             
@@ -1006,12 +1061,14 @@ class DynamicUI(DynamicGroup):
         except IOError:
             self.lastRun = {}
             
-    def __init__(self, uri):
+    def __init__(self, uri, use_gui):
         """Constructor for the DynamicUI class, a subclass of DynamicGroup.
             DynamicUI loads all setting from a JSON object at the provided URI
             and recursively creates all elements.
             
             uri - the string URI to the JSON configuration file.
+            use_gui - a boolean.  Determines whether the UI will be presented
+                to the user for interaction.  Necessary for testing.
             
             returns an instance of DynamicUI."""
             
@@ -1023,6 +1080,7 @@ class DynamicUI(DynamicGroup):
         self.outputDict = {}
         self.allElements = self.getElementsDictionary()
         self.layout().setSizeConstraint(QtGui.QLayout.SetMinimumSize)
+        self.use_gui = use_gui
         
         self.initUI()
         
@@ -1061,16 +1119,17 @@ class DynamicUI(DynamicGroup):
         
         self.setGeometry(400, 400, width, height)
         
-        #reveal the assembled UI to the user
-        self.show()
+        #reveal the assembled UI to the user, but only if not testing.
+        if self.use_gui:
+            self.show()
                     
     def addButtons(self):
         """Assembles buttons and connects their callbacks.
         
             returns nothing."""
             
-        self.runButton = QtGui.QPushButton('OK')
-        self.cancelButton = QtGui.QPushButton('Cancel') 
+        self.runButton = QtGui.QPushButton('Run')
+        self.cancelButton = QtGui.QPushButton('Quit') 
        
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()
@@ -1111,7 +1170,7 @@ class DynamicUI(DynamicGroup):
             #print an error if it is encountered.  In rare cases, 
             #element.enabledBy is not initialized properly.
             except AttributeError:
-                print str(AttributeError)
+                print AttribteError.message
 
             #if the parameters from the last run have been loaded, display a 
             #status message
@@ -1301,8 +1360,8 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
                 value = True
             else:
                 value = False
-        elif isinstance(value, boolean):
-            self.setCheckState(value)
+                
+        self.setChecked(value)
              
     def requirementsMet(self):
         return self.value()
@@ -1321,9 +1380,21 @@ class FileEntry(DynamicText):
         self.elements = [self.label, self.textField, self.button]
         
         #expand the given relative path if provided
-        if 'defaultText' in self.attributes:
-            self.textField.setText(os.path.abspath(cmd_folder + '/../../' + 
-                                                   attributes['defaultText']))
+        if 'defaultValue' in self.attributes:
+            self.textField.setText(self.attributes['defaultValue'])
+    
+    def setValue(self, text):
+        """Set the value of the uri field.  If parameter 'text' is an absolute
+            path, set the textfield to its value.  If parameter 'text' is a 
+            relative path, set the textfield to be the absolute path of the
+            input text, relative to the invest root.
+            
+            returns nothing."""
+            
+        if os.path.isabs(text):
+            self.textField.setText(text)
+        else:
+            self.textField.setText(os.path.abspath(invest_root + text))
         
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
@@ -1415,7 +1486,7 @@ def validate(jsonObject):
                              "pattern": "^((file)|(folder)|(text)|(checkbox))$"},
                     "label": {"type": "string",
                               "optional": True},
-                    "defaultText": {"type": "string",
+                    "defaultValue": {"type": ["string", "number", "boolean"],
                                     "optional": True},
                     "required":{"type": "boolean",
                                 "optional" : True},
@@ -1497,17 +1568,34 @@ def validate(jsonObject):
         print 'Error detected in your JSON syntax: ' + str(ValueError)
         print 'Exiting.'
         sys.exit()
-
-def main(json_args):
+        
+def main(json_args, use_gui=True):
     app = QtGui.QApplication(sys.argv)
     validate(json_args)
-    ui = DynamicUI(json_args)
-    result = app.exec_()
+    ui = DynamicUI(json_args, use_gui)
+    if use_gui == True:
+        result = app.exec_()
+    else:
+        ui.resetParametersToDefaults()
+        ui.assembleOutputDict()
+        md = ModelDialog(ui,
+                         ui.attributes['targetScript'],
+                         ui.outputDict,
+                         ui.attributes['modelName'],
+                         printToStdOut = True)
+        md.exec_()
 
-        
 if __name__ == '__main__':
-    modulename, json_args = sys.argv
+    #Optparse module is deprecated since python 2.7.  Using here since OSGeo4W
+    #is version 2.5.
+    parser = OptionParser()
+    parser.add_option('-t', '--test', action='store_false', default=True, dest='test')
+    (options, args) = parser.parse_args(sys.argv)
+
+    modulename, json_args = args
 
     args = open(json_args)
 
-    main(args.read())
+    main(args.read(), options.test)
+    
+    

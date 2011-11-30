@@ -1,2 +1,4 @@
 #!/bin/bash
-python ./setup.py build_ext --inplace
+INCLUDE="-I." \
+LDFLAGS="-L." \
+    python ./setup.py build_ext --inplace
