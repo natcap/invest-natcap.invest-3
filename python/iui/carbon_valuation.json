@@ -3,6 +3,7 @@
     "label": "Valuation of Carbon Sequestration",
     "targetScript": "./python/invest_core/carbon_valuation.py",
     "modelName": "carbon_valuation",
+    "localDocURI": "./documentation/carbonstorage.html",
     "height": 400,
     "width": 500,
     "elements": [

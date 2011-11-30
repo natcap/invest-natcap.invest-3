@@ -1071,8 +1071,17 @@ class DynamicUI(DynamicGroup):
                 to the user for interaction.  Necessary for testing.
             
             returns an instance of DynamicUI."""
-            
-        super(DynamicUI, self).__init__(json.loads(uri), QtGui.QVBoxLayout())
+        layout = QtGui.QVBoxLayout()
+        self.docWidget = QtGui.QLabel('')
+        layout.addWidget(self.docWidget)
+        
+        super(DynamicUI, self).__init__(json.loads(uri), layout)
+
+        docURI = '<a href=\"file:///' + os.path.abspath(invest_root +
+                                       self.attributes['localDocURI']) + '\"> \
+Documentation</a>'
+        self.docWidget.setOpenExternalLinks(True)
+        self.docWidget.setText(docURI)
         self.lastRun = {}
         self.messageArea = QtGui.QLabel('')
         self.layout().addWidget(self.messageArea)
@@ -1558,6 +1567,8 @@ def validate(jsonObject):
                            "optional": False},
                 "width": {"type": "integer",
                           "optional": False},
+                "localDocURI": {"type": "string",
+                                "optional": False},
                 "elements": elements
                 }
               }

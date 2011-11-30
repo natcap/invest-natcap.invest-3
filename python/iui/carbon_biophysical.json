@@ -3,6 +3,7 @@
     "label": "Carbon Storage and Sequestration",
     "targetScript" : "./python/invest_core/carbon_biophysical.py",
     "modelName" : "carbon_biophysical",
+    "localDocURI": "./documentation/carbonstorage.html",
     "height": 400,
     "width" : 500,
     "elements": [
