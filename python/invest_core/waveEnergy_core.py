@@ -11,6 +11,8 @@ import invest_cython_core
 import sys, os
 import scipy
 
+from Decimal import *
+
 def biophysical(args):
     """
     args['wave_base_data'] - a dictionary
