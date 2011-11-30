@@ -8,8 +8,33 @@ import math
 from osgeo import gdal, osr
 import logging
 import scipy
-from queue import Queue
 logger = logging.getLogger('invest_cython_core')
+
+cimport cqueue
+cdef class Queue:
+    cdef cqueue.Queue *_c_queue
+    def __cinit__(self,items=None):
+        self._c_queue = cqueue.queue_new()
+        if items != None:
+            for i in items:
+                cqueue.queue_push_tail(self._c_queue,i)
+
+    def __dealloc__(self):
+        cqueue.queue_free(self._c_queue)
+        
+    def __len__(self): 
+        return cqueue.queue_size(self._c_queue)
+
+    cpdef extend(self, items):
+        for i in items:
+            cqueue.queue_push_tail(self._c_queue,i)
+
+    cpdef int pop(self):
+        return cqueue.queue_pop_head(self._c_queue)
+    
+    cpdef append(self, int x):
+        cqueue.queue_push_tail(self._c_queue, x)
+
 
 def newRasterFromBase(base, outputURI, format, nodata, datatype):
     """Create a new, empty GDAL raster dataset with the spatial references,
@@ -341,6 +366,89 @@ def flowDirection(dem, flow):
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
     return flow
 
+cdef Queue calculateInflowNeighbors(int i, int j, np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix,
+                                    int nodataFlowDirection):
+    """Returns a list of the neighboring pixels to i,j that are in bounds
+        and also flow into point i,j.  This information is inferred from
+        the flowDirectionMatrix"""
+
+    #consider neighbors who flow into i,j, so shift the pixels backwards.
+    #example: 1 means flow to the right, so check the pixel to the right
+    #to see if it flows into the current pixel, thus 1:(-1,0)
+    #shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1), 8:(1, -1), 16:(1, 0),
+    #                32:(1, 1), 64:(0, 1), 128:(-1, 1)}
+    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = \
+        np.array([1,-1, 0, 2,-1, -1, 4, 0, -1, 8, 1, -1, 16, 1, 0,
+                    32, 1, 1, 64, 0, 1, 128, -1, 1])
+    cdef int pi, pj, dir, k, n
+    cdef Queue neighbors = Queue()
+    for k in range(8):
+        dir = shiftIndexes[k*3]
+        pi = i + shiftIndexes[k*3+1]
+        pj = j + shiftIndexes[k*3+2]
+        #ensure that the offsets are within bounds of the matrix
+        if pi >= 0 and pj >= 0 and pi < flowDirectionMatrix.shape[0] and \
+            pj < flowDirectionMatrix.shape[1]:
+            if flowDirectionMatrix[pi, pj] == nodataFlowDirection:
+                continue
+            if flowDirectionMatrix[pi, pj] == dir:
+                neighbors.extend([pi, pj])
+    return neighbors
+
+cdef calculateFlow(Queue pixelsToProcess, 
+                      np.ndarray[np.int_t,ndim=2] accumulationMatrix,
+                      np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix,
+                      nodataFlowDirection, nodataFlowAccumulation):
+    """Takes a list of pixels to calculate flow for, then does a 
+        dynamic style programming process of visiting and updating
+        each one as it needs processing.  Modified `accumulationMatrix`
+        during processing.
+        
+        pixelsToProcess - a collections.deque of (i,j) tuples"""
+    cdef int i,j
+    logger = logging.getLogger('calculateFlow')
+    while len(pixelsToProcess) > 0:
+        i = pixelsToProcess.pop()
+        j = pixelsToProcess.pop()
+        #nodata out the values that don't need processing
+        if flowDirectionMatrix[i,j] == nodataFlowDirection:
+            accumulationMatrix[i, j] = nodataFlowAccumulation
+            continue
+        
+        #if p is calculated, skip its calculation
+        if accumulationMatrix[i, j] != -1: continue
+
+        #if any neighbors flow into p and are uncalculated, push p and
+        #neighbors on the stack
+        neighbors = calculateInflowNeighbors(i, j, flowDirectionMatrix, nodataFlowDirection)
+        incomplete = False
+        n = len(neighbors)
+        for k in range(n):
+            ni, nj = neighbors.pop(),neighbors.pop()
+            neighbors.append(ni)
+            neighbors.append(nj)
+            #Turns out one of the neighbors is uncalculated
+            #Stop checking and process all later
+            if accumulationMatrix[ni, nj] == -1:
+                incomplete = True
+                break
+            
+        #If one of the neighbors was uncalculated, push the pixel and 
+        #neighbors back on the processing list
+        if incomplete:
+            #Put p first, so it's not visited again until neighbors 
+            #are processed
+            pixelsToProcess.extend([i, j])
+            while (len(neighbors) > 0):
+                pixelsToProcess.append(neighbors.pop())
+        else:
+            #Otherwise, all the inflow neighbors are calculated so do the
+            #pixelflow calculation 
+            accumulationMatrix[i, j] = 0
+            while len(neighbors) > 0:
+                ni, nj = neighbors.pop(),neighbors.pop()
+                accumulationMatrix[i, j] += 1 + accumulationMatrix[ni, nj]
+
 @cython.boundscheck(False)
 def flowAccumulation(flowDirection, flowAccumulation):
     """Creates a raster of accumulated flow to each cell.
@@ -371,88 +479,6 @@ def flowAccumulation(flowDirection, flowAccumulation):
         np.zeros([xdim, ydim],dtype=np.int)
     accumulationMatrix[:] = -1
 
-    def calculateInflowNeighbors(int i, int j, 
-                                 np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix):
-        """Returns a list of the neighboring pixels to i,j that are in bounds
-            and also flow into point i,j.  This information is inferred from
-            the flowDirectionMatrix"""
-
-        #consider neighbors who flow into i,j, so shift the pixels backwards.
-        #example: 1 means flow to the right, so check the pixel to the right
-        #to see if it flows into the current pixel, thus 1:(-1,0)
-        #shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1), 8:(1, -1), 16:(1, 0),
-        #                32:(1, 1), 64:(0, 1), 128:(-1, 1)}
-        cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = \
-            np.array([1,-1, 0, 2,-1, -1, 4, 0, -1, 8, 1, -1, 16, 1, 0,
-                        32, 1, 1, 64, 0, 1, 128, -1, 1])
-        cdef int pi, pj, dir, k, n
-        neighbors = Queue()
-        for k in range(8):
-            dir = shiftIndexes[k*3]
-            pi = i + shiftIndexes[k*3+1]
-            pj = j + shiftIndexes[k*3+2]
-            #ensure that the offsets are within bounds of the matrix
-            if pi >= 0 and pj >= 0 and pi < flowDirectionMatrix.shape[0] and \
-                pj < flowDirectionMatrix.shape[1]:
-                if flowDirectionMatrix[pi, pj] == nodataFlowDirection:
-                    continue
-                if flowDirectionMatrix[pi, pj] == dir:
-                    neighbors.extend([pi, pj])
-        return neighbors
-
-    def calculateFlow(pixelsToProcess, 
-                      np.ndarray[np.int_t,ndim=2] accumulationMatrix,
-                      np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix):
-        """Takes a list of pixels to calculate flow for, then does a 
-            dynamic style programming process of visiting and updating
-            each one as it needs processing.  Modified `accumulationMatrix`
-            during processing.
-            
-            pixelsToProcess - a collections.deque of (i,j) tuples"""
-        cdef int i,j
-        logger = logging.getLogger('calculateFlow')
-        while len(pixelsToProcess) > 0:
-            i = pixelsToProcess.pop()
-            j = pixelsToProcess.pop()
-            #nodata out the values that don't need processing
-            if flowDirectionMatrix[i,j] == nodataFlowDirection:
-                accumulationMatrix[i, j] = nodataFlowAccumulation
-                continue
-            
-            #if p is calculated, skip its calculation
-            if accumulationMatrix[i, j] != -1: continue
-
-            #if any neighbors flow into p and are uncalculated, push p and
-            #neighbors on the stack
-            neighbors = calculateInflowNeighbors(i, j, flowDirectionMatrix)
-            incomplete = False
-            n = len(neighbors)
-            for k in range(n):
-                ni, nj = neighbors.pop(),neighbors.pop()
-                neighbors.append(ni)
-                neighbors.append(nj)
-                #Turns out one of the neighbors is uncalculated
-                #Stop checking and process all later
-                if accumulationMatrix[ni, nj] == -1:
-                    incomplete = True
-                    break
-                
-            #If one of the neighbors was uncalculated, push the pixel and 
-            #neighbors back on the processing list
-            if incomplete:
-                #Put p first, so it's not visited again until neighbors 
-                #are processed
-                pixelsToProcess.extend([i, j])
-                while (len(neighbors) > 0):
-                    pixelsToProcess.append(neighbors.pop())
-            else:
-                #Otherwise, all the inflow neighbors are calculated so do the
-                #pixelflow calculation 
-                accumulationMatrix[i, j] = 0
-                while len(neighbors) > 0:
-                    ni, nj = neighbors.pop(),neighbors.pop()
-                    accumulationMatrix[i, j] += 1 + accumulationMatrix[ni, nj]
-
     logger.info('calculating flow accumulation')
 
     q=Queue([1,2,3,4,3,2,1])
@@ -466,6 +492,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
                 logger.debug('percent complete %2.2f %%' % 
                              (100*(x+1.0)/accumulationMatrix.shape[0]))
                 lastx=x
-            calculateFlow(Queue([x, y]),accumulationMatrix,flowDirectionMatrix)
+            calculateFlow(Queue([x, y]),accumulationMatrix,flowDirectionMatrix,
+                          nodataFlowDirection, nodataFlowAccumulation)
 
     flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix.transpose(), 0, 0)
