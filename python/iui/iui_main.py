@@ -419,6 +419,8 @@ class DynamicText(DynamicPrimitive):
             self.root = self.getRoot()
         
         self.root.messageArea.setText('')
+        self.root.resetButton.setDisabled(False)
+
         
         #If the user has already pressed the OK button and some text is updated,
         #we need to check all other elements and update the main window 
@@ -995,6 +997,9 @@ class DynamicUI(DynamicGroup):
         """Reset all parameters to defaults provided in the configuration file.
         
             returns nothing"""
+
+        self.resetButton.setDisabled(True)
+        self.messageArea.setText('Parameters reset to defaults')
             
         for id, element in self.allElements.iteritems():
             if isinstance(element, DynamicPrimitive):
@@ -1116,13 +1121,12 @@ Documentation</a>'
         except KeyError:
             print 'Modelname required in config file to load last run\'s arguments'
         
+        self.addButtons()
         self.initElements()
         
         #this groups all elements together at the top, leaving the
         #buttons at the bottom of the window.
         self.layout().insertStretch(-1)
-        
-        self.addButtons()
         
         if 'width' in self.attributes:
             width = self.attributes['width']
@@ -1163,6 +1167,7 @@ Documentation</a>'
         #connect the buttons to their functions.
         self.runButton.clicked.connect(self.okPressed)
         self.cancelButton.clicked.connect(self.closeWindow)
+        self.resetButton.clicked.connect(self.resetParametersToDefaults)
 
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
@@ -1197,10 +1202,12 @@ Documentation</a>'
                 print AttribteError.message
 
             #if the parameters from the last run have been loaded, display a 
-            #status message
+            #status message.  Otherwise, display a reset message.
             if self.lastRun != {}:
                 self.messageArea.setText('Parameters from your last run have \
 been loaded.')
+            else:
+                self.resetButton.setDisabled(True)
 
     def recursiveToggle(self, controllingID):
         """Enable or disable all objects enabledBy controllingID based on 
