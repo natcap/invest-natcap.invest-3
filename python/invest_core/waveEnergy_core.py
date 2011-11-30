@@ -16,6 +16,7 @@ def biophysical(args):
     """
     args['wave_base_data'] - a dictionary
     args['analysis_area'] - 
+    args['analysis_area_extract']
     args['AOI'] - a shapefile
     args['machine_perf'] - a dictionary
     args['machine_param'] - a dictionary
@@ -27,10 +28,12 @@ def biophysical(args):
     workspaceDir = args['workspace_dir']
     waveDataDir = args['wave_data_dir']
     filesystemencoding = sys.getfilesystemencoding()
+    
     #Shapefile of polygon that has the dimensions for providing the area of interest
-    cutter_uri = waveDataDir + os.sep + 'WCNA_extract.shp'
-    cutter = ogr.Open(cutter_uri.encode(filesystemencoding))
-    cutterLayer = cutter.GetLayer(0)
+    if 'AOI' in args:
+        cutter = args['AOI']
+    else:
+        cutter = args['analysis_area_extract']
 
     global_dem = args['dem']
     format = 'GTiff'
@@ -59,14 +62,13 @@ def biophysical(args):
     for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], layer, options=['ATTRIBUTE=' + prop])
-
-    
-    heightPeriodArray = pointShapeToDict(args['analysis_area'])
-    interpolateHeight(heightPeriodArray, waveHeightRaster)
-    interpolatePeriod(heightPeriodArray, wavePeriodRaster)
     
     outputPath = '../../test_data/wave_Energy/Intermediate/WaveData_clipZ.shp'
     aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
+
+    heightPeriodArray = pointShapeToDict(args['analysis_area'])
+    interpolateHeight(heightPeriodArray, waveHeightRaster)
+    interpolatePeriod(heightPeriodArray, wavePeriodRaster)
 
     wavePowerPath = '../../test_data/wave_Energy/Intermediate/wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
