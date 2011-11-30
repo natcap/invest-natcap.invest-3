@@ -11,7 +11,6 @@ import invest_cython_core
 import sys, os
 import scipy
 
-from Decimal import *
 
 def biophysical(args):
     """
@@ -167,8 +166,10 @@ def pointShapeToDict(shape):
             field_index = shape_feat.GetFieldIndex(field)
             itemArray[var] = shape_feat.GetField(field_index)
             
-        itemArray[2] = round(itemArray[2], 6)
-        itemArray[3] = round(itemArray[3], 6)
+#        itemArray[2] = '%.6f' % itemArray[2]
+#        itemArray[3] = '%.6f' % itemArray[3]
+#        itemArray[4] = '%.2f' % itemArray[4]
+#        itemArray[5] = '%.2f' % itemArray[5]
         xrangeLong.append(itemArray[2])
         yrangeLat.append(itemArray[3])
         
@@ -178,7 +179,7 @@ def pointShapeToDict(shape):
         shape_feat.Destroy()
         shape_feat = shape_layer.GetNextFeature()
         
-    shape.Destroy()
+#    shape.Destroy()
     
     xrangeLongNoDup = list(set(xrangeLong))
     yrangeLatNoDup = list(set(yrangeLat))
