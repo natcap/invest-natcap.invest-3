@@ -215,34 +215,25 @@ def interpolateHeight(results, raster):
     yrange = results[1]
     matrixHeight = results[2]
     
-    print xrange.shape
-    print yrange.shape
-    print matrixHeight.shape
-    
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
     matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
     newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
     newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
     
-    print newxrange.shape
-    print newyrange.shape
-    
     #This is probably true if north is up
     if gt[5] < 0:
-        newyrange = newyrange[::-1]
-        matrix = matrix[::-1]
+        print 'North is up'
+#        yrange = yrange[::-1]
+#        matrixHeight = matrixHeight[::-1]
 
-#    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange,
-#                                                matrixHeight,
-#                                                kx=1, ky=1)
-#    spl = spl(newyrange, newxrange)[::-1]
+    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrixHeight, kx=1, ky=1)
+    spl = spl(newyrange[::-1], newxrange)[::-1]
 
-    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
-    spl = spl(newxrange, newyrange).transpose()
+#    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
+#    spl = spl(newxrange, newyrange).transpose()
 
     band.WriteArray(spl, 0, 0)
-    print "AFTER INTERPOLATE"
 
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     heightBand = waveHeight.GetRasterBand(1)
