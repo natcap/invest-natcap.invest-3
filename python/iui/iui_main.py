@@ -418,6 +418,8 @@ class DynamicText(DynamicPrimitive):
         if self.root == None:
             self.root = self.getRoot()
         
+        self.root.messageArea.setText('')
+        
         #If the user has already pressed the OK button and some text is updated,
         #we need to check all other elements and update the main window 
         #notifications accordingly.
@@ -1115,6 +1117,11 @@ Documentation</a>'
             print 'Modelname required in config file to load last run\'s arguments'
         
         self.initElements()
+        
+        #this groups all elements together at the top, leaving the
+        #buttons at the bottom of the window.
+        self.layout().insertStretch(-1)
+        
         self.addButtons()
         
         if 'width' in self.attributes:
@@ -1138,13 +1145,20 @@ Documentation</a>'
         
             returns nothing."""
             
-        self.runButton = QtGui.QPushButton('Run')
-        self.cancelButton = QtGui.QPushButton('Quit') 
+        self.runButton = QtGui.QPushButton(' Run')
+        self.runButton.setIcon(QtGui.QIcon(cmd_folder + '/dialog-ok.png'))
+        
+        self.cancelButton = QtGui.QPushButton(' Quit') 
+        self.cancelButton.setIcon(QtGui.QIcon(cmd_folder + '/dialog-close.png'))
+        
+        self.resetButton = QtGui.QPushButton(' Reset')
+        self.resetButton.setIcon(QtGui.QIcon(cmd_folder + '/edit-undo.png'))
        
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()
-        self.buttonBox.addButton(self.runButton, 0)
-        self.buttonBox.addButton(self.cancelButton, 1)
+        self.buttonBox.addButton(self.runButton, QtGui.QDialogButtonBox.AcceptRole)
+        self.buttonBox.addButton(self.cancelButton, QtGui.QDialogButtonBox.RejectRole)
+        self.buttonBox.addButton(self.resetButton, QtGui.QDialogButtonBox.ResetRole)
         
         #connect the buttons to their functions.
         self.runButton.clicked.connect(self.okPressed)
@@ -1340,7 +1354,9 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
             returns nothing."""
             
         if self.root == None:
-            self.root = self.getRoot()   
+            self.root = self.getRoot()
+            
+        self.root.messageArea.setText('')
         
         self.root.updateRequirementNotification()
         self.root.recursiveToggle(self.attributes['id'])
