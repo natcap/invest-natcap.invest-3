@@ -372,6 +372,7 @@ def flowDirection(dem, flow):
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
     return flow
 
+
 cdef Queue calculateInflowNeighbors(int i, int j, 
                     np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix, 
                     int nodataFlowDirection):
@@ -399,21 +400,23 @@ cdef Queue calculateInflowNeighbors(int i, int j,
             if flowDirectionMatrix[pi, pj] == nodataFlowDirection:
                 continue
             if flowDirectionMatrix[pi, pj] == dir:
-                neighbors.extend([pi, pj])
+                neighbors.append(pi)
+                neighbors.append(pj)
     return neighbors
 
-cdef calculateFlow(Queue pixelsToProcess, 
+@cython.boundscheck(False)
+cdef void calculateFlow(Queue pixelsToProcess, 
                       np.ndarray[np.int_t,ndim=2] accumulationMatrix,
                       np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix,
-                      nodataFlowDirection, nodataFlowAccumulation):
+                      int nodataFlowDirection, int nodataFlowAccumulation):
     """Takes a list of pixels to calculate flow for, then does a 
         dynamic style programming process of visiting and updating
         each one as it needs processing.  Modified `accumulationMatrix`
         during processing.
         
         pixelsToProcess - a collections.deque of (i,j) tuples"""
-    cdef int i,j
-    logger = logging.getLogger('calculateFlow')
+    cdef int i,j, ni, nj, runningSum
+    #logger = logging.getLogger('calculateFlow')
     while pixelsToProcess.size() > 0:
         i = pixelsToProcess.pop()
         j = pixelsToProcess.pop()
@@ -433,7 +436,7 @@ cdef calculateFlow(Queue pixelsToProcess,
         #neighbors on the stack
         neighbors = calculateInflowNeighbors(i, j, flowDirectionMatrix, 
                                              nodataFlowDirection)
-        n = len(neighbors)
+        n = neighbors.size()
         #logger.debug("%s neighbors" % n)
         incomplete = False
         for k in range(n):
@@ -454,7 +457,7 @@ cdef calculateFlow(Queue pixelsToProcess,
             #are processed
             pixelsToProcess.push(j)
             pixelsToProcess.push(i)
-            while (len(neighbors) > 0):
+            while (neighbors.size() > 0):
                 ni,nj = neighbors.pop(), neighbors.pop()
                 pixelsToProcess.push(nj)
                 pixelsToProcess.push(ni)
@@ -462,9 +465,12 @@ cdef calculateFlow(Queue pixelsToProcess,
             #Otherwise, all the inflow neighbors are calculated so do the
             #pixelflow calculation 
             accumulationMatrix[i, j] = 0
-            while len(neighbors) > 0:
+            runningSum = 0
+            while neighbors.size() > 0:
                 ni, nj = neighbors.pop(),neighbors.pop()
-                accumulationMatrix[i, j] += 1 + accumulationMatrix[ni, nj]
+                runningSum += 1 + accumulationMatrix[ni, nj]
+            accumulationMatrix[i, j] = runningSum
+    return
 
 @cython.boundscheck(False)
 def flowAccumulation(flowDirection, flowAccumulation):
