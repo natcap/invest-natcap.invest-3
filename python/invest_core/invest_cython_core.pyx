@@ -385,7 +385,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
         cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = \
             np.array([1,-1, 0, 2,-1, -1, 4, 0, -1, 8, 1, -1, 16, 1, 0,
                         32, 1, 1, 64, 0, 1, 128, -1, 1])
-        cdef int pi, pj, dir, k
+        cdef int pi, pj, dir, k, n
         neighbors = Queue()
         for k in range(8):
             dir = shiftIndexes[k*3]
@@ -397,7 +397,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
                 if flowDirectionMatrix[pi, pj] == nodataFlowDirection:
                     continue
                 if flowDirectionMatrix[pi, pj] == dir:
-                    neighbors.extend([pi, pj],2)
+                    neighbors.extend([pi, pj])
         return neighbors
 
     def calculateFlow(pixelsToProcess, 
@@ -426,25 +426,31 @@ def flowAccumulation(flowDirection, flowAccumulation):
             #neighbors on the stack
             neighbors = calculateInflowNeighbors(i, j, flowDirectionMatrix)
             incomplete = False
-            for ni, nj in neighbors:
+            n = len(neighbors)
+            for k in range(n):
+                ni, nj = neighbors.pop(),neighbors.pop()
+                neighbors.append(ni)
+                neighbors.append(nj)
                 #Turns out one of the neighbors is uncalculated
                 #Stop checking and process all later
                 if accumulationMatrix[ni, nj] == -1:
                     incomplete = True
                     break
+                
             #If one of the neighbors was uncalculated, push the pixel and 
             #neighbors back on the processing list
             if incomplete:
                 #Put p first, so it's not visited again until neighbors 
                 #are processed
-                pixelsToProcess.extend([i, j],2)
-                while (neighbors.size() > 0):
+                pixelsToProcess.extend([i, j])
+                while (len(neighbors) > 0):
                     pixelsToProcess.append(neighbors.pop())
             else:
                 #Otherwise, all the inflow neighbors are calculated so do the
                 #pixelflow calculation 
                 accumulationMatrix[i, j] = 0
-                for ni, nj in neighbors:
+                while len(neighbors) > 0:
+                    ni, nj = neighbors.pop(),neighbors.pop()
                     accumulationMatrix[i, j] += 1 + accumulationMatrix[ni, nj]
 
     logger.info('calculating flow accumulation')

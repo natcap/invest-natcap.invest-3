@@ -14,9 +14,9 @@ cdef class Queue:
     def __len__(self): 
         return cqueue.queue_size(self._c_queue)
 
-    cdef extend(self, int* items, size_t count):
-        for i in range(count):
-            cqueue.queue_push_tail(self._c_queue,items[i])
+    cpdef extend(self, items):
+        for i in items:
+            cqueue.queue_push_tail(self._c_queue,i)
 
     cpdef int pop(self):
         return cqueue.queue_pop_head(self._c_queue)
