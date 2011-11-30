@@ -449,9 +449,12 @@ cdef calculateFlow(Queue pixelsToProcess,
         if incomplete:
             #Put p first, so it's not visited again until neighbors 
             #are processed
-            pixelsToProcess.extend([i, j])
+            pixelsToProcess.push(j)
+            pixelsToProcess.push(i)
             while (len(neighbors) > 0):
-                pixelsToProcess.append(neighbors.pop())
+                ni,nj = neighbors.pop(), neighbors.pop()
+                pixelsToProcess.push(nj)
+                pixelsToProcess.push(ni)
         else:
             #Otherwise, all the inflow neighbors are calculated so do the
             #pixelflow calculation 
