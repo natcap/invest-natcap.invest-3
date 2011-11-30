@@ -366,8 +366,9 @@ def flowDirection(dem, flow):
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
     return flow
 
-cdef Queue calculateInflowNeighbors(int i, int j, np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix,
-                                    int nodataFlowDirection):
+cdef Queue calculateInflowNeighbors(int i, int j, 
+                    np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix, 
+                    int nodataFlowDirection):
     """Returns a list of the neighboring pixels to i,j that are in bounds
         and also flow into point i,j.  This information is inferred from
         the flowDirectionMatrix"""
@@ -420,7 +421,8 @@ cdef calculateFlow(Queue pixelsToProcess,
 
         #if any neighbors flow into p and are uncalculated, push p and
         #neighbors on the stack
-        neighbors = calculateInflowNeighbors(i, j, flowDirectionMatrix, nodataFlowDirection)
+        neighbors = calculateInflowNeighbors(i, j, flowDirectionMatrix, 
+                                             nodataFlowDirection)
         incomplete = False
         n = len(neighbors)
         for k in range(n):
@@ -466,7 +468,8 @@ def flowAccumulation(flowDirection, flowAccumulation):
     #Load the input flow into a numpy array
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
-    cdef np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix = flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
+    cdef np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix = \
+        flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
         flowDirection.RasterXSize, flowDirection.RasterYSize).transpose()
     nodataFlowDirection = flowDirection.GetRasterBand(1).GetNoDataValue()
     nodataFlowAccumulation = flowAccumulation.GetRasterBand(1).GetNoDataValue()
@@ -481,10 +484,6 @@ def flowAccumulation(flowDirection, flowAccumulation):
 
     logger.info('calculating flow accumulation')
 
-    q=Queue([1,2,3,4,3,2,1])
-    while (len(q)>0):
-        print q.pop()
-
     lastx = -1
     for x in range(xdim):
         for y in range(ydim):
@@ -495,4 +494,5 @@ def flowAccumulation(flowDirection, flowAccumulation):
             calculateFlow(Queue([x, y]),accumulationMatrix,flowDirectionMatrix,
                           nodataFlowDirection, nodataFlowAccumulation)
 
-    flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix.transpose(), 0, 0)
+    flowAccumulation.GetRasterBand(1).WriteArray(\
+        accumulationMatrix.transpose(), 0, 0)
