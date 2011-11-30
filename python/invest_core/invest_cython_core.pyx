@@ -37,6 +37,9 @@ cdef class Queue:
     
     cpdef append(self, int x):
         cqueue.queue_push_tail(self._c_queue, x)
+        
+    cpdef int size(self):
+        return cqueue.queue_size(self._c_queue)
 
 
 def newRasterFromBase(base, outputURI, format, nodata, datatype):
@@ -411,7 +414,7 @@ cdef calculateFlow(Queue pixelsToProcess,
         pixelsToProcess - a collections.deque of (i,j) tuples"""
     cdef int i,j
     logger = logging.getLogger('calculateFlow')
-    while len(pixelsToProcess) > 0:
+    while pixelsToProcess.size() > 0:
         i = pixelsToProcess.pop()
         j = pixelsToProcess.pop()
         #logger.debug("pixelsToProcess i,j=%s %s" % (i,j))
