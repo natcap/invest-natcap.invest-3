@@ -351,7 +351,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
         
         returns nothing"""
 
-    cdef int nodataFlowDirection, nodataFlowAccumulation
+    cdef int nodataFlowDirection, nodataFlowAccumulation, x, y
 
     logger = logging.getLogger('flowAccumulation')
     logger.debug('initializing temporary buffers')
@@ -460,11 +460,12 @@ def flowAccumulation(flowDirection, flowAccumulation):
         print q.pop()
 
     lastx = -1
-    for (x, y), value in np.ndenumerate(accumulationMatrix):
-        if lastx != x:
-            logger.debug('percent complete %2.2f %%' % 
-                         (100*(x+1.0)/accumulationMatrix.shape[0]))
-            lastx=x
-        calculateFlow(Queue([x, y]),accumulationMatrix,flowDirectionMatrix)
+    for x in range(xdim):
+        for y in range(ydim):
+            if lastx != x:
+                logger.debug('percent complete %2.2f %%' % 
+                             (100*(x+1.0)/accumulationMatrix.shape[0]))
+                lastx=x
+            calculateFlow(Queue([x, y]),accumulationMatrix,flowDirectionMatrix)
 
     flowAccumulation.GetRasterBand(1).WriteArray(accumulationMatrix.transpose(), 0, 0)
