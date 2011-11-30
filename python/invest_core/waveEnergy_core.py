@@ -33,7 +33,6 @@ def biophysical(args):
     #Shapefile of polygon that has the dimensions for providing the area of interest
     if 'AOI' in args:
         cutter = args['AOI']
-        print 'AOI is cutter'
     else:
         cutter = args['analysis_area_extract']
 
@@ -75,6 +74,11 @@ def biophysical(args):
 
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
+
+    area_shape.Destroy()
+    cutter.Destroy()
+    waveHeightRaster.Destroy()
+    wavePeriodRaster.Destroy()
 
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
