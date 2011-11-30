@@ -411,22 +411,28 @@ cdef calculateFlow(Queue pixelsToProcess,
     while len(pixelsToProcess) > 0:
         i = pixelsToProcess.pop()
         j = pixelsToProcess.pop()
+        #logger.debug("pixelsToProcess i,j=%s %s" % (i,j))
         #nodata out the values that don't need processing
         if flowDirectionMatrix[i,j] == nodataFlowDirection:
             accumulationMatrix[i, j] = nodataFlowAccumulation
+            #logger.debug("nodataFlowDirection %s" % nodataFlowDirection)
             continue
         
         #if p is calculated, skip its calculation
-        if accumulationMatrix[i, j] != -1: continue
+        if accumulationMatrix[i, j] != -1:
+            #logger.debug("already calculated") 
+            continue
 
         #if any neighbors flow into p and are uncalculated, push p and
         #neighbors on the stack
         neighbors = calculateInflowNeighbors(i, j, flowDirectionMatrix, 
                                              nodataFlowDirection)
-        incomplete = False
         n = len(neighbors)
+        #logger.debug("%s neighbors" % n)
+        incomplete = False
         for k in range(n):
             ni, nj = neighbors.pop(),neighbors.pop()
+            #logger.debug("i,j=%s %s ni,nj=%s %s" % (i,j,ni,nj))
             neighbors.append(ni)
             neighbors.append(nj)
             #Turns out one of the neighbors is uncalculated
