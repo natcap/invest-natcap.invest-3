@@ -1081,6 +1081,7 @@ class DynamicUI(DynamicGroup):
                                        self.attributes['localDocURI']) + '\"> \
 Documentation</a>'
         self.docWidget.setOpenExternalLinks(True)
+        self.docWidget.setAlignment(QtCore.Qt.AlignRight)
         self.docWidget.setText(docURI)
         self.lastRun = {}
         self.messageArea = QtGui.QLabel('')
