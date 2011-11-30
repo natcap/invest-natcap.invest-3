@@ -1169,8 +1169,8 @@ class DynamicUI(DynamicGroup):
             
             #print an error if it is encountered.  In rare cases, 
             #element.enabledBy is not initialized properly.
-            except AttributeError as e:
-                print e.message
+            except AttributeError:
+                print AttribteError.message
 
             #if the parameters from the last run have been loaded, display a 
             #status message
