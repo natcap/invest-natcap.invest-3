@@ -31,10 +31,10 @@ def biophysical(args):
     filesystemencoding = sys.getfilesystemencoding()
     
     #Shapefile of polygon that has the dimensions for providing the area of interest
-    if 'AOI' in args:
-        cutter = args['AOI']
-    else:
-        cutter = args['analysis_area_extract']
+#    if 'AOI' in args:
+#        cutter = args['AOI']
+#    else:
+    cutter = args['analysis_area_extract']
 
     outputPath = interDir + os.sep + 'WaveData_clipZ.shp'
     aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
@@ -57,7 +57,7 @@ def biophysical(args):
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
     #Create rasters bounded by shape file of analyis area
     for path in (waveHeightPath, wavePeriodPath):
-        invest_cython_core.createRasterFromVectorExtents(30, 30,
+        invest_cython_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY,
                                               datatype, nodata, path, cutter)
 
     #Open created rasters
@@ -77,8 +77,8 @@ def biophysical(args):
 
     area_shape.Destroy()
     cutter.Destroy()
-    waveHeightRaster.Destroy()
-    wavePeriodRaster.Destroy()
+    waveHeightRaster = None
+    wavePeriodRaster = None
 
 
 def clipShape(shapeToClip, bindingShape, outputPath):
