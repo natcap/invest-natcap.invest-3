@@ -24,6 +24,8 @@ def biophysical(args):
     args['workspace_dir'] - the workspace path
         
     """
+    transformProjection(args['analysis_area_extract'], args['AOI'])
+    
     captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
     workspaceDir = args['workspace_dir']
     interDir = workspaceDir + os.sep + 'Intermediate'
@@ -91,7 +93,24 @@ def aoiBlankRaster(aoiShape, interDir, xRes, yRes, datatype):
     gdal.RasterizeLayer(blankRaster, [1], aoiShape.GetLayer(0))
     
     return blankRaster
+
+def transformProjection(targetProj, sourceProj):
+    source_Layer = sourceProj.GetLayer(0)
+    target_Layer = targetProj.GetLayer(0)
+    target_feat  = target_Layer.GetNextFeature()
+    target_geom  = target_feat.GetGeometryRef()
+    targetSR = target_geom.GetSpatialReference()
+    source_feat  = source_Layer.GetNextFeature()
+    source_geom  = source_feat.GetGeometryRef()
+    sourceSR = source_geom.GetSpatialReference()
     
+    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
+    source_geom.Transform(coordTrans)
+    source_Layer.SetSpatialFilter(source_geom)
+
+    print source_geom
+    print source_Layer.GetExtent()
+
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
 
