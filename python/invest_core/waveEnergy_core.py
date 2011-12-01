@@ -56,57 +56,30 @@ def biophysical(args):
     waveHeightPath = interDir + os.sep + 'waveHeight.tif'
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
     #Create rasters bounded by shape file of analyis area
-#    for path in (waveHeightPath, wavePeriodPath):
-#        invest_cython_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY,
-#                                              datatype, nodata, path, cutter)
+    for path in (waveHeightPath, wavePeriodPath):
+        invest_cython_core.createRasterFromVectorExtents(30, 30,
+                                              datatype, nodata, path, cutter)
 
-#    #Open created rasters
-#    waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
-#    wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
-#    #Rasterize the height and period values into respected rasters from shapefile
-#    for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
-#        raster.GetRasterBand(1).SetNoDataValue(nodata)
-#        gdal.RasterizeLayer(raster, [1], area_layer, options=['ATTRIBUTE=' + prop])
-#
-#    heightPeriodArray = pointShapeToDict(area_shape)
-#    interpolateHeight(heightPeriodArray, waveHeightRaster)
-#    interpolatePeriod(heightPeriodArray, wavePeriodRaster)
-#
-#    wavePowerPath = interDir + os.sep + 'wp_kw.tif'
-#    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
-#
-#    area_shape.Destroy()
-#    cutter.Destroy()
-#    waveHeightRaster.Destroy()
-#    wavePeriodRaster.Destroy()
-    shapeSpatialStuff(pixelSizeX, pixelSizeY, datatype, nodata, waveHeightPath, args['analysis_area_extract'])
-    shapeSpatialStuff(pixelSizeX, pixelSizeY, datatype, nodata, waveHeightPath, cutter)
-def shapeSpatialStuff(xRes, yRes, format, nodata, rasterFile, shp):
-    #Determine the width and height of the tiff in pixels based on desired
-    #x and y resolution
-    shpExtent = shp.GetLayer(0).GetExtent()
-    print shpExtent
-    tiff_width = int(math.ceil(abs(shpExtent[1] - shpExtent[0]) / xRes))
-    tiff_height = int(math.ceil(abs(shpExtent[3] - shpExtent[2]) / yRes))
-    print tiff_width
-    print tiff_height
+    #Open created rasters
+    waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
+    wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
+    #Rasterize the height and period values into respected rasters from shapefile
+    for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
+        raster.GetRasterBand(1).SetNoDataValue(nodata)
+        gdal.RasterizeLayer(raster, [1], area_layer, options=['ATTRIBUTE=' + prop])
 
-#    driver = gdal.GetDriverByName('GTiff')
-#    raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
-##    raster.GetRasterBand(1).SetNoDataValue(1.0)
-#
-#    #Set the transform based on the hupper left corner and given pixel
-#    #dimensions
-#    raster_transform = [shpExtent[0], xRes, 0.0, shpExtent[3], 0.0, -yRes]
-#    raster.SetGeoTransform(raster_transform)
-#
-#    #Use the same projection on the raster as the shapefile
-#    srs = osr.SpatialReference()
-#    srs.ImportFromWkt(shp.GetLayer(0).GetSpatialRef().__str__())
-#    raster.SetProjection(srs.ExportToWkt())
+    heightPeriodArray = pointShapeToDict(area_shape)
+    interpolateHeight(heightPeriodArray, waveHeightRaster)
+    interpolatePeriod(heightPeriodArray, wavePeriodRaster)
 
-    #Initalize everything to nodata
-#    raster.GetRasterBand(1).Fill(nodata)
+    wavePowerPath = interDir + os.sep + 'wp_kw.tif'
+    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
+
+    area_shape.Destroy()
+    cutter.Destroy()
+    waveHeightRaster.Destroy()
+    wavePeriodRaster.Destroy()
+
 
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
