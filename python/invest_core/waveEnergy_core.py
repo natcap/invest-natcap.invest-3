@@ -52,6 +52,9 @@ def biophysical(args):
     pixelSizeX = abs(geoform[1])
     pixelSizeY = abs(geoform[5])
 
+    blankRaster = aoiBlankRaster(cutter, interDir, pixelSizeX, pixelSizeY, datatype)
+
+
     #Rasters which will be past (along with global_dem) to vectorize with wave power op.
     waveHeightPath = interDir + os.sep + 'waveHeight.tif'
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
@@ -73,14 +76,22 @@ def biophysical(args):
     interpolatePeriod(heightPeriodArray, wavePeriodRaster)
 
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
-    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, aoiDictionary)
+    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
 
     area_shape.Destroy()
     cutter.Destroy()
     waveHeightRaster = None
     wavePeriodRaster = None
 
-
+def aoiBlankRaster(aoiShape, interDir, xRes, yRes, datatype):
+    rasterPath = interDir + os.sep + 'aoiBlankRaster.tif'
+    invest_cython_core.createRasterFromVectorExtents(xRes, yRes, datatype, 0, rasterPath, aoiShape)
+    blankRaster = gdal.Open(rasterPath, GA_Update)
+    blankRaster.GetRasterBand(1).SetNoDataValue(0)
+    gdal.RasterizeLayer(blankRaster, [1], aoiShape.GetLayer(0))
+    
+    return blankRaster
+    
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
 
@@ -271,7 +282,7 @@ def interpolatePeriod(results, raster):
 
     band.WriteArray(spl, 0, 0)
 
-def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
+def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
     heightBand = waveHeight.GetRasterBand(1)
     periodBand = waveHeight.GetRasterBand(1)
     heightNoData = heightBand.GetNoDataValue()
@@ -280,7 +291,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
     p = 1028
     g = 9.8
 
-    def op(a, b, c):
+    def op(a, b, c, d):
         c = np.absolute(c)
         tem = 2.0 * math.pi / (b * .86)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
@@ -288,7 +299,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, aoiDictionary):
         wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
         return wp
 
-    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op,
+    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation, blankRaster], op,
                                  rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
 
     #Need to interpolate raster outcome from above that plots wave power
