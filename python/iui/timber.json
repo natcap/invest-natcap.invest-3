@@ -3,6 +3,7 @@
     "label": "Managed Timber Production and Valuation",
     "targetScript": "./python/invest_core/timber.py",
     "modelName": "timber",
+    "localDocURI": "./documentation/managed_timber_production_model.html",
     "height": 400,
     "width": 500,
     "elements": [

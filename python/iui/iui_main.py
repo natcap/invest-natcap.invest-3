@@ -418,6 +418,10 @@ class DynamicText(DynamicPrimitive):
         if self.root == None:
             self.root = self.getRoot()
         
+        self.root.messageArea.setText('')
+        self.root.resetButton.setDisabled(False)
+
+        
         #If the user has already pressed the OK button and some text is updated,
         #we need to check all other elements and update the main window 
         #notifications accordingly.
@@ -993,6 +997,9 @@ class DynamicUI(DynamicGroup):
         """Reset all parameters to defaults provided in the configuration file.
         
             returns nothing"""
+
+        self.resetButton.setDisabled(True)
+        self.messageArea.setText('Parameters reset to defaults')
             
         for id, element in self.allElements.iteritems():
             if isinstance(element, DynamicPrimitive):
@@ -1071,8 +1078,18 @@ class DynamicUI(DynamicGroup):
                 to the user for interaction.  Necessary for testing.
             
             returns an instance of DynamicUI."""
-            
-        super(DynamicUI, self).__init__(json.loads(uri), QtGui.QVBoxLayout())
+        layout = QtGui.QVBoxLayout()
+        self.docWidget = QtGui.QLabel('')
+        layout.addWidget(self.docWidget)
+        
+        super(DynamicUI, self).__init__(json.loads(uri), layout)
+
+        docURI = '<a href=\"file:///' + os.path.abspath(invest_root +
+                                       self.attributes['localDocURI']) + '\"> \
+Documentation</a>'
+        self.docWidget.setOpenExternalLinks(True)
+        self.docWidget.setAlignment(QtCore.Qt.AlignRight)
+        self.docWidget.setText(docURI)
         self.lastRun = {}
         self.messageArea = QtGui.QLabel('')
         self.layout().addWidget(self.messageArea)
@@ -1104,8 +1121,12 @@ class DynamicUI(DynamicGroup):
         except KeyError:
             print 'Modelname required in config file to load last run\'s arguments'
         
-        self.initElements()
         self.addButtons()
+        self.initElements()
+        
+        #this groups all elements together at the top, leaving the
+        #buttons at the bottom of the window.
+        self.layout().insertStretch(-1)
         
         if 'width' in self.attributes:
             width = self.attributes['width']
@@ -1128,17 +1149,25 @@ class DynamicUI(DynamicGroup):
         
             returns nothing."""
             
-        self.runButton = QtGui.QPushButton('Run')
-        self.cancelButton = QtGui.QPushButton('Quit') 
+        self.runButton = QtGui.QPushButton(' Run')
+        self.runButton.setIcon(QtGui.QIcon(cmd_folder + '/dialog-ok.png'))
+        
+        self.cancelButton = QtGui.QPushButton(' Quit') 
+        self.cancelButton.setIcon(QtGui.QIcon(cmd_folder + '/dialog-close.png'))
+        
+        self.resetButton = QtGui.QPushButton(' Reset')
+        self.resetButton.setIcon(QtGui.QIcon(cmd_folder + '/edit-undo.png'))
        
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()
-        self.buttonBox.addButton(self.runButton, 0)
-        self.buttonBox.addButton(self.cancelButton, 1)
+        self.buttonBox.addButton(self.runButton, QtGui.QDialogButtonBox.AcceptRole)
+        self.buttonBox.addButton(self.cancelButton, QtGui.QDialogButtonBox.RejectRole)
+        self.buttonBox.addButton(self.resetButton, QtGui.QDialogButtonBox.ResetRole)
         
         #connect the buttons to their functions.
         self.runButton.clicked.connect(self.okPressed)
         self.cancelButton.clicked.connect(self.closeWindow)
+        self.resetButton.clicked.connect(self.resetParametersToDefaults)
 
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
@@ -1173,10 +1202,12 @@ class DynamicUI(DynamicGroup):
                 print AttribteError.message
 
             #if the parameters from the last run have been loaded, display a 
-            #status message
+            #status message.  Otherwise, display a reset message.
             if self.lastRun != {}:
                 self.messageArea.setText('Parameters from your last run have \
 been loaded.')
+            else:
+                self.resetButton.setDisabled(True)
 
     def recursiveToggle(self, controllingID):
         """Enable or disable all objects enabledBy controllingID based on 
@@ -1330,7 +1361,9 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
             returns nothing."""
             
         if self.root == None:
-            self.root = self.getRoot()   
+            self.root = self.getRoot()
+            
+        self.root.messageArea.setText('')
         
         self.root.updateRequirementNotification()
         self.root.recursiveToggle(self.attributes['id'])
@@ -1558,6 +1591,8 @@ def validate(jsonObject):
                            "optional": False},
                 "width": {"type": "integer",
                           "optional": False},
+                "localDocURI": {"type": "string",
+                                "optional": False},
                 "elements": elements
                 }
               }
@@ -1583,7 +1618,7 @@ def main(json_args, use_gui=True):
                          ui.outputDict,
                          ui.attributes['modelName'],
                          printToStdOut = True)
-        md.exec_()
+        app.exec_()
 
 if __name__ == '__main__':
     #Optparse module is deprecated since python 2.7.  Using here since OSGeo4W
