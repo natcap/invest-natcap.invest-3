@@ -760,10 +760,6 @@ class ModelDialog(QtGui.QDialog):
             self.modelProcess.terminate()
         self.cancel = True
         self.done(0)
-    
-    def showEvent(self, data):
-        if self.printToStdOut == True:
-            self.hide()
         
 class processThread(QtCore.QThread):
     """Class processThread loads a python module from source and runs its
@@ -822,7 +818,6 @@ class DynamicUI(DynamicGroup):
         
             returns nothing"""
         
-        print 'Cancelled.'
         sys.exit(0)
 
     def saveLastRun(self):
