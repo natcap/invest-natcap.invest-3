@@ -292,14 +292,14 @@ def calculateSlope(dem, uri=''):
     slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
     return slope
 
+"""This is a structure that's used in flow direction"""
 cdef struct Pair:
-    """This is a structure that's used in flow direction"""
     int i,j
     float h
 
+"""This is a compare function that can be passed to stdlib's qsort such
+    that pairs are sorted in increasing height order"""
 cdef int pairCompare(const_void *a, const_void *b):
-    """This is a compare function that can be passed to stdlib's qsort such
-        that pairs are sorted in increasing height order"""
     cdef float v = ((<Pair*>a)).h-((<Pair*>b)).h
     if v < 0: return -1
     if v > 0: return 1
