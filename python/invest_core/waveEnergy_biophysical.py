@@ -98,7 +98,7 @@ def execute(args):
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
         biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri']+os.sep+'NAmerica_WestCoast_4m.txt')
         biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
-        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding))
+        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding), 1)
     elif args['analysis_area_uri'] == 'East Coast of North America and Puerto Rico':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
@@ -126,7 +126,7 @@ def execute(args):
     AOI = None
     if 'AOI_uri' in args:
         try:
-            AOI = ogr.Open(args['AOI_uri'].encode(filesystemencoding))
+            AOI = ogr.Open(args['AOI_uri'].encode(filesystemencoding), 1)
             biophysicalargs['AOI'] = AOI
             
         except IOError, e:
