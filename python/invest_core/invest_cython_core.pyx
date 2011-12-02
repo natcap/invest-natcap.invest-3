@@ -10,6 +10,13 @@ import logging
 import scipy
 logger = logging.getLogger('invest_cython_core')
 
+cdef extern from "stdlib.h":
+    ctypedef void const_void "const void"
+    void qsort(void *base, int nmemb, int size,
+            int(*compar)(const_void *, const_void *)) 
+    void free(void* ptr)
+    void* malloc(size_t size)
+
 cimport cqueue
 cdef class Queue:
     cdef cqueue.Queue *_c_queue
@@ -285,6 +292,19 @@ def calculateSlope(dem, uri=''):
     slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
     return slope
 
+cdef struct Pair:
+    """This is a structure that's used in flow direction"""
+    int i,j
+    float h
+
+cdef int pairCompare(const_void *a, const_void *b):
+    """This is a compare function that can be passed to stdlib's qsort such
+        that pairs are sorted in increasing height order"""
+    cdef float v = ((<Pair*>a)).h-((<Pair*>b)).h
+    if v < 0: return -1
+    if v > 0: return 1
+    return 0
+
 @cython.boundscheck(False)
 def flowDirection(dem, flow):
     """Calculates the D8 pour point algorithm.  The output is a integer
@@ -319,8 +339,13 @@ def flowDirection(dem, flow):
        
        returns nothing"""
 
-    cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, d, nodataFlow
+    cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, d, nodataFlow, \
+        validPixelCount
     cdef np.float_t lowest, h, nodataDem
+    cdef Pair *demPixels = \
+        <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
+
+    
 
     nodataDem = dem.GetRasterBand(1).GetNoDataValue()
     nodataFlow = flow.GetRasterBand(1).GetNoDataValue()
@@ -336,6 +361,21 @@ def flowDirection(dem, flow):
     demMatrix[:] = demMatrixTmp
     
     xmax, ymax = demMatrix.shape[0], demMatrix.shape[1]
+    
+    #Construct a lookup table that sorts DEM pixels by height so we can process
+    #the lowest pixels to the highest in propagating shortest path distances.
+    validPixelCount = 0
+    for x in range(1,xmax-1):
+        for y in range(1,ymax-1):
+            h = demMatrix[x,y]
+            if h == nodataDem: continue
+            demPixels[validPixelCount].i = x
+            demPixels[validPixelCount].j = y
+            demPixels[validPixelCount].h = h
+            validPixelCount += 1
+    
+    #Sort pixels by increasing height
+    qsort(demPixels,validPixelCount,sizeof(Pair),pairCompare)
     
     #This matrix holds the flow direction value, initialize to zero
     cdef np.ndarray[np.int_t,ndim=2] flowMatrix = \
@@ -370,6 +410,9 @@ def flowDirection(dem, flow):
             flowMatrix[x,y] = dcur
 
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
+    
+    free(demPixels)
+    
     return flow
 
 cdef Queue calculateInflowNeighbors(int i, int j, 
