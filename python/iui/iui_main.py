@@ -1444,11 +1444,10 @@ class YearEntry(DynamicText):
         super(YearEntry, self).__init__(attributes)
         self.elements = [self.label, self.textField]
 
-        #set the min and max width to clarify that this entry should be a 4-digit year
-        self.textField.setMaximumWidth(70)
-        self.textField.setMinimumWidth(40)
-
-
+        #set the width attribute, if it's provided.
+        if 'width' in self.attributes:
+            self.textField.setMaximumWidth(self.attributes['width'])
+        
 class FileButton(QtGui.QPushButton):
     """This object is the button used in the FileEntry object that, when
         pressed, will open a file dialog (QtGui.QFileDialog).  The string URI
@@ -1533,6 +1532,8 @@ def validate(jsonObject):
                                   "optional": True},
                     "dataType": {"type" : "string",
                                  "optional": True},
+                    "width":{"type": "integer",
+                             "optional": True},
                     "requiredIf":{"type": "array",
                                   "optional": True,
                                   "items": {"type": "string"}
