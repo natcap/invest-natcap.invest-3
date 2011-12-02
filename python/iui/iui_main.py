@@ -1141,7 +1141,7 @@ class DynamicUI(DynamicGroup):
     
     def sendFeedback(self):
         feedbackURI = QtCore.QUrl('mailto:richsharp@stanford.edu' +
-                                  '?subject=InVEST\ Feedback',
+                                  '?subject=InVEST Feedback',
                                   QtCore.QUrl.TolerantMode)
         QtGui.QDesktopServices.openUrl(feedbackURI)
         
