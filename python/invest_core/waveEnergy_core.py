@@ -53,8 +53,7 @@ def biophysical(args):
     blankRaster = aoiBlankRaster(cutter, interDir, pixelSizeX, pixelSizeY, datatype)
     
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
-    aoiDictionary = clipShape(args['analysis_area'], cutter, waveShapePath)
-    area_shape = ogr.Open(waveShapePath, 1)
+    area_shape = clipShape(args['analysis_area'], cutter, waveShapePath)
     area_layer = area_shape.GetLayer(0)
     #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
     #and add the sum as a field to the shapefile
@@ -165,7 +164,6 @@ def clipShape(shapeToClip, bindingShape, outputPath):
         #For all the features in the current point shape (for all the points)
         #Check to see if they Intersect with the binding polygons geometry and
         #if they do, then add all of the fields and values from that point to the new shape
-        aoiDictionary = {}
         while in_feat is not None:
             geom = in_feat.GetGeometryRef()
             #Intersection returns a new geometry if they intersect
@@ -179,14 +177,6 @@ def clipShape(shapeToClip, bindingShape, outputPath):
                     src_field = in_feat.GetField(fld_index2)
                     out_feat.SetField(fld_index2, src_field)
 
-                itemArray = [0, 0, 0, 0]
-                
-                for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3)):
-                    field_index = in_feat.GetFieldIndex(field)
-                    itemArray[var] = in_feat.GetField(field_index)
-
-                aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3]]
-
                 shp_layer.CreateFeature(out_feat)
                 out_feat.Destroy()
 
@@ -194,11 +184,8 @@ def clipShape(shapeToClip, bindingShape, outputPath):
             in_feat = in_layer.GetNextFeature()
         clip_feat.Destroy()
         clip_feat = clip_layer.GetNextFeature()
-    #Close shapefiles
-#    bindingShape.Destroy()
-#    shapeToClip.Destroy()
-    shp_ds.Destroy()
-    return aoiDictionary
+
+    return shp_ds
 
 def pointShapeToDict(shape):
 
