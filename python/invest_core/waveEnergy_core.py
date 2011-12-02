@@ -328,31 +328,6 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
     invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation, blankRaster], op,
                                  rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
 
-    #Need to interpolate raster outcome from above that plots wave power
-    #Idea: Get indices of nonzero values to make up original range
-    #      Somehow generate a new matrix off from the nonzero values
-    #      matrix[np.nonzero(matrix)] will return array of values
-    #      Then use those values for base interpolation
-
-#    raster = gdal.Open(wavePowerPath, GA_Update)
-#    gt = raster.GetGeoTransform()
-#    band = raster.GetRasterBand(1)
-#    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-#    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-#    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-#    #This is probably true if north is up
-#    if gt[5] < 0:
-#        newyrange = newyrange[::-1]
-#        matrix = matrix[::-1]
-#
-#    spl = scipy.interpolate.RectBivariateSpline(newyrange, newxrange,
-#                                                matrix,
-#                                                kx=1, ky=1)
-#    spl = spl(newyrange, newxrange)[::-1]
-#
-#    band.WriteArray(spl, 0, 0)
-
-
 def npv():
     for num in range(1, T + 1):
         sum = sum + (B[num] - C[num]) * ((1 + i) ** (-1 * t))
