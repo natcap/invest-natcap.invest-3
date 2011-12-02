@@ -24,40 +24,43 @@ def biophysical(args):
     args['workspace_dir'] - the workspace path
         
     """
+    filesystemencoding = sys.getfilesystemencoding()
 #    transformProjection(args['analysis_area_extract'], args['AOI'])
-    
-    energyCap = captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
+
+    #Set variables for common output paths
     workspaceDir = args['workspace_dir']
     interDir = workspaceDir + os.sep + 'Intermediate'
+    outputDir = workspaceDir + os.sep + 'Output'
     waveDataDir = args['wave_data_dir']
-    filesystemencoding = sys.getfilesystemencoding()
+    waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
     
-    #Shapefile of polygon that has the dimensions for providing the area of interest
+    #Set global_dem and nodata values/datatype for new rasters
+    global_dem = args['dem']
+    nodata = -1
+    datatype = gdal.GDT_Float32
+    #Get the resolution from the global dem to be used for creating new blank rasters
+    geoform = global_dem.GetGeoTransform()
+    pixelSizeX = abs(geoform[1])
+    pixelSizeY = abs(geoform[5])
+    
+    #Determine which shapefile will be used to determine area of interest
 #    if 'AOI' in args:
 #        cutter = args['AOI']
 #    else:
     cutter = args['analysis_area_extract']
 
-    outputPath = interDir + os.sep + 'WaveData_clipZ.shp'
-    aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
-    area_shape = ogr.Open(outputPath, 1)
-    area_layer = area_shape.GetLayer(0)
-    
-    copyCapturedWaveEnergyToShape(energyCap, area_shape)
-
-    global_dem = args['dem']
-    format = 'GTiff'
-    nodata = -1
-    datatype = gdal.GDT_Float32
-
-    #Create a new raster that has the values of the WWW shapefile
-    #Get the resolution from the global dem
-    geoform = global_dem.GetGeoTransform()
-    pixelSizeX = abs(geoform[1])
-    pixelSizeY = abs(geoform[5])
-
+    #Blank raster to be used in clipping output rasters to areas of interest
     blankRaster = aoiBlankRaster(cutter, interDir, pixelSizeX, pixelSizeY, datatype)
-
+    
+    #Create a new shapefile that is a copy of analysis_area but bounded by AOI
+    aoiDictionary = clipShape(args['analysis_area'], cutter, waveShapePath)
+    area_shape = ogr.Open(waveShapePath, 1)
+    area_layer = area_shape.GetLayer(0)
+    #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
+    #and add the sum as a field to the shapefile
+    energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'], args['machine_param'])
+    energyCap = computeWaveEnergyCapacity(args['wave_base_data'], energyInterp)
+    capturedWaveEnergyToShape(energyCap, area_shape)
 
     #Rasters which will be past (along with global_dem) to vectorize with wave power op.
     waveHeightPath = interDir + os.sep + 'waveHeight.tif'
@@ -328,14 +331,14 @@ def npv():
 
     return npv
 
-def captureWaveEnergy(waveData, machinePerf, machineParam):
+def waveEnergyInterp(waveData, machinePerf, machineParam):
     x = np.array(machinePerf.pop(0))
     y = np.array(machinePerf.pop(0))
     z = np.array(machinePerf)
     newx = np.array(waveData[0])
     newy = np.array(waveData[1])
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
-    return computeWaveEnergyCapacity(waveData, interpZ)
+    return interpZ
 
 def computeWaveEnergyCapacity(waveData, interpZ):
     energyCap = {}
@@ -383,7 +386,7 @@ def computeWaveEnergyCapacity(waveData, interpZ):
 
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and
 #interpolate them and rasterize them.
-def copyCapturedWaveEnergyToShape(energyCap, waveShape):
+def capturedWaveEnergyToShape(energyCap, waveShape):
     
     wave_Layer = waveShape.GetLayer(0)
     wave_Layer.ResetReading()
