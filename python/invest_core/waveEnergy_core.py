@@ -120,6 +120,10 @@ def transformProjection(targetProj, sourceProj):
 #    print source_geom
 #    print source_Layer.GetExtent()
 
+#clipShape takes the shapefile you would like to cut down,
+#the polygon shape you want the other shapefile cut to,
+#and the path for the new shapefile
+#It returns a new shapefile in the same format/projection as shapeToClip
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
 
