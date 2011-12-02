@@ -26,7 +26,7 @@ def biophysical(args):
     """
     transformProjection(args['analysis_area_extract'], args['AOI'])
     
-    captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
+    energyCap = captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
     workspaceDir = args['workspace_dir']
     interDir = workspaceDir + os.sep + 'Intermediate'
     waveDataDir = args['wave_data_dir']
@@ -40,8 +40,10 @@ def biophysical(args):
 
     outputPath = interDir + os.sep + 'WaveData_clipZ.shp'
     aoiDictionary = clipShape(args['analysis_area'], cutter, outputPath)
-    area_shape = ogr.Open(outputPath)
+    area_shape = ogr.Open(outputPath, 1)
     area_layer = area_shape.GetLayer(0)
+    
+    copyCapturedWaveEnergyToShape(energyCap, area_shape)
 
     global_dem = args['dem']
     format = 'GTiff'
@@ -107,9 +109,9 @@ def transformProjection(targetProj, sourceProj):
     coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
     source_geom.Transform(coordTrans)
     source_Layer.SetSpatialFilter(source_geom)
-
-    print source_geom
-    print source_Layer.GetExtent()
+#
+#    print source_geom
+#    print source_Layer.GetExtent()
 
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
@@ -359,7 +361,7 @@ def captureWaveEnergy(waveData, machinePerf, machineParam):
     newx = np.array(waveData[0])
     newy = np.array(waveData[1])
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
-    computeWaveEnergyCapacity(waveData, interpZ)
+    return computeWaveEnergyCapacity(waveData, interpZ)
 
 def computeWaveEnergyCapacity(waveData, interpZ):
     energyCap = {}
@@ -403,15 +405,29 @@ def computeWaveEnergyCapacity(waveData, interpZ):
 
 #            print sum
     print energyCap[(556, 496)]
-    copyCapturedWaveEnergyToShape(energyCap)
     return energyCap
 
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and
 #interpolate them and rasterize them.
-def copyCapturedWaveEnergyToShape(energyCap):
-    energyCap = energyCap
+def copyCapturedWaveEnergyToShape(energyCap, waveShape):
+    
+    wave_Layer = waveShape.GetLayer(0)
+    field_def = ogr.FieldDefn('capWE_Sum', ogr.OFTReal)
+    wave_Layer.CreateField(field_def)
+    
+    for feat in wave_Layer:
+        iIndex = feat.GetFieldIndex('I')
+        jIndex = feat.GetFieldIndex('J')
+        iVal = feat.GetField(iIndex)
+        jVal = feat.GetField(jIndex)
+        value = energyCap[(iVal, jVal)]
+        
+        index = feat.GetFieldIndex('capWE_Sum')
+        feat.SetField(index, value)
 
-
+        #save the field modifications to the layer.
+        wave_Layer.SetFeature(feat)
+        feat.Destroy()
 
 
 
