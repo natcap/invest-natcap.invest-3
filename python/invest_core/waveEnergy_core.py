@@ -33,6 +33,8 @@ def biophysical(args):
     outputDir = workspaceDir + os.sep + 'Output'
     waveDataDir = args['wave_data_dir']
     waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
+    #Path for 'new' AOI, see comment below 'if AOI in args'
+    waveAOIPath = interDir + os.sep + 'waveAOIShape.shp'
     
     #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
@@ -44,10 +46,13 @@ def biophysical(args):
     pixelSizeY = abs(geoform[5])
     
     #Determine which shapefile will be used to determine area of interest
-#    if 'AOI' in args:
-#        cutter = args['AOI']
-#    else:
-    cutter = args['analysis_area_extract']
+    if 'AOI' in args:
+        #The AOI shapefile has a different projection than lat/long so by calling
+        #the clipShape function with analysis_area_extract (which has lat/long projection
+        #which we would expect) and AOI I am making a new AOI with the proper projection
+        cutter = clipShape(args['analysis_area_extract'], args['AOI'], waveAOIPath)        
+    else:
+        cutter = args['analysis_area_extract']
 
     #Blank raster to be used in clipping output rasters to areas of interest
     blankRaster = aoiBlankRaster(cutter, interDir, pixelSizeX, pixelSizeY, datatype)
