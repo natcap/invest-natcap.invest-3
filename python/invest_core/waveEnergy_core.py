@@ -62,22 +62,27 @@ def biophysical(args):
     #Rasters which will be past (along with global_dem) to vectorize with wave power op.
     waveHeightPath = interDir + os.sep + 'waveHeight.tif'
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
+    waveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
     #Create rasters bounded by shape file of analyis area
-    for path in (waveHeightPath, wavePeriodPath):
+    for path in (waveHeightPath, wavePeriodPath, waveEnergyPath):
         invest_cython_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY,
                                               datatype, nodata, path, cutter)
 
     #Open created rasters
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
+    waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
     #Rasterize the height and period values into respected rasters from shapefile
-    for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster)):
+    for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster),  ('capWE_Sum', waveEnergyRaster)):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], area_layer, options=['ATTRIBUTE=' + prop])
 
     heightPeriodArray = pointShapeToDict(area_shape)
     interpolateHeight(heightPeriodArray, waveHeightRaster)
     interpolatePeriod(heightPeriodArray, wavePeriodRaster)
+    
+    sumArray = pointShapeToDictWE(area_shape)
+    interpolateSum(sumArray, waveEnergyRaster)
 
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
@@ -429,7 +434,79 @@ def copyCapturedWaveEnergyToShape(energyCap, waveShape):
         wave_Layer.SetFeature(feat)
         feat.Destroy()
 
+    
+def pointShapeToDictWE(shape):
 
+    shape_layer = shape.GetLayer(0)
+    shape_layer.ResetReading()
+    shape_feat = shape_layer.GetNextFeature()
+    aoiDictionary = {}
+    latlongDict = {}
+    xrangeLong = []
+    yrangeLat = []
+    while shape_feat is not None:
 
+        itemArray = [0, 0, 0, 0, 0]
+        
+        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('capWE_Sum', 4)):
+            field_index = shape_feat.GetFieldIndex(field)
+            itemArray[var] = shape_feat.GetField(field_index)
+
+        xrangeLong.append(itemArray[2])
+        yrangeLat.append(itemArray[3])
+        
+        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4]]
+        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4]]
+        
+        shape_feat.Destroy()
+        shape_feat = shape_layer.GetNextFeature()
+        
+    xrangeLongNoDup = list(set(xrangeLong))
+    yrangeLatNoDup = list(set(yrangeLat))
+    
+    xrangeLongNoDup.sort()
+    yrangeLatNoDup.sort()
+    
+    xrangeLongNP = np.array(xrangeLongNoDup)
+    yrangeLatNP = np.array(yrangeLatNoDup)
+    matrixSum = []
+    for j in yrangeLatNP:
+        tmpSum = []
+        for i in xrangeLongNP:
+            if (i,j) in latlongDict:
+                tmpSum.append(latlongDict[(i,j)][0])
+            else:
+                tmpSum.append(0)
+        matrixSum.append(tmpSum)
+        
+    matrixSumNP = np.array(matrixSum)
+    
+    results = [xrangeLongNP, yrangeLatNP, matrixSumNP]
+    return results
+
+def interpolateSum(results, raster):
+    xrange = results[0]
+    yrange = results[1]
+    matrixSum = results[2]
+    
+    gt = raster.GetGeoTransform()
+    band = raster.GetRasterBand(1)
+    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
+    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
+    
+    #This is probably true if north is up
+    if gt[5] < 0:
+        print 'North is up'
+#        yrange = yrange[::-1]
+#        matrixHeight = matrixHeight[::-1]
+
+    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrixSum, kx=1, ky=1)
+    spl = spl(newyrange[::-1], newxrange)[::-1]
+
+#    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
+#    spl = spl(newxrange, newyrange).transpose()
+
+    band.WriteArray(spl, 0, 0)
 
 
