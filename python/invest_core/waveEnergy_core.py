@@ -213,11 +213,7 @@ def pointShapeToDict(shape):
         for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('HSAVG_M', 4), ('TPAVG_S', 5)):
             field_index = shape_feat.GetFieldIndex(field)
             itemArray[var] = shape_feat.GetField(field_index)
-            
-#        itemArray[2] = '%.6f' % itemArray[2]
-#        itemArray[3] = '%.6f' % itemArray[3]
-#        itemArray[4] = '%.2f' % itemArray[4]
-#        itemArray[5] = '%.2f' % itemArray[5]
+
         xrangeLong.append(itemArray[2])
         yrangeLat.append(itemArray[3])
         
@@ -226,9 +222,7 @@ def pointShapeToDict(shape):
         
         shape_feat.Destroy()
         shape_feat = shape_layer.GetNextFeature()
-        
-#    shape.Destroy()
-    
+
     xrangeLongNoDup = list(set(xrangeLong))
     yrangeLatNoDup = list(set(yrangeLat))
     
