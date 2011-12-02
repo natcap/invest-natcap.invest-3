@@ -1079,8 +1079,11 @@ class DynamicUI(DynamicGroup):
         #this is important because QtGui displays elements in the order in which
         #they are added.
         layout = QtGui.QVBoxLayout()
-        self.topButtonBox = QtGui.QDialogButtonBox()
-        layout.addWidget(self.topButtonBox)
+        
+        self.links = QtGui.QLabel()
+        self.links.setOpenExternalLinks(True)
+        self.links.setAlignment(QtCore.Qt.AlignRight)
+        layout.addWidget(self.links)
         
         super(DynamicUI, self).__init__(json.loads(uri), layout)
 
@@ -1115,7 +1118,7 @@ class DynamicUI(DynamicGroup):
         except KeyError:
             print 'Modelname required in config file to load last run\'s arguments'
         
-        self.addTopButtons()
+        self.addLinks()
         self.addBottomButtons()
         self.initElements()
         
@@ -1138,39 +1141,15 @@ class DynamicUI(DynamicGroup):
         #reveal the assembled UI to the user, but only if not testing.
         if self.use_gui:
             self.show()
+        
+    def addLinks(self):
+        docURI = 'file:///' + os.path.abspath(invest_root +
+                                     self.attributes['localDocURI'])
+        feedbackURI = 'mailto:richsharp@stanford.edu?subject=InVEST Feedback'
+        self.links.setText('<a href=\"' + docURI + '\">Model documentation' +
+                             '</a> | <a href=\"' + feedbackURI + '\">'+
+                             'Send feedback</a>')
     
-    def sendFeedback(self):
-        feedbackURI = QtCore.QUrl('mailto:richsharp@stanford.edu' +
-                                  '?subject=InVEST Feedback',
-                                  QtCore.QUrl.TolerantMode)
-        QtGui.QDesktopServices.openUrl(feedbackURI)
-        
-    def openDocs(self):
-        docURI = QtCore.QUrl('file:///' + os.path.abspath(invest_root +
-                                     self.attributes['localDocURI']),
-                             QtCore.QUrl.TolerantMode)
-        QtGui.QDesktopServices.openUrl(docURI)
-        
-    def addTopButtons(self):
-
-        docIcon = QtGui.QIcon(cmd_folder + '/dialog-information.png')
-        docToolTip = 'Check out this model\'s documentation'
-        docButtonRole = QtGui.QDialogButtonBox.AcceptRole
-        self.docButton = QtGui.QPushButton()
-        self.docButton.setIcon(docIcon)
-        self.docButton.setToolTip(docToolTip)
-        self.docButton.clicked.connect(self.openDocs)
-        self.topButtonBox.addButton(self.docButton, docButtonRole)
-        
-        feedbackIcon = QtGui.QIcon(cmd_folder + '/help-about.png')
-        feedbackToolTip = 'Tell us what you think!'
-        feedbackButtonRole = QtGui.QDialogButtonBox.AcceptRole
-        self.feedbackButton = QtGui.QPushButton()
-        self.feedbackButton.setIcon(feedbackIcon)
-        self.feedbackButton.setToolTip(feedbackToolTip)
-        self.feedbackButton.clicked.connect(self.sendFeedback)
-        self.topButtonBox.addButton(self.feedbackButton, feedbackButtonRole)
-        
     def addBottomButtons(self):
         """Assembles buttons and connects their callbacks.
         
