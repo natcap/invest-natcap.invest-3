@@ -4,7 +4,7 @@
     "targetScript": "./python/invest_core/timber.py",
     "modelName": "timber",
     "localDocURI": "./documentation/managed_timber_production_model.html",
-    "height": 400,
+    "height": 150,
     "width": 500,
     "elements": [
         {
@@ -39,6 +39,7 @@
                     "id": "discount",
                     "args_id": "market_disc_rate",
                     "type": "text",
+                    "width": 70,
                     "label": "Market discount rate (%)",
                     "required": true,
                     "dataType": "float",
