@@ -24,7 +24,7 @@ def biophysical(args):
     args['workspace_dir'] - the workspace path
         
     """
-    transformProjection(args['analysis_area_extract'], args['AOI'])
+#    transformProjection(args['analysis_area_extract'], args['AOI'])
     
     energyCap = captureWaveEnergy(args['wave_base_data'], args['machine_perf'], args['machine_param'])
     workspaceDir = args['workspace_dir']
@@ -417,6 +417,7 @@ def computeWaveEnergyCapacity(waveData, interpZ):
 def copyCapturedWaveEnergyToShape(energyCap, waveShape):
     
     wave_Layer = waveShape.GetLayer(0)
+    wave_Layer.ResetReading()
     field_def = ogr.FieldDefn('capWE_Sum', ogr.OFTReal)
     wave_Layer.CreateField(field_def)
     
