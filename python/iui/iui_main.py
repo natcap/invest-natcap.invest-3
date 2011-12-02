@@ -760,10 +760,6 @@ class ModelDialog(QtGui.QDialog):
             self.modelProcess.terminate()
         self.cancel = True
         self.done(0)
-    
-    def showEvent(self, data):
-        if self.printToStdOut == True:
-            self.hide()
         
 class processThread(QtCore.QThread):
     """Class processThread loads a python module from source and runs its
@@ -822,7 +818,6 @@ class DynamicUI(DynamicGroup):
         
             returns nothing"""
         
-        print 'Cancelled.'
         sys.exit(0)
 
     def saveLastRun(self):
@@ -1078,18 +1073,20 @@ class DynamicUI(DynamicGroup):
                 to the user for interaction.  Necessary for testing.
             
             returns an instance of DynamicUI."""
+            
+        #the top buttonbox needs to be initialized before super() is called, 
+        #since super() also creates all elements based on the user's JSON config
+        #this is important because QtGui displays elements in the order in which
+        #they are added.
         layout = QtGui.QVBoxLayout()
-        self.docWidget = QtGui.QLabel('')
-        layout.addWidget(self.docWidget)
+        
+        self.links = QtGui.QLabel()
+        self.links.setOpenExternalLinks(True)
+        self.links.setAlignment(QtCore.Qt.AlignRight)
+        layout.addWidget(self.links)
         
         super(DynamicUI, self).__init__(json.loads(uri), layout)
 
-        docURI = '<a href=\"file:///' + os.path.abspath(invest_root +
-                                       self.attributes['localDocURI']) + '\"> \
-Documentation</a>'
-        self.docWidget.setOpenExternalLinks(True)
-        self.docWidget.setAlignment(QtCore.Qt.AlignRight)
-        self.docWidget.setText(docURI)
         self.lastRun = {}
         self.messageArea = QtGui.QLabel('')
         self.layout().addWidget(self.messageArea)
@@ -1121,7 +1118,8 @@ Documentation</a>'
         except KeyError:
             print 'Modelname required in config file to load last run\'s arguments'
         
-        self.addButtons()
+        self.addLinks()
+        self.addBottomButtons()
         self.initElements()
         
         #this groups all elements together at the top, leaving the
@@ -1143,8 +1141,16 @@ Documentation</a>'
         #reveal the assembled UI to the user, but only if not testing.
         if self.use_gui:
             self.show()
-                    
-    def addButtons(self):
+        
+    def addLinks(self):
+        docURI = 'file:///' + os.path.abspath(invest_root +
+                                     self.attributes['localDocURI'])
+        feedbackURI = 'mailto:richsharp@stanford.edu?subject=InVEST Feedback'
+        self.links.setText('<a href=\"' + docURI + '\">Model documentation' +
+                             '</a> | <a href=\"' + feedbackURI + '\">'+
+                             'Send feedback</a>')
+    
+    def addBottomButtons(self):
         """Assembles buttons and connects their callbacks.
         
             returns nothing."""
@@ -1438,11 +1444,10 @@ class YearEntry(DynamicText):
         super(YearEntry, self).__init__(attributes)
         self.elements = [self.label, self.textField]
 
-        #set the min and max width to clarify that this entry should be a 4-digit year
-        self.textField.setMaximumWidth(70)
-        self.textField.setMinimumWidth(40)
-
-
+        #set the width attribute, if it's provided.
+        if 'width' in self.attributes:
+            self.textField.setMaximumWidth(self.attributes['width'])
+        
 class FileButton(QtGui.QPushButton):
     """This object is the button used in the FileEntry object that, when
         pressed, will open a file dialog (QtGui.QFileDialog).  The string URI
@@ -1527,6 +1532,8 @@ def validate(jsonObject):
                                   "optional": True},
                     "dataType": {"type" : "string",
                                  "optional": True},
+                    "width":{"type": "integer",
+                             "optional": True},
                     "requiredIf":{"type": "array",
                                   "optional": True,
                                   "items": {"type": "string"}

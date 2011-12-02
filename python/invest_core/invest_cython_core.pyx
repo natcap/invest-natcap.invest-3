@@ -25,20 +25,20 @@ cdef class Queue:
     def __len__(self): 
         return cqueue.queue_size(self._c_queue)
 
-    cpdef extend(self, items):
+    cdef extend(self, items):
         for i in items:
             cqueue.queue_push_tail(self._c_queue,i)
 
-    cpdef int pop(self):
+    cdef int pop(self):
         return cqueue.queue_pop_head(self._c_queue)
     
-    cpdef push(self, int x):
+    cdef push(self, int x):
         cqueue.queue_push_head(self._c_queue, x)
     
-    cpdef append(self, int x):
+    cdef append(self, int x):
         cqueue.queue_push_tail(self._c_queue, x)
         
-    cpdef int size(self):
+    cdef int size(self):
         return cqueue.queue_size(self._c_queue)
 
 
@@ -372,7 +372,6 @@ def flowDirection(dem, flow):
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
     return flow
 
-
 cdef Queue calculateInflowNeighbors(int i, int j, 
                     np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix, 
                     int nodataFlowDirection):
@@ -385,9 +384,8 @@ cdef Queue calculateInflowNeighbors(int i, int j,
     #to see if it flows into the current pixel, thus 1:(-1,0)
     #shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1), 8:(1, -1), 16:(1, 0),
     #                32:(1, 1), 64:(0, 1), 128:(-1, 1)}
-    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = \
-        np.array([1,-1, 0, 2,-1, -1, 4, 0, -1, 8, 1, -1, 16, 1, 0,
-                    32, 1, 1, 64, 0, 1, 128, -1, 1])
+    cdef int *shiftIndexes = [1,-1, 0, 2,-1, -1, 4, 0, -1, 8, 1, -1, 16, 1, 0,
+                    32, 1, 1, 64, 0, 1, 128, -1, 1]
     cdef int pi, pj, dir, k, n
     cdef Queue neighbors = Queue()
     for k in range(8):
@@ -510,8 +508,8 @@ def flowAccumulation(flowDirection, flowAccumulation):
     for x in range(xdim):
         for y in range(ydim):
             if lastx != x:
-#                logger.debug('percent complete %2.2f %%' % 
-#                             (100*(x+1.0)/accumulationMatrix.shape[0]))
+                logger.debug('percent complete %2.2f %%' % 
+                             (100*(x+1.0)/accumulationMatrix.shape[0]))
                 lastx=x
             q.append(x)
             q.append(y)
