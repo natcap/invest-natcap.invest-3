@@ -340,9 +340,9 @@ def flowDirection(dem, flow):
        returns nothing"""
 
     cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, j, d, nodataFlow, \
-        validPixelCount, garbageCount
+        validPixelCount
     cdef np.float_t lowest, h, nodataDem, drainageHeight, currentHeight, \
-        neighborHeight
+        neighborHeight, neighborDrop, currentDrop
     cdef Pair *demPixels = \
         <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
     cdef Queue q = Queue()
@@ -433,24 +433,30 @@ def flowDirection(dem, flow):
     for x in range(1,xmax-1):
         for y in range(1,ymax-1):
             #The lowest height seen so far, initialize to current pixel height
-            lowest = demMatrix[x,y]
+            currentHeight = demMatrix[x,y]
             
+            #check for nodata values
             if lowest == nodataDem:
                 flowMatrix[x,y] = nodataFlow
                 continue
-             
-            #The current flow direction, initalize to 0 for no direction
-            dcur = 0 
+            currentDrop = deltaHeight[x,y]
+            
+            #The current flow direction, initialize to 0 for no direction
+            dcur = 0
             #search the neighbors for the lowest pixel(s)
             for i in range(8):
                 d = shiftIndexes[i*3]
                 #the height of the neighboring cell
-                h = demMatrix[x+shiftIndexes[i*3+1],y+shiftIndexes[i*3+2]] 
-                if h < lowest:
-                    lowest = h
+                neighborHeight = demMatrix[x+shiftIndexes[i*3+1],
+                                           y+shiftIndexes[i*3+2]]
+                #ensure that the neighbor is downhill
+                if neighborHeight > currentHeight: continue 
+                neighborDrop = deltaHeight[x+shiftIndexes[i*3+1],
+                                           y+shiftIndexes[i*3+2]]
+                
+                if neighborDrop > currentDrop:
+                    currentDrop = neighborDrop
                     dcur = d
-                elif h == lowest:
-                    dcur += d
             flowMatrix[x,y] = dcur
 
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
