@@ -339,14 +339,17 @@ def flowDirection(dem, flow):
        
        returns nothing"""
 
-    cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, d, nodataFlow, \
-        validPixelCount
-    cdef np.float_t lowest, h, nodataDem
+    cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, j, d, nodataFlow, \
+        validPixelCount, garbageCount
+    cdef np.float_t lowest, h, nodataDem, drainageHeight, currentHeight, \
+        neighborHeight
     cdef Pair *demPixels = \
         <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
-
+    cdef Queue q = Queue()
     
-
+    #This is an array that makes checking neighbor indexes easier
+    cdef int *neighborOffsets = \
+        [-1, 0, -1, -1, 0, -1, 1, -1, 1, 0, 1, 1, 0, 1, -1, 1]
     nodataDem = dem.GetRasterBand(1).GetNoDataValue()
     nodataFlow = flow.GetRasterBand(1).GetNoDataValue()
 
@@ -376,6 +379,47 @@ def flowDirection(dem, flow):
     
     #Sort pixels by increasing height
     qsort(demPixels,validPixelCount,sizeof(Pair),pairCompare)
+    
+    #This matrix holds the drop in elevation from the current pixel to the
+    #most downhill connected pixel on the grid.  Initialize to -1
+    cdef np.ndarray[np.float_t,ndim=2] deltaHeight = \
+        np.zeros([xmax,ymax], dtype=np.float)
+    deltaHeight[:] = -1.0
+    
+    for p in range(validPixelCount):
+        i = demPixels[validPixelCount].i
+        j = demPixels[validPixelCount].j
+        #if this point has been processed, it's not a drainage point, so skip
+        #over it 
+        if deltaHeight[i,j] != -1: continue
+        #initialize the drainage point to 0 height above drainage point
+        deltaHeight[i,j] = 0
+        q.append(i)
+        q.append(j)
+        while q.size() > 0:
+            i = q.pop()
+            j = q.pop()
+            drainageHeight = deltaHeight[i,j]
+            currentHeight = demMatrix[i,j]
+            #visit neighbors of i,j
+            for k in range(8):
+                io = i + neighborOffsets[k*2]
+                jo = j + neighborOffsets[k*2+1]
+                #make sure io and jo are in bounds
+                if io < 0 or jo < 0 or io >= xmax or jo >= ymax: continue
+                #make sure io,jo is upstream or equal
+                neighborHeight = demMatrix[io,jo]
+                if neighborHeight < currentHeight: continue
+                
+                #update delta height if the current delta height of the
+                #neighbor pixel is smaller than what we could calculate
+                #now.  If it is, update the height and enqueue the neighbor
+                #for further propogation of processing heights
+                if neighborHeight-drainageHeight > deltaHeight[io,jo]:
+                    deltaHeight[io,jo] = neighborHeight-drainageHeight
+                    q.append(io)
+                    q.append(jo)
+    
     
     #This matrix holds the flow direction value, initialize to zero
     cdef np.ndarray[np.int_t,ndim=2] flowMatrix = \
