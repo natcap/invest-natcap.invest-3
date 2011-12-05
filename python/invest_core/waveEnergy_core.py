@@ -29,9 +29,9 @@ def biophysical(args):
 
     #Set variables for common output paths
     workspaceDir = args['workspace_dir']
+    waveDataDir = args['wave_data_dir']
     interDir = workspaceDir + os.sep + 'Intermediate'
     outputDir = workspaceDir + os.sep + 'Output'
-    waveDataDir = args['wave_data_dir']
     waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
     #Path for 'new' AOI, see comment below 'if AOI in args'
     waveAOIPath = interDir + os.sep + 'waveAOIShape.shp'
@@ -39,6 +39,7 @@ def biophysical(args):
     waveHeightPath = interDir + os.sep + 'waveHeight.tif'
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
     waveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
+    wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     
     #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
@@ -92,9 +93,9 @@ def biophysical(args):
     interpolateField(periodArray, wavePeriodRaster)
     interpolateField(energySumArray, waveEnergyRaster)
 
-    wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
 
+    #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
     waveHeightRaster = None
