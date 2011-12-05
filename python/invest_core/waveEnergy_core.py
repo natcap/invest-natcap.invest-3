@@ -86,11 +86,11 @@ def biophysical(args):
 
     heightArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
     periodArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
-    interpolateHeight(heightArray, waveHeightRaster)
-    interpolatePeriod(periodArray, wavePeriodRaster)
+    interpolateField(heightArray, waveHeightRaster)
+    interpolateField(periodArray, wavePeriodRaster)
     
     energySumArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
-    interpolateSum(energySumArray, waveEnergyRaster)
+    interpolateField(energySumArray, waveEnergyRaster)
 
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
@@ -304,14 +304,14 @@ def pointShapeToDict(shape, key, valueArray, value):
 #    results = [xrangeLongNP, yrangeLatNP, matrixHeightNP, matrixPeriodNP]
 #    return results
 
-def interpolateHeight(results, raster):
+def interpolateField(results, raster):
     xrange = results[0]
     yrange = results[1]
-    matrixHeight = results[2]
+    matrix = results[2]
     
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
-    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+    matrixZ = band.ReadAsArray(0, 0, band.XSize, band.YSize)
     newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
     newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
     
@@ -321,32 +321,7 @@ def interpolateHeight(results, raster):
 #        yrange = yrange[::-1]
 #        matrixHeight = matrixHeight[::-1]
 
-    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrixHeight, kx=1, ky=1)
-    spl = spl(newyrange[::-1], newxrange)[::-1]
-
-#    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
-#    spl = spl(newxrange, newyrange).transpose()
-
-    band.WriteArray(spl, 0, 0)
-    
-def interpolatePeriod(results, raster):
-    xrange = results[0]
-    yrange = results[1]
-    matrixHeight = results[2]
-    
-    gt = raster.GetGeoTransform()
-    band = raster.GetRasterBand(1)
-    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-    
-    #This is probably true if north is up
-    if gt[5] < 0:
-        print 'North is up'
-#        yrange = yrange[::-1]
-#        matrixHeight = matrixHeight[::-1]
-
-    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrixHeight, kx=1, ky=1)
+    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrix, kx=1, ky=1)
     spl = spl(newyrange[::-1], newxrange)[::-1]
 
 #    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
@@ -455,30 +430,4 @@ def capturedWaveEnergyToShape(energyCap, waveShape):
         #save the field modifications to the layer.
         wave_Layer.SetFeature(feat)
         feat.Destroy()
-
-def interpolateSum(results, raster):
-    xrange = results[0]
-    yrange = results[1]
-    matrixSum = results[2]
-    
-    gt = raster.GetGeoTransform()
-    band = raster.GetRasterBand(1)
-    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-    
-    #This is probably true if north is up
-    if gt[5] < 0:
-        print 'North is up'
-#        yrange = yrange[::-1]
-#        matrixHeight = matrixHeight[::-1]
-
-    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrixSum, kx=1, ky=1)
-    spl = spl(newyrange[::-1], newxrange)[::-1]
-
-#    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
-#    spl = spl(newxrange, newyrange).transpose()
-
-    band.WriteArray(spl, 0, 0)
-
 
