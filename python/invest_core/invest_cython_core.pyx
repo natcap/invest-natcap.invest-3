@@ -305,7 +305,6 @@ cdef int pairCompare(const_void *a, const_void *b):
     if v > 0: return 1
     return 0
 
-@cython.boundscheck(False)
 def flowDirection(dem, flow):
     """Calculates the D8 pour point algorithm.  The output is a integer
         raster whose values range from 1 to 255.  The values for each direction
@@ -381,14 +380,16 @@ def flowDirection(dem, flow):
     qsort(demPixels,validPixelCount,sizeof(Pair),pairCompare)
     
     #This matrix holds the drop in elevation from the current pixel to the
-    #most downhill connected pixel on the grid.  Initialize to -1
+    #most downhill connected pixel on the grid.  The ymax and xmax
+    #axes are swapped so they correspond to the transposed version of
+    #demMatrix.  
     cdef np.ndarray[np.float_t,ndim=2] deltaHeight = \
         np.zeros([xmax,ymax], dtype=np.float)
-    deltaHeight[:] = -1.0
+    deltaHeight[:] = -1.0 #Initialize all heights to -1
     
     for p in range(validPixelCount):
-        i = demPixels[validPixelCount].i
-        j = demPixels[validPixelCount].j
+        i = demPixels[p].i
+        j = demPixels[p].j
         #if this point has been processed, it's not a drainage point, so skip
         #over it 
         if deltaHeight[i,j] != -1: continue
