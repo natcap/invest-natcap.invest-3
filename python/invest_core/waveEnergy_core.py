@@ -84,12 +84,13 @@ def biophysical(args):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], area_layer, options=['ATTRIBUTE=' + prop])
 
-    heightPeriodArray = pointShapeToDict(area_shape)
-    interpolateHeight(heightPeriodArray, waveHeightRaster)
-    interpolatePeriod(heightPeriodArray, wavePeriodRaster)
+    heightArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
+    periodArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
+    interpolateHeight(heightArray, waveHeightRaster)
+    interpolatePeriod(periodArray, wavePeriodRaster)
     
-    sumArray = pointShapeToDictWE(area_shape)
-    interpolateSum(sumArray, waveEnergyRaster)
+    energySumArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+    interpolateSum(energySumArray, waveEnergyRaster)
 
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
@@ -196,32 +197,51 @@ def clipShape(shapeToClip, bindingShape, outputPath):
 
     return shp_ds
 
-def pointShapeToDict(shape):
+def pointShapeToDict(shape, key, valueArray, value):
 
     shape_layer = shape.GetLayer(0)
+    shape_layer.ResetReading()
     shape_feat = shape_layer.GetNextFeature()
 
-    aoiDictionary = {}
-    latlongDict = {}
+#    aoiDictionary = {}
+#    latlongDict = {}
+#    xrangeLong = []
+#    yrangeLat = []
+
+    fieldDict = {}
     xrangeLong = []
     yrangeLat = []
+    xRangeField = 'LONG'
+    yRangeField = 'LATI'
     while shape_feat is not None:
+#
+#        itemArray = [0, 0, 0, 0, 0, 0]
+#        
+#        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('HSAVG_M', 4), ('TPAVG_S', 5)):
+#            field_index = shape_feat.GetFieldIndex(field)
+#            itemArray[var] = shape_feat.GetField(field_index)
+#            
+#            fieldDict[field] = 
+#        
+#        fieldDict[key] = 
 
-        itemArray = [0, 0, 0, 0, 0, 0]
-        
-        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('HSAVG_M', 4), ('TPAVG_S', 5)):
+        valueDict = {}
+        #May want to check to make sure field is in shape layer
+        for field in valueArray:
             field_index = shape_feat.GetFieldIndex(field)
-            itemArray[var] = shape_feat.GetField(field_index)
+            valueDict[field] = shape_feat.GetField(field_index)
+        keyList = []        
+        for k in key:
+            keyList.append(valueDict[k])
+        tupledKey = tuple(keyList)
+        fieldDict[tupledKey] = valueDict
 
-        xrangeLong.append(itemArray[2])
-        yrangeLat.append(itemArray[3])
-        
-        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4], itemArray[5]]
-        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4], itemArray[5]]
+        xrangeLong.append(fieldDict[tupledKey][xRangeField])
+        yrangeLat.append(fieldDict[tupledKey][yRangeField])
         
         shape_feat.Destroy()
         shape_feat = shape_layer.GetNextFeature()
-
+    
     xrangeLongNoDup = list(set(xrangeLong))
     yrangeLatNoDup = list(set(yrangeLat))
     
@@ -230,26 +250,59 @@ def pointShapeToDict(shape):
     
     xrangeLongNP = np.array(xrangeLongNoDup)
     yrangeLatNP = np.array(yrangeLatNoDup)
-    matrixHeight = []
-    matrixPeriod = []
-    for j in yrangeLatNP:
-        tmpHeight = []
-        tmpPeriod = []
-        for i in xrangeLongNP:
-            if (i,j) in latlongDict:
-                tmpHeight.append(latlongDict[(i,j)][0])
-                tmpPeriod.append(latlongDict[(i,j)][1])
-            else:
-                tmpHeight.append(0)
-                tmpPeriod.append(0)
-        matrixHeight.append(tmpHeight)
-        matrixPeriod.append(tmpPeriod)
-        
-    matrixHeightNP = np.array(matrixHeight)
-    matrixPeriodNP = np.array(matrixPeriod)
     
-    results = [xrangeLongNP, yrangeLatNP, matrixHeightNP, matrixPeriodNP]
+    matrix = []
+    for j in yrangeLatNP:
+        tmp = []
+        for i in xrangeLongNP:
+            if (i,j) in fieldDict:
+                tmp.append(fieldDict[(i,j)][value])
+            else:
+                tmp.append(0)
+        matrix.append(tmp)
+        
+    matrixNP = np.array(matrix)
+    results = [xrangeLongNP, yrangeLatNP, matrixNP]
     return results
+    
+
+#        xrangeLong.append(itemArray[2])
+#        yrangeLat.append(itemArray[3])
+#        
+#        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4], itemArray[5]]
+#        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4], itemArray[5]]
+#        
+#        shape_feat.Destroy()
+#        shape_feat = shape_layer.GetNextFeature()
+#
+#    xrangeLongNoDup = list(set(xrangeLong))
+#    yrangeLatNoDup = list(set(yrangeLat))
+#    
+#    xrangeLongNoDup.sort()
+#    yrangeLatNoDup.sort()
+#    
+#    xrangeLongNP = np.array(xrangeLongNoDup)
+#    yrangeLatNP = np.array(yrangeLatNoDup)
+#    matrixHeight = []
+#    matrixPeriod = []
+#    for j in yrangeLatNP:
+#        tmpHeight = []
+#        tmpPeriod = []
+#        for i in xrangeLongNP:
+#            if (i,j) in latlongDict:
+#                tmpHeight.append(latlongDict[(i,j)][0])
+#                tmpPeriod.append(latlongDict[(i,j)][1])
+#            else:
+#                tmpHeight.append(0)
+#                tmpPeriod.append(0)
+#        matrixHeight.append(tmpHeight)
+#        matrixPeriod.append(tmpPeriod)
+#        
+#    matrixHeightNP = np.array(matrixHeight)
+#    matrixPeriodNP = np.array(matrixPeriod)
+#    
+#    results = [xrangeLongNP, yrangeLatNP, matrixHeightNP, matrixPeriodNP]
+#    return results
 
 def interpolateHeight(results, raster):
     xrange = results[0]
@@ -279,7 +332,7 @@ def interpolateHeight(results, raster):
 def interpolatePeriod(results, raster):
     xrange = results[0]
     yrange = results[1]
-    matrixHeight = results[3]
+    matrixHeight = results[2]
     
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
