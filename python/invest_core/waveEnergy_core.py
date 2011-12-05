@@ -67,8 +67,8 @@ def biophysical(args):
     area_layer = area_shape.GetLayer(0)
     #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
     #and add the sum as a field to the shapefile
-    energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'], args['machine_param'])
-    energyCap = computeWaveEnergyCapacity(args['wave_base_data'], energyInterp)
+    energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
+    energyCap = computeWaveEnergyCapacity(args['wave_base_data'], energyInterp, args['machine_param'])
     capturedWaveEnergyToShape(energyCap, area_shape)
 
     #Create rasters bounded by shape file of analyis area
@@ -302,7 +302,7 @@ def npv():
 
     return npv
 
-def waveEnergyInterp(waveData, machinePerf, machineParam):
+def waveEnergyInterp(waveData, machinePerf):
     x = np.array(machinePerf.pop(0))
     y = np.array(machinePerf.pop(0))
     z = np.array(machinePerf)
@@ -311,7 +311,7 @@ def waveEnergyInterp(waveData, machinePerf, machineParam):
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
     return interpZ
 
-def computeWaveEnergyCapacity(waveData, interpZ):
+def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
     energyCap = {}
     waveRow = waveData.pop(0)
     waveColumn = waveData.pop(1)
