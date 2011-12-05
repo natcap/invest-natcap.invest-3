@@ -203,27 +203,12 @@ def pointShapeToDict(shape, key, valueArray, value):
     shape_layer.ResetReading()
     shape_feat = shape_layer.GetNextFeature()
 
-#    aoiDictionary = {}
-#    latlongDict = {}
-#    xrangeLong = []
-#    yrangeLat = []
-
     fieldDict = {}
     xrangeLong = []
     yrangeLat = []
     xRangeField = 'LONG'
     yRangeField = 'LATI'
     while shape_feat is not None:
-#
-#        itemArray = [0, 0, 0, 0, 0, 0]
-#        
-#        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('HSAVG_M', 4), ('TPAVG_S', 5)):
-#            field_index = shape_feat.GetFieldIndex(field)
-#            itemArray[var] = shape_feat.GetField(field_index)
-#            
-#            fieldDict[field] = 
-#        
-#        fieldDict[key] = 
 
         valueDict = {}
         #May want to check to make sure field is in shape layer
@@ -264,45 +249,6 @@ def pointShapeToDict(shape, key, valueArray, value):
     matrixNP = np.array(matrix)
     results = [xrangeLongNP, yrangeLatNP, matrixNP]
     return results
-    
-
-#        xrangeLong.append(itemArray[2])
-#        yrangeLat.append(itemArray[3])
-#        
-#        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4], itemArray[5]]
-#        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4], itemArray[5]]
-#        
-#        shape_feat.Destroy()
-#        shape_feat = shape_layer.GetNextFeature()
-#
-#    xrangeLongNoDup = list(set(xrangeLong))
-#    yrangeLatNoDup = list(set(yrangeLat))
-#    
-#    xrangeLongNoDup.sort()
-#    yrangeLatNoDup.sort()
-#    
-#    xrangeLongNP = np.array(xrangeLongNoDup)
-#    yrangeLatNP = np.array(yrangeLatNoDup)
-#    matrixHeight = []
-#    matrixPeriod = []
-#    for j in yrangeLatNP:
-#        tmpHeight = []
-#        tmpPeriod = []
-#        for i in xrangeLongNP:
-#            if (i,j) in latlongDict:
-#                tmpHeight.append(latlongDict[(i,j)][0])
-#                tmpPeriod.append(latlongDict[(i,j)][1])
-#            else:
-#                tmpHeight.append(0)
-#                tmpPeriod.append(0)
-#        matrixHeight.append(tmpHeight)
-#        matrixPeriod.append(tmpPeriod)
-#        
-#    matrixHeightNP = np.array(matrixHeight)
-#    matrixPeriodNP = np.array(matrixPeriod)
-#    
-#    results = [xrangeLongNP, yrangeLatNP, matrixHeightNP, matrixPeriodNP]
-#    return results
 
 def interpolateField(results, raster):
     xrange = results[0]
