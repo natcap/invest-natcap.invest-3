@@ -10,6 +10,13 @@ import logging
 import scipy
 logger = logging.getLogger('invest_cython_core')
 
+cdef extern from "stdlib.h":
+    ctypedef void const_void "const void"
+    void qsort(void *base, int nmemb, int size,
+            int(*compar)(const_void *, const_void *)) 
+    void free(void* ptr)
+    void* malloc(size_t size)
+
 cimport cqueue
 cdef class Queue:
     cdef cqueue.Queue *_c_queue
@@ -285,6 +292,19 @@ def calculateSlope(dem, uri=''):
     slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
     return slope
 
+"""This is a structure that's used in flow direction"""
+cdef struct Pair:
+    int i,j
+    float h
+
+"""This is a compare function that can be passed to stdlib's qsort such
+    that pairs are sorted in increasing height order"""
+cdef int pairCompare(const_void *a, const_void *b):
+    cdef float v = ((<Pair*>a)).h-((<Pair*>b)).h
+    if v < 0: return -1
+    if v > 0: return 1
+    return 0
+
 @cython.boundscheck(False)
 def flowDirection(dem, flow):
     """Calculates the D8 pour point algorithm.  The output is a integer
@@ -319,9 +339,17 @@ def flowDirection(dem, flow):
        
        returns nothing"""
 
-    cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, d, nodataFlow
-    cdef np.float_t lowest, h, nodataDem
-
+    cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, j, d, nodataFlow, \
+        validPixelCount
+    cdef np.float_t lowest, h, nodataDem, drainageHeight, currentHeight, \
+        neighborHeight, neighborDrop, currentDrop
+    cdef Pair *demPixels = \
+        <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
+    cdef Queue q = Queue()
+    
+    #This is an array that makes checking neighbor indexes easier
+    cdef int *neighborOffsets = \
+        [-1, 0, -1, -1, 0, -1, 1, -1, 1, 0, 1, 1, 0, 1, -1, 1]
     nodataDem = dem.GetRasterBand(1).GetNoDataValue()
     nodataFlow = flow.GetRasterBand(1).GetNoDataValue()
 
@@ -337,6 +365,62 @@ def flowDirection(dem, flow):
     
     xmax, ymax = demMatrix.shape[0], demMatrix.shape[1]
     
+    #Construct a lookup table that sorts DEM pixels by height so we can process
+    #the lowest pixels to the highest in propagating shortest path distances.
+    validPixelCount = 0
+    for x in range(1,xmax-1):
+        for y in range(1,ymax-1):
+            h = demMatrix[x,y]
+            if h == nodataDem: continue
+            demPixels[validPixelCount].i = x
+            demPixels[validPixelCount].j = y
+            demPixels[validPixelCount].h = h
+            validPixelCount += 1
+    
+    #Sort pixels by increasing height
+    qsort(demPixels,validPixelCount,sizeof(Pair),pairCompare)
+    
+    #This matrix holds the drop in elevation from the current pixel to the
+    #most downhill connected pixel on the grid.  Initialize to -1
+    cdef np.ndarray[np.float_t,ndim=2] deltaHeight = \
+        np.zeros([xmax,ymax], dtype=np.float)
+    deltaHeight[:] = -1.0
+    
+    for p in range(validPixelCount):
+        i = demPixels[validPixelCount].i
+        j = demPixels[validPixelCount].j
+        #if this point has been processed, it's not a drainage point, so skip
+        #over it 
+        if deltaHeight[i,j] != -1: continue
+        #initialize the drainage point to 0 height above drainage point
+        deltaHeight[i,j] = 0
+        q.append(i)
+        q.append(j)
+        while q.size() > 0:
+            i = q.pop()
+            j = q.pop()
+            drainageHeight = deltaHeight[i,j]
+            currentHeight = demMatrix[i,j]
+            #visit neighbors of i,j
+            for k in range(8):
+                io = i + neighborOffsets[k*2]
+                jo = j + neighborOffsets[k*2+1]
+                #make sure io and jo are in bounds
+                if io < 0 or jo < 0 or io >= xmax or jo >= ymax: continue
+                #make sure io,jo is upstream or equal
+                neighborHeight = demMatrix[io,jo]
+                if neighborHeight < currentHeight: continue
+                
+                #update delta height if the current delta height of the
+                #neighbor pixel is smaller than what we could calculate
+                #now.  If it is, update the height and enqueue the neighbor
+                #for further propogation of processing heights
+                if neighborHeight-drainageHeight > deltaHeight[io,jo]:
+                    deltaHeight[io,jo] = neighborHeight-drainageHeight
+                    q.append(io)
+                    q.append(jo)
+    
+    
     #This matrix holds the flow direction value, initialize to zero
     cdef np.ndarray[np.int_t,ndim=2] flowMatrix = \
         np.zeros([xmax,ymax], dtype=np.int)
@@ -349,27 +433,36 @@ def flowDirection(dem, flow):
     for x in range(1,xmax-1):
         for y in range(1,ymax-1):
             #The lowest height seen so far, initialize to current pixel height
-            lowest = demMatrix[x,y]
+            currentHeight = demMatrix[x,y]
             
+            #check for nodata values
             if lowest == nodataDem:
                 flowMatrix[x,y] = nodataFlow
                 continue
-             
-            #The current flow direction, initalize to 0 for no direction
-            dcur = 0 
+            currentDrop = deltaHeight[x,y]
+            
+            #The current flow direction, initialize to 0 for no direction
+            dcur = 0
             #search the neighbors for the lowest pixel(s)
             for i in range(8):
                 d = shiftIndexes[i*3]
                 #the height of the neighboring cell
-                h = demMatrix[x+shiftIndexes[i*3+1],y+shiftIndexes[i*3+2]] 
-                if h < lowest:
-                    lowest = h
+                neighborHeight = demMatrix[x+shiftIndexes[i*3+1],
+                                           y+shiftIndexes[i*3+2]]
+                #ensure that the neighbor is downhill
+                if neighborHeight > currentHeight: continue 
+                neighborDrop = deltaHeight[x+shiftIndexes[i*3+1],
+                                           y+shiftIndexes[i*3+2]]
+                
+                if neighborDrop > currentDrop:
+                    currentDrop = neighborDrop
                     dcur = d
-                elif h == lowest:
-                    dcur += d
             flowMatrix[x,y] = dcur
 
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
+    
+    free(demPixels)
+    
     return flow
 
 cdef Queue calculateInflowNeighbors(int i, int j, 
