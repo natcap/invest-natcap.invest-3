@@ -63,6 +63,32 @@ class TestWaveEnergy(unittest.TestCase):
         newShape = waveEnergy_core.clipShape(shapeToClip, bindingShape, newShapePath)
 
 
+    def test_waveEnergy_shapeToDict(self):
+        """Test pointShapeToDict to make sure that it works properly for different geometries"""
+        #This ensures we are not in Arc's python directory so that when
+        #we import gdal stuff we don't get the wrong GDAL version.
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        filesystemencoding = sys.getfilesystemencoding()
+        
+        
+        testDir = '../../../test_data/wave_Energy'
+        shapePath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+#        elif os.path.isfile(output_dir + 'timber.shp'):
+#            os.remove(output_dir + 'timber.shp')
+
+        shapeToClip = ogr.Open(shapePath.encode(filesystemencoding))
+        key = ['LONG', 'LATI']
+        valueArray = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
+        
+        shapeArray = waveEnergy_core.pointShapeToDict(shapeToClip, key, valueArray)
+        for value in shapeArray:
+            print value
+
 #    def test_waveEnergy_with_inputs(self):
 #        """Test timber model with real inputs.  Compare copied and modified shapefile with valid
 #            shapefile that was created from the same inputs.  Regression test."""

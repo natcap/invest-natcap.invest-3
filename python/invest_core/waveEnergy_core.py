@@ -33,6 +33,8 @@ def biophysical(args):
     outputDir = workspaceDir + os.sep + 'Output'
     waveDataDir = args['wave_data_dir']
     waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
+    #Path for 'new' AOI, see comment below 'if AOI in args'
+    waveAOIPath = interDir + os.sep + 'waveAOIShape.shp'
     
     #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
@@ -44,10 +46,13 @@ def biophysical(args):
     pixelSizeY = abs(geoform[5])
     
     #Determine which shapefile will be used to determine area of interest
-#    if 'AOI' in args:
-#        cutter = args['AOI']
-#    else:
-    cutter = args['analysis_area_extract']
+    if 'AOI' in args:
+        #The AOI shapefile has a different projection than lat/long so by calling
+        #the clipShape function with analysis_area_extract (which has lat/long projection
+        #which we would expect) and AOI I am making a new AOI with the proper projection
+        cutter = clipShape(args['analysis_area_extract'], args['AOI'], waveAOIPath)        
+    else:
+        cutter = args['analysis_area_extract']
 
     #Blank raster to be used in clipping output rasters to areas of interest
     blankRaster = aoiBlankRaster(cutter, interDir, pixelSizeX, pixelSizeY, datatype)
@@ -79,12 +84,13 @@ def biophysical(args):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], area_layer, options=['ATTRIBUTE=' + prop])
 
-    heightPeriodArray = pointShapeToDict(area_shape)
-    interpolateHeight(heightPeriodArray, waveHeightRaster)
-    interpolatePeriod(heightPeriodArray, wavePeriodRaster)
+    heightArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
+    periodArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
+    interpolateField(heightArray, waveHeightRaster)
+    interpolateField(periodArray, wavePeriodRaster)
     
-    sumArray = pointShapeToDictWE(area_shape)
-    interpolateSum(sumArray, waveEnergyRaster)
+    energySumArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+    interpolateField(energySumArray, waveEnergyRaster)
 
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
@@ -120,6 +126,10 @@ def transformProjection(targetProj, sourceProj):
 #    print source_geom
 #    print source_Layer.GetExtent()
 
+#clipShape takes the shapefile you would like to cut down,
+#the polygon shape you want the other shapefile cut to,
+#and the path for the new shapefile
+#It returns a new shapefile in the same format/projection as shapeToClip
 def clipShape(shapeToClip, bindingShape, outputPath):
     shape_source = outputPath
 
@@ -187,32 +197,51 @@ def clipShape(shapeToClip, bindingShape, outputPath):
 
     return shp_ds
 
-def pointShapeToDict(shape):
+def pointShapeToDict(shape, key, valueArray, value):
 
     shape_layer = shape.GetLayer(0)
+    shape_layer.ResetReading()
     shape_feat = shape_layer.GetNextFeature()
 
-    aoiDictionary = {}
-    latlongDict = {}
+#    aoiDictionary = {}
+#    latlongDict = {}
+#    xrangeLong = []
+#    yrangeLat = []
+
+    fieldDict = {}
     xrangeLong = []
     yrangeLat = []
+    xRangeField = 'LONG'
+    yRangeField = 'LATI'
     while shape_feat is not None:
+#
+#        itemArray = [0, 0, 0, 0, 0, 0]
+#        
+#        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('HSAVG_M', 4), ('TPAVG_S', 5)):
+#            field_index = shape_feat.GetFieldIndex(field)
+#            itemArray[var] = shape_feat.GetField(field_index)
+#            
+#            fieldDict[field] = 
+#        
+#        fieldDict[key] = 
 
-        itemArray = [0, 0, 0, 0, 0, 0]
-        
-        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('HSAVG_M', 4), ('TPAVG_S', 5)):
+        valueDict = {}
+        #May want to check to make sure field is in shape layer
+        for field in valueArray:
             field_index = shape_feat.GetFieldIndex(field)
-            itemArray[var] = shape_feat.GetField(field_index)
+            valueDict[field] = shape_feat.GetField(field_index)
+        keyList = []        
+        for k in key:
+            keyList.append(valueDict[k])
+        tupledKey = tuple(keyList)
+        fieldDict[tupledKey] = valueDict
 
-        xrangeLong.append(itemArray[2])
-        yrangeLat.append(itemArray[3])
-        
-        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4], itemArray[5]]
-        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4], itemArray[5]]
+        xrangeLong.append(fieldDict[tupledKey][xRangeField])
+        yrangeLat.append(fieldDict[tupledKey][yRangeField])
         
         shape_feat.Destroy()
         shape_feat = shape_layer.GetNextFeature()
-
+    
     xrangeLongNoDup = list(set(xrangeLong))
     yrangeLatNoDup = list(set(yrangeLat))
     
@@ -221,35 +250,68 @@ def pointShapeToDict(shape):
     
     xrangeLongNP = np.array(xrangeLongNoDup)
     yrangeLatNP = np.array(yrangeLatNoDup)
-    matrixHeight = []
-    matrixPeriod = []
+    
+    matrix = []
     for j in yrangeLatNP:
-        tmpHeight = []
-        tmpPeriod = []
+        tmp = []
         for i in xrangeLongNP:
-            if (i,j) in latlongDict:
-                tmpHeight.append(latlongDict[(i,j)][0])
-                tmpPeriod.append(latlongDict[(i,j)][1])
+            if (i,j) in fieldDict:
+                tmp.append(fieldDict[(i,j)][value])
             else:
-                tmpHeight.append(0)
-                tmpPeriod.append(0)
-        matrixHeight.append(tmpHeight)
-        matrixPeriod.append(tmpPeriod)
+                tmp.append(0)
+        matrix.append(tmp)
         
-    matrixHeightNP = np.array(matrixHeight)
-    matrixPeriodNP = np.array(matrixPeriod)
-    
-    results = [xrangeLongNP, yrangeLatNP, matrixHeightNP, matrixPeriodNP]
+    matrixNP = np.array(matrix)
+    results = [xrangeLongNP, yrangeLatNP, matrixNP]
     return results
+    
 
-def interpolateHeight(results, raster):
+#        xrangeLong.append(itemArray[2])
+#        yrangeLat.append(itemArray[3])
+#        
+#        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4], itemArray[5]]
+#        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4], itemArray[5]]
+#        
+#        shape_feat.Destroy()
+#        shape_feat = shape_layer.GetNextFeature()
+#
+#    xrangeLongNoDup = list(set(xrangeLong))
+#    yrangeLatNoDup = list(set(yrangeLat))
+#    
+#    xrangeLongNoDup.sort()
+#    yrangeLatNoDup.sort()
+#    
+#    xrangeLongNP = np.array(xrangeLongNoDup)
+#    yrangeLatNP = np.array(yrangeLatNoDup)
+#    matrixHeight = []
+#    matrixPeriod = []
+#    for j in yrangeLatNP:
+#        tmpHeight = []
+#        tmpPeriod = []
+#        for i in xrangeLongNP:
+#            if (i,j) in latlongDict:
+#                tmpHeight.append(latlongDict[(i,j)][0])
+#                tmpPeriod.append(latlongDict[(i,j)][1])
+#            else:
+#                tmpHeight.append(0)
+#                tmpPeriod.append(0)
+#        matrixHeight.append(tmpHeight)
+#        matrixPeriod.append(tmpPeriod)
+#        
+#    matrixHeightNP = np.array(matrixHeight)
+#    matrixPeriodNP = np.array(matrixPeriod)
+#    
+#    results = [xrangeLongNP, yrangeLatNP, matrixHeightNP, matrixPeriodNP]
+#    return results
+
+def interpolateField(results, raster):
     xrange = results[0]
     yrange = results[1]
-    matrixHeight = results[2]
+    matrix = results[2]
     
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
-    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+    matrixZ = band.ReadAsArray(0, 0, band.XSize, band.YSize)
     newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
     newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
     
@@ -259,32 +321,7 @@ def interpolateHeight(results, raster):
 #        yrange = yrange[::-1]
 #        matrixHeight = matrixHeight[::-1]
 
-    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrixHeight, kx=1, ky=1)
-    spl = spl(newyrange[::-1], newxrange)[::-1]
-
-#    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
-#    spl = spl(newxrange, newyrange).transpose()
-
-    band.WriteArray(spl, 0, 0)
-    
-def interpolatePeriod(results, raster):
-    xrange = results[0]
-    yrange = results[1]
-    matrixHeight = results[3]
-    
-    gt = raster.GetGeoTransform()
-    band = raster.GetRasterBand(1)
-    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-    
-    #This is probably true if north is up
-    if gt[5] < 0:
-        print 'North is up'
-#        yrange = yrange[::-1]
-#        matrixHeight = matrixHeight[::-1]
-
-    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrixHeight, kx=1, ky=1)
+    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrix, kx=1, ky=1)
     spl = spl(newyrange[::-1], newxrange)[::-1]
 
 #    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
@@ -393,80 +430,4 @@ def capturedWaveEnergyToShape(energyCap, waveShape):
         #save the field modifications to the layer.
         wave_Layer.SetFeature(feat)
         feat.Destroy()
-
-    
-def pointShapeToDictWE(shape):
-
-    shape_layer = shape.GetLayer(0)
-    shape_layer.ResetReading()
-    shape_feat = shape_layer.GetNextFeature()
-    aoiDictionary = {}
-    latlongDict = {}
-    xrangeLong = []
-    yrangeLat = []
-    while shape_feat is not None:
-
-        itemArray = [0, 0, 0, 0, 0]
-        
-        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('capWE_Sum', 4)):
-            field_index = shape_feat.GetFieldIndex(field)
-            itemArray[var] = shape_feat.GetField(field_index)
-
-        xrangeLong.append(itemArray[2])
-        yrangeLat.append(itemArray[3])
-        
-        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4]]
-        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4]]
-        
-        shape_feat.Destroy()
-        shape_feat = shape_layer.GetNextFeature()
-        
-    xrangeLongNoDup = list(set(xrangeLong))
-    yrangeLatNoDup = list(set(yrangeLat))
-    
-    xrangeLongNoDup.sort()
-    yrangeLatNoDup.sort()
-    
-    xrangeLongNP = np.array(xrangeLongNoDup)
-    yrangeLatNP = np.array(yrangeLatNoDup)
-    matrixSum = []
-    for j in yrangeLatNP:
-        tmpSum = []
-        for i in xrangeLongNP:
-            if (i,j) in latlongDict:
-                tmpSum.append(latlongDict[(i,j)][0])
-            else:
-                tmpSum.append(0)
-        matrixSum.append(tmpSum)
-        
-    matrixSumNP = np.array(matrixSum)
-    
-    results = [xrangeLongNP, yrangeLatNP, matrixSumNP]
-    return results
-
-def interpolateSum(results, raster):
-    xrange = results[0]
-    yrange = results[1]
-    matrixSum = results[2]
-    
-    gt = raster.GetGeoTransform()
-    band = raster.GetRasterBand(1)
-    matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-    
-    #This is probably true if north is up
-    if gt[5] < 0:
-        print 'North is up'
-#        yrange = yrange[::-1]
-#        matrixHeight = matrixHeight[::-1]
-
-    spl = scipy.interpolate.RectBivariateSpline(yrange, xrange, matrixSum, kx=1, ky=1)
-    spl = spl(newyrange[::-1], newxrange)[::-1]
-
-#    spl = scipy.interpolate.RectBivariateSpline(xrange, yrange, matrixHeight.transpose(), kx=3, ky=3)
-#    spl = spl(newxrange, newyrange).transpose()
-
-    band.WriteArray(spl, 0, 0)
-
 
