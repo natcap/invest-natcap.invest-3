@@ -35,6 +35,10 @@ def biophysical(args):
     waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
     #Path for 'new' AOI, see comment below 'if AOI in args'
     waveAOIPath = interDir + os.sep + 'waveAOIShape.shp'
+    #Rasters which will be past (along with global_dem) to vectorize with wave power op.
+    waveHeightPath = interDir + os.sep + 'waveHeight.tif'
+    wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
+    waveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
     
     #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
@@ -66,10 +70,6 @@ def biophysical(args):
     energyCap = computeWaveEnergyCapacity(args['wave_base_data'], energyInterp)
     capturedWaveEnergyToShape(energyCap, area_shape)
 
-    #Rasters which will be past (along with global_dem) to vectorize with wave power op.
-    waveHeightPath = interDir + os.sep + 'waveHeight.tif'
-    wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
-    waveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
     #Create rasters bounded by shape file of analyis area
     for path in (waveHeightPath, wavePeriodPath, waveEnergyPath):
         invest_cython_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY,
@@ -86,10 +86,10 @@ def biophysical(args):
 
     heightArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
     periodArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
+    energySumArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+
     interpolateField(heightArray, waveHeightRaster)
     interpolateField(periodArray, wavePeriodRaster)
-    
-    energySumArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
     interpolateField(energySumArray, waveEnergyRaster)
 
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
