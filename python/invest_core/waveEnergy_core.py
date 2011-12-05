@@ -456,56 +456,6 @@ def capturedWaveEnergyToShape(energyCap, waveShape):
         wave_Layer.SetFeature(feat)
         feat.Destroy()
 
-    
-def pointShapeToDictWE(shape):
-
-    shape_layer = shape.GetLayer(0)
-    shape_layer.ResetReading()
-    shape_feat = shape_layer.GetNextFeature()
-    aoiDictionary = {}
-    latlongDict = {}
-    xrangeLong = []
-    yrangeLat = []
-    while shape_feat is not None:
-
-        itemArray = [0, 0, 0, 0, 0]
-        
-        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('capWE_Sum', 4)):
-            field_index = shape_feat.GetFieldIndex(field)
-            itemArray[var] = shape_feat.GetField(field_index)
-
-        xrangeLong.append(itemArray[2])
-        yrangeLat.append(itemArray[3])
-        
-        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4]]
-        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4]]
-        
-        shape_feat.Destroy()
-        shape_feat = shape_layer.GetNextFeature()
-        
-    xrangeLongNoDup = list(set(xrangeLong))
-    yrangeLatNoDup = list(set(yrangeLat))
-    
-    xrangeLongNoDup.sort()
-    yrangeLatNoDup.sort()
-    
-    xrangeLongNP = np.array(xrangeLongNoDup)
-    yrangeLatNP = np.array(yrangeLatNoDup)
-    matrixSum = []
-    for j in yrangeLatNP:
-        tmpSum = []
-        for i in xrangeLongNP:
-            if (i,j) in latlongDict:
-                tmpSum.append(latlongDict[(i,j)][0])
-            else:
-                tmpSum.append(0)
-        matrixSum.append(tmpSum)
-        
-    matrixSumNP = np.array(matrixSum)
-    
-    results = [xrangeLongNP, yrangeLatNP, matrixSumNP]
-    return results
-
 def interpolateSum(results, raster):
     xrange = results[0]
     yrange = results[1]
