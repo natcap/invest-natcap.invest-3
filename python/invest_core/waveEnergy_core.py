@@ -315,9 +315,9 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
     energyCap = {}
     waveRow = waveData.pop(0)
     waveColumn = waveData.pop(1)
-    periodMax = 17 #Get value from machine_param
+    periodMax = machineParam['TpMax']['VALUE']
     periodMaxPos = -1
-    heightMax = 5.5 #Get value from machine_param
+    heightMax = machineParam['HsMax']['VALUE']
     heightMaxPos = -1
     for i, v in enumerate(waveRow):
         if v > periodMax and periodMaxPos == -1:
