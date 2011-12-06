@@ -11,7 +11,6 @@ import invest_cython_core
 import sys, os
 import scipy
 
-
 def biophysical(args):
     """
     args['wave_base_data'] - a dictionary
@@ -338,11 +337,7 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
             multArray[:, periodMaxPos:] = 0
         if heightMaxPos != -1:
             multArray[heightMaxPos:, :] = 0
-            
-        if key == (580,508):
-            print periodMaxPos
-            print heightMaxPos
-            print multArray
+
         validArray = np.divide(multArray, 5.0)
 #        validArray = np.where(multArray>capMax, capMax, multArray)
         #Since we are doing a cubic interpolation there is a possibility we
@@ -351,14 +346,9 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
         validArray = np.where(validArray < 0, 0, validArray)
 #            def deviceConstraints(a, capmax, hmax, tmax):
 
-#        sum = np.sum(validArray)
         sum = (validArray.sum()/1000)
         energyCap[key] = sum
-#        if key == (556, 496):
-#            print interpZ
 
-#            print sum
-    print energyCap[(580, 508)]
     return energyCap
 
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and
