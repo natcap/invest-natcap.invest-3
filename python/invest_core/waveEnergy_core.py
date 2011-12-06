@@ -283,10 +283,10 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
     noDataOut = -1
     p = 1028
     g = 9.8
-
+    alfa = 0.86
     def op(a, b, c, d):
         c = np.absolute(c)
-        tem = 2.0 * math.pi / (b * .86)
+        tem = 2.0 * math.pi / (b * alfa)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
         waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * (np.sqrt((g / k) * np.tanh(k * c)))) / 2
         wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
