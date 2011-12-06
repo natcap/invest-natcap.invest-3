@@ -341,7 +341,7 @@ def flowDirection(dem, flow):
     cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, j, d, nodataFlow, \
         validPixelCount
     cdef np.float_t lowest, h, nodataDem, drainageDistance, currentHeight, \
-        neighborHeight, neighborDistance, currentDistance
+        neighborHeight, neighborDistance, currentDistance, stepDistance
     cdef Pair *demPixels = \
         <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
     cdef Queue q = Queue()
@@ -414,13 +414,22 @@ def flowDirection(dem, flow):
                 neighborHeight = demMatrix[io,jo]
                 if neighborHeight < currentHeight: continue
                 
+                #stepDistance refers to the distance we travel across the
+                #pixel, whether it's 1 across or sqrt(2) diagonally. We're
+                #diagonal if both the io and jo offsets are turned on
+                if abs(io)+abs(jo) < 2:
+                    stepDistance = 1.0
+                else:
+                    stepDistance = math.sqrt(2)
+                
                 #update distance if the current distance
                 #neighbor pixel is greater than what we could calculate
                 #now.  If it is, update the height and enqueue the neighbor
                 #for further propogation of processing distances
+                
                 if distanceToDrain[io,jo] == -1 or \
-                    drainageDistance+1 < distanceToDrain[io,jo]:
-                    distanceToDrain[io,jo] = drainageDistance+1
+                    drainageDistance+stepDistance < distanceToDrain[io,jo]:
+                    distanceToDrain[io,jo] = drainageDistance+stepDistance
                     q.append(io)
                     q.append(jo)
     
