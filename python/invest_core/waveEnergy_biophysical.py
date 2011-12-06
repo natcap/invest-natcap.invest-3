@@ -195,4 +195,5 @@ def extrapolateWaveData(waveFile):
         return waveDict
     
     except IOError, e:
-        print 'File I/O error' + e
+        print 'File I/O error'
+        print e
