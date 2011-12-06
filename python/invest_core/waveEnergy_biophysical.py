@@ -44,7 +44,8 @@ def execute(args):
     for dir in [outputDir, intermediateDir]:
         if not os.path.exists(dir):
             os.makedirs(dir)
-        
+    
+    #Dictionary that will hold all the inputs to be passed to waveEnergy_core
     biophysicalargs = {}
     biophysicalargs['workspace_dir'] = args['workspace_dir']
     biophysicalargs['wave_data_dir'] = args['wave_base_data_uri']
@@ -149,6 +150,55 @@ def execute(args):
         
     waveEnergy_core.biophysical(biophysicalargs)
 
+#def extrapolateWaveData(waveFile):
+#    try:
+#        waveOpen = open(waveFile)
+#        waveDict = {}
+#        waveArray = []
+#        waveRow = []
+#        waveCol = []
+#        key = ''
+#        rowcolIndicator = 0
+#        check = 0
+#        rowcolGrab = False
+#        for line in waveOpen:
+#            if line[0] == 'I':
+#                iVal = int(line.split(',')[1])
+#                jVal = int(line.split(',')[3])
+#                key = (iVal, jVal)
+#                waveArray = []
+#                rowcolGrab = True
+#            elif rowcolGrab:
+#                if rowcolIndicator == 0:
+#                    if check != -1:
+#                        waveRow.append(line.split(','))
+#                        waveRow = waveRow[0]
+#                    rowcolIndicator = rowcolIndicator + 1
+#                elif rowcolIndicator == 1:
+#                    if check != -1:
+#                        waveCol.append(line.split(','))
+#                        waveCol = waveCol[0]
+#                        check = -1
+#                    rowcolIndicator = 0
+#                    rowcolGrab = False
+#            else:
+#                waveArray.append(line.split(','))
+#                waveDict[key] = waveArray
+#                
+#        for i, val in enumerate(waveRow):
+#            waveRow[i] = float(val)
+#        for i, val in enumerate(waveCol):
+#            waveCol[i] = float(val)
+#        
+#        waveOpen.close()
+#        waveDict[0] = waveRow
+#        waveDict[1] = waveCol
+#        return waveDict
+#    
+#    except IOError, e:
+#        print 'File I/O error'
+#        print e
+        
 def extrapolateWaveData(waveFile):
     try:
         waveOpen = open(waveFile)
@@ -157,37 +207,26 @@ def extrapolateWaveData(waveFile):
         waveRow = []
         waveCol = []
         key = ''
-        rowcolIndicator = 0
-        check = 0
-        rowcolGrab = False
+        rowIndicator = False
+        colIndicator = False
         for line in waveOpen:
             if line[0] == 'I':
                 iVal = int(line.split(',')[1])
                 jVal = int(line.split(',')[3])
                 key = (iVal, jVal)
                 waveArray = []
-                rowcolGrab = True
-            elif rowcolGrab:
-                if rowcolIndicator == 0:
-                    if check != -1:
-                        waveRow.append(line.split(','))
-                        waveRow = waveRow[0]
-                    rowcolIndicator = rowcolIndicator + 1
-                elif rowcolIndicator == 1:
-                    if check != -1:
-                        waveCol.append(line.split(','))
-                        waveCol = waveCol[0]
-                        check = -1
-                    rowcolIndicator = 0
-                    rowcolGrab = False
+                rowIndicator = True
+            elif rowIndicator:
+                waveRow.append(line.split(','))
+                waveRow = waveRow[0]
+                rowIndicator = False
+                colIndicator = True
+            elif colIndicator:
+                waveCol.append(line.split(','))
+                waveCol = waveCol[0]
+                colIndicator = False
             else:
-                waveArray.append(line.split(','))
-                waveDict[key] = waveArray
-                
-        for i, val in enumerate(waveRow):
-            waveRow[i] = float(val)
-        for i, val in enumerate(waveCol):
-            waveCol[i] = float(val)
+                waveDict[key] = waveArray.append(line.split(','))
         
         waveOpen.close()
         waveDict[0] = waveRow
