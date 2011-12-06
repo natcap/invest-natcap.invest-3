@@ -302,11 +302,11 @@ def npv():
     return npv
 
 def waveEnergyInterp(waveData, machinePerf):
-    x = np.array(machinePerf.pop(0))
-    y = np.array(machinePerf.pop(0))
-    z = np.array(machinePerf)
-    newx = np.array(waveData[0])
-    newy = np.array(waveData[1])
+    x = np.array(machinePerf.pop(0), dtype='f')
+    y = np.array(machinePerf.pop(0), dtype='f')
+    z = np.array(machinePerf, dtype='f')
+    newx = waveData[0]
+    newy = waveData[1]
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
     return interpZ
 
@@ -327,10 +327,7 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
             heightMaxPos = i
 
     for key, val in waveData.iteritems():
-        for index, array in enumerate(val):
-            for i, num in enumerate(array):
-                array[i] = float(num)
-        tempArray = np.array(val)
+        tempArray = np.array(val, dtype='f')
         multArray = np.multiply(tempArray, interpZ)
 
         if periodMaxPos != -1:
