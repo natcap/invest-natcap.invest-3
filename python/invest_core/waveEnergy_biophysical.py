@@ -51,10 +51,7 @@ def execute(args):
     biophysicalargs['wave_data_dir'] = args['wave_base_data_uri']
 #    biophysicalargs['workspace_dir'] = args['workspace_dir']
     
-    dict = [[],[]]
-    arrayHeader = []
-    arrayColumns = []
-    machine_perf_twoDArray = []
+    machine_perf_twoDArray = [[],[]]
     
     #Create a 2D array of the machine performance table and place the x fields
     #and y fields as first two arrays in the list of arrays
@@ -64,19 +61,14 @@ def execute(args):
         getRow = True
         for row in reader:
             if getRow:
-                dict[0] = row[1:]
+                machine_perf_twoDArray[0] = row[1:]
                 getRow = False
             else:
-                dict[1].append(row.pop(0))
-                dict.append(row)
+                machine_perf_twoDArray[1].append(row.pop(0))
+                machine_perf_twoDArray.append(row)
         f.close()
     except IOError, e:
         print 'File I/O error' + e
-    #Convert all the string values to floats
-    for array in dict:
-        for index, val in enumerate(array):
-            array[index] = float(val)
-        machine_perf_twoDArray.append(array)
     
     biophysicalargs['machine_perf'] = machine_perf_twoDArray
     
@@ -150,55 +142,6 @@ def execute(args):
         
     waveEnergy_core.biophysical(biophysicalargs)
 
-#def extrapolateWaveData(waveFile):
-#    try:
-#        waveOpen = open(waveFile)
-#        waveDict = {}
-#        waveArray = []
-#        waveRow = []
-#        waveCol = []
-#        key = ''
-#        rowcolIndicator = 0
-#        check = 0
-#        rowcolGrab = False
-#        for line in waveOpen:
-#            if line[0] == 'I':
-#                iVal = int(line.split(',')[1])
-#                jVal = int(line.split(',')[3])
-#                key = (iVal, jVal)
-#                waveArray = []
-#                rowcolGrab = True
-#            elif rowcolGrab:
-#                if rowcolIndicator == 0:
-#                    if check != -1:
-#                        waveRow.append(line.split(','))
-#                        waveRow = waveRow[0]
-#                    rowcolIndicator = rowcolIndicator + 1
-#                elif rowcolIndicator == 1:
-#                    if check != -1:
-#                        waveCol.append(line.split(','))
-#                        waveCol = waveCol[0]
-#                        check = -1
-#                    rowcolIndicator = 0
-#                    rowcolGrab = False
-#            else:
-#                waveArray.append(line.split(','))
-#                waveDict[key] = waveArray
-#                
-#        for i, val in enumerate(waveRow):
-#            waveRow[i] = float(val)
-#        for i, val in enumerate(waveCol):
-#            waveCol[i] = float(val)
-#        
-#        waveOpen.close()
-#        waveDict[0] = waveRow
-#        waveDict[1] = waveCol
-#        return waveDict
-#    
-#    except IOError, e:
-#        print 'File I/O error'
-#        print e
-        
 def extrapolateWaveData(waveFile):
     try:
         waveOpen = open(waveFile)
@@ -226,11 +169,12 @@ def extrapolateWaveData(waveFile):
                     waveCol = line.split(',')
                     colIndicator = False
             else:
-                waveDict[key] = waveArray.append(line.split(','))
+                waveArray.append(line.split(','))
+                waveDict[key] = waveArray
         
         waveOpen.close()
-        waveDict[0] = waveRow
-        waveDict[1] = waveCol
+        waveDict[0] = np.array(waveRow, dtype='f')
+        waveDict[1] = np.array(waveCol, dtype='f')
         return waveDict
     
     except IOError, e:
