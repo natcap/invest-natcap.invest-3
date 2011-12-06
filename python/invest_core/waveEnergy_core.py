@@ -11,7 +11,6 @@ import invest_cython_core
 import sys, os
 import scipy
 
-
 def biophysical(args):
     """
     args['wave_base_data'] - a dictionary
@@ -303,11 +302,11 @@ def npv():
     return npv
 
 def waveEnergyInterp(waveData, machinePerf):
-    x = np.array(machinePerf.pop(0))
-    y = np.array(machinePerf.pop(0))
-    z = np.array(machinePerf)
-    newx = np.array(waveData[0])
-    newy = np.array(waveData[1])
+    x = np.array(machinePerf.pop(0), dtype='f')
+    y = np.array(machinePerf.pop(0), dtype='f')
+    z = np.array(machinePerf, dtype='f')
+    newx = waveData[0]
+    newy = waveData[1]
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
     return interpZ
 
@@ -328,21 +327,14 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
             heightMaxPos = i
 
     for key, val in waveData.iteritems():
-        for index, array in enumerate(val):
-            for i, num in enumerate(array):
-                array[i] = float(num)
-        tempArray = np.array(val)
+        tempArray = np.array(val, dtype='f')
         multArray = np.multiply(tempArray, interpZ)
 
         if periodMaxPos != -1:
             multArray[:, periodMaxPos:] = 0
         if heightMaxPos != -1:
             multArray[heightMaxPos:, :] = 0
-            
-        if key == (580,508):
-            print periodMaxPos
-            print heightMaxPos
-            print multArray
+
         validArray = np.divide(multArray, 5.0)
 #        validArray = np.where(multArray>capMax, capMax, multArray)
         #Since we are doing a cubic interpolation there is a possibility we
@@ -351,14 +343,9 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
         validArray = np.where(validArray < 0, 0, validArray)
 #            def deviceConstraints(a, capmax, hmax, tmax):
 
-#        sum = np.sum(validArray)
         sum = (validArray.sum()/1000)
         energyCap[key] = sum
-#        if key == (556, 496):
-#            print interpZ
 
-#            print sum
-    print energyCap[(580, 508)]
     return energyCap
 
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and
