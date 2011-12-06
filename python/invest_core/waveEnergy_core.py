@@ -29,12 +29,17 @@ def biophysical(args):
 
     #Set variables for common output paths
     workspaceDir = args['workspace_dir']
+    waveDataDir = args['wave_data_dir']
     interDir = workspaceDir + os.sep + 'Intermediate'
     outputDir = workspaceDir + os.sep + 'Output'
-    waveDataDir = args['wave_data_dir']
     waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
     #Path for 'new' AOI, see comment below 'if AOI in args'
     waveAOIPath = interDir + os.sep + 'waveAOIShape.shp'
+    #Rasters which will be past (along with global_dem) to vectorize with wave power op.
+    waveHeightPath = interDir + os.sep + 'waveHeight.tif'
+    wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
+    waveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
+    wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     
     #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
@@ -62,14 +67,10 @@ def biophysical(args):
     area_layer = area_shape.GetLayer(0)
     #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
     #and add the sum as a field to the shapefile
-    energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'], args['machine_param'])
-    energyCap = computeWaveEnergyCapacity(args['wave_base_data'], energyInterp)
+    energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
+    energyCap = computeWaveEnergyCapacity(args['wave_base_data'], energyInterp, args['machine_param'])
     capturedWaveEnergyToShape(energyCap, area_shape)
 
-    #Rasters which will be past (along with global_dem) to vectorize with wave power op.
-    waveHeightPath = interDir + os.sep + 'waveHeight.tif'
-    wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
-    waveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
     #Create rasters bounded by shape file of analyis area
     for path in (waveHeightPath, wavePeriodPath, waveEnergyPath):
         invest_cython_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY,
@@ -86,15 +87,15 @@ def biophysical(args):
 
     heightArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
     periodArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
+    energySumArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+
     interpolateField(heightArray, waveHeightRaster)
     interpolateField(periodArray, wavePeriodRaster)
-    
-    energySumArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
     interpolateField(energySumArray, waveEnergyRaster)
 
-    wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
 
+    #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
     waveHeightRaster = None
@@ -203,27 +204,12 @@ def pointShapeToDict(shape, key, valueArray, value):
     shape_layer.ResetReading()
     shape_feat = shape_layer.GetNextFeature()
 
-#    aoiDictionary = {}
-#    latlongDict = {}
-#    xrangeLong = []
-#    yrangeLat = []
-
     fieldDict = {}
     xrangeLong = []
     yrangeLat = []
     xRangeField = 'LONG'
     yRangeField = 'LATI'
     while shape_feat is not None:
-#
-#        itemArray = [0, 0, 0, 0, 0, 0]
-#        
-#        for field, var in (('I', 0), ('J', 1), ('LONG', 2), ('LATI', 3), ('HSAVG_M', 4), ('TPAVG_S', 5)):
-#            field_index = shape_feat.GetFieldIndex(field)
-#            itemArray[var] = shape_feat.GetField(field_index)
-#            
-#            fieldDict[field] = 
-#        
-#        fieldDict[key] = 
 
         valueDict = {}
         #May want to check to make sure field is in shape layer
@@ -264,45 +250,6 @@ def pointShapeToDict(shape, key, valueArray, value):
     matrixNP = np.array(matrix)
     results = [xrangeLongNP, yrangeLatNP, matrixNP]
     return results
-    
-
-#        xrangeLong.append(itemArray[2])
-#        yrangeLat.append(itemArray[3])
-#        
-#        aoiDictionary[(itemArray[0], itemArray[1])] = [itemArray[2], itemArray[3], itemArray[4], itemArray[5]]
-#        latlongDict[(itemArray[2], itemArray[3])] = [itemArray[4], itemArray[5]]
-#        
-#        shape_feat.Destroy()
-#        shape_feat = shape_layer.GetNextFeature()
-#
-#    xrangeLongNoDup = list(set(xrangeLong))
-#    yrangeLatNoDup = list(set(yrangeLat))
-#    
-#    xrangeLongNoDup.sort()
-#    yrangeLatNoDup.sort()
-#    
-#    xrangeLongNP = np.array(xrangeLongNoDup)
-#    yrangeLatNP = np.array(yrangeLatNoDup)
-#    matrixHeight = []
-#    matrixPeriod = []
-#    for j in yrangeLatNP:
-#        tmpHeight = []
-#        tmpPeriod = []
-#        for i in xrangeLongNP:
-#            if (i,j) in latlongDict:
-#                tmpHeight.append(latlongDict[(i,j)][0])
-#                tmpPeriod.append(latlongDict[(i,j)][1])
-#            else:
-#                tmpHeight.append(0)
-#                tmpPeriod.append(0)
-#        matrixHeight.append(tmpHeight)
-#        matrixPeriod.append(tmpPeriod)
-#        
-#    matrixHeightNP = np.array(matrixHeight)
-#    matrixPeriodNP = np.array(matrixPeriod)
-#    
-#    results = [xrangeLongNP, yrangeLatNP, matrixHeightNP, matrixPeriodNP]
-#    return results
 
 def interpolateField(results, raster):
     xrange = results[0]
@@ -355,7 +302,7 @@ def npv():
 
     return npv
 
-def waveEnergyInterp(waveData, machinePerf, machineParam):
+def waveEnergyInterp(waveData, machinePerf):
     x = np.array(machinePerf.pop(0))
     y = np.array(machinePerf.pop(0))
     z = np.array(machinePerf)
@@ -364,21 +311,21 @@ def waveEnergyInterp(waveData, machinePerf, machineParam):
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
     return interpZ
 
-def computeWaveEnergyCapacity(waveData, interpZ):
+def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
     energyCap = {}
     waveRow = waveData.pop(0)
     waveColumn = waveData.pop(1)
-    periodMax = 17 #Get value from machine_param
+    capMax = float(machineParam['CapMax']['VALUE'])
+    periodMax = float(machineParam['TpMax']['VALUE'])
     periodMaxPos = -1
-    heightMax = 5.5 #Get value from machine_param
+    heightMax = float(machineParam['HsMax']['VALUE'])
     heightMaxPos = -1
     for i, v in enumerate(waveRow):
-        if v > periodMax and periodMaxPos == -1:
+        if (v > periodMax) and (periodMaxPos == -1):
             periodMaxPos = i
     for i, v in enumerate(waveColumn):
-        if v > heightMax and heightMaxPos == -1:
+        if (v > heightMax) and (heightMaxPos == -1):
             heightMaxPos = i
-
 
     for key, val in waveData.iteritems():
         for index, array in enumerate(val):
@@ -391,21 +338,27 @@ def computeWaveEnergyCapacity(waveData, interpZ):
             multArray[:, periodMaxPos:] = 0
         if heightMaxPos != -1:
             multArray[heightMaxPos:, :] = 0
+            
+        if key == (580,508):
+            print periodMaxPos
+            print heightMaxPos
+            print multArray
         validArray = np.divide(multArray, 5.0)
-#        validArray = np.where(multArray>750, 750, multArray)
+#        validArray = np.where(multArray>capMax, capMax, multArray)
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero.  So here
         #we drive any negative values to zero.
         validArray = np.where(validArray < 0, 0, validArray)
 #            def deviceConstraints(a, capmax, hmax, tmax):
 
-        sum = np.sum(validArray)
+#        sum = np.sum(validArray)
+        sum = (validArray.sum()/1000)
         energyCap[key] = sum
 #        if key == (556, 496):
 #            print interpZ
 
 #            print sum
-    print energyCap[(556, 496)]
+    print energyCap[(580, 508)]
     return energyCap
 
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and

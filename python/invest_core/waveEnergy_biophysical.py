@@ -86,7 +86,7 @@ def execute(args):
         machineParamFile = open(args['machine_param_uri'])
         reader = csv.DictReader(machineParamFile)
         for row in reader:
-            machine_params[row['NAME']] = row
+            machine_params[row['NAME'].strip()] = row
         machineParamFile.close()
         biophysicalargs['machine_param'] = machine_params
     except IOError, e:
@@ -195,4 +195,5 @@ def extrapolateWaveData(waveFile):
         return waveDict
     
     except IOError, e:
-        print 'File I/O error' + e
+        print 'File I/O error'
+        print e
