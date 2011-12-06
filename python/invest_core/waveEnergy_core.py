@@ -316,17 +316,16 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
     waveRow = waveData.pop(0)
     waveColumn = waveData.pop(1)
     capMax = float(machineParam['CapMax']['VALUE'])
-    periodMax = machineParam['TpMax']['VALUE']
+    periodMax = float(machineParam['TpMax']['VALUE'])
     periodMaxPos = -1
-    heightMax = machineParam['HsMax']['VALUE']
+    heightMax = float(machineParam['HsMax']['VALUE'])
     heightMaxPos = -1
     for i, v in enumerate(waveRow):
-        if v > periodMax and periodMaxPos == -1:
+        if (v > periodMax) and (periodMaxPos == -1):
             periodMaxPos = i
     for i, v in enumerate(waveColumn):
-        if v > heightMax and heightMaxPos == -1:
+        if (v > heightMax) and (heightMaxPos == -1):
             heightMaxPos = i
-
 
     for key, val in waveData.iteritems():
         for index, array in enumerate(val):
@@ -339,6 +338,11 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
             multArray[:, periodMaxPos:] = 0
         if heightMaxPos != -1:
             multArray[heightMaxPos:, :] = 0
+            
+        if key == (580,508):
+            print periodMaxPos
+            print heightMaxPos
+            print multArray
         validArray = np.divide(multArray, 5.0)
 #        validArray = np.where(multArray>capMax, capMax, multArray)
         #Since we are doing a cubic interpolation there is a possibility we
@@ -347,13 +351,14 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
         validArray = np.where(validArray < 0, 0, validArray)
 #            def deviceConstraints(a, capmax, hmax, tmax):
 
-        sum = np.sum(validArray)
+#        sum = np.sum(validArray)
+        sum = (validArray.sum()/1000)
         energyCap[key] = sum
 #        if key == (556, 496):
 #            print interpZ
 
 #            print sum
-    print energyCap[(556, 496)]
+    print energyCap[(580, 508)]
     return energyCap
 
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and
