@@ -295,12 +295,6 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
     invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation, blankRaster], op,
                                  rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
 
-def npv():
-    for num in range(1, T + 1):
-        sum = sum + (B[num] - C[num]) * ((1 + i) ** (-1 * t))
-
-    return npv
-
 def waveEnergyInterp(waveData, machinePerf):
     x = np.array(machinePerf.pop(0), dtype='f')
     y = np.array(machinePerf.pop(0), dtype='f')
@@ -371,3 +365,9 @@ def capturedWaveEnergyToShape(energyCap, waveShape):
         wave_Layer.SetFeature(feat)
         feat.Destroy()
 
+
+def npv():
+    for num in range(1, T + 1):
+        sum = sum + (B[num] - C[num]) * ((1 + i) ** (-1 * t))
+
+    return npv
