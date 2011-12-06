@@ -340,8 +340,8 @@ def flowDirection(dem, flow):
 
     cdef np.int_t x, y, dcur, xdim, ydim, xmax, ymax, i, j, d, nodataFlow, \
         validPixelCount
-    cdef np.float_t lowest, h, nodataDem, drainageHeight, currentHeight, \
-        neighborHeight, neighborDrop, currentDrop
+    cdef np.float_t lowest, h, nodataDem, drainageDistance, currentHeight, \
+        neighborHeight, neighborDistance, currentDistance, stepDistance
     cdef Pair *demPixels = \
         <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
     cdef Queue q = Queue()
@@ -376,31 +376,33 @@ def flowDirection(dem, flow):
             demPixels[validPixelCount].h = h
             validPixelCount += 1
     
-    #Sort pixels by increasing height
+    #Sort pixels by increasing height so that we visit drainage points in order
     qsort(demPixels,validPixelCount,sizeof(Pair),pairCompare)
     
-    #This matrix holds the drop in elevation from the current pixel to the
-    #most downhill connected pixel on the grid.  The ymax and xmax
-    #axes are swapped so they correspond to the transposed version of
-    #demMatrix.  
-    cdef np.ndarray[np.float_t,ndim=2] deltaHeight = \
-        np.zeros([xmax,ymax], dtype=np.float)
-    deltaHeight[:] = -1.0 #Initialize all heights to -1
+    #This matrix holds the minimum path distance from the current pixel to the
+    #most downhill connected pixel on the grid.
+    cdef np.ndarray[np.int_t,ndim=2] distanceToDrain = \
+        np.zeros([xmax,ymax], dtype=np.int)
+    distanceToDrain[:] = -1.0 #Initialize all heights to -1
     
+    #Do a breadth first walk from each pixel uphill updating the minimum
+    #distance from the current pixel to the starting pixel
     for p in range(validPixelCount):
         i = demPixels[p].i
         j = demPixels[p].j
+        
         #if this point has been processed, it's not a drainage point, so skip
-        #over it 
-        if deltaHeight[i,j] != -1: continue
+        if distanceToDrain[i,j] != -1: continue
+        
         #initialize the drainage point to 0 height above drainage point
-        deltaHeight[i,j] = 0
+        distanceToDrain[i,j] = 0
         q.append(i)
         q.append(j)
+        
         while q.size() > 0:
             i = q.pop()
             j = q.pop()
-            drainageHeight = deltaHeight[i,j]
+            drainageDistance = distanceToDrain[i,j]
             currentHeight = demMatrix[i,j]
             #visit neighbors of i,j
             for k in range(8):
@@ -412,15 +414,24 @@ def flowDirection(dem, flow):
                 neighborHeight = demMatrix[io,jo]
                 if neighborHeight < currentHeight: continue
                 
-                #update delta height if the current delta height of the
-                #neighbor pixel is smaller than what we could calculate
+                #stepDistance refers to the distance we travel across the
+                #pixel, whether it's 1 across or sqrt(2) diagonally. We're
+                #diagonal if both the io and jo offsets are turned on
+                if abs(io)+abs(jo) < 2:
+                    stepDistance = 1.0
+                else:
+                    stepDistance = math.sqrt(2)
+                
+                #update distance if the current distance
+                #neighbor pixel is greater than what we could calculate
                 #now.  If it is, update the height and enqueue the neighbor
-                #for further propogation of processing heights
-                if neighborHeight-drainageHeight > deltaHeight[io,jo]:
-                    deltaHeight[io,jo] = neighborHeight-drainageHeight
+                #for further propogation of processing distances
+                
+                if distanceToDrain[io,jo] == -1 or \
+                    drainageDistance+stepDistance < distanceToDrain[io,jo]:
+                    distanceToDrain[io,jo] = drainageDistance+stepDistance
                     q.append(io)
                     q.append(jo)
-    
     
     #This matrix holds the flow direction value, initialize to zero
     cdef np.ndarray[np.int_t,ndim=2] flowMatrix = \
@@ -435,12 +446,12 @@ def flowDirection(dem, flow):
         for y in range(1,ymax-1):
             #The lowest height seen so far, initialize to current pixel height
             currentHeight = demMatrix[x,y]
-            
+            lowest = currentHeight
             #check for nodata values
             if lowest == nodataDem:
                 flowMatrix[x,y] = nodataFlow
                 continue
-            currentDrop = deltaHeight[x,y]
+            currentDistance = distanceToDrain[x,y]
             
             #The current flow direction, initialize to 0 for no direction
             dcur = 0
@@ -452,16 +463,18 @@ def flowDirection(dem, flow):
                                            y+shiftIndexes[i*3+2]]
                 #ensure that the neighbor is downhill
                 if neighborHeight > currentHeight: continue 
-                neighborDrop = deltaHeight[x+shiftIndexes[i*3+1],
+                neighborDistance = distanceToDrain[x+shiftIndexes[i*3+1],
                                            y+shiftIndexes[i*3+2]]
                 
-                if neighborDrop > currentDrop:
-                    currentDrop = neighborDrop
+                if neighborDistance < currentDistance:
+                    currentDistance = neighborDistance
                     dcur = d
             flowMatrix[x,y] = dcur
 
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
-    
+    dh = newRasterFromBase(flow,'../../../test_out/distanceToDrain.tiff','GTiff',
+                      -1,gdal.GDT_Float32)
+    dh.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),0,0)
     free(demPixels)
     
     return flow
