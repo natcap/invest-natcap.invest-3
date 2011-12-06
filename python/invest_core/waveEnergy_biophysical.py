@@ -49,15 +49,13 @@ def execute(args):
     biophysicalargs = {}
     biophysicalargs['workspace_dir'] = args['workspace_dir']
     biophysicalargs['wave_data_dir'] = args['wave_base_data_uri']
-#    biophysicalargs['workspace_dir'] = args['workspace_dir']
-    
-    machine_perf_twoDArray = [[],[]]
-    
+    biophysicalargs['dem'] = gdal.Open(args['dem_uri'])
     #Create a 2D array of the machine performance table and place the x fields
     #and y fields as first two arrays in the list of arrays
     try:
-        f = open(args['machine_perf_uri'])
-        reader = csv.reader(f)
+        machine_perf_twoDArray = [[],[]]
+        machinePerfFile = open(args['machine_perf_uri'])
+        reader = csv.reader(machinePerfFile)
         getRow = True
         for row in reader:
             if getRow:
@@ -66,16 +64,15 @@ def execute(args):
             else:
                 machine_perf_twoDArray[1].append(row.pop(0))
                 machine_perf_twoDArray.append(row)
-        f.close()
+        machinePerfFile.close()
+        biophysicalargs['machine_perf'] = machine_perf_twoDArray
     except IOError, e:
         print 'File I/O error' + e
-    
-    biophysicalargs['machine_perf'] = machine_perf_twoDArray
-    
+        
     #Create a dictionary of dictionaries where the inner dictionaries keys are the column fields.
     #This is for the machine parameter values.
-    machine_params = {}
     try:
+        machine_params = {}
         machineParamFile = open(args['machine_param_uri'])
         reader = csv.DictReader(machineParamFile)
         for row in reader:
@@ -113,15 +110,12 @@ def execute(args):
     else:
         print 'Analysis Area ERROR'
     
-    gdal.AllRegister()
-    
     #If the area of interest is present add it to the output arguments
     AOI = None
     if 'AOI_uri' in args:
         try:
             AOI = ogr.Open(args['AOI_uri'].encode(filesystemencoding), 1)
-            biophysicalargs['AOI'] = AOI
-            
+            biophysicalargs['AOI'] = AOI            
         except IOError, e:
             print 'File I/O error' + e
     #If the valuation is true, then create dictionaries for the following files
@@ -138,8 +132,6 @@ def execute(args):
             except IOError, e:
                 print 'File I/O error' + e
     
-    biophysicalargs['dem'] = gdal.Open(args['dem_uri'])
-        
     waveEnergy_core.biophysical(biophysicalargs)
 
 def extrapolateWaveData(waveFile):
