@@ -207,24 +207,24 @@ def extrapolateWaveData(waveFile):
         waveRow = []
         waveCol = []
         key = ''
-        rowIndicator = False
-        colIndicator = False
+        rowIndicator = True
+        colIndicator = True
+        rowcolGrab = 0
         for line in waveOpen:
             if line[0] == 'I':
                 iVal = int(line.split(',')[1])
                 jVal = int(line.split(',')[3])
                 key = (iVal, jVal)
                 waveArray = []
-                rowIndicator = True
-            elif rowIndicator:
-                waveRow.append(line.split(','))
-                waveRow = waveRow[0]
-                rowIndicator = False
-                colIndicator = True
-            elif colIndicator:
-                waveCol.append(line.split(','))
-                waveCol = waveCol[0]
-                colIndicator = False
+                rowcolGrab = 1
+            elif rowcolGrab == 1 or rowcolGrab == 2:
+                rowcolGrab = rowcolGrab + 1
+                if rowIndicator:
+                    waveRow = line.split(',')
+                    rowIndicator = False
+                elif colIndicator:
+                    waveCol = line.split(',')
+                    colIndicator = False
             else:
                 waveDict[key] = waveArray.append(line.split(','))
         
