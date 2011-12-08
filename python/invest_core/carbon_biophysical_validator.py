@@ -130,6 +130,11 @@ that can be opened with GDAL.')
                                 if index == -1:
                                     out.append(prefix + ': field ' + field + 'must exist')
                             pass
+    
+    #verify that current year < future year
+    if args['lulc_cur_year'] > args['lulc_fut_year']:
+        out.append('Current year: ' + str(args['lulc_cur_year']) + ' must be '
+                    + 'less than the future year: ' + str(args['lulc_fut_year']))
              
 
     #Inconsistencies in market discount rate.
