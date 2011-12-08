@@ -145,7 +145,7 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
 
     driver = gdal.GetDriverByName('GTiff')
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
-    raster.GetRasterBand(1).SetNoDataValue(1.0)
+    raster.GetRasterBand(1).SetNoDataValue(nodata)
 
     #Set the transform based on the hupper left corner and given pixel
     #dimensions
