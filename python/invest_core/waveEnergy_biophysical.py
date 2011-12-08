@@ -23,8 +23,8 @@ def execute(args):
                                      shapefile.
         args['analysis_area_uri'] - A string identifying the analysis area of interest
         args['AOI_uri'] - A polygon shapefile outlining a more detailed area within the analyis area.
-        args['machine_perf_uri'] - A string of the location of a CSV file that holds the machine performace table. 
-        args['machine_param_uri'] - A string of the location of a CSV file that holds the machien parameter table.
+        args['machine_perf_uri'] - The path of a CSV file that holds the machine performace table. 
+        args['machine_param_uri'] - The path of a CSV file that holds the machien parameter table.
         args['dem_uri'] - The path of the Global Digital Elevation Model (DEM)
         args['calculate_valuation'] - A boolean value indicating whether to compute the economic evaluation.
         args['landgridpts_uri'] - The path to a CSV file containing the Landing and Power Grid Connection Points table.
