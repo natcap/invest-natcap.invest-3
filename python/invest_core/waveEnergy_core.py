@@ -42,7 +42,7 @@ def biophysical(args):
     
     #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
-    nodata = -1
+    nodata = 0
     datatype = gdal.GDT_Float32
     #Get the resolution from the global dem to be used for creating new blank rasters
     geoform = global_dem.GetGeoTransform()
