@@ -14,8 +14,8 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         args['workspace_dir'] = '../../test_data/wave_Energy'
         args['wave_base_data_uri'] = '../../test_data/wave_Energy/samp_input/WaveData'
         args['analysis_area_uri'] = 'West Coast of North America and Hawaii'
-        args['machine_perf_uri'] = '../../test_data/wave_Energy/samp_input/Machine_AquaBuOYCSV.csv'
-        args['machine_param_uri'] = '../../test_data/wave_Energy/samp_input/Machine_AquaBuOYParamCSV.csv'
+        args['machine_perf_uri'] = '../../test_data/wave_Energy/samp_input/Machine_PelamisPerfCSV.csv'
+        args['machine_param_uri'] = '../../test_data/wave_Energy/samp_input/Machine_PelamisParamCSV.csv'
         args['dem_uri'] = '../../test_data/wave_Energy/samp_input/global_dem'
         args['AOI_uri'] = '../../test_data/wave_Energy/samp_input/AOI_WCVI.shp'
         waveEnergy_biophysical.execute(args)
