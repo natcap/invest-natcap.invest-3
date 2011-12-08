@@ -12,29 +12,37 @@ import sys, os
 import scipy
 
 def biophysical(args):
-    """
-    args['wave_base_data'] - a dictionary
-    args['analysis_area'] - 
-    args['analysis_area_extract']
-    args['AOI'] - a shapefile
-    args['machine_perf'] - a dictionary
-    args['machine_param'] - a dictionary
-    args['dem'] - a GIS raster file
+    """Runs the biophysical part of the Wave Energy Model (WEM).
+    
+    args['wave_base_data'] - a dictionary of seastate bin data.
+    args['analysis_area'] - a point geometry shapefile representing the relevant WW3 points
+    args['analysis_area_extract'] - a polygon geometry shapefile encompassing the broader range
+                                    of interest.
+    args['AOI'] - a polygon geometry shapefile outlining a more specific area of interest.
+    args['machine_perf'] - a 2D array representing the machine performance table.
+    args['machine_param'] - a dictionary which holds the machine parameter values.
+    args['dem'] - a GIS raster file of the global elevation model
     args['workspace_dir'] - the workspace path
+    args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
         
     """
     filesystemencoding = sys.getfilesystemencoding()
 #    transformProjection(args['analysis_area_extract'], args['AOI'])
 
     #Set variables for common output paths
+    #Workspace Directory path
     workspaceDir = args['workspace_dir']
+    #Wave Data Directory path
     waveDataDir = args['wave_data_dir']
+    #Intermediate Directory path to store information
     interDir = workspaceDir + os.sep + 'Intermediate'
+    #Output Directory path to store output rasters
     outputDir = workspaceDir + os.sep + 'Output'
+    #Path for clipped wave point shapefile holding values of interest
     waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
     #Path for 'new' AOI, see comment below 'if AOI in args'
     waveAOIPath = interDir + os.sep + 'waveAOIShape.shp'
-    #Rasters which will be past (along with global_dem) to vectorize with wave power op.
+    #Paths for intermediate and output rasters.
     waveHeightPath = interDir + os.sep + 'waveHeight.tif'
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
     waveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
@@ -53,7 +61,7 @@ def biophysical(args):
     if 'AOI' in args:
         #The AOI shapefile has a different projection than lat/long so by calling
         #the clipShape function with analysis_area_extract (which has lat/long projection
-        #which we would expect) and AOI I am making a new AOI with the proper projection
+        #which we would expect) and AOI, I am making a new AOI with the proper projection
         cutter = clipShape(args['analysis_area_extract'], args['AOI'], waveAOIPath)        
     else:
         cutter = args['analysis_area_extract']
