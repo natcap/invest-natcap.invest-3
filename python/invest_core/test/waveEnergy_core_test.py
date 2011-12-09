@@ -15,7 +15,10 @@ from osgeo import ogr
 class TestWaveEnergy(unittest.TestCase):
 
     def test_waveEnergy_clipShape(self):
-        """Test clipShape to make sure that it works properly for different geometries"""
+        """A trivial test case that makes sure clipShape returns the proper shape
+        after it has been clipped by a polygon shapefile.  Here the clipping polygon is
+        the same size and form as the shape to be clipped so we would expect the output to be
+        equal to the input"""
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -37,7 +40,42 @@ class TestWaveEnergy(unittest.TestCase):
         bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
         
         newShape = waveEnergy_core.clipShape(shapeToClip, bindingShape, newShapePath)
-
+        
+        layerCount = shapeToClip.GetLayerCount()
+        layerCountNew = newShape.GetLayerCount()        
+        self.assertEqual(layerCount, layerCountNew, 'The shapes DO NOT have the same number of layers')
+        
+        for layerNum in range(layerCount):
+            layer = shapeToClip.GetLayer(layerNum)
+            layerNew = newShape.GetLayer(layerNum)
+            
+            featCount = layer.GetFeatureCount()
+            featCountNew = layerNew.GetFeatureCount()
+            self.assertEqual(featCount, featCountNew, 'The layers DO NOT have the same number of features')
+            
+            feat = layer.GetNextFeature()
+            featNew = layerNew.GetNextFeature()
+            while feat is not None:
+                layerDef = layer.GetLayerDefn()
+                layerDefNew = layerNew.GetLayerDefn()
+            
+                fieldCount = layerDef.GetFieldCount()
+                fieldCountNew = layerDefNew.GetFieldCount()
+                self.assertEqual(fieldCount, fieldCountNew, 'The shapes DO NOT have the same number of fields')
+                                            
+                for fld_index in range(fieldCount):
+                    field = feat.GetField(fld_index)
+                    fieldNew = featNew.GetField(fld_index)
+                    self.assertEqual(field, fieldNew, 'The field values DO NOT match')
+                    
+                feat.Destroy()
+                featNew.Destroy()
+                feat = layer.GetNextFeature()
+                featNew = layerNew.GetNextFeature()
+                
+        newShape.Destroy()
+        shapeToClip.Destroy()                
+        
     def test_waveEnergy_clipShapeProj(self):
         """Test clipShape to make sure that it works properly for different geometries"""
         #This ensures we are not in Arc's python directory so that when
@@ -85,9 +123,9 @@ class TestWaveEnergy(unittest.TestCase):
         key = ['LONG', 'LATI']
         valueArray = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
         
-        shapeArray = waveEnergy_core.pointShapeToDict(shapeToClip, key, valueArray)
-        for value in shapeArray:
-            print value
+        shapeArray = waveEnergy_core.pointShapeToDict(shapeToClip, key, valueArray, 'HSAVG_M')
+#        for value in shapeArray:
+#            print value
 
 #    def test_waveEnergy_with_inputs(self):
 #        """Test timber model with real inputs.  Compare copied and modified shapefile with valid
