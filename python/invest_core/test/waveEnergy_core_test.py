@@ -33,8 +33,6 @@ class TestWaveEnergy(unittest.TestCase):
         output_dir = testDir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
-#        elif os.path.isfile(output_dir + 'timber.shp'):
-#            os.remove(output_dir + 'timber.shp')
         
         shapeToClip = ogr.Open(shapeToClipPath.encode(filesystemencoding))
         bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
@@ -74,7 +72,13 @@ class TestWaveEnergy(unittest.TestCase):
                 featNew = layerNew.GetNextFeature()
                 
         newShape.Destroy()
-        shapeToClip.Destroy()                
+        shapeToClip.Destroy()      
+        
+        if os.path.isdir(output_dir):
+            textFileList = os.listdir(output_dir)
+            for file in textFileList:
+                os.remove(output_dir + file)
+            os.rmdir(output_dir)
         
     def test_waveEnergy_clipShapeProj(self):
         """Test clipShape to make sure that it works properly for different geometries"""
