@@ -151,7 +151,7 @@ class TestWaveEnergy(unittest.TestCase):
         
         
         testDir = '../../../test_data/wave_Energy'
-        shapePath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        shapePath = testDir + os.sep + 'test_input/pointShapeTest.shp'
         
         #Add the Output directory onto the given workspace
         output_dir = testDir + os.sep + 'test_output/'
@@ -164,7 +164,21 @@ class TestWaveEnergy(unittest.TestCase):
         key = ['LONG', 'LATI']
         valueArray = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
         value = 'HSAVG_M'
+        xrange = [-126.933144, -126.866477, -126.79981]
+        yrange = [47.600162]
+        matrix = [[2.8, 2.8, 2.79]]
         shapeArray = waveEnergy_core.pointShapeToDict(shapeToClip, key, valueArray, value)
+        self.assertEqual(len(xrange), len(shapeArray[0]), 'xranges do not have same number of elements')
+        self.assertEqual(len(yrange), len(shapeArray[1]), 'yranges do not have same number of elements')
+        self.assertEqual(len(matrix), len(shapeArray[2]), 'matrices do not have same number of elements')
+        shapeMatrix = shapeArray[2]
+        for index, var in enumerate(matrix):
+            for innerIndex, num in enumerate(var):
+                self.assertEqual(num, shapeMatrix[index][innerIndex], 'The values of the matrices do not match')
+        
+        shapeToClip.Destroy()
+        
+        
 #        for value in shapeArray:
 #            print value
 
