@@ -73,6 +73,7 @@ class TestWaveEnergy(unittest.TestCase):
                 
         newShape.Destroy()
         shapeToClip.Destroy()      
+        bindingShape.Destroy()
         
         if os.path.isdir(output_dir):
             textFileList = os.listdir(output_dir)
@@ -89,8 +90,8 @@ class TestWaveEnergy(unittest.TestCase):
         filesystemencoding = sys.getfilesystemencoding()
         
         testDir = '../../../test_data/wave_Energy'
-        shapeToClipPath = testDir + os.sep + 'samp_input/WaveData/WCNA_extract.shp'
-        bindingShapePath = testDir + os.sep + 'samp_input/AOI_WCVI.shp'
+        shapeToClipPath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        bindingShapePath = testDir + os.sep + 'test_input/threePointShape.shp'
         newShapePath = testDir + os.sep + 'test_output/waveEnergy_ClipAOI.shp'
         
         #Add the Output directory onto the given workspace
@@ -104,7 +105,42 @@ class TestWaveEnergy(unittest.TestCase):
         bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
         
         newShape = waveEnergy_core.clipShape(shapeToClip, bindingShape, newShapePath)
-
+        
+#        pointOneFields = [6025, 'Point', 572, 490, -126.933144, 47.600162, 2.8, 11.1]
+#        pointTwoFields = [6064, 'Point', 573, 490, -126.866477, 47.600162, 2.8, 11.11]
+#        pointThreeFields = [6101, 'Point', 574, 490, -126.79981, 47.600162, 2.79, 11.11]
+        #It seems that the fields "FID" and "Shape" are not included for some reason when
+        #Looping through all the fields of the shapefile
+        pointOneFields = [572, 490, -126.933144, 47.600162, 2.8, 11.1]
+        pointTwoFields = [573, 490, -126.866477, 47.600162, 2.8, 11.11]
+        pointThreeFields = [574, 490, -126.79981, 47.600162, 2.79, 11.11]
+        pointFieldArray = [pointOneFields, pointTwoFields, pointThreeFields]
+        
+        layer = newShape.GetLayer(0)
+        featCountCalc = 3
+        featCount = layer.GetFeatureCount()
+        self.assertEqual(featCountCalc, featCount, 'The number of features are not correct')
+        
+        feat = layer.GetNextFeature()
+        pointArrayIderator = 0
+        while feat is not None:
+            layerDef = layer.GetLayerDefn()
+            pointField = pointFieldArray[pointArrayIderator]
+            fieldCount = layerDef.GetFieldCount()
+            fldCountCalc = 6
+            self.assertEqual(fieldCount, fldCountCalc, 'The number of fields are not correct')
+            for fld_index in range(fieldCount):
+                field = feat.GetField(fld_index)
+                fieldCalc = pointField[fld_index]
+                self.assertEqual(field, fieldCalc, 'The field values do not match'+str(field)+'!='+str(fieldCalc))
+                
+            feat.Destroy()
+            feat = layer.GetNextFeature()
+            pointArrayIderator = pointArrayIderator+1
+            
+        newShape.Destroy()
+        shapeToClip.Destroy()
+        bindingShape.Destroy()
 
     def test_waveEnergy_shapeToDict(self):
         """Test pointShapeToDict to make sure that it works properly for different geometries"""
@@ -127,8 +163,8 @@ class TestWaveEnergy(unittest.TestCase):
         shapeToClip = ogr.Open(shapePath.encode(filesystemencoding))
         key = ['LONG', 'LATI']
         valueArray = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
-        
-        shapeArray = waveEnergy_core.pointShapeToDict(shapeToClip, key, valueArray, 'HSAVG_M')
+        value = 'HSAVG_M'
+        shapeArray = waveEnergy_core.pointShapeToDict(shapeToClip, key, valueArray, value)
 #        for value in shapeArray:
 #            print value
 
