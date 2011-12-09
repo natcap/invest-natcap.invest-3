@@ -102,6 +102,29 @@ def biophysical(args):
 
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
 
+#
+    print pixelSizeX
+    print pixelSizeY
+    src_ds = gdal.Open(wavePowerPath)
+    reprojWP = '../../test_data/wave_Energy/Intermediate/reprojWPRaster.tif'
+    
+    sr = osr.SpatialReference()
+    sr.ImportFromEPSG(32611)
+    
+    sr2 = osr.SpatialReference()
+    sr2.ImportFromEPSG(4326)
+    
+    drv = gdal.GetDriverByName('GTiff')
+    dst_ds = drv.Create(reprojWP, src_ds.RasterXSize, src_ds.RasterYSize, 1, gdal.GDT_Float32)
+    dst_ds.SetProjection(src_ds.GetProjectionRef())
+    dst_ds.SetGeoTransform(src_ds.GetGeoTransform())
+    
+    gdal.ReprojectImage(src_ds, dst_ds, sr.ExportToWkt(), sr2.ExportToWkt())
+#    gdal.ReprojectImage(src_ds, dst_ds)
+    dst_ds = None
+
+#
+
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
