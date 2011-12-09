@@ -81,7 +81,8 @@ class TestWaveEnergy(unittest.TestCase):
             os.rmdir(output_dir)
         
     def test_waveEnergy_clipShapeProj(self):
-        """Test clipShape to make sure that it works properly for different geometries"""
+        """A non trivial test case that makes sure clipShape returns the proper shape
+        after it has been clipped by a polygon shapefile."""
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
