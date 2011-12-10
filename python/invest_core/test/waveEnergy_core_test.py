@@ -80,6 +80,35 @@ class TestWaveEnergy(unittest.TestCase):
             for file in textFileList:
                 os.remove(output_dir + file)
             os.rmdir(output_dir)
+            
+    def test_waveEnergy_clipShapeZero(self):
+        """A trivial test case that makes sure clipShape returns the proper shape
+        after it has been clipped by a polygon shapefile.  Here the clipping polygon is
+        the same size and form as the shape to be clipped so we would expect the output to be
+        equal to the input"""
+        #This ensures we are not in Arc's python directory so that when
+        #we import gdal stuff we don't get the wrong GDAL version.
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        filesystemencoding = sys.getfilesystemencoding()
+        
+        testDir = '../../../test_data/wave_Energy'
+        shapeToClipPath = testDir + os.sep + 'test_input/pointShapeTest.shp'
+        bindingShapePath = testDir + os.sep + 'samp_input/AOI_WCVI.shp'
+        newShapePath = testDir + os.sep + 'test_output/waveEnergy_NoClip.shp'
+        
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        
+        shapeToClip = ogr.Open(shapeToClipPath.encode(filesystemencoding))
+        bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
+        
+        newShape = waveEnergy_core.clipShape(shapeToClip, bindingShape, newShapePath)
+        
+        layer = newShape.GetLayer(0)
+        
+        self.assertEqual(layer.GetFeatureCount(), 0)
         
     def test_waveEnergy_clipShapeProj(self):
         """A non trivial test case that makes sure clipShape returns the proper shape
