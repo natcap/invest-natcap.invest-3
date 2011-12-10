@@ -21,7 +21,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         waveEnergy_biophysical.execute(args)
         
     def test_waveEnergy_extrapWaveData(self):
-        wave_base_data_uri = '../../../test_data/wave_Energy/samp_input/WaveData/sampleWCWaveData.txt'
+        wave_base_data_uri = '../../../test_data/wave_Energy/test_input/sampleWCWaveData.txt'
         if os.path.isfile(wave_base_data_uri):
             waveData = waveEnergy_biophysical.extrapolateWaveData(wave_base_data_uri)
             
