@@ -67,7 +67,7 @@ def biophysical(args):
         cutter = args['analysis_area_extract']
 
     #Blank raster to be used in clipping output rasters to areas of interest
-    blankRaster = aoiBlankRaster(cutter, interDir, pixelSizeX, pixelSizeY, datatype)
+    blankRaster = aoiBlankRaster(cutter, interDir, .0077, .0077, datatype)
     
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
     area_shape = clipShape(args['analysis_area'], cutter, waveShapePath)
@@ -80,8 +80,8 @@ def biophysical(args):
 
     #Create rasters bounded by shape file of analyis area
     for path in (waveHeightPath, wavePeriodPath, waveEnergyPath):
-        invest_cython_core.createRasterFromVectorExtents(pixelSizeX, pixelSizeY,
-                                              datatype, nodata, path, cutter)
+        invest_cython_core.createRasterFromVectorExtents(.0077, .0077,
+                                              datatype, nodata, path, area_shape)
 
     #Open created rasters
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
@@ -319,6 +319,15 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
 
     invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation, blankRaster], op,
                                  rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
+    
+    wpRaster = gdal.Open(wavePowerPath, GA_Update)
+    wpNoData = wpRaster.GetRasterBand(1).GetNoDataValue()
+    def op2(a):
+        if a < 1:
+            return wpNoData
+        else:
+            return a
+    invest_core.vectorize1ArgOp(wpRaster.GetRasterBand(1), op2, wpRaster.GetRasterBand(1))
 
 def waveEnergyInterp(waveData, machinePerf):
     x = np.array(machinePerf.pop(0), dtype='f')
