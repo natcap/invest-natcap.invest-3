@@ -123,19 +123,6 @@ def execute(args):
             biophysicalargs['AOI'] = AOI            
         except IOError, e:
             print 'File I/O error' + e
-    #If the valuation is true, then create dictionaries for the following files
-    if 'calculate_valuation' in args:
-        for file, id in (('machine_econ', 'NAME'), ('landgridpts', 'ID')):
-            try:
-                f = open(args[file+'_uri'])
-                dict = {}
-                reader = csv.DictReader(f)
-                for row in reader:
-                    dict[row[id]] = row
-                biophysicalargs[file] = dict
-                f.close()
-            except IOError, e:
-                print 'File I/O error' + e
     
     waveEnergy_core.biophysical(biophysicalargs)
 
