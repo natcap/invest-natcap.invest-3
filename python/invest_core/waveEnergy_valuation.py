@@ -55,7 +55,7 @@ def execute(args):
         for row in reader:
             landGridPts[row['ID'].strip()] = row
         landGridPtsFile.close()
-        valuationargs['machine_param'] = landGridPts
+        valuationargs['land_gridPts'] = landGridPts
     except IOError, e:
         print 'File I/O error' + e
     #Open the output files for capturedWE from the biophysical run
