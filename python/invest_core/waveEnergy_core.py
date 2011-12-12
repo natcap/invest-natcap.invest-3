@@ -52,10 +52,6 @@ def biophysical(args):
     global_dem = args['dem']
     nodata = 0
     datatype = gdal.GDT_Float32
-    #Get the resolution from the global dem to be used for creating new blank rasters
-    geoform = global_dem.GetGeoTransform()
-    pixelSizeX = abs(geoform[1])
-    pixelSizeY = abs(geoform[5])
     
     #Determine which shapefile will be used to determine area of interest
     if 'AOI' in args:
@@ -65,13 +61,23 @@ def biophysical(args):
         cutter = clipShape(args['analysis_area_extract'], args['AOI'], waveAOIPath)        
     else:
         cutter = args['analysis_area_extract']
-
-    #Blank raster to be used in clipping output rasters to areas of interest
-    blankRaster = aoiBlankRaster(cutter, interDir, .0077, .0077, datatype)
-    
+        
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
     area_shape = clipShape(args['analysis_area'], cutter, waveShapePath)
     area_layer = area_shape.GetLayer(0)
+    #Get the spatial extents of the shapefile.
+    #The pixel size for the output rasters will be set to the less of
+    #the width or height of the shapefiles extents, divided by 250.
+    xmin, xmax, ymin, ymax = area_layer.GetExtent()
+    pixelSize = 0
+    if (xmax-xmin)<(ymax-ymin):
+        pixelSize = (xmax-xmin)/250
+    else:
+        pixelSize = (ymax-ymin)/250
+        
+    #Blank raster to be used in clipping output rasters to areas of interest
+    blankRaster = aoiBlankRaster(cutter, interDir, pixelSize, pixelSize, datatype)
+    
     #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
     #and add the sum as a field to the shapefile
     energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
@@ -80,7 +86,7 @@ def biophysical(args):
 
     #Create rasters bounded by shape file of analyis area
     for path in (waveHeightPath, wavePeriodPath, waveEnergyPath):
-        invest_cython_core.createRasterFromVectorExtents(.0077, .0077,
+        invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
                                               datatype, nodata, path, area_shape)
 
     #Open created rasters
@@ -101,29 +107,6 @@ def biophysical(args):
     interpolateField(energySumArray, waveEnergyRaster)
 
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
-
-#
-    print pixelSizeX
-    print pixelSizeY
-    src_ds = gdal.Open(wavePowerPath)
-    reprojWP = '../../test_data/wave_Energy/Intermediate/reprojWPRaster.tif'
-    
-    sr = osr.SpatialReference()
-    sr.ImportFromEPSG(32611)
-    
-    sr2 = osr.SpatialReference()
-    sr2.ImportFromEPSG(4326)
-    
-    drv = gdal.GetDriverByName('GTiff')
-    dst_ds = drv.Create(reprojWP, src_ds.RasterXSize, src_ds.RasterYSize, 1, gdal.GDT_Float32)
-    dst_ds.SetProjection(src_ds.GetProjectionRef())
-    dst_ds.SetGeoTransform(src_ds.GetGeoTransform())
-    
-    gdal.ReprojectImage(src_ds, dst_ds, sr.ExportToWkt(), sr2.ExportToWkt())
-#    gdal.ReprojectImage(src_ds, dst_ds)
-    dst_ds = None
-
-#
 
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
