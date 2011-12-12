@@ -382,9 +382,34 @@ def capturedWaveEnergyToShape(energyCap, waveShape):
         wave_Layer.SetFeature(feat)
         feat.Destroy()
 
-
-def npv():
-    for num in range(1, T + 1):
-        sum = sum + (B[num] - C[num]) * ((1 + i) ** (-1 * t))
-
-    return npv
+def valuation(args):
+    """Executes the valuation calculations for the Wave Energy Model.  The result
+    is a smooth output raster of the net present value from the interpolation of
+    the specific WW3 wave points npv. Requires the following arguments:
+    """
+    #For each WW3 wave point:
+        #Calculate annualRevenue
+        
+        #Calculate annualCost
+        
+        #Calculate installCost
+        
+        #Calculate mooringCost
+        
+        #Calculate transCost
+        
+        #Calculate IC (installCost+mooringCost+transCost)
+        
+        #Calculate NPVWE :
+            
+    #        def npv(annualRevenue, annualCost):
+    #            for num in range(1, T + 1):
+    #                sum = sum + (annualRevenue[num] - annualCost[num]) * ((1 + i) ** (-1 * t))
+    #        
+    #            return npv
+    
+        #Need to calculate the distances from each WW3 point to landing points
+        
+        #Need to calculate distances from underwater cable landing point to power grid connection point
+        
+    #Generate interpolated raster from points above
