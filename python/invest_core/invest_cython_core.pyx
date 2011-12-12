@@ -191,7 +191,7 @@ def calculateIntersectionRectangle(rasterList):
                        max(rec[3], boundingBox[3])]
     return boundingBox
 
-def interpolateMatrix(x, y, z, newx, newy):
+def interpolateMatrix(x, y, z, newx, newy, degree=1):
     """Takes a matrix of values from a rectangular grid along with new 
         coordinates and returns a matrix with those values interpolated along
         the new axis points.
@@ -208,7 +208,7 @@ def interpolateMatrix(x, y, z, newx, newy):
     #Create an interpolator for the 2D data.  Here's a reference
     #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
     #not using interp2d because this bug: http://projects.scipy.org/scipy/ticket/898
-    spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=3, ky=3)
+    spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=degree, ky=degree)
     return spl(newx, newy).transpose()
 
 #No data out the pixels that used nodata values in calculating slope
