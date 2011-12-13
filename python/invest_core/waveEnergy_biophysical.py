@@ -7,7 +7,6 @@ import invest_core
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 import numpy as np
-from dbfpy import dbf
 
 import csv
 
