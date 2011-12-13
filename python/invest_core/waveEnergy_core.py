@@ -4,7 +4,6 @@ import osgeo.gdal
 from osgeo.gdalconst import *
 import osgeo.osr as osr
 from osgeo import ogr
-from dbfpy import dbf
 import math
 import invest_core
 import invest_cython_core
@@ -46,7 +45,8 @@ def biophysical(args):
     #Paths for intermediate and output rasters.
     waveHeightPath = interDir + os.sep + 'waveHeight.tif'
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
-    waveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
+    tempWaveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
+    waveEnergyPath = interDir + os.sep + 'capwe_mwh'
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     
     #Set global_dem and nodata values/datatype for new rasters
@@ -86,14 +86,14 @@ def biophysical(args):
     capturedWaveEnergyToShape(energyCap, area_shape)
 
     #Create rasters bounded by shape file of analyis area
-    for path in (waveHeightPath, wavePeriodPath, waveEnergyPath):
+    for path in (waveHeightPath, wavePeriodPath, tempWaveEnergyPath):
         invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
                                               datatype, nodata, path, area_shape)
 
     #Open created rasters
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
-    waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
+    waveEnergyRaster = gdal.Open(tempWaveEnergyPath, GA_Update)
     #Rasterize the height and period values into respected rasters from shapefile
     for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster),  ('capWE_Sum', waveEnergyRaster)):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
@@ -107,6 +107,12 @@ def biophysical(args):
     interpPointsOverRaster(periodArray[0], periodArray[1], wavePeriodRaster)
     interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
 
+    def clipWERaster(a,b):
+        return a
+    
+    invest_core.vectorizeRasters([waveEnergyRaster, blankRaster], clipWERaster,
+                                 rasterName=waveEnergyPath, datatype=gdal.GDT_Float32)
+    
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
 
     #Clean up Shapefiles and Rasters
@@ -114,6 +120,9 @@ def biophysical(args):
     cutter.Destroy()
     waveHeightRaster = None
     wavePeriodRaster = None
+    waveEnergyRaster = None
+    blankRaster = None
+    
 
 def aoiBlankRaster(aoiShape, interDir, xRes, yRes, datatype):
     rasterPath = interDir + os.sep + 'aoiBlankRaster.tif'
@@ -124,19 +133,19 @@ def aoiBlankRaster(aoiShape, interDir, xRes, yRes, datatype):
     
     return blankRaster
 
-def transformProjection(targetProj, sourceProj):
-    source_Layer = sourceProj.GetLayer(0)
-    target_Layer = targetProj.GetLayer(0)
-    target_feat  = target_Layer.GetNextFeature()
-    target_geom  = target_feat.GetGeometryRef()
-    targetSR = target_geom.GetSpatialReference()
-    source_feat  = source_Layer.GetNextFeature()
-    source_geom  = source_feat.GetGeometryRef()
-    sourceSR = source_geom.GetSpatialReference()
-    
-    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
-    source_geom.Transform(coordTrans)
-    source_Layer.SetSpatialFilter(source_geom)
+#def transformProjection(targetProj, sourceProj):
+#    source_Layer = sourceProj.GetLayer(0)
+#    target_Layer = targetProj.GetLayer(0)
+#    target_feat  = target_Layer.GetNextFeature()
+#    target_geom  = target_feat.GetGeometryRef()
+#    targetSR = target_geom.GetSpatialReference()
+#    source_feat  = source_Layer.GetNextFeature()
+#    source_geom  = source_feat.GetGeometryRef()
+#    sourceSR = source_geom.GetSpatialReference()
+#    
+#    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
+#    source_geom.Transform(coordTrans)
+#    source_Layer.SetSpatialFilter(source_geom)
 #
 #    print source_geom
 #    print source_Layer.GetExtent()
