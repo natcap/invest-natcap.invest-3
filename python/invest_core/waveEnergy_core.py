@@ -10,6 +10,7 @@ import invest_core
 import invest_cython_core
 import sys, os
 import scipy
+from scipy.interpolate import LinearNDInterpolator as ip
 
 def biophysical(args):
     """Runs the biophysical part of the Wave Energy Model (WEM).
@@ -98,13 +99,13 @@ def biophysical(args):
         raster.GetRasterBand(1).SetNoDataValue(nodata)
         gdal.RasterizeLayer(raster, [1], area_layer, options=['ATTRIBUTE=' + prop])
 
-    heightArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
-    periodArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
-    energySumArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+    heightArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
+    periodArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
+    energySumArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
 
-    interpolateField(heightArray, waveHeightRaster)
-    interpolateField(periodArray, wavePeriodRaster)
-    interpolateField(energySumArray, waveEnergyRaster)
+    interpPointsOverRaster(heightArray[0], heightArray[1], waveHeightRaster)
+    interpPointsOverRaster(periodArray[0], periodArray[1], wavePeriodRaster)
+    interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
 
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
 
@@ -211,17 +212,66 @@ def clipShape(shapeToClip, bindingShape, outputPath):
 
     return shp_ds
 
-def pointShapeToDict(shape, key, valueArray, value):
+#def pointShapeToDict(shape, key, valueArray, value):
+#
+#    shape_layer = shape.GetLayer(0)
+#    shape_layer.ResetReading()
+#    shape_feat = shape_layer.GetNextFeature()
+#
+#    fieldDict = {}
+#    xrangeLong = []
+#    yrangeLat = []
+#    xRangeField = 'LONG'
+#    yRangeField = 'LATI'
+#    while shape_feat is not None:
+#
+#        valueDict = {}
+#        #May want to check to make sure field is in shape layer
+#        for field in valueArray:
+#            field_index = shape_feat.GetFieldIndex(field)
+#            valueDict[field] = shape_feat.GetField(field_index)
+#        keyList = []        
+#        for k in key:
+#            keyList.append(valueDict[k])
+#        tupledKey = tuple(keyList)
+#        fieldDict[tupledKey] = valueDict
+#
+#        xrangeLong.append(fieldDict[tupledKey][xRangeField])
+#        yrangeLat.append(fieldDict[tupledKey][yRangeField])
+#        
+#        shape_feat.Destroy()
+#        shape_feat = shape_layer.GetNextFeature()
+#    
+#    xrangeLongNoDup = list(set(xrangeLong))
+#    yrangeLatNoDup = list(set(yrangeLat))
+#    
+#    xrangeLongNoDup.sort()
+#    yrangeLatNoDup.sort()
+#    
+#    xrangeLongNP = np.array(xrangeLongNoDup)
+#    yrangeLatNP = np.array(yrangeLatNoDup)
+#    
+#    matrix = []
+#    for j in yrangeLatNP:
+#        tmp = []
+#        for i in xrangeLongNP:
+#            if (i,j) in fieldDict:
+#                tmp.append(fieldDict[(i,j)][value])
+#            else:
+#                tmp.append(0)
+#        matrix.append(tmp)
+#        
+#    matrixNP = np.array(matrix)
+#    results = [xrangeLongNP, yrangeLatNP, matrixNP]
+#    return results
+
+def getPointsValues(shape, key, valueArray, value):
 
     shape_layer = shape.GetLayer(0)
     shape_layer.ResetReading()
     shape_feat = shape_layer.GetNextFeature()
 
     fieldDict = {}
-    xrangeLong = []
-    yrangeLat = []
-    xRangeField = 'LONG'
-    yRangeField = 'LATI'
     while shape_feat is not None:
 
         valueDict = {}
@@ -233,55 +283,54 @@ def pointShapeToDict(shape, key, valueArray, value):
         for k in key:
             keyList.append(valueDict[k])
         tupledKey = tuple(keyList)
-        fieldDict[tupledKey] = valueDict
+        fieldDict[tupledKey] = valueDict[value]
 
-        xrangeLong.append(fieldDict[tupledKey][xRangeField])
-        yrangeLat.append(fieldDict[tupledKey][yRangeField])
-        
         shape_feat.Destroy()
         shape_feat = shape_layer.GetNextFeature()
     
-    xrangeLongNoDup = list(set(xrangeLong))
-    yrangeLatNoDup = list(set(yrangeLat))
-    
-    xrangeLongNoDup.sort()
-    yrangeLatNoDup.sort()
-    
-    xrangeLongNP = np.array(xrangeLongNoDup)
-    yrangeLatNP = np.array(yrangeLatNoDup)
-    
-    matrix = []
-    for j in yrangeLatNP:
-        tmp = []
-        for i in xrangeLongNP:
-            if (i,j) in fieldDict:
-                tmp.append(fieldDict[(i,j)][value])
-            else:
-                tmp.append(0)
-        matrix.append(tmp)
-        
-    matrixNP = np.array(matrix)
-    results = [xrangeLongNP, yrangeLatNP, matrixNP]
+    points = []
+    values = []
+    for id, val in fieldDict.iteritems():
+        points.append(list(id))
+        values.append(val)
+
+    results = [points, values]
     return results
 
-def interpolateField(results, raster):
-    xrange = results[0]
-    yrange = results[1]
-    matrix = results[2]
+def interpPointsOverRaster(points, values, raster):
+    points = np.array(points)
+    values = np.array(values)
     
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
-    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-    
-    #This is probably true if north is up
-    if gt[5] < 0:
-        newyrange = newyrange[::-1]
-        matrix = matrix[::-1]
+    xsize = band.XSize
+    ysize = band.YSize
+    newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
 
-    spl = invest_cython_core.interpolateMatrix(xrange, yrange, matrix, newxrange, newyrange)
+    spl = ip(points, values, fill_value=0)    
+    spl = spl(newpoints)
+    spl = spl.reshape(xsize, ysize).transpose()
     
     band.WriteArray(spl, 0, 0)
+
+#def interpolateField(results, raster):
+#    xrange = results[0]
+#    yrange = results[1]
+#    matrix = results[2]
+#    
+#    gt = raster.GetGeoTransform()
+#    band = raster.GetRasterBand(1)
+#    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
+#    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
+#    
+#    #This is probably true if north is up
+#    if gt[5] < 0:
+#        newyrange = newyrange[::-1]
+#        matrix = matrix[::-1]
+#
+#    spl = invest_cython_core.interpolateMatrix(xrange, yrange, matrix, newxrange, newyrange)
+#    
+#    band.WriteArray(spl, 0, 0)
 
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
     heightBand = waveHeight.GetRasterBand(1)
