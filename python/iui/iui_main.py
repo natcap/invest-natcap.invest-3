@@ -1081,7 +1081,6 @@ class DynamicUI(DynamicGroup):
         layout = QtGui.QVBoxLayout()
         
         self.links = QtGui.QLabel()
-        self.links.setOpenExternalLinks(True)
         self.links.setAlignment(QtCore.Qt.AlignRight)
         layout.addWidget(self.links)
         
@@ -1145,10 +1144,29 @@ class DynamicUI(DynamicGroup):
     def addLinks(self):
         docURI = 'file:///' + os.path.abspath(invest_root +
                                      self.attributes['localDocURI'])
-        feedbackURI = 'mailto:richsharp@stanford.edu?subject=InVEST Feedback'
+        self.feedbackBody="Please include the following information:\
+\n\n1) InVEST model you're having difficulty with\n2) Explicit error message or \
+behavior\n3) If possible, a screenshot of the state of your InVEST toolset when \
+you get the error.\n4)ArcGIS version and service pack number\n\n\
+Feel free to also contact us about requests for collaboration, suggestions for \
+improvement, or anything else you'd like to share."
+        self.feedbackURI = 'mailto:richsharp@stanford.edu?subject=InVEST Feedback'
         self.links.setText('<a href=\"' + docURI + '\">Model documentation' +
-                             '</a> | <a href=\"' + feedbackURI + '\">'+
+                             '</a> | <a href=\"' + self.feedbackURI + '\">'+
                              'Send feedback</a>')
+        self.links.linkActivated.connect(self.contactPopup)
+        
+    def contactPopup(self, uri):
+        if str(uri) == self.feedbackURI:
+            #open up a qdialog
+            self.feedbackDialog = QtGui.QMessageBox()
+            self.feedbackDialog.setWindowTitle('Send feedback')
+            self.feedbackDialog.setText("If you'd like to report a problem with\
+this model, send an email to richsharp@stanford.edu." + self.feedbackBody)
+            self.feedbackDialog.show()
+
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl(uri))
+        
     
     def addBottomButtons(self):
         """Assembles buttons and connects their callbacks.
