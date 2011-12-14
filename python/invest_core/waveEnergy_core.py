@@ -106,7 +106,7 @@ def biophysical(args):
     interpPointsOverRaster(heightArray[0], heightArray[1], waveHeightRaster)
     interpPointsOverRaster(periodArray[0], periodArray[1], wavePeriodRaster)
     interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
-
+    
     def clipWERaster(a,b):
         return a
     
@@ -123,7 +123,6 @@ def biophysical(args):
     waveEnergyRaster = None
     blankRaster = None
     
-
 def aoiBlankRaster(aoiShape, interDir, xRes, yRes, datatype):
     rasterPath = interDir + os.sep + 'aoiBlankRaster.tif'
     invest_cython_core.createRasterFromVectorExtents(xRes, yRes, datatype, 0, rasterPath, aoiShape)
@@ -314,18 +313,19 @@ def interpPointsOverRaster(points, values, raster):
     band = raster.GetRasterBand(1)
     xsize = band.XSize
     ysize = band.YSize
-    newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
+    #newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
+    newpoints = np.array([[gt[0]+gt[1]*i,gt[3]+gt[5]*j] for i in np.arange(xsize) for j in np.arange(ysize)])
 
     spl = ip(points, values, fill_value=0)    
     spl = spl(newpoints)
     spl = spl.reshape(xsize, ysize).transpose()
     
     band.WriteArray(spl, 0, 0)
-
-#def interpolateField(results, raster):
-#    xrange = results[0]
-#    yrange = results[1]
-#    matrix = results[2]
+    
+#def interpolateField(x, y, z, raster):
+#    xrange = x
+#    yrange = y
+#    matrix = z
 #    
 #    gt = raster.GetGeoTransform()
 #    band = raster.GetRasterBand(1)
