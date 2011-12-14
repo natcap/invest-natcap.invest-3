@@ -171,7 +171,43 @@ class TestWaveEnergy(unittest.TestCase):
         shapeToClip.Destroy()
         bindingShape.Destroy()
 
-    def test_waveEnergy_shapeToDict(self):
+#    def test_waveEnergy_shapeToDict(self):
+#        """Test pointShapeToDict to make sure that it works properly for different geometries"""
+#        #This ensures we are not in Arc's python directory so that when
+#        #we import gdal stuff we don't get the wrong GDAL version.
+#        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+#        filesystemencoding = sys.getfilesystemencoding()
+#        
+#        
+#        testDir = '../../../test_data/wave_Energy'
+#        shapePath = testDir + os.sep + 'test_input/pointShapeTest.shp'
+#        
+#        #Add the Output directory onto the given workspace
+#        output_dir = testDir + os.sep + 'test_output/'
+#        if not os.path.isdir(output_dir):
+#            os.mkdir(output_dir)
+##        elif os.path.isfile(output_dir + 'timber.shp'):
+##            os.remove(output_dir + 'timber.shp')
+#
+#        shapeToClip = ogr.Open(shapePath.encode(filesystemencoding))
+#        key = ['LONG', 'LATI']
+#        valueArray = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
+#        value = 'HSAVG_M'
+#        xrange = [-126.933144, -126.866477, -126.79981]
+#        yrange = [47.600162]
+#        matrix = [[2.8, 2.8, 2.79]]
+#        shapeArray = waveEnergy_core.pointShapeToDict(shapeToClip, key, valueArray, value)
+#        self.assertEqual(len(xrange), len(shapeArray[0]), 'xranges do not have same number of elements')
+#        self.assertEqual(len(yrange), len(shapeArray[1]), 'yranges do not have same number of elements')
+#        self.assertEqual(len(matrix), len(shapeArray[2]), 'matrices do not have same number of elements')
+#        shapeMatrix = shapeArray[2]
+#        for index, var in enumerate(matrix):
+#            for innerIndex, num in enumerate(var):
+#                self.assertEqual(num, shapeMatrix[index][innerIndex], 'The values of the matrices do not match')
+#        
+#        shapeToClip.Destroy()
+        
+def test_waveEnergy_getPointsValues(self):
         """Test pointShapeToDict to make sure that it works properly for different geometries"""
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
@@ -193,18 +229,19 @@ class TestWaveEnergy(unittest.TestCase):
         key = ['LONG', 'LATI']
         valueArray = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
         value = 'HSAVG_M'
-        xrange = [-126.933144, -126.866477, -126.79981]
-        yrange = [47.600162]
-        matrix = [[2.8, 2.8, 2.79]]
-        shapeArray = waveEnergy_core.pointShapeToDict(shapeToClip, key, valueArray, value)
-        self.assertEqual(len(xrange), len(shapeArray[0]), 'xranges do not have same number of elements')
-        self.assertEqual(len(yrange), len(shapeArray[1]), 'yranges do not have same number of elements')
-        self.assertEqual(len(matrix), len(shapeArray[2]), 'matrices do not have same number of elements')
-        shapeMatrix = shapeArray[2]
-        for index, var in enumerate(matrix):
+        points = [[-126.933144, 47.600162], [-126.866477, 47.600162], [-126.79981, 47.600162]]
+        values = [2.8, 2.8, 2.79]
+        shapeArray = waveEnergy_core.getPointsValues(shapeToClip, key, valueArray, value)
+        self.assertEqual(len(points), len(shapeArray[0]), 'The number of points do not match')
+        self.assertEqual(len(values), len(shapeArray[1]), 'The number of values do not match')
+        shapePoints = shapeArray[0]
+        shapeValues = shapeArray[1]
+        for index, var in enumerate(points):
             for innerIndex, num in enumerate(var):
-                self.assertEqual(num, shapeMatrix[index][innerIndex], 'The values of the matrices do not match')
-        
+                self.assertEqual(num, shapePoints[index][innerIndex], 'The points values do not match')
+        for i, val in enumerate(values):
+            self.assertEquatl(val, shapeValues[i], 'The values do not match')
+            
         shapeToClip.Destroy()
         
         
