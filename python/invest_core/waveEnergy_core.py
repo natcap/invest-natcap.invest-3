@@ -26,7 +26,6 @@ def biophysical(args):
     args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
         
     """
-    filesystemencoding = sys.getfilesystemencoding()
 #    transformProjection(args['analysis_area_extract'], args['AOI'])
 
     #Set variables for common output paths
@@ -45,8 +44,7 @@ def biophysical(args):
     #Paths for intermediate and output rasters.
     waveHeightPath = interDir + os.sep + 'waveHeight.tif'
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
-    tempWaveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
-    waveEnergyPath = interDir + os.sep + 'capwe_mwh'
+    waveEnergyPath = interDir + os.sep + 'capwe_mwh.tif'
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     
     #Set global_dem and nodata values/datatype for new rasters
@@ -76,9 +74,6 @@ def biophysical(args):
     else:
         pixelSize = (ymax-ymin)/250
         
-    #Blank raster to be used in clipping output rasters to areas of interest
-    blankRaster = aoiBlankRaster(cutter, interDir, pixelSize, pixelSize, datatype)
-    
     #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
     #and add the sum as a field to the shapefile
     energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
@@ -86,18 +81,14 @@ def biophysical(args):
     capturedWaveEnergyToShape(energyCap, area_shape)
 
     #Create rasters bounded by shape file of analyis area
-    for path in (waveHeightPath, wavePeriodPath, tempWaveEnergyPath):
+    for path in (waveHeightPath, wavePeriodPath, waveEnergyPath):
         invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
                                               datatype, nodata, path, area_shape)
 
     #Open created rasters
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
-    waveEnergyRaster = gdal.Open(tempWaveEnergyPath, GA_Update)
-    #Rasterize the height and period values into respected rasters from shapefile
-    for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster),  ('capWE_Sum', waveEnergyRaster)):
-        raster.GetRasterBand(1).SetNoDataValue(nodata)
-        gdal.RasterizeLayer(raster, [1], area_layer, options=['ATTRIBUTE=' + prop])
+    waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
 
     heightArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
     periodArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
@@ -106,32 +97,43 @@ def biophysical(args):
     interpPointsOverRaster(heightArray[0], heightArray[1], waveHeightRaster)
     interpPointsOverRaster(periodArray[0], periodArray[1], wavePeriodRaster)
     interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
-    
-    def clipWERaster(a,b):
-        return a
-    
-    invest_core.vectorizeRasters([waveEnergyRaster, blankRaster], clipWERaster,
-                                 rasterName=waveEnergyPath, datatype=gdal.GDT_Float32)
-    
-    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
 
+    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath)    
+    wavePowerRaster = gdal.Open(wavePowerPath, GA_Update)
+    
+    wavePowerRaster = clipRasterFromPolygon(cutter, wavePowerRaster, wavePowerPath)
+    waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
+    
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
     waveHeightRaster = None
     wavePeriodRaster = None
     waveEnergyRaster = None
-    blankRaster = None
+    wavePowerRaster = None
     
-def aoiBlankRaster(aoiShape, interDir, xRes, yRes, datatype):
-    rasterPath = interDir + os.sep + 'aoiBlankRaster.tif'
-    invest_cython_core.createRasterFromVectorExtents(xRes, yRes, datatype, 0, rasterPath, aoiShape)
-    blankRaster = gdal.Open(rasterPath, GA_Update)
-    blankRaster.GetRasterBand(1).SetNoDataValue(0)
-    gdal.RasterizeLayer(blankRaster, [1], aoiShape.GetLayer(0))
+def clipRasterFromPolygon(shape, raster, path):
+    gt = raster.GetGeoTransform()
+    pixelX = gt[1]
+    pixelY = gt[5]
     
-    return blankRaster
-
+    copyRaster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    copyBand = copyRaster.GetRasterBand(1)
+    nodata = copyBand.GetNoDataValue()
+    copyBand.Fill(nodata)
+    
+    gdal.RasterizeLayer(copyRaster, [1], shape.GetLayer(0))
+    
+    def op(a,b):
+        if b==nodata:
+            return b
+        else:
+            return a
+    
+    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copyBand, op, copyBand)
+    
+    return copyRaster
+    
 #def transformProjection(targetProj, sourceProj):
 #    source_Layer = sourceProj.GetLayer(0)
 #    target_Layer = targetProj.GetLayer(0)
@@ -341,7 +343,7 @@ def interpPointsOverRaster(points, values, raster):
 #    
 #    band.WriteArray(spl, 0, 0)
 
-def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
+def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     heightBand = waveHeight.GetRasterBand(1)
     periodBand = waveHeight.GetRasterBand(1)
     heightNoData = heightBand.GetNoDataValue()
@@ -350,7 +352,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
     p = 1028
     g = 9.8
     alfa = 0.86
-    def op(a, b, c, d):
+    def op(a, b, c):
         c = np.absolute(c)
         tem = 2.0 * math.pi / (b * alfa)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
@@ -358,7 +360,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
         wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
         return wp
 
-    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation, blankRaster], op,
+    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op,
                                  rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
     
     wpRaster = gdal.Open(wavePowerPath, GA_Update)
