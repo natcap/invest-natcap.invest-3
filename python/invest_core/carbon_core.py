@@ -87,11 +87,21 @@ landscape')
         calculateHWPStorageCur(args['hwp_cur_shape'], args['c_hwp_cur'],
                             args['bio_hwp_cur'], args['vol_hwp_cur'],
                             cellArea, args['lulc_cur_year'])
+        logger.info('calculating raster stats for bio_hwp_cur')
+        invest_core.calculateRasterStats(args['bio_hwp_cur'].GetRasterBand(1))
+        logger.info('calculating raster stats for vol_hwp_cur')
+        invest_core.calculateRasterStats(args['vol_hwp_cur'].GetRasterBand(1))
+        logger.info('calculating raster stats for c_hwp_cur')
+        invest_core.calculateRasterStats(args['c_hwp_cur'].GetRasterBand(1))
+
         #Add the current hwp carbon storage to tot_C_cur
         invest_core.rasterAdd(args['tot_C_cur'].GetRasterBand(1),
                               args['c_hwp_cur'].GetRasterBand(1),
                               args['tot_C_cur'].GetRasterBand(1))
         logger.info('finished HWP storage for the current landscape')
+
+    logger.info('calculating raster stats for tot_C_cur')
+    invest_core.calculateRasterStats(args['tot_C_cur'].GetRasterBand(1))
 
     if 'lulc_fut' in args:
         #calculate carbon storage for the future landscape if it exists
@@ -115,17 +125,34 @@ landscape')
             calculateHWPStorageFut(harvestMaps, args['c_hwp_fut'],
                 args['bio_hwp_fut'], args['vol_hwp_fut'], cellArea,
                 args['lulc_cur_year'], args['lulc_fut_year'])
+            logger.info('calculating raster stats for bio_hwp_fut')
+            invest_core.calculateRasterStats(args['bio_hwp_fut'].
+                                            GetRasterBand(1))
+            logger.info('calculating raster stats for vol_hwp_fut')
+            invest_core.calculateRasterStats(args['vol_hwp_fut'].
+                                             GetRasterBand(1))
+            logger.info('calculating raster stats for c_hwp_fut')
+            invest_core.calculateRasterStats(args['c_hwp_fut'].
+                                             GetRasterBand(1))
+
             #Add the future hwp carbon storage to tot_C_fut
             invest_core.rasterAdd(args['tot_C_fut'].GetRasterBand(1),
                               args['c_hwp_fut'].GetRasterBand(1),
                               args['tot_C_fut'].GetRasterBand(1))
             logger.info('finished calculating HWP storage for future landscape')
 
+        logger.info('calculating raster stats for tot_C_fut')
+        invest_core.calculateRasterStats(args['tot_C_fut'].GetRasterBand(1))
+
         #calculate seq. only after HWP has been added to the storage rasters
         logger.info('calculating carbon sequestration')
         invest_core.rasterDiff(args['tot_C_fut'].GetRasterBand(1),
                                args['tot_C_cur'].GetRasterBand(1),
                                args['sequest'].GetRasterBand(1))
+
+        logger.info('calculating raster stats for sequest')
+        invest_core.calculateRasterStats(args['sequest'].GetRasterBand(1))
+
         logger.info('finished calculating carbon sequestration')
 
 def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
