@@ -7,7 +7,6 @@ import invest_core
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 import numpy as np
-from dbfpy import dbf
 
 import csv
 
@@ -148,9 +147,7 @@ def extrapolateWaveData(waveFile):
         rowcolGrab = 0
         for line in waveOpen:
             if line[0] == 'I':
-                iVal = int(line.split(',')[1])
-                jVal = int(line.split(',')[3])
-                key = (iVal, jVal)
+                key = (int(line.split(',')[1]), int(line.split(',')[3]))
                 waveArray = []
                 rowcolGrab = 1
             elif rowcolGrab == 1 or rowcolGrab == 2:
