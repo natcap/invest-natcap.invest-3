@@ -4,12 +4,12 @@ import osgeo.gdal
 from osgeo.gdalconst import *
 import osgeo.osr as osr
 from osgeo import ogr
-from dbfpy import dbf
 import math
 import invest_core
 import invest_cython_core
 import sys, os
 import scipy
+from scipy.interpolate import LinearNDInterpolator as ip
 
 def biophysical(args):
     """Runs the biophysical part of the Wave Energy Model (WEM).
@@ -26,7 +26,6 @@ def biophysical(args):
     args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
         
     """
-    filesystemencoding = sys.getfilesystemencoding()
 #    transformProjection(args['analysis_area_extract'], args['AOI'])
 
     #Set variables for common output paths
@@ -45,7 +44,7 @@ def biophysical(args):
     #Paths for intermediate and output rasters.
     waveHeightPath = interDir + os.sep + 'waveHeight.tif'
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
-    waveEnergyPath = interDir + os.sep + 'waveEnergyCap.tif'
+    waveEnergyPath = interDir + os.sep + 'capwe_mwh.tif'
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     
     #Set global_dem and nodata values/datatype for new rasters
@@ -75,9 +74,6 @@ def biophysical(args):
     else:
         pixelSize = (ymax-ymin)/250
         
-    #Blank raster to be used in clipping output rasters to areas of interest
-    blankRaster = aoiBlankRaster(cutter, interDir, pixelSize, pixelSize, datatype)
-    
     #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
     #and add the sum as a field to the shapefile
     energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
@@ -93,49 +89,64 @@ def biophysical(args):
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
     waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
-    #Rasterize the height and period values into respected rasters from shapefile
-    for prop, raster in (('HSAVG_M', waveHeightRaster), ('TPAVG_S', wavePeriodRaster),  ('capWE_Sum', waveEnergyRaster)):
-        raster.GetRasterBand(1).SetNoDataValue(nodata)
-        gdal.RasterizeLayer(raster, [1], area_layer, options=['ATTRIBUTE=' + prop])
 
-    heightArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
-    periodArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
-    energySumArray = pointShapeToDict(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+    heightArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
+    periodArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
+    energySumArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
 
-    interpolateField(heightArray, waveHeightRaster)
-    interpolateField(periodArray, wavePeriodRaster)
-    interpolateField(energySumArray, waveEnergyRaster)
+    interpPointsOverRaster(heightArray[0], heightArray[1], waveHeightRaster)
+    interpPointsOverRaster(periodArray[0], periodArray[1], wavePeriodRaster)
+    interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
 
-    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath, blankRaster)
-
+    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath)    
+    wavePowerRaster = gdal.Open(wavePowerPath, GA_Update)
+    
+    wavePowerRaster = clipRasterFromPolygon(cutter, wavePowerRaster, wavePowerPath)
+    waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
+    
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
     waveHeightRaster = None
     wavePeriodRaster = None
-
-def aoiBlankRaster(aoiShape, interDir, xRes, yRes, datatype):
-    rasterPath = interDir + os.sep + 'aoiBlankRaster.tif'
-    invest_cython_core.createRasterFromVectorExtents(xRes, yRes, datatype, 0, rasterPath, aoiShape)
-    blankRaster = gdal.Open(rasterPath, GA_Update)
-    blankRaster.GetRasterBand(1).SetNoDataValue(0)
-    gdal.RasterizeLayer(blankRaster, [1], aoiShape.GetLayer(0))
+    waveEnergyRaster = None
+    wavePowerRaster = None
     
-    return blankRaster
-
-def transformProjection(targetProj, sourceProj):
-    source_Layer = sourceProj.GetLayer(0)
-    target_Layer = targetProj.GetLayer(0)
-    target_feat  = target_Layer.GetNextFeature()
-    target_geom  = target_feat.GetGeometryRef()
-    targetSR = target_geom.GetSpatialReference()
-    source_feat  = source_Layer.GetNextFeature()
-    source_geom  = source_feat.GetGeometryRef()
-    sourceSR = source_geom.GetSpatialReference()
+def clipRasterFromPolygon(shape, raster, path):
+    gt = raster.GetGeoTransform()
+    pixelX = gt[1]
+    pixelY = gt[5]
     
-    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
-    source_geom.Transform(coordTrans)
-    source_Layer.SetSpatialFilter(source_geom)
+    copyRaster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    copyBand = copyRaster.GetRasterBand(1)
+    nodata = copyBand.GetNoDataValue()
+    copyBand.Fill(nodata)
+    
+    gdal.RasterizeLayer(copyRaster, [1], shape.GetLayer(0))
+    
+    def op(a,b):
+        if b==nodata:
+            return b
+        else:
+            return a
+    
+    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copyBand, op, copyBand)
+    
+    return copyRaster
+    
+#def transformProjection(targetProj, sourceProj):
+#    source_Layer = sourceProj.GetLayer(0)
+#    target_Layer = targetProj.GetLayer(0)
+#    target_feat  = target_Layer.GetNextFeature()
+#    target_geom  = target_feat.GetGeometryRef()
+#    targetSR = target_geom.GetSpatialReference()
+#    source_feat  = source_Layer.GetNextFeature()
+#    source_geom  = source_feat.GetGeometryRef()
+#    sourceSR = source_geom.GetSpatialReference()
+#    
+#    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
+#    source_geom.Transform(coordTrans)
+#    source_Layer.SetSpatialFilter(source_geom)
 #
 #    print source_geom
 #    print source_Layer.GetExtent()
@@ -211,17 +222,66 @@ def clipShape(shapeToClip, bindingShape, outputPath):
 
     return shp_ds
 
-def pointShapeToDict(shape, key, valueArray, value):
+#def pointShapeToDict(shape, key, valueArray, value):
+#
+#    shape_layer = shape.GetLayer(0)
+#    shape_layer.ResetReading()
+#    shape_feat = shape_layer.GetNextFeature()
+#
+#    fieldDict = {}
+#    xrangeLong = []
+#    yrangeLat = []
+#    xRangeField = 'LONG'
+#    yRangeField = 'LATI'
+#    while shape_feat is not None:
+#
+#        valueDict = {}
+#        #May want to check to make sure field is in shape layer
+#        for field in valueArray:
+#            field_index = shape_feat.GetFieldIndex(field)
+#            valueDict[field] = shape_feat.GetField(field_index)
+#        keyList = []        
+#        for k in key:
+#            keyList.append(valueDict[k])
+#        tupledKey = tuple(keyList)
+#        fieldDict[tupledKey] = valueDict
+#
+#        xrangeLong.append(fieldDict[tupledKey][xRangeField])
+#        yrangeLat.append(fieldDict[tupledKey][yRangeField])
+#        
+#        shape_feat.Destroy()
+#        shape_feat = shape_layer.GetNextFeature()
+#    
+#    xrangeLongNoDup = list(set(xrangeLong))
+#    yrangeLatNoDup = list(set(yrangeLat))
+#    
+#    xrangeLongNoDup.sort()
+#    yrangeLatNoDup.sort()
+#    
+#    xrangeLongNP = np.array(xrangeLongNoDup)
+#    yrangeLatNP = np.array(yrangeLatNoDup)
+#    
+#    matrix = []
+#    for j in yrangeLatNP:
+#        tmp = []
+#        for i in xrangeLongNP:
+#            if (i,j) in fieldDict:
+#                tmp.append(fieldDict[(i,j)][value])
+#            else:
+#                tmp.append(0)
+#        matrix.append(tmp)
+#        
+#    matrixNP = np.array(matrix)
+#    results = [xrangeLongNP, yrangeLatNP, matrixNP]
+#    return results
+
+def getPointsValues(shape, key, valueArray, value):
 
     shape_layer = shape.GetLayer(0)
     shape_layer.ResetReading()
     shape_feat = shape_layer.GetNextFeature()
 
     fieldDict = {}
-    xrangeLong = []
-    yrangeLat = []
-    xRangeField = 'LONG'
-    yRangeField = 'LATI'
     while shape_feat is not None:
 
         valueDict = {}
@@ -233,57 +293,57 @@ def pointShapeToDict(shape, key, valueArray, value):
         for k in key:
             keyList.append(valueDict[k])
         tupledKey = tuple(keyList)
-        fieldDict[tupledKey] = valueDict
+        fieldDict[tupledKey] = valueDict[value]
 
-        xrangeLong.append(fieldDict[tupledKey][xRangeField])
-        yrangeLat.append(fieldDict[tupledKey][yRangeField])
-        
         shape_feat.Destroy()
         shape_feat = shape_layer.GetNextFeature()
     
-    xrangeLongNoDup = list(set(xrangeLong))
-    yrangeLatNoDup = list(set(yrangeLat))
-    
-    xrangeLongNoDup.sort()
-    yrangeLatNoDup.sort()
-    
-    xrangeLongNP = np.array(xrangeLongNoDup)
-    yrangeLatNP = np.array(yrangeLatNoDup)
-    
-    matrix = []
-    for j in yrangeLatNP:
-        tmp = []
-        for i in xrangeLongNP:
-            if (i,j) in fieldDict:
-                tmp.append(fieldDict[(i,j)][value])
-            else:
-                tmp.append(0)
-        matrix.append(tmp)
-        
-    matrixNP = np.array(matrix)
-    results = [xrangeLongNP, yrangeLatNP, matrixNP]
+    points = []
+    values = []
+    for id, val in fieldDict.iteritems():
+        points.append(list(id))
+        values.append(val)
+
+    results = [points, values]
     return results
 
-def interpolateField(results, raster):
-    xrange = results[0]
-    yrange = results[1]
-    matrix = results[2]
+def interpPointsOverRaster(points, values, raster):
+    points = np.array(points)
+    values = np.array(values)
     
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
-    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-    
-    #This is probably true if north is up
-    if gt[5] < 0:
-        newyrange = newyrange[::-1]
-        matrix = matrix[::-1]
+    xsize = band.XSize
+    ysize = band.YSize
+    #newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
+    newpoints = np.array([[gt[0]+gt[1]*i,gt[3]+gt[5]*j] for i in np.arange(xsize) for j in np.arange(ysize)])
 
-    spl = invest_cython_core.interpolateMatrix(xrange, yrange, matrix, newxrange, newyrange)
+    spl = ip(points, values, fill_value=0)    
+    spl = spl(newpoints)
+    spl = spl.reshape(xsize, ysize).transpose()
     
     band.WriteArray(spl, 0, 0)
+    
+#def interpolateField(x, y, z, raster):
+#    xrange = x
+#    yrange = y
+#    matrix = z
+#    
+#    gt = raster.GetGeoTransform()
+#    band = raster.GetRasterBand(1)
+#    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
+#    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
+#    
+#    #This is probably true if north is up
+#    if gt[5] < 0:
+#        newyrange = newyrange[::-1]
+#        matrix = matrix[::-1]
+#
+#    spl = invest_cython_core.interpolateMatrix(xrange, yrange, matrix, newxrange, newyrange)
+#    
+#    band.WriteArray(spl, 0, 0)
 
-def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
+def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     heightBand = waveHeight.GetRasterBand(1)
     periodBand = waveHeight.GetRasterBand(1)
     heightNoData = heightBand.GetNoDataValue()
@@ -292,7 +352,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
     p = 1028
     g = 9.8
     alfa = 0.86
-    def op(a, b, c, d):
+    def op(a, b, c):
         c = np.absolute(c)
         tem = 2.0 * math.pi / (b * alfa)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
@@ -300,7 +360,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
         wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
         return wp
 
-    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation, blankRaster], op,
+    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op,
                                  rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
     
     wpRaster = gdal.Open(wavePowerPath, GA_Update)
