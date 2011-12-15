@@ -17,7 +17,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         args['machine_perf_uri'] = '../../test_data/wave_Energy/samp_input/Machine_PelamisPerfCSV.csv'
         args['machine_param_uri'] = '../../test_data/wave_Energy/samp_input/Machine_PelamisParamCSV.csv'
         args['dem_uri'] = '../../test_data/wave_Energy/samp_input/global_dem'
-        args['AOI_uri'] = '../../test_data/wave_Energy/samp_input/AOI_WCVI.shp'
+#        args['AOI_uri'] = '../../test_data/wave_Energy/samp_input/AOI_WCVI.shp'
         waveEnergy_biophysical.execute(args)
         
     def test_waveEnergy_extrapWaveData(self):
