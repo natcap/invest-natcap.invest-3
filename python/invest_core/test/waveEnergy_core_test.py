@@ -10,6 +10,7 @@ import waveEnergy_core
 import math
 from dbfpy import dbf
 from osgeo import ogr
+import numpy as np
 
 
 class TestWaveEnergy(unittest.TestCase):
@@ -342,7 +343,38 @@ class TestWaveEnergy(unittest.TestCase):
             else:
                 self.assertEqual(0, 1, 'The keys do not match')
         
-
+    def test_waveEnergy_waveEnergyInterp(self):
+        waveData = {0:[1,2,3,4,5,6,7,8], 1:[.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]}
+        machinePerf = [[2,3,4,7], [1, 2, 3], 
+                       [0, 8, 20, 10], 
+                       [6, 18, 23, 13], 
+                       [0, 8, 20, 0]]
+        result = [[0, 0, 8, 20, 16.6666667, 13.33333, 10, 10],
+                  [0, 0, 8, 20, 16.66666667, 13.33333333, 10, 10],
+                  [3, 3, 13, 21.5, 18.16666667, 14.83333333, 11.5, 11.5],
+                  [6, 6, 18, 23, 19.66666667, 16.33333333, 13, 13],
+                  [3, 3, 13, 21.5, 16.5, 11.5, 6.5, 6.5],
+                  [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0],
+                  [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0],
+                  [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0]]
+        result = np.array(result)
+        interpZ = waveEnergy_core.waveEnergyInterp(waveData, machinePerf)
+        
+        self.assertEqual(result.shape, interpZ.shape, 'The shapes are not the same')
+        
+        for indexOut, ar in enumerate(result):
+            for indexIn, val in enumerate(ar):
+                self.assertAlmostEqual(val, interpZ[indexOut][indexIn], 5, 'Values do not match')
+        
+        
+def waveEnergyInterp(waveData, machinePerf):
+    x = np.array(machinePerf.pop(0), dtype='f')
+    y = np.array(machinePerf.pop(0), dtype='f')
+    z = np.array(machinePerf, dtype='f')
+    newx = waveData[0]
+    newy = waveData[1]
+    interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
+    return interpZ
 #    def test_waveEnergy_with_inputs(self):
 #        """Test timber model with real inputs.  Compare copied and modified shapefile with valid
 #            shapefile that was created from the same inputs.  Regression test."""
