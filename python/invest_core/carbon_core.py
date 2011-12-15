@@ -732,4 +732,6 @@ def valuation(args):
     logger.info('starting valuation of each pixel')
     invest_core.vectorize1ArgOp(args['sequest'].GetRasterBand(1), valueOp,
                                 args['value_seq'].GetRasterBand(1))
+    logger.info('calculating raster stats for value_seq')
+    invest_core.calculateRasterStats(args['value_seq'].GetRasterBand(1))
     logger.info('finished valuation of each pixel')
