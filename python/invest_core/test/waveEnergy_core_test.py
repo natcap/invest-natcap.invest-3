@@ -75,11 +75,11 @@ class TestWaveEnergy(unittest.TestCase):
         shapeToClip.Destroy()      
         bindingShape.Destroy()
         
-        if os.path.isdir(output_dir):
-            textFileList = os.listdir(output_dir)
-            for file in textFileList:
-                os.remove(output_dir + file)
-            os.rmdir(output_dir)
+#        if os.path.isdir(output_dir):
+#            textFileList = os.listdir(output_dir)
+#            for file in textFileList:
+#                os.remove(output_dir + file)
+#            os.rmdir(output_dir)
             
     def test_waveEnergy_clipShapeZero(self):
         """A trivial test case that makes sure clipShape returns the proper shape
@@ -109,6 +109,11 @@ class TestWaveEnergy(unittest.TestCase):
         layer = newShape.GetLayer(0)
         
         self.assertEqual(layer.GetFeatureCount(), 0)
+        
+        layer = None
+        newShape.Destroy()
+        shapeToClip.Destroy()
+        bindingShape.Destroy()
         
     def test_waveEnergy_clipShapeProj(self):
         """A non trivial test case that makes sure clipShape returns the proper shape
@@ -207,8 +212,8 @@ class TestWaveEnergy(unittest.TestCase):
 #        
 #        shapeToClip.Destroy()
         
-def test_waveEnergy_getPointsValues(self):
-        """Test pointShapeToDict to make sure that it works properly for different geometries"""
+    def test_waveEnergy_getPointsValues(self):
+        """Test getPointsValues to make sure that it works properly for different geometries"""
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -236,17 +241,107 @@ def test_waveEnergy_getPointsValues(self):
         self.assertEqual(len(values), len(shapeArray[1]), 'The number of values do not match')
         shapePoints = shapeArray[0]
         shapeValues = shapeArray[1]
+        calcDict = {}
+        funDict = {}
         for index, var in enumerate(points):
-            for innerIndex, num in enumerate(var):
-                self.assertEqual(num, shapePoints[index][innerIndex], 'The points values do not match')
-        for i, val in enumerate(values):
-            self.assertEquatl(val, shapeValues[i], 'The values do not match')
+            calcDict[tuple(var)] = values[index]
+        for index, var in enumerate(shapePoints):
+            funDict[tuple(var)] = shapeValues[index]
+        for key, val in calcDict.iteritems():
+            if key in funDict:
+                self.assertEqual(val, funDict[key], 'The values do not match')
+            else:
+                self.assertEqual(0, 1, 'The keys do not match')
             
         shapeToClip.Destroy()
         
+    def test_waveEnergy_capturedWaveEnergyToShape(self):
+        """Test capturedWaveEnergyToShape to make sure that it works properly for different geometries"""
+        #This ensures we are not in Arc's python directory so that when
+        #we import gdal stuff we don't get the wrong GDAL version.
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        filesystemencoding = sys.getfilesystemencoding()
         
-#        for value in shapeArray:
-#            print value
+        
+        testDir = '../../../test_data/wave_Energy'
+        shapePath = testDir + os.sep + 'test_input/pointShapeTest.shp'
+        newPath = str(testDir + os.sep + 'test_output/pointShapeSum.shp')
+        waveShape = ogr.Open(shapePath.encode(filesystemencoding), 1)
+        
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+#        elif os.path.isfile(output_dir + 'timber.shp'):
+#            os.remove(output_dir + 'timber.shp')
+
+        waveShapeCopy = ogr.GetDriverByName('Memory').CopyDataSource(waveShape, '')
+#        waveShapeCopy.Destroy()
+#        waveShapeCopy = ogr.Open(newPath.encode(filesystemencoding), 1)
+        
+        testDict = {(572, 490):2302, (573, 490):1453, (574, 490):2103}
+        ijArray = [[572, 490], [573, 490], [574, 490]]
+        waveEnergy_core.capturedWaveEnergyToShape(testDict, waveShapeCopy)
+        
+        layer = waveShapeCopy.GetLayer(0)
+        #Need to reset the layer because the function call goes through the features in
+        #the layer and does not reset or close.
+        layer.ResetReading()
+        feat = layer.GetNextFeature()
+        compDict = {}
+        while feat is not None:
+            tempArray = []
+            for fld in ('I', 'J', 'capWE_Sum'):
+                index = feat.GetFieldIndex(fld)
+                fieldVal = feat.GetField(index)
+                tempArray.append(fieldVal)
+            compDict[(tempArray[0], tempArray[1])] = tempArray[2]
+
+            feat.Destroy()
+            feat = layer.GetNextFeature()
+            
+        self.assertEqual(len(testDict), len(compDict), 'The lengths of the dictionaries are not the same')
+            
+        for key, val in testDict.iteritems():
+            if key in compDict:
+                self.assertEqual(val, compDict[key], 'The values corresponding to the keys do not match'+str(val)+':'+str(compDict[key]))
+            else:
+                self.assertEqual(0, 1, 'The key does not exist in the new feature')
+                
+            
+        waveShape.Destroy()
+        waveShapeCopy.Destroy()
+        
+        
+    def test_waveEnergy_computeWaveEnergyCapacity(self):
+        """Test computWaveEnergyCapacity function to make sure it works properly"""
+               
+#        waveData = 'A dictionary with key (I,J) and value 2D array'
+        waveData = {0:[1,2,3,4,5], 1:[1,2,3,4],
+                    (520, 490):[[0, 10, 13, 9, 7],
+                                [8, 15, 17, 13, 3],
+                                [0, 3, 11, 9, 7],
+                                [11, 17, 23, 19, 12]],
+                    (521, 491):[[-1, 6.5, 13.3, 9, 7],
+                                [-8, -5, 170, 13, 0],
+                                [2, 3, 11.5, 9, 7.25],
+                                [11, 17, 23, 19, 12]]
+                    }
+#        interpZ = 'An interpolated object from machine performace and waveData ranges'
+        interpZ = [[0, 0, 1, 3, 8],[0, 3, 5, 9, 7],[1, 4, 5, 3, 0],[0, 0, 0, 0, 0]]
+#        machineParam = 'A dictionary with CapMax TpMax and HsMax'
+        machineParam = {'CapMax':{'VALUE':20}, 'TpMax':{'VALUE':4}, 'HsMax':{'VALUE':3}}
+        result = {(520, 490):0.0762, (521, 491):0.22116}
+        
+        weSum = waveEnergy_core.computeWaveEnergyCapacity(waveData, interpZ, machineParam)
+               
+        """Loop that compares dictionaries weSum and result checking key, sum values"""
+        for key in result:
+            if key in weSum:
+                self.assertAlmostEqual(result[key], weSum[key], 8, 'The values do not match for key '+str(weSum[key]))
+            else:
+                self.assertEqual(0, 1, 'The keys do not match')
+        
 
 #    def test_waveEnergy_with_inputs(self):
 #        """Test timber model with real inputs.  Compare copied and modified shapefile with valid
