@@ -39,7 +39,7 @@ def execute(args, out):
         Whatever elements are in `out` prior to the call will be removed.
         (required)
     """
-
+    
     #Initialize out to be an empty list
     out[:] = []
 
@@ -131,11 +131,12 @@ that can be opened with GDAL.')
                                     out.append(prefix + ': field ' + field + 'must exist')
                             pass
     
-    #verify that current year < future year
-    if args['lulc_cur_year'] > args['lulc_fut_year']:
-        out.append('Current year: ' + str(args['lulc_cur_year']) + ' must be '
-                    + 'less than the future year: ' + str(args['lulc_fut_year']))
-             
+    if 'lulc_fut_uri' in args:
+        #verify that current year < future year
+        if args['lulc_cur_year'] > args['lulc_fut_year']:
+            out.append('Current year: ' + str(args['lulc_cur_year']) + ' must be '
+                        + 'less than the future year: ' + str(args['lulc_fut_year']))
+                 
 
     #Inconsistencies in market discount rate.
     #should be a number, either positive or negative
