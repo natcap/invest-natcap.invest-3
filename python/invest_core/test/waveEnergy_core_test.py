@@ -10,6 +10,7 @@ import waveEnergy_core
 import math
 from dbfpy import dbf
 from osgeo import ogr
+from osgeo import gdal
 import numpy as np
 
 
@@ -366,15 +367,63 @@ class TestWaveEnergy(unittest.TestCase):
             for indexIn, val in enumerate(ar):
                 self.assertAlmostEqual(val, interpZ[indexOut][indexIn], 5, 'Values do not match')
         
+    def test_waveEnergy_clipRasterFromPolygon(self):        
+        #This ensures we are not in Arc's python directory so that when
+        #we import gdal stuff we don't get the wrong GDAL version.
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        filesystemencoding = sys.getfilesystemencoding()
         
-def waveEnergyInterp(waveData, machinePerf):
-    x = np.array(machinePerf.pop(0), dtype='f')
-    y = np.array(machinePerf.pop(0), dtype='f')
-    z = np.array(machinePerf, dtype='f')
-    newx = waveData[0]
-    newy = waveData[1]
-    interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
-    return interpZ
+        testDir = '../../../test_data/wave_Energy'
+        shapePath = testDir + os.sep + 'test_input/threePointShape.shp'
+        rasterPath = testDir + os.sep + 'Intermediate/wp_kw.tif'
+        path = testDir + os.sep + 'test_output/wpClipped.tif'
+        
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        
+        shape = ogr.Open(shapePath)
+        raster = gdal.Open(rasterPath)
+        
+        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
+    
+        newRaster = None
+    
+    def test_waveEnergy_wavePower(self):
+        """Test wavePower to make sure desired outputs are met"""
+        
+        
+        
+#        def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
+#            heightBand = waveHeight.GetRasterBand(1)
+#            periodBand = waveHeight.GetRasterBand(1)
+#            heightNoData = heightBand.GetNoDataValue()
+#            periodNoData = periodBand.GetNoDataValue()
+#            noDataOut = -1
+#            p = 1028
+#            g = 9.8
+#            alfa = 0.86
+#            def op(a, b, c, d):
+#                c = np.absolute(c)
+#                tem = 2.0 * math.pi / (b * alfa)
+#                k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
+#                waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * (np.sqrt((g / k) * np.tanh(k * c)))) / 2
+#                wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
+#                return wp
+#        
+#            invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation, blankRaster], op,
+#                                         rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
+#            
+#            wpRaster = gdal.Open(wavePowerPath, GA_Update)
+#            wpNoData = wpRaster.GetRasterBand(1).GetNoDataValue()
+#            def op2(a):
+#                if a < 1:
+#                    return wpNoData
+#                else:
+#                    return a
+#            invest_core.vectorize1ArgOp(wpRaster.GetRasterBand(1), op2, wpRaster.GetRasterBand(1))
+
 #    def test_waveEnergy_with_inputs(self):
 #        """Test timber model with real inputs.  Compare copied and modified shapefile with valid
 #            shapefile that was created from the same inputs.  Regression test."""
