@@ -11,6 +11,27 @@ import logging
 from collections import deque
 logger = logging.getLogger('invest_core')
 
+def calculateRasterStats(band):
+    """Calculates and sets the min, max, stdev, and mean for the given band.
+    
+        band - a GDAL rasterband that will be modified by having its band
+            statistics set
+    
+        returns nothing
+    """
+
+    #calculating raster statistics
+    rasterMin, rasterMax = band.ComputeRasterMinMax(0)
+    print rasterMin, rasterMax
+    #make up stddev and mean
+    mean = (rasterMax + rasterMin) / 2.0
+
+    #This is an incorrect standard deviation, but saves us from having to 
+    #calculate by hand
+    stdev = (rasterMax - mean) / 2.0
+
+    band.SetStatistics(rasterMin, rasterMax, mean, stdev)
+
 def rasterDiff(rasterBandA, rasterBandB, outputRasterBand):
     """Iterate through the rows in the two sequestration rasters and calculate 
         the difference in each pixel.  Maps the difference to the output 
