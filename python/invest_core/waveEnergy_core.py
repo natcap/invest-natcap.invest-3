@@ -241,8 +241,21 @@ def clipShape(shapeToClip, bindingShape, outputPath):
 
     return shp_ds
 
-#def pointShapeToDict(shape, key, valueArray, value):
+#def pointShapeToMatrixRanges(shape, key, valueArray, value):
+#    """From a point geometry shape, this function generates a matrix (based
+#    on value), an array xrange (based on first element in key), and an array
+#    yrange (based on second element in key).  These three arrays can then be
+#    be used for interpolation purposes.
 #
+#    shape - A point geometry shapefile
+#    key - A list of Strings referencing fields from the points in shape.
+#            This list is used to build xranges/yranges
+#    valueArray - A list of STrings referencing fields from the points in shape.
+#                    Must include values from list and value to build matrix from
+#    value - A String representing the value to be used to build the matrix.
+#    
+#    returns - A list of 3 arrays, the xrange, yrange, and matrix
+#    """
 #    shape_layer = shape.GetLayer(0)
 #    shape_layer.ResetReading()
 #    shape_feat = shape_layer.GetNextFeature()
@@ -355,6 +368,15 @@ def interpPointsOverRaster(points, values, raster):
     band.WriteArray(spl, 0, 0)
     
 #def interpolateField(x, y, z, raster):
+#    """Interpolates a raster (raster that has been rasterized from point
+#        geometry shape layer) using arguments x,y,z and dimensions of
+#        raster.  Correct interpolated matrix is written out to the raster band.
+#    x - An array representing the xrange of the 'original' raster
+#    y - An array representing the yrange of the 'original' raster
+#    z - A 2D array representing a matrix of the 'original' raster
+#    raster - The raster to interpolate
+#
+#    returns - Nothing
 #    xrange = x
 #    yrange = y
 #    matrix = z
@@ -374,6 +396,17 @@ def interpPointsOverRaster(points, values, raster):
 #    band.WriteArray(spl, 0, 0)
 
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
+    """Calculates the wave power from the arguments and writes the
+    output raster to hard disk. 
+    
+    waveHeight - A raster representing the wave heights for AOI
+    wavePeriod - A raster representing the wave periods for AOI
+    elevation  - A raster representing the elevation for AOI
+    wavePowerPath - A String representing the output path
+    
+    returns - Nothing
+    
+    """
     heightBand = waveHeight.GetRasterBand(1)
     periodBand = waveHeight.GetRasterBand(1)
     heightNoData = heightBand.GetNoDataValue()
@@ -403,6 +436,14 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     invest_core.vectorize1ArgOp(wpRaster.GetRasterBand(1), op2, wpRaster.GetRasterBand(1))
 
 def waveEnergyInterp(waveData, machinePerf):
+    """Generates a matrix representing the interpolation of the
+    machine performance table using new ranges from wave watch data
+    
+    waveData - A dictionary holding newxrange,newyrange values
+    machinePerf - A 2D array holding the ranges of the machine performance
+    
+    returns - The interpolated matrix
+    """
     x = np.array(machinePerf.pop(0), dtype='f')
     y = np.array(machinePerf.pop(0), dtype='f')
     z = np.array(machinePerf, dtype='f')
@@ -412,6 +453,18 @@ def waveEnergyInterp(waveData, machinePerf):
     return interpZ
 
 def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
+    """Computes the wave energy capacity for each point and
+    generates a dictionary whos keys are the points and whos value
+    is the wave energy capacity
+    
+    waveData - A dictionary containing wave watch data
+    interpZ - A 2D array of the interpolated values for the machine
+                performance table
+    machineParam - A dictionary containing the restrictions for the machines
+                    (CapMax, TpMax, HsMax)
+                    
+    returns - A dictionary
+    """
     energyCap = {}
     waveRow = waveData.pop(0)
     waveColumn = waveData.pop(1)
@@ -452,7 +505,14 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and
 #interpolate them and rasterize them.
 def capturedWaveEnergyToShape(energyCap, waveShape):
+    """Adds a field, value to a shapefile from a dictionary
     
+    energyCap - A dictionary representing the wave energy capacity
+    waveShape  - A point geometry shapefile to write the new field/values to
+    
+    returns - Nothing
+    
+    """
     wave_Layer = waveShape.GetLayer(0)
     wave_Layer.ResetReading()
     field_def = ogr.FieldDefn('capWE_Sum', ogr.OFTReal)
