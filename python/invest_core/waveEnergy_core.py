@@ -89,18 +89,18 @@ def biophysical(args):
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
     waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
-
+    #Get the corresponding points and values from the shapefile to be used for interpolation
     heightArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
     periodArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
     energySumArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
-
+    #Interpolate the rasters (give a smooth surface)
     interpPointsOverRaster(heightArray[0], heightArray[1], waveHeightRaster)
     interpPointsOverRaster(periodArray[0], periodArray[1], wavePeriodRaster)
     interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
-
+    #Generate the wave power raster
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath)    
     wavePowerRaster = gdal.Open(wavePowerPath, GA_Update)
-    
+    #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wavePowerRaster = clipRasterFromPolygon(cutter, wavePowerRaster, wavePowerPath)
     waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
     
@@ -113,6 +113,15 @@ def biophysical(args):
     wavePowerRaster = None
     
 def clipRasterFromPolygon(shape, raster, path):
+    """Returns a raster where any value outside the bounds of the polygon shape are set
+    to nodata values.  This represents clipping the raster to the dimensions of the polygon
+    
+    shape - A polygon shapefile representing the bounds for the raster
+    raster - A raster to be bounded by shape
+    path - The path for the clipped output raster
+    
+    returns - the clipped raster    
+    """
     gt = raster.GetGeoTransform()
     pixelX = gt[1]
     pixelY = gt[5]
@@ -156,6 +165,16 @@ def clipRasterFromPolygon(shape, raster, path):
 #and the path for the new shapefile
 #It returns a new shapefile in the same format/projection as shapeToClip
 def clipShape(shapeToClip, bindingShape, outputPath):
+    """Copies a polygon or point geometry shapefile, only keeping the features
+    that intersect or are within a binding polygon shape.
+    
+    shapeToClip - A point or polygon shapefile to clip
+    bindingShape - A polygon shapefile indicating the bounds for the
+                    shapeToClip features
+    outputPath  - The path for the clipped output shapefile
+    
+    returns - A shapefile representing the clipped version of shapeToClip
+    """
     shape_source = outputPath
 
     if os.path.isfile(shape_source):
@@ -276,7 +295,17 @@ def clipShape(shapeToClip, bindingShape, outputPath):
 #    return results
 
 def getPointsValues(shape, key, valueArray, value):
-
+    """Generates a list of points and a list of values based on a point
+    geometry shapefile and other criteria from the arguments
+    
+    shape - A point geometry shapefile of which to gather the information from
+    key   - A list of fields from shape that will be you points
+    valueArray - A list of all the relevant fields from shape requiring fields
+                    to be used as key and field for the value
+    value - A string representing the field from shape to be used as the value
+    
+    returns - A list of points and values (points represented as 2D list, values as list)
+     """
     shape_layer = shape.GetLayer(0)
     shape_layer.ResetReading()
     shape_feat = shape_layer.GetNextFeature()
@@ -308,6 +337,7 @@ def getPointsValues(shape, key, valueArray, value):
     return results
 
 def interpPointsOverRaster(points, values, raster):
+    """"""
     points = np.array(points)
     values = np.array(values)
     
