@@ -466,29 +466,35 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
     returns - A dictionary
     """
     energyCap = {}
+    #Get the row,col headers (ranges) for the wave watch data
     waveRow = waveData.pop(0)
     waveColumn = waveData.pop(1)
+    #Get the machine parameter restriction values
     capMax = float(machineParam['CapMax']['VALUE'])
     periodMax = float(machineParam['TpMax']['VALUE'])
-    periodMaxPos = -1
     heightMax = float(machineParam['HsMax']['VALUE'])
+    periodMaxPos = -1
     heightMaxPos = -1
+    #Using the restrictions find the max position (index) for period and height
+    #in the waveRow/waveColumn ranges
     for i, v in enumerate(waveRow):
         if (v > periodMax) and (periodMaxPos == -1):
             periodMaxPos = i
     for i, v in enumerate(waveColumn):
         if (v > heightMax) and (heightMaxPos == -1):
             heightMaxPos = i
-
+    #For all the wave watch points, multiply the occurence matrix by the interpolated
+    #machine performance matrix to get the captured wave energy
     for key, val in waveData.iteritems():
         tempArray = np.array(val, dtype='f')
         multArray = np.multiply(tempArray, interpZ)
-
+        #Set any value that is outside the restricting ranges provided by 
+        #machine parameters to zero
         if periodMaxPos != -1:
             multArray[:, periodMaxPos:] = 0
         if heightMaxPos != -1:
             multArray[heightMaxPos:, :] = 0
-
+        #Divide the matrix by 5 to get the yearly values
         validArray = np.divide(multArray, 5.0)
 #        validArray = np.where(multArray>capMax, capMax, multArray)
         #Since we are doing a cubic interpolation there is a possibility we
@@ -496,7 +502,8 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
         #we drive any negative values to zero.
         validArray = np.where(validArray < 0, 0, validArray)
 #            def deviceConstraints(a, capmax, hmax, tmax):
-
+        #Sum all of the values from the matrix to get the total captured wave energy
+        #and convert into mega watts
         sum = (validArray.sum()/1000)
         energyCap[key] = sum
 
@@ -514,10 +521,15 @@ def capturedWaveEnergyToShape(energyCap, waveShape):
     
     """
     wave_Layer = waveShape.GetLayer(0)
+    #Incase the layer has already been read through earlier in the program
+    #reset it to start from the beginning
     wave_Layer.ResetReading()
+    #Create a new field for the shapefile
     field_def = ogr.FieldDefn('capWE_Sum', ogr.OFTReal)
     wave_Layer.CreateField(field_def)
-    
+    #For all of the features (points) in the shapefile, get the 
+    #corresponding point/value from the dictionary and set the 'capWE_Sum'
+    #field as the value from the dictionary
     for feat in wave_Layer:
         iIndex = feat.GetFieldIndex('I')
         jIndex = feat.GetFieldIndex('J')
