@@ -21,7 +21,8 @@ def calculateRasterStats(band):
     """
 
     #calculating raster statistics
-    rasterMin, rasterMax = band.ComputeBandStats(False)
+    rasterMin, rasterMax = band.ComputeRasterMinMax(0)
+    print rasterMin, rasterMax
     #make up stddev and mean
     mean = (rasterMax + rasterMin) / 2.0
 
