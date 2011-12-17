@@ -122,17 +122,22 @@ def clipRasterFromPolygon(shape, raster, path):
     
     returns - the clipped raster    
     """
+    #Get the pixel size from the raster to clip.
     gt = raster.GetGeoTransform()
     pixelX = gt[1]
     pixelY = gt[5]
-    
+    #Create a new raster as a copy from 'raster'
     copyRaster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     copyBand = copyRaster.GetRasterBand(1)
+    #Set the copied rasters values to nodata to create a blank raster.
     nodata = copyBand.GetNoDataValue()
     copyBand.Fill(nodata)
-    
+    #Rasterize the polygon layer onto the copied raster
     gdal.RasterizeLayer(copyRaster, [1], shape.GetLayer(0))
-    
+    #If the copied raster's value is nodata then the pixel is not within
+    #the polygon and should write nodata back. If copied raster's value
+    #is not nodata, then pixel lies within polygon and the value from 'raster'
+    #should be written out.
     def op(a,b):
         if b==nodata:
             return b
@@ -223,10 +228,11 @@ def clipShape(shapeToClip, bindingShape, outputPath):
             #Intersection returns a new geometry if they intersect
             geom = geom.Intersection(clip_geom)
             if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
+                #Create a new feature from the input feature and set its geometry
                 out_feat = ogr.Feature(feature_def=shp_layer.GetLayerDefn())
                 out_feat.SetFrom(in_feat)
                 out_feat.SetGeometryDirectly(geom)
-
+                #For all the fields in the feature set the field values from the source field
                 for fld_index2 in range(out_feat.GetFieldCount()):
                     src_field = in_feat.GetField(fld_index2)
                     out_feat.SetField(fld_index2, src_field)
@@ -319,22 +325,29 @@ def getPointsValues(shape, key, valueArray, value):
     
     returns - A list of points and values (points represented as 2D list, values as list)
      """
+    #Retrieve the layer from the shapefile and reset the reader head
+    #incase it has been iterated through earlier.
     shape_layer = shape.GetLayer(0)
     shape_layer.ResetReading()
+    #Get the first point from the shape layer
     shape_feat = shape_layer.GetNextFeature()
 
     fieldDict = {}
+    #For all the points in the layer add the desired 'key' and 'value' to the dictionary.
     while shape_feat is not None:
-
+        #This dictionary is used to store the needed values of the desired fields from 'valueArray'
         valueDict = {}
         #May want to check to make sure field is in shape layer
+        #For the relevant field in the list valueArray, add the fields value to the dictionary
         for field in valueArray:
             field_index = shape_feat.GetFieldIndex(field)
             valueDict[field] = shape_feat.GetField(field_index)
-        keyList = []        
+        keyList = []
+        #Create a tuple from the elements of the provided key list
         for k in key:
             keyList.append(valueDict[k])
         tupledKey = tuple(keyList)
+        #Set the created tuple as the key of this dictionary and set its value to desired element from valueDict
         fieldDict[tupledKey] = valueDict[value]
 
         shape_feat.Destroy()
@@ -342,6 +355,8 @@ def getPointsValues(shape, key, valueArray, value):
     
     points = []
     values = []
+    #Construct two arrays, one a list of all the points from fieldDict, and the other a list
+    #of all the values corresponding the points from fieldDict
     for id, val in fieldDict.iteritems():
         points.append(list(id))
         values.append(val)
@@ -359,20 +374,25 @@ def interpPointsOverRaster(points, values, raster):
     
     returns - Nothing
     """
+    #Set the points and values to numpy arrays
     points = np.array(points)
     values = np.array(values)
-    
+    #Get the dimensions from the raster as well as the GeoTransform information
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
     xsize = band.XSize
     ysize = band.YSize
     #newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
+    #Make a numpy array representing the points of the raster (the points are the pixels)
     newpoints = np.array([[gt[0]+gt[1]*i,gt[3]+gt[5]*j] for i in np.arange(xsize) for j in np.arange(ysize)])
-
-    spl = ip(points, values, fill_value=0)    
+    #Interpolate the points and values from the shapefile from earlier
+    spl = ip(points, values, fill_value=0)
+    #Run the interpolator object over the new set of points from the raster. Will return a list of values.
     spl = spl(newpoints)
+    #Reshape the list of values to the dimensions of the raster for writing.
+    #Transpose the matrix provided from 'reshape' because gdal thinks of x,y opposite of humans
     spl = spl.reshape(xsize, ysize).transpose()
-    
+    #Write interpolated matrix of values to raster
     band.WriteArray(spl, 0, 0)
     
 #def interpolateField(x, y, z, raster):
@@ -384,7 +404,7 @@ def interpPointsOverRaster(points, values, raster):
 #    z - A 2D array representing a matrix of the 'original' raster
 #    raster - The raster to interpolate
 #
-#    returns - Nothing
+#    returns - Nothing"""
 #    xrange = x
 #    yrange = y
 #    matrix = z
@@ -415,23 +435,40 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     returns - Nothing
     
     """
-    #
+    #Sea water density constant (kg/m^3)
     p = 1028
+    #Gravitational acceleration (m/s^2)
     g = 9.8
+    #Constant determining the shape of a wave spectrum (see users guide pg 23)
     alfa = 0.86
+    #Function defining the equations to compute the wave power.
     def op(a, b, c):
+        """Function computes the wave power for a specific point.  
+        Function used as an argument in invest_core.vectorizeRasters.
+        
+        a - waveHeight raster which represents the wave height for a point
+        b - wavePeriod raster which represents the wave period for a point
+        c - global dem raster which represents the elevation for a point
+        
+        returns - The wave power at a give point
+        """
         c = np.absolute(c)
+        #wave frequency calculation (used to calculate wave number k)
         tem = 2.0 * math.pi / (b * alfa)
+        #wave number calculation (expressed as a function of wave frequency and water depth)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
+        #wave group velocity calculation (expressed as a function of wave energy period and water depth)
         waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * (np.sqrt((g / k) * np.tanh(k * c)))) / 2
+        #wave power calculation
         wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
         return wp
-
+    #Create a new raster, wave power, by running the 'op' function over three rasters
     invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op,
                                  rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
     
     wpRaster = gdal.Open(wavePowerPath, GA_Update)
     wpNoData = wpRaster.GetRasterBand(1).GetNoDataValue()
+    #Where the wave power value is less than 1, set the value to nodata
     def op2(a):
         if a < 1:
             return wpNoData
