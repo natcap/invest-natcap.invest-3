@@ -350,7 +350,15 @@ def getPointsValues(shape, key, valueArray, value):
     return results
 
 def interpPointsOverRaster(points, values, raster):
-    """"""
+    """Interpolates the values of a given set of points and values to the points
+    of a raster and writes the interpolated matrix to the raster band
+    
+    points - A 2D array of points, where the points are represented as [x,y]
+    values - A list of values corresponding to the points of 'points'
+    raster - A raster to write the interpolated values too
+    
+    returns - Nothing
+    """
     points = np.array(points)
     values = np.array(values)
     
