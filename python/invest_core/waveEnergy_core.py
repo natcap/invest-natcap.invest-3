@@ -415,11 +415,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     returns - Nothing
     
     """
-    heightBand = waveHeight.GetRasterBand(1)
-    periodBand = waveHeight.GetRasterBand(1)
-    heightNoData = heightBand.GetNoDataValue()
-    periodNoData = periodBand.GetNoDataValue()
-    noDataOut = -1
+    #
     p = 1028
     g = 9.8
     alfa = 0.86
@@ -452,11 +448,14 @@ def waveEnergyInterp(waveData, machinePerf):
     
     returns - The interpolated matrix
     """
+    #Get ranges and matrix for machine performance table
     x = np.array(machinePerf.pop(0), dtype='f')
     y = np.array(machinePerf.pop(0), dtype='f')
     z = np.array(machinePerf, dtype='f')
+    #Get new ranges to interpolate to, from waveData table
     newx = waveData[0]
     newy = waveData[1]
+    #Interpolate machine performance table and return the interpolated matrix
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
     return interpZ
 
