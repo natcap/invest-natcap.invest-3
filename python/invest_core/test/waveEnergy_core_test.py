@@ -412,18 +412,21 @@ class TestWaveEnergy(unittest.TestCase):
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
             
-        waveHeightDriver = gdal.GetDriveByName('GTIFF')
-        waveHeight = waveHeightDriver.Create(whPath, 5, 5, 1, gdal.GDT_CFloat32)
+        waveHeightDriver = gdal.GetDriverByName('GTIFF')
+        waveHeight = waveHeightDriver.Create(whPath, 5, 5, 1, gdal.GDT_Float32)
         waveHeight.SetGeoTransform([-129, 1, 0, 48, 0, 1])
         waveHeight.GetRasterBand(1).Fill(2)
         
-        wavePeriodDriver = gdal.GetDriveByName('GTIFF')
-        wavePeriod = wavePeriodDriver.Create(wpPath, 5, 5, 1, gdal.GDT_CFloat32)
+        height = waveHeight.GetRasterBand(1).ReadAsArray()
+        print height
+        
+        wavePeriodDriver = gdal.GetDriverByName('GTIFF')
+        wavePeriod = wavePeriodDriver.Create(wpPath, 5, 5, 1, gdal.GDT_Float32)
         wavePeriod.SetGeoTransform([-129, 1, 0, 48, 0, 1])
         wavePeriod.GetRasterBand(1).Fill(5)
         
-        elevationDriver = gdal.GetDriveByName('GTIFF')
-        elevation = elevationDriver.Create(ePath, 5, 5, 1, gdal.GDT_CFloat32)
+        elevationDriver = gdal.GetDriverByName('GTIFF')
+        elevation = elevationDriver.Create(ePath, 5, 5, 1, gdal.GDT_Float32)
         elevation.SetGeoTransform([-129, 1, 0, 48, 0, 1])
         elevation.GetRasterBand(1).Fill(-500)
         
