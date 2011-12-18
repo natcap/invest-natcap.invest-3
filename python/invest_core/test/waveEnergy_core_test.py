@@ -388,19 +388,51 @@ class TestWaveEnergy(unittest.TestCase):
         
         newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
     
+        #Test whether pixels are inside polygon
+        
+        
+        #Test values of newRaster with raster
+    
         newRaster = None
     
     def test_waveEnergy_wavePower(self):
         """Test wavePower to make sure desired outputs are met"""
+        #This ensures we are not in Arc's python directory so that when
+        #we import gdal stuff we don't get the wrong GDAL version.
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+        filesystemencoding = sys.getfilesystemencoding()
         
+        testDir = '../../../test_data/wave_Energy'
+        path = testDir + os.sep + 'test_output/wpGen.tif'
+        whPath = testDir + os.sep + 'test_output/wheight.tif'
+        wpPath = testDir + os.sep + 'test_output/wperiod.tif'
+        ePath = testDir + os.sep + 'test_output/elevation.tif'
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+            
+        waveHeightDriver = gdal.GetDriveByName('GTIFF')
+        waveHeight = waveHeightDriver.Create(whPath, 5, 5, 1, gdal.GDT_CFloat32)
+        waveHeight.SetGeoTransform([-129, 1, 0, 48, 0, 1])
+        waveHeight.GetRasterBand(1).Fill(2)
         
+        wavePeriodDriver = gdal.GetDriveByName('GTIFF')
+        wavePeriod = wavePeriodDriver.Create(wpPath, 5, 5, 1, gdal.GDT_CFloat32)
+        wavePeriod.SetGeoTransform([-129, 1, 0, 48, 0, 1])
+        wavePeriod.GetRasterBand(1).Fill(5)
+        
+        elevationDriver = gdal.GetDriveByName('GTIFF')
+        elevation = elevationDriver.Create(ePath, 5, 5, 1, gdal.GDT_CFloat32)
+        elevation.SetGeoTransform([-129, 1, 0, 48, 0, 1])
+        elevation.GetRasterBand(1).Fill(-500)
+        
+        wpRaster = waveEnergy_core.wavePower(waveHeight, wavePeriod, elevation, path)
+        
+        matrix = wpRaster.GetRasterBand(1).ReadAsArray()
+        print matrix
         
 #        def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
-#            heightBand = waveHeight.GetRasterBand(1)
-#            periodBand = waveHeight.GetRasterBand(1)
-#            heightNoData = heightBand.GetNoDataValue()
-#            periodNoData = periodBand.GetNoDataValue()
-#            noDataOut = -1
 #            p = 1028
 #            g = 9.8
 #            alfa = 0.86
