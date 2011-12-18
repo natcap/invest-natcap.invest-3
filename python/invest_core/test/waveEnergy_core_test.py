@@ -417,20 +417,20 @@ class TestWaveEnergy(unittest.TestCase):
         waveHeight = waveHeightDriver.Create(whPath, 5, 5, 1, gdal.GDT_Float32)
         waveHeight.SetGeoTransform([-129, 1, 0, 48, 0, -1])
         waveHeight.GetRasterBand(1).Fill(2)
-        
-        height = waveHeight.GetRasterBand(1).ReadAsArray()
-        print height
+        waveHeight.GetRasterBand(1).SetNoDataValue(0)
         
         wavePeriodDriver = gdal.GetDriverByName('GTIFF')
         wavePeriod = wavePeriodDriver.Create(wpPath, 5, 5, 1, gdal.GDT_Float32)
         wavePeriod.SetGeoTransform([-129, 1, 0, 48, 0, -1])
         wavePeriod.GetRasterBand(1).Fill(5)
+        wavePeriod.GetRasterBand(1).SetNoDataValue(0)
         
         elevationDriver = gdal.GetDriverByName('GTIFF')
         elevation = elevationDriver.Create(ePath, 5, 5, 1, gdal.GDT_Float32)
         elevation.SetGeoTransform([-129, 1, 0, 48, 0, -1])
         elevation.GetRasterBand(1).Fill(-500)
-        
+        elevation.GetRasterBand(1).SetNoDataValue(0)
+
         waveEnergy_core.wavePower(waveHeight, wavePeriod, elevation, path)
         wpRaster = gdal.Open(path, GA_Update)
         matrix = wpRaster.GetRasterBand(1).ReadAsArray()
