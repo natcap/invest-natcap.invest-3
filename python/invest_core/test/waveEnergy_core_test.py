@@ -11,6 +11,7 @@ import math
 from dbfpy import dbf
 from osgeo import ogr
 from osgeo import gdal
+from osgeo.gdalconst import *
 import numpy as np
 
 
@@ -367,33 +368,33 @@ class TestWaveEnergy(unittest.TestCase):
             for indexIn, val in enumerate(ar):
                 self.assertAlmostEqual(val, interpZ[indexOut][indexIn], 5, 'Values do not match')
         
-    def test_waveEnergy_clipRasterFromPolygon(self):        
-        #This ensures we are not in Arc's python directory so that when
-        #we import gdal stuff we don't get the wrong GDAL version.
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
-        filesystemencoding = sys.getfilesystemencoding()
-        
-        testDir = '../../../test_data/wave_Energy'
-        shapePath = testDir + os.sep + 'test_input/threePointShape.shp'
-        rasterPath = testDir + os.sep + 'Intermediate/wp_kw.tif'
-        path = testDir + os.sep + 'test_output/wpClipped.tif'
-        
-        #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
-        if not os.path.isdir(output_dir):
-            os.mkdir(output_dir)
-        
-        shape = ogr.Open(shapePath)
-        raster = gdal.Open(rasterPath)
-        
-        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
-    
-        #Test whether pixels are inside polygon
-        
-        
-        #Test values of newRaster with raster
-    
-        newRaster = None
+#    def test_waveEnergy_clipRasterFromPolygon(self):        
+#        #This ensures we are not in Arc's python directory so that when
+#        #we import gdal stuff we don't get the wrong GDAL version.
+#        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+#        filesystemencoding = sys.getfilesystemencoding()
+#        
+#        testDir = '../../../test_data/wave_Energy'
+#        shapePath = testDir + os.sep + 'test_input/threePointShape.shp'
+#        rasterPath = testDir + os.sep + 'Intermediate/wp_kw.tif'
+#        path = testDir + os.sep + 'test_output/wpClipped.tif'
+#        
+#        #Add the Output directory onto the given workspace
+#        output_dir = testDir + os.sep + 'test_output/'
+#        if not os.path.isdir(output_dir):
+#            os.mkdir(output_dir)
+#        
+#        shape = ogr.Open(shapePath)
+#        raster = gdal.Open(rasterPath)
+#        
+#        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
+#    
+#        #Test whether pixels are inside polygon
+#        
+#        
+#        #Test values of newRaster with raster
+#    
+#        newRaster = None
     
     def test_waveEnergy_wavePower(self):
         """Test wavePower to make sure desired outputs are met"""
@@ -414,7 +415,7 @@ class TestWaveEnergy(unittest.TestCase):
             
         waveHeightDriver = gdal.GetDriverByName('GTIFF')
         waveHeight = waveHeightDriver.Create(whPath, 5, 5, 1, gdal.GDT_Float32)
-        waveHeight.SetGeoTransform([-129, 1, 0, 48, 0, 1])
+        waveHeight.SetGeoTransform([-129, 1, 0, 48, 0, -1])
         waveHeight.GetRasterBand(1).Fill(2)
         
         height = waveHeight.GetRasterBand(1).ReadAsArray()
@@ -422,16 +423,16 @@ class TestWaveEnergy(unittest.TestCase):
         
         wavePeriodDriver = gdal.GetDriverByName('GTIFF')
         wavePeriod = wavePeriodDriver.Create(wpPath, 5, 5, 1, gdal.GDT_Float32)
-        wavePeriod.SetGeoTransform([-129, 1, 0, 48, 0, 1])
+        wavePeriod.SetGeoTransform([-129, 1, 0, 48, 0, -1])
         wavePeriod.GetRasterBand(1).Fill(5)
         
         elevationDriver = gdal.GetDriverByName('GTIFF')
         elevation = elevationDriver.Create(ePath, 5, 5, 1, gdal.GDT_Float32)
-        elevation.SetGeoTransform([-129, 1, 0, 48, 0, 1])
+        elevation.SetGeoTransform([-129, 1, 0, 48, 0, -1])
         elevation.GetRasterBand(1).Fill(-500)
         
-        wpRaster = waveEnergy_core.wavePower(waveHeight, wavePeriod, elevation, path)
-        
+        waveEnergy_core.wavePower(waveHeight, wavePeriod, elevation, path)
+        wpRaster = gdal.Open(path, GA_Update)
         matrix = wpRaster.GetRasterBand(1).ReadAsArray()
         print matrix
         
