@@ -475,6 +475,8 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
         else:
             return a
     invest_core.vectorize1ArgOp(wpRaster.GetRasterBand(1), op2, wpRaster.GetRasterBand(1))
+    wpRaster = None
+
 
 def waveEnergyInterp(waveData, machinePerf):
     """Generates a matrix representing the interpolation of the
