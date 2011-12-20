@@ -1,13 +1,13 @@
 import os, sys
-cmd_folder = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, cmd_folder + '/../')
-import carbon_core
 import unittest
+import random
+
 from osgeo import ogr, gdal, osr
 from osgeo.gdalconst import *
-from dbfpy import dbf
 import numpy as np
-import random
+
+from invest.carbon import carbon_core
+from invest.dbfpy import dbf
 
 class TestInvestCarbonCore(unittest.TestCase):
     def test_carbon_core_nodata(self):
