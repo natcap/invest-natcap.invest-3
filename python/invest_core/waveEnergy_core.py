@@ -89,18 +89,18 @@ def biophysical(args):
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
     waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
-
+    #Get the corresponding points and values from the shapefile to be used for interpolation
     heightArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
     periodArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
     energySumArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
-
+    #Interpolate the rasters (give a smooth surface)
     interpPointsOverRaster(heightArray[0], heightArray[1], waveHeightRaster)
     interpPointsOverRaster(periodArray[0], periodArray[1], wavePeriodRaster)
     interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
-
+    #Generate the wave power raster
     wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath)    
     wavePowerRaster = gdal.Open(wavePowerPath, GA_Update)
-    
+    #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wavePowerRaster = clipRasterFromPolygon(cutter, wavePowerRaster, wavePowerPath)
     waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
     
@@ -113,17 +113,31 @@ def biophysical(args):
     wavePowerRaster = None
     
 def clipRasterFromPolygon(shape, raster, path):
+    """Returns a raster where any value outside the bounds of the polygon shape are set
+    to nodata values.  This represents clipping the raster to the dimensions of the polygon
+    
+    shape - A polygon shapefile representing the bounds for the raster
+    raster - A raster to be bounded by shape
+    path - The path for the clipped output raster
+    
+    returns - the clipped raster    
+    """
+    #Get the pixel size from the raster to clip.
     gt = raster.GetGeoTransform()
     pixelX = gt[1]
     pixelY = gt[5]
-    
+    #Create a new raster as a copy from 'raster'
     copyRaster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     copyBand = copyRaster.GetRasterBand(1)
+    #Set the copied rasters values to nodata to create a blank raster.
     nodata = copyBand.GetNoDataValue()
     copyBand.Fill(nodata)
-    
+    #Rasterize the polygon layer onto the copied raster
     gdal.RasterizeLayer(copyRaster, [1], shape.GetLayer(0))
-    
+    #If the copied raster's value is nodata then the pixel is not within
+    #the polygon and should write nodata back. If copied raster's value
+    #is not nodata, then pixel lies within polygon and the value from 'raster'
+    #should be written out.
     def op(a,b):
         if b==nodata:
             return b
@@ -156,6 +170,16 @@ def clipRasterFromPolygon(shape, raster, path):
 #and the path for the new shapefile
 #It returns a new shapefile in the same format/projection as shapeToClip
 def clipShape(shapeToClip, bindingShape, outputPath):
+    """Copies a polygon or point geometry shapefile, only keeping the features
+    that intersect or are within a binding polygon shape.
+    
+    shapeToClip - A point or polygon shapefile to clip
+    bindingShape - A polygon shapefile indicating the bounds for the
+                    shapeToClip features
+    outputPath  - The path for the clipped output shapefile
+    
+    returns - A shapefile representing the clipped version of shapeToClip
+    """
     shape_source = outputPath
 
     if os.path.isfile(shape_source):
@@ -204,10 +228,11 @@ def clipShape(shapeToClip, bindingShape, outputPath):
             #Intersection returns a new geometry if they intersect
             geom = geom.Intersection(clip_geom)
             if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
+                #Create a new feature from the input feature and set its geometry
                 out_feat = ogr.Feature(feature_def=shp_layer.GetLayerDefn())
                 out_feat.SetFrom(in_feat)
                 out_feat.SetGeometryDirectly(geom)
-
+                #For all the fields in the feature set the field values from the source field
                 for fld_index2 in range(out_feat.GetFieldCount()):
                     src_field = in_feat.GetField(fld_index2)
                     out_feat.SetField(fld_index2, src_field)
@@ -222,8 +247,21 @@ def clipShape(shapeToClip, bindingShape, outputPath):
 
     return shp_ds
 
-#def pointShapeToDict(shape, key, valueArray, value):
+#def pointShapeToMatrixRanges(shape, key, valueArray, value):
+#    """From a point geometry shape, this function generates a matrix (based
+#    on value), an array xrange (based on first element in key), and an array
+#    yrange (based on second element in key).  These three arrays can then be
+#    be used for interpolation purposes.
 #
+#    shape - A point geometry shapefile
+#    key - A list of Strings referencing fields from the points in shape.
+#            This list is used to build xranges/yranges
+#    valueArray - A list of STrings referencing fields from the points in shape.
+#                    Must include values from list and value to build matrix from
+#    value - A String representing the value to be used to build the matrix.
+#    
+#    returns - A list of 3 arrays, the xrange, yrange, and matrix
+#    """
 #    shape_layer = shape.GetLayer(0)
 #    shape_layer.ResetReading()
 #    shape_feat = shape_layer.GetNextFeature()
@@ -276,23 +314,40 @@ def clipShape(shapeToClip, bindingShape, outputPath):
 #    return results
 
 def getPointsValues(shape, key, valueArray, value):
-
+    """Generates a list of points and a list of values based on a point
+    geometry shapefile and other criteria from the arguments
+    
+    shape - A point geometry shapefile of which to gather the information from
+    key   - A list of fields from shape that will be you points
+    valueArray - A list of all the relevant fields from shape requiring fields
+                    to be used as key and field for the value
+    value - A string representing the field from shape to be used as the value
+    
+    returns - A list of points and values (points represented as 2D list, values as list)
+     """
+    #Retrieve the layer from the shapefile and reset the reader head
+    #incase it has been iterated through earlier.
     shape_layer = shape.GetLayer(0)
     shape_layer.ResetReading()
+    #Get the first point from the shape layer
     shape_feat = shape_layer.GetNextFeature()
 
     fieldDict = {}
+    #For all the points in the layer add the desired 'key' and 'value' to the dictionary.
     while shape_feat is not None:
-
+        #This dictionary is used to store the needed values of the desired fields from 'valueArray'
         valueDict = {}
         #May want to check to make sure field is in shape layer
+        #For the relevant field in the list valueArray, add the fields value to the dictionary
         for field in valueArray:
             field_index = shape_feat.GetFieldIndex(field)
             valueDict[field] = shape_feat.GetField(field_index)
-        keyList = []        
+        keyList = []
+        #Create a tuple from the elements of the provided key list
         for k in key:
             keyList.append(valueDict[k])
         tupledKey = tuple(keyList)
+        #Set the created tuple as the key of this dictionary and set its value to desired element from valueDict
         fieldDict[tupledKey] = valueDict[value]
 
         shape_feat.Destroy()
@@ -300,6 +355,8 @@ def getPointsValues(shape, key, valueArray, value):
     
     points = []
     values = []
+    #Construct two arrays, one a list of all the points from fieldDict, and the other a list
+    #of all the values corresponding the points from fieldDict
     for id, val in fieldDict.iteritems():
         points.append(list(id))
         values.append(val)
@@ -308,23 +365,46 @@ def getPointsValues(shape, key, valueArray, value):
     return results
 
 def interpPointsOverRaster(points, values, raster):
+    """Interpolates the values of a given set of points and values to the points
+    of a raster and writes the interpolated matrix to the raster band
+    
+    points - A 2D array of points, where the points are represented as [x,y]
+    values - A list of values corresponding to the points of 'points'
+    raster - A raster to write the interpolated values too
+    
+    returns - Nothing
+    """
+    #Set the points and values to numpy arrays
     points = np.array(points)
     values = np.array(values)
-    
+    #Get the dimensions from the raster as well as the GeoTransform information
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
     xsize = band.XSize
     ysize = band.YSize
     #newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
+    #Make a numpy array representing the points of the raster (the points are the pixels)
     newpoints = np.array([[gt[0]+gt[1]*i,gt[3]+gt[5]*j] for i in np.arange(xsize) for j in np.arange(ysize)])
-
-    spl = ip(points, values, fill_value=0)    
+    #Interpolate the points and values from the shapefile from earlier
+    spl = ip(points, values, fill_value=0)
+    #Run the interpolator object over the new set of points from the raster. Will return a list of values.
     spl = spl(newpoints)
+    #Reshape the list of values to the dimensions of the raster for writing.
+    #Transpose the matrix provided from 'reshape' because gdal thinks of x,y opposite of humans
     spl = spl.reshape(xsize, ysize).transpose()
-    
+    #Write interpolated matrix of values to raster
     band.WriteArray(spl, 0, 0)
     
 #def interpolateField(x, y, z, raster):
+#    """Interpolates a raster (raster that has been rasterized from point
+#        geometry shape layer) using arguments x,y,z and dimensions of
+#        raster.  Correct interpolated matrix is written out to the raster band.
+#    x - An array representing the xrange of the 'original' raster
+#    y - An array representing the yrange of the 'original' raster
+#    z - A 2D array representing a matrix of the 'original' raster
+#    raster - The raster to interpolate
+#
+#    returns - Nothing"""
 #    xrange = x
 #    yrange = y
 #    matrix = z
@@ -344,68 +424,123 @@ def interpPointsOverRaster(points, values, raster):
 #    band.WriteArray(spl, 0, 0)
 
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
-    heightBand = waveHeight.GetRasterBand(1)
-    periodBand = waveHeight.GetRasterBand(1)
-    heightNoData = heightBand.GetNoDataValue()
-    periodNoData = periodBand.GetNoDataValue()
-    noDataOut = -1
+    """Calculates the wave power from the arguments and writes the
+    output raster to hard disk. 
+    
+    waveHeight - A raster representing the wave heights for AOI
+    wavePeriod - A raster representing the wave periods for AOI
+    elevation  - A raster representing the elevation for AOI
+    wavePowerPath - A String representing the output path
+    
+    returns - Nothing
+    
+    """
+    #Sea water density constant (kg/m^3)
     p = 1028
+    #Gravitational acceleration (m/s^2)
     g = 9.8
+    #Constant determining the shape of a wave spectrum (see users guide pg 23)
     alfa = 0.86
+    #Function defining the equations to compute the wave power.
     def op(a, b, c):
+        """Function computes the wave power for a specific point.  
+        Function used as an argument in invest_core.vectorizeRasters.
+        
+        a - waveHeight raster which represents the wave height for a point
+        b - wavePeriod raster which represents the wave period for a point
+        c - global dem raster which represents the elevation for a point
+        
+        returns - The wave power at a give point
+        """
         c = np.absolute(c)
+        #wave frequency calculation (used to calculate wave number k)
         tem = 2.0 * math.pi / (b * alfa)
+        #wave number calculation (expressed as a function of wave frequency and water depth)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
+        #wave group velocity calculation (expressed as a function of wave energy period and water depth)
         waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * (np.sqrt((g / k) * np.tanh(k * c)))) / 2
+        #wave power calculation
         wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
         return wp
-
+    #Create a new raster, wave power, by running the 'op' function over three rasters
     invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op,
                                  rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
     
     wpRaster = gdal.Open(wavePowerPath, GA_Update)
     wpNoData = wpRaster.GetRasterBand(1).GetNoDataValue()
+    #Where the wave power value is less than 1, set the value to nodata
     def op2(a):
         if a < 1:
             return wpNoData
         else:
             return a
     invest_core.vectorize1ArgOp(wpRaster.GetRasterBand(1), op2, wpRaster.GetRasterBand(1))
+    wpRaster = None
+
 
 def waveEnergyInterp(waveData, machinePerf):
+    """Generates a matrix representing the interpolation of the
+    machine performance table using new ranges from wave watch data
+    
+    waveData - A dictionary holding newxrange,newyrange values
+    machinePerf - A 2D array holding the ranges of the machine performance
+    
+    returns - The interpolated matrix
+    """
+    #Get ranges and matrix for machine performance table
     x = np.array(machinePerf.pop(0), dtype='f')
     y = np.array(machinePerf.pop(0), dtype='f')
     z = np.array(machinePerf, dtype='f')
+    #Get new ranges to interpolate to, from waveData table
     newx = waveData[0]
     newy = waveData[1]
+    #Interpolate machine performance table and return the interpolated matrix
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
     return interpZ
 
 def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
+    """Computes the wave energy capacity for each point and
+    generates a dictionary whos keys are the points and whos value
+    is the wave energy capacity
+    
+    waveData - A dictionary containing wave watch data
+    interpZ - A 2D array of the interpolated values for the machine
+                performance table
+    machineParam - A dictionary containing the restrictions for the machines
+                    (CapMax, TpMax, HsMax)
+                    
+    returns - A dictionary
+    """
     energyCap = {}
+    #Get the row,col headers (ranges) for the wave watch data
     waveRow = waveData.pop(0)
     waveColumn = waveData.pop(1)
+    #Get the machine parameter restriction values
     capMax = float(machineParam['CapMax']['VALUE'])
     periodMax = float(machineParam['TpMax']['VALUE'])
-    periodMaxPos = -1
     heightMax = float(machineParam['HsMax']['VALUE'])
+    periodMaxPos = -1
     heightMaxPos = -1
+    #Using the restrictions find the max position (index) for period and height
+    #in the waveRow/waveColumn ranges
     for i, v in enumerate(waveRow):
         if (v > periodMax) and (periodMaxPos == -1):
             periodMaxPos = i
     for i, v in enumerate(waveColumn):
         if (v > heightMax) and (heightMaxPos == -1):
             heightMaxPos = i
-
+    #For all the wave watch points, multiply the occurence matrix by the interpolated
+    #machine performance matrix to get the captured wave energy
     for key, val in waveData.iteritems():
         tempArray = np.array(val, dtype='f')
         multArray = np.multiply(tempArray, interpZ)
-
+        #Set any value that is outside the restricting ranges provided by 
+        #machine parameters to zero
         if periodMaxPos != -1:
             multArray[:, periodMaxPos:] = 0
         if heightMaxPos != -1:
             multArray[heightMaxPos:, :] = 0
-
+        #Divide the matrix by 5 to get the yearly values
         validArray = np.divide(multArray, 5.0)
 #        validArray = np.where(multArray>capMax, capMax, multArray)
         #Since we are doing a cubic interpolation there is a possibility we
@@ -413,7 +548,8 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
         #we drive any negative values to zero.
         validArray = np.where(validArray < 0, 0, validArray)
 #            def deviceConstraints(a, capmax, hmax, tmax):
-
+        #Sum all of the values from the matrix to get the total captured wave energy
+        #and convert into mega watts
         sum = (validArray.sum()/1000)
         energyCap[key] = sum
 
@@ -422,12 +558,24 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and
 #interpolate them and rasterize them.
 def capturedWaveEnergyToShape(energyCap, waveShape):
+    """Adds a field, value to a shapefile from a dictionary
     
+    energyCap - A dictionary representing the wave energy capacity
+    waveShape  - A point geometry shapefile to write the new field/values to
+    
+    returns - Nothing
+    
+    """
     wave_Layer = waveShape.GetLayer(0)
+    #Incase the layer has already been read through earlier in the program
+    #reset it to start from the beginning
     wave_Layer.ResetReading()
+    #Create a new field for the shapefile
     field_def = ogr.FieldDefn('capWE_Sum', ogr.OFTReal)
     wave_Layer.CreateField(field_def)
-    
+    #For all of the features (points) in the shapefile, get the 
+    #corresponding point/value from the dictionary and set the 'capWE_Sum'
+    #field as the value from the dictionary
     for feat in wave_Layer:
         iIndex = feat.GetFieldIndex('I')
         jIndex = feat.GetFieldIndex('J')
