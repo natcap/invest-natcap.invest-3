@@ -305,7 +305,7 @@ cdef int pairCompare(const_void *a, const_void *b):
     if v > 0: return 1
     return 0
 
-def flowDirection(dem, flow):
+def flowDirectionD8(dem, flow):
     """Calculates the D8 pour point algorithm.  The output is a integer
         raster whose values range from 1 to 255.  The values for each direction
         from the center are:
@@ -479,7 +479,7 @@ def flowDirection(dem, flow):
     
     return flow
 
-cdef Queue calculateInflowNeighbors(int i, int j, 
+cdef Queue calculateInflowNeighborsD8(int i, int j, 
                     np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix, 
                     int nodataFlowDirection):
     """Returns a list of the neighboring pixels to i,j that are in bounds
@@ -510,12 +510,12 @@ cdef Queue calculateInflowNeighbors(int i, int j,
     return neighbors
 
 @cython.boundscheck(False)
-cdef void calculateFlow(Queue pixelsToProcess, 
+cdef void calculateFlowD8(Queue pixelsToProcess, 
                       np.ndarray[np.int_t,ndim=2] accumulationMatrix,
                       np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix,
                       int nodataFlowDirection, int nodataFlowAccumulation):
-    """Takes a list of pixels to calculate flow for, then does a 
-        dynamic style programming process of visiting and updating
+    """Takes a list of pixels to calculate flow for the D8 algorithm, then 
+        does a dynamic style programming process of visiting and updating
         each one as it needs processing.  Modified `accumulationMatrix`
         during processing.
         
@@ -539,7 +539,7 @@ cdef void calculateFlow(Queue pixelsToProcess,
 
         #if any neighbors flow into p and are uncalculated, push p and
         #neighbors on the stack
-        neighbors = calculateInflowNeighbors(i, j, flowDirectionMatrix, 
+        neighbors = calculateInflowNeighborsD8(i, j, flowDirectionMatrix, 
                                              nodataFlowDirection)
         n = neighbors.size()
         #logger.debug("%s neighbors" % n)
@@ -578,7 +578,7 @@ cdef void calculateFlow(Queue pixelsToProcess,
     return
 
 @cython.boundscheck(False)
-def flowAccumulation(flowDirection, flowAccumulation):
+def flowAccumulationD8(flowDirection, flowAccumulation):
     """Creates a raster of accumulated flow to each cell.
     
         flowDirection - A raster showing direction of flow out of each cell
@@ -620,7 +620,7 @@ def flowAccumulation(flowDirection, flowAccumulation):
                 lastx=x
             q.append(x)
             q.append(y)
-            calculateFlow(q,accumulationMatrix,flowDirectionMatrix,
+            calculateFlowD8(q,accumulationMatrix,flowDirectionMatrix,
                           nodataFlowDirection, nodataFlowAccumulation)
 
     flowAccumulation.GetRasterBand(1).WriteArray(\
