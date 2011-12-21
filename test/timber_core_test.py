@@ -167,11 +167,11 @@ class TestTimber(unittest.TestCase):
         with set values.  Compares calculated Biomass and Volume with that from running the
         shapefile through the model. """
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
-        dir_path = current_folder + 'data/timber/BioVolTest/'
+        dir_path = current_folder + 'data/timber/Output/'
         if not os.path.isdir(dir_path):
-            os.mkdir(current_folder + 'data/timber/BioVolTest')
-        shp_path = current_folder + 'data/timber/BioVolTest'
-        dbf_path = current_folder + 'data/timber/BioVolTest/test.dbf'
+            os.mkdir(current_folder + 'data/timber/Output')
+        shp_path = current_folder + 'data/timber/Output'
+        dbf_path = current_folder + 'data/timber/Output/test.dbf'
 
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)

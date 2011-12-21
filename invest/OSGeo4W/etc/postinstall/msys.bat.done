@@ -1,5 +1,0 @@
-mkdir "%OSGEO4W_STARTMENU%"
-xxmklink "%OSGEO4W_STARTMENU%\msys.lnk"       "%OSGEO4W_ROOT%\apps\msys\msys.bat" " " \ "msys" 1 "%OSGEO4W_ROOT%\apps\msys\m.ico"
-xxmklink "%ALLUSERSPROFILE%\Desktop\msys.lnk" "%OSGEO4W_ROOT%\apps\msys\msys.bat" " " \ "msys" 1 "%OSGEO4W_ROOT%\apps\msys\m.ico"
-
-textreplace -std -t apps/msys/msys.bat
