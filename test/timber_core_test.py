@@ -144,6 +144,7 @@ class TestTimber(unittest.TestCase):
         tbio = 20
         tvol = 20
 
+        lyr = ds.GetLayerByName('timber')
         feat = lyr.GetFeature(0)
         for field, value in (('TNPV', tnpv), ('TBiomass', tbio), ('TVolume', tvol)):
             field_index = feat.GetFieldIndex(field)
@@ -168,6 +169,14 @@ class TestTimber(unittest.TestCase):
         shapefile through the model. """
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
         dir_path = current_folder + 'data/timber/Output/'
+
+        #Deleting any files in the output if they already exist, this
+        #caused a bug once when I didn't do this.
+        if os.path.isdir(dir_path):
+            textFileList = os.listdir(dir_path)
+            for file in textFileList:
+                os.remove(dir_path + file)
+
         if not os.path.isdir(dir_path):
             os.mkdir(current_folder + 'data/timber/Output')
         shp_path = current_folder + 'data/timber/Output'
@@ -276,7 +285,7 @@ class TestTimber(unittest.TestCase):
 
         timber_core.execute(args)
 
-        valid_output_shape = ogr.Open(current_folder + 'data/timber/sample_output/timber.shp')
+        valid_output_shape = ogr.Open(current_folder + 'data/timber/regression_data/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
         #Check that the number of features (polygons) are the same between shapefiles
         num_features_valid = valid_output_layer.GetFeatureCount()
@@ -307,7 +316,3 @@ class TestTimber(unittest.TestCase):
             for file in textFileList:
                 os.remove('data/timber/Output/' + file)
             os.rmdir('data/timber/Output/')
-
-suite = unittest.TestLoader().loadTestsFromTestCase(TestTimber)
-unittest.TextTestRunner(verbosity=2).run(suite)
-
