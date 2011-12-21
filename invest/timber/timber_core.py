@@ -1,11 +1,14 @@
 """Module that contains the core computational components for the timber 
     model"""
 
+import math
+import imp
+import sys
+import os
+import logging
 
 import numpy as np
-import imp, sys, os
 from osgeo import ogr
-import math
 
 def execute(args):
     """Executes the basic timber management model that calculates the Total Net Present Value and maps
@@ -22,6 +25,7 @@ def execute(args):
                                  relative polygons to Parcl_ID field in timber_shape
         
         returns nothing"""
+    logging.debug('executing timber_core')
     #Retrieve the layer of the shapefile which contains the polygons
     timber_shape = args['timber_shape']
     layer = timber_shape.GetLayerByName('timber')

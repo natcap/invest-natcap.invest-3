@@ -1,16 +1,16 @@
-import sys, os
-
-#Add current directory and parent path for import tests
-cmd_folder = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, cmd_folder + '/../')
-os.chdir(cmd_folder)
-
+import sys
+import os
 import unittest
-import timber_core
 import math
-from dbfpy import dbf
+import logging
+
+from invest.dbfpy import dbf
 from osgeo import ogr
 
+from invest.timber import timber_core
+
+#Create a variable to prepend to each path
+current_folder = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 class TestTimber(unittest.TestCase):
 
@@ -82,12 +82,12 @@ class TestTimber(unittest.TestCase):
         """Smoke test for Timber.  Model should not crash with 
             basic input requirements"""
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
-        smoke_path = '../../../test_data/timber/Smoke/'
+        smoke_path = current_folder + 'data/timber/Smoke/'
         if not os.path.isdir(smoke_path):
-            os.mkdir('../../../test_data/timber/Smoke')
+            os.mkdir(current_folder + 'data/timber/Smoke')
         #Define the paths for the sample input/output files
-        dbf_path = '../../../test_data/timber/Smoke/test.dbf'
-        shp_path = '../../../test_data/timber/Smoke'
+        dbf_path = current_folder + 'data/timber/Smoke/test.dbf'
+        shp_path = current_folder + 'data/timber/Smoke'
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
         db.addField(('PRICE', 'N', 3), ('T', 'N', 2), ('BCEF', 'N', 1), ('Parcel_ID', 'N', 1),
@@ -167,11 +167,11 @@ class TestTimber(unittest.TestCase):
         with set values.  Compares calculated Biomass and Volume with that from running the
         shapefile through the model. """
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
-        dir_path = '../../../test_data/timber/BioVolTest/'
+        dir_path = current_folder + 'data/timber/BioVolTest/'
         if not os.path.isdir(dir_path):
-            os.mkdir('../../../test_data/timber/BioVolTest')
-        shp_path = '../../../test_data/timber/BioVolTest'
-        dbf_path = '../../../test_data/timber/BioVolTest/test.dbf'
+            os.mkdir(current_folder + 'data/timber/BioVolTest')
+        shp_path = current_folder + 'data/timber/BioVolTest'
+        dbf_path = current_folder + 'data/timber/BioVolTest/test.dbf'
 
         #Create our own dbf file with basic attributes for one polygon
         db = dbf.Dbf(dbf_path, new=True)
@@ -227,6 +227,7 @@ class TestTimber(unittest.TestCase):
 
         timber_core.execute(args)
         #Compare Biomass, Volume, and TNPV calculations
+        lyr = ds.GetLayerByName('timber')
         feat = lyr.GetFeature(0)
         for field, value in (('TNPV', TNPV), ('TBiomass', calculatedBiomass), ('TVolume', calculatedVolume)):
             field_index = feat.GetFieldIndex(field)
@@ -250,11 +251,11 @@ class TestTimber(unittest.TestCase):
         """Test timber model with real inputs.  Compare copied and modified shapefile with valid
             shapefile that was created from the same inputs.  Regression test."""
         #Open table and shapefile
-        attr_table = dbf.Dbf('../../../timber/input/plant_table.dbf')
-        test_shape = ogr.Open('../../../timber/input/plantation.shp', 1)
+        attr_table = dbf.Dbf(current_folder + 'data/timber/input/plant_table.dbf')
+        test_shape = ogr.Open(current_folder + 'data/timber/input/plantation.shp', 1)
 
         #Add the Output directory onto the given workspace
-        output_dir = '../../../test_data/timber' + os.sep + 'Output/'
+        output_dir = current_folder + 'data/timber' + os.sep + 'Output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
         elif os.path.isfile(output_dir + 'timber.shp'):
@@ -265,7 +266,7 @@ class TestTimber(unittest.TestCase):
         ogr.GetDriverByName('ESRI Shapefile').\
             CopyDataSource(test_shape, shape_source)
 
-        timber_output_shape = ogr.Open('../../../test_data/timber/Output/timber.shp', 1)
+        timber_output_shape = ogr.Open(current_folder + 'data/timber/Output/timber.shp', 1)
         timber_output_layer = timber_output_shape.GetLayerByName('timber')
 
         args = {'timber_shape': timber_output_shape,
@@ -275,7 +276,7 @@ class TestTimber(unittest.TestCase):
 
         timber_core.execute(args)
 
-        valid_output_shape = ogr.Open('../../../timber/sample_output/timber.shp')
+        valid_output_shape = ogr.Open(current_folder + 'data/timber/sample_output/timber.shp')
         valid_output_layer = valid_output_shape.GetLayerByName('timber')
         #Check that the number of features (polygons) are the same between shapefiles
         num_features_valid = valid_output_layer.GetFeatureCount()
@@ -301,11 +302,11 @@ class TestTimber(unittest.TestCase):
         timber_output_layer = None
         attr_table.close()
         #Delete all the generated files and directory
-        if os.path.isdir('../../../test_data/timber/Output/'):
-            textFileList = os.listdir('../../../test_data/timber/Output/')
+        if os.path.isdir('data/timber/Output/'):
+            textFileList = os.listdir('data/timber/Output/')
             for file in textFileList:
-                os.remove('../../../test_data/timber/Output/' + file)
-            os.rmdir('../../../test_data/timber/Output/')
+                os.remove('data/timber/Output/' + file)
+            os.rmdir('data/timber/Output/')
 
 suite = unittest.TestLoader().loadTestsFromTestCase(TestTimber)
 unittest.TextTestRunner(verbosity=2).run(suite)
