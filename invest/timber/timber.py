@@ -1,12 +1,16 @@
 """InVEST Timber model at the "uri" level.  No separation between
     biophysical and valuation since the model is so simple."""
 
-import imp, sys, os
-import simplejson as json
-import timber_core
-from osgeo import ogr
+import imp
+import sys
+import os
+
 import numpy
-from dbfpy import dbf
+from osgeo import ogr
+
+import json
+from invest.dbfpy import dbf
+import timber_core
 
 def execute(args):
     """This function invokes the timber model given uri inputs specified by the user guide.
