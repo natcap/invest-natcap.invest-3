@@ -9,7 +9,7 @@ from osgeo.gdalconst import *
 import numpy as np
 from nose.exc import SkipTest
 
-import waveEnergy_core
+import invest.wave_energy.waveEnergy_core
 
 class TestWaveEnergy(unittest.TestCase):
 
