@@ -5,14 +5,12 @@ import random
 from osgeo import ogr, gdal, osr
 from osgeo.gdalconst import *
 import numpy as np
-from nose.exc import SkipTest
 
 from invest.carbon import carbon_core
 from invest.dbfpy import dbf
 
 class TestInvestCarbonCore(unittest.TestCase):
     def test_carbon_core_nodata(self):
-        raise SkipTest("haven't refactored this test yet")
         """Test several raster sizes that have only nodata values"""
         driver = gdal.GetDriverByName("GTIFF")
 
@@ -46,7 +44,6 @@ class TestInvestCarbonCore(unittest.TestCase):
             self.assertAlmostEqual(sum, xDim * yDim * outNodata)
 
     def test_carbon_storage(self):
-        raise SkipTest("haven't refactored this test yet")
         """Test of calculateCarbonStorage against a random LULC array, includes
              tests on nodata values"""
 

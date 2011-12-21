@@ -1,27 +1,24 @@
 import os, sys
-import unittest
-import random
-import logging
-import math
-
-import numpy as np
-from osgeo import ogr, gdal, osr
-from osgeo.gdalconst import *
-from dbfpy import dbf
-from nose.exc import SkipTest
-
+cmd_folder = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, cmd_folder + '/../')
+os.chdir(cmd_folder)
 import invest_core
 import invest_cython_core
 import invest_test_core
-
-
+import unittest
+from osgeo import ogr, gdal, osr
+from osgeo.gdalconst import *
+from dbfpy import dbf
+import numpy as np
+import random
+import logging
+import math
 logger = logging.getLogger('invest_core_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
     def testflowDirection(self):
-        raise SkipTest("haven't refactored this test yet")
         """Regression test for flow direction on a DEM"""
         dem = gdal.Open('../../../sediment_test_data/dem')
         flow = invest_cython_core.newRasterFromBase(dem,
@@ -32,7 +29,6 @@ class TestInvestCore(unittest.TestCase):
         invest_test_core.assertTwoDatasetsEqual(self, flow, regressionFlow)
 
     def testflowAccumulation(self):
-        raise SkipTest("haven't refactored this test yet")
         """Regression test for flowDirection accumulation on a DEM"""
         dem = gdal.Open('../../../sediment_test_data/dem')
         flowDirection = invest_cython_core.newRasterFromBase(dem,
@@ -44,7 +40,6 @@ class TestInvestCore(unittest.TestCase):
         invest_cython_core.flowAccumulation(flowDirection, accumulation)
 
     def testflowDirectionSimple(self):
-        raise SkipTest("haven't refactored this test yet")
         """Regression test for flow direction on a DEM with an example
         constructed by hand"""
         driver = gdal.GetDriverByName("MEM")
@@ -92,7 +87,6 @@ class TestInvestCore(unittest.TestCase):
 
 
     def testslopeCalculation(self):
-        raise SkipTest("haven't refactored this test yet")
         """Regression test for slope calculation"""
         dem = gdal.Open('../../../sediment_test_data/dem')
         slope = invest_cython_core.calculateSlope(dem, uri='../../../test_out/slope.tif')
@@ -101,7 +95,6 @@ class TestInvestCore(unittest.TestCase):
         invest_test_core.assertTwoDatasetsEqual(self, slope, regressionSlope)
 
     def testvectorizeRasters(self):
-        raise SkipTest("haven't refactored this test yet")
         r1 = gdal.Open('../../../test_data/lulc_samp_cur')
         r2 = gdal.Open('../../../test_data/precip')
 
@@ -112,7 +105,6 @@ class TestInvestCore(unittest.TestCase):
             rasterName='../../../test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testvectorizeRastersWaveEnergy(self):
-        raise SkipTest("haven't refactored this test yet")
         r1 = gdal.Open('../../../test_data/wave_Energy/samp_data/input/global_dem')
         r2 = gdal.Open('../../../test_data/wave_Energy/waveHeight.tif')
 
@@ -123,7 +115,6 @@ class TestInvestCore(unittest.TestCase):
             rasterName='../../../test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testinterpolateMatrix(self):
-        raise SkipTest("haven't refactored this test yet")
         """Test the matrix interpolation function"""
 
         def assertEqualInterpPoints(x, y, newx, newy, z):
@@ -163,7 +154,6 @@ class TestInvestCore(unittest.TestCase):
 
 
     def testRasterDiff(self):
-        raise SkipTest("haven't refactored this test yet")
         driver = gdal.GetDriverByName("MEM")
 
         xDim, yDim = 417, 219
@@ -192,7 +182,6 @@ class TestInvestCore(unittest.TestCase):
         invest_test_core.assertTwoDatasetsEqual(self, datasetOut, datasetC)
 
     def testRasterAdd(self):
-        raise SkipTest("haven't refactored this test yet")
         driver = gdal.GetDriverByName("MEM")
 
         xDim, yDim = 417, 219
@@ -222,7 +211,6 @@ class TestInvestCore(unittest.TestCase):
 
 
     def test_carbon_pixel_area(self):
-        raise SkipTest("haven't refactored this test yet")
         """Verify the correct output of carbon.pixelArea()"""
 
         dataset = gdal.Open('../../../test_data/carbon_regression.tif',
@@ -234,7 +222,6 @@ class TestInvestCore(unittest.TestCase):
         self.assertEqual(0.09, area)
 
     def test_createRasterFromVectorExtents(self):
-        raise SkipTest("haven't refactored this test yet")
         fsencoding = sys.getfilesystemencoding()
         shp = ogr.Open('../../../sediment_test_data/subwatersheds.shp'.\
                        encode(fsencoding))

@@ -2,16 +2,12 @@
     of entire rasters, etc."""
 
 import unittest
-import logging
-
 from osgeo import gdal
 import numpy as np
-from nose.exc import SkipTest
-
+import logging
 logger = logging.getLogger('invest_core')
 
 def assertTwoDatasetEqualURI(unitTest, aUri, bUri):
-    raise SkipTest("haven't refactored this test yet")
     """Tests if datasets a and b are 'almost equal' to each other on a per
         pixel basis
         
@@ -24,7 +20,6 @@ def assertTwoDatasetEqualURI(unitTest, aUri, bUri):
     assertTwoDatasetsEqual(unitTest, gdal.Open(aUri), gdal.Open(bUri))
 
 def assertTwoDatasetsEqual(unitTest, a, b):
-    raise SkipTest("haven't refactored this test yet")
     """Tests if datasets a and b are 'almost equal' to each other on a per
         pixel basis
         
@@ -55,7 +50,6 @@ def assertTwoDatasetsEqual(unitTest, a, b):
         np.testing.assert_array_almost_equal(aArray, bArray)
 
 def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
-    raise SkipTest("haven't refactored this test yet")
     """Create a new raster with random int values.
         
         cols - an int, the number of columns in the output raster
@@ -81,7 +75,6 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
 
 
 def assertTwoDatasets(unit, firstDS, secondDS, checkEqual, dict=None):
-    raise SkipTest("haven't refactored this test yet")
     firstDSBand = firstDS.GetRasterBand(1)
     secondDSBand = secondDS.GetRasterBand(1)
     unit.assertEqual(firstDSBand.XSize, secondDSBand.XSize,
@@ -100,7 +93,6 @@ def assertTwoDatasets(unit, firstDS, secondDS, checkEqual, dict=None):
 
 
 def assertThreeDatasets(unit, firstDS, secondDS, thirdDS, checkMask, nodata):
-    raise SkipTest("haven't refactored this test yet")
     firstDSBand = firstDS.GetRasterBand(1)
     secondDSBand = secondDS.GetRasterBand(1)
     maskBand = thirdDS.GetRasterBand(1)
@@ -121,7 +113,6 @@ def assertThreeDatasets(unit, firstDS, secondDS, thirdDS, checkMask, nodata):
 
 
 def vectorize_dataset_equality_pools(unit, firstDS, secondDS, dict):
-    raise SkipTest("haven't refactored this test yet")
     """Assert that the pixel values of secondDS match those of firstDS when
         the input dict is mapped.
         
@@ -140,7 +131,6 @@ def vectorize_dataset_equality_pools(unit, firstDS, secondDS, dict):
     assertTwoDatasets(unit, firstDS, secondDS, checkEqual, dict)
 
 def vectorize_dataset_equality_mask(unit, firstDS, secondDS, mask):
-    raise SkipTest("haven't refactored this test yet")
     """Assert that the pixel values of firstDS have been masked correctly.
         
         unit - the 'self' object from the unittesting framework
@@ -163,7 +153,6 @@ def vectorize_dataset_equality_mask(unit, firstDS, secondDS, mask):
 
 
 def vectorize_dataset_equality(unit, firstDS, secondDS):
-    raise SkipTest("haven't refactored this test yet")
     """Assert that the pixel values of secondDS match those of firstDS.
         
         unit - the 'self' object from the unittesting framework

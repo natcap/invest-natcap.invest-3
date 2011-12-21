@@ -1,17 +1,20 @@
 import sys, os
-import unittest
-import math
 
+#Add current directory and parent path for import tests
+cmd_folder = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, cmd_folder + '/../')
+os.chdir(cmd_folder)
+
+import unittest
+import timber_core
+import math
 from dbfpy import dbf
 from osgeo import ogr
-from nose.exc import SkipTest
 
-import timber_core
 
 class TestTimber(unittest.TestCase):
 
     def test_timber_summationOne_NotImmedHarv(self):
-        raise SkipTest("haven't refactored this test yet")
         """Test of the first summation in the Net Present Value equation when 
             immediate harvest is NO. Using known inputs.  Calculated value and Hand Calculations
             compared against the models equation"""
@@ -35,7 +38,6 @@ class TestTimber(unittest.TestCase):
 
 
     def test_timber_summationOne_ImmedHarv(self):
-        raise SkipTest("haven't refactored this test yet")
         """Test of the first summation in the Net Present Value equation when 
             immediate harvest is YES. Using known inputs.  Calculated value and Hand Calculations
             compared against the models equation"""
@@ -58,7 +60,6 @@ class TestTimber(unittest.TestCase):
         self.assertAlmostEqual(summationCalculated, summation, 5)
 
     def test_timber_summationTwo(self):
-        raise SkipTest("haven't refactored this test yet")
         """Test of the second summation in the Net Present Value equation using 
             known inputs.  Calculated value and Hand Calculations
             compared against the models equation"""
@@ -78,7 +79,6 @@ class TestTimber(unittest.TestCase):
         self.assertAlmostEqual(summationCalculated, summation, 5)
 
     def test_timber_smoke(self):
-        raise SkipTest("haven't refactored this test yet")
         """Smoke test for Timber.  Model should not crash with 
             basic input requirements"""
         #Set the path for the test inputs/outputs and check to make sure the directory does not exist
@@ -163,7 +163,6 @@ class TestTimber(unittest.TestCase):
             os.rmdir(smoke_path)
 
     def test_timber_BioVol(self):
-        raise SkipTest("haven't refactored this test yet")
         """Biomass and Volume test for timber model.  Creates an attribute table and shapefile
         with set values.  Compares calculated Biomass and Volume with that from running the
         shapefile through the model. """
@@ -248,7 +247,6 @@ class TestTimber(unittest.TestCase):
             os.rmdir(dir_path)
 
     def test_timber_with_inputs(self):
-        raise SkipTest("haven't refactored this test yet")
         """Test timber model with real inputs.  Compare copied and modified shapefile with valid
             shapefile that was created from the same inputs.  Regression test."""
         #Open table and shapefile

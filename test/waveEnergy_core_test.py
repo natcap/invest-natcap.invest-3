@@ -7,7 +7,6 @@ from osgeo import ogr
 from osgeo import gdal
 from osgeo.gdalconst import *
 import numpy as np
-from nose.exc import SkipTest
 
 import invest.wave_energy.waveEnergy_core
 
@@ -18,7 +17,6 @@ class TestWaveEnergy(unittest.TestCase):
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
         the same size and form as the shape to be clipped so we would expect the output to be
         equal to the input"""
-        raise SkipTest("haven't refactored this test yet")
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -86,7 +84,6 @@ class TestWaveEnergy(unittest.TestCase):
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
         the same size and form as the shape to be clipped so we would expect the output to be
         equal to the input"""
-        raise SkipTest("haven't refactored this test yet")
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -119,7 +116,6 @@ class TestWaveEnergy(unittest.TestCase):
     def test_waveEnergy_clipShapeProj(self):
         """A non trivial test case that makes sure clipShape returns the proper shape
         after it has been clipped by a polygon shapefile."""
-        raise SkipTest("haven't refactored this test yet")
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -216,7 +212,6 @@ class TestWaveEnergy(unittest.TestCase):
         
     def test_waveEnergy_getPointsValues(self):
         """Test getPointsValues to make sure that it works properly for different geometries"""
-        raise SkipTest("haven't refactored this test yet")
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -260,7 +255,6 @@ class TestWaveEnergy(unittest.TestCase):
         
     def test_waveEnergy_capturedWaveEnergyToShape(self):
         """Test capturedWaveEnergyToShape to make sure that it works properly for different geometries"""
-        raise SkipTest("haven't refactored this test yet")
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -320,7 +314,6 @@ class TestWaveEnergy(unittest.TestCase):
     def test_waveEnergy_computeWaveEnergyCapacity(self):
         """Test computWaveEnergyCapacity function to make sure it works properly"""
                
-        raise SkipTest("haven't refactored this test yet")
 #        waveData = 'A dictionary with key (I,J) and value 2D array'
         waveData = {0:[1,2,3,4,5], 1:[1,2,3,4],
                     (520, 490):[[0, 10, 13, 9, 7],
@@ -348,7 +341,6 @@ class TestWaveEnergy(unittest.TestCase):
                 self.assertEqual(0, 1, 'The keys do not match')
         
     def test_waveEnergy_waveEnergyInterp(self):
-        raise SkipTest("haven't refactored this test yet")
         waveData = {0:[1,2,3,4,5,6,7,8], 1:[.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]}
         machinePerf = [[2,3,4,7], [1, 2, 3], 
                        [0, 8, 20, 10], 
@@ -401,7 +393,6 @@ class TestWaveEnergy(unittest.TestCase):
     
     def test_waveEnergy_wavePower(self):
         """Test wavePower to make sure desired outputs are met"""
-        raise SkipTest("haven't refactored this test yet")
         #This ensures we are not in Arc's python directory so that when
         #we import gdal stuff we don't get the wrong GDAL version.
         os.chdir(os.path.dirname(os.path.realpath(__file__)))
