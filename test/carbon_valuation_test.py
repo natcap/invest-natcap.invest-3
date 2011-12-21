@@ -2,9 +2,6 @@
 
 import os, sys
 import unittest
-
-from nose.exc import SkipTest
-
 import invest_test_core
 
 #Add current directory and parent path for import tests
@@ -15,7 +12,6 @@ import carbon_valuation
 
 class TestCarbonBiophysical(unittest.TestCase):
     def test_carbon_valuation_regression(self):
-        raise SkipTest("haven't refactored this test yet")
         """Regression test for carbon_valuation function.  A few pixels have 
             been tested by hand against the following python snippet:
             

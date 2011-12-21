@@ -2,9 +2,6 @@
 
 import os, sys
 import unittest
-
-from nose.exc import SkipTest
-
 import invest_test_core
 
 #Add current directory and parent path for import tests
@@ -16,7 +13,6 @@ import sediment_biophysical
 
 class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_regression(self):
-        raise SkipTest("haven't refactored this test yet")
         """Test for sediment_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
 
