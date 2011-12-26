@@ -16,11 +16,10 @@ setup(name='invest',
                 'invest.invest_core',
                 'invest.iui',
                 'invest.sediment',
-                'invest.simplejson',
                 'invest.timber',
                 'invest.validator_core',
                 'invest.wave_energy'],
-      cmdclass = {'build_ext': build_ext},
+      cmdclass={'build_ext': build_ext},
       ext_modules=[Extension(name="invest_cython_core",
                              sources=cython_source_files)]
       )
