@@ -2,9 +2,9 @@ import os, sys
 cmd_folder = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cmd_folder + '/../')
 os.chdir(cmd_folder)
-import invest_core
-import invest_cython_core
-import invest_test_core
+import invest.invest_core
+import invest.invest_cython_core
+import invest.invest_test_core
 import unittest
 from osgeo import ogr, gdal, osr
 from osgeo.gdalconst import *
