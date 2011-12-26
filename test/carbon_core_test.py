@@ -19,19 +19,19 @@ class TestInvestCarbonCore(unittest.TestCase):
                                                 (443, 953, 2, 1.0),
                                                 (719, 211, 12, 111.5)]:
             #Create a blank xDim x yDim raster
-            lulc = driver.Create('../../../test_data/test_blank_input', xDim,
+            lulc = driver.Create('./data/test_data/test_blank_input', xDim,
                                  yDim, 1, gdal.GDT_Byte)
             lulc.GetRasterBand(1).SetNoDataValue(inNoData)
             #Fill raster with nodata 
             lulc.GetRasterBand(1).Fill(lulc.GetRasterBand(1).GetNoDataValue())
 
             #Create the output raster
-            tot_C_cur = driver.Create('../../../test_data/tot_C_cur_blank_output',
+            tot_C_cur = driver.Create('./data/test_data/tot_C_cur_blank_output',
                 xDim, yDim, 1, gdal.GDT_Float32)
             tot_C_cur.GetRasterBand(1).SetNoDataValue(outNodata)
 
             args = { 'lulc_cur': lulc,
-                    'carbon_pools': dbf.Dbf('../../../test_data/test_blank_dbf',
+                    'carbon_pools': dbf.Dbf('./data/test_data/test_blank_dbf',
                                             new=True),
                     'tot_C_cur': tot_C_cur}
             carbon_core.biophysical(args)
@@ -50,7 +50,7 @@ class TestInvestCarbonCore(unittest.TestCase):
         #picked some largish x and y dimensions that are prime numbers
         xDim, yDim = (710, 569)
         driver = gdal.GetDriverByName("GTIFF")
-        lulc = driver.Create('../../../test_data/test_input', xDim, yDim, 1,
+        lulc = driver.Create('./data/test_data/test_input', xDim, yDim, 1,
                                  gdal.GDT_Byte)
 
         #Made up carbon pools, last entry is the nodata value
@@ -67,7 +67,7 @@ class TestInvestCarbonCore(unittest.TestCase):
         lulc.GetRasterBand(1).WriteArray(array, 0, 0)
 
         #Create the output raster
-        tot_C_cur = driver.Create('../../../test_data/tot_C_cur',
+        tot_C_cur = driver.Create('./data/test_data/tot_C_cur',
             xDim, yDim, 1, gdal.GDT_Float64)
         tot_C_cur.GetRasterBand(1).SetNoDataValue(-255.0)
 
