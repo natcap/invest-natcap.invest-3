@@ -1,13 +1,16 @@
 """This module contains general purpose geoprocessing functions useful for
     the InVEST toolset"""
 
+import math
+import logging
+
 import numpy as np
 cimport numpy as np
 cimport cython
-import math
-from osgeo import gdal, osr
-import logging
 import scipy
+
+from osgeo import gdal, osr
+
 logger = logging.getLogger('invest_cython_core')
 
 cdef extern from "stdlib.h":
