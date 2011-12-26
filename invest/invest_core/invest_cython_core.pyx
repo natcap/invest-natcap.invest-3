@@ -1,7 +1,6 @@
 """This module contains general purpose geoprocessing functions useful for
     the InVEST toolset"""
 
-import pyximport; pyximport.install()
 import numpy as np
 cimport numpy as np
 cimport cython
