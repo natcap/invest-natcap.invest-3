@@ -5,12 +5,8 @@ from Cython.Distutils import build_ext
 cython_source_files = ['invest_cython_core/invest_cython_core.pyx',
                        'invest_cython_core/simplequeue.c']
 
-setup(name='invest_cython_core', 
-      cmdclass={'build_ext': build_ext},
-      ext_package='invest_cython_core',
-      ext_modules=[Extension(name="invest_cython_core",
-                             sources = cython_source_files)]
-      )
+#setup(name='invest_cython_core', 
+#      )
 
 setup(name='invest',
       version='tip',
@@ -24,4 +20,7 @@ setup(name='invest',
                 'invest.timber',
                 'invest.validator_core',
                 'invest.wave_energy'],
+      cmdclass = {'build_ext': build_ext},
+      ext_modules=[Extension(name="invest_cython_core",
+                             sources=cython_source_files)]
       )
