@@ -1,15 +1,17 @@
 """InVEST valuation interface module.  Informally known as the URI level."""
 
-import sys, os
+import sys
+import os
+import logging
+
 import simplejson as json
 from osgeo import gdal
-import invest_cython_core
-import carbon_core
 
-import logging
+import invest_cython_core
+from invest.carbon import carbon_core
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 logger = logging.getLogger('carbon_valuation')
 
 def execute(args):
@@ -31,7 +33,6 @@ def execute(args):
         
         returns nothing."""
 
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
     gdal.AllRegister()
 
     #Load and copy relevant inputs from args into a dictionary that
