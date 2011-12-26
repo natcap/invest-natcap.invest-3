@@ -1,6 +1,7 @@
 """This module contains general purpose geoprocessing functions useful for
     the InVEST toolset"""
 
+import pyximport; pyximport.install()
 import numpy as np
 cimport numpy as np
 cimport cython
@@ -17,36 +18,47 @@ cdef extern from "stdlib.h":
     void free(void* ptr)
     void* malloc(size_t size)
 
-cimport cqueue
-cdef class Queue:
-    cdef cqueue.Queue *_c_queue
+cdef extern from "simplequeue.h":
+    ctypedef struct Queue:
+        pass
+    ctypedef int QueueValue
+
+    Queue *queue_new()
+    void queue_free(Queue *queue)
+    Queue* queue_push_tail(Queue *queue, QueueValue data)
+    Queue* queue_push_head(Queue *queue, QueueValue data)
+    QueueValue queue_pop_head(Queue *queue)
+    int queue_size(Queue *queue)
+
+cdef class CQueue:
+    cdef Queue *_c_queue
     def __cinit__(self,items=None):
-        self._c_queue = cqueue.queue_new()
+        self._c_queue = queue_new()
         if items != None:
             for i in items:
-                cqueue.queue_push_tail(self._c_queue,i)
+                queue_push_tail(self._c_queue,i)
 
     def __dealloc__(self):
-        cqueue.queue_free(self._c_queue)
+        queue_free(self._c_queue)
         
     def __len__(self): 
-        return cqueue.queue_size(self._c_queue)
+        return queue_size(self._c_queue)
 
     cdef extend(self, items):
         for i in items:
-            cqueue.queue_push_tail(self._c_queue,i)
+            queue_push_tail(self._c_queue,i)
 
     cdef int pop(self):
-        return cqueue.queue_pop_head(self._c_queue)
+        return queue_pop_head(self._c_queue)
     
     cdef push(self, int x):
-        cqueue.queue_push_head(self._c_queue, x)
+        queue_push_head(self._c_queue, x)
     
     cdef append(self, int x):
-        cqueue.queue_push_tail(self._c_queue, x)
+        queue_push_tail(self._c_queue, x)
         
     cdef int size(self):
-        return cqueue.queue_size(self._c_queue)
+        return queue_size(self._c_queue)
 
 
 def newRasterFromBase(base, outputURI, format, nodata, datatype):
@@ -344,7 +356,7 @@ def flowDirectionD8(dem, flow):
         neighborHeight, neighborDistance, currentDistance, stepDistance
     cdef Pair *demPixels = \
         <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
-    cdef Queue q = Queue()
+    cdef CQueue q = CQueue()
     
     #This is an array that makes checking neighbor indexes easier
     cdef int *neighborOffsets = \
@@ -479,7 +491,7 @@ def flowDirectionD8(dem, flow):
     
     return flow
 
-cdef Queue calculateInflowNeighborsD8(int i, int j, 
+cdef CQueue calculateInflowNeighborsD8(int i, int j, 
                     np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix, 
                     int nodataFlowDirection):
     """Returns a list of the neighboring pixels to i,j that are in bounds
@@ -494,7 +506,7 @@ cdef Queue calculateInflowNeighborsD8(int i, int j,
     cdef int *shiftIndexes = [1,-1, 0, 2,-1, -1, 4, 0, -1, 8, 1, -1, 16, 1, 0,
                     32, 1, 1, 64, 0, 1, 128, -1, 1]
     cdef int pi, pj, dir, k, n
-    cdef Queue neighbors = Queue()
+    cdef CQueue neighbors = CQueue()
     for k in range(8):
         dir = shiftIndexes[k*3]
         pi = i + shiftIndexes[k*3+1]
@@ -510,7 +522,7 @@ cdef Queue calculateInflowNeighborsD8(int i, int j,
     return neighbors
 
 @cython.boundscheck(False)
-cdef void calculateFlowD8(Queue pixelsToProcess, 
+cdef void calculateFlowD8(CQueue pixelsToProcess, 
                       np.ndarray[np.int_t,ndim=2] accumulationMatrix,
                       np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix,
                       int nodataFlowDirection, int nodataFlowAccumulation):
@@ -588,7 +600,7 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
         returns nothing"""
 
     cdef int nodataFlowDirection, nodataFlowAccumulation, x, y
-    cdef Queue q
+    cdef CQueue q
     logger = logging.getLogger('flowAccumulation')
     logger.debug('initializing temporary buffers')
     #Load the input flow into a numpy array
@@ -611,7 +623,7 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
     logger.info('calculating flow accumulation')
 
     lastx = -1
-    q = Queue()
+    q = CQueue()
     for x in range(xdim):
         for y in range(ydim):
             if lastx != x:
