@@ -1,11 +1,13 @@
 """InVEST Carbon biophysical module at the "uri" level"""
 
 import sys, os
+
+from osgeo import gdal, ogr
+from invest.dbfpy import dbf
 import simplejson as json
+
 import carbon_core
 import invest_cython_core
-from osgeo import gdal, ogr
-from dbfpy import dbf
 
 import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
