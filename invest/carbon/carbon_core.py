@@ -9,7 +9,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 from invest.dbfpy import dbf
-from invest import invest_core
+from invest.invest_core import invest_core
 from invest.invest_core import invest_cython_core
 
 logger = logging.getLogger('carbon_core')
