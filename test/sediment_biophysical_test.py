@@ -1,15 +1,19 @@
 """URI level tests for the carbon biophysical module"""
 
-import os, sys
+import os
+import sys
 import unittest
+
+from invest.sediment import sediment_biophysical
+from osgeo import ogr
+from osgeo import gdal
+from osgeo import osr
+
+from invest.invest_core import invest_core
+import invest_cython_core
 import invest_test_core
+from invest.dbfpy import dbf
 
-#Add current directory and parent path for import tests
-cmd_folder = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, cmd_folder + '/../')
-os.chdir(cmd_folder)
-
-import sediment_biophysical
 
 class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_regression(self):
@@ -17,8 +21,8 @@ class TestSedimentBiophysical(unittest.TestCase):
 do sequestration and harvested wood products on lulc maps."""
 
         args = {}
-        args['workspace_dir'] = '../../../sediment_biophysical_output'
-        baseDir = '../../../sediment_test_data'
+        args['workspace_dir'] = './data/sediment_biophysical_output'
+        baseDir = './data/sediment_test_data'
         args['dem_uri'] = '%s/dem' % baseDir
         args['erosivity_uri'] = '%s/erosivity' % baseDir
         args['erodibility_uri'] = '%s/erodibility.tif' % baseDir
@@ -38,6 +42,28 @@ do sequestration and harvested wood products on lulc maps."""
         args['slope_threshold'] = 70.0
 
         sediment_biophysical.execute(args)
+
+    def testflowDirection(self):
+        """Regression test for flow direction on a DEM"""
+        dem = gdal.Open('./data/sediment_test_data/dem')
+        flow = invest_cython_core.newRasterFromBase(dem,
+            './data/test_out/flow.tif', 'GTiff', 0, gdal.GDT_Float32)
+        invest_cython_core.flowDirectionD8(dem, flow)
+        regressionFlow = \
+            gdal.Open('./data/sediment_test_data/flowregression.tif')
+        invest_test_core.assertTwoDatasetsEqual(self, flow, regressionFlow)
+
+    def testflowAccumulation(self):
+        """Regression test for flowDirection accumulation on a DEM"""
+        dem = gdal.Open('./data/sediment_test_data/dem')
+        flowDirection = invest_cython_core.newRasterFromBase(dem,
+            './data/test_out/flowDirection.tif', 'GTiff', 0, gdal.GDT_Byte)
+        invest_cython_core.flowDirectionD8(dem, flowDirection)
+
+        accumulation = invest_cython_core.newRasterFromBase(dem,
+            './data/test_out/accumulation.tif', 'GTiff', -1, gdal.GDT_Float32)
+        invest_cython_core.flowAccumulationD8(flowDirection, accumulation)
+
 
         #Regression tests go here
 #        #assert that '../../test_data/tot_C_cur.tif' equals

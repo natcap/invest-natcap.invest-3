@@ -5,7 +5,9 @@ import math
 import unittest
 
 import numpy as np
-from osgeo import ogr, gdal, osr
+from osgeo import ogr
+from osgeo import gdal
+from osgeo import osr
 from osgeo.gdalconst import *
 
 from invest.invest_core import invest_core

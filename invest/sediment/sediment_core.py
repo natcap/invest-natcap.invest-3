@@ -1,12 +1,15 @@
 """Module that contains the core computational components for the carbon model
     including the biophysical and valuation functions"""
 
-import numpy as np
-from osgeo import gdal, ogr
-from dbfpy import dbf
 import math
-import invest_core
 import logging
+
+import numpy as np
+from osgeo import gdal
+from osgeo import ogr
+
+from invest.dbfpy import dbf
+from invest.invest_core import invest_core
 
 logger = logging.getLogger('carbon_core')
 

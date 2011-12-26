@@ -1,16 +1,16 @@
 """InVEST Sediment biophysical module at the "uri" level"""
 
-import sys, os
-#Prepend current directory to search for correct GDAL library
-cmd_folder = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, cmd_folder)
+import sys
+import os
+import csv
+import logging
 
 import simplejson as json
-import sediment_core
-from osgeo import gdal, ogr
-import csv
+from osgeo import gdal
+from osgeo import ogr
 
-import logging
+from invest.sediment import sediment_core
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
