@@ -1,18 +1,18 @@
 import os, sys
-cmd_folder = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, cmd_folder + '/../')
-os.chdir(cmd_folder)
-from invest import invest_core
-from invest.invest_core import invest_cython_core
-import invest.invest_test_core
 import unittest
-from osgeo import ogr, gdal, osr
-from osgeo.gdalconst import *
-from dbfpy import dbf
-import numpy as np
 import random
 import logging
 import math
+
+from osgeo import ogr, gdal, osr
+from osgeo.gdalconst import *
+from invest.dbfpy import dbf
+import numpy as np
+
+from invest import invest_core
+import invest_cython_core
+import invest_test_core
+
 logger = logging.getLogger('invest_core_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
