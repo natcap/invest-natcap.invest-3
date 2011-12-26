@@ -1,14 +1,16 @@
 """InVEST Wave Energy Model file handler module"""
 
-import sys, os
+import sys
+import os
+import csv
+
 import simplejson as json
-import waveEnergy_core
-import invest_core
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 import numpy as np
 
-import csv
+from invest.invest_core import invest_core
+from invest.wave_energy import waveEnergy_core
 
 def execute(args):
     """This function invokes the biophysical part of the wave energy model given URI inputs.
@@ -33,18 +35,15 @@ def execute(args):
         
         returns nothing."""
 
-    #This ensures we are not in Arc's python directory so that when
-    #we import gdal stuff we don't get the wrong GDAL version.
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
     filesystemencoding = sys.getfilesystemencoding()
-    
+
     #Create the Output and Intermediate directories if they do not exist.
     outputDir = args['workspace_dir'] + os.sep + 'Output' + os.sep
     intermediateDir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
     for dir in [outputDir, intermediateDir]:
         if not os.path.exists(dir):
             os.makedirs(dir)
-    
+
     #Dictionary that will hold all the inputs to be passed to waveEnergy_core
     biophysicalargs = {}
     biophysicalargs['workspace_dir'] = args['workspace_dir']
@@ -53,7 +52,7 @@ def execute(args):
     #Create a 2D array of the machine performance table and place the row
     #and column headers as the first two arrays in the list of arrays
     try:
-        machine_perf_twoDArray = [[],[]]
+        machine_perf_twoDArray = [[], []]
         machinePerfFile = open(args['machine_perf_uri'])
         reader = csv.reader(machinePerfFile)
         getRow = True
@@ -68,7 +67,7 @@ def execute(args):
         biophysicalargs['machine_perf'] = machine_perf_twoDArray
     except IOError, e:
         print 'File I/O error' + e
-        
+
     #Create a dictionary whose keys are the 'NAMES' from the machine parameter table
     #and whose corresponding values are dictionaries whose keys are the column headers of
     #the machine parameter table with corresponding values
@@ -82,7 +81,7 @@ def execute(args):
         biophysicalargs['machine_param'] = machine_params
     except IOError, e:
         print 'File I/O error' + e
-        
+
     #Depending on which analyis area is selected:
     #Extrapolate the corresponding WW3 Data and place in the arguments dictionary
     #Open the point geometry analysis area shapefile contaning the corresponding seastate bins
@@ -90,39 +89,39 @@ def execute(args):
     if args['analysis_area_uri'] == 'West Coast of North America and Hawaii':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
-        biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri']+os.sep+'NAmerica_WestCoast_4m.txt')
+        biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.txt')
         biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
         biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding), 1)
     elif args['analysis_area_uri'] == 'East Coast of North America and Puerto Rico':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
-        biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri']+os.sep+'NAmerica_EastCoast_4m.txt')
+        biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.txt')
         biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
         biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding))
     elif args['analysis_area_uri'] == 'Global(Eastern Hemisphere)':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri']+os.sep+'Global_EastHemi_30m.txt')
+        biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.txt')
         biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
         biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding))
     elif args['analysis_area_uri'] == 'Global(Western Hemisphere)':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.shp'
-        analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp' 
-        biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri']+os.sep+'Global_WestHemi_30m.txt')
+        analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
+        biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.txt')
         biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
         biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding))
     else:
         print 'Analysis Area ERROR'
-    
+
     #If the area of interest is present add it to the dictionary arguments
     AOI = None
     if 'AOI_uri' in args:
         try:
             AOI = ogr.Open(args['AOI_uri'].encode(filesystemencoding), 1)
-            biophysicalargs['AOI'] = AOI            
+            biophysicalargs['AOI'] = AOI
         except IOError, e:
             print 'File I/O error' + e
-    
+
     waveEnergy_core.biophysical(biophysicalargs)
 
 def extrapolateWaveData(waveFile):
@@ -161,12 +160,12 @@ def extrapolateWaveData(waveFile):
             else:
                 waveArray.append(line.split(','))
                 waveDict[key] = waveArray
-        
+
         waveOpen.close()
         waveDict[0] = np.array(waveRow, dtype='f')
         waveDict[1] = np.array(waveCol, dtype='f')
         return waveDict
-    
+
     except IOError, e:
         print 'File I/O error'
         print e

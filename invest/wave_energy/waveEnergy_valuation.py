@@ -1,15 +1,18 @@
 """InVEST Wave Energy Model file handler module"""
 
-import sys, os
-import simplejson as json
-import waveEnergy_core
-import invest_core
-from osgeo import gdal, ogr
-from osgeo.gdalconst import *
-import numpy as np
-from dbfpy import dbf
-
+import sys
+import os
 import csv
+
+import simplejson as json
+import numpy as np
+from invest.invest_core import invest_core
+from osgeo import ogr
+from osgeo import gdal
+from osgeo.gdalconst import *
+from invest.dbfpy import dbf
+
+import waveEnergy_core
 
 def execute(args):
     """This function invokes the valuation part of the wave energy model given URI inputs.
@@ -26,16 +29,13 @@ def execute(args):
         args['captureWE'] - We need the captured wave energy output from biophysical run.
         args['globa_dem'] - We need the depth of the locations for calculating costs
         """
-        
-    #This ensures we are not in Arc's python directory so that when
-    #we import gdal stuff we don't get the wrong GDAL version.
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
     filesystemencoding = sys.getfilesystemencoding()
-    
+
     valuationargs = []
-    
+
     #Open/create the output directory
-    
+
     #Read machine economic parameters into a dictionary
     try:
         machine_econ = {}
@@ -59,7 +59,7 @@ def execute(args):
     except IOError, e:
         print 'File I/O error' + e
     #Open the output files for capturedWE from the biophysical run
-    
+
     #Open the file that contains the depth values
-    
+
     #Call the valuation core module with attached arguments to run the economic valuation

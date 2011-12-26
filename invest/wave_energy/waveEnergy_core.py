@@ -1,15 +1,18 @@
+import math
+import sys
+import os
+
 import numpy as np
 from osgeo import gdal
 import osgeo.gdal
 from osgeo.gdalconst import *
 import osgeo.osr as osr
 from osgeo import ogr
-import math
-import invest_core
-import invest_cython_core
-import sys, os
 import scipy
 from scipy.interpolate import LinearNDInterpolator as ip
+
+from invest.invest_core import invest_core
+import invest_cython_core
 
 def biophysical(args):
     """Runs the biophysical part of the Wave Energy Model (WEM).
