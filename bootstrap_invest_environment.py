@@ -10,5 +10,7 @@ def after_install(options, home_dir):
                      'numpy'])
     subprocess.call([join(home_dir, 'bin', 'easy_install'),
                      'scipy'])
+    subprocess.call([join(home_dir, 'bin', 'easy_install'),
+                     'nose'])
 """))
 print output
