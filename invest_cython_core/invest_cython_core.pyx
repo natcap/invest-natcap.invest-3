@@ -486,9 +486,6 @@ def flowDirectionD8(dem, flow):
             flowMatrix[x,y] = dcur
 
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
-    dh = newRasterFromBase(flow,'../../../test_out/distanceToDrain.tiff','GTiff',
-                      -1,gdal.GDT_Float32)
-    dh.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),0,0)
     free(demPixels)
     
     return flow
