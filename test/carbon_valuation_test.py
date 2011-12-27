@@ -5,7 +5,7 @@ import sys
 import unittest
 
 import invest_test_core
-from invest.carbon import carbon_valuation
+from invest_natcap.carbon import carbon_valuation
 
 class TestCarbonBiophysical(unittest.TestCase):
     def test_carbon_valuation_regression(self):

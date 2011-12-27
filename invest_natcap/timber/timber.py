@@ -9,7 +9,7 @@ import numpy
 from osgeo import ogr
 
 import json
-from invest.dbfpy import dbf
+from invest_natcap.dbfpy import dbf
 import timber_core
 
 def execute(args):

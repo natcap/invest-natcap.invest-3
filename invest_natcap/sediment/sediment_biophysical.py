@@ -9,7 +9,7 @@ import simplejson as json
 from osgeo import gdal
 from osgeo import ogr
 
-from invest.sediment import sediment_core
+from invest_natcap.sediment import sediment_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')

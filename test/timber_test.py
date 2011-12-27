@@ -2,7 +2,7 @@ import os
 import sys
 import unittest
 
-from invest.timber import timber
+from invest_natcap.timber import timber
 
 #Create a variable to prepend to each path
 current_folder = os.path.dirname(os.path.abspath(__file__)) + os.sep

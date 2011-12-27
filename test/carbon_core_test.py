@@ -6,8 +6,8 @@ from osgeo import ogr, gdal, osr
 from osgeo.gdalconst import *
 import numpy as np
 
-from invest.carbon import carbon_core
-from invest.dbfpy import dbf
+from invest_natcap.carbon import carbon_core
+from invest_natcap.dbfpy import dbf
 
 class TestInvestCarbonCore(unittest.TestCase):
     def test_carbon_core_nodata(self):

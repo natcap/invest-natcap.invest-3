@@ -9,8 +9,8 @@ from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 import numpy as np
 
-from invest.invest_core import invest_core
-from invest.wave_energy import waveEnergy_core
+from invest_natcap.invest_core import invest_core
+from invest_natcap.wave_energy import waveEnergy_core
 
 def execute(args):
     """This function invokes the biophysical part of the wave energy model given URI inputs.

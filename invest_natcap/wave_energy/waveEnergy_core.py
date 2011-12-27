@@ -11,7 +11,7 @@ from osgeo import ogr
 import scipy
 from scipy.interpolate import LinearNDInterpolator as ip
 
-from invest.invest_core import invest_core
+from invest_natcap.invest_core import invest_core
 import invest_cython_core
 
 def biophysical(args):

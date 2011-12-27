@@ -2,9 +2,11 @@
     of entire rasters, etc."""
 
 import unittest
-from osgeo import gdal
-import numpy as np
 import logging
+
+import numpy as np
+from osgeo import gdal
+
 logger = logging.getLogger('invest_core')
 
 def assertTwoDatasetEqualURI(unitTest, aUri, bUri):

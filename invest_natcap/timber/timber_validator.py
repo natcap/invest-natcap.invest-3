@@ -1,11 +1,15 @@
 """InVEST Timber model validator.  Checks that arguments to timber module
     make sense.."""
 
-import imp, sys, os
+import imp
+import sys
+import os
+
+import numpy
 import osgeo
 from osgeo import ogr
-import numpy
-from dbfpy import dbf
+from invest.dbfpy import dbf
+
 import validator_core
 
 def execute(args, out):

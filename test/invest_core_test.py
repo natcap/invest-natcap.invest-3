@@ -6,10 +6,10 @@ import math
 
 from osgeo import ogr, gdal, osr
 from osgeo.gdalconst import *
-from invest.dbfpy import dbf
 import numpy as np
 
-from invest.invest_core import invest_core
+from invest_natcap.dbfpy import dbf
+from invest_natcap.invest_core import invest_core
 import invest_cython_core
 import invest_test_core
 

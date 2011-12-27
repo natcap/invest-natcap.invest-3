@@ -6,11 +6,12 @@ import csv
 
 import simplejson as json
 import numpy as np
-from invest.invest_core import invest_core
 from osgeo import ogr
 from osgeo import gdal
 from osgeo.gdalconst import *
-from invest.dbfpy import dbf
+
+from invest_natcap.invest_core import invest_core
+from invest_natcap.dbfpy import dbf
 
 import waveEnergy_core
 

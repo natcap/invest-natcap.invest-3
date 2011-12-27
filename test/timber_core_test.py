@@ -4,10 +4,10 @@ import unittest
 import math
 import logging
 
-from invest.dbfpy import dbf
 from osgeo import ogr
 
-from invest.timber import timber_core
+from invest_natcap.dbfpy import dbf
+from invest_natcap.timber import timber_core
 
 #Create a variable to prepend to each path
 current_folder = os.path.dirname(os.path.abspath(__file__)) + os.sep

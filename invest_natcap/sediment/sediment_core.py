@@ -8,8 +8,8 @@ import numpy as np
 from osgeo import gdal
 from osgeo import ogr
 
-from invest.dbfpy import dbf
-from invest.invest_core import invest_core
+from invest_natcap.dbfpy import dbf
+from invest_natcap.invest_core import invest_core
 
 logger = logging.getLogger('carbon_core')
 

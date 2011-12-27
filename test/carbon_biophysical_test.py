@@ -3,7 +3,7 @@
 import os, sys
 import unittest
 
-from invest.carbon import carbon_biophysical
+from invest_natcap.carbon import carbon_biophysical
 import invest_test_core
 
 class TestCarbonBiophysical(unittest.TestCase):

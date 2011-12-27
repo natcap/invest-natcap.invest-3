@@ -1,14 +1,17 @@
 """This module contains general purpose geoprocessing functions useful for
     the InVEST toolset"""
 
+import logging
+import math
+from collections import deque
+
 import numpy as np
 import scipy.interpolate
 import scipy.signal
-import math
-import invest_cython_core
 from osgeo import gdal, osr
-import logging
-from collections import deque
+
+import invest_cython_core
+
 logger = logging.getLogger('invest_core')
 
 def calculateRasterStats(band):

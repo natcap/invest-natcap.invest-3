@@ -4,15 +4,15 @@ import os
 import sys
 import unittest
 
-from invest.sediment import sediment_biophysical
 from osgeo import ogr
 from osgeo import gdal
 from osgeo import osr
 
-from invest.invest_core import invest_core
+from invest_natcap.invest_core import invest_core
+from invest_natcap.sediment import sediment_biophysical
 import invest_cython_core
 import invest_test_core
-from invest.dbfpy import dbf
+from invest_natcap.dbfpy import dbf
 
 
 class TestSedimentBiophysical(unittest.TestCase):

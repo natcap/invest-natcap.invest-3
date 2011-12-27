@@ -2,7 +2,7 @@ import os
 import sys
 import unittest
 
-from invest.wave_energy import waveEnergy_biophysical
+from invest_natcap.wave_energy import waveEnergy_biophysical
 import invest_test_core
 
 class TestWaveEnergyBiophysical(unittest.TestCase):

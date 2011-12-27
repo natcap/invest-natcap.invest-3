@@ -8,7 +8,7 @@ import simplejson as json
 from osgeo import gdal
 
 import invest_cython_core
-from invest.carbon import carbon_core
+from invest_natcap.carbon import carbon_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')

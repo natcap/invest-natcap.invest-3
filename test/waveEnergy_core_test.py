@@ -6,10 +6,10 @@ import math
 from osgeo import ogr
 from osgeo import gdal
 from osgeo.gdalconst import *
-from invest.dbfpy import dbf
+from invest_natcap.dbfpy import dbf
 import numpy as np
 
-from invest.wave_energy import waveEnergy_core
+from invest_natcap.wave_energy import waveEnergy_core
 
 class TestWaveEnergy(unittest.TestCase):
 

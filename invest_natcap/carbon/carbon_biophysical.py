@@ -3,10 +3,10 @@
 import sys, os
 
 from osgeo import gdal, ogr
-from invest.dbfpy import dbf
 import simplejson as json
 
 import carbon_core
+from invest_natcap.dbfpy import dbf
 import invest_cython_core
 
 import logging
