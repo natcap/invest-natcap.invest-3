@@ -395,8 +395,8 @@ def flowDirectionD8(dem, flow):
     
     #This matrix holds the minimum path distance from the current pixel to the
     #most downhill connected pixel on the grid.
-    cdef np.ndarray[np.int_t,ndim=2] distanceToDrain = \
-        np.zeros([xmax,ymax], dtype=np.int)
+    cdef np.ndarray[np.float_t,ndim=2] distanceToDrain = \
+        np.zeros([xmax,ymax], dtype=np.float)
     distanceToDrain[:] = -1.0 #Initialize all heights to -1
     
     #Do a breadth first walk from each pixel uphill updating the minimum
