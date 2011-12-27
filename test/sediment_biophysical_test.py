@@ -7,6 +7,7 @@ import unittest
 from osgeo import ogr
 from osgeo import gdal
 from osgeo import osr
+from nose.plugins.skip import SkipTest
 
 from invest_natcap.invest_core import invest_core
 from invest_natcap.sediment import sediment_biophysical
@@ -43,25 +44,30 @@ do sequestration and harvested wood products on lulc maps."""
 
         sediment_biophysical.execute(args)
 
-    def testflowDirection(self):
-        """Regression test for flow direction on a DEM"""
+    def testflowDirectionD8(self):
+        """Regression test for flow direction with D8 algorithm on a DEM"""
+        raise SkipTest
         dem = gdal.Open('./data/sediment_test_data/dem')
         flow = invest_cython_core.newRasterFromBase(dem,
-            './data/test_out/flow.tif', 'GTiff', 0, gdal.GDT_Float32)
+            './data/test_out/testflowAccumulationD8_flow.tif', 'GTiff', 0,
+            gdal.GDT_Float32)
         invest_cython_core.flowDirectionD8(dem, flow)
         regressionFlow = \
             gdal.Open('./data/sediment_test_data/flowregression.tif')
         invest_test_core.assertTwoDatasetsEqual(self, flow, regressionFlow)
 
-    def testflowAccumulation(self):
-        """Regression test for flowDirection accumulation on a DEM"""
+    def testflowAccumulationD8(self):
+        """Regression test for flowDirection accumulation with D8 algorithm on a DEM"""
+
         dem = gdal.Open('./data/sediment_test_data/dem')
         flowDirection = invest_cython_core.newRasterFromBase(dem,
-            './data/test_out/flowDirection.tif', 'GTiff', 0, gdal.GDT_Byte)
+            './data/test_out/testflowAccumulationD8_flowDirection.tif',
+            'GTiff', 0, gdal.GDT_Byte)
         invest_cython_core.flowDirectionD8(dem, flowDirection)
 
         accumulation = invest_cython_core.newRasterFromBase(dem,
-            './data/test_out/accumulation.tif', 'GTiff', -1, gdal.GDT_Float32)
+            './data/test_out/testflowAccumulationD8_accumulation.tif',
+            'GTiff', -1, gdal.GDT_Float32)
         invest_cython_core.flowAccumulationD8(flowDirection, accumulation)
 
 
@@ -103,7 +109,3 @@ do sequestration and harvested wood products on lulc maps."""
 #        invest_test_core.assertTwoDatasetEqualURI(self,
 #            args['workspace_dir'] + "/Intermediate/vol_hwp_fut.tif",
 #            '../../test_data/vol_hwp_fut_regression.tif')
-
-
-suite = unittest.TestLoader().loadTestsFromTestCase(TestSedimentBiophysical)
-unittest.TextTestRunner(verbosity=2).run(suite)
