@@ -12,7 +12,7 @@ import invest_test_core
 
 class TestCythonCore(unittest.TestCase):
     """Main testing class for the Cython sediment tests"""
-     def test_flow_direction_d8(self):
+    def test_flow_direction_d8(self):
         """Regression test for flow direction with D8 algorithm on a DEM"""
         raise SkipTest
         dem = gdal.Open('./data/sediment_test_data/dem')
@@ -38,43 +38,3 @@ class TestCythonCore(unittest.TestCase):
             './data/test_out/testflowAccumulationD8_accumulation.tif',
             'GTiff', -1, gdal.GDT_Float32)
         invest_cython_core.flowAccumulationD8(flow_direction, accumulation)
-
-
-        #Regression tests go here
-#        #assert that '../../test_data/tot_C_cur.tif' equals
-#        #../../carbon_output/Output/tot_C_cur.tif
-#        invest_test_core.assertTwoDatasetEqualURI(self,
-#            args['workspace_dir'] + "/Output/tot_C_cur.tif",
-#            '../../test_data/tot_C_cur_regression.tif')
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self,
-#            args['workspace_dir'] + "/Output/tot_C_fut.tif",
-#            '../../test_data/tot_C_fut_regression.tif')
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self,
-#            args['workspace_dir'] + "/Output/sequest.tif",
-#            '../../test_data/sequest_regression.tif')
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self,
-#            args['workspace_dir'] + "/Intermediate/bio_hwp_cur.tif",
-#            '../../test_data/bio_hwp_cur_regression.tif')
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self,
-#            args['workspace_dir'] + "/Intermediate/bio_hwp_fut.tif",
-#            '../../test_data/bio_hwp_fut_regression.tif')
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self,
-#            args['workspace_dir'] + "/Intermediate/c_hwp_cur.tif",
-#            '../../test_data/c_hwp_cur_regression.tif')
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self,
-#            args['workspace_dir'] + "/Intermediate/c_hwp_fut.tif",
-#            '../../test_data/c_hwp_fut_regression.tif')
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self,
-#            args['workspace_dir'] + "/Intermediate/vol_hwp_cur.tif",
-#            '../../test_data/vol_hwp_cur_regression.tif')
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self,
-#            args['workspace_dir'] + "/Intermediate/vol_hwp_fut.tif",
-#            '../../test_data/vol_hwp_fut_regression.tif')
