@@ -1,17 +1,9 @@
 """Module that contains the core computational components for the carbon model
     including the biophysical and valuation functions"""
 
-import math
 import logging
 
-import numpy as np
-from osgeo import gdal
-from osgeo import ogr
-
-from invest_natcap.dbfpy import dbf
-from invest_natcap.invest_core import invest_core
-
-logger = logging.getLogger('carbon_core')
+LOGGER = logging.getLogger('carbon_core')
 
 def biophysical(args):
     """Executes the basic sediment model
@@ -49,7 +41,7 @@ def biophysical(args):
             
         returns nothing"""
 
-    logger.info("do it up")
+    LOGGER.info("do it up")
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -59,4 +51,4 @@ def valuation(args):
         
         returns nothing"""
 
-    logger.info('do it up')
+    LOGGER.info('do it up')
