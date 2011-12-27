@@ -21,14 +21,15 @@ def execute(args):
         pass to the core wave energy valuation processing function.  It may write
         log, warning, or error messages to stdout.
         
-        args - a python dictionary with at least the following possible entries:
+        args - A python dictionary with at least the following possible entries:
         args['workspace_dir'] - Where the intermediate and ouput folder/files will be saved.
-        args['land_gridPts_uri'] - A CSV file path for the landing and grid point coordinates
-        args['machine_econ_uri'] - A CSV file path for the machine economic parameters
-        args['numberOfMachines'] - An integer specifying the number of machines
-        args['projection_uri'] - A path for the projection to transform coordinates from decimal degrees to meters
+        args['land_gridPts_uri'] - A CSV file path containing the Landing and Power Grid Connection Points table.
+        args['machine_econ_uri'] - A CSV file path for the machine economic parameters table.
+        args['numberOfMachines'] - An integer specifying the number of machines.
+        args['projection_uri'] - A path for the projection to transform coordinates from decimal degrees to meters.
         args['captureWE'] - We need the captured wave energy output from biophysical run.
-        args['globa_dem'] - We need the depth of the locations for calculating costs
+        args['globa_dem'] - We need the depth of the locations for calculating costs.
+
         """
 
     filesystemencoding = sys.getfilesystemencoding()
