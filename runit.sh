@@ -15,8 +15,8 @@ pushd test
 #nosetests carbon_core_test.py
 #nosetests carbon_biophysical_test.py
 #nosetests carbon_valuation_test.py
-nosetests sediment_biophysical_test.py
+#nosetests sediment_biophysical_test.py
 #nosetests invest_core_test.py
-#nosetests waveEnergy_biophysical_test.py
-#nosetests waveEnergy_core_test.py
+nosetests waveEnergy_biophysical_test.py
+nosetests waveEnergy_core_test.py
 popd
