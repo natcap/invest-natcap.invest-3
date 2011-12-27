@@ -1,42 +1,37 @@
 """URI level tests for the carbon biophysical module"""
 
-import os
-import sys
 import unittest
 
-from osgeo import ogr
 from osgeo import gdal
-from osgeo import osr
 from nose.plugins.skip import SkipTest
 
-from invest_natcap.invest_core import invest_core
 from invest_natcap.sediment import sediment_biophysical
 import invest_cython_core
 import invest_test_core
-from invest_natcap.dbfpy import dbf
 
 
 class TestSedimentBiophysical(unittest.TestCase):
-    def test_sediment_biophysical_regression(self):
+    """Main testing class for the biophysical sediment tests"""
+    def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
 
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
-        baseDir = './data/sediment_test_data'
-        args['dem_uri'] = '%s/dem' % baseDir
-        args['erosivity_uri'] = '%s/erosivity' % baseDir
-        args['erodibility_uri'] = '%s/erodibility.tif' % baseDir
-        args['landuse_uri'] = '%s/landuse_90.tif' % baseDir
+        base_dir = './data/sediment_test_data'
+        args['dem_uri'] = '%s/dem' % base_dir
+        args['erosivity_uri'] = '%s/erosivity' % base_dir
+        args['erodibility_uri'] = '%s/erodibility.tif' % base_dir
+        args['landuse_uri'] = '%s/landuse_90.tif' % base_dir
 
         #shapefile
-        args['watersheds_uri'] = '%s/watersheds.shp' % baseDir
-        args['subwatersheds_uri'] = '%s/subwatersheds.shp' % baseDir
-        args['reservoir_locations_uri'] = '%s/reservoir_loc.shp' % baseDir
-        args['reservoir_properties_uri'] = '%s/reservoir_prop' % baseDir
+        args['watersheds_uri'] = '%s/watersheds.shp' % base_dir
+        args['subwatersheds_uri'] = '%s/subwatersheds.shp' % base_dir
+        args['reservoir_locations_uri'] = '%s/reservoir_loc.shp' % base_dir
+        args['reservoir_properties_uri'] = '%s/reservoir_prop' % base_dir
 
         #table
-        args['biophysical_table_uri'] = '%s/biophysical_table.csv' % baseDir
+        args['biophysical_table_uri'] = '%s/biophysical_table.csv' % base_dir
 
         #primatives
         args['threshold_flow_accumulation'] = 1000
@@ -44,7 +39,7 @@ do sequestration and harvested wood products on lulc maps."""
 
         sediment_biophysical.execute(args)
 
-    def testflowDirectionD8(self):
+    def test_flow_direction_d8(self):
         """Regression test for flow direction with D8 algorithm on a DEM"""
         raise SkipTest
         dem = gdal.Open('./data/sediment_test_data/dem')
@@ -52,23 +47,24 @@ do sequestration and harvested wood products on lulc maps."""
             './data/test_out/testflowAccumulationD8_flow.tif', 'GTiff', 0,
             gdal.GDT_Float32)
         invest_cython_core.flowDirectionD8(dem, flow)
-        regressionFlow = \
+        regression_flow = \
             gdal.Open('./data/sediment_test_data/flowregression.tif')
-        invest_test_core.assertTwoDatasetsEqual(self, flow, regressionFlow)
+        invest_test_core.assertTwoDatasetsEqual(self, flow, regression_flow)
 
-    def testflowAccumulationD8(self):
-        """Regression test for flowDirection accumulation with D8 algorithm on a DEM"""
+    def test_flow_accumulation_d8(self):
+        """Regression test for flow_direction accumulation with D8 algorithm 
+            on a DEM"""
 
         dem = gdal.Open('./data/sediment_test_data/dem')
-        flowDirection = invest_cython_core.newRasterFromBase(dem,
+        flow_direction = invest_cython_core.newRasterFromBase(dem,
             './data/test_out/testflowAccumulationD8_flowDirection.tif',
             'GTiff', 0, gdal.GDT_Byte)
-        invest_cython_core.flowDirectionD8(dem, flowDirection)
+        invest_cython_core.flowDirectionD8(dem, flow_direction)
 
         accumulation = invest_cython_core.newRasterFromBase(dem,
             './data/test_out/testflowAccumulationD8_accumulation.tif',
             'GTiff', -1, gdal.GDT_Float32)
-        invest_cython_core.flowAccumulationD8(flowDirection, accumulation)
+        invest_cython_core.flowAccumulationD8(flow_direction, accumulation)
 
 
         #Regression tests go here
