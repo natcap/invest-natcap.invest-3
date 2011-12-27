@@ -457,7 +457,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
         """
         c = np.absolute(c)
         #wave frequency calculation (used to calculate wave number k)
-        tem = 2.0 * math.pi / (b * alfa)
+        tem = (2.0 * math.pi) / (b * alfa)
         #wave number calculation (expressed as a function of wave frequency and water depth)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
         #wave group velocity calculation (expressed as a function of wave energy period and water depth)
