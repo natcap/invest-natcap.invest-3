@@ -384,6 +384,64 @@ class TestWaveEnergy(unittest.TestCase):
             self.assertAlmostEqual(val, tempMatrix[i], 4)
     
         newRaster = None
+        
+    def test_waveEnergy_interpPointsOverRaster(self):
+        testDir = './data/test_data/wave_Energy'
+        path = testDir + os.sep + 'test_output/fourbyfourRaster.tif'
+        #Create a blank raster of small dimensions.
+        driver = gdal.GetDriverByName('GTIFF')
+        raster = driver.Create(path, 4, 4, 1, gdal.GDT_Float32)
+        raster.SetGeoTransform([-129, 1, 0, 48, 0, -1])
+        raster.GetRasterBand(1).SetNoDataValue(0)
+        raster.GetRasterBand(1).Fill(0)
+        #Hard code points and values
+        points = np.array([[-128, 47], [-128, 45], [-126, 47], [-126, 45]])
+        values =  np.array([10, 12, 14, 16])
+        #Hand Calculate what interpolated values should be and set as matrix
+        result = np.array([[  0.,   0.,   0.,   0.],
+                           [  0.,  10.,  12.,  14.],
+                           [  0.,  11.,  13.,  15.],
+                           [  0.,  12.,  14.,  16.]])
+
+        waveEnergy_core.interpPointsOverRaster(points, values, raster)
+        band = raster.GetRasterBand(1)
+        matrix = band.ReadAsArray()
+        self.assertEqual(matrix.size, result.size, 'The sizes are not the same')
+        for indexOut, ar in enumerate(result):
+            for indexIn, val in enumerate(ar):
+                self.assertAlmostEqual(val, matrix[indexOut][indexIn], 5)
+        
+    
+#    def interpPointsOverRaster(points, values, raster):
+#    """Interpolates the values of a given set of points and values to the points
+#    of a raster and writes the interpolated matrix to the raster band
+#    
+#    points - A 2D array of points, where the points are represented as [x,y]
+#    values - A list of values corresponding to the points of 'points'
+#    raster - A raster to write the interpolated values too
+#    
+#    returns - Nothing
+#    """
+#    #Set the points and values to numpy arrays
+#    points = np.array(points)
+#    values = np.array(values)
+#    #Get the dimensions from the raster as well as the GeoTransform information
+#    gt = raster.GetGeoTransform()
+#    band = raster.GetRasterBand(1)
+#    xsize = band.XSize
+#    ysize = band.YSize
+#    #newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
+#    #Make a numpy array representing the points of the raster (the points are the pixels)
+#    newpoints = np.array([[gt[0]+gt[1]*i,gt[3]+gt[5]*j] for i in np.arange(xsize) for j in np.arange(ysize)])
+#    #Interpolate the points and values from the shapefile from earlier
+#    spl = ip(points, values, fill_value=0)
+#    #Run the interpolator object over the new set of points from the raster. Will return a list of values.
+#    spl = spl(newpoints)
+#    #Reshape the list of values to the dimensions of the raster for writing.
+#    #Transpose the matrix provided from 'reshape' because gdal thinks of x,y opposite of humans
+#    spl = spl.reshape(xsize, ysize).transpose()
+#    #Write interpolated matrix of values to raster
+#    band.WriteArray(spl, 0, 0)
 
     def test_waveEnergy_wavePower(self):
         """Test wavePower to make sure desired outputs are met"""
