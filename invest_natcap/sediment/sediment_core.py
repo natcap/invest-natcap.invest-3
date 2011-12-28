@@ -5,6 +5,7 @@ import logging
 import math
 
 import numpy as np
+from invest_natcap.invest_core import invest_core
 
 LOGGER = logging.getLogger('sediment_core')
 
@@ -103,13 +104,12 @@ def flow_direction_inf(dem, flow):
     a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
     #Get pixel sizes
-    d_1 = dem.GetGeoTransform()[1]
-    d_2 = dem.GetGeoTransform()[5]
+    d_1 = abs(dem.GetGeoTransform()[1])
+    d_2 = abs(dem.GetGeoTransform()[5])
 
     LOGGER.debug("d1 d2 %s %s" % (d_1, d_2))
 
-    slope_max = 0 #use this to keep track of the maximum down-slope
-    flow_direction_overall = 0 #flow direction on largest downwards slope
+
 
     #loop through each cell and skip any edge pixels
     for x_index in range(1, xmax - 1):
@@ -118,6 +118,8 @@ def flow_direction_inf(dem, flow):
             if dem_matrix[x_index, y_index] == nodata_dem:
                 flow_matrix[x_index, y_index] = nodata_flow
                 continue
+            slope_max = 0 #use this to keep track of the maximum down-slope
+            flow_direction_overall = 0 #flow direction on largest downwards slope
             #Calculate the flow flow_direction for each facet
             for facet_index in range(8):
                 e_0 = dem_matrix[e_0_offsets[facet_index][0] + x_index,
@@ -142,3 +144,4 @@ def flow_direction_inf(dem, flow):
             flow_matrix[x_index, y_index] = flow_direction_overall
 
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
+    invest_core.calculateRasterStats(flow.GetRasterBand(1))
