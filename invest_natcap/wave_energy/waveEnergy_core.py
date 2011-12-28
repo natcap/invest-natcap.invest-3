@@ -29,7 +29,6 @@ def biophysical(args):
     args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
         
     """
-#    transformProjection(args['analysis_area_extract'], args['AOI'])
 
     #Set variables for common output paths
     #Workspace Directory path
@@ -151,23 +150,6 @@ def clipRasterFromPolygon(shape, raster, path):
     
     return copyRaster
     
-#def transformProjection(targetProj, sourceProj):
-#    source_Layer = sourceProj.GetLayer(0)
-#    target_Layer = targetProj.GetLayer(0)
-#    target_feat  = target_Layer.GetNextFeature()
-#    target_geom  = target_feat.GetGeometryRef()
-#    targetSR = target_geom.GetSpatialReference()
-#    source_feat  = source_Layer.GetNextFeature()
-#    source_geom  = source_feat.GetGeometryRef()
-#    sourceSR = source_geom.GetSpatialReference()
-#    
-#    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
-#    source_geom.Transform(coordTrans)
-#    source_Layer.SetSpatialFilter(source_geom)
-#
-#    print source_geom
-#    print source_Layer.GetExtent()
-
 #clipShape takes the shapefile you would like to cut down,
 #the polygon shape you want the other shapefile cut to,
 #and the path for the new shapefile
