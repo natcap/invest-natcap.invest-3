@@ -107,6 +107,7 @@ def flow_direction_inf(dem, flow):
 
     #loop through each cell and skip any edge pixels
     for x_index in range(1, xmax - 1):
+        LOGGER.debug("%s of %s" % (x_index, xmax))
         for y_index in range(1, ymax - 1):
             #Calculate the flow angle for each facet
             for facet_index in range(8):
