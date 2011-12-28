@@ -10,6 +10,7 @@ cython_source_files = ['invest_cython_core/invest_cython_core.pyx',
 
 setup(name='invest_natcap',
       version='tip',
+      modules = ['invest_natcap.postprocessing'],
       packages = ['invest_natcap',
                 'invest_natcap.carbon',
                 'invest_natcap.dbfpy',
