@@ -119,7 +119,8 @@ def flow_direction_inf(dem, flow):
                 flow_matrix[x_index, y_index] = nodata_flow
                 continue
             slope_max = 0 #use this to keep track of the maximum down-slope
-            flow_direction_overall = 0 #flow direction on largest downwards slope
+            flow_direction_max_slope = 0 #flow direction on largest downwards slope
+            max_index = 0 #index to keep track of max slope facet
             #Calculate the flow flow_direction for each facet
             for facet_index in range(8):
                 e_0 = dem_matrix[e_0_offsets[facet_index][0] + x_index,
@@ -139,9 +140,13 @@ def flow_direction_inf(dem, flow):
                     flow_direction = math.atan(d_2 / d_1)
                     slope = (e_0 - e_2) / math.sqrt(d_1 ** 2 + d_2 ** 2)
                 if slope > slope_max:
-                    flow_direction_overall = flow_direction
+                    flow_direction_max_slope = flow_direction
                     slope_max = slope
-            flow_matrix[x_index, y_index] = flow_direction_overall
+                    max_index = facet_index
+            #Calculate the global angle depending on the max slope facet
+            flow_matrix[x_index, y_index] = \
+                a_f[max_index] * flow_direction_max_slope + \
+                a_c[max_index] * math.pi / 2.0
 
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
