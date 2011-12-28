@@ -406,7 +406,7 @@ class TestWaveEnergy(unittest.TestCase):
         waveEnergy_core.wavePower(waveHeight, wavePeriod, elevation, path)
         wpRaster = gdal.Open(path, GA_Update)
         matrix = wpRaster.GetRasterBand(1).ReadAsArray()
-        self.assertEqual(matrix[0][0], 1.2593)
+        self.assertAlmostEqual(matrix[0][0], 8.44585, 4)
 
 #        def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
 #            p = 1028
