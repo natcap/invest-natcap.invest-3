@@ -2,10 +2,12 @@
 
 import unittest
 import logging
+import os
 
 from osgeo import gdal
 from nose.plugins.skip import SkipTest
 
+from invest_natcap import postprocessing
 from invest_natcap.sediment import sediment_biophysical
 import invest_cython_core
 import invest_test_core
@@ -42,3 +44,18 @@ do sequestration and harvested wood products on lulc maps."""
         args['slope_threshold'] = 70.0
 
         sediment_biophysical.execute(args)
+        postprocessing.plot_flow_direction(args['workspace_dir'] + os.sep +
+            'Intermediate' + os.sep + 'flow.tif',
+            args['workspace_dir'] + os.sep + 'Intermediate' + os.sep +
+            'flow_arrows.png')
+
+    def test_postprocessing_flow_direction(self):
+        """Test for sediment_biophysical function running with sample input to \
+            do sequestration and harvested wood products on lulc maps."""
+        raise SkipTest
+        args = {}
+        args['workspace_dir'] = './data/sediment_biophysical_output'
+        postprocessing.plot_flow_direction(args['workspace_dir'] + os.sep +
+            'Intermediate' + os.sep + 'flow.tif',
+            args['workspace_dir'] + os.sep + 'Intermediate' + os.sep +
+            'flow_arrows.png')
