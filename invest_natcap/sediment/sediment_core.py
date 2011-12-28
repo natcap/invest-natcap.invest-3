@@ -93,11 +93,11 @@ def flow_direction_inf(dem, flow):
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.
-    e_0 = [(+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0),
+    e_0_offsets = [(+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0),
           (+0, +0), (+0, +0)]
-    e_1 = [(+0, +1), (-1, +0), (-1, +0), (+0, -1), (+0, -1), (+1, +0),
+    e_1_offsets = [(+0, +1), (-1, +0), (-1, +0), (+0, -1), (+0, -1), (+1, +0),
           (+1, +0), (+0, +1)]
-    e_2 = [(-1, +1), (-1, +1), (-1, -1), (-1, -1), (+1, -1), (+1, -1),
+    e_2_offsets = [(-1, +1), (-1, +1), (-1, -1), (-1, -1), (+1, -1), (+1, -1),
           (+1, +1), (+1, +1)]
     a_c = [0, 1, 1, 2, 2, 3, 3, 4]
     a_f = [1, -1, 1, -1, 1, -1, 1, -1]
@@ -113,14 +113,21 @@ def flow_direction_inf(dem, flow):
 
     #loop through each cell and skip any edge pixels
     for x_index in range(1, xmax - 1):
-        LOGGER.debug("%slope of %slope" % (x_index, xmax))
+        LOGGER.debug("%s of %s" % (x_index, xmax))
         for y_index in range(1, ymax - 1):
+            if dem_matrix[x_index, y_index] == nodata_dem:
+                flow_matrix[x_index, y_index] = nodata_flow
+                continue
             #Calculate the flow flow_direction for each facet
             for facet_index in range(8):
-                s_1 = (dem_matrix[e_0[facet_index]] -
-                       dem_matrix[e_1[facet_index]]) / d_1 #Eqn 1
-                s_2 = (dem_matrix[e_1[facet_index]] -
-                       dem_matrix[e_2[facet_index]]) / d_2 #Eqn 2
+                e_0 = dem_matrix[e_0_offsets[facet_index][0] + x_index,
+                                 e_0_offsets[facet_index][0] + y_index]
+                e_1 = dem_matrix[e_1_offsets[facet_index][0] + x_index,
+                                 e_1_offsets[facet_index][0] + y_index]
+                e_2 = dem_matrix[e_2_offsets[facet_index][0] + x_index,
+                                 e_2_offsets[facet_index][0] + y_index]
+                s_1 = (e_0 - e_1) / d_1 #Eqn 1
+                s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 flow_direction = math.atan(s_2 / s_1) #Eqn 3
                 slope = math.sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
                 if flow_direction < 0: #Eqn 4
