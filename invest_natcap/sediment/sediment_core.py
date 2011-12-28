@@ -39,10 +39,13 @@ def biophysical(args):
         args['v_stream_out'] - An output raster file that classifies the
             watersheds into stream and non-stream regions based on the
             value of 'threshold_flow_accumulation'
+        args['flow'] - An output raster indicating the flow direction on each
+            pixel
             
         returns nothing"""
 
-    LOGGER.info("do it up")
+    LOGGER.info("calculating flow direction")
+    flow_direction_inf(args['dem'], args['flow'])
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -77,10 +80,10 @@ def flow_direction_inf(dem, flow):
 
     #Incoming matrix type could be anything numerical.  Cast to a floating
     #point for cython speed and because it's the most general form.
-    dem_matrix = dem_matrix_tmp.astype(np.float)
-    dem_matrix[:] = dem_matrix_tmp
+    E = dem_matrix_tmp.astype(np.float)
+    E[:] = dem_matrix_tmp
 
-    xmax, ymax = dem_matrix.shape[0], dem_matrix.shape[1]
+    xmax, ymax = E.shape[0], E.shape[1]
 
     #This matrix holds the flow direction value, initialize to zero
     flow_matrix = np.zeros([xmax, ymax], dtype=np.float)
@@ -93,12 +96,28 @@ def flow_direction_inf(dem, flow):
     ac = [0, 1, 1, 2, 2, 3, 3, 4]
     af = [1, -1, 1, -1, 1, -1, 1, -1]
 
+    d1 = E.GetGeoTransform()[1]
+    d2 = E.GetGeoTransform()[5]
+
+    smax = 0 #use this to keep track of the maximum down-slope
+    r_prime = 0 #this is the angle associated with the largest downwards slope
+
     #loop through each cell and skip any edge pixels
     for x_index in range(1, xmax - 1):
         for y_index in range(1, ymax - 1):
-            for facet_index in range(1, 9):
+            for facet_index in range(8):
                 #Algorithm goes in here
-                flow_matrix[x_index, y_index] = 0.0
-
+                s1 = (E[e0[facet_index]] - E[e1[facet_index]]) / d1 #Eqn 1
+                s2 = (E[e1[facet_index]] - E[e2[facet_index]]) / d2 #Eqn 2
+                r = math.atan(s2 / s1) #Eqn 3
+                s = math.sqrt(s1 ** 2 + s2 ** 2) #Eqn 3
+                if r < 0: r, s = 1, s1 #Eqn 4
+                if r > math.atan(d2 / d1): #Eqn 5
+                    r = math.atan(d2 / d1)
+                    s = (e0 - e2) / math.sqrt(d1 ** 2 + d2 ** 2)
+                if s > smax:
+                    r_prime = r
+                    smax = s
+            flow_matrix[x_index, y_index] = r_prime
 
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
