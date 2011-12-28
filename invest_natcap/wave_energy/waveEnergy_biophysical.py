@@ -18,22 +18,19 @@ def execute(args):
         pass to the core wave energy biophysical processing function.  It may write
         log, warning, or error messages to stdout.
         
-        args - a python dictionary with at least the following possible entries:
+        args - A python dictionary with at least the following possible entries:
         args['workspace_dir'] - Where the intermediate and ouput folder/files will be saved.
         args['wave_base_data_uri'] - Directory location of wave base data including WW3 data and analyis area
                                      shapefile.
-        args['analysis_area_uri'] - A string identifying the analysis area of interest
+        args['analysis_area_uri'] - A string identifying the analysis area of interest.
         args['AOI_uri'] - A polygon shapefile outlining a more detailed area within the analyis area.
         args['machine_perf_uri'] - The path of a CSV file that holds the machine performace table. 
-        args['machine_param_uri'] - The path of a CSV file that holds the machien parameter table.
-        args['dem_uri'] - The path of the Global Digital Elevation Model (DEM)
-        args['calculate_valuation'] - A boolean value indicating whether to compute the economic evaluation.
-        args['landgridpts_uri'] - The path to a CSV file containing the Landing and Power Grid Connection Points table.
-        args['machine_econ_uri'] - The path to a CSV file containing the machine economic table.
-        args['number_machines'] - An integer representing the number of machines.
-        args['projection'] - The path to a projection used for economic evaluation.
+        args['machine_param_uri'] - The path of a CSV file that holds the machine parameter table.
+        args['dem_uri'] - The path of the Global Digital Elevation Model (DEM).
         
-        returns nothing."""
+        returns nothing.
+        
+        """
 
     filesystemencoding = sys.getfilesystemencoding()
 
