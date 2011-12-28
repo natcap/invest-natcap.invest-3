@@ -9,6 +9,7 @@ import simplejson as json
 from osgeo import gdal
 from osgeo import ogr
 
+import invest_cython_core
 from invest_natcap.sediment import sediment_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -113,7 +114,28 @@ def execute(args):
 
     #build output rasters
     #first determine the minimum resolution of each of the input rasters
+    #These lines sets up the output directory structure for the workspace
+    outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output' + os.sep
+    intermediateDirectoryPrefix = args['workspace_dir'] + os.sep + \
+        'Intermediate' + os.sep
+    for d in [outputDirectoryPrefix, intermediateDirectoryPrefix]:
+        if not os.path.exists(d):
+            logger.debug('creating directory %s', d)
+            os.makedirs(d)
 
+    #This defines a dictionary that links output/temporary GDAL/OAL objects
+    #to their locations on disk.  Helpful for creating the objects in the 
+    #next step
+    output_uris = {}
+    output_uris['flow'] = intermediateDirectoryPrefix + 'flow.tif'
+
+    #Create the output and intermediate rasters to be the same size/format as
+    #the base LULC
+    for raster_name, raster_path in output_uris.iteritems():
+        LOGGER.debug('creating output raster %s', raster_path)
+        biophysical_args[raster_name] = \
+            invest_cython_core.newRasterFromBase(biophysical_args['dem'],
+                              raster_path, 'GTiff', -5.0, gdal.GDT_Float32)
 
     LOGGER.info('starting biophysical model')
     sediment_core.biophysical(biophysical_args)
