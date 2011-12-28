@@ -332,34 +332,6 @@ def interpPointsOverRaster(points, values, raster):
     #Write interpolated matrix of values to raster
     band.WriteArray(spl, 0, 0)
     
-#def interpolateField(x, y, z, raster):
-#    """Interpolates a raster (raster that has been rasterized from point
-#        geometry shape layer) using arguments x,y,z and dimensions of
-#        raster.  Correct interpolated matrix is written out to the raster band.
-#    x - An array representing the xrange of the 'original' raster
-#    y - An array representing the yrange of the 'original' raster
-#    z - A 2D array representing a matrix of the 'original' raster
-#    raster - The raster to interpolate
-#
-#    returns - Nothing"""
-#    xrange = x
-#    yrange = y
-#    matrix = z
-#    
-#    gt = raster.GetGeoTransform()
-#    band = raster.GetRasterBand(1)
-#    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-#    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-#    
-#    #This is probably true if north is up
-#    if gt[5] < 0:
-#        newyrange = newyrange[::-1]
-#        matrix = matrix[::-1]
-#
-#    spl = invest_cython_core.interpolateMatrix(xrange, yrange, matrix, newxrange, newyrange)
-#    
-#    band.WriteArray(spl, 0, 0)
-
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     """Calculates the wave power from the arguments and writes the
     output raster to hard disk. 
