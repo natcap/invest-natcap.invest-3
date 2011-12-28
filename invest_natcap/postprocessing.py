@@ -22,6 +22,5 @@ def plot_flow_direction(flow_matrix):
                  units='xy',
                  pivot='middle',
                  scale=1)
-    pylab.tight_layout()
     pylab.savefig('flow.png', dpi=3200)
     LOGGER.info('Done with plot of flow direction')
