@@ -57,6 +57,9 @@ def valuation(args):
 def flow_direction_inf(dem, flow):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
+        Algorithm from: Tarboton, "A new method for the determination of flow
+        directions and upslope areas in grid digital elevation models," Water
+        Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
 
        dem - (input) a single band raster with elevation values
        flow - (output) a single band float raster of same dimensions as
@@ -64,28 +67,38 @@ def flow_direction_inf(dem, flow):
        
        returns nothing"""
 
-    nodataDem = dem.GetRasterBand(1).GetNoDataValue()
-    nodataFlow = flow.GetRasterBand(1).GetNoDataValue()
+    nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
+    nodata_flow = flow.GetRasterBand(1).GetNoDataValue()
 
-    #GDal inverts x and y, so it's easier to transpose in and back out later
-    #on gdal arrays, so we invert the x and y offsets here
-    demMatrixTmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, \
+    #GDal inverts x_index and y_index, so it's easier to transpose in and back out later
+    #on gdal arrays, so we invert the x_index and y_index offsets here
+    dem_matrix_tmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, \
         dem.RasterYSize).transpose()
 
     #Incoming matrix type could be anything numerical.  Cast to a floating
     #point for cython speed and because it's the most general form.
-    demMatrix = demMatrixTmp.astype(np.float)
-    demMatrix[:] = demMatrixTmp
+    dem_matrix = dem_matrix_tmp.astype(np.float)
+    dem_matrix[:] = dem_matrix_tmp
 
-    xmax, ymax = demMatrix.shape[0], demMatrix.shape[1]
+    xmax, ymax = dem_matrix.shape[0], dem_matrix.shape[1]
 
     #This matrix holds the flow direction value, initialize to zero
-    flowMatrix = np.zeros([xmax, ymax], dtype=np.float)
+    flow_matrix = np.zeros([xmax, ymax], dtype=np.float)
+
+    #facet elevation and factors for slope and angle calculations from Table 1
+    #in Tarboton 1997.
+    e0 = [[+0, +0], [+0, +0], [+0, +0], [+0, +0], [+0, +0], [+0, +0], [+0, +0], [+0, +0]]
+    e1 = [[+0, +1], [-1, +0], [-1, +0], [+0, -1], [+0, -1], [+1, +0], [+1, +0], [+0, +1]]
+    e2 = [[-1, +1], [-1, +1], [-1, -1], [-1, -1], [+1, -1], [+1, -1], [+1, +1], [+1, +1]]
+    ac = [0, 1, 1, 2, 2, 3, 3, 4]
+    af = [1, -1, 1, -1, 1, -1, 1, -1]
 
     #loop through each cell and skip any edge pixels
-    for x in range(1, xmax - 1):
-        for y in range(1, ymax - 1):
-            #Algorithm goes in here
-            flowMatrix[x, y] = .0
+    for x_index in range(1, xmax - 1):
+        for y_index in range(1, ymax - 1):
+            for facet_index in range(1, 9):
+                #Algorithm goes in here
+                flow_matrix[x_index, y_index] = 0.0
 
-    flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
+
+    flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
