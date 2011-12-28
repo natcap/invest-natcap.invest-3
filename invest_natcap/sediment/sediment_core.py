@@ -75,53 +75,63 @@ def flow_direction_inf(dem, flow):
     nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
     nodata_flow = flow.GetRasterBand(1).GetNoDataValue()
 
-    #GDal inverts x_index and y_index, so it's easier to transpose in and back out later
-    #on gdal arrays, so we invert the x_index and y_index offsets here
+    #GDal inverts x_index and y_index, so it'slope easier to transpose in and 
+    #back out later on gdal arrays, so we invert the x_index and y_index 
+    #offsets here
     dem_matrix_tmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, \
         dem.RasterYSize).transpose()
 
     #Incoming matrix type could be anything numerical.  Cast to a floating
-    #point for cython speed and because it's the most general form.
-    E = dem_matrix_tmp.astype(np.float)
-    E[:] = dem_matrix_tmp
+    #point for cython speed and because it'slope the most general form.
+    dem_matrix = dem_matrix_tmp.astype(np.float)
+    dem_matrix[:] = dem_matrix_tmp
 
-    xmax, ymax = E.shape[0], E.shape[1]
+    xmax, ymax = dem_matrix.shape[0], dem_matrix.shape[1]
 
     #This matrix holds the flow direction value, initialize to zero
     flow_matrix = np.zeros([xmax, ymax], dtype=np.float)
 
-    #facet elevation and factors for slope and angle calculations from Table 1
-    #in Tarboton 1997.
-    e0 = [(+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0)]
-    e1 = [(+0, +1), (-1, +0), (-1, +0), (+0, -1), (+0, -1), (+1, +0), (+1, +0), (+0, +1)]
-    e2 = [(-1, +1), (-1, +1), (-1, -1), (-1, -1), (+1, -1), (+1, -1), (+1, +1), (+1, +1)]
-    ac = [0, 1, 1, 2, 2, 3, 3, 4]
-    af = [1, -1, 1, -1, 1, -1, 1, -1]
+    #facet elevation and factors for slope and flow_direction calculations 
+    #from Table 1 in Tarboton 1997.
+    e_0 = [(+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0),
+          (+0, +0), (+0, +0)]
+    e_1 = [(+0, +1), (-1, +0), (-1, +0), (+0, -1), (+0, -1), (+1, +0),
+          (+1, +0), (+0, +1)]
+    e_2 = [(-1, +1), (-1, +1), (-1, -1), (-1, -1), (+1, -1), (+1, -1),
+          (+1, +1), (+1, +1)]
+    a_c = [0, 1, 1, 2, 2, 3, 3, 4]
+    a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
     #Get pixel sizes
-    d1 = dem.GetGeoTransform()[1]
-    d2 = dem.GetGeoTransform()[5]
+    d_1 = dem.GetGeoTransform()[1]
+    d_2 = dem.GetGeoTransform()[5]
 
-    smax = 0 #use this to keep track of the maximum down-slope
-    r_prime = 0 #this is the angle associated with the largest downwards slope
+    LOGGER.debug("d1 d2 %s %s" % (d_1, d_2))
+
+    slope_max = 0 #use this to keep track of the maximum down-slope
+    flow_direction_overall = 0 #flow direction on largest downwards slope
 
     #loop through each cell and skip any edge pixels
     for x_index in range(1, xmax - 1):
-        LOGGER.debug("%s of %s" % (x_index, xmax))
+        LOGGER.debug("%slope of %slope" % (x_index, xmax))
         for y_index in range(1, ymax - 1):
-            #Calculate the flow angle for each facet
+            #Calculate the flow flow_direction for each facet
             for facet_index in range(8):
-                s1 = (E[e0[facet_index]] - E[e1[facet_index]]) / d1 #Eqn 1
-                s2 = (E[e1[facet_index]] - E[e2[facet_index]]) / d2 #Eqn 2
-                r = math.atan(s2 / s1) #Eqn 3
-                s = math.sqrt(s1 ** 2 + s2 ** 2) #Eqn 3
-                if r < 0: r, s = 1, s1 #Eqn 4
-                if r > math.atan(d2 / d1): #Eqn 5
-                    r = math.atan(d2 / d1)
-                    s = (e0 - e2) / math.sqrt(d1 ** 2 + d2 ** 2)
-                if s > smax:
-                    r_prime = r
-                    smax = s
-            flow_matrix[x_index, y_index] = r_prime
+                s_1 = (dem_matrix[e_0[facet_index]] -
+                       dem_matrix[e_1[facet_index]]) / d_1 #Eqn 1
+                s_2 = (dem_matrix[e_1[facet_index]] -
+                       dem_matrix[e_2[facet_index]]) / d_2 #Eqn 2
+                flow_direction = math.atan(s_2 / s_1) #Eqn 3
+                slope = math.sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+                if flow_direction < 0: #Eqn 4
+                    flow_direction = 1
+                    slope = s_1
+                if flow_direction > math.atan(d_2 / d_1): #Eqn 5
+                    flow_direction = math.atan(d_2 / d_1)
+                    slope = (e_0 - e_2) / math.sqrt(d_1 ** 2 + d_2 ** 2)
+                if slope > slope_max:
+                    flow_direction_overall = flow_direction
+                    slope_max = slope
+            flow_matrix[x_index, y_index] = flow_direction_overall
 
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
