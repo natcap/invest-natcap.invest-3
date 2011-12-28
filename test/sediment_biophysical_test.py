@@ -1,6 +1,7 @@
 """URI level tests for the carbon biophysical module"""
 
 import unittest
+import logging
 
 from osgeo import gdal
 from nose.plugins.skip import SkipTest
@@ -9,6 +10,9 @@ from invest_natcap.sediment import sediment_biophysical
 import invest_cython_core
 import invest_test_core
 
+LOGGER = logging.getLogger('sediment_biophysical_test')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestSedimentBiophysical(unittest.TestCase):
     """Main testing class for the biophysical sediment tests"""
