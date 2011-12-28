@@ -6,6 +6,8 @@ import math
 
 import numpy as np
 
+from invest_natcap import postprocessing
+
 LOGGER = logging.getLogger('sediment_core')
 
 def biophysical(args):
@@ -141,4 +143,5 @@ def flow_direction_inf(dem, flow):
                     slope_max = slope
             flow_matrix[x_index, y_index] = flow_direction_overall
 
+    postprocessing.plot_flow_direction(flow_matrix)
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
