@@ -346,30 +346,44 @@ class TestWaveEnergy(unittest.TestCase):
             for indexIn, val in enumerate(ar):
                 self.assertAlmostEqual(val, interpZ[indexOut][indexIn], 5, 'Values do not match')
 
-#    def test_waveEnergy_clipRasterFromPolygon(self):        
-#        filesystemencoding = sys.getfilesystemencoding()
-#        
-#        testDir = './data/test_data/wave_Energy'
-#        shapePath = testDir + os.sep + 'test_input/threePointShape.shp'
-#        rasterPath = testDir + os.sep + 'Intermediate/wp_kw.tif'
-#        path = testDir + os.sep + 'test_output/wpClipped.tif'
-#        
-#        #Add the Output directory onto the given workspace
-#        output_dir = testDir + os.sep + 'test_output/'
-#        if not os.path.isdir(output_dir):
-#            os.mkdir(output_dir)
-#        
-#        shape = ogr.Open(shapePath)
-#        raster = gdal.Open(rasterPath)
-#        
-#        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
-#    
-#        #Test whether pixels are inside polygon
-#        
-#        
-#        #Test values of newRaster with raster
-#    
-#        newRaster = None
+    def test_waveEnergy_clipRasterFromPolygon(self):        
+        filesystemencoding = sys.getfilesystemencoding()
+        
+        testDir = './data/test_data/wave_Energy'
+        shapePath = testDir + os.sep + 'test_input/threePointShape.shp'
+        rasterPath = testDir + os.sep + 'test_input/noAOIWP.tif'
+        path = testDir + os.sep + 'test_output/wpClipped.tif'
+        
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        
+        shape = ogr.Open(shapePath)
+        raster = gdal.Open(rasterPath)
+        
+        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
+    
+        newBand = newRaster.GetRasterBand(1)
+        band = raster.GetRasterBand(1)
+        nodata = band.GetNoDataValue()
+        testMatrix = [36.742653, 36.675091, 36.606201, 36.537350, 36.469341, 
+                      36.814983, 36.763050, 36.704857, 36.646111, 36.587391]
+        matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+        newMatrix = newBand.ReadAsArray(0, 0, newBand.XSize, newBand.YSize)
+        tempMatrix = []
+        for index, item in enumerate(newMatrix):
+            for i, val in enumerate(item):
+                if val!=nodata:
+                    tempMatrix.append(val)
+                    self.assertEqual(val, matrix[index][i], 'Values are not the same')
+                    
+        self.assertEqual(len(tempMatrix), 10, 'Number of pixels do not match')
+        
+        for i, val in enumerate(testMatrix):
+            self.assertAlmostEqual(val, tempMatrix[i], 4)
+    
+        newRaster = None
 
     def test_waveEnergy_wavePower(self):
         """Test wavePower to make sure desired outputs are met"""
