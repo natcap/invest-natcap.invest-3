@@ -4,6 +4,8 @@
 import logging
 import math
 
+import numpy as np
+
 LOGGER = logging.getLogger('sediment_core')
 
 def biophysical(args):
@@ -90,14 +92,15 @@ def flow_direction_inf(dem, flow):
 
     #facet elevation and factors for slope and angle calculations from Table 1
     #in Tarboton 1997.
-    e0 = [[+0, +0], [+0, +0], [+0, +0], [+0, +0], [+0, +0], [+0, +0], [+0, +0], [+0, +0]]
-    e1 = [[+0, +1], [-1, +0], [-1, +0], [+0, -1], [+0, -1], [+1, +0], [+1, +0], [+0, +1]]
-    e2 = [[-1, +1], [-1, +1], [-1, -1], [-1, -1], [+1, -1], [+1, -1], [+1, +1], [+1, +1]]
+    e0 = [(+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0), (+0, +0)]
+    e1 = [(+0, +1), (-1, +0), (-1, +0), (+0, -1), (+0, -1), (+1, +0), (+1, +0), (+0, +1)]
+    e2 = [(-1, +1), (-1, +1), (-1, -1), (-1, -1), (+1, -1), (+1, -1), (+1, +1), (+1, +1)]
     ac = [0, 1, 1, 2, 2, 3, 3, 4]
     af = [1, -1, 1, -1, 1, -1, 1, -1]
 
-    d1 = E.GetGeoTransform()[1]
-    d2 = E.GetGeoTransform()[5]
+    #Get pixel sizes
+    d1 = dem.GetGeoTransform()[1]
+    d2 = dem.GetGeoTransform()[5]
 
     smax = 0 #use this to keep track of the maximum down-slope
     r_prime = 0 #this is the angle associated with the largest downwards slope
@@ -105,8 +108,8 @@ def flow_direction_inf(dem, flow):
     #loop through each cell and skip any edge pixels
     for x_index in range(1, xmax - 1):
         for y_index in range(1, ymax - 1):
+            #Calculate the flow angle for each facet
             for facet_index in range(8):
-                #Algorithm goes in here
                 s1 = (E[e0[facet_index]] - E[e1[facet_index]]) / d1 #Eqn 1
                 s2 = (E[e1[facet_index]] - E[e2[facet_index]]) / d2 #Eqn 2
                 r = math.atan(s2 / s1) #Eqn 3
