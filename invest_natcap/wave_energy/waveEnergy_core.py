@@ -510,7 +510,7 @@ def valuation(args):
     #Extract the machine economic parameters
     machine_econ_dict = args['machine_econ']
     capMax = float(machine_econ['CapMax']['VALUE'])
-    cC = float(machine_econ['Cc']['VALUE'])
+    capitalCost = float(machine_econ['Cc']['VALUE'])
     cml = float(machine_econ['Cml']['VALUE'])
     cul = float(machine_econ['Cul']['VALUE'])
     col = float(machine_econ['Col']['VALUE'])
@@ -526,18 +526,21 @@ def valuation(args):
     
     for feat in shape_layer:
         #Get capturedWE
+        capWEIndex = feat.GetFieldIndex('capSum_WE')
+        capWEValue = feat.GetField(fieldIndex)
         #Get Depth
-        return None
-    #For each WW3 wave point:
-#        lenml = 3.0 * depth
+        depthIndex = feat.GetFieldIndex('capSum_WE')
+        depthValue = feat.GetField(fieldIndex)
+        
+        lenml = 3.0 * depthValue
         #Calculate annualRevenue
-#        annualRevenue = price * units * capturedWE
+        annualRevenue = price * units * capWEValue
         #Calculate annualCost
-#        anuualCost = omc * capturedWE * units
+        anuualCost = omc * capWEValue * units
         #Calculate installCost
-#        installCost = units * capRate * capMax
+        installCost = units * capRate * capitalCost
         #Calculate mooringCost
-#        mooringCost = smlpm * lenml * cml * units
+        mooringCost = smlpm * lenml * cml * units
         #Calculate transCost
         
         #Calculate IC (installCost+mooringCost+transCost)
@@ -550,6 +553,15 @@ def valuation(args):
     #        
     #            return npv
     
+        ###############IDEA###################
+    #Do all calculations including NPV
+    def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
+        return None
+    #Call vectorizeRasters and pass in needed rasters as well as op
+    
+    #Interpolate raster
+        ##############IDEA####################
+        
         #Need to calculate the distances from each WW3 point to landing points
         
         #Need to calculate distances from underwater cable landing point to power grid connection point
