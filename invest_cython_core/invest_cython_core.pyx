@@ -8,10 +8,11 @@ import numpy as np
 cimport numpy as np
 cimport cython
 import scipy
-
 from osgeo import gdal, osr
 
-logger = logging.getLogger('invest_cython_core')
+from invest_natcap.invest_core import invest_core
+
+LOGGER = logging.getLogger('invest_cython_core')
 
 cdef extern from "stdlib.h":
     ctypedef void const_void "const void"
@@ -19,6 +20,10 @@ cdef extern from "stdlib.h":
             int(*compar)(const_void *, const_void *)) 
     void free(void* ptr)
     void* malloc(size_t size)
+    
+cdef extern from "math.h":
+    double atan(double x)
+    double sqrt(double x)
 
 cdef extern from "simplequeue.h":
     ctypedef struct Queue:
@@ -193,8 +198,8 @@ def calculateIntersectionRectangle(rasterList):
     for band in rasterList:
         #intersect the current bounding box with the one just read
         gt = band.GetGeoTransform()
-        logger.debug('geotransform on raster band %s %s' % (gt, band))
-        logger.debug('pixel x and y %s %s' % (band.RasterXSize,
+        LOGGER.debug('geotransform on raster band %s %s' % (gt, band))
+        LOGGER.debug('pixel x and y %s %s' % (band.RasterXSize,
                                               band.RasterYSize))
         rec = [gt[0], gt[3], gt[0] + gt[1] * band.RasterXSize,
                gt[3] + gt[5] * band.RasterYSize]
@@ -234,7 +239,7 @@ def shiftMatrix(M, x, y):
         y - the number of elements y-wise to shift M
     
         returns M rolled x and y elements along the x and y axis"""
-    logger.debug('shifting by %s %s' % (x, y))
+    LOGGER.debug('shifting by %s %s' % (x, y))
     return np.roll(np.roll(M, x, axis=1), y, axis=0)
 
 def calculateSlope(dem, uri=''):
@@ -249,37 +254,37 @@ def calculateSlope(dem, uri=''):
         returns a raster of the same dimensions as dem whose elements are
             percent slopeMatrix (percent rise)"""
 
-    logger = logging.getLogger('calculateSlope')
+    LOGGER = logging.getLogger('calculateSlope')
     #Read the DEM directly into an array
     demBand = dem.GetRasterBand(1)
     demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
-    logger.debug('demBandMatrix size %s' % (demBandMatrix.size))
+    LOGGER.debug('demBandMatrix size %s' % (demBandMatrix.size))
 
     #Create an empty slope matrix
     slopeMatrix = np.empty((demBand.YSize, demBand.XSize))
-    logger.debug('slopeMatrix size %s' % (slopeMatrix.size))
+    LOGGER.debug('slopeMatrix size %s' % (slopeMatrix.size))
 
     gp = dem.GetGeoTransform()
     cellXSize = gp[1]
     cellYSize = gp[5]
     nodata = demBand.GetNoDataValue()
-    logger.info('starting pixelwise slope calculation')
+    LOGGER.info('starting pixelwise slope calculation')
 
-    logger.debug('building kernels')
+    LOGGER.debug('building kernels')
     #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
     dzdyKernel = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64)
     dzdxKernel = dzdyKernel.transpose().copy()
     dzdyKernel /= (8 * cellYSize)
     dzdxKernel /= (8 * cellXSize)
 
-    logger.debug('doing convolution')
+    LOGGER.debug('doing convolution')
     dzdx = scipy.signal.convolve2d(demBandMatrix, dzdxKernel, 'same')
     dzdy = scipy.signal.convolve2d(demBandMatrix, dzdyKernel, 'same')
     slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
 
     #Now, "nodata" out the points that used nodata from the demBandMatrix
     noDataIndex = demBandMatrix == nodata
-    logger.debug('slopeMatrix and noDataIndex shape %s %s' %
+    LOGGER.debug('slopeMatrix and noDataIndex shape %s %s' %
                  (slopeMatrix.shape, noDataIndex.shape))
     slopeMatrix[noDataIndex] = -1
 
@@ -291,13 +296,13 @@ def calculateSlope(dem, uri=''):
     #Create output raster
     format = 'MEM'
     if uri != '': format = 'GTiff'
-    logger.debug('create raster for slope')
+    LOGGER.debug('create raster for slope')
     slope = newRasterFromBase(dem, uri, format, -1, gdal.GDT_Float32)
     slope.GetRasterBand(1).WriteArray(slopeMatrix, 0, 0)
 
     raster = slope.GetRasterBand(1)
 
-    logger.debug('these are the band stats ' + str(raster.ComputeBandStats(False)))
+    LOGGER.debug('these are the band stats ' + str(raster.ComputeBandStats(False)))
 
     rasterMin, rasterMax = raster.ComputeBandStats(False)
     #make up stddev and mean
@@ -532,20 +537,20 @@ cdef void calculateFlowD8(CQueue pixelsToProcess,
         
         pixelsToProcess - a collections.deque of (i,j) tuples"""
     cdef int i,j, ni, nj, runningSum
-    #logger = logging.getLogger('calculateFlow')
+    #LOGGER = logging.getLogger('calculateFlow')
     while pixelsToProcess.size() > 0:
         i = pixelsToProcess.pop()
         j = pixelsToProcess.pop()
-        #logger.debug("pixelsToProcess i,j=%s %s" % (i,j))
+        #LOGGER.debug("pixelsToProcess i,j=%s %s" % (i,j))
         #nodata out the values that don't need processing
         if flowDirectionMatrix[i,j] == nodataFlowDirection:
             accumulationMatrix[i, j] = nodataFlowAccumulation
-            #logger.debug("nodataFlowDirection %s" % nodataFlowDirection)
+            #LOGGER.debug("nodataFlowDirection %s" % nodataFlowDirection)
             continue
         
         #if p is calculated, skip its calculation
         if accumulationMatrix[i, j] != -1:
-            #logger.debug("already calculated") 
+            #LOGGER.debug("already calculated") 
             continue
 
         #if any neighbors flow into p and are uncalculated, push p and
@@ -553,11 +558,11 @@ cdef void calculateFlowD8(CQueue pixelsToProcess,
         neighbors = calculateInflowNeighborsD8(i, j, flowDirectionMatrix, 
                                              nodataFlowDirection)
         n = neighbors.size()
-        #logger.debug("%s neighbors" % n)
+        #LOGGER.debug("%s neighbors" % n)
         incomplete = False
         for k in range(n):
             ni, nj = neighbors.pop(),neighbors.pop()
-            #logger.debug("i,j=%s %s ni,nj=%s %s" % (i,j,ni,nj))
+            #LOGGER.debug("i,j=%s %s ni,nj=%s %s" % (i,j,ni,nj))
             neighbors.append(ni)
             neighbors.append(nj)
             #Turns out one of the neighbors is uncalculated
@@ -600,8 +605,8 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
 
     cdef int nodataFlowDirection, nodataFlowAccumulation, x, y
     cdef CQueue q
-    logger = logging.getLogger('flowAccumulation')
-    logger.debug('initializing temporary buffers')
+    LOGGER = logging.getLogger('flowAccumulation')
+    LOGGER.debug('initializing temporary buffers')
     #Load the input flow into a numpy array
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
@@ -619,14 +624,14 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
         np.zeros([xdim, ydim],dtype=np.int)
     accumulationMatrix[:] = -1
 
-    logger.info('calculating flow accumulation')
+    LOGGER.info('calculating flow accumulation')
 
     lastx = -1
     q = CQueue()
     for x in range(xdim):
         for y in range(ydim):
             if lastx != x:
-                logger.debug('percent complete %2.2f %%' % 
+                LOGGER.debug('percent complete %2.2f %%' % 
                              (100*(x+1.0)/accumulationMatrix.shape[0]))
                 lastx=x
             q.append(x)
@@ -636,3 +641,118 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
 
     flowAccumulation.GetRasterBand(1).WriteArray(\
         accumulationMatrix.transpose(), 0, 0)
+
+
+def flow_direction_inf(dem, flow):
+    """Calculates the D-infinity flow algorithm.  The output is a float
+        raster whose values range from 0 to 2pi.
+        Algorithm from: Tarboton, "A new method for the determination of flow
+        directions and upslope areas in grid digital elevation models," Water
+        Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
+
+       dem - (input) a single band raster with elevation values
+       flow - (output) a single band float raster of same dimensions as
+           dem.  After the function call it will have flow direction in it 
+       
+       returns nothing"""
+
+    cdef int x_index, y_index, xmax, ymax, max_index, facet_index
+    cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
+        flow_direction_max_slope, slope_max, nodata_dem, nodata_flow
+
+    nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
+    nodata_flow = flow.GetRasterBand(1).GetNoDataValue()
+
+    #GDal inverts x_index and y_index, so it'slope easier to transpose in and 
+    #back out later on gdal arrays, so we invert the x_index and y_index 
+    #offsets here
+    LOGGER.info("loading DEM")
+    dem_matrix_tmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, 
+                                         dem.RasterYSize).transpose()
+
+    #Incoming matrix type could be anything numerical.  Cast to a floating
+    #point for cython speed and because it'slope the most general form.
+    cdef np.ndarray [np.float_t,ndim=2] dem_matrix = dem_matrix_tmp.astype(np.float)
+    dem_matrix[:] = dem_matrix_tmp
+
+    xmax, ymax = dem_matrix.shape[0], dem_matrix.shape[1]
+
+    #This matrix holds the flow direction value, initialize to nodata_flow
+    cdef np.ndarray [np.float_t,ndim=2] flow_matrix = np.empty([xmax, ymax], 
+                                                               dtype=np.float)
+    flow_matrix[:] = nodata_flow
+
+    #facet elevation and factors for slope and flow_direction calculations 
+    #from Table 1 in Tarboton 1997.
+    cdef int *e_0_offsets = [+0, +0, +0, +0, +0, +0, +0, +0, +0, +0, +0, +0,
+          +0, +0, +0, +0]
+    cdef int *e_1_offsets = [+0, +1, -1, +0, -1, +0, +0, -1, +0, -1, +1, +0,
+          +1, +0, +0, +1]
+    cdef int *e_2_offsets = [-1, +1, -1, +1, -1, -1, -1, -1, +1, -1, +1, -1,
+          +1, +1, +1, +1]
+    cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
+    cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
+
+    #Get pixel sizes
+    d_1 = abs(dem.GetGeoTransform()[1])
+    d_2 = abs(dem.GetGeoTransform()[5])
+
+    #loop through each cell and skip any edge pixels
+    for x_index in range(1, xmax - 1):
+        LOGGER.info("processing row %s of %s" % (x_index, xmax))
+        for y_index in range(1, ymax - 1):
+
+            #If we're on a nodata pixel, set the flow to nodata and skip
+            if dem_matrix[x_index, y_index] == nodata_dem:
+                flow_matrix[x_index, y_index] = nodata_flow
+                continue
+
+            #Calculate the flow flow_direction for each facet
+            slope_max = 0 #use this to keep track of the maximum down-slope
+            flow_direction_max_slope = 0 #flow direction on max downward slope
+            max_index = 0 #index to keep track of max slope facet
+            for facet_index in range(8):
+                #This defines the three height points
+                e_0 = dem_matrix[e_0_offsets[facet_index*2+0] + x_index,
+                                 e_0_offsets[facet_index*2+1] + y_index]
+                e_1 = dem_matrix[e_1_offsets[facet_index*2+0] + x_index,
+                                 e_1_offsets[facet_index*2+1] + y_index]
+                e_2 = dem_matrix[e_2_offsets[facet_index*2+0] + x_index,
+                                 e_2_offsets[facet_index*2+1] + y_index]
+                #s_1 is slope along straight edge
+                s_1 = (e_0 - e_1) / d_1 #Eqn 1
+                if s_1 == 0: continue #to avoid divide by zero cases
+                #slope along diagonal edge
+                s_2 = (e_1 - e_2) / d_2 #Eqn 2
+                flow_direction = atan(s_2 / s_1) #Eqn 3
+
+                if flow_direction < 0: #Eqn 4
+                    #If the flow direction goes off one side, set flow
+                    #direction to that side and the slope to the straight line
+                    #distance slope
+                    flow_direction = 0
+                    slope = s_1
+                elif flow_direction > atan(d_2 / d_1): #Eqn 5
+                    #If the flow direciton goes off the diagonal side, figure
+                    #out what its value is and
+                    flow_direction = atan(d_2 / d_1)
+                    slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
+                else:
+                    slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+
+                if slope > slope_max:
+                    flow_direction_max_slope = flow_direction
+                    slope_max = slope
+                    max_index = facet_index
+
+            #Calculate the global angle depending on the max slope facet
+            if slope_max > 0:
+                flow_matrix[x_index, y_index] = \
+                    a_f[max_index] * flow_direction_max_slope + \
+                    a_c[max_index] * 3.14159265 / 2.0
+            else:
+                flow_matrix[x_index, y_index] = nodata_flow
+
+    LOGGER.info("writing flow data to raster")
+    flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
+    invest_core.calculateRasterStats(flow.GetRasterBand(1))
