@@ -491,8 +491,20 @@ def valuation(args):
     args['machine_econ'] - 
     args['land_gridPts'] - 
     args['projection'] - 
+    args['workspace_dir'] - 
     
     """
+    #Set variables for common output paths
+    #Workspace Directory path
+    workspaceDir = args['workspace_dir']
+    #Intermediate Directory path to store information
+    interDir = workspaceDir + os.sep + 'Intermediate'
+    #Output Directory path to store output rasters
+    outputDir = workspaceDir + os.sep + 'Output'
+    #Path for clipped wave point shapefile holding values of interest
+    projectedShapePath = interDir + os.sep + 'WaveData_clip_Prj.shp'
+    
+    
     #Numver of units
     units = args['number_machines']
     #Extract the machine economic parameters
@@ -507,6 +519,15 @@ def valuation(args):
     drate = float(machine_econ['R']['VALUE'])
     smlpm = float(machine_econ['Smlpm']['VALUE'])
     
+    attribute_shape = args['attribute_shape']
+
+    shape = changeProjection(attribute_shape, args['projection'], projectedShapePath)
+    shape_layer = shape.GetLayer(0)
+    
+    for feat in shape_layer:
+        #Get capturedWE
+        #Get Depth
+        return None
     #For each WW3 wave point:
 #        lenml = 3.0 * depth
         #Calculate annualRevenue
