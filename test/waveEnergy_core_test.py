@@ -13,6 +13,27 @@ from invest_natcap.wave_energy import waveEnergy_core
 
 class TestWaveEnergy(unittest.TestCase):
 
+    def test_waveEnergy_biophysical(self):
+        """Runs the biophysical part of the Wave Energy Model (WEM).
+    
+        args['wave_base_data'] - a dictionary of seastate bin data.
+        args['analysis_area'] - a point geometry shapefile representing the relevant WW3 points
+        args['analysis_area_extract'] - a polygon geometry shapefile encompassing the broader range
+                                        of interest.
+        args['AOI'] - a polygon geometry shapefile outlining a more specific area of interest.
+        args['machine_perf'] - a 2D array representing the machine performance table.
+        args['machine_param'] - a dictionary which holds the machine parameter values.
+        args['dem'] - a GIS raster file of the global elevation model
+        args['workspace_dir'] - the workspace path
+        args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
+            
+        """
+        #Set all arguments to be passed
+        
+        #Check that output/intermediate files have been made
+        
+        #Check that resulting rasters are correct
+        
     def test_waveEnergy_clipShape(self):
         """A trivial test case that makes sure clipShape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
