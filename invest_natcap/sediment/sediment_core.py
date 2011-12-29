@@ -115,38 +115,56 @@ def flow_direction_inf(dem, flow):
     for x_index in range(1, xmax - 1):
         LOGGER.debug("%s of %s" % (x_index, xmax))
         for y_index in range(1, ymax - 1):
+
+            #If we're on a nodata pixel, set the flow to nodata and skip
             if dem_matrix[x_index, y_index] == nodata_dem:
                 flow_matrix[x_index, y_index] = nodata_flow
                 continue
-            slope_max = 0 #use this to keep track of the maximum down-slope
-            flow_direction_max_slope = 0 #flow direction on largest downwards slope
-            max_index = 0 #index to keep track of max slope facet
+
             #Calculate the flow flow_direction for each facet
+            slope_max = 0 #use this to keep track of the maximum down-slope
+            flow_direction_max_slope = 0 #flow direction on max downward slope
+            max_index = 0 #index to keep track of max slope facet
             for facet_index in range(8):
+                #This defines the three height points
                 e_0 = dem_matrix[e_0_offsets[facet_index][0] + x_index,
                                  e_0_offsets[facet_index][1] + y_index]
                 e_1 = dem_matrix[e_1_offsets[facet_index][0] + x_index,
                                  e_1_offsets[facet_index][1] + y_index]
                 e_2 = dem_matrix[e_2_offsets[facet_index][0] + x_index,
                                  e_2_offsets[facet_index][1] + y_index]
+                #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
+                #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 flow_direction = math.atan(s_2 / s_1) #Eqn 3
-                slope = math.sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+
                 if flow_direction < 0: #Eqn 4
-                    flow_direction = 1
+                    #If the flow direction goes off one side, set flow
+                    #direction to that side and the slope to the straight line
+                    #distance slope
+                    flow_direction = 0
                     slope = s_1
-                if flow_direction > math.atan(d_2 / d_1): #Eqn 5
+                elif flow_direction > math.atan(d_2 / d_1): #Eqn 5
+                    #If the flow direciton goes off the diagonal side, figure
+                    #out what its value is and
                     flow_direction = math.atan(d_2 / d_1)
                     slope = (e_0 - e_2) / math.sqrt(d_1 ** 2 + d_2 ** 2)
+                else:
+                    slope = math.sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+
                 if slope > slope_max:
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
                     max_index = facet_index
+
             #Calculate the global angle depending on the max slope facet
-            flow_matrix[x_index, y_index] = \
-                a_f[max_index] * flow_direction_max_slope + \
-                a_c[max_index] * math.pi / 2.0
+            if slope_max > 0:
+                flow_matrix[x_index, y_index] = \
+                    a_f[max_index] * flow_direction_max_slope + \
+                    a_c[max_index] * math.pi / 2.0
+            else:
+                flow_matrix[x_index, y_index] = nodata_flow
 
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
