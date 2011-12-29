@@ -493,6 +493,8 @@ def valuation(args):
     args['projection'] - 
     
     """
+    #Numver of units
+    units = args['number_machines']
     #Extract the machine economic parameters
     machine_econ_dict = args['machine_econ']
     capMax = float(machine_econ['CapMax']['VALUE'])
@@ -506,18 +508,19 @@ def valuation(args):
     smlpm = float(machine_econ['Smlpm']['VALUE'])
     
     #For each WW3 wave point:
+#        lenml = 3.0 * depth
         #Calculate annualRevenue
-        
+#        annualRevenue = price * units * capturedWE
         #Calculate annualCost
-        
+#        anuualCost = omc * capturedWE * units
         #Calculate installCost
-        
+#        installCost = units * capRate * capMax
         #Calculate mooringCost
-        
+#        mooringCost = smlpm * lenml * cml * units
         #Calculate transCost
         
         #Calculate IC (installCost+mooringCost+transCost)
-        
+#        IC = installCost + morringCost + transCost
         #Calculate NPVWE :
             
     #        def npv(annualRevenue, annualCost):
