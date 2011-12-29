@@ -79,6 +79,7 @@ def flow_direction_inf(dem, flow):
     #GDal inverts x_index and y_index, so it'slope easier to transpose in and 
     #back out later on gdal arrays, so we invert the x_index and y_index 
     #offsets here
+    LOGGER.info("loading DEM")
     dem_matrix_tmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, \
         dem.RasterYSize).transpose()
 
@@ -108,13 +109,9 @@ def flow_direction_inf(dem, flow):
     d_1 = abs(dem.GetGeoTransform()[1])
     d_2 = abs(dem.GetGeoTransform()[5])
 
-    LOGGER.debug("d1 d2 %s %s" % (d_1, d_2))
-
-
-
     #loop through each cell and skip any edge pixels
     for x_index in range(1, xmax - 1):
-        LOGGER.debug("%s of %s" % (x_index, xmax))
+        LOGGER.info("processing row %s of %s" % (x_index, xmax))
         for y_index in range(1, ymax - 1):
 
             #If we're on a nodata pixel, set the flow to nodata and skip
@@ -167,5 +164,6 @@ def flow_direction_inf(dem, flow):
             else:
                 flow_matrix[x_index, y_index] = nodata_flow
 
+    LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
