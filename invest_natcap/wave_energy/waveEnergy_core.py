@@ -485,7 +485,26 @@ def valuation(args):
     """Executes the valuation calculations for the Wave Energy Model.  The result
     is a smooth output raster of the net present value from the interpolation of
     the specific WW3 wave points npv. Requires the following arguments:
+    
+    args['attribute_shape'] - 
+    args['number_machines'] - 
+    args['machine_econ'] - 
+    args['land_gridPts'] - 
+    args['projection'] - 
+    
     """
+    #Extract the machine economic parameters
+    machine_econ_dict = args['machine_econ']
+    capMax = float(machine_econ['CapMax']['VALUE'])
+    cC = float(machine_econ['Cc']['VALUE'])
+    cml = float(machine_econ['Cml']['VALUE'])
+    cul = float(machine_econ['Cul']['VALUE'])
+    col = float(machine_econ['Col']['VALUE'])
+    omc = float(machine_econ['Omc']['VALUE'])
+    price = float(machine_econ['P']['VALUE'])
+    drate = float(machine_econ['R']['VALUE'])
+    smlpm = float(machine_econ['Smlpm']['VALUE'])
+    
     #For each WW3 wave point:
         #Calculate annualRevenue
         
