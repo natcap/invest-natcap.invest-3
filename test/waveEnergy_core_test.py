@@ -33,6 +33,21 @@ class TestWaveEnergy(unittest.TestCase):
         #Check that output/intermediate files have been made
         
         #Check that resulting rasters are correct
+    def test_waveEnergy_changeProjection(self):
+        testDir = './data/test_data/wave_Energy'
+        shapeToReprojectPath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        projection = testDir + os.sep + 'test_input/WGS_1984_UTM_Zone_10N.prj'
+        outputPath = testDir + os.sep + 'test_output/waveEnergy_Clip_prj.shp'
+
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        
+        shapeToReproject = ogr.Open(shapeToReprojectPath)   
+        
+        waveEnergy_core.changeProjection(shapeToReproject, projection, outputPath)
+        
         
     def test_waveEnergy_clipShape(self):
         """A trivial test case that makes sure clipShape returns the proper shape
