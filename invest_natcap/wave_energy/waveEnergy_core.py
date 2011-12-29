@@ -349,7 +349,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
         #wave number calculation (expressed as a function of wave frequency and water depth)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
         #wave group velocity calculation (expressed as a function of wave energy period and water depth)
-        waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * (np.sqrt((g / k) * np.tanh(k * c)))) / 2
+        waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * np.sqrt((g / k) * np.tanh(k * c))) / 2
         #wave power calculation
         wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
         return wp
