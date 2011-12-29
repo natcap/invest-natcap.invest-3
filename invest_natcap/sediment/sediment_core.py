@@ -89,8 +89,9 @@ def flow_direction_inf(dem, flow):
 
     xmax, ymax = dem_matrix.shape[0], dem_matrix.shape[1]
 
-    #This matrix holds the flow direction value, initialize to zero
-    flow_matrix = np.zeros([xmax, ymax], dtype=np.float)
+    #This matrix holds the flow direction value, initialize to nodata_flow
+    flow_matrix = np.empty([xmax, ymax], dtype=np.float)
+    flow_matrix[:] = nodata_flow
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.
