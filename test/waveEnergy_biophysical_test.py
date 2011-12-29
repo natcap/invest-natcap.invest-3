@@ -2,6 +2,7 @@ import os
 import sys
 import unittest
 
+import numpy as np
 from invest_natcap.wave_energy import waveEnergy_biophysical
 import invest_test_core
 
@@ -18,11 +19,38 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         waveEnergy_biophysical.execute(args)
 
     def test_waveEnergy_extrapWaveData(self):
-        wave_base_data_uri = './data/test_data/wave_Energy/test_input/sampleWCWaveData.txt'
+        wave_base_data_uri = './data/test_data/wave_Energy/test_input/sampWaveDataTest.txt'
         if os.path.isfile(wave_base_data_uri):
             waveData = waveEnergy_biophysical.extrapolateWaveData(wave_base_data_uri)
-
-#            print waveData
+            row = np.array([.25, 1.0, 2.0, 3.0, 4.0, 5.0])
+            col = np.array([.125, .5, 1.0, 1.5, 2.0, 2.5])
+            matrix1 = np.array([[0., 0., 0., 0., 0., 0.],
+                                [0., 0., 0., 3.0, 0., 0.],
+                                [0., 0., 0., 0., 24.0, 27.0],
+                                [0., 0., 0., 0., 3.0, 219.0],
+                                [0., 0., 0., 0., 0., 84.0],
+                                [0., 0., 0., 0., 0., 12.0]])
+            matrix2 = np.array([[0., 0., 0., 0., 0., 0.],
+                                [0., 0., 0., 3.0, 0., 0.],
+                                [0., 0., 0., 0., 24.0, 21.0],
+                                [0., 0., 0., 0., 3.0, 219.0],
+                                [0., 0., 0., 0., 0., 78.0],
+                                [0., 0., 0., 0., 0., 12.0]])
+            
+            testDict = {(580, 507): matrix1, (580, 508): matrix2}
+            keys = [(580, 507), (580, 508)]
+            for key in testDict:
+                if key in waveData:
+                    for i, ar in enumerate(testDict[key]):
+                        for index, val in enumerate(ar):
+                            self.assertEqual(val, float(waveData[key][i][index]))
+                else:
+                    self.assertEqual(0, 1, 'Keys do not match')
+            for val, val2 in zip(row, waveData[0]):
+                self.assertEqual(val, val2)
+            for val, val2 in zip(col, waveData[1]):
+                self.assertEqual(val, val2)
+                
         else:
             print 'NOT A FILE'
 

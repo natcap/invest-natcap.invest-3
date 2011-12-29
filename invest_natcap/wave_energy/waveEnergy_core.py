@@ -29,7 +29,6 @@ def biophysical(args):
     args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
         
     """
-#    transformProjection(args['analysis_area_extract'], args['AOI'])
 
     #Set variables for common output paths
     #Workspace Directory path
@@ -151,23 +150,6 @@ def clipRasterFromPolygon(shape, raster, path):
     
     return copyRaster
     
-#def transformProjection(targetProj, sourceProj):
-#    source_Layer = sourceProj.GetLayer(0)
-#    target_Layer = targetProj.GetLayer(0)
-#    target_feat  = target_Layer.GetNextFeature()
-#    target_geom  = target_feat.GetGeometryRef()
-#    targetSR = target_geom.GetSpatialReference()
-#    source_feat  = source_Layer.GetNextFeature()
-#    source_geom  = source_feat.GetGeometryRef()
-#    sourceSR = source_geom.GetSpatialReference()
-#    
-#    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
-#    source_geom.Transform(coordTrans)
-#    source_Layer.SetSpatialFilter(source_geom)
-#
-#    print source_geom
-#    print source_Layer.GetExtent()
-
 #clipShape takes the shapefile you would like to cut down,
 #the polygon shape you want the other shapefile cut to,
 #and the path for the new shapefile
@@ -249,72 +231,6 @@ def clipShape(shapeToClip, bindingShape, outputPath):
         clip_feat = clip_layer.GetNextFeature()
 
     return shp_ds
-
-#def pointShapeToMatrixRanges(shape, key, valueArray, value):
-#    """From a point geometry shape, this function generates a matrix (based
-#    on value), an array xrange (based on first element in key), and an array
-#    yrange (based on second element in key).  These three arrays can then be
-#    be used for interpolation purposes.
-#
-#    shape - A point geometry shapefile
-#    key - A list of Strings referencing fields from the points in shape.
-#            This list is used to build xranges/yranges
-#    valueArray - A list of STrings referencing fields from the points in shape.
-#                    Must include values from list and value to build matrix from
-#    value - A String representing the value to be used to build the matrix.
-#    
-#    returns - A list of 3 arrays, the xrange, yrange, and matrix
-#    """
-#    shape_layer = shape.GetLayer(0)
-#    shape_layer.ResetReading()
-#    shape_feat = shape_layer.GetNextFeature()
-#
-#    fieldDict = {}
-#    xrangeLong = []
-#    yrangeLat = []
-#    xRangeField = 'LONG'
-#    yRangeField = 'LATI'
-#    while shape_feat is not None:
-#
-#        valueDict = {}
-#        #May want to check to make sure field is in shape layer
-#        for field in valueArray:
-#            field_index = shape_feat.GetFieldIndex(field)
-#            valueDict[field] = shape_feat.GetField(field_index)
-#        keyList = []        
-#        for k in key:
-#            keyList.append(valueDict[k])
-#        tupledKey = tuple(keyList)
-#        fieldDict[tupledKey] = valueDict
-#
-#        xrangeLong.append(fieldDict[tupledKey][xRangeField])
-#        yrangeLat.append(fieldDict[tupledKey][yRangeField])
-#        
-#        shape_feat.Destroy()
-#        shape_feat = shape_layer.GetNextFeature()
-#    
-#    xrangeLongNoDup = list(set(xrangeLong))
-#    yrangeLatNoDup = list(set(yrangeLat))
-#    
-#    xrangeLongNoDup.sort()
-#    yrangeLatNoDup.sort()
-#    
-#    xrangeLongNP = np.array(xrangeLongNoDup)
-#    yrangeLatNP = np.array(yrangeLatNoDup)
-#    
-#    matrix = []
-#    for j in yrangeLatNP:
-#        tmp = []
-#        for i in xrangeLongNP:
-#            if (i,j) in fieldDict:
-#                tmp.append(fieldDict[(i,j)][value])
-#            else:
-#                tmp.append(0)
-#        matrix.append(tmp)
-#        
-#    matrixNP = np.array(matrix)
-#    results = [xrangeLongNP, yrangeLatNP, matrixNP]
-#    return results
 
 def getPointsValues(shape, key, valueArray, value):
     """Generates a list of points and a list of values based on a point
@@ -398,34 +314,6 @@ def interpPointsOverRaster(points, values, raster):
     #Write interpolated matrix of values to raster
     band.WriteArray(spl, 0, 0)
     
-#def interpolateField(x, y, z, raster):
-#    """Interpolates a raster (raster that has been rasterized from point
-#        geometry shape layer) using arguments x,y,z and dimensions of
-#        raster.  Correct interpolated matrix is written out to the raster band.
-#    x - An array representing the xrange of the 'original' raster
-#    y - An array representing the yrange of the 'original' raster
-#    z - A 2D array representing a matrix of the 'original' raster
-#    raster - The raster to interpolate
-#
-#    returns - Nothing"""
-#    xrange = x
-#    yrange = y
-#    matrix = z
-#    
-#    gt = raster.GetGeoTransform()
-#    band = raster.GetRasterBand(1)
-#    newxrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-#    newyrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-#    
-#    #This is probably true if north is up
-#    if gt[5] < 0:
-#        newyrange = newyrange[::-1]
-#        matrix = matrix[::-1]
-#
-#    spl = invest_cython_core.interpolateMatrix(xrange, yrange, matrix, newxrange, newyrange)
-#    
-#    band.WriteArray(spl, 0, 0)
-
 def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
     """Calculates the wave power from the arguments and writes the
     output raster to hard disk. 

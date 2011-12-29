@@ -13,6 +13,27 @@ from invest_natcap.wave_energy import waveEnergy_core
 
 class TestWaveEnergy(unittest.TestCase):
 
+    def test_waveEnergy_biophysical(self):
+        """Runs the biophysical part of the Wave Energy Model (WEM).
+    
+        args['wave_base_data'] - a dictionary of seastate bin data.
+        args['analysis_area'] - a point geometry shapefile representing the relevant WW3 points
+        args['analysis_area_extract'] - a polygon geometry shapefile encompassing the broader range
+                                        of interest.
+        args['AOI'] - a polygon geometry shapefile outlining a more specific area of interest.
+        args['machine_perf'] - a 2D array representing the machine performance table.
+        args['machine_param'] - a dictionary which holds the machine parameter values.
+        args['dem'] - a GIS raster file of the global elevation model
+        args['workspace_dir'] - the workspace path
+        args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
+            
+        """
+        #Set all arguments to be passed
+        
+        #Check that output/intermediate files have been made
+        
+        #Check that resulting rasters are correct
+        
     def test_waveEnergy_clipShape(self):
         """A trivial test case that makes sure clipShape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
@@ -346,30 +367,102 @@ class TestWaveEnergy(unittest.TestCase):
             for indexIn, val in enumerate(ar):
                 self.assertAlmostEqual(val, interpZ[indexOut][indexIn], 5, 'Values do not match')
 
-#    def test_waveEnergy_clipRasterFromPolygon(self):        
-#        filesystemencoding = sys.getfilesystemencoding()
-#        
-#        testDir = './data/test_data/wave_Energy'
-#        shapePath = testDir + os.sep + 'test_input/threePointShape.shp'
-#        rasterPath = testDir + os.sep + 'Intermediate/wp_kw.tif'
-#        path = testDir + os.sep + 'test_output/wpClipped.tif'
-#        
-#        #Add the Output directory onto the given workspace
-#        output_dir = testDir + os.sep + 'test_output/'
-#        if not os.path.isdir(output_dir):
-#            os.mkdir(output_dir)
-#        
-#        shape = ogr.Open(shapePath)
-#        raster = gdal.Open(rasterPath)
-#        
-#        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
+    def test_waveEnergy_clipRasterFromPolygon(self):        
+        filesystemencoding = sys.getfilesystemencoding()
+        
+        testDir = './data/test_data/wave_Energy'
+        shapePath = testDir + os.sep + 'test_input/threePointShape.shp'
+        rasterPath = testDir + os.sep + 'test_input/noAOIWP.tif'
+        path = testDir + os.sep + 'test_output/wpClipped.tif'
+        
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        
+        shape = ogr.Open(shapePath)
+        raster = gdal.Open(rasterPath)
+        
+        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
+    
+        newBand = newRaster.GetRasterBand(1)
+        band = raster.GetRasterBand(1)
+        nodata = band.GetNoDataValue()
+        testMatrix = [36.742653, 36.675091, 36.606201, 36.537350, 36.469341, 
+                      36.814983, 36.763050, 36.704857, 36.646111, 36.587391]
+        matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+        newMatrix = newBand.ReadAsArray(0, 0, newBand.XSize, newBand.YSize)
+        tempMatrix = []
+        for index, item in enumerate(newMatrix):
+            for i, val in enumerate(item):
+                if val!=nodata:
+                    tempMatrix.append(val)
+                    self.assertEqual(val, matrix[index][i], 'Values are not the same')
+                    
+        self.assertEqual(len(tempMatrix), 10, 'Number of pixels do not match')
+        
+        for i, val in enumerate(testMatrix):
+            self.assertAlmostEqual(val, tempMatrix[i], 4)
+    
+        newRaster = None
+        
+    def test_waveEnergy_interpPointsOverRaster(self):
+        testDir = './data/test_data/wave_Energy'
+        path = testDir + os.sep + 'test_output/fourbyfourRaster.tif'
+        #Create a blank raster of small dimensions.
+        driver = gdal.GetDriverByName('GTIFF')
+        raster = driver.Create(path, 4, 4, 1, gdal.GDT_Float32)
+        raster.SetGeoTransform([-129, 1, 0, 48, 0, -1])
+        raster.GetRasterBand(1).SetNoDataValue(0)
+        raster.GetRasterBand(1).Fill(0)
+        #Hard code points and values
+        points = np.array([[-128, 47], [-128, 45], [-126, 47], [-126, 45]])
+        values =  np.array([10, 12, 14, 16])
+        #Hand Calculate what interpolated values should be and set as matrix
+        result = np.array([[  0.,   0.,   0.,   0.],
+                           [  0.,  10.,  12.,  14.],
+                           [  0.,  11.,  13.,  15.],
+                           [  0.,  12.,  14.,  16.]])
+
+        waveEnergy_core.interpPointsOverRaster(points, values, raster)
+        band = raster.GetRasterBand(1)
+        matrix = band.ReadAsArray()
+        self.assertEqual(matrix.size, result.size, 'The sizes are not the same')
+        for indexOut, ar in enumerate(result):
+            for indexIn, val in enumerate(ar):
+                self.assertAlmostEqual(val, matrix[indexOut][indexIn], 5)
+        
+    
+#    def interpPointsOverRaster(points, values, raster):
+#    """Interpolates the values of a given set of points and values to the points
+#    of a raster and writes the interpolated matrix to the raster band
 #    
-#        #Test whether pixels are inside polygon
-#        
-#        
-#        #Test values of newRaster with raster
+#    points - A 2D array of points, where the points are represented as [x,y]
+#    values - A list of values corresponding to the points of 'points'
+#    raster - A raster to write the interpolated values too
 #    
-#        newRaster = None
+#    returns - Nothing
+#    """
+#    #Set the points and values to numpy arrays
+#    points = np.array(points)
+#    values = np.array(values)
+#    #Get the dimensions from the raster as well as the GeoTransform information
+#    gt = raster.GetGeoTransform()
+#    band = raster.GetRasterBand(1)
+#    xsize = band.XSize
+#    ysize = band.YSize
+#    #newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
+#    #Make a numpy array representing the points of the raster (the points are the pixels)
+#    newpoints = np.array([[gt[0]+gt[1]*i,gt[3]+gt[5]*j] for i in np.arange(xsize) for j in np.arange(ysize)])
+#    #Interpolate the points and values from the shapefile from earlier
+#    spl = ip(points, values, fill_value=0)
+#    #Run the interpolator object over the new set of points from the raster. Will return a list of values.
+#    spl = spl(newpoints)
+#    #Reshape the list of values to the dimensions of the raster for writing.
+#    #Transpose the matrix provided from 'reshape' because gdal thinks of x,y opposite of humans
+#    spl = spl.reshape(xsize, ysize).transpose()
+#    #Write interpolated matrix of values to raster
+#    band.WriteArray(spl, 0, 0)
 
     def test_waveEnergy_wavePower(self):
         """Test wavePower to make sure desired outputs are met"""
@@ -406,7 +499,7 @@ class TestWaveEnergy(unittest.TestCase):
         waveEnergy_core.wavePower(waveHeight, wavePeriod, elevation, path)
         wpRaster = gdal.Open(path, GA_Update)
         matrix = wpRaster.GetRasterBand(1).ReadAsArray()
-        self.assertEqual(matrix[0][0], 1.2593)
+        self.assertAlmostEqual(matrix[0][0], 8.44585, 4)
 
 #        def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
 #            p = 1028
