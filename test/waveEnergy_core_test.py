@@ -79,14 +79,14 @@ class TestWaveEnergy(unittest.TestCase):
             args['machine_param'] = machine_params
         except IOError, e:
             print 'File I/O error' + e
-            
-            
+
+
         waveEnergy_core.biophysical(args)
-            
+
         #Check that output/intermediate files have been made
-        
+
         #Check that resulting rasters are correct
-        
+
     def test_waveEnergy_changeProjection(self):
         testDir = './data/test_data/wave_Energy'
         shapeToReprojectPath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
@@ -97,12 +97,12 @@ class TestWaveEnergy(unittest.TestCase):
         output_dir = testDir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
-        
-        shapeToReproject = ogr.Open(shapeToReprojectPath)   
-        
+
+        shapeToReproject = ogr.Open(shapeToReprojectPath)
+
         waveEnergy_core.changeProjection(shapeToReproject, projection, outputPath)
-        
-        
+
+
     def test_waveEnergy_clipShape(self):
         """A trivial test case that makes sure clipShape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
@@ -436,45 +436,45 @@ class TestWaveEnergy(unittest.TestCase):
             for indexIn, val in enumerate(ar):
                 self.assertAlmostEqual(val, interpZ[indexOut][indexIn], 5, 'Values do not match')
 
-    def test_waveEnergy_clipRasterFromPolygon(self):        
+    def test_waveEnergy_clipRasterFromPolygon(self):
         filesystemencoding = sys.getfilesystemencoding()
-        
+
         testDir = './data/test_data/wave_Energy'
         shapePath = testDir + os.sep + 'test_input/threePointShape.shp'
         rasterPath = testDir + os.sep + 'test_input/noAOIWP.tif'
         path = testDir + os.sep + 'test_output/wpClipped.tif'
-        
+
         #Add the Output directory onto the given workspace
         output_dir = testDir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
-        
+
         shape = ogr.Open(shapePath)
         raster = gdal.Open(rasterPath)
-        
+
         newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
-    
+
         newBand = newRaster.GetRasterBand(1)
         band = raster.GetRasterBand(1)
         nodata = band.GetNoDataValue()
-        testMatrix = [36.742653, 36.675091, 36.606201, 36.537350, 36.469341, 
+        testMatrix = [36.742653, 36.675091, 36.606201, 36.537350, 36.469341,
                       36.814983, 36.763050, 36.704857, 36.646111, 36.587391]
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
         newMatrix = newBand.ReadAsArray(0, 0, newBand.XSize, newBand.YSize)
         tempMatrix = []
         for index, item in enumerate(newMatrix):
             for i, val in enumerate(item):
-                if val!=nodata:
+                if val != nodata:
                     tempMatrix.append(val)
                     self.assertEqual(val, matrix[index][i], 'Values are not the same')
-                    
+
         self.assertEqual(len(tempMatrix), 10, 'Number of pixels do not match')
-        
+
         for i, val in enumerate(testMatrix):
             self.assertAlmostEqual(val, tempMatrix[i], 4)
-    
+
         newRaster = None
-        
+
     def test_waveEnergy_interpPointsOverRaster(self):
         testDir = './data/test_data/wave_Energy'
         path = testDir + os.sep + 'test_output/fourbyfourRaster.tif'
@@ -486,12 +486,12 @@ class TestWaveEnergy(unittest.TestCase):
         raster.GetRasterBand(1).Fill(0)
         #Hard code points and values
         points = np.array([[-128, 47], [-128, 45], [-126, 47], [-126, 45]])
-        values =  np.array([10, 12, 14, 16])
+        values = np.array([10, 12, 14, 16])
         #Hand Calculate what interpolated values should be and set as matrix
-        result = np.array([[  0.,   0.,   0.,   0.],
-                           [  0.,  10.,  12.,  14.],
-                           [  0.,  11.,  13.,  15.],
-                           [  0.,  12.,  14.,  16.]])
+        result = np.array([[  0., 0., 0., 0.],
+                           [  0., 10., 12., 14.],
+                           [  0., 11., 13., 15.],
+                           [  0., 12., 14., 16.]])
 
         waveEnergy_core.interpPointsOverRaster(points, values, raster)
         band = raster.GetRasterBand(1)
@@ -500,8 +500,8 @@ class TestWaveEnergy(unittest.TestCase):
         for indexOut, ar in enumerate(result):
             for indexIn, val in enumerate(ar):
                 self.assertAlmostEqual(val, matrix[indexOut][indexIn], 5)
-        
-    
+
+
 #    def interpPointsOverRaster(points, values, raster):
 #    """Interpolates the values of a given set of points and values to the points
 #    of a raster and writes the interpolated matrix to the raster band
@@ -654,7 +654,3 @@ class TestWaveEnergy(unittest.TestCase):
 #            for file in textFileList:
 #                os.remove('./data/test_data/timber/Output/' + file)
 #            os.rmdir('./data/test_data/timber/Output/')
-
-suite = unittest.TestLoader().loadTestsFromTestCase(TestWaveEnergy)
-unittest.TextTestRunner(verbosity=2).run(suite)
-

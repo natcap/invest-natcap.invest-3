@@ -36,7 +36,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
                                 [0., 0., 0., 0., 3.0, 219.0],
                                 [0., 0., 0., 0., 0., 78.0],
                                 [0., 0., 0., 0., 0., 12.0]])
-            
+
             testDict = {(580, 507): matrix1, (580, 508): matrix2}
             keys = [(580, 507), (580, 508)]
             for key in testDict:
@@ -50,9 +50,6 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
                 self.assertEqual(val, val2)
             for val, val2 in zip(col, waveData[1]):
                 self.assertEqual(val, val2)
-                
+
         else:
             print 'NOT A FILE'
-
-suite = unittest.TestLoader().loadTestsFromTestCase(TestWaveEnergyBiophysical)
-unittest.TextTestRunner(verbosity=2).run(suite)

@@ -102,7 +102,7 @@ class TestInvestCore(unittest.TestCase):
             return np.sqrt(a ** 2 + b ** 2)
 
         invest_core.vectorizeRasters([r1, r2], op,
-            rasterName = './data/test_out/rasterizeRasters.tiff', datatype = gdal.GDT_Float32)
+            rasterName='./data/test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testvectorizeRastersWaveEnergy(self):
         r1 = gdal.Open('./data/test_data/wave_Energy/samp_data/input/global_dem')
@@ -112,7 +112,7 @@ class TestInvestCore(unittest.TestCase):
             return np.sqrt(a ** 2 + b ** 2)
 
         invest_core.vectorizeRasters([r1, r2], op,
-            rasterName = './data/test_out/rasterizeRasters.tiff', datatype = gdal.GDT_Float32)
+            rasterName='./data/test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testinterpolateMatrix(self):
         """Test the matrix interpolation function"""
@@ -227,6 +227,3 @@ class TestInvestCore(unittest.TestCase):
                        encode(fsencoding))
         raster = invest_cython_core.createRasterFromVectorExtents(30, 30,
                        gdal.GDT_Float32, -5.0, './data/test_out/subwatershed.tif', shp)
-
-suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCore)
-unittest.TextTestRunner(verbosity=2).run(suite)

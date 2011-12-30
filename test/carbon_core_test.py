@@ -82,12 +82,3 @@ class TestInvestCarbonCore(unittest.TestCase):
         for x in xrange(xDim):
             for y in xrange(yDim):
                 self.assertAlmostEqual(pools[array[y][x]], data[y][x])
-
-if __name__ == '__main__':
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestInvestCarbonCore)
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
-
-
-
-

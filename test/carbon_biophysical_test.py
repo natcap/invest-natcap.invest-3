@@ -83,6 +83,3 @@ do sequestration and harvested wood products on lulc maps."""
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Intermediate/vol_hwp_fut.tif",
             './data/test_data/vol_hwp_fut_regression.tif')
-
-suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)
-unittest.TextTestRunner(verbosity=2).run(suite)

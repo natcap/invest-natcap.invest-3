@@ -43,6 +43,3 @@ class TestCarbonBiophysical(unittest.TestCase):
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Output/value_seq.tif",
             './data/test_data/value_seq_regression.tif')
-
-suite = unittest.TestLoader().loadTestsFromTestCase(TestCarbonBiophysical)
-unittest.TextTestRunner(verbosity=2).run(suite)
