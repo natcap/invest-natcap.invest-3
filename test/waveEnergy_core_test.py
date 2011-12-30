@@ -11,7 +11,7 @@ from invest_natcap.dbfpy import dbf
 import numpy as np
 
 from invest_natcap.wave_energy import waveEnergy_core
-import waveEnergy_biophysical_test
+import waveEnergy_biophysical
 
 class TestWaveEnergy(unittest.TestCase):
 
@@ -40,7 +40,7 @@ class TestWaveEnergy(unittest.TestCase):
         machineParamPath = './data/test_data/wave_Energy/samp_input/Machine_PelamisParamCSV.csv'
         #Set all arguments to be passed
         args = []
-        args['wave_base_data'] = waveEnergy_biophysical_test.extrapolateWaveData(waveFilePath)
+        args['wave_base_data'] = waveEnergy_biophysical.extrapolateWaveData(waveFilePath)
         args['analysis_area'] = ogr.Open(analysisPath, 1)
         args['analysis_area_extract'] = ogr.Open(analysisExtractPath)
         args['AOI'] = ogr.Open(aoiPath)
