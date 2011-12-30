@@ -558,7 +558,8 @@ def valuation(args):
     def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
         return None
     #Call vectorizeRasters and pass in needed rasters as well as op
-    
+    invest_core.vectorizeRasters([capWE, elevation], op,
+                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
     #Interpolate raster
         ##############IDEA####################
         
