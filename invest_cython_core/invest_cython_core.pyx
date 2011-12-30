@@ -656,15 +656,15 @@ def flow_direction_inf(dem, flow):
        
        returns nothing"""
 
-    cdef int x_index, y_index, xmax, ymax, max_index, facet_index
+    cdef int col_index, row_index, col_max, row_max, max_index, facet_index
     cdef double e_0, e_1, e_2, s_1, s_2, d_1, d_2, flow_direction, slope, \
         flow_direction_max_slope, slope_max, nodata_dem, nodata_flow
 
     nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
     nodata_flow = flow.GetRasterBand(1).GetNoDataValue()
 
-    #GDal inverts x_index and y_index, so it'slope easier to transpose in and 
-    #back out later on gdal arrays, so we invert the x_index and y_index 
+    #GDal inverts col_index and row_index, so it'slope easier to transpose in and 
+    #back out later on gdal arrays, so we invert the col_index and row_index 
     #offsets here
     LOGGER.info("loading DEM")
     dem_matrix_tmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, 
@@ -675,12 +675,20 @@ def flow_direction_inf(dem, flow):
     cdef np.ndarray [np.float_t,ndim=2] dem_matrix = dem_matrix_tmp.astype(np.float)
     dem_matrix[:] = dem_matrix_tmp
 
-    xmax, ymax = dem_matrix.shape[0], dem_matrix.shape[1]
+    col_max, row_max = dem_matrix.shape[0], dem_matrix.shape[1]
 
     #This matrix holds the flow direction value, initialize to nodata_flow
-    cdef np.ndarray [np.float_t,ndim=2] flow_matrix = np.empty([xmax, ymax], 
+    cdef np.ndarray [np.float_t,ndim=2] flow_matrix = np.empty([col_max, row_max], 
                                                                dtype=np.float)
     flow_matrix[:] = nodata_flow
+
+    #Get pixel sizes
+    d_1 = dem.GetGeoTransform()[1]
+    d_2 = dem.GetGeoTransform()[5]
+    d_1_sign = 1 if d_1 >= 0 else -1
+    d_2_sign = 1 if d_2 >= 0 else -1
+    d_1 = abs(d_1)
+    d_2 = abs(d_2)
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  The order is row (y), column (x)
@@ -711,18 +719,16 @@ def flow_direction_inf(dem, flow):
     cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
-    #Get pixel sizes
-    d_1 = abs(dem.GetGeoTransform()[1])
-    d_2 = abs(dem.GetGeoTransform()[5])
+    
 
     #loop through each cell and skip any edge pixels
-    for x_index in range(1, xmax - 1):
-        LOGGER.info("processing row %s of %s" % (x_index, xmax))
-        for y_index in range(1, ymax - 1):
+    for col_index in range(1, col_max - 1):
+        LOGGER.info("processing col %s of %s" % (col_index, col_max))
+        for row_index in range(1, row_max - 1):
 
             #If we're on a nodata pixel, set the flow to nodata and skip
-            if dem_matrix[x_index, y_index] == nodata_dem:
-                flow_matrix[x_index, y_index] = nodata_flow
+            if dem_matrix[col_index, row_index] == nodata_dem:
+                flow_matrix[col_index, row_index] = nodata_flow
                 continue
 
             #Calculate the flow flow_direction for each facet
@@ -732,12 +738,12 @@ def flow_direction_inf(dem, flow):
             for facet_index in range(8):
                 #This defines the three height points
                 #The 
-                e_0 = dem_matrix[e_0_offsets[facet_index*2+1] + y_index,
-                                 e_0_offsets[facet_index*2+0] + x_index]
-                e_1 = dem_matrix[e_1_offsets[facet_index*2+1] + y_index,
-                                 e_1_offsets[facet_index*2+0] + x_index]
-                e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + y_index,
-                                 e_2_offsets[facet_index*2+0] + x_index]
+                e_0 = dem_matrix[e_0_offsets[facet_index*2+1] + col_index,
+                                 e_0_offsets[facet_index*2+0] + row_index]
+                e_1 = dem_matrix[e_1_offsets[facet_index*2+1] + col_index,
+                                 e_1_offsets[facet_index*2+0] + row_index]
+                e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + col_index,
+                                 e_2_offsets[facet_index*2+0] + row_index]
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
                 if s_1 == 0: continue #to avoid divide by zero cases
@@ -766,11 +772,11 @@ def flow_direction_inf(dem, flow):
 
             #Calculate the global angle depending on the max slope facet
             if slope_max > 0:
-                flow_matrix[x_index, y_index] = \
+                flow_matrix[col_index, row_index] = \
                     a_f[max_index] * flow_direction_max_slope + \
                     a_c[max_index] * 3.14159265 / 2.0
             else:
-                flow_matrix[x_index, y_index] = nodata_flow
+                flow_matrix[col_index, row_index] = nodata_flow
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
