@@ -684,12 +684,30 @@ def flow_direction_inf(dem, flow):
 
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  The order is row (y), column (x)
-    cdef int *e_0_offsets = [+0, +0, +0, +0, +0, +0, +0, +0, +0, +0, +0, +0,
-          +0, +0, +0, +0]
-    cdef int *e_1_offsets = [+0, +1, -1, +0, -1, +0, +0, -1, +0, -1, +1, +0,
-          +1, +0, +0, +1]
-    cdef int *e_2_offsets = [-1, +1, -1, +1, -1, -1, -1, -1, +1, -1, +1, -1,
-          +1, +1, +1, +1]
+    cdef int *e_0_offsets = [+0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0,
+                             +0, +0]
+    cdef int *e_1_offsets = [+0, +1,
+                             -1, +0,
+                             -1, +0,
+                             +0, -1,
+                             +0, -1,
+                             +1, +0,
+                             +1, +0,
+                             +0, +1]
+    cdef int *e_2_offsets = [-1, +1,
+                             -1, +1,
+                             -1, -1,
+                             -1, -1,
+                             +1, -1,
+                             +1, -1,
+                             +1, +1,
+                             +1, +1]
     cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
