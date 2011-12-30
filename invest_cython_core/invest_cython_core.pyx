@@ -724,6 +724,7 @@ def flow_direction_inf(dem, flow):
     #loop through each cell and skip any edge pixels
     for col_index in range(1, col_max - 1):
         LOGGER.info("processing col %s of %s" % (col_index, col_max))
+        LOGGER.info("d_1 d_2 %s %s" % (d_1,d_2))
         for row_index in range(1, row_max - 1):
 
             #If we're on a nodata pixel, set the flow to nodata and skip
@@ -746,10 +747,14 @@ def flow_direction_inf(dem, flow):
                                  e_2_offsets[facet_index*2+0] + row_index]
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
-                if s_1 == 0: continue #to avoid divide by zero cases
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
-                flow_direction = atan(s_2 / s_1) #Eqn 3
+                #Default to pi/2 in case s_1 = 0
+                flow_direction = 3.14159262/2.0
+                 #to avoid divide by zero cases
+                if s_1 != 0:
+                    flow_direction = atan(s_2 / s_1) #Eqn 3
+                #LOGGER.info("flow_direction %s" % (flow_direction))
 
                 if flow_direction < 0: #Eqn 4
                     #If the flow direction goes off one side, set flow
@@ -757,13 +762,16 @@ def flow_direction_inf(dem, flow):
                     #distance slope
                     flow_direction = 0
                     slope = s_1
+                    #LOGGER.debug("flow direction < 0 slope=%s"%slope)
                 elif flow_direction > atan(d_2 / d_1): #Eqn 5
                     #If the flow direciton goes off the diagonal side, figure
                     #out what its value is and
                     flow_direction = atan(d_2 / d_1)
                     slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
+                    #LOGGER.debug("flow direction > 45 slope=%s"%slope)
                 else:
                     slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
+                    #LOGGER.debug("flow direction in middle slope=%s"%slope)
 
                 if slope > slope_max:
                     flow_direction_max_slope = flow_direction
@@ -775,6 +783,7 @@ def flow_direction_inf(dem, flow):
                 flow_matrix[col_index, row_index] = \
                     a_f[max_index] * flow_direction_max_slope + \
                     a_c[max_index] * 3.14159265 / 2.0
+                #LOGGER.debug("setting flow direction to %s " % (flow_matrix[col_index, row_index]))
             else:
                 flow_matrix[col_index, row_index] = nodata_flow
 
