@@ -683,7 +683,7 @@ def flow_direction_inf(dem, flow):
     flow_matrix[:] = nodata_flow
 
     #facet elevation and factors for slope and flow_direction calculations 
-    #from Table 1 in Tarboton 1997.
+    #from Table 1 in Tarboton 1997.  The order is row (y), column (x)
     cdef int *e_0_offsets = [+0, +0, +0, +0, +0, +0, +0, +0, +0, +0, +0, +0,
           +0, +0, +0, +0]
     cdef int *e_1_offsets = [+0, +1, -1, +0, -1, +0, +0, -1, +0, -1, +1, +0,
@@ -713,12 +713,13 @@ def flow_direction_inf(dem, flow):
             max_index = 0 #index to keep track of max slope facet
             for facet_index in range(8):
                 #This defines the three height points
-                e_0 = dem_matrix[e_0_offsets[facet_index*2+0] + x_index,
-                                 e_0_offsets[facet_index*2+1] + y_index]
-                e_1 = dem_matrix[e_1_offsets[facet_index*2+0] + x_index,
-                                 e_1_offsets[facet_index*2+1] + y_index]
-                e_2 = dem_matrix[e_2_offsets[facet_index*2+0] + x_index,
-                                 e_2_offsets[facet_index*2+1] + y_index]
+                #The 
+                e_0 = dem_matrix[e_0_offsets[facet_index*2+1] + y_index,
+                                 e_0_offsets[facet_index*2+0] + x_index]
+                e_1 = dem_matrix[e_1_offsets[facet_index*2+1] + y_index,
+                                 e_1_offsets[facet_index*2+0] + x_index]
+                e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + y_index,
+                                 e_2_offsets[facet_index*2+0] + x_index]
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
                 if s_1 == 0: continue #to avoid divide by zero cases
