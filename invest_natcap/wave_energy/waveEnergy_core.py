@@ -11,8 +11,8 @@ from osgeo import ogr
 import scipy
 from scipy.interpolate import LinearNDInterpolator as ip
 
-from invest_natcap.invest_core import invest_core
 import invest_cython_core
+from invest_natcap.invest_core import invest_core
 
 def biophysical(args):
     """Runs the biophysical part of the Wave Energy Model (WEM).
