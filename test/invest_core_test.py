@@ -9,8 +9,8 @@ from osgeo.gdalconst import *
 import numpy as np
 
 from invest_natcap.dbfpy import dbf
-from invest_natcap.invest_core import invest_core
 import invest_cython_core
+from invest_natcap.invest_core import invest_core
 import invest_test_core
 
 logger = logging.getLogger('invest_core_test')
