@@ -519,6 +519,20 @@ def valuation(args):
     drate = float(machine_econ['R']['VALUE'])
     smlpm = float(machine_econ['Smlpm']['VALUE'])
     
+    #Extract the landing and grid points data
+    
+    #Make a point shapefile for landing and grid points.
+    drv = ogr.GetDriverByName('ESRI Shapefile')
+    ds = drv.CreateDataSource(landPtShape)
+    layer = ds.CreateLayer('landpoints', args['projection'], wkbPoint)
+#    
+#        src_fd = in_defn.GetFieldDefn(fld_index)
+#
+#        fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
+#        fd.SetWidth(src_fd.GetWidth())
+#        fd.SetPrecision(src_fd.GetPrecision())
+#        shp_layer.CreateField(fd)
+    
     attribute_shape = args['attribute_shape']
 
     shape = changeProjection(attribute_shape, args['projection'], projectedShapePath)
