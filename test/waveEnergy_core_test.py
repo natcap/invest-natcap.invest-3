@@ -11,7 +11,7 @@ from invest_natcap.dbfpy import dbf
 import numpy as np
 
 from invest_natcap.wave_energy import waveEnergy_core
-from test import waveEnergy_biophysical_test
+import waveEnergy_biophysical_test
 
 class TestWaveEnergy(unittest.TestCase):
 
