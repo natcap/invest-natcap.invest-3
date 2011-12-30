@@ -44,10 +44,10 @@ do sequestration and harvested wood products on lulc maps."""
         args['slope_threshold'] = 70.0
 
         sediment_biophysical.execute(args)
-        postprocessing.plot_flow_direction(args['workspace_dir'] + os.sep +
-            'Intermediate' + os.sep + 'flow.tif',
-            args['workspace_dir'] + os.sep + 'Intermediate' + os.sep +
-            'flow_arrows.png')
+
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + os.sep + "/Intermediate/flow.tif",
+            './data/sediment_regression_data/flow_regression.tif')
 
     def test_postprocessing_flow_direction(self):
         """Test for sediment_biophysical function running with sample input to \
