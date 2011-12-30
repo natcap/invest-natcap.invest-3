@@ -2,6 +2,7 @@ import sys
 import os
 import unittest
 import math
+import csv
 
 from osgeo import ogr
 from osgeo import gdal
@@ -10,6 +11,7 @@ from invest_natcap.dbfpy import dbf
 import numpy as np
 
 from invest_natcap.wave_energy import waveEnergy_core
+from test import waveEnergy_biophysical_test
 
 class TestWaveEnergy(unittest.TestCase):
 
@@ -28,11 +30,78 @@ class TestWaveEnergy(unittest.TestCase):
         args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
             
         """
+        testDir = './data/test_data/wave_Energy'
+        analysisPath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        analysisExtractPath = testDir + os.sep + 'samp_input/WaveData/WCNA_extract.shp'
+        aoiPath = testDir + os.sep + 'samp_input/AOI_WCVI.shp'
+        demPath = testDir + os.sep + 'samp_input/global_dem'
+        waveFilePath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.txt'
+        machinePerfPath = './data/test_data/wave_Energy/samp_input/Machine_PelamisPerfCSV.csv'
+        machineParamPath = './data/test_data/wave_Energy/samp_input/Machine_PelamisParamCSV.csv'
         #Set all arguments to be passed
-        
+        args = []
+        args['wave_base_data'] = waveEnergy_biophysical_test.extrapolateWaveData(waveFilePath)
+        args['analysis_area'] = ogr.Open(analysisPath, 1)
+        args['analysis_area_extract'] = ogr.Open(analysisExtractPath)
+        args['AOI'] = ogr.Open(aoiPath)
+        args['dem'] = gdal.Open(demPath)
+        args['workspace_dir'] = './data/test_data/wave_Energy'
+        args['wave_data_dir'] = './data/test_data/wave_Energy/samp_input/WaveData'
+        #Create a 2D array of the machine performance table and place the row
+        #and column headers as the first two arrays in the list of arrays
+        try:
+            machine_perf_twoDArray = [[], []]
+            machinePerfFile = open(machinePerfPath)
+            reader = csv.reader(machinePerfFile)
+            getRow = True
+            for row in reader:
+                if getRow:
+                    machine_perf_twoDArray[0] = row[1:]
+                    getRow = False
+                else:
+                    machine_perf_twoDArray[1].append(row.pop(0))
+                    machine_perf_twoDArray.append(row)
+            machinePerfFile.close()
+            args['machine_perf'] = machine_perf_twoDArray
+        except IOError, e:
+            print 'File I/O error' + e
+
+        #Create a dictionary whose keys are the 'NAMES' from the machine parameter table
+        #and whose corresponding values are dictionaries whose keys are the column headers of
+        #the machine parameter table with corresponding values
+        try:
+            machine_params = {}
+            machineParamFile = open(machineParamPath)
+            reader = csv.DictReader(machineParamFile)
+            for row in reader:
+                machine_params[row['NAME'].strip()] = row
+            machineParamFile.close()
+            args['machine_param'] = machine_params
+        except IOError, e:
+            print 'File I/O error' + e
+            
+            
+        waveEnergy_core.biophysical(args)
+            
         #Check that output/intermediate files have been made
         
         #Check that resulting rasters are correct
+        
+    def test_waveEnergy_changeProjection(self):
+        testDir = './data/test_data/wave_Energy'
+        shapeToReprojectPath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        projection = testDir + os.sep + 'test_input/WGS_1984_UTM_Zone_10N.prj'
+        outputPath = testDir + os.sep + 'test_output/waveEnergy_Clip_prj.shp'
+
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        
+        shapeToReproject = ogr.Open(shapeToReprojectPath)   
+        
+        waveEnergy_core.changeProjection(shapeToReproject, projection, outputPath)
+        
         
     def test_waveEnergy_clipShape(self):
         """A trivial test case that makes sure clipShape returns the proper shape

@@ -349,7 +349,7 @@ def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
         #wave number calculation (expressed as a function of wave frequency and water depth)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
         #wave group velocity calculation (expressed as a function of wave energy period and water depth)
-        waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * (np.sqrt((g / k) * np.tanh(k * c)))) / 2
+        waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * np.sqrt((g / k) * np.tanh(k * c))) / 2
         #wave power calculation
         wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
         return wp
@@ -485,20 +485,66 @@ def valuation(args):
     """Executes the valuation calculations for the Wave Energy Model.  The result
     is a smooth output raster of the net present value from the interpolation of
     the specific WW3 wave points npv. Requires the following arguments:
+    
+    args['attribute_shape'] - 
+    args['number_machines'] - 
+    args['machine_econ'] - 
+    args['land_gridPts'] - 
+    args['projection'] - 
+    args['workspace_dir'] - 
+    
     """
-    #For each WW3 wave point:
+    #Set variables for common output paths
+    #Workspace Directory path
+    workspaceDir = args['workspace_dir']
+    #Intermediate Directory path to store information
+    interDir = workspaceDir + os.sep + 'Intermediate'
+    #Output Directory path to store output rasters
+    outputDir = workspaceDir + os.sep + 'Output'
+    #Path for clipped wave point shapefile holding values of interest
+    projectedShapePath = interDir + os.sep + 'WaveData_clip_Prj.shp'
+    
+    
+    #Numver of units
+    units = args['number_machines']
+    #Extract the machine economic parameters
+    machine_econ_dict = args['machine_econ']
+    capMax = float(machine_econ['CapMax']['VALUE'])
+    capitalCost = float(machine_econ['Cc']['VALUE'])
+    cml = float(machine_econ['Cml']['VALUE'])
+    cul = float(machine_econ['Cul']['VALUE'])
+    col = float(machine_econ['Col']['VALUE'])
+    omc = float(machine_econ['Omc']['VALUE'])
+    price = float(machine_econ['P']['VALUE'])
+    drate = float(machine_econ['R']['VALUE'])
+    smlpm = float(machine_econ['Smlpm']['VALUE'])
+    
+    attribute_shape = args['attribute_shape']
+
+    shape = changeProjection(attribute_shape, args['projection'], projectedShapePath)
+    shape_layer = shape.GetLayer(0)
+    
+    for feat in shape_layer:
+        #Get capturedWE
+        capWEIndex = feat.GetFieldIndex('capSum_WE')
+        capWEValue = feat.GetField(fieldIndex)
+        #Get Depth
+        depthIndex = feat.GetFieldIndex('capSum_WE')
+        depthValue = feat.GetField(fieldIndex)
+        
+        lenml = 3.0 * depthValue
         #Calculate annualRevenue
-        
+        annualRevenue = price * units * capWEValue
         #Calculate annualCost
-        
+        anuualCost = omc * capWEValue * units
         #Calculate installCost
-        
+        installCost = units * capRate * capitalCost
         #Calculate mooringCost
-        
+        mooringCost = smlpm * lenml * cml * units
         #Calculate transCost
         
         #Calculate IC (installCost+mooringCost+transCost)
-        
+#        IC = installCost + morringCost + transCost
         #Calculate NPVWE :
             
     #        def npv(annualRevenue, annualCost):
@@ -507,8 +553,70 @@ def valuation(args):
     #        
     #            return npv
     
+        ###############IDEA###################
+    #Do all calculations including NPV
+    def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
+        return None
+    #Call vectorizeRasters and pass in needed rasters as well as op
+    invest_core.vectorizeRasters([capWE, elevation], op,
+                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
+    #Interpolate raster
+        ##############IDEA####################
+        
         #Need to calculate the distances from each WW3 point to landing points
         
         #Need to calculate distances from underwater cable landing point to power grid connection point
         
     #Generate interpolated raster from points above
+    
+def changeProjection(shapeToReproject, projection, outputPath):
+    """Changes the projection of a shapefile by creating a new shapefile based on
+    the projection passed in and then copying all the features and fields of
+    the shapefile to reproject to the new shapefile.
+    """
+    shape_source = outputPath
+
+    if os.path.isfile(shape_source):
+        os.remove(shape_source)
+    #Get the layer of points from the current point geometry shape
+    in_layer = shapeToReproject.GetLayer(0)
+    #Get the layer definition which holds needed attribute values
+    in_defn = in_layer.GetLayerDefn()
+    #Create a new shapefile with similar properties of the current point geometry shape
+    shp_driver = ogr.GetDriverByName('ESRI Shapefile')
+    shp_ds = shp_driver.CreateDataSource(shape_source)
+    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), projection, in_defn.GetGeomType())
+    #Get the number of fields in the current point shapefile
+    in_field_count = in_defn.GetFieldCount()
+    #For every field, create a duplicate field and add it to the new shapefiles layer
+    for fld_index in range(in_field_count):
+        src_fd = in_defn.GetFieldDefn(fld_index)
+
+        fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
+        fd.SetWidth(src_fd.GetWidth())
+        fd.SetPrecision(src_fd.GetPrecision())
+        shp_layer.CreateField(fd)
+
+    
+    in_layer.ResetReading()
+    in_feat = in_layer.GetNextFeature()
+    geom = in_feat.GetGeometryRef()
+   
+    while in_feat is not None:
+        
+        #Create a new feature from the input feature and set its geometry
+        out_feat = ogr.Feature(feature_def=shp_layer.GetLayerDefn())
+        out_feat.SetFrom(in_feat)
+        out_feat.SetGeometryDirectly(geom)
+        #For all the fields in the feature set the field values from the source field
+        for fld_index2 in range(out_feat.GetFieldCount()):
+            src_field = in_feat.GetField(fld_index2)
+            out_feat.SetField(fld_index2, src_field)
+
+        shp_layer.CreateFeature(out_feat)
+        out_feat.Destroy()
+
+        in_feat.Destroy()
+        in_feat = in_layer.GetNextFeature()
+
+    return shp_ds
