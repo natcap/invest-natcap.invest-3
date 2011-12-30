@@ -9,6 +9,7 @@ from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 import numpy as np
 
+import invest_cython_core
 from invest_natcap.invest_core import invest_core
 from invest_natcap.wave_energy import waveEnergy_core
 
