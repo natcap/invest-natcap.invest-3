@@ -682,14 +682,6 @@ def flow_direction_inf(dem, flow):
                                                                dtype=np.float)
     flow_matrix[:] = nodata_flow
 
-    #Get pixel sizes
-    d_1 = dem.GetGeoTransform()[1]
-    d_2 = dem.GetGeoTransform()[5]
-    d_1_sign = 1 if d_1 >= 0 else -1
-    d_2_sign = 1 if d_2 >= 0 else -1
-    d_1 = abs(d_1)
-    d_2 = abs(d_2)
-
     #facet elevation and factors for slope and flow_direction calculations 
     #from Table 1 in Tarboton 1997.  The order is row (y), column (x)
     cdef int *e_0_offsets = [+0, +0,
@@ -719,12 +711,13 @@ def flow_direction_inf(dem, flow):
     cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
-    
+    #Get pixel sizes
+    d_1 = abs(dem.GetGeoTransform()[1])
+    d_2 = abs(dem.GetGeoTransform()[5])
 
     #loop through each cell and skip any edge pixels
     for col_index in range(1, col_max - 1):
         LOGGER.info("processing col %s of %s" % (col_index, col_max))
-        LOGGER.info("d_1 d_2 %s %s" % (d_1,d_2))
         for row_index in range(1, row_max - 1):
 
             #If we're on a nodata pixel, set the flow to nodata and skip
@@ -747,14 +740,15 @@ def flow_direction_inf(dem, flow):
                                  e_2_offsets[facet_index*2+0] + row_index]
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
+                if s_1 < 0: continue #uphill slope, so skip
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
+                if s_2 < 0: continue #uphill slope, so skip
                 #Default to pi/2 in case s_1 = 0
+                #to avoid divide by zero cases
                 flow_direction = 3.14159262/2.0
-                 #to avoid divide by zero cases
                 if s_1 != 0:
                     flow_direction = atan(s_2 / s_1) #Eqn 3
-                #LOGGER.info("flow_direction %s" % (flow_direction))
 
                 if flow_direction < 0: #Eqn 4
                     #If the flow direction goes off one side, set flow
@@ -777,13 +771,12 @@ def flow_direction_inf(dem, flow):
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
                     max_index = facet_index
-
+                    
             #Calculate the global angle depending on the max slope facet
             if slope_max > 0:
                 flow_matrix[col_index, row_index] = \
                     a_f[max_index] * flow_direction_max_slope + \
                     a_c[max_index] * 3.14159265 / 2.0
-                #LOGGER.debug("setting flow direction to %s " % (flow_matrix[col_index, row_index]))
             else:
                 flow_matrix[col_index, row_index] = nodata_flow
 
