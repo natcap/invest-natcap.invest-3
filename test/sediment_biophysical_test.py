@@ -22,7 +22,6 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with sample input to \
 do sequestration and harvested wood products on lulc maps."""
-        raise SkipTest
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
         base_dir = './data/sediment_test_data'
@@ -51,24 +50,27 @@ do sequestration and harvested wood products on lulc maps."""
             './data/sediment_regression_data/flow_regression.tif')
 
     def test_sediment_biophysical_simple(self):
-        """This test is a smaller version of a real world case failing"""
+        """This test is a smaller version of a real world case that failed"""
 
+        #Create two 3x3 rasters in memory
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
         projection = base.GetProjection()
         geotransform = base.GetGeoTransform()
-        dem = invest_cython_core.newRaster(cols, rows, projection, geotransform, 'GTiff', -1,
-                         gdal.GDT_Float32, 1, './data/sediment_test_data/small_dem.tiff')
-        flow = \
-            invest_cython_core.newRasterFromBase(dem,
-                              './data/sediment_test_data/small_dem_flow.tiff', 'GTiff', -5.0, gdal.GDT_Float32)
+        dem = invest_cython_core.newRaster(cols, rows, projection,
+            geotransform, 'MEM', -1, gdal.GDT_Float32, 1, '')
+        flow = invest_cython_core.newRasterFromBase(dem, 'MEM', 'GTiff', -5.0,
+                                                    gdal.GDT_Float32)
 
+        #This is a test case that was calculated by hand
         array = np.array([[249, 246, 243], [241, 238, 235], [233, 231, 228]])
-
         dem.GetRasterBand(1).WriteArray(array, 0, 0)
-
         invest_cython_core.flow_direction_inf(dem, flow)
+        flowArray = flow.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
+
+        #Direction 5.117281 was calculated by hand
+        self.assertAlmostEqual(flowArray[0][0], 5.117281)
 
     def test_postprocessing_flow_direction(self):
         """Test for sediment_biophysical function running with sample input to \
