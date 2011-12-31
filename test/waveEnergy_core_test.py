@@ -11,7 +11,7 @@ from invest_natcap.dbfpy import dbf
 import numpy as np
 
 from invest_natcap.wave_energy import waveEnergy_core
-import waveEnergy_biophysical_test
+from invest_natcap.wave_energy import waveEnergy_biophysical
 
 class TestWaveEnergy(unittest.TestCase):
 
@@ -39,8 +39,8 @@ class TestWaveEnergy(unittest.TestCase):
         machinePerfPath = './data/test_data/wave_Energy/samp_input/Machine_PelamisPerfCSV.csv'
         machineParamPath = './data/test_data/wave_Energy/samp_input/Machine_PelamisParamCSV.csv'
         #Set all arguments to be passed
-        args = []
-        args['wave_base_data'] = waveEnergy_biophysical_test.extrapolateWaveData(waveFilePath)
+        args = {}
+        args['wave_base_data'] = waveEnergy_biophysical.extrapolateWaveData(waveFilePath)
         args['analysis_area'] = ogr.Open(analysisPath, 1)
         args['analysis_area_extract'] = ogr.Open(analysisExtractPath)
         args['AOI'] = ogr.Open(aoiPath)
@@ -82,7 +82,7 @@ class TestWaveEnergy(unittest.TestCase):
 
 
         waveEnergy_core.biophysical(args)
-
+        
         #Check that output/intermediate files have been made
 
         #Check that resulting rasters are correct
@@ -100,9 +100,11 @@ class TestWaveEnergy(unittest.TestCase):
 
         shapeToReproject = ogr.Open(shapeToReprojectPath)
 
-        waveEnergy_core.changeProjection(shapeToReproject, projection, outputPath)
+        newShape = waveEnergy_core.changeProjection(shapeToReproject, projection, outputPath)
 
-
+        shapeToReproject.Destroy()
+        newShape.Destroy()
+        
     def test_waveEnergy_clipShape(self):
         """A trivial test case that makes sure clipShape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
@@ -131,6 +133,7 @@ class TestWaveEnergy(unittest.TestCase):
 
         for layerNum in range(layerCount):
             layer = shapeToClip.GetLayer(layerNum)
+            layer.ResetReading()
             layerNew = newShape.GetLayer(layerNum)
 
             featCount = layer.GetFeatureCount()
