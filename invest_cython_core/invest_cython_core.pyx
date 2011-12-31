@@ -715,9 +715,9 @@ def flow_direction_inf(dem, flow):
     d_1 = abs(dem.GetGeoTransform()[1])
     d_2 = abs(dem.GetGeoTransform()[5])
 
+    LOGGER.info("calculating d-inf per pixel flows")
     #loop through each cell and skip any edge pixels
     for col_index in range(1, col_max - 1):
-        LOGGER.info("processing col %s of %s" % (col_index, col_max))
         for row_index in range(1, row_max - 1):
 
             #If we're on a nodata pixel, set the flow to nodata and skip
@@ -779,6 +779,32 @@ def flow_direction_inf(dem, flow):
                     a_c[max_index] * 3.14159265 / 2.0
             else:
                 flow_matrix[col_index, row_index] = nodata_flow
+
+    #Calculate D8 flow to resolve undefined flows in D-inf
+    d8_flow_dataset = newRasterFromBase(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
+    LOGGER.info("calculating D8 flow")
+    flowDirectionD8(dem, d8_flow_dataset)
+    d8_flow_matrix = d8_flow_dataset.ReadAsArray(0, 0, dem.RasterXSize, 
+                                    dem.RasterYSize).transpose()
+    
+    nodata_d8 = d8_flow_dataset.GetRasterBand(1).GetNoDataValue()
+
+    d8_to_radians = {0: 0.0,
+                     1: 0.0,
+                     2: 5.497787144,
+                     4: 4.71238898,
+                     8: 3.926990817,
+                     16: 3.141592654,
+                     32: 2.35619449,
+                     64: 1.570796327,
+                     128: 0.785398163,
+                     nodata_d8: nodata_flow
+                     }
+    
+    for col_index in range(1, col_max - 1):
+        for row_index in range(1, row_max - 1):
+            if flow_matrix[col_index, row_index] == nodata_flow:
+                flow_matrix[col_index, row_index] = d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
