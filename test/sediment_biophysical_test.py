@@ -60,7 +60,7 @@ do sequestration and harvested wood products on lulc maps."""
         geotransform = base.GetGeoTransform()
         dem = invest_cython_core.newRaster(cols, rows, projection,
             geotransform, 'MEM', -1, gdal.GDT_Float32, 1, '')
-        flow = invest_cython_core.newRasterFromBase(dem, 'MEM', 'GTiff', -5.0,
+        flow = invest_cython_core.newRasterFromBase(dem, '', 'MEM', -5.0,
                                                     gdal.GDT_Float32)
 
         #This is a test case that was calculated by hand
