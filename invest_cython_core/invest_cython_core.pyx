@@ -687,8 +687,8 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation):
         
         returns nothing"""
 
-    cdef int x, y
-    cdef float nodata_flow_direction, nodata_flow_accumulation, nodata_dem
+    cdef int i, j, p, direction_index
+    cdef float nodata_flow_direction, nodata_flow_accumulation, nodata_dem, PI
     cdef CQueue q
     cdef Pair *dem_pixels = \
         <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
@@ -737,9 +737,28 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation):
     qsort(dem_pixels,valid_pixel_count,sizeof(Pair),pairCompare)
     
     LOGGER.info('calculating flow accumulation')
-
-    flow_accumulation.GetRasterBand(1).WriteArray(\
-        accumulation_matrix.transpose(), 0, 0)
+    
+    accumulation_matrix[:] = nodata_flow_accumulation
+    
+    PI = 3.14159265
+    cdef float *quartiles = [PI/4.0,PI/2.0,
+                        3.0*PI/4.0,PI,
+                        5.0*PI/4,3.0*PI/2.0,
+                        7.0*PI/4.0,2.0*PI]
+    
+    for p in range(valid_pixel_count):
+        i = dem_pixels[p].i
+        j = dem_pixels[p].j
+        
+        direction_index = 0
+        while flow_direction_matrix[i,j] > quartiles[direction_index]:
+            direction_index += 1
+        flow_direction_matrix[i,j]
+        
+        #push flow from current pixel to downstream pixels
+        
+    flow_accumulation.GetRasterBand(1).WriteArray( 
+                                       accumulation_matrix.transpose(), 0, 0)
     
     free(dem_pixels)
 
