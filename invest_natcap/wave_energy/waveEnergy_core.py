@@ -506,6 +506,12 @@ def valuation(args):
     landptPath = interDir + os.sep + 'landingPoints.shp'
     gridptPath = interDir + os.sep + 'gridPoint.shp'
     
+    if os.path.isfile(landptPath):
+        os.remove(landptPath)
+    if os.path.isfile(gridptPath):
+        os.remove(gridptPath)
+    
+    
     #Numver of units
     units = args['number_machines']
     #Extract the machine economic parameters
@@ -583,11 +589,10 @@ def valuation(args):
     index = feat.GetFieldIndex('Id')
     feat.SetField(index, 0)
     
-#    geom = in_feat.GetGeometryRef()
-#    sourceSR = geom.GetSpatialReference()
-#    targetSR = srs_prj
-#    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
-#    geom.Transform(coordTrans)
+    sourceSR = args['attribute_shape'].GetLayer(0).GetSpatialRef()
+    targetSR = srs_prj
+    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
+    grid_geom.Transform(coordTrans)
     
     feat.SetGeometryDirectly(grid_geom)
     #save the field modifications to the layer.
