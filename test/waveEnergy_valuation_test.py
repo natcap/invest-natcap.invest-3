@@ -21,7 +21,7 @@ class TestWaveEnergyValuation(unittest.TestCase):
         args['projection_uri'] - A path for the projection to transform coordinates from decimal degrees to meters.
         args['captureWE'] - We need the captured wave energy output from biophysical run.
         args['globa_dem'] - We need the depth of the locations for calculating costs.
-
+        args['']
         """
         
         
@@ -32,8 +32,8 @@ class TestWaveEnergyValuation(unittest.TestCase):
         args['land_gridPts_uri'] = './data/test_data/wave_Energy/samp_input/LandGridPts_WCVI_CSV.csv'
         args['machine_econ_uri'] = './data/test_data/wave_Energy/samp_input/Machine_PelamisEconCSV.csv'
         args['numberOfMachines'] = 24
-        args['projection_uri'] = './data/test_data/wave_Energy/test_input/WGS_1984_UTM_ZONE_10N.prjc'
+        args['projection_uri'] = './data/test_data/wave_Energy/test_input/WGS_1984_UTM_Zone_10N.prj'
         args['captureWE'] = './data/test_data/wave_Energy/test_input/aoiCapWE.tif'
         args['globa_dem'] = './data/test_data/wave_Energy/samp_input/global_dem'
-        
+        args['attribute_shape_path'] = './data/test_data/wave_Energy/samp_input/WaveData/NAmerica_WestCoast_4m.shp'
         waveEnergy_valuation.execute(args)
