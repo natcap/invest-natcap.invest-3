@@ -642,7 +642,7 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
     flowAccumulation.GetRasterBand(1).WriteArray(\
         accumulationMatrix.transpose(), 0, 0)
 
-cdef void calculate_flow_dinf(CQueue pixelsToProcess, 
+cdef void calculate_flow_dinf(np.ndarray[np.float_t,ndim=2] dem_matrix,
                       np.ndarray[np.int_t,ndim=2] accumulationMatrix,
                       np.ndarray[np.float_t,ndim=2] flowDirectionMatrix,
                       int nodataFlowDirection, int nodataFlowAccumulation):
@@ -651,21 +651,42 @@ cdef void calculate_flow_dinf(CQueue pixelsToProcess,
         each one as it needs processing.  Modified `accumulationMatrix`
         during processing.
         
+        dem_pixels - a matrix of DEM pixel heights, used to march the 
+            algorithm from uphill to downhill
+        
         pixelsToProcess - a collections.deque of (i,j) tuples"""
-    cdef int i,j, ni, nj, runningSum
+    cdef int i,j, ni, nj, runningSum, valid_pixel_count
+    
+    #Construct a lookup table that sorts DEM pixels by height so we can process
+    #the lowest pixels to the highest in propagating shortest path distances.
+    cdef np.ndarray[np.float_t,ndim=2] dem_pixels = dem_matrix.astype(np.float)
+    imax, jmax = dem_matrix.shape[0], dem_matrix.shape[1]
+    valid_pixel_count = 0
+    for i in range(1,imax-1):
+        for j in range(1,jmax-1):
+            h = dem_matrix[i,j]
+            if h == nodataDem: continue
+            dem_pixels[valid_pixel_count].i = i
+            dem_pixels[valid_pixel_count].j = j
+            dem_pixels[valid_pixel_count].h = h
+            valid_pixel_count += 1
+    
+    #Sort pixels by increasing height so that we visit drainage points in order
+    qsort(dem_pixels,validPixelCount,sizeof(Pair),pairCompare)
+    
     #LOGGER = logging.getLogger('calculateFlow')
     while pixelsToProcess.size() > 0:
         i = pixelsToProcess.pop()
         j = pixelsToProcess.pop()
         #LOGGER.debug("pixelsToProcess i,j=%s %s" % (i,j))
         #nodata out the values that don't need processing
-        if flowDirectionMatrix[i,j] == nodataFlowDirection:
+        if flowDirectionMatrix[i, j] == nodataFlowDirection:
             accumulationMatrix[i, j] = nodataFlowAccumulation
             #LOGGER.debug("nodataFlowDirection %s" % nodataFlowDirection)
             continue
         
-        #if p is calculated, skip its calculation
-        if accumulationMatrix[i, j] != -1:
+        #if p is calculated, skip its calculation (-1 or -2 mean uncalculated)
+        if accumulationMatrix[i, j] > -1:
             #LOGGER.debug("already calculated") 
             continue
 
@@ -678,12 +699,11 @@ cdef void calculate_flow_dinf(CQueue pixelsToProcess,
         incomplete = False
         for k in range(n):
             ni, nj = neighbors.pop(),neighbors.pop()
-            #LOGGER.debug("i,j=%s %s ni,nj=%s %s" % (i,j,ni,nj))
             neighbors.append(ni)
             neighbors.append(nj)
             #Turns out one of the neighbors is uncalculated
             #Stop checking and process all later
-            if accumulationMatrix[ni, nj] == -1:
+            if accumulationMatrix[ni, nj] == -2:
                 incomplete = True
                 break
             
@@ -696,8 +716,18 @@ cdef void calculate_flow_dinf(CQueue pixelsToProcess,
             pixelsToProcess.push(i)
             while (neighbors.size() > 0):
                 ni,nj = neighbors.pop(), neighbors.pop()
-                pixelsToProcess.push(nj)
-                pixelsToProcess.push(ni)
+                #This ensures that ni and nj don't exist more than once
+                #on the queue
+                if accumulationMatrix[ni, nj] == -2:
+                    #LOGGER.debug("processing new neighbor ni,nj=%s,%s" % (ni,nj))
+                    accumulationMatrix[ni, nj] = -1
+                    pixelsToProcess.push(nj)
+                    pixelsToProcess.push(ni)
+                else:
+                    #this makes the second time around we've seen this pixel
+                    #there's probably a loop because of roundoff error in
+                    #flow directions, arbitratily choose a flow of 1
+                    accumulationMatrix[ni, nj] = 1 
         else:
             #Otherwise, all the inflow neighbors are calculated so do the
             #pixelflow calculation 
@@ -773,7 +803,11 @@ def flow_accumulation_dinf(flowDirection, flowAccumulation):
     xdim, ydim = flowDirectionMatrix.shape[0], flowDirectionMatrix.shape[1]
     cdef np.ndarray[np.int_t,ndim=2] accumulationMatrix = \
         np.zeros([xdim, ydim],dtype=np.int)
-    accumulationMatrix[:] = -1
+        
+    #initalize to -2 to indicate no processing has occured.  This will change
+    #to -1 to indicate it's been enqueued, and something else when value is
+    #calculated
+    accumulationMatrix[:] = -2 
 
     LOGGER.info('calculating flow accumulation')
 
@@ -787,6 +821,7 @@ def flow_accumulation_dinf(flowDirection, flowAccumulation):
                 lastx=x
             q.append(x)
             q.append(y)
+            accumulationMatrix[x,y] = -1 #-1 indicates its been enqueued
             calculate_flow_dinf(q,accumulationMatrix,flowDirectionMatrix,
                           nodataFlowDirection, nodataFlowAccumulation)
 
