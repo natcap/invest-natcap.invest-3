@@ -53,6 +53,7 @@ def biophysical(args):
 
     LOGGER.info("calculating flow accumulation")
     invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
+                                              args['dem'],
                                               args['flow_accumulation'])
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a

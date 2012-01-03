@@ -642,103 +642,6 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
     flowAccumulation.GetRasterBand(1).WriteArray(\
         accumulationMatrix.transpose(), 0, 0)
 
-cdef void calculate_flow_dinf(np.ndarray[np.float_t,ndim=2] dem_matrix,
-                      np.ndarray[np.int_t,ndim=2] accumulationMatrix,
-                      np.ndarray[np.float_t,ndim=2] flowDirectionMatrix,
-                      int nodataFlowDirection, int nodataFlowAccumulation):
-    """Takes a list of pixels to calculate flow for the dinf algorithm, then
-        does a dynamic style programming process of visiting and updating
-        each one as it needs processing.  Modified `accumulationMatrix`
-        during processing.
-        
-        dem_pixels - a matrix of DEM pixel heights, used to march the 
-            algorithm from uphill to downhill
-        
-        pixelsToProcess - a collections.deque of (i,j) tuples"""
-    cdef int i,j, ni, nj, runningSum, valid_pixel_count
-    
-    #Construct a lookup table that sorts DEM pixels by height so we can process
-    #the lowest pixels to the highest in propagating shortest path distances.
-    cdef np.ndarray[np.float_t,ndim=2] dem_pixels = dem_matrix.astype(np.float)
-    imax, jmax = dem_matrix.shape[0], dem_matrix.shape[1]
-    valid_pixel_count = 0
-    for i in range(1,imax-1):
-        for j in range(1,jmax-1):
-            h = dem_matrix[i,j]
-            if h == nodataDem: continue
-            dem_pixels[valid_pixel_count].i = i
-            dem_pixels[valid_pixel_count].j = j
-            dem_pixels[valid_pixel_count].h = h
-            valid_pixel_count += 1
-    
-    #Sort pixels by increasing height so that we visit drainage points in order
-    qsort(dem_pixels,validPixelCount,sizeof(Pair),pairCompare)
-    
-    #LOGGER = logging.getLogger('calculateFlow')
-    while pixelsToProcess.size() > 0:
-        i = pixelsToProcess.pop()
-        j = pixelsToProcess.pop()
-        #LOGGER.debug("pixelsToProcess i,j=%s %s" % (i,j))
-        #nodata out the values that don't need processing
-        if flowDirectionMatrix[i, j] == nodataFlowDirection:
-            accumulationMatrix[i, j] = nodataFlowAccumulation
-            #LOGGER.debug("nodataFlowDirection %s" % nodataFlowDirection)
-            continue
-        
-        #if p is calculated, skip its calculation (-1 or -2 mean uncalculated)
-        if accumulationMatrix[i, j] > -1:
-            #LOGGER.debug("already calculated") 
-            continue
-
-        #if any neighbors flow into p and are uncalculated, push p and
-        #neighbors on the stack
-        neighbors = calculate_inflow_neighbors_dinf(i, j, flowDirectionMatrix,
-                                             nodataFlowDirection)
-        n = neighbors.size()
-        #LOGGER.debug("%s neighbors" % n)
-        incomplete = False
-        for k in range(n):
-            ni, nj = neighbors.pop(),neighbors.pop()
-            neighbors.append(ni)
-            neighbors.append(nj)
-            #Turns out one of the neighbors is uncalculated
-            #Stop checking and process all later
-            if accumulationMatrix[ni, nj] == -2:
-                incomplete = True
-                break
-            
-        #If one of the neighbors was uncalculated, push the pixel and 
-        #neighbors back on the processing list
-        if incomplete:
-            #Put p first, so it's not visited again until neighbors 
-            #are processed
-            pixelsToProcess.push(j)
-            pixelsToProcess.push(i)
-            while (neighbors.size() > 0):
-                ni,nj = neighbors.pop(), neighbors.pop()
-                #This ensures that ni and nj don't exist more than once
-                #on the queue
-                if accumulationMatrix[ni, nj] == -2:
-                    #LOGGER.debug("processing new neighbor ni,nj=%s,%s" % (ni,nj))
-                    accumulationMatrix[ni, nj] = -1
-                    pixelsToProcess.push(nj)
-                    pixelsToProcess.push(ni)
-                else:
-                    #this makes the second time around we've seen this pixel
-                    #there's probably a loop because of roundoff error in
-                    #flow directions, arbitratily choose a flow of 1
-                    accumulationMatrix[ni, nj] = 1 
-        else:
-            #Otherwise, all the inflow neighbors are calculated so do the
-            #pixelflow calculation 
-            accumulationMatrix[i, j] = 0
-            runningSum = 0
-            while neighbors.size() > 0:
-                ni, nj = neighbors.pop(),neighbors.pop()
-                runningSum += 1 + accumulationMatrix[ni, nj]
-            accumulationMatrix[i, j] = runningSum
-    return
-
 cdef CQueue calculate_inflow_neighbors_dinf(int i, int j, 
                     np.ndarray[np.float_t,ndim=2] flow_direction_matrix, 
                     int nodata_flow_direction):
@@ -774,59 +677,71 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
     return neighbors
 
 
-def flow_accumulation_dinf(flowDirection, flowAccumulation):
+def flow_accumulation_dinf(flow_direction, dem, flow_accumulation):
     """Creates a raster of accumulated flow to each cell.
     
-        flowDirection - A raster showing direction of flow out of each cell
+        flow_direction - A input raster showing direction of flow out of each cell
             with direcitonal values given in radians.
-        flowAccumulation - The output flow accumulation raster set
+        dem - (input) a single band raster with elevation values
+        flow_accumulation - The output flow accumulation raster set
         
         returns nothing"""
 
-    cdef int nodataFlowDirection, nodataFlowAccumulation, x, y
+    cdef int x, y
+    cdef float nodata_flow_direction, nodata_flow_accumulation, nodata_dem
     cdef CQueue q
+    cdef Pair *dem_pixels = \
+        <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
     LOGGER = logging.getLogger('flow_accumulation_dinf')
     LOGGER.debug('initializing temporary buffers')
     #Load the input flow into a numpy array
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
-    cdef np.ndarray[np.float_t,ndim=2] flowDirectionMatrix = \
-        flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
-        flowDirection.RasterXSize, flowDirection.RasterYSize).transpose().astype(np.float)
-        
-    nodataFlowDirection = flowDirection.GetRasterBand(1).GetNoDataValue()
-    nodataFlowAccumulation = flowAccumulation.GetRasterBand(1).GetNoDataValue()
-    gp = flowDirection.GetGeoTransform()
+    cdef np.ndarray[np.float_t,ndim=2] flow_direction_matrix = \
+        flow_direction.GetRasterBand(1).ReadAsArray(0, 0,
+        flow_direction.RasterXSize, flow_direction.RasterYSize).transpose().astype(np.float)
+    nodata_flow_direction = flow_direction.GetRasterBand(1).GetNoDataValue()
+    nodata_flow_accumulation = flow_accumulation.GetRasterBand(1).GetNoDataValue()
+    nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
+    gp = flow_direction.GetGeoTransform()
+    
     cellXSize = gp[1]
     cellYSize = gp[5]
     #Create the output flow, initialize to -1 as undefined
-    xdim, ydim = flowDirectionMatrix.shape[0], flowDirectionMatrix.shape[1]
-    cdef np.ndarray[np.int_t,ndim=2] accumulationMatrix = \
+    xdim, ydim = flow_direction_matrix.shape[0], flow_direction_matrix.shape[1]
+    cdef np.ndarray[np.int_t,ndim=2] accumulation_matrix = \
         np.zeros([xdim, ydim],dtype=np.int)
         
-    #initalize to -2 to indicate no processing has occured.  This will change
-    #to -1 to indicate it's been enqueued, and something else when value is
-    #calculated
-    accumulationMatrix[:] = -2 
+        
+    LOGGER.info("loading DEM")
+    cdef np.ndarray[np.float_t,ndim=2] dem_matrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, 
+                         dem.RasterYSize).transpose().astype(np.float)
 
+    #Incoming matrix type could be anything numerical.  Cast to a floating
+    #point for cython speed and because it'slope the most general form.
+    LOGGER.info('sorting pixels by height')
+    #Construct a lookup table that sorts DEM pixels by height so we can process
+    #the lowest pixels to the highest in propagating shortest path distances.
+    imax, jmax = dem_matrix.shape[0], dem_matrix.shape[1]
+    valid_pixel_count = 0
+    for i in range(1,imax-1):
+        for j in range(1,jmax-1):
+            h = dem_matrix[i,j]
+            if h == nodata_dem: continue
+            dem_pixels[valid_pixel_count].i = i
+            dem_pixels[valid_pixel_count].j = j
+            dem_pixels[valid_pixel_count].h = h
+            valid_pixel_count += 1
+    
+    #Sort pixels by increasing height so that we visit drainage points in order
+    qsort(dem_pixels,valid_pixel_count,sizeof(Pair),pairCompare)
+    
     LOGGER.info('calculating flow accumulation')
 
-    lastx = -1
-    q = CQueue()
-    for x in range(xdim):
-        for y in range(ydim):
-            if lastx != x:
-                LOGGER.debug('percent complete %2.2f %%' % 
-                             (100*(x+1.0)/accumulationMatrix.shape[0]))
-                lastx=x
-            q.append(x)
-            q.append(y)
-            accumulationMatrix[x,y] = -1 #-1 indicates its been enqueued
-            calculate_flow_dinf(q,accumulationMatrix,flowDirectionMatrix,
-                          nodataFlowDirection, nodataFlowAccumulation)
-
-    flowAccumulation.GetRasterBand(1).WriteArray(\
-        accumulationMatrix.transpose(), 0, 0)
+    flow_accumulation.GetRasterBand(1).WriteArray(\
+        accumulation_matrix.transpose(), 0, 0)
+    
+    free(dem_pixels)
 
 def flow_direction_inf(dem, flow):
     """Calculates the D-infinity flow algorithm.  The output is a float
@@ -858,7 +773,6 @@ def flow_direction_inf(dem, flow):
     #Incoming matrix type could be anything numerical.  Cast to a floating
     #point for cython speed and because it'slope the most general form.
     cdef np.ndarray [np.float_t,ndim=2] dem_matrix = dem_matrix_tmp.astype(np.float)
-    dem_matrix[:] = dem_matrix_tmp
 
     col_max, row_max = dem_matrix.shape[0], dem_matrix.shape[1]
 
