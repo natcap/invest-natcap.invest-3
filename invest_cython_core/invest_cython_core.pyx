@@ -762,7 +762,8 @@ def flow_accumulation_dinf(flowDirection, flowAccumulation):
     #on gdal arrays, so we invert the x and y offsets here
     cdef np.ndarray[np.float_t,ndim=2] flowDirectionMatrix = \
         flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
-        flowDirection.RasterXSize, flowDirection.RasterYSize).transpose()
+        flowDirection.RasterXSize, flowDirection.RasterYSize).transpose().astype(np.float)
+        
     nodataFlowDirection = flowDirection.GetRasterBand(1).GetNoDataValue()
     nodataFlowAccumulation = flowAccumulation.GetRasterBand(1).GetNoDataValue()
     gp = flowDirection.GetGeoTransform()
