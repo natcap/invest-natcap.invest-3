@@ -721,7 +721,7 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
     #radian direction
     cdef float PI = 3.14159265, alpha, beta
     cdef int *shift_indexes = [-1,0,-1,-1,0,-1,1,-1,1,0,1,1,0,1,-1,1]
-    cdef int *inflow_angles = [0.0,PI/4.0,PI/2.0,3.0*PI/4.0,PI,5.0*PI/4.0,
+    cdef float *inflow_angles = [0.0,PI/4.0,PI/2.0,3.0*PI/4.0,PI,5.0*PI/4.0,
                                3.0*PI/2.0,7.0*PI/4.0]
     cdef int pi, pj, k, n
     cdef CQueue neighbors = CQueue()
@@ -737,7 +737,7 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
             beta = flow_direction_matrix[pi, pj]
             if beta == nodata_flow_direction:
                 continue
-            if abs(alpha-beta) < PI/4.0 or
+            if abs(alpha-beta) < PI/4.0 or \
                 (alpha == 0.0 and abs(2*PI+alpha-beta) < PI/4.0):
                 neighbors.append(pi)
                 neighbors.append(pj)
