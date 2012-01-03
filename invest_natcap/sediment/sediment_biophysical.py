@@ -127,7 +127,10 @@ def execute(args):
     #to their locations on disk.  Helpful for creating the objects in the 
     #next step
     output_uris = {}
-    output_uris['flow_direction'] = intermediateDirectoryPrefix + 'flow.tif'
+    output_uris['flow_direction'] = intermediateDirectoryPrefix + \
+        'flow_direction.tif'
+    output_uris['flow_accumulation'] = intermediateDirectoryPrefix + \
+        'flow_accumulation.tif'
 
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC

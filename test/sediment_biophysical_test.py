@@ -46,8 +46,8 @@ class TestSedimentBiophysical(unittest.TestCase):
         sediment_biophysical.execute(args)
 
         invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + os.sep + "/Intermediate/flow.tif",
-            './data/sediment_regression_data/flow_regression.tif')
+            args['workspace_dir'] + os.sep + "/Intermediate/flow_direction.tif",
+            './data/sediment_regression_data/flow_direction_regression.tif')
 
     def test_sediment_biophysical_simple(self):
         """This test is a smaller version of a real world case that failed"""
