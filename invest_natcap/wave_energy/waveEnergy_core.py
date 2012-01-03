@@ -503,7 +503,8 @@ def valuation(args):
     outputDir = workspaceDir + os.sep + 'Output'
     #Path for clipped wave point shapefile holding values of interest
     projectedShapePath = interDir + os.sep + 'WaveData_clip_Prj.shp'
-    
+    landptPath = interDir + os.sep + 'landingPoints.shp'
+    gridptPath = interDir + os.sep + 'gridPoint.shp'
     
     #Numver of units
     units = args['number_machines']
@@ -520,11 +521,70 @@ def valuation(args):
     smlpm = float(machine_econ['Smlpm']['VALUE'])
     
     #Extract the landing and grid points data
+    land_grid_pts = args['land_gridPts']
+    grid_pt = {}
+    land_pts = {}
+    for key, value in land_grid_pts.iteritems():
+        if value['TYPE'] == 'GRID':
+            grid_pt = value
+        else:
+            land_pts[key] = value
     
-    #Make a point shapefile for landing and grid points.
+    #Create geometry for grid point location:
+    grid_lat = grid_pt['LAT']
+    grid_long = grid_pt['LONG']
+    grid_geom = ogr.Geometry(ogr.wkbPoint)
+    grid_geom.AddPoint(grid_lat, grid_long)
+    
+    #Make a point shapefile for landing points.
     drv = ogr.GetDriverByName('ESRI Shapefile')
-    ds = drv.CreateDataSource(landPtShape)
-    layer = ds.CreateLayer('landpoints', args['projection'], wkbPoint)
+    ds = drv.CreateDataSource(landptPath)
+    prjFile = open(args['projection'])
+    prj = prjFile.read()
+    srs_prj = osr.SpatialReference()
+    srs_prj.ImportFromWkt(prj)
+    layer = ds.CreateLayer('landpoints', srs_prj, wkbPoint)
+    
+    field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
+    layer.CreateField(field_defn)
+    
+    feat = ogr.Feature(layer.GetLayerDefn())
+    layer.CreateFeature(feat)
+    index = feat.GetFieldIndex('Id')
+    feat.SetField(index, 0)
+    #save the field modifications to the layer.
+    lyr.SetFeature(feat)
+    feat.Destroy()
+    
+#    src_fd = in_defn.GetFieldDefn(fld_index)
+#
+#    fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
+#    fd.SetWidth(src_fd.GetWidth())
+#    fd.SetPrecision(src_fd.GetPrecision())
+#    shp_layer.CreateField(fd)
+
+    #Make a point shapefile for grid points
+    drv = ogr.GetDriverByName('ESRI Shapefile')
+    ds = drv.CreateDataSource(gridptPath)
+    prjFile = open(args['projection'])
+    prj = prjFile.read()
+    srs_prj = osr.SpatialReference()
+    srs_prj.ImportFromWkt(prj)
+    layer = ds.CreateLayer('gridpoint', srs_prj, wkbPoint)
+    
+    field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
+    layer.CreateField(field_defn)
+
+    feat = ogr.Feature(layer.GetLayerDefn())
+    layer.CreateFeature(feat)
+    index = feat.GetFieldIndex('Id')
+    feat.SetField(index, 0)
+    feat.SetGeometryDirectly(grid_geom)
+    #save the field modifications to the layer.
+    lyr.SetFeature(feat)
+    feat.Destroy()
+    
+    
 #    
 #        src_fd = in_defn.GetFieldDefn(fld_index)
 #
