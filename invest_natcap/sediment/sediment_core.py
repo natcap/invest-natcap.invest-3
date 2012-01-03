@@ -43,13 +43,13 @@ def biophysical(args):
         args['v_stream_out'] - An output raster file that classifies the
             watersheds into stream and non-stream regions based on the
             value of 'threshold_flow_accumulation'
-        args['flow'] - An output raster indicating the flow direction on each
+        args['flow_direction'] - An output raster indicating the flow direction on each
             pixel
             
         returns nothing"""
 
     LOGGER.info("calculating flow direction")
-    invest_cython_core.flow_direction_inf(args['dem'], args['flow'])
+    invest_cython_core.flow_direction_inf(args['dem'], args['flow_direction'])
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
