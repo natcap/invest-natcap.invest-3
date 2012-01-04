@@ -642,7 +642,7 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
     flowAccumulation.GetRasterBand(1).WriteArray(\
         accumulationMatrix.transpose(), 0, 0)
 
-cdef void calculate_flow_dinf(CQueue pixels_to_process,
+cdef void d_p_area(CQueue pixels_to_process,
                               np.ndarray[np.int_t,ndim=2] accumulationMatrix,
                       np.ndarray[np.float_t,ndim=2] flowDirectionMatrix,
                       int nodataFlowDirection, int nodataFlowAccumulation):
@@ -757,40 +757,40 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
     return neighbors
 
 
-def flow_accumulation_dinf(flowDirection, flowAccumulation):
+def flow_accumulation_dinf(flow_direction, flow_accumulation):
     """Creates a raster of accumulated flow to each cell.
     
-        flowDirection - A raster showing direction of flow out of each cell
+        flow_direction - A raster showing direction of flow out of each cell
             with direcitonal values given in radians.
-        flowAccumulation - The output flow accumulation raster set
+        flow_accumulation - The output flow accumulation raster set
         
         returns nothing"""
 
-    cdef int nodataFlowDirection, nodataFlowAccumulation, i, j
+    cdef int nodata_flow_direction, nodata_flow_accumulation, i, j
     cdef CQueue q
     LOGGER = logging.getLogger('flow_accumulation_dinf')
     LOGGER.debug('initializing temporary buffers')
     #Load the input flow into a numpy array
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
-    cdef np.ndarray[np.float_t,ndim=2] flowDirectionMatrix = \
-        flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
-        flowDirection.RasterXSize, flowDirection.RasterYSize).transpose().astype(np.float)
+    cdef np.ndarray[np.float_t,ndim=2] flow_direction_matrix = \
+        flow_direction.GetRasterBand(1).ReadAsArray(0, 0,
+        flow_direction.RasterXSize, flow_direction.RasterYSize).transpose().astype(np.float)
         
-    nodataFlowDirection = flowDirection.GetRasterBand(1).GetNoDataValue()
-    nodataFlowAccumulation = flowAccumulation.GetRasterBand(1).GetNoDataValue()
-    gp = flowDirection.GetGeoTransform()
+    nodata_flow_direction = flow_direction.GetRasterBand(1).GetNoDataValue()
+    nodata_flow_accumulation = flow_accumulation.GetRasterBand(1).GetNoDataValue()
+    gp = flow_direction.GetGeoTransform()
     cellXSize = gp[1]
     cellYSize = gp[5]
     #Create the output flow, initialize to -1 as undefined
-    idim, jdim = flowDirectionMatrix.shape[0], flowDirectionMatrix.shape[1]
-    cdef np.ndarray[np.int_t,ndim=2] accumulationMatrix = \
+    idim, jdim = flow_direction_matrix.shape[0], flow_direction_matrix.shape[1]
+    cdef np.ndarray[np.int_t,ndim=2] accumulation_matrix = \
         np.zeros([idim, jdim],dtype=np.int)
         
     #initalize to -2 to indicate no processing has occured.  This will change
     #to -1 to indicate it's been enqueued, and something else when value is
     #calculated
-    accumulationMatrix[:] = -2 
+    accumulation_matrix[:] = -2 
 
     LOGGER.info('calculating flow accumulation')
 
@@ -804,13 +804,13 @@ def flow_accumulation_dinf(flowDirection, flowAccumulation):
                 lasti=i
             q.append(i)
             q.append(j)
-            accumulationMatrix[i,j] = -1 #-1 indicates its been enqueued
-            calculate_flow_dinf(q,accumulationMatrix,flowDirectionMatrix,
-                          nodataFlowDirection, nodataFlowAccumulation)
+            accumulation_matrix[i,j] = -1 #-1 indicates its been enqueued
+            d_p_area(q,accumulation_matrix,flow_direction_matrix,
+                          nodata_flow_direction, nodata_flow_accumulation)
 
-    flowAccumulation.GetRasterBand(1).WriteArray(\
-        accumulationMatrix.transpose(), 0, 0)
-    invest_core.calculateRasterStats(flowAccumulation.GetRasterBand(1))
+    flow_accumulation.GetRasterBand(1).WriteArray(\
+        accumulation_matrix.transpose(), 0, 0)
+    invest_core.calculateRasterStats(flow_accumulation.GetRasterBand(1))
 
 def flow_direction_inf(dem, flow):
     """Calculates the D-infinity flow algorithm.  The output is a float
