@@ -535,32 +535,45 @@ def valuation(args):
             grid_pt = value
         else:
             land_pts[key] = value
+    #Create a coordinate transformation for lat/long to meters
+    prjFile = open(args['projection'])
+    prj = prjFile.read()
+    srs_prj = osr.SpatialReference()
+    srs_prj.ImportFromWkt(prj)
+    sourceSR = args['attribute_shape'].GetLayer(0).GetSpatialRef()
+    targetSR = srs_prj
+    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
     
     #Create geometry for grid point location:
     grid_lat = grid_pt['LAT']
     grid_long = grid_pt['LONG']
     grid_geom = ogr.Geometry(ogr.wkbPoint)
     grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))
+    
     #Make a point shapefile for landing points.
     drv = ogr.GetDriverByName('ESRI Shapefile')
     ds = drv.CreateDataSource(landptPath)
-    prjFile = open(args['projection'])
-    prj = prjFile.read()
-    srs_prj = osr.SpatialReference()
-    srs_prj.ImportFromWkt(prj)
-    layer = ds.CreateLayer('landpoints', srs_prj, ogr.wkbPoint)
-    
+    layer = ds.CreateLayer('landpoints', srs_prj, ogr.wkbPoint)    
     field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
     layer.CreateField(field_defn)
     
-    feat = ogr.Feature(layer.GetLayerDefn())
-    layer.CreateFeature(feat)
-    index = feat.GetFieldIndex('Id')
-    feat.SetField(index, 0)
-    #save the field modifications to the layer.
-    layer.SetFeature(feat)
-    feat.Destroy()
-    prjFile.close()
+    for key, value in land_pts.iteritems():
+        landing_lat = value['LAT']
+        landing_long = value['LONG']
+        landing_geom = ogr.Geometry(ogr.wkbPoint)
+        landing_geom.AddPoint_2D(float(landing_long), float(landing_lat))
+        landing_geom.Transform(coordTrans)
+        
+        feat = ogr.Feature(layer.GetLayerDefn())
+        layer.CreateFeature(feat)
+        index = feat.GetFieldIndex('Id')
+        feat.SetField(index, value['ID'])
+        feat.SetGeometryDirectly(landing_geom)
+        
+        #save the field modifications to the layer.
+        layer.SetFeature(feat)
+        feat.Destroy()
+    
     layer = None
     drv = None
     ds.Destroy()
@@ -574,10 +587,6 @@ def valuation(args):
     #Make a point shapefile for grid points
     drv = ogr.GetDriverByName('ESRI Shapefile')
     ds = drv.CreateDataSource(gridptPath)
-    prjFile = open(args['projection'])
-    prj = prjFile.read()
-    srs_prj = osr.SpatialReference()
-    srs_prj.ImportFromWkt(prj)
     layer = ds.CreateLayer('gridpoint', srs_prj, ogr.wkbPoint)
     field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
     layer.CreateField(field_defn)
@@ -587,9 +596,6 @@ def valuation(args):
     index = feat.GetFieldIndex('Id')
     feat.SetField(index, 0)
     
-    sourceSR = args['attribute_shape'].GetLayer(0).GetSpatialRef()
-    targetSR = srs_prj
-    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
     grid_geom.Transform(coordTrans)
     feat.SetGeometryDirectly(grid_geom)
     #save the field modifications to the layer.
