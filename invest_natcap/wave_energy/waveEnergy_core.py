@@ -577,12 +577,6 @@ def valuation(args):
     layer = None
     drv = None
     ds.Destroy()
-#    src_fd = in_defn.GetFieldDefn(fld_index)
-#
-#    fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
-#    fd.SetWidth(src_fd.GetWidth())
-#    fd.SetPrecision(src_fd.GetPrecision())
-#    shp_layer.CreateField(fd)
 
     #Make a point shapefile for grid points
     drv = ogr.GetDriverByName('ESRI Shapefile')
@@ -607,18 +601,39 @@ def valuation(args):
     drv = None
     ds.Destroy()
     
-#    
-#        src_fd = in_defn.GetFieldDefn(fld_index)
-#
-#        fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
-#        fd.SetWidth(src_fd.GetWidth())
-#        fd.SetPrecision(src_fd.GetPrecision())
-#        shp_layer.CreateField(fd)
-    
     attribute_shape = args['attribute_shape']
 
     shape = changeProjection(attribute_shape, args['projection'], projectedShapePath)
     shape_layer = shape.GetLayer(0)
+    landingShape = ogr.Open(landptPath)
+    gridShape = ogr.Open(gridptPath)
+    
+    def getPoints(shape):
+        point = []
+        
+        layer = shape.GetLayer(0)
+        feat = layer.GetNextFeature()
+        while feat is not None:
+            x = float(feat.GetX())
+            y = float(feat.GetY())
+            point.append([x,y])
+            feat.Destroy()
+            feat = layer.GetNextFeature()
+        
+        return point
+    
+    
+    def calcDist(xy_1, xy_2):
+        mindist = np.zeros(len(xy_1))
+        minid = np.zeros(len(xy_1))
+        for i, xy in enumerate(xy_1):
+            dist = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
+            mindist[i], minid[i] = dists.min(), dists.argmin()
+        return mindist, minid
+    
+    wePoints = getPoints(attribute_shape)
+    landingPoints = getPoints(landingShape)
+    gridPoint = getPoints(gridShape)
     
 #    for feat in shape_layer:
 #        #Get capturedWE
