@@ -540,8 +540,7 @@ def valuation(args):
     grid_lat = grid_pt['LAT']
     grid_long = grid_pt['LONG']
     grid_geom = ogr.Geometry(ogr.wkbPoint)
-    grid_geom.AddPoint(float(grid_lat), float(grid_long))
-    
+    grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))
     #Make a point shapefile for landing points.
     drv = ogr.GetDriverByName('ESRI Shapefile')
     ds = drv.CreateDataSource(landptPath)
@@ -580,7 +579,6 @@ def valuation(args):
     srs_prj = osr.SpatialReference()
     srs_prj.ImportFromWkt(prj)
     layer = ds.CreateLayer('gridpoint', srs_prj, ogr.wkbPoint)
-    
     field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
     layer.CreateField(field_defn)
 
@@ -589,11 +587,12 @@ def valuation(args):
     index = feat.GetFieldIndex('Id')
     feat.SetField(index, 0)
     
-    sourceSR = args['attribute_shape'].GetLayer(0).GetSpatialRef()
+    grid_geom.AssignSpatialReference(args['attribute_shape'].GetLayer(0).GetSpatialRef())
+    sourceSR = grid_geom.GetSpatialReference()
     targetSR = srs_prj
+
     coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
     grid_geom.Transform(coordTrans)
-    
     feat.SetGeometryDirectly(grid_geom)
     #save the field modifications to the layer.
     layer.SetFeature(feat)
@@ -712,7 +711,6 @@ def changeProjection(shapeToReproject, projection, outputPath):
     srs_prj = osr.SpatialReference()
     srs_prj.ImportFromWkt(prj)
 #    srs_prj.StripCTParms()
-    print srs_prj
     shp_layer = shp_ds.CreateLayer(in_defn.GetName(), srs_prj, in_defn.GetGeomType())
     #Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()
