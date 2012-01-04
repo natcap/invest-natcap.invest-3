@@ -782,11 +782,11 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation):
         flow_i = 1-flow_i_1
         
         #Assign flow to each downstream pixel
-        accumulation_matrix[direction_offsets[direction_index*2],
-                            direction_offsets[direction_index*2+1]] = \
+        accumulation_matrix[i+direction_offsets[direction_index*2],
+                            j+direction_offsets[direction_index*2+1]] = \
                             accumulation_matrix[i,j] + flow_i
-        accumulation_matrix[direction_offsets[(direction_index-1)*2],
-                            direction_offsets[(direction_index-1)*2+1]] = \
+        accumulation_matrix[i+direction_offsets[(direction_index-1)*2],
+                            j+direction_offsets[(direction_index-1)*2+1]] = \
                             accumulation_matrix[i,j] + flow_i_1
 
     LOGGER.info('writing flow accumulation to array')
