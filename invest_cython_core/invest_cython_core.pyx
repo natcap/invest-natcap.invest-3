@@ -643,12 +643,12 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
         accumulationMatrix.transpose(), 0, 0)
 
 cdef void d_p_area(CQueue pixels_to_process,
-                              np.ndarray[np.int_t,ndim=2] accumulationMatrix,
-                      np.ndarray[np.float_t,ndim=2] flowDirectionMatrix,
-                      int nodataFlowDirection, int nodataFlowAccumulation):
+                              np.ndarray[np.int_t,ndim=2] accumulation_matrix,
+                      np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
+                      int nodata_flow_direction, int nodata_flow_accumulation):
     """Takes a list of pixels to calculate flow for the dinf algorithm, then
         does a dynamic style programming process of visiting and updating
-        each one as it needs processing.  Modified `accumulationMatrix`
+        each one as it needs processing.  Modified `accumulation_matrix`
         during processing.
         
         dem_pixels - a matrix of DEM pixel heights, used to march the 
@@ -663,20 +663,20 @@ cdef void d_p_area(CQueue pixels_to_process,
         j = pixels_to_process.pop()
         #LOGGER.debug("pixelsToProcess i,j=%s %s" % (i,j))
         #nodata out the values that don't need processing
-        if flowDirectionMatrix[i, j] == nodataFlowDirection:
-            accumulationMatrix[i, j] = nodataFlowAccumulation
-            #LOGGER.debug("nodataFlowDirection %s" % nodataFlowDirection)
+        if flow_direction_matrix[i, j] == nodata_flow_direction:
+            accumulation_matrix[i, j] = nodata_flow_accumulation
+            #LOGGER.debug("nodata_flow_direction %s" % nodata_flow_direction)
             continue
         
         #if p is calculated, skip its calculation (-1 or -2 mean uncalculated)
-        if accumulationMatrix[i, j] > -1:
+        if accumulation_matrix[i, j] > -1:
             #LOGGER.debug("already calculated") 
             continue
 
         #if any neighbors flow into p and are uncalculated, push p and
         #neighbors on the stack
-        neighbors = calculate_inflow_neighbors_dinf(i, j, flowDirectionMatrix,
-                                             nodataFlowDirection)
+        neighbors = calculate_inflow_neighbors_dinf(i, j, flow_direction_matrix,
+                                             nodata_flow_direction)
         n = neighbors.size()
         #LOGGER.debug("%s neighbors" % n)
         incomplete = False
@@ -686,7 +686,7 @@ cdef void d_p_area(CQueue pixels_to_process,
             neighbors.append(nj)
             #Turns out one of the neighbors is uncalculated
             #Stop checking and process all later
-            if accumulationMatrix[ni, nj] == -2:
+            if accumulation_matrix[ni, nj] == -2:
                 incomplete = True
                 break
             
@@ -701,25 +701,25 @@ cdef void d_p_area(CQueue pixels_to_process,
                 ni,nj = neighbors.pop(), neighbors.pop()
                 #This ensures that ni and nj don't exist more than once
                 #on the queue
-                if accumulationMatrix[ni, nj] == -2:
+                if accumulation_matrix[ni, nj] == -2:
                     #LOGGER.debug("processing new neighbor ni,nj=%s,%s" % (ni,nj))
-                    accumulationMatrix[ni, nj] = -1
+                    accumulation_matrix[ni, nj] = -1
                     pixels_to_process.push(nj)
                     pixels_to_process.push(ni)
                 else:
                     #this makes the second time around we've seen this pixel
                     #there's probably a loop because of roundoff error in
                     #flow directions, arbitratily choose a flow of 1
-                    accumulationMatrix[ni, nj] = 1 
+                    accumulation_matrix[ni, nj] = 1 
         else:
             #Otherwise, all the inflow neighbors are calculated so do the
             #pixelflow calculation 
-            accumulationMatrix[i, j] = 0
+            accumulation_matrix[i, j] = 0
             runningSum = 0
             while neighbors.size() > 0:
                 ni, nj = neighbors.pop(),neighbors.pop()
-                runningSum += 1 + accumulationMatrix[ni, nj]
-            accumulationMatrix[i, j] = runningSum
+                runningSum += 1 + accumulation_matrix[ni, nj]
+            accumulation_matrix[i, j] = runningSum
     return
 
 cdef CQueue calculate_inflow_neighbors_dinf(int i, int j, 
@@ -728,7 +728,7 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
     
     """Returns a list of the neighboring pixels to i,j that are in bounds
         and also flow into point i,j.  This information is inferred from
-        the flowDirectionMatrix"""
+        the flow_direction_matrix"""
 
     #consider neighbors who flow into i,j, third argument is the inflow
     #radian direction
