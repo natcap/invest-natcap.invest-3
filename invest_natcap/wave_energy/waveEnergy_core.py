@@ -503,28 +503,110 @@ def valuation(args):
     outputDir = workspaceDir + os.sep + 'Output'
     #Path for clipped wave point shapefile holding values of interest
     projectedShapePath = interDir + os.sep + 'WaveData_clip_Prj.shp'
+    landptPath = interDir + os.sep + 'landingPoints.shp'
+    gridptPath = interDir + os.sep + 'gridPoint.shp'
+    
+    if os.path.isfile(landptPath):
+        os.remove(landptPath)
+    if os.path.isfile(gridptPath):
+        os.remove(gridptPath)
     
     
     #Numver of units
     units = args['number_machines']
     #Extract the machine economic parameters
-    machine_econ_dict = args['machine_econ']
+    machine_econ = args['machine_econ']
     capMax = float(machine_econ['CapMax']['VALUE'])
-    capitalCost = float(machine_econ['Cc']['VALUE'])
-    cml = float(machine_econ['Cml']['VALUE'])
-    cul = float(machine_econ['Cul']['VALUE'])
-    col = float(machine_econ['Col']['VALUE'])
-    omc = float(machine_econ['Omc']['VALUE'])
-    price = float(machine_econ['P']['VALUE'])
-    drate = float(machine_econ['R']['VALUE'])
-    smlpm = float(machine_econ['Smlpm']['VALUE'])
+    capitalCost = float(machine_econ['cc']['VALUE'])
+    cml = float(machine_econ['cml']['VALUE'])
+    cul = float(machine_econ['cul']['VALUE'])
+    col = float(machine_econ['col']['VALUE'])
+    omc = float(machine_econ['omc']['VALUE'])
+    price = float(machine_econ['p']['VALUE'])
+    drate = float(machine_econ['r']['VALUE'])
+    smlpm = float(machine_econ['smlpm']['VALUE'])
     
     #Extract the landing and grid points data
+    land_grid_pts = args['land_gridPts']
+    grid_pt = {}
+    land_pts = {}
+    for key, value in land_grid_pts.iteritems():
+        if value['TYPE'] == 'GRID':
+            grid_pt = value
+        else:
+            land_pts[key] = value
+    #Create a coordinate transformation for lat/long to meters
+    prjFile = open(args['projection'])
+    prj = prjFile.read()
+    srs_prj = osr.SpatialReference()
+    srs_prj.ImportFromWkt(prj)
+    sourceSR = args['attribute_shape'].GetLayer(0).GetSpatialRef()
+    targetSR = srs_prj
+    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
     
-    #Make a point shapefile for landing and grid points.
+    #Create geometry for grid point location:
+    grid_lat = grid_pt['LAT']
+    grid_long = grid_pt['LONG']
+    grid_geom = ogr.Geometry(ogr.wkbPoint)
+    grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))
+    
+    #Make a point shapefile for landing points.
     drv = ogr.GetDriverByName('ESRI Shapefile')
-    ds = drv.CreateDataSource(landPtShape)
-    layer = ds.CreateLayer('landpoints', args['projection'], wkbPoint)
+    ds = drv.CreateDataSource(landptPath)
+    layer = ds.CreateLayer('landpoints', srs_prj, ogr.wkbPoint)    
+    field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
+    layer.CreateField(field_defn)
+    
+    for key, value in land_pts.iteritems():
+        landing_lat = value['LAT']
+        landing_long = value['LONG']
+        landing_geom = ogr.Geometry(ogr.wkbPoint)
+        landing_geom.AddPoint_2D(float(landing_long), float(landing_lat))
+        landing_geom.Transform(coordTrans)
+        
+        feat = ogr.Feature(layer.GetLayerDefn())
+        layer.CreateFeature(feat)
+        index = feat.GetFieldIndex('Id')
+        feat.SetField(index, value['ID'])
+        feat.SetGeometryDirectly(landing_geom)
+        
+        #save the field modifications to the layer.
+        layer.SetFeature(feat)
+        feat.Destroy()
+    
+    layer = None
+    drv = None
+    ds.Destroy()
+#    src_fd = in_defn.GetFieldDefn(fld_index)
+#
+#    fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
+#    fd.SetWidth(src_fd.GetWidth())
+#    fd.SetPrecision(src_fd.GetPrecision())
+#    shp_layer.CreateField(fd)
+
+    #Make a point shapefile for grid points
+    drv = ogr.GetDriverByName('ESRI Shapefile')
+    ds = drv.CreateDataSource(gridptPath)
+    layer = ds.CreateLayer('gridpoint', srs_prj, ogr.wkbPoint)
+    field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
+    layer.CreateField(field_defn)
+
+    feat = ogr.Feature(layer.GetLayerDefn())
+    layer.CreateFeature(feat)
+    index = feat.GetFieldIndex('Id')
+    feat.SetField(index, 0)
+    
+    grid_geom.Transform(coordTrans)
+    feat.SetGeometryDirectly(grid_geom)
+    #save the field modifications to the layer.
+    layer.SetFeature(feat)
+    feat.Destroy()
+    
+    prjFile.close()
+    layer = None
+    drv = None
+    ds.Destroy()
+    
 #    
 #        src_fd = in_defn.GetFieldDefn(fld_index)
 #
@@ -538,25 +620,25 @@ def valuation(args):
     shape = changeProjection(attribute_shape, args['projection'], projectedShapePath)
     shape_layer = shape.GetLayer(0)
     
-    for feat in shape_layer:
-        #Get capturedWE
-        capWEIndex = feat.GetFieldIndex('capSum_WE')
-        capWEValue = feat.GetField(fieldIndex)
-        #Get Depth
-        depthIndex = feat.GetFieldIndex('capSum_WE')
-        depthValue = feat.GetField(fieldIndex)
-        
-        lenml = 3.0 * depthValue
-        #Calculate annualRevenue
-        annualRevenue = price * units * capWEValue
-        #Calculate annualCost
-        anuualCost = omc * capWEValue * units
-        #Calculate installCost
-        installCost = units * capRate * capitalCost
-        #Calculate mooringCost
-        mooringCost = smlpm * lenml * cml * units
-        #Calculate transCost
-        
+#    for feat in shape_layer:
+#        #Get capturedWE
+#        capWEIndex = feat.GetFieldIndex('capSum_WE')
+#        capWEValue = feat.GetField(fieldIndex)
+#        #Get Depth
+#        depthIndex = feat.GetFieldIndex('capSum_WE')
+#        depthValue = feat.GetField(fieldIndex)
+#        
+#        lenml = 3.0 * depthValue
+#        #Calculate annualRevenue
+#        annualRevenue = price * units * capWEValue
+#        #Calculate annualCost
+#        anuualCost = omc * capWEValue * units
+#        #Calculate installCost
+#        installCost = units * capRate * capitalCost
+#        #Calculate mooringCost
+#        mooringCost = smlpm * lenml * cml * units
+#        #Calculate transCost
+#        
         #Calculate IC (installCost+mooringCost+transCost)
 #        IC = installCost + morringCost + transCost
         #Calculate NPVWE :
@@ -572,8 +654,8 @@ def valuation(args):
     def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
         return None
     #Call vectorizeRasters and pass in needed rasters as well as op
-    invest_core.vectorizeRasters([capWE, elevation], op,
-                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
+#    invest_core.vectorizeRasters([capWE, elevation], op,
+#                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
     #Interpolate raster
         ##############IDEA####################
         
@@ -634,7 +716,6 @@ def changeProjection(shapeToReproject, projection, outputPath):
     srs_prj = osr.SpatialReference()
     srs_prj.ImportFromWkt(prj)
 #    srs_prj.StripCTParms()
-    print srs_prj
     shp_layer = shp_ds.CreateLayer(in_defn.GetName(), srs_prj, in_defn.GetGeomType())
     #Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()

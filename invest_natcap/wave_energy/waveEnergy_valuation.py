@@ -10,8 +10,8 @@ from osgeo import ogr
 from osgeo import gdal
 from osgeo.gdalconst import *
 
+import invest_cython_core
 from invest_natcap.invest_core import invest_core
-from invest_natcap.dbfpy import dbf
 from invest_natcap.wave_energy import waveEnergy_core
 
 def execute(args):
@@ -28,13 +28,14 @@ def execute(args):
         args['projection_uri'] - A path for the projection to transform coordinates from decimal degrees to meters.
         args['captureWE'] - We need the captured wave energy output from biophysical run.
         args['globa_dem'] - We need the depth of the locations for calculating costs.
-
+        args['attribute_shape_path']
         """
 
     filesystemencoding = sys.getfilesystemencoding()
 
-    valuationargs = []
-
+    valuationargs = {}
+    valuationargs['workspace_dir'] = args['workspace_dir']
+    valuationargs['projection'] = args['projection_uri']
     #Open/create the output directory
 
     #Read machine economic parameters into a dictionary
