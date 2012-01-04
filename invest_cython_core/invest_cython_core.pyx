@@ -810,6 +810,7 @@ def flow_accumulation_dinf(flowDirection, flowAccumulation):
 
     flowAccumulation.GetRasterBand(1).WriteArray(\
         accumulationMatrix.transpose(), 0, 0)
+    invest_core.calculateRasterStats(flowAccumulation.GetRasterBand(1))
 
 def flow_direction_inf(dem, flow):
     """Calculates the D-infinity flow algorithm.  The output is a float
