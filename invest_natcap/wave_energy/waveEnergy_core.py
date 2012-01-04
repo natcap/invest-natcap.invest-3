@@ -587,16 +587,15 @@ def valuation(args):
     index = feat.GetFieldIndex('Id')
     feat.SetField(index, 0)
     
-    grid_geom.AssignSpatialReference(args['attribute_shape'].GetLayer(0).GetSpatialRef())
-    sourceSR = grid_geom.GetSpatialReference()
+    sourceSR = args['attribute_shape'].GetLayer(0).GetSpatialRef()
     targetSR = srs_prj
-
     coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
     grid_geom.Transform(coordTrans)
     feat.SetGeometryDirectly(grid_geom)
     #save the field modifications to the layer.
     layer.SetFeature(feat)
     feat.Destroy()
+    
     prjFile.close()
     layer = None
     drv = None
