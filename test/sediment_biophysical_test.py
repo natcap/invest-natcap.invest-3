@@ -1,4 +1,4 @@
-"""URI level tests for the carbon biophysical module"""
+"""URI level tests for the sediment biophysical module"""
 
 import unittest
 import logging
@@ -20,8 +20,8 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestSedimentBiophysical(unittest.TestCase):
     """Main testing class for the biophysical sediment tests"""
     def test_sediment_biophysical_re(self):
-        """Test for sediment_biophysical function running with sample input to \
-do sequestration and harvested wood products on lulc maps."""
+        """Test for sediment_biophysical function running with default InVEST 
+           sample input."""
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
         base_dir = './data/sediment_test_data'
@@ -46,8 +46,8 @@ do sequestration and harvested wood products on lulc maps."""
         sediment_biophysical.execute(args)
 
         invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + os.sep + "/Intermediate/flow.tif",
-            './data/sediment_regression_data/flow_regression.tif')
+            args['workspace_dir'] + os.sep + "/Intermediate/flow_direction.tif",
+            './data/sediment_regression_data/flow_direction_regression.tif')
 
     def test_sediment_biophysical_simple(self):
         """This test is a smaller version of a real world case that failed"""
@@ -73,8 +73,7 @@ do sequestration and harvested wood products on lulc maps."""
         self.assertAlmostEqual(flowArray[0][0], 5.117281)
 
     def test_postprocessing_flow_direction(self):
-        """Test for sediment_biophysical function running with sample input to \
-            do sequestration and harvested wood products on lulc maps."""
+        """Test for a postprocessing quiver plot."""
         raise SkipTest
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
