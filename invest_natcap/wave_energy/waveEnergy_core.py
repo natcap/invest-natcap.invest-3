@@ -605,6 +605,7 @@ def valuation(args):
 
     shape = changeProjection(attribute_shape, args['projection'], projectedShapePath)
     shape_layer = shape.GetLayer(0)
+    
     landingShape = ogr.Open(landptPath)
     gridShape = ogr.Open(gridptPath)
     
@@ -635,27 +636,46 @@ def valuation(args):
     landingPoints = getPoints(landingShape)
     gridPoint = getPoints(gridShape)
     
-#    for feat in shape_layer:
-#        #Get capturedWE
-#        capWEIndex = feat.GetFieldIndex('capSum_WE')
-#        capWEValue = feat.GetField(fieldIndex)
-#        #Get Depth
-#        depthIndex = feat.GetFieldIndex('capSum_WE')
-#        depthValue = feat.GetField(fieldIndex)
-#        
-#        lenml = 3.0 * depthValue
-#        #Calculate annualRevenue
-#        annualRevenue = price * units * capWEValue
-#        #Calculate annualCost
-#        anuualCost = omc * capWEValue * units
-#        #Calculate installCost
-#        installCost = units * capRate * capitalCost
-#        #Calculate mooringCost
-#        mooringCost = smlpm * lenml * cml * units
-#        #Calculate transCost
-#        
-        #Calculate IC (installCost+mooringCost+transCost)
-#        IC = installCost + morringCost + transCost
+    W2L_Dist, W2L_ID = calcDist(wePoints, landingPoints)
+    L2G_Dist, L2G_ID = calcDist(landingPoints, gridPoint)
+    
+    for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
+        field_defn = ogr.FieldDefn(field, ogr.OFTReal)
+        shape_layer.CreateField(field_defn)
+        
+    j = 0
+    for feature in shape_layer:
+        W2L_index = feature.GetFieldIndex('W2L_MDIST')
+        L2G_index = feature.GetFieldIndex('L2G_MDIST')
+        ID_index = feature.GetFieldIndex('LAND_ID')    
+    
+        feature.SetField(W2L_index, W2L_Dist[j])
+        feature.SetField(L2G_index, l2G_Dist[j])
+        landID = int(W2L_ID[j])
+        feature.SetField(ID_index, landID)
+        j = j + 1
+    
+    for feat in shape_layer:
+        #Get capturedWE
+        capWEIndex = feat.GetFieldIndex('capSum_WE')
+        capWEValue = feat.GetField(fieldIndex)
+        #Get Depth
+        depthIndex = feat.GetFieldIndex('depth')
+        depthValue = feat.GetField(fieldIndex)
+        
+        lenml = 3.0 * depthValue
+        #Calculate annualRevenue
+        annualRevenue = price * units * capWEValue
+        #Calculate annualCost
+        anuualCost = omc * capWEValue * units
+        #Calculate installCost
+        installCost = units * capRate * capitalCost
+        #Calculate mooringCost
+        mooringCost = smlpm * lenml * cml * units
+        #Calculate transCost
+        
+#        Calculate IC (installCost+mooringCost+transCost)
+        IC = installCost + morringCost + transCost
         #Calculate NPVWE :
             
     #        def npv(annualRevenue, annualCost):
