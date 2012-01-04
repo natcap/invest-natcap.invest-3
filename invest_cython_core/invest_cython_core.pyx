@@ -688,7 +688,8 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation):
         returns nothing"""
 
     cdef int i, j, p, direction_index
-    cdef float nodata_flow_direction, nodata_flow_accumulation, nodata_dem, PI
+    cdef float nodata_flow_direction, nodata_flow_accumulation, nodata_dem, PI, \
+        alpha, beta_i, beta_i_1, flow_i, flow_i_1
     cdef CQueue q
     cdef Pair *dem_pixels = \
         <Pair *>malloc(dem.RasterXSize*dem.RasterYSize * sizeof(Pair))
@@ -709,9 +710,8 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation):
     cellYSize = gp[5]
     #Create the output flow, initialize to -1 as undefined
     xdim, ydim = flow_direction_matrix.shape[0], flow_direction_matrix.shape[1]
-    cdef np.ndarray[np.int_t,ndim=2] accumulation_matrix = \
-        np.zeros([xdim, ydim],dtype=np.int)
-        
+    cdef np.ndarray[np.float_t,ndim=2] accumulation_matrix = \
+        np.zeros([xdim, ydim],dtype=np.float)
         
     LOGGER.info("loading DEM")
     cdef np.ndarray[np.float_t,ndim=2] dem_matrix = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, 
@@ -724,10 +724,15 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation):
     #the lowest pixels to the highest in propagating shortest path distances.
     imax, jmax = dem_matrix.shape[0], dem_matrix.shape[1]
     valid_pixel_count = 0
+    #Zero out the flow
+    accumulation_matrix[:] = 0.0
     for i in range(1,imax-1):
         for j in range(1,jmax-1):
             h = dem_matrix[i,j]
-            if h == nodata_dem: continue
+            if h == nodata_dem:
+                #reset accumulation pixels outside the valid area
+                accumulation_matrix[i,j] = nodata_flow_accumulation
+                continue
             dem_pixels[valid_pixel_count].i = i
             dem_pixels[valid_pixel_count].j = j
             dem_pixels[valid_pixel_count].h = h
@@ -737,26 +742,54 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation):
     qsort(dem_pixels,valid_pixel_count,sizeof(Pair),pairCompare)
     
     LOGGER.info('calculating flow accumulation')
-    
-    accumulation_matrix[:] = nodata_flow_accumulation
-    
     PI = 3.14159265
-    cdef float *quartiles = [PI/4.0,PI/2.0,
-                        3.0*PI/4.0,PI,
-                        5.0*PI/4,3.0*PI/2.0,
-                        7.0*PI/4.0,2.0*PI]
+    cdef float *quartiles = [0.0,
+                             PI/4.0,
+                             PI/2.0,
+                             3.0*PI/4.0,
+                             PI,
+                             5.0*PI/4.0,
+                             3.0*PI/2.0,
+                             7.0*PI/4.0,
+                             2.0*PI]
+    cdef int *direction_offsets = [1,0,
+                                   1,1,
+                                   0,1,
+                                   -1,1,
+                                   -1,0,
+                                   -1,-1,
+                                   0,-1,
+                                   1,-1,
+                                   1,0]
     
     for p in range(valid_pixel_count):
         i = dem_pixels[p].i
         j = dem_pixels[p].j
         
-        direction_index = 0
+        #init to 1 because we have padding on lookup tables
+        direction_index = 1 
+        #Search for the outward direction of flow
         while flow_direction_matrix[i,j] > quartiles[direction_index]:
             direction_index += 1
-        flow_direction_matrix[i,j]
         
-        #push flow from current pixel to downstream pixels
+        #Partition the flow to the i and i-1 pixels
+        alpha = flow_direction_matrix[i,j]
+        beta_i = quartiles[direction_index]
+        beta_i_1 = quartiles[direction_index-1]
         
+        #These are numbers between 0 and 1
+        flow_i_1 = (beta_i-alpha)/(beta_i-beta_i_1)
+        flow_i = 1-flow_i_1
+        
+        #Assign flow to each downstream pixel
+        accumulation_matrix[direction_offsets[direction_index*2],
+                            direction_offsets[direction_index*2+1]] = \
+                            accumulation_matrix[i,j] + flow_i
+        accumulation_matrix[direction_offsets[(direction_index-1)*2],
+                            direction_offsets[(direction_index-1)*2+1]] = \
+                            accumulation_matrix[i,j] + flow_i_1
+
+    LOGGER.info('writing flow accumulation to array')
     flow_accumulation.GetRasterBand(1).WriteArray( 
                                        accumulation_matrix.transpose(), 0, 0)
     
