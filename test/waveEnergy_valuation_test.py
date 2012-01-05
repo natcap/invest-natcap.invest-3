@@ -35,5 +35,5 @@ class TestWaveEnergyValuation(unittest.TestCase):
         args['projection_uri'] = './data/test_data/wave_Energy/test_input/WGS_1984_UTM_Zone_10N.prj'
         args['captureWE'] = './data/test_data/wave_Energy/test_input/aoiCapWE.tif'
         args['globa_dem'] = './data/test_data/wave_Energy/samp_input/global_dem'
-        args['attribute_shape_path'] = './data/test_data/wave_Energy/samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        args['attribute_shape_path'] = './data/test_data/wave_Energy/Intermediate/WaveData_clipZ.shp'
         waveEnergy_valuation.execute(args)
