@@ -477,6 +477,26 @@ class TestWaveEnergy(unittest.TestCase):
             self.assertAlmostEqual(val, tempMatrix[i], 4)
 
         newRaster = None
+        
+    def test_waveEnergy_clipRasterFromPolygon_DEM(self):
+        filesystemencoding = sys.getfilesystemencoding()
+
+        testDir = './data/test_data/wave_Energy'
+        shapePath = testDir + os.sep + 'samp_input/AOI_WCVI.shp'
+        rasterPath = testDir + os.sep + 'samp_input/global_dem'
+        path = testDir + os.sep + 'test_output/clipped_dem.tif'
+
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+
+        shape = ogr.Open(shapePath)
+        raster = gdal.Open(rasterPath)
+
+        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
+
+        newRaster = None
 
     def test_waveEnergy_interpPointsOverRaster(self):
         testDir = './data/test_data/wave_Energy'

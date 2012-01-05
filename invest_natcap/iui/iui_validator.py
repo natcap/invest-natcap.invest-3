@@ -6,7 +6,7 @@ import re
 from osgeo import ogr, gdal
 
 sys.path.insert(0, './invest-natcap.invest-3')
-from dbfpy import dbf
+from invest_natcap.dbfpy import dbf
 
 class Validator():
     """Notes on subclassing:
