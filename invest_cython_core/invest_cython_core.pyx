@@ -655,8 +655,12 @@ cdef void d_p_area(CQueue pixels_to_process,
             algorithm from uphill to downhill
         
         pixelsToProcess - a collections.deque of (i,j) tuples"""
-    cdef int i,j, ni, nj, runningSum, valid_pixel_count
-    
+    cdef int i,j, ni, nj, runningSum, uncalculated_neighbors_index
+    cdef float PI = 3.14159265, alpha, beta
+    cdef int *shift_indexes = [-1,0,-1,-1,0,-1,1,-1,1,0,1,1,0,1,-1,1]
+    cdef float *inflow_angles = [0.0,PI/4.0,PI/2.0,3.0*PI/4.0,PI,5.0*PI/4.0,
+                               3.0*PI/2.0,7.0*PI/4.0]
+    cdef int uncalculated_neighbors[8]
     #LOGGER = logging.getLogger('calculateFlow')
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
@@ -667,7 +671,9 @@ cdef void d_p_area(CQueue pixels_to_process,
             continue
 
         #if pixel set, continue
+        if flow_direction_matrix[i, j] != -1: continue
         
+        uncalculated_neighbors_index = 0
         #Set current pixel flow value to 1
 
         #build list of uncalculated neighbors
@@ -744,7 +750,7 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation):
     #initalize to -2 to indicate no processing has occured.  This will change
     #to -1 to indicate it's been enqueued, and something else when value is
     #calculated
-    accumulation_matrix[:] = -2 
+    accumulation_matrix[:] = -1
 
     LOGGER.info('calculating flow accumulation')
 
@@ -758,7 +764,6 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation):
                 lasti=i
             q.append(i)
             q.append(j)
-            accumulation_matrix[i,j] = -1 #-1 indicates its been enqueued
             d_p_area(q,accumulation_matrix,flow_direction_matrix,
                           nodata_flow_direction, nodata_flow_accumulation)
 
