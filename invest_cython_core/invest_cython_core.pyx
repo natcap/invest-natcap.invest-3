@@ -718,6 +718,7 @@ cdef void d_p_area(CQueue pixels_to_process,
         j = pixels_to_process.pop()
         LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
         LOGGER.debug("%s, %s, %s\n%s, %s, %s\n%s, %s, %s" % (dem_pixels[i-1,j+1],dem_pixels[i,j+1],dem_pixels[i+1,j+1],dem_pixels[i-1,j],dem_pixels[i,j],dem_pixels[i+1,j],dem_pixels[i-1,j-1],dem_pixels[i,j-1],dem_pixels[i+1,j-1]))
+        LOGGER.debug("rows col %s %s" % (dem_pixels.shape[0],dem_pixels.shape[1]))
         
         if flow_direction_matrix[i, j] == nodata_flow_direction:
             accumulation_matrix[i, j] = nodata_flow_accumulation
@@ -903,6 +904,11 @@ def flow_direction_inf(dem, flow):
             slope_max = 0 #use this to keep track of the maximum down-slope
             flow_direction_max_slope = 0 #flow direction on max downward slope
             max_index = 0 #index to keep track of max slope facet
+            
+            #Initialize flow matrix to nod_data flow so the default is to 
+            #calculate with D8.
+            flow_matrix[col_index, row_index] = nodata_flow
+            
             for facet_index in range(8):
                 #This defines the three height points
                 #The 
@@ -912,14 +918,21 @@ def flow_direction_inf(dem, flow):
                                  e_1_offsets[facet_index*2+0] + row_index]
                 e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + col_index,
                                  e_2_offsets[facet_index*2+0] + row_index]
+                
+                #avoid calculating a slope on nodata values
+                if e_1 == nodata_dem or e_2 == nodata_dem: 
+                    break #fallthrough to D8
+                 
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
-                if s_1 <= 0: continue #uphill slope or flat, so skip, D8 resolve
+                
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
-                if s_2 <= 0: continue #uphill slope or flat, so skip, D8 resolve
-                #Default to pi/2 in case s_1 = 0
-                #to avoid divide by zero cases
+                
+                if s_1 <= 0 or s_2 <= 0: 
+                    break #uphill slope or flat, so skip, D8 resolve
+                
+                #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
                 flow_direction = 3.14159262/2.0
                 if s_1 != 0:
                     flow_direction = atan(s_2 / s_1) #Eqn 3
@@ -945,14 +958,16 @@ def flow_direction_inf(dem, flow):
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
                     max_index = facet_index
-                    
-            #Calculate the global angle depending on the max slope facet
-            if slope_max > 0:
-                flow_matrix[col_index, row_index] = \
-                    a_f[max_index] * flow_direction_max_slope + \
-                    a_c[max_index] * 3.14159265 / 2.0
-            else:
-                flow_matrix[col_index, row_index] = nodata_flow
+            else: 
+                # This is the fallthrough condition for the for loop, we reach
+                # it only if we haven't encountered an invalid slope or pixel
+                # that caused the above algorithm to break out
+                 
+                #Calculate the global angle depending on the max slope facet
+                if slope_max > 0:
+                    flow_matrix[col_index, row_index] = \
+                        a_f[max_index] * flow_direction_max_slope + \
+                        a_c[max_index] * 3.14159265 / 2.0
 
     #Calculate D8 flow to resolve undefined flows in D-inf
     d8_flow_dataset = newRasterFromBase(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
