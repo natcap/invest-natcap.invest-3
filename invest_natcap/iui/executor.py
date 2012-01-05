@@ -1,11 +1,9 @@
 import threading
-import os, sys
+import os
+import sys
 import imp
 from collections import deque
 import traceback
-
-cmd_folder = os.path.dirname(os.path.abspath(__file__))
-
 
 class Executor(threading.Thread):
     def __init__(self):
@@ -18,37 +16,37 @@ class Executor(threading.Thread):
         self.funcMap = {'validator': self.runValidator,
                         'model': self.runModel,
                         'saveParams': self.saveParamsToDisk}
-    
+
     def restart(self):
         try:
             self.start()
         except RuntimeError: #occurs if this thread has already been started
             self.run()
-    
+
     def write(self, string):
         self.printQueue.append(string)
-    
+
     def hasMessages(self):
         if len(self.printQueue) > 0:
             return True
         else:
             return False
-        
+
     def getMessage(self):
         try:
             return self.printQueue.popleft()
         except IndexError:
             return None
-            
+
     def cancel(self):
         self.cancelFlag.set()
-        
+
     def isCancelled(self):
         return self.cancelFlag.isSet()
-        
+
     def setThreadFailed(self, state):
         self.threadFailed = state
-        
+
     def printTraceback(self):
         print(str(traceback.print_exc()) + '\n')
 
@@ -57,12 +55,12 @@ class Executor(threading.Thread):
         opDict = {'type': op,
                   'args': args,
                   'uri': uri}
-        
+
         if index == None:
             self.operations.append(opDict)
         else:
             self.operations.insert(index, opDict)
-       
+
     def run(self):
         sys.stdout = self
         sys.stderr = self
@@ -74,27 +72,27 @@ class Executor(threading.Thread):
             if self.isCancelled():
                 print('Cancelled.')
                 break
-            else:            
+            else:
                 self.funcMap[operation['type']](operation['uri'], operation['args'])
-            
+
             if self.threadFailed:
                 print('Exiting due to failures')
                 break
-        
+
         if not self.threadFailed:
             print('Operations completed successfully')
-        
+
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-            
+
     def runValidator(self, uri, args):
         print('starting validator.')
         validator = imp.load_source('validator', uri)
         outputList = []
-        
+
         try:
             validator.execute(args, outputList)
-            
+
             if len(outputList) > 0:
                 print('ERRORS:\n')
                 for error in outputList:
@@ -106,11 +104,11 @@ class Executor(threading.Thread):
             print('\nProblem occurred while running validation.')
             self.printTraceback()
             self.setThreadFailed(True)
-        
+
     def saveParamsToDisk(self, data=None):
         self.outputObj.saveLastRun()
         print('Parameters saved to disk')
-        
+
     def runModel(self, uri, args):
         try:
             print('Running the model.')
@@ -120,4 +118,4 @@ class Executor(threading.Thread):
             print('Problem running the model')
             self.printTraceback()
             self.setThreadFailed(True)
-        
+
