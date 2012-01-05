@@ -837,25 +837,30 @@ class Testator(object):
         print string
 
     def checkExecutor(self):
-        if self.executor.isAlive() or self.executor.hasMessages():
-            while self.executor.hasMessages():
-                msg = self.executor.getMessage()
-
-                if msg != None:
-                    self.write(msg)
-        else:
-            self.finished()
+        if self.executor != None:
+            if self.executor.isAlive() or self.executor.hasMessages():
+                while self.executor.hasMessages():
+                    msg = self.executor.getMessage()
+    
+                    if msg != None:
+                        self.write(msg)
+            else:
+                self.finished()
 
     def startExecutor(self):
-        self.executor.restart()
+        self.executor.start()
 
     def cancelExecutor(self):
         self.executor.cancel()
 
     def finished(self):
+        self.executor = None #indicate we need to make a new executor
         self.timer.stop()
 
     def addOperation(self, op, args=None, uri=None, index=None):
+        if not self.executor:
+            self.executor = executor.Executor()
+            
         self.executor.addOperation(op, args, uri, index)
 
 
@@ -942,11 +947,24 @@ class OperationDialog(QtGui.QDialog, Testator):
 
     def startExecutor(self):
         self.statusArea.clear()
+        self.start_buttons()
         self.timer.timeout.connect(self.checkExecutor)
 
         Testator.startExecutor(self)
         self.timer.start(100)
 
+    def start_buttons(self):
+        self.progressBar.setMaximum(0) #start the progressbar.
+        self.backButton.setDisabled(True)
+        self.quitButton.setDisabled(True)
+        self.cancelButton.setDisabled(False)
+                
+    def stop_buttons(self):
+        self.progressBar.setMaximum(1) #stops the progressbar.
+        self.backButton.setDisabled(False)
+        self.quitButton.setDisabled(False)
+        self.cancelButton.setDisabled(True)
+        
     def write(self, text):
         """Write text.  If printing to the status area, also scrolls to the end 
             of the text region after writing to it.  Otherwise, print to stdout.
@@ -966,10 +984,7 @@ class OperationDialog(QtGui.QDialog, Testator):
 
         Testator.finished(self)
 
-        self.progressBar.setMaximum(1) #stops the progressbar.
-        self.backButton.setDisabled(False) #enables the backButton
-        self.quitButton.setDisabled(False) #enables the quitButton
-        self.cancelButton.setDisabled(True) #disable the cancel button
+        self.stop_buttons()
 
     def closeEvent(self, data=None):
         """When a closeEvent is detected, run self.closeWindow().

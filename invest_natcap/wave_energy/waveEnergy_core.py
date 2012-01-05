@@ -506,6 +506,9 @@ def valuation(args):
     landptPath = interDir + os.sep + 'landingPoints.shp'
     gridptPath = interDir + os.sep + 'gridPoint.shp'
     
+    dem = args['global_dem']
+    capWE = args['capturedWE']
+    
     if os.path.isfile(landptPath):
         os.remove(landptPath)
     if os.path.isfile(gridptPath):
@@ -526,6 +529,10 @@ def valuation(args):
     drate = float(machine_econ['r']['VALUE'])
     smlpm = float(machine_econ['smlpm']['VALUE'])
     
+    year = 25.0
+    T = np.linspace(0.0, year-1.0, year)
+    print T
+    rho = 1.0/(1.0+drate)
     #Extract the landing and grid points data
     land_grid_pts = args['land_gridPts']
     grid_pt = {}
@@ -602,8 +609,10 @@ def valuation(args):
     ds.Destroy()
     
     attribute_shape = args['attribute_shape']
-
+    attribute_layer = attribute_shape.GetLayer(0)
     shape = changeProjection(attribute_shape, args['projection'], projectedShapePath)
+    shape.Destroy()
+    shape = ogr.Open(projectedShapePath, 1)
     shape_layer = shape.GetLayer(0)
     
     landingShape = ogr.Open(landptPath)
@@ -615,69 +624,112 @@ def valuation(args):
         layer = shape.GetLayer(0)
         feat = layer.GetNextFeature()
         while feat is not None:
-            x = float(feat.GetX())
-            y = float(feat.GetY())
+            x = float(feat.GetGeometryRef().GetX())
+            y = float(feat.GetGeometryRef().GetY())
             point.append([x,y])
             feat.Destroy()
             feat = layer.GetNextFeature()
         
-        return point
+        return np.array(point)
     
     
     def calcDist(xy_1, xy_2):
         mindist = np.zeros(len(xy_1))
         minid = np.zeros(len(xy_1))
         for i, xy in enumerate(xy_1):
-            dist = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
+            dists = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
             mindist[i], minid[i] = dists.min(), dists.argmin()
         return mindist, minid
     
-    wePoints = getPoints(attribute_shape)
+    wePoints = getPoints(shape)
     landingPoints = getPoints(landingShape)
     gridPoint = getPoints(gridShape)
     
     W2L_Dist, W2L_ID = calcDist(wePoints, landingPoints)
     L2G_Dist, L2G_ID = calcDist(landingPoints, gridPoint)
-    
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
         shape_layer.CreateField(field_defn)
         
     j = 0
-    for feature in shape_layer:
+    shape_layer.ResetReading()
+    feature = shape_layer.GetNextFeature()
+    while feature is not None:
         W2L_index = feature.GetFieldIndex('W2L_MDIST')
         L2G_index = feature.GetFieldIndex('L2G_MDIST')
         ID_index = feature.GetFieldIndex('LAND_ID')    
-    
-        feature.SetField(W2L_index, W2L_Dist[j])
-        feature.SetField(L2G_index, l2G_Dist[j])
-        landID = int(W2L_ID[j])
-        feature.SetField(ID_index, landID)
-        j = j + 1
-    
-    for feat in shape_layer:
-        #Get capturedWE
-        capWEIndex = feat.GetFieldIndex('capSum_WE')
-        capWEValue = feat.GetField(fieldIndex)
-        #Get Depth
-        depthIndex = feat.GetFieldIndex('depth')
-        depthValue = feat.GetField(fieldIndex)
         
-        lenml = 3.0 * depthValue
+        landID = int(W2L_ID[j])
+        
+        feature.SetField(W2L_index, W2L_Dist[j])
+        feature.SetField(L2G_index, L2G_Dist[landID])
+        feature.SetField(ID_index, landID)
+        
+        j = j + 1
+        
+        shape_layer.SetFeature(feature)
+        feature.Destroy()
+        feature = shape_layer.GetNextFeature()
+    shape.Destroy()
+    shape = ogr.Open(projectedShapePath, 1)
+    shape_layer = shape.GetLayer(0)
+    
+    #########Create W2L/L2G Rasters##########
+    xmin, xmax, ymin, ymax = attribute_layer.GetExtent()
+    pixelSize = 0
+    if (xmax-xmin)<(ymax-ymin):
+        pixelSize = (xmax-xmin)/250
+    else:
+        pixelSize = (ymax-ymin)/250
+    
+    waveLand_path = interDir + os.sep + 'waveLand.tif'
+    landGrid_path = interDir + os.sep + 'landGrid.tif'
+    datatype = gdal.GDT_Float32
+    nodata = 0
+    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+                                              datatype, nodata, waveLand_path, attribute_shape)
+    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+                                              datatype, nodata, landGrid_path, attribute_shape)
+    waveLandRaster = gdal.Open(waveLand_path, GA_Update)
+    landGridRaster = gdal.Open(landGrid_path, GA_Update)
+    #Get the corresponding points and values from the shapefile to be used for interpolation
+    waveLandArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'W2L_MDIST'], 'W2L_MDIST')
+    landGridArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'L2G_MDIST'], 'L2G_MDIST')
+     #Interpolate the rasters (give a smooth surface)
+    interpPointsOverRaster(waveLandArray[0], waveLandArray[1], waveLandRaster)
+    interpPointsOverRaster(landGridArray[0], landGridArray[1], landGridRaster)
+    #########################################
+    
+    capWE = args['capturedWE']
+    def op(capturedWE, dem, distWL, distLG):
+        capWE = np.ones(len(T))*3526*1000.0
+        capWE[0] = 0
+        lenml = 3.0 * dem
         #Calculate annualRevenue
-        annualRevenue = price * units * capWEValue
+        annualRevenue = price * units * capWE
         #Calculate annualCost
-        anuualCost = omc * capWEValue * units
+        annualCost = omc * capWE * units
         #Calculate installCost
-        installCost = units * capRate * capitalCost
+        installCost = units * capMax * capitalCost
         #Calculate mooringCost
         mooringCost = smlpm * lenml * cml * units
         #Calculate transCost
-        
-#        Calculate IC (installCost+mooringCost+transCost)
-        IC = installCost + morringCost + transCost
+        transCost = (distWL*cul/1000.0) + (distLG*col/1000.0)
+        #Calculate IC (installCost+mooringCost+transCost)
+        IC = installCost + mooringCost + transCost
+        print IC
+        annualCost[0] = IC
         #Calculate NPVWE :
             
+        NPV = []
+        for i in range(len(T)):
+            NPV.append(rho**i * (annualRevenue[i] - annualCost[i]))
+            
+        return sum(NPV)
+    npvPath = interDir + os.sep + 'waveEnergy_NPV.tif'
+    invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
+                                 rasterName=npvPath, datatype=gdal.GDT_Float32)
+    
     #        def npv(annualRevenue, annualCost):
     #            for num in range(1, T + 1):
     #                sum = sum + (annualRevenue[num] - annualCost[num]) * ((1 + i) ** (-1 * t))
@@ -686,8 +738,8 @@ def valuation(args):
     
         ###############IDEA###################
     #Do all calculations including NPV
-    def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
-        return None
+#    def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
+#        return None
     #Call vectorizeRasters and pass in needed rasters as well as op
 #    invest_core.vectorizeRasters([capWE, elevation], op,
 #                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)

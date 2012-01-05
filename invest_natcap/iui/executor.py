@@ -17,12 +17,6 @@ class Executor(threading.Thread):
                         'model': self.runModel,
                         'saveParams': self.saveParamsToDisk}
 
-    def restart(self):
-        try:
-            self.start()
-        except RuntimeError: #occurs if this thread has already been started
-            self.run()
-
     def write(self, string):
         self.printQueue.append(string)
 
