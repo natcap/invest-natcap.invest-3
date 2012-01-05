@@ -689,8 +689,8 @@ cdef void d_p_area(CQueue pixels_to_process,
             algorithm from uphill to downhill
         
         pixelsToProcess - a collections.deque of (i,j) tuples"""
-    cdef int i,j, ni, nj, runningSum, uncalculated_neighbors_index, pi, pj, \
-        neighbor_index
+    cdef int i,j, ni, nj, runningSum, pi, pj, neighbor_index, \
+        uncalculated_neighbors
     cdef float PI = 3.14159265, alpha, beta
     cdef int *shift_indexes = [-1,0,
                                -1,-1,
@@ -708,12 +708,12 @@ cdef void d_p_area(CQueue pixels_to_process,
                                  5.0*PI/4.0,
                                  3.0*PI/2.0,
                                  7.0*PI/4.0]
-    cdef int uncalculated_neighbors[8]
+    cdef CQueue neighbors
     LOGGER = logging.getLogger('d_p_area')
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
-        LOGGER.debug("working on pixel %s, %s" % (i,j))
+        LOGGER.debug("working on pixel %s, %s, direction %s" % (i,j, flow_direction_matrix[i, j]))
         
         if flow_direction_matrix[i, j] == nodata_flow_direction:
             accumulation_matrix[i, j] = nodata_flow_accumulation
@@ -723,48 +723,35 @@ cdef void d_p_area(CQueue pixels_to_process,
         if accumulation_matrix[i, j] != -1: continue
 
         #build list of uncalculated neighbors
-        uncalculated_neighbors_index = 0
-        for neighbor_index in range(8):
-            #Calculate actual neighbor i and j position
-            pi = shift_indexes[neighbor_index*2]+i
-            pj = shift_indexes[neighbor_index*2+1]+j
-            
-            #if the neighbor is outside of the grid, then skip it
-            if pi < 0 or pi >= flow_direction_matrix.shape[0] or \
-                pj < 0 or pj >= flow_direction_matrix.shape[1]:
-                continue
-            
-            #if the neighbor is a nodata value, skip it
-            if flow_direction_matrix[pi,pj] == nodata_flow_direction:
-                accumulation_matrix[pi, pj] = nodata_flow_accumulation
-                continue
-            
-            #If the neighbor pixel is uncalculated, add it to the list
-            if accumulation_matrix[pi,pj] == -1:
-                uncalculated_neighbors[uncalculated_neighbors_index] = \
-                    neighbor_index
-                uncalculated_neighbors_index += 1
+        neighbors = calculate_inflow_neighbors_dinf(i,j, 
+            flow_direction_matrix, nodata_flow_direction)
         
         #check to see if any of the neighbors were uncalculated, if so, 
         #calculate them
-        if uncalculated_neighbors_index != 0:
+        LOGGER.debug("%s neighbors" % (neighbors.size()))
+        if neighbors.size() != 0:
             #push the current pixel back on, note the indexes are in reverse
             #order so they can be popped off in order
             pixels_to_process.push(j)
             pixels_to_process.push(i)
             
             #Visit each uncalculated neighbor and push on the work queue
-            for neighbor_index in range(uncalculated_neighbors_index):
-                pi = shift_indexes[neighbor_index*2]+i
-                pj = shift_indexes[neighbor_index*2+1]+j
-                pixels_to_process.push(pj)
-                pixels_to_process.push(pi)
+            uncalculated_neighbors = 0
+            while neighbors.size() != 0:
+                pi = neighbors.pop()
+                pj = neighbors.pop()
+                #see if neighbor is uncalculated
+                if accumulation_matrix[pi, pj] == -1:
+                    pixels_to_process.push(pj)
+                    pixels_to_process.push(pi)
+                    uncalculated_neighbors += 1
             #this skips over the calculation of pixel i,j until neighbors are
             #calculated
-            continue 
+            if uncalculated_neighbors != 0: continue 
 
         #If we get here then the neighbors are calculated
         accumulation_matrix[i, j] = 1
+        LOGGER.debug("accumulation_matrix[i, j] = %s" % (accumulation_matrix[i, j]))
         
         #Add contribution from each neighbor to current pixel 
 
