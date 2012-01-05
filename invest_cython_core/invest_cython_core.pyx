@@ -655,7 +655,7 @@ cdef void d_p_area(CQueue pixels_to_process,
             algorithm from uphill to downhill
         
         pixelsToProcess - a collections.deque of (i,j) tuples"""
-    cdef int i,j, ni, nj, runningSum, uncalculated_neighbors_index, pi, pj,
+    cdef int i,j, ni, nj, runningSum, uncalculated_neighbors_index, pi, pj, \
         neighbor_index
     cdef float PI = 3.14159265, alpha, beta
     cdef int *shift_indexes = [-1,0,
@@ -695,7 +695,7 @@ cdef void d_p_area(CQueue pixels_to_process,
             pj = shift_indexes[neighbor_index*2+1]+j
             
             #if the neighbor is outside of the grid, then skip it
-            if pi < 0 or pi >= flow_direction_matrix.shape[0] or
+            if pi < 0 or pi >= flow_direction_matrix.shape[0] or \
                 pj < 0 or pj >= flow_direction_matrix.shape[1]:
                 continue
             
@@ -706,7 +706,7 @@ cdef void d_p_area(CQueue pixels_to_process,
             
             #If the neighbor pixel is uncalculated, add it to the list
             if accumulation_matrix[pi,pj] == -1:
-                uncalculated_neighbors[uncalculated_neighbors_index] = 
+                uncalculated_neighbors[uncalculated_neighbors_index] = \
                     neighbor_index
                 uncalculated_neighbors_index += 1
         
