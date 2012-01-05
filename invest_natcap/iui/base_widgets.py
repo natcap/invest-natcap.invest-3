@@ -8,6 +8,7 @@ from PyQt4 import QtGui, QtCore
 
 import iui_validator
 import executor
+import registrar
 import simplejson as json
 
 #This is for something
@@ -1287,6 +1288,26 @@ been loaded.')
             else:
                 label += str(element + '\n')
         self.messageArea.setText(label.rstrip())
+
+class ElementRegistrar(registrar.Registrar):
+    def __init__(self):
+        registrar.Registrar.__init__(self)
+        updates = {'container' : Container,
+                   'list': GridList,
+                   'file': FileEntry,
+                   'folder': FileEntry,
+                   'text': YearEntry,
+                   'sliderSpinBox': SliderSpinBox,
+                   'hideableFileEntry': HideableFileEntry
+                   }
+        self.update_map(updates)
+        
+    def eval(self, type, op_values):
+        widget = registrar.Registrar.get_func(self, type)
+        if issubclass(widget, DynamicGroup):
+            return widget(op_values, self)
+        else:
+            return widget(op_values)
 
 class Registrar(object):
     def __init__(self):
