@@ -105,6 +105,9 @@ class Checker(registrar.Registrar):
             check()
             
         #execute restriction checks in map
+        
+    def get_element(self, element_id):
+        return self.element.root.allElements[element_id]
             
 class FileChecker(Checker):
     def __init__(self, element):
@@ -145,9 +148,7 @@ class OGRChecker(FileChecker):
 
         updates = {'layer': self.open_layer,
                    'fieldsExist': self.verify_fields_exist}
-        
-        self.add_check_function(self.open)
-
+        self.update_map(updates)
         
     def open(self):
         """Attempt to open the shapefile."""
@@ -177,7 +178,7 @@ class OGRChecker(FileChecker):
             return error
         
         layer_def = self.layer.GetLayerDefn()
-        prefix = 'Missing fields'
+        prefix = 'Missing fields: '
         field_str = ''
         for field in self.valid['fieldsExist']:
             index = layer_def.GetFieldIndex(field)
@@ -188,118 +189,113 @@ class OGRChecker(FileChecker):
             return prefix + field_str
 
 
-    def checkNumber(self, validateAs, value):
-        if 'gteq' in validateAs:
-            otherValue = validateAs['gteq']
+class DBFChecker(FileChecker):
+    def __init__(self, element):
+        FileChecker.__init__(self, element)
+        updates = {'fieldsExist': self.verify_fields_exist,
+                   'restrictions': self.verify_restrictions}
+        self.update_map(updates)
+    
+    def open(self):
+        """Attempt to open the DBF."""
+        
+        self.file = dbf.Dbf(str(self.uri))
+        
+        if not isinstance(self.file, dbf.Dbf):
+            return str('Must be a DBF file')
+        
+    def verify_fields_exist(self):
+        prefix = 'Missing fields: '
+        field_str = ''
+        for field in self.valid['fieldsExist']:
+            if field.upper() not in self.file.FileNames:
+                field_str += str(field + ', ')
+        
+        if len(field_str) > 0:
+            return prefix + field_str
+        
+    def verify_restrictions(self):
+        field_str = ''
+        for restriction in self.valid['restrictions']:
+            res_field = restriction['field']
+            res_attrib = res['validateAs']
+            
+#            if res_attrib['type'] == 'number':
+#                for record in range
+#        
 
-            if isinstance(otherValue, str):
-                otherValue = self.allElements[otherValue].value()
-
-            if value < otherValue:
-                return str('Value must be greater than or equal to ' + str(otherValue))
-
-        if 'greaterThan' in validateAs:
-            otherValue = validateAs['greaterThan']
-
-            if isinstance(otherValue, str):
-                otherValue = self.allElements[otherValue].value()
-
-            if value <= otherValue:
-                return str('Value must be greater than ' + str(otherValue))
-
-        if 'lteq' in validateAs:
-            otherValue = validateAs['lteq']
-
-            if isinstance(otherValue, str):
-                otherValue = self.allElements[otherValue].value()
-
-            if value > otherValue:
-                return str('Value must be less than or equal to ' + str(otherValue))
-
-        if 'lessThan' in validateAs:
-            otherValue = validateAs['lessThan']
-
-            if isinstance(otherValue, str):
-                otherValue = self.allElements[otherValue].value()
-
-            if value >= otherValue:
-                return str('Value must be less than ' + str(otherValue))
-
-    def checkDBF(self, validateAs, uri):
-        fileError = self.checkExists(validateAs, uri)
-        if not fileError:
-            try:
-                dbfFile = dbf.Dbf(str(uri))
-            except:
-                return str(uri + ' is not a DBF file')
-
-            if not isinstance(dbfFile, dbf.Dbf):
-                return str(uri + ' is not a DBF file')
-
-            if 'fieldsExist' in validateAs:
-                fieldStr = ''
-                for field in self.validateAs['fieldsExist']:
-                    if field.upper() not in dbfFile.FileNames:
-                        fieldStr += str(field + ' missing from ' + str(uri))
-                if fieldStr != '':
-                    return fieldStr
-
-            if 'restrictions' in validateAs:
-                fieldStr = ''
-                for res in validateAs['restrictions']:
-                    res_field = res['field']
-                    res_att = res['validateAs']
-
-                    if res_att['type'] == 'number':
-                        for record in range(dbfFile.recordCount):
-                            res_field_value = dbfFile[record][res_field]
-                            comp_value = dbfFile[record][res_att['greaterThan']]
-
-                            if comp_value < res_field_value:
-                                fieldStr != str(res['field'] + ' must be greater \
-than ' + res_att['greaterThan'] + ' at record ' + record)
-
-                    elif res_att['type'] == 'string':
-                        for record in range(dbfFile.recordCount):
-                            res_field_value = dbfFile[record][res_field]
-                            regexp = res_att['allowedValues']
-
-                            if not re.search(res_field_value, regexp):
-                                fieldStr += str('Field ' + res_field + ' does \
-not match the allowed pattern at record ' + record)
-
-                if fieldStr != '':
-                    return fieldStr
-        else:
-            return fileError
-
-    def checkOGR(self, validateAs, uri):
-        fileError = self.checkExists(validateAs, uri)
-        if not fileError:
-            print 'ogr'
-            ogrFile = ogr.Open(str(uri))
-
-            if not isinstance(ogrFile, osgeo.ogr.DataSource):
-                return str(uri + ' is not a shapefile that OGR can open')
-
-            if 'layer' in validateAs:
-                layer = ogrFile.GetLayerByName(str(validateAs['layer']))
-
-                if not isinstance(layer, osgeo.ogr.Layer):
-                    return str(uri + ' must have a layer called ' +
-                               str(validateAs['layer']))
-
-                if 'fieldsExist' in validateAs:
-                    layer_def = layer.GetLayerDefn()
-                    fieldStr = ''
-                    for field in validateAs['fieldsExist']:
-                        index = layer_def.GetFieldIndex(field)
-                        if index == -1:
-                            fieldStr += str(uri + ' : field ' + field + ' must exist')
-                    if fieldStr != '':
-                        return fieldStr
-        else:
-            return fileError
+#    def checkDBF(self, validateAs, uri):
+#            if 'restrictions' in validateAs:
+#                fieldStr = ''
+#                for res in validateAs['restrictions']:
+#                    res_field = res['field']
+#                    res_att = res['validateAs']
+#
+#                    if res_att['type'] == 'number':
+#                        for record in range(dbfFile.recordCount):
+#                            res_field_value = dbfFile[record][res_field]
+#                            comp_value = dbfFile[record][res_att['greaterThan']]
+#
+#                            if comp_value < res_field_value:
+#                                fieldStr != str(res['field'] + ' must be greater \
+#than ' + res_att['greaterThan'] + ' at record ' + record)
+#
+#                    elif res_att['type'] == 'string':
+#                        for record in range(dbfFile.recordCount):
+#                            res_field_value = dbfFile[record][res_field]
+#                            regexp = res_att['allowedValues']
+#
+#                            if not re.search(res_field_value, regexp):
+#                                fieldStr += str('Field ' + res_field + ' does \
+#not match the allowed pattern at record ' + record)
+#
+#                if fieldStr != '':
+#                    return fieldStr
+#        else:
+#            return fileError
+#        
+        
+class NumberChecker(Checker):
+    def __init__(self, element=None, value=None):
+        Checker.__init__(self, element)
+        updates = {'gteq': (self.verify, self._greater_than_equal_to),
+                   'greaterThan': (self.verify, self._greater_than),
+                   'lteq': (self.verify, self._less_than_equal_to),
+                   'lessThan': (self.verify, self._less_than)}
+        self.update_map(updates)
+        
+        self.value = value
+        
+    def _greater_than(self, a, b):
+        if not a < b:
+            return 'Value must be greater than ' + str(b)
+    
+    def _less_than(self, a, b):
+        if not a < b:
+            return 'Value must be less than ' + str(b)
+        
+    def _less_than_equal_to(self, a, b):
+        if not a <= b:
+            return 'Value must be less than or equal to ' + str(b)
+    
+    def _greater_than_equal_to(self, a, b):
+        if not a >= b:
+            return 'Value must be greater than or equal to ' + str(b)
+        
+    def get_restriction(self, key):
+        tuple = self.map[key]
+        return tuple[0](key, tuple[1])
+        
+    def verify(self, key, op):
+        other_value = self.valid[key]
+        
+        if isinstance(other_value, str):
+            other_value = self.get_element(other_value)
+            
+        error = op(self.value, other_value)
+        
+        if error != None:
+            return error
 
     #all check functions take a single value, which is returned by the
     #element.value() function.  All check functions should perform the required
