@@ -10,6 +10,9 @@ import iui_validator
 import executor
 import simplejson as json
 
+#This is for something
+CMD_FOLDER = '.'
+
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
         UI Interpreter's related classes.  It is not invoked directly by other
@@ -717,7 +720,7 @@ class FileButton(QtGui.QPushButton):
     def __init__(self, text, URIfield, filetype='file'):
         super(FileButton, self).__init__()
         self.text = text
-        self.setIcon(QtGui.QIcon(cmd_folder + '/document-open.png'))
+        self.setIcon(QtGui.QIcon(CMD_FOLDER + '/document-open.png'))
         self.URIfield = URIfield
         self.filetype = filetype
 
@@ -1026,7 +1029,7 @@ class RootWindow(DynamicGroup):
         self.lastRun = {}
         if 'modelName' in attributes:
             modelname = self.attributes['modelName']
-            self.lastRunURI = str(cmd_folder + '/cfg/' + modelname + '_lastrun_' +
+            self.lastRunURI = str(CMD_FOLDER + '/cfg/' + modelname + '_lastrun_' +
                               platform.node() + '.json')
         else:
             self.lastRunURI = ''
@@ -1228,13 +1231,13 @@ been loaded.')
             returns nothing."""
 
         self.runButton = QtGui.QPushButton(' Run')
-        self.runButton.setIcon(QtGui.QIcon(cmd_folder + '/dialog-ok.png'))
+        self.runButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/dialog-ok.png'))
 
         self.cancelButton = QtGui.QPushButton(' Quit')
-        self.cancelButton.setIcon(QtGui.QIcon(cmd_folder + '/dialog-close.png'))
+        self.cancelButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/dialog-close.png'))
 
         self.resetButton = QtGui.QPushButton(' Reset')
-        self.resetButton.setIcon(QtGui.QIcon(cmd_folder + '/edit-undo.png'))
+        self.resetButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/edit-undo.png'))
 
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()
