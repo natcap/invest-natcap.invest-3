@@ -935,7 +935,7 @@ def flow_direction_inf(dem, flow):
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 
                 if s_1 <= 0 or s_2 <= 0: 
-                    break #uphill slope or flat, so skip, D8 resolve
+                    continue #uphill slope or flat, so skip, D8 resolve
                 
                 #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
                 flow_direction = 3.14159262/2.0
