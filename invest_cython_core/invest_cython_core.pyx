@@ -642,47 +642,6 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
     flowAccumulation.GetRasterBand(1).WriteArray(\
         accumulationMatrix.transpose(), 0, 0)
 
-cdef void d_p_area(CQueue pixels_to_process,
-                              np.ndarray[np.int_t,ndim=2] accumulation_matrix,
-                      np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
-                      int nodata_flow_direction, int nodata_flow_accumulation):
-    """Takes a list of pixels to calculate flow for the dinf algorithm, then
-        does a dynamic style programming process of visiting and updating
-        each one as it needs processing.  Modified `accumulation_matrix`
-        during processing.
-        
-        dem_pixels - a matrix of DEM pixel heights, used to march the 
-            algorithm from uphill to downhill
-        
-        pixelsToProcess - a collections.deque of (i,j) tuples"""
-    cdef int i,j, ni, nj, runningSum, uncalculated_neighbors_index
-    cdef float PI = 3.14159265, alpha, beta
-    cdef int *shift_indexes = [-1,0,-1,-1,0,-1,1,-1,1,0,1,1,0,1,-1,1]
-    cdef float *inflow_angles = [0.0,PI/4.0,PI/2.0,3.0*PI/4.0,PI,5.0*PI/4.0,
-                               3.0*PI/2.0,7.0*PI/4.0]
-    cdef int uncalculated_neighbors[8]
-    #LOGGER = logging.getLogger('calculateFlow')
-    while pixels_to_process.size() > 0:
-        i = pixels_to_process.pop()
-        j = pixels_to_process.pop()
-        
-        if flow_direction_matrix[i, j] == nodata_flow_direction:
-            accumulation_matrix[i, j] = nodata_flow_accumulation
-            continue
-
-        #if pixel set, continue
-        if flow_direction_matrix[i, j] != -1: continue
-        
-
-        #build list of uncalculated neighbors
-        uncalculated_neighbors_index = 0
-        
-        #if len(list) > 0, push i,j, and neighbors and continue
-        
-        #Set current pixel flow value to 1
-
-        #Add contribution from each neighbor to current pixel 
-
 cdef CQueue calculate_inflow_neighbors_dinf(int i, int j, 
                     np.ndarray[np.float_t,ndim=2] flow_direction_matrix, 
                     int nodata_flow_direction):
@@ -717,6 +676,84 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
                 neighbors.append(pj)
     return neighbors
 
+cdef void d_p_area(CQueue pixels_to_process,
+                              np.ndarray[np.int_t,ndim=2] accumulation_matrix,
+                      np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
+                      int nodata_flow_direction, int nodata_flow_accumulation):
+    """Takes a list of pixels to calculate flow for the dinf algorithm, then
+        does a dynamic style programming process of visiting and updating
+        each one as it needs processing.  Modified `accumulation_matrix`
+        during processing.
+        
+        dem_pixels - a matrix of DEM pixel heights, used to march the 
+            algorithm from uphill to downhill
+        
+        pixelsToProcess - a collections.deque of (i,j) tuples"""
+    cdef int i,j, ni, nj, runningSum, pi, pj, neighbor_index, \
+        uncalculated_neighbors
+    cdef float PI = 3.14159265, alpha, beta
+    cdef int *shift_indexes = [-1,0,
+                               -1,-1,
+                               0,-1,
+                               1,-1,
+                               1,0,
+                               1,1,
+                               0,1,
+                               -1,1]
+    cdef float *inflow_angles = [0.0,
+                                 PI/4.0,
+                                 PI/2.0,
+                                 3.0*PI/4.0,
+                                 PI,
+                                 5.0*PI/4.0,
+                                 3.0*PI/2.0,
+                                 7.0*PI/4.0]
+    cdef CQueue neighbors
+    LOGGER = logging.getLogger('d_p_area')
+    while pixels_to_process.size() > 0:
+        i = pixels_to_process.pop()
+        j = pixels_to_process.pop()
+        LOGGER.debug("working on pixel %s, %s, direction %s" % (i,j, flow_direction_matrix[i, j]))
+        
+        if flow_direction_matrix[i, j] == nodata_flow_direction:
+            accumulation_matrix[i, j] = nodata_flow_accumulation
+            continue
+
+        #if pixel set, continue
+        if accumulation_matrix[i, j] != -1: continue
+
+        #build list of uncalculated neighbors
+        neighbors = calculate_inflow_neighbors_dinf(i,j, 
+            flow_direction_matrix, nodata_flow_direction)
+        
+        #check to see if any of the neighbors were uncalculated, if so, 
+        #calculate them
+        LOGGER.debug("%s neighbors" % (neighbors.size()))
+        if neighbors.size() != 0:
+            #push the current pixel back on, note the indexes are in reverse
+            #order so they can be popped off in order
+            pixels_to_process.push(j)
+            pixels_to_process.push(i)
+            
+            #Visit each uncalculated neighbor and push on the work queue
+            uncalculated_neighbors = 0
+            while neighbors.size() != 0:
+                pi = neighbors.pop()
+                pj = neighbors.pop()
+                #see if neighbor is uncalculated
+                if accumulation_matrix[pi, pj] == -1:
+                    pixels_to_process.push(pj)
+                    pixels_to_process.push(pi)
+                    uncalculated_neighbors += 1
+            #this skips over the calculation of pixel i,j until neighbors are
+            #calculated
+            if uncalculated_neighbors != 0: continue 
+
+        #If we get here then the neighbors are calculated
+        accumulation_matrix[i, j] = 1
+        LOGGER.debug("accumulation_matrix[i, j] = %s" % (accumulation_matrix[i, j]))
+        
+        #Add contribution from each neighbor to current pixel 
 
 def flow_accumulation_dinf(flow_direction, flow_accumulation):
     """Creates a raster of accumulated flow to each cell.
