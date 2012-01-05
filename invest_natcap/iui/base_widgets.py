@@ -837,7 +837,8 @@ class Testator(object):
         print string
 
     def checkExecutor(self):
-        if self.executor.isAlive() or self.executor.hasMessages():
+        if ((self.executor.isAlive() or self.executor.hasMessages()) and 
+            self.executor != None):
             while self.executor.hasMessages():
                 msg = self.executor.getMessage()
 
@@ -847,15 +848,19 @@ class Testator(object):
             self.finished()
 
     def startExecutor(self):
-        self.executor.restart()
+        self.executor.start()
 
     def cancelExecutor(self):
         self.executor.cancel()
 
     def finished(self):
+        self.executor = None #indicate we need to make a new executor
         self.timer.stop()
 
     def addOperation(self, op, args=None, uri=None, index=None):
+        if not self.executor:
+            self.executor = executor.Executor()
+            
         self.executor.addOperation(op, args, uri, index)
 
 
