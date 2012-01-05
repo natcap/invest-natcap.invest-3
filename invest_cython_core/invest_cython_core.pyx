@@ -658,9 +658,22 @@ cdef void d_p_area(CQueue pixels_to_process,
     cdef int i,j, ni, nj, runningSum, uncalculated_neighbors_index, pi, pj,
         neighbor_index
     cdef float PI = 3.14159265, alpha, beta
-    cdef int *shift_indexes = [-1,0,-1,-1,0,-1,1,-1,1,0,1,1,0,1,-1,1]
-    cdef float *inflow_angles = [0.0,PI/4.0,PI/2.0,3.0*PI/4.0,PI,5.0*PI/4.0,
-                               3.0*PI/2.0,7.0*PI/4.0]
+    cdef int *shift_indexes = [-1,0,
+                               -1,-1,
+                               0,-1,
+                               1,-1,
+                               1,0,
+                               1,1,
+                               0,1,
+                               -1,1]
+    cdef float *inflow_angles = [0.0,
+                                 PI/4.0,
+                                 PI/2.0,
+                                 3.0*PI/4.0,
+                                 PI,
+                                 5.0*PI/4.0,
+                                 3.0*PI/2.0,
+                                 7.0*PI/4.0]
     cdef int uncalculated_neighbors[8]
     #LOGGER = logging.getLogger('calculateFlow')
     while pixels_to_process.size() > 0:
@@ -672,8 +685,7 @@ cdef void d_p_area(CQueue pixels_to_process,
             continue
 
         #if pixel set, continue
-        if flow_direction_matrix[i, j] != -1: continue
-        
+        if accumulation_matrix[i, j] != -1: continue
 
         #build list of uncalculated neighbors
         uncalculated_neighbors_index = 0
@@ -684,11 +696,27 @@ cdef void d_p_area(CQueue pixels_to_process,
             if pi < 0 or pi >= flow_direction_matrix.shape[0] or
                 pj < 0 or pj >= flow_direction_matrix.shape[1]:
                 continue
+            if accumulation_matrix[pi,pj] == -1:
+                uncalculated_neighbors[uncalculated_neighbors_index] = 
+                    neighbor_index
+            uncalculated_neighbors_index += 1
         
-        #if len(list) > 0, push i,j, and neighbors and continue
-        
-        #Set current pixel flow value to 1
+        #check to see if any of the neighbors were uncalculated, if so, 
+        #calculate them
+        if uncalculated_neighbors_index != 0:
+            #push the current pixel back on
+            pixels_to_process.push(j)
+            pixels_to_process.push(i)
+            for neighbor_index in range(uncalculated_neighbors_index):
+                pi = shift_indexes[neighbor_index*2]+i
+                pj = shift_indexes[neighbor_index*2+1]+j
+                pixels_to_process.push(pj)
+                pixels_to_process.push(pi)
+            continue #this skips over that pixel
 
+        #Set current pixel flow value to 1
+        accumulation_matrix[i, j] = 1
+        
         #Add contribution from each neighbor to current pixel 
 
 cdef CQueue calculate_inflow_neighbors_dinf(int i, int j, 
