@@ -725,40 +725,46 @@ cdef void d_p_area(CQueue pixels_to_process,
             continue
 
         #if pixel set, continue
-        if accumulation_matrix[i, j] != -1: continue
+        if accumulation_matrix[i, j] > 0: continue
 
         #build list of uncalculated neighbors
         neighbors = calculate_inflow_neighbors_dinf(i,j, 
             flow_direction_matrix, nodata_flow_direction)
         
-        #check to see if any of the neighbors were uncalculated, if so, 
-        #calculate them
-        LOGGER.debug("%s neighbors" % (neighbors.size()))
-        if neighbors.size() != 0:
-            #push the current pixel back on, note the indexes are in reverse
-            #order so they can be popped off in order
-            pixels_to_process.push(j)
-            pixels_to_process.push(i)
+        if accumulation_matrix[i, j] == -1: #never visited
+            #mark visited
+            accumulation_matrix[i, j] = 0
             
-            #Visit each uncalculated neighbor and push on the work queue
-            uncalculated_neighbors = 0
-            while neighbors.size() != 0:
-                pi = neighbors.pop()
-                pj = neighbors.pop()
-                #see if neighbor is uncalculated
-                if accumulation_matrix[pi, pj] == -1:
-                    pixels_to_process.push(pj)
-                    pixels_to_process.push(pi)
-                    uncalculated_neighbors += 1
-            #this skips over the calculation of pixel i,j until neighbors are
-            #calculated
-            if uncalculated_neighbors != 0: continue 
+            #check to see if any of the neighbors were uncalculated, if so, 
+            #calculate them
+            LOGGER.debug("%s neighbors" % (neighbors.size()))
+            if neighbors.size() != 0:
+                #push the current pixel back on, note the indexes are in reverse
+                #order so they can be popped off in order
+                pixels_to_process.push(j)
+                pixels_to_process.push(i)
+                
+                #Visit each uncalculated neighbor and push on the work queue
+                while neighbors.size() != 0:
+                    pi = neighbors.pop()
+                    pj = neighbors.pop()
+                    #see if neighbor is uncalculated
+                    if accumulation_matrix[pi, pj] == -1:
+                        pixels_to_process.push(pj)
+                        pixels_to_process.push(pi)
+                #this skips over the calculation of pixel i,j until neighbors are
+                #calculated
+                continue 
 
-        #If we get here then the neighbors are calculated
+        #If we get here then this pixel and its neighbors have been processed
         accumulation_matrix[i, j] = 1
+        #Add contribution from each neighbor to current pixel 
+        while neighbors.size() != 0:
+            pi = neighbors.pop()
+            pj = neighbors.pop()
+            accumulation_matrix[i, j] += accumulation_matrix[pi, pj]
         LOGGER.debug("accumulation_matrix[i, j] = %s" % (accumulation_matrix[i, j]))
         
-        #Add contribution from each neighbor to current pixel 
 
 def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     """Creates a raster of accumulated flow to each cell.
