@@ -677,18 +677,33 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
     return neighbors
 
 cdef void d_p_area(CQueue pixels_to_process,
-                              np.ndarray[np.int_t,ndim=2] accumulation_matrix,
-                      np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
-                      int nodata_flow_direction, int nodata_flow_accumulation):
+                   np.ndarray[np.int_t,ndim=2] accumulation_matrix,
+                   np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
+                   int nodata_flow_direction, int nodata_flow_accumulation):
     """Takes a list of pixels to calculate flow for the dinf algorithm, then
         does a dynamic style programming process of visiting and updating
         each one as it needs processing.  Modified `accumulation_matrix`
         during processing.
         
-        dem_pixels - a matrix of DEM pixel heights, used to march the 
-            algorithm from uphill to downhill
+        pixels_to_process - a collections CQueue of i,j indexes to process.
+            Popping i then j will give you the next pixel to process.  This
+            queue will be modified and eventually returned empty as part of
+            the calculation process.
+            
+        flow_direction_matrix - a numpy array input indicating the flow 
+            direction at each pixel in radians.
+            
+        accumulation_matrix - a numpy array output of the flow accumulation
+            along each pixel.  Must be the same dimensions as 
+            flow_direction_matrix
+
+        nodata_flow_direction - the value that can be used to determine if
+            a pixel in flow_direction_matrix is a nodata value
+            
+        nodata_flow_accumulation - the value to assign to a pixel in 
+            accumulation_matrix if a nodata value should go there.  Should
+            correspond to a nodata value pixel in flow_direction_matrix"""
         
-        pixelsToProcess - a collections.deque of (i,j) tuples"""
     cdef int i,j, ni, nj, runningSum, pi, pj, neighbor_index, \
         uncalculated_neighbors
     cdef float PI = 3.14159265
