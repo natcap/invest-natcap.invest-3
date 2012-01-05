@@ -716,7 +716,8 @@ cdef void d_p_area(CQueue pixels_to_process,
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
-        LOGGER.debug("working on pixel %s, %s, direction %s" % (i,j, flow_direction_matrix[i, j]*180/PI))
+        LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
+        LOGGER.debug("%s, %s, %s\n%s, %s, %s\n%s, %s, %s" % (dem_pixels[i-1,j+1],dem_pixels[i,j+1],dem_pixels[i+1,j+1],dem_pixels[i-1,j],dem_pixels[i,j],dem_pixels[i+1,j],dem_pixels[i-1,j-1],dem_pixels[i,j-1],dem_pixels[i+1,j-1]))
         
         if flow_direction_matrix[i, j] == nodata_flow_direction:
             accumulation_matrix[i, j] = nodata_flow_accumulation
