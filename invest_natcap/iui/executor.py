@@ -40,6 +40,9 @@ class Executor(threading.Thread):
 
     def setThreadFailed(self, state):
         self.threadFailed = state
+        
+    def isThreadFailed(self):
+        return self.threadFailed
 
     def printTraceback(self):
         print(str(traceback.print_exc()) + '\n')
@@ -69,11 +72,11 @@ class Executor(threading.Thread):
             else:
                 self.funcMap[operation['type']](operation['uri'], operation['args'])
 
-            if self.threadFailed:
+            if self.isThreadFailed():
                 print('Exiting due to failures')
                 break
 
-        if not self.threadFailed:
+        if not self.isThreadFailed():
             print('Operations completed successfully')
 
         sys.stdout = sys.__stdout__
