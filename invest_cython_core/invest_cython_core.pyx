@@ -673,13 +673,14 @@ cdef void d_p_area(CQueue pixels_to_process,
         #if pixel set, continue
         if flow_direction_matrix[i, j] != -1: continue
         
-        uncalculated_neighbors_index = 0
-        #Set current pixel flow value to 1
 
         #build list of uncalculated neighbors
+        uncalculated_neighbors_index = 0
         
         #if len(list) > 0, push i,j, and neighbors and continue
         
+        #Set current pixel flow value to 1
+
         #Add contribution from each neighbor to current pixel 
 
 cdef CQueue calculate_inflow_neighbors_dinf(int i, int j, 
