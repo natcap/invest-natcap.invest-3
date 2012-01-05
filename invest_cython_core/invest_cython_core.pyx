@@ -642,6 +642,40 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
     flowAccumulation.GetRasterBand(1).WriteArray(\
         accumulationMatrix.transpose(), 0, 0)
 
+cdef CQueue calculate_inflow_neighbors_dinf(int i, int j, 
+                    np.ndarray[np.float_t,ndim=2] flow_direction_matrix, 
+                    int nodata_flow_direction):
+    
+    """Returns a list of the neighboring pixels to i,j that are in bounds
+        and also flow into point i,j.  This information is inferred from
+        the flow_direction_matrix"""
+
+    #consider neighbors who flow into i,j, third argument is the inflow
+    #radian direction
+    cdef float PI = 3.14159265, alpha, beta
+    cdef int *shift_indexes = [-1,0,-1,-1,0,-1,1,-1,1,0,1,1,0,1,-1,1]
+    cdef float *inflow_angles = [0.0,PI/4.0,PI/2.0,3.0*PI/4.0,PI,5.0*PI/4.0,
+                               3.0*PI/2.0,7.0*PI/4.0]
+    cdef int pi, pj, k, n
+    cdef CQueue neighbors = CQueue()
+    for k in range(8):
+        #alpha is the angle that flows from pixel pi, pj, to i, j
+        alpha = inflow_angles[k]
+        pi = i + shift_indexes[k*2+0]
+        pj = j + shift_indexes[k*2+1]
+        #ensure that the offsets are within bounds of the matrix
+        if pi >= 0 and pj >= 0 and pi < flow_direction_matrix.shape[0] and \
+            pj < flow_direction_matrix.shape[1]:
+            #beta is the current outflow direction from pi,pj 
+            beta = flow_direction_matrix[pi, pj]
+            if beta == nodata_flow_direction:
+                continue
+            if abs(alpha-beta) < PI/4.0 or \
+                (alpha == 0.0 and abs(2*PI+alpha-beta) < PI/4.0):
+                neighbors.append(pi)
+                neighbors.append(pj)
+    return neighbors
+
 cdef void d_p_area(CQueue pixels_to_process,
                               np.ndarray[np.int_t,ndim=2] accumulation_matrix,
                       np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
@@ -675,10 +709,11 @@ cdef void d_p_area(CQueue pixels_to_process,
                                  3.0*PI/2.0,
                                  7.0*PI/4.0]
     cdef int uncalculated_neighbors[8]
-    #LOGGER = logging.getLogger('calculateFlow')
+    LOGGER = logging.getLogger('d_p_area')
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
+        LOGGER.debug("working on pixel %s, %s" % (i,j))
         
         if flow_direction_matrix[i, j] == nodata_flow_direction:
             accumulation_matrix[i, j] = nodata_flow_accumulation
@@ -732,41 +767,6 @@ cdef void d_p_area(CQueue pixels_to_process,
         accumulation_matrix[i, j] = 1
         
         #Add contribution from each neighbor to current pixel 
-
-cdef CQueue calculate_inflow_neighbors_dinf(int i, int j, 
-                    np.ndarray[np.float_t,ndim=2] flow_direction_matrix, 
-                    int nodata_flow_direction):
-    
-    """Returns a list of the neighboring pixels to i,j that are in bounds
-        and also flow into point i,j.  This information is inferred from
-        the flow_direction_matrix"""
-
-    #consider neighbors who flow into i,j, third argument is the inflow
-    #radian direction
-    cdef float PI = 3.14159265, alpha, beta
-    cdef int *shift_indexes = [-1,0,-1,-1,0,-1,1,-1,1,0,1,1,0,1,-1,1]
-    cdef float *inflow_angles = [0.0,PI/4.0,PI/2.0,3.0*PI/4.0,PI,5.0*PI/4.0,
-                               3.0*PI/2.0,7.0*PI/4.0]
-    cdef int pi, pj, k, n
-    cdef CQueue neighbors = CQueue()
-    for k in range(8):
-        #alpha is the angle that flows from pixel pi, pj, to i, j
-        alpha = inflow_angles[k]
-        pi = i + shift_indexes[k*2+0]
-        pj = j + shift_indexes[k*2+1]
-        #ensure that the offsets are within bounds of the matrix
-        if pi >= 0 and pj >= 0 and pi < flow_direction_matrix.shape[0] and \
-            pj < flow_direction_matrix.shape[1]:
-            #beta is the current outflow direction from pi,pj 
-            beta = flow_direction_matrix[pi, pj]
-            if beta == nodata_flow_direction:
-                continue
-            if abs(alpha-beta) < PI/4.0 or \
-                (alpha == 0.0 and abs(2*PI+alpha-beta) < PI/4.0):
-                neighbors.append(pi)
-                neighbors.append(pj)
-    return neighbors
-
 
 def flow_accumulation_dinf(flow_direction, flow_accumulation):
     """Creates a raster of accumulated flow to each cell.
