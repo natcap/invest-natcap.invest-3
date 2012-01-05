@@ -7,6 +7,7 @@ from osgeo import ogr
 from osgeo import gdal
 
 from invest_natcap.dbfpy import dbf
+import registrar
 
 class Validator():
     """Notes on subclassing:
@@ -85,18 +86,54 @@ class Validator():
         else:
             return None
 
-    def checkGDAL(self, validateAs, uri):
-        """Verify that the file at URI is a raster dataset that GDAL can open."""
-
-        fileError = self.checkExists(validateAs, uri)
-        if not fileError:
-            gdal.PushErrorHandler('CPLQuietErrorHandler')
-            fileObj = gdal.Open(str(uri))
-
-            if fileObj == None:
-                return str(uri + ' is not a raster that GDAL can open')
+class Checker(registrar.Registrar):
+    #self.map is used for restrictions
+    def __init__(self, element):
+        registrar.Registrar.__init__(self)
+        self.element = element
+        self.checks = []
+        
+    def add_check_function(self, func, index=None):
+        if index == None:
+            self.checks.append(func)
         else:
-            return fileError
+            self.checks.insert(index, func)
+            
+    def run_checks(self):
+        for check in self.checks:
+            check()
+            
+class FileChecker(Checker):
+    def __init__(self, element):
+        Checker.__init__(self, element)
+        
+        self.uri = self.element.value()
+        self.add_check_function(self.checkExists)
+    
+    def checkExists(self):
+        """Verify that the file at URI exists."""
+
+        if not os.path.exists(self.uri):
+            return str('File not found')
+        else:
+            return None
+        
+class GDALChecker(FileChecker):
+    def __init__(self, element):
+        FileChecker.__init__(self, element)
+        
+        self.add_check_function(self.open)
+        
+    def open(self):
+        """Attempt to open the GDAL object.  URI must exist."""
+        
+        gdal.PushErrorHandler('CPLQuietErrorHandler')
+        fileObj = gdal.Open(str(self.uri))
+
+        if fileObj == None:
+            return str('Must be a raster that GDAL can open')
+
+
 
     def checkNumber(self, validateAs, value):
         if 'gteq' in validateAs:
