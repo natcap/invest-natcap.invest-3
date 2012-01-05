@@ -661,66 +661,20 @@ cdef void d_p_area(CQueue pixels_to_process,
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
-        #LOGGER.debug("pixelsToProcess i,j=%s %s" % (i,j))
-        #nodata out the values that don't need processing
+        
         if flow_direction_matrix[i, j] == nodata_flow_direction:
             accumulation_matrix[i, j] = nodata_flow_accumulation
-            #LOGGER.debug("nodata_flow_direction %s" % nodata_flow_direction)
-            continue
-        
-        #if p is calculated, skip its calculation (-1 or -2 mean uncalculated)
-        if accumulation_matrix[i, j] > -1:
-            #LOGGER.debug("already calculated") 
             continue
 
-        #if any neighbors flow into p and are uncalculated, push p and
-        #neighbors on the stack
-        neighbors = calculate_inflow_neighbors_dinf(i, j, flow_direction_matrix,
-                                             nodata_flow_direction)
-        n = neighbors.size()
-        #LOGGER.debug("%s neighbors" % n)
-        incomplete = False
-        for k in range(n):
-            ni, nj = neighbors.pop(),neighbors.pop()
-            neighbors.append(ni)
-            neighbors.append(nj)
-            #Turns out one of the neighbors is uncalculated
-            #Stop checking and process all later
-            if accumulation_matrix[ni, nj] == -2:
-                incomplete = True
-                break
-            
-        #If one of the neighbors was uncalculated, push the pixel and 
-        #neighbors back on the processing list
-        if incomplete:
-            #Put p first, so it's not visited again until neighbors 
-            #are processed
-            pixels_to_process.push(j)
-            pixels_to_process.push(i)
-            while (neighbors.size() > 0):
-                ni,nj = neighbors.pop(), neighbors.pop()
-                #This ensures that ni and nj don't exist more than once
-                #on the queue
-                if accumulation_matrix[ni, nj] == -2:
-                    #LOGGER.debug("processing new neighbor ni,nj=%s,%s" % (ni,nj))
-                    accumulation_matrix[ni, nj] = -1
-                    pixels_to_process.push(nj)
-                    pixels_to_process.push(ni)
-                else:
-                    #this makes the second time around we've seen this pixel
-                    #there's probably a loop because of roundoff error in
-                    #flow directions, arbitratily choose a flow of 1
-                    accumulation_matrix[ni, nj] = 1 
-        else:
-            #Otherwise, all the inflow neighbors are calculated so do the
-            #pixelflow calculation 
-            accumulation_matrix[i, j] = 0
-            runningSum = 0
-            while neighbors.size() > 0:
-                ni, nj = neighbors.pop(),neighbors.pop()
-                runningSum += 1 + accumulation_matrix[ni, nj]
-            accumulation_matrix[i, j] = runningSum
-    return
+        #if pixel set, continue
+        
+        #Set current pixel flow value to 1
+
+        #build list of uncalculated neighbors
+        
+        #if len(list) > 0, push i,j, and neighbors and continue
+        
+        #Add contribution from each neighbor to current pixel 
 
 cdef CQueue calculate_inflow_neighbors_dinf(int i, int j, 
                     np.ndarray[np.float_t,ndim=2] flow_direction_matrix, 
