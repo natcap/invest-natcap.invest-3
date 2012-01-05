@@ -679,7 +679,8 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
 cdef void d_p_area(CQueue pixels_to_process,
                    np.ndarray[np.int_t,ndim=2] accumulation_matrix,
                    np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
-                   int nodata_flow_direction, int nodata_flow_accumulation):
+                   int nodata_flow_direction, int nodata_flow_accumulation,
+                   np.ndarray[np.float_t,ndim=2] dem_pixels):
     """Takes a list of pixels to calculate flow for the dinf algorithm, then
         does a dynamic style programming process of visiting and updating
         each one as it needs processing.  Modified `accumulation_matrix`
@@ -702,7 +703,10 @@ cdef void d_p_area(CQueue pixels_to_process,
             
         nodata_flow_accumulation - the value to assign to a pixel in 
             accumulation_matrix if a nodata value should go there.  Should
-            correspond to a nodata value pixel in flow_direction_matrix"""
+            correspond to a nodata value pixel in flow_direction_matrix
+
+        dem_pixels - a matrix of DEM pixel heights, used to march the 
+            algorithm from uphill to downhill"""
         
     cdef int i,j, ni, nj, runningSum, pi, pj, neighbor_index, \
         uncalculated_neighbors
@@ -754,12 +758,13 @@ cdef void d_p_area(CQueue pixels_to_process,
         
         #Add contribution from each neighbor to current pixel 
 
-def flow_accumulation_dinf(flow_direction, flow_accumulation):
+def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     """Creates a raster of accumulated flow to each cell.
     
         flow_direction - A raster showing direction of flow out of each cell
             with direcitonal values given in radians.
         flow_accumulation - The output flow accumulation raster set
+        dem - heightmap raster for the area of interest
         
         returns nothing"""
 
@@ -773,7 +778,9 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation):
     cdef np.ndarray[np.float_t,ndim=2] flow_direction_matrix = \
         flow_direction.GetRasterBand(1).ReadAsArray(0, 0,
         flow_direction.RasterXSize, flow_direction.RasterYSize).transpose().astype(np.float)
-        
+    cdef np.ndarray[np.float_t,ndim=2] dem_pixels  = \
+        dem.GetRasterBand(1).ReadAsArray(0, 0,
+        dem.RasterXSize, dem.RasterYSize).transpose().astype(np.float)
     nodata_flow_direction = flow_direction.GetRasterBand(1).GetNoDataValue()
     nodata_flow_accumulation = flow_accumulation.GetRasterBand(1).GetNoDataValue()
     gp = flow_direction.GetGeoTransform()
@@ -802,7 +809,8 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation):
             q.append(i)
             q.append(j)
             d_p_area(q,accumulation_matrix,flow_direction_matrix,
-                          nodata_flow_direction, nodata_flow_accumulation)
+                          nodata_flow_direction, nodata_flow_accumulation,
+                          dem_pixels)
 
     flow_accumulation.GetRasterBand(1).WriteArray(\
         accumulation_matrix.transpose(), 0, 0)
