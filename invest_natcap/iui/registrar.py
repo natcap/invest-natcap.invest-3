@@ -8,13 +8,13 @@ class Registrar(object):
         self.map.update(updates)
         
     def eval(self, mapKey, opValues):
-        return self.map[mapKey](opValues)
+        try:
+            return self.map[mapKey](opValues)
+        except KeyError: #key not in self.map
+            return None
     
     def get_func(self, mapKey):
         return self.map[mapKey]
-    
-    def is_key_in_map(self, mapKey):
-        return mapKey in self.map
     
 class DatatypeRegistrar(Registrar):
     def __init__(self):
@@ -25,8 +25,9 @@ class DatatypeRegistrar(Registrar):
         self.update_map(updates)
         
     def eval(self, mapKey, opValues):
-        if is_key_in_map():
-            return Registrar.eval(mapKey, opValues)
-        else:
+        cast_value = Registrar.eval(mapKey, opValues)
+
+        if cast_value == None:
             return str(opValues)
-        
+
+        return cast_value
