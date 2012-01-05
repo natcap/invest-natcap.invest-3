@@ -506,6 +506,9 @@ def valuation(args):
     landptPath = interDir + os.sep + 'landingPoints.shp'
     gridptPath = interDir + os.sep + 'gridPoint.shp'
     
+    dem = args['global_dem']
+    capWE = args['capturedWE']
+    
     if os.path.isfile(landptPath):
         os.remove(landptPath)
     if os.path.isfile(gridptPath):
@@ -526,6 +529,10 @@ def valuation(args):
     drate = float(machine_econ['r']['VALUE'])
     smlpm = float(machine_econ['smlpm']['VALUE'])
     
+    year = 25.0
+    T = np.linspace(0.0, year-1.0, year)
+    print T
+    rho = 1.0/(1.0+drate)
     #Extract the landing and grid points data
     land_grid_pts = args['land_gridPts']
     grid_pt = {}
@@ -693,30 +700,36 @@ def valuation(args):
     interpPointsOverRaster(landGridArray[0], landGridArray[1], landGridRaster)
     #########################################
     
-    
-    def op(a,b,c,d):
-        #Get capturedWE
-        capWEIndex = feat.GetFieldIndex('capWE_Sum')
-        capWEValue = feat.GetField(fieldIndex)
-        #Get Depth
-        depthIndex = feat.GetFieldIndex('depth')
-        depthValue = feat.GetField(fieldIndex)
-        
-        lenml = 3.0 * depthValue
+    capWE = args['capturedWE']
+    def op(capturedWE, dem, distWL, distLG):
+        capWE = np.ones(len(T))*3526*1000.0
+        capWE[0] = 0
+        lenml = 3.0 * dem
         #Calculate annualRevenue
-        annualRevenue = price * units * capWEValue
+        annualRevenue = price * units * capWE
         #Calculate annualCost
-        anuualCost = omc * capWEValue * units
+        annualCost = omc * capWE * units
         #Calculate installCost
-        installCost = units * capRate * capitalCost
+        installCost = units * capMax * capitalCost
         #Calculate mooringCost
         mooringCost = smlpm * lenml * cml * units
         #Calculate transCost
-        
+        transCost = (distWL*cul/1000.0) + (distLG*col/1000.0)
         #Calculate IC (installCost+mooringCost+transCost)
-        IC = installCost + morringCost + transCost
+        IC = installCost + mooringCost + transCost
+        print IC
+        annualCost[0] = IC
         #Calculate NPVWE :
             
+        NPV = []
+        for i in range(len(T)):
+            NPV.append(rho**i * (annualRevenue[i] - annualCost[i]))
+            
+        return sum(NPV)
+    npvPath = interDir + os.sep + 'waveEnergy_NPV.tif'
+    invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
+                                 rasterName=npvPath, datatype=gdal.GDT_Float32)
+    
     #        def npv(annualRevenue, annualCost):
     #            for num in range(1, T + 1):
     #                sum = sum + (annualRevenue[num] - annualCost[num]) * ((1 + i) ** (-1 * t))
@@ -725,8 +738,8 @@ def valuation(args):
     
         ###############IDEA###################
     #Do all calculations including NPV
-    def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
-        return None
+#    def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
+#        return None
     #Call vectorizeRasters and pass in needed rasters as well as op
 #    invest_core.vectorizeRasters([capWE, elevation], op,
 #                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
