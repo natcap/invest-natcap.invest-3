@@ -999,7 +999,8 @@ def flow_direction_inf(dem, flow):
     for col_index in range(1, col_max - 1):
         for row_index in range(1, row_max - 1):
             if flow_matrix[col_index, row_index] == nodata_flow:
-                flow_matrix[col_index, row_index] = d8_to_radians[d8_flow_matrix[col_index, row_index]]
+                flow_matrix[col_index, row_index] = \
+                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
