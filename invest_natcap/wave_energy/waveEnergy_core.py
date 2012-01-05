@@ -676,17 +676,21 @@ def valuation(args):
         pixelSize = (ymax-ymin)/250
     
     waveLand_path = interDir + os.sep + 'waveLand.tif'
+    landGrid_path = interDir + os.sep + 'landGrid.tif'
     datatype = gdal.GDT_Float32
     nodata = 0
     invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
                                               datatype, nodata, waveLand_path, attribute_shape)
-    
+    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+                                              datatype, nodata, landGrid_path, attribute_shape)
     waveLandRaster = gdal.Open(waveLand_path, GA_Update)
+    landGridRaster = gdal.Open(landGrid_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
     waveLandArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'W2L_MDIST'], 'W2L_MDIST')
-    
+    landGridArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'L2G_MDIST'], 'L2G_MDIST')
      #Interpolate the rasters (give a smooth surface)
     interpPointsOverRaster(waveLandArray[0], waveLandArray[1], waveLandRaster)
+    interpPointsOverRaster(landGridArray[0], landGridArray[1], landGridRaster)
     #########################################
     
     
