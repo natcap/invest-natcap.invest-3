@@ -691,29 +691,13 @@ cdef void d_p_area(CQueue pixels_to_process,
         pixelsToProcess - a collections.deque of (i,j) tuples"""
     cdef int i,j, ni, nj, runningSum, pi, pj, neighbor_index, \
         uncalculated_neighbors
-    cdef float PI = 3.14159265, alpha, beta
-    cdef int *shift_indexes = [-1,0,
-                               -1,-1,
-                               0,-1,
-                               1,-1,
-                               1,0,
-                               1,1,
-                               0,1,
-                               -1,1]
-    cdef float *inflow_angles = [0.0,
-                                 PI/4.0,
-                                 PI/2.0,
-                                 3.0*PI/4.0,
-                                 PI,
-                                 5.0*PI/4.0,
-                                 3.0*PI/2.0,
-                                 7.0*PI/4.0]
+    cdef float PI = 3.14159265
     cdef CQueue neighbors
     LOGGER = logging.getLogger('d_p_area')
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
-        LOGGER.debug("working on pixel %s, %s, direction %s" % (i,j, flow_direction_matrix[i, j]))
+        LOGGER.debug("working on pixel %s, %s, direction %s" % (i,j, flow_direction_matrix[i, j]*180/PI))
         
         if flow_direction_matrix[i, j] == nodata_flow_direction:
             accumulation_matrix[i, j] = nodata_flow_accumulation
