@@ -91,6 +91,7 @@ class Checker(registrar.Registrar):
     def __init__(self, element):
         registrar.Registrar.__init__(self)
         self.element = element
+        self.valid = self.element.attributes['validateAs']
         self.checks = []
         
     def add_check_function(self, func, index=None):
@@ -98,10 +99,12 @@ class Checker(registrar.Registrar):
             self.checks.append(func)
         else:
             self.checks.insert(index, func)
-            
+    
     def run_checks(self):
         for check in self.checks:
             check()
+            
+        #execute restriction checks in map
             
 class FileChecker(Checker):
     def __init__(self, element):
@@ -109,6 +112,7 @@ class FileChecker(Checker):
         
         self.uri = self.element.value()
         self.add_check_function(self.checkExists)
+        self.add_check_function(self.open)
     
     def checkExists(self):
         """Verify that the file at URI exists."""
@@ -118,12 +122,14 @@ class FileChecker(Checker):
         else:
             return None
         
+    def open(self):
+        try:
+            file_handler = open(self.uri, 'w')
+            file_handler.close()
+        except:
+            return 'Unable to open file'
+        
 class GDALChecker(FileChecker):
-    def __init__(self, element):
-        FileChecker.__init__(self, element)
-        
-        self.add_check_function(self.open)
-        
     def open(self):
         """Attempt to open the GDAL object.  URI must exist."""
         
@@ -133,6 +139,53 @@ class GDALChecker(FileChecker):
         if fileObj == None:
             return str('Must be a raster that GDAL can open')
 
+class OGRChecker(FileChecker):
+    def __init__(self, element):
+        FileChecker.__init__(self, element)
+
+        updates = {'layer': self.open_layer,
+                   'fieldsExist': self.verify_fields_exist}
+        
+        self.add_check_function(self.open)
+
+        
+    def open(self):
+        """Attempt to open the shapefile."""
+        
+        self.file = ogr.Open(str(self.uri))
+        
+        if not isinstance(ogrFile, osgeo.ogr.DataSource):
+            return str('Shapefile not compatible with OGR')
+        
+    def open_layer(self):
+        """Attempt to open the layer specified in self.valid."""
+        
+        layer_name = str(self.valid['layer'])
+        self.layer = self.file.GetLayerByName(layer_name)
+        
+        if not isinstance(self.layer, osgeo.ogr.Layer):
+            return str('Shapefile must have a layer called ' + layer_name)
+    
+    def verify_fields_exist(self):
+        """Verify that the specified fields exist.  Runs self.open_layer as a
+            precondition.
+            
+            returns a string listing all missing fields."""
+            
+        error = self.open_layer
+        if error != None:
+            return error
+        
+        layer_def = self.layer.GetLayerDefn()
+        prefix = 'Missing fields'
+        field_str = ''
+        for field in self.valid['fieldsExist']:
+            index = layer_def.GetFieldIndex(field)
+            if index == -1:
+                field_str += str(field + ', ')
+                
+        if len(field_str) > 0:
+            return prefix + field_str
 
 
     def checkNumber(self, validateAs, value):
