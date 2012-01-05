@@ -602,8 +602,10 @@ def valuation(args):
     ds.Destroy()
     
     attribute_shape = args['attribute_shape']
-
+    attribute_layer = attribute_shape.GetLayer(0)
     shape = changeProjection(attribute_shape, args['projection'], projectedShapePath)
+    shape.Destroy()
+    shape = ogr.Open(projectedShapePath, 1)
     shape_layer = shape.GetLayer(0)
     
     landingShape = ogr.Open(landptPath)
@@ -615,49 +617,82 @@ def valuation(args):
         layer = shape.GetLayer(0)
         feat = layer.GetNextFeature()
         while feat is not None:
-            x = float(feat.GetX())
-            y = float(feat.GetY())
+            x = float(feat.GetGeometryRef().GetX())
+            y = float(feat.GetGeometryRef().GetY())
             point.append([x,y])
             feat.Destroy()
             feat = layer.GetNextFeature()
         
-        return point
+        return np.array(point)
     
     
     def calcDist(xy_1, xy_2):
         mindist = np.zeros(len(xy_1))
         minid = np.zeros(len(xy_1))
         for i, xy in enumerate(xy_1):
-            dist = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
+            dists = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
             mindist[i], minid[i] = dists.min(), dists.argmin()
         return mindist, minid
     
-    wePoints = getPoints(attribute_shape)
+    wePoints = getPoints(shape)
     landingPoints = getPoints(landingShape)
     gridPoint = getPoints(gridShape)
     
     W2L_Dist, W2L_ID = calcDist(wePoints, landingPoints)
     L2G_Dist, L2G_ID = calcDist(landingPoints, gridPoint)
-    
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
         shape_layer.CreateField(field_defn)
         
     j = 0
-    for feature in shape_layer:
+    shape_layer.ResetReading()
+    feature = shape_layer.GetNextFeature()
+    while feature is not None:
         W2L_index = feature.GetFieldIndex('W2L_MDIST')
         L2G_index = feature.GetFieldIndex('L2G_MDIST')
         ID_index = feature.GetFieldIndex('LAND_ID')    
-    
-        feature.SetField(W2L_index, W2L_Dist[j])
-        feature.SetField(L2G_index, l2G_Dist[j])
+        
         landID = int(W2L_ID[j])
+        
+        feature.SetField(W2L_index, W2L_Dist[j])
+        feature.SetField(L2G_index, L2G_Dist[landID])
         feature.SetField(ID_index, landID)
+        
         j = j + 1
+        
+        shape_layer.SetFeature(feature)
+        feature.Destroy()
+        feature = shape_layer.GetNextFeature()
+    shape.Destroy()
+    shape = ogr.Open(projectedShapePath, 1)
+    shape_layer = shape.GetLayer(0)
     
-    for feat in shape_layer:
+    #########Create W2L/L2G Rasters##########
+    xmin, xmax, ymin, ymax = attribute_layer.GetExtent()
+    pixelSize = 0
+    if (xmax-xmin)<(ymax-ymin):
+        pixelSize = (xmax-xmin)/250
+    else:
+        pixelSize = (ymax-ymin)/250
+    
+    waveLand_path = interDir + os.sep + 'waveLand.tif'
+    datatype = gdal.GDT_Float32
+    nodata = 0
+    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+                                              datatype, nodata, waveLand_path, attribute_shape)
+    
+    waveLandRaster = gdal.Open(waveLand_path, GA_Update)
+    #Get the corresponding points and values from the shapefile to be used for interpolation
+    waveLandArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'W2L_MDIST'], 'W2L_MDIST')
+    
+     #Interpolate the rasters (give a smooth surface)
+    interpPointsOverRaster(waveLandArray[0], waveLandArray[1], waveLandRaster)
+    #########################################
+    
+    
+    def op(a,b,c,d):
         #Get capturedWE
-        capWEIndex = feat.GetFieldIndex('capSum_WE')
+        capWEIndex = feat.GetFieldIndex('capWE_Sum')
         capWEValue = feat.GetField(fieldIndex)
         #Get Depth
         depthIndex = feat.GetFieldIndex('depth')
@@ -674,7 +709,7 @@ def valuation(args):
         mooringCost = smlpm * lenml * cml * units
         #Calculate transCost
         
-#        Calculate IC (installCost+mooringCost+transCost)
+        #Calculate IC (installCost+mooringCost+transCost)
         IC = installCost + morringCost + transCost
         #Calculate NPVWE :
             
