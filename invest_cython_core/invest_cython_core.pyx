@@ -648,7 +648,19 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
     
     """Returns a list of the neighboring pixels to i,j that are in bounds
         and also flow into point i,j.  This information is inferred from
-        the flow_direction_matrix"""
+        the flow_direction_matrix
+        
+        i - column of pixel to calculate neighbors for
+        j - row of pixel to calculate neighbors for
+        flow_direction_matrix - a 2D numpy float array whose values indicate
+            outward flow directions in terms of radians
+        nodata_flow_direction - the value that corresponds to a nodata entry
+            in flow_direction_matrix
+            
+        returns a queue of neighboring cell indexes in the form 
+            (pi1, pj1, prop1, ..., pin, pjn, propn)
+        
+        """
 
     #consider neighbors who flow into i,j, third argument is the inflow
     #radian direction
@@ -761,6 +773,7 @@ cdef void d_p_area(CQueue pixels_to_process,
         while neighbors.size() != 0:
             pi = neighbors.pop()
             pj = neighbors.pop()
+            #calculate the contribution of pi,pj to i,j
             accumulation_matrix[i, j] += accumulation_matrix[pi, pj]
         #LOGGER.debug("accumulation_matrix[i, j] = %s" % (accumulation_matrix[i, j]))
         
@@ -998,10 +1011,10 @@ def flow_direction_inf(dem, flow):
     
     for col_index in range(1, col_max - 1):
         for row_index in range(1, row_max - 1):
-            #if flow_matrix[col_index, row_index] == nodata_flow:
+            if flow_matrix[col_index, row_index] == nodata_flow:
                 flow_matrix[col_index, row_index] = \
-                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
-                    #nodata_flow
+                    nodata_flow
+                    #d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
