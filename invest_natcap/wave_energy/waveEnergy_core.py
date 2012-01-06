@@ -618,27 +618,6 @@ def valuation(args):
     landingShape = ogr.Open(landptPath)
     gridShape = ogr.Open(gridptPath)
     
-    def getPoints(shape):
-        point = []
-        layer = shape.GetLayer(0)
-        feat = layer.GetNextFeature()
-        while feat is not None:
-            x = float(feat.GetGeometryRef().GetX())
-            y = float(feat.GetGeometryRef().GetY())
-            point.append([x,y])
-            feat.Destroy()
-            feat = layer.GetNextFeature()
-        
-        return np.array(point)
-    
-    def calcDist(xy_1, xy_2):
-        mindist = np.zeros(len(xy_1))
-        minid = np.zeros(len(xy_1))
-        for i, xy in enumerate(xy_1):
-            dists = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
-            mindist[i], minid[i] = dists.min(), dists.argmin()
-        return mindist, minid
-    
     wePoints = getPoints(shape)
     landingPoints = getPoints(landingShape)
     gridPoint = getPoints(gridShape)
@@ -732,7 +711,27 @@ def valuation(args):
     invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
                                  rasterName=npvPath, datatype=gdal.GDT_Float32)
     
+def getPoints(shape):
+    point = []
+    layer = shape.GetLayer(0)
+    feat = layer.GetNextFeature()
+    while feat is not None:
+        x = float(feat.GetGeometryRef().GetX())
+        y = float(feat.GetGeometryRef().GetY())
+        point.append([x,y])
+        feat.Destroy()
+        feat = layer.GetNextFeature()
     
+    return np.array(point)
+    
+def calcDist(xy_1, xy_2):
+    mindist = np.zeros(len(xy_1))
+    minid = np.zeros(len(xy_1))
+    for i, xy in enumerate(xy_1):
+        dists = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
+        mindist[i], minid[i] = dists.min(), dists.argmin()
+    return mindist, minid
+
 def changeProjection(shapeToReproject, projection, outputPath):
     """Changes the projection of a shapefile by creating a new shapefile based on
     the projection passed in and then copying all the features and fields of
