@@ -531,7 +531,6 @@ def valuation(args):
     
     year = 25.0
     T = np.linspace(0.0, year-1.0, year)
-    print T
     rho = 1.0/(1.0+drate)
     #Extract the landing and grid points data
     land_grid_pts = args['land_gridPts']
@@ -702,9 +701,9 @@ def valuation(args):
     
     capWE = args['capturedWE']
     def op(capturedWE, dem, distWL, distLG):
-        capWE = np.ones(len(T))*3526*1000.0
-        capWE[0] = 0
-        lenml = 3.0 * dem
+        capWE = 24*capturedWE*1000.0
+#        capWE[0] = 0
+        lenml = 3.0 * np.absolute(dem)
         #Calculate annualRevenue
         annualRevenue = price * units * capWE
         #Calculate annualCost
@@ -717,15 +716,18 @@ def valuation(args):
         transCost = (distWL*cul/1000.0) + (distLG*col/1000.0)
         #Calculate IC (installCost+mooringCost+transCost)
         IC = installCost + mooringCost + transCost
-        print IC
-        annualCost[0] = IC
+#        annualCost = annualCost + IC
+#        annualCost[0] = IC
         #Calculate NPVWE :
             
-        NPV = []
+        NPV = np.zeros(capWE.shape, dtype=float)
         for i in range(len(T)):
-            NPV.append(rho**i * (annualRevenue[i] - annualCost[i]))
-            
-        return sum(NPV)
+            if i==0:
+                NPV = NPV + (-1*((rho**i)*IC))
+            else:
+                NPV = NPV + (rho**i * (annualRevenue/24 - annualCost/24))
+       
+        return NPV/1000
     npvPath = interDir + os.sep + 'waveEnergy_NPV.tif'
     invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
                                  rasterName=npvPath, datatype=gdal.GDT_Float32)
