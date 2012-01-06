@@ -505,6 +505,7 @@ def valuation(args):
     projectedShapePath = interDir + os.sep + 'WaveData_clip_Prj.shp'
     landptPath = interDir + os.sep + 'landingPoints.shp'
     gridptPath = interDir + os.sep + 'gridPoint.shp'
+    npvPath = interDir + os.sep + 'waveEnergy_NPV.tif'
     
     dem = args['global_dem']
     capWE = args['capturedWE']
@@ -707,7 +708,7 @@ def valuation(args):
                 NPV = NPV + (rho**i * (annualRevenue - annualCost))
        
         return NPV/1000
-    npvPath = interDir + os.sep + 'waveEnergy_NPV.tif'
+    
     invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
                                  rasterName=npvPath, datatype=gdal.GDT_Float32)
     
