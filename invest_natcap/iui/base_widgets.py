@@ -210,7 +210,7 @@ class DynamicGroup(DynamicElement):
         #appropriate elements.  As new element classes are created, they must
         #likewise be entered here to be created.
         for values in elementsArray:
-            widget = self.registrar.create(values['type'], values)
+            widget = self.registrar.eval(values['type'], values)
             #If an unusual layoutManager has been declared, it may be necessary 
             #to add a new clause to this conditional block.
             if isinstance(self.layout(), QtGui.QGridLayout):
@@ -303,6 +303,8 @@ class DynamicPrimitive(DynamicElement):
 
         #create the elements array such that it only includes the present object
         self.elements = [self]
+        self.validator = iui_validator.Validator(self)
+        self.error_string = ''
 
     def resetValue(self):
         """If a default value has been specified, reset this element to its
@@ -337,6 +339,16 @@ class DynamicPrimitive(DynamicElement):
                 value = str(self.value())
                 if value != '':
                     return self.cast_value()
+
+    def set_error(self, error):
+        if error == None:
+            msg = 'No error found'
+        else:
+            msg = str('error: ' + error)
+        print msg
+                
+    def validate(self):
+        self.set_error(self.validator.validate())
 
 class ErrorPopup(QtGui.QWidget):
     def __init__(self, parent, linkedElement):
@@ -401,11 +413,6 @@ class LabeledElement(DynamicPrimitive):
             return True
         else:
             return False
-
-    def validate(self):
-        self.errors = []
-        errors = self.root.validator.checkElement(self)
-        self.addErrors(errors)
 
     def addElement(self, element):
         self.elements.append(element)
@@ -604,7 +611,7 @@ class DynamicText(LabeledElement):
         LabeledElement.updateLinks(self, rootPointer)
 
         self.textField.editingFinished.connect(self.validate)
-
+        
 class Container(QtGui.QGroupBox, DynamicGroup):
     """Class Container represents a QGroupBox (which is akin to the HTML widget
         'fieldset'.  It has a Vertical layout, but may be subclassed if a 
@@ -1056,8 +1063,6 @@ class RootWindow(DynamicGroup):
 
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
-
-        self.validator = iui_validator.Validator(self.allElements)
 
         for id, element in self.allElements.iteritems():
             element.updateLinks(self)
