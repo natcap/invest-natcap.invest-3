@@ -179,7 +179,7 @@ class DBFChecker(FileChecker):
         updates = {'fieldsExist': self.verify_fields_exist,
                    'restrictions': self.verify_restrictions}
         self.update_map(updates)
-        self.num_checker = NumberChecker()
+        self.num_checker = NumberChecker(self.element)
     
     def open(self):
         """Attempt to open the DBF."""

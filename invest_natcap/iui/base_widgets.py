@@ -219,11 +219,12 @@ class DynamicGroup(DynamicElement):
                     self.layout().addWidget(subElement, i, j)
                     j += 1
                     
-                if isinstance(widget, DynamicPrimitive):
+                if issubclass(widget.__class__, DynamicPrimitive):
                     i += 1 #display the error on the row below
                     self.layout().addWidget(widget.error, i, 
                         widget.error.get_setting('start'), 
                         widget.error.get_setting('width'), 1)
+                    i += 1
             else:
                 self.layout().addWidget(widget)
                 
@@ -349,11 +350,10 @@ class DynamicPrimitive(DynamicElement):
 
     def set_error(self, error):
         if error == None:
-            msg = 'No error found'
+            msg = ''
         else:
-            msg = str('error: ' + error)
-            self.error.set_error(msg)
-        print msg
+            msg = str(error)
+        self.error.set_error(msg)
                 
     def validate(self):
         self.set_error(self.validator.validate())
@@ -366,6 +366,8 @@ class ErrorString(QtGui.QLabel):
              
         QtGui.QLabel.__init__(self)
         self._settings = display_settings
+        self.setStyleSheet('QLabel { color: red; font-weight: normal; ' + 
+            'padding-bottom: 10px}')
         #set a stylesheet here
 
     def get_setting(self, key):

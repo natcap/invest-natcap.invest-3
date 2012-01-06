@@ -12,7 +12,7 @@ import base_widgets
 import executor
 import iui_validator
 
-class ModelUIRegistrar(base_widgets.Registrar):
+class ModelUIRegistrar(base_widgets.ElementRegistrar):
     def __init__(self):
         super(ModelUIRegistrar, self).__init__()
 
@@ -22,7 +22,7 @@ class ModelUIRegistrar(base_widgets.Registrar):
                    'text': base_widgets.YearEntry
                     }
 
-        self.elementMap.update(changes)
+        self.update_map(changes)
 
 class ModelUI(base_widgets.RootWindow):
     def __init__(self, uri, use_gui):
@@ -79,8 +79,7 @@ class ModelUI(base_widgets.RootWindow):
             self.show()
 
     def addLinks(self):
-        docURI = 'file:///' + os.path.abspath(invest_root +
-                                     self.attributes['localDocURI'])
+        docURI = 'file:///' + os.path.abspath(self.attributes['localDocURI'])
         self.feedbackBody = "Please include the following information:\
 \n\n1) InVEST model you're having difficulty with\n2) Explicit error message or \
 behavior\n3) If possible, a screenshot of the state of your InVEST toolset when \
