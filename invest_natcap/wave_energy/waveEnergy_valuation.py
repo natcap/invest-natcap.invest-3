@@ -37,6 +37,11 @@ def execute(args):
     valuationargs['global_dem'] = gdal.Open(args['global_dem'])
     valuationargs['capturedWE'] = gdal.Open(args['capturedWE'])
     #Open/create the output directory
+    outputDir = args['workspace_dir'] + os.sep + 'Output' + os.sep
+    intermediateDir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
+    for dir in [outputDir, intermediateDir]:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
 
     #Read machine economic parameters into a dictionary
     try:
