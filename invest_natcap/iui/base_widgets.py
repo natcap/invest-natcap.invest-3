@@ -210,7 +210,7 @@ class DynamicGroup(DynamicElement):
         #appropriate elements.  As new element classes are created, they must
         #likewise be entered here to be created.
         for values in elementsArray:
-            widget = self.registrar.create(values['type'], values)
+            widget = self.registrar.eval(values['type'], values)
             #If an unusual layoutManager has been declared, it may be necessary 
             #to add a new clause to this conditional block.
             if isinstance(self.layout(), QtGui.QGridLayout):
@@ -218,8 +218,17 @@ class DynamicGroup(DynamicElement):
                 for subElement in widget.elements:
                     self.layout().addWidget(subElement, i, j)
                     j += 1
+                    
+                if (issubclass(widget.__class__, DynamicPrimitive) and 
+                    widget.display_error()):
+                    i += 1 #display the error on the row below
+                    self.layout().addWidget(widget.error, i, 
+                        widget.error.get_setting('start'), 
+                        widget.error.get_setting('width'), 1)
+                    i += 1
             else:
                 self.layout().addWidget(widget)
+                
 
             #the self.elements array is used for maintaining a list of pointers
             #to elements associated with this group.
@@ -303,6 +312,9 @@ class DynamicPrimitive(DynamicElement):
 
         #create the elements array such that it only includes the present object
         self.elements = [self]
+        self.validator = iui_validator.Validator(self)
+        self.error = ErrorString()
+        self.set_display_error(True)
 
     def resetValue(self):
         """If a default value has been specified, reset this element to its
@@ -338,74 +350,52 @@ class DynamicPrimitive(DynamicElement):
                 if value != '':
                     return self.cast_value()
 
-class ErrorPopup(QtGui.QWidget):
-    def __init__(self, parent, linkedElement):
-        QtGui.QWidget.__init__(self, parent)
-        self.setLayout(QtGui.QVBoxLayout())
-        self.errors = QtGui.QLabel()
-        self.linkedElement = linkedElement
+    def set_error(self, error):
+        if error == None:
+            msg = ''
+        else:
+            msg = str(error)
+        self.error.set_error(msg)
+                
+    def validate(self):
+        self.set_error(self.validator.validate())
+        
+    def display_error(self):
+        """returns a boolean"""
+        return self._display_error
+    
+    def set_display_error(self, display):
+        """display is a boolean"""
+        
+        self._display_error = display
 
-    def setErrors(self, errorList):
-        text = ''
-        for error in errorList:
-            text += str(error) + '\n'
+class ErrorString(QtGui.QLabel):
+    def __init__(self, display_settings={'start':0, 'width':1}):
+        """display_settings is a python dict:
+            {'start': int,
+             'width': int}"""
+             
+        QtGui.QLabel.__init__(self)
+        self._settings = display_settings
+        self.setStyleSheet('QLabel { color: red; font-weight: normal; ' + 
+            'padding-bottom: 10px}')
+        #set a stylesheet here
 
-        self.errors.setText(text)
+    def get_setting(self, key):
+        return self._settings[key]
+    
+    def set_setting(self, key, value):
+        self._settings[key] = value
 
-
-class ValidationStatusButton(QtGui.QPushButton):
-    def __init__(self, parent, state='ok'):
-        QtGui.QPushButton.__init__(self, parent)
-        self.parent = parent
-        self.setFlat(True)
-        self.setState(state)
-        self.errorWindow = ErrorPopup(self, parent)
-        self.pressed.connect(self.getErrors)
-
-    def setState(self, state=''):
-        if state == 'ok':
-            self.setIcon(QtGui.QIcon('dialog-yes.png'))
-        elif state == 'error':
-            self.setIcon(QtGui.QIcon('dialog-no.png'))
-#        else:
-#            self.setIcon(QtGui.QIcon('blank-space.png'))
-
-    def getErrors(self):
-        for error in self.parent.errors:
-            print error
+    def set_error(self, error_string=''):
+        self.setText(error_string)
 
 class LabeledElement(DynamicPrimitive):
     def __init__(self, attributes):
         DynamicPrimitive.__init__(self, attributes)
-
-        self.validButton = ValidationStatusButton(self)
         self.label = QtGui.QLabel(attributes['label'])
-
-        self.elements = [self.validButton, self.label]
-
-        self.errors = []
-
-    def addError(self, errorStr):
-        self.errors.append(errorStr)
-
-    def addErrors(self, errorList):
-        if len(errorList) > 0:
-            for element, error in errorList:
-                self.addError(error)
-            self.validButton.setState('error')
-        else:
-            self.validButton.setState('ok')
-
-    def hasErrors(self):
-        if len(self.errors) > 0:
-            return True
-        else:
-            return False
-
-    def validate(self):
-        self.errors = []
-        errors = self.root.validator.checkElement(self)
-        self.addErrors(errors)
+        self.elements = [self.label]
+        self.error.set_setting('start', 1)
 
     def addElement(self, element):
         self.elements.append(element)
@@ -413,16 +403,12 @@ class LabeledElement(DynamicPrimitive):
     def initState(self):
         if self.isEnabled():
             self.validate()
-        else:
-            self.validButton.setState('')
 
     def setState(self, state, includeSelf=True, recursive=True):
         DynamicPrimitive.setState(self, state, includeSelf, recursive)
 
         if state == True:
             self.validate()
-        else:
-            self.validButton.setState('')
 
 class DynamicText(LabeledElement):
     """Creates an object containing a label and a sigle-line text field for
@@ -604,7 +590,7 @@ class DynamicText(LabeledElement):
         LabeledElement.updateLinks(self, rootPointer)
 
         self.textField.editingFinished.connect(self.validate)
-
+        
 class Container(QtGui.QGroupBox, DynamicGroup):
     """Class Container represents a QGroupBox (which is akin to the HTML widget
         'fieldset'.  It has a Vertical layout, but may be subclassed if a 
@@ -682,6 +668,7 @@ class FileEntry(DynamicText):
         super(FileEntry, self).__init__(attributes)
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.addElement(self.button)
+        self.error.set_setting('width', 2)
 
     def setValue(self, text):
         """Set the value of the uri field.  If parameter 'text' is an absolute
@@ -805,6 +792,7 @@ class HideableFileEntry(FileEntry):
         #remove the label, as it is being subsumed by the new checkbox's label.
         self.elements.remove(self.label)
         self.elements.insert(0, self.checkbox)
+        self.error.set_setting('start', 2)
 
         self.hideableElements = [self.textField, self.button]
         self.toggleHiding(False)
@@ -1056,8 +1044,6 @@ class RootWindow(DynamicGroup):
 
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
-
-        self.validator = iui_validator.Validator(self.allElements)
 
         for id, element in self.allElements.iteritems():
             element.updateLinks(self)

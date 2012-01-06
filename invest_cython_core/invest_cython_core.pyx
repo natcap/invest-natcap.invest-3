@@ -316,6 +316,10 @@ cdef struct Pair:
     int i,j
     float h
 
+cdef struct NeighborFlow:
+    int i,j
+    float prop
+
 """This is a compare function that can be passed to stdlib's qsort such
     that pairs are sorted in increasing height order"""
 cdef int pairCompare(const_void *a, const_void *b):
@@ -642,22 +646,35 @@ def flowAccumulationD8(flowDirection, flowAccumulation):
     flowAccumulation.GetRasterBand(1).WriteArray(\
         accumulationMatrix.transpose(), 0, 0)
 
-cdef CQueue calculate_inflow_neighbors_dinf(int i, int j, 
+cdef void calculate_inflow_neighbors_dinf(int i, int j, 
                     np.ndarray[np.float_t,ndim=2] flow_direction_matrix, 
-                    int nodata_flow_direction):
+                    int nodata_flow_direction,
+                    NeighborFlow *neighbors):
     
     """Returns a list of the neighboring pixels to i,j that are in bounds
         and also flow into point i,j.  This information is inferred from
-        the flow_direction_matrix"""
+        the flow_direction_matrix
+        
+        i - column of pixel to calculate neighbors for
+        j - row of pixel to calculate neighbors for
+        flow_direction_matrix - a 2D numpy float array whose values indicate
+            outward flow directions in terms of radians
+        nodata_flow_direction - the value that corresponds to a nodata entry
+            in flow_direction_matrix
+        neighbors - an output as an array of NeighborFlow structs (i, j, prop).
+            Valid entries start at index 0 and end when the NeighborFlow.prop
+            value == -1
+            
+        returns nothing
+        """
 
     #consider neighbors who flow into i,j, third argument is the inflow
     #radian direction
-    cdef float PI = 3.14159265, alpha, beta
+    cdef float PI = 3.14159265, alpha, beta, prop
     cdef int *shift_indexes = [-1,0,-1,-1,0,-1,1,-1,1,0,1,1,0,1,-1,1]
     cdef float *inflow_angles = [0.0,PI/4.0,PI/2.0,3.0*PI/4.0,PI,5.0*PI/4.0,
                                3.0*PI/2.0,7.0*PI/4.0]
-    cdef int pi, pj, k, n
-    cdef CQueue neighbors = CQueue()
+    cdef int pi, pj, k, n, neighbor_index = 0
     for k in range(8):
         #alpha is the angle that flows from pixel pi, pj, to i, j
         alpha = inflow_angles[k]
@@ -670,16 +687,26 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
             beta = flow_direction_matrix[pi, pj]
             if beta == nodata_flow_direction:
                 continue
-            if abs(alpha-beta) < PI/4.0 or \
-                (alpha == 0.0 and abs(2*PI+alpha-beta) < PI/4.0):
-                neighbors.append(pi)
-                neighbors.append(pj)
-    return neighbors
+            prop = -1 #initialize
+            if alpha == 0:
+                alpha = 2*PI
+            if abs(alpha-beta) < PI/4.0:
+                neighbors[neighbor_index].i = pi
+                neighbors[neighbor_index].j = pj
+
+                #The proporation is 1-the proportion of beta pointing to alpha
+                #if alpha == beta then prop == 1, otherwise it's less than 1
+                #but greater than 0 because of the if statement guard above
+                prop = 1-abs(alpha-beta)/(PI/4.0)
+                neighbors[neighbor_index].prop = prop
+                neighbor_index += 1
+    #Placing a -1 in prop marks the end of the neighbor array
+    neighbors[neighbor_index].prop = -1
 
 cdef void d_p_area(CQueue pixels_to_process,
-                   np.ndarray[np.int_t,ndim=2] accumulation_matrix,
+                   np.ndarray[np.float_t,ndim=2] accumulation_matrix,
                    np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
-                   int nodata_flow_direction, int nodata_flow_accumulation,
+                   int nodata_flow_direction, float nodata_flow_accumulation,
                    np.ndarray[np.float_t,ndim=2] dem_pixels):
     """Takes a list of pixels to calculate flow for the dinf algorithm, then
         does a dynamic style programming process of visiting and updating
@@ -710,8 +737,11 @@ cdef void d_p_area(CQueue pixels_to_process,
         
     cdef int i,j, ni, nj, runningSum, pi, pj, neighbor_index, \
         uncalculated_neighbors
-    cdef float PI = 3.14159265
-    cdef CQueue neighbors
+    cdef float PI = 3.14159265, prop
+    #cdef CQueue neighbors
+    #This is an array of pairs that keeps track of i,j indexes and proportion
+    #of flow to the inner cell.
+    cdef NeighborFlow *neighbors = <NeighborFlow *>malloc(9 * sizeof(Pair))
     LOGGER = logging.getLogger('d_p_area')
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
@@ -728,8 +758,8 @@ cdef void d_p_area(CQueue pixels_to_process,
         if accumulation_matrix[i, j] > 0: continue
 
         #build list of uncalculated neighbors
-        neighbors = calculate_inflow_neighbors_dinf(i,j, 
-            flow_direction_matrix, nodata_flow_direction)
+        calculate_inflow_neighbors_dinf(i,j, flow_direction_matrix, 
+                                        nodata_flow_direction, neighbors)
         
         if accumulation_matrix[i, j] == -1: #never visited
             #mark visited
@@ -737,33 +767,41 @@ cdef void d_p_area(CQueue pixels_to_process,
             
             #check to see if any of the neighbors were uncalculated, if so, 
             #calculate them
-            if neighbors.size() != 0:
+            if neighbors[0].prop != -1:
                 #push the current pixel back on, note the indexes are in reverse
                 #order so they can be popped off in order
                 pixels_to_process.push(j)
                 pixels_to_process.push(i)
                 
                 #Visit each uncalculated neighbor and push on the work queue
-                while neighbors.size() != 0:
-                    pi = neighbors.pop()
-                    pj = neighbors.pop()
+                for neighbor_index in range(8):
+                    #-1 prop marks the end of the neighbor list
+                    if neighbors[neighbor_index].prop == -1: break 
+                    
+                    pi = neighbors[neighbor_index].i
+                    pj = neighbors[neighbor_index].j
+                    
                     #see if neighbor is uncalculated
                     if accumulation_matrix[pi, pj] == -1:
                         pixels_to_process.push(pj)
                         pixels_to_process.push(pi)
-                #this skips over the calculation of pixel i,j until neighbors are
-                #calculated
+                #this skips over the calculation of pixel i,j until neighbors 
+                #are calculated
                 continue 
 
         #If we get here then this pixel and its neighbors have been processed
         accumulation_matrix[i, j] = 1
         #Add contribution from each neighbor to current pixel 
-        while neighbors.size() != 0:
-            pi = neighbors.pop()
-            pj = neighbors.pop()
-            accumulation_matrix[i, j] += accumulation_matrix[pi, pj]
-        #LOGGER.debug("accumulation_matrix[i, j] = %s" % (accumulation_matrix[i, j]))
-        
+        for neighbor_index in range(8):
+            prop = neighbors[neighbor_index].prop
+            if prop == -1: break 
+            
+            pi = neighbors[neighbor_index].i
+            pj = neighbors[neighbor_index].j
+
+            #calculate the contribution of pi,pj to i,j
+            accumulation_matrix[i, j] += prop * accumulation_matrix[pi, pj]
+            #LOGGER.debug("prop %s accumulation_matrix[i, j] = %s" % (prop, accumulation_matrix[i, j]))
 
 def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     """Creates a raster of accumulated flow to each cell.
@@ -775,7 +813,8 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
         
         returns nothing"""
 
-    cdef int nodata_flow_direction, nodata_flow_accumulation, i, j
+    cdef int nodata_flow_direction, i, j
+    cdef float nodata_flow_accumulation
     cdef CQueue q
     LOGGER = logging.getLogger('flow_accumulation_dinf')
     LOGGER.debug('initializing temporary buffers')
@@ -795,8 +834,8 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     cellYSize = gp[5]
     #Create the output flow, initialize to -1 as undefined
     idim, jdim = flow_direction_matrix.shape[0], flow_direction_matrix.shape[1]
-    cdef np.ndarray[np.int_t,ndim=2] accumulation_matrix = \
-        np.zeros([idim, jdim],dtype=np.int)
+    cdef np.ndarray[np.float_t,ndim=2] accumulation_matrix = \
+        np.zeros([idim, jdim],dtype=np.float)
         
     #initalize to -2 to indicate no processing has occured.  This will change
     #to -1 to indicate it's been enqueued, and something else when value is
@@ -998,10 +1037,10 @@ def flow_direction_inf(dem, flow):
     
     for col_index in range(1, col_max - 1):
         for row_index in range(1, row_max - 1):
-            #if flow_matrix[col_index, row_index] == nodata_flow:
+            if flow_matrix[col_index, row_index] == nodata_flow:
                 flow_matrix[col_index, row_index] = \
-                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
-                    #nodata_flow
+                    nodata_flow
+                    #d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)

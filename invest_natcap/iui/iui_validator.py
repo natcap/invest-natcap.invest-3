@@ -21,14 +21,14 @@ class Validator(registrar.Registrar):
         registrar.Registrar.__init__(self)
 
         self.element = element
-        self.init_type_checker()
-        updates = {'GDAL': self.GDALChecker,
-                   'OGR': self.OGRChecker,
-                   'number': self.NumberChecker,
-                   'file': self.FileChecker,
-                   'DBF': self.DBFChecker}
+        updates = {'GDAL': GDALChecker,
+                   'OGR': OGRChecker,
+                   'number': NumberChecker,
+                   'file': FileChecker,
+                   'DBF': DBFChecker}
         self.update_map(updates)
-        self.validateFuncs = [self.elementIsRequired]
+        self.init_type_checker()
+        self.validateFuncs = [self.is_element_required]
 
     def validate(self):
         """Validate the element.  This is a two step process: first, all 
@@ -52,7 +52,7 @@ class Validator(registrar.Registrar):
             
         try:
             type = self.element.attributes['validateAs']['type']
-            self.type_checker = self.get_func(type)
+            self.type_checker = self.get_func(type)(self.element)
         except KeyError:
             self.type_checker = None
 
@@ -80,10 +80,16 @@ class Checker(registrar.Registrar):
             self.checks.insert(index, func)
     
     def run_checks(self):
-        for check in self.checks:
-            check()
+        for check_func in self.checks:
+            error = check_func()
+            if error != None:
+                return error
             
-        #execute restriction checks in map
+        for key, value in self.valid.iteritems():
+            error = self.eval(key, value)
+            if error != None:
+                return error
+        return None
         
     def get_element(self, element_id):
         return self.element.root.allElements[element_id]
@@ -92,17 +98,17 @@ class FileChecker(Checker):
     def __init__(self, element):
         Checker.__init__(self, element)
         
-        self.uri = self.element.value()
-        self.add_check_function(self.checkExists)
+        self.uri = None
+        self.add_check_function(self.check_exists)
         self.add_check_function(self.open)
     
-    def checkExists(self):
+    def check_exists(self):
         """Verify that the file at URI exists."""
 
-        if not os.path.exists(self.uri):
+        self.uri = self.element.value()
+
+        if os.path.exists(self.uri) == False:
             return str('File not found')
-        else:
-            return None
         
     def open(self):
         try:
@@ -114,11 +120,10 @@ class FileChecker(Checker):
 class GDALChecker(FileChecker):
     def open(self):
         """Attempt to open the GDAL object.  URI must exist."""
-        
-        gdal.PushErrorHandler('CPLQuietErrorHandler')
-        fileObj = gdal.Open(str(self.uri))
 
-        if fileObj == None:
+        gdal.PushErrorHandler('CPLQuietErrorHandler')
+        file_obj = gdal.Open(str(self.uri))
+        if file_obj == None:
             return str('Must be a raster that GDAL can open')
 
 class OGRChecker(FileChecker):
@@ -131,7 +136,7 @@ class OGRChecker(FileChecker):
         
     def open(self):
         """Attempt to open the shapefile."""
-        
+
         self.file = ogr.Open(str(self.uri))
         
         if not isinstance(ogrFile, osgeo.ogr.DataSource):
@@ -174,7 +179,7 @@ class DBFChecker(FileChecker):
         updates = {'fieldsExist': self.verify_fields_exist,
                    'restrictions': self.verify_restrictions}
         self.update_map(updates)
-        self.num_checker = NumberChecker()
+        self.num_checker = NumberChecker(self.element)
     
     def open(self):
         """Attempt to open the DBF."""
