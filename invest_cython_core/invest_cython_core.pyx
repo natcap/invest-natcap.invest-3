@@ -544,14 +544,14 @@ cdef void calculate_inflow_neighbors_dinf(int i, int j,
     #consider neighbors who flow into i,j, third argument is the inflow
     #radian direction
     cdef float PI = 3.14159265, alpha, beta, prop
-    cdef int *shift_indexes = [-1,0,
-                               -1,-1,
-                               0,-1,
-                               1,-1,
-                               1,0,
-                               1,1,
-                               0,1,
-                               -1,1]
+    cdef int *shift_indexes = [-1, 0,
+                               -1, -1,
+                               0, -1,
+                               1, -1,
+                               1, 0,
+                               1, 1,
+                               0, 1,
+                               -1, 1]
     cdef float *inflow_angles = [0.0,
                                  PI/4.0,
                                  PI/2.0,
@@ -560,6 +560,7 @@ cdef void calculate_inflow_neighbors_dinf(int i, int j,
                                  5.0*PI/4.0,
                                  3.0*PI/2.0,
                                  7.0*PI/4.0]
+    
     cdef int pi, pj, k, n, neighbor_index = 0
     for k in range(8):
         #alpha is the angle that flows from pixel pi, pj, to i, j
@@ -715,6 +716,7 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
         dem.RasterXSize, dem.RasterYSize).transpose().astype(np.float)
     nodata_flow_direction = flow_direction.GetRasterBand(1).GetNoDataValue()
     nodata_flow_accumulation = flow_accumulation.GetRasterBand(1).GetNoDataValue()
+    nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
     gp = flow_direction.GetGeoTransform()
     cellXSize = gp[1]
     cellYSize = gp[5]
@@ -722,6 +724,8 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     idim, jdim = flow_direction_matrix.shape[0], flow_direction_matrix.shape[1]
     cdef np.ndarray[np.float_t,ndim=2] accumulation_matrix = \
         np.zeros([idim, jdim],dtype=np.float)
+    cdef Pair *dem_pixel_pairs = \
+        <Pair *>malloc(flow_direction.RasterXSize*flow_direction.RasterYSize * sizeof(Pair))
         
     #initalize to -2 to indicate no processing has occured.  This will change
     #to -1 to indicate it's been enqueued, and something else when value is
@@ -730,16 +734,28 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
 
     LOGGER.info('calculating flow accumulation')
 
-    lasti = -1
+    #Construct a lookup table that sorts DEM pixels by height so we can process
+    #the lowest pixels to the highest in propagating shortest path distances.
+    valid_pixel_count = 0
+    for i in range(1,idim-1):
+        for j in range(1,jdim-1):
+            h = dem_pixels[i,j]
+            if h == nodata_dem: continue
+            dem_pixel_pairs[valid_pixel_count].i = i
+            dem_pixel_pairs[valid_pixel_count].j = j
+            dem_pixel_pairs[valid_pixel_count].h = h
+            valid_pixel_count += 1
+    
+    #Sort pixels by increasing height so that we visit drainage points in order
+    qsort(dem_pixel_pairs,valid_pixel_count,sizeof(Pair),pairCompare)
+    
     q = CQueue()
-    for i in range(idim):
-        for j in range(jdim):
-            if lasti != i:
+    for i in range(valid_pixel_count):
+            if i % 100 == 0:
                 LOGGER.debug('percent complete %2.2f %%' % 
-                             (100*(i+1.0)/idim))
-                lasti=i
-            q.append(i)
-            q.append(j)
+                             (100*(i+1.0)/valid_pixel_count))
+            q.append(dem_pixel_pairs[i].i)
+            q.append(dem_pixel_pairs[i].j)
             #LOGGER.debug('q size %s' %(q.size()))
             d_p_area(q,accumulation_matrix,flow_direction_matrix,
                           nodata_flow_direction, nodata_flow_accumulation,
@@ -748,6 +764,8 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     flow_accumulation.GetRasterBand(1).WriteArray(\
         accumulation_matrix.transpose(), 0, 0)
     invest_core.calculateRasterStats(flow_accumulation.GetRasterBand(1))
+    
+    free(dem_pixel_pairs)
 
 def flow_direction_inf(dem, flow):
     """Calculates the D-infinity flow algorithm.  The output is a float
