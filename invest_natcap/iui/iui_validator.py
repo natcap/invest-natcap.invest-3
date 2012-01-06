@@ -108,7 +108,7 @@ class FileChecker(Checker):
         self.uri = self.element.value()
 
         if os.path.exists(self.uri) == False:
-            return str(self.uri + ' File not found')
+            return str('File not found')
         
     def open(self):
         try:
@@ -124,7 +124,7 @@ class GDALChecker(FileChecker):
         gdal.PushErrorHandler('CPLQuietErrorHandler')
         file_obj = gdal.Open(str(self.uri))
         if file_obj == None:
-            return str(self.uri + ' Must be a raster that GDAL can open')
+            return str('Must be a raster that GDAL can open')
 
 class OGRChecker(FileChecker):
     def __init__(self, element):
