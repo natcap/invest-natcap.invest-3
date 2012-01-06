@@ -679,10 +679,8 @@ def valuation(args):
     interpPointsOverRaster(landGridArray[0], landGridArray[1], landGridRaster)
     #########################################
     
-    capWE = args['capturedWE']
     def op(capturedWE, dem, distWL, distLG):
         capWE = capturedWE*1000.0
-#        capWE[0] = 0
         lenml = 3.0 * np.absolute(dem)
         #Calculate annualRevenue
         annualRevenue = price * units * capWE
@@ -696,9 +694,6 @@ def valuation(args):
         transCost = (distWL*cul/1000.0) + (distLG*col/1000.0)
         #Calculate IC (installCost+mooringCost+transCost)
         IC = installCost + mooringCost + transCost
-#        annualCost = annualCost + IC
-#        annualCost[0] = IC
-        #Calculate NPVWE :
             
         NPV = np.zeros(capWE.shape, dtype=float)
         for i in range(len(T)):
