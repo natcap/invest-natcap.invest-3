@@ -358,7 +358,8 @@ class DynamicPrimitive(DynamicElement):
         self.error.set_error(msg)
                 
     def validate(self):
-        self.set_error(self.validator.validate())
+        if self.isEnabled():
+            self.set_error(self.validator.validate())
         
     def display_error(self):
         """returns a boolean"""
