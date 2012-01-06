@@ -541,6 +541,7 @@ def valuation(args):
             grid_pt = value
         else:
             land_pts[key] = value
+            
     #Create a coordinate transformation for lat/long to meters
     prjFile = open(args['projection'])
     prj = prjFile.read()
@@ -619,7 +620,6 @@ def valuation(args):
     
     def getPoints(shape):
         point = []
-        
         layer = shape.GetLayer(0)
         feat = layer.GetNextFeature()
         while feat is not None:
@@ -630,7 +630,6 @@ def valuation(args):
             feat = layer.GetNextFeature()
         
         return np.array(point)
-    
     
     def calcDist(xy_1, xy_2):
         mindist = np.zeros(len(xy_1))
@@ -694,6 +693,7 @@ def valuation(args):
     #Get the corresponding points and values from the shapefile to be used for interpolation
     waveLandArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'W2L_MDIST'], 'W2L_MDIST')
     landGridArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'L2G_MDIST'], 'L2G_MDIST')
+
      #Interpolate the rasters (give a smooth surface)
     interpPointsOverRaster(waveLandArray[0], waveLandArray[1], waveLandRaster)
     interpPointsOverRaster(landGridArray[0], landGridArray[1], landGridRaster)
@@ -701,7 +701,7 @@ def valuation(args):
     
     capWE = args['capturedWE']
     def op(capturedWE, dem, distWL, distLG):
-        capWE = 24*capturedWE*1000.0
+        capWE = capturedWE*1000.0
 #        capWE[0] = 0
         lenml = 3.0 * np.absolute(dem)
         #Calculate annualRevenue
@@ -725,7 +725,7 @@ def valuation(args):
             if i==0:
                 NPV = NPV + (-1*((rho**i)*IC))
             else:
-                NPV = NPV + (rho**i * (annualRevenue/24 - annualCost/24))
+                NPV = NPV + (rho**i * (annualRevenue - annualCost))
        
         return NPV/1000
     npvPath = interDir + os.sep + 'waveEnergy_NPV.tif'
