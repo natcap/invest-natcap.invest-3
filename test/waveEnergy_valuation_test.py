@@ -31,7 +31,7 @@ class TestWaveEnergyValuation(unittest.TestCase):
         args['wave_base_data_uri'] = './data/test_data/wave_Energy/samp_input/WaveData'
         args['land_gridPts_uri'] = './data/test_data/wave_Energy/samp_input/LandGridPts_WCVI_CSV.csv'
         args['machine_econ_uri'] = './data/test_data/wave_Energy/samp_input/Machine_PelamisEconCSV.csv'
-        args['numberOfMachines'] = 24
+        args['numberOfMachines'] = 28
         args['projection_uri'] = './data/test_data/wave_Energy/test_input/WGS_1984_UTM_Zone_10N.prj'
         args['capturedWE'] = './data/test_data/wave_Energy/test_input/aoiCapWE.tif'
         args['global_dem'] = './data/test_data/wave_Energy/samp_input/global_dem'
