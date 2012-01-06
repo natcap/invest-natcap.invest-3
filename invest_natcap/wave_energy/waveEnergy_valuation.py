@@ -36,6 +36,8 @@ def execute(args):
     valuationargs['projection'] = args['projection_uri']
     valuationargs['global_dem'] = gdal.Open(args['global_dem'])
     valuationargs['capturedWE'] = gdal.Open(args['capturedWE'])
+    valuationargs['wave_data_shape'] = ogr.Open(args['wave_data_shape_path'])
+    valuationargs['number_machines'] = args['numberOfMachines']
     #Open/create the output directory
     outputDir = args['workspace_dir'] + os.sep + 'Output' + os.sep
     intermediateDir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
@@ -65,23 +67,6 @@ def execute(args):
         valuationargs['land_gridPts'] = landGridPts
     except IOError, e:
         print 'File I/O error' + e
-    #It may be easiest to have capturedWE and Depth in shapefile and
-    #have that shapefile be named something specific so that we can
-    #differentiate between whether AOI was used or not.  If not, then
-    #report an error back saying that the biophysical model must be run
-    #with AOI for valuation to be run.
-    #If the above is the case, then:
-    attribute_shape = ogr.Open(args['wave_data_shape_path'])    
-    valuationargs['wave_data_shape'] = attribute_shape
-    
-    #Open the output files for capturedWE from the biophysical run
 
-    #Open the file that contains the depth values
-    
-    #Add the number of machines to arguments for valuation
-    valuationargs['number_machines'] = args['numberOfMachines']
-    #Not sure whether the projection should be taken care of here or in valuation
-        #Handle projection transformation here if necessary
-        
     #Call the valuation core module with attached arguments to run the economic valuation
     waveEnergy_core.valuation(valuationargs)
