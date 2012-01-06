@@ -10,24 +10,12 @@ from invest_natcap.dbfpy import dbf
 import registrar
 
 class Validator(registrar.Registrar):
-    """Notes on subclassing:
-    
-        self.lookup
-        ==================================
-        Functions added to the dictionary self.lookup must accept one argument:
-        the output of element.value().
+    """Validator class contains a reference to an object's type-specific checker.
+        It is assumed that one single iui input element will have its own 
+        validator.
         
-        self.validateFuncs
-        ==================================
-        Functions added to the python list self.validateFuncs must accept the
-        following arguments:
+        element - a reference to the element in question."""
         
-          id - the string identifier of the element
-          element - the pointer to the element
-          failed - a pointer to a python list.  This list has elements that are
-            tuples with the following structure: (element pointer, error message string)
-            
-        """
     def __init__(self, element):
         #allElements is a pointer to a python dict: str id -> obj pointer.
         registrar.Registrar.__init__(self)
@@ -43,6 +31,13 @@ class Validator(registrar.Registrar):
         self.validateFuncs = [self.elementIsRequired]
 
     def validate(self):
+        """Validate the element.  This is a two step process: first, all 
+            functions in the Validator's validateFuncs list are executed.  Then,
+            The validator's type checker class is invoked to actually check the 
+            input against the defined restrictions.
+            
+            returns a string if an error is found.  Returns None otherwise."""
+            
         for func in self.validateFuncs:
             error = func()
             if error != None:
@@ -51,6 +46,10 @@ class Validator(registrar.Registrar):
         return self.type_checker.run_checks()
         
     def init_type_checker(self):
+        """Initialize the type checker.
+        
+            returns nothing."""
+            
         try:
             type = self.element.attributes['validateAs']['type']
             self.type_checker = self.get_func(type)
@@ -58,6 +57,11 @@ class Validator(registrar.Registrar):
             self.type_checker = None
 
     def is_element_required(self):
+        """Check to see if the element is required.  If the element is required
+            but its requirements are not satisfied, return an error message.
+            
+            returns a string if an error is found.  Returns None otherwise."""
+            
         if self.element.isRequired() and not self.element.requirementsMet():
             return 'Element is required'
 
