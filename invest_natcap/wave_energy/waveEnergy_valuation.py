@@ -36,6 +36,8 @@ def execute(args):
     valuationargs = {}
     valuationargs['workspace_dir'] = args['workspace_dir']
     valuationargs['projection'] = args['projection_uri']
+    valuationargs['global_dem'] = gdal.Open(args['global_dem'])
+    valuationargs['capturedWE'] = gdal.Open(args['capturedWE'])
     #Open/create the output directory
 
     #Read machine economic parameters into a dictionary

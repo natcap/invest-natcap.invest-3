@@ -677,90 +677,101 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
     return neighbors
 
 cdef void d_p_area(CQueue pixels_to_process,
-                              np.ndarray[np.int_t,ndim=2] accumulation_matrix,
-                      np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
-                      int nodata_flow_direction, int nodata_flow_accumulation):
+                   np.ndarray[np.int_t,ndim=2] accumulation_matrix,
+                   np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
+                   int nodata_flow_direction, int nodata_flow_accumulation,
+                   np.ndarray[np.float_t,ndim=2] dem_pixels):
     """Takes a list of pixels to calculate flow for the dinf algorithm, then
         does a dynamic style programming process of visiting and updating
         each one as it needs processing.  Modified `accumulation_matrix`
         during processing.
         
+        pixels_to_process - a collections CQueue of i,j indexes to process.
+            Popping i then j will give you the next pixel to process.  This
+            queue will be modified and eventually returned empty as part of
+            the calculation process.
+            
+        flow_direction_matrix - a numpy array input indicating the flow 
+            direction at each pixel in radians.
+            
+        accumulation_matrix - a numpy array output of the flow accumulation
+            along each pixel.  Must be the same dimensions as 
+            flow_direction_matrix
+
+        nodata_flow_direction - the value that can be used to determine if
+            a pixel in flow_direction_matrix is a nodata value
+            
+        nodata_flow_accumulation - the value to assign to a pixel in 
+            accumulation_matrix if a nodata value should go there.  Should
+            correspond to a nodata value pixel in flow_direction_matrix
+
         dem_pixels - a matrix of DEM pixel heights, used to march the 
-            algorithm from uphill to downhill
+            algorithm from uphill to downhill"""
         
-        pixelsToProcess - a collections.deque of (i,j) tuples"""
     cdef int i,j, ni, nj, runningSum, pi, pj, neighbor_index, \
         uncalculated_neighbors
-    cdef float PI = 3.14159265, alpha, beta
-    cdef int *shift_indexes = [-1,0,
-                               -1,-1,
-                               0,-1,
-                               1,-1,
-                               1,0,
-                               1,1,
-                               0,1,
-                               -1,1]
-    cdef float *inflow_angles = [0.0,
-                                 PI/4.0,
-                                 PI/2.0,
-                                 3.0*PI/4.0,
-                                 PI,
-                                 5.0*PI/4.0,
-                                 3.0*PI/2.0,
-                                 7.0*PI/4.0]
+    cdef float PI = 3.14159265
     cdef CQueue neighbors
     LOGGER = logging.getLogger('d_p_area')
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
-        LOGGER.debug("working on pixel %s, %s, direction %s" % (i,j, flow_direction_matrix[i, j]))
-        
+        #LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
+        #LOGGER.debug("%s, %s, %s\n%s, %s, %s\n%s, %s, %s" % (dem_pixels[i-1,j+1],dem_pixels[i,j+1],dem_pixels[i+1,j+1],dem_pixels[i-1,j],dem_pixels[i,j],dem_pixels[i+1,j],dem_pixels[i-1,j-1],dem_pixels[i,j-1],dem_pixels[i+1,j-1]))
+        #LOGGER.debug("rows col %s %s" % (dem_pixels.shape[0],dem_pixels.shape[1]))
+        #LOGGER.debug("nodata flow direction %s\n " % (nodata_flow_direction))
         if flow_direction_matrix[i, j] == nodata_flow_direction:
             accumulation_matrix[i, j] = nodata_flow_accumulation
             continue
 
         #if pixel set, continue
-        if accumulation_matrix[i, j] != -1: continue
+        if accumulation_matrix[i, j] > 0: continue
 
         #build list of uncalculated neighbors
         neighbors = calculate_inflow_neighbors_dinf(i,j, 
             flow_direction_matrix, nodata_flow_direction)
         
-        #check to see if any of the neighbors were uncalculated, if so, 
-        #calculate them
-        LOGGER.debug("%s neighbors" % (neighbors.size()))
-        if neighbors.size() != 0:
-            #push the current pixel back on, note the indexes are in reverse
-            #order so they can be popped off in order
-            pixels_to_process.push(j)
-            pixels_to_process.push(i)
+        if accumulation_matrix[i, j] == -1: #never visited
+            #mark visited
+            accumulation_matrix[i, j] = 0
             
-            #Visit each uncalculated neighbor and push on the work queue
-            uncalculated_neighbors = 0
-            while neighbors.size() != 0:
-                pi = neighbors.pop()
-                pj = neighbors.pop()
-                #see if neighbor is uncalculated
-                if accumulation_matrix[pi, pj] == -1:
-                    pixels_to_process.push(pj)
-                    pixels_to_process.push(pi)
-                    uncalculated_neighbors += 1
-            #this skips over the calculation of pixel i,j until neighbors are
-            #calculated
-            if uncalculated_neighbors != 0: continue 
+            #check to see if any of the neighbors were uncalculated, if so, 
+            #calculate them
+            if neighbors.size() != 0:
+                #push the current pixel back on, note the indexes are in reverse
+                #order so they can be popped off in order
+                pixels_to_process.push(j)
+                pixels_to_process.push(i)
+                
+                #Visit each uncalculated neighbor and push on the work queue
+                while neighbors.size() != 0:
+                    pi = neighbors.pop()
+                    pj = neighbors.pop()
+                    #see if neighbor is uncalculated
+                    if accumulation_matrix[pi, pj] == -1:
+                        pixels_to_process.push(pj)
+                        pixels_to_process.push(pi)
+                #this skips over the calculation of pixel i,j until neighbors are
+                #calculated
+                continue 
 
-        #If we get here then the neighbors are calculated
+        #If we get here then this pixel and its neighbors have been processed
         accumulation_matrix[i, j] = 1
-        LOGGER.debug("accumulation_matrix[i, j] = %s" % (accumulation_matrix[i, j]))
-        
         #Add contribution from each neighbor to current pixel 
+        while neighbors.size() != 0:
+            pi = neighbors.pop()
+            pj = neighbors.pop()
+            accumulation_matrix[i, j] += accumulation_matrix[pi, pj]
+        #LOGGER.debug("accumulation_matrix[i, j] = %s" % (accumulation_matrix[i, j]))
+        
 
-def flow_accumulation_dinf(flow_direction, flow_accumulation):
+def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     """Creates a raster of accumulated flow to each cell.
     
         flow_direction - A raster showing direction of flow out of each cell
             with direcitonal values given in radians.
         flow_accumulation - The output flow accumulation raster set
+        dem - heightmap raster for the area of interest
         
         returns nothing"""
 
@@ -774,7 +785,9 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation):
     cdef np.ndarray[np.float_t,ndim=2] flow_direction_matrix = \
         flow_direction.GetRasterBand(1).ReadAsArray(0, 0,
         flow_direction.RasterXSize, flow_direction.RasterYSize).transpose().astype(np.float)
-        
+    cdef np.ndarray[np.float_t,ndim=2] dem_pixels  = \
+        dem.GetRasterBand(1).ReadAsArray(0, 0,
+        dem.RasterXSize, dem.RasterYSize).transpose().astype(np.float)
     nodata_flow_direction = flow_direction.GetRasterBand(1).GetNoDataValue()
     nodata_flow_accumulation = flow_accumulation.GetRasterBand(1).GetNoDataValue()
     gp = flow_direction.GetGeoTransform()
@@ -802,8 +815,10 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation):
                 lasti=i
             q.append(i)
             q.append(j)
+            #LOGGER.debug('q size %s' %(q.size()))
             d_p_area(q,accumulation_matrix,flow_direction_matrix,
-                          nodata_flow_direction, nodata_flow_accumulation)
+                          nodata_flow_direction, nodata_flow_accumulation,
+                          dem_pixels)
 
     flow_accumulation.GetRasterBand(1).WriteArray(\
         accumulation_matrix.transpose(), 0, 0)
@@ -895,6 +910,11 @@ def flow_direction_inf(dem, flow):
             slope_max = 0 #use this to keep track of the maximum down-slope
             flow_direction_max_slope = 0 #flow direction on max downward slope
             max_index = 0 #index to keep track of max slope facet
+            
+            #Initialize flow matrix to nod_data flow so the default is to 
+            #calculate with D8.
+            flow_matrix[col_index, row_index] = nodata_flow
+            
             for facet_index in range(8):
                 #This defines the three height points
                 #The 
@@ -904,14 +924,21 @@ def flow_direction_inf(dem, flow):
                                  e_1_offsets[facet_index*2+0] + row_index]
                 e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + col_index,
                                  e_2_offsets[facet_index*2+0] + row_index]
+                
+                #avoid calculating a slope on nodata values
+                if e_1 == nodata_dem or e_2 == nodata_dem: 
+                    break #fallthrough to D8
+                 
                 #s_1 is slope along straight edge
                 s_1 = (e_0 - e_1) / d_1 #Eqn 1
-                if s_1 <= 0: continue #uphill slope or flat, so skip, D8 resolve
+                
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
-                if s_2 <= 0: continue #uphill slope or flat, so skip, D8 resolve
-                #Default to pi/2 in case s_1 = 0
-                #to avoid divide by zero cases
+                
+                if s_1 <= 0 or s_2 <= 0: 
+                    continue #uphill slope or flat, so skip, D8 resolve
+                
+                #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
                 flow_direction = 3.14159262/2.0
                 if s_1 != 0:
                     flow_direction = atan(s_2 / s_1) #Eqn 3
@@ -937,14 +964,16 @@ def flow_direction_inf(dem, flow):
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
                     max_index = facet_index
-                    
-            #Calculate the global angle depending on the max slope facet
-            if slope_max > 0:
-                flow_matrix[col_index, row_index] = \
-                    a_f[max_index] * flow_direction_max_slope + \
-                    a_c[max_index] * 3.14159265 / 2.0
-            else:
-                flow_matrix[col_index, row_index] = nodata_flow
+            else: 
+                # This is the fallthrough condition for the for loop, we reach
+                # it only if we haven't encountered an invalid slope or pixel
+                # that caused the above algorithm to break out
+                 
+                #Calculate the global angle depending on the max slope facet
+                if slope_max > 0:
+                    flow_matrix[col_index, row_index] = \
+                        a_f[max_index] * flow_direction_max_slope + \
+                        a_c[max_index] * 3.14159265 / 2.0
 
     #Calculate D8 flow to resolve undefined flows in D-inf
     d8_flow_dataset = newRasterFromBase(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
@@ -969,8 +998,10 @@ def flow_direction_inf(dem, flow):
     
     for col_index in range(1, col_max - 1):
         for row_index in range(1, row_max - 1):
-            if flow_matrix[col_index, row_index] == nodata_flow:
-                flow_matrix[col_index, row_index] = d8_to_radians[d8_flow_matrix[col_index, row_index]]
+            #if flow_matrix[col_index, row_index] == nodata_flow:
+                flow_matrix[col_index, row_index] = \
+                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
+                    #nodata_flow
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
