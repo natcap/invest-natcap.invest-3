@@ -9,7 +9,7 @@ from osgeo import gdal
 from invest_natcap.dbfpy import dbf
 import registrar
 
-class Validator():
+class Validator(registrar.Registrar):
     """Notes on subclassing:
     
         self.lookup
@@ -28,63 +28,38 @@ class Validator():
             tuples with the following structure: (element pointer, error message string)
             
         """
-    def __init__(self, allElements):
+    def __init__(self, element):
         #allElements is a pointer to a python dict: str id -> obj pointer.
-        self.typeLookup = {'GDAL': self.checkGDAL,
-                           'OGR': self.checkOGR,
-                           'number': self.checkNumber,
-                           'file': self.checkExists,
-                           'DBF': self.checkDBF}
-        self.allElements = allElements
-        self.validateFuncs = [self.elementIsRequired, self.validateAs]
+        registrar.Registrar.__init__(self)
 
-    def checkElement(self, element):
-        failed = []
+        self.element = element
+        self.init_type_checker()
+        updates = {'GDAL': self.GDALChecker,
+                   'OGR': self.OGRChecker,
+                   'number': self.NumberChecker,
+                   'file': self.FileChecker,
+                   'DBF': self.DBFChecker}
+        self.update_map(updates)
+        self.validateFuncs = [self.elementIsRequired]
+
+    def validate(self):
         for func in self.validateFuncs:
-            func(element.attributes['id'], element, failed)
-
-        return failed
-
-    def checkType(self, validateAs, value):
-        return self.typeLookup[validateAs['type']](validateAs, value)
-
-    def elementIsRequired(self, id, element, failed):
-        if element.isRequired() and not element.requirementsMet():
-            errorMsg = 'Element is required'
-            failed.append((element, errorMsg))
-
-    def validateAs(self, id, element, failed):
-        if 'validateAs' in element.attributes and element.isEnabled():
-            errorMsg = self.checkType(element.attributes['validateAs'], element.value())
-            if errorMsg != None:
-                failed.append((element, errorMsg))
-
-    def checkAll(self):
-        """Ensure that all elements pass specified validation (validation functions
-            are defined in self.validateFuncs)  Subclasses of Validator may 
-            modify local versions of Validator.validateFuncs as appliccable.
+            error = func()
+            if error != None:
+                return error
         
-            Functions in self.validateFuncs list must accept the following args:
-              - id = the string id of the element
-              - element = a pointer to the element
-              - failed = a pointer to a list
+        return self.type_checker.run_checks()
         
-            returns a list of tuples (element pointer, error message string)"""
+    def init_type_checker(self):
+        try:
+            type = self.element.attributes['validateAs']['type']
+            self.type_checker = self.get_func(type)
+        except KeyError:
+            self.type_checker = None
 
-        failed = []
-        for id, element in self.allElements.iteritems():
-            for function in self.validateFuncs:
-                function(id, element, failed)
-
-        return failed
-
-    def checkExists(self, validateAs, uri):
-        """Verify that the file at URI exists."""
-
-        if not os.path.exists(uri):
-            return str(uri + ': File not found')
-        else:
-            return None
+    def is_element_required(self):
+        if self.element.isRequired() and not self.element.requirementsMet():
+            return 'Element is required'
 
 class Checker(registrar.Registrar):
     #self.map is used for restrictions
