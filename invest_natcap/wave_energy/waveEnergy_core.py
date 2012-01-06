@@ -732,27 +732,6 @@ def valuation(args):
     invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
                                  rasterName=npvPath, datatype=gdal.GDT_Float32)
     
-    #        def npv(annualRevenue, annualCost):
-    #            for num in range(1, T + 1):
-    #                sum = sum + (annualRevenue[num] - annualCost[num]) * ((1 + i) ** (-1 * t))
-    #        
-    #            return npv
-    
-        ###############IDEA###################
-    #Do all calculations including NPV
-#    def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
-#        return None
-    #Call vectorizeRasters and pass in needed rasters as well as op
-#    invest_core.vectorizeRasters([capWE, elevation], op,
-#                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
-    #Interpolate raster
-        ##############IDEA####################
-        
-        #Need to calculate the distances from each WW3 point to landing points
-        
-        #Need to calculate distances from underwater cable landing point to power grid connection point
-        
-    #Generate interpolated raster from points above
     
 def changeProjection(shapeToReproject, projection, outputPath):
     """Changes the projection of a shapefile by creating a new shapefile based on
