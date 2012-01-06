@@ -195,6 +195,7 @@ class DBFChecker(FileChecker):
         updates = {'fieldsExist': self.verify_fields_exist,
                    'restrictions': self.verify_restrictions}
         self.update_map(updates)
+        self.num_checker = NumberChecker()
     
     def open(self):
         """Attempt to open the DBF."""
@@ -219,44 +220,57 @@ class DBFChecker(FileChecker):
         for restriction in self.valid['restrictions']:
             res_field = restriction['field']
             res_attrib = res['validateAs']
-            
-#            if res_attrib['type'] == 'number':
-#                for record in range
-#        
 
-#    def checkDBF(self, validateAs, uri):
-#            if 'restrictions' in validateAs:
-#                fieldStr = ''
-#                for res in validateAs['restrictions']:
-#                    res_field = res['field']
-#                    res_att = res['validateAs']
-#
-#                    if res_att['type'] == 'number':
-#                        for record in range(dbfFile.recordCount):
-#                            res_field_value = dbfFile[record][res_field]
-#                            comp_value = dbfFile[record][res_att['greaterThan']]
-#
-#                            if comp_value < res_field_value:
-#                                fieldStr != str(res['field'] + ' must be greater \
-#than ' + res_att['greaterThan'] + ' at record ' + record)
-#
-#                    elif res_att['type'] == 'string':
-#                        for record in range(dbfFile.recordCount):
-#                            res_field_value = dbfFile[record][res_field]
-#                            regexp = res_att['allowedValues']
-#
-#                            if not re.search(res_field_value, regexp):
-#                                fieldStr += str('Field ' + res_field + ' does \
-#not match the allowed pattern at record ' + record)
-#
-#                if fieldStr != '':
-#                    return fieldStr
-#        else:
-#            return fileError
-#        
+            if res_attrib['type'] == 'number':
+                self.verify_number(res_field, res_attrib)
+            elif res_attrib['type'] == 'string':
+                self.verify_string(res_field, res_attrib)
+
+                
+    def verify_number(self, res_field, res_attrib):
+        """Verify that a given field conforms to numeric restrictions.
+            
+            res_field - a string fieldname in the DBF file.
+            res_attrib - a dictionary of restrictions
+            
+            returns a string if an error is found.  Otherwise, returns None."""
+            
+        field_str = ''
+        for key, value in self.res_attrib.iteritems():
+            for record in range(self.file.recordCount):
+                if isinstance(value, str): #if value is a fieldname
+                    value = self.file[record][value]
         
+                other_value = self.file[record][res_attrib[key]]
+                error = self.num_checker.check_number(value, other_value, key)
+                field_str += str(res_field + ': ' + error + ' at record ' + 
+                                 record)
+                
+        if len(field_str) > 0:
+            return field_str
+
+    def verify_string(self, res_field, res_attrib):
+        """Verify that a given field conforms to its string restrictions.
+        
+            res_field - a string fieldname in the DBF file
+            res_attrib - a dictionary of restrictions
+            
+            returns a string if an error is found.  Otherwise, returns None """
+            
+        field_str = ''
+        for record in range(self.file.recordCount):
+            res_field_value = self.file[record][res_field]
+            regexp = res_attrib['allowedValues']
+            
+            if not re.search(res_field_value, regexp):
+                field_str += str(res_field + ' ' + error + ' at record ' + 
+                                 record)
+                
+        if len(field_str) > 0:
+            return field_str
+
 class NumberChecker(Checker):
-    def __init__(self, element=None, value=None):
+    def __init__(self, element):
         Checker.__init__(self, element)
         updates = {'gteq': (self.verify, self._greater_than_equal_to),
                    'greaterThan': (self.verify, self._greater_than),
@@ -264,7 +278,17 @@ class NumberChecker(Checker):
                    'lessThan': (self.verify, self._less_than)}
         self.update_map(updates)
         
-        self.value = value
+    def check_number(self, a, b, op_string):
+        """Check the status of two numbers based on an operation.
+        
+            a - a number
+            b - a number
+            op_string - a string index into NumberChecker.map
+            
+            returns a string if an error is found.  Otherwise, returns None"""
+            
+        tuple = self.map[op_string]
+        return tuple[1](a, b)
         
     def _greater_than(self, a, b):
         if not a < b:
@@ -292,10 +316,11 @@ class NumberChecker(Checker):
         if isinstance(other_value, str):
             other_value = self.get_element(other_value)
             
-        error = op(self.value, other_value)
+        error = op(self.element.value(), other_value)
         
         if error != None:
             return error
+
 
     #all check functions take a single value, which is returned by the
     #element.value() function.  All check functions should perform the required
