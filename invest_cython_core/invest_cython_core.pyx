@@ -462,8 +462,15 @@ def flowDirectionD8(dem, flow):
     
     #This array indicates the integer flow direction based on which pixel
     # to shift to.  The order is d,xo,yo eight times for 8 directions
-    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1,1, 0, 2,1, 1, 
-        4,0, 1, 8,-1, 1, 16,-1, 0, 32,-1,-1, 64,0,-1, 128, 1,-1],dtype=np.int)
+    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1, -1, 0,
+                                                              2, -1, 1,
+                                                              4, 0, 1,
+                                                              8, 1, 1,
+                                                              16, 1, 0,
+                                                              32, 1, -1,
+                                                              64, 0, -1,
+                                                              128, -1, -1],
+                                                             dtype=np.int)
     #loop through each cell and skip any edge pixels
     for x in range(1,xmax-1):
         for y in range(1,ymax-1):
@@ -498,153 +505,6 @@ def flowDirectionD8(dem, flow):
     free(demPixels)
     
     return flow
-
-cdef CQueue calculateInflowNeighborsD8(int i, int j, 
-                    np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix, 
-                    int nodataFlowDirection):
-    """Returns a list of the neighboring pixels to i,j that are in bounds
-        and also flow into point i,j.  This information is inferred from
-        the flowDirectionMatrix"""
-
-    #consider neighbors who flow into i,j, so shift the pixels backwards.
-    #example: 1 means flow to the right, so check the pixel to the right
-    #to see if it flows into the current pixel, thus 1:(-1,0)
-    #shiftIndexes = {1:(-1, 0), 2:(-1, -1), 4:(0, -1), 8:(1, -1), 16:(1, 0),
-    #                32:(1, 1), 64:(0, 1), 128:(-1, 1)}
-    cdef int *shiftIndexes = [1,-1, 0, 2,-1, -1, 4, 0, -1, 8, 1, -1, 16, 1, 0,
-                    32, 1, 1, 64, 0, 1, 128, -1, 1]
-    cdef int pi, pj, dir, k, n
-    cdef CQueue neighbors = CQueue()
-    for k in range(8):
-        dir = shiftIndexes[k*3]
-        pi = i + shiftIndexes[k*3+1]
-        pj = j + shiftIndexes[k*3+2]
-        #ensure that the offsets are within bounds of the matrix
-        if pi >= 0 and pj >= 0 and pi < flowDirectionMatrix.shape[0] and \
-            pj < flowDirectionMatrix.shape[1]:
-            if flowDirectionMatrix[pi, pj] == nodataFlowDirection:
-                continue
-            if flowDirectionMatrix[pi, pj] == dir:
-                neighbors.append(pi)
-                neighbors.append(pj)
-    return neighbors
-
-@cython.boundscheck(False)
-cdef void calculateFlowD8(CQueue pixelsToProcess, 
-                      np.ndarray[np.int_t,ndim=2] accumulationMatrix,
-                      np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix,
-                      int nodataFlowDirection, int nodataFlowAccumulation):
-    """Takes a list of pixels to calculate flow for the D8 algorithm, then 
-        does a dynamic style programming process of visiting and updating
-        each one as it needs processing.  Modified `accumulationMatrix`
-        during processing.
-        
-        pixelsToProcess - a collections.deque of (i,j) tuples"""
-    cdef int i,j, ni, nj, runningSum
-    #LOGGER = logging.getLogger('calculateFlow')
-    while pixelsToProcess.size() > 0:
-        i = pixelsToProcess.pop()
-        j = pixelsToProcess.pop()
-        #LOGGER.debug("pixelsToProcess i,j=%s %s" % (i,j))
-        #nodata out the values that don't need processing
-        if flowDirectionMatrix[i,j] == nodataFlowDirection:
-            accumulationMatrix[i, j] = nodataFlowAccumulation
-            #LOGGER.debug("nodataFlowDirection %s" % nodataFlowDirection)
-            continue
-        
-        #if p is calculated, skip its calculation
-        if accumulationMatrix[i, j] != -1:
-            #LOGGER.debug("already calculated") 
-            continue
-
-        #if any neighbors flow into p and are uncalculated, push p and
-        #neighbors on the stack
-        neighbors = calculateInflowNeighborsD8(i, j, flowDirectionMatrix, 
-                                             nodataFlowDirection)
-        n = neighbors.size()
-        #LOGGER.debug("%s neighbors" % n)
-        incomplete = False
-        for k in range(n):
-            ni, nj = neighbors.pop(),neighbors.pop()
-            #LOGGER.debug("i,j=%s %s ni,nj=%s %s" % (i,j,ni,nj))
-            neighbors.append(ni)
-            neighbors.append(nj)
-            #Turns out one of the neighbors is uncalculated
-            #Stop checking and process all later
-            if accumulationMatrix[ni, nj] == -1:
-                incomplete = True
-                break
-            
-        #If one of the neighbors was uncalculated, push the pixel and 
-        #neighbors back on the processing list
-        if incomplete:
-            #Put p first, so it's not visited again until neighbors 
-            #are processed
-            pixelsToProcess.push(j)
-            pixelsToProcess.push(i)
-            while (neighbors.size() > 0):
-                ni,nj = neighbors.pop(), neighbors.pop()
-                pixelsToProcess.push(nj)
-                pixelsToProcess.push(ni)
-        else:
-            #Otherwise, all the inflow neighbors are calculated so do the
-            #pixelflow calculation 
-            accumulationMatrix[i, j] = 0
-            runningSum = 0
-            while neighbors.size() > 0:
-                ni, nj = neighbors.pop(),neighbors.pop()
-                runningSum += 1 + accumulationMatrix[ni, nj]
-            accumulationMatrix[i, j] = runningSum
-    return
-
-@cython.boundscheck(False)
-def flowAccumulationD8(flowDirection, flowAccumulation):
-    """Creates a raster of accumulated flow to each cell.
-    
-        flowDirection - A raster showing direction of flow out of each cell
-            This can be created with invest_core.flowDirection
-        flowAccumulation - The output flow accumulation raster set
-        
-        returns nothing"""
-
-    cdef int nodataFlowDirection, nodataFlowAccumulation, x, y
-    cdef CQueue q
-    LOGGER = logging.getLogger('flowAccumulation')
-    LOGGER.debug('initializing temporary buffers')
-    #Load the input flow into a numpy array
-    #GDal inverts x and y, so it's easier to transpose in and back out later
-    #on gdal arrays, so we invert the x and y offsets here
-    cdef np.ndarray[np.uint8_t,ndim=2] flowDirectionMatrix = \
-        flowDirection.GetRasterBand(1).ReadAsArray(0, 0,
-        flowDirection.RasterXSize, flowDirection.RasterYSize).transpose()
-    nodataFlowDirection = flowDirection.GetRasterBand(1).GetNoDataValue()
-    nodataFlowAccumulation = flowAccumulation.GetRasterBand(1).GetNoDataValue()
-    gp = flowDirection.GetGeoTransform()
-    cellXSize = gp[1]
-    cellYSize = gp[5]
-    #Create the output flow, initalize to -1 as undefined
-    xdim, ydim = flowDirectionMatrix.shape[0], flowDirectionMatrix.shape[1]
-    cdef np.ndarray[np.int_t,ndim=2] accumulationMatrix = \
-        np.zeros([xdim, ydim],dtype=np.int)
-    accumulationMatrix[:] = -1
-
-    LOGGER.info('calculating flow accumulation')
-
-    lastx = -1
-    q = CQueue()
-    for x in range(xdim):
-        for y in range(ydim):
-            if lastx != x:
-                LOGGER.debug('percent complete %2.2f %%' % 
-                             (100*(x+1.0)/accumulationMatrix.shape[0]))
-                lastx=x
-            q.append(x)
-            q.append(y)
-            calculateFlowD8(q,accumulationMatrix,flowDirectionMatrix,
-                          nodataFlowDirection, nodataFlowAccumulation)
-
-    flowAccumulation.GetRasterBand(1).WriteArray(\
-        accumulationMatrix.transpose(), 0, 0)
 
 cdef void calculate_inflow_neighbors_dinf(int i, int j, 
                     np.ndarray[np.float_t,ndim=2] flow_direction_matrix, 
