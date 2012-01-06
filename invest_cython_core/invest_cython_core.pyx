@@ -684,10 +684,17 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
             beta = flow_direction_matrix[pi, pj]
             if beta == nodata_flow_direction:
                 continue
-            if abs(alpha-beta) < PI/4.0 or \
-                (alpha == 0.0 and abs(2*PI+alpha-beta) < PI/4.0):
+            prop = -1 #initialize
+            if alpha == 0:
+                alpha = 2*PI
+            if abs(alpha-beta) < PI/4.0:
                 neighbors.append(pi)
                 neighbors.append(pj)
+                #The proporation is 1-the proportion of beta pointing to alpha
+                #if alpha == beta then prop == 1, otherwise it's less than 1
+                #but greater than 0 because of the if statement guard above
+                prop = 1-abs(alpha-beta)/(PI/4.0)
+                neighbors.append(prop)
     return neighbors
 
 cdef void d_p_area(CQueue pixels_to_process,
@@ -724,7 +731,7 @@ cdef void d_p_area(CQueue pixels_to_process,
         
     cdef int i,j, ni, nj, runningSum, pi, pj, neighbor_index, \
         uncalculated_neighbors
-    cdef float PI = 3.14159265
+    cdef float PI = 3.14159265, prop
     cdef CQueue neighbors
     LOGGER = logging.getLogger('d_p_area')
     while pixels_to_process.size() > 0:
@@ -761,6 +768,7 @@ cdef void d_p_area(CQueue pixels_to_process,
                 while neighbors.size() != 0:
                     pi = neighbors.pop()
                     pj = neighbors.pop()
+                    prop = neighbors.pop()
                     #see if neighbor is uncalculated
                     if accumulation_matrix[pi, pj] == -1:
                         pixels_to_process.push(pj)
@@ -775,8 +783,9 @@ cdef void d_p_area(CQueue pixels_to_process,
         while neighbors.size() != 0:
             pi = neighbors.pop()
             pj = neighbors.pop()
+            prop = neighbors.pop()
             #calculate the contribution of pi,pj to i,j
-            accumulation_matrix[i, j] += accumulation_matrix[pi, pj]
+            accumulation_matrix[i, j] += prop * accumulation_matrix[pi, pj]
         #LOGGER.debug("accumulation_matrix[i, j] = %s" % (accumulation_matrix[i, j]))
         
 
