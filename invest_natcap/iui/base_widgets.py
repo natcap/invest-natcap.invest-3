@@ -219,7 +219,8 @@ class DynamicGroup(DynamicElement):
                     self.layout().addWidget(subElement, i, j)
                     j += 1
                     
-                if issubclass(widget.__class__, DynamicPrimitive):
+                if (issubclass(widget.__class__, DynamicPrimitive) and 
+                    widget.display_error()):
                     i += 1 #display the error on the row below
                     self.layout().addWidget(widget.error, i, 
                         widget.error.get_setting('start'), 
@@ -313,6 +314,7 @@ class DynamicPrimitive(DynamicElement):
         self.elements = [self]
         self.validator = iui_validator.Validator(self)
         self.error = ErrorString()
+        self.set_display_error(True)
 
     def resetValue(self):
         """If a default value has been specified, reset this element to its
@@ -357,6 +359,15 @@ class DynamicPrimitive(DynamicElement):
                 
     def validate(self):
         self.set_error(self.validator.validate())
+        
+    def display_error(self):
+        """returns a boolean"""
+        return self._display_error
+    
+    def set_display_error(self, display):
+        """display is a boolean"""
+        
+        self._display_error = display
 
 class ErrorString(QtGui.QLabel):
     def __init__(self, display_settings={'start':0, 'width':1}):
