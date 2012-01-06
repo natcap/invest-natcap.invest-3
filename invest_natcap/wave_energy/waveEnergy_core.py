@@ -486,12 +486,14 @@ def valuation(args):
     is a smooth output raster of the net present value from the interpolation of
     the specific WW3 wave points npv. Requires the following arguments:
     
-    args['attribute_shape'] - 
+    args['workspace_dir'] - 
+    args['wave_data_shape'] - 
     args['number_machines'] - 
     args['machine_econ'] - 
     args['land_gridPts'] - 
     args['projection'] - 
-    args['workspace_dir'] - 
+    args['global_dem'] - 
+    args['capturedWE'] - 
     
     """
     #Set variables for common output paths
@@ -548,7 +550,7 @@ def valuation(args):
     prj = prjFile.read()
     srs_prj = osr.SpatialReference()
     srs_prj.ImportFromWkt(prj)
-    sourceSR = args['attribute_shape'].GetLayer(0).GetSpatialRef()
+    sourceSR = args['wave_data_shape'].GetLayer(0).GetSpatialRef()
     targetSR = srs_prj
     coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
     
@@ -609,9 +611,9 @@ def valuation(args):
     drv = None
     ds.Destroy()
     
-    attribute_shape = args['attribute_shape']
-    attribute_layer = attribute_shape.GetLayer(0)
-    shape = changeProjection(attribute_shape, args['projection'], projectedShapePath)
+    wave_data_shape = args['wave_data_shape']
+    wave_data_layer = wave_data_shape.GetLayer(0)
+    shape = changeProjection(wave_data_shape, args['projection'], projectedShapePath)
     shape.Destroy()
     shape = ogr.Open(projectedShapePath, 1)
     shape_layer = shape.GetLayer(0)
@@ -653,7 +655,7 @@ def valuation(args):
     shape_layer = shape.GetLayer(0)
     
     #########Create W2L/L2G Rasters##########
-    xmin, xmax, ymin, ymax = attribute_layer.GetExtent()
+    xmin, xmax, ymin, ymax = wave_data_layer.GetExtent()
     pixelSize = 0
     if (xmax-xmin)<(ymax-ymin):
         pixelSize = (xmax-xmin)/250
@@ -665,9 +667,9 @@ def valuation(args):
     datatype = gdal.GDT_Float32
     nodata = 0
     invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
-                                              datatype, nodata, waveLand_path, attribute_shape)
+                                              datatype, nodata, waveLand_path, wave_data_shape)
     invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
-                                              datatype, nodata, landGrid_path, attribute_shape)
+                                              datatype, nodata, landGrid_path, wave_data_shape)
     waveLandRaster = gdal.Open(waveLand_path, GA_Update)
     landGridRaster = gdal.Open(landGrid_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
