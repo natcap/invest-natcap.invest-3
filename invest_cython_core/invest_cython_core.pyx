@@ -659,6 +659,8 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
             
         returns a queue of neighboring cell indexes in the form 
             (pi1, pj1, prop1, ..., pin, pjn, propn)
+            where pi and pj are row, column indexes and prop is the proportion
+            of inflow from pi pj to i j.
         
         """
 
@@ -668,7 +670,7 @@ cdef CQueue calculate_inflow_neighbors_dinf(int i, int j,
     cdef int *shift_indexes = [-1,0,-1,-1,0,-1,1,-1,1,0,1,1,0,1,-1,1]
     cdef float *inflow_angles = [0.0,PI/4.0,PI/2.0,3.0*PI/4.0,PI,5.0*PI/4.0,
                                3.0*PI/2.0,7.0*PI/4.0]
-    cdef int pi, pj, k, n
+    cdef int pi, pj, k, n, prop
     cdef CQueue neighbors = CQueue()
     for k in range(8):
         #alpha is the angle that flows from pixel pi, pj, to i, j
