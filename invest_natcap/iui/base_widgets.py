@@ -353,10 +353,12 @@ class DynamicPrimitive(DynamicElement):
     def set_error(self, error):
         if error == None:
             msg = ''
+            self.setBGcolorSatisfied()
         else:
             msg = str(error)
+            self.setBGcolorSatisfied(False)
         self.error.set_error(msg)
-                
+        
     def validate(self):
         if self.isEnabled():
             self.set_error(self.validator.validate())
