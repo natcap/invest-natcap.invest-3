@@ -7,209 +7,299 @@ from osgeo import ogr
 from osgeo import gdal
 
 from invest_natcap.dbfpy import dbf
+import registrar
 
-class Validator():
-    """Notes on subclassing:
-    
-        self.lookup
-        ==================================
-        Functions added to the dictionary self.lookup must accept one argument:
-        the output of element.value().
+class Validator(registrar.Registrar):
+    """Validator class contains a reference to an object's type-specific checker.
+        It is assumed that one single iui input element will have its own 
+        validator.
         
-        self.validateFuncs
-        ==================================
-        Functions added to the python list self.validateFuncs must accept the
-        following arguments:
+        element - a reference to the element in question."""
         
-          id - the string identifier of the element
-          element - the pointer to the element
-          failed - a pointer to a python list.  This list has elements that are
-            tuples with the following structure: (element pointer, error message string)
-            
-        """
-    def __init__(self, allElements):
+    def __init__(self, element):
         #allElements is a pointer to a python dict: str id -> obj pointer.
-        self.typeLookup = {'GDAL': self.checkGDAL,
-                           'OGR': self.checkOGR,
-                           'number': self.checkNumber,
-                           'file': self.checkExists,
-                           'DBF': self.checkDBF}
-        self.allElements = allElements
-        self.validateFuncs = [self.elementIsRequired, self.validateAs]
+        registrar.Registrar.__init__(self)
 
-    def checkElement(self, element):
-        failed = []
+        self.element = element
+        self.init_type_checker()
+        updates = {'GDAL': self.GDALChecker,
+                   'OGR': self.OGRChecker,
+                   'number': self.NumberChecker,
+                   'file': self.FileChecker,
+                   'DBF': self.DBFChecker}
+        self.update_map(updates)
+        self.validateFuncs = [self.elementIsRequired]
+
+    def validate(self):
+        """Validate the element.  This is a two step process: first, all 
+            functions in the Validator's validateFuncs list are executed.  Then,
+            The validator's type checker class is invoked to actually check the 
+            input against the defined restrictions.
+            
+            returns a string if an error is found.  Returns None otherwise."""
+            
         for func in self.validateFuncs:
-            func(element.attributes['id'], element, failed)
-
-        return failed
-
-    def checkType(self, validateAs, value):
-        return self.typeLookup[validateAs['type']](validateAs, value)
-
-    def elementIsRequired(self, id, element, failed):
-        if element.isRequired() and not element.requirementsMet():
-            errorMsg = 'Element is required'
-            failed.append((element, errorMsg))
-
-    def validateAs(self, id, element, failed):
-        if 'validateAs' in element.attributes and element.isEnabled():
-            errorMsg = self.checkType(element.attributes['validateAs'], element.value())
-            if errorMsg != None:
-                failed.append((element, errorMsg))
-
-    def checkAll(self):
-        """Ensure that all elements pass specified validation (validation functions
-            are defined in self.validateFuncs)  Subclasses of Validator may 
-            modify local versions of Validator.validateFuncs as appliccable.
+            error = func()
+            if error != None:
+                return error
         
-            Functions in self.validateFuncs list must accept the following args:
-              - id = the string id of the element
-              - element = a pointer to the element
-              - failed = a pointer to a list
+        return self.type_checker.run_checks()
         
-            returns a list of tuples (element pointer, error message string)"""
+    def init_type_checker(self):
+        """Initialize the type checker.
+        
+            returns nothing."""
+            
+        try:
+            type = self.element.attributes['validateAs']['type']
+            self.type_checker = self.get_func(type)
+        except KeyError:
+            self.type_checker = None
 
-        failed = []
-        for id, element in self.allElements.iteritems():
-            for function in self.validateFuncs:
-                function(id, element, failed)
+    def is_element_required(self):
+        """Check to see if the element is required.  If the element is required
+            but its requirements are not satisfied, return an error message.
+            
+            returns a string if an error is found.  Returns None otherwise."""
+            
+        if self.element.isRequired() and not self.element.requirementsMet():
+            return 'Element is required'
 
-        return failed
-
-    def checkExists(self, validateAs, uri):
+class Checker(registrar.Registrar):
+    #self.map is used for restrictions
+    def __init__(self, element):
+        registrar.Registrar.__init__(self)
+        self.element = element
+        self.valid = self.element.attributes['validateAs']
+        self.checks = []
+        
+    def add_check_function(self, func, index=None):
+        if index == None:
+            self.checks.append(func)
+        else:
+            self.checks.insert(index, func)
+    
+    def run_checks(self):
+        for check in self.checks:
+            check()
+            
+        #execute restriction checks in map
+        
+    def get_element(self, element_id):
+        return self.element.root.allElements[element_id]
+            
+class FileChecker(Checker):
+    def __init__(self, element):
+        Checker.__init__(self, element)
+        
+        self.uri = self.element.value()
+        self.add_check_function(self.checkExists)
+        self.add_check_function(self.open)
+    
+    def checkExists(self):
         """Verify that the file at URI exists."""
 
-        if not os.path.exists(uri):
-            return str(uri + ': File not found')
+        if not os.path.exists(self.uri):
+            return str('File not found')
         else:
             return None
+        
+    def open(self):
+        try:
+            file_handler = open(self.uri, 'w')
+            file_handler.close()
+        except:
+            return 'Unable to open file'
+        
+class GDALChecker(FileChecker):
+    def open(self):
+        """Attempt to open the GDAL object.  URI must exist."""
+        
+        gdal.PushErrorHandler('CPLQuietErrorHandler')
+        fileObj = gdal.Open(str(self.uri))
 
-    def checkGDAL(self, validateAs, uri):
-        """Verify that the file at URI is a raster dataset that GDAL can open."""
+        if fileObj == None:
+            return str('Must be a raster that GDAL can open')
 
-        fileError = self.checkExists(validateAs, uri)
-        if not fileError:
-            gdal.PushErrorHandler('CPLQuietErrorHandler')
-            fileObj = gdal.Open(str(uri))
+class OGRChecker(FileChecker):
+    def __init__(self, element):
+        FileChecker.__init__(self, element)
 
-            if fileObj == None:
-                return str(uri + ' is not a raster that GDAL can open')
-        else:
-            return fileError
+        updates = {'layer': self.open_layer,
+                   'fieldsExist': self.verify_fields_exist}
+        self.update_map(updates)
+        
+    def open(self):
+        """Attempt to open the shapefile."""
+        
+        self.file = ogr.Open(str(self.uri))
+        
+        if not isinstance(ogrFile, osgeo.ogr.DataSource):
+            return str('Shapefile not compatible with OGR')
+        
+    def open_layer(self):
+        """Attempt to open the layer specified in self.valid."""
+        
+        layer_name = str(self.valid['layer'])
+        self.layer = self.file.GetLayerByName(layer_name)
+        
+        if not isinstance(self.layer, osgeo.ogr.Layer):
+            return str('Shapefile must have a layer called ' + layer_name)
+    
+    def verify_fields_exist(self):
+        """Verify that the specified fields exist.  Runs self.open_layer as a
+            precondition.
+            
+            returns a string listing all missing fields."""
+            
+        error = self.open_layer
+        if error != None:
+            return error
+        
+        layer_def = self.layer.GetLayerDefn()
+        prefix = 'Missing fields: '
+        field_str = ''
+        for field in self.valid['fieldsExist']:
+            index = layer_def.GetFieldIndex(field)
+            if index == -1:
+                field_str += str(field + ', ')
+                
+        if len(field_str) > 0:
+            return prefix + field_str
 
-    def checkNumber(self, validateAs, value):
-        if 'gteq' in validateAs:
-            otherValue = validateAs['gteq']
 
-            if isinstance(otherValue, str):
-                otherValue = self.allElements[otherValue].value()
+class DBFChecker(FileChecker):
+    def __init__(self, element):
+        FileChecker.__init__(self, element)
+        updates = {'fieldsExist': self.verify_fields_exist,
+                   'restrictions': self.verify_restrictions}
+        self.update_map(updates)
+        self.num_checker = NumberChecker()
+    
+    def open(self):
+        """Attempt to open the DBF."""
+        
+        self.file = dbf.Dbf(str(self.uri))
+        
+        if not isinstance(self.file, dbf.Dbf):
+            return str('Must be a DBF file')
+        
+    def verify_fields_exist(self):
+        prefix = 'Missing fields: '
+        field_str = ''
+        for field in self.valid['fieldsExist']:
+            if field.upper() not in self.file.FileNames:
+                field_str += str(field + ', ')
+        
+        if len(field_str) > 0:
+            return prefix + field_str
+        
+    def verify_restrictions(self):
+        field_str = ''
+        for restriction in self.valid['restrictions']:
+            res_field = restriction['field']
+            res_attrib = res['validateAs']
 
-            if value < otherValue:
-                return str('Value must be greater than or equal to ' + str(otherValue))
+            if res_attrib['type'] == 'number':
+                self.verify_number(res_field, res_attrib)
+            elif res_attrib['type'] == 'string':
+                self.verify_string(res_field, res_attrib)
 
-        if 'greaterThan' in validateAs:
-            otherValue = validateAs['greaterThan']
+                
+    def verify_number(self, res_field, res_attrib):
+        """Verify that a given field conforms to numeric restrictions.
+            
+            res_field - a string fieldname in the DBF file.
+            res_attrib - a dictionary of restrictions
+            
+            returns a string if an error is found.  Otherwise, returns None."""
+            
+        field_str = ''
+        for key, value in self.res_attrib.iteritems():
+            for record in range(self.file.recordCount):
+                if isinstance(value, str): #if value is a fieldname
+                    value = self.file[record][value]
+        
+                other_value = self.file[record][res_attrib[key]]
+                error = self.num_checker.check_number(value, other_value, key)
+                field_str += str(res_field + ': ' + error + ' at record ' + 
+                                 record)
+                
+        if len(field_str) > 0:
+            return field_str
 
-            if isinstance(otherValue, str):
-                otherValue = self.allElements[otherValue].value()
+    def verify_string(self, res_field, res_attrib):
+        """Verify that a given field conforms to its string restrictions.
+        
+            res_field - a string fieldname in the DBF file
+            res_attrib - a dictionary of restrictions
+            
+            returns a string if an error is found.  Otherwise, returns None """
+            
+        field_str = ''
+        for record in range(self.file.recordCount):
+            res_field_value = self.file[record][res_field]
+            regexp = res_attrib['allowedValues']
+            
+            if not re.search(res_field_value, regexp):
+                field_str += str(res_field + ' ' + error + ' at record ' + 
+                                 record)
+                
+        if len(field_str) > 0:
+            return field_str
 
-            if value <= otherValue:
-                return str('Value must be greater than ' + str(otherValue))
+class NumberChecker(Checker):
+    def __init__(self, element):
+        Checker.__init__(self, element)
+        updates = {'gteq': (self.verify, self._greater_than_equal_to),
+                   'greaterThan': (self.verify, self._greater_than),
+                   'lteq': (self.verify, self._less_than_equal_to),
+                   'lessThan': (self.verify, self._less_than)}
+        self.update_map(updates)
+        
+    def check_number(self, a, b, op_string):
+        """Check the status of two numbers based on an operation.
+        
+            a - a number
+            b - a number
+            op_string - a string index into NumberChecker.map
+            
+            returns a string if an error is found.  Otherwise, returns None"""
+            
+        tuple = self.map[op_string]
+        return tuple[1](a, b)
+        
+    def _greater_than(self, a, b):
+        if not a < b:
+            return 'Value must be greater than ' + str(b)
+    
+    def _less_than(self, a, b):
+        if not a < b:
+            return 'Value must be less than ' + str(b)
+        
+    def _less_than_equal_to(self, a, b):
+        if not a <= b:
+            return 'Value must be less than or equal to ' + str(b)
+    
+    def _greater_than_equal_to(self, a, b):
+        if not a >= b:
+            return 'Value must be greater than or equal to ' + str(b)
+        
+    def get_restriction(self, key):
+        tuple = self.map[key]
+        return tuple[0](key, tuple[1])
+        
+    def verify(self, key, op):
+        other_value = self.valid[key]
+        
+        if isinstance(other_value, str):
+            other_value = self.get_element(other_value)
+            
+        error = op(self.element.value(), other_value)
+        
+        if error != None:
+            return error
 
-        if 'lteq' in validateAs:
-            otherValue = validateAs['lteq']
-
-            if isinstance(otherValue, str):
-                otherValue = self.allElements[otherValue].value()
-
-            if value > otherValue:
-                return str('Value must be less than or equal to ' + str(otherValue))
-
-        if 'lessThan' in validateAs:
-            otherValue = validateAs['lessThan']
-
-            if isinstance(otherValue, str):
-                otherValue = self.allElements[otherValue].value()
-
-            if value >= otherValue:
-                return str('Value must be less than ' + str(otherValue))
-
-    def checkDBF(self, validateAs, uri):
-        fileError = self.checkExists(validateAs, uri)
-        if not fileError:
-            try:
-                dbfFile = dbf.Dbf(str(uri))
-            except:
-                return str(uri + ' is not a DBF file')
-
-            if not isinstance(dbfFile, dbf.Dbf):
-                return str(uri + ' is not a DBF file')
-
-            if 'fieldsExist' in validateAs:
-                fieldStr = ''
-                for field in self.validateAs['fieldsExist']:
-                    if field.upper() not in dbfFile.FileNames:
-                        fieldStr += str(field + ' missing from ' + str(uri))
-                if fieldStr != '':
-                    return fieldStr
-
-            if 'restrictions' in validateAs:
-                fieldStr = ''
-                for res in validateAs['restrictions']:
-                    res_field = res['field']
-                    res_att = res['validateAs']
-
-                    if res_att['type'] == 'number':
-                        for record in range(dbfFile.recordCount):
-                            res_field_value = dbfFile[record][res_field]
-                            comp_value = dbfFile[record][res_att['greaterThan']]
-
-                            if comp_value < res_field_value:
-                                fieldStr != str(res['field'] + ' must be greater \
-than ' + res_att['greaterThan'] + ' at record ' + record)
-
-                    elif res_att['type'] == 'string':
-                        for record in range(dbfFile.recordCount):
-                            res_field_value = dbfFile[record][res_field]
-                            regexp = res_att['allowedValues']
-
-                            if not re.search(res_field_value, regexp):
-                                fieldStr += str('Field ' + res_field + ' does \
-not match the allowed pattern at record ' + record)
-
-                if fieldStr != '':
-                    return fieldStr
-        else:
-            return fileError
-
-    def checkOGR(self, validateAs, uri):
-        fileError = self.checkExists(validateAs, uri)
-        if not fileError:
-            print 'ogr'
-            ogrFile = ogr.Open(str(uri))
-
-            if not isinstance(ogrFile, osgeo.ogr.DataSource):
-                return str(uri + ' is not a shapefile that OGR can open')
-
-            if 'layer' in validateAs:
-                layer = ogrFile.GetLayerByName(str(validateAs['layer']))
-
-                if not isinstance(layer, osgeo.ogr.Layer):
-                    return str(uri + ' must have a layer called ' +
-                               str(validateAs['layer']))
-
-                if 'fieldsExist' in validateAs:
-                    layer_def = layer.GetLayerDefn()
-                    fieldStr = ''
-                    for field in validateAs['fieldsExist']:
-                        index = layer_def.GetFieldIndex(field)
-                        if index == -1:
-                            fieldStr += str(uri + ' : field ' + field + ' must exist')
-                    if fieldStr != '':
-                        return fieldStr
-        else:
-            return fileError
 
     #all check functions take a single value, which is returned by the
     #element.value() function.  All check functions should perform the required

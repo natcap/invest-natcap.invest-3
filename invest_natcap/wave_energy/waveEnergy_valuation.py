@@ -28,10 +28,8 @@ def execute(args):
         args['projection_uri'] - A path for the projection to transform coordinates from decimal degrees to meters.
         args['captureWE'] - We need the captured wave energy output from biophysical run.
         args['globa_dem'] - We need the depth of the locations for calculating costs.
-        args['attribute_shape_path']
+        args['wave_data_shape_path'] - The path to the point shapefile created during biophysical run.
         """
-
-    filesystemencoding = sys.getfilesystemencoding()
 
     valuationargs = {}
     valuationargs['workspace_dir'] = args['workspace_dir']
@@ -68,8 +66,8 @@ def execute(args):
     #report an error back saying that the biophysical model must be run
     #with AOI for valuation to be run.
     #If the above is the case, then:
-    attribute_shape = ogr.Open(args['attribute_shape_path'])    
-    valuationargs['attribute_shape'] = attribute_shape
+    attribute_shape = ogr.Open(args['wave_data_shape_path'])    
+    valuationargs['wave_data_shape'] = attribute_shape
     
     #Open the output files for capturedWE from the biophysical run
 

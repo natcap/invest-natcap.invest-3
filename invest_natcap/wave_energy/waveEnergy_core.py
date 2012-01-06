@@ -505,6 +505,7 @@ def valuation(args):
     projectedShapePath = interDir + os.sep + 'WaveData_clip_Prj.shp'
     landptPath = interDir + os.sep + 'landingPoints.shp'
     gridptPath = interDir + os.sep + 'gridPoint.shp'
+    npvPath = interDir + os.sep + 'waveEnergy_NPV.tif'
     
     dem = args['global_dem']
     capWE = args['capturedWE']
@@ -531,7 +532,6 @@ def valuation(args):
     
     year = 25.0
     T = np.linspace(0.0, year-1.0, year)
-    print T
     rho = 1.0/(1.0+drate)
     #Extract the landing and grid points data
     land_grid_pts = args['land_gridPts']
@@ -542,6 +542,7 @@ def valuation(args):
             grid_pt = value
         else:
             land_pts[key] = value
+            
     #Create a coordinate transformation for lat/long to meters
     prjFile = open(args['projection'])
     prj = prjFile.read()
@@ -618,29 +619,6 @@ def valuation(args):
     landingShape = ogr.Open(landptPath)
     gridShape = ogr.Open(gridptPath)
     
-    def getPoints(shape):
-        point = []
-        
-        layer = shape.GetLayer(0)
-        feat = layer.GetNextFeature()
-        while feat is not None:
-            x = float(feat.GetGeometryRef().GetX())
-            y = float(feat.GetGeometryRef().GetY())
-            point.append([x,y])
-            feat.Destroy()
-            feat = layer.GetNextFeature()
-        
-        return np.array(point)
-    
-    
-    def calcDist(xy_1, xy_2):
-        mindist = np.zeros(len(xy_1))
-        minid = np.zeros(len(xy_1))
-        for i, xy in enumerate(xy_1):
-            dists = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
-            mindist[i], minid[i] = dists.min(), dists.argmin()
-        return mindist, minid
-    
     wePoints = getPoints(shape)
     landingPoints = getPoints(landingShape)
     gridPoint = getPoints(gridShape)
@@ -695,16 +673,15 @@ def valuation(args):
     #Get the corresponding points and values from the shapefile to be used for interpolation
     waveLandArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'W2L_MDIST'], 'W2L_MDIST')
     landGridArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'L2G_MDIST'], 'L2G_MDIST')
+
      #Interpolate the rasters (give a smooth surface)
     interpPointsOverRaster(waveLandArray[0], waveLandArray[1], waveLandRaster)
     interpPointsOverRaster(landGridArray[0], landGridArray[1], landGridRaster)
     #########################################
     
-    capWE = args['capturedWE']
     def op(capturedWE, dem, distWL, distLG):
-        capWE = np.ones(len(T))*3526*1000.0
-        capWE[0] = 0
-        lenml = 3.0 * dem
+        capWE = capturedWE*1000.0
+        lenml = 3.0 * np.absolute(dem)
         #Calculate annualRevenue
         annualRevenue = price * units * capWE
         #Calculate annualCost
@@ -717,41 +694,40 @@ def valuation(args):
         transCost = (distWL*cul/1000.0) + (distLG*col/1000.0)
         #Calculate IC (installCost+mooringCost+transCost)
         IC = installCost + mooringCost + transCost
-        print IC
-        annualCost[0] = IC
-        #Calculate NPVWE :
             
-        NPV = []
+        NPV = np.zeros(capWE.shape, dtype=float)
         for i in range(len(T)):
-            NPV.append(rho**i * (annualRevenue[i] - annualCost[i]))
-            
-        return sum(NPV)
-    npvPath = interDir + os.sep + 'waveEnergy_NPV.tif'
+            if i==0:
+                NPV = NPV + (-1*((rho**i)*IC))
+            else:
+                NPV = NPV + (rho**i * (annualRevenue - annualCost))
+       
+        return NPV/1000
+    
     invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
                                  rasterName=npvPath, datatype=gdal.GDT_Float32)
     
-    #        def npv(annualRevenue, annualCost):
-    #            for num in range(1, T + 1):
-    #                sum = sum + (annualRevenue[num] - annualCost[num]) * ((1 + i) ** (-1 * t))
-    #        
-    #            return npv
+def getPoints(shape):
+    point = []
+    layer = shape.GetLayer(0)
+    feat = layer.GetNextFeature()
+    while feat is not None:
+        x = float(feat.GetGeometryRef().GetX())
+        y = float(feat.GetGeometryRef().GetY())
+        point.append([x,y])
+        feat.Destroy()
+        feat = layer.GetNextFeature()
     
-        ###############IDEA###################
-    #Do all calculations including NPV
-#    def op(depth, capWE, W2L_MDIST, LAND_ID, L2G_MDIST):
-#        return None
-    #Call vectorizeRasters and pass in needed rasters as well as op
-#    invest_core.vectorizeRasters([capWE, elevation], op,
-#                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
-    #Interpolate raster
-        ##############IDEA####################
-        
-        #Need to calculate the distances from each WW3 point to landing points
-        
-        #Need to calculate distances from underwater cable landing point to power grid connection point
-        
-    #Generate interpolated raster from points above
+    return np.array(point)
     
+def calcDist(xy_1, xy_2):
+    mindist = np.zeros(len(xy_1))
+    minid = np.zeros(len(xy_1))
+    for i, xy in enumerate(xy_1):
+        dists = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
+        mindist[i], minid[i] = dists.min(), dists.argmin()
+    return mindist, minid
+
 def changeProjection(shapeToReproject, projection, outputPath):
     """Changes the projection of a shapefile by creating a new shapefile based on
     the projection passed in and then copying all the features and fields of
