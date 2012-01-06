@@ -8,6 +8,7 @@ from PyQt4 import QtGui, QtCore
 
 import iui_validator
 import executor
+import registrar
 import simplejson as json
 
 #This is for something
@@ -170,7 +171,9 @@ class DynamicGroup(DynamicElement):
                 parsed from the user-defined JSON object.
             layout - a layout mechanism compatible with Qt4 or a subclass of 
                 such a layout manager.
-            registrar=None - An (optional) instance of base_widgets.Registrar.
+            registrar=None - An (optional) instance of 
+                base_widgets.ElementRegistrar.  Required if creating elements 
+                within this DynamicGroup.
         
             returns an instance of DynamicGroup"""
 
@@ -324,17 +327,16 @@ class DynamicPrimitive(DynamicElement):
 
         return {self.attributes['id'] : self}
 
+    def cast_value(self):
+        return self.root.type_registrar.eval(self.attributes['dataType'],
+                                             self.value())
+
     def getOutputValue(self):
         if 'args_id' in self.attributes:
             if self.isEnabled():
                 value = str(self.value())
                 if value != '':
-                    if 'dataType' in self.attributes:
-                        datatype = self.attributes['dataType']
-                        return self.root.registrar.castForOutput(datatype,
-                                                                 self.value())
-                    else:
-                        return str(value)
+                    return self.cast_value()
 
 class ErrorPopup(QtGui.QWidget):
     def __init__(self, parent, linkedElement):
@@ -1016,12 +1018,13 @@ class OperationDialog(QtGui.QDialog, Testator):
 
 
 class RootWindow(DynamicGroup):
-    def __init__(self, attributes, layout, registrar):
+    def __init__(self, attributes, layout, object_registrar):
         DynamicElement.__init__(self, attributes)
 
+        self.type_registrar = registrar.DatatypeRegistrar()
         self.setLayout(layout)
 
-        self.body = DynamicGroup(attributes, QtGui.QVBoxLayout(), registrar)
+        self.body = DynamicGroup(attributes, QtGui.QVBoxLayout(), object_registrar)
 
         if 'scrollable' in self.attributes:
             make_scrollable = self.attributes['scrollable']
@@ -1288,32 +1291,25 @@ been loaded.')
                 label += str(element + '\n')
         self.messageArea.setText(label.rstrip())
 
-class Registrar(object):
+class ElementRegistrar(registrar.Registrar):
     def __init__(self):
-        self.elementMap = {'container' : Container,
-                           'list': GridList,
-                           'file': FileEntry,
-                           'folder': FileEntry,
-                           'text': YearEntry,
-                           'sliderSpinBox': SliderSpinBox,
-                           'hideableFileEntry': HideableFileEntry
-                           }
-
-        self.dataTypes = {'int': int,
-                          'float': float}
-
-    def castForOutput(self, typeString, value):
-        if typeString in self.dataTypes:
-            returnValue = self.dataTypes[typeString](value)
-        else:
-            returnValue = str(value)
-
-    def create(self, type, values):
-        widget = self.elementMap[type]
+        registrar.Registrar.__init__(self)
+        updates = {'container' : Container,
+                   'list': GridList,
+                   'file': FileEntry,
+                   'folder': FileEntry,
+                   'text': YearEntry,
+                   'sliderSpinBox': SliderSpinBox,
+                   'hideableFileEntry': HideableFileEntry
+                   }
+        self.update_map(updates)
+        
+    def eval(self, type, op_values):
+        widget = registrar.Registrar.get_func(self, type)
         if issubclass(widget, DynamicGroup):
-            return widget(values, self)
+            return widget(op_values, self)
         else:
-            return widget(values)
+            return widget(op_values)
 
 if __name__ == "__main__":
     reg = Registrar()
