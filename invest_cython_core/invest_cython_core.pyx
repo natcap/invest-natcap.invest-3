@@ -648,33 +648,35 @@ cdef void d_p_area(CQueue pixels_to_process,
         calculate_inflow_neighbors_dinf(i,j, flow_direction_matrix, 
                                         nodata_flow_direction, neighbors)
         
-        if accumulation_matrix[i, j] == -1: #never visited
-            #mark visited
-            accumulation_matrix[i, j] = 0
+        #mark visited
+        accumulation_matrix[i, j] = 0
+        
+        #check to see if any of the neighbors were uncalculated, if so, 
+        #calculate them
+        neighbors_uncalculated = False
+        #Visit each uncalculated neighbor and push on the work queue
+        for neighbor_index in range(8):
+            #-1 prop marks the end of the neighbor list
+            if neighbors[neighbor_index].prop == -1: break 
             
-            #check to see if any of the neighbors were uncalculated, if so, 
-            #calculate them
-            if neighbors[0].prop != -1:
+            pi = neighbors[neighbor_index].i
+            pj = neighbors[neighbor_index].j
+            
+            #see if neighbor is uncalculated
+            if accumulation_matrix[pi, pj] == -1:
                 #push the current pixel back on, note the indexes are in reverse
                 #order so they can be popped off in order
                 pixels_to_process.push(j)
                 pixels_to_process.push(i)
-                
-                #Visit each uncalculated neighbor and push on the work queue
-                for neighbor_index in range(8):
-                    #-1 prop marks the end of the neighbor list
-                    if neighbors[neighbor_index].prop == -1: break 
                     
-                    pi = neighbors[neighbor_index].i
-                    pj = neighbors[neighbor_index].j
-                    
-                    #see if neighbor is uncalculated
-                    if accumulation_matrix[pi, pj] == -1:
-                        pixels_to_process.push(pj)
-                        pixels_to_process.push(pi)
-                #this skips over the calculation of pixel i,j until neighbors 
-                #are calculated
-                continue 
+                pixels_to_process.push(pj)
+                pixels_to_process.push(pi)
+                neighbors_uncalculated = True
+                break
+        #this skips over the calculation of pixel i,j until neighbors 
+        #are calculated
+        if neighbors_uncalculated:
+            continue 
 
         #If we get here then this pixel and its neighbors have been processed
         accumulation_matrix[i, j] = 1
@@ -740,7 +742,9 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     for i in range(1,idim-1):
         for j in range(1,jdim-1):
             h = dem_pixels[i,j]
-            if h == nodata_dem: continue
+            if h == nodata_dem:
+                accumulation_matrix[i,j] = nodata_flow_accumulation 
+                continue
             dem_pixel_pairs[valid_pixel_count].i = i
             dem_pixel_pairs[valid_pixel_count].j = j
             dem_pixel_pairs[valid_pixel_count].h = h
