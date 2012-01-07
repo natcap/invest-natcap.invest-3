@@ -340,8 +340,11 @@ class DynamicPrimitive(DynamicElement):
         return {self.attributes['id'] : self}
 
     def cast_value(self):
-        return self.root.type_registrar.eval(self.attributes['dataType'],
-                                             self.value())
+        try:
+            return self.root.type_registrar.eval(self.attributes['dataType'],
+                self.value())
+        except KeyError:
+            return str(self.value())
 
     def getOutputValue(self):
         if 'args_id' in self.attributes:
@@ -358,6 +361,11 @@ class DynamicPrimitive(DynamicElement):
             msg = str(error)
             self.setBGcolorSatisfied(False)
         self.error.set_error(msg)
+
+    def has_error(self):
+        if str(self.error.text()) == '':
+            return False
+        return True
         
     def validate(self):
         if self.isEnabled():
@@ -1124,21 +1132,20 @@ class RootWindow(DynamicGroup):
 
         self.okpressed = True
 
-        #if some required element has not been satisfied, alert the user and 
-        #return to the UI.  Otherwise (if the user has provided all required
-        #inputs), run the model.
-        failed = self.validator.checkAll()
-
-        if len(failed) > 0:
-            for element, errorMsg in failed:
-                if issubclass(element.__class__, DynamicPrimitive):
-                    element.setBGcolorSatisfied(False)
-
-            self.showMessages(failed)
-
-        else:
+        if not self.errors_exist():
             self.queueOperations()
             self.runProgram()
+
+    def errors_exist(self):
+        """Check to see if any elements in this UI have errors.
+        
+            Returns True if an error is found.  False if not."""
+            
+        for id, element in self.allElements.iteritems():
+            if issubclass(element.__class__, DynamicPrimitive):
+                if element.has_error():
+                    return True
+        return False
 
     def queueOperations(self):
         #placeholder for custom implementations.
