@@ -32,13 +32,13 @@ def biophysical(args):
 
     #Set variables for common output paths
     #Workspace Directory path
-    workspaceDir = args['workspace_dir']
+    workspace_dir = args['workspace_dir']
     #Wave Data Directory path
     waveDataDir = args['wave_data_dir']
     #Intermediate Directory path to store information
-    interDir = workspaceDir + os.sep + 'Intermediate'
+    interDir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
-    outputDir = workspaceDir + os.sep + 'Output'
+    outputDir = workspace_dir + os.sep + 'Output'
     #Path for clipped wave point shapefile holding values of interest
     waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
     #Path for 'new' AOI, see comment below 'if AOI in args'
@@ -88,8 +88,8 @@ def biophysical(args):
         lat = geom.GetX()
         long = geom.GetY()
 
-        i = int((lat - demGT[0])/demGT[1])
-        j = int((long - demGT[3])/demGT[5])
+        i = int((lat - demGT[0]) / demGT[1])
+        j = int((long - demGT[3]) / demGT[5])
 
         depth = demMatrix[j][i]
         
@@ -109,10 +109,10 @@ def biophysical(args):
     #the width or height of the shapefiles extents, divided by 250.
     xmin, xmax, ymin, ymax = area_layer.GetExtent()
     pixelSize = 0
-    if (xmax-xmin)<(ymax-ymin):
-        pixelSize = (xmax-xmin)/250
+    if (xmax - xmin) < (ymax - ymin):
+        pixelSize = (xmax - xmin) / 250
     else:
-        pixelSize = (ymax-ymin)/250
+        pixelSize = (ymax - ymin) / 250
         
     #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
     #and add the sum as a field to the shapefile
@@ -144,6 +144,8 @@ def biophysical(args):
     wavePowerRaster = clipRasterFromPolygon(cutter, wavePowerRaster, wavePowerPath)
     waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
     
+    wavePowerShape(area_shape)
+    
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
@@ -151,6 +153,56 @@ def biophysical(args):
     wavePeriodRaster = None
     waveEnergyRaster = None
     wavePowerRaster = None
+    
+def wavePowerShape(shape):
+    """Calculates the wave power from the arguments and writes the
+    output raster to hard disk. 
+    
+    waveHeight - A raster representing the wave heights for AOI
+    wavePeriod - A raster representing the wave periods for AOI
+    elevation  - A raster representing the elevation for AOI
+    wavePowerPath - A String representing the output path
+    
+    returns - Nothing
+    
+    """
+    #Sea water density constant (kg/m^3)
+    p = 1028
+    #Gravitational acceleration (m/s^2)
+    g = 9.8
+    #Constant determining the shape of a wave spectrum (see users guide pg 23)
+    alfa = 0.86
+    #Function defining the equations to compute the wave power.
+    layer = shape.GetLayer(0)
+    layer.ResetReading()
+    field_defn = ogr.FieldDefn('wp_Kw', ogr.OFTReal)
+    layer.CreateField(field_defn)
+    layer.ResetReading()
+    feat = layer.GetNextFeature()
+    while feat is not None:
+        height_index = feat.GetFieldIndex('HSAVG_M')
+        period_index = feat.GetFieldIndex('TPAVG_S')
+        depth_index = feat.GetFieldIndex('Depth_M')
+        wp_index = feat.GetFieldIndex('wp_Kw')
+        height = feat.GetFieldAsDouble(height_index)
+        period = feat.GetFieldAsDouble(period_index)
+        depth = feat.GetFieldAsInteger(depth_index)
+
+        depth = np.absolute(depth)
+        #wave frequency calculation (used to calculate wave number k)
+        tem = (2.0 * math.pi) / (period * alfa)
+        #wave number calculation (expressed as a function of wave frequency and water depth)
+        k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (depth / g))))
+        #wave group velocity calculation (expressed as a function of wave energy period and water depth)
+        waveGroupVelocity = ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) * np.sqrt((g / k) * np.tanh(k * depth))) / 2
+        #wave power calculation
+        wp = (((p * g) / 16) * (np.square(height)) * waveGroupVelocity) / 1000
+
+        feat.SetField(wp_index, wp)
+        
+        layer.SetFeature(feat)
+        feat.Destroy()
+        feat = layer.GetNextFeature()
     
 def clipRasterFromPolygon(shape, raster, path):
     """Returns a raster where any value outside the bounds of the polygon shape are set
@@ -178,8 +230,8 @@ def clipRasterFromPolygon(shape, raster, path):
     #the polygon and should write nodata back. If copied raster's value
     #is not nodata, then pixel lies within polygon and the value from 'raster'
     #should be written out.
-    def op(a,b):
-        if b==nodata:
+    def op(a, b):
+        if b == nodata:
             return b
         else:
             return a
@@ -341,7 +393,7 @@ def interpPointsOverRaster(points, values, raster):
     ysize = band.YSize
     #newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
     #Make a numpy array representing the points of the raster (the points are the pixels)
-    newpoints = np.array([[gt[0]+gt[1]*i,gt[3]+gt[5]*j] for i in np.arange(xsize) for j in np.arange(ysize)])
+    newpoints = np.array([[gt[0] + gt[1] * i, gt[3] + gt[5] * j] for i in np.arange(xsize) for j in np.arange(ysize)])
     #Interpolate the points and values from the shapefile from earlier
     spl = ip(points, values, fill_value=0)
     #Run the interpolator object over the new set of points from the raster. Will return a list of values.
@@ -479,7 +531,7 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
 #            def deviceConstraints(a, capmax, hmax, tmax):
         #Sum all of the values from the matrix to get the total captured wave energy
         #and convert into mega watts
-        sum = (validArray.sum()/1000)
+        sum = (validArray.sum() / 1000)
         energyCap[key] = sum
 
     return energyCap
@@ -571,8 +623,8 @@ def valuation(args):
     smlpm = float(machine_econ['smlpm']['VALUE'])
     
     year = 25.0
-    T = np.linspace(0.0, year-1.0, year)
-    rho = 1.0/(1.0+drate)
+    T = np.linspace(0.0, year - 1.0, year)
+    rho = 1.0 / (1.0 + drate)
     #Extract the landing and grid points data
     land_grid_pts = args['land_gridPts']
     grid_pt = {}
@@ -715,8 +767,8 @@ def valuation(args):
         lat = geom.GetX()
         long = geom.GetY()
 
-        i = int((lat - demGT[0])/demGT[1])
-        j = int((long - demGT[3])/demGT[5])
+        i = int((lat - demGT[0]) / demGT[1])
+        j = int((long - demGT[3]) / demGT[5])
 
         depth = demMatrix[j][i]
         #Need to transform the geometry back otherwise it messes with
@@ -734,10 +786,10 @@ def valuation(args):
     #########Create W2L/L2G Rasters##########
     xmin, xmax, ymin, ymax = wave_data_layer.GetExtent()
     pixelSize = 0
-    if (xmax-xmin)<(ymax-ymin):
-        pixelSize = (xmax-xmin)/250
+    if (xmax - xmin) < (ymax - ymin):
+        pixelSize = (xmax - xmin) / 250
     else:
-        pixelSize = (ymax-ymin)/250
+        pixelSize = (ymax - ymin) / 250
     
     waveLand_path = interDir + os.sep + 'waveLand.tif'
     landGrid_path = interDir + os.sep + 'landGrid.tif'
@@ -759,7 +811,7 @@ def valuation(args):
     #########################################
     
     def op(capturedWE, dem, distWL, distLG):
-        capWE = capturedWE*1000.0
+        capWE = capturedWE * 1000.0
         lenml = 3.0 * np.absolute(dem)
         #Calculate annualRevenue
         annualRevenue = price * units * capWE
@@ -770,18 +822,18 @@ def valuation(args):
         #Calculate mooringCost
         mooringCost = smlpm * lenml * cml * units
         #Calculate transCost
-        transCost = (distWL*cul/1000.0) + (distLG*col/1000.0)
+        transCost = (distWL * cul / 1000.0) + (distLG * col / 1000.0)
         #Calculate IC (installCost+mooringCost+transCost)
         IC = installCost + mooringCost + transCost
             
         NPV = np.zeros(capWE.shape, dtype=float)
         for i in range(len(T)):
-            if i==0:
-                NPV = NPV + (-1*((rho**i)*IC))
+            if i == 0:
+                NPV = NPV + (-1 * ((rho ** i) * IC))
             else:
-                NPV = NPV + (rho**i * (annualRevenue - annualCost))
+                NPV = NPV + (rho ** i * (annualRevenue - annualCost))
        
-        return NPV/1000
+        return NPV / 1000
     
     invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
                                  rasterName=npvPath, datatype=gdal.GDT_Float32)
@@ -793,7 +845,7 @@ def getPoints(shape):
     while feat is not None:
         x = float(feat.GetGeometryRef().GetX())
         y = float(feat.GetGeometryRef().GetY())
-        point.append([x,y])
+        point.append([x, y])
         feat.Destroy()
         feat = layer.GetNextFeature()
     
@@ -803,7 +855,7 @@ def calcDist(xy_1, xy_2):
     mindist = np.zeros(len(xy_1))
     minid = np.zeros(len(xy_1))
     for i, xy in enumerate(xy_1):
-        dists = np.sqrt(np.sum((xy-xy_2)**2, axis = 1))
+        dists = np.sqrt(np.sum((xy - xy_2) ** 2, axis=1))
         mindist[i], minid[i] = dists.min(), dists.argmin()
     return mindist, minid
 
