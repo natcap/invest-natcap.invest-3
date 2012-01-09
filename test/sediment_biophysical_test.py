@@ -23,7 +23,6 @@ class TestSedimentBiophysical(unittest.TestCase):
         """A test constructed by hand to test the low level dinf direction and
             flow functions.  Intent is the the test case is small enough to be
             hand calculatable, yet large enough to be non-trivial."""
-        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
 
         projection = base.GetProjection()
@@ -93,7 +92,8 @@ class TestSedimentBiophysical(unittest.TestCase):
         projection = base.GetProjection()
         geotransform = base.GetGeoTransform()
         dem = invest_cython_core.newRaster(cols, rows, projection,
-            geotransform, 'MEM', -1, gdal.GDT_Float32, 1, '')
+            geotransform, 'GTiff', -1, gdal.GDT_Float32, 1,
+            './data/sediment_3x3_output/dem.tif')
         flow_raster = invest_cython_core.newRasterFromBase(dem, '',
             'MEM', -5.0, gdal.GDT_Float32)
 
@@ -107,11 +107,10 @@ class TestSedimentBiophysical(unittest.TestCase):
         flow_array = flow_raster.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
 
         #Direction 4.712385 was calculated by hand
-        self.assertAlmostEqual(flow_array[0][0], 4.712385)
+        self.assertAlmostEqual(flow_array[0][0], 4.712389)
 
     def test_sediment_biophysical_simple_2(self):
         """This test is a smaller version of a real world case that failed"""
-
         #Create two 3x3 rasters in memory
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
@@ -124,7 +123,9 @@ class TestSedimentBiophysical(unittest.TestCase):
                                                     gdal.GDT_Float32)
 
         #This is a test case that was calculated by hand
-        array = np.array([[249, 246, 243], [241, 238, 235], [233, 231, 228]])
+        array = np.array([[249, 246, 243],
+                          [241, 238, 235],
+                          [233, 231, 228]])
         dem.GetRasterBand(1).WriteArray(array, 0, 0)
         invest_cython_core.flow_direction_inf(dem, flow)
         flowArray = flow.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
