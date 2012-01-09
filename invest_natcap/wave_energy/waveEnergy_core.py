@@ -48,7 +48,7 @@ def biophysical(args):
     wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
     waveEnergyPath = interDir + os.sep + 'capwe_mwh.tif'
     wavePowerPath = interDir + os.sep + 'wp_kw.tif'
-    
+    wave_power_path = interDir + os.sep + 'wp_shape_version.tif'
     #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
     nodata = 0
@@ -121,11 +121,12 @@ def biophysical(args):
     capturedWaveEnergyToShape(energyCap, area_shape)
 
     #Create rasters bounded by shape file of analyis area
-    for path in (waveHeightPath, wavePeriodPath, waveEnergyPath):
+    for path in (waveHeightPath, wavePeriodPath, waveEnergyPath, wave_power_path):
         invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
                                               datatype, nodata, path, area_shape)
 
     #Open created rasters
+    wave_power_raster = gdal.Open(wave_power_path, GA_Update)
     waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
     wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
     waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
@@ -148,8 +149,11 @@ def biophysical(args):
     area_shape = ogr.Open(waveShapePath, 1)
     area_layer = area_shape.GetLayer(0)
     
-    wavePowerShape(area_shape)
+    wave_power_shape = wavePowerShape(area_shape)
     
+    wave_power_array = getPointsValues(wave_power_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
+    interpPointsOverRaster(wave_power_array[0], wave_power_array[1], wave_power_raster)
+    wave_power_raster = clipRasterFromPolygon(cutter, wave_power_raster, wave_power_path)
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
@@ -157,6 +161,8 @@ def biophysical(args):
     wavePeriodRaster = None
     waveEnergyRaster = None
     wavePowerRaster = None
+    
+    wave_power_raster = None
     
 def wavePowerShape(shape):
     """Calculates the wave power from the arguments and writes the
@@ -206,6 +212,8 @@ def wavePowerShape(shape):
         layer.SetFeature(feat)
         feat.Destroy()
         feat = layer.GetNextFeature()
+    
+    return shape
     
 def clipRasterFromPolygon(shape, raster, path):
     """Returns a raster where any value outside the bounds of the polygon shape are set
