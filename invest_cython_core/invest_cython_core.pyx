@@ -811,7 +811,12 @@ def flow_direction_inf(dem, flow):
     flow_matrix[:] = nodata_flow
 
     #facet elevation and factors for slope and flow_direction calculations 
-    #from Table 1 in Tarboton 1997.  The order is row (y), column (x)
+    #from Table 1 in Tarboton 1997.  
+    #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
+    #convention.
+    #THIS IS IMPORTANT:  The row indexes in the paper increase downward, but in
+    #GDAL the row increases upward, so the first column of these offsets are 
+    #negated if you're checking these numbers against the paper.
     cdef int *e_0_offsets = [+0, +0,
                              +0, +0,
                              +0, +0,
@@ -864,13 +869,17 @@ def flow_direction_inf(dem, flow):
             
             for facet_index in range(8):
                 #This defines the three height points
-                #The 
                 e_0 = dem_matrix[e_0_offsets[facet_index*2+1] + col_index,
                                  e_0_offsets[facet_index*2+0] + row_index]
                 e_1 = dem_matrix[e_1_offsets[facet_index*2+1] + col_index,
                                  e_1_offsets[facet_index*2+0] + row_index]
                 e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + col_index,
                                  e_2_offsets[facet_index*2+0] + row_index]
+                
+                #LOGGER.debug('facet %s' % (facet_index+1))
+                #LOGGER.debug('e_1_offsets %s %s' %(e_1_offsets[facet_index*2+1],
+                #                                   e_1_offsets[facet_index*2+0]))
+                #LOGGER.debug('e_0 %s e_1 %s e_2 %s' % (e_0, e_1, e_2))
                 
                 #avoid calculating a slope on nodata values
                 if e_1 == nodata_dem or e_2 == nodata_dem: 
@@ -882,8 +891,9 @@ def flow_direction_inf(dem, flow):
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 
-                if s_1 <= 0 or s_2 <= 0: 
-                    continue #uphill slope or flat, so skip, D8 resolve
+                if s_1 <= 0 and s_2 <= 0:
+                    #uphill slope or flat, so skip, D8 resolve 
+                    continue 
                 
                 #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
                 flow_direction = 3.14159262/2.0
@@ -891,6 +901,7 @@ def flow_direction_inf(dem, flow):
                     flow_direction = atan(s_2 / s_1) #Eqn 3
 
                 if flow_direction < 0: #Eqn 4
+                    #LOGGER.debug("flow direciton negative")
                     #If the flow direction goes off one side, set flow
                     #direction to that side and the slope to the straight line
                     #distance slope
@@ -898,15 +909,18 @@ def flow_direction_inf(dem, flow):
                     slope = s_1
                     #LOGGER.debug("flow direction < 0 slope=%s"%slope)
                 elif flow_direction > atan(d_2 / d_1): #Eqn 5
+                    #LOGGER.debug("flow direciton greater than 45 degrees")
                     #If the flow direciton goes off the diagonal side, figure
                     #out what its value is and
                     flow_direction = atan(d_2 / d_1)
                     slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
                     #LOGGER.debug("flow direction > 45 slope=%s"%slope)
                 else:
+                    #LOGGER.debug("flow direciton in bounds")
                     slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
                     #LOGGER.debug("flow direction in middle slope=%s"%slope)
 
+                #LOGGER.debug("slope %s" % slope)
                 if slope > slope_max:
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
@@ -917,6 +931,8 @@ def flow_direction_inf(dem, flow):
                 # that caused the above algorithm to break out
                  
                 #Calculate the global angle depending on the max slope facet
+                #LOGGER.debug("slope_max %s" % slope_max)
+                #LOGGER.debug("max_index %s" % (max_index+1))
                 if slope_max > 0:
                     flow_matrix[col_index, row_index] = \
                         a_f[max_index] * flow_direction_max_slope + \
@@ -943,11 +959,11 @@ def flow_direction_inf(dem, flow):
                      nodata_d8: nodata_flow
                      }
     
-    for col_index in range(1, col_max - 1):
-        for row_index in range(1, row_max - 1):
-            if flow_matrix[col_index, row_index] == nodata_flow:
-                flow_matrix[col_index, row_index] = \
-                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
+    #for col_index in range(1, col_max - 1):
+    #    for row_index in range(1, row_max - 1):
+    #        if flow_matrix[col_index, row_index] == nodata_flow:
+    #            flow_matrix[col_index, row_index] = \
+    #                d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
