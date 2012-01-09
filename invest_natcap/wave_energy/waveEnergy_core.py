@@ -66,6 +66,49 @@ def biophysical(args):
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
     area_shape = clipShape(args['analysis_area'], cutter, waveShapePath)
     area_layer = area_shape.GetLayer(0)
+    
+    ### ADD DEPTH FIELD #####        
+    demGT = global_dem.GetGeoTransform()
+    demBand = global_dem.GetRasterBand(1)
+    xsize = demBand.XSize
+    ysize = demBand.YSize
+    demMatrix = demBand.ReadAsArray()
+    
+    field_defn = ogr.FieldDefn('Depth_M', ogr.OFTReal)
+    area_layer.CreateField(field_defn)
+        
+    area_layer.ResetReading()
+    feature = area_layer.GetNextFeature()
+    
+    while feature is not None:
+        Depth_index = feature.GetFieldIndex('Depth_M')    
+
+        geom = feature.GetGeometryRef()
+        geom.Transform(coordTransOp)
+
+        lat = geom.GetX()
+        long = geom.GetY()
+
+        i = int((lat - demGT[0])/demGT[1])
+        j = int((long - demGT[3])/demGT[5])
+
+        depth = demMatrix[j][i]
+        #Need to transform the geometry back otherwise it messes with
+        #the point shape and it won't save properly
+        geom.Transform(coordTrans)
+        
+        feature.SetField(Depth_index, depth)
+        
+        shape_layer.SetFeature(feature)
+        feature.Destroy()
+        feature = shape_layer.GetNextFeature()
+    shape.Destroy()
+    shape = ogr.Open(projectedShapePath, 1)
+    shape_layer = shape.GetLayer(0)
+    
+    
+   
+    
     #Get the spatial extents of the shapefile.
     #The pixel size for the output rasters will be set to the less of
     #the width or height of the shapefiles extents, divided by 250.
