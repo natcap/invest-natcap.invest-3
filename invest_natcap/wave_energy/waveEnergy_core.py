@@ -144,6 +144,10 @@ def biophysical(args):
     wavePowerRaster = clipRasterFromPolygon(cutter, wavePowerRaster, wavePowerPath)
     waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
     
+    area_shape.Destroy()
+    area_shape = ogr.Open(waveShapePath, 1)
+    area_layer = area_shape.GetLayer(0)
+    
     wavePowerShape(area_shape)
     
     #Clean up Shapefiles and Rasters
@@ -174,7 +178,6 @@ def wavePowerShape(shape):
     alfa = 0.86
     #Function defining the equations to compute the wave power.
     layer = shape.GetLayer(0)
-    layer.ResetReading()
     field_defn = ogr.FieldDefn('wp_Kw', ogr.OFTReal)
     layer.CreateField(field_defn)
     layer.ResetReading()
@@ -197,7 +200,7 @@ def wavePowerShape(shape):
         waveGroupVelocity = ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) * np.sqrt((g / k) * np.tanh(k * depth))) / 2
         #wave power calculation
         wp = (((p * g) / 16) * (np.square(height)) * waveGroupVelocity) / 1000
-
+        
         feat.SetField(wp_index, wp)
         
         layer.SetFeature(feat)
