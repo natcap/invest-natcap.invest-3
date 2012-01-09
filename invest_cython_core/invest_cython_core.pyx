@@ -811,7 +811,12 @@ def flow_direction_inf(dem, flow):
     flow_matrix[:] = nodata_flow
 
     #facet elevation and factors for slope and flow_direction calculations 
-    #from Table 1 in Tarboton 1997.  The order is row (y), column (x)
+    #from Table 1 in Tarboton 1997.  
+    #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
+    #convention.
+    #THIS IS IMPORTANT:  The row indexes in the paper increase downward, but in
+    #GDAL the row increases upward, so the first column of these offsets are 
+    #negated if you're checking these numbers against the paper.
     cdef int *e_0_offsets = [+0, +0,
                              +0, +0,
                              +0, +0,
@@ -821,21 +826,21 @@ def flow_direction_inf(dem, flow):
                              +0, +0,
                              +0, +0]
     cdef int *e_1_offsets = [+0, +1,
-                             -1, +0,
-                             -1, +0,
-                             +0, -1,
-                             +0, -1,
                              +1, +0,
                              +1, +0,
+                             +0, -1,
+                             +0, -1,
+                             -1, +0,
+                             -1, +0,
                              +0, +1]
-    cdef int *e_2_offsets = [-1, +1,
-                             -1, +1,
-                             -1, -1,
-                             -1, -1,
-                             +1, -1,
-                             +1, -1,
+    cdef int *e_2_offsets = [+1, +1,
                              +1, +1,
-                             +1, +1]
+                             +1, -1,
+                             +1, -1,
+                             -1, -1,
+                             -1, -1,
+                             -1, +1,
+                             -1, +1]
     cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
@@ -943,11 +948,11 @@ def flow_direction_inf(dem, flow):
                      nodata_d8: nodata_flow
                      }
     
-    for col_index in range(1, col_max - 1):
-        for row_index in range(1, row_max - 1):
-            if flow_matrix[col_index, row_index] == nodata_flow:
-                flow_matrix[col_index, row_index] = \
-                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
+    #for col_index in range(1, col_max - 1):
+    #    for row_index in range(1, row_max - 1):
+    #        if flow_matrix[col_index, row_index] == nodata_flow:
+    #            flow_matrix[col_index, row_index] = \
+    #                d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
