@@ -726,6 +726,46 @@ def valuation(args):
     invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
                                  rasterName=npvPath, datatype=gdal.GDT_Float32)
     
+    def npv_wave(annual_revenue, annual_cost):
+        npv = []
+        for i in range(len(T)):
+            npv.append(rho ** i * (annual_revenue - annual_cost))
+        return sum(npv)
+    
+    field_defn_npv = ogr.FieldDefn('NPV_25Y', ogr.OFTReal)
+    shape_layer.CreateField(field_defn_npv)
+    
+    feat = shape_layer.GetNextFeature()
+    while feat is not None:
+        depth_index = feat.GetFieldIndex('Depth_M')
+        wave_to_land_index = feat.GetFieldIndex('W2L_MDIST')
+        land_to_grid_index = feat.GetFieldIndex('L2G_MDIST')
+        captured_wave_energy_index = feat.GetFieldIndex('CapWE_MWHY')
+        npv_index = feat.GetFieldIndex('NPV_25Y')
+        
+        depth = feat.GetFieldAsDouble(depth_index)
+        wave_to_land = feat.GetFieldAsDouble(wave_to_land_index)
+        land_to_grid = feat.GetFieldAsDouble(land_to_grid_index)
+        captured_wave_energy = feat.GetFieldAsDouble(captured_wave_energy_index)
+        
+        captured_we = np.ones(len(T)) * int(captured_wave_energy) * 1000.0
+        captured_we[0] = 0
+        
+        lenml = 3.0 * np.absolute(depth)
+        install_cost = units * capMax * capitalCost
+        mooring_cost = smlpm * lenml * cml * units
+        trans_cost = (wave_to_land * cul / 1000.0) + (land_to_grid * col / 1000.0)
+        initial_cost = install_cost + mooring_cost + trans_cost
+        annual_revenue = price * units * captured_we
+        annual_cost = omc * captured_we * units
+        annual_cost[0] = initial_cost
+        
+        feat.SetField(npv_index, npv_wave(annual_revenue, annual_cost) / 1000.0)
+        
+        shape_layer.SetFeature(feat)
+        feat.Destroy()
+        feat = shape_layer.GetNextFeature()
+    
 def getPoints(shape):
     point = []
     layer = shape.GetLayer(0)
