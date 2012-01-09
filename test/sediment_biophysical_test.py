@@ -19,9 +19,40 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestSedimentBiophysical(unittest.TestCase):
     """Main testing class for the biophysical sediment tests"""
+    def test_sediment_dinf_flow_dir(self):
+        """A test constructed by hand to test the low level dinf direction and
+            flow functions.  Intent is the the test case is small enough to be
+            hand calculatable, yet large enough to be non-trivial."""
+        base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
+
+        projection = base.GetProjection()
+        geotransform = base.GetGeoTransform()
+
+        dem = invest_cython_core.newRaster(6, 6, projection, geotransform,
+            'GTiff', -1, gdal.GDT_Float32, 1, '')
+        flow_direction = invest_cython_core.newRasterFromBase(dem, '',
+            'GTiff', -5.0, gdal.GDT_Float32)
+        flow_accumulation = invest_cython_core.newRasterFromBase(dem, '',
+            'GTiff', -5.0, gdal.GDT_Float32)
+
+        #This is a test case that was calculated by hand
+        #dem_array = np.array([[249, 246, 243], 
+        #[241, 238, 235],
+        #[233, 231, 228]])
+        #dem.GetRasterBand(1).WriteArray(dem_array, 0, 0)
+
+        #invest_cython_core.flow_direction_inf(dem, flow_direction)
+
+        #invest_cython_core.flow_accumulation_dinf(flow_direction,
+        #                                          flow_accumulation, dem)
+
+
+        pass
+
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with default InVEST 
            sample input."""
+        raise SkipTest
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
         base_dir = './data/sediment_test_data'
