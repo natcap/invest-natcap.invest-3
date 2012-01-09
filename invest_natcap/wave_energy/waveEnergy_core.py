@@ -44,10 +44,7 @@ def biophysical(args):
     #Path for 'new' AOI, see comment below 'if AOI in args'
     waveAOIPath = interDir + os.sep + 'waveAOIShape.shp'
     #Paths for intermediate and output rasters.
-    waveHeightPath = interDir + os.sep + 'waveHeight.tif'
-    wavePeriodPath = interDir + os.sep + 'wavePeriod.tif'
     waveEnergyPath = interDir + os.sep + 'capwe_mwh.tif'
-    wavePowerPath = interDir + os.sep + 'wp_kw.tif'
     wave_power_path = interDir + os.sep + 'wp_shape_version.tif'
     #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
@@ -82,27 +79,19 @@ def biophysical(args):
     
     while feature is not None:
         depth_index = feature.GetFieldIndex('Depth_M')    
-
         geom = feature.GetGeometryRef()
-
         lat = geom.GetX()
         long = geom.GetY()
-
         i = int((lat - demGT[0]) / demGT[1])
         j = int((long - demGT[3]) / demGT[5])
-
-        depth = demMatrix[j][i]
-        
-        feature.SetField(depth_index, depth)
-        
+        depth = demMatrix[j][i]        
+        feature.SetField(depth_index, depth)        
         area_layer.SetFeature(feature)
         feature.Destroy()
         feature = area_layer.GetNextFeature()
     area_shape.Destroy()
     area_shape = ogr.Open(waveShapePath, 1)
     area_layer = area_shape.GetLayer(0)
-    
-   
     
     #Get the spatial extents of the shapefile.
     #The pixel size for the output rasters will be set to the less of
@@ -119,52 +108,34 @@ def biophysical(args):
     energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
     energyCap = computeWaveEnergyCapacity(args['wave_base_data'], energyInterp, args['machine_param'])
     capturedWaveEnergyToShape(energyCap, area_shape)
+    area_shape = wavePower(area_shape)
 
     #Create rasters bounded by shape file of analyis area
-    for path in (waveHeightPath, wavePeriodPath, waveEnergyPath, wave_power_path):
-        invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
-                                              datatype, nodata, path, area_shape)
+    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+                                              datatype, nodata, waveEnergyPath, area_shape)
+    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+                                              datatype, nodata, wave_power_path, area_shape)
 
     #Open created rasters
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
-    waveHeightRaster = gdal.Open(waveHeightPath, GA_Update)
-    wavePeriodRaster = gdal.Open(wavePeriodPath, GA_Update)
     waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
-    heightArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'HSAVG_M'], 'HSAVG_M')
-    periodArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'TPAVG_S'], 'TPAVG_S')
     energySumArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+    wave_power_array = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
     #Interpolate the rasters (give a smooth surface)
-    interpPointsOverRaster(heightArray[0], heightArray[1], waveHeightRaster)
-    interpPointsOverRaster(periodArray[0], periodArray[1], wavePeriodRaster)
     interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
-    #Generate the wave power raster
-    wavePower(waveHeightRaster, wavePeriodRaster, global_dem, wavePowerPath)    
-    wavePowerRaster = gdal.Open(wavePowerPath, GA_Update)
-    #Clip the wave energy and wave power rasters so that they are confined to the AOI
-    wavePowerRaster = clipRasterFromPolygon(cutter, wavePowerRaster, wavePowerPath)
-    waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
-    
-    area_shape.Destroy()
-    area_shape = ogr.Open(waveShapePath, 1)
-    area_layer = area_shape.GetLayer(0)
-    
-    wave_power_shape = wavePowerShape(area_shape)
-    
-    wave_power_array = getPointsValues(wave_power_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
     interpPointsOverRaster(wave_power_array[0], wave_power_array[1], wave_power_raster)
+    #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clipRasterFromPolygon(cutter, wave_power_raster, wave_power_path)
+    waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
+        
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
-    waveHeightRaster = None
-    wavePeriodRaster = None
     waveEnergyRaster = None
-    wavePowerRaster = None
-    
     wave_power_raster = None
     
-def wavePowerShape(shape):
+def wavePower(shape):
     """Calculates the wave power from the arguments and writes the
     output raster to hard disk. 
     
@@ -414,61 +385,6 @@ def interpPointsOverRaster(points, values, raster):
     spl = spl.reshape(xsize, ysize).transpose()
     #Write interpolated matrix of values to raster
     band.WriteArray(spl, 0, 0)
-    
-def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath):
-    """Calculates the wave power from the arguments and writes the
-    output raster to hard disk. 
-    
-    waveHeight - A raster representing the wave heights for AOI
-    wavePeriod - A raster representing the wave periods for AOI
-    elevation  - A raster representing the elevation for AOI
-    wavePowerPath - A String representing the output path
-    
-    returns - Nothing
-    
-    """
-    #Sea water density constant (kg/m^3)
-    p = 1028
-    #Gravitational acceleration (m/s^2)
-    g = 9.8
-    #Constant determining the shape of a wave spectrum (see users guide pg 23)
-    alfa = 0.86
-    #Function defining the equations to compute the wave power.
-    def op(a, b, c):
-        """Function computes the wave power for a specific point.  
-        Function used as an argument in invest_core.vectorizeRasters.
-        
-        a - waveHeight raster which represents the wave height for a point
-        b - wavePeriod raster which represents the wave period for a point
-        c - global dem raster which represents the elevation for a point
-        
-        returns - The wave power at a give point
-        """
-        c = np.absolute(c)
-        #wave frequency calculation (used to calculate wave number k)
-        tem = (2.0 * math.pi) / (b * alfa)
-        #wave number calculation (expressed as a function of wave frequency and water depth)
-        k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
-        #wave group velocity calculation (expressed as a function of wave energy period and water depth)
-        waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * np.sqrt((g / k) * np.tanh(k * c))) / 2
-        #wave power calculation
-        wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
-        return wp
-    #Create a new raster, wave power, by running the 'op' function over three rasters
-    invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation], op,
-                                 rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
-    
-    wpRaster = gdal.Open(wavePowerPath, GA_Update)
-    wpNoData = wpRaster.GetRasterBand(1).GetNoDataValue()
-    #Where the wave power value is less than 1, set the value to nodata
-    def op2(a):
-        if a < 1:
-            return wpNoData
-        else:
-            return a
-    invest_core.vectorize1ArgOp(wpRaster.GetRasterBand(1), op2, wpRaster.GetRasterBand(1))
-    wpRaster = None
-
 
 def waveEnergyInterp(waveData, machinePerf):
     """Generates a matrix representing the interpolation of the
