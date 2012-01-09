@@ -524,7 +524,7 @@ def valuation(args):
     projectedShapePath = interDir + os.sep + 'WaveData_clip_Prj.shp'
     landptPath = interDir + os.sep + 'landingPoints.shp'
     gridptPath = interDir + os.sep + 'gridPoint.shp'
-    npvPath = interDir + os.sep + 'waveEnergy_NPV.tif'
+    wave_farm_value_path = interDir + os.sep + 'wave_energy_npv.tif'
     
     dem = args['global_dem']
     capWE = args['capturedWE']
@@ -671,76 +671,22 @@ def valuation(args):
     shape = ogr.Open(projectedShapePath, 1)
     shape_layer = shape.GetLayer(0)
     
-    #########Create W2L/L2G Rasters##########
-    xmin, xmax, ymin, ymax = wave_data_layer.GetExtent()
-    pixelSize = 0
-    if (xmax - xmin) < (ymax - ymin):
-        pixelSize = (xmax - xmin) / 250
-    else:
-        pixelSize = (ymax - ymin) / 250
-    
-    waveLand_path = interDir + os.sep + 'waveLand.tif'
-    landGrid_path = interDir + os.sep + 'landGrid.tif'
-    datatype = gdal.GDT_Float32
-    nodata = 0
-    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
-                                              datatype, nodata, waveLand_path, wave_data_shape)
-    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
-                                              datatype, nodata, landGrid_path, wave_data_shape)
-    waveLandRaster = gdal.Open(waveLand_path, GA_Update)
-    landGridRaster = gdal.Open(landGrid_path, GA_Update)
-    #Get the corresponding points and values from the shapefile to be used for interpolation
-    waveLandArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'W2L_MDIST'], 'W2L_MDIST')
-    landGridArray = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'L2G_MDIST'], 'L2G_MDIST')
-
-     #Interpolate the rasters (give a smooth surface)
-    interpPointsOverRaster(waveLandArray[0], waveLandArray[1], waveLandRaster)
-    interpPointsOverRaster(landGridArray[0], landGridArray[1], landGridRaster)
-    #########################################
-    
-    def op(capturedWE, dem, distWL, distLG):
-        capWE = capturedWE * 1000.0
-        lenml = 3.0 * np.absolute(dem)
-        #Calculate annualRevenue
-        annualRevenue = price * units * capWE
-        #Calculate annualCost
-        annualCost = omc * capWE * units
-        #Calculate installCost
-        installCost = units * capMax * capitalCost
-        #Calculate mooringCost
-        mooringCost = smlpm * lenml * cml * units
-        #Calculate transCost
-        transCost = (distWL * cul / 1000.0) + (distLG * col / 1000.0)
-        #Calculate IC (installCost+mooringCost+transCost)
-        IC = installCost + mooringCost + transCost
-            
-        NPV = np.zeros(capWE.shape, dtype=float)
-        for i in range(len(T)):
-            if i == 0:
-                NPV = NPV + (-1 * ((rho ** i) * IC))
-            else:
-                NPV = NPV + (rho ** i * (annualRevenue - annualCost))
-       
-        return NPV / 1000
-    
-    invest_core.vectorizeRasters([capWE, dem, waveLandRaster, landGridRaster], op,
-                                 rasterName=npvPath, datatype=gdal.GDT_Float32)
     
     def npv_wave(annual_revenue, annual_cost):
         npv = []
         for i in range(len(T)):
-            npv.append(rho ** i * (annual_revenue - annual_cost))
+            npv.append(rho ** i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
     
     field_defn_npv = ogr.FieldDefn('NPV_25Y', ogr.OFTReal)
     shape_layer.CreateField(field_defn_npv)
-    
+    shape_layer.ResetReading()
     feat = shape_layer.GetNextFeature()
     while feat is not None:
         depth_index = feat.GetFieldIndex('Depth_M')
         wave_to_land_index = feat.GetFieldIndex('W2L_MDIST')
         land_to_grid_index = feat.GetFieldIndex('L2G_MDIST')
-        captured_wave_energy_index = feat.GetFieldIndex('CapWE_MWHY')
+        captured_wave_energy_index = feat.GetFieldIndex('CapWE_Sum')
         npv_index = feat.GetFieldIndex('NPV_25Y')
         
         depth = feat.GetFieldAsDouble(depth_index)
@@ -760,11 +706,32 @@ def valuation(args):
         annual_cost = omc * captured_we * units
         annual_cost[0] = initial_cost
         
-        feat.SetField(npv_index, npv_wave(annual_revenue, annual_cost) / 1000.0)
+        npv_result = npv_wave(annual_revenue, annual_cost) / 1000.0
+        feat.SetField(npv_index, npv_result)
         
         shape_layer.SetFeature(feat)
         feat.Destroy()
         feat = shape_layer.GetNextFeature()
+    
+    #########Create W2L/L2G Rasters##########
+    xmin, xmax, ymin, ymax = wave_data_layer.GetExtent()
+    pixelSize = 0
+    if (xmax - xmin) < (ymax - ymin):
+        pixelSize = (xmax - xmin) / 250
+    else:
+        pixelSize = (ymax - ymin) / 250
+    
+    datatype = gdal.GDT_Float32
+    nodata = 0
+    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+                                              datatype, nodata, wave_farm_value_path, wave_data_shape)
+    wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
+    #Get the corresponding points and values from the shapefile to be used for interpolation
+    wave_farm_value_array = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'NPV_25Y'], 'NPV_25Y')
+
+     #Interpolate the rasters (give a smooth surface)
+    interpPointsOverRaster(wave_farm_value_array[0], wave_farm_value_array[1], wave_farm_value_raster)
+    #########################################
     
 def getPoints(shape):
     point = []
