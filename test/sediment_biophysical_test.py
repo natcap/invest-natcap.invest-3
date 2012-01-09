@@ -23,6 +23,7 @@ class TestSedimentBiophysical(unittest.TestCase):
         """A test constructed by hand to test the low level dinf direction and
             flow functions.  Intent is the the test case is small enough to be
             hand calculatable, yet large enough to be non-trivial."""
+        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
 
         projection = base.GetProjection()
@@ -31,10 +32,10 @@ class TestSedimentBiophysical(unittest.TestCase):
         dem = invest_cython_core.newRaster(6, 6, projection, geotransform,
             'GTiff', -1, gdal.GDT_Float32, 1,
             './data/sediment_6x6_output/dem.tif')
-        flow_direction = invest_cython_core.newRasterFromBase(dem, 
+        flow_direction = invest_cython_core.newRasterFromBase(dem,
             './data/sediment_6x6_output/flow_direction.tif',
             'GTiff', -5.0, gdal.GDT_Float32)
-        flow_accumulation = invest_cython_core.newRasterFromBase(dem, 
+        flow_accumulation = invest_cython_core.newRasterFromBase(dem,
             './data/sediment_6x6_output/flow_accumulation.tif',
             'GTiff', -5.0, gdal.GDT_Float32)
 
@@ -47,13 +48,10 @@ class TestSedimentBiophysical(unittest.TestCase):
                               [999, 999, 999, 999, 999, 999]])
         dem.GetRasterBand(1).WriteArray(dem_array, 0, 0)
 
-        #invest_cython_core.flow_direction_inf(dem, flow_direction)
+        invest_cython_core.flow_direction_inf(dem, flow_direction)
 
         #invest_cython_core.flow_accumulation_dinf(flow_direction,
         #                                          flow_accumulation, dem)
-
-
-        pass
 
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with default InVEST 
@@ -86,9 +84,34 @@ class TestSedimentBiophysical(unittest.TestCase):
             args['workspace_dir'] + os.sep + "/Intermediate/flow_direction.tif",
             './data/sediment_regression_data/flow_direction_regression.tif')
 
-    def test_sediment_biophysical_simple(self):
+    def test_sediment_biophysical_simple_1(self):
         """This test is a smaller version of a real world case that failed"""
-        raise SkipTest
+        #Create two 3x3 rasters in memory
+        base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
+        cols = 3
+        rows = 3
+        projection = base.GetProjection()
+        geotransform = base.GetGeoTransform()
+        dem = invest_cython_core.newRaster(cols, rows, projection,
+            geotransform, 'MEM', -1, gdal.GDT_Float32, 1, '')
+        flow_raster = invest_cython_core.newRasterFromBase(dem, '',
+            'MEM', -5.0, gdal.GDT_Float32)
+
+        #This is a test case that was calculated by hand
+        array = np.array([[111, 115, 999],
+                          [108, 109, 999],
+                          [105, 102, 999]])
+
+        dem.GetRasterBand(1).WriteArray(array, 0, 0)
+        invest_cython_core.flow_direction_inf(dem, flow_raster)
+        flow_array = flow_raster.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
+
+        #Direction 4.712385 was calculated by hand
+        self.assertAlmostEqual(flow_array[0][0], 4.712385)
+
+    def test_sediment_biophysical_simple_2(self):
+        """This test is a smaller version of a real world case that failed"""
+
         #Create two 3x3 rasters in memory
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
