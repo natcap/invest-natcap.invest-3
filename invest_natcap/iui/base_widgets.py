@@ -13,6 +13,7 @@ import simplejson as json
 
 #This is for something
 CMD_FOLDER = '.'
+INVEST_ROOT = './'
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -222,8 +223,8 @@ class DynamicGroup(DynamicElement):
                 if (issubclass(widget.__class__, DynamicPrimitive) and 
                     widget.display_error()):
                     i += 1 #display the error on the row below
-                    self.layout().addWidget(widget.error, i, 
-                        widget.error.get_setting('start'), 
+                    self.layout().addWidget(widget.error, i,
+                        widget.error.get_setting('start'),
                         widget.error.get_setting('width'), 1)
                     i += 1
             else:
@@ -494,7 +495,7 @@ class DynamicText(LabeledElement):
         #If the user has already pressed the OK button and some text is updated,
         #we need to check all other elements and update the main window 
         #notifications accordingly.
-        if self.root.okpressed == True and self.isEnabled():
+        if self.isEnabled():
             if self.isRequired() and not self.requirementsMet():
                 self.setBGcolorSatisfied(False)
             else:
@@ -692,7 +693,7 @@ class FileEntry(DynamicText):
         if os.path.isabs(text):
             self.textField.setText(text)
         else:
-            self.textField.setText(os.path.abspath(invest_root + text))
+            self.textField.setText(os.path.abspath(INVEST_ROOT + text))
 
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
@@ -1046,7 +1047,7 @@ class RootWindow(DynamicGroup):
         self.lastRun = {}
         if 'modelName' in attributes:
             modelname = self.attributes['modelName']
-            self.lastRunURI = str(CMD_FOLDER + '/cfg/' + modelname + '_lastrun_' +
+            self.lastRunURI = str(CMD_FOLDER + '/cfg/' + modelname + '_lastrun_' + 
                               platform.node() + '.json')
         else:
             self.lastRunURI = ''
@@ -1129,8 +1130,6 @@ class RootWindow(DynamicGroup):
         """A callback, run when the user presses the 'OK' button.
         
             returns nothing."""
-
-        self.okpressed = True
 
         if not self.errors_exist():
             self.queueOperations()
