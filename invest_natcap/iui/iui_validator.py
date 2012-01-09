@@ -25,6 +25,7 @@ class Validator(registrar.Registrar):
                    'OGR': OGRChecker,
                    'number': NumberChecker,
                    'file': FileChecker,
+                   'folder': URIChecker,
                    'DBF': DBFChecker}
         self.update_map(updates)
         self.init_type_checker()
@@ -93,22 +94,36 @@ class Checker(registrar.Registrar):
         
     def get_element(self, element_id):
         return self.element.root.allElements[element_id]
-            
-class FileChecker(Checker):
+
+class URIChecker(Checker):
     def __init__(self, element):
         Checker.__init__(self, element)
-        
         self.uri = None
         self.add_check_function(self.check_exists)
-        self.add_check_function(self.open)
-    
+     
     def check_exists(self):
         """Verify that the file at URI exists."""
 
         self.uri = self.element.value()
 
         if os.path.exists(self.uri) == False:
-            return str('File not found')
+            return str('Not found')
+        
+class FolderChecker(URIChecker):
+    def __init__(self, element):
+        URIChecker.__init__(self, element)
+        self.add_check_function(self.open)
+    
+    def open(self):
+        if not os.path.isdir(self.uri):
+            return 'Must be a folder'
+
+class FileChecker(URIChecker):
+    def __init__(self, element):
+        URIChecker.__init__(self, element)
+        
+        self.uri = None
+        self.add_check_function(self.open)
         
     def open(self):
         try:
