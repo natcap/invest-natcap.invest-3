@@ -29,17 +29,23 @@ class TestSedimentBiophysical(unittest.TestCase):
         geotransform = base.GetGeoTransform()
 
         dem = invest_cython_core.newRaster(6, 6, projection, geotransform,
-            'GTiff', -1, gdal.GDT_Float32, 1, '')
-        flow_direction = invest_cython_core.newRasterFromBase(dem, '',
+            'GTiff', -1, gdal.GDT_Float32, 1,
+            './data/sediment_6x6_output/dem.tif')
+        flow_direction = invest_cython_core.newRasterFromBase(dem, 
+            './data/sediment_6x6_output/flow_direction.tif',
             'GTiff', -5.0, gdal.GDT_Float32)
-        flow_accumulation = invest_cython_core.newRasterFromBase(dem, '',
+        flow_accumulation = invest_cython_core.newRasterFromBase(dem, 
+            './data/sediment_6x6_output/flow_accumulation.tif',
             'GTiff', -5.0, gdal.GDT_Float32)
 
         #This is a test case that was calculated by hand
-        #dem_array = np.array([[249, 246, 243], 
-        #[241, 238, 235],
-        #[233, 231, 228]])
-        #dem.GetRasterBand(1).WriteArray(dem_array, 0, 0)
+        dem_array = np.array([[999, 999, 999, 999, 999, 999],
+                              [999, 120, 112, 111, 115, 999],
+                              [999, 109, 110, 108, 109, 999],
+                              [999, 106, 103, 105, 102, 999],
+                              [999, 109, 106, 104, 100, 999],
+                              [999, 999, 999, 999, 999, 999]])
+        dem.GetRasterBand(1).WriteArray(dem_array, 0, 0)
 
         #invest_cython_core.flow_direction_inf(dem, flow_direction)
 
