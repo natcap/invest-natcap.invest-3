@@ -29,9 +29,10 @@ class Executor(threading.Thread):
         self.printQueue.append(string)
         
     def hasMessages(self):
-        if len(self.printQueue) > 0:
-            return True
-        else:
+        try:
+            if self.printQueue[0]:
+                return True
+        except IndexError:
             return False
 
     def getMessage(self):
