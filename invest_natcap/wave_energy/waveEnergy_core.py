@@ -67,7 +67,7 @@ def biophysical(args):
     area_shape = clipShape(args['analysis_area'], cutter, waveShapePath)
     area_layer = area_shape.GetLayer(0)
     
-    ### ADD DEPTH FIELD #####        
+    ### ADD DEPTH FIELD #####  
     demGT = global_dem.GetGeoTransform()
     demBand = global_dem.GetRasterBand(1)
     xsize = demBand.XSize
@@ -81,10 +81,9 @@ def biophysical(args):
     feature = area_layer.GetNextFeature()
     
     while feature is not None:
-        Depth_index = feature.GetFieldIndex('Depth_M')    
+        depth_index = feature.GetFieldIndex('Depth_M')    
 
         geom = feature.GetGeometryRef()
-        geom.Transform(coordTransOp)
 
         lat = geom.GetX()
         long = geom.GetY()
@@ -93,19 +92,15 @@ def biophysical(args):
         j = int((long - demGT[3])/demGT[5])
 
         depth = demMatrix[j][i]
-        #Need to transform the geometry back otherwise it messes with
-        #the point shape and it won't save properly
-        geom.Transform(coordTrans)
         
-        feature.SetField(Depth_index, depth)
+        feature.SetField(depth_index, depth)
         
-        shape_layer.SetFeature(feature)
+        area_layer.SetFeature(feature)
         feature.Destroy()
-        feature = shape_layer.GetNextFeature()
-    shape.Destroy()
-    shape = ogr.Open(projectedShapePath, 1)
-    shape_layer = shape.GetLayer(0)
-    
+        feature = area_layer.GetNextFeature()
+    area_shape.Destroy()
+    area_shape = ogr.Open(waveShapePath, 1)
+    area_layer = area_shape.GetLayer(0)
     
    
     
