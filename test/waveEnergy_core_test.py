@@ -528,7 +528,6 @@ class TestWaveEnergy(unittest.TestCase):
         """Test wavePower to make sure desired outputs are met"""
 
         testDir = './data/test_data/wave_Energy'
-        path = testDir + os.sep + 'test_output/wpGen.tif'
         shape_path = testDir + os.sep + 'test_input/test_wave_power_shape.shp'
         shape_copy_path = testDir + os.sep + 'test_output/test_wave_power_shape.shp'
         #Add the Output directory onto the given workspace
@@ -582,6 +581,42 @@ class TestWaveEnergy(unittest.TestCase):
         shape_copy.Destroy()
         shape.Destroy()
         
+    def test_waveEnergy_wavePower_regression(self):
+        """Test wavePower to make sure desired outputs are met"""
+
+        testDir = './data/test_data/wave_Energy'
+        shape_path = testDir + os.sep + 'test_input/test_wavepower_withfields.shp'
+        shape_copy_path = testDir + os.sep + 'test_output/test_wave_power_regression.shp'
+        regression_shape_path = testDir + os.sep + 'regression_tests/test_wave_power_shape.shp'
+        #Add the Output directory onto the given workspace
+        output_dir = testDir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        if os.path.isfile(shape_copy_path):
+            os.remove(shape_copy_path)
+
+        shape = ogr.Open(shape_path)
+        shape_reg = ogr.Open(regression_shape_path)
+        shape_copy = ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(shape, shape_copy_path)
+        shape_copy = waveEnergy_core.wavePower(shape_copy)
         
-        
+        layer = shape_copy.GetLayer(0)
+        layer_reg = shape_reg.GetLayer(0)
+        layer.ResetReading()
+        feat = layer.GetNextFeature()
+        feat_reg = layer_reg.GetNextFeature()
+        while feat is not None:
+            wave_power_index = feat.GetFieldIndex('wp_Kw')
+            wave_power_index_reg = feat_reg.GetFieldIndex('wp_Kw')
+            wave_power = feat.GetField(wave_power_index)
+            wave_power_reg = feat_reg.GetField(wave_power_index_reg)
+            self.assertEqual(wave_power, wave_power_reg)
+            feat.Destroy()
+            feat_reg.Destroy()
+            feat = layer.GetNextFeature()
+            feat_reg = layer_reg.GetNextFeature()
+
+        shape_copy.Destroy()
+        shape.Destroy()
+        shape_reg.Destroy()
         
