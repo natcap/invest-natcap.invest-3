@@ -49,8 +49,8 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         invest_cython_core.flow_direction_inf(dem, flow_direction)
 
-        #invest_cython_core.flow_accumulation_dinf(flow_direction,
-        #                                          flow_accumulation, dem)
+        invest_cython_core.flow_accumulation_dinf(flow_direction,
+                                                  flow_accumulation, dem)
 
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with default InVEST 
