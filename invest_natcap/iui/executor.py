@@ -4,9 +4,17 @@ import sys
 import imp
 from collections import deque
 import traceback
+import logging
+
+
+LOGGER = logging.getLogger('executor')
 
 class Executor(threading.Thread):
     def __init__(self):
+        logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+            %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
+            stream=self)
+        
         threading.Thread.__init__(self)
 
         self.printQueue = deque([])
@@ -19,11 +27,12 @@ class Executor(threading.Thread):
 
     def write(self, string):
         self.printQueue.append(string)
-
+        
     def hasMessages(self):
-        if len(self.printQueue) > 0:
-            return True
-        else:
+        try:
+            if self.printQueue[0]:
+                return True
+        except IndexError:
             return False
 
     def getMessage(self):
@@ -33,6 +42,7 @@ class Executor(threading.Thread):
             return None
 
     def cancel(self):
+        LOGGER.debug('Cancellation request received; finishing current operation')
         self.cancelFlag.set()
 
     def isCancelled(self):
@@ -67,13 +77,15 @@ class Executor(threading.Thread):
             self.setThreadFailed(False)
 
             if self.isCancelled():
-                print('Cancelled.')
+                LOGGER.debug('Remaining operations cancelled')
+#                print('Cancelled.')
                 break
             else:
                 self.funcMap[operation['type']](operation['uri'], operation['args'])
 
             if self.isThreadFailed():
-                print('Exiting due to failures')
+                LOGGER.debug('Exiting due to failures')
+#                print('Exiting due to failures')
                 break
 
         if not self.isThreadFailed():

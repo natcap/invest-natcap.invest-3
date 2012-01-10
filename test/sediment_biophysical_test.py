@@ -40,18 +40,18 @@ class TestSedimentBiophysical(unittest.TestCase):
             'GTiff', -5.0, gdal.GDT_Float32)
 
         #This is a test case that was calculated by hand
-        dem_array = np.array([[999, 999, 999, 999, 999, 999],
-                              [999, 120, 112, 111, 115, 999],
-                              [999, 109, 110, 108, 109, 999],
-                              [999, 106, 103, 105, 102, 999],
-                              [999, 109, 106, 104, 100, 999],
-                              [999, 999, 999, 999, 999, 999]])
+        dem_array = np.array([[130, 130, 130, 130, 130, 130],
+                              [130, 120, 112, 111, 115, 130],
+                              [130, 109, 110, 108, 109, 130],
+                              [130, 106, 103, 105, 102, 130],
+                              [130, 109, 106, 104, 100, 130],
+                              [130, 130, 130, 130, 130, 130]])
         dem.GetRasterBand(1).WriteArray(dem_array, 0, 0)
 
         invest_cython_core.flow_direction_inf(dem, flow_direction)
 
-        #invest_cython_core.flow_accumulation_dinf(flow_direction,
-        #                                          flow_accumulation, dem)
+        invest_cython_core.flow_accumulation_dinf(flow_direction,
+                                                  flow_accumulation, dem)
 
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with default InVEST 
@@ -87,13 +87,15 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_simple_1(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
+        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
         projection = base.GetProjection()
         geotransform = base.GetGeoTransform()
         dem = invest_cython_core.newRaster(cols, rows, projection,
-            geotransform, 'MEM', -1, gdal.GDT_Float32, 1, '')
+            geotransform, 'GTiff', -1, gdal.GDT_Float32, 1,
+            './data/sediment_3x3_output/dem.tif')
         flow_raster = invest_cython_core.newRasterFromBase(dem, '',
             'MEM', -5.0, gdal.GDT_Float32)
 
@@ -107,12 +109,12 @@ class TestSedimentBiophysical(unittest.TestCase):
         flow_array = flow_raster.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
 
         #Direction 4.712385 was calculated by hand
-        self.assertAlmostEqual(flow_array[0][0], 4.712385)
+        self.assertAlmostEqual(flow_array[0][0], 4.712389)
 
     def test_sediment_biophysical_simple_2(self):
         """This test is a smaller version of a real world case that failed"""
-
         #Create two 3x3 rasters in memory
+        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
@@ -124,13 +126,41 @@ class TestSedimentBiophysical(unittest.TestCase):
                                                     gdal.GDT_Float32)
 
         #This is a test case that was calculated by hand
-        array = np.array([[249, 246, 243], [241, 238, 235], [233, 231, 228]])
+        array = np.array([[249, 246, 243],
+                          [241, 238, 235],
+                          [233, 231, 228]])
         dem.GetRasterBand(1).WriteArray(array, 0, 0)
         invest_cython_core.flow_direction_inf(dem, flow)
         flowArray = flow.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
 
         #Direction 5.117281 was calculated by hand
         self.assertAlmostEqual(flowArray[0][0], 5.117281)
+
+    def test_sediment_biophysical_simple_3(self):
+        """This test is a smaller version of a real world case that failed"""
+        #Create two 3x3 rasters in memory
+
+        base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
+        cols = 3
+        rows = 3
+        projection = base.GetProjection()
+        geotransform = base.GetGeoTransform()
+        dem = invest_cython_core.newRaster(cols, rows, projection,
+            geotransform, 'MEM', -1, gdal.GDT_Float32, 1, '')
+        flow = invest_cython_core.newRasterFromBase(dem, '', 'MEM', -5.0,
+                                                    gdal.GDT_Float32)
+
+        #This is a test case that was calculated by hand
+        array = np.array([[120, 109, 110],
+                          [120, 106, 103],
+                          [120, 109, 106]])
+        dem.GetRasterBand(1).WriteArray(array, 0, 0)
+        invest_cython_core.flow_direction_inf(dem, flow)
+        flowArray = flow.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
+
+        #Direction 5.117281 was calculated by hand
+        self.assertAlmostEqual(flowArray[0][0], 0.0)
+
 
     def test_postprocessing_flow_direction(self):
         """Test for a postprocessing quiver plot."""

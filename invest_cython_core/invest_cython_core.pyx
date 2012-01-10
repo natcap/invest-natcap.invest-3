@@ -553,13 +553,13 @@ cdef void calculate_inflow_neighbors_dinf(int i, int j,
                                0, 1,
                                -1, 1]
     cdef float *inflow_angles = [0.0,
-                                 PI/4.0,
-                                 PI/2.0,
-                                 3.0*PI/4.0,
-                                 PI,
-                                 5.0*PI/4.0,
+                                 7.0*PI/4.0,
                                  3.0*PI/2.0,
-                                 7.0*PI/4.0]
+                                 5.0*PI/4.0,
+                                 PI,
+                                 3.0*PI/4.0,
+                                 PI/2.0,
+                                 PI/4.0]
     
     cdef int pi, pj, k, n, neighbor_index = 0
     for k in range(8):
@@ -567,6 +567,7 @@ cdef void calculate_inflow_neighbors_dinf(int i, int j,
         alpha = inflow_angles[k]
         pi = i + shift_indexes[k*2+0]
         pj = j + shift_indexes[k*2+1]
+        LOGGER.debug('visiting pi pj %s %s' % (pi,pj))
         #ensure that the offsets are within bounds of the matrix
         if pi >= 0 and pj >= 0 and pi < flow_direction_matrix.shape[0] and \
             pj < flow_direction_matrix.shape[1]:
@@ -633,7 +634,7 @@ cdef void d_p_area(CQueue pixels_to_process,
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
-        #LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
+        LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
         #LOGGER.debug("%s, %s, %s\n%s, %s, %s\n%s, %s, %s" % (dem_pixels[i-1,j+1],dem_pixels[i,j+1],dem_pixels[i+1,j+1],dem_pixels[i-1,j],dem_pixels[i,j],dem_pixels[i+1,j],dem_pixels[i-1,j-1],dem_pixels[i,j-1],dem_pixels[i+1,j-1]))
         #LOGGER.debug("rows col %s %s" % (dem_pixels.shape[0],dem_pixels.shape[1]))
         #LOGGER.debug("nodata flow direction %s\n " % (nodata_flow_direction))
@@ -814,9 +815,6 @@ def flow_direction_inf(dem, flow):
     #from Table 1 in Tarboton 1997.  
     #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
     #convention.
-    #THIS IS IMPORTANT:  The row indexes in the paper increase downward, but in
-    #GDAL the row increases upward, so the first column of these offsets are 
-    #negated if you're checking these numbers against the paper.
     cdef int *e_0_offsets = [+0, +0,
                              +0, +0,
                              +0, +0,
@@ -826,21 +824,21 @@ def flow_direction_inf(dem, flow):
                              +0, +0,
                              +0, +0]
     cdef int *e_1_offsets = [+0, +1,
-                             +1, +0,
-                             +1, +0,
-                             +0, -1,
-                             +0, -1,
                              -1, +0,
                              -1, +0,
+                             +0, -1,
+                             +0, -1,
+                             +1, +0,
+                             +1, +0,
                              +0, +1]
-    cdef int *e_2_offsets = [+1, +1,
-                             +1, +1,
-                             +1, -1,
-                             +1, -1,
-                             -1, -1,
-                             -1, -1,
+    cdef int *e_2_offsets = [-1, +1,
                              -1, +1,
-                             -1, +1]
+                             -1, -1,
+                             -1, -1,
+                             +1, -1,
+                             +1, -1,
+                             +1, +1,
+                             +1, +1]
     cdef int *a_c = [0, 1, 1, 2, 2, 3, 3, 4]
     cdef int *a_f = [1, -1, 1, -1, 1, -1, 1, -1]
 
@@ -869,13 +867,17 @@ def flow_direction_inf(dem, flow):
             
             for facet_index in range(8):
                 #This defines the three height points
-                #The 
                 e_0 = dem_matrix[e_0_offsets[facet_index*2+1] + col_index,
                                  e_0_offsets[facet_index*2+0] + row_index]
                 e_1 = dem_matrix[e_1_offsets[facet_index*2+1] + col_index,
                                  e_1_offsets[facet_index*2+0] + row_index]
                 e_2 = dem_matrix[e_2_offsets[facet_index*2+1] + col_index,
                                  e_2_offsets[facet_index*2+0] + row_index]
+                
+                #LOGGER.debug('facet %s' % (facet_index+1))
+                #LOGGER.debug('e_1_offsets %s %s' %(e_1_offsets[facet_index*2+1],
+                #                                   e_1_offsets[facet_index*2+0]))
+                #LOGGER.debug('e_0 %s e_1 %s e_2 %s' % (e_0, e_1, e_2))
                 
                 #avoid calculating a slope on nodata values
                 if e_1 == nodata_dem or e_2 == nodata_dem: 
@@ -887,8 +889,9 @@ def flow_direction_inf(dem, flow):
                 #slope along diagonal edge
                 s_2 = (e_1 - e_2) / d_2 #Eqn 2
                 
-                if s_1 <= 0 or s_2 <= 0: 
-                    continue #uphill slope or flat, so skip, D8 resolve
+                if s_1 <= 0 and s_2 <= 0:
+                    #uphill slope or flat, so skip, D8 resolve 
+                    continue 
                 
                 #Default to pi/2 in case s_1 = 0 to avoid divide by zero cases
                 flow_direction = 3.14159262/2.0
@@ -896,6 +899,7 @@ def flow_direction_inf(dem, flow):
                     flow_direction = atan(s_2 / s_1) #Eqn 3
 
                 if flow_direction < 0: #Eqn 4
+                    #LOGGER.debug("flow direciton negative")
                     #If the flow direction goes off one side, set flow
                     #direction to that side and the slope to the straight line
                     #distance slope
@@ -903,15 +907,18 @@ def flow_direction_inf(dem, flow):
                     slope = s_1
                     #LOGGER.debug("flow direction < 0 slope=%s"%slope)
                 elif flow_direction > atan(d_2 / d_1): #Eqn 5
+                    #LOGGER.debug("flow direciton greater than 45 degrees")
                     #If the flow direciton goes off the diagonal side, figure
                     #out what its value is and
                     flow_direction = atan(d_2 / d_1)
                     slope = (e_0 - e_2) / sqrt(d_1 ** 2 + d_2 ** 2)
                     #LOGGER.debug("flow direction > 45 slope=%s"%slope)
                 else:
+                    #LOGGER.debug("flow direciton in bounds")
                     slope = sqrt(s_1 ** 2 + s_2 ** 2) #Eqn 3
                     #LOGGER.debug("flow direction in middle slope=%s"%slope)
 
+                #LOGGER.debug("slope %s" % slope)
                 if slope > slope_max:
                     flow_direction_max_slope = flow_direction
                     slope_max = slope
@@ -922,6 +929,8 @@ def flow_direction_inf(dem, flow):
                 # that caused the above algorithm to break out
                  
                 #Calculate the global angle depending on the max slope facet
+                #LOGGER.debug("slope_max %s" % slope_max)
+                #LOGGER.debug("max_index %s" % (max_index+1))
                 if slope_max > 0:
                     flow_matrix[col_index, row_index] = \
                         a_f[max_index] * flow_direction_max_slope + \
