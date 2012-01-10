@@ -524,156 +524,64 @@ class TestWaveEnergy(unittest.TestCase):
             for indexIn, val in enumerate(ar):
                 self.assertAlmostEqual(val, matrix[indexOut][indexIn], 5)
 
-
-#    def interpPointsOverRaster(points, values, raster):
-#    """Interpolates the values of a given set of points and values to the points
-#    of a raster and writes the interpolated matrix to the raster band
-#    
-#    points - A 2D array of points, where the points are represented as [x,y]
-#    values - A list of values corresponding to the points of 'points'
-#    raster - A raster to write the interpolated values too
-#    
-#    returns - Nothing
-#    """
-#    #Set the points and values to numpy arrays
-#    points = np.array(points)
-#    values = np.array(values)
-#    #Get the dimensions from the raster as well as the GeoTransform information
-#    gt = raster.GetGeoTransform()
-#    band = raster.GetRasterBand(1)
-#    xsize = band.XSize
-#    ysize = band.YSize
-#    #newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
-#    #Make a numpy array representing the points of the raster (the points are the pixels)
-#    newpoints = np.array([[gt[0]+gt[1]*i,gt[3]+gt[5]*j] for i in np.arange(xsize) for j in np.arange(ysize)])
-#    #Interpolate the points and values from the shapefile from earlier
-#    spl = ip(points, values, fill_value=0)
-#    #Run the interpolator object over the new set of points from the raster. Will return a list of values.
-#    spl = spl(newpoints)
-#    #Reshape the list of values to the dimensions of the raster for writing.
-#    #Transpose the matrix provided from 'reshape' because gdal thinks of x,y opposite of humans
-#    spl = spl.reshape(xsize, ysize).transpose()
-#    #Write interpolated matrix of values to raster
-#    band.WriteArray(spl, 0, 0)
-
     def test_waveEnergy_wavePower(self):
         """Test wavePower to make sure desired outputs are met"""
-        filesystemencoding = sys.getfilesystemencoding()
 
         testDir = './data/test_data/wave_Energy'
         path = testDir + os.sep + 'test_output/wpGen.tif'
-        whPath = testDir + os.sep + 'test_output/wheight.tif'
-        wpPath = testDir + os.sep + 'test_output/wperiod.tif'
-        ePath = testDir + os.sep + 'test_output/elevation.tif'
+        shape_path = testDir + os.sep + 'test_input/test_wave_power_shape.shp'
+        shape_copy_path = testDir + os.sep + 'test_output/test_wave_power_shape.shp'
         #Add the Output directory onto the given workspace
         output_dir = testDir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
+        if os.path.isfile(shape_copy_path):
+            os.remove(shape_copy_path)
 
-        waveHeightDriver = gdal.GetDriverByName('GTIFF')
-        waveHeight = waveHeightDriver.Create(whPath, 5, 5, 1, gdal.GDT_Float32)
-        waveHeight.SetGeoTransform([-129, 1, 0, 48, 0, -1])
-        waveHeight.GetRasterBand(1).Fill(2)
-        waveHeight.GetRasterBand(1).SetNoDataValue(0)
-
-        wavePeriodDriver = gdal.GetDriverByName('GTIFF')
-        wavePeriod = wavePeriodDriver.Create(wpPath, 5, 5, 1, gdal.GDT_Float32)
-        wavePeriod.SetGeoTransform([-129, 1, 0, 48, 0, -1])
-        wavePeriod.GetRasterBand(1).Fill(5)
-        wavePeriod.GetRasterBand(1).SetNoDataValue(0)
-
-        elevationDriver = gdal.GetDriverByName('GTIFF')
-        elevation = elevationDriver.Create(ePath, 5, 5, 1, gdal.GDT_Float32)
-        elevation.SetGeoTransform([-129, 1, 0, 48, 0, -1])
-        elevation.GetRasterBand(1).Fill(-500)
-        elevation.GetRasterBand(1).SetNoDataValue(0)
-
-        waveEnergy_core.wavePower(waveHeight, wavePeriod, elevation, path)
-        wpRaster = gdal.Open(path, GA_Update)
-        matrix = wpRaster.GetRasterBand(1).ReadAsArray()
-        self.assertAlmostEqual(matrix[0][0], 8.44585, 4)
-
-#        def wavePower(waveHeight, wavePeriod, elevation, wavePowerPath, blankRaster):
-#            p = 1028
-#            g = 9.8
-#            alfa = 0.86
-#            def op(a, b, c, d):
-#                c = np.absolute(c)
-#                tem = 2.0 * math.pi / (b * alfa)
-#                k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (c / g))))
-#                waveGroupVelocity = ((1 + ((2 * k * c) / np.sinh(2 * k * c))) * (np.sqrt((g / k) * np.tanh(k * c)))) / 2
-#                wp = (((p * g) / 16) * (np.square(a)) * waveGroupVelocity) / 1000
-#                return wp
-#        
-#            invest_core.vectorizeRasters([waveHeight, wavePeriod, elevation, blankRaster], op,
-#                                         rasterName=wavePowerPath, datatype=gdal.GDT_Float32)
-#            
-#            wpRaster = gdal.Open(wavePowerPath, GA_Update)
-#            wpNoData = wpRaster.GetRasterBand(1).GetNoDataValue()
-#            def op2(a):
-#                if a < 1:
-#                    return wpNoData
-#                else:
-#                    return a
-#            invest_core.vectorize1ArgOp(wpRaster.GetRasterBand(1), op2, wpRaster.GetRasterBand(1))
-
-#    def test_waveEnergy_with_inputs(self):
-#        """Test timber model with real inputs.  Compare copied and modified shapefile with valid
-#            shapefile that was created from the same inputs.  Regression test."""
-#        #Open table and shapefile
-#        attr_table = dbf.Dbf('./data/timber/input/plant_table.dbf')
-#        test_shape = ogr.Open('./data/timber/input/plantation.shp', 1)
-#
-#        #Add the Output directory onto the given workspace
-#        output_dir = './data/test_data/timber' + os.sep + 'Output/'
-#        if not os.path.isdir(output_dir):
-#            os.mkdir(output_dir)
-#        elif os.path.isfile(output_dir + 'timber.shp'):
-#            os.remove(output_dir + 'timber.shp')
-#
-#        shape_source = output_dir + 'timber.shp'
-#
-#        ogr.GetDriverByName('ESRI Shapefile').\
-#            CopyDataSource(test_shape, shape_source)
-#
-#        timber_output_shape = ogr.Open('./data/test_data/timber/Output/timber.shp', 1)
-#        timber_output_layer = timber_output_shape.GetLayerByName('timber')
-#
-#        args = {'timber_shape': timber_output_shape,
-#               'attr_table':attr_table,
-#               'mdr':7,
-#               }
-#
-#        timber_core.execute(args)
-#
-#        valid_output_shape = ogr.Open('./data/timber/sample_output/timber.shp')
-#        valid_output_layer = valid_output_shape.GetLayerByName('timber')
-#        #Check that the number of features (polygons) are the same between shapefiles
-#        num_features_valid = valid_output_layer.GetFeatureCount()
-#        num_features_copy = timber_output_layer.GetFeatureCount()
-#        self.assertEqual(num_features_valid, num_features_copy)
-#        #If number of features are equal, compare each shapefiles 3 fields
-#        if num_features_valid == num_features_copy:
-#            for i in range(num_features_valid):
-#                feat = valid_output_layer.GetFeature(i)
-#                feat2 = timber_output_layer.GetFeature(i)
-#                for field in ('TNPV', 'TBiomass', 'TVolume'):
-#                    field_index = feat.GetFieldIndex(field)
-#                    field_value = feat.GetField(field_index)
-#                    field_index2 = feat2.GetFieldIndex(field)
-#                    field_value2 = feat2.GetField(field_index2)
-#                    self.assertAlmostEqual(field_value, field_value2, 2)
-#        #This is how OGR cleans up and flushes datasources
-#        test_shape.Destroy()
-#        timber_output_shape.Destroy()
-#        valid_output_shape = None
-#        timber_output_shape = None
-#        test_shape = None
-#        timber_output_layer = None
-#        attr_table.close()
-#        #Delete all the generated files and directory
-#        if os.path.isdir('./data/test_data/timber/Output/'):
-#            textFileList = os.listdir('./data/test_data/timber/Output/')
-#            for file in textFileList:
-#                os.remove('./data/test_data/timber/Output/' + file)
-#            os.rmdir('./data/test_data/timber/Output/')
+        depth_list = [-500, -1000, -100, 1, -80]
+        height_list = [2.5, 2.8, 2.3, 1.5, 2.04]
+        period_list = [10.0, 12.0, 8.0, 5.0, 11.3]
+        calculations_byhand = [26.39331177, 39.729324, 17.87146248, 3.996030763, 20.10613825]
+        shape = ogr.Open(shape_path)
+        
+        shape_copy = ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(shape, shape_copy_path)
+        layer = shape_copy.GetLayer(0)
+        for field in ['Depth_M', 'HSAVG_M', 'TPAVG_S']:
+            fld_defn = ogr.FieldDefn(field, ogr.OFTReal)
+            layer.CreateField(fld_defn)
+        layer.ResetReading()
+        feat = layer.GetNextFeature()
+        i = 0
+        while feat is not None:
+            height_index = feat.GetFieldIndex('HSAVG_M')
+            period_index = feat.GetFieldIndex('TPAVG_S')
+            depth_index = feat.GetFieldIndex('Depth_M')
+        
+            feat.SetField(depth_index, depth_list[i])
+            feat.SetField(height_index, height_list[i])
+            feat.SetField(period_index, period_list[i])
+        
+            layer.SetFeature(feat)
+            feat.Destroy()
+            feat = layer.GetNextFeature()
+            i = i + 1
+        layer = None
+        shape_copy = waveEnergy_core.wavePower(shape_copy)
+        
+        layer = shape_copy.GetLayer(0)
+        layer.ResetReading()
+        feat = layer.GetNextFeature()
+        i = 0
+        while feat is not None:
+            wave_power_index = feat.GetFieldIndex('wp_Kw')
+            wave_power = feat.GetField(wave_power_index)
+            self.assertAlmostEqual(wave_power, calculations_byhand[i], 1)
+            feat.Destroy()
+            feat = layer.GetNextFeature()
+            i = i + 1
+        shape_copy.Destroy()
+        shape.Destroy()
+        
+        
+        
+        
