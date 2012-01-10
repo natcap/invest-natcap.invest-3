@@ -39,12 +39,12 @@ class TestSedimentBiophysical(unittest.TestCase):
             'GTiff', -5.0, gdal.GDT_Float32)
 
         #This is a test case that was calculated by hand
-        dem_array = np.array([[999, 999, 999, 999, 999, 999],
-                              [999, 120, 112, 111, 115, 999],
-                              [999, 109, 110, 108, 109, 999],
-                              [999, 106, 103, 105, 102, 999],
-                              [999, 109, 106, 104, 100, 999],
-                              [999, 999, 999, 999, 999, 999]])
+        dem_array = np.array([[130, 130, 130, 130, 130, 130],
+                              [130, 120, 112, 111, 115, 130],
+                              [130, 109, 110, 108, 109, 130],
+                              [130, 106, 103, 105, 102, 130],
+                              [130, 109, 106, 104, 100, 130],
+                              [130, 130, 130, 130, 130, 130]])
         dem.GetRasterBand(1).WriteArray(dem_array, 0, 0)
 
         invest_cython_core.flow_direction_inf(dem, flow_direction)
