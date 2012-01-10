@@ -769,38 +769,10 @@ def changeProjection(shapeToReproject, projection, outputPath):
     
     prjFile = open(projection)
     prj = prjFile.read()
-#    prj = """PROJCS["WGS_1984_UTM_Zone_10N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",
-#    SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],
-#    UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],
-#    PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-123.0],
-#    PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0],AUTHORITY["EPSG",32610]]
-#    """
-#    prj = """GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",
-#    SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],
-#    UNIT["Degree",0.0174532925199433]]"""
-#    print projection
-#    print prj
-#    print in_layer.GetSpatialRef()
-#
-#    """
-#    PROJCS["WGS_1984_UTM_Zone_10N",
-#        GEOGCS["GCS_WGS_1984",
-#            DATUM["D_WGS_1984",
-#                SPHEROID["WGS_1984",6378137.0,298.257223563]],
-#            PRIMEM["Greenwich",0.0],
-#            UNIT["Degree",0.0174532925199433]],
-#        PROJECTION["Transverse_Mercator"],
-#        PARAMETER["False_Easting",500000.0],
-#        PARAMETER["False_Northing",0.0],
-#        PARAMETER["Central_Meridian",-123.0],
-#        PARAMETER["Scale_Factor",0.9996],
-#        PARAMETER["Latitude_Of_Origin",0.0],
-#        UNIT["Meter",1.0]]
-#    """
 
     srs_prj = osr.SpatialReference()
     srs_prj.ImportFromWkt(prj)
-#    srs_prj.StripCTParms()
+
     shp_layer = shp_ds.CreateLayer(in_defn.GetName(), srs_prj, in_defn.GetGeomType())
     #Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()
@@ -826,10 +798,7 @@ def changeProjection(shapeToReproject, projection, outputPath):
         coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
         #Transform the polygon geometry into the same format as the point shape geometry
         geom.Transform(coordTrans)
-        #For all the features in the current point shape (for all the points)
-        #Check to see if they Intersect with the binding polygons geometry and
-        #if they do, then add all of the fields and values from that point to the new shape
-#        print geom
+
         #Create a new feature from the input feature and set its geometry
         out_feat = ogr.Feature(feature_def=shp_layer.GetLayerDefn())
         out_feat.SetFrom(in_feat)
@@ -838,7 +807,7 @@ def changeProjection(shapeToReproject, projection, outputPath):
         for fld_index2 in range(out_feat.GetFieldCount()):
             src_field = in_feat.GetField(fld_index2)
             out_feat.SetField(fld_index2, src_field)
-#
+
         shp_layer.CreateFeature(out_feat)
         out_feat.Destroy()
 
