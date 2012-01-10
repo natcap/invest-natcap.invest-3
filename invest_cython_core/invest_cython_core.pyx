@@ -567,6 +567,7 @@ cdef void calculate_inflow_neighbors_dinf(int i, int j,
         alpha = inflow_angles[k]
         pi = i + shift_indexes[k*2+0]
         pj = j + shift_indexes[k*2+1]
+        LOGGER.debug('visiting pi pj %s %s' % (pi,pj))
         #ensure that the offsets are within bounds of the matrix
         if pi >= 0 and pj >= 0 and pi < flow_direction_matrix.shape[0] and \
             pj < flow_direction_matrix.shape[1]:
@@ -633,7 +634,7 @@ cdef void d_p_area(CQueue pixels_to_process,
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
-        #LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
+        LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
         #LOGGER.debug("%s, %s, %s\n%s, %s, %s\n%s, %s, %s" % (dem_pixels[i-1,j+1],dem_pixels[i,j+1],dem_pixels[i+1,j+1],dem_pixels[i-1,j],dem_pixels[i,j],dem_pixels[i+1,j],dem_pixels[i-1,j-1],dem_pixels[i,j-1],dem_pixels[i+1,j-1]))
         #LOGGER.debug("rows col %s %s" % (dem_pixels.shape[0],dem_pixels.shape[1]))
         #LOGGER.debug("nodata flow direction %s\n " % (nodata_flow_direction))
@@ -814,9 +815,6 @@ def flow_direction_inf(dem, flow):
     #from Table 1 in Tarboton 1997.  
     #THIS IS IMPORTANT:  The order is row (j), column (i), transposed to GDAL
     #convention.
-    #THIS IS IMPORTANT:  The row indexes in the paper increase downward, but in
-    #GDAL the row increases upward, so the first column of these offsets are 
-    #negated if you're checking these numbers against the paper.
     cdef int *e_0_offsets = [+0, +0,
                              +0, +0,
                              +0, +0,
