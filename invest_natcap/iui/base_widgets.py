@@ -19,7 +19,8 @@ class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
         UI Interpreter's related classes.  It is not invoked directly by other
         IUI classes, but is instead used as a base class for almost all classes
-        in the UI interpreter.
+        in the UI interpreter.  A diagram of this class heirarchy can be found
+        at https://docs.google.com/drawings/d/13QZ6SsUwvoBPjvr0gf_X1X20sc35tLTr9oedX1vaUh8/edit
         
         DynamicElement serves as a base class for DynamicGroup and 
         DynamicPrimitive.  The functions and object data it declares are shared
