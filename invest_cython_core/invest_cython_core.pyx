@@ -553,13 +553,13 @@ cdef void calculate_inflow_neighbors_dinf(int i, int j,
                                0, 1,
                                -1, 1]
     cdef float *inflow_angles = [0.0,
-                                 PI/4.0,
-                                 PI/2.0,
-                                 3.0*PI/4.0,
-                                 PI,
-                                 5.0*PI/4.0,
+                                 7.0*PI/4.0,
                                  3.0*PI/2.0,
-                                 7.0*PI/4.0]
+                                 5.0*PI/4.0,
+                                 PI,
+                                 3.0*PI/4.0,
+                                 PI/2.0,
+                                 PI/4.0]
     
     cdef int pi, pj, k, n, neighbor_index = 0
     for k in range(8):
