@@ -87,7 +87,6 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_simple_1(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
-        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
@@ -114,7 +113,6 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_simple_2(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
-        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
@@ -139,7 +137,6 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_simple_3(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
-
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
