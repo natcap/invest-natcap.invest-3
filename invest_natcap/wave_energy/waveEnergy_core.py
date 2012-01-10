@@ -50,6 +50,9 @@ def biophysical(args):
     global_dem = args['dem']
     nodata = 0
     datatype = gdal.GDT_Float32
+    gt = dem.GetGeoTransform()
+    pixel_xsize = float(gt[1])
+    pixel_ysize = np.absolute(float(gt[5]))
     
     #Determine which shapefile will be used to determine area of interest
     if 'AOI' in args:
@@ -93,16 +96,6 @@ def biophysical(args):
     area_shape = ogr.Open(waveShapePath, 1)
     area_layer = area_shape.GetLayer(0)
     
-    #Get the spatial extents of the shapefile.
-    #The pixel size for the output rasters will be set to the less of
-    #the width or height of the shapefiles extents, divided by 250.
-    xmin, xmax, ymin, ymax = area_layer.GetExtent()
-    pixelSize = 0
-    if (xmax - xmin) < (ymax - ymin):
-        pixelSize = (xmax - xmin) / 250
-    else:
-        pixelSize = (ymax - ymin) / 250
-        
     #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
     #and add the sum as a field to the shapefile
     energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
@@ -111,9 +104,9 @@ def biophysical(args):
     area_shape = wavePower(area_shape)
 
     #Create rasters bounded by shape file of analyis area
-    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                               datatype, nodata, waveEnergyPath, area_shape)
-    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                               datatype, nodata, wave_power_path, area_shape)
 
     #Open created rasters
