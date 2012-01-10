@@ -525,6 +525,7 @@ def valuation(args):
     landptPath = interDir + os.sep + 'landingPoints.shp'
     gridptPath = interDir + os.sep + 'gridPoint.shp'
     wave_farm_value_path = interDir + os.sep + 'wave_energy_npv.tif'
+    raster_projected_path = interDir + os.sep + 'raster_projected.tif'
     
     dem = args['global_dem']
     capWE = args['capturedWE']
@@ -728,9 +729,15 @@ def valuation(args):
     wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
     wave_farm_value_array = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'NPV_25Y'], 'NPV_25Y')
-
+    
      #Interpolate the rasters (give a smooth surface)
     interpPointsOverRaster(wave_farm_value_array[0], wave_farm_value_array[1], wave_farm_value_raster)
+
+    virtual = gdal.AutoCreateWarpedVRT(wave_farm_value_raster,
+                                       wave_farm_value_raster.GetProjectionRef(),
+                                       prj)
+    drv = gdal.GetDriverByName('GTIFF')
+    drv.CreateCopy(raster_projected_path, virtual, True)
     #########################################
     
 def getPoints(shape):
