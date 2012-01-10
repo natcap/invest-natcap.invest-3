@@ -529,6 +529,9 @@ def valuation(args):
     
     dem = args['global_dem']
     capWE = args['capturedWE']
+    gt = dem.GetGeoTransform()
+    pixel_xsize = float(gt[1])
+    pixel_ysize = np.absolute(float(gt[5]))
     
     if os.path.isfile(landptPath):
         os.remove(landptPath)
@@ -714,17 +717,10 @@ def valuation(args):
         feat.Destroy()
         feat = shape_layer.GetNextFeature()
     
-    #########Create W2L/L2G Rasters##########
-    xmin, xmax, ymin, ymax = wave_data_layer.GetExtent()
-    pixelSize = 0
-    if (xmax - xmin) < (ymax - ymin):
-        pixelSize = (xmax - xmin) / 250
-    else:
-        pixelSize = (ymax - ymin) / 250
-    
+
     datatype = gdal.GDT_Float32
     nodata = 0
-    invest_cython_core.createRasterFromVectorExtents(pixelSize, pixelSize,
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                               datatype, nodata, wave_farm_value_path, wave_data_shape)
     wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
