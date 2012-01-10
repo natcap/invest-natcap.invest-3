@@ -159,7 +159,7 @@ class TestSedimentBiophysical(unittest.TestCase):
         flowArray = flow.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
 
         #Direction 5.117281 was calculated by hand
-        self.assertAlmostEqual(flowArray[0][0], 5.117281)
+        self.assertAlmostEqual(flowArray[0][0], 0.0)
 
 
     def test_postprocessing_flow_direction(self):
