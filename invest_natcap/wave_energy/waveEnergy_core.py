@@ -34,7 +34,6 @@ def biophysical(args):
 
     returns - Nothing
     """
-
     #Set variables for output paths
     #Workspace Directory path
     workspace_dir = args['workspace_dir']
@@ -51,14 +50,15 @@ def biophysical(args):
     #Paths for wave energy and wave power raster
     wave_energy_path = intermediate_dir + os.sep + 'capwe_mwh.tif'
     wave_power_path = intermediate_dir + os.sep + 'wp_kw.tif'
-    #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
+    #Set nodata value and datatype for new rasters
     nodata = 0
     datatype = gdal.GDT_Float32
+    #Since the global dem is the finest resolution we get as an input,
+    #use its pixel sizes as the sizes for the new rasters
     gt = dem.GetGeoTransform()
     pixel_xsize = float(gt[1])
     pixel_ysize = np.absolute(float(gt[5]))
-    
     #Determine which shapefile will be used to determine area of interest
     if 'AOI' in args:
         #The AOI shapefile has a different projection than lat/long so by calling
@@ -67,66 +67,68 @@ def biophysical(args):
         cutter = clipShape(args['analysis_area_extract'], args['AOI'], wave_aoi_path)        
     else:
         cutter = args['analysis_area_extract']
-        
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
     area_shape = clipShape(args['analysis_area'], cutter, wave_shape_path)
     area_layer = area_shape.GetLayer(0)
-    
-    ### ADD DEPTH FIELD #####  
-    demGT = global_dem.GetGeoTransform()
-    demBand = global_dem.GetRasterBand(1)
-    xsize = demBand.XSize
-    ysize = demBand.YSize
-    demMatrix = demBand.ReadAsArray()
-    
+    #We do all wave power calculations by manipulating the fields in
+    #the wave data shapefile, thus we need to add proper depth values
+    #from the raster DEM
+    dem_gt = global_dem.GetGeoTransform()
+    dem_band = global_dem.GetRasterBand(1)
+    xsize = dem_band.XSize
+    ysize = dem_band.YSize
+    dem_matrix = dem_band.ReadAsArray()
+    #Create a new field for the depth attribute
     field_defn = ogr.FieldDefn('Depth_M', ogr.OFTReal)
     area_layer.CreateField(field_defn)
-        
+    #ResetReading to make sure we start reading from the first feature
     area_layer.ResetReading()
     feature = area_layer.GetNextFeature()
-    
+    #For all the features (points) add the proper depth value from the DEM
     while feature is not None:
         depth_index = feature.GetFieldIndex('Depth_M')    
         geom = feature.GetGeometryRef()
         lat = geom.GetX()
         long = geom.GetY()
-        i = int((lat - demGT[0]) / demGT[1])
-        j = int((long - demGT[3]) / demGT[5])
-        depth = demMatrix[j][i]        
+        #To get proper depth value we must index into the dem matrix
+        #by getting where the point is located in terms of the matrix
+        i = int((lat - dem_gt[0]) / dem_gt[1])
+        j = int((long - dem_gt[3]) / dem_gt[5])
+        depth = dem_matrix[j][i]        
         feature.SetField(depth_index, depth)        
         area_layer.SetFeature(feature)
         feature.Destroy()
         feature = area_layer.GetNextFeature()
+    #We close and open the same shapefile to make sure all data is officially written to disk
+    #Not sure if this is absolutely necessary, should test to make sure we aren't doing extra work.
     area_shape.Destroy()
     area_shape = ogr.Open(wave_shape_path, 1)
     area_layer = area_shape.GetLayer(0)
-    
-    #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
-    #and add the sum as a field to the shapefile
-    energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
-    energyCap = computeWaveEnergyCapacity(args['wave_base_data'], energyInterp, args['machine_param'])
-    capturedWaveEnergyToShape(energyCap, area_shape)
+    #Generate an interpolate object for waveEnergyCap
+    energy_interp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
+    #Create a dictionary with the wave energy capacity sums from each location
+    energy_cap = computeWaveEnergyCapacity(args['wave_base_data'], energy_interp, args['machine_param'])
+    #Add the sum as a field to the shapefile for the corresponding points
+    capturedWaveEnergyToShape(energy_cap, area_shape)
+    #Calculate wave power for each wave point and add it as a field to the shapefile
     area_shape = wavePower(area_shape)
-
-    #Create rasters bounded by shape file of analyis area
+    #Create blank rasters bounded by the shape file of analyis area
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                               datatype, nodata, wave_energy_path, area_shape)
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                               datatype, nodata, wave_power_path, area_shape)
-
     #Open created rasters
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
     waveEnergyRaster = gdal.Open(wave_energy_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
     energySumArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
     wave_power_array = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
-    #Interpolate the rasters (give a smooth surface)
+    #Interpolate wave energy and wave power from the shapefile over the rasters
     interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
     interpPointsOverRaster(wave_power_array[0], wave_power_array[1], wave_power_raster)
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clipRasterFromPolygon(cutter, wave_power_raster, wave_power_path)
     waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, wave_energy_path)
-        
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
