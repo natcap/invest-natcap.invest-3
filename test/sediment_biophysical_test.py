@@ -23,7 +23,6 @@ class TestSedimentBiophysical(unittest.TestCase):
         """A test constructed by hand to test the low level dinf direction and
             flow functions.  Intent is the the test case is small enough to be
             hand calculatable, yet large enough to be non-trivial."""
-        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
 
         projection = base.GetProjection()
@@ -56,7 +55,6 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with default InVEST 
            sample input."""
-        raise SkipTest
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
         base_dir = './data/sediment_test_data'
@@ -161,7 +159,6 @@ class TestSedimentBiophysical(unittest.TestCase):
 
     def test_postprocessing_flow_direction(self):
         """Test for a postprocessing quiver plot."""
-        raise SkipTest
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
         postprocessing.plot_flow_direction(args['workspace_dir'] + os.sep +
