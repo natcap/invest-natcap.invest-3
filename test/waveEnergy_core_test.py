@@ -3,6 +3,7 @@ import os
 import unittest
 import math
 import csv
+import osr
 
 from osgeo import ogr
 from osgeo import gdal
@@ -99,9 +100,55 @@ class TestWaveEnergy(unittest.TestCase):
             os.mkdir(output_dir)
 
         shapeToReproject = ogr.Open(shapeToReprojectPath)
+        lyr = shapeToReproject.GetLayer(0)
+
+        prj_file = open(projection)
+        prj_string = prj_file.read()
+        spatial_prj = osr.SpatialReference()
+        spatial_prj.ImportFromWkt(prj_string)
 
         newShape = waveEnergy_core.changeProjection(shapeToReproject, projection, outputPath)
+        layer = newShape.GetLayer(0)
+        
+        shape_projection = layer.GetSpatialRef()
+        projcs = shape_projection.GetAttrValue('PROJCS')
+        projcs_calc = spatial_prj.GetAttrValue('PROJCS')
+        attribute_projection = shape_projection.GetAttrValue('PROJECTION')
+        attribute_projection_calc = spatial_prj.GetAttrValue('PROJECTION')
+        attribute_unit = shape_projection.GetAttrValue('UNIT')
+        attribute_unit_calc = spatial_prj.GetAttrValue('UNIT')
+        attribute_spheroid = shape_projection.GetAttrValue('SPHEROID')
+        attribute_spheroid_calc = spatial_prj.GetAttrValue('SPHEROID')
 
+        self.assertEqual(projcs, projcs_calc)
+        self.assertEqual(attribute_projection, attribute_projection_calc)
+        self.assertEqual(attribute_unit, attribute_unit_calc)
+        self.assertEqual(attribute_spheroid, attribute_spheroid_calc)
+        
+        feat_count = lyr.GetFeatureCount()
+        feat_count_projected = layer.GetFeatureCount()
+        self.assertEqual(feat_count, feat_count_projected, 'The layers DO NOT have the same number of features')
+
+        feat = lyr.GetNextFeature()
+        feat_projected = layer.GetNextFeature()
+        while feat is not None:
+            layer_def = lyr.GetLayerDefn()
+            layer_def_projected = layer.GetLayerDefn()
+
+            field_count = layer_def.GetFieldCount()
+            field_count_projected = layer_def_projected.GetFieldCount()
+            self.assertEqual(field_count, field_count_projected, 'The shapes DO NOT have the same number of fields')
+
+            for fld_index in range(field_count):
+                field = feat.GetField(fld_index)
+                field_projected = feat_projected.GetField(fld_index)
+                self.assertEqual(field, field_projected, 'The field values DO NOT match')
+
+            feat.Destroy()
+            feat_projected.Destroy()
+            feat = lyr.GetNextFeature()
+            feat_projected = layer.GetNextFeature()
+        
         shapeToReproject.Destroy()
         newShape.Destroy()
         
@@ -657,7 +704,6 @@ class TestWaveEnergy(unittest.TestCase):
         calculated_dist_results = np.array([52.77309921, 143.5444182, 87.66413178, 1348.222904])
         calculated_id_results = np.array([1, 1, 0, 1])
         dist_results, id_results = waveEnergy_core.calcDist(xy_1, xy_2)
-        print id_results
         calculated_dist_rounded = np.ma.round(calculated_dist_results, 3)
         dist_rounded = np.ma.round(dist_results, 3)
         mask_dist = calculated_dist_rounded == dist_rounded
