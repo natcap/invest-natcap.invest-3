@@ -464,7 +464,6 @@ def flowDirectionD8(dem, flow):
                     q.append(io)
                     q.append(jo)
                     
-                LOGGER.debug('distanceToDrain[io,jo]= %s' % (distanceToDrain[io,jo]))
     
     #This matrix holds the flow direction value, initialize to zero
     cdef np.ndarray[np.int_t,ndim=2] flowMatrix = \
@@ -505,8 +504,6 @@ def flowDirectionD8(dem, flow):
                 if neighborHeight > currentHeight: continue 
                 neighborDistance = distanceToDrain[x+shiftIndexes[i*3+1],
                                            y+shiftIndexes[i*3+2]]
-                LOGGER.debug("i j %s %s io jo %s %s" % (x,y,x+shiftIndexes[i*3+1],y+shiftIndexes[i*3+2]))
-                LOGGER.debug("currentHeight, neighborHeight %s, %s" %(currentHeight, neighborHeight))
                 if neighborDistance < currentDistance:
                     currentDistance = neighborDistance
                     dcur = d
