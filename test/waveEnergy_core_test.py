@@ -651,10 +651,16 @@ class TestWaveEnergy(unittest.TestCase):
             self.assertEqual(value[0], calculated_points[index][0])
             self.assertEqual(value[1], calculated_points[index][1])
         
-#def calcDist(xy_1, xy_2):
-#    mindist = np.zeros(len(xy_1))
-#    minid = np.zeros(len(xy_1))
-#    for i, xy in enumerate(xy_1):
-#        dists = np.sqrt(np.sum((xy - xy_2) ** 2, axis=1))
-#        mindist[i], minid[i] = dists.min(), dists.argmin()
-#    return mindist, minid
+    def test_waveEnergy_calcDist(self):
+        xy_1 = np.array([[250, 120], [300, 212], [125, 215], [1222, 988]])
+        xy_2 = np.array([[156, 133], [198, 111]])
+        calculated_dist_results = np.array([52.77309921, 143.5444182, 87.66413178, 1348.222904])
+        calculated_id_results = np.array([1, 1, 0, 1])
+        dist_results, id_results = waveEnergy_core.calcDist(xy_1, xy_2)
+        print id_results
+        calculated_dist_rounded = np.ma.round(calculated_dist_results, 3)
+        dist_rounded = np.ma.round(dist_results, 3)
+        mask_dist = calculated_dist_rounded == dist_rounded
+        mask_id = calculated_id_results == id_results
+        self.assertTrue(mask_dist.all())
+        self.assertTrue(mask_id.all())
