@@ -440,12 +440,10 @@ def flowDirectionD8(dem, flow):
             for k in range(8):
                 io = i + neighborOffsets[k*2]
                 jo = j + neighborOffsets[k*2+1]
-                LOGGER.debug("D8 visit neighbors i j %s %s io jo %s %s" % (i,j,io,jo))
                 #make sure io and jo are in bounds
                 if io < 0 or jo < 0 or io >= xmax or jo >= ymax: continue
                 #make sure io,jo is upstream or equal
                 neighborHeight = demMatrix[io,jo]
-                LOGGER.debug('currentHeight neighborHeight %s %s' % (currentHeight,neighborHeight))
                 if neighborHeight < currentHeight: continue
                 
                 #stepDistance refers to the distance we travel across the
@@ -455,7 +453,6 @@ def flowDirectionD8(dem, flow):
                     stepDistance = 1.0
                 else:
                     stepDistance = math.sqrt(2)
-                LOGGER.debug('stepDistance %s' % (stepDistance))
                 #update distance if the current distance
                 #neighbor pixel is greater than what we could calculate
                 #now.  If it is, update the height and enqueue the neighbor
@@ -475,13 +472,13 @@ def flowDirectionD8(dem, flow):
     
     #This array indicates the integer flow direction based on which pixel
     # to shift to.  The order is d,xo,yo eight times for 8 directions
-    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1, 0, -1,
-                                                              2, -1, -1,
-                                                              4, -1, 0,
+    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1, 1, 0,
+                                                              2, 1, 1,
+                                                              4, 0, 1,
                                                               8, -1, 1,
-                                                              16, 0, 1,
-                                                              32, 1, 1,
-                                                              64, 1, 0,
+                                                              16, -1, 0,
+                                                              32, -1, -1,
+                                                              64, 0, -1,
                                                               128, 1, -1],
                                                              dtype=np.int)
     #loop through each cell and skip any edge pixels
@@ -508,7 +505,8 @@ def flowDirectionD8(dem, flow):
                 if neighborHeight > currentHeight: continue 
                 neighborDistance = distanceToDrain[x+shiftIndexes[i*3+1],
                                            y+shiftIndexes[i*3+2]]
-                
+                LOGGER.debug("i j %s %s io jo %s %s" % (x,y,x+shiftIndexes[i*3+1],y+shiftIndexes[i*3+2]))
+                LOGGER.debug("currentHeight, neighborHeight %s, %s" %(currentHeight, neighborHeight))
                 if neighborDistance < currentDistance:
                     currentDistance = neighborDistance
                     dcur = d
