@@ -35,22 +35,22 @@ def biophysical(args):
     returns - Nothing
     """
 
-    #Set variables for common output paths
+    #Set variables for output paths
     #Workspace Directory path
     workspace_dir = args['workspace_dir']
     #Wave Data Directory path
-    waveDataDir = args['wave_data_dir']
+    wave_data_dir = args['wave_data_dir']
     #Intermediate Directory path to store information
-    interDir = workspace_dir + os.sep + 'Intermediate'
+    intermediate_dir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
-    outputDir = workspace_dir + os.sep + 'Output'
-    #Path for clipped wave point shapefile holding values of interest
-    waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
+    output_dir = workspace_dir + os.sep + 'Output'
+    #Path for clipped wave point shapefile holding wave attribute information
+    wave_shape_path = intermediate_dir + os.sep + 'WaveData_clipZ.shp'
     #Path for 'new' AOI, see comment below 'if AOI in args'
-    waveAOIPath = interDir + os.sep + 'waveAOIShape.shp'
-    #Paths for intermediate and output rasters.
-    waveEnergyPath = interDir + os.sep + 'capwe_mwh.tif'
-    wave_power_path = interDir + os.sep + 'wp_shape_version.tif'
+    wave_aoi_path = intermediate_dir + os.sep + 'waveAOIShape.shp'
+    #Paths for wave energy and wave power raster
+    wave_energy_path = intermediate_dir + os.sep + 'capwe_mwh.tif'
+    wave_power_path = intermediate_dir + os.sep + 'wp_kw.tif'
     #Set global_dem and nodata values/datatype for new rasters
     global_dem = args['dem']
     nodata = 0
@@ -64,12 +64,12 @@ def biophysical(args):
         #The AOI shapefile has a different projection than lat/long so by calling
         #the clipShape function with analysis_area_extract (which has lat/long projection
         #which we would expect) and AOI, I am making a new AOI with the proper projection
-        cutter = clipShape(args['analysis_area_extract'], args['AOI'], waveAOIPath)        
+        cutter = clipShape(args['analysis_area_extract'], args['AOI'], wave_aoi_path)        
     else:
         cutter = args['analysis_area_extract']
         
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
-    area_shape = clipShape(args['analysis_area'], cutter, waveShapePath)
+    area_shape = clipShape(args['analysis_area'], cutter, wave_shape_path)
     area_layer = area_shape.GetLayer(0)
     
     ### ADD DEPTH FIELD #####  
@@ -98,7 +98,7 @@ def biophysical(args):
         feature.Destroy()
         feature = area_layer.GetNextFeature()
     area_shape.Destroy()
-    area_shape = ogr.Open(waveShapePath, 1)
+    area_shape = ogr.Open(wave_shape_path, 1)
     area_layer = area_shape.GetLayer(0)
     
     #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
@@ -110,13 +110,13 @@ def biophysical(args):
 
     #Create rasters bounded by shape file of analyis area
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                              datatype, nodata, waveEnergyPath, area_shape)
+                                              datatype, nodata, wave_energy_path, area_shape)
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                               datatype, nodata, wave_power_path, area_shape)
 
     #Open created rasters
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
-    waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
+    waveEnergyRaster = gdal.Open(wave_energy_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
     energySumArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
     wave_power_array = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
@@ -125,7 +125,7 @@ def biophysical(args):
     interpPointsOverRaster(wave_power_array[0], wave_power_array[1], wave_power_raster)
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clipRasterFromPolygon(cutter, wave_power_raster, wave_power_path)
-    waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
+    waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, wave_energy_path)
         
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
