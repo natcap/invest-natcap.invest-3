@@ -36,4 +36,11 @@ class TestWaveEnergyValuation(unittest.TestCase):
         args['capturedWE'] = './data/test_data/wave_Energy/test_input/aoiCapWE.tif'
         args['global_dem'] = './data/test_data/wave_Energy/samp_input/global_dem'
         args['wave_data_shape_path'] = './data/test_data/wave_Energy/Intermediate/WaveData_clipZ.shp'
+        
         waveEnergy_valuation.execute(args)
+
+        #assert that the output raster is equivalent to the regression
+        #test
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + '/Intermediate/raster_projected.tif',
+            args['workspace_dir'] + '/regression_tests/raster_projected.tif')
