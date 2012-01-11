@@ -755,7 +755,7 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     
     q = CQueue()
     for i in range(valid_pixel_count):
-            if i % 100 == 0:
+            if i % (valid_pixel_count/100) == 0:
                 LOGGER.debug('percent complete %2.2f %%' % 
                              (100*(i+1.0)/valid_pixel_count))
             q.append(dem_pixel_pairs[i].i)
