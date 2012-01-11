@@ -739,8 +739,8 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     #Construct a lookup table that sorts DEM pixels by height so we can process
     #the lowest pixels to the highest in propagating shortest path distances.
     valid_pixel_count = 0
-    for i in range(1,idim-1):
-        for j in range(1,jdim-1):
+    for i in range(idim):
+        for j in range(jdim):
             h = dem_pixels[i,j]
             if h == nodata_dem:
                 accumulation_matrix[i,j] = nodata_flow_accumulation 
