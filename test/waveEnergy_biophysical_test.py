@@ -18,6 +18,27 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         args['AOI_uri'] = './data/test_data/wave_Energy/samp_input/AOI_WCVI.shp'
         waveEnergy_biophysical.execute(args)
 
+        #assert that the output raster is equivalent to the regression
+        #test
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + '/Intermediate/capwe_mwh.tif',
+            args['workspace_dir'] + '/regression_tests/capwe_mwh_regression.tif')
+        
+        #assert that the output raster is equivalent to the regression
+        #test
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + '/Intermediate/wp_kw.tif',
+            args['workspace_dir'] + '/regression_tests/wp_kw_regression.tif')
+        
+        #Check Following Shapefiles:
+        
+            #WaveData_clipZ
+            
+            #landingPoints
+            
+            #gridPoint
+
+
     def test_waveEnergy_extrapWaveData(self):
         wave_base_data_uri = './data/test_data/wave_Energy/test_input/sampWaveDataTest.txt'
         if os.path.isfile(wave_base_data_uri):
