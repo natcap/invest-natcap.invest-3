@@ -44,3 +44,6 @@ class TestWaveEnergyValuation(unittest.TestCase):
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + '/Intermediate/raster_projected.tif',
             args['workspace_dir'] + '/regression_tests/raster_projected.tif')
+
+        #Need to check the shapefiles landingpoints and gridpoint to make sure
+        #those are both correct
