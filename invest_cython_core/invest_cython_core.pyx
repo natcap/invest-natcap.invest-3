@@ -449,11 +449,10 @@ def flowDirectionD8(dem, flow):
                 #stepDistance refers to the distance we travel across the
                 #pixel, whether it's 1 across or sqrt(2) diagonally. We're
                 #diagonal if both the io and jo offsets are turned on
-                if abs(io)+abs(jo) < 2:
+                if abs(neighborOffsets[k*2])+abs(neighborOffsets[k*2+1]) < 2:
                     stepDistance = 1.0
                 else:
                     stepDistance = math.sqrt(2)
-                
                 #update distance if the current distance
                 #neighbor pixel is greater than what we could calculate
                 #now.  If it is, update the height and enqueue the neighbor
@@ -464,6 +463,7 @@ def flowDirectionD8(dem, flow):
                     distanceToDrain[io,jo] = drainageDistance+stepDistance
                     q.append(io)
                     q.append(jo)
+                    
     
     #This matrix holds the flow direction value, initialize to zero
     cdef np.ndarray[np.int_t,ndim=2] flowMatrix = \
@@ -471,14 +471,14 @@ def flowDirectionD8(dem, flow):
     
     #This array indicates the integer flow direction based on which pixel
     # to shift to.  The order is d,xo,yo eight times for 8 directions
-    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1, -1, 0,
-                                                              2, -1, 1,
+    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1, 1, 0,
+                                                              2, 1, 1,
                                                               4, 0, 1,
-                                                              8, 1, 1,
-                                                              16, 1, 0,
-                                                              32, 1, -1,
+                                                              8, -1, 1,
+                                                              16, -1, 0,
+                                                              32, -1, -1,
                                                               64, 0, -1,
-                                                              128, -1, -1],
+                                                              128, 1, -1],
                                                              dtype=np.int)
     #loop through each cell and skip any edge pixels
     for x in range(1,xmax-1):
@@ -504,7 +504,6 @@ def flowDirectionD8(dem, flow):
                 if neighborHeight > currentHeight: continue 
                 neighborDistance = distanceToDrain[x+shiftIndexes[i*3+1],
                                            y+shiftIndexes[i*3+2]]
-                
                 if neighborDistance < currentDistance:
                     currentDistance = neighborDistance
                     dcur = d
@@ -513,9 +512,9 @@ def flowDirectionD8(dem, flow):
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
     free(demPixels)
     
-    #distanceRaster = newRasterFromBase(flow,'distance.tiff', 'GTiff', -5.0,
-    #    gdal.GDT_Float32)
-    #distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),0,0)
+    distanceRaster = newRasterFromBase(flow,'distance.tiff', 'GTiff', -5.0,
+        gdal.GDT_Float32)
+    distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),0,0)
     
     return flow
 
@@ -567,7 +566,7 @@ cdef void calculate_inflow_neighbors_dinf(int i, int j,
         alpha = inflow_angles[k]
         pi = i + shift_indexes[k*2+0]
         pj = j + shift_indexes[k*2+1]
-        LOGGER.debug('visiting pi pj %s %s' % (pi,pj))
+        #LOGGER.debug('visiting pi pj %s %s' % (pi,pj))
         #ensure that the offsets are within bounds of the matrix
         if pi >= 0 and pj >= 0 and pi < flow_direction_matrix.shape[0] and \
             pj < flow_direction_matrix.shape[1]:
@@ -634,7 +633,7 @@ cdef void d_p_area(CQueue pixels_to_process,
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
-        LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
+        #LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
         #LOGGER.debug("%s, %s, %s\n%s, %s, %s\n%s, %s, %s" % (dem_pixels[i-1,j+1],dem_pixels[i,j+1],dem_pixels[i+1,j+1],dem_pixels[i-1,j],dem_pixels[i,j],dem_pixels[i+1,j],dem_pixels[i-1,j-1],dem_pixels[i,j-1],dem_pixels[i+1,j-1]))
         #LOGGER.debug("rows col %s %s" % (dem_pixels.shape[0],dem_pixels.shape[1]))
         #LOGGER.debug("nodata flow direction %s\n " % (nodata_flow_direction))
@@ -740,8 +739,8 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     #Construct a lookup table that sorts DEM pixels by height so we can process
     #the lowest pixels to the highest in propagating shortest path distances.
     valid_pixel_count = 0
-    for i in range(1,idim-1):
-        for j in range(1,jdim-1):
+    for i in range(idim):
+        for j in range(jdim):
             h = dem_pixels[i,j]
             if h == nodata_dem:
                 accumulation_matrix[i,j] = nodata_flow_accumulation 
@@ -945,7 +944,7 @@ def flow_direction_inf(dem, flow):
     
     nodata_d8 = d8_flow_dataset.GetRasterBand(1).GetNoDataValue()
 
-    d8_to_radians = {0: 0.0,
+    d8_to_radians = {0: -1.0,
                      1: 0.0,
                      2: 5.497787144,
                      4: 4.71238898,
@@ -957,11 +956,11 @@ def flow_direction_inf(dem, flow):
                      nodata_d8: nodata_flow
                      }
     
-    #for col_index in range(1, col_max - 1):
-    #    for row_index in range(1, row_max - 1):
-    #        if flow_matrix[col_index, row_index] == nodata_flow:
-    #            flow_matrix[col_index, row_index] = \
-    #                d8_to_radians[d8_flow_matrix[col_index, row_index]]
+    for col_index in range(1, col_max - 1):
+        for row_index in range(1, row_max - 1):
+            if flow_matrix[col_index, row_index] == nodata_flow:
+                flow_matrix[col_index, row_index] = \
+                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
