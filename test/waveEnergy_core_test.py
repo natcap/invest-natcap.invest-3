@@ -619,4 +619,42 @@ class TestWaveEnergy(unittest.TestCase):
         shape_copy.Destroy()
         shape.Destroy()
         shape_reg.Destroy()
+
+    def test_waveEnergy_getPoints(self):
+        testDir = './data/test_data/wave_Energy'
+        shape_path = testDir + os.sep + 'test_input/test_wavepower_withfields.shp'
         
+        shape = ogr.Open(shape_path)
+        layer = shape.GetLayer(0)
+        calculated_points = [[-126.726911, 48.241337], [-126.580642, 48.240944],
+                             [-126.726911, 48.098204], [-126.5771122, 48.015067],
+                              [-126.427313, 48.091537]]
+        drv = ogr.GetDriverByName('MEMORY')
+        src = drv.CreateDataSource('')
+        lyr = src.CreateLayer('geom', layer.GetSpatialRef(), ogr.wkbPoint)
+        field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
+        lyr.CreateField(field_defn)
+        
+        for index, value in enumerate(calculated_points):
+            point = ogr.Geometry(ogr.wkbPoint)
+            point.AddPoint_2D(value[0], value[1])            
+            feat = ogr.Feature(lyr.GetLayerDefn())
+            lyr.CreateFeature(feat)
+            feat.SetGeometryDirectly(point)
+            lyr.SetFeature(feat)
+            feat.Destroy()
+        
+        lyr.ResetReading()
+        result_points = waveEnergy_core.getPoints(src)
+        
+        for index, value in enumerate(result_points):
+            self.assertEqual(value[0], calculated_points[index][0])
+            self.assertEqual(value[1], calculated_points[index][1])
+        
+#def calcDist(xy_1, xy_2):
+#    mindist = np.zeros(len(xy_1))
+#    minid = np.zeros(len(xy_1))
+#    for i, xy in enumerate(xy_1):
+#        dists = np.sqrt(np.sum((xy - xy_2) ** 2, axis=1))
+#        mindist[i], minid[i] = dists.min(), dists.argmin()
+#    return mindist, minid
