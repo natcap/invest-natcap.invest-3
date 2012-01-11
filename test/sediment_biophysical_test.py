@@ -82,6 +82,10 @@ class TestSedimentBiophysical(unittest.TestCase):
             args['workspace_dir'] + os.sep + "/Intermediate/flow_direction.tif",
             './data/sediment_regression_data/flow_direction_regression.tif')
 
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + os.sep + "/Intermediate/flow_accumulation.tif",
+            './data/sediment_regression_data/flow_accumulation_regression.tif')
+
     def test_sediment_biophysical_simple_1(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
@@ -155,13 +159,3 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         #Direction 5.117281 was calculated by hand
         self.assertAlmostEqual(flowArray[0][0], 0.0)
-
-
-    def test_postprocessing_flow_direction(self):
-        """Test for a postprocessing quiver plot."""
-        args = {}
-        args['workspace_dir'] = './data/sediment_biophysical_output'
-        postprocessing.plot_flow_direction(args['workspace_dir'] + os.sep +
-            'Intermediate' + os.sep + 'flow.tif',
-            args['workspace_dir'] + os.sep + 'Intermediate' + os.sep +
-            'flow_arrows.png')
