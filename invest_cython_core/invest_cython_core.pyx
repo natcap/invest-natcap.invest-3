@@ -918,22 +918,16 @@ def calculate_ls_factor(upslope_area, aspect, cell_size, output_uri=''):
             
     pass
 
-def calculate_slope(dem, slope, aspect=None):
-    """Generates raster maps of slope, aspect, and curvature.  Follows the
-        algorithm described here http://grass.osgeo.org/gdp/html_grass64/r.slope.aspect.html
-        and here:
+def calculate_slope(dem, slope):
+    """Generates raster maps of slope.  Follows the algorithm described here:
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
         
         dem - (input) a single band raster of z values.  z units should be identical
             to ground units.
         slope - (modified output) a single band raster of the same dimensions 
             as dem whose elements are percent rise
-        aspect - (optional output) a single band raster of type float that 
-            indicates the direction that slopes are facing in terms of radians
-            east and increase clockwise: pi/2 is north, pi is west, 3pi/2, 
-            south and 0 or 2pi is east.
             
-        returns """
+        returns nothing"""
 
     LOGGER = logging.getLogger('calculateSlope')
     #Read the DEM directly into an array
