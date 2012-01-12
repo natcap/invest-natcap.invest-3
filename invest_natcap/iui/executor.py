@@ -6,10 +6,6 @@ from collections import deque
 import traceback
 import logging
 
-
-#logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-#    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger('executor')
 
 class Executor(threading.Thread):
@@ -45,7 +41,7 @@ class Executor(threading.Thread):
             return None
 
     def cancel(self):
-#        LOGGER.debug('Cancellation request received; finishing current operation')
+        LOGGER.debug('Cancellation request received; finishing current operation')
         self.cancelFlag.set()
 
     def isCancelled(self):
@@ -80,25 +76,23 @@ class Executor(threading.Thread):
             self.setThreadFailed(False)
 
             if self.isCancelled():
-#                LOGGER.debug('Remaining operations cancelled')
-                print('Cancelled.')
+                LOGGER.debug('Remaining operations cancelled')
                 break
             else:
                 self.funcMap[operation['type']](operation['uri'], operation['args'])
 
             if self.isThreadFailed():
-#                LOGGER.debug('Exiting due to failures')
-                print('Exiting due to failures')
+                LOGGER.error('Exiting due to failures')
                 break
 
         if not self.isThreadFailed():
-            print('Operations completed successfully')
+            LOGGER.info('Operations completed successfully')
 
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
 
     def runValidator(self, uri, args):
-        print('starting validator.')
+        LOGGER.info('Starting validator')
         validator = imp.load_source('validator', uri)
         outputList = []
 
@@ -118,16 +112,18 @@ class Executor(threading.Thread):
             self.setThreadFailed(True)
 
     def saveParamsToDisk(self, data=None):
+        LOGGER.info('Saving parameters to disk')
         self.outputObj.saveLastRun()
-        print('Parameters saved to disk')
+        LOGGER.info('Parameters saved to disk')
 
     def runModel(self, uri, args):
         try:
-            print('Running the model.')
+            LOGGER.info('Loading the queued model')
             model = imp.load_source('model', uri)
+            LOGGER.info('Executing the loaded model')
             model.execute(args)
         except:
-            print('Problem running the model')
+            LOGGER.error('Error: a problem occurred while running the model')
             self.printTraceback()
             self.setThreadFailed(True)
 
