@@ -5,9 +5,65 @@ import imp
 from collections import deque
 import traceback
 import logging
+import time
 
 LOGGER = logging.getLogger('executor')
 
+
+class Controller(object):
+    def __init__(self):
+        object.__init__(self)
+        self.executor = Executor()
+        self.msg_checker = PrintQueueChecker(self.executor)
+        self.thread_finished = False
+    
+    def get_message(self):
+        if self.msg_checker.is_alive():
+            return self.msg_checker.get_message()
+        else:
+            self.finished()
+        
+    def start_executor(self):
+        self.executor.start()
+        self.msg_checker.start()
+        
+    def cancel_executor(self):
+        self.executor.cancel()
+        
+    def finished(self):
+        self.executor = None
+        self.msg_checker = None
+        self.thread_finished = True
+        
+    def is_finished(self):
+        return self.thread_finished
+        
+    def add_operation(self, op, args=None, uri=None, index=None):
+        if not self.executor:
+            self.executor = executor.Executor()
+            self.msg_checker = PrintQueueChecker(self.executor)
+            
+        self.executor.addOperation(op, args, uri, index)
+    
+
+class PrintQueueChecker(threading.Thread):
+    def __init__(self, executor_object):
+        threading.Thread.__init__(self)
+        self.executor = executor_object
+        self.message = None
+    
+    def get_message(self):
+        message = self.message
+        self.message = None #indicates the current message has been retrieved
+        return message
+        
+    def run(self):
+        while self.executor.is_alive() or self.executor.hasMessages():
+            if self.message == None:
+                self.message = self.executor.getMessage()
+            time.sleep(0.1)
+        print 'printqueuechecker is finished'
+    
 class Executor(threading.Thread):
     def __init__(self):
         logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \

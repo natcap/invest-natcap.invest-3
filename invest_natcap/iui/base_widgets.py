@@ -831,43 +831,7 @@ class Dropdown(LabeledElement):
 
         self.addElement(self.dropdown)
 
-class Testator(object):
-    def __init__(self):
-        object.__init__(self)
-        self.executor = executor.Executor()
-
-    def write(self, string):
-        print string
-
-    def checkExecutor(self):
-        if self.executor != None:
-            if self.executor.isAlive() or self.executor.hasMessages():
-                while self.executor.hasMessages():
-                    msg = self.executor.getMessage()
-        
-                    if msg != None:
-                        self.write(msg)
-            else:
-                self.finished()
-
-    def startExecutor(self):
-        self.executor.start()
-
-    def cancelExecutor(self):
-        self.executor.cancel()
-
-    def finished(self):
-        self.executor = None #indicate we need to make a new executor
-        self.timer.stop()
-
-    def addOperation(self, op, args=None, uri=None, index=None):
-        if not self.executor:
-            self.executor = executor.Executor()
-            
-        self.executor.addOperation(op, args, uri, index)
-
-
-class OperationDialog(QtGui.QDialog, Testator):
+class OperationDialog(QtGui.QDialog):
     """ModelDialog is a class defining a modal window presented to the user
         while the model is running.  This modal window prevents the user from
         interacting with the main UI window while the model is processing and 
@@ -882,9 +846,10 @@ class OperationDialog(QtGui.QDialog, Testator):
 
             returns an instance of ModelDialog."""
         QtGui.QDialog.__init__(self)
-        Testator.__init__(self)
+#        Testator.__init__(self)
 
         self.root = root
+        self.exec_controller = executor.Controller()
 
         #set window attributes
         self.setLayout(QtGui.QVBoxLayout())
@@ -941,7 +906,7 @@ class OperationDialog(QtGui.QDialog, Testator):
         #connect the buttons to their callback functions.
         self.backButton.clicked.connect(self.closeWindow)
         self.quitButton.clicked.connect(sys.exit)
-        self.cancelButton.clicked.connect(self.cancelExecutor)
+        self.cancelButton.clicked.connect(self.exec_controller.cancel_executor)
 
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
@@ -954,10 +919,21 @@ class OperationDialog(QtGui.QDialog, Testator):
     def startExecutor(self):
         self.statusArea.clear()
         self.start_buttons()
-        self.timer.timeout.connect(self.checkExecutor)
 
-        Testator.startExecutor(self)
+        self.exec_controller.start_executor()
+
+        self.timer.timeout.connect(self.check_messages)
         self.timer.start(100)
+        
+    def check_messages(self):
+        if not self.exec_controller.is_finished():
+            message = self.exec_controller.get_message()
+            if message != None:
+                self.write(message)
+        else:
+            self.finished()
+        
+        
 
     def start_buttons(self):
         self.progressBar.setMaximum(0) #start the progressbar.
@@ -987,8 +963,6 @@ class OperationDialog(QtGui.QDialog, Testator):
         """Notify the user that model processing has finished.
         
             returns nothing."""
-
-        Testator.finished(self)
 
         self.stop_buttons()
 
