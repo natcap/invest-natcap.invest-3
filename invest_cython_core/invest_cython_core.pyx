@@ -242,75 +242,6 @@ def shiftMatrix(M, x, y):
     LOGGER.debug('shifting by %s %s' % (x, y))
     return np.roll(np.roll(M, x, axis=1), y, axis=0)
 
-def calculateSlope(dem, uri=''):
-    """Calculates the slopeMatrix of the given DEM in terms of percentage rise.
-        Here's a good reference for the algorithm:
-        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
-        
-        dem - a single band raster of z values.  z units should be identical
-            to ground units.
-        uri - optional argument if the user wishes to store the raster on disk
-            
-        returns a raster of the same dimensions as dem whose elements are
-            percent slopeMatrix (percent rise)"""
-
-    LOGGER = logging.getLogger('calculateSlope')
-    #Read the DEM directly into an array
-    demBand = dem.GetRasterBand(1)
-    demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
-    LOGGER.debug('demBandMatrix size %s' % (demBandMatrix.size))
-
-    #Create an empty slope matrix
-    slopeMatrix = np.empty((demBand.YSize, demBand.XSize))
-    LOGGER.debug('slopeMatrix size %s' % (slopeMatrix.size))
-
-    gp = dem.GetGeoTransform()
-    cellXSize = gp[1]
-    cellYSize = gp[5]
-    nodata = demBand.GetNoDataValue()
-    LOGGER.info('starting pixelwise slope calculation')
-
-    LOGGER.debug('building kernels')
-    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
-    dzdyKernel = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64)
-    dzdxKernel = dzdyKernel.transpose().copy()
-    dzdyKernel /= (8 * cellYSize)
-    dzdxKernel /= (8 * cellXSize)
-
-    LOGGER.debug('doing convolution')
-    dzdx = scipy.signal.convolve2d(demBandMatrix, dzdxKernel, 'same')
-    dzdy = scipy.signal.convolve2d(demBandMatrix, dzdyKernel, 'same')
-    slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
-
-    #Now, "nodata" out the points that used nodata from the demBandMatrix
-    noDataIndex = demBandMatrix == nodata
-    LOGGER.debug('slopeMatrix and noDataIndex shape %s %s' %
-                 (slopeMatrix.shape, noDataIndex.shape))
-    slopeMatrix[noDataIndex] = -1
-
-    offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
-               (-1, -1)]
-    for offset in offsets:
-        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = -1
-
-    #Create output raster
-    format = 'MEM'
-    if uri != '': format = 'GTiff'
-    LOGGER.debug('create raster for slope')
-    slope = newRasterFromBase(dem, uri, format, -1, gdal.GDT_Float32)
-    slope.GetRasterBand(1).WriteArray(slopeMatrix, 0, 0)
-
-    raster = slope.GetRasterBand(1)
-
-    LOGGER.debug('these are the band stats ' + str(raster.ComputeBandStats(False)))
-
-    rasterMin, rasterMax = raster.ComputeBandStats(False)
-    #make up stddev and mean
-    mean = (rasterMax + rasterMin) / 2.0
-    stdev = (rasterMax - mean) / 2.0
-    slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
-    return slope
-
 """This is a structure that's used in flow direction"""
 cdef struct Pair:
     int i,j
@@ -986,3 +917,69 @@ def calculate_ls_factor(upslope_area, aspect, cell_size, output_uri=''):
         returns a raster of the same dimensions as inputs whose elements """
             
     pass
+
+def calculate_slope(dem, slope, aspect=None):
+    """Generates raster maps of slope, aspect, and curvature.  Follows the
+        algorithm described here http://grass.osgeo.org/gdp/html_grass64/r.slope.aspect.html
+        and here:
+        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
+        
+        dem - (input) a single band raster of z values.  z units should be identical
+            to ground units.
+        slope - (modified output) a single band raster of the same dimensions 
+            as dem whose elements are percent rise
+        aspect - (optional output) a single band raster of type float that 
+            indicates the direction that slopes are facing in terms of radians
+            east and increase clockwise: pi/2 is north, pi is west, 3pi/2, 
+            south and 0 or 2pi is east.
+            
+        returns """
+
+    LOGGER = logging.getLogger('calculateSlope')
+    #Read the DEM directly into an array
+    demBand = dem.GetRasterBand(1)
+    demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
+    LOGGER.debug('demBandMatrix size %s' % (demBandMatrix.size))
+
+    #Create an empty slope matrix
+    slopeMatrix = np.empty((demBand.YSize, demBand.XSize))
+    LOGGER.debug('slopeMatrix size %s' % (slopeMatrix.size))
+
+    gp = dem.GetGeoTransform()
+    cellXSize = gp[1]
+    cellYSize = gp[5]
+    nodata = demBand.GetNoDataValue()
+    LOGGER.info('starting pixelwise slope calculation')
+
+    LOGGER.debug('building kernels')
+    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
+    dzdyKernel = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64)
+    dzdxKernel = dzdyKernel.transpose().copy()
+    dzdyKernel /= (8 * cellYSize)
+    dzdxKernel /= (8 * cellXSize)
+
+    LOGGER.debug('doing convolution')
+    dzdx = scipy.signal.convolve2d(demBandMatrix, dzdxKernel, 'same')
+    dzdy = scipy.signal.convolve2d(demBandMatrix, dzdyKernel, 'same')
+    slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
+
+    #Now, "nodata" out the points that used nodata from the demBandMatrix
+    noDataIndex = demBandMatrix == nodata
+    LOGGER.debug('slopeMatrix and noDataIndex shape %s %s' %
+                 (slopeMatrix.shape, noDataIndex.shape))
+    slopeMatrix[noDataIndex] = -1
+
+    offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
+               (-1, -1)]
+    for offset in offsets:
+        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = -1
+
+    raster = slope.GetRasterBand(1)
+
+    LOGGER.debug('these are the band stats ' + str(raster.ComputeBandStats(False)))
+
+    rasterMin, rasterMax = raster.ComputeBandStats(False)
+    #make up stddev and mean
+    mean = (rasterMax + rasterMin) / 2.0
+    stdev = (rasterMax - mean) / 2.0
+    slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
