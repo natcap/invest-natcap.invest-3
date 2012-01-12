@@ -844,7 +844,7 @@ class Testator(object):
             if self.executor.isAlive() or self.executor.hasMessages():
                 while self.executor.hasMessages():
                     msg = self.executor.getMessage()
-    
+        
                     if msg != None:
                         self.write(msg)
             else:
@@ -948,6 +948,9 @@ class OperationDialog(QtGui.QDialog, Testator):
 
         self.timer = QtCore.QTimer()
 
+    def showEvent(self, event):
+        QtCore.QTimer.singleShot(100, self.startExecutor)
+    
     def startExecutor(self):
         self.statusArea.clear()
         self.start_buttons()
@@ -1154,7 +1157,6 @@ class RootWindow(DynamicGroup):
         return
 
     def runProgram(self):
-        self.operationDialog.startExecutor()
         self.operationDialog.exec_()
 
         if self.operationDialog.cancelled():
