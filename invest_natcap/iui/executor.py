@@ -62,7 +62,6 @@ class PrintQueueChecker(threading.Thread):
             if self.message == None:
                 self.message = self.executor.getMessage()
             time.sleep(0.1)
-        print 'printqueuechecker is finished'
     
 class Executor(threading.Thread):
     def __init__(self):
