@@ -15,120 +15,127 @@ import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
 def biophysical(args):
-    """Runs the biophysical part of the Wave Energy Model (WEM).
-    
+    """Runs the biophysical part of the Wave Energy Model (WEM). Generates a wave power raster,
+    wave energy capacity raster, and a wave data shapefile that hosts various attributes for
+    wave farm locations, such as depth, wave height, and wave period.
+    Required:
+    args['workspace_dir'] - the workspace path
+    args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
     args['wave_base_data'] - a dictionary of seastate bin data.
     args['analysis_area'] - a point geometry shapefile representing the relevant WW3 points
     args['analysis_area_extract'] - a polygon geometry shapefile encompassing the broader range
                                     of interest.
-    args['AOI'] - a polygon geometry shapefile outlining a more specific area of interest.
     args['machine_perf'] - a 2D array representing the machine performance table.
     args['machine_param'] - a dictionary which holds the machine parameter values.
     args['dem'] - a GIS raster file of the global elevation model
-    args['workspace_dir'] - the workspace path
-    args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
-        
-    """
+    
+    Optional (but required for valuation):
+    args['AOI'] - a polygon geometry shapefile outlining a more specific area of interest (Optional).
 
-    #Set variables for common output paths
+    returns - Nothing
+    """
+    #Set variables for output paths
     #Workspace Directory path
     workspace_dir = args['workspace_dir']
     #Wave Data Directory path
-    waveDataDir = args['wave_data_dir']
+    wave_data_dir = args['wave_data_dir']
     #Intermediate Directory path to store information
-    interDir = workspace_dir + os.sep + 'Intermediate'
+    intermediate_dir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
-    outputDir = workspace_dir + os.sep + 'Output'
-    #Path for clipped wave point shapefile holding values of interest
-    waveShapePath = interDir + os.sep + 'WaveData_clipZ.shp'
+    output_dir = workspace_dir + os.sep + 'Output'
+    #Path for clipped wave point shapefile holding wave attribute information
+    wave_shape_path = intermediate_dir + os.sep + 'WaveData_clipZ.shp'
     #Path for 'new' AOI, see comment below 'if AOI in args'
-    waveAOIPath = interDir + os.sep + 'waveAOIShape.shp'
-    #Paths for intermediate and output rasters.
-    waveEnergyPath = interDir + os.sep + 'capwe_mwh.tif'
-    wave_power_path = interDir + os.sep + 'wp_shape_version.tif'
-    #Set global_dem and nodata values/datatype for new rasters
+    wave_aoi_path = intermediate_dir + os.sep + 'waveAOIShape.shp'
+    #Paths for wave energy and wave power raster
+    wave_energy_path = intermediate_dir + os.sep + 'capwe_mwh.tif'
+    wave_power_path = intermediate_dir + os.sep + 'wp_kw.tif'
     global_dem = args['dem']
+    #Set nodata value and datatype for new rasters
     nodata = 0
     datatype = gdal.GDT_Float32
+    #Since the global dem is the finest resolution we get as an input,
+    #use its pixel sizes as the sizes for the new rasters
     gt = dem.GetGeoTransform()
     pixel_xsize = float(gt[1])
     pixel_ysize = np.absolute(float(gt[5]))
-    
     #Determine which shapefile will be used to determine area of interest
     if 'AOI' in args:
         #The AOI shapefile has a different projection than lat/long so by calling
-        #the clipShape function with analysis_area_extract (which has lat/long projection
+        #the clip_shape function with analysis_area_extract (which has lat/long projection
         #which we would expect) and AOI, I am making a new AOI with the proper projection
-        cutter = clipShape(args['analysis_area_extract'], args['AOI'], waveAOIPath)        
+        cutter = clip_shape(args['analysis_area_extract'], args['AOI'], wave_aoi_path)        
     else:
         cutter = args['analysis_area_extract']
-        
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
-    area_shape = clipShape(args['analysis_area'], cutter, waveShapePath)
+    area_shape = clip_shape(args['analysis_area'], cutter, wave_shape_path)
     area_layer = area_shape.GetLayer(0)
-    
-    ### ADD DEPTH FIELD #####  
-    demGT = global_dem.GetGeoTransform()
-    demBand = global_dem.GetRasterBand(1)
-    xsize = demBand.XSize
-    ysize = demBand.YSize
-    demMatrix = demBand.ReadAsArray()
-    
+    #We do all wave power calculations by manipulating the fields in
+    #the wave data shapefile, thus we need to add proper depth values
+    #from the raster DEM
+    dem_gt = global_dem.GetGeoTransform()
+    dem_band = global_dem.GetRasterBand(1)
+    xsize = dem_band.XSize
+    ysize = dem_band.YSize
+    dem_matrix = dem_band.ReadAsArray()
+    #Create a new field for the depth attribute
     field_defn = ogr.FieldDefn('Depth_M', ogr.OFTReal)
     area_layer.CreateField(field_defn)
-        
+    #ResetReading to make sure we start reading from the first feature
     area_layer.ResetReading()
     feature = area_layer.GetNextFeature()
-    
+    #For all the features (points) add the proper depth value from the DEM
     while feature is not None:
         depth_index = feature.GetFieldIndex('Depth_M')    
         geom = feature.GetGeometryRef()
         lat = geom.GetX()
         long = geom.GetY()
-        i = int((lat - demGT[0]) / demGT[1])
-        j = int((long - demGT[3]) / demGT[5])
-        depth = demMatrix[j][i]        
+        #To get proper depth value we must index into the dem matrix
+        #by getting where the point is located in terms of the matrix
+        i = int((lat - dem_gt[0]) / dem_gt[1])
+        j = int((long - dem_gt[3]) / dem_gt[5])
+        depth = dem_matrix[j][i]        
         feature.SetField(depth_index, depth)        
         area_layer.SetFeature(feature)
         feature.Destroy()
         feature = area_layer.GetNextFeature()
+    #We close and open the same shapefile to make sure all data is officially written to disk
+    #Not sure if this is absolutely necessary, should test to make sure we aren't doing extra work.
     area_shape.Destroy()
-    area_shape = ogr.Open(waveShapePath, 1)
+    area_shape = ogr.Open(wave_shape_path, 1)
     area_layer = area_shape.GetLayer(0)
-    
-    #Generate an interpolate object for waveEnergyCap, create a dictionary with the sums from each location,
-    #and add the sum as a field to the shapefile
-    energyInterp = waveEnergyInterp(args['wave_base_data'], args['machine_perf'])
-    energyCap = computeWaveEnergyCapacity(args['wave_base_data'], energyInterp, args['machine_param'])
-    capturedWaveEnergyToShape(energyCap, area_shape)
-    area_shape = wavePower(area_shape)
-
-    #Create rasters bounded by shape file of analyis area
+    #Generate an interpolate object for waveEnergyCap
+    energy_interp = wave_energy_interp(args['wave_base_data'], args['machine_perf'])
+    #Create a dictionary with the wave energy capacity sums from each location
+    energy_cap = compute_wave_energy_capacity(args['wave_base_data'], energy_interp, args['machine_param'])
+    #Add the sum as a field to the shapefile for the corresponding points
+    captured_wave_energy_to_shape(energy_cap, area_shape)
+    #Calculate wave power for each wave point and add it as a field to the shapefile
+    area_shape = wave_power(area_shape)
+    #Create blank rasters bounded by the shape file of analyis area
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                              datatype, nodata, waveEnergyPath, area_shape)
+                                              datatype, nodata, wave_energy_path, area_shape)
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                               datatype, nodata, wave_power_path, area_shape)
-
     #Open created rasters
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
-    waveEnergyRaster = gdal.Open(waveEnergyPath, GA_Update)
+    waveEnergyRaster = gdal.Open(wave_energy_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
-    energySumArray = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
-    wave_power_array = getPointsValues(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
-    #Interpolate the rasters (give a smooth surface)
-    interpPointsOverRaster(energySumArray[0], energySumArray[1], waveEnergyRaster)
-    interpPointsOverRaster(wave_power_array[0], wave_power_array[1], wave_power_raster)
+    energySumArray = get_points_values(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+    wave_power_array = get_points_values(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
+    #Interpolate wave energy and wave power from the shapefile over the rasters
+    interp_points_over_raster(energySumArray[0], energySumArray[1], waveEnergyRaster)
+    interp_points_over_raster(wave_power_array[0], wave_power_array[1], wave_power_raster)
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
-    wave_power_raster = clipRasterFromPolygon(cutter, wave_power_raster, wave_power_path)
-    waveEnergyRaster = clipRasterFromPolygon(cutter, waveEnergyRaster, waveEnergyPath)
-        
+    wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
+    waveEnergyRaster = clip_raster_from_polygon(cutter, waveEnergyRaster, wave_energy_path)
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
     waveEnergyRaster = None
     wave_power_raster = None
     
-def wavePower(shape):
+def wave_power(shape):
     """Calculates the wave power from the arguments and writes the
     output raster to hard disk. 
     
@@ -179,7 +186,7 @@ def wavePower(shape):
     
     return shape
     
-def clipRasterFromPolygon(shape, raster, path):
+def clip_raster_from_polygon(shape, raster, path):
     """Returns a raster where any value outside the bounds of the polygon shape are set
     to nodata values.  This represents clipping the raster to the dimensions of the polygon
     
@@ -215,11 +222,11 @@ def clipRasterFromPolygon(shape, raster, path):
     
     return copyRaster
     
-#clipShape takes the shapefile you would like to cut down,
+#clip_shape takes the shapefile you would like to cut down,
 #the polygon shape you want the other shapefile cut to,
 #and the path for the new shapefile
 #It returns a new shapefile in the same format/projection as shapeToClip
-def clipShape(shapeToClip, bindingShape, outputPath):
+def clip_shape(shapeToClip, bindingShape, outputPath):
     """Copies a polygon or point geometry shapefile, only keeping the features
     that intersect or are within a binding polygon shape.
     
@@ -297,7 +304,7 @@ def clipShape(shapeToClip, bindingShape, outputPath):
 
     return shp_ds
 
-def getPointsValues(shape, key, valueArray, value):
+def get_points_values(shape, key, valueArray, value):
     """Generates a list of points and a list of values based on a point
     geometry shapefile and other criteria from the arguments
     
@@ -348,7 +355,7 @@ def getPointsValues(shape, key, valueArray, value):
     results = [points, values]
     return results
 
-def interpPointsOverRaster(points, values, raster):
+def interp_points_over_raster(points, values, raster):
     """Interpolates the values of a given set of points and values to the points
     of a raster and writes the interpolated matrix to the raster band
     
@@ -379,7 +386,7 @@ def interpPointsOverRaster(points, values, raster):
     #Write interpolated matrix of values to raster
     band.WriteArray(spl, 0, 0)
 
-def waveEnergyInterp(waveData, machinePerf):
+def wave_energy_interp(waveData, machinePerf):
     """Generates a matrix representing the interpolation of the
     machine performance table using new ranges from wave watch data
     
@@ -399,7 +406,7 @@ def waveEnergyInterp(waveData, machinePerf):
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
     return interpZ
 
-def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
+def compute_wave_energy_capacity(waveData, interpZ, machineParam):
     """Computes the wave energy capacity for each point and
     generates a dictionary whos keys are the points and whos value
     is the wave energy capacity
@@ -458,7 +465,7 @@ def computeWaveEnergyCapacity(waveData, interpZ, machineParam):
 
 #This function will hopefully take the dictionary of waveEnergyCapacity sums and
 #interpolate them and rasterize them.
-def capturedWaveEnergyToShape(energyCap, waveShape):
+def captured_wave_energy_to_shape(energyCap, waveShape):
     """Adds a field, value to a shapefile from a dictionary
     
     energyCap - A dictionary representing the wave energy capacity
@@ -627,7 +634,7 @@ def valuation(args):
     
     wave_data_shape = args['wave_data_shape']
     wave_data_layer = wave_data_shape.GetLayer(0)
-    shape = changeProjection(wave_data_shape, args['projection'], projectedShapePath)
+    shape = change_shape_projection(wave_data_shape, args['projection'], projectedShapePath)
     shape.Destroy()
     shape = ogr.Open(projectedShapePath, 1)
     shape_layer = shape.GetLayer(0)
@@ -635,12 +642,12 @@ def valuation(args):
     landingShape = ogr.Open(landptPath)
     gridShape = ogr.Open(gridptPath)
     
-    wePoints = getPoints(shape)
-    landingPoints = getPoints(landingShape)
-    gridPoint = getPoints(gridShape)
+    wePoints = get_points_geometries(shape)
+    landingPoints = get_points_geometries(landingShape)
+    gridPoint = get_points_geometries(gridShape)
     
-    W2L_Dist, W2L_ID = calcDist(wePoints, landingPoints)
-    L2G_Dist, L2G_ID = calcDist(landingPoints, gridPoint)
+    W2L_Dist, W2L_ID = calculate_distance(wePoints, landingPoints)
+    L2G_Dist, L2G_ID = calculate_distance(landingPoints, gridPoint)
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
         shape_layer.CreateField(field_defn)
@@ -717,10 +724,10 @@ def valuation(args):
                                               datatype, nodata, wave_farm_value_path, wave_data_shape)
     wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
-    wave_farm_value_array = getPointsValues(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'NPV_25Y'], 'NPV_25Y')
+    wave_farm_value_array = get_points_values(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'NPV_25Y'], 'NPV_25Y')
     
      #Interpolate the rasters (give a smooth surface)
-    interpPointsOverRaster(wave_farm_value_array[0], wave_farm_value_array[1], wave_farm_value_raster)
+    interp_points_over_raster(wave_farm_value_array[0], wave_farm_value_array[1], wave_farm_value_raster)
 
     virtual = gdal.AutoCreateWarpedVRT(wave_farm_value_raster,
                                        wave_farm_value_raster.GetProjectionRef(),
@@ -729,7 +736,7 @@ def valuation(args):
     drv.CreateCopy(raster_projected_path, virtual, True)
     #########################################
     
-def getPoints(shape):
+def get_points_geometries(shape):
     point = []
     layer = shape.GetLayer(0)
     feat = layer.GetNextFeature()
@@ -742,7 +749,7 @@ def getPoints(shape):
     
     return np.array(point)
     
-def calcDist(xy_1, xy_2):
+def calculate_distance(xy_1, xy_2):
     mindist = np.zeros(len(xy_1))
     minid = np.zeros(len(xy_1))
     for i, xy in enumerate(xy_1):
@@ -750,7 +757,7 @@ def calcDist(xy_1, xy_2):
         mindist[i], minid[i] = dists.min(), dists.argmin()
     return mindist, minid
 
-def changeProjection(shapeToReproject, projection, outputPath):
+def change_shape_projection(shapeToReproject, projection, outputPath):
     """Changes the projection of a shapefile by creating a new shapefile based on
     the projection passed in and then copying all the features and fields of
     the shapefile to reproject to the new shapefile.

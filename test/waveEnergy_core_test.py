@@ -3,6 +3,7 @@ import os
 import unittest
 import math
 import csv
+import osr
 
 from osgeo import ogr
 from osgeo import gdal
@@ -99,14 +100,60 @@ class TestWaveEnergy(unittest.TestCase):
             os.mkdir(output_dir)
 
         shapeToReproject = ogr.Open(shapeToReprojectPath)
+        lyr = shapeToReproject.GetLayer(0)
 
-        newShape = waveEnergy_core.changeProjection(shapeToReproject, projection, outputPath)
+        prj_file = open(projection)
+        prj_string = prj_file.read()
+        spatial_prj = osr.SpatialReference()
+        spatial_prj.ImportFromWkt(prj_string)
 
+        newShape = waveEnergy_core.change_shape_projection(shapeToReproject, projection, outputPath)
+        layer = newShape.GetLayer(0)
+        
+        shape_projection = layer.GetSpatialRef()
+        projcs = shape_projection.GetAttrValue('PROJCS')
+        projcs_calc = spatial_prj.GetAttrValue('PROJCS')
+        attribute_projection = shape_projection.GetAttrValue('PROJECTION')
+        attribute_projection_calc = spatial_prj.GetAttrValue('PROJECTION')
+        attribute_unit = shape_projection.GetAttrValue('UNIT')
+        attribute_unit_calc = spatial_prj.GetAttrValue('UNIT')
+        attribute_spheroid = shape_projection.GetAttrValue('SPHEROID')
+        attribute_spheroid_calc = spatial_prj.GetAttrValue('SPHEROID')
+
+        self.assertEqual(projcs, projcs_calc)
+        self.assertEqual(attribute_projection, attribute_projection_calc)
+        self.assertEqual(attribute_unit, attribute_unit_calc)
+        self.assertEqual(attribute_spheroid, attribute_spheroid_calc)
+        
+        feat_count = lyr.GetFeatureCount()
+        feat_count_projected = layer.GetFeatureCount()
+        self.assertEqual(feat_count, feat_count_projected, 'The layers DO NOT have the same number of features')
+
+        feat = lyr.GetNextFeature()
+        feat_projected = layer.GetNextFeature()
+        while feat is not None:
+            layer_def = lyr.GetLayerDefn()
+            layer_def_projected = layer.GetLayerDefn()
+
+            field_count = layer_def.GetFieldCount()
+            field_count_projected = layer_def_projected.GetFieldCount()
+            self.assertEqual(field_count, field_count_projected, 'The shapes DO NOT have the same number of fields')
+
+            for fld_index in range(field_count):
+                field = feat.GetField(fld_index)
+                field_projected = feat_projected.GetField(fld_index)
+                self.assertEqual(field, field_projected, 'The field values DO NOT match')
+
+            feat.Destroy()
+            feat_projected.Destroy()
+            feat = lyr.GetNextFeature()
+            feat_projected = layer.GetNextFeature()
+        
         shapeToReproject.Destroy()
         newShape.Destroy()
         
     def test_waveEnergy_clipShape(self):
-        """A trivial test case that makes sure clipShape returns the proper shape
+        """A trivial test case that makes sure clip_shape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
         the same size and form as the shape to be clipped so we would expect the output to be
         equal to the input"""
@@ -125,7 +172,7 @@ class TestWaveEnergy(unittest.TestCase):
         shapeToClip = ogr.Open(shapeToClipPath.encode(filesystemencoding))
         bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
 
-        newShape = waveEnergy_core.clipShape(shapeToClip, bindingShape, newShapePath)
+        newShape = waveEnergy_core.clip_shape(shapeToClip, bindingShape, newShapePath)
 
         layerCount = shapeToClip.GetLayerCount()
         layerCountNew = newShape.GetLayerCount()
@@ -171,7 +218,7 @@ class TestWaveEnergy(unittest.TestCase):
 #            os.rmdir(output_dir)
 
     def test_waveEnergy_clipShapeZero(self):
-        """A trivial test case that makes sure clipShape returns the proper shape
+        """A trivial test case that makes sure clip_shape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
         the same size and form as the shape to be clipped so we would expect the output to be
         equal to the input"""
@@ -190,7 +237,7 @@ class TestWaveEnergy(unittest.TestCase):
         shapeToClip = ogr.Open(shapeToClipPath.encode(filesystemencoding))
         bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
 
-        newShape = waveEnergy_core.clipShape(shapeToClip, bindingShape, newShapePath)
+        newShape = waveEnergy_core.clip_shape(shapeToClip, bindingShape, newShapePath)
 
         layer = newShape.GetLayer(0)
 
@@ -202,7 +249,7 @@ class TestWaveEnergy(unittest.TestCase):
         bindingShape.Destroy()
 
     def test_waveEnergy_clipShapeProj(self):
-        """A non trivial test case that makes sure clipShape returns the proper shape
+        """A non trivial test case that makes sure clip_shape returns the proper shape
         after it has been clipped by a polygon shapefile."""
         filesystemencoding = sys.getfilesystemencoding()
 
@@ -221,7 +268,7 @@ class TestWaveEnergy(unittest.TestCase):
         shapeToClip = ogr.Open(shapeToClipPath.encode(filesystemencoding))
         bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
 
-        newShape = waveEnergy_core.clipShape(shapeToClip, bindingShape, newShapePath)
+        newShape = waveEnergy_core.clip_shape(shapeToClip, bindingShape, newShapePath)
 
 #        pointOneFields = [6025, 'Point', 572, 490, -126.933144, 47.600162, 2.8, 11.1]
 #        pointTwoFields = [6064, 'Point', 573, 490, -126.866477, 47.600162, 2.8, 11.11]
@@ -333,7 +380,7 @@ class TestWaveEnergy(unittest.TestCase):
         shapeToClip.Destroy()
 
     def test_waveEnergy_capturedWaveEnergyToShape(self):
-        """Test capturedWaveEnergyToShape to make sure that it works properly for different geometries"""
+        """Test captured_wave_energy_to_shape to make sure that it works properly for different geometries"""
         filesystemencoding = sys.getfilesystemencoding()
 
 
@@ -355,7 +402,7 @@ class TestWaveEnergy(unittest.TestCase):
 
         testDict = {(572, 490):2302, (573, 490):1453, (574, 490):2103}
         ijArray = [[572, 490], [573, 490], [574, 490]]
-        waveEnergy_core.capturedWaveEnergyToShape(testDict, waveShapeCopy)
+        waveEnergy_core.captured_wave_energy_to_shape(testDict, waveShapeCopy)
 
         layer = waveShapeCopy.GetLayer(0)
         #Need to reset the layer because the function call goes through the features in
@@ -407,7 +454,7 @@ class TestWaveEnergy(unittest.TestCase):
         machineParam = {'CapMax':{'VALUE':20}, 'TpMax':{'VALUE':4}, 'HsMax':{'VALUE':3}}
         result = {(520, 490):0.0762, (521, 491):0.22116}
 
-        weSum = waveEnergy_core.computeWaveEnergyCapacity(waveData, interpZ, machineParam)
+        weSum = waveEnergy_core.compute_wave_energy_capacity(waveData, interpZ, machineParam)
 
         """Loop that compares dictionaries weSum and result checking key, sum values"""
         for key in result:
@@ -431,7 +478,7 @@ class TestWaveEnergy(unittest.TestCase):
                   [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0],
                   [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0]]
         result = np.array(result)
-        interpZ = waveEnergy_core.waveEnergyInterp(waveData, machinePerf)
+        interpZ = waveEnergy_core.wave_energy_interp(waveData, machinePerf)
 
         self.assertEqual(result.shape, interpZ.shape, 'The shapes are not the same')
 
@@ -455,7 +502,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape = ogr.Open(shapePath)
         raster = gdal.Open(rasterPath)
 
-        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
+        newRaster = waveEnergy_core.clip_raster_from_polygon(shape, raster, path)
 
         newBand = newRaster.GetRasterBand(1)
         band = raster.GetRasterBand(1)
@@ -494,7 +541,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape = ogr.Open(shapePath)
         raster = gdal.Open(rasterPath)
 
-        newRaster = waveEnergy_core.clipRasterFromPolygon(shape, raster, path)
+        newRaster = waveEnergy_core.clip_raster_from_polygon(shape, raster, path)
 
         newRaster = None
 
@@ -516,7 +563,7 @@ class TestWaveEnergy(unittest.TestCase):
                            [  0., 11., 13., 15.],
                            [  0., 12., 14., 16.]])
 
-        waveEnergy_core.interpPointsOverRaster(points, values, raster)
+        waveEnergy_core.interp_points_over_raster(points, values, raster)
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray()
         self.assertEqual(matrix.size, result.size, 'The sizes are not the same')
@@ -525,7 +572,7 @@ class TestWaveEnergy(unittest.TestCase):
                 self.assertAlmostEqual(val, matrix[indexOut][indexIn], 5)
 
     def test_waveEnergy_wavePower(self):
-        """Test wavePower to make sure desired outputs are met"""
+        """Test wave_power to make sure desired outputs are met"""
 
         testDir = './data/test_data/wave_Energy'
         shape_path = testDir + os.sep + 'test_input/test_wave_power_shape.shp'
@@ -565,7 +612,7 @@ class TestWaveEnergy(unittest.TestCase):
             feat = layer.GetNextFeature()
             i = i + 1
         layer = None
-        shape_copy = waveEnergy_core.wavePower(shape_copy)
+        shape_copy = waveEnergy_core.wave_power(shape_copy)
         
         layer = shape_copy.GetLayer(0)
         layer.ResetReading()
@@ -582,7 +629,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape.Destroy()
         
     def test_waveEnergy_wavePower_regression(self):
-        """Test wavePower to make sure desired outputs are met"""
+        """Test wave_power to make sure desired outputs are met"""
 
         testDir = './data/test_data/wave_Energy'
         shape_path = testDir + os.sep + 'test_input/test_wavepower_withfields.shp'
@@ -598,7 +645,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape = ogr.Open(shape_path)
         shape_reg = ogr.Open(regression_shape_path)
         shape_copy = ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(shape, shape_copy_path)
-        shape_copy = waveEnergy_core.wavePower(shape_copy)
+        shape_copy = waveEnergy_core.wave_power(shape_copy)
         
         layer = shape_copy.GetLayer(0)
         layer_reg = shape_reg.GetLayer(0)
@@ -645,16 +692,21 @@ class TestWaveEnergy(unittest.TestCase):
             feat.Destroy()
         
         lyr.ResetReading()
-        result_points = waveEnergy_core.getPoints(src)
+        result_points = waveEnergy_core.get_points_geometries(src)
         
         for index, value in enumerate(result_points):
             self.assertEqual(value[0], calculated_points[index][0])
             self.assertEqual(value[1], calculated_points[index][1])
         
-#def calcDist(xy_1, xy_2):
-#    mindist = np.zeros(len(xy_1))
-#    minid = np.zeros(len(xy_1))
-#    for i, xy in enumerate(xy_1):
-#        dists = np.sqrt(np.sum((xy - xy_2) ** 2, axis=1))
-#        mindist[i], minid[i] = dists.min(), dists.argmin()
-#    return mindist, minid
+    def test_waveEnergy_calcDist(self):
+        xy_1 = np.array([[250, 120], [300, 212], [125, 215], [1222, 988]])
+        xy_2 = np.array([[156, 133], [198, 111]])
+        calculated_dist_results = np.array([52.77309921, 143.5444182, 87.66413178, 1348.222904])
+        calculated_id_results = np.array([1, 1, 0, 1])
+        dist_results, id_results = waveEnergy_core.calculate_distance(xy_1, xy_2)
+        calculated_dist_rounded = np.ma.round(calculated_dist_results, 3)
+        dist_rounded = np.ma.round(dist_results, 3)
+        mask_dist = calculated_dist_rounded == dist_rounded
+        mask_id = calculated_id_results == id_results
+        self.assertTrue(mask_dist.all())
+        self.assertTrue(mask_id.all())
