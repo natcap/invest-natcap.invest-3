@@ -242,75 +242,6 @@ def shiftMatrix(M, x, y):
     LOGGER.debug('shifting by %s %s' % (x, y))
     return np.roll(np.roll(M, x, axis=1), y, axis=0)
 
-def calculateSlope(dem, uri=''):
-    """Calculates the slopeMatrix of the given DEM in terms of percentage rise.
-        Here's a good reference for the algorithm:
-        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
-        
-        dem - a single band raster of z values.  z units should be identical
-            to ground units.
-        uri - optional argument if the user wishes to store the raster on disk
-            
-        returns a raster of the same dimensions as dem whose elements are
-            percent slopeMatrix (percent rise)"""
-
-    LOGGER = logging.getLogger('calculateSlope')
-    #Read the DEM directly into an array
-    demBand = dem.GetRasterBand(1)
-    demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
-    LOGGER.debug('demBandMatrix size %s' % (demBandMatrix.size))
-
-    #Create an empty slope matrix
-    slopeMatrix = np.empty((demBand.YSize, demBand.XSize))
-    LOGGER.debug('slopeMatrix size %s' % (slopeMatrix.size))
-
-    gp = dem.GetGeoTransform()
-    cellXSize = gp[1]
-    cellYSize = gp[5]
-    nodata = demBand.GetNoDataValue()
-    LOGGER.info('starting pixelwise slope calculation')
-
-    LOGGER.debug('building kernels')
-    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
-    dzdyKernel = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64)
-    dzdxKernel = dzdyKernel.transpose().copy()
-    dzdyKernel /= (8 * cellYSize)
-    dzdxKernel /= (8 * cellXSize)
-
-    LOGGER.debug('doing convolution')
-    dzdx = scipy.signal.convolve2d(demBandMatrix, dzdxKernel, 'same')
-    dzdy = scipy.signal.convolve2d(demBandMatrix, dzdyKernel, 'same')
-    slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
-
-    #Now, "nodata" out the points that used nodata from the demBandMatrix
-    noDataIndex = demBandMatrix == nodata
-    LOGGER.debug('slopeMatrix and noDataIndex shape %s %s' %
-                 (slopeMatrix.shape, noDataIndex.shape))
-    slopeMatrix[noDataIndex] = -1
-
-    offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
-               (-1, -1)]
-    for offset in offsets:
-        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = -1
-
-    #Create output raster
-    format = 'MEM'
-    if uri != '': format = 'GTiff'
-    LOGGER.debug('create raster for slope')
-    slope = newRasterFromBase(dem, uri, format, -1, gdal.GDT_Float32)
-    slope.GetRasterBand(1).WriteArray(slopeMatrix, 0, 0)
-
-    raster = slope.GetRasterBand(1)
-
-    LOGGER.debug('these are the band stats ' + str(raster.ComputeBandStats(False)))
-
-    rasterMin, rasterMax = raster.ComputeBandStats(False)
-    #make up stddev and mean
-    mean = (rasterMax + rasterMin) / 2.0
-    stdev = (rasterMax - mean) / 2.0
-    slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
-    return slope
-
 """This is a structure that's used in flow direction"""
 cdef struct Pair:
     int i,j
@@ -449,11 +380,10 @@ def flowDirectionD8(dem, flow):
                 #stepDistance refers to the distance we travel across the
                 #pixel, whether it's 1 across or sqrt(2) diagonally. We're
                 #diagonal if both the io and jo offsets are turned on
-                if abs(io)+abs(jo) < 2:
+                if abs(neighborOffsets[k*2])+abs(neighborOffsets[k*2+1]) < 2:
                     stepDistance = 1.0
                 else:
                     stepDistance = math.sqrt(2)
-                
                 #update distance if the current distance
                 #neighbor pixel is greater than what we could calculate
                 #now.  If it is, update the height and enqueue the neighbor
@@ -464,6 +394,7 @@ def flowDirectionD8(dem, flow):
                     distanceToDrain[io,jo] = drainageDistance+stepDistance
                     q.append(io)
                     q.append(jo)
+                    
     
     #This matrix holds the flow direction value, initialize to zero
     cdef np.ndarray[np.int_t,ndim=2] flowMatrix = \
@@ -471,14 +402,14 @@ def flowDirectionD8(dem, flow):
     
     #This array indicates the integer flow direction based on which pixel
     # to shift to.  The order is d,xo,yo eight times for 8 directions
-    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1, -1, 0,
-                                                              2, -1, 1,
+    cdef np.ndarray[np.int_t,ndim=1] shiftIndexes = np.array([1, 1, 0,
+                                                              2, 1, 1,
                                                               4, 0, 1,
-                                                              8, 1, 1,
-                                                              16, 1, 0,
-                                                              32, 1, -1,
+                                                              8, -1, 1,
+                                                              16, -1, 0,
+                                                              32, -1, -1,
                                                               64, 0, -1,
-                                                              128, -1, -1],
+                                                              128, 1, -1],
                                                              dtype=np.int)
     #loop through each cell and skip any edge pixels
     for x in range(1,xmax-1):
@@ -504,7 +435,6 @@ def flowDirectionD8(dem, flow):
                 if neighborHeight > currentHeight: continue 
                 neighborDistance = distanceToDrain[x+shiftIndexes[i*3+1],
                                            y+shiftIndexes[i*3+2]]
-                
                 if neighborDistance < currentDistance:
                     currentDistance = neighborDistance
                     dcur = d
@@ -513,9 +443,9 @@ def flowDirectionD8(dem, flow):
     flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
     free(demPixels)
     
-    #distanceRaster = newRasterFromBase(flow,'distance.tiff', 'GTiff', -5.0,
-    #    gdal.GDT_Float32)
-    #distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),0,0)
+    distanceRaster = newRasterFromBase(flow,'distance.tiff', 'GTiff', -5.0,
+        gdal.GDT_Float32)
+    distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),0,0)
     
     return flow
 
@@ -567,7 +497,7 @@ cdef void calculate_inflow_neighbors_dinf(int i, int j,
         alpha = inflow_angles[k]
         pi = i + shift_indexes[k*2+0]
         pj = j + shift_indexes[k*2+1]
-        LOGGER.debug('visiting pi pj %s %s' % (pi,pj))
+        #LOGGER.debug('visiting pi pj %s %s' % (pi,pj))
         #ensure that the offsets are within bounds of the matrix
         if pi >= 0 and pj >= 0 and pi < flow_direction_matrix.shape[0] and \
             pj < flow_direction_matrix.shape[1]:
@@ -634,7 +564,7 @@ cdef void d_p_area(CQueue pixels_to_process,
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
-        LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
+        #LOGGER.debug("working on pixel %s, %s, direction %s height %s" % (i,j, flow_direction_matrix[i, j]*180/PI, dem_pixels[i,j]))
         #LOGGER.debug("%s, %s, %s\n%s, %s, %s\n%s, %s, %s" % (dem_pixels[i-1,j+1],dem_pixels[i,j+1],dem_pixels[i+1,j+1],dem_pixels[i-1,j],dem_pixels[i,j],dem_pixels[i+1,j],dem_pixels[i-1,j-1],dem_pixels[i,j-1],dem_pixels[i+1,j-1]))
         #LOGGER.debug("rows col %s %s" % (dem_pixels.shape[0],dem_pixels.shape[1]))
         #LOGGER.debug("nodata flow direction %s\n " % (nodata_flow_direction))
@@ -740,8 +670,8 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     #Construct a lookup table that sorts DEM pixels by height so we can process
     #the lowest pixels to the highest in propagating shortest path distances.
     valid_pixel_count = 0
-    for i in range(1,idim-1):
-        for j in range(1,jdim-1):
+    for i in range(idim):
+        for j in range(jdim):
             h = dem_pixels[i,j]
             if h == nodata_dem:
                 accumulation_matrix[i,j] = nodata_flow_accumulation 
@@ -756,7 +686,7 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     
     q = CQueue()
     for i in range(valid_pixel_count):
-            if i % 100 == 0:
+            if i % (valid_pixel_count/100) == 0:
                 LOGGER.debug('percent complete %2.2f %%' % 
                              (100*(i+1.0)/valid_pixel_count))
             q.append(dem_pixel_pairs[i].i)
@@ -945,7 +875,7 @@ def flow_direction_inf(dem, flow):
     
     nodata_d8 = d8_flow_dataset.GetRasterBand(1).GetNoDataValue()
 
-    d8_to_radians = {0: 0.0,
+    d8_to_radians = {0: -1.0,
                      1: 0.0,
                      2: 5.497787144,
                      4: 4.71238898,
@@ -957,12 +887,99 @@ def flow_direction_inf(dem, flow):
                      nodata_d8: nodata_flow
                      }
     
-    #for col_index in range(1, col_max - 1):
-    #    for row_index in range(1, row_max - 1):
-    #        if flow_matrix[col_index, row_index] == nodata_flow:
-    #            flow_matrix[col_index, row_index] = \
-    #                d8_to_radians[d8_flow_matrix[col_index, row_index]]
+    for col_index in range(1, col_max - 1):
+        for row_index in range(1, row_max - 1):
+            if flow_matrix[col_index, row_index] == nodata_flow:
+                flow_matrix[col_index, row_index] = \
+                    d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
+
+def calculate_ls_factor(upslope_area, aspect, cell_size, output_uri=''):
+    """Calculates the LS factor as Equation 3 from "Extension and validation 
+        of a geographic information system-based method for calculating the
+        Revised Universal Soil Loss Equation length-slope factor for erosion
+        risk assessments in large watersheds"   
+        
+        (Required that all raster inputs are same dimensions and projections)
+        upslope_area - a single band raster of type float that indicates
+            the contributing area at the inlet of a grid cell
+        aspect - a single band raster of type float that indicates the 
+            direction that slopes are facing in terms of radians east and
+            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
+            0 or 2pi is east.
+        cell_size - the width or height of the grid cells (requires that
+            cells are square)
+        uri - (optional) uri location to disk to store the resulting raster
+            
+        returns a raster of the same dimensions as inputs whose elements """
+            
+    pass
+
+def calculate_slope(dem, slope, aspect=None):
+    """Generates raster maps of slope, aspect, and curvature.  Follows the
+        algorithm described here http://grass.osgeo.org/gdp/html_grass64/r.slope.aspect.html
+        and here:
+        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
+        
+        dem - (input) a single band raster of z values.  z units should be identical
+            to ground units.
+        slope - (modified output) a single band raster of the same dimensions 
+            as dem whose elements are percent rise
+        aspect - (optional output) a single band raster of type float that 
+            indicates the direction that slopes are facing in terms of radians
+            east and increase clockwise: pi/2 is north, pi is west, 3pi/2, 
+            south and 0 or 2pi is east.
+            
+        returns """
+
+    LOGGER = logging.getLogger('calculateSlope')
+    #Read the DEM directly into an array
+    demBand = dem.GetRasterBand(1)
+    demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
+    LOGGER.debug('demBandMatrix size %s' % (demBandMatrix.size))
+
+    #Create an empty slope matrix
+    slopeMatrix = np.empty((demBand.YSize, demBand.XSize))
+    LOGGER.debug('slopeMatrix size %s' % (slopeMatrix.size))
+
+    gp = dem.GetGeoTransform()
+    cellXSize = gp[1]
+    cellYSize = gp[5]
+    nodata = demBand.GetNoDataValue()
+    LOGGER.info('starting pixelwise slope calculation')
+
+    LOGGER.debug('building kernels')
+    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
+    dzdyKernel = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64)
+    dzdxKernel = dzdyKernel.transpose().copy()
+    dzdyKernel /= (8 * cellYSize)
+    dzdxKernel /= (8 * cellXSize)
+
+    LOGGER.debug('doing convolution')
+    dzdx = scipy.signal.convolve2d(demBandMatrix, dzdxKernel, 'same')
+    dzdy = scipy.signal.convolve2d(demBandMatrix, dzdyKernel, 'same')
+    slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
+
+    #Now, "nodata" out the points that used nodata from the demBandMatrix
+    noDataIndex = demBandMatrix == nodata
+    LOGGER.debug('slopeMatrix and noDataIndex shape %s %s' %
+                 (slopeMatrix.shape, noDataIndex.shape))
+    slopeMatrix[noDataIndex] = -1
+
+    offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
+               (-1, -1)]
+    for offset in offsets:
+        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = -1
+
+    raster = slope.GetRasterBand(1)
+
+    LOGGER.debug('these are the band stats ' + str(raster.ComputeBandStats(False)))
+
+    rasterMin, rasterMax = raster.ComputeBandStats(False)
+    #make up stddev and mean
+    mean = (rasterMax + rasterMin) / 2.0
+    stdev = (rasterMax - mean) / 2.0
+    slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)

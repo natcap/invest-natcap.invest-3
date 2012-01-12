@@ -23,7 +23,6 @@ class TestSedimentBiophysical(unittest.TestCase):
         """A test constructed by hand to test the low level dinf direction and
             flow functions.  Intent is the the test case is small enough to be
             hand calculatable, yet large enough to be non-trivial."""
-        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
 
         projection = base.GetProjection()
@@ -56,7 +55,6 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with default InVEST 
            sample input."""
-        raise SkipTest
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
         base_dir = './data/sediment_test_data'
@@ -84,10 +82,13 @@ class TestSedimentBiophysical(unittest.TestCase):
             args['workspace_dir'] + os.sep + "/Intermediate/flow_direction.tif",
             './data/sediment_regression_data/flow_direction_regression.tif')
 
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + os.sep + "/Intermediate/flow_accumulation.tif",
+            './data/sediment_regression_data/flow_accumulation_regression.tif')
+
     def test_sediment_biophysical_simple_1(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
-        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
@@ -114,7 +115,6 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_simple_2(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
-        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
@@ -139,7 +139,6 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_simple_3(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
-
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
@@ -160,14 +159,3 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         #Direction 5.117281 was calculated by hand
         self.assertAlmostEqual(flowArray[0][0], 0.0)
-
-
-    def test_postprocessing_flow_direction(self):
-        """Test for a postprocessing quiver plot."""
-        raise SkipTest
-        args = {}
-        args['workspace_dir'] = './data/sediment_biophysical_output'
-        postprocessing.plot_flow_direction(args['workspace_dir'] + os.sep +
-            'Intermediate' + os.sep + 'flow.tif',
-            args['workspace_dir'] + os.sep + 'Intermediate' + os.sep +
-            'flow_arrows.png')
