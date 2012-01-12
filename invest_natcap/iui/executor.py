@@ -7,6 +7,9 @@ import traceback
 import logging
 
 
+#logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+#    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
 LOGGER = logging.getLogger('executor')
 
 class Executor(threading.Thread):
@@ -42,7 +45,7 @@ class Executor(threading.Thread):
             return None
 
     def cancel(self):
-        LOGGER.debug('Cancellation request received; finishing current operation')
+#        LOGGER.debug('Cancellation request received; finishing current operation')
         self.cancelFlag.set()
 
     def isCancelled(self):
@@ -77,15 +80,15 @@ class Executor(threading.Thread):
             self.setThreadFailed(False)
 
             if self.isCancelled():
-                LOGGER.debug('Remaining operations cancelled')
-#                print('Cancelled.')
+#                LOGGER.debug('Remaining operations cancelled')
+                print('Cancelled.')
                 break
             else:
                 self.funcMap[operation['type']](operation['uri'], operation['args'])
 
             if self.isThreadFailed():
-                LOGGER.debug('Exiting due to failures')
-#                print('Exiting due to failures')
+#                LOGGER.debug('Exiting due to failures')
+                print('Exiting due to failures')
                 break
 
         if not self.isThreadFailed():
