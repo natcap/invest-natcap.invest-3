@@ -1155,7 +1155,7 @@ class RootWindow(DynamicGroup):
         #loop through all elements known to the UI, assemble into a dictionary
         #with the mapping element ID -> element value
         for id, element in self.allElements.iteritems():
-            if issubclass(element.__class__, base_widgets.DynamicPrimitive):
+            if issubclass(element.__class__, DynamicPrimitive):
                 user_args[id] = str(element.value())
 
         #create a file in the current directory

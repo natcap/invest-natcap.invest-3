@@ -199,6 +199,7 @@ class Executor(threading.Thread):
 
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
+        logging.shutdown()
 
     def runValidator(self, uri, args):
         LOGGER.info('Starting validator')
