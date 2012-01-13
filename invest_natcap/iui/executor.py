@@ -5,9 +5,118 @@ import imp
 from collections import deque
 import traceback
 import logging
+import time
 
 LOGGER = logging.getLogger('executor')
 
+
+class Controller(object):
+    """The Controller class manages two Thread objects: Executor and 
+        PrintQueueChecker.  Executor runs models and queues up print statements
+        in a local printqueue list.  Printqueue checks on Executor's printqueue
+        and fetches the next message at a specified interval.
+        
+        The printqueuechecker exists to offload the work of list-related 
+        operations from the main thread, which leaves the main thread free to 
+        perform UI-related tasks."""
+        
+    def __init__(self):
+        object.__init__(self)
+        self.executor = Executor()
+        self.msg_checker = PrintQueueChecker(self.executor)
+        self.thread_finished = False
+    
+    def get_message(self):
+        """Check to see if the message checker thread is alive and returns the 
+            current message if so.  If the message checker thread is not alive,
+            None is returned and self.finished() is called."""
+            
+        if self.msg_checker.is_alive():
+            return self.msg_checker.get_message()
+        else:
+            self.finished()
+        
+    def start_executor(self):
+        """Starts the executor and message checker threads.  Returns nothing."""
+        
+        self.thread_finished = False
+        self.executor.start()
+        self.msg_checker.start()
+        
+    def cancel_executor(self):
+        """Trigger the executor's cancel event. Returns nothing."""
+        
+        self.executor.cancel()
+        
+    def finished(self):
+        """Set the executor and message checker thread objects to none and set 
+            the thread_finished variable to True.
+            
+            Returns nothing."""
+            
+        del self.executor
+        self.executor = None
+        del self.msg_checker
+        self.executor = None
+        self.thread_finished = True
+        
+    def is_finished(self):
+        """Returns True if the threads are finished.  False if not."""
+        
+        return self.thread_finished
+        
+    def add_operation(self, op, args=None, uri=None, index=None):
+        """Wrapper method for Executor.addOperation.  Creates new executor
+            and message checker thread instances if necessary. 
+            
+            Returns nothing."""
+        
+        if not self.executor:
+            self.executor = Executor()
+            self.msg_checker = PrintQueueChecker(self.executor)
+            
+        self.executor.addOperation(op, args, uri, index)
+    
+
+class PrintQueueChecker(threading.Thread):
+    """PrintQueueChecker is a thread class that checks on a specified executor
+        thread object.  By placing the responsibility of this operation in a
+        separate thread, we allow the main thread to attend to more pressing UI
+        related tasks."""
+        
+    def __init__(self, executor_object):
+        threading.Thread.__init__(self)
+        self.executor = executor_object
+        self.message = None
+    
+    def get_message(self):
+        """Check to see if there is a new message available.
+        
+        Returns the string message, if one is available.  None if not."""
+        
+        message = self.message
+        self.message = None #indicates the current message has been retrieved
+        return message
+        
+    def run(self):
+        """Fetch messages as long as the executor is alive or has messages.
+        
+            This method is reimplemented from threading.Thread and is started by
+            calling self.start().
+        
+            This function calls the executor object function getMessage(), which
+            uses the collections.deque queue object to manage the printqueue.
+            
+            The new message is only fetched from the executor if the main thread
+            has fetched the current message from this PrintQueueChecker 
+            instance.
+            
+            returns nothing."""
+        while self.executor.is_alive() or self.executor.hasMessages():
+            if self.message == None:
+                self.message = self.executor.getMessage()
+            time.sleep(0.1)
+    
 class Executor(threading.Thread):
     def __init__(self):
         logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
