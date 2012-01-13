@@ -69,7 +69,7 @@ class Controller(object):
             Returns nothing."""
         
         if not self.executor:
-            self.executor = executor.Executor()
+            self.executor = Executor()
             self.msg_checker = PrintQueueChecker(self.executor)
             
         self.executor.addOperation(op, args, uri, index)
