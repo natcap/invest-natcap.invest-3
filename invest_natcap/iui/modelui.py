@@ -50,7 +50,7 @@ class ModelUI(base_widgets.RootWindow):
         registrar = ModelUIRegistrar()
         self.okpressed = False
 
-        base_widgets.RootWindow.__init__(self, json.loads(uri), layout, registrar)
+        base_widgets.RootWindow.__init__(self, uri, layout, registrar)
 
 
         self.layout().setSizeConstraint(QtGui.QLayout.SetMinimumSize)
@@ -87,8 +87,8 @@ you get the error.\n4)ArcGIS version and service pack number\n\n\
 Feel free to also contact us about requests for collaboration, suggestions for \
 improvement, or anything else you'd like to share."
         self.feedbackURI = 'mailto:richsharp@stanford.edu?subject=InVEST Feedback'
-        self.links.setText('<a href=\"' + docURI + '\">Model documentation' +
-                             '</a> | <a href=\"' + self.feedbackURI + '\">' +
+        self.links.setText('<a href=\"' + docURI + '\">Model documentation' + 
+                             '</a> | <a href=\"' + self.feedbackURI + '\">' + 
                              'Send feedback</a>')
         self.links.linkActivated.connect(self.contactPopup)
 
@@ -303,14 +303,14 @@ def getFlatDefaultArgumentsDictionary(args):
     return flatDict
 
 
-def main(json_args, use_gui=True):
+def main(uri, use_gui=True):
     app = QtGui.QApplication(sys.argv)
 #    validate(json_args)
-    ui = ModelUI(json_args, use_gui)
+    ui = ModelUI(uri, use_gui)
     if use_gui == True:
         result = app.exec_()
     else:
-        orig_args = json.loads(json_args)
+        orig_args = json.loads(open(json_args).read())
         args = getFlatDefaultArgumentsDictionary(orig_args)
 
         thread = executor.Executor()
@@ -329,11 +329,7 @@ if __name__ == '__main__':
     #is version 2.5.
     parser = OptionParser()
     parser.add_option('-t', '--test', action='store_false', default=True, dest='test')
-    (options, args) = parser.parse_args(sys.argv)
+    (options, uri) = parser.parse_args(sys.argv)
 
-    modulename, json_args = args
-
-    args = open(json_args)
-
-    main(args.read(), options.test)
+    main(uri, options.test)
 
