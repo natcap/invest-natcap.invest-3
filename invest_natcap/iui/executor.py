@@ -9,7 +9,7 @@ import time
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
-    stream=sys.stdout)
+    stream=open(os.devnull, 'w'))
 
 LOGGER = logging.getLogger()
 
