@@ -1226,26 +1226,6 @@ been loaded.')
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
 
-    def showMessages(self, messageList):
-        """Add all messages in messageList to the messageArea QLabel.
-        
-            messageList - a python list of either tuples or strings.
-                If the list is of strings, messages are presumed to be status
-                messages.  If the list is of tuples, the tuples are expected
-                to have the structure (element pointer, error string).
-                
-            returns nothing. """
-
-        self.messageArea.setText('')
-        label = ''
-        for element in messageList:
-            if issubclass(element.__class__, tuple):
-                element[0].setBGcolorSatisfied(False)
-                label += str(element[1] + '\n')
-            else:
-                label += str(element + '\n')
-        self.messageArea.setText(label.rstrip())
-
 class ElementRegistrar(registrar.Registrar):
     def __init__(self):
         registrar.Registrar.__init__(self)
