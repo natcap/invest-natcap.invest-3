@@ -39,6 +39,7 @@ class Controller(object):
     def start_executor(self):
         """Starts the executor and message checker threads.  Returns nothing."""
         
+        self.thread_finished = False
         self.executor.start()
         self.msg_checker.start()
         
@@ -53,8 +54,10 @@ class Controller(object):
             
             Returns nothing."""
             
+        del self.executor
         self.executor = None
-        self.msg_checker = None
+        del self.msg_checker
+        self.executor = None
         self.thread_finished = True
         
     def is_finished(self):

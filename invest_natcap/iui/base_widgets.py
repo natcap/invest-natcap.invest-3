@@ -964,6 +964,7 @@ class OperationDialog(QtGui.QDialog):
         
             returns nothing."""
 
+        self.timer.stop()
         self.stop_buttons()
 
     def closeEvent(self, data=None):
