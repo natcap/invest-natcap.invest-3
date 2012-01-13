@@ -7,6 +7,9 @@ import traceback
 import logging
 import time
 
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
 LOGGER = logging.getLogger('executor')
 
 
@@ -119,9 +122,13 @@ class PrintQueueChecker(threading.Thread):
     
 class Executor(threading.Thread):
     def __init__(self):
-        logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-            %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
-            stream=self)
+        
+#        logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+#            %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
+#            stream=self)
+
+        handler = logging.StreamHandler(self)
+        LOGGER.addHandler(handler)
         
         threading.Thread.__init__(self)
 
@@ -150,7 +157,7 @@ class Executor(threading.Thread):
             return None
 
     def cancel(self):
-        LOGGER.debug('Cancellation request received; finishing current operation')
+        self.LOGGER.debug('Cancellation request received; finishing current operation')
         self.cancelFlag.set()
 
     def isCancelled(self):
@@ -191,7 +198,7 @@ class Executor(threading.Thread):
                 self.funcMap[operation['type']](operation['uri'], operation['args'])
 
             if self.isThreadFailed():
-                LOGGER.error('Exiting due to failures')
+                self.LOGGER.error('Exiting due to failures')
                 break
 
         if not self.isThreadFailed():
@@ -199,7 +206,6 @@ class Executor(threading.Thread):
 
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        logging.shutdown()
 
     def runValidator(self, uri, args):
         LOGGER.info('Starting validator')
