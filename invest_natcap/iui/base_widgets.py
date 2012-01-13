@@ -996,7 +996,10 @@ class OperationDialog(QtGui.QDialog):
 
 
 class RootWindow(DynamicElement):
-    def __init__(self, attributes, layout, object_registrar):
+    def __init__(self, uri, layout, object_registrar):
+        self.config_loader = fileio.JSONHandler(uri)
+        attributes = self.config_loader.get_attributes()
+        
         DynamicElement.__init__(self, attributes)
 
         self.type_registrar = registrar.DatatypeRegistrar()
@@ -1023,7 +1026,7 @@ class RootWindow(DynamicElement):
             self.layout().addWidget(self.body)
 
         self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
-        self.lastRun = last_run_handler.get_attributes()
+        self.lastRun = self.last_run_handler.get_attributes()
 
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
