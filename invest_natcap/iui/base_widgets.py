@@ -829,6 +829,15 @@ class Dropdown(LabeledElement):
             self.addItem(option)
 
         self.addElement(self.dropdown)
+        
+    def value(self):
+        if 'returns' in self.attributes:
+            if self.attributes['returns'] == 'strings':
+                return self.dropdown.currentText()
+            else: #return the ordinal
+                return self.dropdown.currentIndex()
+        else:
+            return self.dropdown.currentText()
 
 class OperationDialog(QtGui.QDialog):
     """ModelDialog is a class defining a modal window presented to the user
@@ -1235,7 +1244,8 @@ class ElementRegistrar(registrar.Registrar):
                    'folder': FileEntry,
                    'text': YearEntry,
                    'sliderSpinBox': SliderSpinBox,
-                   'hideableFileEntry': HideableFileEntry
+                   'hideableFileEntry': HideableFileEntry,
+                   'dropdown': Dropdown
                    }
         self.update_map(updates)
         
