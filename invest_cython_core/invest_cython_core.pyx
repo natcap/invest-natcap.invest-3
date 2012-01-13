@@ -897,27 +897,6 @@ def flow_direction_inf(dem, flow):
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
 
-def calculate_ls_factor(upslope_area, aspect, cell_size, output_uri=''):
-    """Calculates the LS factor as Equation 3 from "Extension and validation 
-        of a geographic information system-based method for calculating the
-        Revised Universal Soil Loss Equation length-slope factor for erosion
-        risk assessments in large watersheds"   
-        
-        (Required that all raster inputs are same dimensions and projections)
-        upslope_area - a single band raster of type float that indicates
-            the contributing area at the inlet of a grid cell
-        aspect - a single band raster of type float that indicates the 
-            direction that slopes are facing in terms of radians east and
-            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
-            0 or 2pi is east.
-        cell_size - the width or height of the grid cells (requires that
-            cells are square)
-        uri - (optional) uri location to disk to store the resulting raster
-            
-        returns a raster of the same dimensions as inputs whose elements """
-            
-    pass
-
 def calculate_slope(dem, slope):
     """Generates raster maps of slope.  Follows the algorithm described here:
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
@@ -977,3 +956,26 @@ def calculate_slope(dem, slope):
     mean = (rasterMax + rasterMin) / 2.0
     stdev = (rasterMax - mean) / 2.0
     slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
+
+def calculate_ls_factor(upslope_area, aspect, cell_size, ls_factor):
+    """Calculates the LS factor as Equation 3 from "Extension and validation 
+        of a geographic information system-based method for calculating the
+        Revised Universal Soil Loss Equation length-slope factor for erosion
+        risk assessments in large watersheds"   
+        
+        (Required that all raster inputs are same dimensions and projections)
+        upslope_area - a single band raster of type float that indicates
+            the contributing area at the inlet of a grid cell
+        aspect - a single band raster of type float that indicates the 
+            direction that slopes are facing in terms of radians east and
+            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
+            0 or 2pi is east.
+        cell_size - the width or height of the grid cells (requires that
+            cells are square)
+        ls_factor - (modified output) a single band raster dataset that will
+            have the per-pixel ls factor written to it
+            
+        returns a raster of the same dimensions as inputs whose elements """
+            
+        
+    pass
