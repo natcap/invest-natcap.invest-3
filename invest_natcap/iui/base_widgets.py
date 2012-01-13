@@ -1,7 +1,6 @@
 import sys
 import imp
 import os
-import platform
 import time
 
 from PyQt4 import QtGui, QtCore
@@ -9,7 +8,7 @@ from PyQt4 import QtGui, QtCore
 import iui_validator
 import executor
 import registrar
-import simplejson as json
+import fileio
 
 #This is for something
 CMD_FOLDER = '.'
@@ -996,7 +995,7 @@ class OperationDialog(QtGui.QDialog):
 
 
 
-class RootWindow(DynamicGroup):
+class RootWindow(DynamicElement):
     def __init__(self, attributes, layout, object_registrar):
         DynamicElement.__init__(self, attributes)
 
@@ -1023,15 +1022,8 @@ class RootWindow(DynamicGroup):
         else:
             self.layout().addWidget(self.body)
 
-        self.lastRun = {}
-        if 'modelName' in attributes:
-            modelname = self.attributes['modelName']
-            self.lastRunURI = str(CMD_FOLDER + '/cfg/' + modelname + '_lastrun_' + 
-                              platform.node() + '.json')
-        else:
-            self.lastRunURI = ''
-
-        self.getLastRun()
+        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+        self.lastRun = last_run_handler.get_attributes()
 
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
@@ -1137,13 +1129,6 @@ class RootWindow(DynamicGroup):
         if self.operationDialog.cancelled():
             QtCore.QCoreApplication.instance().exit()
 
-
-    def getLastRun(self):
-        try:
-            self.lastRun = json.loads(open(self.lastRunURI).read())
-        except IOError:
-            self.lastRun = {}
-
     def saveLastRun(self):
         """Saves the current values of all input elements to a JSON object on 
             disc.
@@ -1158,13 +1143,7 @@ class RootWindow(DynamicGroup):
             if issubclass(element.__class__, DynamicPrimitive):
                 user_args[id] = str(element.value())
 
-        #create a file in the current directory
-        user_args_file = open(self.lastRunURI, 'w')
-
-        #save a json rendition of the arguments dictionary to the newly opened
-        #file
-        user_args_file.writelines(json.dumps(user_args))
-        user_args_file.close()
+        self.last_run_handler.write_to_disk(user_args)
 
     def initElements(self):
         """Set the enabled/disabled state and text from the last run for all 

@@ -24,9 +24,9 @@ class JSONHandler(object):
         
         return self.dict
     
-    def write_to_disk(self):
+    def write_to_disk(self, dict):
         file = open(self.uri)
-        file.writelines(json.dumps(self.dict))
+        file.writelines(json.dumps(dict))
         file.close()
         
 class LastRunHandler(JSONHandler):
