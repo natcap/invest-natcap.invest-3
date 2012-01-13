@@ -793,10 +793,9 @@ class SliderSpinBox(DynamicPrimitive):
         self.slider.setValue(int(fieldValue * self.attributes['sliderSteps']))
 
 
-class HideableFileEntry(FileEntry):
+class HideableElement(LabeledElement):
     def __init__(self, attributes):
-        super(HideableFileEntry, self).__init__(attributes)
-
+        LabeledElement.__init__(self, attributes)
         self.checkbox = QtGui.QCheckBox(attributes['label'])
         self.checkbox.toggled.connect(self.toggleHiding)
         self.checkbox.toggled.connect(self.toggle)
@@ -805,8 +804,8 @@ class HideableFileEntry(FileEntry):
         self.elements.remove(self.label)
         self.elements.insert(0, self.checkbox)
         self.error.set_setting('start', 2)
-
         self.hideableElements = [self.textField, self.button]
+        
         self.toggleHiding(False)
 
     def toggleHiding(self, checked):
@@ -818,6 +817,17 @@ class HideableFileEntry(FileEntry):
 
     def requirementsMet(self):
         return self.checkbox.isChecked()
+
+class HideableFileEntry(HideableElement, FileEntry):
+    def __init__(self, attributes):
+        HideableElement.__init__(self, attributes)
+        FileEntry.__init__(self, attributes)
+
+    def requirementsMet(self):
+        if self.checkbox.isChecked():
+            return FileEntry.requirementsMet(self)
+        return False
+
 
 class Dropdown(LabeledElement):
     def __init__(self, attributes):
