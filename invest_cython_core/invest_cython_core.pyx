@@ -977,5 +977,10 @@ def calculate_ls_factor(upslope_area, aspect, cell_size, ls_factor):
             
         returns a raster of the same dimensions as inputs whose elements """
             
-        
+    upslope_area_matrix = upslope_area.GetRasterBand(1).ReadAsArray(0, 0, 
+        upslope_area.RasterXSize, upslope_area.RasterYSize).transpose().astype(np.float)
+
+    #Incoming matrix type could be anything numerical.  Cast to a floating
+    #point for cython speed and because it'slope the most general form.
+    cdef np.ndarray [np.float_t,ndim=2] dem_matrix = dem_matrix_tmp.astype(np.float)
     pass
