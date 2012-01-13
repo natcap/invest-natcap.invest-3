@@ -8,9 +8,10 @@ import logging
 import time
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
+    stream=sys.stdout)
 
-LOGGER = logging.getLogger('executor')
+LOGGER = logging.getLogger()
 
 
 class Controller(object):
@@ -127,7 +128,11 @@ class Executor(threading.Thread):
 #            %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
 #            stream=self)
 
+        format_string = '%(asctime)s %(name)-18s %(levelname)-8s %(message)s'
+        date_format = '%m/%d/%Y %H:%M:%S '
+        formatter = logging.Formatter(format_string, date_format)
         handler = logging.StreamHandler(self)
+        handler.setFormatter(formatter)
         LOGGER.addHandler(handler)
         
         threading.Thread.__init__(self)
