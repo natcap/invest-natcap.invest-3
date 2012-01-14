@@ -996,7 +996,11 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
         np.zeros((nrows,ncols))
         
     for row_index in range(1,nrows-1):
-        for col_index in range(1,nrows-1):
+        for col_index in range(1,ncols-1):
             #temporarily set ls to slope
             ls_factor_matrix[row_index,col_index] = \
                 slope_matrix[row_index,col_index]
+
+    ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(),0,0)
+    invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
+    
