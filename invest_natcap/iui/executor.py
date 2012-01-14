@@ -7,7 +7,11 @@ import traceback
 import logging
 import time
 
-LOGGER = logging.getLogger('executor')
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
+    stream=open(os.devnull, 'w'))
+
+LOGGER = logging.getLogger()
 
 
 class Controller(object):
@@ -119,9 +123,17 @@ class PrintQueueChecker(threading.Thread):
     
 class Executor(threading.Thread):
     def __init__(self):
-        logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-            %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
-            stream=self)
+        
+#        logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+#            %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
+#            stream=self)
+
+        format_string = '%(asctime)s %(name)-18s %(levelname)-8s %(message)s'
+        date_format = '%m/%d/%Y %H:%M:%S '
+        formatter = logging.Formatter(format_string, date_format)
+        handler = logging.StreamHandler(self)
+        handler.setFormatter(formatter)
+        LOGGER.addHandler(handler)
         
         threading.Thread.__init__(self)
 
@@ -150,7 +162,7 @@ class Executor(threading.Thread):
             return None
 
     def cancel(self):
-        LOGGER.debug('Cancellation request received; finishing current operation')
+        self.LOGGER.debug('Cancellation request received; finishing current operation')
         self.cancelFlag.set()
 
     def isCancelled(self):
@@ -191,7 +203,7 @@ class Executor(threading.Thread):
                 self.funcMap[operation['type']](operation['uri'], operation['args'])
 
             if self.isThreadFailed():
-                LOGGER.error('Exiting due to failures')
+                self.LOGGER.error('Exiting due to failures')
                 break
 
         if not self.isThreadFailed():

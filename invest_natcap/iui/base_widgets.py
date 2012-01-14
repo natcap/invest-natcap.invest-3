@@ -1,7 +1,6 @@
 import sys
 import imp
 import os
-import platform
 import time
 
 from PyQt4 import QtGui, QtCore
@@ -9,7 +8,7 @@ from PyQt4 import QtGui, QtCore
 import iui_validator
 import executor
 import registrar
-import simplejson as json
+import fileio
 
 #This is for something
 CMD_FOLDER = '.'
@@ -794,10 +793,9 @@ class SliderSpinBox(DynamicPrimitive):
         self.slider.setValue(int(fieldValue * self.attributes['sliderSteps']))
 
 
-class HideableFileEntry(FileEntry):
+class HideableElement(LabeledElement):
     def __init__(self, attributes):
-        super(HideableFileEntry, self).__init__(attributes)
-
+        LabeledElement.__init__(self, attributes)
         self.checkbox = QtGui.QCheckBox(attributes['label'])
         self.checkbox.toggled.connect(self.toggleHiding)
         self.checkbox.toggled.connect(self.toggle)
@@ -806,8 +804,8 @@ class HideableFileEntry(FileEntry):
         self.elements.remove(self.label)
         self.elements.insert(0, self.checkbox)
         self.error.set_setting('start', 2)
-
         self.hideableElements = [self.textField, self.button]
+        
         self.toggleHiding(False)
 
     def toggleHiding(self, checked):
@@ -820,6 +818,17 @@ class HideableFileEntry(FileEntry):
     def requirementsMet(self):
         return self.checkbox.isChecked()
 
+class HideableFileEntry(HideableElement, FileEntry):
+    def __init__(self, attributes):
+        HideableElement.__init__(self, attributes)
+        FileEntry.__init__(self, attributes)
+
+    def requirementsMet(self):
+        if self.checkbox.isChecked():
+            return FileEntry.requirementsMet(self)
+        return False
+
+
 class Dropdown(LabeledElement):
     def __init__(self, attributes):
         LabeledElement.__init__(self, attributes)
@@ -830,6 +839,15 @@ class Dropdown(LabeledElement):
             self.addItem(option)
 
         self.addElement(self.dropdown)
+        
+    def value(self):
+        if 'returns' in self.attributes:
+            if self.attributes['returns'] == 'strings':
+                return self.dropdown.currentText()
+            else: #return the ordinal
+                return self.dropdown.currentIndex()
+        else:
+            return self.dropdown.currentText()
 
 class OperationDialog(QtGui.QDialog):
     """ModelDialog is a class defining a modal window presented to the user
@@ -996,8 +1014,11 @@ class OperationDialog(QtGui.QDialog):
 
 
 
-class RootWindow(DynamicGroup):
-    def __init__(self, attributes, layout, object_registrar):
+class RootWindow(DynamicElement):
+    def __init__(self, uri, layout, object_registrar):
+        self.config_loader = fileio.JSONHandler(uri)
+        attributes = self.config_loader.get_attributes()
+        
         DynamicElement.__init__(self, attributes)
 
         self.type_registrar = registrar.DatatypeRegistrar()
@@ -1023,15 +1044,8 @@ class RootWindow(DynamicGroup):
         else:
             self.layout().addWidget(self.body)
 
-        self.lastRun = {}
-        if 'modelName' in attributes:
-            modelname = self.attributes['modelName']
-            self.lastRunURI = str(CMD_FOLDER + '/cfg/' + modelname + '_lastrun_' + 
-                              platform.node() + '.json')
-        else:
-            self.lastRunURI = ''
-
-        self.getLastRun()
+        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+        self.lastRun = self.last_run_handler.get_attributes()
 
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
@@ -1137,13 +1151,6 @@ class RootWindow(DynamicGroup):
         if self.operationDialog.cancelled():
             QtCore.QCoreApplication.instance().exit()
 
-
-    def getLastRun(self):
-        try:
-            self.lastRun = json.loads(open(self.lastRunURI).read())
-        except IOError:
-            self.lastRun = {}
-
     def saveLastRun(self):
         """Saves the current values of all input elements to a JSON object on 
             disc.
@@ -1155,16 +1162,10 @@ class RootWindow(DynamicGroup):
         #loop through all elements known to the UI, assemble into a dictionary
         #with the mapping element ID -> element value
         for id, element in self.allElements.iteritems():
-            if issubclass(element.__class__, base_widgets.DynamicPrimitive):
+            if issubclass(element.__class__, DynamicPrimitive):
                 user_args[id] = str(element.value())
 
-        #create a file in the current directory
-        user_args_file = open(self.lastRunURI, 'w')
-
-        #save a json rendition of the arguments dictionary to the newly opened
-        #file
-        user_args_file.writelines(json.dumps(user_args))
-        user_args_file.close()
+        self.last_run_handler.write_to_disk(user_args)
 
     def initElements(self):
         """Set the enabled/disabled state and text from the last run for all 
@@ -1244,26 +1245,6 @@ been loaded.')
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
 
-    def showMessages(self, messageList):
-        """Add all messages in messageList to the messageArea QLabel.
-        
-            messageList - a python list of either tuples or strings.
-                If the list is of strings, messages are presumed to be status
-                messages.  If the list is of tuples, the tuples are expected
-                to have the structure (element pointer, error string).
-                
-            returns nothing. """
-
-        self.messageArea.setText('')
-        label = ''
-        for element in messageList:
-            if issubclass(element.__class__, tuple):
-                element[0].setBGcolorSatisfied(False)
-                label += str(element[1] + '\n')
-            else:
-                label += str(element + '\n')
-        self.messageArea.setText(label.rstrip())
-
 class ElementRegistrar(registrar.Registrar):
     def __init__(self):
         registrar.Registrar.__init__(self)
@@ -1273,7 +1254,8 @@ class ElementRegistrar(registrar.Registrar):
                    'folder': FileEntry,
                    'text': YearEntry,
                    'sliderSpinBox': SliderSpinBox,
-                   'hideableFileEntry': HideableFileEntry
+                   'hideableFileEntry': HideableFileEntry,
+                   'dropdown': Dropdown
                    }
         self.update_map(updates)
         
