@@ -957,30 +957,53 @@ def calculate_slope(dem, slope):
     stdev = (rasterMax - mean) / 2.0
     slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
 
-def calculate_ls_factor(upslope_area, aspect, cell_size, ls_factor):
+def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
         risk assessments in large watersheds"   
         
-        (Required that all raster inputs are same dimensions and projections)
+        (Required that all raster inputs are same dimensions and projections
+        and have square cells)
         upslope_area - a single band raster of type float that indicates
             the contributing area at the inlet of a grid cell
+        slope - a single band raster of type float that indicates
+            the slope at a pixel given as a proportion (e.g. a value of 0.05
+            is a slope of 5%)
         aspect - a single band raster of type float that indicates the 
             direction that slopes are facing in terms of radians east and
             increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
             0 or 2pi is east.
-        cell_size - the width or height of the grid cells (requires that
-            cells are square)
         ls_factor - (modified output) a single band raster dataset that will
             have the per-pixel ls factor written to it
             
         returns a raster of the same dimensions as inputs whose elements """
-            
-    upslope_area_matrix = upslope_area.GetRasterBand(1).ReadAsArray(0, 0, 
-        upslope_area.RasterXSize, upslope_area.RasterYSize).transpose().astype(np.float)
-
-    #Incoming matrix type could be anything numerical.  Cast to a floating
-    #point for cython speed and because it'slope the most general form.
-    cdef np.ndarray [np.float_t,ndim=2] dem_matrix = dem_matrix_tmp.astype(np.float)
-    pass
+    
+    cdef int nrows = upslope_area.RasterXSize, \
+             ncols = upslope_area.RasterYSize, \
+             row_index, col_index
+    
+    #Assumes that cells are square
+    cdef float cell_size = abs(upslope_area.GetGeoTransform()[1])
+    cdef float cell_area = cell_size ** 2
+    
+    cdef np.ndarray [np.float_t,ndim=2] upslope_area_matrix = \
+        upslope_area.GetRasterBand(1).ReadAsArray(0, 0, \
+        nrows,ncols).transpose().astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] slope_matrix = \
+        slope.GetRasterBand(1).ReadAsArray(0, 0, \
+        nrows,ncols).transpose().astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] aspect_matrix = \
+        aspect.GetRasterBand(1).ReadAsArray(0, 0, \
+        nrows, ncols).transpose().astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] ls_factor_matrix = \
+        np.zeros((nrows,ncols))
+        
+    for row_index in range(1,nrows-1):
+        for col_index in range(1,nrows-1):
+            #temporarily set ls to slope
+            ls_factor_matrix[row_index,col_index] = \
+                slope_matrix[row_index,col_index]
