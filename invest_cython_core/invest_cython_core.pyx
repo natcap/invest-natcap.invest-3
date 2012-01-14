@@ -947,15 +947,8 @@ def calculate_slope(dem, slope):
     for offset in offsets:
         slopeMatrix[shiftMatrix(noDataIndex, *offset)] = -1
 
-    raster = slope.GetRasterBand(1)
-
-    LOGGER.debug('these are the band stats ' + str(raster.ComputeBandStats(False)))
-
-    rasterMin, rasterMax = raster.ComputeBandStats(False)
-    #make up stddev and mean
-    mean = (rasterMax + rasterMin) / 2.0
-    stdev = (rasterMax - mean) / 2.0
-    slope.GetRasterBand(1).SetStatistics(rasterMin, rasterMax, mean, stdev)
+    slope.GetRasterBand(1).WriteArray(slopeMatrix,0,0)
+    invest_core.calculateRasterStats(slope.GetRasterBand(1))
 
 def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
