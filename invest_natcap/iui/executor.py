@@ -203,7 +203,7 @@ class Executor(threading.Thread):
                 self.funcMap[operation['type']](operation['uri'], operation['args'])
 
             if self.isThreadFailed():
-                self.LOGGER.error('Exiting due to failures')
+                LOGGER.error('Exiting due to failures')
                 break
 
         if not self.isThreadFailed():
