@@ -40,6 +40,10 @@ def biophysical(args):
             part of a stream.  required if 'v_stream' is not provided.
         args['slope_threshold'] - A percentage slope threshold as described in
             the user's guide.
+        args['slope'] - an output raster file that holds the slope percentage
+            as a proporition from the dem
+        args['ls_factor'] - an output raster file containing the ls_factor
+            calculated on the particular dem
         args['v_stream_out'] - An output raster file that classifies the
             watersheds into stream and non-stream regions based on the
             value of 'threshold_flow_accumulation'
@@ -55,6 +59,17 @@ def biophysical(args):
     invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
                                               args['flow_accumulation'],
                                               args['dem'])
+
+    invest_cython_core.calculate_slope(args['dem'], args['slope'])
+
+    LOGGER.info("calculating LS factor accumulation")
+    invest_cython_core.calculate_ls_factor(args['flow_accumulation'],
+                                           args['slope'],
+                                           args['flow_direction'],
+                                           args['ls_factor'])
+
+
+
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
         LULC raster.
