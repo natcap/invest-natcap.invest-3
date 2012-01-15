@@ -981,7 +981,8 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
     #Assumes that cells are square
     cdef float cell_size = abs(upslope_area.GetGeoTransform()[1])
     cdef float cell_area = cell_size ** 2
-    cdef float m, alpha, xij
+    cdef float m, alpha, xij, contributing_area, 
+    cdef float upslope_nodata, aspect_nodata, ls_nodata
     
     cdef np.ndarray [np.float_t,ndim=2] upslope_area_matrix = \
         upslope_area.GetRasterBand(1).ReadAsArray(0, 0, \
@@ -1001,20 +1002,24 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
     for row_index in range(1,nrows-1):
         LOGGER.debug('row_index %s' % row_index)
         for col_index in range(1,ncols-1):
+            alpha = aspect_matrix[row_index, col_index]
+            xij = abs(sin(alpha)+ cos(alpha))
+            
+            contributing_area = \
+                (upslope_area_matrix[row_index,col_index]-1) * cell_area
+                
             #temporarily set m to 0.5 for debugging
             m = 0.5
-            alpha = aspect_matrix[row_index,col_index]
-            xij = abs(sin(aspect_matrix[row_index,col_index])+
-                  cos(aspect_matrix[row_index,col_index]))
+            
             #ls_factor_matrix[row_index,col_index] = xij**m
             ls_factor_matrix[row_index,col_index] = \
                 slope_matrix[row_index,col_index] * \
-                ((upslope_area_matrix[row_index,col_index]*cell_area)**(m+1)-
-                ((upslope_area_matrix[row_index,col_index]-1)*cell_area)**(m+1)) / \
+                (contributing_area**(m+1)-
+                (contributing_area+cell_area)**(m+1)) / \
                 ((cell_size**(m+2))*(xij**m)*(22.13**m))
                 
             #From the paper "as a final check against exessively long slope
-            #length calculations .. cap of 333m
+            #length calculations ... cap of 333m"
             if ls_factor_matrix[row_index,col_index] > 333:
                 ls_factor_matrix[row_index,col_index] = 333
 
