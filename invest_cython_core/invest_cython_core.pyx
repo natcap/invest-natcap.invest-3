@@ -1019,13 +1019,18 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
             
             contributing_area = \
                 (upslope_area_matrix[row_index,col_index]-1) * cell_area
-                
-            #temporarily set m to 0.5 for debugging
+
+            slope = slope_matrix[row_index, col_index]
+            #Set the m value to the lookup table that's in the InVEST 2.2.0
+            #documentation
             m = 0.5
+            if slope < 0.05: m = 0.4
+            if slope <= 0.035: m = 0.3
+            if slope <= 0.01: m = 0.2
             
             #ls_factor_matrix[row_index,col_index] = xij**m
             ls_factor_matrix[row_index,col_index] = \
-                slope_matrix[row_index,col_index] * \
+                slope * \
                 ((contributing_area+cell_area)**(m+1)-
                  contributing_area**(m+1)) / \
                 ((cell_size**(m+2))*(xij**m)*(22.13**m))
