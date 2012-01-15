@@ -947,7 +947,7 @@ def calculate_slope(dem, slope):
     offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
                (-1, -1)]
     for offset in offsets:
-        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = -1
+        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = slope.GetRasterBand(1).GetNoDataValue()
 
     slope.GetRasterBand(1).WriteArray(slopeMatrix,0,0)
     invest_core.calculateRasterStats(slope.GetRasterBand(1))
@@ -981,8 +981,13 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
     #Assumes that cells are square
     cdef float cell_size = abs(upslope_area.GetGeoTransform()[1])
     cdef float cell_area = cell_size ** 2
-    cdef float m, alpha, xij, contributing_area, 
-    cdef float upslope_nodata, aspect_nodata, ls_nodata
+    cdef float m, alpha, xij, contributing_area 
+    
+    #Tease out all the nodata values for reading and setting
+    cdef float upslope_nodata = upslope_area.GetRasterBand(1).GetNoDataValue()
+    cdef float slope_nodata = slope.GetRasterBand(1).GetNoDataValue()
+    cdef float aspect_nodata = aspect.GetRasterBand(1).GetNoDataValue()
+    cdef float ls_nodata = ls_factor.GetRasterBand(1).GetNoDataValue()
     
     cdef np.ndarray [np.float_t,ndim=2] upslope_area_matrix = \
         upslope_area.GetRasterBand(1).ReadAsArray(0, 0, \
@@ -1002,6 +1007,13 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
     for row_index in range(1,nrows-1):
         LOGGER.debug('row_index %s' % row_index)
         for col_index in range(1,ncols-1):
+            #Set the nodata bounds first
+            if aspect_matrix[row_index, col_index] == aspect_nodata or \
+                slope_matrix[row_index, col_index] == slope_nodata or \
+                upslope_area_matrix[row_index, col_index] == upslope_nodata:
+                ls_factor_matrix[row_index,col_index] = ls_nodata
+                continue
+                
             alpha = aspect_matrix[row_index, col_index]
             xij = abs(sin(alpha)+ cos(alpha))
             
@@ -1014,8 +1026,8 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
             #ls_factor_matrix[row_index,col_index] = xij**m
             ls_factor_matrix[row_index,col_index] = \
                 slope_matrix[row_index,col_index] * \
-                (contributing_area**(m+1)-
-                (contributing_area+cell_area)**(m+1)) / \
+                ((contributing_area+cell_area)**(m+1)-
+                 contributing_area**(m+1)) / \
                 ((cell_size**(m+2))*(xij**m)*(22.13**m))
                 
             #From the paper "as a final check against exessively long slope
@@ -1025,4 +1037,3 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
 
     ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(),0,0)
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
-    
