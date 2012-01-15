@@ -952,7 +952,8 @@ def calculate_slope(dem, slope):
     slope.GetRasterBand(1).WriteArray(slopeMatrix,0,0)
     invest_core.calculateRasterStats(slope.GetRasterBand(1))
 
-def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
+def calculate_ls_factor(upslope_area, slope, aspect, ls_factor,
+    slope_threshold = 0.075):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
@@ -971,6 +972,9 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
             0 or 2pi is east.
         ls_factor - (modified output) a single band raster dataset that will
             have the per-pixel ls factor written to it
+        slope_threshold - the cutoff for areas that the LS factor should be
+            calcualted with the Huan and Lu formula from the InVEST 2.2.0 user's
+            guide 
             
         returns a raster of the same dimensions as inputs whose elements """
     
@@ -1035,6 +1039,11 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
                  contributing_area**(m+1)) / \
                 ((cell_size**(m+2))*(xij**m)*(22.13**m))
                 
+            #This case handles high slopes from the InVEST 2.2.0 manual
+            if slope > slope_threshold:
+                ls_factor_matrix[row_index,col_index] = \
+                    0.08 * cell_area**0.35 * slope ** 0.6
+            
             #From the paper "as a final check against exessively long slope
             #length calculations ... cap of 333m"
             if ls_factor_matrix[row_index,col_index] > 333:
