@@ -24,6 +24,8 @@ cdef extern from "stdlib.h":
 cdef extern from "math.h":
     double atan(double x)
     double sqrt(double x)
+    double sin(double x)
+    double cos(double x)
 
 cdef extern from "simplequeue.h":
     ctypedef struct Queue:
@@ -979,6 +981,7 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
     #Assumes that cells are square
     cdef float cell_size = abs(upslope_area.GetGeoTransform()[1])
     cdef float cell_area = cell_size ** 2
+    cdef float m, alpha, xij
     
     cdef np.ndarray [np.float_t,ndim=2] upslope_area_matrix = \
         upslope_area.GetRasterBand(1).ReadAsArray(0, 0, \
@@ -996,10 +999,19 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
         np.zeros((nrows,ncols))
         
     for row_index in range(1,nrows-1):
+        LOGGER.debug('row_index %s' % row_index)
         for col_index in range(1,ncols-1):
             #temporarily set ls to slope
-            ls_factor_matrix[row_index,col_index] = \
-                slope_matrix[row_index,col_index]
+            m = 0.5
+            alpha = aspect_matrix[row_index,col_index]
+            xij = (sin(aspect_matrix[row_index,col_index])+
+                  cos(aspect_matrix[row_index,col_index]))
+#            ls_factor_matrix[row_index,col_index] = aspect_matrix[row_index,col_index]
+#            ls_factor_matrix[row_index,col_index] = \
+#                slope_matrix[row_index,col_index] * \
+#                ((upslope_area_matrix[row_index,col_index]*cell_area)**(m+1)-
+#                ((upslope_area_matrix[row_index,col_index]-1)*cell_area)**(m+1)) / \
+#                ((cell_size**(m+2))*(xij**m)*(22.13**m))
 
     ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(),0,0)
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
