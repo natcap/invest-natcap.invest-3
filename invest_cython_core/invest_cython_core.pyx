@@ -1001,17 +1001,22 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
     for row_index in range(1,nrows-1):
         LOGGER.debug('row_index %s' % row_index)
         for col_index in range(1,ncols-1):
-            #temporarily set ls to slope
+            #temporarily set m to 0.5 for debugging
             m = 0.5
             alpha = aspect_matrix[row_index,col_index]
-            xij = (sin(aspect_matrix[row_index,col_index])+
+            xij = abs(sin(aspect_matrix[row_index,col_index])+
                   cos(aspect_matrix[row_index,col_index]))
-#            ls_factor_matrix[row_index,col_index] = aspect_matrix[row_index,col_index]
-#            ls_factor_matrix[row_index,col_index] = \
-#                slope_matrix[row_index,col_index] * \
-#                ((upslope_area_matrix[row_index,col_index]*cell_area)**(m+1)-
-#                ((upslope_area_matrix[row_index,col_index]-1)*cell_area)**(m+1)) / \
-#                ((cell_size**(m+2))*(xij**m)*(22.13**m))
+            #ls_factor_matrix[row_index,col_index] = xij**m
+            ls_factor_matrix[row_index,col_index] = \
+                slope_matrix[row_index,col_index] * \
+                ((upslope_area_matrix[row_index,col_index]*cell_area)**(m+1)-
+                ((upslope_area_matrix[row_index,col_index]-1)*cell_area)**(m+1)) / \
+                ((cell_size**(m+2))*(xij**m)*(22.13**m))
+                
+            #From the paper "as a final check against exessively long slope
+            #length calculations .. cap of 333m
+            if ls_factor_matrix[row_index,col_index] > 333:
+                ls_factor_matrix[row_index,col_index] = 333
 
     ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(),0,0)
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
