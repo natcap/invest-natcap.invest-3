@@ -31,42 +31,42 @@ def execute(args):
         args['wave_data_shape_path'] - The path to the point shapefile created during biophysical run.
         """
 
-    valuationargs = {}
-    valuationargs['workspace_dir'] = args['workspace_dir']
-    valuationargs['projection'] = args['projection_uri']
-    valuationargs['global_dem'] = gdal.Open(args['global_dem'])
-    valuationargs['capturedWE'] = gdal.Open(args['capturedWE'])
-    valuationargs['wave_data_shape'] = ogr.Open(args['wave_data_shape_path'])
-    valuationargs['number_machines'] = args['numberOfMachines']
+    valuation_args = {}
+    valuation_args['workspace_dir'] = args['workspace_dir']
+    valuation_args['projection'] = args['projection_uri']
+    valuation_args['global_dem'] = gdal.Open(args['global_dem'])
+    valuation_args['capturedWE'] = gdal.Open(args['capturedWE'])
+    valuation_args['wave_data_shape'] = ogr.Open(args['wave_data_shape_path'])
+    valuation_args['number_machines'] = args['numberOfMachines']
     #Open/create the output directory
-    outputDir = args['workspace_dir'] + os.sep + 'Output' + os.sep
-    intermediateDir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
-    for dir in [outputDir, intermediateDir]:
+    output_dir = args['workspace_dir'] + os.sep + 'Output' + os.sep
+    intermediate_dir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
+    for dir in [output_dir, intermediate_dir]:
         if not os.path.exists(dir):
             os.makedirs(dir)
 
     #Read machine economic parameters into a dictionary
     try:
         machine_econ = {}
-        machineEconFile = open(args['machine_econ_uri'])
-        reader = csv.DictReader(machineEconFile)
+        machine_econ_file = open(args['machine_econ_uri'])
+        reader = csv.DictReader(machine_econ_file)
         for row in reader:
             machine_econ[row['NAME'].strip()] = row
-        machineEconFile.close()
-        valuationargs['machine_econ'] = machine_econ
+        machine_econ_file.close()
+        valuation_args['machine_econ'] = machine_econ
     except IOError, e:
         print 'File I/O error' + e
     #Read landing and power grid connection points into a dictionary
     try:
-        landGridPts = {}
-        landGridPtsFile = open(args['land_gridPts_uri'])
-        reader = csv.DictReader(landGridPtsFile)
+        land_grid_pts = {}
+        land_grid_pts_file = open(args['land_gridPts_uri'])
+        reader = csv.DictReader(land_grid_pts_file)
         for row in reader:
-            landGridPts[row['ID'].strip()] = row
-        landGridPtsFile.close()
-        valuationargs['land_gridPts'] = landGridPts
+            land_grid_pts[row['ID'].strip()] = row
+        land_grid_pts_file.close()
+        valuation_args['land_gridPts'] = land_grid_pts
     except IOError, e:
         print 'File I/O error' + e
 
     #Call the valuation core module with attached arguments to run the economic valuation
-    waveEnergy_core.valuation(valuationargs)
+    waveEnergy_core.valuation(valuation_args)
