@@ -533,7 +533,6 @@ def valuation(args):
     raster_projected_path = interDir + os.sep + 'raster_projected.tif'
     
     dem = args['global_dem']
-    capWE = args['capturedWE']
     gt = dem.GetGeoTransform()
     pixel_xsize = float(gt[1])
     pixel_ysize = np.absolute(float(gt[5]))
