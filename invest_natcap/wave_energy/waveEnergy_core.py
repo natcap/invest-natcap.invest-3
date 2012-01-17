@@ -7,7 +7,6 @@ from osgeo import gdal
 from osgeo.gdalconst import GA_Update
 import osgeo.osr as osr
 from osgeo import ogr
-import scipy
 from scipy.interpolate import LinearNDInterpolator as ip
 
 import invest_cython_core
