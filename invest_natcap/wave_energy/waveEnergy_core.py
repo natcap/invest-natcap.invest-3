@@ -56,9 +56,9 @@ def biophysical(args):
     datatype = gdal.GDT_Float32
     #Since the global dem is the finest resolution we get as an input,
     #use its pixel sizes as the sizes for the new rasters
-    gt = dem.GetGeoTransform()
-    pixel_xsize = float(gt[1])
-    pixel_ysize = np.absolute(float(gt[5]))
+    dem_gt = global_dem.GetGeoTransform()
+    pixel_xsize = float(dem_gt[1])
+    pixel_ysize = np.absolute(float(dem_gt[5]))
     #Determine which shapefile will be used to determine area of interest
     if 'AOI' in args:
         #The AOI shapefile has a different projection than lat/long so by calling
@@ -73,7 +73,7 @@ def biophysical(args):
     #We do all wave power calculations by manipulating the fields in
     #the wave data shapefile, thus we need to add proper depth values
     #from the raster DEM
-    dem_gt = global_dem.GetGeoTransform()
+#    dem_gt = global_dem.GetGeoTransform()
     dem_band = global_dem.GetRasterBand(1)
     xsize = dem_band.XSize
     ysize = dem_band.YSize
