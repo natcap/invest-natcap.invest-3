@@ -33,8 +33,6 @@ def execute(args):
         
         """
 
-    filesystemencoding = sys.getfilesystemencoding()
-
     #Create the Output and Intermediate directories if they do not exist.
     outputDir = args['workspace_dir'] + os.sep + 'Output' + os.sep
     intermediateDir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
@@ -88,26 +86,26 @@ def execute(args):
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
         biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.txt')
-        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
-        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding), 1)
+        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path, 1)
+        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path, 1)
     elif args['analysis_area_uri'] == 'East Coast of North America and Puerto Rico':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
         biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.txt')
-        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
-        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding))
+        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path, 1)
+        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global(Eastern Hemisphere)':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
         biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.txt')
-        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
-        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding))
+        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path, 1)
+        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global(Western Hemisphere)':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
         biophysicalargs['wave_base_data'] = extrapolateWaveData(args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.txt')
-        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path.encode(filesystemencoding), 1)
-        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path.encode(filesystemencoding))
+        biophysicalargs['analysis_area'] = ogr.Open(analysis_area_path, 1)
+        biophysicalargs['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     else:
         print 'Analysis Area ERROR'
 
@@ -115,7 +113,7 @@ def execute(args):
     AOI = None
     if 'AOI_uri' in args:
         try:
-            AOI = ogr.Open(args['AOI_uri'].encode(filesystemencoding), 1)
+            AOI = ogr.Open(args['AOI_uri'], 1)
             biophysicalargs['AOI'] = AOI
         except IOError, e:
             print 'File I/O error' + e
