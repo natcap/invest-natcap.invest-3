@@ -757,36 +757,43 @@ def calculate_distance(xy_1, xy_2):
         mindist[i], minid[i] = dists.min(), dists.argmin()
     return mindist, minid
 
-def change_shape_projection(shapeToReproject, projection, outputPath):
+def change_shape_projection(shape_to_reproject, projection, output_path):
     """Changes the projection of a shapefile by creating a new shapefile based on
-    the projection passed in and then copying all the features and fields of
-    the shapefile to reproject to the new shapefile.
+    the projection passed in.  The new shapefile then copies all the features and fields of
+    the shapefile to reproject as its own. The reprojected shapefile is written to 'outputpath'
+    and is returned.
+    
+    shape_to_reproject - A shapefile to be copied and reprojected.
+    projection - A file path to the location of the desired projection.
+    output_path - The path to where the new shapefile should be written to disk.
+    
+    returns - The reprojected shapefile.
     """
-    shape_source = outputPath
-
+    shape_source = output_path
+    #If this file already exists, then remove it
     if os.path.isfile(shape_source):
         os.remove(shape_source)
     #Get the layer of points from the current point geometry shape
-    in_layer = shapeToReproject.GetLayer(0)
+    in_layer = shape_to_reproject.GetLayer(0)
     #Get the layer definition which holds needed attribute values
     in_defn = in_layer.GetLayerDefn()
     #Create a new shapefile with similar properties of the current point geometry shape
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
     shp_ds = shp_driver.CreateDataSource(shape_source)
-    
-    prjFile = open(projection)
-    prj = prjFile.read()
-
+    #Open the projection file and read in contents as a string
+    prj_file = open(projection)
+    prj = prj_file.read()
+    #Create a new spatial reference and set it from 'prj' string
     srs_prj = osr.SpatialReference()
     srs_prj.ImportFromWkt(prj)
-
+    #Create the new layer for the shapefile using same name and geometry type from
+    #shape_to_reproject, but different projection
     shp_layer = shp_ds.CreateLayer(in_defn.GetName(), srs_prj, in_defn.GetGeomType())
     #Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()
     #For every field, create a duplicate field and add it to the new shapefiles layer
     for fld_index in range(in_field_count):
         src_fd = in_defn.GetFieldDefn(fld_index)
-
         fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
         fd.SetWidth(src_fd.GetWidth())
         fd.SetPrecision(src_fd.GetPrecision())
@@ -794,19 +801,18 @@ def change_shape_projection(shapeToReproject, projection, outputPath):
     
     in_layer.ResetReading()
     in_feat = in_layer.GetNextFeature()
- 
+    #Copy all of the features in shape_to_reproject to the new shapefile
     while in_feat is not None:
         geom = in_feat.GetGeometryRef()
-        #Get the spatial reference of the geometry to use in transforming
-        sourceSR = geom.GetSpatialReference()
-        #Get the spatial reference of the geometry to use in transforming
-        targetSR = srs_prj
+        #Get the spatial reference of the source geometry to use in transforming
+        source_sr = geom.GetSpatialReference()
+        #Get the spatial reference of the target geometry to use in transforming
+        target_sr = srs_prj
         #Create a coordinate transformation
-        coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
-        #Transform the polygon geometry into the same format as the point shape geometry
-        geom.Transform(coordTrans)
-
-        #Create a new feature from the input feature and set its geometry
+        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        #Transform the geometry into a format desired for the new projection
+        geom.Transform(coord_trans)
+        #Copy shape_to_reproject's feature and set as new shapes feature
         out_feat = ogr.Feature(feature_def=shp_layer.GetLayerDefn())
         out_feat.SetFrom(in_feat)
         out_feat.SetGeometry(geom)
