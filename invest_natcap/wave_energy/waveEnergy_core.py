@@ -408,8 +408,8 @@ def wave_energy_interp(wave_data, machine_perf):
 
 def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     """Computes the wave energy capacity for each point and
-    generates a dictionary whos keys are the points and whos value
-    is the wave energy capacity
+    generates a dictionary whos keys are the points (I,J) and whos value
+    is the wave energy capacity.
     
     wave_data - A dictionary containing wave watch data
     interp_z - A 2D array of the interpolated values for the machine
@@ -417,7 +417,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     machine_param - A dictionary containing the restrictions for the machines
                     (CapMax, TpMax, HsMax)
                     
-    returns - A dictionary
+    returns - A dictionary representing the wave energy capacity at each wave point
     """
     energyCap = {}
     #Get the row,col headers (ranges) for the wave watch data
