@@ -3,6 +3,7 @@
 
 import math
 import logging
+import bisect
 
 import numpy as np
 cimport numpy as np
@@ -1025,12 +1026,13 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor,
                 (upslope_area_matrix[row_index,col_index]-1) * cell_area
 
             slope = slope_matrix[row_index, col_index]
+            
             #Set the m value to the lookup table that's in the InVEST 2.2.0
-            #documentation
-            m = 0.5
-            if slope < 0.05: m = 0.4
-            if slope <= 0.035: m = 0.3
-            if slope <= 0.01: m = 0.2
+            #documentation.  Use the bisect function to do a nifty range 
+            #lookup. http://docs.python.org/library/bisect.html#other-examples
+            slope_table = [0.01, 0.035, 0.05]
+            exponent_table = [0.2, 0.3, 0.4, 0.5]
+            m = exponent_table[bisect.bisect(slope_table,slope)]
             
             #ls_factor_matrix[row_index,col_index] = xij**m
             ls_factor_matrix[row_index,col_index] = \
