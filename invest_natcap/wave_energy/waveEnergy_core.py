@@ -306,13 +306,14 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
 
 def get_points_values(shape, key, value_array, value):
     """Generates a list of points and a list of values based on a point
-    geometry shapefile and other criteria from the arguments
+    geometry shapefile
     
     shape - A point geometry shapefile of which to gather the information from
-    key   - A list of fields from shape that will be you points
-    value_array - A list of all the relevant fields from shape requiring fields
-                    to be used as key and field for the value
-    value - A string representing the field from shape to be used as the value
+    key   - A list of fields from shapefile shape whose values will be the points
+    value_array - A list of fields, where the list contains the fields used in
+                  key and value
+    value - A string representing the field from shapefile shape that is
+            to be returned
     
     returns - A list of points and values (points represented as 2D list, values as list)
      """
@@ -322,14 +323,16 @@ def get_points_values(shape, key, value_array, value):
     shape_layer.ResetReading()
     #Get the first point from the shape layer
     shape_feat = shape_layer.GetNextFeature()
-
     field_dict = {}
-    #For all the points in the layer add the desired 'key' and 'value' to the dictionary.
+    #For all the points in the layer add the desired 
+    #'key' and 'value' to the dictionary.
     while shape_feat is not None:
-        #This dictionary is used to store the needed values of the desired fields from 'value_array'
+        #This dictionary is used to store the needed values 
+        #of the desired fields from 'value_array'
         value_dict = {}
         #May want to check to make sure field is in shape layer
-        #For the relevant field in the list value_array, add the fields value to the dictionary
+        #For the relevant field in the list value_array, 
+        #add the fields value to the dictionary
         for field in value_array:
             field_index = shape_feat.GetFieldIndex(field)
             value_dict[field] = shape_feat.GetField(field_index)
@@ -338,7 +341,8 @@ def get_points_values(shape, key, value_array, value):
         for k in key:
             key_list.append(value_dict[k])
         tupled_key = tuple(key_list)
-        #Set the created tuple as the key of this dictionary and set its value to desired element from value_dict
+        #Set the created tuple as the key of this dictionary 
+        #and set its value to desired element from value_dict
         field_dict[tupled_key] = value_dict[value]
 
         shape_feat.Destroy()
