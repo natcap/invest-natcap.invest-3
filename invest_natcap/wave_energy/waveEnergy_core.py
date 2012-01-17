@@ -463,18 +463,19 @@ def compute_wave_energy_capacity(waveData, interpZ, machineParam):
 
     return energyCap
 
-#This function will hopefully take the dictionary of waveEnergyCapacity sums and
-#interpolate them and rasterize them.
-def captured_wave_energy_to_shape(energyCap, waveShape):
-    """Adds a field, value to a shapefile from a dictionary
+def captured_wave_energy_to_shape(energy_cap, wave_shape):
+    """Adds each captured wave energy value from the dictionary
+    energy_cap to a field of the shapefile wave_shape. The values are
+    set corresponding to the same I,J values which is the key of the
+    dictionary and used as the unique identier of the shape.
     
-    energyCap - A dictionary representing the wave energy capacity
-    waveShape  - A point geometry shapefile to write the new field/values to
+    energy_cap - A dictionary with keys (I,J), representing the wave energy capacity
+                values.
+    wave_shape  - A point geometry shapefile to write the new field/values to
     
-    returns - Nothing
-    
+    returns - Nothing    
     """
-    wave_Layer = waveShape.GetLayer(0)
+    wave_Layer = wave_shape.GetLayer(0)
     #Incase the layer has already been read through earlier in the program
     #reset it to start from the beginning
     wave_Layer.ResetReading()
@@ -485,16 +486,15 @@ def captured_wave_energy_to_shape(energyCap, waveShape):
     #corresponding point/value from the dictionary and set the 'capWE_Sum'
     #field as the value from the dictionary
     for feat in wave_Layer:
-        iIndex = feat.GetFieldIndex('I')
-        jIndex = feat.GetFieldIndex('J')
-        iVal = feat.GetField(iIndex)
-        jVal = feat.GetField(jIndex)
-        value = energyCap[(iVal, jVal)]
+        index_i = feat.GetFieldIndex('I')
+        index_j = feat.GetFieldIndex('J')
+        value_i = feat.GetField(index_i)
+        value_j = feat.GetField(index_j)
+        we_value = energy_cap[(value_i, value_j)]
         
         index = feat.GetFieldIndex('capWE_Sum')
-        feat.SetField(index, value)
-
-        #save the field modifications to the layer.
+        feat.SetField(index, we_value)
+        #Save the feature modifications to the layer.
         wave_Layer.SetFeature(feat)
         feat.Destroy()
 
