@@ -750,12 +750,12 @@ def get_points_geometries(shape):
     return np.array(point)
     
 def calculate_distance(xy_1, xy_2):
-    mindist = np.zeros(len(xy_1))
-    minid = np.zeros(len(xy_1))
+    min_dist = np.zeros(len(xy_1))
+    min_id = np.zeros(len(xy_1))
     for i, xy in enumerate(xy_1):
         dists = np.sqrt(np.sum((xy - xy_2) ** 2, axis=1))
-        mindist[i], minid[i] = dists.min(), dists.argmin()
-    return mindist, minid
+        min_dist[i], min_id[i] = dists.min(), dists.argmin()
+    return min_dist, min_id
 
 def change_shape_projection(shape_to_reproject, projection, output_path):
     """Changes the projection of a shapefile by creating a new shapefile based on
