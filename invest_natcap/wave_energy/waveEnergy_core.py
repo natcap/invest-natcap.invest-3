@@ -4,8 +4,7 @@ import os
 
 import numpy as np
 from osgeo import gdal
-import osgeo.gdal
-from osgeo.gdalconst import *
+from osgeo.gdalconst import GA_Update
 import osgeo.osr as osr
 from osgeo import ogr
 import scipy
@@ -15,22 +14,26 @@ import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
 def biophysical(args):
-    """Runs the biophysical part of the Wave Energy Model (WEM). Generates a wave power raster,
-    wave energy capacity raster, and a wave data shapefile that hosts various attributes for
+    """Runs the biophysical part of the Wave Energy Model (WEM). 
+    Generates a wave power raster, wave energy capacity raster, 
+    and a wave data shapefile that hosts various attributes for
     wave farm locations, such as depth, wave height, and wave period.
     Required:
     args['workspace_dir'] - the workspace path
-    args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
+    args['wave_data_dir'] - the wave data path, used for retreiving other 
+                            relevant files.
     args['wave_base_data'] - a dictionary of seastate bin data.
-    args['analysis_area'] - a point geometry shapefile representing the relevant WW3 points
-    args['analysis_area_extract'] - a polygon geometry shapefile encompassing the broader range
-                                    of interest.
+    args['analysis_area'] - a point geometry shapefile representing the 
+                            relevant WW3 points
+    args['analysis_area_extract'] - a polygon geometry shapefile encompassing 
+                                    the broader range of interest.
     args['machine_perf'] - a 2D array representing the machine performance table.
     args['machine_param'] - a dictionary which holds the machine parameter values.
     args['dem'] - a GIS raster file of the global elevation model
     
     Optional (but required for valuation):
-    args['AOI'] - a polygon geometry shapefile outlining a more specific area of interest (Optional).
+    args['AOI'] - a polygon geometry shapefile outlining a more 
+                  specific area of interest (Optional).
 
     returns - Nothing
     """
