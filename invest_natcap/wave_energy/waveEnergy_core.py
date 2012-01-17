@@ -419,6 +419,11 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
                     
     returns - A dictionary representing the wave energy capacity at each wave point
     """
+    #It seems that the capacity max is already set to it's limit in
+    #the machine performance table. However, if it needed to be
+    #restricted the following line could be used:
+    #interp_z = np.where(interp_z>cap_max, cap_max, interp_z)
+    
     energy_cap = {}
     #Get the row,col headers (ranges) for the wave watch data
     wave_row = wave_data.pop(0)
@@ -427,6 +432,8 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     cap_max = float(machine_param['CapMax']['VALUE'])
     period_max = float(machine_param['TpMax']['VALUE'])
     height_max = float(machine_param['HsMax']['VALUE'])
+    #Set position variables to use as a check and as an end
+    #point for rows/cols if restrictions limit the ranges
     period_max_pos = -1
     height_max_pos = -1
     #Using the restrictions find the max position (index) for period and height
@@ -440,6 +447,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     #For all the wave watch points, multiply the occurence matrix by the interpolated
     #machine performance matrix to get the captured wave energy
     for key, val in wave_data.iteritems():
+        #Convert all values to type float
         temp_array = np.array(val, dtype='f')
         mult_array = np.multiply(temp_array, interp_z)
         #Set any value that is outside the restricting ranges provided by 
@@ -450,12 +458,10 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
             mult_array[height_max_pos:, :] = 0
         #Divide the matrix by 5 to get the yearly values
         valid_array = np.divide(mult_array, 5.0)
-#        valid_array = np.where(mult_array>cap_max, cap_max, mult_array)
         #Since we are doing a cubic interpolation there is a possibility we
-        #will have negative values where they should be zero.  So here
+        #will have negative values where they should be zero. So here
         #we drive any negative values to zero.
         valid_array = np.where(valid_array < 0, 0, valid_array)
-#            def deviceConstraints(a, capmax, hmax, tmax):
         #Sum all of the values from the matrix to get the total captured wave energy
         #and convert into mega watts
         sum = (valid_array.sum() / 1000)
