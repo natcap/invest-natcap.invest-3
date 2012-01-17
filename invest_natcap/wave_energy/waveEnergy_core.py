@@ -226,27 +226,27 @@ def clip_raster_from_polygon(shape, raster, path):
 #the polygon shape you want the other shapefile cut to,
 #and the path for the new shapefile
 #It returns a new shapefile in the same format/projection as shapeToClip
-def clip_shape(shapeToClip, bindingShape, outputPath):
+def clip_shape(shape_to_clip, binding_shape, output_path):
     """Copies a polygon or point geometry shapefile, only keeping the features
     that intersect or are within a binding polygon shape.
     
-    shapeToClip - A point or polygon shapefile to clip
-    bindingShape - A polygon shapefile indicating the bounds for the
-                    shapeToClip features
-    outputPath  - The path for the clipped output shapefile
+    shape_to_clip - A point or polygon shapefile to clip
+    binding_shape - A polygon shapefile indicating the bounds for the
+                    shape_to_clip features
+    output_path  - The path for the clipped output shapefile
     
-    returns - A shapefile representing the clipped version of shapeToClip
+    returns - A shapefile representing the clipped version of shape_to_clip
     """
-    shape_source = outputPath
+    shape_source = output_path
 
     if os.path.isfile(shape_source):
         os.remove(shape_source)
     #Get the layer of points from the current point geometry shape
-    in_layer = shapeToClip.GetLayer(0)
+    in_layer = shape_to_clip.GetLayer(0)
     #Get the layer definition which holds needed attribute values
     in_defn = in_layer.GetLayerDefn()
     #Get the layer of the polygon (binding) geometry shape
-    clip_layer = bindingShape.GetLayer(0)
+    clip_layer = binding_shape.GetLayer(0)
     #Create a new shapefile with similar properties of the current point geometry shape
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
     shp_ds = shp_driver.CreateDataSource(shape_source)
@@ -304,13 +304,13 @@ def clip_shape(shapeToClip, bindingShape, outputPath):
 
     return shp_ds
 
-def get_points_values(shape, key, valueArray, value):
+def get_points_values(shape, key, value_array, value):
     """Generates a list of points and a list of values based on a point
     geometry shapefile and other criteria from the arguments
     
     shape - A point geometry shapefile of which to gather the information from
     key   - A list of fields from shape that will be you points
-    valueArray - A list of all the relevant fields from shape requiring fields
+    value_array - A list of all the relevant fields from shape requiring fields
                     to be used as key and field for the value
     value - A string representing the field from shape to be used as the value
     
@@ -326,11 +326,11 @@ def get_points_values(shape, key, valueArray, value):
     fieldDict = {}
     #For all the points in the layer add the desired 'key' and 'value' to the dictionary.
     while shape_feat is not None:
-        #This dictionary is used to store the needed values of the desired fields from 'valueArray'
+        #This dictionary is used to store the needed values of the desired fields from 'value_array'
         valueDict = {}
         #May want to check to make sure field is in shape layer
-        #For the relevant field in the list valueArray, add the fields value to the dictionary
-        for field in valueArray:
+        #For the relevant field in the list value_array, add the fields value to the dictionary
+        for field in value_array:
             field_index = shape_feat.GetFieldIndex(field)
             valueDict[field] = shape_feat.GetField(field_index)
         keyList = []
@@ -386,47 +386,47 @@ def interp_points_over_raster(points, values, raster):
     #Write interpolated matrix of values to raster
     band.WriteArray(spl, 0, 0)
 
-def wave_energy_interp(waveData, machinePerf):
+def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
     machine performance table using new ranges from wave watch data
     
-    waveData - A dictionary holding newxrange,newyrange values
-    machinePerf - A 2D array holding the ranges of the machine performance
+    wave_data - A dictionary holding newxrange,newyrange values
+    machine_perf - A 2D array holding the ranges of the machine performance
     
     returns - The interpolated matrix
     """
     #Get ranges and matrix for machine performance table
-    x = np.array(machinePerf.pop(0), dtype='f')
-    y = np.array(machinePerf.pop(0), dtype='f')
-    z = np.array(machinePerf, dtype='f')
-    #Get new ranges to interpolate to, from waveData table
-    newx = waveData[0]
-    newy = waveData[1]
+    x = np.array(machine_perf.pop(0), dtype='f')
+    y = np.array(machine_perf.pop(0), dtype='f')
+    z = np.array(machine_perf, dtype='f')
+    #Get new ranges to interpolate to, from wave_data table
+    newx = wave_data[0]
+    newy = wave_data[1]
     #Interpolate machine performance table and return the interpolated matrix
     interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
     return interpZ
 
-def compute_wave_energy_capacity(waveData, interpZ, machineParam):
+def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     """Computes the wave energy capacity for each point and
     generates a dictionary whos keys are the points and whos value
     is the wave energy capacity
     
-    waveData - A dictionary containing wave watch data
-    interpZ - A 2D array of the interpolated values for the machine
+    wave_data - A dictionary containing wave watch data
+    interp_z - A 2D array of the interpolated values for the machine
                 performance table
-    machineParam - A dictionary containing the restrictions for the machines
+    machine_param - A dictionary containing the restrictions for the machines
                     (CapMax, TpMax, HsMax)
                     
     returns - A dictionary
     """
     energyCap = {}
     #Get the row,col headers (ranges) for the wave watch data
-    waveRow = waveData.pop(0)
-    waveColumn = waveData.pop(1)
+    waveRow = wave_data.pop(0)
+    waveColumn = wave_data.pop(1)
     #Get the machine parameter restriction values
-    capMax = float(machineParam['CapMax']['VALUE'])
-    periodMax = float(machineParam['TpMax']['VALUE'])
-    heightMax = float(machineParam['HsMax']['VALUE'])
+    capMax = float(machine_param['CapMax']['VALUE'])
+    periodMax = float(machine_param['TpMax']['VALUE'])
+    heightMax = float(machine_param['HsMax']['VALUE'])
     periodMaxPos = -1
     heightMaxPos = -1
     #Using the restrictions find the max position (index) for period and height
@@ -439,9 +439,9 @@ def compute_wave_energy_capacity(waveData, interpZ, machineParam):
             heightMaxPos = i
     #For all the wave watch points, multiply the occurence matrix by the interpolated
     #machine performance matrix to get the captured wave energy
-    for key, val in waveData.iteritems():
+    for key, val in wave_data.iteritems():
         tempArray = np.array(val, dtype='f')
-        multArray = np.multiply(tempArray, interpZ)
+        multArray = np.multiply(tempArray, interp_z)
         #Set any value that is outside the restricting ranges provided by 
         #machine parameters to zero
         if periodMaxPos != -1:
