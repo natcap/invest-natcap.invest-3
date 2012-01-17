@@ -73,7 +73,6 @@ def biophysical(args):
     #We do all wave power calculations by manipulating the fields in
     #the wave data shapefile, thus we need to add proper depth values
     #from the raster DEM
-#    dem_gt = global_dem.GetGeoTransform()
     dem_band = global_dem.GetRasterBand(1)
     xsize = dem_band.XSize
     ysize = dem_band.YSize
@@ -119,33 +118,32 @@ def biophysical(args):
                                               datatype, nodata, wave_power_path, area_shape)
     #Open created rasters
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
-    waveEnergyRaster = gdal.Open(wave_energy_path, GA_Update)
+    wave_energy_raster = gdal.Open(wave_energy_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
-    energySumArray = get_points_values(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+    energy_sum_array = get_points_values(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
     wave_power_array = get_points_values(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
     #Interpolate wave energy and wave power from the shapefile over the rasters
-    interp_points_over_raster(energySumArray[0], energySumArray[1], waveEnergyRaster)
+    interp_points_over_raster(energy_sum_array[0], energy_sum_array[1], wave_energy_raster)
     interp_points_over_raster(wave_power_array[0], wave_power_array[1], wave_power_raster)
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
-    waveEnergyRaster = clip_raster_from_polygon(cutter, waveEnergyRaster, wave_energy_path)
+    wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
-    waveEnergyRaster = None
+    wave_energy_raster = None
     wave_power_raster = None
     
 def wave_power(shape):
-    """Calculates the wave power from the arguments and writes the
-    output raster to hard disk. 
+    """Calculates the wave power from the fields in the shapefile
+    and writes the wave power value to a field for the corresponding
+    feature. 
     
-    waveHeight - A raster representing the wave heights for AOI
-    wavePeriod - A raster representing the wave periods for AOI
-    elevation  - A raster representing the elevation for AOI
-    wavePowerPath - A String representing the output path
+    shape - A Shapefile that has all the attributes represented in fields
+            to calculate wave power at a specific wave farm
     
-    returns - Nothing
-    
+    returns - The shape that was just edited with the new wave power field
+              and corresponding value    
     """
     #Sea water density constant (kg/m^3)
     p = 1028
@@ -153,12 +151,14 @@ def wave_power(shape):
     g = 9.8
     #Constant determining the shape of a wave spectrum (see users guide pg 23)
     alfa = 0.86
-    #Function defining the equations to compute the wave power.
+    #Add a waver power field to the shapefile.
     layer = shape.GetLayer(0)
     field_defn = ogr.FieldDefn('wp_Kw', ogr.OFTReal)
     layer.CreateField(field_defn)
     layer.ResetReading()
     feat = layer.GetNextFeature()
+    #For ever feature (point) calculate the wave power and add the value
+    #to itself in a new field
     while feat is not None:
         height_index = feat.GetFieldIndex('HSAVG_M')
         period_index = feat.GetFieldIndex('TPAVG_S')
@@ -171,12 +171,14 @@ def wave_power(shape):
         depth = np.absolute(depth)
         #wave frequency calculation (used to calculate wave number k)
         tem = (2.0 * math.pi) / (period * alfa)
-        #wave number calculation (expressed as a function of wave frequency and water depth)
+        #wave number calculation (expressed as a function of 
+        #wave frequency and water depth)
         k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (depth / g))))
-        #wave group velocity calculation (expressed as a function of wave energy period and water depth)
-        waveGroupVelocity = ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) * np.sqrt((g / k) * np.tanh(k * depth))) / 2
+        #wave group velocity calculation (expressed as a 
+        #function of wave energy period and water depth)
+        wave_group_velocity = ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) * np.sqrt((g / k) * np.tanh(k * depth))) / 2
         #wave power calculation
-        wp = (((p * g) / 16) * (np.square(height)) * waveGroupVelocity) / 1000
+        wp = (((p * g) / 16) * (np.square(height)) * wave_group_velocity) / 1000
         
         feat.SetField(wp_index, wp)
         
@@ -187,45 +189,42 @@ def wave_power(shape):
     return shape
     
 def clip_raster_from_polygon(shape, raster, path):
-    """Returns a raster where any value outside the bounds of the polygon shape are set
-    to nodata values.  This represents clipping the raster to the dimensions of the polygon
+    """Returns a raster where any value outside the bounds of the
+    polygon shape are set to nodata values. This represents clipping 
+    the raster to the dimensions of the polygon.
     
     shape - A polygon shapefile representing the bounds for the raster
     raster - A raster to be bounded by shape
     path - The path for the clipped output raster
     
-    returns - the clipped raster    
+    returns - The clipped raster    
     """
     #Get the pixel size from the raster to clip.
     gt = raster.GetGeoTransform()
-    pixelX = gt[1]
-    pixelY = gt[5]
+    pixel_x = gt[1]
+    pixel_y = gt[5]
     #Create a new raster as a copy from 'raster'
-    copyRaster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-    copyBand = copyRaster.GetRasterBand(1)
+    copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    copy_band = copy_raster.GetRasterBand(1)
     #Set the copied rasters values to nodata to create a blank raster.
-    nodata = copyBand.GetNoDataValue()
-    copyBand.Fill(nodata)
+    nodata = copy_band.GetNoDataValue()
+    copy_band.Fill(nodata)
     #Rasterize the polygon layer onto the copied raster
-    gdal.RasterizeLayer(copyRaster, [1], shape.GetLayer(0))
+    gdal.RasterizeLayer(copy_raster, [1], shape.GetLayer(0))
     #If the copied raster's value is nodata then the pixel is not within
     #the polygon and should write nodata back. If copied raster's value
     #is not nodata, then pixel lies within polygon and the value from 'raster'
     #should be written out.
-    def op(a, b):
-        if b == nodata:
-            return b
+    def fill_bound_data(value, copy_value):
+        if copy_value == nodata:
+            return copy_value
         else:
-            return a
+            return value
+    #Vectorize the two rasters using the operation fill_bound_data
+    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copy_band,
+                                fill_bound_data, copy_band)
+    return copy_raster
     
-    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copyBand, op, copyBand)
-    
-    return copyRaster
-    
-#clip_shape takes the shapefile you would like to cut down,
-#the polygon shape you want the other shapefile cut to,
-#and the path for the new shapefile
-#It returns a new shapefile in the same format/projection as shapeToClip
 def clip_shape(shape_to_clip, binding_shape, output_path):
     """Copies a polygon or point geometry shapefile, only keeping the features
     that intersect or are within a binding polygon shape.
@@ -238,7 +237,7 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
     returns - A shapefile representing the clipped version of shape_to_clip
     """
     shape_source = output_path
-
+    #If the output_path is already a file, remove it
     if os.path.isfile(shape_source):
         os.remove(shape_source)
     #Get the layer of points from the current point geometry shape
@@ -247,16 +246,17 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
     in_defn = in_layer.GetLayerDefn()
     #Get the layer of the polygon (binding) geometry shape
     clip_layer = binding_shape.GetLayer(0)
-    #Create a new shapefile with similar properties of the current point geometry shape
+    #Create a new shapefile with similar properties of the 
+    #current point geometry shape
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
     shp_ds = shp_driver.CreateDataSource(shape_source)
-    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), in_layer.GetSpatialRef(), in_defn.GetGeomType())
+    shp_layer = shp_ds.CreateLayer(in_defn.GetName(),
+                                   in_layer.GetSpatialRef(), in_defn.GetGeomType())
     #Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()
     #For every field, create a duplicate field and add it to the new shapefiles layer
     for fld_index in range(in_field_count):
         src_fd = in_defn.GetFieldDefn(fld_index)
-
         fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
         fd.SetWidth(src_fd.GetWidth())
         fd.SetPrecision(src_fd.GetPrecision())
@@ -266,20 +266,22 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
     while clip_feat is not None:
         clip_geom = clip_feat.GetGeometryRef()
         #Get the spatial reference of the geometry to use in transforming
-        sourceSR = clip_geom.GetSpatialReference()
+        source_sr = clip_geom.GetSpatialReference()
         #Retrieve the current point shapes feature and get it's geometry reference
         in_layer.ResetReading()
         in_feat = in_layer.GetNextFeature()
         geom = in_feat.GetGeometryRef()
         #Get the spatial reference of the geometry to use in transforming
-        targetSR = geom.GetSpatialReference()
+        target_sr = geom.GetSpatialReference()
         #Create a coordinate transformation
-        coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
-        #Transform the polygon geometry into the same format as the point shape geometry
-        clip_geom.Transform(coordTrans)
+        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        #Transform the polygon geometry into the same format as the 
+        #point shape geometry
+        clip_geom.Transform(coord_trans)
         #For all the features in the current point shape (for all the points)
         #Check to see if they Intersect with the binding polygons geometry and
-        #if they do, then add all of the fields and values from that point to the new shape
+        #if they do, then add all of the fields and values from that 
+        #point to the new shape
         while in_feat is not None:
             geom = in_feat.GetGeometryRef()
             #Intersection returns a new geometry if they intersect
