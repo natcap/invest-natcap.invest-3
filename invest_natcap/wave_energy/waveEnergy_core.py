@@ -388,23 +388,24 @@ def interp_points_over_raster(points, values, raster):
 
 def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
-    machine performance table using new ranges from wave watch data
+    machine performance table using new ranges from wave watch data.
     
-    wave_data - A dictionary holding newxrange,newyrange values
-    machine_perf - A 2D array holding the ranges of the machine performance
+    wave_data - A dictionary holding the new x range and y range values
+    machine_perf - A 2D array representation of the machine performance
+                   table that also includes the ranges
     
     returns - The interpolated matrix
     """
     #Get ranges and matrix for machine performance table
-    x = np.array(machine_perf.pop(0), dtype='f')
-    y = np.array(machine_perf.pop(0), dtype='f')
-    z = np.array(machine_perf, dtype='f')
+    x_range = np.array(machine_perf.pop(0), dtype='f')
+    y_range = np.array(machine_perf.pop(0), dtype='f')
+    z_matrix = np.array(machine_perf, dtype='f')
     #Get new ranges to interpolate to, from wave_data table
-    newx = wave_data[0]
-    newy = wave_data[1]
+    new_x = wave_data[0]
+    new_y = wave_data[1]
     #Interpolate machine performance table and return the interpolated matrix
-    interpZ = invest_cython_core.interpolateMatrix(x, y, z, newx, newy)
-    return interpZ
+    interp_z = invest_cython_core.interpolateMatrix(x_range, y_range, z_matrix, new_x, new_y)
+    return interp_z
 
 def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     """Computes the wave energy capacity for each point and
