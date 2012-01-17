@@ -419,49 +419,49 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
                     
     returns - A dictionary representing the wave energy capacity at each wave point
     """
-    energyCap = {}
+    energy_cap = {}
     #Get the row,col headers (ranges) for the wave watch data
-    waveRow = wave_data.pop(0)
-    waveColumn = wave_data.pop(1)
+    wave_row = wave_data.pop(0)
+    wave_column = wave_data.pop(1)
     #Get the machine parameter restriction values
-    capMax = float(machine_param['CapMax']['VALUE'])
-    periodMax = float(machine_param['TpMax']['VALUE'])
-    heightMax = float(machine_param['HsMax']['VALUE'])
-    periodMaxPos = -1
-    heightMaxPos = -1
+    cap_max = float(machine_param['CapMax']['VALUE'])
+    period_max = float(machine_param['TpMax']['VALUE'])
+    height_max = float(machine_param['HsMax']['VALUE'])
+    period_max_pos = -1
+    height_max_pos = -1
     #Using the restrictions find the max position (index) for period and height
-    #in the waveRow/waveColumn ranges
-    for i, v in enumerate(waveRow):
-        if (v > periodMax) and (periodMaxPos == -1):
-            periodMaxPos = i
-    for i, v in enumerate(waveColumn):
-        if (v > heightMax) and (heightMaxPos == -1):
-            heightMaxPos = i
+    #in the wave_row/wave_column ranges
+    for i, v in enumerate(wave_row):
+        if (v > period_max) and (period_max_pos == -1):
+            period_max_pos = i
+    for i, v in enumerate(wave_column):
+        if (v > height_max) and (height_max_pos == -1):
+            height_max_pos = i
     #For all the wave watch points, multiply the occurence matrix by the interpolated
     #machine performance matrix to get the captured wave energy
     for key, val in wave_data.iteritems():
-        tempArray = np.array(val, dtype='f')
-        multArray = np.multiply(tempArray, interp_z)
+        temp_array = np.array(val, dtype='f')
+        mult_array = np.multiply(temp_array, interp_z)
         #Set any value that is outside the restricting ranges provided by 
         #machine parameters to zero
-        if periodMaxPos != -1:
-            multArray[:, periodMaxPos:] = 0
-        if heightMaxPos != -1:
-            multArray[heightMaxPos:, :] = 0
+        if period_max_pos != -1:
+            mult_array[:, period_max_pos:] = 0
+        if height_max_pos != -1:
+            mult_array[height_max_pos:, :] = 0
         #Divide the matrix by 5 to get the yearly values
-        validArray = np.divide(multArray, 5.0)
-#        validArray = np.where(multArray>capMax, capMax, multArray)
+        valid_array = np.divide(mult_array, 5.0)
+#        valid_array = np.where(mult_array>cap_max, cap_max, mult_array)
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero.  So here
         #we drive any negative values to zero.
-        validArray = np.where(validArray < 0, 0, validArray)
+        valid_array = np.where(valid_array < 0, 0, valid_array)
 #            def deviceConstraints(a, capmax, hmax, tmax):
         #Sum all of the values from the matrix to get the total captured wave energy
         #and convert into mega watts
-        sum = (validArray.sum() / 1000)
-        energyCap[key] = sum
+        sum = (valid_array.sum() / 1000)
+        energy_cap[key] = sum
 
-    return energyCap
+    return energy_cap
 
 def captured_wave_energy_to_shape(energy_cap, wave_shape):
     """Adds each captured wave energy value from the dictionary
