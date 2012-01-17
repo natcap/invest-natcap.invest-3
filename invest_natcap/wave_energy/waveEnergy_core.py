@@ -737,6 +737,16 @@ def valuation(args):
     #########################################
     
 def get_points_geometries(shape):
+    """This function takes a shapefile and for each feature retrieves
+    the X and Y value from it's geometry. The X and Y value are stored in
+    a numpy array as a point [x,y], which is returned when all the features
+    have been iterated through.
+    
+    shape - A shapefile
+    
+    returns - A numpy array of points, which represent the shape's feature's
+              geometries.
+    """
     point = []
     layer = shape.GetLayer(0)
     feat = layer.GetNextFeature()
