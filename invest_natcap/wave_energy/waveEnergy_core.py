@@ -525,25 +525,31 @@ def valuation(args):
     inter_dir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
     output_dir = workspace_dir + os.sep + 'Output'
-    #Path for clipped wave point shapefile holding values of interest
+    #Output path for projected wave point shapefile holding values of interest
     projected_shape_path = inter_dir + os.sep + 'WaveData_clip_Prj.shp'
+    #Output path for landing point shapefile
     land_pt_path = inter_dir + os.sep + 'landing_points.shp'
+    #Output path for grid point shapefile
     grid_pt_path = inter_dir + os.sep + 'grid_point.shp'
+    #Output path for net present value raster
     wave_farm_value_path = inter_dir + os.sep + 'wave_energy_npv.tif'
+    #Output path for the projected net present value raster
     raster_projected_path = inter_dir + os.sep + 'raster_projected.tif'
     
+    wave_data_shape = args['wave_data_shape']
+    prj_file_path = args['projection']
+    #Since the global_dem is the only input raster, we base the pixel
+    #size of our output raster from the global_dem
     dem = args['global_dem']
     gt = dem.GetGeoTransform()
     pixel_xsize = float(gt[1])
     pixel_ysize = np.absolute(float(gt[5]))
-    
+    #If either shapefile, landing or grid exist, remove them
     if os.path.isfile(land_pt_path):
         os.remove(land_pt_path)
     if os.path.isfile(grid_pt_path):
         os.remove(grid_pt_path)
-    
-    
-    #Numver of units
+    #Number of machines for a given wave farm
     units = args['number_machines']
     #Extract the machine economic parameters
     machine_econ = args['machine_econ']
@@ -556,9 +562,11 @@ def valuation(args):
     price = float(machine_econ['p']['VALUE'])
     drate = float(machine_econ['r']['VALUE'])
     smlpm = float(machine_econ['smlpm']['VALUE'])
-    
+    #The NPV is for a 25 year period
     year = 25.0
-    T = np.linspace(0.0, year - 1.0, year)
+    #A numpy array of length 25, representing the npv of a farm for each year
+    time = np.linspace(0.0, year - 1.0, year)
+    #The discount rate calculation for the npv equations
     rho = 1.0 / (1.0 + drate)
     #Extract the landing and grid points data
     land_grid_pts = args['land_gridPts']
@@ -568,77 +576,72 @@ def valuation(args):
         if value['TYPE'] == 'GRID':
             grid_pt = value
         else:
-            land_pts[key] = value
-            
+            land_pts[key] = value            
     #Create a coordinate transformation for lat/long to meters
-    prj_file = open(args['projection'])
+    prj_file = open(prj_file_path)
     prj = prj_file.read()
     srs_prj = osr.SpatialReference()
     srs_prj.ImportFromWkt(prj)
-    source_sr = args['wave_data_shape'].GetLayer(0).GetSpatialRef()
+    source_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
     target_sr = srs_prj
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
-    #Create geometry for grid point location:
-    grid_lat = grid_pt['LAT']
-    grid_long = grid_pt['LONG']
-    grid_geom = ogr.Geometry(ogr.wkbPoint)
-    grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))
-    
     #Make a point shapefile for landing points.
     drv_landing = ogr.GetDriverByName('ESRI Shapefile')
     ds_landing = drv_landing.CreateDataSource(land_pt_path)
     layer_landing = ds_landing.CreateLayer('landpoints', srs_prj, ogr.wkbPoint)    
     field_defn_landing = ogr.FieldDefn('Id', ogr.OFTInteger)
     layer_landing.CreateField(field_defn_landing)
-    
+    #For all of the landing points create a point feature on the layer
     for key, value in land_pts.iteritems():
         landing_lat = value['LAT']
         landing_long = value['LONG']
         landing_geom = ogr.Geometry(ogr.wkbPoint)
         landing_geom.AddPoint_2D(float(landing_long), float(landing_lat))
         landing_geom.Transform(coord_trans)
-        
+        #Create the feature, setting the id field to the corresponding id
+        #field from the csv file
         feat_landing = ogr.Feature(layer_landing.GetLayerDefn())
         layer_landing.CreateFeature(feat_landing)
         index = feat_landing.GetFieldIndex('Id')
         feat_landing.SetField(index, value['ID'])
         feat_landing.SetGeometryDirectly(landing_geom)
-        
-        #save the field modifications to the layer_grid.
+        #Save the feature modifications to the layer.
         layer_landing.SetFeature(feat_landing)
         feat_landing.Destroy()
-    
     layer_landing = None
     drv_landing = None
     ds_landing.Destroy()
-
+    #Create geometry for grid point location:
+    grid_lat = grid_pt['LAT']
+    grid_long = grid_pt['LONG']
+    grid_geom = ogr.Geometry(ogr.wkbPoint)
+    grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))    
+    grid_geom.Transform(coord_trans)
     #Make a point shapefile for grid points
     drv_grid = ogr.GetDriverByName('ESRI Shapefile')
     ds_grid = drv_grid.CreateDataSource(grid_pt_path)
     layer_grid = ds_grid.CreateLayer('gridpoint', srs_prj, ogr.wkbPoint)
     field_defn_grid = ogr.FieldDefn('Id', ogr.OFTInteger)
     layer_grid.CreateField(field_defn_grid)
-
+    #Create the feature, setting the id field to the corresponding id
+    #field from the csv file
     feat_grid = ogr.Feature(layer_grid.GetLayerDefn())
     layer_grid.CreateFeature(feat_grid)
     index = feat_grid.GetFieldIndex('Id')
-    feat_grid.SetField(index, 0)
-    
-    grid_geom.Transform(coord_trans)
+    feat_grid.SetField(index, grid_pt['ID'])    
     feat_grid.SetGeometryDirectly(grid_geom)
-    #save the field modifications to the layer_grid.
+    #Save the feature modifications to the layer.
     layer_grid.SetFeature(feat_grid)
     feat_grid.Destroy()
-    
+    #Close the necessary files and objects
     prj_file.close()
     layer_grid = None
     drv_grid = None
     ds_grid.Destroy()
-    
-    wave_data_shape = args['wave_data_shape']
+    #Reproject the shapefile so that it's geometry is in meters
     wave_data_layer = wave_data_shape.GetLayer(0)
-    shape = change_shape_projection(wave_data_shape, args['projection'], projected_shape_path)
+    shape = change_shape_projection(wave_data_shape, prj_file_path, projected_shape_path)
     shape.Destroy()
     shape = ogr.Open(projected_shape_path, 1)
     shape_layer = shape.GetLayer(0)
@@ -652,10 +655,12 @@ def valuation(args):
     
     W2L_Dist, W2L_ID = calculate_distance(we_points, landing_points)
     L2G_Dist, L2G_ID = calculate_distance(landing_points, grid_point)
+    #Add three new fields to the shapefile that will store the distances
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
         shape_layer.CreateField(field_defn)
-        
+    #For each feature in the shapefile add the corresponding distances
+    #from W2L_Dist and L2G_Dist that was calculated above
     j = 0
     shape_layer.ResetReading()
     feature = shape_layer.GetNextFeature()
@@ -679,10 +684,17 @@ def valuation(args):
     shape = ogr.Open(projected_shape_path, 1)
     shape_layer = shape.GetLayer(0)
     
-    
     def npv_wave(annual_revenue, annual_cost):
+        """Calculates the NPV for a wave farm site based on the
+        annual revenue and annual cost
+        
+        annual_revenue - A numpy array of the annual revenue for the first 25 years
+        annual_cost - A numpy array of the annual cost for the first 25 years
+        
+        returns - The Total NPV which is the sum of all 25 years
+        """
         npv = []
-        for i in range(len(T)):
+        for i in range(len(time)):
             npv.append(rho ** i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
     
@@ -690,6 +702,7 @@ def valuation(args):
     shape_layer.CreateField(field_defn_npv)
     shape_layer.ResetReading()
     feat_grid = shape_layer.GetNextFeature()
+    #For all the wave farm sites, calculate npv and write to shapefile
     while feat_grid is not None:
         depth_index = feat_grid.GetFieldIndex('Depth_M')
         wave_to_land_index = feat_grid.GetFieldIndex('W2L_MDIST')
@@ -701,10 +714,12 @@ def valuation(args):
         wave_to_land = feat_grid.GetFieldAsDouble(wave_to_land_index)
         land_to_grid = feat_grid.GetFieldAsDouble(land_to_grid_index)
         captured_wave_energy = feat_grid.GetFieldAsDouble(captured_wave_energy_index)
-        
-        captured_we = np.ones(len(T)) * int(captured_wave_energy) * 1000.0
+        #Create a numpy array of length 25, filled with the captured wave energy
+        #in kW/h. Represents the lifetime of this wave farm.
+        captured_we = np.ones(len(time)) * int(captured_wave_energy) * 1000.0
+        #It is expected that there is no revenue from the first year
         captured_we[0] = 0
-        
+        #Compute values to determine NPV
         lenml = 3.0 * np.absolute(depth)
         install_cost = units * cap_max * capital_cost
         mooring_cost = smlpm * lenml * cml * units
@@ -712,6 +727,7 @@ def valuation(args):
         initial_cost = install_cost + mooring_cost + trans_cost
         annual_revenue = price * units * captured_we
         annual_cost = omc * captured_we * units
+        #The first year's costs are the initial start up costs
         annual_cost[0] = initial_cost
         
         npv_result = npv_wave(annual_revenue, annual_cost) / 1000.0
@@ -720,25 +736,25 @@ def valuation(args):
         shape_layer.SetFeature(feat_grid)
         feat_grid.Destroy()
         feat_grid = shape_layer.GetNextFeature()
-    
 
     datatype = gdal.GDT_Float32
     nodata = 0
+    #Create a blank raster from the extents of the wave farm shapefile
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                               datatype, nodata, wave_farm_value_path, wave_data_shape)
     wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
     wave_farm_value_array = get_points_values(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'NPV_25Y'], 'NPV_25Y')
-    
-     #Interpolate the rasters (give a smooth surface)
+    #Interpolate the NPV values based on the dimensions and corresponding points of the raster, then
+    #write the interpolated values to the raster
     interp_points_over_raster(wave_farm_value_array[0], wave_farm_value_array[1], wave_farm_value_raster)
-
+    #Reproject the raster into a meters format
     virtual = gdal.AutoCreateWarpedVRT(wave_farm_value_raster,
                                        wave_farm_value_raster.GetProjectionRef(),
                                        prj)
+    #Since the reprojection is just a virtual copy we must save it to disk
     drv_grid = gdal.GetDriverByName('GTIFF')
     drv_grid.CreateCopy(raster_projected_path, virtual, True)
-    #########################################
     
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
