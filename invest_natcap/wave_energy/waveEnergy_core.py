@@ -356,12 +356,13 @@ def get_points_values(shape, key, value_array, value):
     return results
 
 def interp_points_over_raster(points, values, raster):
-    """Interpolates the values of a given set of points and values to the points
-    of a raster and writes the interpolated matrix to the raster band
+    """Interpolates a given set of points and values over new points
+    provided by the raster and writes the interpolated matrix to the raster band.
     
     points - A 2D array of points, where the points are represented as [x,y]
     values - A list of values corresponding to the points of 'points'
-    raster - A raster to write the interpolated values too
+    raster - A raster to write the interpolated values too and to get the
+             new dimensions from
     
     returns - Nothing
     """
@@ -371,18 +372,17 @@ def interp_points_over_raster(points, values, raster):
     #Get the dimensions from the raster as well as the GeoTransform information
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
-    xsize = band.XSize
-    ysize = band.YSize
-    #newpoints = np.array([[x,y] for x in np.arange(gt[0], xsize*gt[1]+gt[0] , gt[1]) for y in np.arange(gt[3], ysize*gt[5]+gt[3], gt[5])])
+    size_x = band.XSize
+    size_y = band.YSize
     #Make a numpy array representing the points of the raster (the points are the pixels)
-    newpoints = np.array([[gt[0] + gt[1] * i, gt[3] + gt[5] * j] for i in np.arange(xsize) for j in np.arange(ysize)])
+    new_points = np.array([[gt[0] + gt[1] * i, gt[3] + gt[5] * j] for i in np.arange(size_x) for j in np.arange(size_y)])
     #Interpolate the points and values from the shapefile from earlier
     spl = ip(points, values, fill_value=0)
     #Run the interpolator object over the new set of points from the raster. Will return a list of values.
-    spl = spl(newpoints)
+    spl = spl(new_points)
     #Reshape the list of values to the dimensions of the raster for writing.
     #Transpose the matrix provided from 'reshape' because gdal thinks of x,y opposite of humans
-    spl = spl.reshape(xsize, ysize).transpose()
+    spl = spl.reshape(size_x, size_y).transpose()
     #Write interpolated matrix of values to raster
     band.WriteArray(spl, 0, 0)
 
