@@ -323,32 +323,32 @@ def get_points_values(shape, key, value_array, value):
     #Get the first point from the shape layer
     shape_feat = shape_layer.GetNextFeature()
 
-    fieldDict = {}
+    field_dict = {}
     #For all the points in the layer add the desired 'key' and 'value' to the dictionary.
     while shape_feat is not None:
         #This dictionary is used to store the needed values of the desired fields from 'value_array'
-        valueDict = {}
+        value_dict = {}
         #May want to check to make sure field is in shape layer
         #For the relevant field in the list value_array, add the fields value to the dictionary
         for field in value_array:
             field_index = shape_feat.GetFieldIndex(field)
-            valueDict[field] = shape_feat.GetField(field_index)
-        keyList = []
+            value_dict[field] = shape_feat.GetField(field_index)
+        key_list = []
         #Create a tuple from the elements of the provided key list
         for k in key:
-            keyList.append(valueDict[k])
-        tupledKey = tuple(keyList)
-        #Set the created tuple as the key of this dictionary and set its value to desired element from valueDict
-        fieldDict[tupledKey] = valueDict[value]
+            key_list.append(value_dict[k])
+        tupled_key = tuple(key_list)
+        #Set the created tuple as the key of this dictionary and set its value to desired element from value_dict
+        field_dict[tupled_key] = value_dict[value]
 
         shape_feat.Destroy()
         shape_feat = shape_layer.GetNextFeature()
     
     points = []
     values = []
-    #Construct two arrays, one a list of all the points from fieldDict, and the other a list
-    #of all the values corresponding the points from fieldDict
-    for id, val in fieldDict.iteritems():
+    #Construct two arrays, one a list of all the points from field_dict, and the other a list
+    #of all the values corresponding the points from field_dict
+    for id, val in field_dict.iteritems():
         points.append(list(id))
         values.append(val)
 
