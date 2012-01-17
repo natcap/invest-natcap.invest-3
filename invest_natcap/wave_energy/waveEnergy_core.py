@@ -499,19 +499,24 @@ def captured_wave_energy_to_shape(energyCap, waveShape):
         feat.Destroy()
 
 def valuation(args):
-    """Executes the valuation calculations for the Wave Energy Model.  The result
-    is a smooth output raster of the net present value from the interpolation of
-    the specific WW3 wave points npv. Requires the following arguments:
+    """Executes the valuation calculations for the Wave Energy Model.
+    The Net Present Value (npv) is calculated for each wave farm site
+    and then a raster is created based off of the interpolation of these
+    points. This function requires the following arguments:
     
-    args['workspace_dir'] - 
-    args['wave_data_shape'] - 
-    args['number_machines'] - 
-    args['machine_econ'] - 
-    args['land_gridPts'] - 
-    args['projection'] - 
-    args['global_dem'] - 
-    args['capturedWE'] - 
-    
+    args['workspace_dir'] - A path to where the Output and Intermediate folders
+                            will be placed or currently are.
+    args['wave_data_shape'] - A file path to the shapefile generated from the biophysical run
+                              which holds various attributes of each wave farm.
+    args['number_machines'] - An integer representing the number of machines to make up a farm.
+    args['machine_econ'] - A dictionary holding the machine economic parameters.
+    args['land_gridPts'] - A dictionary holidng the landing point and grid point
+                           information and location.
+    args['projection'] - A file path to the projection that allows to calculate
+                         distances in Meters.
+    args['global_dem'] - A raster of the global DEM
+
+    returns - Nothing
     """
     #Set variables for common output paths
     #Workspace Directory path
