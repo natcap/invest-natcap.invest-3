@@ -520,35 +520,35 @@ def valuation(args):
     """
     #Set variables for common output paths
     #Workspace Directory path
-    workspaceDir = args['workspace_dir']
+    workspace_dir = args['workspace_dir']
     #Intermediate Directory path to store information
-    interDir = workspaceDir + os.sep + 'Intermediate'
+    inter_dir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
-    outputDir = workspaceDir + os.sep + 'Output'
+    output_dir = workspace_dir + os.sep + 'Output'
     #Path for clipped wave point shapefile holding values of interest
-    projectedShapePath = interDir + os.sep + 'WaveData_clip_Prj.shp'
-    landptPath = interDir + os.sep + 'landingPoints.shp'
-    gridptPath = interDir + os.sep + 'gridPoint.shp'
-    wave_farm_value_path = interDir + os.sep + 'wave_energy_npv.tif'
-    raster_projected_path = interDir + os.sep + 'raster_projected.tif'
+    projected_shape_path = inter_dir + os.sep + 'WaveData_clip_Prj.shp'
+    land_pt_path = inter_dir + os.sep + 'landing_points.shp'
+    grid_pt_path = inter_dir + os.sep + 'grid_point.shp'
+    wave_farm_value_path = inter_dir + os.sep + 'wave_energy_npv.tif'
+    raster_projected_path = inter_dir + os.sep + 'raster_projected.tif'
     
     dem = args['global_dem']
     gt = dem.GetGeoTransform()
     pixel_xsize = float(gt[1])
     pixel_ysize = np.absolute(float(gt[5]))
     
-    if os.path.isfile(landptPath):
-        os.remove(landptPath)
-    if os.path.isfile(gridptPath):
-        os.remove(gridptPath)
+    if os.path.isfile(land_pt_path):
+        os.remove(land_pt_path)
+    if os.path.isfile(grid_pt_path):
+        os.remove(grid_pt_path)
     
     
     #Numver of units
     units = args['number_machines']
     #Extract the machine economic parameters
     machine_econ = args['machine_econ']
-    capMax = float(machine_econ['CapMax']['VALUE'])
-    capitalCost = float(machine_econ['cc']['VALUE'])
+    cap_max = float(machine_econ['CapMax']['VALUE'])
+    capital_cost = float(machine_econ['cc']['VALUE'])
     cml = float(machine_econ['cml']['VALUE'])
     cul = float(machine_econ['cul']['VALUE'])
     col = float(machine_econ['col']['VALUE'])
@@ -571,14 +571,14 @@ def valuation(args):
             land_pts[key] = value
             
     #Create a coordinate transformation for lat/long to meters
-    prjFile = open(args['projection'])
-    prj = prjFile.read()
+    prj_file = open(args['projection'])
+    prj = prj_file.read()
     srs_prj = osr.SpatialReference()
     srs_prj.ImportFromWkt(prj)
-    sourceSR = args['wave_data_shape'].GetLayer(0).GetSpatialRef()
-    targetSR = srs_prj
-    coordTrans = osr.CoordinateTransformation(sourceSR, targetSR)
-    coordTransOp = osr.CoordinateTransformation(targetSR, sourceSR)
+    source_sr = args['wave_data_shape'].GetLayer(0).GetSpatialRef()
+    target_sr = srs_prj
+    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+    coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     #Create geometry for grid point location:
     grid_lat = grid_pt['LAT']
     grid_long = grid_pt['LONG']
@@ -586,72 +586,72 @@ def valuation(args):
     grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))
     
     #Make a point shapefile for landing points.
-    drv = ogr.GetDriverByName('ESRI Shapefile')
-    ds = drv.CreateDataSource(landptPath)
-    layer = ds.CreateLayer('landpoints', srs_prj, ogr.wkbPoint)    
-    field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
-    layer.CreateField(field_defn)
+    drv_landing = ogr.GetDriverByName('ESRI Shapefile')
+    ds_landing = drv_landing.CreateDataSource(land_pt_path)
+    layer_landing = ds_landing.CreateLayer('landpoints', srs_prj, ogr.wkbPoint)    
+    field_defn_landing = ogr.FieldDefn('Id', ogr.OFTInteger)
+    layer_landing.CreateField(field_defn_landing)
     
     for key, value in land_pts.iteritems():
         landing_lat = value['LAT']
         landing_long = value['LONG']
         landing_geom = ogr.Geometry(ogr.wkbPoint)
         landing_geom.AddPoint_2D(float(landing_long), float(landing_lat))
-        landing_geom.Transform(coordTrans)
+        landing_geom.Transform(coord_trans)
         
-        feat = ogr.Feature(layer.GetLayerDefn())
-        layer.CreateFeature(feat)
-        index = feat.GetFieldIndex('Id')
-        feat.SetField(index, value['ID'])
-        feat.SetGeometryDirectly(landing_geom)
+        feat_landing = ogr.Feature(layer_landing.GetLayerDefn())
+        layer_landing.CreateFeature(feat_landing)
+        index = feat_landing.GetFieldIndex('Id')
+        feat_landing.SetField(index, value['ID'])
+        feat_landing.SetGeometryDirectly(landing_geom)
         
-        #save the field modifications to the layer.
-        layer.SetFeature(feat)
-        feat.Destroy()
+        #save the field modifications to the layer_grid.
+        layer_landing.SetFeature(feat_landing)
+        feat_landing.Destroy()
     
-    layer = None
-    drv = None
-    ds.Destroy()
+    layer_landing = None
+    drv_landing = None
+    ds_landing.Destroy()
 
     #Make a point shapefile for grid points
-    drv = ogr.GetDriverByName('ESRI Shapefile')
-    ds = drv.CreateDataSource(gridptPath)
-    layer = ds.CreateLayer('gridpoint', srs_prj, ogr.wkbPoint)
-    field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
-    layer.CreateField(field_defn)
+    drv_grid = ogr.GetDriverByName('ESRI Shapefile')
+    ds_grid = drv_grid.CreateDataSource(grid_pt_path)
+    layer_grid = ds_grid.CreateLayer('gridpoint', srs_prj, ogr.wkbPoint)
+    field_defn_grid = ogr.FieldDefn('Id', ogr.OFTInteger)
+    layer_grid.CreateField(field_defn_grid)
 
-    feat = ogr.Feature(layer.GetLayerDefn())
-    layer.CreateFeature(feat)
-    index = feat.GetFieldIndex('Id')
-    feat.SetField(index, 0)
+    feat_grid = ogr.Feature(layer_grid.GetLayerDefn())
+    layer_grid.CreateFeature(feat_grid)
+    index = feat_grid.GetFieldIndex('Id')
+    feat_grid.SetField(index, 0)
     
-    grid_geom.Transform(coordTrans)
-    feat.SetGeometryDirectly(grid_geom)
-    #save the field modifications to the layer.
-    layer.SetFeature(feat)
-    feat.Destroy()
+    grid_geom.Transform(coord_trans)
+    feat_grid.SetGeometryDirectly(grid_geom)
+    #save the field modifications to the layer_grid.
+    layer_grid.SetFeature(feat_grid)
+    feat_grid.Destroy()
     
-    prjFile.close()
-    layer = None
-    drv = None
-    ds.Destroy()
+    prj_file.close()
+    layer_grid = None
+    drv_grid = None
+    ds_grid.Destroy()
     
     wave_data_shape = args['wave_data_shape']
     wave_data_layer = wave_data_shape.GetLayer(0)
-    shape = change_shape_projection(wave_data_shape, args['projection'], projectedShapePath)
+    shape = change_shape_projection(wave_data_shape, args['projection'], projected_shape_path)
     shape.Destroy()
-    shape = ogr.Open(projectedShapePath, 1)
+    shape = ogr.Open(projected_shape_path, 1)
     shape_layer = shape.GetLayer(0)
     
-    landingShape = ogr.Open(landptPath)
-    gridShape = ogr.Open(gridptPath)
+    landing_shape = ogr.Open(land_pt_path)
+    grid_shape = ogr.Open(grid_pt_path)
     
-    wePoints = get_points_geometries(shape)
-    landingPoints = get_points_geometries(landingShape)
-    gridPoint = get_points_geometries(gridShape)
+    we_points = get_points_geometries(shape)
+    landing_points = get_points_geometries(landing_shape)
+    grid_point = get_points_geometries(grid_shape)
     
-    W2L_Dist, W2L_ID = calculate_distance(wePoints, landingPoints)
-    L2G_Dist, L2G_ID = calculate_distance(landingPoints, gridPoint)
+    W2L_Dist, W2L_ID = calculate_distance(we_points, landing_points)
+    L2G_Dist, L2G_ID = calculate_distance(landing_points, grid_point)
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
         shape_layer.CreateField(field_defn)
@@ -664,11 +664,11 @@ def valuation(args):
         L2G_index = feature.GetFieldIndex('L2G_MDIST')
         ID_index = feature.GetFieldIndex('LAND_ID')    
         
-        landID = int(W2L_ID[j])
+        land_id = int(W2L_ID[j])
         
         feature.SetField(W2L_index, W2L_Dist[j])
-        feature.SetField(L2G_index, L2G_Dist[landID])
-        feature.SetField(ID_index, landID)
+        feature.SetField(L2G_index, L2G_Dist[land_id])
+        feature.SetField(ID_index, land_id)
         
         j = j + 1
         
@@ -676,7 +676,7 @@ def valuation(args):
         feature.Destroy()
         feature = shape_layer.GetNextFeature()
     shape.Destroy()
-    shape = ogr.Open(projectedShapePath, 1)
+    shape = ogr.Open(projected_shape_path, 1)
     shape_layer = shape.GetLayer(0)
     
     
@@ -689,24 +689,24 @@ def valuation(args):
     field_defn_npv = ogr.FieldDefn('NPV_25Y', ogr.OFTReal)
     shape_layer.CreateField(field_defn_npv)
     shape_layer.ResetReading()
-    feat = shape_layer.GetNextFeature()
-    while feat is not None:
-        depth_index = feat.GetFieldIndex('Depth_M')
-        wave_to_land_index = feat.GetFieldIndex('W2L_MDIST')
-        land_to_grid_index = feat.GetFieldIndex('L2G_MDIST')
-        captured_wave_energy_index = feat.GetFieldIndex('CapWE_Sum')
-        npv_index = feat.GetFieldIndex('NPV_25Y')
+    feat_grid = shape_layer.GetNextFeature()
+    while feat_grid is not None:
+        depth_index = feat_grid.GetFieldIndex('Depth_M')
+        wave_to_land_index = feat_grid.GetFieldIndex('W2L_MDIST')
+        land_to_grid_index = feat_grid.GetFieldIndex('L2G_MDIST')
+        captured_wave_energy_index = feat_grid.GetFieldIndex('CapWE_Sum')
+        npv_index = feat_grid.GetFieldIndex('NPV_25Y')
         
-        depth = feat.GetFieldAsDouble(depth_index)
-        wave_to_land = feat.GetFieldAsDouble(wave_to_land_index)
-        land_to_grid = feat.GetFieldAsDouble(land_to_grid_index)
-        captured_wave_energy = feat.GetFieldAsDouble(captured_wave_energy_index)
+        depth = feat_grid.GetFieldAsDouble(depth_index)
+        wave_to_land = feat_grid.GetFieldAsDouble(wave_to_land_index)
+        land_to_grid = feat_grid.GetFieldAsDouble(land_to_grid_index)
+        captured_wave_energy = feat_grid.GetFieldAsDouble(captured_wave_energy_index)
         
         captured_we = np.ones(len(T)) * int(captured_wave_energy) * 1000.0
         captured_we[0] = 0
         
         lenml = 3.0 * np.absolute(depth)
-        install_cost = units * capMax * capitalCost
+        install_cost = units * cap_max * capital_cost
         mooring_cost = smlpm * lenml * cml * units
         trans_cost = (wave_to_land * cul / 1000.0) + (land_to_grid * col / 1000.0)
         initial_cost = install_cost + mooring_cost + trans_cost
@@ -715,11 +715,11 @@ def valuation(args):
         annual_cost[0] = initial_cost
         
         npv_result = npv_wave(annual_revenue, annual_cost) / 1000.0
-        feat.SetField(npv_index, npv_result)
+        feat_grid.SetField(npv_index, npv_result)
         
-        shape_layer.SetFeature(feat)
-        feat.Destroy()
-        feat = shape_layer.GetNextFeature()
+        shape_layer.SetFeature(feat_grid)
+        feat_grid.Destroy()
+        feat_grid = shape_layer.GetNextFeature()
     
 
     datatype = gdal.GDT_Float32
@@ -736,8 +736,8 @@ def valuation(args):
     virtual = gdal.AutoCreateWarpedVRT(wave_farm_value_raster,
                                        wave_farm_value_raster.GetProjectionRef(),
                                        prj)
-    drv = gdal.GetDriverByName('GTIFF')
-    drv.CreateCopy(raster_projected_path, virtual, True)
+    drv_grid = gdal.GetDriverByName('GTIFF')
+    drv_grid.CreateCopy(raster_projected_path, virtual, True)
     #########################################
     
 def get_points_geometries(shape):
