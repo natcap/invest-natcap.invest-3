@@ -750,8 +750,23 @@ def get_points_geometries(shape):
     return np.array(point)
     
 def calculate_distance(xy_1, xy_2):
+    """For all points in xy_1, this function calculates the distance
+    from point xy_1 to various points in xy_2,
+    and stores the shortest distances found in a list min_dist.
+    The function also stores the index from which ever point in xy_2
+    was closest, as an id in a list that corresponds to min_dist.
+    
+    xy_1 - A numpy array of points in the form [x,y]
+    xy_2 - A numpy array of points in the form [x,y]
+    
+    returns - A numpy array of shortest distances and a numpy array
+              of id's corresponding to the array of shortest distances  
+    """
+    #Create two numpy array of zeros with length set to as many points in xy_1
     min_dist = np.zeros(len(xy_1))
     min_id = np.zeros(len(xy_1))
+    #For all points xy in xy_1 calcuate the distance from xy to xy_2
+    #and save the shortest distance found.
     for i, xy in enumerate(xy_1):
         dists = np.sqrt(np.sum((xy - xy_2) ** 2, axis=1))
         min_dist[i], min_id[i] = dists.min(), dists.argmin()
