@@ -7,6 +7,7 @@ import math
 import numpy as np
 
 import invest_cython_core
+from invest_natcap.invest_core import invest_core
 
 LOGGER = logging.getLogger('sediment_core')
 
@@ -67,7 +68,13 @@ def biophysical(args):
                                            args['slope'],
                                            args['flow_direction'],
                                            args['ls_factor'])
-
+    def mult_all(*args):
+        val = 1.0
+        for a in args: val *= a
+    op = np.vectorize(mult_all)
+    LOGGER.info("calculating potential soil loss")
+    invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
+        args['erodibility']], op, 'a.tif')
 
 
 def valuation(args):
