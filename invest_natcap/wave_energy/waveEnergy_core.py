@@ -50,8 +50,8 @@ def biophysical(args):
     #Path for 'new' AOI, see comment below 'if AOI in args'
     wave_aoi_path = intermediate_dir + os.sep + 'waveAOIShape.shp'
     #Paths for wave energy and wave power raster
-    wave_energy_path = intermediate_dir + os.sep + 'capwe_mwh.tif'
-    wave_power_path = intermediate_dir + os.sep + 'wp_kw.tif'
+    wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
+    wave_power_path = output_dir + os.sep + 'wp_kw.tif'
     global_dem = args['dem']
     #Set nodata value and datatype for new rasters
     nodata = 0
@@ -541,15 +541,15 @@ def valuation(args):
     #Output Directory path to store output rasters
     output_dir = workspace_dir + os.sep + 'Output'
     #Output path for projected wave point shapefile holding values of interest
-    projected_shape_path = inter_dir + os.sep + 'WaveData_clip_Prj.shp'
+    projected_shape_path = inter_dir + os.sep + 'WaveData_prj.shp'
     #Output path for landing point shapefile
-    land_pt_path = inter_dir + os.sep + 'landing_points.shp'
+    land_pt_path = output_dir + os.sep + 'LandPts_prj.shp'
     #Output path for grid point shapefile
-    grid_pt_path = inter_dir + os.sep + 'grid_point.shp'
+    grid_pt_path = output_dir + os.sep + 'GridPt_prj.shp'
     #Output path for net present value raster
     wave_farm_value_path = inter_dir + os.sep + 'wave_energy_npv.tif'
     #Output path for the projected net present value raster
-    raster_projected_path = inter_dir + os.sep + 'raster_projected.tif'
+    raster_projected_path = output_dir + os.sep + 'npv_usd.tif'
     
     wave_data_shape = args['wave_data_shape']
     prj_file_path = args['projection']
