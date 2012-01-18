@@ -138,7 +138,7 @@ def vectorize1ArgOp(rasterBand, op, outBand):
         outBand.WriteArray(out_array, 0, i)
 
 def vectorizeRasters(rasterList, op, rasterName=None,
-                     datatype=gdal.GDT_Float32,):
+                     datatype=gdal.GDT_Float32, nodata=0):
     """Apply the numpy vectorized operation `op` on the rasters contained in
         rasterList where the arguments to `op` are brodcasted pixels from
         each raster in rasterList in the order they exist in the list
@@ -150,6 +150,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
             resulting raster is only mapped to MEM
         datatype - the GDAL datatype of the output raster.  By default this
             is a 32 bit float.
+        nodata - the nodata value for the output raster
         
         returns a single band raster"""
 
@@ -195,7 +196,6 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     if rasterName != None:
         outputURI = rasterName
         format = 'GTiff'
-    nodata = 0
     outRaster = invest_cython_core.newRaster(outCols, outRows, projection, outGt, format,
                           nodata, datatype, 1, outputURI)
     outBand = outRaster.GetRasterBand(1)
