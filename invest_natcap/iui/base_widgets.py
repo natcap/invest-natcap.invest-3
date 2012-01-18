@@ -1154,9 +1154,9 @@ class Root(DynamicElement):
 
         return outputDict
         
-class RootWindow(Root):
+class AppRoot(RootWindow):
     def __init__(self, uri, layout, object_registrar):
-        Root.__init__(self, uri, layout, object_registrar)
+        RootWindow.__init__(self, uri, layout, object_registrar)
         self.addBottomButtons()
         self.setWindowSize()
 
