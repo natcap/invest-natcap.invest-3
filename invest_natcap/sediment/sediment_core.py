@@ -96,15 +96,16 @@ def biophysical(args):
     ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
-    def mult_all(ls_factor, erosivity, erodibility):
+    def mult_all(ls_factor, erosivity, erodibility, usle_c_p):
         if ls_factor == usle_nodata or erosivity == usle_nodata or \
-            erodibility == usle_nodata:
+            erodibility == usle_nodata or usle_c_p == usle_nodata:
             return usle_nodata
-        return ls_factor * erosivity * erodibility
+        return ls_factor * erosivity * erodibility * usle_c_p
     op = np.vectorize(mult_all)
     LOGGER.info("calculating potential soil loss")
     invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
-        args['erodibility']], op, args['usle_uri'], nodata=usle_nodata)
+        args['erodibility'], usle_c_p_raster], op, args['usle_uri'],
+                                 nodata=usle_nodata)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
