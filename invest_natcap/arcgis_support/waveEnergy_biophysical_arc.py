@@ -13,18 +13,13 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)) + "\\..\\")
 gp.AddMessage(os.getcwd())
 
 #build up the JSON dictionary for saving previously used parameters to disk.
-arguments = {'output_dir': gp.GetParameterAsText(0),
+arguments = {'workspace_dir': gp.GetParameterAsText(0),
              'wave_base_data_uri': gp.GetParameterAsText(1),
              'analysis_area_uri': gp.GetParameterAsText(2),
              'machine_perf_uri': gp.GetParameterAsText(3),
              'machine_param_uri': gp.GetParameterAsText(4),
              'dem_uri': gp.GetParameterAsText(5),
-#             'AOI_uri': gp.GetParameterAsText(3),
-#             'valuation': gp.GetParameterAsText(7),
-#             'landgridpts_uri': gp.GetParameterAsText(8),
-#             'machine_econ_uri': gp.GetParameterAsText(9),
-#             'number_machines': gp.GetParameterAsText(10),
-#             'projection_uri': gp.GetParameterAsText(11)
+             'aoi_uri': gp.GetParameterAsText(6)
              }
 
 args_file = open('C:\Users\\' + getpass.getuser() + '\My Documents\ArcGIS\\waveEnergy_biophysical_args.json', 'w')

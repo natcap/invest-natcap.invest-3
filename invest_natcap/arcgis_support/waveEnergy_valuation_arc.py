@@ -14,18 +14,13 @@ gp.AddMessage(os.getcwd())
 
 #build up the JSON dictionary for saving previously used parameters to disk.
 arguments = {
-#             'output_dir': gp.GetParameterAsText(0),
-#             'wave_base_data_uri': gp.GetParameterAsText(1),
-#             'analysis_area_uri': gp.GetParameterAsText(2),
-             'AOI_uri': gp.GetParameterAsText(0),
-#             'machine_perf_uri': float(gp.GetParameterAsText(4)),
-#             'machine_param_uri': gp.GetParameterAsText(5),
-#             'dem_uri': gp.GetParameterAsText(6),
-             'valuation': gp.GetParameterAsText(1),
-             'landgridpts_uri': gp.GetParameterAsText(2),
-             'machine_econ_uri': gp.GetParameterAsText(3),
-             'number_machines': gp.GetParameterAsText(4),
-             'projection_uri': gp.GetParameterAsText(5)
+             'workspace_dir': gp.GetParameterAsText(0),
+             'wave_data_shape_path': gp.GetParameterAsText(1),
+             'global_dem': gp.GetParameterAsText(2),
+             'land_gridPts_uri': gp.GetParameterAsText(3),
+             'machine_econ_uri': gp.GetParameterAsText(4),
+             'number__of_machines': gp.GetParameterAsText(5),
+             'projection_uri': gp.GetParameterAsText(6)
              }
 
 args_file = open('C:\Users\\' + getpass.getuser() + '\My Documents\ArcGIS\\waveEnergy_valuation_args.json', 'w')
