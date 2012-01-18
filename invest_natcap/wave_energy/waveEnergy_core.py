@@ -19,8 +19,6 @@ def biophysical(args):
     wave farm locations, such as depth, wave height, and wave period.
     Required:
     args['workspace_dir'] - the workspace path
-    args['wave_data_dir'] - the wave data path, used for retreiving other 
-                            relevant files.
     args['wave_base_data'] - a dictionary of seastate bin data.
     args['analysis_area'] - a point geometry shapefile representing the 
                             relevant WW3 points
@@ -31,7 +29,7 @@ def biophysical(args):
     args['dem'] - a GIS raster file of the global elevation model
     
     Optional (but required for valuation):
-    args['AOI'] - a polygon geometry shapefile outlining a more 
+    args['aoi'] - a polygon geometry shapefile outlining a more 
                   specific area of interest (Optional).
 
     returns - Nothing
@@ -39,8 +37,6 @@ def biophysical(args):
     #Set variables for output paths
     #Workspace Directory path
     workspace_dir = args['workspace_dir']
-    #Wave Data Directory path
-    wave_data_dir = args['wave_data_dir']
     #Intermediate Directory path to store information
     intermediate_dir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
@@ -62,11 +58,11 @@ def biophysical(args):
     pixel_xsize = float(dem_gt[1])
     pixel_ysize = np.absolute(float(dem_gt[5]))
     #Determine which shapefile will be used to determine area of interest
-    if 'AOI' in args:
+    if 'aoi' in args:
         #The AOI shapefile has a different projection than lat/long so by calling
         #the clip_shape function with analysis_area_extract (which has lat/long projection
         #which we would expect) and AOI, I am making a new AOI with the proper projection
-        cutter = clip_shape(args['analysis_area_extract'], args['AOI'], wave_aoi_path)        
+        cutter = clip_shape(args['analysis_area_extract'], args['aoi'], wave_aoi_path)        
     else:
         cutter = args['analysis_area_extract']
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
