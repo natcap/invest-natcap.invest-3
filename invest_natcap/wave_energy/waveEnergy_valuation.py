@@ -25,7 +25,7 @@ def execute(args):
         args['machine_econ_uri'] - A CSV file path for the machine economic parameters table.
         args['number_of_machines'] - An integer specifying the number of machines for a wave farm site.
         args['projection_uri'] - A path for the projection to transform coordinates from decimal degrees to meters.
-        args['globa_dem'] - The file path to the global dem.
+        args['global_dem'] - The file path to the global dem.
         args['wave_data_shape_path'] - The path to the point shapefile created during biophysical run.
         
         returns - Nothing
