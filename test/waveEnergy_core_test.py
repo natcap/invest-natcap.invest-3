@@ -44,7 +44,7 @@ class TestWaveEnergy(unittest.TestCase):
         args['wave_base_data'] = waveEnergy_biophysical.extrapolateWaveData(waveFilePath)
         args['analysis_area'] = ogr.Open(analysisPath, 1)
         args['analysis_area_extract'] = ogr.Open(analysisExtractPath)
-        args['AOI'] = ogr.Open(aoiPath)
+        args['aoi'] = ogr.Open(aoiPath)
         args['dem'] = gdal.Open(demPath)
         args['workspace_dir'] = './data/test_data/wave_Energy'
         args['wave_data_dir'] = './data/test_data/wave_Energy/samp_input/WaveData'
@@ -52,17 +52,17 @@ class TestWaveEnergy(unittest.TestCase):
         #and column headers as the first two arrays in the list of arrays
         try:
             machine_perf_twoDArray = [[], []]
-            machinePerfFile = open(machinePerfPath)
-            reader = csv.reader(machinePerfFile)
-            getRow = True
+            machine_perf_file = open(machinePerfPath)
+            reader = csv.reader(machine_perf_file)
+            get_row = True
             for row in reader:
-                if getRow:
+                if get_row:
                     machine_perf_twoDArray[0] = row[1:]
-                    getRow = False
+                    get_row = False
                 else:
                     machine_perf_twoDArray[1].append(row.pop(0))
                     machine_perf_twoDArray.append(row)
-            machinePerfFile.close()
+            machine_perf_file.close()
             args['machine_perf'] = machine_perf_twoDArray
         except IOError, e:
             print 'File I/O error' + e
@@ -72,11 +72,11 @@ class TestWaveEnergy(unittest.TestCase):
         #the machine parameter table with corresponding values
         try:
             machine_params = {}
-            machineParamFile = open(machineParamPath)
-            reader = csv.DictReader(machineParamFile)
+            machine_param_file = open(machineParamPath)
+            reader = csv.DictReader(machine_param_file)
             for row in reader:
                 machine_params[row['NAME'].strip()] = row
-            machineParamFile.close()
+            machine_param_file.close()
             args['machine_param'] = machine_params
         except IOError, e:
             print 'File I/O error' + e
@@ -89,26 +89,26 @@ class TestWaveEnergy(unittest.TestCase):
         #Check that resulting rasters are correct
 
     def test_waveEnergy_changeProjection(self):
-        testDir = './data/test_data/wave_Energy'
-        shapeToReprojectPath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
-        projection = testDir + os.sep + 'test_input/WGS_1984_UTM_Zone_10N.prj'
-        outputPath = testDir + os.sep + 'test_output/waveEnergy_Clip_prj.shp'
+        test_dir = './data/test_data/wave_Energy'
+        shape_to_reproject_path = test_dir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        projection = test_dir + os.sep + 'test_input/WGS_1984_UTM_Zone_10N.prj'
+        outputPath = test_dir + os.sep + 'test_output/waveEnergy_Clip_prj.shp'
 
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
 
-        shapeToReproject = ogr.Open(shapeToReprojectPath)
-        lyr = shapeToReproject.GetLayer(0)
+        shape_to_reproject = ogr.Open(shape_to_reproject_path)
+        lyr = shape_to_reproject.GetLayer(0)
 
         prj_file = open(projection)
         prj_string = prj_file.read()
         spatial_prj = osr.SpatialReference()
         spatial_prj.ImportFromWkt(prj_string)
 
-        newShape = waveEnergy_core.change_shape_projection(shapeToReproject, projection, outputPath)
-        layer = newShape.GetLayer(0)
+        new_shape = waveEnergy_core.change_shape_projection(shape_to_reproject, projection, outputPath)
+        layer = new_shape.GetLayer(0)
         
         shape_projection = layer.GetSpatialRef()
         projcs = shape_projection.GetAttrValue('PROJCS')
@@ -149,8 +149,8 @@ class TestWaveEnergy(unittest.TestCase):
             feat = lyr.GetNextFeature()
             feat_projected = layer.GetNextFeature()
         
-        shapeToReproject.Destroy()
-        newShape.Destroy()
+        shape_to_reproject.Destroy()
+        new_shape.Destroy()
         
     def test_waveEnergy_clipShape(self):
         """A trivial test case that makes sure clip_shape returns the proper shape
@@ -159,57 +159,57 @@ class TestWaveEnergy(unittest.TestCase):
         equal to the input"""
         filesystemencoding = sys.getfilesystemencoding()
 
-        testDir = './data/test_data/wave_Energy'
-        shapeToClipPath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
-        bindingShapePath = testDir + os.sep + 'samp_input/WaveData/WCNA_extract.shp'
-        newShapePath = testDir + os.sep + 'test_output/waveEnergy_Clipz.shp'
+        test_dir = './data/test_data/wave_Energy'
+        shape_to_clip_path = test_dir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        binding_shape_path = test_dir + os.sep + 'samp_input/WaveData/WCNA_extract.shp'
+        new_shape_path = test_dir + os.sep + 'test_output/waveEnergy_Clipz.shp'
 
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
 
-        shapeToClip = ogr.Open(shapeToClipPath.encode(filesystemencoding))
-        bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
+        shape_to_clip = ogr.Open(shape_to_clip_path.encode(filesystemencoding))
+        binding_shape = ogr.Open(binding_shape_path.encode(filesystemencoding))
 
-        newShape = waveEnergy_core.clip_shape(shapeToClip, bindingShape, newShapePath)
+        new_shape = waveEnergy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
 
-        layerCount = shapeToClip.GetLayerCount()
-        layerCountNew = newShape.GetLayerCount()
-        self.assertEqual(layerCount, layerCountNew, 'The shapes DO NOT have the same number of layers')
+        layer_count = shape_to_clip.GetLayerCount()
+        layer_count_new = new_shape.GetLayerCount()
+        self.assertEqual(layer_count, layer_count_new, 'The shapes DO NOT have the same number of layers')
 
-        for layerNum in range(layerCount):
-            layer = shapeToClip.GetLayer(layerNum)
+        for layer_num in range(layer_count):
+            layer = shape_to_clip.GetLayer(layer_num)
             layer.ResetReading()
-            layerNew = newShape.GetLayer(layerNum)
+            layer_new = new_shape.GetLayer(layer_num)
 
-            featCount = layer.GetFeatureCount()
-            featCountNew = layerNew.GetFeatureCount()
-            self.assertEqual(featCount, featCountNew, 'The layers DO NOT have the same number of features')
+            feat_count = layer.GetFeatureCount()
+            feat_count_new = layer_new.GetFeatureCount()
+            self.assertEqual(feat_count, feat_count_new, 'The layers DO NOT have the same number of features')
 
             feat = layer.GetNextFeature()
-            featNew = layerNew.GetNextFeature()
+            feat_new = layer_new.GetNextFeature()
             while feat is not None:
-                layerDef = layer.GetLayerDefn()
-                layerDefNew = layerNew.GetLayerDefn()
+                layer_def = layer.GetLayerDefn()
+                layer_def_new = layer_new.GetLayerDefn()
 
-                fieldCount = layerDef.GetFieldCount()
-                fieldCountNew = layerDefNew.GetFieldCount()
-                self.assertEqual(fieldCount, fieldCountNew, 'The shapes DO NOT have the same number of fields')
+                field_count = layer_def.GetFieldCount()
+                field_count_new = layer_def_new.GetFieldCount()
+                self.assertEqual(field_count, field_count_new, 'The shapes DO NOT have the same number of fields')
 
-                for fld_index in range(fieldCount):
+                for fld_index in range(field_count):
                     field = feat.GetField(fld_index)
-                    fieldNew = featNew.GetField(fld_index)
-                    self.assertEqual(field, fieldNew, 'The field values DO NOT match')
+                    field_new = feat_new.GetField(fld_index)
+                    self.assertEqual(field, field_new, 'The field values DO NOT match')
 
                 feat.Destroy()
-                featNew.Destroy()
+                feat_new.Destroy()
                 feat = layer.GetNextFeature()
-                featNew = layerNew.GetNextFeature()
+                feat_new = layer_new.GetNextFeature()
 
-        newShape.Destroy()
-        shapeToClip.Destroy()
-        bindingShape.Destroy()
+        new_shape.Destroy()
+        shape_to_clip.Destroy()
+        binding_shape.Destroy()
 
 #        if os.path.isdir(output_dir):
 #            textFileList = os.listdir(output_dir)
@@ -224,111 +224,111 @@ class TestWaveEnergy(unittest.TestCase):
         equal to the input"""
         filesystemencoding = sys.getfilesystemencoding()
 
-        testDir = './data/test_data/wave_Energy'
-        shapeToClipPath = testDir + os.sep + 'test_input/pointShapeTest.shp'
-        bindingShapePath = testDir + os.sep + 'samp_input/AOI_WCVI.shp'
-        newShapePath = testDir + os.sep + 'test_output/waveEnergy_NoClip.shp'
+        test_dir = './data/test_data/wave_Energy'
+        shape_to_clip_path = test_dir + os.sep + 'test_input/pointShapeTest.shp'
+        binding_shape_path = test_dir + os.sep + 'samp_input/AOI_WCVI.shp'
+        new_shape_path = test_dir + os.sep + 'test_output/waveEnergy_NoClip.shp'
 
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
 
-        shapeToClip = ogr.Open(shapeToClipPath.encode(filesystemencoding))
-        bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
+        shape_to_clip = ogr.Open(shape_to_clip_path.encode(filesystemencoding))
+        binding_shape = ogr.Open(binding_shape_path.encode(filesystemencoding))
 
-        newShape = waveEnergy_core.clip_shape(shapeToClip, bindingShape, newShapePath)
+        new_shape = waveEnergy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
 
-        layer = newShape.GetLayer(0)
+        layer = new_shape.GetLayer(0)
 
         self.assertEqual(layer.GetFeatureCount(), 0)
 
         layer = None
-        newShape.Destroy()
-        shapeToClip.Destroy()
-        bindingShape.Destroy()
+        new_shape.Destroy()
+        shape_to_clip.Destroy()
+        binding_shape.Destroy()
 
     def test_waveEnergy_clipShapeProj(self):
         """A non trivial test case that makes sure clip_shape returns the proper shape
         after it has been clipped by a polygon shapefile."""
         filesystemencoding = sys.getfilesystemencoding()
 
-        testDir = './data/test_data/wave_Energy'
-        shapeToClipPath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
-        bindingShapePath = testDir + os.sep + 'test_input/threePointShape.shp'
-        newShapePath = testDir + os.sep + 'test_output/waveEnergy_ClipAOI.shp'
+        test_dir = './data/test_data/wave_Energy'
+        shape_to_clip_path = test_dir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        binding_shape_path = test_dir + os.sep + 'test_input/threePointShape.shp'
+        new_shape_path = test_dir + os.sep + 'test_output/waveEnergy_ClipAOI.shp'
 
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
 #        elif os.path.isfile(output_dir + 'timber.shp'):
 #            os.remove(output_dir + 'timber.shp')
 
-        shapeToClip = ogr.Open(shapeToClipPath.encode(filesystemencoding))
-        bindingShape = ogr.Open(bindingShapePath.encode(filesystemencoding))
+        shape_to_clip = ogr.Open(shape_to_clip_path.encode(filesystemencoding))
+        binding_shape = ogr.Open(binding_shape_path.encode(filesystemencoding))
 
-        newShape = waveEnergy_core.clip_shape(shapeToClip, bindingShape, newShapePath)
+        new_shape = waveEnergy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
 
-#        pointOneFields = [6025, 'Point', 572, 490, -126.933144, 47.600162, 2.8, 11.1]
-#        pointTwoFields = [6064, 'Point', 573, 490, -126.866477, 47.600162, 2.8, 11.11]
-#        pointThreeFields = [6101, 'Point', 574, 490, -126.79981, 47.600162, 2.79, 11.11]
+#        point_one_fields = [6025, 'Point', 572, 490, -126.933144, 47.600162, 2.8, 11.1]
+#        point_two_fields = [6064, 'Point', 573, 490, -126.866477, 47.600162, 2.8, 11.11]
+#        point_three_fields = [6101, 'Point', 574, 490, -126.79981, 47.600162, 2.79, 11.11]
         #It seems that the fields "FID" and "Shape" are not included for some reason when
         #Looping through all the fields of the shapefile
-        pointOneFields = [572, 490, -126.933144, 47.600162, 2.8, 11.1]
-        pointTwoFields = [573, 490, -126.866477, 47.600162, 2.8, 11.11]
-        pointThreeFields = [574, 490, -126.79981, 47.600162, 2.79, 11.11]
-        pointFieldArray = [pointOneFields, pointTwoFields, pointThreeFields]
+        point_one_fields = [572, 490, -126.933144, 47.600162, 2.8, 11.1]
+        point_two_fields = [573, 490, -126.866477, 47.600162, 2.8, 11.11]
+        point_three_fields = [574, 490, -126.79981, 47.600162, 2.79, 11.11]
+        point_field_array = [point_one_fields, point_two_fields, point_three_fields]
 
-        layer = newShape.GetLayer(0)
-        featCountCalc = 3
-        featCount = layer.GetFeatureCount()
-        self.assertEqual(featCountCalc, featCount, 'The number of features are not correct')
+        layer = new_shape.GetLayer(0)
+        feat_count_calc = 3
+        feat_count = layer.GetFeatureCount()
+        self.assertEqual(feat_count_calc, feat_count, 'The number of features are not correct')
 
         feat = layer.GetNextFeature()
-        pointArrayIderator = 0
+        point_array_iderator = 0
         while feat is not None:
-            layerDef = layer.GetLayerDefn()
-            pointField = pointFieldArray[pointArrayIderator]
-            fieldCount = layerDef.GetFieldCount()
-            fldCountCalc = 6
-            self.assertEqual(fieldCount, fldCountCalc, 'The number of fields are not correct')
-            for fld_index in range(fieldCount):
+            layer_def = layer.GetLayerDefn()
+            point_field = point_field_array[point_array_iderator]
+            field_count = layer_def.GetFieldCount()
+            fld_count_calc = 6
+            self.assertEqual(field_count, fld_count_calc, 'The number of fields are not correct')
+            for fld_index in range(field_count):
                 field = feat.GetField(fld_index)
-                fieldCalc = pointField[fld_index]
-                self.assertEqual(field, fieldCalc, 'The field values do not match' + str(field) + '!=' + str(fieldCalc))
+                field_calc = point_field[fld_index]
+                self.assertEqual(field, field_calc, 'The field values do not match' + str(field) + '!=' + str(field_calc))
 
             feat.Destroy()
             feat = layer.GetNextFeature()
-            pointArrayIderator = pointArrayIderator + 1
+            point_array_iderator = point_array_iderator + 1
 
-        newShape.Destroy()
-        shapeToClip.Destroy()
-        bindingShape.Destroy()
+        new_shape.Destroy()
+        shape_to_clip.Destroy()
+        binding_shape.Destroy()
 
 #    def test_waveEnergy_shapeToDict(self):
 #        """Test pointShapeToDict to make sure that it works properly for different geometries"""
 #        filesystemencoding = sys.getfilesystemencoding()
 #        
 #        
-#        testDir = './data/test_data/wave_Energy'
-#        shapePath = testDir + os.sep + 'test_input/pointShapeTest.shp'
+#        test_dir = './data/test_data/wave_Energy'
+#        shapePath = test_dir + os.sep + 'test_input/pointShapeTest.shp'
 #        
 #        #Add the Output directory onto the given workspace
-#        output_dir = testDir + os.sep + 'test_output/'
+#        output_dir = test_dir + os.sep + 'test_output/'
 #        if not os.path.isdir(output_dir):
 #            os.mkdir(output_dir)
 ##        elif os.path.isfile(output_dir + 'timber.shp'):
 ##            os.remove(output_dir + 'timber.shp')
 #
-#        shapeToClip = ogr.Open(shapePath.encode(filesystemencoding))
+#        shape_to_clip = ogr.Open(shapePath.encode(filesystemencoding))
 #        key = ['LONG', 'LATI']
 #        valueArray = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
 #        value = 'HSAVG_M'
 #        xrange = [-126.933144, -126.866477, -126.79981]
 #        yrange = [47.600162]
 #        matrix = [[2.8, 2.8, 2.79]]
-#        shapeArray = waveEnergy_core.pointShapeToDict(shapeToClip, key, valueArray, value)
+#        shapeArray = waveEnergy_core.pointShapeToDict(shape_to_clip, key, valueArray, value)
 #        self.assertEqual(len(xrange), len(shapeArray[0]), 'xranges do not have same number of elements')
 #        self.assertEqual(len(yrange), len(shapeArray[1]), 'yranges do not have same number of elements')
 #        self.assertEqual(len(matrix), len(shapeArray[2]), 'matrices do not have same number of elements')
@@ -337,108 +337,108 @@ class TestWaveEnergy(unittest.TestCase):
 #            for innerIndex, num in enumerate(var):
 #                self.assertEqual(num, shapeMatrix[index][innerIndex], 'The values of the matrices do not match')
 #        
-#        shapeToClip.Destroy()
+#        shape_to_clip.Destroy()
 
     def test_waveEnergy_getPointsValues(self):
         """Test getPointsValues to make sure that it works properly for different geometries"""
         filesystemencoding = sys.getfilesystemencoding()
 
 
-        testDir = './data/test_data/wave_Energy'
-        shapePath = testDir + os.sep + 'test_input/pointShapeTest.shp'
+        test_dir = './data/test_data/wave_Energy'
+        shapePath = test_dir + os.sep + 'test_input/pointShapeTest.shp'
 
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
 #        elif os.path.isfile(output_dir + 'timber.shp'):
 #            os.remove(output_dir + 'timber.shp')
 
-        shapeToClip = ogr.Open(shapePath.encode(filesystemencoding))
+        shape_to_clip = ogr.Open(shapePath.encode(filesystemencoding))
         key = ['LONG', 'LATI']
-        valueArray = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
+        value_array = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
         value = 'HSAVG_M'
         points = [[-126.933144, 47.600162], [-126.866477, 47.600162], [-126.79981, 47.600162]]
         values = [2.8, 2.8, 2.79]
-        shapeArray = waveEnergy_core.getPointsValues(shapeToClip, key, valueArray, value)
-        self.assertEqual(len(points), len(shapeArray[0]), 'The number of points do not match')
-        self.assertEqual(len(values), len(shapeArray[1]), 'The number of values do not match')
-        shapePoints = shapeArray[0]
-        shapeValues = shapeArray[1]
-        calcDict = {}
-        funDict = {}
+        shape_array = waveEnergy_core.getPointsValues(shape_to_clip, key, value_array, value)
+        self.assertEqual(len(points), len(shape_array[0]), 'The number of points do not match')
+        self.assertEqual(len(values), len(shape_array[1]), 'The number of values do not match')
+        shape_points = shape_array[0]
+        shape_values = shape_array[1]
+        calc_dict = {}
+        fun_dict = {}
         for index, var in enumerate(points):
-            calcDict[tuple(var)] = values[index]
-        for index, var in enumerate(shapePoints):
-            funDict[tuple(var)] = shapeValues[index]
-        for key, val in calcDict.iteritems():
-            if key in funDict:
-                self.assertEqual(val, funDict[key], 'The values do not match')
+            calc_dict[tuple(var)] = values[index]
+        for index, var in enumerate(shape_points):
+            fun_dict[tuple(var)] = shape_values[index]
+        for key, val in calc_dict.iteritems():
+            if key in fun_dict:
+                self.assertEqual(val, fun_dict[key], 'The values do not match')
             else:
                 self.assertEqual(0, 1, 'The keys do not match')
 
-        shapeToClip.Destroy()
+        shape_to_clip.Destroy()
 
     def test_waveEnergy_capturedWaveEnergyToShape(self):
         """Test captured_wave_energy_to_shape to make sure that it works properly for different geometries"""
         filesystemencoding = sys.getfilesystemencoding()
 
 
-        testDir = './data/test_data/wave_Energy'
-        shapePath = testDir + os.sep + 'test_input/pointShapeTest.shp'
-        newPath = str(testDir + os.sep + 'test_output/pointShapeSum.shp')
-        waveShape = ogr.Open(shapePath.encode(filesystemencoding), 1)
+        test_dir = './data/test_data/wave_Energy'
+        shape_path = test_dir + os.sep + 'test_input/pointShapeTest.shp'
+        new_path = str(test_dir + os.sep + 'test_output/pointShapeSum.shp')
+        wave_shape = ogr.Open(shape_path.encode(filesystemencoding), 1)
 
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
 #        elif os.path.isfile(output_dir + 'timber.shp'):
 #            os.remove(output_dir + 'timber.shp')
 
-        waveShapeCopy = ogr.GetDriverByName('Memory').CopyDataSource(waveShape, '')
-#        waveShapeCopy.Destroy()
-#        waveShapeCopy = ogr.Open(newPath.encode(filesystemencoding), 1)
+        wave_shape_copy = ogr.GetDriverByName('Memory').CopyDataSource(wave_shape, '')
+#        wave_shape_copy.Destroy()
+#        wave_shape_copy = ogr.Open(new_path.encode(filesystemencoding), 1)
 
-        testDict = {(572, 490):2302, (573, 490):1453, (574, 490):2103}
-        ijArray = [[572, 490], [573, 490], [574, 490]]
-        waveEnergy_core.captured_wave_energy_to_shape(testDict, waveShapeCopy)
+        test_dict = {(572, 490):2302, (573, 490):1453, (574, 490):2103}
+        ij_array = [[572, 490], [573, 490], [574, 490]]
+        waveEnergy_core.captured_wave_energy_to_shape(test_dict, wave_shape_copy)
 
-        layer = waveShapeCopy.GetLayer(0)
+        layer = wave_shape_copy.GetLayer(0)
         #Need to reset the layer because the function call goes through the features in
         #the layer and does not reset or close.
         layer.ResetReading()
         feat = layer.GetNextFeature()
-        compDict = {}
+        comp_dict = {}
         while feat is not None:
-            tempArray = []
+            temp_array = []
             for fld in ('I', 'J', 'capWE_Sum'):
                 index = feat.GetFieldIndex(fld)
-                fieldVal = feat.GetField(index)
-                tempArray.append(fieldVal)
-            compDict[(tempArray[0], tempArray[1])] = tempArray[2]
+                field_val = feat.GetField(index)
+                temp_array.append(field_val)
+            comp_dict[(temp_array[0], temp_array[1])] = temp_array[2]
 
             feat.Destroy()
             feat = layer.GetNextFeature()
 
-        self.assertEqual(len(testDict), len(compDict), 'The lengths of the dictionaries are not the same')
+        self.assertEqual(len(test_dict), len(comp_dict), 'The lengths of the dictionaries are not the same')
 
-        for key, val in testDict.iteritems():
-            if key in compDict:
-                self.assertEqual(val, compDict[key], 'The values corresponding to the keys do not match' + str(val) + ':' + str(compDict[key]))
+        for key, val in test_dict.iteritems():
+            if key in comp_dict:
+                self.assertEqual(val, comp_dict[key], 'The values corresponding to the keys do not match' + str(val) + ':' + str(comp_dict[key]))
             else:
                 self.assertEqual(0, 1, 'The key does not exist in the new feature')
 
 
-        waveShape.Destroy()
-        waveShapeCopy.Destroy()
+        wave_shape.Destroy()
+        wave_shape_copy.Destroy()
 
 
     def test_waveEnergy_computeWaveEnergyCapacity(self):
         """Test computWaveEnergyCapacity function to make sure it works properly"""
 
-#        waveData = 'A dictionary with key (I,J) and value 2D array'
-        waveData = {0:[1, 2, 3, 4, 5], 1:[1, 2, 3, 4],
+#        wave_data = 'A dictionary with key (I,J) and value 2D array'
+        wave_data = {0:[1, 2, 3, 4, 5], 1:[1, 2, 3, 4],
                     (520, 490):[[0, 10, 13, 9, 7],
                                 [8, 15, 17, 13, 3],
                                 [0, 3, 11, 9, 7],
@@ -448,24 +448,24 @@ class TestWaveEnergy(unittest.TestCase):
                                 [2, 3, 11.5, 9, 7.25],
                                 [11, 17, 23, 19, 12]]
                     }
-#        interpZ = 'An interpolated object from machine performace and waveData ranges'
+#        interpZ = 'An interpolated object from machine performace and wave_data ranges'
         interpZ = [[0, 0, 1, 3, 8], [0, 3, 5, 9, 7], [1, 4, 5, 3, 0], [0, 0, 0, 0, 0]]
-#        machineParam = 'A dictionary with CapMax TpMax and HsMax'
-        machineParam = {'CapMax':{'VALUE':20}, 'TpMax':{'VALUE':4}, 'HsMax':{'VALUE':3}}
+#        machine_param = 'A dictionary with CapMax TpMax and HsMax'
+        machine_param = {'CapMax':{'VALUE':20}, 'TpMax':{'VALUE':4}, 'HsMax':{'VALUE':3}}
         result = {(520, 490):0.0762, (521, 491):0.22116}
 
-        weSum = waveEnergy_core.compute_wave_energy_capacity(waveData, interpZ, machineParam)
+        we_sum = waveEnergy_core.compute_wave_energy_capacity(wave_data, interpZ, machine_param)
 
-        """Loop that compares dictionaries weSum and result checking key, sum values"""
+        """Loop that compares dictionaries we_sum and result checking key, sum values"""
         for key in result:
-            if key in weSum:
-                self.assertAlmostEqual(result[key], weSum[key], 8, 'The values do not match for key ' + str(weSum[key]))
+            if key in we_sum:
+                self.assertAlmostEqual(result[key], we_sum[key], 8, 'The values do not match for key ' + str(we_sum[key]))
             else:
                 self.assertEqual(0, 1, 'The keys do not match')
 
     def test_waveEnergy_waveEnergyInterp(self):
-        waveData = {0:[1, 2, 3, 4, 5, 6, 7, 8], 1:[.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]}
-        machinePerf = [[2, 3, 4, 7], [1, 2, 3],
+        wave_data = {0:[1, 2, 3, 4, 5, 6, 7, 8], 1:[.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]}
+        machine_perf = [[2, 3, 4, 7], [1, 2, 3],
                        [0, 8, 20, 10],
                        [6, 18, 23, 13],
                        [0, 8, 20, 0]]
@@ -478,7 +478,7 @@ class TestWaveEnergy(unittest.TestCase):
                   [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0],
                   [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0]]
         result = np.array(result)
-        interpZ = waveEnergy_core.wave_energy_interp(waveData, machinePerf)
+        interpZ = waveEnergy_core.wave_energy_interp(wave_data, machine_perf)
 
         self.assertEqual(result.shape, interpZ.shape, 'The shapes are not the same')
 
@@ -489,65 +489,65 @@ class TestWaveEnergy(unittest.TestCase):
     def test_waveEnergy_clipRasterFromPolygon(self):
         filesystemencoding = sys.getfilesystemencoding()
 
-        testDir = './data/test_data/wave_Energy'
-        shapePath = testDir + os.sep + 'test_input/threePointShape.shp'
-        rasterPath = testDir + os.sep + 'test_input/noAOIWP.tif'
-        path = testDir + os.sep + 'test_output/wpClipped.tif'
+        test_dir = './data/test_data/wave_Energy'
+        shape_path = test_dir + os.sep + 'test_input/threePointShape.shp'
+        raster_path = test_dir + os.sep + 'test_input/noAOIWP.tif'
+        path = test_dir + os.sep + 'test_output/wpClipped.tif'
 
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
 
-        shape = ogr.Open(shapePath)
-        raster = gdal.Open(rasterPath)
+        shape = ogr.Open(shape_path)
+        raster = gdal.Open(raster_path)
 
-        newRaster = waveEnergy_core.clip_raster_from_polygon(shape, raster, path)
+        new_raster = waveEnergy_core.clip_raster_from_polygon(shape, raster, path)
 
-        newBand = newRaster.GetRasterBand(1)
+        new_band = new_raster.GetRasterBand(1)
         band = raster.GetRasterBand(1)
         nodata = band.GetNoDataValue()
-        testMatrix = [36.742653, 36.675091, 36.606201, 36.537350, 36.469341,
+        test_matrix = [36.742653, 36.675091, 36.606201, 36.537350, 36.469341,
                       36.814983, 36.763050, 36.704857, 36.646111, 36.587391]
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-        newMatrix = newBand.ReadAsArray(0, 0, newBand.XSize, newBand.YSize)
-        tempMatrix = []
-        for index, item in enumerate(newMatrix):
+        new_matrix = new_band.ReadAsArray(0, 0, new_band.XSize, new_band.YSize)
+        temp_matrix = []
+        for index, item in enumerate(new_matrix):
             for i, val in enumerate(item):
                 if val != nodata:
-                    tempMatrix.append(val)
+                    temp_matrix.append(val)
                     self.assertEqual(val, matrix[index][i], 'Values are not the same')
 
-        self.assertEqual(len(tempMatrix), 10, 'Number of pixels do not match')
+        self.assertEqual(len(temp_matrix), 10, 'Number of pixels do not match')
 
-        for i, val in enumerate(testMatrix):
-            self.assertAlmostEqual(val, tempMatrix[i], 4)
+        for i, val in enumerate(test_matrix):
+            self.assertAlmostEqual(val, temp_matrix[i], 4)
 
-        newRaster = None
+        new_raster = None
         
     def test_waveEnergy_clipRasterFromPolygon_DEM(self):
         filesystemencoding = sys.getfilesystemencoding()
 
-        testDir = './data/test_data/wave_Energy'
-        shapePath = testDir + os.sep + 'samp_input/AOI_WCVI.shp'
-        rasterPath = testDir + os.sep + 'samp_input/global_dem'
-        path = testDir + os.sep + 'test_output/clipped_dem.tif'
+        test_dir = './data/test_data/wave_Energy'
+        shape_path = test_dir + os.sep + 'samp_input/AOI_WCVI.shp'
+        raster_path = test_dir + os.sep + 'samp_input/global_dem'
+        path = test_dir + os.sep + 'test_output/clipped_dem.tif'
 
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
 
-        shape = ogr.Open(shapePath)
-        raster = gdal.Open(rasterPath)
+        shape = ogr.Open(shape_path)
+        raster = gdal.Open(raster_path)
 
-        newRaster = waveEnergy_core.clip_raster_from_polygon(shape, raster, path)
+        new_raster = waveEnergy_core.clip_raster_from_polygon(shape, raster, path)
 
-        newRaster = None
+        new_raster = None
 
     def test_waveEnergy_interpPointsOverRaster(self):
-        testDir = './data/test_data/wave_Energy'
-        path = testDir + os.sep + 'test_output/fourbyfourRaster.tif'
+        test_dir = './data/test_data/wave_Energy'
+        path = test_dir + os.sep + 'test_output/fourbyfourRaster.tif'
         #Create a blank raster of small dimensions.
         driver = gdal.GetDriverByName('GTIFF')
         raster = driver.Create(path, 4, 4, 1, gdal.GDT_Float32)
@@ -574,11 +574,11 @@ class TestWaveEnergy(unittest.TestCase):
     def test_waveEnergy_wavePower(self):
         """Test wave_power to make sure desired outputs are met"""
 
-        testDir = './data/test_data/wave_Energy'
-        shape_path = testDir + os.sep + 'test_input/test_wave_power_shape.shp'
-        shape_copy_path = testDir + os.sep + 'test_output/test_wave_power_shape.shp'
+        test_dir = './data/test_data/wave_Energy'
+        shape_path = test_dir + os.sep + 'test_input/test_wave_power_shape.shp'
+        shape_copy_path = test_dir + os.sep + 'test_output/test_wave_power_shape.shp'
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
         if os.path.isfile(shape_copy_path):
@@ -587,7 +587,7 @@ class TestWaveEnergy(unittest.TestCase):
         depth_list = [-500, -1000, -100, 1, -80]
         height_list = [2.5, 2.8, 2.3, 1.5, 2.04]
         period_list = [10.0, 12.0, 8.0, 5.0, 11.3]
-        calculations_byhand = [26.39331177, 39.729324, 17.87146248, 3.996030763, 20.10613825]
+        calculations_by_hand = [26.39331177, 39.729324, 17.87146248, 3.996030763, 20.10613825]
         shape = ogr.Open(shape_path)
         
         shape_copy = ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(shape, shape_copy_path)
@@ -621,7 +621,7 @@ class TestWaveEnergy(unittest.TestCase):
         while feat is not None:
             wave_power_index = feat.GetFieldIndex('wp_Kw')
             wave_power = feat.GetField(wave_power_index)
-            self.assertAlmostEqual(wave_power, calculations_byhand[i], 1)
+            self.assertAlmostEqual(wave_power, calculations_by_hand[i], 1)
             feat.Destroy()
             feat = layer.GetNextFeature()
             i = i + 1
@@ -631,12 +631,12 @@ class TestWaveEnergy(unittest.TestCase):
     def test_waveEnergy_wavePower_regression(self):
         """Test wave_power to make sure desired outputs are met"""
 
-        testDir = './data/test_data/wave_Energy'
-        shape_path = testDir + os.sep + 'test_input/test_wavepower_withfields.shp'
-        shape_copy_path = testDir + os.sep + 'test_output/test_wave_power_regression.shp'
-        regression_shape_path = testDir + os.sep + 'regression_tests/test_wave_power_shape.shp'
+        test_dir = './data/test_data/wave_Energy'
+        shape_path = test_dir + os.sep + 'test_input/test_wavepower_withfields.shp'
+        shape_copy_path = test_dir + os.sep + 'test_output/test_wave_power_regression.shp'
+        regression_shape_path = test_dir + os.sep + 'regression_tests/test_wave_power_shape.shp'
         #Add the Output directory onto the given workspace
-        output_dir = testDir + os.sep + 'test_output/'
+        output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
         if os.path.isfile(shape_copy_path):
@@ -668,8 +668,8 @@ class TestWaveEnergy(unittest.TestCase):
         shape_reg.Destroy()
 
     def test_waveEnergy_getPoints(self):
-        testDir = './data/test_data/wave_Energy'
-        shape_path = testDir + os.sep + 'test_input/test_wavepower_withfields.shp'
+        test_dir = './data/test_data/wave_Energy'
+        shape_path = test_dir + os.sep + 'test_input/test_wavepower_withfields.shp'
         
         shape = ogr.Open(shape_path)
         layer = shape.GetLayer(0)
