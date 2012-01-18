@@ -8,7 +8,6 @@ import simplejson as json
 import numpy as np
 from osgeo import ogr
 from osgeo import gdal
-from osgeo.gdalconst import *
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
