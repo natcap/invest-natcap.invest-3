@@ -5,6 +5,7 @@ import logging
 import math
 
 import numpy as np
+from osgeo import gdal
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
@@ -70,10 +71,28 @@ def biophysical(args):
                                            args['flow_direction'],
                                            args['ls_factor'])
 
+    #Nodata value to use for output raster
+    usle_nodata = -1.0
+
+    #map lulc to a usle_c * usle_p raster
+    LOGGER.info('mapping landuse types to crop and practice management values')
+    usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], 'cp.tif',
+        'GTiff', usle_nodata, gdal.GDT_Float32)
+    def lulc_to_cp(lulc_code):
+        if str(lulc_code) not in args['biophysical_table']:
+            return usle_nodata
+        #We need to divide the c and p factors by 1000 because they're stored
+        #in the table as C * 1000 and P * 1000.  See the user's guide:
+        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
+        return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
+            float(args['biophysical_table'][str(lulc_code)]['usle_p']) / 10 ** 6
+    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1), lulc_to_cp,
+                                usle_c_p_raster.GetRasterBand(1))
+
+    #Set up structures for USLE calculation
     ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
-    usle_nodata = -1.0
     def mult_all(ls_factor, erosivity, erodibility):
         if ls_factor == usle_nodata or erosivity == usle_nodata or \
             erodibility == usle_nodata:
@@ -83,6 +102,7 @@ def biophysical(args):
     LOGGER.info("calculating potential soil loss")
     invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
         args['erodibility']], op, args['usle_uri'], nodata=usle_nodata)
+    LOGGER.debug(args['biophysical_table'])
 
 
 def valuation(args):
