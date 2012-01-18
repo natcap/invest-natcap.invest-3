@@ -29,6 +29,7 @@ def biophysical(args):
         args['subwatersheds'] - an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds' shape provided as input. (required)
+        args['usle_uri'] - a URI location to the temporary USLE raster
         args['reservoir_locations'] - an input shape file with 
             points indicating reservoir locations with IDs. (optional)
         args['reservoir_properties'] - an input CSV table 
@@ -74,7 +75,7 @@ def biophysical(args):
     op = np.vectorize(mult_all)
     LOGGER.info("calculating potential soil loss")
     invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
-        args['erodibility']], op, 'a.tif')
+        args['erodibility']], op, args['usle_uri'])
 
 
 def valuation(args):
