@@ -950,8 +950,6 @@ class OperationDialog(QtGui.QDialog):
                 self.write(message)
         else:
             self.finished()
-        
-        
 
     def start_buttons(self):
         self.progressBar.setMaximum(0) #start the progressbar.
@@ -1012,25 +1010,22 @@ class OperationDialog(QtGui.QDialog):
     def cancelled(self):
         return self.cancel
 
-
-
-class RootWindow(DynamicElement):
+class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
         
         DynamicElement.__init__(self, attributes)
-
         self.type_registrar = registrar.DatatypeRegistrar()
         self.setLayout(layout)
-
+        
         self.body = DynamicGroup(attributes, QtGui.QVBoxLayout(), object_registrar)
-
+        
         if 'scrollable' in self.attributes:
             make_scrollable = self.attributes['scrollable']
         else:
             make_scrollable = True
-
+            
         if make_scrollable:
             self.scrollArea = QtGui.QScrollArea()
             self.layout().addWidget(self.scrollArea)
@@ -1043,7 +1038,7 @@ class RootWindow(DynamicElement):
                                     self.scrollArea.verticalScrollBar().maximum())
         else:
             self.layout().addWidget(self.body)
-
+            
         self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
         self.lastRun = self.last_run_handler.get_attributes()
 
@@ -1054,57 +1049,18 @@ class RootWindow(DynamicElement):
             element.updateLinks(self)
 
         self.operationDialog = OperationDialog(self)
-
-        self.messageArea = QtGui.QLabel('')
+        
+        self.messageArea = QtGui.QLabel()
         self.layout().addWidget(self.messageArea)
+
         self.initElements()
-        self.addBottomButtons()
-
-        self.setWindowSize()
-
-        return
+        
 
     def updateScrollBorder(self, min, max):
         if min == 0 and max == 0:
             self.scrollArea.setStyleSheet("QScrollArea { border: None } ")
         else:
             self.scrollArea.setStyleSheet("")
-
-    def setWindowSize(self):
-        #this groups all elements together at the top, leaving the
-        #buttons at the bottom of the window.
-
-        if 'width' in self.attributes:
-            width = self.attributes['width']
-        else:
-            width = 400
-
-        if 'height' in self.attributes:
-            height = self.attributes['height']
-        else:
-            height = 400
-
-        self.setGeometry(400, 400, width, height)
-        self.setWindowIcon(QtGui.QIcon('natcap_logo.png'))
-
-    def closeWindow(self):
-        """Terminates the application.
-        
-            This function is called when the user closes the window by any of
-            Qt's recognized methods (often including closing the window via the
-            little x in the corner of the window and/or pressing the Esc key).
-        
-            returns nothing"""
-
-        sys.exit(0)
-
-    def closeEvent(self, event=None):
-        """Terminates the application. This function is a Qt-defined callback 
-            for when the window is closed.
-            
-            returns nothing"""
-
-        sys.exit(0)
 
     def resetParametersToDefaults(self):
         """Reset all parameters to defaults provided in the configuration file.
@@ -1118,15 +1074,6 @@ class RootWindow(DynamicElement):
                 element.resetValue()
             elif issubclass(element.__class__, Container):
                 element.resetValue()
-
-    def okPressed(self):
-        """A callback, run when the user presses the 'OK' button.
-        
-            returns nothing."""
-
-        if not self.errors_exist():
-            self.queueOperations()
-            self.runProgram()
 
     def errors_exist(self):
         """Check to see if any elements in this UI have errors.
@@ -1144,12 +1091,6 @@ class RootWindow(DynamicElement):
         #intended for the user to call executor.addOperation() as necessary
         #for the given model.
         return
-
-    def runProgram(self):
-        self.operationDialog.exec_()
-
-        if self.operationDialog.cancelled():
-            QtCore.QCoreApplication.instance().exit()
 
     def saveLastRun(self):
         """Saves the current values of all input elements to a JSON object on 
@@ -1179,10 +1120,6 @@ class RootWindow(DynamicElement):
             for id, value in self.lastRun.iteritems():
                 element = self.allElements[id]
                 element.setValue(value)
-
-            self.messageArea.setText('Parameters from your last run have \
-been loaded.')
-
 
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
@@ -1216,6 +1153,63 @@ been loaded.')
                     outputDict[args_id] = element_value
 
         return outputDict
+        
+class ExecRoot(RootWindow):
+    def __init__(self, uri, layout, object_registrar):
+        RootWindow.__init__(self, uri, layout, object_registrar)
+        self.addBottomButtons()
+        self.setWindowSize()
+
+    def setWindowSize(self):
+        #this groups all elements together at the top, leaving the
+        #buttons at the bottom of the window.
+
+        if 'width' in self.attributes:
+            width = self.attributes['width']
+        else:
+            width = 400
+
+        if 'height' in self.attributes:
+            height = self.attributes['height']
+        else:
+            height = 400
+
+        self.setGeometry(400, 400, width, height)
+        self.setWindowIcon(QtGui.QIcon('natcap_logo.png'))
+
+    def okPressed(self):
+        """A callback, run when the user presses the 'OK' button.
+        
+            returns nothing."""
+
+        if not self.errors_exist():
+            self.queueOperations()
+            self.runProgram()
+
+    def runProgram(self):
+        self.operationDialog.exec_()
+
+        if self.operationDialog.cancelled():
+            QtCore.QCoreApplication.instance().exit()
+
+    def closeWindow(self):
+        """Terminates the application.
+        
+            This function is called when the user closes the window by any of
+            Qt's recognized methods (often including closing the window via the
+            little x in the corner of the window and/or pressing the Esc key).
+        
+            returns nothing"""
+
+        sys.exit(0)
+
+    def closeEvent(self, event=None):
+        """Terminates the application. This function is a Qt-defined callback 
+            for when the window is closed.
+            
+            returns nothing"""
+
+        sys.exit(0)
 
     def addBottomButtons(self):
         """Assembles buttons and connects their callbacks.
