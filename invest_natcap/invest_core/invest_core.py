@@ -138,7 +138,7 @@ def vectorize1ArgOp(rasterBand, op, outBand):
         outBand.WriteArray(out_array, 0, i)
 
 def vectorizeRasters(rasterList, op, rasterName=None,
-                     datatype=gdal.GDT_Float32, nodata=0):
+                     datatype=gdal.GDT_Float32, nodata=0.0):
     """Apply the numpy vectorized operation `op` on the rasters contained in
         rasterList where the arguments to `op` are brodcasted pixels from
         each raster in rasterList in the order they exist in the list
@@ -190,7 +190,6 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     outGt = [aoiBox[0], pixelWidth, 0.0, aoiBox[1], 0.0, pixelHeight]
 
     projection = rasterList[0].GetProjection()
-
     outputURI = ''
     format = 'MEM'
     if rasterName != None:

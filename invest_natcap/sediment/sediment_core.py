@@ -69,13 +69,23 @@ def biophysical(args):
                                            args['slope'],
                                            args['flow_direction'],
                                            args['ls_factor'])
-    def mult_all(*args):
+
+    ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
+    erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
+    erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
+    usle_nodata = -1.0
+    def mult_all(ls_factor, erosivity, erodibility):
+        if ls_factor == ls_nodata or erosivity == erosivity_nodata or \
+            erodibility == erodibility_nodata:
+            return usle_nodata
+        return args[1]
         val = 1.0
         for a in args: val *= a
+        return val
     op = np.vectorize(mult_all)
     LOGGER.info("calculating potential soil loss")
     invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
-        args['erodibility']], op, args['usle_uri'])
+        args['erodibility']], op, args['usle_uri'], usle_nodata)
 
 
 def valuation(args):
