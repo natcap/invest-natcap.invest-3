@@ -11,6 +11,12 @@ import numpy as np
 
 from invest_natcap.wave_energy import waveEnergy_core
 
+import logging
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+logger = logging.getLogger('carbon_biophysical')
+
 def execute(args):
     """This function invokes the biophysical part of the wave energy model 
         given URI inputs. It will do filehandling and open/create appropriate 
