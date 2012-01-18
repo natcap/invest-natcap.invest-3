@@ -195,8 +195,8 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     if rasterName != None:
         outputURI = rasterName
         format = 'GTiff'
-    outRaster = invest_cython_core.newRaster(outCols, outRows, projection, outGt, format,
-                          nodata, datatype, 1, outputURI)
+    outRaster = invest_cython_core.newRaster(outCols, outRows, projection,
+        outGt, format, nodata, datatype, 1, outputURI)
     outBand = outRaster.GetRasterBand(1)
     outBand.Fill(0)
 
@@ -214,6 +214,12 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         gt = raster.GetGeoTransform()
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+
+        #Need to set nodata values to something reasonable to avoid weird
+        #interpolation issues if nodata is a large value like -3e38.
+        nodataMask = matrix == band.GetNoDataValue()
+        matrix[nodataMask] = nodata
+
         logger.debug('bandXSize bandYSize %s %s' % (band.XSize, band.YSize))
         xrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
         logger.debug('gt[0] + band.XSize * gt[1] = %s' % (gt[0] + band.XSize * gt[1]))
