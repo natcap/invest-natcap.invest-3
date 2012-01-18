@@ -109,8 +109,8 @@ def execute(args):
     #If the area of interest is present add it to the dictionary arguments
     if 'aoi_uri' in args:
         try:
-            aoi = ogr.Open(args['AOI_uri'], 1)
-            biophysical_args['AOI'] = aoi
+            aoi = ogr.Open(args['aoi_uri'], 1)
+            biophysical_args['aoi'] = aoi
         except IOError, e:
             print 'File I/O error' + e
     #Fire up the biophysical function in waveEnergy_core with the gathered arguments
