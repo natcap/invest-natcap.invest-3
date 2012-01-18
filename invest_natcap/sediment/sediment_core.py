@@ -102,8 +102,6 @@ def biophysical(args):
     LOGGER.info("calculating potential soil loss")
     invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
         args['erodibility']], op, args['usle_uri'], nodata=usle_nodata)
-    LOGGER.debug(args['biophysical_table'])
-
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
