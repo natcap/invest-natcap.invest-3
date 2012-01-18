@@ -75,17 +75,14 @@ def biophysical(args):
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
     usle_nodata = -1.0
     def mult_all(ls_factor, erosivity, erodibility):
-        if ls_factor == ls_nodata or erosivity == erosivity_nodata or \
-            erodibility == erodibility_nodata:
+        if ls_factor == usle_nodata or erosivity == usle_nodata or \
+            erodibility == usle_nodata:
             return usle_nodata
-        return args[1]
-        val = 1.0
-        for a in args: val *= a
-        return val
+        return ls_factor * erosivity * erodibility
     op = np.vectorize(mult_all)
     LOGGER.info("calculating potential soil loss")
     invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
-        args['erodibility']], op, args['usle_uri'], usle_nodata)
+        args['erodibility']], op, args['usle_uri'], nodata=usle_nodata)
 
 
 def valuation(args):
