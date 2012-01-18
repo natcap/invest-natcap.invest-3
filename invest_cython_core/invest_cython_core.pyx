@@ -986,7 +986,7 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     #Assumes that cells are square
     cdef float cell_size = abs(upslope_area.GetGeoTransform()[1])
     cdef float cell_area = cell_size ** 2
-    cdef float m, alpha, xij, contributing_area
+    cdef float m, alpha, beta, xij, contributing_area
     cdef float PI = 3.14159265 
     
     #Tease out all the nodata values for reading and setting
@@ -1037,12 +1037,16 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
             else:
                 slope_factor =  16.8*sin(slope_in_radians)-0.5
             
+            #Set the m value to the lookup table that's from Yonas's handwritten
+            #notes.  On the margin it says "Equation 15".  Don't know from
+            #where.
+            beta = (sin(slope_in_radians) / 0.0896) / \
+                   (3*pow(sin(slope_in_radians),0.8)+0.56)
+            slope_table = [0.01, 0.035, 0.05, 0.09]
+            exponent_table = [0.2, 0.3, 0.4, 0.5, beta/(1+beta)]
             
-            #Set the m value to the lookup table that's in the InVEST 2.2.0
-            #documentation.  Use the bisect function to do a nifty range 
+            #Use the bisect function to do a nifty range 
             #lookup. http://docs.python.org/library/bisect.html#other-examples
-            slope_table = [0.01, 0.035, 0.05]
-            exponent_table = [0.2, 0.3, 0.4, 0.5]
             m = exponent_table[bisect.bisect(slope_table,slope)]
             
             #The length part of the ls_factor:
