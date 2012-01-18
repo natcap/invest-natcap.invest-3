@@ -1009,7 +1009,10 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
         
     cdef np.ndarray [np.float_t,ndim=2] ls_factor_matrix = \
         np.zeros((nrows,ncols))
-
+    
+    #This is necessary to avoid not setting the outside boundary
+    ls_factor_matrix[:] = ls_nodata
+    
     mraster = newRasterFromBase(aspect, 'm.tif', 'GTiff', -5.0, gdal.GDT_Float32)
     xijraster = newRasterFromBase(aspect, 'xij.tif', 'GTiff', -5.0, gdal.GDT_Float32)
         
@@ -1019,11 +1022,10 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     for row_index in range(1,nrows-1):
         LOGGER.debug('row_index %s' % row_index)
         for col_index in range(1,ncols-1):
-            #Set the nodata bounds first
+            #Skip the calculation if any of the inputs are nodata
             if aspect_matrix[row_index, col_index] == aspect_nodata or \
                 slope_matrix[row_index, col_index] == slope_nodata or \
                 upslope_area_matrix[row_index, col_index] == upslope_nodata:
-                ls_factor_matrix[row_index,col_index] = ls_nodata
                 continue
                 
             #adjust flow direction to correspond to compass direction.
