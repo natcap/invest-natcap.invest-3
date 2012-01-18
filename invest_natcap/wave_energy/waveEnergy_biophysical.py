@@ -43,7 +43,6 @@ def execute(args):
     #Dictionary that will hold all the inputs to be passed to waveEnergy_core
     biophysical_args = {}
     biophysical_args['workspace_dir'] = args['workspace_dir']
-    biophysical_args['wave_data_dir'] = args['wave_base_data_uri']
     biophysical_args['dem'] = gdal.Open(args['dem_uri'])
     #Create a 2D array of the machine performance table and place the row
     #and column headers as the first two arrays in the list of arrays
