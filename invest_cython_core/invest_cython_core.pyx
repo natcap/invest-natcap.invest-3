@@ -24,6 +24,8 @@ cdef extern from "stdlib.h":
 cdef extern from "math.h":
     double atan(double x)
     double sqrt(double x)
+    double sin(double x)
+    double cos(double x)
 
 cdef extern from "simplequeue.h":
     ctypedef struct Queue:
@@ -945,12 +947,13 @@ def calculate_slope(dem, slope):
     offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
                (-1, -1)]
     for offset in offsets:
-        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = -1
+        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = slope.GetRasterBand(1).GetNoDataValue()
 
     slope.GetRasterBand(1).WriteArray(slopeMatrix,0,0)
     invest_core.calculateRasterStats(slope.GetRasterBand(1))
 
-def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
+def calculate_ls_factor(upslope_area, slope, aspect, ls_factor,
+    slope_threshold = 0.075):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
@@ -969,6 +972,9 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
             0 or 2pi is east.
         ls_factor - (modified output) a single band raster dataset that will
             have the per-pixel ls factor written to it
+        slope_threshold - the cutoff for areas that the LS factor should be
+            calcualted with the Huan and Lu formula from the InVEST 2.2.0 user's
+            guide 
             
         returns a raster of the same dimensions as inputs whose elements """
     
@@ -979,6 +985,13 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
     #Assumes that cells are square
     cdef float cell_size = abs(upslope_area.GetGeoTransform()[1])
     cdef float cell_area = cell_size ** 2
+    cdef float m, alpha, xij, contributing_area 
+    
+    #Tease out all the nodata values for reading and setting
+    cdef float upslope_nodata = upslope_area.GetRasterBand(1).GetNoDataValue()
+    cdef float slope_nodata = slope.GetRasterBand(1).GetNoDataValue()
+    cdef float aspect_nodata = aspect.GetRasterBand(1).GetNoDataValue()
+    cdef float ls_nodata = ls_factor.GetRasterBand(1).GetNoDataValue()
     
     cdef np.ndarray [np.float_t,ndim=2] upslope_area_matrix = \
         upslope_area.GetRasterBand(1).ReadAsArray(0, 0, \
@@ -996,11 +1009,45 @@ def calculate_ls_factor(upslope_area, slope, aspect, ls_factor):
         np.zeros((nrows,ncols))
         
     for row_index in range(1,nrows-1):
+        LOGGER.debug('row_index %s' % row_index)
         for col_index in range(1,ncols-1):
-            #temporarily set ls to slope
+            #Set the nodata bounds first
+            if aspect_matrix[row_index, col_index] == aspect_nodata or \
+                slope_matrix[row_index, col_index] == slope_nodata or \
+                upslope_area_matrix[row_index, col_index] == upslope_nodata:
+                ls_factor_matrix[row_index,col_index] = ls_nodata
+                continue
+                
+            alpha = aspect_matrix[row_index, col_index]
+            xij = abs(sin(alpha)+ cos(alpha))
+            
+            contributing_area = \
+                (upslope_area_matrix[row_index,col_index]-1) * cell_area
+
+            slope = slope_matrix[row_index, col_index]
+            #Set the m value to the lookup table that's in the InVEST 2.2.0
+            #documentation
+            m = 0.5
+            if slope < 0.05: m = 0.4
+            if slope <= 0.035: m = 0.3
+            if slope <= 0.01: m = 0.2
+            
+            #ls_factor_matrix[row_index,col_index] = xij**m
             ls_factor_matrix[row_index,col_index] = \
-                slope_matrix[row_index,col_index]
+                slope * \
+                ((contributing_area+cell_area)**(m+1)-
+                 contributing_area**(m+1)) / \
+                ((cell_size**(m+2))*(xij**m)*(22.13**m))
+                
+            #This case handles high slopes from the InVEST 2.2.0 manual
+            if slope > slope_threshold:
+                ls_factor_matrix[row_index,col_index] = \
+                    0.08 * cell_area**0.35 * slope ** 0.6
+            
+            #From the paper "as a final check against exessively long slope
+            #length calculations ... cap of 333m"
+            if ls_factor_matrix[row_index,col_index] > 333:
+                ls_factor_matrix[row_index,col_index] = 333
 
     ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(),0,0)
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
-    
