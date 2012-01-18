@@ -1,0 +1,75 @@
+{
+    "id" : "window",
+    "label": "Wave Energy,
+    "targetScript" : "./python/invest_core/waveEnergy_biophysical.py",
+    "modelName" : "waveEnergy_biophysical",
+    "localDocURI": "./documentation/carbonstorage.html",
+    "height": 400,
+    "width" : 500,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "./carbon",
+                    "required": true
+                },          
+				{        
+                    "id" : "wave_base_data",
+                    "args_id" : "wave_base_data_uri",
+                    "type": "folder",
+                    "label": "Path to Folder with Wave Base Data",
+                    "defaultValue": "./carbon",
+                    "required": true
+                },    
+		        {
+		            "id": "analysis_area",
+		            "args_id": "analysis_area_uri",
+		            "type": "text",
+		            "width": 70,
+		            "label": "Analysis Area",
+		            "required": true,
+		            "dataType": "string",
+		            "defaultValue": "West Coast of North America and Hawaii"
+		        },
+        		{
+                    "id" : "machine_perf_table",
+                    "type": "file",
+                    "label": "Machine Performance Table",
+                    "defaultValue": "./carbon/input/carbon_pools_samp.dbf",
+                    "args_id": "machine_perf_uri",
+                    "required": true
+                },
+                {
+                    "id" : "machine_param_table",
+                    "type": "file",
+                    "label": "Machine Parameter Table",
+                    "args_id": "machine_param_uri",
+                    "required": true,
+                    "defaultValue": "./carbon/input/harv_samp_cur.shp"
+                },
+                {
+                    "id" : "dem",
+                    "type": "file",
+                    "label": "Global Digital Elevation Model (DEM)",
+                    "args_id": "dem_uri",
+                    "required": true,
+                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
+                },
+                {
+                    "id" : "aoi",
+                    "type": "file",
+                    "label": "Area of Interest (AOI)",
+                    "args_id": "aoi_uri",
+                    "required": false,
+                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
+                }
+            ]
+        }
+    ]
+}

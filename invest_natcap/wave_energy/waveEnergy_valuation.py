@@ -23,27 +23,26 @@ def execute(args):
         args['workspace_dir'] - Where the intermediate and ouput folder/files will be saved.
         args['land_gridPts_uri'] - A CSV file path containing the Landing and Power Grid Connection Points table.
         args['machine_econ_uri'] - A CSV file path for the machine economic parameters table.
-        args['numberOfMachines'] - An integer specifying the number of machines.
+        args['number_of_machines'] - An integer specifying the number of machines for a wave farm site.
         args['projection_uri'] - A path for the projection to transform coordinates from decimal degrees to meters.
-        args['captureWE'] - We need the captured wave energy output from biophysical run.
-        args['globa_dem'] - We need the depth of the locations for calculating costs.
+        args['global_dem'] - The file path to the global dem.
         args['wave_data_shape_path'] - The path to the point shapefile created during biophysical run.
+        
+        returns - Nothing
         """
 
     valuation_args = {}
     valuation_args['workspace_dir'] = args['workspace_dir']
     valuation_args['projection'] = args['projection_uri']
     valuation_args['global_dem'] = gdal.Open(args['global_dem'])
-    valuation_args['capturedWE'] = gdal.Open(args['capturedWE'])
     valuation_args['wave_data_shape'] = ogr.Open(args['wave_data_shape_path'])
-    valuation_args['number_machines'] = args['numberOfMachines']
+    valuation_args['number_machines'] = args['number_of_machines']
     #Open/create the output directory
     output_dir = args['workspace_dir'] + os.sep + 'Output' + os.sep
     intermediate_dir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
     for dir in [output_dir, intermediate_dir]:
         if not os.path.exists(dir):
             os.makedirs(dir)
-
     #Read machine economic parameters into a dictionary
     try:
         machine_econ = {}
@@ -66,6 +65,5 @@ def execute(args):
         valuation_args['land_gridPts'] = land_grid_pts
     except IOError, e:
         print 'File I/O error' + e
-
     #Call the valuation core module with attached arguments to run the economic valuation
     waveEnergy_core.valuation(valuation_args)

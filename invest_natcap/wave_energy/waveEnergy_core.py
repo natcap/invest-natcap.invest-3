@@ -19,8 +19,6 @@ def biophysical(args):
     wave farm locations, such as depth, wave height, and wave period.
     Required:
     args['workspace_dir'] - the workspace path
-    args['wave_data_dir'] - the wave data path, used for retreiving other 
-                            relevant files.
     args['wave_base_data'] - a dictionary of seastate bin data.
     args['analysis_area'] - a point geometry shapefile representing the 
                             relevant WW3 points
@@ -31,7 +29,7 @@ def biophysical(args):
     args['dem'] - a GIS raster file of the global elevation model
     
     Optional (but required for valuation):
-    args['AOI'] - a polygon geometry shapefile outlining a more 
+    args['aoi'] - a polygon geometry shapefile outlining a more 
                   specific area of interest (Optional).
 
     returns - Nothing
@@ -39,8 +37,6 @@ def biophysical(args):
     #Set variables for output paths
     #Workspace Directory path
     workspace_dir = args['workspace_dir']
-    #Wave Data Directory path
-    wave_data_dir = args['wave_data_dir']
     #Intermediate Directory path to store information
     intermediate_dir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
@@ -50,8 +46,8 @@ def biophysical(args):
     #Path for 'new' AOI, see comment below 'if AOI in args'
     wave_aoi_path = intermediate_dir + os.sep + 'waveAOIShape.shp'
     #Paths for wave energy and wave power raster
-    wave_energy_path = intermediate_dir + os.sep + 'capwe_mwh.tif'
-    wave_power_path = intermediate_dir + os.sep + 'wp_kw.tif'
+    wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
+    wave_power_path = output_dir + os.sep + 'wp_kw.tif'
     global_dem = args['dem']
     #Set nodata value and datatype for new rasters
     nodata = 0
@@ -62,11 +58,11 @@ def biophysical(args):
     pixel_xsize = float(dem_gt[1])
     pixel_ysize = np.absolute(float(dem_gt[5]))
     #Determine which shapefile will be used to determine area of interest
-    if 'AOI' in args:
+    if 'aoi' in args:
         #The AOI shapefile has a different projection than lat/long so by calling
         #the clip_shape function with analysis_area_extract (which has lat/long projection
         #which we would expect) and AOI, I am making a new AOI with the proper projection
-        cutter = clip_shape(args['analysis_area_extract'], args['AOI'], wave_aoi_path)        
+        cutter = clip_shape(args['analysis_area_extract'], args['aoi'], wave_aoi_path)        
     else:
         cutter = args['analysis_area_extract']
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
@@ -541,15 +537,15 @@ def valuation(args):
     #Output Directory path to store output rasters
     output_dir = workspace_dir + os.sep + 'Output'
     #Output path for projected wave point shapefile holding values of interest
-    projected_shape_path = inter_dir + os.sep + 'WaveData_clip_Prj.shp'
+    projected_shape_path = inter_dir + os.sep + 'WaveData_prj.shp'
     #Output path for landing point shapefile
-    land_pt_path = inter_dir + os.sep + 'landing_points.shp'
+    land_pt_path = output_dir + os.sep + 'LandPts_prj.shp'
     #Output path for grid point shapefile
-    grid_pt_path = inter_dir + os.sep + 'grid_point.shp'
+    grid_pt_path = output_dir + os.sep + 'GridPt_prj.shp'
     #Output path for net present value raster
     wave_farm_value_path = inter_dir + os.sep + 'wave_energy_npv.tif'
     #Output path for the projected net present value raster
-    raster_projected_path = inter_dir + os.sep + 'raster_projected.tif'
+    raster_projected_path = output_dir + os.sep + 'npv_usd.tif'
     
     wave_data_shape = args['wave_data_shape']
     prj_file_path = args['projection']
