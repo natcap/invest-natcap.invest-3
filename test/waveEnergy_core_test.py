@@ -31,28 +31,28 @@ class TestWaveEnergy(unittest.TestCase):
         args['wave_data_dir'] - the wave data path, used for retreiving other relevant files.
             
         """
-        testDir = './data/test_data/wave_Energy'
-        analysisPath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
-        analysisExtractPath = testDir + os.sep + 'samp_input/WaveData/WCNA_extract.shp'
-        aoiPath = testDir + os.sep + 'samp_input/AOI_WCVI.shp'
-        demPath = testDir + os.sep + 'samp_input/global_dem'
-        waveFilePath = testDir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.txt'
-        machinePerfPath = './data/test_data/wave_Energy/samp_input/Machine_PelamisPerfCSV.csv'
-        machineParamPath = './data/test_data/wave_Energy/samp_input/Machine_PelamisParamCSV.csv'
+        test_dir = './data/test_data/wave_Energy'
+        analysis_path = test_dir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
+        analysis_extract_path = test_dir + os.sep + 'samp_input/WaveData/WCNA_extract.shp'
+        aoi_path = test_dir + os.sep + 'samp_input/AOI_WCVI.shp'
+        dem_path = test_dir + os.sep + 'samp_input/global_dem'
+        wave_file_path = test_dir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.txt'
+        machine_perf_path = './data/test_data/wave_Energy/samp_input/Machine_PelamisPerfCSV.csv'
+        machine_param_path = './data/test_data/wave_Energy/samp_input/Machine_PelamisParamCSV.csv'
         #Set all arguments to be passed
         args = {}
-        args['wave_base_data'] = waveEnergy_biophysical.extrapolateWaveData(waveFilePath)
-        args['analysis_area'] = ogr.Open(analysisPath, 1)
-        args['analysis_area_extract'] = ogr.Open(analysisExtractPath)
-        args['aoi'] = ogr.Open(aoiPath)
-        args['dem'] = gdal.Open(demPath)
+        args['wave_base_data'] = waveEnergy_biophysical.extrapolate_wave_data(wave_file_path)
+        args['analysis_area'] = ogr.Open(analysis_path, 1)
+        args['analysis_area_extract'] = ogr.Open(analysis_extract_path)
+        args['aoi'] = ogr.Open(aoi_path)
+        args['dem'] = gdal.Open(dem_path)
         args['workspace_dir'] = './data/test_data/wave_Energy'
         args['wave_data_dir'] = './data/test_data/wave_Energy/samp_input/WaveData'
         #Create a 2D array of the machine performance table and place the row
         #and column headers as the first two arrays in the list of arrays
         try:
             machine_perf_twoDArray = [[], []]
-            machine_perf_file = open(machinePerfPath)
+            machine_perf_file = open(machine_perf_path)
             reader = csv.reader(machine_perf_file)
             get_row = True
             for row in reader:
@@ -72,7 +72,7 @@ class TestWaveEnergy(unittest.TestCase):
         #the machine parameter table with corresponding values
         try:
             machine_params = {}
-            machine_param_file = open(machineParamPath)
+            machine_param_file = open(machine_param_path)
             reader = csv.DictReader(machine_param_file)
             for row in reader:
                 machine_params[row['NAME'].strip()] = row
@@ -92,7 +92,7 @@ class TestWaveEnergy(unittest.TestCase):
         test_dir = './data/test_data/wave_Energy'
         shape_to_reproject_path = test_dir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
         projection = test_dir + os.sep + 'test_input/WGS_1984_UTM_Zone_10N.prj'
-        outputPath = test_dir + os.sep + 'test_output/waveEnergy_Clip_prj.shp'
+        output_path = test_dir + os.sep + 'test_output/waveEnergy_Clip_prj.shp'
 
         #Add the Output directory onto the given workspace
         output_dir = test_dir + os.sep + 'test_output/'
@@ -107,7 +107,7 @@ class TestWaveEnergy(unittest.TestCase):
         spatial_prj = osr.SpatialReference()
         spatial_prj.ImportFromWkt(prj_string)
 
-        new_shape = waveEnergy_core.change_shape_projection(shape_to_reproject, projection, outputPath)
+        new_shape = waveEnergy_core.change_shape_projection(shape_to_reproject, projection, output_path)
         layer = new_shape.GetLayer(0)
         
         shape_projection = layer.GetSpatialRef()
@@ -360,7 +360,7 @@ class TestWaveEnergy(unittest.TestCase):
         value = 'HSAVG_M'
         points = [[-126.933144, 47.600162], [-126.866477, 47.600162], [-126.79981, 47.600162]]
         values = [2.8, 2.8, 2.79]
-        shape_array = waveEnergy_core.getPointsValues(shape_to_clip, key, value_array, value)
+        shape_array = waveEnergy_core.get_points_values(shape_to_clip, key, value_array, value)
         self.assertEqual(len(points), len(shape_array[0]), 'The number of points do not match')
         self.assertEqual(len(values), len(shape_array[1]), 'The number of values do not match')
         shape_points = shape_array[0]
