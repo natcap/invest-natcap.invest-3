@@ -13,10 +13,11 @@ import numpy as np
 
 from invest_natcap.wave_energy import waveEnergy_core
 from invest_natcap.wave_energy import waveEnergy_biophysical
+import invest_test_core
 
 class TestWaveEnergy(unittest.TestCase):
 
-    def test_waveEnergy_biophysical(self):
+    def test_wave_energy_biophysical_regression(self):
         """Runs the biophysical part of the Wave Energy Model (WEM).
     
         args['wave_base_data'] - a dictionary of seastate bin data.
@@ -81,12 +82,44 @@ class TestWaveEnergy(unittest.TestCase):
         except IOError, e:
             print 'File I/O error' + e
 
-
         waveEnergy_core.biophysical(args)
         
         #Check that output/intermediate files have been made
-
+        regression_shape = ogr.Open(args['workspace_dir'] + '/regression_tests/WaveData_clipZ_regression.shp')
+        shape = ogr.Open(args['workspace_dir'] + '/Intermediate/WaveData_clipZ.shp')
+        
+        regression_layer = regression_shape.GetLayer(0)
+        layer = shape.GetLayer(0)
+        
+        regression_feat_count = regression_layer.GetFeatureCount()
+        feat_count = layer.GetFeatureCount()
+        self.assertEqual(regression_feat_count, feat_count)
+        
+        layer_def = layer.GetLayerDefn()
+        reg_layer_def = regression_layer.GetLayerDefn()
+        field_count = layer_def.GetFieldCount()
+        reg_field_count = reg_layer_def.GetFieldCount()
+        self.assertEqual(field_count, reg_field_count, 'The shapes DO NOT have the same number of fields')
+        
+        reg_feat = regression_layer.GetNextFeature()
+        feat = layer.GetNextFeature()
+        while reg_feat is not None:            
+            for fld_index in range(field_count):
+                field = feat.GetField(fld_index)
+                reg_field = reg_feat.GetField(fld_index)
+                self.assertEqual(field, reg_field, 'The field values DO NOT match')
+            feat.Destroy()
+            reg_feat.Destroy()
+            feat = layer.GetNextFeature()
+            reg_feat = regression_layer.GetNextFeature()
+                
         #Check that resulting rasters are correct
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + '/Output/wp_kw.tif',
+            args['workspace_dir'] + '/regression_tests/wp_kw_regression.tif')
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + '/Output/capwe_mwh.tif',
+            args['workspace_dir'] + '/regression_tests/capwe_mwh_regression.tif')
 
     def test_waveEnergy_changeProjection(self):
         test_dir = './data/test_data/wave_Energy'
