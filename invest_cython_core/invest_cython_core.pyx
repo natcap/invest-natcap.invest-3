@@ -998,7 +998,7 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     cdef np.ndarray [np.float_t,ndim=2] upslope_area_matrix = \
         upslope_area.GetRasterBand(1).ReadAsArray(0, 0, \
         nrows,ncols).transpose().astype(np.float)
-        
+    
     cdef np.ndarray [np.float_t,ndim=2] slope_matrix = \
         slope_raster.GetRasterBand(1).ReadAsArray(0, 0, \
         nrows,ncols).transpose().astype(np.float)
@@ -1009,7 +1009,13 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
         
     cdef np.ndarray [np.float_t,ndim=2] ls_factor_matrix = \
         np.zeros((nrows,ncols))
+
+    mraster = newRasterFromBase(aspect, 'm.tif', 'GTiff', -5.0, gdal.GDT_Float32)
+    xijraster = newRasterFromBase(aspect, 'xij.tif', 'GTiff', -5.0, gdal.GDT_Float32)
         
+    cdef np.ndarray [np.float_t,ndim=2] m_matrix = np.zeros((nrows,ncols))
+    cdef np.ndarray [np.float_t,ndim=2] xij_matrix = np.zeros((nrows,ncols))
+    
     for row_index in range(1,nrows-1):
         LOGGER.debug('row_index %s' % row_index)
         for col_index in range(1,ncols-1):
@@ -1048,12 +1054,14 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
             #Use the bisect function to do a nifty range 
             #lookup. http://docs.python.org/library/bisect.html#other-examples
             m = exponent_table[bisect.bisect(slope_table,slope)]
-            
+            m_matrix[row_index,col_index] = m
             #The length part of the ls_factor:
             ls_factor_matrix[row_index,col_index] = \
                 ((contributing_area+cell_area)**(m+1)-
                  contributing_area**(m+1)) / \
                 ((cell_size**(m+2))*(xij**m)*(22.13**m))
+                
+            xij_matrix[row_index,col_index] = xij
 
             #From the paper "as a final check against exessively long slope
             #length calculations ... cap of 333m"
@@ -1063,4 +1071,6 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
             ls_factor_matrix[row_index,col_index] *= slope_factor
 
     ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(),0,0)
+    mraster.GetRasterBand(1).WriteArray(m_matrix.transpose(),0,0)
+    xijraster.GetRasterBand(1).WriteArray(xij_matrix.transpose(),0,0)
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
