@@ -185,7 +185,7 @@ class DynamicGroup(DynamicElement):
         #itself is a subclass of QtGui.QWidget) so that we can add widgets 
         #as necessary.
         self.setLayout(layout)
-
+        
         self.registrar = registrar
         if registrar != None:
             self.createElements(attributes['elements'])
@@ -1020,7 +1020,7 @@ class Root(DynamicElement):
         self.setLayout(layout)
         
         self.body = DynamicGroup(attributes, QtGui.QVBoxLayout(), object_registrar)
-        
+
         if 'scrollable' in self.attributes:
             make_scrollable = self.attributes['scrollable']
         else:
@@ -1153,10 +1153,17 @@ class Root(DynamicElement):
                     outputDict[args_id] = element_value
 
         return outputDict
+
+class EmbeddedUI(Root):
+    def __init__(self, attributes, object_registrar):
+        uri = attributes['configURI']
+        layout = QtGui.QVBoxLayout()
+        Root.__init__(self, uri, layout, object_registrar)
         
-class ExecRoot(RootWindow):
+        
+class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
-        RootWindow.__init__(self, uri, layout, object_registrar)
+        Root.__init__(self, uri, layout, object_registrar)
         self.addBottomButtons()
         self.setWindowSize()
 
@@ -1249,13 +1256,14 @@ class ElementRegistrar(registrar.Registrar):
                    'text': YearEntry,
                    'sliderSpinBox': SliderSpinBox,
                    'hideableFileEntry': HideableFileEntry,
-                   'dropdown': Dropdown
+                   'dropdown': Dropdown,
+                   'embeddedUI': EmbeddedUI
                    }
         self.update_map(updates)
         
     def eval(self, type, op_values):
         widget = registrar.Registrar.get_func(self, type)
-        if issubclass(widget, DynamicGroup):
+        if issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI):
             return widget(op_values, self)
         else:
             return widget(op_values)
