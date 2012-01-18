@@ -1,6 +1,7 @@
 import math
 import sys
 import os
+import logging
 
 import numpy as np
 from osgeo import gdal
@@ -11,6 +12,8 @@ from scipy.interpolate import LinearNDInterpolator as ip
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
+
+logger = logging.getLogger('wave_energy_core')
 
 def biophysical(args):
     """Runs the biophysical part of the Wave Energy Model (WEM). 
