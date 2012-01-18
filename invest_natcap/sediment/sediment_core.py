@@ -79,10 +79,13 @@ def biophysical(args):
     usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], '',
         'MEM', usle_nodata, gdal.GDT_Float32)
     def lulc_to_cp(lulc_code):
+        #There are string casts here because the biophysical table is all 
+        #strings thanks to the csv table conversion.
         if str(lulc_code) not in args['biophysical_table']:
             return usle_nodata
-        #We need to divide the c and p factors by 1000 because they're stored
-        #in the table as C * 1000 and P * 1000.  See the user's guide:
+        #We need to divide the c and p factors by 1000 (10*6 == 1000*1000) 
+        #because they're stored in the table as C * 1000 and P * 1000.  See 
+        #the user's guide:
         #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
         return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
             float(args['biophysical_table'][str(lulc_code)]['usle_p']) / 10 ** 6
