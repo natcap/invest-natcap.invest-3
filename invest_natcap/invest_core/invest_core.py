@@ -138,7 +138,7 @@ def vectorize1ArgOp(rasterBand, op, outBand):
         outBand.WriteArray(out_array, 0, i)
 
 def vectorizeRasters(rasterList, op, rasterName=None,
-                     datatype=gdal.GDT_Float32,):
+                     datatype=gdal.GDT_Float32, nodata=0.0):
     """Apply the numpy vectorized operation `op` on the rasters contained in
         rasterList where the arguments to `op` are brodcasted pixels from
         each raster in rasterList in the order they exist in the list
@@ -150,6 +150,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
             resulting raster is only mapped to MEM
         datatype - the GDAL datatype of the output raster.  By default this
             is a 32 bit float.
+        nodata - the nodata value for the output raster
         
         returns a single band raster"""
 
@@ -189,15 +190,13 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     outGt = [aoiBox[0], pixelWidth, 0.0, aoiBox[1], 0.0, pixelHeight]
 
     projection = rasterList[0].GetProjection()
-
     outputURI = ''
     format = 'MEM'
     if rasterName != None:
         outputURI = rasterName
         format = 'GTiff'
-    nodata = 0
-    outRaster = invest_cython_core.newRaster(outCols, outRows, projection, outGt, format,
-                          nodata, datatype, 1, outputURI)
+    outRaster = invest_cython_core.newRaster(outCols, outRows, projection,
+        outGt, format, nodata, datatype, 1, outputURI)
     outBand = outRaster.GetRasterBand(1)
     outBand.Fill(0)
 
@@ -215,6 +214,12 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         gt = raster.GetGeoTransform()
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
+
+        #Need to set nodata values to something reasonable to avoid weird
+        #interpolation issues if nodata is a large value like -3e38.
+        nodataMask = matrix == band.GetNoDataValue()
+        matrix[nodataMask] = nodata
+
         logger.debug('bandXSize bandYSize %s %s' % (band.XSize, band.YSize))
         xrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
         logger.debug('gt[0] + band.XSize * gt[1] = %s' % (gt[0] + band.XSize * gt[1]))
