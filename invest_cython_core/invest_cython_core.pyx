@@ -27,6 +27,7 @@ cdef extern from "math.h":
     double sqrt(double x)
     double sin(double x)
     double cos(double x)
+    double pow(double x, double y)
 
 cdef extern from "simplequeue.h":
     ctypedef struct Queue:
