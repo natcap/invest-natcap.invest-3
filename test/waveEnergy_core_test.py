@@ -111,7 +111,7 @@ class TestWaveEnergy(unittest.TestCase):
             args['workspace_dir'] + '/Output/capwe_mwh.tif',
             args['workspace_dir'] + '/regression_tests/capwe_mwh_regression.tif')
 
-    def test_waveEnergy_changeProjection(self):
+    def test_wave_energy_change_projection(self):
         test_dir = './data/test_data/wave_Energy'
         shape_to_reproject_path = test_dir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.shp'
         projection = test_dir + os.sep + 'test_input/WGS_1984_UTM_Zone_10N.prj'
@@ -175,7 +175,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape_to_reproject.Destroy()
         new_shape.Destroy()
         
-    def test_waveEnergy_clipShape(self):
+    def test_wave_energy_clip_shape(self):
         """A trivial test case that makes sure clip_shape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
         the same size and form as the shape to be clipped so we would expect the output to be
@@ -240,7 +240,7 @@ class TestWaveEnergy(unittest.TestCase):
 #                os.remove(output_dir + file)
 #            os.rmdir(output_dir)
 
-    def test_waveEnergy_clipShapeZero(self):
+    def test_wave_energy_clip_shape_zero(self):
         """A trivial test case that makes sure clip_shape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
         the same size and form as the shape to be clipped so we would expect the output to be
@@ -271,7 +271,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape_to_clip.Destroy()
         binding_shape.Destroy()
 
-    def test_waveEnergy_clipShapeProj(self):
+    def test_wave_energy_clip_shape_proj(self):
         """A non trivial test case that makes sure clip_shape returns the proper shape
         after it has been clipped by a polygon shapefile."""
         filesystemencoding = sys.getfilesystemencoding()
@@ -362,7 +362,7 @@ class TestWaveEnergy(unittest.TestCase):
 #        
 #        shape_to_clip.Destroy()
 
-    def test_waveEnergy_getPointsValues(self):
+    def test_wave_energy_get_points_values(self):
         """Test getPointsValues to make sure that it works properly for different geometries"""
         filesystemencoding = sys.getfilesystemencoding()
 
@@ -402,7 +402,7 @@ class TestWaveEnergy(unittest.TestCase):
 
         shape_to_clip.Destroy()
 
-    def test_waveEnergy_capturedWaveEnergyToShape(self):
+    def test_wave_energy_captured_wave_energy_to_shape(self):
         """Test captured_wave_energy_to_shape to make sure that it works properly for different geometries"""
         filesystemencoding = sys.getfilesystemencoding()
 
@@ -457,7 +457,7 @@ class TestWaveEnergy(unittest.TestCase):
         wave_shape_copy.Destroy()
 
 
-    def test_waveEnergy_computeWaveEnergyCapacity(self):
+    def test_waveEnergy_compute_wave_energy_capacity(self):
         """Test computWaveEnergyCapacity function to make sure it works properly"""
 
 #        wave_data = 'A dictionary with key (I,J) and value 2D array'
@@ -486,7 +486,7 @@ class TestWaveEnergy(unittest.TestCase):
             else:
                 self.assertEqual(0, 1, 'The keys do not match')
 
-    def test_waveEnergy_waveEnergyInterp(self):
+    def test_wave_energy_wave_energy_interp(self):
         wave_data = {0:[1, 2, 3, 4, 5, 6, 7, 8], 1:[.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]}
         machine_perf = [[2, 3, 4, 7], [1, 2, 3],
                        [0, 8, 20, 10],
@@ -509,7 +509,7 @@ class TestWaveEnergy(unittest.TestCase):
             for indexIn, val in enumerate(ar):
                 self.assertAlmostEqual(val, interpZ[indexOut][indexIn], 5, 'Values do not match')
 
-    def test_waveEnergy_clipRasterFromPolygon(self):
+    def test_wave_energy_clip_raster_from_polygon(self):
         filesystemencoding = sys.getfilesystemencoding()
 
         test_dir = './data/test_data/wave_Energy'
