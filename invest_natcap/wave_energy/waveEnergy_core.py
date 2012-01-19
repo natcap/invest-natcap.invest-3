@@ -394,9 +394,12 @@ def interp_points_over_raster(points, values, raster):
     gt = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
     size_x = band.XSize
+    logger.debug('Size of X dimension of raster : %s', size_x)
     size_y = band.YSize
+    logger.debug('Size of Y dimension of raster : %s', size_y)
     #Make a numpy array representing the points of the raster (the points are the pixels)
     new_points = np.array([[gt[0] + gt[1] * i, gt[3] + gt[5] * j] for i in np.arange(size_x) for j in np.arange(size_y)])
+    logger.debug('New points from raster : %s', new_points)
     #Interpolate the points and values from the shapefile from earlier
     spl = ip(points, values, fill_value=0)
     #Run the interpolator object over the new set of points from the raster. Will return a list of values.
@@ -426,6 +429,7 @@ def wave_energy_interp(wave_data, machine_perf):
     new_y = wave_data[1]
     #Interpolate machine performance table and return the interpolated matrix
     interp_z = invest_cython_core.interpolateMatrix(x_range, y_range, z_matrix, new_x, new_y)
+    logger.debug('Machine Performance Table Interpolated : %s', interp_z)
     return interp_z
 
 def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
@@ -466,6 +470,8 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     for i, v in enumerate(wave_column):
         if (v > height_max) and (height_max_pos == -1):
             height_max_pos = i
+    logger.debug('Position of max period : %f', period_max_pos)
+    logger.debug('Position of max height : %f', height_max_pos)
     #For all the wave watch points, multiply the occurence matrix by the interpolated
     #machine performance matrix to get the captured wave energy
     for key, val in wave_data.iteritems():
@@ -571,7 +577,9 @@ def valuation(args):
     dem = args['global_dem']
     gt = dem.GetGeoTransform()
     pixel_xsize = float(gt[1])
+    logger.debug('X pixel size of DEM : %f', pixel_xsize)
     pixel_ysize = np.absolute(float(gt[5]))
+    logger.debug('Y pixel size of DEM : %f', pixel_ysize)
     #If either shapefile, landing or grid exist, remove them
     if os.path.isfile(land_pt_path):
         os.remove(land_pt_path)
@@ -608,6 +616,7 @@ def valuation(args):
     #Create a coordinate transformation for lat/long to meters
     prj_file = open(prj_file_path)
     prj = prj_file.read()
+    logger.debug('The new projection as string : %s', prj)
     srs_prj = osr.SpatialReference()
     srs_prj.ImportFromWkt(prj)
     source_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
