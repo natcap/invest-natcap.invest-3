@@ -3,6 +3,7 @@ import sys
 import unittest
 
 import numpy as np
+from osgeo import ogr
 from invest_natcap.wave_energy import waveEnergy_valuation
 import invest_test_core
 
