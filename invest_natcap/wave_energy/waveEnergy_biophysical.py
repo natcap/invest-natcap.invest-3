@@ -3,6 +3,7 @@
 import sys
 import os
 import csv
+import logging
 
 import simplejson as json
 from osgeo import gdal
@@ -11,10 +12,8 @@ import numpy as np
 
 from invest_natcap.wave_energy import waveEnergy_core
 
-import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 logger = logging.getLogger('carbon_biophysical')
 
 def execute(args):
@@ -65,6 +64,8 @@ def execute(args):
                 machine_perf_twoDArray[1].append(row.pop(0))
                 machine_perf_twoDArray.append(row)
         machine_perf_file.close()
+        logger.debug('Machine Performance Rows : %s', machine_perf_twoDArray[0])
+        logger.debug('Machine Performance Cols : %s', machine_perf_twoDArray[1])
         biophysical_args['machine_perf'] = machine_perf_twoDArray
     except IOError, e:
         print 'File I/O error' + e
@@ -110,16 +111,20 @@ def execute(args):
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path, 1)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     else:
+        logger.debug('Analysis Area : %s', args['analysis_area_uri'])
         print 'Analysis Area ERROR. The Analysis Area Specified is not handled by this model.'
     #If the area of interest is present add it to the dictionary arguments
     if 'aoi_uri' in args:
         try:
+            logger.debug('AOI File : %s', args['aoi'])
             aoi = ogr.Open(args['aoi_uri'], 1)
             biophysical_args['aoi'] = aoi
         except IOError, e:
             print 'File I/O error' + e
     #Fire up the biophysical function in waveEnergy_core with the gathered arguments
+    logger.info('Starting Wave Energy Biophysical.')
     waveEnergy_core.biophysical(biophysical_args)
+    logger.info('Completed Wave Energy Biophysical.')
 
 def extrapolate_wave_data(wave_file):
     """The extrapolate_wave_data function converts WW3 text data into a dictionary who's
@@ -164,7 +169,9 @@ def extrapolate_wave_data(wave_file):
 
         wave_open.close()
         #Add row/col header to dictionary
+        logger.debug('WaveData row %s', wave_row)
         wave_dict[0] = np.array(wave_row, dtype='f')
+        logger.debug('WaveData col %s', wave_col)
         wave_dict[1] = np.array(wave_col, dtype='f')
         return wave_dict
 
