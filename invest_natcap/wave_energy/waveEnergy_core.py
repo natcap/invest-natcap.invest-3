@@ -65,15 +65,19 @@ def biophysical(args):
         #The AOI shapefile has a different projection than lat/long so by calling
         #the clip_shape function with analysis_area_extract (which has lat/long projection
         #which we would expect) and AOI, I am making a new AOI with the proper projection
-        cutter = clip_shape(args['analysis_area_extract'], args['aoi'], wave_aoi_path)        
+        logger.debug('Running clip_shape on aoi file')
+        cutter = clip_shape(args['analysis_area_extract'], args['aoi'], wave_aoi_path)
+        logger.debug('Finished clip_shape on aoi file')
     else:
         cutter = args['analysis_area_extract']
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
+    logger.debug('Binding the wave watch data shapefile to a smaller area of interest')
     area_shape = clip_shape(args['analysis_area'], cutter, wave_shape_path)
     area_layer = area_shape.GetLayer(0)
     #We do all wave power calculations by manipulating the fields in
     #the wave data shapefile, thus we need to add proper depth values
     #from the raster DEM
+    logger.debug('Adding a depth field to the shapefile from the DEM raster')
     dem_band = global_dem.GetRasterBand(1)
     xsize = dem_band.XSize
     ysize = dem_band.YSize
@@ -99,18 +103,25 @@ def biophysical(args):
         area_layer.SetFeature(feature)
         feature.Destroy()
         feature = area_layer.GetNextFeature()
+    logger.debug('Finished adding depth field to shapefile from DEM raster')
     #We close and open the same shapefile to make sure all data is officially written to disk
     #Not sure if this is absolutely necessary, should test to make sure we aren't doing extra work.
     area_shape.Destroy()
     area_shape = ogr.Open(wave_shape_path, 1)
     area_layer = area_shape.GetLayer(0)
     #Generate an interpolate object for waveEnergyCap
+    logger.debug('Interpolating machine performance table')
     energy_interp = wave_energy_interp(args['wave_base_data'], args['machine_perf'])
     #Create a dictionary with the wave energy capacity sums from each location
+    logger.debug('Summing the wave energy capacity at each wave farm and saving to dictionary')
+    logger.info('Calculating Captured Wave Energy.')
     energy_cap = compute_wave_energy_capacity(args['wave_base_data'], energy_interp, args['machine_param'])
     #Add the sum as a field to the shapefile for the corresponding points
+    logger.debug('Adding the wave energy sums to the WaveData shapefile')
     captured_wave_energy_to_shape(energy_cap, area_shape)
     #Calculate wave power for each wave point and add it as a field to the shapefile
+    logger.debug('Calculating wave power for each farm site and saving as field to shapefile')
+    logger.info('Calculating Wave Power.')
     area_shape = wave_power(area_shape)
     #Create blank rasters bounded by the shape file of analyis area
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
@@ -121,9 +132,12 @@ def biophysical(args):
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
     wave_energy_raster = gdal.Open(wave_energy_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
+    logger.debug('Getting the points and corresponding values of wave power and captured wave energy')
     energy_sum_array = get_points_values(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
     wave_power_array = get_points_values(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
     #Interpolate wave energy and wave power from the shapefile over the rasters
+    logger.debug('Interpolate wave power and wave energy capacity onto rasters')
+    logger.info('Generating Wave Power and Captured Wave Energy rasters.')
     interp_points_over_raster(energy_sum_array[0], energy_sum_array[1], wave_energy_raster)
     interp_points_over_raster(wave_power_array[0], wave_power_array[1], wave_power_raster)
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
@@ -601,6 +615,7 @@ def valuation(args):
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     #Make a point shapefile for landing points.
+    logger.info('Creating Landing Points Shapefile.')
     drv_landing = ogr.GetDriverByName('ESRI Shapefile')
     ds_landing = drv_landing.CreateDataSource(land_pt_path)
     layer_landing = ds_landing.CreateLayer('landpoints', srs_prj, ogr.wkbPoint)    
@@ -633,6 +648,7 @@ def valuation(args):
     grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))    
     grid_geom.Transform(coord_trans)
     #Make a point shapefile for grid points
+    logger.info('Creating Grid Points Shapefile.')
     drv_grid = ogr.GetDriverByName('ESRI Shapefile')
     ds_grid = drv_grid.CreateDataSource(grid_pt_path)
     layer_grid = ds_grid.CreateLayer('gridpoint', srs_prj, ogr.wkbPoint)
@@ -666,7 +682,7 @@ def valuation(args):
     we_points = get_points_geometries(shape)
     landing_points = get_points_geometries(landing_shape)
     grid_point = get_points_geometries(grid_shape)
-    
+    logger.info('Calculating Distances.')
     W2L_Dist, W2L_ID = calculate_distance(we_points, landing_points)
     L2G_Dist, L2G_ID = calculate_distance(landing_points, grid_point)
     #Add three new fields to the shapefile that will store the distances
@@ -717,6 +733,7 @@ def valuation(args):
     shape_layer.ResetReading()
     feat_grid = shape_layer.GetNextFeature()
     #For all the wave farm sites, calculate npv and write to shapefile
+    logger.info('Calculating the Net Present Value.')
     while feat_grid is not None:
         depth_index = feat_grid.GetFieldIndex('Depth_M')
         wave_to_land_index = feat_grid.GetFieldIndex('W2L_MDIST')
@@ -761,6 +778,7 @@ def valuation(args):
     wave_farm_value_array = get_points_values(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'NPV_25Y'], 'NPV_25Y')
     #Interpolate the NPV values based on the dimensions and corresponding points of the raster, then
     #write the interpolated values to the raster
+    logger.info('Generating Net Present Value Raster.')
     interp_points_over_raster(wave_farm_value_array[0], wave_farm_value_array[1], wave_farm_value_raster)
     #Reproject the raster into a meters format
     virtual = gdal.AutoCreateWarpedVRT(wave_farm_value_raster,
