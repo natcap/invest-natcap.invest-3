@@ -1,6 +1,6 @@
 {
     "id" : "window",
-    "label": "Wave Energy,
+    "label": "Wave Energy",
     "targetScript" : "./python/invest_core/waveEnergy_biophysical.py",
     "modelName" : "waveEnergy_biophysical",
     "localDocURI": "./documentation/carbonstorage.html",
