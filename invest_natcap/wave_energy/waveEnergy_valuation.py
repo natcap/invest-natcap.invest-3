@@ -3,6 +3,7 @@
 import sys
 import os
 import csv
+import logging 
 
 import simplejson as json
 import numpy as np
@@ -12,6 +13,10 @@ from osgeo import gdal
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
 from invest_natcap.wave_energy import waveEnergy_core
+
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+logger = logging.getLogger('carbon_valuation')
 
 def execute(args):
     """This function invokes the valuation part of the wave energy model given URI inputs.
@@ -30,7 +35,6 @@ def execute(args):
         
         returns - Nothing
         """
-
     valuation_args = {}
     valuation_args['workspace_dir'] = args['workspace_dir']
     valuation_args['projection'] = args['projection_uri']
@@ -66,4 +70,6 @@ def execute(args):
     except IOError, e:
         print 'File I/O error' + e
     #Call the valuation core module with attached arguments to run the economic valuation
+    logger.info('Beginning Wave Energy Valuation.')
     waveEnergy_core.valuation(valuation_args)
+    logger.info('Wave Energy Valuation Completed.')
