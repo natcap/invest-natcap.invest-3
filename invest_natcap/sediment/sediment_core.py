@@ -5,6 +5,7 @@ import logging
 import math
 
 import numpy as np
+from osgeo import gdal
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
@@ -29,6 +30,7 @@ def biophysical(args):
         args['subwatersheds'] - an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds' shape provided as input. (required)
+        args['usle_uri'] - a URI location to the temporary USLE raster
         args['reservoir_locations'] - an input shape file with 
             points indicating reservoir locations with IDs. (optional)
         args['reservoir_properties'] - an input CSV table 
@@ -68,14 +70,42 @@ def biophysical(args):
                                            args['slope'],
                                            args['flow_direction'],
                                            args['ls_factor'])
-    def mult_all(*args):
-        val = 1.0
-        for a in args: val *= a
+
+    #Nodata value to use for output raster
+    usle_nodata = -1.0
+
+    #map lulc to a usle_c * usle_p raster
+    LOGGER.info('mapping landuse types to crop and practice management values')
+    usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], '',
+        'MEM', usle_nodata, gdal.GDT_Float32)
+    def lulc_to_cp(lulc_code):
+        #There are string casts here because the biophysical table is all 
+        #strings thanks to the csv table conversion.
+        if str(lulc_code) not in args['biophysical_table']:
+            return usle_nodata
+        #We need to divide the c and p factors by 1000 (10*6 == 1000*1000) 
+        #because they're stored in the table as C * 1000 and P * 1000.  See 
+        #the user's guide:
+        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
+        return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
+            float(args['biophysical_table'][str(lulc_code)]['usle_p']) / 10 ** 6
+    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1), lulc_to_cp,
+                                usle_c_p_raster.GetRasterBand(1))
+
+    #Set up structures for USLE calculation
+    ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
+    erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
+    erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
+    def mult_all(ls_factor, erosivity, erodibility, usle_c_p):
+        if ls_factor == usle_nodata or erosivity == usle_nodata or \
+            erodibility == usle_nodata or usle_c_p == usle_nodata:
+            return usle_nodata
+        return ls_factor * erosivity * erodibility * usle_c_p
     op = np.vectorize(mult_all)
     LOGGER.info("calculating potential soil loss")
     invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
-        args['erodibility']], op, 'a.tif')
-
+        args['erodibility'], usle_c_p_raster], op, args['usle_uri'],
+                                 nodata=usle_nodata)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a

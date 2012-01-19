@@ -986,7 +986,7 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     #Assumes that cells are square
     cdef float cell_size = abs(upslope_area.GetGeoTransform()[1])
     cdef float cell_area = cell_size ** 2
-    cdef float m, alpha, xij, contributing_area
+    cdef float m, alpha, beta, xij, contributing_area
     cdef float PI = 3.14159265 
     
     #Tease out all the nodata values for reading and setting
@@ -998,7 +998,7 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     cdef np.ndarray [np.float_t,ndim=2] upslope_area_matrix = \
         upslope_area.GetRasterBand(1).ReadAsArray(0, 0, \
         nrows,ncols).transpose().astype(np.float)
-        
+    
     cdef np.ndarray [np.float_t,ndim=2] slope_matrix = \
         slope_raster.GetRasterBand(1).ReadAsArray(0, 0, \
         nrows,ncols).transpose().astype(np.float)
@@ -1009,18 +1009,32 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
         
     cdef np.ndarray [np.float_t,ndim=2] ls_factor_matrix = \
         np.zeros((nrows,ncols))
+    
+    #This is necessary to avoid not setting the outside boundary
+    ls_factor_matrix[:] = ls_nodata
+    
+    mraster = newRasterFromBase(aspect, 'm.tif', 'GTiff', -5.0, gdal.GDT_Float32)
+    xijraster = newRasterFromBase(aspect, 'xij.tif', 'GTiff', -5.0, gdal.GDT_Float32)
         
+    cdef np.ndarray [np.float_t,ndim=2] m_matrix = np.zeros((nrows,ncols))
+    cdef np.ndarray [np.float_t,ndim=2] xij_matrix = np.zeros((nrows,ncols))
+    
     for row_index in range(1,nrows-1):
         LOGGER.debug('row_index %s' % row_index)
         for col_index in range(1,ncols-1):
-            #Set the nodata bounds first
+            #Skip the calculation if any of the inputs are nodata
             if aspect_matrix[row_index, col_index] == aspect_nodata or \
                 slope_matrix[row_index, col_index] == slope_nodata or \
                 upslope_area_matrix[row_index, col_index] == upslope_nodata:
-                ls_factor_matrix[row_index,col_index] = ls_nodata
                 continue
                 
-            alpha = aspect_matrix[row_index, col_index]
+            #adjust flow direction to correspond to compass direction.
+            #This means the directions need to be flipped since compass
+            #direction is left-handed and the whole coordinate system needs
+            #to be rotated 90 degrees.  See the following for aspect direction
+            #http://edndoc.esri.com/arcobjects/9.2/net/shared/geoprocessing/spatial_analyst_tools/how_aspect_works.htm
+            alpha = -aspect_matrix[row_index, col_index]+PI/2
+            if alpha < 0: alpha += 2*PI
             xij = abs(sin(alpha)+ cos(alpha))
             
             contributing_area = \
@@ -1037,19 +1051,25 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
             else:
                 slope_factor =  16.8*sin(slope_in_radians)-0.5
             
+            #Set the m value to the lookup table that's from Yonas's handwritten
+            #notes.  On the margin it says "Equation 15".  Don't know from
+            #where.
+            beta = (sin(slope_in_radians) / 0.0896) / \
+                   (3*pow(sin(slope_in_radians),0.8)+0.56)
+            slope_table = [0.01, 0.035, 0.05, 0.09]
+            exponent_table = [0.2, 0.3, 0.4, 0.5, beta/(1+beta)]
             
-            #Set the m value to the lookup table that's in the InVEST 2.2.0
-            #documentation.  Use the bisect function to do a nifty range 
+            #Use the bisect function to do a nifty range 
             #lookup. http://docs.python.org/library/bisect.html#other-examples
-            slope_table = [0.01, 0.035, 0.05]
-            exponent_table = [0.2, 0.3, 0.4, 0.5]
             m = exponent_table[bisect.bisect(slope_table,slope)]
-            
+            m_matrix[row_index,col_index] = m
             #The length part of the ls_factor:
             ls_factor_matrix[row_index,col_index] = \
                 ((contributing_area+cell_area)**(m+1)-
                  contributing_area**(m+1)) / \
                 ((cell_size**(m+2))*(xij**m)*(22.13**m))
+                
+            xij_matrix[row_index,col_index] = xij
 
             #From the paper "as a final check against exessively long slope
             #length calculations ... cap of 333m"
@@ -1059,4 +1079,6 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
             ls_factor_matrix[row_index,col_index] *= slope_factor
 
     ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(),0,0)
+    mraster.GetRasterBand(1).WriteArray(m_matrix.transpose(),0,0)
+    xijraster.GetRasterBand(1).WriteArray(xij_matrix.transpose(),0,0)
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))

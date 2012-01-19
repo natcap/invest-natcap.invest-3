@@ -16,8 +16,7 @@ class ModelUIRegistrar(base_widgets.ElementRegistrar):
     def __init__(self):
         super(ModelUIRegistrar, self).__init__()
 
-        changes = {'checkbox': CheckBox,
-                   'file': base_widgets.FileEntry,
+        changes = {'file': base_widgets.FileEntry,
                    'folder': base_widgets.FileEntry,
                    'text': base_widgets.YearEntry
                     }
@@ -111,68 +110,6 @@ this model, send an email to richsharp@stanford.edu." + self.feedbackBody)
         self.operationDialog.executor.addOperation('model',
                                                    modelArgs,
                                                    self.attributes['targetScript'])
-
-
-class CheckBox(QtGui.QCheckBox, base_widgets.DynamicPrimitive):
-    """This class represents a checkbox for our UI interpreter.  It has the 
-        ability to enable and disable other elements."""
-
-    def __init__(self, attributes):
-        """Constructor for the CheckBox class.
- 
-            attributes - a python dictionary containing all attributes of this 
-                checkbox as defined by the user in the json configuration file.
-            
-            returns an instance of CheckBox"""
-
-#        super(CheckBox, self).__init__(attributes)
-        QtGui.QCheckBox.__init__(self)
-        base_widgets.DynamicPrimitive.__init__(self, attributes)
-
-        #set the text of the checkbox
-        self.setText(attributes['label'])
-
-        #connect the button to the toggle function.
-        self.toggled.connect(self.toggle)
-
-    def toggle(self, isChecked):
-        """Enable/disable all elements controlled by this element.
-        
-            returns nothing."""
-
-        self.setState(isChecked, includeSelf=False)
-
-    def isEnabled(self):
-        """Check to see if this element is checked.
-        
-            returns a boolean"""
-
-        return self.isChecked()
-
-    def value(self):
-        """Get the value of this checkbox.
-        
-            returns a boolean."""
-        return self.isChecked()
-
-    def setValue(self, value):
-        """Set the value of this element to value.
-            
-            value - a string or boolean representing
-            
-            returns nothing"""
-
-        if isinstance(value, unicode) or isinstance(value, str):
-            if value == 'True':
-                value = True
-            else:
-                value = False
-
-        self.setChecked(value)
-        self.setState(value, includeSelf=False)
-
-    def requirementsMet(self):
-        return self.value()
 
 def validate(jsonObject):
     """Validates a string containing a JSON object against our schema.  Uses the

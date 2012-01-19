@@ -185,7 +185,7 @@ class DynamicGroup(DynamicElement):
         #itself is a subclass of QtGui.QWidget) so that we can add widgets 
         #as necessary.
         self.setLayout(layout)
-
+        
         self.registrar = registrar
         if registrar != None:
             self.createElements(attributes['elements'])
@@ -849,6 +849,67 @@ class Dropdown(LabeledElement):
         else:
             return self.dropdown.currentText()
 
+class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
+    """This class represents a checkbox for our UI interpreter.  It has the 
+        ability to enable and disable other elements."""
+
+    def __init__(self, attributes):
+        """Constructor for the CheckBox class.
+ 
+            attributes - a python dictionary containing all attributes of this 
+                checkbox as defined by the user in the json configuration file.
+            
+            returns an instance of CheckBox"""
+
+#        super(CheckBox, self).__init__(attributes)
+        QtGui.QCheckBox.__init__(self)
+        DynamicPrimitive.__init__(self, attributes)
+
+        #set the text of the checkbox
+        self.setText(attributes['label'])
+
+        #connect the button to the toggle function.
+        self.toggled.connect(self.toggle)
+
+    def toggle(self, isChecked):
+        """Enable/disable all elements controlled by this element.
+        
+            returns nothing."""
+
+        self.setState(isChecked, includeSelf=False)
+
+    def isEnabled(self):
+        """Check to see if this element is checked.
+        
+            returns a boolean"""
+
+        return self.isChecked()
+
+    def value(self):
+        """Get the value of this checkbox.
+        
+            returns a boolean."""
+        return self.isChecked()
+
+    def setValue(self, value):
+        """Set the value of this element to value.
+            
+            value - a string or boolean representing
+            
+            returns nothing"""
+
+        if isinstance(value, unicode) or isinstance(value, str):
+            if value == 'True':
+                value = True
+            else:
+                value = False
+
+        self.setChecked(value)
+        self.setState(value, includeSelf=False)
+
+    def requirementsMet(self):
+        return self.value()
+
 class OperationDialog(QtGui.QDialog):
     """ModelDialog is a class defining a modal window presented to the user
         while the model is running.  This modal window prevents the user from
@@ -1020,7 +1081,7 @@ class Root(DynamicElement):
         self.setLayout(layout)
         
         self.body = DynamicGroup(attributes, QtGui.QVBoxLayout(), object_registrar)
-        
+
         if 'scrollable' in self.attributes:
             make_scrollable = self.attributes['scrollable']
         else:
@@ -1031,7 +1092,6 @@ class Root(DynamicElement):
             self.layout().addWidget(self.scrollArea)
             self.scrollArea.setWidget(self.body)
             self.scrollArea.setWidgetResizable(True)
-            self.body.layout().insertStretch(-1)
             self.scrollArea.verticalScrollBar().rangeChanged.connect(self.updateScrollBorder)
 
             self.updateScrollBorder(self.scrollArea.verticalScrollBar().minimum(),
@@ -1153,10 +1213,17 @@ class Root(DynamicElement):
                     outputDict[args_id] = element_value
 
         return outputDict
+
+class EmbeddedUI(Root):
+    def __init__(self, attributes, object_registrar):
+        uri = attributes['configURI']
+        layout = QtGui.QVBoxLayout()
+        Root.__init__(self, uri, layout, object_registrar)
+        self.body.layout().insertStretch(-1)
         
-class ExecRoot(RootWindow):
+class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
-        RootWindow.__init__(self, uri, layout, object_registrar)
+        Root.__init__(self, uri, layout, object_registrar)
         self.addBottomButtons()
         self.setWindowSize()
 
@@ -1249,13 +1316,15 @@ class ElementRegistrar(registrar.Registrar):
                    'text': YearEntry,
                    'sliderSpinBox': SliderSpinBox,
                    'hideableFileEntry': HideableFileEntry,
-                   'dropdown': Dropdown
+                   'dropdown': Dropdown,
+                   'embeddedUI': EmbeddedUI,
+                   'checkbox': CheckBox
                    }
         self.update_map(updates)
         
     def eval(self, type, op_values):
         widget = registrar.Registrar.get_func(self, type)
-        if issubclass(widget, DynamicGroup):
+        if issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI):
             return widget(op_values, self)
         else:
             return widget(op_values)
