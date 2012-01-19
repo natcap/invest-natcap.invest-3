@@ -1,12 +1,9 @@
 """InVEST Wave Energy Model file handler module"""
 
-import sys
 import os
 import csv
 import logging 
 
-import simplejson as json
-import numpy as np
 from osgeo import ogr
 from osgeo import gdal
 
@@ -44,9 +41,9 @@ def execute(args):
     #Open/create the output directory
     output_dir = args['workspace_dir'] + os.sep + 'Output' + os.sep
     intermediate_dir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
-    for dir in [output_dir, intermediate_dir]:
-        if not os.path.exists(dir):
-            os.makedirs(dir)
+    for directory in [output_dir, intermediate_dir]:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
     #Read machine economic parameters into a dictionary
     try:
         machine_econ = {}
@@ -56,8 +53,8 @@ def execute(args):
             machine_econ[row['NAME'].strip()] = row
         machine_econ_file.close()
         valuation_args['machine_econ'] = machine_econ
-    except IOError, e:
-        print 'File I/O error' + e
+    except IOError, error:
+        print 'File I/O error' + error
     #Read landing and power grid connection points into a dictionary
     try:
         land_grid_pts = {}
@@ -67,8 +64,8 @@ def execute(args):
             land_grid_pts[row['ID'].strip()] = row
         land_grid_pts_file.close()
         valuation_args['land_gridPts'] = land_grid_pts
-    except IOError, e:
-        print 'File I/O error' + e
+    except IOError, error:
+        print 'File I/O error' + error
     #Call the valuation core module with attached arguments to run the economic valuation
     logger.info('Beginning Wave Energy Valuation.')
     waveEnergy_core.valuation(valuation_args)
