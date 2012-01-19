@@ -119,7 +119,7 @@ def execute(args):
     #If the area of interest is present add it to the dictionary arguments
     if 'aoi_uri' in args:
         try:
-            logger.debug('AOI File : %s', args['aoi'])
+            logger.debug('AOI File : %s', args['aoi_uri'])
             aoi = ogr.Open(args['aoi_uri'], 1)
             biophysical_args['aoi'] = aoi
         except IOError, error:
