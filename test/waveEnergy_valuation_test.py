@@ -8,21 +8,6 @@ import invest_test_core
 
 class TestWaveEnergyValuation(unittest.TestCase):
     def test_wave_energy_valuation_regression(self):
-        """This function invokes the valuation part of the wave energy model given URI inputs.
-        It will do filehandling and open/create appropriate objects to 
-        pass to the core wave energy valuation processing function.  It may write
-        log, warning, or error messages to stdout.
-        
-        args - A python dictionary with at least the following possible entries:
-        args['workspace_dir'] - Where the intermediate and ouput folder/files will be saved.
-        args['land_gridPts_uri'] - A CSV file path containing the Landing and Power Grid Connection Points table.
-        args['machine_econ_uri'] - A CSV file path for the machine economic parameters table.
-        args['number_of_machines'] - An integer specifying the number of machines.
-        args['projection_uri'] - A path for the projection to transform coordinates from decimal degrees to meters.
-        args['globa_dem'] - We need the depth of the locations for calculating costs.
-        args['']
-        """
-        
         args = {}
         args['workspace_dir'] = './data/test_data/wave_Energy'
         args['wave_base_data_uri'] = './data/test_data/wave_Energy/samp_input/WaveData'
@@ -41,9 +26,7 @@ class TestWaveEnergyValuation(unittest.TestCase):
             args['workspace_dir'] + '/Output/npv_usd.tif',
             args['workspace_dir'] + '/regression_tests/npv_usd_regression.tif')
 
-        #Need to check the shapefiles landingpoints and gridpoint to make sure
-        #those are both correct
-        #Check that output/intermediate files have been made
+        #Regression Check for LandPts_prj shapefile
         regression_landing_shape = ogr.Open(args['workspace_dir'] + '/regression_tests/LandPts_prj_regression.shp')
         landing_shape = ogr.Open(args['workspace_dir'] + '/Output/LandPts_prj.shp')
         
@@ -75,7 +58,7 @@ class TestWaveEnergyValuation(unittest.TestCase):
         regression_landing_shape.Destroy()
         landing_shape.Destroy()
         
-        
+        #Regression Check for GridPt_prj shapefile
         regression_grid_shape = ogr.Open(args['workspace_dir'] + '/regression_tests/GridPt_prj_regression.shp')
         grid_shape = ogr.Open(args['workspace_dir'] + '/Output/GridPt_prj.shp')
         
