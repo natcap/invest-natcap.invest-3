@@ -1,5 +1,5 @@
+"""InVEST Wave Energy Model Core Code"""
 import math
-import sys
 import os
 import logging
 
@@ -79,8 +79,6 @@ def biophysical(args):
     #from the raster DEM
     logger.debug('Adding a depth field to the shapefile from the DEM raster')
     dem_band = global_dem.GetRasterBand(1)
-    xsize = dem_band.XSize
-    ysize = dem_band.YSize
     dem_matrix = dem_band.ReadAsArray()
     #Create a new field for the depth attribute
     field_defn = ogr.FieldDefn('Depth_M', ogr.OFTReal)
@@ -93,11 +91,11 @@ def biophysical(args):
         depth_index = feature.GetFieldIndex('Depth_M')    
         geom = feature.GetGeometryRef()
         lat = geom.GetX()
-        long = geom.GetY()
+        longitude = geom.GetY()
         #To get proper depth value we must index into the dem matrix
         #by getting where the point is located in terms of the matrix
         i = int((lat - dem_gt[0]) / dem_gt[1])
-        j = int((long - dem_gt[3]) / dem_gt[5])
+        j = int((longitude - dem_gt[3]) / dem_gt[5])
         depth = dem_matrix[j][i]        
         feature.SetField(depth_index, depth)        
         area_layer.SetFeature(feature)
@@ -115,7 +113,8 @@ def biophysical(args):
     #Create a dictionary with the wave energy capacity sums from each location
     logger.debug('Summing the wave energy capacity at each wave farm and saving to dictionary')
     logger.info('Calculating Captured Wave Energy.')
-    energy_cap = compute_wave_energy_capacity(args['wave_base_data'], energy_interp, args['machine_param'])
+    energy_cap = compute_wave_energy_capacity(args['wave_base_data'],
+                                              energy_interp, args['machine_param'])
     #Add the sum as a field to the shapefile for the corresponding points
     logger.debug('Adding the wave energy sums to the WaveData shapefile')
     captured_wave_energy_to_shape(energy_cap, area_shape)
@@ -133,8 +132,10 @@ def biophysical(args):
     wave_energy_raster = gdal.Open(wave_energy_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
     logger.debug('Getting the points and corresponding values of wave power and captured wave energy')
-    energy_sum_array = get_points_values(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
-    wave_power_array = get_points_values(area_shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
+    energy_sum_array = get_points_values(area_shape, ['LONG', 'LATI'],
+                                         ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
+    wave_power_array = get_points_values(area_shape, ['LONG', 'LATI'],
+                                         ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
     #Interpolate wave energy and wave power from the shapefile over the rasters
     logger.debug('Interpolate wave power and wave energy capacity onto rasters')
     logger.info('Generating Wave Power and Captured Wave Energy rasters.')
@@ -161,9 +162,9 @@ def wave_power(shape):
               and corresponding value    
     """
     #Sea water density constant (kg/m^3)
-    p = 1028
+    swd = 1028
     #Gravitational acceleration (m/s^2)
-    g = 9.8
+    grav = 9.8
     #Constant determining the shape of a wave spectrum (see users guide pg 23)
     alfa = 0.86
     #Add a waver power field to the shapefile.
@@ -188,14 +189,15 @@ def wave_power(shape):
         tem = (2.0 * math.pi) / (period * alfa)
         #wave number calculation (expressed as a function of 
         #wave frequency and water depth)
-        k = np.square(tem) / (g * np.sqrt(np.tanh((np.square(tem)) * (depth / g))))
+        k = np.square(tem) / (grav * np.sqrt(np.tanh((np.square(tem)) * (depth / grav))))
         #wave group velocity calculation (expressed as a 
         #function of wave energy period and water depth)
-        wave_group_velocity = ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) * np.sqrt((g / k) * np.tanh(k * depth))) / 2
+        wave_group_velocity = ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) 
+                               * np.sqrt((grav / k) * np.tanh(k * depth))) / 2
         #wave power calculation
-        wp = (((p * g) / 16) * (np.square(height)) * wave_group_velocity) / 1000
+        wave_pow = (((swd * grav) / 16) * (np.square(height)) * wave_group_velocity) / 1000
         
-        feat.SetField(wp_index, wp)
+        feat.SetField(wp_index, wave_pow)
         
         layer.SetFeature(feat)
         feat.Destroy()
@@ -214,10 +216,6 @@ def clip_raster_from_polygon(shape, raster, path):
     
     returns - The clipped raster    
     """
-    #Get the pixel size from the raster to clip.
-    gt = raster.GetGeoTransform()
-    pixel_x = gt[1]
-    pixel_y = gt[5]
     #Create a new raster as a copy from 'raster'
     copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     copy_band = copy_raster.GetRasterBand(1)
@@ -226,11 +224,18 @@ def clip_raster_from_polygon(shape, raster, path):
     copy_band.Fill(nodata)
     #Rasterize the polygon layer onto the copied raster
     gdal.RasterizeLayer(copy_raster, [1], shape.GetLayer(0))
-    #If the copied raster's value is nodata then the pixel is not within
-    #the polygon and should write nodata back. If copied raster's value
-    #is not nodata, then pixel lies within polygon and the value from 'raster'
-    #should be written out.
     def fill_bound_data(value, copy_value):
+        """If the copied raster's value is nodata then the pixel is not within
+        the polygon and should write nodata back. If copied raster's value
+        is not nodata, then pixel lies within polygon and the value from 'raster'
+        should be written out.
+        
+        value - The pixel value of the raster to be bounded by the shape
+        copy_value - The pixel value of a copied raster where every pixel
+                     is nodata except for where the polygon was rasterized
+        
+        returns - Either a nodata value or relevant pixel value
+        """
         if copy_value == nodata:
             return copy_value
         else:
@@ -272,10 +277,10 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
     #For every field, create a duplicate field and add it to the new shapefiles layer
     for fld_index in range(in_field_count):
         src_fd = in_defn.GetFieldDefn(fld_index)
-        fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
-        fd.SetWidth(src_fd.GetWidth())
-        fd.SetPrecision(src_fd.GetPrecision())
-        shp_layer.CreateField(fd)
+        fd_def = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
+        fd_def.SetWidth(src_fd.GetWidth())
+        fd_def.SetPrecision(src_fd.GetPrecision())
+        shp_layer.CreateField(fd_def)
     #Retrieve the binding polygon feature and get it's geometry reference
     clip_feat = clip_layer.GetNextFeature()
     while clip_feat is not None:
@@ -369,8 +374,8 @@ def get_points_values(shape, key, value_array, value):
     values = []
     #Construct two arrays, one a list of all the points from field_dict, and the other a list
     #of all the values corresponding the points from field_dict
-    for id, val in field_dict.iteritems():
-        points.append(list(id))
+    for id_key, val in field_dict.iteritems():
+        points.append(list(id_key))
         values.append(val)
 
     results = [points, values]
@@ -391,18 +396,20 @@ def interp_points_over_raster(points, values, raster):
     points = np.array(points)
     values = np.array(values)
     #Get the dimensions from the raster as well as the GeoTransform information
-    gt = raster.GetGeoTransform()
+    geo_tran = raster.GetGeoTransform()
     band = raster.GetRasterBand(1)
     size_x = band.XSize
     logger.debug('Size of X dimension of raster : %s', size_x)
     size_y = band.YSize
     logger.debug('Size of Y dimension of raster : %s', size_y)
     #Make a numpy array representing the points of the raster (the points are the pixels)
-    new_points = np.array([[gt[0] + gt[1] * i, gt[3] + gt[5] * j] for i in np.arange(size_x) for j in np.arange(size_y)])
+    new_points = np.array([[geo_tran[0] + geo_tran[1] * i,
+                            geo_tran[3] + geo_tran[5] * j] for i in np.arange(size_x) for j in np.arange(size_y)])
     logger.debug('New points from raster : %s', new_points)
     #Interpolate the points and values from the shapefile from earlier
     spl = ip(points, values, fill_value=0)
-    #Run the interpolator object over the new set of points from the raster. Will return a list of values.
+    #Run the interpolator object over the new set of points from the raster. 
+    #Will return a list of values.
     spl = spl(new_points)
     #Reshape the list of values to the dimensions of the raster for writing.
     #Transpose the matrix provided from 'reshape' because gdal thinks of x,y opposite of humans
@@ -464,12 +471,12 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     height_max_pos = -1
     #Using the restrictions find the max position (index) for period and height
     #in the wave_row/wave_column ranges
-    for i, v in enumerate(wave_row):
-        if (v > period_max) and (period_max_pos == -1):
-            period_max_pos = i
-    for i, v in enumerate(wave_column):
-        if (v > height_max) and (height_max_pos == -1):
-            height_max_pos = i
+    for index_pos, value in enumerate(wave_row):
+        if (value > period_max) and (period_max_pos == -1):
+            period_max_pos = index_pos
+    for index_pos, value in enumerate(wave_column):
+        if (value > height_max) and (height_max_pos == -1):
+            height_max_pos = index_pos
     logger.debug('Position of max period : %f', period_max_pos)
     logger.debug('Position of max height : %f', height_max_pos)
     #For all the wave watch points, multiply the occurence matrix by the interpolated
@@ -492,8 +499,8 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
         valid_array = np.where(valid_array < 0, 0, valid_array)
         #Sum all of the values from the matrix to get the total captured wave energy
         #and convert into mega watts
-        sum = (valid_array.sum() / 1000)
-        energy_cap[key] = sum
+        sum_we = (valid_array.sum() / 1000)
+        energy_cap[key] = sum_we
 
     return energy_cap
 
@@ -509,17 +516,17 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape):
     
     returns - Nothing    
     """
-    wave_Layer = wave_shape.GetLayer(0)
+    wave_layer = wave_shape.GetLayer(0)
     #Incase the layer has already been read through earlier in the program
     #reset it to start from the beginning
-    wave_Layer.ResetReading()
+    wave_layer.ResetReading()
     #Create a new field for the shapefile
     field_def = ogr.FieldDefn('capWE_Sum', ogr.OFTReal)
-    wave_Layer.CreateField(field_def)
+    wave_layer.CreateField(field_def)
     #For all of the features (points) in the shapefile, get the 
     #corresponding point/value from the dictionary and set the 'capWE_Sum'
     #field as the value from the dictionary
-    for feat in wave_Layer:
+    for feat in wave_layer:
         index_i = feat.GetFieldIndex('I')
         index_j = feat.GetFieldIndex('J')
         value_i = feat.GetField(index_i)
@@ -529,7 +536,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape):
         index = feat.GetFieldIndex('capWE_Sum')
         feat.SetField(index, we_value)
         #Save the feature modifications to the layer.
-        wave_Layer.SetFeature(feat)
+        wave_layer.SetFeature(feat)
         feat.Destroy()
 
 def valuation(args):
@@ -575,10 +582,10 @@ def valuation(args):
     #Since the global_dem is the only input raster, we base the pixel
     #size of our output raster from the global_dem
     dem = args['global_dem']
-    gt = dem.GetGeoTransform()
-    pixel_xsize = float(gt[1])
+    geo_tran = dem.GetGeoTransform()
+    pixel_xsize = float(geo_tran[1])
     logger.debug('X pixel size of DEM : %f', pixel_xsize)
-    pixel_ysize = np.absolute(float(gt[5]))
+    pixel_ysize = np.absolute(float(geo_tran[5]))
     logger.debug('Y pixel size of DEM : %f', pixel_ysize)
     #If either shapefile, landing or grid exist, remove them
     if os.path.isfile(land_pt_path):
@@ -692,29 +699,29 @@ def valuation(args):
     landing_points = get_points_geometries(landing_shape)
     grid_point = get_points_geometries(grid_shape)
     logger.info('Calculating Distances.')
-    W2L_Dist, W2L_ID = calculate_distance(we_points, landing_points)
-    L2G_Dist, L2G_ID = calculate_distance(landing_points, grid_point)
+    wave_to_land_dist, wave_to_land_id = calculate_distance(we_points, landing_points)
+    land_to_grid_dist, land_to_grid_id = calculate_distance(landing_points, grid_point)
     #Add three new fields to the shapefile that will store the distances
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
         shape_layer.CreateField(field_defn)
     #For each feature in the shapefile add the corresponding distances
-    #from W2L_Dist and L2G_Dist that was calculated above
-    j = 0
+    #from wave_to_land_dist and land_to_grid_dist that was calculated above
+    iterate_feat = 0
     shape_layer.ResetReading()
     feature = shape_layer.GetNextFeature()
     while feature is not None:
-        W2L_index = feature.GetFieldIndex('W2L_MDIST')
-        L2G_index = feature.GetFieldIndex('L2G_MDIST')
-        ID_index = feature.GetFieldIndex('LAND_ID')    
+        wave_to_land_index = feature.GetFieldIndex('W2L_MDIST')
+        land_to_grid_index = feature.GetFieldIndex('L2G_MDIST')
+        id_index = feature.GetFieldIndex('LAND_ID')    
         
-        land_id = int(W2L_ID[j])
+        land_id = int(wave_to_land_id[iterate_feat])
         
-        feature.SetField(W2L_index, W2L_Dist[j])
-        feature.SetField(L2G_index, L2G_Dist[land_id])
-        feature.SetField(ID_index, land_id)
+        feature.SetField(wave_to_land_index, wave_to_land_dist[iterate_feat])
+        feature.SetField(land_to_grid_index, land_to_grid_dist[land_id])
+        feature.SetField(id_index, land_id)
         
-        j = j + 1
+        iterate_feat = iterate_feat + 1
         
         shape_layer.SetFeature(feature)
         feature.Destroy()
@@ -781,14 +788,17 @@ def valuation(args):
     nodata = 0
     #Create a blank raster from the extents of the wave farm shapefile
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                              datatype, nodata, wave_farm_value_path, wave_data_shape)
+                                                     datatype, nodata, wave_farm_value_path, wave_data_shape)
     wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
-    wave_farm_value_array = get_points_values(shape, ['LONG', 'LATI'], ['LONG', 'LATI', 'NPV_25Y'], 'NPV_25Y')
-    #Interpolate the NPV values based on the dimensions and corresponding points of the raster, then
-    #write the interpolated values to the raster
+    wave_farm_value_array = get_points_values(shape, ['LONG', 'LATI'],
+                                              ['LONG', 'LATI', 'NPV_25Y'], 'NPV_25Y')
+    #Interpolate the NPV values based on the dimensions and 
+    #corresponding points of the raster, then write the interpolated 
+    #values to the raster
     logger.info('Generating Net Present Value Raster.')
-    interp_points_over_raster(wave_farm_value_array[0], wave_farm_value_array[1], wave_farm_value_raster)
+    interp_points_over_raster(wave_farm_value_array[0],
+                              wave_farm_value_array[1], wave_farm_value_raster)
     #Reproject the raster into a meters format
     virtual = gdal.AutoCreateWarpedVRT(wave_farm_value_raster,
                                        wave_farm_value_raster.GetProjectionRef(),
@@ -800,7 +810,7 @@ def valuation(args):
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
     the X and Y value from it's geometry. The X and Y value are stored in
-    a numpy array as a point [x,y], which is returned when all the features
+    a numpy array as a point [x_location,y_location], which is returned when all the features
     have been iterated through.
     
     shape - A shapefile
@@ -812,9 +822,9 @@ def get_points_geometries(shape):
     layer = shape.GetLayer(0)
     feat = layer.GetNextFeature()
     while feat is not None:
-        x = float(feat.GetGeometryRef().GetX())
-        y = float(feat.GetGeometryRef().GetY())
-        point.append([x, y])
+        x_location = float(feat.GetGeometryRef().GetX())
+        y_location = float(feat.GetGeometryRef().GetY())
+        point.append([x_location, y_location])
         feat.Destroy()
         feat = layer.GetNextFeature()
     
@@ -836,11 +846,11 @@ def calculate_distance(xy_1, xy_2):
     #Create two numpy array of zeros with length set to as many points in xy_1
     min_dist = np.zeros(len(xy_1))
     min_id = np.zeros(len(xy_1))
-    #For all points xy in xy_1 calcuate the distance from xy to xy_2
+    #For all points xy_point in xy_1 calcuate the distance from xy_point to xy_2
     #and save the shortest distance found.
-    for i, xy in enumerate(xy_1):
-        dists = np.sqrt(np.sum((xy - xy_2) ** 2, axis=1))
-        min_dist[i], min_id[i] = dists.min(), dists.argmin()
+    for index, xy_point in enumerate(xy_1):
+        dists = np.sqrt(np.sum((xy_point - xy_2) ** 2, axis=1))
+        min_dist[index], min_id[index] = dists.min(), dists.argmin()
     return min_dist, min_id
 
 def change_shape_projection(shape_to_reproject, projection, output_path):
@@ -880,10 +890,10 @@ def change_shape_projection(shape_to_reproject, projection, output_path):
     #For every field, create a duplicate field and add it to the new shapefiles layer
     for fld_index in range(in_field_count):
         src_fd = in_defn.GetFieldDefn(fld_index)
-        fd = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
-        fd.SetWidth(src_fd.GetWidth())
-        fd.SetPrecision(src_fd.GetPrecision())
-        shp_layer.CreateField(fd)
+        fd_def = ogr.FieldDefn(src_fd.GetName(), src_fd.GetType())
+        fd_def.SetWidth(src_fd.GetWidth())
+        fd_def.SetPrecision(src_fd.GetPrecision())
+        shp_layer.CreateField(fd_def)
     
     in_layer.ResetReading()
     in_feat = in_layer.GetNextFeature()
