@@ -136,6 +136,7 @@ def extrapolate_wave_data(wave_file):
     
     returns - A dictionary of matrices representing hours of specific seastates.  
     """
+    logger.debug('Extrapolating wave data from text to a dictionary')
     try:
         wave_open = open(wave_file)
         wave_dict = {}
@@ -173,6 +174,7 @@ def extrapolate_wave_data(wave_file):
         wave_dict[0] = np.array(wave_row, dtype='f')
         logger.debug('WaveData col %s', wave_col)
         wave_dict[1] = np.array(wave_col, dtype='f')
+        logger.debug('Finished extrapolating wave data to dictionary')
         return wave_dict
 
     except IOError, e:
