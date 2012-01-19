@@ -849,6 +849,67 @@ class Dropdown(LabeledElement):
         else:
             return self.dropdown.currentText()
 
+class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
+    """This class represents a checkbox for our UI interpreter.  It has the 
+        ability to enable and disable other elements."""
+
+    def __init__(self, attributes):
+        """Constructor for the CheckBox class.
+ 
+            attributes - a python dictionary containing all attributes of this 
+                checkbox as defined by the user in the json configuration file.
+            
+            returns an instance of CheckBox"""
+
+#        super(CheckBox, self).__init__(attributes)
+        QtGui.QCheckBox.__init__(self)
+        DynamicPrimitive.__init__(self, attributes)
+
+        #set the text of the checkbox
+        self.setText(attributes['label'])
+
+        #connect the button to the toggle function.
+        self.toggled.connect(self.toggle)
+
+    def toggle(self, isChecked):
+        """Enable/disable all elements controlled by this element.
+        
+            returns nothing."""
+
+        self.setState(isChecked, includeSelf=False)
+
+    def isEnabled(self):
+        """Check to see if this element is checked.
+        
+            returns a boolean"""
+
+        return self.isChecked()
+
+    def value(self):
+        """Get the value of this checkbox.
+        
+            returns a boolean."""
+        return self.isChecked()
+
+    def setValue(self, value):
+        """Set the value of this element to value.
+            
+            value - a string or boolean representing
+            
+            returns nothing"""
+
+        if isinstance(value, unicode) or isinstance(value, str):
+            if value == 'True':
+                value = True
+            else:
+                value = False
+
+        self.setChecked(value)
+        self.setState(value, includeSelf=False)
+
+    def requirementsMet(self):
+        return self.value()
+
 class OperationDialog(QtGui.QDialog):
     """ModelDialog is a class defining a modal window presented to the user
         while the model is running.  This modal window prevents the user from
@@ -1031,7 +1092,6 @@ class Root(DynamicElement):
             self.layout().addWidget(self.scrollArea)
             self.scrollArea.setWidget(self.body)
             self.scrollArea.setWidgetResizable(True)
-            self.body.layout().insertStretch(-1)
             self.scrollArea.verticalScrollBar().rangeChanged.connect(self.updateScrollBorder)
 
             self.updateScrollBorder(self.scrollArea.verticalScrollBar().minimum(),
@@ -1159,7 +1219,7 @@ class EmbeddedUI(Root):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
         Root.__init__(self, uri, layout, object_registrar)
-        
+        self.body.layout().insertStretch(-1)
         
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
@@ -1257,7 +1317,8 @@ class ElementRegistrar(registrar.Registrar):
                    'sliderSpinBox': SliderSpinBox,
                    'hideableFileEntry': HideableFileEntry,
                    'dropdown': Dropdown,
-                   'embeddedUI': EmbeddedUI
+                   'embeddedUI': EmbeddedUI,
+                   'checkbox': CheckBox
                    }
         self.update_map(updates)
         
