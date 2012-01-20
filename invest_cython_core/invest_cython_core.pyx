@@ -1119,7 +1119,7 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
     """This function calculates the sediment exported to stream from each pixel
         given the potential soil loss, flow direction, vegitation retention 
         efficiency, and flow_accumulation+stream_threshold for stream 
-        calculation"""
+        calculation
         
         (all the following rasters must have the same dimensions+projections)
         potential_soil_loss - (input) raster whose values are a total quantity 
