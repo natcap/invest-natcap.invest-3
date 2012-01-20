@@ -1100,18 +1100,53 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
             cell based on the routed sediment inflow
             
         returns nothing"""
+    
+    cdef int nrows = potential_soil_loss.RasterXSize, \
+             ncols = potential_soil_loss.RasterYSize, \
+             row_index, col_index
+    
+    cdef float potential_soil_loss_nodata = \
+        potential_soil_loss.GetRasterBand(1).GetNoDataValue()
+    cdef float aspect_nodata = aspect.GetRasterBand(1).GetNoDataValue()
+    cdef float retention_efficiency_nodata = \
+        retention_efficiency.GetRasterBand(1).GetNoDataValue()
+    cdef float sediment_retention_nodata = \
+        sediment_retention.GetRasterBand(1).GetNoDataValue()
+    
+    cdef np.ndarray [np.float_t,ndim=2] potential_soil_loss_matrix = \
+        potential_soil_loss.GetRasterBand(1).ReadAsArray(0, 0, \
+        nrows,ncols).transpose().astype(np.float)
+    
+    cdef np.ndarray [np.float_t,ndim=2] aspect_matrix = \
+        aspect.GetRasterBand(1).ReadAsArray(0, 0, \
+        nrows,ncols).transpose().astype(np.float)
         
-        #loop through each pixel
-        #enqueue that pixel
-            #while pixels still left to process
-            #if inflow neighbors export is calculated:
-                #calc retained sediment where inflow is proportioned by inflow angle
-                #calc export for that cell
-            #else;
-                #push pixel back
-                #push inflow neighbors
-         
-        pass
+    cdef np.ndarray [np.float_t,ndim=2] retention_efficiency_matrix = \
+        retention_efficiency.GetRasterBand(1).ReadAsArray(0, 0, \
+        nrows,ncols).transpose().astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] sediment_retention_matrix = \
+        np.empty((nrows,ncols))
+    sediment_retention[:] = sediment_retention_nodata
+    
+    #loop through each cell and skip any edge pixels
+    for col_index in range(1, ncols - 1):
+        for row_index in range(1, nrows - 1):
+
+            #If we're on a nodata pixel, set the flow to nodata and skip
+            if potential_soil_loss[col_index, row_index] == potential_soil_loss_nodata:
+                continue
+        
+    #loop through each pixel
+    #enqueue that pixel
+        #while pixels still left to process
+        #if inflow neighbors export is calculated:
+            #calc retained sediment where inflow is proportioned by inflow angle
+            #calc export for that cell
+        #else;
+            #push pixel back
+            #push inflow neighbors
+     
         
 def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
                            flow_accumulation, stream_threshold, 
@@ -1142,4 +1177,3 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             #loop over neighbor pixels
                 #if neighbor pixel unprocessed, enqueue it
                 #to neighbor, add % of inflow to current cell * current cell export (river is 1.0) 
-        pass
