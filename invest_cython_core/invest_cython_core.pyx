@@ -1083,8 +1083,8 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
 
     
-def route_sediment(potential_soil_loss, aspect, retention_efficiency,  
-                   sediment_retention):
+def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,  
+                           sediment_retention):
     """This function calculated the sediment retained on the landscape given 
         the potential soil loss, flow direction, vegitation retention efficiency,
         an the DEM.
