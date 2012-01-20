@@ -1112,3 +1112,34 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                 #push inflow neighbors
          
         pass
+        
+def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
+                           flow_accumulation, stream_threshold, 
+                           sediment_export):
+    """This function calculates the sediment exported to stream from each pixel
+        given the potential soil loss, flow direction, vegitation retention 
+        efficiency, and flow_accumulation+stream_threshold for stream 
+        calculation"""
+        
+        (all the following rasters must have the same dimensions+projections)
+        potential_soil_loss - (input) raster whose values are a total quantity 
+            of soil exported from individual cells based on the USLE
+        aspect - (input) raster that gives d-infinity flow directions out from 
+            each pixel
+        retention_efficiency - (input) raster of vegitation sediment trapping 
+            efficiency
+        flow_accumulation - (input) the flow accumulation to that pixel, 
+            including the pixel
+        stream_threshold - (input) a floating point cutoff to indicate when
+            a pixel should be considered a stream
+        sediment_export - (output) the amount of sediment exported from a given 
+            cell to the stream based on the routed sediment inflow
+            
+        returns nothing"""
+        
+        #push all stream pixels onto a queue
+        #while pixels still left to process
+            #loop over neighbor pixels
+                #if neighbor pixel unprocessed, enqueue it
+                #to neighbor, add % of inflow to current cell * current cell export (river is 1.0) 
+        pass
