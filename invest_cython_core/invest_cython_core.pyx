@@ -1081,3 +1081,34 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     mraster.GetRasterBand(1).WriteArray(m_matrix.transpose(),0,0)
     xijraster.GetRasterBand(1).WriteArray(xij_matrix.transpose(),0,0)
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
+
+    
+def route_sediment(potential_soil_loss, aspect, retention_efficiency,  
+                   sediment_retention):
+    """This function calculated the sediment retained on the landscape given 
+        the potential soil loss, flow direction, vegitation retention efficiency,
+        an the DEM.
+        
+        (all the following rasters must have the same dimensions+projections)
+        potential_soil_loss - (input) raster whose values are a total quantity 
+            of soil exported from individual cells based on the USLE
+        aspect - (input) raster that gives d-infinity flow directions out from 
+            each pixel
+        retention_efficiency - (input) raster of vegitation sediment trapping 
+            efficiency
+        sediment_retention - (output) the amount of sediment retained on that 
+            cell based on the routed sediment inflow
+            
+        returns nothing"""
+        
+        #loop through each pixel
+        #enqueue that pixel
+            #while pixels still left to process
+            #if inflow neighbors export is calculated:
+                #calc retained sediment where inflow is proportioned by inflow angle
+                #calc export for that cell
+            #else;
+                #push pixel back
+                #push inflow neighbors
+         
+        pass
