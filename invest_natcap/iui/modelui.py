@@ -12,6 +12,8 @@ import base_widgets
 import executor
 import iui_validator
 
+CMD_FOLDER = '.'
+
 class ModelUIRegistrar(base_widgets.ElementRegistrar):
     def __init__(self):
         super(ModelUIRegistrar, self).__init__()
@@ -23,7 +25,7 @@ class ModelUIRegistrar(base_widgets.ElementRegistrar):
 
         self.update_map(changes)
 
-class ModelUI(base_widgets.RootWindow):
+class ModelUI(base_widgets.ExecRoot):
     def __init__(self, uri, use_gui):
         """Constructor for the DynamicUI class, a subclass of DynamicGroup.
             DynamicUI loads all setting from a JSON object at the provided URI
@@ -49,7 +51,7 @@ class ModelUI(base_widgets.RootWindow):
         registrar = ModelUIRegistrar()
         self.okpressed = False
 
-        base_widgets.RootWindow.__init__(self, uri, layout, registrar)
+        base_widgets.ExecRoot.__init__(self, uri, layout, registrar)
 
 
         self.layout().setSizeConstraint(QtGui.QLayout.SetMinimumSize)
@@ -104,10 +106,10 @@ this model, send an email to richsharp@stanford.edu." + self.feedbackBody)
 
     def queueOperations(self):
         modelArgs = self.assembleOutputDict()
-        self.operationDialog.executor.addOperation('validator', modelArgs,
-                cmd_folder + '/../invest-natcap.invest-3/python/invest_core/' + self.attributes['modelName']
+        self.operationDialog.exec_controller.add_operation('validator', modelArgs,
+                CMD_FOLDER + '/../invest-natcap.invest-3/python/invest_core/' + self.attributes['modelName']
                 + '_validator.py')
-        self.operationDialog.executor.addOperation('model',
+        self.operationDialog.exec_controller.add_operation('model',
                                                    modelArgs,
                                                    self.attributes['targetScript'])
 
@@ -267,6 +269,6 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option('-t', '--test', action='store_false', default=True, dest='test')
     (options, uri) = parser.parse_args(sys.argv)
-
-    main(uri, options.test)
+    print uri
+    main(uri[1], options.test)
 

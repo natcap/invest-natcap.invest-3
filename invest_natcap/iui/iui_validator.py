@@ -44,7 +44,9 @@ class Validator(registrar.Registrar):
             if error != None:
                 return error
         
-        return self.type_checker.run_checks()
+        if self.type_checker != None:
+            return self.type_checker.run_checks()
+        return ''
         
     def init_type_checker(self):
         """Initialize the type checker.
