@@ -106,9 +106,6 @@ this model, send an email to richsharp@stanford.edu." + self.feedbackBody)
 
     def queueOperations(self):
         modelArgs = self.assembleOutputDict()
-        self.operationDialog.exec_controller.add_operation('validator', modelArgs,
-                CMD_FOLDER + '/../invest-natcap.invest-3/python/invest_core/' + self.attributes['modelName']
-                + '_validator.py')
         self.operationDialog.exec_controller.add_operation('model',
                                                    modelArgs,
                                                    self.attributes['targetScript'])
