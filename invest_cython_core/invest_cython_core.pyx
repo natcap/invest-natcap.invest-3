@@ -1029,14 +1029,12 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
                 upslope_area_matrix[row_index, col_index] == upslope_nodata:
                 continue
                 
-            #adjust flow direction to correspond to compass direction.
-            #This means the directions need to be flipped since compass
-            #direction is left-handed and the whole coordinate system needs
-            #to be rotated 90 degrees.  See the following for aspect direction
-            #http://edndoc.esri.com/arcobjects/9.2/net/shared/geoprocessing/spatial_analyst_tools/how_aspect_works.htm
-            alpha = -aspect_matrix[row_index, col_index]+PI/2
-            if alpha < 0: alpha += 2*PI
-            xij = abs(sin(alpha)+ cos(alpha))
+            #Here the aspect direciton can range from 0 to 2PI, but the purpose
+            #of the term is to determine the length of the flow path on the
+            #pixel, thus we take the absolute value of each trigometric
+            #function to keep the computation in the first quadrant
+            alpha = aspect_matrix[row_index, col_index]
+            xij = abs(sin(alpha))+ abs(cos(alpha))
             
             contributing_area = \
                 (upslope_area_matrix[row_index,col_index]-1) * cell_area
