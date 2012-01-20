@@ -1076,6 +1076,8 @@ class Root(DynamicElement):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
         
+        self.find_and_replace(attributes)
+        
         DynamicElement.__init__(self, attributes)
         self.type_registrar = registrar.DatatypeRegistrar()
         self.setLayout(layout)
@@ -1115,7 +1117,22 @@ class Root(DynamicElement):
 
         self.initElements()
         
-
+    def find_and_replace(self, attributes):
+#        self.locate(attributes)
+        return
+        
+    def locate(self, attributes):
+        for key, value in attributes.iteritems():
+            if isinstance(value, dict):
+                if 'inheritFrom' in value:
+                    print('Found one! ' + key)
+                else:
+                    self.locate(value)
+            elif isinstance(value, list):
+                for element in value:
+                    self.locate(element)
+            
+    
     def updateScrollBorder(self, min, max):
         if min == 0 and max == 0:
             self.scrollArea.setStyleSheet("QScrollArea { border: None } ")
