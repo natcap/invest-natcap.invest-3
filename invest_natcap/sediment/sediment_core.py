@@ -52,6 +52,8 @@ def biophysical(args):
             value of 'threshold_flow_accumulation'
         args['flow_direction'] - An output raster indicating the flow direction on each
             pixel
+        args['sret_dr'] - An output raster showing the amount of sediment
+            retained on each pixel during routing.
             
         returns nothing"""
 
@@ -106,6 +108,27 @@ def biophysical(args):
     invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
         args['erodibility'], usle_c_p_raster], op, args['usle_uri'],
                                  nodata=usle_nodata)
+
+    #map lulc to a usle_c * usle_p raster
+    LOGGER.info('mapping landuse types to vegetation retention efficiencies')
+    retention_efficiency_raster = invest_cython_core.newRasterFromBase(args['landuse'],
+        '', 'MEM', usle_nodata, gdal.GDT_Float32)
+
+    def lulc_to_retention(lulc_code):
+        #There are string casts here because the biophysical table is all 
+        #strings thanks to the csv table conversion.
+        if str(lulc_code) not in args['biophysical_table']:
+            return usle_nodata
+        #We need to divide the retention efficiency by 100  because they're 
+        #stored in the table as sedret_eff * 100.  See the user's guide:
+        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
+        return float(args['biophysical_table'][str(lulc_code)]['sedret_eff']) / \
+            100.0
+    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1), lulc_to_retention,
+                                retention_efficiency_raster.GetRasterBand(1))
+
+    invest_cython_core.calc_retained_sediment(args['usle_uri'], 
+        args['flow_direction'], retention_efficiency_raster, args['sret_dr'])
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
