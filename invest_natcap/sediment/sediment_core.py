@@ -98,16 +98,36 @@ def biophysical(args):
     ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
+
+
+
     def mult_all(ls_factor, erosivity, erodibility, usle_c_p):
         if ls_factor == usle_nodata or erosivity == usle_nodata or \
             erodibility == usle_nodata or usle_c_p == usle_nodata:
             return usle_nodata
         return ls_factor * erosivity * erodibility * usle_c_p
     op = np.vectorize(mult_all)
+
     LOGGER.info("calculating potential soil loss")
+
     potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
         args['erodibility'], usle_c_p_raster], op, args['usle_uri'],
                                  nodata=usle_nodata)
+
+    #change units from tons per hetare to tons per cell.  We need to do this
+    #after the vectorize raster operation since we won't know the cell size
+    #until then.  Convert cell_area to meters (in Ha by default)
+    cell_area = invest_cython_core.pixelArea(potential_soil_loss) * (10 ** 4)
+    LOGGER.debug("{cell_area: %s" % cell_area)
+    potential_soil_loss_matrix = potential_soil_loss.GetRasterBand(1).ReadAsArray(0, 0, potential_soil_loss.RasterXSize, potential_soil_loss.RasterYSize)
+    potential_soil_loss_nodata = potential_soil_loss.GetRasterBand(1).GetNoDataValue()
+    potential_soil_loss_nodata_mask = potential_soil_loss_matrix == potential_soil_loss_nodata
+    potential_soil_loss_matrix *= cell_area / 10000.0
+    potential_soil_loss_matrix[potential_soil_loss_nodata_mask] = potential_soil_loss_nodata
+    #Get rid of any negative values due to outside interpolation:
+    potential_soil_loss_matrix[potential_soil_loss_matrix < 0] = potential_soil_loss_nodata
+    potential_soil_loss.GetRasterBand(1).WriteArray(potential_soil_loss_matrix, 0, 0)
+    invest_core.calculateRasterStats(potential_soil_loss.GetRasterBand(1))
 
     #map lulc to a usle_c * usle_p raster
     LOGGER.info('mapping landuse types to vegetation retention efficiencies')
@@ -130,8 +150,8 @@ def biophysical(args):
     invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1), lulc_to_retention,
                                 retention_efficiency_raster.GetRasterBand(1))
 
-    invest_cython_core.calc_retained_sediment(potential_soil_loss,
-        args['flow_direction'], retention_efficiency_raster, sret_dr)
+    #invest_cython_core.calc_retained_sediment(potential_soil_loss,
+    #    args['flow_direction'], retention_efficiency_raster, sret_dr)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
