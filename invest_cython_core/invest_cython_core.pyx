@@ -1205,17 +1205,8 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                     #current cell sediment export +=  prop *(1- retention_efficiency of cell) * export of neighbor
                     export_matrix[i, j] += retention_efficiency_matrix[i, j] * (1 - prop) * export_matrix[pi, pj]
 
-        
-    #loop through each pixel
-    #enqueue that pixel
-        #while pixels still left to process
-        #if inflow neighbors export is calculated:
-            #calc retained sediment where inflow is proportioned by inflow angle
-            #calc export for that cell
-        #else;
-            #push pixel back
-            #push inflow neighbors
-     
+    sediment_retention.GetRasterBand(1).WriteArray(sediment_retention_matrix, 0, 0)
+    invest_core.calculateRasterStats(sediment_retention)
     free(neighbors)
     
 def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
