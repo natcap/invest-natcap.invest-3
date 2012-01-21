@@ -1,6 +1,7 @@
 import sys
 import os
 import re
+import csv
 
 import osgeo
 from osgeo import ogr
@@ -321,6 +322,82 @@ class NumberChecker(Checker):
         
         if error != None:
             return error
+
+
+class CSVChecker(FileChecker):
+    def __init__(self, element):
+        Checker.__init__(self, element)
+
+        updates = {'fieldsExist': self.verify_fields_exist,
+                   'restrictions': self.verify_restrictions,
+        self.update_map(updates)
+
+    def open(self):
+        """Attempt to open the CSV file"""
+
+        self.file = csv.reader(open(self.uri))
+
+        if not isinstance(self.file, csv.reader):
+            return str("Must be a CSV file")
+
+
+    def verify_fields_exist(self):
+        prefix = 'Missing fields: '
+        field_str = ''
+        field_names = self.file.next()
+        for required_field in self.valid['fieldsExist']:
+            if required_field not in field_names:
+                field_str += str(required_field)
+            
+            if len(field_str) > 0:
+                return prefix + field_str
+
+
+    def verify_restrictions(self):
+        field_str = ''
+        for restriction in self.valid['restrictions']:
+            res_field = restriction['field']
+            res_attrib = res['validateAs']
+
+            if res_attrib['type'] == 'string':
+                self._verify_string(res_field, res_attrib)
+            elif res_attrib['type'] == 'number':
+                self._verify_is_number(res_field, res_attrib)
+
+            if 'valuesExist' in res_attrib:
+                self._verify_values_exist(res_field, res_attrib)
+
+    def _verify_is_number(self, res_field, res_attrib):
+        pass
+
+    def _verify_string(self, res_field, res_attrib):
+        field_str = ''
+        index = self.file.fieldnames.index(res_field)
+        for row in self.file:
+            res_field_value = self.file[index]
+            regexp = res_attrib['allowedValues']
+
+            if not re.search(res_field_value, regexp):
+                field_str += str(res_field + ' ' + error)
+
+        if len(field_str) > 0:
+                return field_str
+
+    def _verify_values_exist(self, res_field, res_attrib):
+        prefix = res_field + ' missing value: '
+        field_str = ''
+        index = self.file.fieldnames.index(res_field)
+        for required_value in res_attrib['valuesExist']
+            exists = False
+            for row in self.file:
+                if row[index] == required_value:
+                    exists = True
+
+            if exists == False:
+                field_str += required_value + ' '
+
+        if len(field_str) > 0:
+            return field_str
 
 
     #all check functions take a single value, which is returned by the
