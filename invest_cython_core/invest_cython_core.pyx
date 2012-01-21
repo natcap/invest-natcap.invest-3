@@ -1141,9 +1141,11 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
     cdef CQueue pixels_to_process = CQueue()
     sediment_retention_matrix[:] = -1
     
+    LOGGER.info('starting calc_retained_sediment')
     
     #loop through each cell and skip any edge pixels
     for col_index in range(1, ncols - 1):
+        LOGGER.debug('col_index %s' % col_index)
         for row_index in range(1, nrows - 1):
 
             while pixels_to_process.size() > 0:
@@ -1208,6 +1210,7 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
     sediment_retention.GetRasterBand(1).WriteArray(sediment_retention_matrix, 0, 0)
     invest_core.calculateRasterStats(sediment_retention)
     free(neighbors)
+    LOGGER.info('done with calc_retained_sediment')
     
 def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
                            flow_accumulation, stream_threshold, 
