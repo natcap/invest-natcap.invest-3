@@ -1,0 +1,84 @@
+ModelUI JSON object syntax
+==========================
+
+overview of json syntax
+idea of an 'element'
+The different element types and what they mean.
+
+
+
+
+Two broad categories of element types:
+
+Groups:
+  - container
+  - list
+  - embeddedUI
+
+Primitive input elements:
+  - file
+  - folder
+  - text
+  - sliderSpinBox
+  - hideableFileEntry
+  - dropdown
+  - checkbox
+
+GROUPS
+================================
+================================
+
+
+container
+=================
+
+The container group allows for the convenient grouping of elements.  It is
+commonly displayed like an HTML fieldset, with a thin line drawn aroung its
+contents and its label featured in the upper-left hand corner.  Display will
+vary based on the style used.
+
+Attributes
+--------------
+    "label"     : A string. Required.  The label of the container.
+    "collapsible: A boolean.  If True, a checkbox will be shown just to the
+                  left of the container's label. When this checkbox is checked,
+                  the contents of the container will be visible.  Container 
+                  contents are invisible with the checkbox is unchecked.
+
+ 
+
+
+list
+==================
+
+The list element allows elements to be grouped together in a grid.  If, for
+example, you were to have a grid with several 'file' elements, all of the 
+labels of the file elements would be nicely aligned, as would the uri fields
+and the buttons.
+
+Attributes
+-------------
+None other than those expected by all containers.
+
+
+embeddedUI
+==================
+
+The embeddedUI element allows a user to embed another user interface into this UI.
+
+Attributes
+-------------
+    "configURI" : A string uri relative to the current directory that points to
+                  the target UI configuration file.
+
+
+
+
+PRIMITIVE ELEMENTS:
+==============================
+==============================
+
+
+Attributes common to all elements:
+
+now, go through each of these and explain all of the available options a user can give, including validateAs
