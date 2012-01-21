@@ -510,9 +510,9 @@ class TestWaveEnergy(unittest.TestCase):
                 self.assertAlmostEqual(val, interpZ[indexOut][indexIn], 5, 'Values do not match')
 
     def test_wave_energy_clip_raster_from_polygon(self):
-        filesystemencoding = sys.getfilesystemencoding()
-
-        test_dir = './data/test_data/wave_Energy'
+        """
+        """
+        test_dir = './data/wave_energy_data'
         shape_path = test_dir + os.sep + 'test_input/threePointShape.shp'
         raster_path = test_dir + os.sep + 'test_input/noAOIWP.tif'
         path = test_dir + os.sep + 'test_output/wpClipped.tif'
@@ -548,29 +548,41 @@ class TestWaveEnergy(unittest.TestCase):
 
         new_raster = None
         
-    def test_waveEnergy_clipRasterFromPolygon_DEM(self):
-        filesystemencoding = sys.getfilesystemencoding()
-
-        test_dir = './data/test_data/wave_Energy'
-        shape_path = test_dir + os.sep + 'samp_input/AOI_WCVI.shp'
-        raster_path = test_dir + os.sep + 'samp_input/global_dem'
-        path = test_dir + os.sep + 'test_output/clipped_dem.tif'
+    def test_wave_energy_clip_raster_from_polygon_regression(self):
+        """
+        """
+        test_dir = './data/wave_energy_data'
+        regression_dir = './data/wave_energy_regression_data'
+        raster_input_path = test_dir + os.sep + 'test_input/clip_raster_from_poly_capwe.tif'
+        copy_raster_input_path = test_dir + os.sep + 'test_output/clip_raster_from_poly_output.tif'
+        regression_raster_path = regression_dir + os.sep + 'clip_raster_from_poly_regression.tif'
+        clip_shape_path = test_dir + os.sep + 'test_input/clip_raster_from_poly_shape.shp'
+        
+        clip_shape = ogr.Open(clip_shape_path)
+        raster_input = gdal.Open(raster_input_path)
 
         #Add the Output directory onto the given workspace
         output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
-
-        shape = ogr.Open(shape_path)
-        raster = gdal.Open(raster_path)
-
-        new_raster = waveEnergy_core.clip_raster_from_polygon(shape, raster, path)
-
-        new_raster = None
-
-    def test_waveEnergy_interpPointsOverRaster(self):
-        test_dir = './data/test_data/wave_Energy'
-        path = test_dir + os.sep + 'test_output/fourbyfourRaster.tif'
+        
+        copy_raster = waveEnergy_core.clip_raster_from_polygon(clip_shape, raster_input, copy_raster_input_path)
+        
+        #Check that resulting rasters are correct
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            regression_raster_path, copy_raster_input_path)
+        
+        copy_raster = None
+        raster_input = None
+        clip_shape.Destroy()
+        
+    def test_wave_energy_interp_points_over_raster(self):
+        """Test interp_points_over_raster by hand creating a blank raster
+        and hand calculate the interpolation over known points. Pass
+        known points and values into function with raster and then check
+        the interpolated raster with hand calculated points."""
+        test_dir = './data/wave_energy_data'
+        path = test_dir + os.sep + 'test_output/fourbyfourRaster_output.tif'
         #Create a blank raster of small dimensions.
         driver = gdal.GetDriverByName('GTIFF')
         raster = driver.Create(path, 4, 4, 1, gdal.GDT_Float32)
@@ -592,12 +604,15 @@ class TestWaveEnergy(unittest.TestCase):
         self.assertEqual(matrix.size, result.size, 'The sizes are not the same')
         for indexOut, ar in enumerate(result):
             for indexIn, val in enumerate(ar):
-                self.assertAlmostEqual(val, matrix[indexOut][indexIn], 5)
+                self.assertAlmostEqual(val, matrix[indexOut][indexIn], 5,
+                                       'The interpolated values are not equal.')
 
-    def test_waveEnergy_wavePower(self):
-        """Test wave_power to make sure desired outputs are met"""
+    def test_wave_energy_wave_power(self):
+        """Test the wave_power function by hand calculating wave power with known
+        variables and creating shapefile with those variables and comparing returned
+        value against known results."""
 
-        test_dir = './data/test_data/wave_Energy'
+        test_dir = './data/wave_energy_data'
         shape_path = test_dir + os.sep + 'test_input/test_wave_power_shape.shp'
         shape_copy_path = test_dir + os.sep + 'test_output/test_wave_power_shape.shp'
         #Add the Output directory onto the given workspace
@@ -644,20 +659,22 @@ class TestWaveEnergy(unittest.TestCase):
         while feat is not None:
             wave_power_index = feat.GetFieldIndex('wp_Kw')
             wave_power = feat.GetField(wave_power_index)
-            self.assertAlmostEqual(wave_power, calculations_by_hand[i], 1)
+            self.assertAlmostEqual(wave_power, calculations_by_hand[i], 1,
+                                   'Wave Power calculations do not match.')
             feat.Destroy()
             feat = layer.GetNextFeature()
             i = i + 1
         shape_copy.Destroy()
         shape.Destroy()
         
-    def test_waveEnergy_wavePower_regression(self):
-        """Test wave_power to make sure desired outputs are met"""
+    def test_wave_energy_wave_power_regression(self):
+        """A regresssion test for the wave_power function."""
 
-        test_dir = './data/test_data/wave_Energy'
+        test_dir = './data/wave_energy_data'
+        regression_dir = './data/wave_energy_regression_data'
         shape_path = test_dir + os.sep + 'test_input/test_wavepower_withfields.shp'
-        shape_copy_path = test_dir + os.sep + 'test_output/test_wave_power_regression.shp'
-        regression_shape_path = test_dir + os.sep + 'regression_tests/test_wave_power_shape.shp'
+        shape_copy_path = test_dir + os.sep + 'test_output/regression_test_wave_power_output.shp'
+        regression_shape_path = regression_dir + os.sep + 'wave_power_regression.shp'
         #Add the Output directory onto the given workspace
         output_dir = test_dir + os.sep + 'test_output/'
         if not os.path.isdir(output_dir):
@@ -680,7 +697,8 @@ class TestWaveEnergy(unittest.TestCase):
             wave_power_index_reg = feat_reg.GetFieldIndex('wp_Kw')
             wave_power = feat.GetField(wave_power_index)
             wave_power_reg = feat_reg.GetField(wave_power_index_reg)
-            self.assertEqual(wave_power, wave_power_reg)
+            self.assertEqual(wave_power, wave_power_reg,
+                             'The wave power values do not match.')
             feat.Destroy()
             feat_reg.Destroy()
             feat = layer.GetNextFeature()
@@ -690,8 +708,11 @@ class TestWaveEnergy(unittest.TestCase):
         shape.Destroy()
         shape_reg.Destroy()
 
-    def test_waveEnergy_getPoints(self):
-        test_dir = './data/test_data/wave_Energy'
+    def test_wave_energy_get_points(self):
+        """Test the get_points_geometries function by first creating a shapefile
+        with assigned points and geometries. Pass shapefile to function
+        and checked returned value against calculated ones."""
+        test_dir = './data/wave_energy_data'
         shape_path = test_dir + os.sep + 'test_input/test_wavepower_withfields.shp'
         
         shape = ogr.Open(shape_path)
@@ -718,10 +739,15 @@ class TestWaveEnergy(unittest.TestCase):
         result_points = waveEnergy_core.get_points_geometries(src)
         
         for index, value in enumerate(result_points):
-            self.assertEqual(value[0], calculated_points[index][0])
-            self.assertEqual(value[1], calculated_points[index][1])
+            self.assertEqual(value[0], calculated_points[index][0],
+                             'The X value of the points do not match.')
+            self.assertEqual(value[1], calculated_points[index][1],
+                             'The Y value of the points do not match.')
         
-    def test_waveEnergy_calcDist(self):
+    def test_wave_energy_calc_dist(self):
+        """Test the calculate_distance function by hand calculating the
+        distances between known points and checking them against the functions
+        returned results on the same set of points."""
         xy_1 = np.array([[250, 120], [300, 212], [125, 215], [1222, 988]])
         xy_2 = np.array([[156, 133], [198, 111]])
         calculated_dist_results = np.array([52.77309921, 143.5444182, 87.66413178, 1348.222904])
@@ -731,5 +757,6 @@ class TestWaveEnergy(unittest.TestCase):
         dist_rounded = np.ma.round(dist_results, 3)
         mask_dist = calculated_dist_rounded == dist_rounded
         mask_id = calculated_id_results == id_results
-        self.assertTrue(mask_dist.all())
-        self.assertTrue(mask_id.all())
+        self.assertTrue(mask_dist.all(),
+                        'Not all of the distances were equal to three decimal places.')
+        self.assertTrue(mask_id.all(), 'Not all of the IDs matched.')

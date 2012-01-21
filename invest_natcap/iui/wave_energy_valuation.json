@@ -1,0 +1,66 @@
+{
+    "id" : "window",
+    "label": "Wave Energy",
+    "targetScript" : "./python/invest_core/waveEnergy_valuation.py",
+    "modelName" : "waveEnergy_valuation",
+    "localDocURI": "./documentation/carbonstorage.html",
+    "height": 400,
+    "width" : 500,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "./carbon",
+                    "required": true
+                },          
+				{        
+                    "id" : "land_grid_points",
+                    "args_id" : "land_gridPts_uri",
+                    "type": "file",
+                    "label": "Path to Folder with Wave Base Data",
+                    "defaultValue": "./carbon",
+                    "required": true
+                },    
+		        {
+		            "id": "machine_econ_table",
+		            "args_id": "machine_econ_uri",
+		            "type": "text",
+		            "width": 70,
+		            "label": "Machine Economic Table",
+		            "required": true,
+		            "defaultValue": ""
+		        },
+                {
+                    "id" : "projection",
+                    "type": "file",
+                    "label": "Projection",
+                    "args_id": "projection_uri",
+                    "required": true,
+                    "defaultValue": ""
+                },
+                {
+                    "id" : "dem",
+                    "type": "file",
+                    "label": "Global Digital Elevation Model (DEM)",
+                    "args_id": "global_dem",
+                    "required": true,
+                    "defaultValue": "",
+                },
+                {
+                    "id" : "wave_data",
+                    "type": "file",
+                    "label": "Wave Data Shapefile",
+                    "args_id": "wave_data_shape_path",
+                    "required": true,
+                    "defaultValue": "",
+                }
+            ]
+        }
+    ]
+}

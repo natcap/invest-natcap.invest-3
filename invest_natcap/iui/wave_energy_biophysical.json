@@ -59,7 +59,7 @@
                     "label": "Global Digital Elevation Model (DEM)",
                     "args_id": "dem_uri",
                     "required": true,
-                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
+                    "defaultValue": "./carbon/input/harv_samp_fut.shp"
                 },
                 {
                     "id" : "aoi",
@@ -67,7 +67,7 @@
                     "label": "Area of Interest (AOI)",
                     "args_id": "aoi_uri",
                     "required": false,
-                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
+                    "defaultValue": "./carbon/input/harv_samp_fut.shp"
                 }
             ]
         }
