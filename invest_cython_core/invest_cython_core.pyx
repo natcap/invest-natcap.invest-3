@@ -455,7 +455,7 @@ def flowDirectionD8(dem, flow):
 
 cdef void calculate_inflow_neighbors_dinf(int i, int j, 
                     np.ndarray[np.float_t,ndim=2] flow_direction_matrix, 
-                    int nodata_flow_direction,
+                    float nodata_flow_direction,
                     NeighborFlow *neighbors):
     
     """Returns a list of the neighboring pixels to i,j that are in bounds
@@ -1115,6 +1115,8 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
     cdef float sediment_retention_nodata = \
         sediment_retention.GetRasterBand(1).GetNoDataValue()
     
+    cdef float prop
+    
     cdef np.ndarray [np.float_t,ndim=2] potential_soil_loss_matrix = \
         potential_soil_loss.GetRasterBand(1).ReadAsArray(0, 0, \
         nrows,ncols).transpose().astype(np.float)
@@ -1129,73 +1131,79 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
         
     cdef np.ndarray [np.float_t,ndim=2] sediment_retention_matrix = \
         np.empty((nrows,ncols))
+    
+    cdef np.ndarray [np.float_t,ndim=2] export_matrix = \
+        np.empty((nrows,ncols))
+    
+    #default export is the potential soil loss from each pixel
+    export_matrix[:] = potential_soil_loss_matrix
         
     cdef CQueue pixels_to_process = CQueue()
     sediment_retention_matrix[:] = -1
+    
     
     #loop through each cell and skip any edge pixels
     for col_index in range(1, ncols - 1):
         for row_index in range(1, nrows - 1):
 
-
-            
-    while pixels_to_process.size() > 0:
-        i = pixels_to_process.pop()
-        j = pixels_to_process.pop()
-        #If we're on a nodata pixel, skip, sediment_retention is set to 
-        #nodata 
-        if potential_soil_loss[col_index, row_index] == \
-            potential_soil_loss_nodata:
-            sediment_retention_matrix[col_index, row_index] = \
-                sediment_retention_nodata
-            continue
-
-        #build list of uncalculated neighbors
-        calculate_inflow_neighbors_dinf(i, j, aspect_matrix,  aspect_nodata, 
-                                        neighbors)
-
-        #check to see if any of the neighbors were uncalculated, if so, 
-        #calculate them
-        neighbors_uncalculated = False
-        #Visit each uncalculated neighbor and push on the work queue
-        for neighbor_index in range(8):
-            #-1 prop marks the end of the neighbor list
-            if neighbors[neighbor_index].prop == -1: break 
-            
-            pi = neighbors[neighbor_index].i
-            pj = neighbors[neighbor_index].j
-            
-            #see if neighbor is uncalculated
-            if sediment_retention_matrix[pi, pj] == -1:
-                #push the current pixel back on, note the indexes are in reverse
-                #order so they can be popped off in order
-                pixels_to_process.push(j)
-                pixels_to_process.push(i)
-                    
-                pixels_to_process.push(pj)
-                pixels_to_process.push(pi)
-                neighbors_uncalculated = True
-                break
-
-        #this skips over the calculation of pixel i,j until neighbors 
-        #are calculated
-        if neighbors_uncalculated:
-            continue 
-
-        #If we get here then this pixel and its neighbors have been processed
-        sediment_retention_matrix[i, j] = 0
+            while pixels_to_process.size() > 0:
+                i = pixels_to_process.pop()
+                j = pixels_to_process.pop()
+                #If we're on a nodata pixel, skip, sediment_retention is set to 
+                #nodata 
+                if potential_soil_loss[col_index, row_index] == \
+                    potential_soil_loss_nodata:
+                    sediment_retention_matrix[col_index, row_index] = \
+                        sediment_retention_nodata
+                    continue
         
-        #Add contribution from each neighbor to current pixel
-        for neighbor_index in range(8):
-            prop = neighbors[neighbor_index].prop
-            if prop == -1: break
-
-            pi = neighbors[neighbor_index].i
-            pj = neighbors[neighbor_index].j
-
-            #calculate the contribution of pi,pj to i,j
-            #calculate sediment retained += prop * retention_efficiency of cell * export of neighbor
-            #current cell sediment export +=  prop *(1- retention_efficiency of cell) * export of neighbor
+                #build list of uncalculated neighbors
+                calculate_inflow_neighbors_dinf(i, j, aspect_matrix,  aspect_nodata, 
+                                                neighbors)
+        
+                #check to see if any of the neighbors were uncalculated, if so, 
+                #calculate them
+                neighbors_uncalculated = False
+                #Visit each uncalculated neighbor and push on the work queue
+                for neighbor_index in range(8):
+                    #-1 prop marks the end of the neighbor list
+                    if neighbors[neighbor_index].prop == -1: break 
+                    
+                    pi = neighbors[neighbor_index].i
+                    pj = neighbors[neighbor_index].j
+                    
+                    #see if neighbor is uncalculated
+                    if sediment_retention_matrix[pi, pj] == -1:
+                        #push the current pixel back on, note the indexes are in reverse
+                        #order so they can be popped off in order
+                        pixels_to_process.push(j)
+                        pixels_to_process.push(i)
+                            
+                        pixels_to_process.push(pj)
+                        pixels_to_process.push(pi)
+                        neighbors_uncalculated = True
+                        break
+        
+                #this skips over the calculation of pixel i,j until neighbors 
+                #are calculated
+                if neighbors_uncalculated:
+                    continue 
+        
+                #If we get here then this pixel and its neighbors have been processed
+                sediment_retention_matrix[i, j] = 0
+                
+                #Add contribution from each neighbor to current pixel
+                for neighbor_index in range(8):
+                    prop = neighbors[neighbor_index].prop
+                    if prop == -1: break
+        
+                    pi = neighbors[neighbor_index].i
+                    pj = neighbors[neighbor_index].j
+        
+                    #calculate sediment retained += prop * retention_efficiency of cell * export of neighbor
+                    sediment_retention_matrix[i, j] += retention_efficiency_matrix[i, j] * prop * export_matrix[pi, pj] 
+                    #current cell sediment export +=  prop *(1- retention_efficiency of cell) * export of neighbor
+                    export_matrix[i, j] += retention_efficiency_matrix[i, j] * (1 - prop) * export_matrix[pi, pj]
 
         
     #loop through each pixel
