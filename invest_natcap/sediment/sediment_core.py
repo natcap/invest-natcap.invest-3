@@ -105,7 +105,7 @@ def biophysical(args):
         return ls_factor * erosivity * erodibility * usle_c_p
     op = np.vectorize(mult_all)
     LOGGER.info("calculating potential soil loss")
-    invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
+    potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'], args['erosivity'],
         args['erodibility'], usle_c_p_raster], op, args['usle_uri'],
                                  nodata=usle_nodata)
 
@@ -124,11 +124,14 @@ def biophysical(args):
         #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
         return float(args['biophysical_table'][str(lulc_code)]['sedret_eff']) / \
             100.0
+
+    sret_dr = invest_cython_core.newRasterFromBase(potential_soil_loss, args['sret_dr_uri'],
+                                         'GTiff', -1.0, gdal.GDT_Float32)
     invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1), lulc_to_retention,
                                 retention_efficiency_raster.GetRasterBand(1))
 
-    invest_cython_core.calc_retained_sediment(args['usle_uri'], 
-        args['flow_direction'], retention_efficiency_raster, args['sret_dr'])
+    invest_cython_core.calc_retained_sediment(potential_soil_loss,
+        args['flow_direction'], retention_efficiency_raster, sret_dr)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a

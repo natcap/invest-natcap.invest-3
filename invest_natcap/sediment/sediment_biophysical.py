@@ -144,7 +144,7 @@ def execute(args):
     #of input rasters.  So we just pass a uri to its final location to the
     #biophysical part.
     biophysical_args['usle_uri'] = outputDirectoryPrefix + 'usle_sm.tif'
-    biophysical_args['sret_dr'] = outputDirectoryPrefix + 'sret_dr.tif'
+    biophysical_args['sret_dr_uri'] = outputDirectoryPrefix + 'sret_dr.tif'
 
     LOGGER.info('starting biophysical model')
     sediment_core.biophysical(biophysical_args)
