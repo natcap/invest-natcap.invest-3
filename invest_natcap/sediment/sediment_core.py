@@ -139,7 +139,7 @@ def biophysical(args):
 
     #map lulc to a usle_c * usle_p raster
     LOGGER.info('mapping landuse types to vegetation retention efficiencies')
-    retention_efficiency_raster = \
+    retention_efficiency_raster_raw = \
         invest_cython_core.newRasterFromBase(args['landuse'], '', 'MEM',
                                              usle_nodata, gdal.GDT_Float32)
 
@@ -154,13 +154,32 @@ def biophysical(args):
         return float(args['biophysical_table'] \
                      [str(lulc_code)]['sedret_eff']) / 100.0
 
+    sret_dr_raw = invest_cython_core.newRasterFromBase(potential_soil_loss,
+        '', 'MEM', -1.0, gdal.GDT_Float32)
+    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
+        lulc_to_retention, retention_efficiency_raster_raw.GetRasterBand(1))
+
+    #now interpolate retention_efficiency_raster_raw to a raster that will
+    #overlay potential_soil_loss
+    def return_efficiency(soil_loss, efficiency):
+        return efficiency
+    op = np.vectorize(return_efficiency)
+    retention_efficiency_raster = \
+        invest_core.vectorizeRasters([potential_soil_loss,
+            retention_efficiency_raster_raw], op, nodata=usle_nodata)
+
+    #Create an output raster for routed sediment retention
     sret_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
         args['sret_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
-    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
-        lulc_to_retention, retention_efficiency_raster.GetRasterBand(1))
 
-    #invest_cython_core.calc_retained_sediment(potential_soil_loss,
-    #    args['flow_direction'], retention_efficiency_raster, sret_dr)
+    #Route the sediment across the landscape and store the amount retained
+    #per pixel
+    LOGGER.debug('potential soil loss dimensions %s %s' % (potential_soil_loss.RasterXSize, potential_soil_loss.RasterYSize))
+    LOGGER.debug('args["flow_direction"] dimensions %s %s' % (args['flow_direction'].RasterXSize, args['flow_direction'].RasterYSize))
+    LOGGER.debug('retention_efficiency_raster dimensions %s %s' % (retention_efficiency_raster.RasterXSize, retention_efficiency_raster.RasterYSize))
+    LOGGER.debug('sret_dr dimensions %s %s' % (sret_dr.RasterXSize, sret_dr.RasterYSize))
+    invest_cython_core.calc_retained_sediment(potential_soil_loss,
+        args['flow_direction'], retention_efficiency_raster, sret_dr)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
