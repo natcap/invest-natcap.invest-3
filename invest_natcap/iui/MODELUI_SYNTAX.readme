@@ -79,6 +79,131 @@ PRIMITIVE ELEMENTS:
 ==============================
 
 
-Attributes common to all elements:
+Attributes common to all primitive elements:
+    "args_id"   : A string value representing the dictionary key with which this
+                  element's value will be associated when the model is run.
+                  This is the standard way of allowing the UI to assemble
+                  arguments for the model.
+    "validateAs": A dictionary defining how to validate the input element and
+                  what restrictions are to be placed on the user's input.  See
+                  the section on Validation in this document for details.  If
+                  this attribute is not provided, no validation will be
+                  performed on this element.
+    "label"     : A string value that will be set as the element's label.  The
+                  particular display of the label depends on the element.
+                  This is a required attribute.
+    "required"  : A boolean.  Indicates whether this element is absolutely
+                  required.  If this element is omitted, this element is assumed
+                  to be not required.
+    "requiredIf": An array of element IDs.  This element is assumed to be
+                  optional unless one of the elements in this list becomes
+                  enabled.
+    "enabledBy" : A string element ID.  If the element represented by the string
+                  element ID is satisfied (the satisfaction of an element's
+                  requirements depends on the element), the current element is
+                  enabled.
+
+Attributes common to text-based primitive elements (file, folder, text elements):
+   "defaultValue" : A string.  The text of the textfield will be set to this
+                    string when the element is created or when the UI is reset
+                    to defaults.
+                    NOTE: If this element is of the type 'file' or 'folder', the
+                    URI given will be turned into an absolute path before it is
+                    entered into the textfield.  It is therefore recommended to
+                    use filepaths relative to the InVEST root wherever possible.
+   "validText"    : A string regular expression using Perl regexp syntax.  This
+                    regular expression is given to the UI to restrict the user's
+                    input to the textfield.  This field should not be necessary
+                    to use on an element of type 'file' or 'folder' if you are
+                    using validation.
+
+file
+==================
+
+The file attribute allows the user to enter a filepath into a textfield, or to
+click a button that will present a file selectino dialog.  If the user selects
+a file through the dialog, the URI to the selected file will be set in the
+textfield.
+
+Attributes
+--------------
+None unique to this element type.
+
+Example file object from carbon_biophysical:
+{
+    "id" : "cur_lulc_raster",
+    "args_id" : "lulc_cur_uri",
+    "type": "file",
+    "label": "Raster location",
+    "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
+    "validateAs": {"type": "GDAL"},
+    "required": true
+},
+
+
+folder
+====================
+
+The 'folder' element type is identical to the 'file' type except that when the
+user clicks the button to select a file, the user is instead expected to select
+a folder (the UI will only permit the user to select an existing folder).
+
+Attributes
+-------------------
+None unique to this element type.
+
+Example file object from carbon_biophysical:
+{
+    "id" : "workspace",
+    "args_id" : "workspace_dir",
+    "type": "folder",
+    "label": "Workspace",
+    "defaultValue": "./carbon",
+    "required": true
+}
+
+
+text
+=======================
+
+The 'text' element type allows the user to enter text, regardless of the type of
+input text.  The set of characters the user may enter can be restricted by using
+the 'validText' attribute, described above and demonstrated below.
+
+To clarify the purpose of a given text element, the 'width' attribute is
+provided.  Use it wisely according to what width makes the element's purpose
+most clear.  For an expected four-digit number, for example, a width of 70
+should suffice, whereas a width of 150 (or to omit declaring the 'width'
+attribute) might be more appropriate for an email address.
+
+Attributes
+------------------------
+    "width" : an int representing the pixel width of the textfield.  If this
+              attribute is not defined in the JSON configuration, no width is
+              assigned and the textfield will expand to fit the space it is
+              permitted.
+
+Example text object from carbon_biophysical:
+{
+    "id" : "cur_lulc_year",
+    "type": "text",
+    "width": 70,
+    "validText": "-?[0-9]+",
+    "dataType": "int",
+    "args_id": "lulc_cur_year",
+    "label": "Year of land cover",
+    "required": false,
+    "enabledBy": "calc_sequestration",
+    "defaultValue": "2000",
+    "validateAs": {"type": "number",
+                   "lteq": "fut_lulc_year"},
+    "requiredIf": ["cur_harvest_map", "fut_harvest_map"]
+}
+
+
+  - sliderSpinBox
+  - hideableFileEntry
+  - dropdown
+  - checkbox
 
 now, go through each of these and explain all of the available options a user can give, including validateAs
