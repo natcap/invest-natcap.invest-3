@@ -9,26 +9,29 @@ import invest_test_core
 
 class TestWaveEnergyValuation(unittest.TestCase):
     def test_wave_energy_valuation_regression(self):
+        """A regression test for valuation file to make sure that the output
+        raster and output shapefile are what is expected.
+        """
         args = {}
-        args['workspace_dir'] = './data/test_data/wave_Energy'
-        args['wave_base_data_uri'] = './data/test_data/wave_Energy/samp_input/WaveData'
-        args['land_gridPts_uri'] = './data/test_data/wave_Energy/samp_input/LandGridPts_WCVI_CSV.csv'
-        args['machine_econ_uri'] = './data/test_data/wave_Energy/samp_input/Machine_PelamisEconCSV.csv'
+        args['workspace_dir'] = './data/wave_energy_data'
+        args['wave_base_data_uri'] = args['workspace_dir'] + os.sep + 'samp_input/WaveData'
+        args['land_gridPts_uri'] = args['workspace_dir'] + os.sep + 'samp_input/LandGridPts_WCVI_CSV.csv'
+        args['machine_econ_uri'] = args['workspace_dir'] + os.sep + 'samp_input/Machine_PelamisEconCSV.csv'
         args['number_of_machines'] = 28
-        args['projection_uri'] = './data/test_data/wave_Energy/test_input/WGS_1984_UTM_Zone_10N.prj'
-        args['global_dem'] = './data/test_data/wave_Energy/samp_input/global_dem'
-        args['wave_data_shape_path'] = './data/test_data/wave_Energy/Intermediate/WaveData_clipZ.shp'
+        args['projection_uri'] = args['workspace_dir'] + os.sep + 'test_input/WGS_1984_UTM_Zone_10N.prj'
+        args['global_dem'] = args['workspace_dir'] + os.sep + 'samp_input/global_dem'
+        args['wave_data_shape_path'] = args['workspace_dir'] + os.sep + 'Intermediate/WaveData_clipZ.shp'
         
         waveEnergy_valuation.execute(args)
-
+        regression_dir = './data/wave_energy_regression_data'
         #assert that the output raster is equivalent to the regression
         #test
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + '/Output/npv_usd.tif',
-            args['workspace_dir'] + '/regression_tests/npv_usd_regression.tif')
+            regression_dir + '/npv_usd_regression.tif')
 
         #Regression Check for LandPts_prj shapefile
-        regression_landing_shape = ogr.Open(args['workspace_dir'] + '/regression_tests/LandPts_prj_regression.shp')
+        regression_landing_shape = ogr.Open(regression_dir + '/LandPts_prj_regression.shp')
         landing_shape = ogr.Open(args['workspace_dir'] + '/Output/LandPts_prj.shp')
         
         regression_layer = regression_landing_shape.GetLayer(0)
@@ -60,7 +63,7 @@ class TestWaveEnergyValuation(unittest.TestCase):
         landing_shape.Destroy()
         
         #Regression Check for GridPt_prj shapefile
-        regression_grid_shape = ogr.Open(args['workspace_dir'] + '/regression_tests/GridPt_prj_regression.shp')
+        regression_grid_shape = ogr.Open(regression_dir + '/GridPt_prj_regression.shp')
         grid_shape = ogr.Open(args['workspace_dir'] + '/Output/GridPt_prj.shp')
         
         regression_layer = regression_grid_shape.GetLayer(0)

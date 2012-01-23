@@ -10,28 +10,28 @@ import invest_test_core
 class TestWaveEnergyBiophysical(unittest.TestCase):
     def test_wave_energy_biophysical(self):
         args = {}
-        args['workspace_dir'] = './data/test_data/wave_Energy'
-        args['wave_base_data_uri'] = './data/test_data/wave_Energy/samp_input/WaveData'
+        args['workspace_dir'] = './data/wave_energy_data'
+        args['wave_base_data_uri'] = args['workspace_dir'] + os.sep + 'samp_input/WaveData'
         args['analysis_area_uri'] = 'West Coast of North America and Hawaii'
-        args['machine_perf_uri'] = './data/test_data/wave_Energy/samp_input/Machine_PelamisPerfCSV.csv'
-        args['machine_param_uri'] = './data/test_data/wave_Energy/samp_input/Machine_PelamisParamCSV.csv'
-        args['dem_uri'] = './data/test_data/wave_Energy/samp_input/global_dem'
-        args['aoi_uri'] = './data/test_data/wave_Energy/samp_input/AOI_WCVI.shp'
+        args['machine_perf_uri'] = args['workspace_dir'] + os.sep + 'samp_input/Machine_PelamisPerfCSV.csv'
+        args['machine_param_uri'] = args['workspace_dir'] + os.sep + 'samp_input/Machine_PelamisParamCSV.csv'
+        args['dem_uri'] = args['workspace_dir'] + os.sep + 'samp_input/global_dem'
+        args['aoi_uri'] = args['workspace_dir'] + os.sep + 'samp_input/AOI_WCVI.shp'
         waveEnergy_biophysical.execute(args)
-
+        regression_dir = './data/wave_energy_regression_data'
         #assert that the output raster is equivalent to the regression test
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + '/Output/capwe_mwh.tif',
-            args['workspace_dir'] + '/regression_tests/capwe_mwh_regression.tif')
+            regression_dir + '/capwe_mwh_regression.tif')
         
         #assert that the output raster is equivalent to the regression test
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + '/Output/wp_kw.tif',
-            args['workspace_dir'] + '/regression_tests/wp_kw_regression.tif')
+            regression_dir + '/wp_kw_regression.tif')
         
         #Regression Check for WaveData_clipZ shapefile
-        regression_wave_data_shape = ogr.Open(args['workspace_dir'] 
-                                              + '/regression_tests/WaveData_clipZ_regression.shp')
+        regression_wave_data_shape = ogr.Open(regression_dir
+                                              + '/WaveData_clipZ_regression.shp')
         wave_data_shape = ogr.Open(args['workspace_dir'] 
                                    + '/Intermediate/WaveData_clipZ.shp')
         
@@ -64,7 +64,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         wave_data_shape.Destroy()
 
     def test_wave_energy_extrapolate_wave_data(self):
-        wave_base_data_uri = './data/test_data/wave_Energy/test_input/sampWaveDataTest.txt'
+        wave_base_data_uri = './data/wave_energy_data/test_input/sampWaveDataTest.txt'
         if os.path.isfile(wave_base_data_uri):
             wave_data = waveEnergy_biophysical.extrapolate_wave_data(wave_base_data_uri)
             row = np.array([.25, 1.0, 2.0, 3.0, 4.0, 5.0])
