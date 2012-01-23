@@ -333,7 +333,7 @@ class CSVChecker(FileChecker):
         updates = {'fieldsExist': self.verify_fields_exist,
                    'restrictions': self.verify_restrictions}
         self.update_map(updates)
-        print self.checks
+        self.num_checker = NumberChecker(self.element)
 
     def open(self):
         """Attempt to open the CSV file"""
@@ -401,8 +401,18 @@ class CSVChecker(FileChecker):
         if 'allowedValues' in res_attrib:
             return self._match_column_values(res_field, res_attrib)
         else:
-            return 'gteq/lteq/gt/lt yet to be implemented'
-        
+            field_str = ''
+            index = self.fieldnames.index(res_field)
+            for key, value in res_attrib.iteritems():
+                for row in self.file:
+                    other_value = row[res_attrib[key]]
+                    error = self.num_checker.check_number(value, other_value, key)
+                    if error != None:
+                        field_str = str(res_field + ': ' + error + ' at record '
+                            + record)
+
+            if len(field_str) > 0:
+                return field_str
 
     def _verify_string(self, res_field, res_attrib):
         return self._match_column_values(res_field, res_attrib)
