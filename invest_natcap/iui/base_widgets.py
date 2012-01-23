@@ -355,9 +355,9 @@ class DynamicPrimitive(DynamicElement):
                     return self.cast_value()
 
     def set_error(self, error):
-        if error == None:
+        if error == None or error == '':
             msg = ''
-            self.setBGcolorSatisfied()
+            self.setBGcolorSatisfied(True)
         else:
             msg = str(error)
             self.setBGcolorSatisfied(False)
