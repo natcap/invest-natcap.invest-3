@@ -361,6 +361,12 @@ class CSVChecker(FileChecker):
 
     def verify_restrictions(self, rest):
         field_str = ''
+
+        if not hasattr(self.file, 'fieldnames'):
+            self.fieldnames = self.file.next()
+        else:
+            self.fieldnames = self.file.fieldnames
+
         for restriction in self.valid['restrictions']:
             res_field = restriction['field']
             res_attrib = restriction['validateAs']
@@ -376,17 +382,10 @@ class CSVChecker(FileChecker):
         if len(field_str) > 0:
             return field_str
 
-    def _verify_is_number(self, res_field, res_attrib):
-        pass
-
-    def _verify_string(self, res_field, res_attrib):
+    def _match_column_values(self, column_name, res_attrib):
         field_str = ''
-        if not hasattr(self.file, 'fieldnames'):
-            self.fieldnames = self.file.next()
-        else:
-            self.fieldnames = self.file.fieldnames
+        index = self.fieldnames.index(column_name)
 
-        index = self.fieldnames.index(res_field)
         for row_num, row in enumerate(self.file):
             res_field_value = row[index]
             regexp = res_attrib['allowedValues']
@@ -397,6 +396,16 @@ class CSVChecker(FileChecker):
                                  str(row_num) + '. ')
 
         return field_str
+
+    def _verify_is_number(self, res_field, res_attrib):
+        if 'allowedValues' in res_attrib:
+            return self._match_column_values(res_field, res_attrib)
+        else:
+            return 'gteq/lteq/gt/lt yet to be implemented'
+        
+
+    def _verify_string(self, res_field, res_attrib):
+        return self._match_column_values(res_field, res_attrib)
 
     def _verify_values_exist(self, res_field, res_attrib):
         prefix = res_field + ' missing value: '
