@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import csv
+import string
 
 import osgeo
 from osgeo import ogr
@@ -350,7 +351,7 @@ class CSVChecker(FileChecker):
 
         if not hasattr(self, "fieldnames"):
             self.fieldnames = self.file.next()
- 
+
         for required_field in fields:
             if required_field not in self.fieldnames:
                 field_str += str(required_field)
@@ -365,12 +366,15 @@ class CSVChecker(FileChecker):
             res_attrib = restriction['validateAs']
 
             if res_attrib['type'] == 'string':
-                self._verify_string(res_field, res_attrib)
+                field_str += self._verify_string(res_field, res_attrib)
             elif res_attrib['type'] == 'number':
-                self._verify_is_number(res_field, res_attrib)
+                field_str += self._verify_is_number(res_field, res_attrib)
 
             if 'valuesExist' in res_attrib:
-                self._verify_values_exist(res_field, res_attrib)
+                field_str += self._verify_values_exist(res_field, res_attrib)
+
+        if len(field_str) > 0:
+            return field_str
 
     def _verify_is_number(self, res_field, res_attrib):
         pass
@@ -383,15 +387,16 @@ class CSVChecker(FileChecker):
             self.fieldnames = self.file.fieldnames
 
         index = self.fieldnames.index(res_field)
-        for row in self.file:
+        for row_num, row in enumerate(self.file):
             res_field_value = row[index]
             regexp = res_attrib['allowedValues']
 
-            if not re.search(res_field_value, regexp):
-                field_str += str(res_field + ' ')
+            pattern = re.compile(regexp)
+            if pattern.search(res_field_value) == None:
+                field_str += str(res_field + ' not valid at record ' +
+                                 str(row_num) + '. ')
 
-        if len(field_str) > 0:
-                return field_str
+        return field_str
 
     def _verify_values_exist(self, res_field, res_attrib):
         prefix = res_field + ' missing value: '
