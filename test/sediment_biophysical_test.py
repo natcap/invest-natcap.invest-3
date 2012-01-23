@@ -20,6 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestSedimentBiophysical(unittest.TestCase):
     """Main testing class for the biophysical sediment tests"""
     def test_sediment_dinf_flow_dir(self):
+        raise SkipTest
         """A test constructed by hand to test the low level dinf direction and
             flow functions.  Intent is the the test case is small enough to be
             hand calculatable, yet large enough to be non-trivial."""
@@ -114,6 +115,7 @@ class TestSedimentBiophysical(unittest.TestCase):
 
     def test_sediment_biophysical_simple_2(self):
         """This test is a smaller version of a real world case that failed"""
+        raise SkipTest
         #Create two 3x3 rasters in memory
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
@@ -138,6 +140,7 @@ class TestSedimentBiophysical(unittest.TestCase):
 
     def test_sediment_biophysical_simple_3(self):
         """This test is a smaller version of a real world case that failed"""
+        raise SkipTest
         #Create two 3x3 rasters in memory
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
