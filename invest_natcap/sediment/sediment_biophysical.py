@@ -128,7 +128,7 @@ def execute(args):
     #next step
     output_uris = {}
     intermediate_rasters = ['flow_direction', 'flow_accumulation', 'slope',
-                            'ls_factor']
+                            'ls_factor', ]
     for id in intermediate_rasters:
         output_uris[id] = intermediateDirectoryPrefix + id + '.tif'
 
@@ -140,10 +140,11 @@ def execute(args):
             invest_cython_core.newRasterFromBase(biophysical_args['dem'],
                               raster_path, 'GTiff', -5.0, gdal.GDT_Float32)
 
-    #We won't know the size of the USLE raster until we vectorize the stack
+    #We won't know the size of the output rasters until we vectorize the stack
     #of input rasters.  So we just pass a uri to its final location to the
     #biophysical part.
     biophysical_args['usle_uri'] = outputDirectoryPrefix + 'usle_sm.tif'
+    biophysical_args['sret_dr_uri'] = outputDirectoryPrefix + 'sret_dr.tif'
 
     LOGGER.info('starting biophysical model')
     sediment_core.biophysical(biophysical_args)
