@@ -141,6 +141,31 @@ Example file object from carbon_biophysical:
 },
 
 
+hideableFileEntry
+=========================
+
+The hideableFileEntry object is identical to the 'file' object except that is
+contains an added feature:  There is a checkbox in front of the file object that
+hides and shows the URI field and button that opens the file dialog.  When the
+checkbox is checked, the URI field and button appear to the user.  When the
+checkbox is unchecked, the URI field and button are hidden from view.
+
+Attributes
+-----------------
+Attributes for this object are identical to the file object.
+
+Example file object from carbon_biophysical:
+{
+    "id" : "cur_lulc_raster",
+    "args_id" : "lulc_cur_uri",
+    "type": "hideableFileEntry",
+    "label": "Raster location",
+    "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
+    "validateAs": {"type": "GDAL"},
+    "required": true
+},
+
+
 folder
 ====================
 
@@ -201,8 +226,42 @@ Example text object from carbon_biophysical:
 }
 
 
-  - sliderSpinBox
-  - hideableFileEntry
+sliderSpinBox
+==============================
+
+The sliderSpinBox object produces a draggable slider widget with a spinbox (a
+little numeric textfield with small, clickable up/down arrows within) associated
+with the slider.  When the user drags the slider, the value in the spinbox is
+updated.  Likewise, if the user updates the value in the spinbox, the slider is
+updated to the user's provided value.
+
+Attributes
+-----------------------------
+    "min" : Required.  A number.  This value represents the minimum allowed
+            value of the slider and the spinbox.
+    "max" : Required.  A number.  This value represents the maximum allowed
+            value of the slider and the spinbox.
+    "sliderSteps" : Required.  An int.  Although the slider represents a
+                    continuum, its values are defined as a series of discreet
+                    steps.  This attribute defines the number of steps permitted
+                    to the slider.
+    "spinboxSteps": Required.  An int.  Defines the number of steps allowed the
+                    spinBox.  When the user clicks either the 'up' or 'down'
+                    arrow on the spinbox, the number entered is incremented or
+                    decremented by the difference between the max and the min
+                    values divided by the number of spinboxSteps.
+
+Example sliderSpinBox object:
+{
+    "id": "slider_spinbox",
+    "type": "sliderSpinBox",
+    "label": "Enter a number between 1 and 100",
+    "min": 0,
+    "max": 100,
+    "sliderSteps": 100,
+    "spinboxSteps": 100
+}
+
   - dropdown
   - checkbox
 
