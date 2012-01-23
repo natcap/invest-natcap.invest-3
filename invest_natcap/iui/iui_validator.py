@@ -347,19 +347,22 @@ class CSVChecker(FileChecker):
     def verify_fields_exist(self, fields):
         prefix = 'Missing fields: '
         field_str = ''
-        field_names = self.file.next()
+
+        if not hasattr(self, "fieldnames"):
+            self.fieldnames = self.file.next()
+ 
         for required_field in fields:
-            if required_field not in field_names:
+            if required_field not in self.fieldnames:
                 field_str += str(required_field)
 
             if len(field_str) > 0:
                 return prefix + field_str
 
-    def verify_restrictions(self):
+    def verify_restrictions(self, rest):
         field_str = ''
         for restriction in self.valid['restrictions']:
             res_field = restriction['field']
-            res_attrib = res['validateAs']
+            res_attrib = restriction['validateAs']
 
             if res_attrib['type'] == 'string':
                 self._verify_string(res_field, res_attrib)
@@ -374,13 +377,18 @@ class CSVChecker(FileChecker):
 
     def _verify_string(self, res_field, res_attrib):
         field_str = ''
-        index = self.file.fieldnames.index(res_field)
+        if not hasattr(self.file, 'fieldnames'):
+            self.fieldnames = self.file.next()
+        else:
+            self.fieldnames = self.file.fieldnames
+
+        index = self.fieldnames.index(res_field)
         for row in self.file:
-            res_field_value = self.file[index]
+            res_field_value = row[index]
             regexp = res_attrib['allowedValues']
 
             if not re.search(res_field_value, regexp):
-                field_str += str(res_field + ' ' + error)
+                field_str += str(res_field + ' ')
 
         if len(field_str) > 0:
                 return field_str
