@@ -262,7 +262,51 @@ Example sliderSpinBox object:
     "spinboxSteps": 100
 }
 
-  - dropdown
-  - checkbox
 
-now, go through each of these and explain all of the available options a user can give, including validateAs
+dropdown
+================================
+
+The dropdown element produces a dropdown menu with options defined by the user
+in the JSON configuration.  The user may opt to have the string value of the
+user's selection returned as the element's value or to have the numeric ordinal
+of the user's selection returned instead.
+
+Attributes
+-------------------------------
+    "options": Required.  An array of strings.  This is the ordered list of
+               strings to be displayed in the dropdown menu.
+    "returns": Optional.  A string.  There are two possible values to this
+               string: "strings" and "ordinals".  If this option is set to
+               "strings", the string of the user's selection will be returned.
+               Otherwise, the ordinal (index of the user's selection) will be
+               returned instead.  NOTE:  if this option is not provided in the
+               configuration, the string of the user's selection will be
+               returned.
+
+Example dropdown object:
+{
+    "id": "dropdown_example",
+    "type": "dropdown",
+    "label": "What is your cell phone carrier?",
+    "options":["verizon", "t-mobile", "sprint", "at&t", "other"],
+    "returns": "strings"
+}
+
+
+checkbox
+=================================
+
+The checkbox element produces a checkbox that can be toggled on or off.  Its
+single attribute is a label.
+
+Example checkbox from carbon_biophysical:
+{
+    "id" : "calc_sequestration",
+    "type": "checkbox",
+    "label": "Calculate sequestration",
+    "defaultValue": false,
+    "required": false
+}
+
+
+
