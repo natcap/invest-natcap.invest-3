@@ -27,7 +27,8 @@ class Validator(registrar.Registrar):
                    'number': NumberChecker,
                    'file': FileChecker,
                    'folder': URIChecker,
-                   'DBF': DBFChecker}
+                   'DBF': DBFChecker,
+                   'CSV': CSVChecker}
         self.update_map(updates)
         self.init_type_checker()
         self.validateFuncs = [self.is_element_required]
@@ -326,32 +327,33 @@ class NumberChecker(Checker):
 
 class CSVChecker(FileChecker):
     def __init__(self, element):
-        Checker.__init__(self, element)
+        FileChecker.__init__(self, element)
 
         updates = {'fieldsExist': self.verify_fields_exist,
-                   'restrictions': self.verify_restrictions,
+                   'restrictions': self.verify_restrictions}
         self.update_map(updates)
+        print self.checks
 
     def open(self):
         """Attempt to open the CSV file"""
 
         self.file = csv.reader(open(self.uri))
+        test_file = csv.reader('')
 
-        if not isinstance(self.file, csv.reader):
+        #isinstance won't work, testing classname against empty csv classname
+        if self.file.__class__ != test_file.__class__:
             return str("Must be a CSV file")
 
-
-    def verify_fields_exist(self):
+    def verify_fields_exist(self, fields):
         prefix = 'Missing fields: '
         field_str = ''
         field_names = self.file.next()
-        for required_field in self.valid['fieldsExist']:
+        for required_field in fields:
             if required_field not in field_names:
                 field_str += str(required_field)
-            
+
             if len(field_str) > 0:
                 return prefix + field_str
-
 
     def verify_restrictions(self):
         field_str = ''
@@ -387,7 +389,7 @@ class CSVChecker(FileChecker):
         prefix = res_field + ' missing value: '
         field_str = ''
         index = self.file.fieldnames.index(res_field)
-        for required_value in res_attrib['valuesExist']
+        for required_value in res_attrib['valuesExist']:
             exists = False
             for row in self.file:
                 if row[index] == required_value:
