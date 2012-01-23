@@ -567,11 +567,11 @@ class TestWaveEnergy(unittest.TestCase):
             os.mkdir(output_dir)
         
         copy_raster = waveEnergy_core.clip_raster_from_polygon(clip_shape, raster_input, copy_raster_input_path)
-        
+        copy_raster.FlushCache()
         #Check that resulting rasters are correct
         invest_test_core.assertTwoDatasetEqualURI(self,
             regression_raster_path, copy_raster_input_path)
-        
+                
         copy_raster = None
         raster_input = None
         clip_shape.Destroy()
