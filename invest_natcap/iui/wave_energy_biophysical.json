@@ -3,7 +3,7 @@
     "label": "Wave Energy",
     "targetScript" : "./python/invest_core/waveEnergy_biophysical.py",
     "modelName" : "waveEnergy_biophysical",
-    "localDocURI": "./documentation/carbonstorage.html",
+    "localDocURI": "./documentation/wave_energy.html",
     "height": 600,
     "width" : 700,
     "elements": [
@@ -31,10 +31,10 @@
 		            "id": "analysis_area",
 		            "args_id": "analysis_area_uri",
 		            "type": "dropdown",
-		            "width": 70,
 		            "label": "Analysis Area",
 		            "options": ["West Coast of North America and Hawaii",
-		            			"North coast of something", "hello world"],
+		            			"East Coast of North America and Puerto Rico", 
+		            			"Global (Eastern Hemisphere)", "Global (Western Hemisphere)"],
 		            "required": true,
 		            "defaultValue": "West Coast of North America and Hawaii"
 		        },

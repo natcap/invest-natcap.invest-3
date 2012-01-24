@@ -3,7 +3,7 @@
     "label": "Wave Energy",
     "targetScript" : "./python/invest_core/waveEnergy_valuation.py",
     "modelName" : "waveEnergy_valuation",
-    "localDocURI": "./documentation/carbonstorage.html",
+    "localDocURI": "./documentation/wave_energy.html",
     "height": 400,
     "width" : 500,
     "elements": [
