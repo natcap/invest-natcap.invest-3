@@ -32,7 +32,7 @@ class Validator(registrar.Registrar):
                    'CSV': CSVChecker}
         self.update_map(updates)
         self.init_type_checker()
-        self.validateFuncs = [self.is_element_required]
+        self.validateFuncs = []
 
     def validate(self):
         """Validate the element.  This is a two step process: first, all 
@@ -62,14 +62,14 @@ class Validator(registrar.Registrar):
         except KeyError:
             self.type_checker = None
 
-    def is_element_required(self):
-        """Check to see if the element is required.  If the element is required
-            but its requirements are not satisfied, return an error message.
-            
-            returns a string if an error is found.  Returns None otherwise."""
-            
-        if self.element.isRequired() and not self.element.requirementsMet():
-            return 'Element is required'
+#    def is_element_required(self):
+#        """Check to see if the element is required.  If the element is required
+#            but its requirements are not satisfied, return an error message.
+#            
+#            returns a string if an error is found.  Returns None otherwise."""
+#            
+#        if self.element.isRequired() and not self.element.requirementsMet():
+#            return 'Element is required'
 
 class Checker(registrar.Registrar):
     #self.map is used for restrictions

@@ -1115,15 +1115,16 @@ class ValidationAssembler(object):
     def _assemble_primitive(self, valid_dict):
         assembled_dict = {}
         for attribute in self.primitive_keys[valid_dict['type']]:
-            element_id = valid_dict[attribute] 
-            assembled_dict[attribute] = self._get_element_value(element_id)
+            if attribute in valid_dict:
+                element_id = valid_dict[attribute] 
+                assembled_dict[attribute] = self._get_element_value(element_id)
 
     def _get_element_value(self, element_id):
         """Takes a string element_id, returns the element's value, either strin
         g or int or boolean."""
-        try:
-            value = self.elements['element_id'].value()
-        except:
+        if element_id in self.elements:
+            value = self.elements[element_id].value()
+        else:
             value = element_id
         return value    
 
