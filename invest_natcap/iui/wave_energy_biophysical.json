@@ -4,8 +4,8 @@
     "targetScript" : "./python/invest_core/waveEnergy_biophysical.py",
     "modelName" : "waveEnergy_biophysical",
     "localDocURI": "./documentation/carbonstorage.html",
-    "height": 400,
-    "width" : 500,
+    "height": 600,
+    "width" : 700,
     "elements": [
         {
             "id" : "workspace_list",
@@ -30,44 +30,45 @@
 		        {
 		            "id": "analysis_area",
 		            "args_id": "analysis_area_uri",
-		            "type": "text",
+		            "type": "dropdown",
 		            "width": 70,
 		            "label": "Analysis Area",
+		            "options": ["West Coast of North America and Hawaii",
+		            			"North coast of something", "hello world"],
 		            "required": true,
-		            "dataType": "string",
 		            "defaultValue": "West Coast of North America and Hawaii"
 		        },
         		{
                     "id" : "machine_perf_table",
+                    "args_id": "machine_perf_uri",
                     "type": "file",
                     "label": "Machine Performance Table",
                     "defaultValue": "./carbon/input/carbon_pools_samp.dbf",
-                    "args_id": "machine_perf_uri",
                     "required": true
                 },
                 {
                     "id" : "machine_param_table",
+                    "args_id": "machine_param_uri",
                     "type": "file",
                     "label": "Machine Parameter Table",
-                    "args_id": "machine_param_uri",
                     "required": true,
                     "defaultValue": "./carbon/input/harv_samp_cur.shp"
                 },
                 {
                     "id" : "dem",
+                    "args_id": "dem_uri",
                     "type": "file",
                     "label": "Global Digital Elevation Model (DEM)",
-                    "args_id": "dem_uri",
-                    "required": true,
-                    "defaultValue": "./carbon/input/harv_samp_fut.shp"
+                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
+                    "required": true
                 },
                 {
                     "id" : "aoi",
+                    "args_id": "aoi_uri",
                     "type": "file",
                     "label": "Area of Interest (AOI)",
-                    "args_id": "aoi_uri",
-                    "required": false,
-                    "defaultValue": "./carbon/input/harv_samp_fut.shp"
+                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
+                    "required": false
                 }
             ]
         }

@@ -30,35 +30,34 @@
 		        {
 		            "id": "machine_econ_table",
 		            "args_id": "machine_econ_uri",
-		            "type": "text",
-		            "width": 70,
+		            "type": "file",
 		            "label": "Machine Economic Table",
-		            "required": true,
-		            "defaultValue": ""
+		            "defaultValue": "",
+		            "required": true
 		        },
                 {
                     "id" : "projection",
+                    "args_id": "projection_uri",
                     "type": "file",
                     "label": "Projection",
-                    "args_id": "projection_uri",
-                    "required": true,
-                    "defaultValue": ""
+                    "defaultValue": "",
+                    "required": true
                 },
                 {
                     "id" : "dem",
+                    "args_id": "global_dem",
                     "type": "file",
                     "label": "Global Digital Elevation Model (DEM)",
-                    "args_id": "global_dem",
-                    "required": true,
                     "defaultValue": "",
+                    "required": true
                 },
                 {
                     "id" : "wave_data",
+                    "args_id": "wave_data_shape_path",
                     "type": "file",
                     "label": "Wave Data Shapefile",
-                    "args_id": "wave_data_shape_path",
-                    "required": true,
                     "defaultValue": "",
+                    "required": true
                 }
             ]
         }
