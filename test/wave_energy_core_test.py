@@ -37,8 +37,7 @@ class TestWaveEnergy(unittest.TestCase):
         args['analysis_area_extract'] = ogr.Open(analysis_extract_path)
         args['aoi'] = ogr.Open(aoi_path)
         args['dem'] = gdal.Open(dem_path)
-        args['workspace_dir'] = './data/test_data/wave_Energy'
-        args['wave_data_dir'] = './data/test_data/wave_Energy/samp_input/WaveData'
+        args['workspace_dir'] = test_dir
         #Create a 2D array of the machine performance table and place the row
         #and column headers as the first two arrays in the list of arrays
         try:
