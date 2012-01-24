@@ -829,14 +829,14 @@ class HideableFileEntry(HideableElement, FileEntry):
         return False
 
 
-class Dropdown(LabeledElement, QtGui.QComboBox):
+class Dropdown(LabeledElement):
     def __init__(self, attributes):
         LabeledElement.__init__(self, attributes)
-        QtGui.QComboBox.__init__(self)
+
         self.dropdown = QtGui.QComboBox()
 
         for option in self.attributes['options']:
-            self.addItem(option)
+            self.dropdown.addItem(option)
 
         self.addElement(self.dropdown)
         
