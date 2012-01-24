@@ -107,7 +107,7 @@ def biophysical(args):
     area_shape.Destroy()
     area_shape = ogr.Open(wave_shape_path, 1)
     area_layer = area_shape.GetLayer(0)
-    #Generate an interpolate object for waveEnergyCap
+    #Generate an interpolate object for wave_energy_capacity
     logger.debug('Interpolating machine performance table')
     energy_interp = wave_energy_interp(args['wave_base_data'], args['machine_perf'])
     #Create a dictionary with the wave energy capacity sums from each location
