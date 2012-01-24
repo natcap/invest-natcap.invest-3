@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 from osgeo import ogr
-from invest_natcap.wave_energy import waveEnergy_valuation
+from invest_natcap.wave_energy import wave_energy_valuation
 import invest_test_core
 
 class TestWaveEnergyValuation(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestWaveEnergyValuation(unittest.TestCase):
         args['global_dem'] = args['workspace_dir'] + os.sep + 'samp_input/global_dem'
         args['wave_data_shape_path'] = args['workspace_dir'] + os.sep + 'Intermediate/WaveData_clipZ.shp'
         
-        waveEnergy_valuation.execute(args)
+        wave_energy_valuation.execute(args)
         regression_dir = './data/wave_energy_regression_data'
         #assert that the output raster is equivalent to the regression
         #test

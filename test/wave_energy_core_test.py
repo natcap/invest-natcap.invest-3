@@ -11,8 +11,8 @@ from osgeo.gdalconst import *
 from invest_natcap.dbfpy import dbf
 import numpy as np
 
-from invest_natcap.wave_energy import waveEnergy_core
-from invest_natcap.wave_energy import waveEnergy_biophysical
+from invest_natcap.wave_energy import wave_energy_core
+from invest_natcap.wave_energy import wave_energy_biophysical
 import invest_test_core
 
 class TestWaveEnergy(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestWaveEnergy(unittest.TestCase):
         machine_param_path = test_dir + os.sep + 'samp_input/Machine_PelamisParamCSV.csv'
         #Set all arguments to be passed
         args = {}
-        args['wave_base_data'] = waveEnergy_biophysical.extrapolate_wave_data(wave_file_path)
+        args['wave_base_data'] = wave_energy_biophysical.extrapolate_wave_data(wave_file_path)
         args['analysis_area'] = ogr.Open(analysis_path, 1)
         args['analysis_area_extract'] = ogr.Open(analysis_extract_path)
         args['aoi'] = ogr.Open(aoi_path)
@@ -72,7 +72,7 @@ class TestWaveEnergy(unittest.TestCase):
         except IOError, e:
             print 'File I/O error' + e
 
-        waveEnergy_core.biophysical(args)
+        wave_energy_core.biophysical(args)
         regression_dir = './data/wave_energy_regression_data/'
         #Check that output/intermediate files have been made
         regression_shape = ogr.Open(regression_dir + 
@@ -137,7 +137,7 @@ class TestWaveEnergy(unittest.TestCase):
         spatial_prj = osr.SpatialReference()
         spatial_prj.ImportFromWkt(prj_string)
 
-        new_shape = waveEnergy_core.change_shape_projection(shape_to_reproject, projection, output_path)
+        new_shape = wave_energy_core.change_shape_projection(shape_to_reproject, projection, output_path)
         layer = new_shape.GetLayer(0)
         
         shape_projection = layer.GetSpatialRef()
@@ -203,7 +203,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape_to_clip = ogr.Open(shape_to_clip_path)
         binding_shape = ogr.Open(binding_shape_path)
 
-        new_shape = waveEnergy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
+        new_shape = wave_energy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
 
         layer_count = shape_to_clip.GetLayerCount()
         layer_count_new = new_shape.GetLayerCount()
@@ -264,7 +264,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape_to_clip = ogr.Open(shape_to_clip_path)
         binding_shape = ogr.Open(binding_shape_path)
 
-        new_shape = waveEnergy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
+        new_shape = wave_energy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
 
         layer = new_shape.GetLayer(0)
 
@@ -294,7 +294,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape_to_clip = ogr.Open(shape_to_clip_path)
         binding_shape = ogr.Open(binding_shape_path)
 
-        new_shape = waveEnergy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
+        new_shape = wave_energy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
         #It seems that the fields "FID" and "Shape" are not included for some reason when
         #Looping through all the fields of the shapefile
         point_one_fields = [572, 490, -126.933144, 47.600162, 2.8, 11.1]
@@ -349,7 +349,7 @@ class TestWaveEnergy(unittest.TestCase):
         value = 'HSAVG_M'
         points = [[-126.933144, 47.600162], [-126.866477, 47.600162], [-126.79981, 47.600162]]
         values = [2.8, 2.8, 2.79]
-        shape_array = waveEnergy_core.get_points_values(shape_to_clip, key, value_array, value)
+        shape_array = wave_energy_core.get_points_values(shape_to_clip, key, value_array, value)
         self.assertEqual(len(points), len(shape_array[0]), 'The number of points do not match')
         self.assertEqual(len(values), len(shape_array[1]), 'The number of values do not match')
         shape_points = shape_array[0]
@@ -387,7 +387,7 @@ class TestWaveEnergy(unittest.TestCase):
         test_dict = {(572, 490):2302, (573, 490):1453, (574, 490):2103}
         ij_array = [[572, 490], [573, 490], [574, 490]]
         
-        waveEnergy_core.captured_wave_energy_to_shape(test_dict, wave_shape_copy)
+        wave_energy_core.captured_wave_energy_to_shape(test_dict, wave_shape_copy)
 
         layer = wave_shape_copy.GetLayer(0)
         #Need to reset the layer because the function call goes through the features in
@@ -441,7 +441,7 @@ class TestWaveEnergy(unittest.TestCase):
         #Hand calculated results for the two points
         result = {(520, 490):0.0762, (521, 491):0.22116}
 
-        we_sum = waveEnergy_core.compute_wave_energy_capacity(wave_data, interpZ, machine_param)
+        we_sum = wave_energy_core.compute_wave_energy_capacity(wave_data, interpZ, machine_param)
 
         #Loop that compares dictionaries we_sum and result checking key, sum values
         for key in result:
@@ -471,7 +471,7 @@ class TestWaveEnergy(unittest.TestCase):
                   [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0],
                   [0, 0, 8, 20, 13.33333333, 6.66666667, 0, 0]]
         result = np.array(result)
-        interpZ = waveEnergy_core.wave_energy_interp(wave_data, machine_perf)
+        interpZ = wave_energy_core.wave_energy_interp(wave_data, machine_perf)
 
         self.assertEqual(result.shape, interpZ.shape, 'The shapes are not the same')
 
@@ -496,7 +496,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape = ogr.Open(shape_path)
         raster = gdal.Open(raster_path)
 
-        new_raster = waveEnergy_core.clip_raster_from_polygon(shape, raster, path)
+        new_raster = wave_energy_core.clip_raster_from_polygon(shape, raster, path)
 
         new_band = new_raster.GetRasterBand(1)
         band = raster.GetRasterBand(1)
@@ -538,7 +538,7 @@ class TestWaveEnergy(unittest.TestCase):
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
         
-        copy_raster = waveEnergy_core.clip_raster_from_polygon(clip_shape, raster_input, copy_raster_input_path)
+        copy_raster = wave_energy_core.clip_raster_from_polygon(clip_shape, raster_input, copy_raster_input_path)
         copy_raster.FlushCache()
         #Check that resulting rasters are correct
         invest_test_core.assertTwoDatasetEqualURI(self,
@@ -570,7 +570,7 @@ class TestWaveEnergy(unittest.TestCase):
                            [  0., 11., 13., 15.],
                            [  0., 12., 14., 16.]])
 
-        waveEnergy_core.interp_points_over_raster(points, values, raster)
+        wave_energy_core.interp_points_over_raster(points, values, raster)
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray()
         self.assertEqual(matrix.size, result.size, 'The sizes are not the same')
@@ -622,7 +622,7 @@ class TestWaveEnergy(unittest.TestCase):
             feat = layer.GetNextFeature()
             i = i + 1
         layer = None
-        shape_copy = waveEnergy_core.wave_power(shape_copy)
+        shape_copy = wave_energy_core.wave_power(shape_copy)
         
         layer = shape_copy.GetLayer(0)
         layer.ResetReading()
@@ -657,7 +657,7 @@ class TestWaveEnergy(unittest.TestCase):
         shape = ogr.Open(shape_path)
         shape_reg = ogr.Open(regression_shape_path)
         shape_copy = ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(shape, shape_copy_path)
-        shape_copy = waveEnergy_core.wave_power(shape_copy)
+        shape_copy = wave_energy_core.wave_power(shape_copy)
         
         layer = shape_copy.GetLayer(0)
         layer_reg = shape_reg.GetLayer(0)
@@ -708,7 +708,7 @@ class TestWaveEnergy(unittest.TestCase):
             feat.Destroy()
         
         lyr.ResetReading()
-        result_points = waveEnergy_core.get_points_geometries(src)
+        result_points = wave_energy_core.get_points_geometries(src)
         
         for index, value in enumerate(result_points):
             self.assertEqual(value[0], calculated_points[index][0],
@@ -724,7 +724,7 @@ class TestWaveEnergy(unittest.TestCase):
         xy_2 = np.array([[156, 133], [198, 111]])
         calculated_dist_results = np.array([52.77309921, 143.5444182, 87.66413178, 1348.222904])
         calculated_id_results = np.array([1, 1, 0, 1])
-        dist_results, id_results = waveEnergy_core.calculate_distance(xy_1, xy_2)
+        dist_results, id_results = wave_energy_core.calculate_distance(xy_1, xy_2)
         calculated_dist_rounded = np.ma.round(calculated_dist_results, 3)
         dist_rounded = np.ma.round(dist_results, 3)
         mask_dist = calculated_dist_rounded == dist_rounded
@@ -775,7 +775,7 @@ class TestWaveEnergy(unittest.TestCase):
         except IOError, error:
             print 'File I/O error' + error
 
-        waveEnergy_core.valuation(args)
+        wave_energy_core.valuation(args)
         
         #Check that output/intermediate files have been made
         regression_dir = './data/wave_energy_regression_data'
