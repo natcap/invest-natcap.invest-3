@@ -8,7 +8,7 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy as np
 
-from invest_natcap.wave_energy import waveEnergy_core
+from invest_natcap.wave_energy import wave_energy_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -43,7 +43,7 @@ def execute(args):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-    #Dictionary that will hold all the inputs to be passed to waveEnergy_core
+    #Dictionary that will hold all the inputs to be passed to wave_energy_core
     biophysical_args = {}
     biophysical_args['workspace_dir'] = args['workspace_dir']
     biophysical_args['dem'] = gdal.Open(args['dem_uri'])
@@ -126,7 +126,7 @@ def execute(args):
             print 'File I/O error' + error
     #Fire up the biophysical function in waveEnergy_core with the gathered arguments
     logger.info('Starting Wave Energy Biophysical.')
-    waveEnergy_core.biophysical(biophysical_args)
+    wave_energy_core.biophysical(biophysical_args)
     logger.info('Completed Wave Energy Biophysical.')
 
 def extrapolate_wave_data(wave_file):

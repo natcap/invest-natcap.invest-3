@@ -9,7 +9,7 @@ from osgeo import gdal
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
-from invest_natcap.wave_energy import waveEnergy_core
+from invest_natcap.wave_energy import wave_energy_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -68,5 +68,5 @@ def execute(args):
         print 'File I/O error' + error
     #Call the valuation core module with attached arguments to run the economic valuation
     logger.info('Beginning Wave Energy Valuation.')
-    waveEnergy_core.valuation(valuation_args)
+    wave_energy_core.valuation(valuation_args)
     logger.info('Wave Energy Valuation Completed.')
