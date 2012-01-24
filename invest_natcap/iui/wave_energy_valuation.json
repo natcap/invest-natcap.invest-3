@@ -1,8 +1,8 @@
 {
     "id" : "window",
     "label": "Wave Energy",
-    "targetScript" : "./python/invest_core/waveEnergy_valuation.py",
-    "modelName" : "waveEnergy_valuation",
+    "targetScript" : "./python/invest_core/wave_energy_valuation.py",
+    "modelName" : "wave_energy_valuation",
     "localDocURI": "./documentation/wave_energy.html",
     "height": 400,
     "width" : 500,

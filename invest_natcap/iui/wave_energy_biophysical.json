@@ -1,8 +1,8 @@
 {
     "id" : "window",
     "label": "Wave Energy",
-    "targetScript" : "./python/invest_core/waveEnergy_biophysical.py",
-    "modelName" : "waveEnergy_biophysical",
+    "targetScript" : "./python/invest_core/wave_energy_biophysical.py",
+    "modelName" : "wave_energy_biophysical",
     "localDocURI": "./documentation/wave_energy.html",
     "height": 600,
     "width" : 700,
