@@ -124,7 +124,7 @@ def execute(args):
             biophysical_args['aoi'] = aoi
         except IOError, error:
             print 'File I/O error' + error
-    #Fire up the biophysical function in waveEnergy_core with the gathered arguments
+    #Fire up the biophysical function in wave_energy_core with the gathered arguments
     logger.info('Starting Wave Energy Biophysical.')
     wave_energy_core.biophysical(biophysical_args)
     logger.info('Completed Wave Energy Biophysical.')
