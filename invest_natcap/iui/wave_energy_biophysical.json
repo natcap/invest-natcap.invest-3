@@ -30,7 +30,8 @@
 		        {
 		            "id": "analysis_area",
 		            "args_id": "analysis_area_uri",
-		            "type": "text",
+		            "type": "dropdown",
+                    "options": ["a", "b", "c"],
 		            "width": 70,
 		            "label": "Analysis Area",
 		            "required": true,

@@ -835,11 +835,22 @@ class Dropdown(LabeledElement):
 
         self.dropdown = QtGui.QComboBox()
 
+        if 'width' in self.attributes:
+            self.dropdown.setMaximumWidth(self.attributes['width'])
+
         for option in self.attributes['options']:
             self.dropdown.addItem(option)
 
         self.addElement(self.dropdown)
-        
+       
+    def setValue(self, index):
+        if isinstance(index, str):
+            index = self.dropdown.findText(index)
+            if index == -1: #returned if the index cannot be found
+                index = 0
+
+        self.dropdown.setCurrentIndex(index)
+
     def value(self):
         if 'returns' in self.attributes:
             if self.attributes['returns'] == 'strings':
