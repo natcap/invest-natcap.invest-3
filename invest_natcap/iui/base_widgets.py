@@ -1091,7 +1091,6 @@ class ValidationAssembler(object):
         self.elements = elements_ptr
         self.primitive_keys = {'number': ['lessThan', 'greaterThan', 'lteq', 
                                           'gteq']}
-
     def assemble(self, element, valid_dict):
         assembled_dict = valid_dict.copy()
         assembled_dict['value'] = element.value()
@@ -1110,13 +1109,14 @@ class ValidationAssembler(object):
                     if valid_dict['type'] in self.primitive_keys:
                         primitive = self._assemble_primitive(restriction)
                         assembled_dict['restrictions'][index] = primitive
-                
+
+        return assembled_dict
+
     def _assemble_primitive(self, valid_dict):
         assembled_dict = {}
         for attribute in self.primitive_keys[valid_dict['type']]:
             element_id = valid_dict[attribute] 
             assembled_dict[attribute] = self._get_element_value(element_id)
-
 
     def _get_element_value(self, element_id):
         """Takes a string element_id, returns the element's value, either strin
@@ -1126,7 +1126,6 @@ class ValidationAssembler(object):
         except:
             value = element_id
         return value    
-        
 
 class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
