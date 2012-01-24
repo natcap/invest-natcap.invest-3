@@ -363,15 +363,27 @@ Attributes
 -------------------
 None unique to this element type.
 
+
+Validation
+-------------------
+Folder validation is limited to checking that the provided URI is a directory on
+the filesystem.  It is configured with the following syntax:
+
+    "validateAs": {"type": "folder"}
+
+
 Example file object from carbon_biophysical:
 {
     "id" : "workspace",
     "args_id" : "workspace_dir",
     "type": "folder",
     "label": "Workspace",
+    "validateAs": {"type": "folder"},
     "defaultValue": "./carbon",
     "required": true
 }
+
+
 
 
 text
@@ -393,6 +405,44 @@ Attributes
               attribute is not defined in the JSON configuration, no width is
               assigned and the textfield will expand to fit the space it is
               permitted.
+
+Validation
+------------------------
+Textfield validation comes in two forms: Numeric and String.
+
+Numeric validation for textfields has two possibile forms of comparison.  You
+may either compare the field's value against another field or a fixed value
+using one of the available comparators.
+
+    Available comparators:
+    "lessThan"    - equivalent to '<'
+    "greaterThan" - equivalent to '>'
+    "gteq"        - equivalent to '>='
+    "lteq"        - equivalent to '<='
+    
+A single field may use an assortment of the available comparators, but a single
+comparator may only be used once.  All comparators use the following syntax: 
+
+    "comparator_name": value
+    
+where value is either a field name or a numeric value.
+
+It is also possible to compare the value of the field against a regular
+expression.  The syntax for this is:
+
+    "allowedValues": "regexp_string"
+
+Where the regexp_string is a string regular expression that can operate with
+python's re module.
+
+String validation is restricted to regular expression matching.  The syntax for
+this is:
+    
+    "allowedValues": "regexp_string"
+
+Where the regexp_string is a string regular expression compatible with python's
+re module.
+
 
 Example text object from carbon_biophysical:
 {
