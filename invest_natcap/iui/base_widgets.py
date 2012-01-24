@@ -369,8 +369,11 @@ class DynamicPrimitive(DynamicElement):
         return True
         
     def validate(self):
-        if self.isEnabled():
-            self.set_error(self.validator.validate())
+        if self.isRequired() and not self.requirementsMet():
+            self.set_error('Element is required')
+        else:
+            if self.isEnabled():
+                self.set_error(self.validator.validate())
         
     def display_error(self):
         """returns a boolean"""
@@ -1081,6 +1084,49 @@ class OperationDialog(QtGui.QDialog):
 
     def cancelled(self):
         return self.cancel
+
+class ValidationAssembler(object):
+    def __init__(self, elements_ptr):
+        object.__init__(self)
+        self.elements = elements_ptr
+        self.primitive_keys = {'number': ['lessThan', 'greaterThan', 'lteq', 
+                                          'gteq']}
+
+    def assemble(self, element, valid_dict):
+        assembled_dict = valid_dict.copy()
+        assembled_dict['value'] = element.value()
+
+        #If the validation type is a primitive, eval as a primitive
+        if valid_dict['type'] in self.primitive_keys:
+            assembled_dict.update(self._assemble_primitive(valid_dict))
+
+        #if the valdidation type has per-row restrictions, eval restrictions
+        #individually.
+        else:
+            if 'restrictions' in valid_dict:
+                #loop through the array of restrictions
+                for index, restriction in enumerate(valid_dict['restrictions']):
+                    #for each restriction, check as a primitive
+                    if valid_dict['type'] in self.primitive_keys:
+                        primitive = self._assemble_primitive(restriction)
+                        assembled_dict['restrictions'][index] = primitive
+                
+    def _assemble_primitive(self, valid_dict):
+        assembled_dict = {}
+        for attribute in self.primitive_keys[valid_dict['type']]:
+            element_id = valid_dict[attribute] 
+            assembled_dict[attribute] = self._get_element_value(element_id)
+
+
+    def _get_element_value(self, element_id):
+        """Takes a string element_id, returns the element's value, either strin
+        g or int or boolean."""
+        try:
+            value = self.elements['element_id'].value()
+        except:
+            value = element_id
+        return value    
+        
 
 class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
