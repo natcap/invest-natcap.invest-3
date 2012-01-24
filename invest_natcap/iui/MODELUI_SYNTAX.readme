@@ -69,7 +69,7 @@ The embeddedUI element allows a user to embed another user interface into this U
 Attributes
 -------------
     "configURI" : A string uri relative to the current directory that points to
-                  the target UI configuration file.
+
 
 
 
@@ -139,6 +139,192 @@ Example file object from carbon_biophysical:
     "validateAs": {"type": "GDAL"},
     "required": true
 },
+
+Validation
+----------------------------------------
+IUI contains significant validation capabilities for files that can be specified
+entirely through the JSON configuration of an object.  All validation for a
+given element is found in the JSON object associated with the "validateAs"
+attribute.
+
+Currently, the following filetypes are supported:
+
+    Filetype     | Available validation operations
+    -------------|-------------------------------------------------------------
+    generic file | open file
+    -------------|-------------------------------------------------------------
+    GDAL         | open file, verify filetype
+    -------------|-------------------------------------------------------------
+    OGR          | open file, verify filetype, verify layer exists,
+                 | check field names, validate field contents
+    -------------|-------------------------------------------------------------
+    DBF          | open file, verify filetype, check field names, validate 
+                 | field contents as regexp, validate field against other fields
+    -------------|-------------------------------------------------------------
+    CSV          | open file, verify filetype, check field names, validate field
+                 | contents as regexp, validate field against other fields.
+
+    NOTE: Before any other filetype-specific validation takes place, the file's
+          URI is checked to ensure that it exists on the present filesystem.  If
+          This check fails, further validation is cancelled.
+
+Each operation has its own syntax for use in the JSON configuration file.
+Individual checks will only be performed if the option exists in the
+configuration.  The only required validation option is the "type" option.  All
+others are optional.
+
+
+    generic file:
+    ------------------------
+    This checker is a fallback validator for an input file.  If possible, use a
+    specialized filetype or define a custom input filetype if further validation
+    is desired.  Validation for this file is limited to ensuring that the file
+    exists and that it can be opened by Python.
+
+    example:
+    ------------------------
+    "validateAs": {"type": "file"}
+
+
+
+    GDAL
+    --------------------------
+    This checker tries to ensure that the given element is a GDAL dataset.  This
+    is done by seeing if GDAL can open the user-provided URI.  This is the
+    limit of GDAL-specific validation.  Other errors are assumed to be
+    documented and/or handled within the module code.  
+
+    example:
+    --------------------------
+    "validateAs": {"type": "GDAL"}
+
+
+
+    OGR
+    --------------------------
+    This checker verified several attributes of an OGR data source as configured
+    in the JSON configuration file.
+
+    "type": "OGR"
+    This option verifies that the provided file can be opened by
+    OGR and that it is an OGR-recognizeable file.
+
+    "layer": "layer_name"
+    This option verifies that the layer with name "layer_name" exists within
+    this shapefile.
+
+    "fieldsExist" : ["field1", "field2", "field3", ...]
+    This option verifies that the fields in this array all exist in the OGR
+    file.  Note that this list is not exclusive ... it merely defines the fields
+    that are required to exist.
+
+    example:
+    --------------------------
+    "validateAs": {"type": "OGR", 
+                   "layer": "layer_name",
+                   "fieldsExist": ["field1", "field2", "field3", ...]}
+
+
+
+    DBF
+    ---------------------------------
+    This checker, verifies several characteristics of an input DBF file using
+    the dbfpy module included with the installation of invest_core.
+
+    "type": "DBF"
+    This option verifies that the provided file can be opened as a DBF file.
+    Note that this check is not 100% accurate because dbfpy can open some
+    unexpected filetypes without error.
+
+    "fieldsExist": ["field1", "field2", "field3", ... ]
+    This option verifies that the fields in this array all exist within this DBF
+    file.  Note that this list is not exclusive ... it merely defines the DBF
+    fields required in this file.
+
+    "restrictions" : [....]
+    This option defines per-row restrictions.  Use this option to specify the
+    sorts of values required in a given column of the table or to specify how
+    the value of a given field should relate to another field in the same table
+    row.
+
+    See the section below on per-record restrictions for details.
+
+
+    
+    CSV
+    --------------------------------
+    This checker verifies several characteristics of an input CSV file using
+    python's built-in csv module.
+
+    "type": "CSV"
+    This option verifies that the provided file can be opened as a CSV file.
+
+    "fieldsExist": ["field1", "field2", "field3", ....]
+    This option verifies that the fields in this array all exist within this CSV
+    file.  Note that this list is not exclusive ... it merely defines the fields
+    that are required to exist in this file.
+
+    "restrictions": [...]
+    This option defines per-row restrictions.  Use this option to specify the
+    sorts of values required in a fiven column of the table or to specify how
+    the value of a given field should relate to another field within the same
+    table row.
+
+    See the section below on per-record restrictions for details.
+
+
+
+    per-record restrictions
+    -----------------------
+    Defined by the "restrictions" option, this allows for the configuration of 
+    restrictions per record.  There are two types of per-record restrictions:
+    absolute and relative.  Absolute restrictions allow the value of a given
+    field to be defined by a regular expression.  Relative restrictions allow
+    the value of a field to be verified to be greater than or less than (or
+    equal to) another field in the same record or a number specified in the
+    configuration file.
+
+    The "restrictions" attribute should point to an array of per-record
+    restrictions.  This allows multiple restrictions to be placed on a given
+    file.
+
+    All per-record restrictions have two attributes:
+        "field": string
+        ----------------
+        This is the field that is being checked against either some
+        value or against the value in another field.
+
+        "validateAs" : JSON object
+        ---------------------------
+        This object defines the specific restrictions for this particular
+        field for every row.  It contains the details of how the field should
+        be validated. 
+
+    example absolute restriction:
+    "validateAs": { "type": "CSV",
+                    "fieldsExist": ["NAME", "VALUE", "NOTE"],
+                    "restrictions": [{"field": "NAME",
+                                    "validateAs": {"type": "string",
+                                                   "allowedValues":"[a-z]*"},
+                                     {"field": "VALUE",
+                                      "validateAs": {"type": "number",
+                                                     "allowedValues":"[0-9]*"}
+                                        }                                    
+                                    }]}
+
+    example relative restrictions
+    "validateAs": { "type": "CSV",
+                    "fieldsExist": ["NAME", "VALUE1", "VALUE2", "VALUE3", "NOTE"],
+                    "restrictions": [{"field": "VALUE1",
+                                      "validateAs": {"type": "number",
+                                                     "lessThan": "VALUE2",
+                                                     "gteq": "VALUE3"}
+                                     },
+                                     {"field": "VALUE2",
+                                      "validateAs": {"type": "number",
+                                                     "lessThan": 42}
+                                     }                                     
+                                    ]}
 
 
 hideableFileEntry
@@ -307,6 +493,8 @@ Example checkbox from carbon_biophysical:
     "defaultValue": false,
     "required": false
 }
+
+
 
 
 
