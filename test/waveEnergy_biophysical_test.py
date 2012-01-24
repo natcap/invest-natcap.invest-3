@@ -16,7 +16,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         args['machine_perf_uri'] = args['workspace_dir'] + os.sep + 'samp_input/Machine_PelamisPerfCSV.csv'
         args['machine_param_uri'] = args['workspace_dir'] + os.sep + 'samp_input/Machine_PelamisParamCSV.csv'
         args['dem_uri'] = args['workspace_dir'] + os.sep + 'samp_input/global_dem'
-        args['aoi_uri'] = args['workspace_dir'] + os.sep + 'samp_input/AOI_WCVI.shp'
+#        args['aoi_uri'] = args['workspace_dir'] + os.sep + 'samp_input/AOI_WCVI.shp'
         waveEnergy_biophysical.execute(args)
         regression_dir = './data/wave_energy_regression_data'
         #assert that the output raster is equivalent to the regression test
