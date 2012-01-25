@@ -227,13 +227,19 @@ class TableChecker(FileChecker, ValidationAssembler):
         
         return [{}]
 
-    def _get_field_value(self, fieldname):
+    def _get_value(self, fieldname):
         """This is a function stub for reimplementation.  Function should fetch
             the value of the given field at the specified row.  Must return a scalar.
             """
 
         return 0
+    
+    def _get_fieldnames(self):
+        """This is a function stub for reimplementation.  Function should fetch
+            a python list of strings where each string is a fieldname in the
+            table."""
 
+        return []
 
 class OGRChecker(TableChecker):
     def __init__(self):
@@ -247,7 +253,7 @@ class OGRChecker(TableChecker):
         self.layer_types = {'polygons' : ogr.wkbPolygon,
                             'points'  : ogr.wkbPoint}
         
-    def open(self):
+    def open(self, valid_dict):
         """Attempt to open the shapefile."""
 
         self.file = ogr.Open(str(self.uri))
@@ -266,10 +272,7 @@ class OGRChecker(TableChecker):
         if not isinstance(self.layer, osgeo.ogr.Layer):
             return str('Shapefile must have a layer called ' + layer_name)
    
-        if 'type' in layer_dict:
-            error = self._check_layer_type(layer_dict[type])
-
-    def _check_layer_type(type_string):
+    def _check_layer_type(self, type_string):
         for feature in self.layer:
             geometry = feature.GetGeometryRef()
             geom_type = geometry.GetGeometryType()
@@ -301,7 +304,6 @@ class DBFChecker(FileChecker):
         updates = {'fieldsExist': self.verify_fields_exist,
                    'restrictions': self.verify_restrictions}
         self.update_map(updates)
-        self.num_checker = NumberChecker(self.element)
     
     def open(self):
         """Attempt to open the DBF."""
@@ -310,70 +312,21 @@ class DBFChecker(FileChecker):
         
         if not isinstance(self.file, dbf.Dbf):
             return str('Must be a DBF file')
-        
-    def verify_fields_exist(self):
-        prefix = 'Missing fields: '
-        field_str = ''
-        for field in self.valid['fieldsExist']:
-            if field.upper() not in self.file.FileNames:
-                field_str += str(field + ', ')
-        
-        if len(field_str) > 0:
-            return prefix + field_str
-        
-    def verify_restrictions(self):
-        field_str = ''
-        for restriction in self.valid['restrictions']:
-            res_field = restriction['field']
-            res_attrib = res['validateAs']
+      
+    def _get_fieldnames(self):
+        return self.file.fieldNames()
 
-            if res_attrib['type'] == 'number':
-                self.verify_number(res_field, res_attrib)
-            elif res_attrib['type'] == 'string':
-                self.verify_string(res_field, res_attrib)
+    def _build_table(self):
+        table_rows = []
 
-                
-    def verify_number(self, res_field, res_attrib):
-        """Verify that a given field conforms to numeric restrictions.
-            
-            res_field - a string fieldname in the DBF file.
-            res_attrib - a dictionary of restrictions
-            
-            returns a string if an error is found.  Otherwise, returns None."""
-            
-        field_str = ''
-        for key, value in self.res_attrib.iteritems():
-            for record in range(self.file.recordCount):
-                if isinstance(value, str): #if value is a fieldname
-                    value = self.file[record][value]
-        
-                other_value = self.file[record][res_attrib[key]]
-                error = self.num_checker.check_number(value, other_value, key)
-                field_str += str(res_field + ': ' + error + ' at record ' + 
-                                 record)
-                
-        if len(field_str) > 0:
-            return field_str
-
-    def verify_string(self, res_field, res_attrib):
-        """Verify that a given field conforms to its string restrictions.
-        
-            res_field - a string fieldname in the DBF file
-            res_attrib - a dictionary of restrictions
-            
-            returns a string if an error is found.  Otherwise, returns None """
-            
-        field_str = ''
         for record in range(self.file.recordCount):
-            res_field_value = self.file[record][res_field]
-            regexp = res_attrib['allowedValues']
+            row = {}
+            for fieldname in self._get_fieldnames():
+                row[fieldname] = self.file[record][fieldname]
             
-            if not re.search(res_field_value, regexp):
-                field_str += str(res_field + ' ' + error + ' at record ' + 
-                                 record)
-                
-        if len(field_str) > 0:
-            return field_str
+            table_rows.append(row)
+
+        return table_rows
 
 class NumberChecker(Checker):
     def __init__(self, element):
@@ -447,94 +400,22 @@ class CSVChecker(FileChecker):
         if self.file.__class__ != test_file.__class__:
             return str("Must be a CSV file")
 
-    def verify_fields_exist(self, fields):
-        prefix = 'Missing fields: '
-        field_str = ''
+    def _build_table(self):
+        table_rows = []
+        fieldnames = self._get_fieldnames()
+        for record in self.file:
+            row = {}
+            for field_name, value in zip(fieldnames, record):
+                row[field_name] = value
+    
+            table_rows.append(row)
+        return table_rows
 
-        if not hasattr(self, "fieldnames"):
+    def _get_fieldnames(self):
+        if not hasattr(self, fieldnames):
             self.fieldnames = self.file.next()
 
-        for required_field in fields:
-            if required_field not in self.fieldnames:
-                field_str += str(required_field)
-
-            if len(field_str) > 0:
-                return prefix + field_str
-
-    def verify_restrictions(self, rest):
-        field_str = ''
-
-        if not hasattr(self.file, 'fieldnames'):
-            self.fieldnames = self.file.next()
-        else:
-            self.fieldnames = self.file.fieldnames
-
-        for restriction in self.valid['restrictions']:
-            res_field = restriction['field']
-            res_attrib = restriction['validateAs']
-
-            if res_attrib['type'] == 'string':
-                field_str += self._verify_string(res_field, res_attrib)
-            elif res_attrib['type'] == 'number':
-                field_str += self._verify_is_number(res_field, res_attrib)
-
-            if 'valuesExist' in res_attrib:
-                field_str += self._verify_values_exist(res_field, res_attrib)
-
-        if len(field_str) > 0:
-            return field_str
-
-    def _match_column_values(self, column_name, res_attrib):
-        field_str = ''
-        index = self.fieldnames.index(column_name)
-
-        for row_num, row in enumerate(self.file):
-            res_field_value = row[index]
-            regexp = res_attrib['allowedValues']
-
-            pattern = re.compile(regexp)
-            if pattern.search(res_field_value) == None:
-                field_str += str(res_field + ' not valid at record ' +
-                                 str(row_num) + '. ')
-
-        return field_str
-
-    def _verify_is_number(self, res_field, res_attrib):
-        if 'allowedValues' in res_attrib:
-            return self._match_column_values(res_field, res_attrib)
-        else:
-            field_str = ''
-            index = self.fieldnames.index(res_field)
-            for key, value in res_attrib.iteritems():
-                for row in self.file:
-                    other_value = row[res_attrib[key]]
-                    error = self.num_checker.check_number(value, other_value, key)
-                    if error != None:
-                        field_str = str(res_field + ': ' + error + ' at record '
-                            + record)
-
-            if len(field_str) > 0:
-                return field_str
-
-    def _verify_string(self, res_field, res_attrib):
-        return self._match_column_values(res_field, res_attrib)
-
-    def _verify_values_exist(self, res_field, res_attrib):
-        prefix = res_field + ' missing value: '
-        field_str = ''
-        index = self.file.fieldnames.index(res_field)
-        for required_value in res_attrib['valuesExist']:
-            exists = False
-            for row in self.file:
-                if row[index] == required_value:
-                    exists = True
-
-            if exists == False:
-                field_str += required_value + ' '
-
-        if len(field_str) > 0:
-            return field_str
-
+        return self.fieldnames
 
     #all check functions take a single value, which is returned by the
     #element.value() function.  All check functions should perform the required
