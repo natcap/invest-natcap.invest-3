@@ -343,12 +343,10 @@ class TestWaveEnergy(unittest.TestCase):
             os.mkdir(output_dir)
 
         shape_to_clip = ogr.Open(shape_path)
-        key = ['LONG', 'LATI']
-        value_array = ['LONG', 'LATI', 'HSAVG_M', 'TPAVG_S']
         value = 'HSAVG_M'
         points = [[-126.933144, 47.600162], [-126.866477, 47.600162], [-126.79981, 47.600162]]
         values = [2.8, 2.8, 2.79]
-        shape_array = wave_energy_core.get_points_values(shape_to_clip, key, value_array, value)
+        shape_array = wave_energy_core.get_points_values(shape_to_clip, value)
         self.assertEqual(len(points), len(shape_array[0]), 'The number of points do not match')
         self.assertEqual(len(values), len(shape_array[1]), 'The number of values do not match')
         shape_points = shape_array[0]
