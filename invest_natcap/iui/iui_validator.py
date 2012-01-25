@@ -9,6 +9,7 @@ from osgeo import ogr
 from osgeo import gdal
 
 from invest_natcap.dbfpy import dbf
+from invest_natcap.carbon import carbon_core
 import registrar
 
 class Validator(registrar.Registrar):
@@ -226,13 +227,7 @@ class TableChecker(FileChecker, ValidationAssembler):
         
         return [{}]
 
-    def _get_fieldnames(self):
-        """This is a function stub for reimplementation.  Must return a list of
-            strings"""
-        
-        return []
-
-    def _get_field_value(self, fieldname, row_index):
+    def _get_field_value(self, fieldname):
         """This is a function stub for reimplementation.  Function should fetch
             the value of the given field at the specified row.  Must return a scalar.
             """
@@ -241,11 +236,16 @@ class TableChecker(FileChecker, ValidationAssembler):
 
 
 class OGRChecker(TableChecker):
-    def __init__(self, element):
+    def __init__(self):
         TableChecker.__init__(self)
 
         updates = {'layer': self.open_layer}
         self.update_map(updates)
+
+        self.add_check_function(self.open_layer)
+
+        self.layer_types = {'polygons' : ogr.wkbPolygon,
+                            'points'  : ogr.wkbPoint}
         
     def open(self):
         """Attempt to open the shapefile."""
@@ -254,38 +254,47 @@ class OGRChecker(TableChecker):
         
         if not isinstance(ogrFile, osgeo.ogr.DataSource):
             return str('Shapefile not compatible with OGR')
-        
-    def open_layer(self):
+
+    def open_layer(self, valid_dict):
         """Attempt to open the layer specified in self.valid."""
-        
-        layer_name = str(self.valid['layer'])
+       
+        layer_dict = valid_dict['layer']
+
+        layer_name = str(layer_dict['name'])
         self.layer = self.file.GetLayerByName(layer_name)
         
         if not isinstance(self.layer, osgeo.ogr.Layer):
             return str('Shapefile must have a layer called ' + layer_name)
-    
-    def verify_fields_exist(self):
-        """Verify that the specified fields exist.  Runs self.open_layer as a
-            precondition.
-            
-            returns a string listing all missing fields."""
-            
-        error = self.open_layer
-        if error != None:
-            return error
-        
+   
+        if 'type' in layer_dict:
+            error = self._check_layer_type(layer_dict[type])
+
+    def _check_layer_type(type_string):
+        for feature in self.layer:
+            geometry = feature.GetGeometryRef()
+            geom_type = geometry.GetGeometryType()
+
+            if geom_type != self.layer_types[type_string]:
+                return str('Not all features are ' + type_string)
+
+    def _get_fieldnames(self):
         layer_def = self.layer.GetLayerDefn()
-        prefix = 'Missing fields: '
-        field_str = ''
-        for field in self.valid['fieldsExist']:
-            index = layer_def.GetFieldIndex(field)
-            if index == -1:
-                field_str += str(field + ', ')
+        num_fields = layer_def.GetFieldCount()
+
+        field_list = []
+        for index in range(num_fields):
+            field_def = layer_def.GetFieldDefn(index)
+            field_list.append(field_def.GetNameRef())
+
+        return field_list
+
+    def _build_table(self):
+        table_rows = []
+        for feature in self.layer:
+            table_rows.append(carbon_core.getFields(feature))
+
+        return table_rows
                 
-        if len(field_str) > 0:
-            return prefix + field_str
-
-
 class DBFChecker(FileChecker):
     def __init__(self, element):
         FileChecker.__init__(self, element)
