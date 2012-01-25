@@ -1085,47 +1085,19 @@ class OperationDialog(QtGui.QDialog):
     def cancelled(self):
         return self.cancel
 
-class ValidationAssembler(object):
-    def __init__(self, elements_ptr):
-        object.__init__(self)
+class ElementAssembler(iui_validator.ValidationAssembler):
+    def __init__(self, elements_ptr=None):
+        iui_validator.ValidationAssembler.__init__(self)
         self.elements = elements_ptr
-        self.primitive_keys = {'number': ['lessThan', 'greaterThan', 'lteq', 
-                                          'gteq']}
-    def assemble(self, element, valid_dict):
-        assembled_dict = valid_dict.copy()
-        assembled_dict['value'] = element.value()
-
-        #If the validation type is a primitive, eval as a primitive
-        if valid_dict['type'] in self.primitive_keys:
-            assembled_dict.update(self._assemble_primitive(valid_dict))
-
-        #if the valdidation type has per-row restrictions, eval restrictions
-        #individually.
-        else:
-            if 'restrictions' in valid_dict:
-                #loop through the array of restrictions
-                for index, restriction in enumerate(valid_dict['restrictions']):
-                    #for each restriction, check as a primitive
-                    if valid_dict['type'] in self.primitive_keys:
-                        primitive = self._assemble_primitive(restriction)
-                        assembled_dict['restrictions'][index] = primitive
-
-        return assembled_dict
-
-    def _assemble_primitive(self, valid_dict):
-        assembled_dict = {}
-        for attribute in self.primitive_keys[valid_dict['type']]:
-            if attribute in valid_dict:
-                element_id = valid_dict[attribute] 
-                assembled_dict[attribute] = self._get_element_value(element_id)
-
-    def _get_element_value(self, element_id):
+    
+    def _get_value(self, element_id):
         """Takes a string element_id, returns the element's value, either strin
         g or int or boolean."""
         if element_id in self.elements:
             value = self.elements[element_id].value()
         else:
             value = element_id
+    
         return value    
 
 class Root(DynamicElement):

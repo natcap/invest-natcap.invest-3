@@ -18,11 +18,10 @@ class Validator(registrar.Registrar):
         
         element - a reference to the element in question."""
         
-    def __init__(self, element):
+    def __init__(self, type):
         #allElements is a pointer to a python dict: str id -> obj pointer.
         registrar.Registrar.__init__(self)
 
-        self.element = element
         updates = {'GDAL': GDALChecker,
                    'OGR': OGRChecker,
                    'number': NumberChecker,
@@ -31,10 +30,10 @@ class Validator(registrar.Registrar):
                    'DBF': DBFChecker,
                    'CSV': CSVChecker}
         self.update_map(updates)
-        self.init_type_checker()
+        self.init_type_checker(type)
         self.validateFuncs = []
 
-    def validate(self):
+    def validate(self, valid_dict):
         """Validate the element.  This is a two step process: first, all 
             functions in the Validator's validateFuncs list are executed.  Then,
             The validator's type checker class is invoked to actually check the 
@@ -48,35 +47,76 @@ class Validator(registrar.Registrar):
                 return error
         
         if self.type_checker != None:
-            return self.type_checker.run_checks()
+            return self.type_checker.run_checks(valid_dict)
         return ''
         
-    def init_type_checker(self):
+    def init_type_checker(self, type):
         """Initialize the type checker.
         
             returns nothing."""
             
         try:
-            type = self.element.attributes['validateAs']['type']
-            self.type_checker = self.get_func(type)(self.element)
+            self.type_checker = self.get_func(type)()
         except KeyError:
             self.type_checker = None
 
-#    def is_element_required(self):
-#        """Check to see if the element is required.  If the element is required
-#            but its requirements are not satisfied, return an error message.
-#            
-#            returns a string if an error is found.  Returns None otherwise."""
-#            
-#        if self.element.isRequired() and not self.element.requirementsMet():
-#            return 'Element is required'
+class ValidationAssembler(object):
+    def __init__(self):
+        object.__init__(self)
+        self.primitive_keys = {'number': ['lessThan', 'greaterThan', 'lteq', 
+                                          'gteq']}
+
+    def assemble(self, value, valid_dict):
+        assembled_dict = {}
+        assembled_dict['value'] = value
+
+        if valid_dict['type'] in self.primitive_keys:
+            assembled_dict.update(self._assemble_primitive(valid_dict))
+        else:
+            if 'restrictions' in valid_dict:
+                assembled_dict.update(self._assemble_complex(valid_dict))
+
+        return assembled_dict
+
+    def _assemble_primitive(self, valid_dict):
+        assembled_dict = {}
+
+        for attribute in self.primitive_keys[valid_dict['type']]:
+            if attribute in valid_dict:
+                value = valid_dict[attribute]
+                if isinstance(value, str) or isinstance(value, unicode):
+                    value = self._get_value(value)
+                    assembled_dict[attribute] = value
+
+        return assembled_dict
+
+    def _assemble_complex(self, valid_dict):
+        assembled_dict = {}
+        assembled_dict['restrictions'] = {}
+
+        for index, restriction in enumerate(valid_dict['restrictions']):
+            if self._is_primitive(restriction):
+                assembled_primitive = self._assemble_primitive(restriction)
+                assembled_dict['restrictions'][index] = assembled_primitive
+
+        return assembled_dict
+
+    def _get_value(self, id):
+        """Function stub for reimplementation.  Should return the value of the
+        element identified by id, where the element itself depends on the
+        context."""
+
+        return 0
+
+    def _is_primitive(self, valid_dict):
+        if valid_dict['type'] in self.primitive_keys:
+            return True
+        return False
 
 class Checker(registrar.Registrar):
     #self.map is used for restrictions
-    def __init__(self, element):
+    def __init__(self):
         registrar.Registrar.__init__(self)
-        self.element = element
-        self.valid = self.element.attributes['validateAs']
         self.checks = []
         
     def add_check_function(self, func, index=None):
@@ -85,38 +125,35 @@ class Checker(registrar.Registrar):
         else:
             self.checks.insert(index, func)
     
-    def run_checks(self):
+    def run_checks(self, valid_dict):
         for check_func in self.checks:
-            error = check_func()
+            error = check_func(valid_dict)
             if error != None:
                 return error
             
-        for key, value in self.valid.iteritems():
+        for key, value in valid_dict.iteritems():
             error = self.eval(key, value)
             if error != None:
                 return error
         return None
         
-    def get_element(self, element_id):
-        return self.element.root.allElements[element_id]
-
 class URIChecker(Checker):
-    def __init__(self, element):
-        Checker.__init__(self, element)
-        self.uri = None
+    def __init__(self):
+        Checker.__init__(self)
+        self.uri = None #initialize to none
         self.add_check_function(self.check_exists)
      
-    def check_exists(self):
-        """Verify that the file at URI exists."""
+    def check_exists(self, valid_dict):
+        """Verify that the file at valid_dict['value'] exists."""
 
-        self.uri = self.element.value()
+        self.uri = valid_dict['value']
 
         if os.path.exists(self.uri) == False:
             return str('Not found')
         
 class FolderChecker(URIChecker):
-    def __init__(self, element):
-        URIChecker.__init__(self, element)
+    def __init__(self):
+        URIChecker.__init__(self)
         self.add_check_function(self.open)
     
     def open(self):
@@ -124,10 +161,9 @@ class FolderChecker(URIChecker):
             return 'Must be a folder'
 
 class FileChecker(URIChecker):
-    def __init__(self, element):
-        URIChecker.__init__(self, element)
-        
-        self.uri = None
+    def __init__(self):
+        URIChecker.__init__(self)
+        self.uri = None #initialize to None
         self.add_check_function(self.open)
         
     def open(self):
@@ -146,12 +182,57 @@ class GDALChecker(FileChecker):
         if file_obj == None:
             return str('Must be a raster that GDAL can open')
 
-class OGRChecker(FileChecker):
-    def __init__(self, element):
-        FileChecker.__init__(self, element)
+class TableChecker(FileChecker):
+    def __init__(self):
+        FileChecker.__init__(self)
+        updates = {'fieldsExist': self.verify_fields_exist,
+                   'restrictions': self.verify_restrictions}
+        self.update_map(updates)
+        valid_assembler = base_widgets.ValidationAssembler()
+        self.primitive_keys = valid_assembler.primitive_keys
+        self.num_checker = NumberChecker()
+        #self.str_checker = StringChecker() #to be implemented
+       
+    def verify_fields_exist(self, field_list):
+        """This is a function stub for reimplementation.  field_list is a python
+        list of strings where each string in the list is a required fieldname.
+        List order is not validated.  Returns the error string if an error is
+        found.  Returns None if no error found."""
+        
+        available_fields = self._get_fieldnames()
+        for required_field in field_list:
+            if required_field not in available_fields:
+                return str('Required field: ' + required_field + ' not found')
 
-        updates = {'layer': self.open_layer,
-                   'fieldsExist': self.verify_fields_exist}
+    def verify_restrictions(self, restriction_list):
+        #loop through restriction_list
+        for restriction in restriction_list:
+            if restriction['type'] in self.primitive_keys:
+                #loop through the available primitive_keys.  If one is found and
+                # the value is a key, fetch the field value and save it to the
+                # restriction so that it can be checked by the correct
+                # primitiveChecker.  Then, pass the assembled restriction
+                # dictionary to the correct primitiveChecker.
+
+    def _get_fieldnames(self):
+        """This is a function stub for reimplementation.  Must return a list of
+            strings"""
+        
+        return []
+
+    def _get_field_value(self, fieldname, row_index):
+        """This is a function stub for reimplementation.  Function should fetch
+            the value of the given field at the specified row.  Must return a scalar.
+            """
+
+        return 0
+
+
+class OGRChecker(TableChecker):
+    def __init__(self, element):
+        TableChecker.__init__(self)
+
+        updates = {'layer': self.open_layer}
         self.update_map(updates)
         
     def open(self):
