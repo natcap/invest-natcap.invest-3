@@ -29,7 +29,8 @@ class Validator(registrar.Registrar):
                    'file': FileChecker,
                    'folder': URIChecker,
                    'DBF': DBFChecker,
-                   'CSV': CSVChecker}
+                   'CSV': CSVChecker,
+                   'string': PrimitiveChecker}
         self.update_map(updates)
         self.init_type_checker(type)
         self.validateFuncs = []
