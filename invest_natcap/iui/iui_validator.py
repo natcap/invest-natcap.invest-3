@@ -119,6 +119,7 @@ class Checker(registrar.Registrar):
     def __init__(self):
         registrar.Registrar.__init__(self)
         self.checks = []
+        self.ignore = ['type', 'value']
         
     def add_check_function(self, func, index=None):
         if index == None:
@@ -131,11 +132,13 @@ class Checker(registrar.Registrar):
             error = check_func(valid_dict)
             if error != None:
                 return error
-            
+        
+        self.value = valid_dict['value']
         for key, value in valid_dict.iteritems():
-            error = self.eval(key, value)
-            if error != None:
-                return error
+            if key not in self.ignore:
+                error = self.eval(key, value)
+                if error != None:
+                    return error
         return None
         
 class URIChecker(Checker):
@@ -328,59 +331,42 @@ class DBFChecker(FileChecker):
 
         return table_rows
 
-class NumberChecker(Checker):
-    def __init__(self, element):
-        Checker.__init__(self, element)
-        updates = {'gteq': (self.verify, self._greater_than_equal_to),
-                   'greaterThan': (self.verify, self._greater_than),
-                   'lteq': (self.verify, self._less_than_equal_to),
-                   'lessThan': (self.verify, self._less_than)}
+class PrimitiveChecker(Checker):
+    def __init__(self):
+        Checker.__init__(self)
+        updates = {'allowedValues': self.check_regexp}
+        self.update_map(updates)
+
+    def check_regexp(self, regexp):
+        pattern = re.compile(regexp)
+        if pattern.match(self.value) == None:
+            return str(self.value + " value not allowed")
+
+class NumberChecker(PrimitiveChecker):
+    def __init__(self):
+        PrimitiveChecker.__init__(self)
+        updates = {'gteq': self.greater_than_equal_to,
+                   'greaterThan': self.greater_than,
+                   'lteq':  self.less_than_equal_to,
+                   'lessThan':  self.less_than}
         self.update_map(updates)
         
-    def check_number(self, a, b, op_string):
-        """Check the status of two numbers based on an operation.
-        
-            a - a number
-            b - a number
-            op_string - a string index into NumberChecker.map
-            
-            returns a string if an error is found.  Otherwise, returns None"""
-            
-        tuple = self.map[op_string]
-        return tuple[1](a, b)
-        
-    def _greater_than(self, a, b):
-        if not a < b:
+    def greater_than(self, b):
+        if not self.value < b:
             return 'Value must be greater than ' + str(b)
     
-    def _less_than(self, a, b):
-        if not a < b:
+    def less_than(self, b):
+        if not self.value < b:
             return 'Value must be less than ' + str(b)
         
-    def _less_than_equal_to(self, a, b):
-        if not a <= b:
+    def less_than_equal_to(self, b):
+        if not self.value <= b:
             return 'Value must be less than or equal to ' + str(b)
     
-    def _greater_than_equal_to(self, a, b):
-        if not a >= b:
+    def greater_than_equal_to(self, b):
+        if not self.value >= b:
             return 'Value must be greater than or equal to ' + str(b)
         
-    def get_restriction(self, key):
-        tuple = self.map[key]
-        return tuple[0](key, tuple[1])
-        
-    def verify(self, key, op):
-        other_value = self.valid[key]
-        
-        if isinstance(other_value, str):
-            other_value = self.get_element(other_value)
-            
-        error = op(self.element.value(), other_value)
-        
-        if error != None:
-            return error
-
-
 class CSVChecker(FileChecker):
     def __init__(self, element):
         FileChecker.__init__(self, element)
