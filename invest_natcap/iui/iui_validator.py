@@ -182,9 +182,10 @@ class GDALChecker(FileChecker):
         if file_obj == None:
             return str('Must be a raster that GDAL can open')
 
-class TableChecker(FileChecker):
+class TableChecker(FileChecker, ValidationAssembler):
     def __init__(self):
         FileChecker.__init__(self)
+        ValidationAssembler.__init__(self)
         updates = {'fieldsExist': self.verify_fields_exist,
                    'restrictions': self.verify_restrictions}
         self.update_map(updates)
@@ -205,14 +206,25 @@ class TableChecker(FileChecker):
                 return str('Required field: ' + required_field + ' not found')
 
     def verify_restrictions(self, restriction_list):
-        #loop through restriction_list
         for restriction in restriction_list:
-            if restriction['type'] in self.primitive_keys:
-                #loop through the available primitive_keys.  If one is found and
-                # the value is a key, fetch the field value and save it to the
-                # restriction so that it can be checked by the correct
-                # primitiveChecker.  Then, pass the assembled restriction
-                # dictionary to the correct primitiveChecker.
+            for row in self._build_table():
+                assembled_dict = {}
+                value = row[restriction['field']]
+                assembled_dict = self.assemble(value, restriction['validateAs'])
+                
+                if row['type'] == 'number':
+                    error = self.num_checker(assembled_dict)
+                elif row['type'] == 'string':
+                    error = self.str_checker(assembled_dict)
+
+                if error != None and error != '':
+                    return error
+                
+    def _build_table(self):
+        """This is a function stub for reimplementation.  Must return a list of
+        dictionaries, where the keys to each dictionary are the fieldnames."""
+        
+        return [{}]
 
     def _get_fieldnames(self):
         """This is a function stub for reimplementation.  Must return a list of
