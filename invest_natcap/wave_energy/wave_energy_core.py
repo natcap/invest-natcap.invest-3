@@ -132,10 +132,8 @@ def biophysical(args):
     wave_energy_raster = gdal.Open(wave_energy_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
     logger.debug('Getting the points and corresponding values of wave power and captured wave energy')
-    energy_sum_array = get_points_values(area_shape, ['LONG', 'LATI'],
-                                         ['LONG', 'LATI', 'capWE_Sum'], 'capWE_Sum')
-    wave_power_array = get_points_values(area_shape, ['LONG', 'LATI'],
-                                         ['LONG', 'LATI', 'wp_Kw'], 'wp_Kw')
+    energy_sum_array = get_points_values(area_shape, 'capWE_Sum')
+    wave_power_array = get_points_values(area_shape, 'wp_Kw')
     #Interpolate wave energy and wave power from the shapefile over the rasters
     logger.debug('Interpolate wave power and wave energy capacity onto rasters')
     logger.info('Generating Wave Power and Captured Wave Energy rasters.')
@@ -326,7 +324,62 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
 
     return shp_ds
 
-def get_points_values(shape, key, value_array, value):
+#def get_points_values(shape, key, value_array, value):
+#    """Generates a list of points and a list of values based on a point
+#    geometry shapefile
+#    
+#    shape - A point geometry shapefile of which to gather the information from
+#    key   - A list of fields from shapefile shape whose values will be the points
+#    value_array - A list of fields, where the list contains the fields used in
+#                  key and value
+#    value - A string representing the field from shapefile shape that is
+#            to be returned
+#    
+#    returns - A list of points and values (points represented as 2D list, values as list)
+#     """
+#    #Retrieve the layer from the shapefile and reset the reader head
+#    #incase it has been iterated through earlier.
+#    shape_layer = shape.GetLayer(0)
+#    shape_layer.ResetReading()
+#    #Get the first point from the shape layer
+#    shape_feat = shape_layer.GetNextFeature()
+#    field_dict = {}
+#    #For all the points in the layer add the desired 
+#    #'key' and 'value' to the dictionary.
+#    while shape_feat is not None:
+#        #This dictionary is used to store the needed values 
+#        #of the desired fields from 'value_array'
+#        value_dict = {}
+#        #May want to check to make sure field is in shape layer
+#        #For the relevant field in the list value_array, 
+#        #add the fields value to the dictionary
+#        for field in value_array:
+#            field_index = shape_feat.GetFieldIndex(field)
+#            value_dict[field] = shape_feat.GetField(field_index)
+#        key_list = []
+#        #Create a tuple from the elements of the provided key list
+#        for k in key:
+#            key_list.append(value_dict[k])
+#        tupled_key = tuple(key_list)
+#        #Set the created tuple as the key of this dictionary 
+#        #and set its value to desired element from value_dict
+#        field_dict[tupled_key] = value_dict[value]
+#
+#        shape_feat.Destroy()
+#        shape_feat = shape_layer.GetNextFeature()
+#    
+#    points = []
+#    values = []
+#    #Construct two arrays, one a list of all the points from field_dict, and the other a list
+#    #of all the values corresponding the points from field_dict
+#    for id_key, val in field_dict.iteritems():
+#        points.append(list(id_key))
+#        values.append(val)
+#
+#    results = [points, values]
+#    return results
+
+def get_points_values(shape, field):
     """Generates a list of points and a list of values based on a point
     geometry shapefile
     
@@ -349,24 +402,18 @@ def get_points_values(shape, key, value_array, value):
     #For all the points in the layer add the desired 
     #'key' and 'value' to the dictionary.
     while shape_feat is not None:
-        #This dictionary is used to store the needed values 
-        #of the desired fields from 'value_array'
-        value_dict = {}
         #May want to check to make sure field is in shape layer
         #For the relevant field in the list value_array, 
         #add the fields value to the dictionary
-        for field in value_array:
-            field_index = shape_feat.GetFieldIndex(field)
-            value_dict[field] = shape_feat.GetField(field_index)
-        key_list = []
-        #Create a tuple from the elements of the provided key list
-        for k in key:
-            key_list.append(value_dict[k])
-        tupled_key = tuple(key_list)
+        field_index = shape_feat.GetFieldIndex(field)
+        value = shape_feat.GetField(field_index)
+        geom = shape_feat.GetGeometryRef()
+        longitude = geom.GetX()
+        latitude = geom.GetY()
         #Set the created tuple as the key of this dictionary 
         #and set its value to desired element from value_dict
-        field_dict[tupled_key] = value_dict[value]
-
+        field_dict[(longitude, latitude)] = value
+        geom = None
         shape_feat.Destroy()
         shape_feat = shape_layer.GetNextFeature()
     
@@ -791,8 +838,7 @@ def valuation(args):
                                                      datatype, nodata, wave_farm_value_path, wave_data_shape)
     wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
-    wave_farm_value_array = get_points_values(shape, ['LONG', 'LATI'],
-                                              ['LONG', 'LATI', 'NPV_25Y'], 'NPV_25Y')
+    wave_farm_value_array = get_points_values(shape, 'NPV_25Y')
     #Interpolate the NPV values based on the dimensions and 
     #corresponding points of the raster, then write the interpolated 
     #values to the raster
