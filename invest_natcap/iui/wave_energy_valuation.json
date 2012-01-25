@@ -1,11 +1,11 @@
 {
     "id" : "window",
-    "label": "Wave Energy",
+    "label": "Wave Energy Valuation",
     "targetScript" : "./python/invest_core/wave_energy_valuation.py",
     "modelName" : "wave_energy_valuation",
     "localDocURI": "./documentation/wave_energy.html",
-    "height": 400,
-    "width" : 500,
+    "height": 600,
+    "width" : 700,
     "elements": [
         {
             "id" : "workspace_list",
@@ -16,7 +16,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "./carbon",
+                    "defaultValue": "./WaveEnergy",
                     "required": true
                 },          
 				{        
@@ -24,7 +24,7 @@
                     "args_id" : "land_gridPts_uri",
                     "type": "file",
                     "label": "Path to Folder with Wave Base Data",
-                    "defaultValue": "./carbon",
+                    "defaultValue": "./WaveEnergy/Input/LandGridPts_WCVI.csv",
                     "required": true
                 },    
 		        {
@@ -32,23 +32,15 @@
 		            "args_id": "machine_econ_uri",
 		            "type": "file",
 		            "label": "Machine Economic Table",
-		            "defaultValue": "",
+		            "defaultValue": "./WaveEnergy/Input/MachineEconomicTable.csv",
 		            "required": true
 		        },
                 {
-                    "id" : "projection",
-                    "args_id": "projection_uri",
-                    "type": "file",
-                    "label": "Projection",
-                    "defaultValue": "",
-                    "required": true
-                },
-                {
                     "id" : "dem",
                     "args_id": "global_dem",
-                    "type": "file",
+                    "type": "folder",
                     "label": "Global Digital Elevation Model (DEM)",
-                    "defaultValue": "",
+                    "defaultValue": "./Base_Data/Marine/DEMs/global_dem",
                     "required": true
                 },
                 {
@@ -56,7 +48,14 @@
                     "args_id": "wave_data_shape_path",
                     "type": "file",
                     "label": "Wave Data Shapefile",
-                    "defaultValue": "",
+                    "defaultValue": "./WaveEnergy/Intermediate/WaveData_clipZ.shp",
+                    "required": true
+                },
+                {
+                    "id" : "projection",
+                    "args_id": "projection_uri",
+                    "type": "file",
+                    "label": "Projection",
                     "required": true
                 }
             ]

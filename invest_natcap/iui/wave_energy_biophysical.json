@@ -1,7 +1,7 @@
 {
     "id" : "window",
-    "label": "Wave Energy",
-    "targetScript" : "./python/invest_core/wave_energy_biophysical.py",
+    "label": "Wave Energy Biophysical",
+    "targetScript" : "../wave_energy/wave_energy_biophysical.py",
     "modelName" : "wave_energy_biophysical",
     "localDocURI": "./documentation/wave_energy.html",
     "height": 600,
@@ -16,7 +16,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "./carbon",
+                    "defaultValue": "./WaveEnergy",
                     "required": true
                 },          
 				{        
@@ -24,7 +24,7 @@
                     "args_id" : "wave_base_data_uri",
                     "type": "folder",
                     "label": "Path to Folder with Wave Base Data",
-                    "defaultValue": "./carbon",
+                    "defaultValue": "./WaveEnergy/Input/WaveData",
                     "required": true
                 },    
 		        {
@@ -35,15 +35,15 @@
 		            "options": ["West Coast of North America and Hawaii",
 		            			"East Coast of North America and Puerto Rico", 
 		            			"Global (Eastern Hemisphere)", "Global (Western Hemisphere)"],
-		            "required": true,
-		            "defaultValue": "West Coast of North America and Hawaii"
+		            "defaultValue": "West Coast of North America and Hawaii",
+		            "required": true
 		        },
         		{
                     "id" : "machine_perf_table",
                     "args_id": "machine_perf_uri",
                     "type": "file",
                     "label": "Machine Performance Table",
-                    "defaultValue": "./carbon/input/carbon_pools_samp.dbf",
+                    "defaultValue": "./WaveEnergy/Input/MachinePerformanceTable.csv",
                     "required": true
                 },
                 {
@@ -52,14 +52,14 @@
                     "type": "file",
                     "label": "Machine Parameter Table",
                     "required": true,
-                    "defaultValue": "./carbon/input/harv_samp_cur.shp"
+                    "defaultValue": "./WaveEnergy/Input/MachineParameterTable.csv"
                 },
                 {
                     "id" : "dem",
                     "args_id": "dem_uri",
-                    "type": "file",
+                    "type": "folder",
                     "label": "Global Digital Elevation Model (DEM)",
-                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
+                    "defaultValue": "./Base_Data/Marine/DEMs/global_dem",
                     "required": true
                 },
                 {
@@ -67,7 +67,7 @@
                     "args_id": "aoi_uri",
                     "type": "file",
                     "label": "Area of Interest (AOI)",
-                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
+                    "defaultValue": "./WaveEnergy/Input/AOI_WCVI.shp",
                     "required": false
                 }
             ]
