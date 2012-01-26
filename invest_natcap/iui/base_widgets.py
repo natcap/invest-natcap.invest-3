@@ -66,7 +66,7 @@ class DynamicElement(QtGui.QWidget):
             returns a pointer to the instance of DynamicUI"""
 
         parent = self.parentWidget()
-        if issubclass(parent.__class__, RootWindow):
+        if issubclass(parent.__class__, Root):
             return parent
         else:
             return parent.getRoot()
@@ -1111,7 +1111,8 @@ class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
-        
+        self.obj_registrar = object_registrar
+
         self.find_and_replace(attributes)
         
         DynamicElement.__init__(self, attributes)
@@ -1204,11 +1205,32 @@ class Root(DynamicElement):
                 if 'inheritFrom' in value:
                     if 'useAttribute' not in value:
                         value['useAttribute'] = key
-                    attributes[key] = self.find_value(value)
+
+                    if 'fromOtherUI' in value:
+                        if str(value['fromOtherUI']) == 'super':
+                            fetched_value = self.obj_registrar.root_ui.find_value(value)
+                        else:
+                            fetched_value = self.find_embedded_value(value)
+                    else:
+                        fetched_value = self.find_value(value)
+
+                    attributes[key] = fetched_value
             elif key == 'elements':
                 for element in value:
                     value = self.find_inherited_elements(element)
         return attributes
+
+    def find_embedded_value(self, inherit):
+        #locate the configuration URI
+        altered_inherit = {'inheritFrom': inherit['fromOtherUI'],
+                           'useAttribute': 'configURI'}
+        embedded_uri = self.find_value(altered_inherit)
+
+        json_handler = fileio.JSONHandler(embedded_uri)
+
+        #locate the value we want
+        del inherit['fromOtherUI']
+        return self.find_value(inherit, json_handler.get_attributes())
 
     def updateScrollBorder(self, min, max):
         if min == 0 and max == 0:
@@ -1313,6 +1335,7 @@ class EmbeddedUI(Root):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
         Root.__init__(self, uri, layout, object_registrar)
+        object_registrar.set_root_ptr(self)
         self.body.layout().insertStretch(-1)
         
 class ExecRoot(Root):
@@ -1401,8 +1424,9 @@ class ExecRoot(Root):
         self.layout().addWidget(self.buttonBox)
 
 class ElementRegistrar(registrar.Registrar):
-    def __init__(self):
+    def __init__(self, root_ptr=None):
         registrar.Registrar.__init__(self)
+        self.root_ui = root_ptr
         updates = {'container' : Container,
                    'list': GridList,
                    'file': FileEntry,
@@ -1416,6 +1440,9 @@ class ElementRegistrar(registrar.Registrar):
                    }
         self.update_map(updates)
         
+    def set_root_ptr(self, root_ptr):
+        self.root_ui = root_ptr
+
     def eval(self, type, op_values):
         widget = registrar.Registrar.get_func(self, type)
         if issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI):
