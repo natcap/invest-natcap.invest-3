@@ -1147,13 +1147,14 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
     for col_index in range(1, ncols - 1):
         LOGGER.debug('col_index %s' % col_index)
         for row_index in range(1, nrows - 1):
-
+            pixels_to_process.push(row_index)
+            pixels_to_process.push(col_index)
             while pixels_to_process.size() > 0:
                 i = pixels_to_process.pop()
                 j = pixels_to_process.pop()
                 #If we're on a nodata pixel, skip, sediment_retention is set to 
                 #nodata 
-                if potential_soil_loss[col_index, row_index] == \
+                if potential_soil_loss_matrix[col_index, row_index] == \
                     potential_soil_loss_nodata:
                     sediment_retention_matrix[col_index, row_index] = \
                         sediment_retention_nodata
@@ -1192,7 +1193,8 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                     continue 
         
                 #This pixel and its neighbors have been processed
-                sediment_retention_matrix[i, j] = 1
+                sediment_retention_matrix[i, j] = 0
+                #LOGGER.debug('sediment_retention_matrix[%s, %s] = 1' % (i,j))
                 
                 #Add contribution from each neighbor to current pixel
                 for neighbor_index in range(8):
