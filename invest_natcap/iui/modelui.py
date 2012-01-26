@@ -15,8 +15,8 @@ import iui_validator
 CMD_FOLDER = '.'
 
 class ModelUIRegistrar(base_widgets.ElementRegistrar):
-    def __init__(self):
-        super(ModelUIRegistrar, self).__init__()
+    def __init__(self, root_ptr):
+        super(ModelUIRegistrar, self).__init__(root_ptr)
 
         changes = {'file': base_widgets.FileEntry,
                    'folder': base_widgets.FileEntry,
@@ -48,7 +48,7 @@ class ModelUI(base_widgets.ExecRoot):
         self.links.setAlignment(QtCore.Qt.AlignRight)
         layout.addWidget(self.links)
 
-        registrar = ModelUIRegistrar()
+        registrar = ModelUIRegistrar(self)
         self.okpressed = False
 
         base_widgets.ExecRoot.__init__(self, uri, layout, registrar)

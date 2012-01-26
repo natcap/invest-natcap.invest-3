@@ -1111,6 +1111,7 @@ class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
+
         self.obj_registrar = object_registrar
 
         self.find_and_replace(attributes)
@@ -1208,7 +1209,10 @@ class Root(DynamicElement):
 
                     if 'fromOtherUI' in value:
                         if str(value['fromOtherUI']) == 'super':
-                            fetched_value = self.obj_registrar.root_ui.find_value(value)
+                            root_ptr = self.obj_registrar.root_ui
+                            root_attrib = root_ptr.attributes
+                            print root_attrib
+                            fetched_value = root_ptr.find_value(value, root_attrib)
                         else:
                             fetched_value = self.find_embedded_value(value)
                     else:
@@ -1335,7 +1339,6 @@ class EmbeddedUI(Root):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
         Root.__init__(self, uri, layout, object_registrar)
-        object_registrar.set_root_ptr(self)
         self.body.layout().insertStretch(-1)
         
 class ExecRoot(Root):
@@ -1424,7 +1427,7 @@ class ExecRoot(Root):
         self.layout().addWidget(self.buttonBox)
 
 class ElementRegistrar(registrar.Registrar):
-    def __init__(self, root_ptr=None):
+    def __init__(self, root_ptr):
         registrar.Registrar.__init__(self)
         self.root_ui = root_ptr
         updates = {'container' : Container,
@@ -1440,9 +1443,6 @@ class ElementRegistrar(registrar.Registrar):
                    }
         self.update_map(updates)
         
-    def set_root_ptr(self, root_ptr):
-        self.root_ui = root_ptr
-
     def eval(self, type, op_values):
         widget = registrar.Registrar.get_func(self, type)
         if issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI):
