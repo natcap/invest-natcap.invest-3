@@ -1164,9 +1164,14 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                 calculate_inflow_neighbors_dinf(i, j, aspect_matrix,  aspect_nodata, 
                                                 neighbors)
         
+                #Set current pixel to 0 so we don't push it onto the queue
+                #later if there's a bit of overflow between pixels
+                sediment_retention_matrix[i, j] = 0
+                
                 #check to see if any of the neighbors were uncalculated, if so, 
                 #calculate them
                 neighbors_uncalculated = False
+                
                 #Visit each uncalculated neighbor and push on the work queue
                 for neighbor_index in range(8):
                     #-1 prop marks the end of the neighbor list
@@ -1184,6 +1189,7 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                             
                         pixels_to_process.push(pj)
                         pixels_to_process.push(pi)
+                        #LOGGER.debug("Neighbors uncalculted i j pi pj queue size %s %s %s %s %s" % (i,j,pi,pj,pixels_to_process.size()))
                         neighbors_uncalculated = True
                         break
         
@@ -1192,10 +1198,6 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                 if neighbors_uncalculated:
                     continue 
         
-                #This pixel and its neighbors have been processed
-                sediment_retention_matrix[i, j] = 0
-                #LOGGER.debug('sediment_retention_matrix[%s, %s] = 1' % (i,j))
-                
                 #Add contribution from each neighbor to current pixel
                 for neighbor_index in range(8):
                     prop = neighbors[neighbor_index].prop
