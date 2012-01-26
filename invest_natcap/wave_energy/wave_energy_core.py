@@ -734,7 +734,7 @@ def valuation(args):
     ds_grid.Destroy()
     #Reproject the shapefile so that it's geometry is in meters
     wave_data_layer = wave_data_shape.GetLayer(0)
-    shape = change_shape_projection(wave_data_shape, prj_file_path, projected_shape_path)
+    shape = change_shape_projection(wave_data_shape, srs_prj, projected_shape_path)
     shape.Destroy()
     shape = ogr.Open(projected_shape_path, 1)
     shape_layer = shape.GetLayer(0)
@@ -899,14 +899,14 @@ def calculate_distance(xy_1, xy_2):
         min_dist[index], min_id[index] = dists.min(), dists.argmin()
     return min_dist, min_id
 
-def change_shape_projection(shape_to_reproject, projection, output_path):
+def change_shape_projection(shape_to_reproject, srs_prj, output_path):
     """Changes the projection of a shapefile by creating a new shapefile based on
     the projection passed in.  The new shapefile then copies all the features and fields of
     the shapefile to reproject as its own. The reprojected shapefile is written to 'outputpath'
     and is returned.
     
     shape_to_reproject - A shapefile to be copied and reprojected.
-    projection - A file path to the location of the desired projection.
+    srs_prj - The desired projection as a SpatialReference from a WKT string.
     output_path - The path to where the new shapefile should be written to disk.
     
     returns - The reprojected shapefile.
@@ -922,12 +922,6 @@ def change_shape_projection(shape_to_reproject, projection, output_path):
     #Create a new shapefile with similar properties of the current point geometry shape
     shp_driver = ogr.GetDriverByName('ESRI Shapefile')
     shp_ds = shp_driver.CreateDataSource(shape_source)
-    #Open the projection file and read in contents as a string
-    prj_file = open(projection)
-    prj = prj_file.read()
-    #Create a new spatial reference and set it from 'prj' string
-    srs_prj = osr.SpatialReference()
-    srs_prj.ImportFromWkt(prj)
     #Create the new layer for the shapefile using same name and geometry type from
     #shape_to_reproject, but different projection
     shp_layer = shp_ds.CreateLayer(in_defn.GetName(), srs_prj, in_defn.GetGeomType())
