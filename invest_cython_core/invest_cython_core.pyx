@@ -1191,8 +1191,8 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                 if neighbors_uncalculated:
                     continue 
         
-                #If we get here then this pixel and its neighbors have been processed
-                sediment_retention_matrix[i, j] = 0
+                #This pixel and its neighbors have been processed
+                sediment_retention_matrix[i, j] = 1
                 
                 #Add contribution from each neighbor to current pixel
                 for neighbor_index in range(8):
@@ -1202,13 +1202,21 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                     pi = neighbors[neighbor_index].i
                     pj = neighbors[neighbor_index].j
         
-                    #calculate sediment retained += prop * retention_efficiency of cell * export of neighbor
-                    sediment_retention_matrix[i, j] += retention_efficiency_matrix[i, j] * prop * export_matrix[pi, pj] 
-                    #current cell sediment export +=  prop *(1- retention_efficiency of cell) * export of neighbor
-                    export_matrix[i, j] += retention_efficiency_matrix[i, j] * (1 - prop) * export_matrix[pi, pj]
+                    #calculate sediment retained += prop * 
+                    #retention_efficiency of cell * export of neighbor
+                    sediment_retention_matrix[i, j] += \
+                        retention_efficiency_matrix[i, j] * prop * \
+                        export_matrix[pi, pj] 
+                    #current cell sediment export +=  prop *
+                    #(1- retention_efficiency of cell) * export of neighbor
+                    export_matrix[i, j] += \
+                        retention_efficiency_matrix[i, j] * (1 - prop) * \
+                        export_matrix[pi, pj]
 
-    sediment_retention.GetRasterBand(1).WriteArray(sediment_retention_matrix, 0, 0)
-    invest_core.calculateRasterStats(sediment_retention)
+    #Need to transpose the output for consistency in our array notation
+    sediment_retention.GetRasterBand(1). \
+        WriteArray(sediment_retention_matrix.transpose(), 0, 0)
+    invest_core.calculateRasterStats(sediment_retention.GetRasterBand(1))
     free(neighbors)
     LOGGER.info('done with calc_retained_sediment')
     
