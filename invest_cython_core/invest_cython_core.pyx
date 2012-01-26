@@ -1014,8 +1014,8 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     #This is necessary to avoid not setting the outside boundary
     ls_factor_matrix[:] = ls_nodata
     
-    mraster = newRasterFromBase(aspect, 'm.tif', 'GTiff', -5.0, gdal.GDT_Float32)
-    xijraster = newRasterFromBase(aspect, 'xij.tif', 'GTiff', -5.0, gdal.GDT_Float32)
+    mraster = newRasterFromBase(aspect, '', 'MEM', -5.0, gdal.GDT_Float32)
+    xijraster = newRasterFromBase(aspect, '', 'MEM', -5.0, gdal.GDT_Float32)
         
     cdef np.ndarray [np.float_t,ndim=2] m_matrix = np.zeros((nrows,ncols))
     cdef np.ndarray [np.float_t,ndim=2] xij_matrix = np.zeros((nrows,ncols))
