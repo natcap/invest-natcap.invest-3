@@ -209,9 +209,15 @@ others are optional.
     This option verifies that the provided file can be opened by
     OGR and that it is an OGR-recognizeable file.
 
-    "layer": "layer_name"
-    This option verifies that the layer with name "layer_name" exists within
-    this shapefile.
+    "layer": {...}
+    This option allows the user to define specific characteristics about the
+    input layer:
+        "name" : Required.  A String.  The name of the layer.  If a layer with
+                 this name is not found in the shapefile, an error is returned.
+        "type" : Optional.  A string.  Allowed values: "polygons", "points".
+                 This option allows the user to specify the type of the given
+                 layer.  Returns an error if this layer is not of the correct
+                 type.
 
     "fieldsExist" : ["field1", "field2", "field3", ...]
     This option verifies that the fields in this array all exist in the OGR
@@ -221,7 +227,8 @@ others are optional.
     example:
     --------------------------
     "validateAs": {"type": "OGR", 
-                   "layer": "layer_name",
+                   "layer": {"name": "layer_name",
+                             "type": "polygons"},
                    "fieldsExist": ["field1", "field2", "field3", ...]}
 
 
