@@ -1154,21 +1154,62 @@ class Root(DynamicElement):
         self.initElements()
         
     def find_and_replace(self, attributes):
-#        self.locate(attributes)
-        return
+        """Initiates a recursive search and replace of the attributes
+            dictionary according to the 'inheritFrom' capabilities of the JSON
+            definition.
+            
+            attributes - a python dictionary representation of the JSON
+                         configuration.
+                         
+        Returns the rendered attributes dictionary."""
         
-    def locate(self, attributes):
+        self.attributes = attributes
+        return self.find_inherited_elements(attributes)
+
+    def find_value(self, inherit, current_dict=None):
+        """Searches the given dictionary for values described in inherit.
+        
+            inherit - a python dictionary confirming to the attribute
+                      inheritance properties of the JSON definition.
+            current_dict - a python dictionary of the current scope of the
+                           search.  if None (the default value), self.attributes
+                           is used for the current_dict.
+                           
+            Returns the value object requested by inherit if found.  Returns
+            None if the requested object is not found."""
+
+        if current_dict == None:
+            current_dict = self.attributes
+
+        if inherit['inheritFrom'] == current_dict['id']:
+            return current_dict[inherit['useAttribute']]
+        else:
+            if 'elements' in current_dict:
+                for element in current_dict['elements']:
+                    value = self.find_value(inherit, element)
+                    if value != None:
+                        return value
+        
+    def find_inherited_elements(self, attributes):
+        """Searches the input attributes dictionary for an inheritance object
+            and initializes a search for the value requested by the inheritance
+            object.
+    
+            attributes - a python dictionary representing an element.
+
+            Returns the rendered attributes dictionary."""
+
         for key, value in attributes.iteritems():
             if isinstance(value, dict):
                 if 'inheritFrom' in value:
-                    print('Found one! ' + key)
-                else:
-                    self.locate(value)
-            elif isinstance(value, list):
+                    if 'useAttribute' not in value:
+                        value['useAttribute'] = key
+                    attributes[key] = self.find_value(value)
+            elif key == 'elements':
                 for element in value:
-                    self.locate(element)
-            
-    
+                    value = self.find_inherited_elements(element)
+        return attributes
+
     def updateScrollBorder(self, min, max):
         if min == 0 and max == 0:
             self.scrollArea.setStyleSheet("QScrollArea { border: None } ")
