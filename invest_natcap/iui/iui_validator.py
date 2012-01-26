@@ -32,7 +32,7 @@ class Validator(registrar.Registrar):
                    'CSV': CSVChecker,
                    'string': PrimitiveChecker}
         self.update_map(updates)
-        self.init_type_checker(type)
+        self.init_type_checker(str(type))
         self.validateFuncs = []
 
     def validate(self, valid_dict):
@@ -42,7 +42,6 @@ class Validator(registrar.Registrar):
             input against the defined restrictions.
             
             returns a string if an error is found.  Returns None otherwise."""
-            
         for func in self.validateFuncs:
             error = func()
             if error != None:
@@ -56,7 +55,7 @@ class Validator(registrar.Registrar):
         """Initialize the type checker.
         
             returns nothing."""
-            
+        
         try:
             self.type_checker = self.get_func(type)()
         except KeyError:
@@ -66,10 +65,11 @@ class ValidationAssembler(object):
     def __init__(self):
         object.__init__(self)
         self.primitive_keys = {'number': ['lessThan', 'greaterThan', 'lteq', 
-                                          'gteq']}
+                                          'gteq'],
+                               'string': []}
 
     def assemble(self, value, valid_dict):
-        assembled_dict = {}
+        assembled_dict = valid_dict.copy()
         assembled_dict['value'] = value
 
         if valid_dict['type'] in self.primitive_keys:
@@ -81,8 +81,7 @@ class ValidationAssembler(object):
         return assembled_dict
 
     def _assemble_primitive(self, valid_dict):
-        assembled_dict = {}
-
+        assembled_dict = valid_dict.copy()
         for attribute in self.primitive_keys[valid_dict['type']]:
             if attribute in valid_dict:
                 value = valid_dict[attribute]
@@ -93,13 +92,14 @@ class ValidationAssembler(object):
         return assembled_dict
 
     def _assemble_complex(self, valid_dict):
-        assembled_dict = {}
-        assembled_dict['restrictions'] = {}
+        assembled_dict = valid_dict.copy()
+        assembled_dict['restrictions'] = []
 
-        for index, restriction in enumerate(valid_dict['restrictions']):
-            if self._is_primitive(restriction):
-                assembled_primitive = self._assemble_primitive(restriction)
-                assembled_dict['restrictions'][index] = assembled_primitive
+        for restriction in valid_dict['restrictions']:
+            field_rest = restriction['validateAs']
+            if self._is_primitive(field_rest):
+                assembled_primitive = self._assemble_primitive(field_rest)
+                assembled_dict['restrictions'].append(assembled_primitive)
 
         return assembled_dict
 
@@ -161,7 +161,7 @@ class FolderChecker(URIChecker):
         URIChecker.__init__(self)
         self.add_check_function(self.open)
     
-    def open(self):
+    def open(self, valid_dict):
         if not os.path.isdir(self.uri):
             return 'Must be a folder'
 
@@ -171,7 +171,7 @@ class FileChecker(URIChecker):
         self.uri = None #initialize to None
         self.add_check_function(self.open)
         
-    def open(self):
+    def open(self, valid_dict):
         try:
             file_handler = open(self.uri, 'w')
             file_handler.close()
@@ -179,7 +179,7 @@ class FileChecker(URIChecker):
             return 'Unable to open file'
         
 class GDALChecker(FileChecker):
-    def open(self):
+    def open(self, valid_dict):
         """Attempt to open the GDAL object.  URI must exist."""
 
         gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -194,10 +194,8 @@ class TableChecker(FileChecker, ValidationAssembler):
         updates = {'fieldsExist': self.verify_fields_exist,
                    'restrictions': self.verify_restrictions}
         self.update_map(updates)
-        valid_assembler = base_widgets.ValidationAssembler()
-        self.primitive_keys = valid_assembler.primitive_keys
         self.num_checker = NumberChecker()
-        #self.str_checker = StringChecker() #to be implemented
+        self.str_checker = PrimitiveChecker()
        
     def verify_fields_exist(self, field_list):
         """This is a function stub for reimplementation.  field_list is a python
@@ -302,13 +300,7 @@ class OGRChecker(TableChecker):
 
         return table_rows
                 
-class DBFChecker(FileChecker):
-    def __init__(self, element):
-        FileChecker.__init__(self, element)
-        updates = {'fieldsExist': self.verify_fields_exist,
-                   'restrictions': self.verify_restrictions}
-        self.update_map(updates)
-    
+class DBFChecker(TableChecker):
     def open(self):
         """Attempt to open the DBF."""
         
@@ -368,20 +360,12 @@ class NumberChecker(PrimitiveChecker):
         if not self.value >= b:
             return 'Value must be greater than or equal to ' + str(b)
         
-class CSVChecker(FileChecker):
-    def __init__(self, element):
-        FileChecker.__init__(self, element)
-
-        updates = {'fieldsExist': self.verify_fields_exist,
-                   'restrictions': self.verify_restrictions}
-        self.update_map(updates)
-        self.num_checker = NumberChecker(self.element)
-
-    def open(self):
+class CSVChecker(TableChecker):
+    def open(self, valid_dict):
         """Attempt to open the CSV file"""
 
-        self.file = csv.reader(open(self.uri))
-        test_file = csv.reader('')
+        self.file = csv.DictReader(open(self.uri))
+        test_file = csv.DictReader('')
 
         #isinstance won't work, testing classname against empty csv classname
         if self.file.__class__ != test_file.__class__:
@@ -399,9 +383,12 @@ class CSVChecker(FileChecker):
         return table_rows
 
     def _get_fieldnames(self):
-        if not hasattr(self, fieldnames):
-            self.fieldnames = self.file.next()
-
+        if not hasattr(self, 'fieldnames'):
+            if not hasattr(self.file, 'fieldnames'):
+                self.fieldnames = self.file.next()
+            else:
+                self.fieldnames = self.file.fieldnames
+        
         return self.fieldnames
 
     #all check functions take a single value, which is returned by the

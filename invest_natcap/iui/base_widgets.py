@@ -313,7 +313,11 @@ class DynamicPrimitive(DynamicElement):
 
         #create the elements array such that it only includes the present object
         self.elements = [self]
-        self.validator = iui_validator.Validator(self)
+        if 'validateAs' in self.attributes:
+            validator_type = self.attributes['validateAs']['type']
+            self.validator = iui_validator.Validator(validator_type)
+        else:
+            self.validator = None
         self.error = ErrorString()
         self.set_display_error(True)
 
@@ -373,7 +377,11 @@ class DynamicPrimitive(DynamicElement):
             self.set_error('Element is required')
         else:
             if self.isEnabled():
-                self.set_error(self.validator.validate())
+                if self.validator != None:
+                    rendered_dict = self.root.assembler.assemble(self.value(),
+                        self.attributes['validateAs'])
+                    error = self.validator.validate(rendered_dict)
+                    self.set_error(error)
         
     def display_error(self):
         """returns a boolean"""
@@ -381,7 +389,6 @@ class DynamicPrimitive(DynamicElement):
     
     def set_display_error(self, display):
         """display is a boolean"""
-        
         self._display_error = display
 
 class ErrorString(QtGui.QLabel):
@@ -1086,7 +1093,7 @@ class OperationDialog(QtGui.QDialog):
         return self.cancel
 
 class ElementAssembler(iui_validator.ValidationAssembler):
-    def __init__(self, elements_ptr=None):
+    def __init__(self, elements_ptr):
         iui_validator.ValidationAssembler.__init__(self)
         self.elements = elements_ptr
     
@@ -1140,7 +1147,7 @@ class Root(DynamicElement):
             element.updateLinks(self)
 
         self.operationDialog = OperationDialog(self)
-        
+        self.assembler = ElementAssembler(self.allElements)        
         self.messageArea = QtGui.QLabel()
         self.layout().addWidget(self.messageArea)
 
