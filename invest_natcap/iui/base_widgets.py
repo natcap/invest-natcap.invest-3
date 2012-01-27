@@ -1367,6 +1367,9 @@ class ExecRoot(Root):
         else:
             height = 400
 
+        if 'label' in self.attributes:
+            self.setWindowTitle(self.attributes['label']
+
         self.setGeometry(400, 400, width, height)
         self.setWindowIcon(QtGui.QIcon('natcap_logo.png'))
 
