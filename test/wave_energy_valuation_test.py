@@ -20,7 +20,7 @@ class TestWaveEnergyValuation(unittest.TestCase):
         args['number_of_machines'] = 28
         args['projection_uri'] = args['workspace_dir'] + os.sep + 'test_input/WGS_1984_UTM_Zone_10N.prj'
         args['global_dem'] = args['workspace_dir'] + os.sep + 'samp_input/global_dem'
-        args['wave_data_shape_path'] = args['workspace_dir'] + os.sep + 'Intermediate/WaveData_clipZ.shp'
+        args['wave_data_shape_path'] = args['workspace_dir'] + os.sep + 'Intermediate/WEM_InputOutput_Pts.shp'
         
         wave_energy_valuation.execute(args)
         regression_dir = './data/wave_energy_regression_data'
