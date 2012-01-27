@@ -397,6 +397,7 @@ def interp_points_over_raster(points, values, raster):
     logger.debug('Size of X dimension of raster : %s', size_x)
     size_y = band.YSize
     logger.debug('Size of Y dimension of raster : %s', size_y)
+    logger.debug('gt[0], [1], [3], [5] : %f : %f : %f : %f', geo_tran[0], geo_tran[1], geo_tran[3], geo_tran[5])
     #Make a numpy array representing the points of the raster (the points are the pixels)
     new_points = np.array([[geo_tran[0] + geo_tran[1] * i,
                             geo_tran[3] + geo_tran[5] * j] for i in np.arange(size_x) for j in np.arange(size_y)])
@@ -616,20 +617,18 @@ def valuation(args):
         else:
             land_pts[key] = value            
     #Create a coordinate transformation for lat/long to meters
-    prj_file = open(prj_file_path)
-    prj = prj_file.read()
-    logger.debug('The new projection as string : %s', prj)
+#    logger.debug('The new projection as string : %s', prj)
     srs_prj = osr.SpatialReference()
-    srs_prj.ImportFromWkt(prj)
-    source_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
-    target_sr = srs_prj
+    srs_prj.SetWellKnownGeogCS("WGS84")
+    source_sr = srs_prj
+    target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     #Make a point shapefile for landing points.
     logger.info('Creating Landing Points Shapefile.')
     drv_landing = ogr.GetDriverByName('ESRI Shapefile')
     ds_landing = drv_landing.CreateDataSource(land_pt_path)
-    layer_landing = ds_landing.CreateLayer('landpoints', srs_prj, ogr.wkbPoint)    
+    layer_landing = ds_landing.CreateLayer('landpoints', target_sr, ogr.wkbPoint)    
     field_defn_landing = ogr.FieldDefn('Id', ogr.OFTInteger)
     layer_landing.CreateField(field_defn_landing)
     #For all of the landing points create a point feature on the layer
@@ -662,7 +661,7 @@ def valuation(args):
     logger.info('Creating Grid Points Shapefile.')
     drv_grid = ogr.GetDriverByName('ESRI Shapefile')
     ds_grid = drv_grid.CreateDataSource(grid_pt_path)
-    layer_grid = ds_grid.CreateLayer('gridpoint', srs_prj, ogr.wkbPoint)
+    layer_grid = ds_grid.CreateLayer('gridpoint', target_sr, ogr.wkbPoint)
     field_defn_grid = ogr.FieldDefn('Id', ogr.OFTInteger)
     layer_grid.CreateField(field_defn_grid)
     #Create the feature, setting the id field to the corresponding id
@@ -676,21 +675,20 @@ def valuation(args):
     layer_grid.SetFeature(feat_grid)
     feat_grid.Destroy()
     #Close the necessary files and objects
-    prj_file.close()
+#    prj_file.close()
     layer_grid = None
     drv_grid = None
     ds_grid.Destroy()
     #Reproject the shapefile so that it's geometry is in meters
+#    wave_data_layer = wave_data_shape.GetLayer(0)
+#    wave_data_shape.Destroy()
+#    wave_data_shape = ogr.Open(projected_shape_path, 1)
     wave_data_layer = wave_data_shape.GetLayer(0)
-    shape = change_shape_projection(wave_data_shape, srs_prj, projected_shape_path)
-    shape.Destroy()
-    shape = ogr.Open(projected_shape_path, 1)
-    shape_layer = shape.GetLayer(0)
     
     landing_shape = ogr.Open(land_pt_path)
     grid_shape = ogr.Open(grid_pt_path)
     
-    we_points = get_points_geometries(shape)
+    we_points = get_points_geometries(wave_data_shape)
     landing_points = get_points_geometries(landing_shape)
     grid_point = get_points_geometries(grid_shape)
     logger.info('Calculating Distances.')
@@ -699,12 +697,12 @@ def valuation(args):
     #Add three new fields to the shapefile that will store the distances
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
-        shape_layer.CreateField(field_defn)
+        wave_data_layer.CreateField(field_defn)
     #For each feature in the shapefile add the corresponding distances
     #from wave_to_land_dist and land_to_grid_dist that was calculated above
     iterate_feat = 0
-    shape_layer.ResetReading()
-    feature = shape_layer.GetNextFeature()
+    wave_data_layer.ResetReading()
+    feature = wave_data_layer.GetNextFeature()
     while feature is not None:
         wave_to_land_index = feature.GetFieldIndex('W2L_MDIST')
         land_to_grid_index = feature.GetFieldIndex('L2G_MDIST')
@@ -718,12 +716,12 @@ def valuation(args):
         
         iterate_feat = iterate_feat + 1
         
-        shape_layer.SetFeature(feature)
+        wave_data_layer.SetFeature(feature)
         feature.Destroy()
-        feature = shape_layer.GetNextFeature()
-    shape.Destroy()
-    shape = ogr.Open(projected_shape_path, 1)
-    shape_layer = shape.GetLayer(0)
+        feature = wave_data_layer.GetNextFeature()
+    wave_data_shape.Destroy()
+    wave_data_shape = ogr.Open(projected_shape_path, 1)
+    wave_data_layer = wave_data_shape.GetLayer(0)
     
     def npv_wave(annual_revenue, annual_cost):
         """Calculates the NPV for a wave farm site based on the
@@ -740,9 +738,9 @@ def valuation(args):
         return sum(npv)
     
     field_defn_npv = ogr.FieldDefn('NPV_25Y', ogr.OFTReal)
-    shape_layer.CreateField(field_defn_npv)
-    shape_layer.ResetReading()
-    feat_grid = shape_layer.GetNextFeature()
+    wave_data_layer.CreateField(field_defn_npv)
+    wave_data_layer.ResetReading()
+    feat_grid = wave_data_layer.GetNextFeature()
     #For all the wave farm sites, calculate npv and write to shapefile
     logger.info('Calculating the Net Present Value.')
     while feat_grid is not None:
@@ -775,35 +773,38 @@ def valuation(args):
         npv_result = npv_wave(annual_revenue, annual_cost) / 1000.0
         feat_grid.SetField(npv_index, npv_result)
         
-        shape_layer.SetFeature(feat_grid)
+        wave_data_layer.SetFeature(feat_grid)
         feat_grid.Destroy()
-        feat_grid = shape_layer.GetNextFeature()
+        feat_grid = wave_data_layer.GetNextFeature()
 
     datatype = gdal.GDT_Float32
     nodata = 0
     #Create a blank raster from the extents of the wave farm shapefile
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
+    logger.debug('Creating Raster From Vector Extents')
+    invest_cython_core.createRasterFromVectorExtents(100, 1000,
                                                      datatype, nodata, wave_farm_value_path, wave_data_shape)
+    logger.debug('Completed Creating Raster From Vector Extents')
     wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
-    wave_farm_value_array = get_points_values(shape, 'NPV_25Y')
-    #Reproject the raster into a meters format
-    virtual = gdal.AutoCreateWarpedVRT(wave_farm_value_raster,
-                                       wave_farm_value_raster.GetProjectionRef(),
-                                       prj)
-    #Since the reprojection is just a virtual copy we must save it to disk
-    drv_grid = gdal.GetDriverByName('GTIFF')
-    drv_grid.CreateCopy(raster_projected_path, virtual, True)
-    virtual = None
-    virtual = gdal.Open(raster_projected_path, GA_Update)
+    wave_farm_value_array = get_points_values(wave_data_shape, 'NPV_25Y')
+#    #Reproject the raster into a meters format
+#    virtual = gdal.AutoCreateWarpedVRT(wave_farm_value_raster,
+#                                       wave_farm_value_raster.GetProjectionRef(),
+#                                       prj)
+#    #Since the reprojection is just a virtual copy we must save it to disk
+#    drv_grid = gdal.GetDriverByName('GTIFF')
+#    drv_grid.CreateCopy(raster_projected_path, virtual, True)
+#    virtual = None
+#    virtual = gdal.Open(raster_projected_path, GA_Update)
     #Interpolate the NPV values based on the dimensions and 
     #corresponding points of the raster, then write the interpolated 
     #values to the raster
     logger.info('Generating Net Present Value Raster.')
     interp_points_over_raster(wave_farm_value_array[0],
-                              wave_farm_value_array[1], virtual)
+                              wave_farm_value_array[1], wave_farm_value_raster)
     logger.debug('Done interpolating NPV over raster.')
     logger.debug('End of wave_energy_core.valuation')
+    
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
     the X and Y value from it's geometry. The X and Y value are stored in
