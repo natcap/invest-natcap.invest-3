@@ -1211,7 +1211,6 @@ class Root(DynamicElement):
                         if str(value['fromOtherUI']) == 'super':
                             root_ptr = self.obj_registrar.root_ui
                             root_attrib = root_ptr.attributes
-                            print root_attrib
                             fetched_value = root_ptr.find_value(value, root_attrib)
                         else:
                             fetched_value = self.find_embedded_value(value)
@@ -1219,7 +1218,7 @@ class Root(DynamicElement):
                         fetched_value = self.find_value(value)
 
                     attributes[key] = fetched_value
-            elif key == 'elements':
+            elif key == 'elements' or key == 'rows':
                 for element in value:
                     value = self.find_inherited_elements(element)
         return attributes
