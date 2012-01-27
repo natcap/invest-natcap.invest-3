@@ -142,6 +142,13 @@ def biophysical(args):
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
+    #Reproject shapefile to be in format of AOI, if given.
+    if 'aoi' in args:
+        prj_shape_path = intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
+        prj_shapefile = change_shape_projection(area_shape, args['aoi'].GetLayer(0).GetSpatialRef(),
+                                                prj_shape_path)
+        prj_shapefile.Destroy()
+        args['aoi'].Destroy()
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
