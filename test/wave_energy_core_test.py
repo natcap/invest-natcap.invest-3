@@ -136,7 +136,7 @@ class TestWaveEnergy(unittest.TestCase):
         spatial_prj = osr.SpatialReference()
         spatial_prj.ImportFromWkt(prj_string)
 
-        new_shape = wave_energy_core.change_shape_projection(shape_to_reproject, projection, output_path)
+        new_shape = wave_energy_core.change_shape_projection(shape_to_reproject, spatial_prj, output_path)
         layer = new_shape.GetLayer(0)
         
         shape_projection = layer.GetSpatialRef()
