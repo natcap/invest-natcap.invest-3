@@ -387,7 +387,6 @@ class DynamicPrimitive(DynamicElement):
 
     def check_validation_error(self):
         if self.validator.thread_finished():
-            print 'stopping?'
             self.timer.stop()
             self.set_error(self.validator.get_error())
         
@@ -561,7 +560,7 @@ class DynamicText(LabeledElement):
             returns nothing"""
 
         if satisfied:
-            self.label.setStyleSheet("QWidget { color: black }")
+            self.label.setStyleSheet("QWidget {}")
             self.textField.setStyleSheet("QWidget {}")
         else:
             self.label.setStyleSheet("QWidget { color: red }")
