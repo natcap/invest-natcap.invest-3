@@ -316,6 +316,7 @@ class DynamicPrimitive(DynamicElement):
         if 'validateAs' in self.attributes:
             validator_type = self.attributes['validateAs']['type']
             self.validator = iui_validator.Validator(validator_type)
+            self.timer = QtCore.QTimer()
         else:
             self.validator = None
         self.error = ErrorString()
@@ -380,8 +381,15 @@ class DynamicPrimitive(DynamicElement):
                 if self.validator != None:
                     rendered_dict = self.root.assembler.assemble(self.value(),
                         self.attributes['validateAs'])
-                    error = self.validator.validate(rendered_dict)
-                    self.set_error(error)
+                    self.validator.validate(rendered_dict)
+                    self.timer.timeout.connect(self.check_validation_error)
+                    self.timer.start(50)
+
+    def check_validation_error(self):
+        if self.validator.thread_finished():
+            print 'stopping?'
+            self.timer.stop()
+            self.set_error(self.validator.get_error())
         
     def display_error(self):
         """returns a boolean"""
