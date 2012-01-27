@@ -1218,7 +1218,7 @@ class Root(DynamicElement):
                         fetched_value = self.find_value(value)
 
                     attributes[key] = fetched_value
-            elif key == 'elements' or key == 'rows':
+            elif key in ['elements', 'rows']:
                 for element in value:
                     value = self.find_inherited_elements(element)
         return attributes
