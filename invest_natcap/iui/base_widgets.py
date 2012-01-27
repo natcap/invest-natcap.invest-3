@@ -66,7 +66,7 @@ class DynamicElement(QtGui.QWidget):
             returns a pointer to the instance of DynamicUI"""
 
         parent = self.parentWidget()
-        if issubclass(parent.__class__, RootWindow):
+        if issubclass(parent.__class__, Root):
             return parent
         else:
             return parent.getRoot()
@@ -313,7 +313,11 @@ class DynamicPrimitive(DynamicElement):
 
         #create the elements array such that it only includes the present object
         self.elements = [self]
-        self.validator = iui_validator.Validator(self)
+        if 'validateAs' in self.attributes:
+            validator_type = self.attributes['validateAs']['type']
+            self.validator = iui_validator.Validator(validator_type)
+        else:
+            self.validator = None
         self.error = ErrorString()
         self.set_display_error(True)
 
@@ -369,8 +373,15 @@ class DynamicPrimitive(DynamicElement):
         return True
         
     def validate(self):
-        if self.isEnabled():
-            self.set_error(self.validator.validate())
+        if self.isRequired() and not self.requirementsMet():
+            self.set_error('Element is required')
+        else:
+            if self.isEnabled():
+                if self.validator != None:
+                    rendered_dict = self.root.assembler.assemble(self.value(),
+                        self.attributes['validateAs'])
+                    error = self.validator.validate(rendered_dict)
+                    self.set_error(error)
         
     def display_error(self):
         """returns a boolean"""
@@ -378,7 +389,6 @@ class DynamicPrimitive(DynamicElement):
     
     def set_display_error(self, display):
         """display is a boolean"""
-        
         self._display_error = display
 
 class ErrorString(QtGui.QLabel):
@@ -1082,11 +1092,28 @@ class OperationDialog(QtGui.QDialog):
     def cancelled(self):
         return self.cancel
 
+class ElementAssembler(iui_validator.ValidationAssembler):
+    def __init__(self, elements_ptr):
+        iui_validator.ValidationAssembler.__init__(self)
+        self.elements = elements_ptr
+    
+    def _get_value(self, element_id):
+        """Takes a string element_id, returns the element's value, either strin
+        g or int or boolean."""
+        if element_id in self.elements:
+            value = self.elements[element_id].value()
+        else:
+            value = element_id
+    
+        return value    
+
 class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
-        
+
+        self.obj_registrar = object_registrar
+
         self.find_and_replace(attributes)
         
         DynamicElement.__init__(self, attributes)
@@ -1122,28 +1149,92 @@ class Root(DynamicElement):
             element.updateLinks(self)
 
         self.operationDialog = OperationDialog(self)
-        
+        self.assembler = ElementAssembler(self.allElements)        
         self.messageArea = QtGui.QLabel()
         self.layout().addWidget(self.messageArea)
 
         self.initElements()
         
     def find_and_replace(self, attributes):
-#        self.locate(attributes)
-        return
+        """Initiates a recursive search and replace of the attributes
+            dictionary according to the 'inheritFrom' capabilities of the JSON
+            definition.
+            
+            attributes - a python dictionary representation of the JSON
+                         configuration.
+                         
+        Returns the rendered attributes dictionary."""
         
-    def locate(self, attributes):
+        self.attributes = attributes
+        return self.find_inherited_elements(attributes)
+
+    def find_value(self, inherit, current_dict=None):
+        """Searches the given dictionary for values described in inherit.
+        
+            inherit - a python dictionary confirming to the attribute
+                      inheritance properties of the JSON definition.
+            current_dict - a python dictionary of the current scope of the
+                           search.  if None (the default value), self.attributes
+                           is used for the current_dict.
+                           
+            Returns the value object requested by inherit if found.  Returns
+            None if the requested object is not found."""
+
+        if current_dict == None:
+            current_dict = self.attributes
+
+        if inherit['inheritFrom'] == current_dict['id']:
+            return current_dict[inherit['useAttribute']]
+        else:
+            if 'elements' in current_dict:
+                for element in current_dict['elements']:
+                    value = self.find_value(inherit, element)
+                    if value != None:
+                        return value
+        
+    def find_inherited_elements(self, attributes):
+        """Searches the input attributes dictionary for an inheritance object
+            and initializes a search for the value requested by the inheritance
+            object.
+    
+            attributes - a python dictionary representing an element.
+
+            Returns the rendered attributes dictionary."""
+
         for key, value in attributes.iteritems():
             if isinstance(value, dict):
                 if 'inheritFrom' in value:
-                    print('Found one! ' + key)
-                else:
-                    self.locate(value)
-            elif isinstance(value, list):
+                    if 'useAttribute' not in value:
+                        value['useAttribute'] = key
+
+                    if 'fromOtherUI' in value:
+                        if str(value['fromOtherUI']) == 'super':
+                            root_ptr = self.obj_registrar.root_ui
+                            root_attrib = root_ptr.attributes
+                            fetched_value = root_ptr.find_value(value, root_attrib)
+                        else:
+                            fetched_value = self.find_embedded_value(value)
+                    else:
+                        fetched_value = self.find_value(value)
+
+                    attributes[key] = fetched_value
+            elif key == 'elements' or key == 'rows':
                 for element in value:
-                    self.locate(element)
-            
-    
+                    value = self.find_inherited_elements(element)
+        return attributes
+
+    def find_embedded_value(self, inherit):
+        #locate the configuration URI
+        altered_inherit = {'inheritFrom': inherit['fromOtherUI'],
+                           'useAttribute': 'configURI'}
+        embedded_uri = self.find_value(altered_inherit)
+
+        json_handler = fileio.JSONHandler(embedded_uri)
+
+        #locate the value we want
+        del inherit['fromOtherUI']
+        return self.find_value(inherit, json_handler.get_attributes())
+
     def updateScrollBorder(self, min, max):
         if min == 0 and max == 0:
             self.scrollArea.setStyleSheet("QScrollArea { border: None } ")
@@ -1335,8 +1426,9 @@ class ExecRoot(Root):
         self.layout().addWidget(self.buttonBox)
 
 class ElementRegistrar(registrar.Registrar):
-    def __init__(self):
+    def __init__(self, root_ptr):
         registrar.Registrar.__init__(self)
+        self.root_ui = root_ptr
         updates = {'container' : Container,
                    'list': GridList,
                    'file': FileEntry,

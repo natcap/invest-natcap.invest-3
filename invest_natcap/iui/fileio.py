@@ -1,8 +1,6 @@
 import simplejson as json
 from platform import node
 
-import base_widgets
-
 class JSONHandler(object):
     def __init__(self, uri):
         object.__init__(self)

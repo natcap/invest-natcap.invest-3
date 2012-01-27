@@ -9,6 +9,7 @@ from osgeo import ogr
 from osgeo import gdal
 
 from invest_natcap.dbfpy import dbf
+from invest_natcap.carbon import carbon_core
 import registrar
 
 class Validator(registrar.Registrar):
@@ -18,66 +19,108 @@ class Validator(registrar.Registrar):
         
         element - a reference to the element in question."""
         
-    def __init__(self, element):
+    def __init__(self, type):
         #allElements is a pointer to a python dict: str id -> obj pointer.
         registrar.Registrar.__init__(self)
 
-        self.element = element
         updates = {'GDAL': GDALChecker,
                    'OGR': OGRChecker,
                    'number': NumberChecker,
                    'file': FileChecker,
                    'folder': URIChecker,
                    'DBF': DBFChecker,
-                   'CSV': CSVChecker}
+                   'CSV': CSVChecker,
+                   'string': PrimitiveChecker}
         self.update_map(updates)
-        self.init_type_checker()
-        self.validateFuncs = [self.is_element_required]
+        self.init_type_checker(str(type))
+        self.validateFuncs = []
 
-    def validate(self):
+    def validate(self, valid_dict):
         """Validate the element.  This is a two step process: first, all 
             functions in the Validator's validateFuncs list are executed.  Then,
             The validator's type checker class is invoked to actually check the 
             input against the defined restrictions.
             
             returns a string if an error is found.  Returns None otherwise."""
-            
         for func in self.validateFuncs:
             error = func()
             if error != None:
                 return error
         
         if self.type_checker != None:
-            return self.type_checker.run_checks()
+            return self.type_checker.run_checks(valid_dict)
         return ''
         
-    def init_type_checker(self):
+    def init_type_checker(self, type):
         """Initialize the type checker.
         
             returns nothing."""
-            
+        
         try:
-            type = self.element.attributes['validateAs']['type']
-            self.type_checker = self.get_func(type)(self.element)
+            self.type_checker = self.get_func(type)()
         except KeyError:
             self.type_checker = None
 
-    def is_element_required(self):
-        """Check to see if the element is required.  If the element is required
-            but its requirements are not satisfied, return an error message.
-            
-            returns a string if an error is found.  Returns None otherwise."""
-            
-        if self.element.isRequired() and not self.element.requirementsMet():
-            return 'Element is required'
+class ValidationAssembler(object):
+    def __init__(self):
+        object.__init__(self)
+        self.primitive_keys = {'number': ['lessThan', 'greaterThan', 'lteq', 
+                                          'gteq'],
+                               'string': []}
+
+    def assemble(self, value, valid_dict):
+        assembled_dict = valid_dict.copy()
+        assembled_dict['value'] = value
+
+        if valid_dict['type'] in self.primitive_keys:
+            assembled_dict.update(self._assemble_primitive(valid_dict))
+        else:
+            if 'restrictions' in valid_dict:
+                assembled_dict.update(self._assemble_complex(valid_dict))
+
+        return assembled_dict
+
+    def _assemble_primitive(self, valid_dict):
+        assembled_dict = valid_dict.copy()
+        for attribute in self.primitive_keys[valid_dict['type']]:
+            if attribute in valid_dict:
+                value = valid_dict[attribute]
+                if isinstance(value, str) or isinstance(value, unicode):
+                    value = self._get_value(value)
+                    assembled_dict[attribute] = value
+
+        return assembled_dict
+
+    def _assemble_complex(self, valid_dict):
+        assembled_dict = valid_dict.copy()
+        assembled_dict['restrictions'] = []
+
+        for restriction in valid_dict['restrictions']:
+            field_rest = restriction['validateAs']
+            if self._is_primitive(field_rest):
+                assembled_primitive = self._assemble_primitive(field_rest)
+                assembled_dict['restrictions'].append(assembled_primitive)
+
+        return assembled_dict
+
+    def _get_value(self, id):
+        """Function stub for reimplementation.  Should return the value of the
+        element identified by id, where the element itself depends on the
+        context."""
+
+        return 0
+
+    def _is_primitive(self, valid_dict):
+        if valid_dict['type'] in self.primitive_keys:
+            return True
+        return False
 
 class Checker(registrar.Registrar):
     #self.map is used for restrictions
-    def __init__(self, element):
+    def __init__(self):
         registrar.Registrar.__init__(self)
-        self.element = element
-        self.valid = self.element.attributes['validateAs']
         self.checks = []
+        self.ignore = ['type', 'value']
         
     def add_check_function(self, func, index=None):
         if index == None:
@@ -85,52 +128,50 @@ class Checker(registrar.Registrar):
         else:
             self.checks.insert(index, func)
     
-    def run_checks(self):
+    def run_checks(self, valid_dict):
         for check_func in self.checks:
-            error = check_func()
+            error = check_func(valid_dict)
             if error != None:
                 return error
-            
-        for key, value in self.valid.iteritems():
-            error = self.eval(key, value)
-            if error != None:
-                return error
+        
+        self.value = valid_dict['value']
+        for key, value in valid_dict.iteritems():
+            if key not in self.ignore:
+                error = self.eval(key, value)
+                if error != None:
+                    return error
         return None
         
-    def get_element(self, element_id):
-        return self.element.root.allElements[element_id]
-
 class URIChecker(Checker):
-    def __init__(self, element):
-        Checker.__init__(self, element)
-        self.uri = None
+    def __init__(self):
+        Checker.__init__(self)
+        self.uri = None #initialize to none
         self.add_check_function(self.check_exists)
      
-    def check_exists(self):
-        """Verify that the file at URI exists."""
+    def check_exists(self, valid_dict):
+        """Verify that the file at valid_dict['value'] exists."""
 
-        self.uri = self.element.value()
+        self.uri = valid_dict['value']
 
         if os.path.exists(self.uri) == False:
             return str('Not found')
         
 class FolderChecker(URIChecker):
-    def __init__(self, element):
-        URIChecker.__init__(self, element)
+    def __init__(self):
+        URIChecker.__init__(self)
         self.add_check_function(self.open)
     
-    def open(self):
+    def open(self, valid_dict):
         if not os.path.isdir(self.uri):
             return 'Must be a folder'
 
 class FileChecker(URIChecker):
-    def __init__(self, element):
-        URIChecker.__init__(self, element)
-        
-        self.uri = None
+    def __init__(self):
+        URIChecker.__init__(self)
+        self.uri = None #initialize to None
         self.add_check_function(self.open)
         
-    def open(self):
+    def open(self, valid_dict):
         try:
             file_handler = open(self.uri, 'w')
             file_handler.close()
@@ -138,7 +179,7 @@ class FileChecker(URIChecker):
             return 'Unable to open file'
         
 class GDALChecker(FileChecker):
-    def open(self):
+    def open(self, valid_dict):
         """Attempt to open the GDAL object.  URI must exist."""
 
         gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -146,61 +187,120 @@ class GDALChecker(FileChecker):
         if file_obj == None:
             return str('Must be a raster that GDAL can open')
 
-class OGRChecker(FileChecker):
-    def __init__(self, element):
-        FileChecker.__init__(self, element)
-
-        updates = {'layer': self.open_layer,
-                   'fieldsExist': self.verify_fields_exist}
+class TableChecker(FileChecker, ValidationAssembler):
+    def __init__(self):
+        FileChecker.__init__(self)
+        ValidationAssembler.__init__(self)
+        updates = {'fieldsExist': self.verify_fields_exist,
+                   'restrictions': self.verify_restrictions}
         self.update_map(updates)
+        self.num_checker = NumberChecker()
+        self.str_checker = PrimitiveChecker()
+       
+    def verify_fields_exist(self, field_list):
+        """This is a function stub for reimplementation.  field_list is a python
+        list of strings where each string in the list is a required fieldname.
+        List order is not validated.  Returns the error string if an error is
+        found.  Returns None if no error found."""
         
-    def open(self):
+        available_fields = self._get_fieldnames()
+        for required_field in field_list:
+            if required_field not in available_fields:
+                return str('Required field: ' + required_field + ' not found')
+
+    def verify_restrictions(self, restriction_list):
+        for restriction in restriction_list:
+            for row in self._build_table():
+                assembled_dict = {}
+                value = row[restriction['field']]
+                assembled_dict = self.assemble(value, restriction['validateAs'])
+                
+                if row['type'] == 'number':
+                    error = self.num_checker(assembled_dict)
+                elif row['type'] == 'string':
+                    error = self.str_checker(assembled_dict)
+
+                if error != None and error != '':
+                    return error
+                
+    def _build_table(self):
+        """This is a function stub for reimplementation.  Must return a list of
+        dictionaries, where the keys to each dictionary are the fieldnames."""
+        
+        return [{}]
+
+    def _get_value(self, fieldname):
+        """This is a function stub for reimplementation.  Function should fetch
+            the value of the given field at the specified row.  Must return a scalar.
+            """
+
+        return 0
+    
+    def _get_fieldnames(self):
+        """This is a function stub for reimplementation.  Function should fetch
+            a python list of strings where each string is a fieldname in the
+            table."""
+
+        return []
+
+class OGRChecker(TableChecker):
+    def __init__(self):
+        TableChecker.__init__(self)
+
+        updates = {'layer': self.open_layer}
+        self.update_map(updates)
+
+        self.add_check_function(self.open_layer)
+
+        self.layer_types = {'polygons' : ogr.wkbPolygon,
+                            'points'  : ogr.wkbPoint}
+        
+    def open(self, valid_dict):
         """Attempt to open the shapefile."""
 
         self.file = ogr.Open(str(self.uri))
         
         if not isinstance(ogrFile, osgeo.ogr.DataSource):
             return str('Shapefile not compatible with OGR')
-        
-    def open_layer(self):
+
+    def open_layer(self, valid_dict):
         """Attempt to open the layer specified in self.valid."""
-        
-        layer_name = str(self.valid['layer'])
+       
+        layer_dict = valid_dict['layer']
+
+        layer_name = str(layer_dict['name'])
         self.layer = self.file.GetLayerByName(layer_name)
         
         if not isinstance(self.layer, osgeo.ogr.Layer):
             return str('Shapefile must have a layer called ' + layer_name)
-    
-    def verify_fields_exist(self):
-        """Verify that the specified fields exist.  Runs self.open_layer as a
-            precondition.
-            
-            returns a string listing all missing fields."""
-            
-        error = self.open_layer
-        if error != None:
-            return error
-        
+   
+    def _check_layer_type(self, type_string):
+        for feature in self.layer:
+            geometry = feature.GetGeometryRef()
+            geom_type = geometry.GetGeometryType()
+
+            if geom_type != self.layer_types[type_string]:
+                return str('Not all features are ' + type_string)
+
+    def _get_fieldnames(self):
         layer_def = self.layer.GetLayerDefn()
-        prefix = 'Missing fields: '
-        field_str = ''
-        for field in self.valid['fieldsExist']:
-            index = layer_def.GetFieldIndex(field)
-            if index == -1:
-                field_str += str(field + ', ')
+        num_fields = layer_def.GetFieldCount()
+
+        field_list = []
+        for index in range(num_fields):
+            field_def = layer_def.GetFieldDefn(index)
+            field_list.append(field_def.GetNameRef())
+
+        return field_list
+
+    def _build_table(self):
+        table_rows = []
+        for feature in self.layer:
+            table_rows.append(carbon_core.getFields(feature))
+
+        return table_rows
                 
-        if len(field_str) > 0:
-            return prefix + field_str
-
-
-class DBFChecker(FileChecker):
-    def __init__(self, element):
-        FileChecker.__init__(self, element)
-        updates = {'fieldsExist': self.verify_fields_exist,
-                   'restrictions': self.verify_restrictions}
-        self.update_map(updates)
-        self.num_checker = NumberChecker(self.element)
-    
+class DBFChecker(TableChecker):
     def open(self):
         """Attempt to open the DBF."""
         
@@ -208,231 +308,88 @@ class DBFChecker(FileChecker):
         
         if not isinstance(self.file, dbf.Dbf):
             return str('Must be a DBF file')
-        
-    def verify_fields_exist(self):
-        prefix = 'Missing fields: '
-        field_str = ''
-        for field in self.valid['fieldsExist']:
-            if field.upper() not in self.file.FileNames:
-                field_str += str(field + ', ')
-        
-        if len(field_str) > 0:
-            return prefix + field_str
-        
-    def verify_restrictions(self):
-        field_str = ''
-        for restriction in self.valid['restrictions']:
-            res_field = restriction['field']
-            res_attrib = res['validateAs']
+      
+    def _get_fieldnames(self):
+        return self.file.fieldNames()
 
-            if res_attrib['type'] == 'number':
-                self.verify_number(res_field, res_attrib)
-            elif res_attrib['type'] == 'string':
-                self.verify_string(res_field, res_attrib)
+    def _build_table(self):
+        table_rows = []
 
-                
-    def verify_number(self, res_field, res_attrib):
-        """Verify that a given field conforms to numeric restrictions.
-            
-            res_field - a string fieldname in the DBF file.
-            res_attrib - a dictionary of restrictions
-            
-            returns a string if an error is found.  Otherwise, returns None."""
-            
-        field_str = ''
-        for key, value in self.res_attrib.iteritems():
-            for record in range(self.file.recordCount):
-                if isinstance(value, str): #if value is a fieldname
-                    value = self.file[record][value]
-        
-                other_value = self.file[record][res_attrib[key]]
-                error = self.num_checker.check_number(value, other_value, key)
-                field_str += str(res_field + ': ' + error + ' at record ' + 
-                                 record)
-                
-        if len(field_str) > 0:
-            return field_str
-
-    def verify_string(self, res_field, res_attrib):
-        """Verify that a given field conforms to its string restrictions.
-        
-            res_field - a string fieldname in the DBF file
-            res_attrib - a dictionary of restrictions
-            
-            returns a string if an error is found.  Otherwise, returns None """
-            
-        field_str = ''
         for record in range(self.file.recordCount):
-            res_field_value = self.file[record][res_field]
-            regexp = res_attrib['allowedValues']
+            row = {}
+            for fieldname in self._get_fieldnames():
+                row[fieldname] = self.file[record][fieldname]
             
-            if not re.search(res_field_value, regexp):
-                field_str += str(res_field + ' ' + error + ' at record ' + 
-                                 record)
-                
-        if len(field_str) > 0:
-            return field_str
+            table_rows.append(row)
 
-class NumberChecker(Checker):
-    def __init__(self, element):
-        Checker.__init__(self, element)
-        updates = {'gteq': (self.verify, self._greater_than_equal_to),
-                   'greaterThan': (self.verify, self._greater_than),
-                   'lteq': (self.verify, self._less_than_equal_to),
-                   'lessThan': (self.verify, self._less_than)}
+        return table_rows
+
+class PrimitiveChecker(Checker):
+    def __init__(self):
+        Checker.__init__(self)
+        updates = {'allowedValues': self.check_regexp}
+        self.update_map(updates)
+
+    def check_regexp(self, regexp):
+        pattern = re.compile(regexp)
+        if pattern.match(self.value) == None:
+            return str(self.value + " value not allowed")
+
+class NumberChecker(PrimitiveChecker):
+    def __init__(self):
+        PrimitiveChecker.__init__(self)
+        updates = {'gteq': self.greater_than_equal_to,
+                   'greaterThan': self.greater_than,
+                   'lteq':  self.less_than_equal_to,
+                   'lessThan':  self.less_than}
         self.update_map(updates)
         
-    def check_number(self, a, b, op_string):
-        """Check the status of two numbers based on an operation.
-        
-            a - a number
-            b - a number
-            op_string - a string index into NumberChecker.map
-            
-            returns a string if an error is found.  Otherwise, returns None"""
-            
-        tuple = self.map[op_string]
-        return tuple[1](a, b)
-        
-    def _greater_than(self, a, b):
-        if not a < b:
+    def greater_than(self, b):
+        if not self.value < b:
             return 'Value must be greater than ' + str(b)
     
-    def _less_than(self, a, b):
-        if not a < b:
+    def less_than(self, b):
+        if not self.value < b:
             return 'Value must be less than ' + str(b)
         
-    def _less_than_equal_to(self, a, b):
-        if not a <= b:
+    def less_than_equal_to(self, b):
+        if not self.value <= b:
             return 'Value must be less than or equal to ' + str(b)
     
-    def _greater_than_equal_to(self, a, b):
-        if not a >= b:
+    def greater_than_equal_to(self, b):
+        if not self.value >= b:
             return 'Value must be greater than or equal to ' + str(b)
         
-    def get_restriction(self, key):
-        tuple = self.map[key]
-        return tuple[0](key, tuple[1])
-        
-    def verify(self, key, op):
-        other_value = self.valid[key]
-        
-        if isinstance(other_value, str):
-            other_value = self.get_element(other_value)
-            
-        error = op(self.element.value(), other_value)
-        
-        if error != None:
-            return error
-
-
-class CSVChecker(FileChecker):
-    def __init__(self, element):
-        FileChecker.__init__(self, element)
-
-        updates = {'fieldsExist': self.verify_fields_exist,
-                   'restrictions': self.verify_restrictions}
-        self.update_map(updates)
-        self.num_checker = NumberChecker(self.element)
-
-    def open(self):
+class CSVChecker(TableChecker):
+    def open(self, valid_dict):
         """Attempt to open the CSV file"""
 
-        self.file = csv.reader(open(self.uri))
-        test_file = csv.reader('')
+        self.file = csv.DictReader(open(self.uri))
+        test_file = csv.DictReader('')
 
         #isinstance won't work, testing classname against empty csv classname
         if self.file.__class__ != test_file.__class__:
             return str("Must be a CSV file")
 
-    def verify_fields_exist(self, fields):
-        prefix = 'Missing fields: '
-        field_str = ''
+    def _build_table(self):
+        table_rows = []
+        fieldnames = self._get_fieldnames()
+        for record in self.file:
+            row = {}
+            for field_name, value in zip(fieldnames, record):
+                row[field_name] = value
+    
+            table_rows.append(row)
+        return table_rows
 
-        if not hasattr(self, "fieldnames"):
-            self.fieldnames = self.file.next()
-
-        for required_field in fields:
-            if required_field not in self.fieldnames:
-                field_str += str(required_field)
-
-            if len(field_str) > 0:
-                return prefix + field_str
-
-    def verify_restrictions(self, rest):
-        field_str = ''
-
-        if not hasattr(self.file, 'fieldnames'):
-            self.fieldnames = self.file.next()
-        else:
-            self.fieldnames = self.file.fieldnames
-
-        for restriction in self.valid['restrictions']:
-            res_field = restriction['field']
-            res_attrib = restriction['validateAs']
-
-            if res_attrib['type'] == 'string':
-                field_str += self._verify_string(res_field, res_attrib)
-            elif res_attrib['type'] == 'number':
-                field_str += self._verify_is_number(res_field, res_attrib)
-
-            if 'valuesExist' in res_attrib:
-                field_str += self._verify_values_exist(res_field, res_attrib)
-
-        if len(field_str) > 0:
-            return field_str
-
-    def _match_column_values(self, column_name, res_attrib):
-        field_str = ''
-        index = self.fieldnames.index(column_name)
-
-        for row_num, row in enumerate(self.file):
-            res_field_value = row[index]
-            regexp = res_attrib['allowedValues']
-
-            pattern = re.compile(regexp)
-            if pattern.search(res_field_value) == None:
-                field_str += str(res_field + ' not valid at record ' +
-                                 str(row_num) + '. ')
-
-        return field_str
-
-    def _verify_is_number(self, res_field, res_attrib):
-        if 'allowedValues' in res_attrib:
-            return self._match_column_values(res_field, res_attrib)
-        else:
-            field_str = ''
-            index = self.fieldnames.index(res_field)
-            for key, value in res_attrib.iteritems():
-                for row in self.file:
-                    other_value = row[res_attrib[key]]
-                    error = self.num_checker.check_number(value, other_value, key)
-                    if error != None:
-                        field_str = str(res_field + ': ' + error + ' at record '
-                            + record)
-
-            if len(field_str) > 0:
-                return field_str
-
-    def _verify_string(self, res_field, res_attrib):
-        return self._match_column_values(res_field, res_attrib)
-
-    def _verify_values_exist(self, res_field, res_attrib):
-        prefix = res_field + ' missing value: '
-        field_str = ''
-        index = self.file.fieldnames.index(res_field)
-        for required_value in res_attrib['valuesExist']:
-            exists = False
-            for row in self.file:
-                if row[index] == required_value:
-                    exists = True
-
-            if exists == False:
-                field_str += required_value + ' '
-
-        if len(field_str) > 0:
-            return field_str
-
+    def _get_fieldnames(self):
+        if not hasattr(self, 'fieldnames'):
+            if not hasattr(self.file, 'fieldnames'):
+                self.fieldnames = self.file.next()
+            else:
+                self.fieldnames = self.file.fieldnames
+        
+        return self.fieldnames
 
     #all check functions take a single value, which is returned by the
     #element.value() function.  All check functions should perform the required

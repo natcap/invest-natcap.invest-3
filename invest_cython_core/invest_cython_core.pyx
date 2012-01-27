@@ -1014,8 +1014,8 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     #This is necessary to avoid not setting the outside boundary
     ls_factor_matrix[:] = ls_nodata
     
-    mraster = newRasterFromBase(aspect, 'm.tif', 'GTiff', -5.0, gdal.GDT_Float32)
-    xijraster = newRasterFromBase(aspect, 'xij.tif', 'GTiff', -5.0, gdal.GDT_Float32)
+    mraster = newRasterFromBase(aspect, '', 'MEM', -5.0, gdal.GDT_Float32)
+    xijraster = newRasterFromBase(aspect, '', 'MEM', -5.0, gdal.GDT_Float32)
         
     cdef np.ndarray [np.float_t,ndim=2] m_matrix = np.zeros((nrows,ncols))
     cdef np.ndarray [np.float_t,ndim=2] xij_matrix = np.zeros((nrows,ncols))
@@ -1147,13 +1147,14 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
     for col_index in range(1, ncols - 1):
         LOGGER.debug('col_index %s' % col_index)
         for row_index in range(1, nrows - 1):
-
+            pixels_to_process.push(row_index)
+            pixels_to_process.push(col_index)
             while pixels_to_process.size() > 0:
                 i = pixels_to_process.pop()
                 j = pixels_to_process.pop()
                 #If we're on a nodata pixel, skip, sediment_retention is set to 
                 #nodata 
-                if potential_soil_loss[col_index, row_index] == \
+                if potential_soil_loss_matrix[col_index, row_index] == \
                     potential_soil_loss_nodata:
                     sediment_retention_matrix[col_index, row_index] = \
                         sediment_retention_nodata
@@ -1163,9 +1164,14 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                 calculate_inflow_neighbors_dinf(i, j, aspect_matrix,  aspect_nodata, 
                                                 neighbors)
         
+                #Set current pixel to 0 so we don't push it onto the queue
+                #later if there's a bit of overflow between pixels
+                sediment_retention_matrix[i, j] = 0
+                
                 #check to see if any of the neighbors were uncalculated, if so, 
                 #calculate them
                 neighbors_uncalculated = False
+                
                 #Visit each uncalculated neighbor and push on the work queue
                 for neighbor_index in range(8):
                     #-1 prop marks the end of the neighbor list
@@ -1183,6 +1189,7 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                             
                         pixels_to_process.push(pj)
                         pixels_to_process.push(pi)
+                        #LOGGER.debug("Neighbors uncalculted i j pi pj queue size %s %s %s %s %s" % (i,j,pi,pj,pixels_to_process.size()))
                         neighbors_uncalculated = True
                         break
         
@@ -1191,9 +1198,6 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                 if neighbors_uncalculated:
                     continue 
         
-                #If we get here then this pixel and its neighbors have been processed
-                sediment_retention_matrix[i, j] = 0
-                
                 #Add contribution from each neighbor to current pixel
                 for neighbor_index in range(8):
                     prop = neighbors[neighbor_index].prop
@@ -1202,13 +1206,21 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                     pi = neighbors[neighbor_index].i
                     pj = neighbors[neighbor_index].j
         
-                    #calculate sediment retained += prop * retention_efficiency of cell * export of neighbor
-                    sediment_retention_matrix[i, j] += retention_efficiency_matrix[i, j] * prop * export_matrix[pi, pj] 
-                    #current cell sediment export +=  prop *(1- retention_efficiency of cell) * export of neighbor
-                    export_matrix[i, j] += retention_efficiency_matrix[i, j] * (1 - prop) * export_matrix[pi, pj]
+                    #calculate sediment retained += prop * 
+                    #retention_efficiency of cell * export of neighbor
+                    sediment_retention_matrix[i, j] += \
+                        retention_efficiency_matrix[i, j] * prop * \
+                        export_matrix[pi, pj] 
+                    #current cell sediment export +=  prop *
+                    #(1- retention_efficiency of cell) * export of neighbor
+                    export_matrix[i, j] += \
+                        retention_efficiency_matrix[i, j] * (1 - prop) * \
+                        export_matrix[pi, pj]
 
-    sediment_retention.GetRasterBand(1).WriteArray(sediment_retention_matrix, 0, 0)
-    invest_core.calculateRasterStats(sediment_retention)
+    #Need to transpose the output for consistency in our array notation
+    sediment_retention.GetRasterBand(1). \
+        WriteArray(sediment_retention_matrix.transpose(), 0, 0)
+    invest_core.calculateRasterStats(sediment_retention.GetRasterBand(1))
     free(neighbors)
     LOGGER.info('done with calc_retained_sediment')
     
