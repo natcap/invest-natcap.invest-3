@@ -146,6 +146,27 @@ def pixelArea(dataset):
     areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
     return areaMeters / (10 ** 4) #convert m^2 to Ha
 
+def pixel_size_in_meters(point_x, point_y, pixel_size_x, pixel_size_y, coord_trans):
+    """Calculates the pixel width and height in meters.
+    
+        dataset - A projected GDAL dataset
+    
+        returns a tuple containing (pixel width in meters, pixel height in meters)"""
+    new_x = point_x + pixel_size_x
+    new_y = point_y + pixel_size_y
+    LOGGER.debug('pixel_size_x: %s', pixel_size_x)
+    LOGGER.debug('top_left_x : %s', new_x)
+    LOGGER.debug('top_left_y : %s', new_y)
+    point1 = coord_trans.TransformPoint(point_x, point_y)
+    point2 = coord_trans.TransformPoint(new_x, new_y)
+    pixel_diff_x = point1[0] - point2[0]
+    pixel_diff_y = point1[1] - point2[1]
+    LOGGER.debug('point1 : %s', point1)
+    LOGGER.debug('point2 : %s', point2)
+    LOGGER.debug('pixel_diff_x : %s', pixel_diff_x)
+    LOGGER.debug('pixel_diff_y : %s', pixel_diff_y)
+    return (pixel_diff_x, pixel_diff_y)
+
 def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     """Create a blank raster based on a vector file extent.  This code is
         adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
@@ -564,7 +585,7 @@ cdef void d_p_area(CQueue pixels_to_process,
     #This is an array of pairs that keeps track of i,j indexes and proportion
     #of flow to the inner cell.
     cdef NeighborFlow *neighbors = <NeighborFlow *>malloc(9 * sizeof(Pair))
-    LOGGER = logging.getLogger('d_p_area')
+    LOGGER = logging.getLOGGER('d_p_area')
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
@@ -640,7 +661,7 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     cdef int nodata_flow_direction, i, j
     cdef float nodata_flow_accumulation
     cdef CQueue q
-    LOGGER = logging.getLogger('flow_accumulation_dinf')
+    LOGGER = logging.getLOGGER('flow_accumulation_dinf')
     LOGGER.debug('initializing temporary buffers')
     #Load the input flow into a numpy array
     #GDal inverts x and y, so it's easier to transpose in and back out later
@@ -912,7 +933,7 @@ def calculate_slope(dem, slope):
             
         returns nothing"""
 
-    LOGGER = logging.getLogger('calculateSlope')
+    LOGGER = logging.getLOGGER('calculateSlope')
     #Read the DEM directly into an array
     demBand = dem.GetRasterBand(1)
     demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
