@@ -549,8 +549,6 @@ def valuation(args):
     args['machine_econ'] - A dictionary holding the machine economic parameters.
     args['land_gridPts'] - A dictionary holidng the landing point and grid point
                            information and location.
-    args['projection'] - A file path to the projection that allows to calculate
-                         distances in Meters.
     args['global_dem'] - A raster of the global DEM
 
     returns - Nothing
@@ -574,7 +572,6 @@ def valuation(args):
     raster_projected_path = output_dir + os.sep + 'npv_usd.tif'
     
     wave_data_shape = args['wave_data_shape']
-    prj_file_path = args['projection']
     #Since the global_dem is the only input raster, we base the pixel
     #size of our output raster from the global_dem
     dem = args['global_dem']
@@ -586,12 +583,6 @@ def valuation(args):
     logger.debug('pixel_size_x: %s', pixel_size_x)
     logger.debug('top_left_x : %s', top_left_x)
     logger.debug('top_left_y : %s', top_left_y)
-#    latlng_spatial_reference = osr.SpatialReference()
-#    latlng_spatial_reference.SetWellKnownGeogCS("WGS84")
-#    shapfile_spatial_reference = wave_data_shape.GetLayer(0).GetSpatialRef()
-#    logger.debug("************** shapfile_spatial_reference angular linear isprojecte %s %s %s" % (shapfile_spatial_reference.GetAngularUnits(), shapfile_spatial_reference.GetLinearUnits(), shapfile_spatial_reference.IsProjected()))
-#    logger.debug("************** latlng_spatial_reference angular linear isprojecte pixelwidth %s %s %s %s" % (latlng_spatial_reference.GetAngularUnits(), latlng_spatial_reference.GetLinearUnits(), latlng_spatial_reference.IsProjected(), geo_tran[1]))
-    
     #Create a coordinate transformation for lat/long to meters
     srs_prj = osr.SpatialReference()
     srs_prj.SetWellKnownGeogCS("WGS84")
@@ -599,14 +590,12 @@ def valuation(args):
     target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
-    
+    #Get the size of the pixels in meters
     pixel_size_tuple = invest_cython_core.pixel_size_in_meters(top_left_x, top_left_y,
                                                                pixel_size_x, pixel_size_y, coord_trans)
     pixel_xsize = pixel_size_tuple[0]
     pixel_ysize = pixel_size_tuple[1]
-#    pixel_xsize = float(geo_tran[1])
     logger.debug('X pixel size of DEM : %f', pixel_xsize)
-#    pixel_ysize = np.absolute(float(geo_tran[5]))
     logger.debug('Y pixel size of DEM : %f', pixel_ysize)
     #If either shapefile, landing or grid exist, remove them
     if os.path.isfile(land_pt_path):
@@ -641,7 +630,6 @@ def valuation(args):
             grid_pt = value
         else:
             land_pts[key] = value            
-#    logger.debug('The new projection as string : %s', prj)
     #Make a point shapefile for landing points.
     logger.info('Creating Landing Points Shapefile.')
     drv_landing = ogr.GetDriverByName('ESRI Shapefile')
@@ -693,25 +681,19 @@ def valuation(args):
     layer_grid.SetFeature(feat_grid)
     feat_grid.Destroy()
     #Close the necessary files and objects
-#    prj_file.close()
     layer_grid = None
     drv_grid = None
     ds_grid.Destroy()
-    #Reproject the shapefile so that it's geometry is in meters
-#    wave_data_layer = wave_data_shape.GetLayer(0)
-#    wave_data_shape.Destroy()
-#    wave_data_shape = ogr.Open(projected_shape_path, 1)
-    wave_data_layer = wave_data_shape.GetLayer(0)
-    
+
     landing_shape = ogr.Open(land_pt_path)
     grid_shape = ogr.Open(grid_pt_path)
-    
     we_points = get_points_geometries(wave_data_shape)
     landing_points = get_points_geometries(landing_shape)
     grid_point = get_points_geometries(grid_shape)
     logger.info('Calculating Distances.')
     wave_to_land_dist, wave_to_land_id = calculate_distance(we_points, landing_points)
     land_to_grid_dist, land_to_grid_id = calculate_distance(landing_points, grid_point)
+    wave_data_layer = wave_data_shape.GetLayer(0)
     #Add three new fields to the shapefile that will store the distances
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
@@ -805,15 +787,6 @@ def valuation(args):
     wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
     wave_farm_value_array = get_points_values(wave_data_shape, 'NPV_25Y')
-#    #Reproject the raster into a meters format
-#    virtual = gdal.AutoCreateWarpedVRT(wave_farm_value_raster,
-#                                       wave_farm_value_raster.GetProjectionRef(),
-#                                       prj)
-#    #Since the reprojection is just a virtual copy we must save it to disk
-#    drv_grid = gdal.GetDriverByName('GTIFF')
-#    drv_grid.CreateCopy(raster_projected_path, virtual, True)
-#    virtual = None
-#    virtual = gdal.Open(raster_projected_path, GA_Update)
     #Interpolate the NPV values based on the dimensions and 
     #corresponding points of the raster, then write the interpolated 
     #values to the raster
