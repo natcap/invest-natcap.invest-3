@@ -578,10 +578,35 @@ def valuation(args):
     #Since the global_dem is the only input raster, we base the pixel
     #size of our output raster from the global_dem
     dem = args['global_dem']
-    geo_tran = dem.GetGeoTransform()
-    pixel_xsize = float(geo_tran[1])
+    geo_tran = dem.GetGeoTransform()    
+    pixel_size_x = geo_tran[1]
+    pixel_size_y = geo_tran[5]
+    top_left_x = geo_tran[0]
+    top_left_y = geo_tran[3]
+    logger.debug('pixel_size_x: %s', pixel_size_x)
+    logger.debug('top_left_x : %s', top_left_x)
+    logger.debug('top_left_y : %s', top_left_y)
+#    latlng_spatial_reference = osr.SpatialReference()
+#    latlng_spatial_reference.SetWellKnownGeogCS("WGS84")
+#    shapfile_spatial_reference = wave_data_shape.GetLayer(0).GetSpatialRef()
+#    logger.debug("************** shapfile_spatial_reference angular linear isprojecte %s %s %s" % (shapfile_spatial_reference.GetAngularUnits(), shapfile_spatial_reference.GetLinearUnits(), shapfile_spatial_reference.IsProjected()))
+#    logger.debug("************** latlng_spatial_reference angular linear isprojecte pixelwidth %s %s %s %s" % (latlng_spatial_reference.GetAngularUnits(), latlng_spatial_reference.GetLinearUnits(), latlng_spatial_reference.IsProjected(), geo_tran[1]))
+    
+    #Create a coordinate transformation for lat/long to meters
+    srs_prj = osr.SpatialReference()
+    srs_prj.SetWellKnownGeogCS("WGS84")
+    source_sr = srs_prj
+    target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
+    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+    coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
+    
+    pixel_size_tuple = invest_cython_core.pixel_size_in_meters(top_left_x, top_left_y,
+                                                               pixel_size_x, pixel_size_y, coord_trans)
+    pixel_xsize = pixel_size_tuple[0]
+    pixel_ysize = pixel_size_tuple[1]
+#    pixel_xsize = float(geo_tran[1])
     logger.debug('X pixel size of DEM : %f', pixel_xsize)
-    pixel_ysize = np.absolute(float(geo_tran[5]))
+#    pixel_ysize = np.absolute(float(geo_tran[5]))
     logger.debug('Y pixel size of DEM : %f', pixel_ysize)
     #If either shapefile, landing or grid exist, remove them
     if os.path.isfile(land_pt_path):
@@ -616,14 +641,7 @@ def valuation(args):
             grid_pt = value
         else:
             land_pts[key] = value            
-    #Create a coordinate transformation for lat/long to meters
 #    logger.debug('The new projection as string : %s', prj)
-    srs_prj = osr.SpatialReference()
-    srs_prj.SetWellKnownGeogCS("WGS84")
-    source_sr = srs_prj
-    target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
-    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-    coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     #Make a point shapefile for landing points.
     logger.info('Creating Landing Points Shapefile.')
     drv_landing = ogr.GetDriverByName('ESRI Shapefile')
@@ -781,7 +799,7 @@ def valuation(args):
     nodata = 0
     #Create a blank raster from the extents of the wave farm shapefile
     logger.debug('Creating Raster From Vector Extents')
-    invest_cython_core.createRasterFromVectorExtents(100, 1000,
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                                      datatype, nodata, wave_farm_value_path, wave_data_shape)
     logger.debug('Completed Creating Raster From Vector Extents')
     wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
