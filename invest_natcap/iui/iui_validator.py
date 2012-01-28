@@ -3,6 +3,7 @@ import os
 import re
 import csv
 import string
+import threading
 
 import osgeo
 from osgeo import ogr
@@ -33,24 +34,31 @@ class Validator(registrar.Registrar):
                    'string': PrimitiveChecker}
         self.update_map(updates)
         self.init_type_checker(str(type))
-        self.validateFuncs = []
+        self.validate_funcs = []
+        self.thread = None
 
     def validate(self, valid_dict):
         """Validate the element.  This is a two step process: first, all 
             functions in the Validator's validateFuncs list are executed.  Then,
             The validator's type checker class is invoked to actually check the 
             input against the defined restrictions.
-            
+           
+            Note that this is done in a separate thread.
+
             returns a string if an error is found.  Returns None otherwise."""
-        for func in self.validateFuncs:
-            error = func()
-            if error != None:
-                return error
-        
-        if self.type_checker != None:
-            return self.type_checker.run_checks(valid_dict)
-        return ''
-        
+      
+        if self.thread == None or not self.thread.is_alive():
+           self.thread = ValidationThread(self.validate_funcs,
+                self.type_checker, valid_dict)
+
+        self.thread.start()
+
+    def thread_finished(self):
+        return not self.thread.is_alive()
+
+    def get_error(self):
+        return self.thread.error_msg
+
     def init_type_checker(self, type):
         """Initialize the type checker.
         
@@ -60,6 +68,27 @@ class Validator(registrar.Registrar):
             self.type_checker = self.get_func(type)()
         except KeyError:
             self.type_checker = None
+
+class ValidationThread(threading.Thread):
+    def __init__(self, validate_funcs, type_checker, valid_dict):
+        threading.Thread.__init__(self)
+        self.validate_funcs = validate_funcs
+        self.type_checker = type_checker
+        self.valid_dict = valid_dict
+        self.error_msg = None
+
+    def set_error(self, error):
+        self.error_msg = error
+
+    def run(self):
+        for func in self.validate_funcs:
+            error = func()
+            if error != None:
+                self.set_error(error)
+
+        if self.type_checker != None:
+            error = self.type_checker.run_checks(self.valid_dict)
+            self.set_error(error)
 
 class ValidationAssembler(object):
     def __init__(self):

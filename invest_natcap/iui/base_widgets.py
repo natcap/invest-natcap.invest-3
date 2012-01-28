@@ -316,6 +316,7 @@ class DynamicPrimitive(DynamicElement):
         if 'validateAs' in self.attributes:
             validator_type = self.attributes['validateAs']['type']
             self.validator = iui_validator.Validator(validator_type)
+            self.timer = QtCore.QTimer()
         else:
             self.validator = None
         self.error = ErrorString()
@@ -380,8 +381,14 @@ class DynamicPrimitive(DynamicElement):
                 if self.validator != None:
                     rendered_dict = self.root.assembler.assemble(self.value(),
                         self.attributes['validateAs'])
-                    error = self.validator.validate(rendered_dict)
-                    self.set_error(error)
+                    self.validator.validate(rendered_dict)
+                    self.timer.timeout.connect(self.check_validation_error)
+                    self.timer.start(50)
+
+    def check_validation_error(self):
+        if self.validator.thread_finished():
+            self.timer.stop()
+            self.set_error(self.validator.get_error())
         
     def display_error(self):
         """returns a boolean"""
@@ -553,7 +560,7 @@ class DynamicText(LabeledElement):
             returns nothing"""
 
         if satisfied:
-            self.label.setStyleSheet("QWidget { color: black }")
+            self.label.setStyleSheet("QWidget {}")
             self.textField.setStyleSheet("QWidget {}")
         else:
             self.label.setStyleSheet("QWidget { color: red }")
@@ -1218,7 +1225,7 @@ class Root(DynamicElement):
                         fetched_value = self.find_value(value)
 
                     attributes[key] = fetched_value
-            elif key == 'elements' or key == 'rows':
+            elif key in ['elements', 'rows']:
                 for element in value:
                     value = self.find_inherited_elements(element)
         return attributes
@@ -1359,6 +1366,9 @@ class ExecRoot(Root):
             height = self.attributes['height']
         else:
             height = 400
+
+        if 'label' in self.attributes:
+            self.setWindowTitle(self.attributes['label'])
 
         self.setGeometry(400, 400, width, height)
         self.setWindowIcon(QtGui.QIcon('natcap_logo.png'))
