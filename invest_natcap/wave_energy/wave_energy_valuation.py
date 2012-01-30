@@ -49,8 +49,15 @@ def execute(args):
         machine_econ = {}
         machine_econ_file = open(args['machine_econ_uri'])
         reader = csv.DictReader(machine_econ_file)
+        logger.debug('reader fieldnames : %s ', reader.fieldnames)
+        #Use read in field names to cover lower/upper case issues
+        name_key = reader.fieldnames[0]
+        value_key = reader.fieldnames[1]
         for row in reader:
-            machine_econ[row['NAME'].strip()] = row
+            #Convert name to lowercase
+            name = row[name_key].strip().lower()
+            logger.debug('Name : %s and Value : % s', name, row[value_key])
+            machine_econ[name] = row[value_key]
         machine_econ_file.close()
         valuation_args['machine_econ'] = machine_econ
     except IOError, error:
