@@ -53,14 +53,12 @@ def execute(args):
         machine_perf_array = [[], []]
         machine_perf_file = open(args['machine_perf_uri'])
         reader = csv.reader(machine_perf_file)
-        get_row = True
+        #Column Header
+        first_row = reader.next()
+        machine_perf_array[0] = first_row[1:]
         for row in reader:
-            if get_row:
-                machine_perf_array[0] = row[1:]
-                get_row = False
-            else:
-                machine_perf_array[1].append(row.pop(0))
-                machine_perf_array.append(row)
+            machine_perf_array[1].append(row.pop(0))
+            machine_perf_array.append(row)
         machine_perf_file.close()
         logger.debug('Machine Performance Rows : %s', machine_perf_array[0])
         logger.debug('Machine Performance Cols : %s', machine_perf_array[1])
@@ -75,7 +73,7 @@ def execute(args):
         machine_param_file = open(args['machine_param_uri'])
         reader = csv.DictReader(machine_param_file)
         for row in reader:
-            machine_params[row['NAME'].strip()] = row
+            machine_params[row['NAME'].strip().lower()] = row['VALUE']
         machine_param_file.close()
         biophysical_args['machine_param'] = machine_params
     except IOError, error:
