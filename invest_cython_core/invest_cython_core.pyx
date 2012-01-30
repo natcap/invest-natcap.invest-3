@@ -146,23 +146,41 @@ def pixelArea(dataset):
     areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
     return areaMeters / (10 ** 4) #convert m^2 to Ha
 
-def pixel_size_in_meters(point_x, point_y, pixel_size_x, pixel_size_y, coord_trans):
-    """Calculates the pixel width and height in meters.
+def pixel_size_in_meters(dataset, coord_trans):
+    """Calculates the pixel width and height in meters. Takes the
+       top left point given by the datasets geoTransform and adds the
+       datasets pixel width to each coordinate (x,y).  The first point
+       and new second point are then converted into meters and the
+       x and y difference are taken to get the pixel width and height in
+       meters.
     
-        dataset - A projected GDAL dataset
-    
-        returns a tuple containing (pixel width in meters, pixel height in meters)"""
-    new_x = point_x + pixel_size_x
-    new_y = point_y + pixel_size_y
+       dataset - A projected GDAL dataset in the form of lat/long decimal degrees
+       coord_trans - An OSR coordinate transformation from lat/long to meters
+       
+       returns a tuple containing (pixel width in meters, pixel height in meters)"""
+    #Get the first points (x,y) from geoTransform
+    geo_tran = dem.GetGeoTransform()    
+    pixel_size_x = geo_tran[1]
+    pixel_size_y = geo_tran[5]
+    top_left_x = geo_tran[0]
+    top_left_y = geo_tran[3]
     LOGGER.debug('pixel_size_x: %s', pixel_size_x)
+    LOGGER.debug('pixel_size_x: %s', pixel_size_y)
+    LOGGER.debug('top_left_x : %s', top_left_x)
+    LOGGER.debug('top_left_y : %s', top_left_y)
+    #Create the second point by adding the pixel width/height
+    new_x = top_left_x + pixel_size_x
+    new_y = top_left_y + pixel_size_y
     LOGGER.debug('top_left_x : %s', new_x)
     LOGGER.debug('top_left_y : %s', new_y)
-    point1 = coord_trans.TransformPoint(point_x, point_y)
-    point2 = coord_trans.TransformPoint(new_x, new_y)
-    pixel_diff_x = point1[0] - point2[0]
-    pixel_diff_y = point1[1] - point2[1]
-    LOGGER.debug('point1 : %s', point1)
-    LOGGER.debug('point2 : %s', point2)
+    #Transform two points into meters
+    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
+    point_2 = coord_trans.TransformPoint(new_x, new_y)
+    #Calculate the x/y difference between two points
+    pixel_diff_x = point_1[0] - point_2[0]
+    pixel_diff_y = point_1[1] - point_2[1]
+    LOGGER.debug('point1 : %s', point_1)
+    LOGGER.debug('point2 : %s', point_2)
     LOGGER.debug('pixel_diff_x : %s', pixel_diff_x)
     LOGGER.debug('pixel_diff_y : %s', pixel_diff_y)
     return (pixel_diff_x, pixel_diff_y)
