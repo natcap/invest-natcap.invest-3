@@ -140,6 +140,9 @@ class DynamicElement(QtGui.QWidget):
         else:
             return ''
 
+    def getElementsDictionary(self):
+        return {self.attributes['id']: self}
+
 class DynamicGroup(DynamicElement):
     """Creates an object intended for grouping other elements together.
     
@@ -185,7 +188,7 @@ class DynamicGroup(DynamicElement):
         #itself is a subclass of QtGui.QWidget) so that we can add widgets 
         #as necessary.
         self.setLayout(layout)
-        
+       
         self.registrar = registrar
         if registrar != None:
             self.createElements(attributes['elements'])
@@ -251,9 +254,11 @@ class DynamicGroup(DynamicElement):
                 element pointer."""
 
         outputDict = {}
+        outputDict[self.attributes['id']] = self
         for element in self.elements:
             #Create an entry in the output dictionary for the current element
-            outputDict[element.attributes['id']] = element
+            #outputDict[element.attributes['id']] = element #superceded by
+            #dynamicElement.getElementsDictionary()
             try:
                 outputDict.update(element.getElementsDictionary())
             except AttributeError:
@@ -1114,6 +1119,31 @@ class ElementAssembler(iui_validator.ValidationAssembler):
     
         return value    
 
+class ScrollArea(QtGui.QScrollArea):
+    def __init__(self, attributes, layout=QtGui.QVBoxLayout(), registrar=None):
+        QtGui.QScrollArea.__init__(self)
+        print self.width()
+
+        self.body = DynamicGroup(attributes, layout, registrar)
+        self.setWidget(self.body)
+        self.updateScrollBorder()
+
+    def updateScrollBorder(self, min=None, max=None):
+        if min == None:
+            min = self.verticalScrollBar().minimum()
+        if max == None:
+            max = self.verticalScrollBar().maximum()
+
+        if min == 0 and max == 0:
+            self.setStyleSheet("QScrollArea { border: None } ")
+        else:
+            self.setStyleSheet("")
+
+    def getElementsDictionary(self):
+        for id, element in self.body.getElementsDictionary().iteritems():
+            print(id, element)
+        return self.body.getElementsDictionary()
+
 class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
@@ -1449,13 +1479,14 @@ class ElementRegistrar(registrar.Registrar):
                    'dropdown': Dropdown,
                    'embeddedUI': EmbeddedUI,
                    'checkbox': CheckBox,
-                   'scrollGroup': DynamicGroup
+                   'scrollGroup': ScrollArea
                    }
         self.update_map(updates)
         
     def eval(self, type, op_values):
         widget = registrar.Registrar.get_func(self, type)
-        if issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI):
+        if (issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI)
+            or issubclass(widget, ScrollArea)):
             return widget(op_values, registrar=self)
         else:
             return widget(op_values)
