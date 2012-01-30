@@ -575,14 +575,6 @@ def valuation(args):
     #Since the global_dem is the only input raster, we base the pixel
     #size of our output raster from the global_dem
     dem = args['global_dem']
-    geo_tran = dem.GetGeoTransform()    
-    pixel_size_x = geo_tran[1]
-    pixel_size_y = geo_tran[5]
-    top_left_x = geo_tran[0]
-    top_left_y = geo_tran[3]
-    logger.debug('pixel_size_x: %s', pixel_size_x)
-    logger.debug('top_left_x : %s', top_left_x)
-    logger.debug('top_left_y : %s', top_left_y)
     #Create a coordinate transformation for lat/long to meters
     srs_prj = osr.SpatialReference()
     srs_prj.SetWellKnownGeogCS("WGS84")
@@ -591,8 +583,7 @@ def valuation(args):
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     #Get the size of the pixels in meters
-    pixel_size_tuple = invest_cython_core.pixel_size_in_meters(top_left_x, top_left_y,
-                                                               pixel_size_x, pixel_size_y, coord_trans)
+    pixel_size_tuple = invest_cython_core.pixel_size_in_meters(dem, coord_trans)
     pixel_xsize = pixel_size_tuple[0]
     pixel_ysize = pixel_size_tuple[1]
     logger.debug('X pixel size of DEM : %f', pixel_xsize)
