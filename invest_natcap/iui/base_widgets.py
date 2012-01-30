@@ -161,7 +161,7 @@ class DynamicGroup(DynamicElement):
         if there is no corresponding entry in createElements()
         """
 
-    def __init__(self, attributes, layout, registrar=None):
+    def __init__(self, attributes, layout=QtGui.QVBoxLayout(), registrar=None):
         """Constructor for the DynamicGroup class.
             Most object construction has been abstracted to the DynamicElement
             class.  The defining feature of a DynamicGroup from a DynamicElement
@@ -1341,10 +1341,10 @@ class Root(DynamicElement):
         return outputDict
 
 class EmbeddedUI(Root):
-    def __init__(self, attributes, object_registrar):
+    def __init__(self, attributes, registrar):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
-        Root.__init__(self, uri, layout, object_registrar)
+        Root.__init__(self, uri, layout, registrar)
         self.body.layout().insertStretch(-1)
         
 class ExecRoot(Root):
@@ -1448,14 +1448,15 @@ class ElementRegistrar(registrar.Registrar):
                    'hideableFileEntry': HideableFileEntry,
                    'dropdown': Dropdown,
                    'embeddedUI': EmbeddedUI,
-                   'checkbox': CheckBox
+                   'checkbox': CheckBox,
+                   'scrollGroup': DynamicGroup
                    }
         self.update_map(updates)
         
     def eval(self, type, op_values):
         widget = registrar.Registrar.get_func(self, type)
         if issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI):
-            return widget(op_values, self)
+            return widget(op_values, registrar=self)
         else:
             return widget(op_values)
 
