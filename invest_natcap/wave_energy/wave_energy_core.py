@@ -589,11 +589,6 @@ def valuation(args):
     pixel_ysize = pixel_size_tuple[1]
     logger.debug('X pixel size of DEM : %f', pixel_xsize)
     logger.debug('Y pixel size of DEM : %f', pixel_ysize)
-    #If either shapefile, landing or grid exist, remove them
-    if os.path.isfile(land_pt_path):
-        os.remove(land_pt_path)
-    if os.path.isfile(grid_pt_path):
-        os.remove(grid_pt_path)
     #Number of machines for a given wave farm
     units = args['number_machines']
     #Extract the machine economic parameters
@@ -622,6 +617,11 @@ def valuation(args):
             grid_pt = value
         else:
             land_pts[key] = value            
+    #If either shapefile, landing or grid exist, remove them
+    if os.path.isfile(land_pt_path):
+        os.remove(land_pt_path)
+    if os.path.isfile(grid_pt_path):
+        os.remove(grid_pt_path)
     #Make a point shapefile for landing points.
     logger.info('Creating Landing Points Shapefile.')
     drv_landing = ogr.GetDriverByName('ESRI Shapefile')
