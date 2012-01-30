@@ -336,13 +336,10 @@ def get_points_values(shape, field):
     geometry shapefile
     
     shape - A point geometry shapefile of which to gather the information from
-    key   - A list of fields from shapefile shape whose values will be the points
-    value_array - A list of fields, where the list contains the fields used in
-                  key and value
-    value - A string representing the field from shapefile shape that is
-            to be returned
+    field - A string representing a field in the shapefile 'shape' 
     
-    returns - A list of points and values (points represented as 2D list, values as list)
+    returns - A list of points and values (points represented as 2D list, 
+              values as list)
      """
     #Retrieve the layer from the shapefile and reset the reader head
     #incase it has been iterated through earlier.
@@ -350,24 +347,21 @@ def get_points_values(shape, field):
     shape_layer.ResetReading()
     #Get the first point from the shape layer
     shape_feat = shape_layer.GetNextFeature()
-    field_dict = {}
     points = []
     values = []
-    #For all the points in the layer add the desired 
-    #'key' and 'value' to the dictionary.
     while shape_feat is not None:
         #May want to check to make sure field is in shape layer
-        #For the relevant field in the list value_array, 
-        #add the fields value to the dictionary
+        #Get the specified field and append its value
+        #to a list
         field_index = shape_feat.GetFieldIndex(field)
         value = shape_feat.GetField(field_index)
+        values.append(value)
+        #Get the X,Y coordinate of the geometry of
+        #the point and append it as a list [X,Y] to
+        #a list
         geom = shape_feat.GetGeometryRef()
         longitude = geom.GetX()
         latitude = geom.GetY()
-        #Set the created tuple as the key of this dictionary 
-        #and set its value to desired element from value_dict
-        field_dict[(longitude, latitude)] = value
-        values.append(value)
         points.append([longitude, latitude])
         geom = None
         shape_feat.Destroy()
