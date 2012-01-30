@@ -452,9 +452,9 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     wave_row = wave_data.pop(0)
     wave_column = wave_data.pop(1)
     #Get the machine parameter restriction values
-    cap_max = float(machine_param['CapMax']['VALUE'])
-    period_max = float(machine_param['TpMax']['VALUE'])
-    height_max = float(machine_param['HsMax']['VALUE'])
+    cap_max = float(machine_param['capmax'])
+    period_max = float(machine_param['tpmax'])
+    height_max = float(machine_param['hsmax'])
     #Set position variables to use as a check and as an end
     #point for rows/cols if restrictions limit the ranges
     period_max_pos = -1
