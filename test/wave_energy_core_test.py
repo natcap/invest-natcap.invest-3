@@ -740,7 +740,6 @@ class TestWaveEnergy(unittest.TestCase):
         number_of_machines = 28
         machine_econ_path = test_dir + os.sep + 'samp_input/Machine_PelamisEconCSV.csv'
         land_grid_path = test_dir + os.sep + 'samp_input/LandGridPts_WCVI_CSV.csv'
-        projection_uri = test_dir + os.sep + 'test_input/WGS_1984_UTM_Zone_10N.prj'
         dem_path = test_dir + os.sep + 'samp_input/global_dem'
         #Set all arguments to be passed
         args = {}
@@ -748,7 +747,6 @@ class TestWaveEnergy(unittest.TestCase):
         args['wave_data_shape'] = ogr.Open(wave_data_shape_path)
         args['number_machines'] = number_of_machines
         args['global_dem'] = gdal.Open(dem_path)
-        args['projection'] = projection_uri
         #Read machine economic parameters into a dictionary
         try:
             machine_econ = {}
