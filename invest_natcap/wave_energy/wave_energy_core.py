@@ -591,15 +591,15 @@ def valuation(args):
     units = args['number_machines']
     #Extract the machine economic parameters
     machine_econ = args['machine_econ']
-    cap_max = float(machine_econ['CapMax']['VALUE'])
-    capital_cost = float(machine_econ['cc']['VALUE'])
-    cml = float(machine_econ['cml']['VALUE'])
-    cul = float(machine_econ['cul']['VALUE'])
-    col = float(machine_econ['col']['VALUE'])
-    omc = float(machine_econ['omc']['VALUE'])
-    price = float(machine_econ['p']['VALUE'])
-    drate = float(machine_econ['r']['VALUE'])
-    smlpm = float(machine_econ['smlpm']['VALUE'])
+    cap_max = float(machine_econ['capmax'])
+    capital_cost = float(machine_econ['cc'])
+    cml = float(machine_econ['cml'])
+    cul = float(machine_econ['cul'])
+    col = float(machine_econ['col'])
+    omc = float(machine_econ['omc'])
+    price = float(machine_econ['p'])
+    drate = float(machine_econ['r'])
+    smlpm = float(machine_econ['smlpm'])
     #The NPV is for a 25 year period
     year = 25.0
     #A numpy array of length 25, representing the npv of a farm for each year
@@ -611,7 +611,7 @@ def valuation(args):
     grid_pt = {}
     land_pts = {}
     for key, value in land_grid_pts.iteritems():
-        if value['TYPE'] == 'GRID':
+        if value['TYPE'].lower() == 'grid':
             grid_pt = value
         else:
             land_pts[key] = value            
