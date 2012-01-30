@@ -159,7 +159,7 @@ def pixel_size_in_meters(dataset, coord_trans):
        
        returns a tuple containing (pixel width in meters, pixel height in meters)"""
     #Get the first points (x,y) from geoTransform
-    geo_tran = dem.GetGeoTransform()    
+    geo_tran = dataset.GetGeoTransform()    
     pixel_size_x = geo_tran[1]
     pixel_size_y = geo_tran[5]
     top_left_x = geo_tran[0]
