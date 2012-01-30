@@ -51,6 +51,7 @@ def biophysical(args):
     #Paths for wave energy and wave power raster
     wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
     wave_power_path = output_dir + os.sep + 'wp_kw.tif'
+    prj_shape_path = intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
     global_dem = args['dem']
     #Set nodata value and datatype for new rasters
     nodata = 0
@@ -144,16 +145,22 @@ def biophysical(args):
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
     #Reproject shapefile to be in format of AOI, if given.
     if 'aoi' in args:
-        prj_shape_path = intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
         prj_shapefile = change_shape_projection(area_shape, args['aoi'].GetLayer(0).GetSpatialRef(),
                                                 prj_shape_path)
         prj_shapefile.Destroy()
         args['aoi'].Destroy()
+    else:
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.CopyDataSource(area_shape, prj_shape_path)
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
     wave_energy_raster = None
     wave_power_raster = None
+    #Clean up temporary files on disk
+    for file in [wave_shape_path, wave_aoi_path]:
+        if os.path.isfile(file):
+            os.remove(file)
     
 def wave_power(shape):
     """Calculates the wave power from the fields in the shapefile
