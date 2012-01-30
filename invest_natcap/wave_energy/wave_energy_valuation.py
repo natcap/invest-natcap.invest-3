@@ -26,7 +26,6 @@ def execute(args):
         args['land_gridPts_uri'] - A CSV file path containing the Landing and Power Grid Connection Points table.
         args['machine_econ_uri'] - A CSV file path for the machine economic parameters table.
         args['number_of_machines'] - An integer specifying the number of machines for a wave farm site.
-        args['projection_uri'] - A path for the projection to transform coordinates from decimal degrees to meters.
         args['global_dem'] - The file path to the global dem.
         args['wave_data_shape_path'] - The path to the point shapefile created during biophysical run.
         
@@ -34,7 +33,6 @@ def execute(args):
         """
     valuation_args = {}
     valuation_args['workspace_dir'] = args['workspace_dir']
-    valuation_args['projection'] = args['projection_uri']
     valuation_args['global_dem'] = gdal.Open(args['global_dem'])
     valuation_args['wave_data_shape'] = ogr.Open(args['wave_data_shape_path'], 1)
     valuation_args['number_machines'] = args['number_of_machines']
