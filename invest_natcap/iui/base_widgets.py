@@ -71,13 +71,6 @@ class DynamicElement(QtGui.QWidget):
         else:
             return parent.getRoot()
 
-#    def isEnabled(self):
-#        """Retrieve the status of the self.enabled boolean attribute.
-#            self.enabled is an attribute of the QtGui.QWidget object.
-#            
-#            returns a boolean"""
-#        return self.enabled
-
     def requirementsMet(self):
         return True
 
@@ -269,6 +262,10 @@ class DynamicGroup(DynamicElement):
     def getOutputValue(self):
         if 'args_id' in self.attributes and self.isEnabled():
             return self.value()
+
+    def value(self):
+        """TO BE IMPLEMENTED"""
+        return True
 
 class DynamicPrimitive(DynamicElement):
     """DynamicPrimitive represents the class of all elements that can be listed
@@ -1352,21 +1349,22 @@ class Root(DynamicElement):
         outputDict = {}
 
         for id, element in self.allElements.iteritems():
+            if 'args_id' in element.attributes and element.isEnabled():
+                element_value = element.getOutputValue()
+                if element_value != None:
+                    print element
+                    args_id = element.attributes['args_id']
+                    if args_id not in outputDict:
+                        outputDict[args_id] = {}
+                    if 'sub_id' in element.attributes:
+                        sub_id = element.attributes['sub_id']
 
-            element_value = element.getOutputValue()
-            if element_value != None:
-                args_id = element.attributes['args_id']
-                if args_id not in outputDict:
-                    outputDict[args_id] = {}
-                if 'sub_id' in element.attributes:
-                    sub_id = element.attributes['sub_id']
+                        if sub_id in self.allElements:
+                            sub_id = self.allElements[sub_id].getLabel()
 
-                    if sub_id in self.allElements:
-                        sub_id = self.allElements[sub_id].getLabel()
-
-                    outputDict[args_id][sub_id] = element_value
-                else:
-                    outputDict[args_id] = element_value
+                        outputDict[args_id][sub_id] = element_value
+                    else:
+                        outputDict[args_id] = element_value
 
         return outputDict
 
@@ -1375,8 +1373,12 @@ class EmbeddedUI(Root):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
         Root.__init__(self, uri, layout, registrar)
+        self.attributes['args_id'] = attributes['args_id']
         self.body.layout().insertStretch(-1)
-        
+
+    def getOutputValue(self):
+        return self.assembleOutputDict()
+
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
         Root.__init__(self, uri, layout, object_registrar)
