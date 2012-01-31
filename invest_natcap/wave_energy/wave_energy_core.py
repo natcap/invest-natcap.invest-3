@@ -59,18 +59,41 @@ def biophysical(args):
     #Since the global dem is the finest resolution we get as an input,
     #use its pixel sizes as the sizes for the new rasters
     dem_gt = global_dem.GetGeoTransform()
-    pixel_xsize = float(dem_gt[1])
-    pixel_ysize = np.absolute(float(dem_gt[5]))
+    pixel_xsize = 0
+    pixel_ysize = 0
+#    pixel_xsize = float(dem_gt[1])
+#    pixel_ysize = np.absolute(float(dem_gt[5]))
+#    
+    
+    
     #Determine which shapefile will be used to determine area of interest
     if 'aoi' in args:
         #The AOI shapefile has a different projection than lat/long so by calling
         #the clip_shape function with analysis_area_extract (which has lat/long projection
         #which we would expect) and AOI, I am making a new AOI with the proper projection
         logger.debug('Running clip_shape on aoi file')
-        cutter = clip_shape(args['analysis_area_extract'], args['aoi'], wave_aoi_path)
+#        cutter = clip_shape(args['analysis_area_extract'], args['aoi'], wave_aoi_path)
         logger.debug('Finished clip_shape on aoi file')
+        
+        cutter = args['aoi']
+        srs_prj = osr.SpatialReference()
+        srs_prj.SetWellKnownGeogCS("WGS84")
+        source_sr = srs_prj
+        target_sr = cutter.GetLayer(0).GetSpatialRef()
+        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
+        #Get the size of the pixels in meters
+        pixel_size_tuple = invest_cython_core.pixel_size_in_meters(global_dem, coord_trans)
+        pixel_xsize = pixel_size_tuple[0]
+        pixel_ysize = pixel_size_tuple[1]
+        logger.debug('X pixel size of DEM : %f', pixel_xsize)
+        logger.debug('Y pixel size of DEM : %f', pixel_ysize)
     else:
         cutter = args['analysis_area_extract']
+        pixel_xsize = float(dem_gt[1])
+        pixel_ysize = np.absolute(float(dem_gt[5]))
+    
+    
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
     logger.debug('Binding the wave watch data shapefile to a smaller area of interest')
     area_shape = clip_shape(args['analysis_area'], cutter, wave_shape_path)
@@ -125,12 +148,23 @@ def biophysical(args):
     area_shape = wave_power(area_shape)
     #Create blank rasters bounded by the shape file of analyis area
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                              datatype, nodata, wave_energy_path, area_shape)
+                                              datatype, nodata, wave_energy_path, cutter)
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                              datatype, nodata, wave_power_path, area_shape)
+                                              datatype, nodata, wave_power_path, cutter)
     #Open created rasters
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
     wave_energy_raster = gdal.Open(wave_energy_path, GA_Update)
+    
+    #Reproject shapefile to be in format of AOI, if given.
+    if 'aoi' in args:
+        area_shape = change_shape_projection(area_shape, args['aoi'].GetLayer(0).GetSpatialRef(),
+                                                prj_shape_path)
+#        prj_shapefile.Destroy()
+#        args['aoi'].Destroy()
+    else:
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        area_shape = driver.CopyDataSource(area_shape, prj_shape_path)
+    
     #Get the corresponding points and values from the shapefile to be used for interpolation
     logger.debug('Getting the points and corresponding values of wave power and captured wave energy')
     energy_sum_array = get_points_values(area_shape, 'capWE_Sum')
@@ -143,15 +177,6 @@ def biophysical(args):
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
-    #Reproject shapefile to be in format of AOI, if given.
-    if 'aoi' in args:
-        prj_shapefile = change_shape_projection(area_shape, args['aoi'].GetLayer(0).GetSpatialRef(),
-                                                prj_shape_path)
-        prj_shapefile.Destroy()
-        args['aoi'].Destroy()
-    else:
-        driver = ogr.GetDriverByName('ESRI Shapefile')
-        driver.CopyDataSource(area_shape, prj_shape_path)
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
