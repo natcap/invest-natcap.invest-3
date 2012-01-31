@@ -561,14 +561,10 @@ def valuation(args):
     inter_dir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
     output_dir = workspace_dir + os.sep + 'Output'
-    #Output path for projected wave point shapefile holding values of interest
-    projected_shape_path = inter_dir + os.sep + 'WaveData_prj.shp'
     #Output path for landing point shapefile
     land_pt_path = output_dir + os.sep + 'LandPts_prj.shp'
     #Output path for grid point shapefile
     grid_pt_path = output_dir + os.sep + 'GridPt_prj.shp'
-    #Output path for net present value raster
-    wave_farm_value_path = inter_dir + os.sep + 'wave_energy_npv.tif'
     #Output path for the projected net present value raster
     raster_projected_path = output_dir + os.sep + 'npv_usd.tif'
     
@@ -711,9 +707,6 @@ def valuation(args):
         wave_data_layer.SetFeature(feature)
         feature.Destroy()
         feature = wave_data_layer.GetNextFeature()
-    wave_data_shape.Destroy()
-    wave_data_shape = ogr.Open(projected_shape_path, 1)
-    wave_data_layer = wave_data_shape.GetLayer(0)
     
     def npv_wave(annual_revenue, annual_cost):
         """Calculates the NPV for a wave farm site based on the
@@ -774,9 +767,9 @@ def valuation(args):
     #Create a blank raster from the extents of the wave farm shapefile
     logger.debug('Creating Raster From Vector Extents')
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                                     datatype, nodata, wave_farm_value_path, wave_data_shape)
+                                                     datatype, nodata, raster_projected_path, wave_data_shape)
     logger.debug('Completed Creating Raster From Vector Extents')
-    wave_farm_value_raster = gdal.Open(wave_farm_value_path, GA_Update)
+    wave_farm_value_raster = gdal.Open(raster_projected_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
     wave_farm_value_array = get_points_values(wave_data_shape, 'NPV_25Y')
     #Interpolate the NPV values based on the dimensions and 
@@ -786,6 +779,8 @@ def valuation(args):
     interp_points_over_raster(wave_farm_value_array[0],
                               wave_farm_value_array[1], wave_farm_value_raster)
     logger.debug('Done interpolating NPV over raster.')
+    wave_farm_value_raster = None
+    wave_data_shape.Destroy()
     logger.debug('End of wave_energy_core.valuation')
     
 def get_points_geometries(shape):
