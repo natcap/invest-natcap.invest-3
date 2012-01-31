@@ -50,13 +50,6 @@
                     "label": "Wave Data Shapefile",
                     "defaultValue": "./WaveEnergy/Intermediate/WaveData_clipZ.shp",
                     "required": true
-                },
-                {
-                    "id" : "projection",
-                    "args_id": "projection_uri",
-                    "type": "file",
-                    "label": "Projection",
-                    "required": true
                 }
             ]
         }
