@@ -15,7 +15,7 @@ class TestWaveEnergyValuation(unittest.TestCase):
         args = {}
         args['workspace_dir'] = './data/wave_energy_data'
         args['wave_base_data_uri'] = args['workspace_dir'] + os.sep + 'samp_input/WaveData'
-        args['land_gridPts_uri'] = args['workspace_dir'] + os.sep + 'samp_input/LandGridPts_WCVI_CSV.csv'
+        args['land_gridPts_uri'] = args['workspace_dir'] + os.sep + 'samp_input/LandGridPts_WCVI_221.csv'
         args['machine_econ_uri'] = args['workspace_dir'] + os.sep + 'samp_input/Machine_PelamisEconCSV.csv'
         args['number_of_machines'] = 28
         args['global_dem'] = args['workspace_dir'] + os.sep + 'samp_input/global_dem'
