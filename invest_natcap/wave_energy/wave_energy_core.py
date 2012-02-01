@@ -46,8 +46,6 @@ def biophysical(args):
     output_dir = workspace_dir + os.sep + 'Output'
     #Path for clipped wave point shapefile holding wave attribute information
     wave_shape_path = intermediate_dir + os.sep + 'WaveData_clipZ.shp'
-    #Path for 'new' AOI, see comment below 'if AOI in args'
-    wave_aoi_path = intermediate_dir + os.sep + 'waveAOIShape.shp'
     #Paths for wave energy and wave power raster
     wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
     wave_power_path = output_dir + os.sep + 'wp_kw.tif'
@@ -146,7 +144,6 @@ def biophysical(args):
     #Open created rasters
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
     wave_energy_raster = gdal.Open(wave_energy_path, GA_Update)
-
     #Get the corresponding points and values from the shapefile to be used for interpolation
     logger.debug('Getting the points and corresponding values of wave power and captured wave energy')
     energy_sum_array = get_points_values(area_shape, 'capWE_Sum')
@@ -165,9 +162,8 @@ def biophysical(args):
     wave_energy_raster = None
     wave_power_raster = None
     #Clean up temporary files on disk
-    for file in [wave_shape_path, wave_aoi_path]:
-        if os.path.isfile(file):
-            os.remove(file)
+    if os.path.isfile(wave_shape_path):
+        os.remove(wave_shape_path)
     
 def wave_power(shape):
     """Calculates the wave power from the fields in the shapefile
