@@ -30,38 +30,9 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
             regression_dir + '/wp_kw_regression.tif')
         
         #Regression Check for WEM_InputOutput_Pts shapefile
-        regression_wave_data_shape = ogr.Open(regression_dir
-                                              + '/WEM_InputOutput_Pts_regression.shp')
-        wave_data_shape = ogr.Open(args['workspace_dir'] 
-                                   + '/Intermediate/WEM_InputOutput_Pts.shp')
-        
-        regression_layer = regression_wave_data_shape.GetLayer(0)
-        layer = wave_data_shape.GetLayer(0)
-        
-        regression_feat_count = regression_layer.GetFeatureCount()
-        feat_count = layer.GetFeatureCount()
-        self.assertEqual(regression_feat_count, feat_count)
-        
-        layer_def = layer.GetLayerDefn()
-        reg_layer_def = regression_layer.GetLayerDefn()
-        field_count = layer_def.GetFieldCount()
-        reg_field_count = reg_layer_def.GetFieldCount()
-        self.assertEqual(field_count, reg_field_count, 'The shapes DO NOT have the same number of fields')
-        
-        reg_feat = regression_layer.GetNextFeature()
-        feat = layer.GetNextFeature()
-        while reg_feat is not None:            
-            for fld_index in range(field_count):
-                field = feat.GetField(fld_index)
-                reg_field = reg_feat.GetField(fld_index)
-                self.assertEqual(field, reg_field, 'The field values DO NOT match')
-            feat.Destroy()
-            reg_feat.Destroy()
-            feat = layer.GetNextFeature()
-            reg_feat = regression_layer.GetNextFeature()
-            
-        regression_wave_data_shape.Destroy()
-        wave_data_shape.Destroy()
+        wave_data_shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
+        regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, wave_data_shape_path, regression_shape_path)
 
     def test_wave_energy_extrapolate_wave_data(self):
         wave_base_data_uri = './data/wave_energy_data/test_input/sampWaveDataTest.txt'
