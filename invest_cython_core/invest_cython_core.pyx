@@ -603,7 +603,7 @@ cdef void d_p_area(CQueue pixels_to_process,
     #This is an array of pairs that keeps track of i,j indexes and proportion
     #of flow to the inner cell.
     cdef NeighborFlow *neighbors = <NeighborFlow *>malloc(9 * sizeof(Pair))
-    LOGGER = logging.getLOGGER('d_p_area')
+    LOGGER = logging.getLogger('d_p_area')
     while pixels_to_process.size() > 0:
         i = pixels_to_process.pop()
         j = pixels_to_process.pop()
@@ -679,7 +679,7 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     cdef int nodata_flow_direction, i, j
     cdef float nodata_flow_accumulation
     cdef CQueue q
-    LOGGER = logging.getLOGGER('flow_accumulation_dinf')
+    LOGGER = logging.getLogger('flow_accumulation_dinf')
     LOGGER.debug('initializing temporary buffers')
     #Load the input flow into a numpy array
     #GDal inverts x and y, so it's easier to transpose in and back out later
@@ -951,7 +951,7 @@ def calculate_slope(dem, slope):
             
         returns nothing"""
 
-    LOGGER = logging.getLOGGER('calculateSlope')
+    LOGGER = logging.getLogger('calculateSlope')
     #Read the DEM directly into an array
     demBand = dem.GetRasterBand(1)
     demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
