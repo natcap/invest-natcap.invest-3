@@ -1,6 +1,7 @@
 """InVEST Wave Energy Model Core Code"""
 import math
 import os
+import re
 import logging
 
 import numpy as np
@@ -162,9 +163,13 @@ def biophysical(args):
     wave_energy_raster = None
     wave_power_raster = None
     #Clean up temporary files on disk
-    if os.path.isfile(wave_shape_path):
-        os.remove(wave_shape_path)
-    
+    pattern = wave_shape_path[wave_shape_path.rfind(os.sep) + 1:
+                              len(wave_shape_path) - 4] + ".*"
+    logging.debug('Regex file pattern : %s', pattern)
+    for f in os.listdir(intermediate_dir):
+        if re.search(pattern, f):
+            os.remove(os.path.join(intermediate_dir, f))
+
 def wave_power(shape):
     """Calculates the wave power from the fields in the shapefile
     and writes the wave power value to a field for the corresponding
