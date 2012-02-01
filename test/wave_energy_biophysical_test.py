@@ -31,7 +31,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         
         #Regression Check for WEM_InputOutput_Pts shapefile
         wave_data_shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
-        regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_regression.shp'
+        regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_bio_regression.shp'
         invest_test_core.assertTwoShapesEqualURI(self, wave_data_shape_path, regression_shape_path)
 
     def test_wave_energy_extrapolate_wave_data(self):
