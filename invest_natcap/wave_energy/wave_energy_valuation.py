@@ -66,7 +66,14 @@ def execute(args):
         land_grid_pts_file = open(args['land_gridPts_uri'])
         reader = csv.DictReader(land_grid_pts_file)
         for row in reader:
-            land_grid_pts[row['ID'].strip()] = row
+            logger.debug('Land Grid Row: %s', row)
+            if row['ID'] in land_grid_pts:
+                land_grid_pts[row['ID'].strip()][row['TYPE']] = [row['LAT'],
+                                                                 row['LONG']]
+            else:
+                land_grid_pts[row['ID'].strip()] = {row['TYPE']:[row['LAT'],
+                                                                 row['LONG']]}
+        logger.debug('New Land_Grid Dict : %s', land_grid_pts)
         land_grid_pts_file.close()
         valuation_args['land_gridPts'] = land_grid_pts
     except IOError, error:

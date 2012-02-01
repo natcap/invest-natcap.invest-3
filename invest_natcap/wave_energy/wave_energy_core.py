@@ -631,13 +631,15 @@ def valuation(args):
     rho = 1.0 / (1.0 + drate)
     #Extract the landing and grid points data
     land_grid_pts = args['land_gridPts']
-    grid_pt = {}
+    grid_pts = {}
     land_pts = {}
     for key, value in land_grid_pts.iteritems():
-        if value['TYPE'].lower() == 'grid':
-            grid_pt = value
-        else:
-            land_pts[key] = value            
+        grid_pts[key] = [value['GRID'][0], value['GRID'][1]]
+        land_pts[key] = [value['LAND'][0], value['LAND'][1]]
+#        if value['TYPE'].lower() == 'grid':
+#            grid_pt = value
+#        else:
+#            land_pts[key] = value            
     #If either shapefile, landing or grid exist, remove them
     if os.path.isfile(land_pt_path):
         os.remove(land_pt_path)
@@ -652,8 +654,10 @@ def valuation(args):
     layer_landing.CreateField(field_defn_landing)
     #For all of the landing points create a point feature on the layer
     for key, value in land_pts.iteritems():
-        landing_lat = value['LAT']
-        landing_long = value['LONG']
+        landing_lat = value[0]
+        landing_long = value[1]
+#        landing_lat = value['LAT']
+#        landing_long = value['LONG']
         landing_geom = ogr.Geometry(ogr.wkbPoint)
         landing_geom.AddPoint_2D(float(landing_long), float(landing_lat))
         landing_geom.Transform(coord_trans)
@@ -662,7 +666,7 @@ def valuation(args):
         feat_landing = ogr.Feature(layer_landing.GetLayerDefn())
         layer_landing.CreateFeature(feat_landing)
         index = feat_landing.GetFieldIndex('Id')
-        feat_landing.SetField(index, value['ID'])
+        feat_landing.SetField(index, key)
         feat_landing.SetGeometryDirectly(landing_geom)
         #Save the feature modifications to the layer.
         layer_landing.SetFeature(feat_landing)
@@ -670,12 +674,7 @@ def valuation(args):
     layer_landing = None
     drv_landing = None
     ds_landing.Destroy()
-    #Create geometry for grid point location:
-    grid_lat = grid_pt['LAT']
-    grid_long = grid_pt['LONG']
-    grid_geom = ogr.Geometry(ogr.wkbPoint)
-    grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))    
-    grid_geom.Transform(coord_trans)
+
     #Make a point shapefile for grid points
     logger.info('Creating Grid Points Shapefile.')
     drv_grid = ogr.GetDriverByName('ESRI Shapefile')
@@ -683,16 +682,25 @@ def valuation(args):
     layer_grid = ds_grid.CreateLayer('gridpoint', target_sr, ogr.wkbPoint)
     field_defn_grid = ogr.FieldDefn('Id', ogr.OFTInteger)
     layer_grid.CreateField(field_defn_grid)
-    #Create the feature, setting the id field to the corresponding id
-    #field from the csv file
-    feat_grid = ogr.Feature(layer_grid.GetLayerDefn())
-    layer_grid.CreateFeature(feat_grid)
-    index = feat_grid.GetFieldIndex('Id')
-    feat_grid.SetField(index, grid_pt['ID'])    
-    feat_grid.SetGeometryDirectly(grid_geom)
-    #Save the feature modifications to the layer.
-    layer_grid.SetFeature(feat_grid)
-    feat_grid.Destroy()
+    #Create geometry for grid point location:
+    for key, value in grid_pts.iteritems():
+        grid_lat = value[0]
+        grid_long = value[1]
+#    grid_lat = grid_pt['LAT']
+#    grid_long = grid_pt['LONG']
+        grid_geom = ogr.Geometry(ogr.wkbPoint)
+        grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))    
+        grid_geom.Transform(coord_trans)
+        #Create the feature, setting the id field to the corresponding id
+        #field from the csv file
+        feat_grid = ogr.Feature(layer_grid.GetLayerDefn())
+        layer_grid.CreateFeature(feat_grid)
+        index = feat_grid.GetFieldIndex('Id')
+        feat_grid.SetField(index, key)    
+        feat_grid.SetGeometryDirectly(grid_geom)
+        #Save the feature modifications to the layer.
+        layer_grid.SetFeature(feat_grid)
+        feat_grid.Destroy()
     #Close the necessary files and objects
     layer_grid = None
     drv_grid = None
