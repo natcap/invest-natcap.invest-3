@@ -125,7 +125,7 @@ class TestInvestCore(unittest.TestCase):
                     ii = newx.tolist().index(xVal)
                     jj = newy.tolist().index(yVal)
                     self.assertAlmostEquals(z[j][i], interpz[jj][ii], 5,
-                                    "z[%s][%s], interpz[%s][%s], %s != %s" %
+                                    "z[%s][%s], interpz[%s][%s], %s != %s" % 
                                     (i, j, ii, jj, z[j][i], interpz[jj][ii]))
 
         #Create a non-trivial somewhat random matrix
@@ -220,7 +220,31 @@ class TestInvestCore(unittest.TestCase):
         #assert the output of pixelArea against the known value 
         #(it's 30x30 meters) so 0.09 Ha
         self.assertEqual(0.09, area)
-
+        
+    def test_wave_energy_pixel_size_in_meters(self):
+        """Verify the correct output of wave_energy.pixel_size_in_meters()"""
+        correct_pixel_path = './data/wave_energy_regression_data/npv_usd_regression.tif'
+        dataset_correct_pixel = gdal.Open(correct_pixel_path,
+                                          gdal.GA_ReadOnly)
+        dataset = gdal.Open('./data/wave_energy_data/samp_input/global_dem',
+                            gdal.GA_ReadOnly)
+        srs_prj = osr.SpatialReference()
+        srs_prj.SetWellKnownGeogCS("WGS84")
+        source_sr = srs_prj
+        trg_prj = osr.SpatialReference()
+        trg_prj.ImportFromWkt(dataset_correct_pixel.GetProjectionRef())
+        target_sr = trg_prj        
+        logger.debug('target_sr: %s', target_sr)
+        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        #Get the size of the pixels in meters
+        pixel_size_tuple = invest_cython_core.pixel_size_in_meters(dataset,
+                                                                   coord_trans)
+        geo_tran = dataset_correct_pixel.GetGeoTransform()
+        #assert that the x and y pixels are the same size.
+        #this is a regression test
+        self.assertEqual(pixel_size_tuple[0], geo_tran[1])
+        self.assertEqual(pixel_size_tuple[1], geo_tran[5])
+        
     def test_createRasterFromVectorExtents(self):
         fsencoding = sys.getfilesystemencoding()
         shp = ogr.Open('./data/sediment_test_data/subwatersheds.shp'.\
