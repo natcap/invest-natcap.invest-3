@@ -1193,9 +1193,9 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                 j = pixels_to_process.pop()
                 #If we're on a nodata pixel, skip, sediment_retention is set to 
                 #nodata 
-                if potential_soil_loss_matrix[col_index, row_index] == \
+                if potential_soil_loss_matrix[i, j] == \
                     potential_soil_loss_nodata:
-                    sediment_retention_matrix[col_index, row_index] = \
+                    sediment_retention_matrix[i, j] = \
                         sediment_retention_nodata
                     continue
         
