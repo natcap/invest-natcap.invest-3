@@ -572,7 +572,7 @@ def valuation(args):
     #Output path for landing point shapefile
     land_pt_path = output_dir + os.sep + 'LandPts_prj.shp'
     #Output path for grid point shapefile
-    grid_pt_path = output_dir + os.sep + 'GridPt_prj.shp'
+    grid_pt_path = output_dir + os.sep + 'GridPts_prj.shp'
     #Output path for the projected net present value raster
     raster_projected_path = output_dir + os.sep + 'npv_usd.tif'
     
