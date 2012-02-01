@@ -619,10 +619,6 @@ def valuation(args):
     for key, value in land_grid_pts.iteritems():
         grid_pts[key] = [value['GRID'][0], value['GRID'][1]]
         land_pts[key] = [value['LAND'][0], value['LAND'][1]]
-#        if value['TYPE'].lower() == 'grid':
-#            grid_pt = value
-#        else:
-#            land_pts[key] = value            
     #If either shapefile, landing or grid exist, remove them
     if os.path.isfile(land_pt_path):
         os.remove(land_pt_path)
@@ -639,8 +635,6 @@ def valuation(args):
     for key, value in land_pts.iteritems():
         landing_lat = value[0]
         landing_long = value[1]
-#        landing_lat = value['LAT']
-#        landing_long = value['LONG']
         landing_geom = ogr.Geometry(ogr.wkbPoint)
         landing_geom.AddPoint_2D(float(landing_long), float(landing_lat))
         landing_geom.Transform(coord_trans)
@@ -669,8 +663,6 @@ def valuation(args):
     for key, value in grid_pts.iteritems():
         grid_lat = value[0]
         grid_long = value[1]
-#    grid_lat = grid_pt['LAT']
-#    grid_long = grid_pt['LONG']
         grid_geom = ogr.Geometry(ogr.wkbPoint)
         grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))    
         grid_geom.Transform(coord_trans)
