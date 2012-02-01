@@ -30,65 +30,14 @@ class TestWaveEnergyValuation(unittest.TestCase):
             regression_dir + '/npv_usd_regression.tif')
 
         #Regression Check for LandPts_prj shapefile
-        regression_landing_shape = ogr.Open(regression_dir + '/LandPts_prj_regression.shp')
-        landing_shape = ogr.Open(args['workspace_dir'] + '/Output/LandPts_prj.shp')
-        
-        regression_layer = regression_landing_shape.GetLayer(0)
-        layer = landing_shape.GetLayer(0)
-        
-        regression_feat_count = regression_layer.GetFeatureCount()
-        feat_count = layer.GetFeatureCount()
-        self.assertEqual(regression_feat_count, feat_count)
-        
-        layer_def = layer.GetLayerDefn()
-        reg_layer_def = regression_layer.GetLayerDefn()
-        field_count = layer_def.GetFieldCount()
-        reg_field_count = reg_layer_def.GetFieldCount()
-        self.assertEqual(field_count, reg_field_count, 'The shapes DO NOT have the same number of fields')
-        
-        reg_feat = regression_layer.GetNextFeature()
-        feat = layer.GetNextFeature()
-        while reg_feat is not None:            
-            for fld_index in range(field_count):
-                field = feat.GetField(fld_index)
-                reg_field = reg_feat.GetField(fld_index)
-                self.assertEqual(field, reg_field, 'The field values DO NOT match')
-            feat.Destroy()
-            reg_feat.Destroy()
-            feat = layer.GetNextFeature()
-            reg_feat = regression_layer.GetNextFeature()
-            
-        regression_landing_shape.Destroy()
-        landing_shape.Destroy()
-        
-        #Regression Check for GridPt_prj shapefile
-        regression_grid_shape = ogr.Open(regression_dir + '/GridPts_prj_regression.shp')
-        grid_shape = ogr.Open(args['workspace_dir'] + '/Output/GridPts_prj.shp')
-        
-        regression_layer = regression_grid_shape.GetLayer(0)
-        layer = grid_shape.GetLayer(0)
-        
-        regression_feat_count = regression_layer.GetFeatureCount()
-        feat_count = layer.GetFeatureCount()
-        self.assertEqual(regression_feat_count, feat_count)
-        
-        layer_def = layer.GetLayerDefn()
-        reg_layer_def = regression_layer.GetLayerDefn()
-        field_count = layer_def.GetFieldCount()
-        reg_field_count = reg_layer_def.GetFieldCount()
-        self.assertEqual(field_count, reg_field_count, 'The shapes DO NOT have the same number of fields')
-        
-        reg_feat = regression_layer.GetNextFeature()
-        feat = layer.GetNextFeature()
-        while reg_feat is not None:            
-            for fld_index in range(field_count):
-                field = feat.GetField(fld_index)
-                reg_field = reg_feat.GetField(fld_index)
-                self.assertEqual(field, reg_field, 'The field values DO NOT match')
-            feat.Destroy()
-            reg_feat.Destroy()
-            feat = layer.GetNextFeature()
-            reg_feat = regression_layer.GetNextFeature()
-            
-        regression_grid_shape.Destroy()
-        grid_shape.Destroy()
+        landing_shape_path = args['workspace_dir'] + '/Output/LandPts_prj.shp'
+        regression_landing_shape_path = regression_dir + '/LandPts_prj_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, landing_shape_path, regression_landing_shape_path)
+        #Regression Check for GridPts_prj shapefile
+        grid_shape_path = args['workspace_dir'] + '/Output/GridPts_prj.shp'
+        regression_grid_shape_path = regression_dir + '/GridPts_prj_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, grid_shape_path, regression_grid_shape_path)
+        #Regression Check for WEM_InputOutput_Pts shapefile
+        wave_data_shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
+        regression_wave_data_shape_path = regression_dir + '/WEM_InputOutput_Pts_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, wave_data_shape_path, regression_wave_data_shape_path)
