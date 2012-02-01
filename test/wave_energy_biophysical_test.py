@@ -29,11 +29,11 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
             args['workspace_dir'] + '/Output/wp_kw.tif',
             regression_dir + '/wp_kw_regression.tif')
         
-        #Regression Check for WaveData_clipZ shapefile
+        #Regression Check for WEM_InputOutput_Pts shapefile
         regression_wave_data_shape = ogr.Open(regression_dir
-                                              + '/WaveData_clipZ_regression.shp')
+                                              + '/WEM_InputOutput_Pts_regression.shp')
         wave_data_shape = ogr.Open(args['workspace_dir'] 
-                                   + '/Intermediate/WaveData_clipZ.shp')
+                                   + '/Intermediate/WEM_InputOutput_Pts.shp')
         
         regression_layer = regression_wave_data_shape.GetLayer(0)
         layer = wave_data_shape.GetLayer(0)
