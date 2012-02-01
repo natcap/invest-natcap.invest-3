@@ -59,26 +59,18 @@ def biophysical(args):
     #Since the global dem is the finest resolution we get as an input,
     #use its pixel sizes as the sizes for the new rasters
     dem_gt = global_dem.GetGeoTransform()
-    pixel_xsize = 0
-    pixel_ysize = 0
-#    pixel_xsize = float(dem_gt[1])
-#    pixel_ysize = np.absolute(float(dem_gt[5]))
-#    
-    
-    
+
+    srs_prj = osr.SpatialReference()
+    srs_prj.SetWellKnownGeogCS("WGS84")
+    source_sr = srs_prj
     #Determine which shapefile will be used to determine area of interest
     if 'aoi' in args:
         #The AOI shapefile has a different projection than lat/long so by calling
         #the clip_shape function with analysis_area_extract (which has lat/long projection
         #which we would expect) and AOI, I am making a new AOI with the proper projection
-        logger.debug('Running clip_shape on aoi file')
-#        cutter = clip_shape(args['analysis_area_extract'], args['aoi'], wave_aoi_path)
-        logger.debug('Finished clip_shape on aoi file')
-        
         cutter = args['aoi']
-        srs_prj = osr.SpatialReference()
-        srs_prj.SetWellKnownGeogCS("WGS84")
-        source_sr = srs_prj
+        analysis_shape = change_shape_projection(args['analysis_area'], args['aoi'].GetLayer(0).GetSpatialRef(),
+                                             wave_shape_path)
         target_sr = cutter.GetLayer(0).GetSpatialRef()
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
@@ -92,11 +84,14 @@ def biophysical(args):
         cutter = args['analysis_area_extract']
         pixel_xsize = float(dem_gt[1])
         pixel_ysize = np.absolute(float(dem_gt[5]))
-    
+        analysis_shape = args['analysis_area']
+        target_sr = cutter.GetLayer(0).GetSpatialRef()
+        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     
     #Create a new shapefile that is a copy of analysis_area but bounded by AOI
     logger.debug('Binding the wave watch data shapefile to a smaller area of interest')
-    area_shape = clip_shape(args['analysis_area'], cutter, wave_shape_path)
+    area_shape = clip_shape(analysis_shape, cutter, prj_shape_path)
     area_layer = area_shape.GetLayer(0)
     #We do all wave power calculations by manipulating the fields in
     #the wave data shapefile, thus we need to add proper depth values
@@ -116,21 +111,18 @@ def biophysical(args):
         geom = feature.GetGeometryRef()
         lat = geom.GetX()
         longitude = geom.GetY()
+        #Transform two points into meters
+        point_decimal_degree = coord_trans_opposite.TransformPoint(lat, longitude)
         #To get proper depth value we must index into the dem matrix
         #by getting where the point is located in terms of the matrix
-        i = int((lat - dem_gt[0]) / dem_gt[1])
-        j = int((longitude - dem_gt[3]) / dem_gt[5])
+        i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
+        j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
         depth = dem_matrix[j][i]        
         feature.SetField(depth_index, depth)        
         area_layer.SetFeature(feature)
         feature.Destroy()
         feature = area_layer.GetNextFeature()
     logger.debug('Finished adding depth field to shapefile from DEM raster')
-    #We close and open the same shapefile to make sure all data is officially written to disk
-    #Not sure if this is absolutely necessary, should test to make sure we aren't doing extra work.
-    area_shape.Destroy()
-    area_shape = ogr.Open(wave_shape_path, 1)
-    area_layer = area_shape.GetLayer(0)
     #Generate an interpolate object for wave_energy_capacity
     logger.debug('Interpolating machine performance table')
     energy_interp = wave_energy_interp(args['wave_base_data'], args['machine_perf'])
@@ -154,17 +146,7 @@ def biophysical(args):
     #Open created rasters
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
     wave_energy_raster = gdal.Open(wave_energy_path, GA_Update)
-    
-    #Reproject shapefile to be in format of AOI, if given.
-    if 'aoi' in args:
-        area_shape = change_shape_projection(area_shape, args['aoi'].GetLayer(0).GetSpatialRef(),
-                                                prj_shape_path)
-#        prj_shapefile.Destroy()
-#        args['aoi'].Destroy()
-    else:
-        driver = ogr.GetDriverByName('ESRI Shapefile')
-        area_shape = driver.CopyDataSource(area_shape, prj_shape_path)
-    
+
     #Get the corresponding points and values from the shapefile to be used for interpolation
     logger.debug('Getting the points and corresponding values of wave power and captured wave energy')
     energy_sum_array = get_points_values(area_shape, 'capWE_Sum')
