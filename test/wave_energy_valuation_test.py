@@ -62,8 +62,8 @@ class TestWaveEnergyValuation(unittest.TestCase):
         landing_shape.Destroy()
         
         #Regression Check for GridPt_prj shapefile
-        regression_grid_shape = ogr.Open(regression_dir + '/GridPt_prj_regression.shp')
-        grid_shape = ogr.Open(args['workspace_dir'] + '/Output/GridPt_prj.shp')
+        regression_grid_shape = ogr.Open(regression_dir + '/GridPts_prj_regression.shp')
+        grid_shape = ogr.Open(args['workspace_dir'] + '/Output/GridPts_prj.shp')
         
         regression_layer = regression_grid_shape.GetLayer(0)
         layer = grid_shape.GetLayer(0)
