@@ -71,13 +71,6 @@ class DynamicElement(QtGui.QWidget):
         else:
             return parent.getRoot()
 
-#    def isEnabled(self):
-#        """Retrieve the status of the self.enabled boolean attribute.
-#            self.enabled is an attribute of the QtGui.QWidget object.
-#            
-#            returns a boolean"""
-#        return self.enabled
-
     def requirementsMet(self):
         return True
 
@@ -140,6 +133,9 @@ class DynamicElement(QtGui.QWidget):
         else:
             return ''
 
+    def getElementsDictionary(self):
+        return {self.attributes['id']: self}
+
 class DynamicGroup(DynamicElement):
     """Creates an object intended for grouping other elements together.
     
@@ -161,7 +157,7 @@ class DynamicGroup(DynamicElement):
         if there is no corresponding entry in createElements()
         """
 
-    def __init__(self, attributes, layout, registrar=None):
+    def __init__(self, attributes, layout=QtGui.QVBoxLayout(), registrar=None):
         """Constructor for the DynamicGroup class.
             Most object construction has been abstracted to the DynamicElement
             class.  The defining feature of a DynamicGroup from a DynamicElement
@@ -185,7 +181,7 @@ class DynamicGroup(DynamicElement):
         #itself is a subclass of QtGui.QWidget) so that we can add widgets 
         #as necessary.
         self.setLayout(layout)
-        
+       
         self.registrar = registrar
         if registrar != None:
             self.createElements(attributes['elements'])
@@ -251,9 +247,11 @@ class DynamicGroup(DynamicElement):
                 element pointer."""
 
         outputDict = {}
+        outputDict[self.attributes['id']] = self
         for element in self.elements:
             #Create an entry in the output dictionary for the current element
-            outputDict[element.attributes['id']] = element
+            #outputDict[element.attributes['id']] = element #superceded by
+            #dynamicElement.getElementsDictionary()
             try:
                 outputDict.update(element.getElementsDictionary())
             except AttributeError:
@@ -264,6 +262,10 @@ class DynamicGroup(DynamicElement):
     def getOutputValue(self):
         if 'args_id' in self.attributes and self.isEnabled():
             return self.value()
+
+    def value(self):
+        """TO BE IMPLEMENTED"""
+        return True
 
 class DynamicPrimitive(DynamicElement):
     """DynamicPrimitive represents the class of all elements that can be listed
@@ -1114,6 +1116,31 @@ class ElementAssembler(iui_validator.ValidationAssembler):
     
         return value    
 
+class ScrollArea(QtGui.QScrollArea):
+    def __init__(self, attributes, layout=QtGui.QVBoxLayout(), registrar=None):
+        QtGui.QScrollArea.__init__(self)
+        print self.width()
+
+        self.body = DynamicGroup(attributes, layout, registrar)
+        self.setWidget(self.body)
+        self.updateScrollBorder()
+
+    def updateScrollBorder(self, min=None, max=None):
+        if min == None:
+            min = self.verticalScrollBar().minimum()
+        if max == None:
+            max = self.verticalScrollBar().maximum()
+
+        if min == 0 and max == 0:
+            self.setStyleSheet("QScrollArea { border: None } ")
+        else:
+            self.setStyleSheet("")
+
+    def getElementsDictionary(self):
+        for id, element in self.body.getElementsDictionary().iteritems():
+            print(id, element)
+        return self.body.getElementsDictionary()
+
 class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
@@ -1322,31 +1349,36 @@ class Root(DynamicElement):
         outputDict = {}
 
         for id, element in self.allElements.iteritems():
+            if 'args_id' in element.attributes and element.isEnabled():
+                element_value = element.getOutputValue()
+                if element_value != None:
+                    print element
+                    args_id = element.attributes['args_id']
+                    if args_id not in outputDict:
+                        outputDict[args_id] = {}
+                    if 'sub_id' in element.attributes:
+                        sub_id = element.attributes['sub_id']
 
-            element_value = element.getOutputValue()
-            if element_value != None:
-                args_id = element.attributes['args_id']
-                if args_id not in outputDict:
-                    outputDict[args_id] = {}
-                if 'sub_id' in element.attributes:
-                    sub_id = element.attributes['sub_id']
+                        if sub_id in self.allElements:
+                            sub_id = self.allElements[sub_id].getLabel()
 
-                    if sub_id in self.allElements:
-                        sub_id = self.allElements[sub_id].getLabel()
-
-                    outputDict[args_id][sub_id] = element_value
-                else:
-                    outputDict[args_id] = element_value
+                        outputDict[args_id][sub_id] = element_value
+                    else:
+                        outputDict[args_id] = element_value
 
         return outputDict
 
 class EmbeddedUI(Root):
-    def __init__(self, attributes, object_registrar):
+    def __init__(self, attributes, registrar):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
-        Root.__init__(self, uri, layout, object_registrar)
+        Root.__init__(self, uri, layout, registrar)
+        self.attributes['args_id'] = attributes['args_id']
         self.body.layout().insertStretch(-1)
-        
+
+    def getOutputValue(self):
+        return self.assembleOutputDict()
+
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
         Root.__init__(self, uri, layout, object_registrar)
@@ -1448,14 +1480,16 @@ class ElementRegistrar(registrar.Registrar):
                    'hideableFileEntry': HideableFileEntry,
                    'dropdown': Dropdown,
                    'embeddedUI': EmbeddedUI,
-                   'checkbox': CheckBox
+                   'checkbox': CheckBox,
+                   'scrollGroup': ScrollArea
                    }
         self.update_map(updates)
         
     def eval(self, type, op_values):
         widget = registrar.Registrar.get_func(self, type)
-        if issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI):
-            return widget(op_values, self)
+        if (issubclass(widget, DynamicGroup) or issubclass(widget, EmbeddedUI)
+            or issubclass(widget, ScrollArea)):
+            return widget(op_values, registrar=self)
         else:
             return widget(op_values)
 
