@@ -6,6 +6,7 @@ import logging
 
 import numpy as np
 from osgeo import gdal
+from osgeo import ogr
 
 logger = logging.getLogger('invest_core')
 
@@ -32,15 +33,15 @@ def assertTwoDatasetsEqual(unitTest, a, b):
         returns True if a and b are equal to each other"""
     unitTest.assertEqual(a.RasterXSize, b.RasterXSize,
                          "x dimensions are different a="
-                         + str(a.RasterXSize) +
+                         + str(a.RasterXSize) + 
                          ", second = " + str(b.RasterXSize))
     unitTest.assertEqual(a.RasterYSize, b.RasterYSize,
                          "y dimensions are different a="
-                         + str(a.RasterYSize) +
+                         + str(a.RasterYSize) + 
                          ", second = " + str(b.RasterYSize))
     unitTest.assertEqual(a.RasterCount, b.RasterCount,
                          "different number of rasters a="
-                         + str(a.RasterCount) +
+                         + str(a.RasterCount) + 
                          ", b = " + str(b.RasterCount))
 
     for bandNumber in range(1, a.RasterCount + 1):
@@ -50,6 +51,60 @@ def assertTwoDatasetsEqual(unitTest, a, b):
         aArray = bandA.ReadAsArray(0, 0, bandA.XSize, bandA.YSize)
         bArray = bandB.ReadAsArray(0, 0, bandB.XSize, bandB.YSize)
         np.testing.assert_array_almost_equal(aArray, bArray)
+
+def assertTwoShapesEqualURI(unitTest, aUri, bUri):
+    """Tests if shapes a and b are equal to each other on a
+       layer, feature, and field basis
+    
+       unitTest - an instance of a unittest object
+       aUri - a URI to a ogr shapefile
+       bUri - a URI to a ogr shapefile
+    
+       returns True if a and b are equal to each other"""
+    
+    assertTwoShapesEqual(unitTest, ogr.Open(aUri), ogr.Open(bUri))
+
+def assertTwoShapesEqual(unitTest, shape, shape_regression):
+    """Tests if shapes a and b are equal to each other on a
+       layer, feature, and field basis
+    
+       unitTest - an instance of a unittest object
+       shape - an ogr shapefile
+       shape_regression - an ogr shapefile
+    
+       returns True if a and b are equal to each other"""
+    
+    layer_count = shape.GetLayerCount()
+    layer_count_regression = shape_regression.GetLayerCount()
+    unitTest.assertEqual(layer_count, layer_count_regression,
+                     'The shapes DO NOT have the same number of layers')
+    for layer_num in range(layer_count):
+        layer = shape.GetLayer(layer_num)
+        layer.ResetReading()
+        layer_regression = shape_regression.GetLayer(layer_num)
+        feat_count = layer.GetFeatureCount()
+        feat_count_regression = layer_regression.GetFeatureCount()
+        unitTest.assertEqual(feat_count, feat_count_regression,
+                         'The layers DO NOT have the same number of features')
+        feat = layer.GetNextFeature()
+        feat_regression = layer_regression.GetNextFeature()
+        while feat is not None:
+            layer_def = layer.GetLayerDefn()
+            layer_def_regression = layer_regression.GetLayerDefn()
+            field_count = layer_def.GetFieldCount()
+            field_count_regression = layer_def_regression.GetFieldCount()
+            unitTest.assertEqual(field_count, field_count_regression,
+                             'The shapes DO NOT have the same number of fields')
+            for fld_index in range(field_count):
+                field = feat.GetField(fld_index)
+                field_regression = feat_regression.GetField(fld_index)
+                unitTest.assertEqual(field, field_regression, 'The field values DO NOT match')
+            feat.Destroy()
+            feat_regression.Destroy()
+            feat = layer.GetNextFeature()
+            feat_regression = layer_regression.GetNextFeature()
+    shape.Destroy()
+    shape_regression.Destroy()
 
 def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
     """Create a new raster with random int values.
@@ -80,10 +135,10 @@ def assertTwoDatasets(unit, firstDS, secondDS, checkEqual, dict=None):
     firstDSBand = firstDS.GetRasterBand(1)
     secondDSBand = secondDS.GetRasterBand(1)
     unit.assertEqual(firstDSBand.XSize, secondDSBand.XSize,
-                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
+                      "Dimensions differ: first=" + str(firstDSBand.XSize) + 
                        ", second = " + str(secondDSBand.XSize))
     unit.assertEqual(firstDSBand.YSize, secondDSBand.YSize,
-                      "Dimensions differ: first=" + str(firstDSBand.YSize) +
+                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
                       ", second = " + str(secondDSBand.YSize))
 
     for i in range(0, firstDSBand.YSize):
@@ -99,10 +154,10 @@ def assertThreeDatasets(unit, firstDS, secondDS, thirdDS, checkMask, nodata):
     secondDSBand = secondDS.GetRasterBand(1)
     maskBand = thirdDS.GetRasterBand(1)
     unit.assertEqual(firstDSBand.XSize, maskBand.XSize,
-                      "Dimensions differ: first=" + str(firstDSBand.XSize) +
+                      "Dimensions differ: first=" + str(firstDSBand.XSize) + 
                        ", second = " + str(maskBand.XSize))
     unit.assertEqual(firstDSBand.YSize, maskBand.YSize,
-                      "Dimensions differ: first=" + str(firstDSBand.YSize) +
+                      "Dimensions differ: first=" + str(firstDSBand.YSize) + 
                       ", second = " + str(maskBand.YSize))
 
     for i in range(0, firstDSBand.YSize):
