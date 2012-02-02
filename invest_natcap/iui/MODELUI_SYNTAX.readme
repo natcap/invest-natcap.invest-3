@@ -312,10 +312,11 @@ others are optional.
                     "fieldsExist": ["NAME", "VALUE", "NOTE"],
                     "restrictions": [{"field": "NAME",
                                     "validateAs": {"type": "string",
-                                                   "allowedValues":"[a-z]*"},
+                                                   "allowedValues": {"pattern":"[a-z]*",
+                                                                     "flag": "ignoreCase"}},
                                      {"field": "VALUE",
                                       "validateAs": {"type": "number",
-                                                     "allowedValues":"[0-9]*"}
+                                                     "allowedValues":{"pattern":"[0-9]*"}}
                                         }                                    
                                     }]}
 

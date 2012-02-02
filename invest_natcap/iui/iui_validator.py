@@ -359,8 +359,23 @@ class PrimitiveChecker(Checker):
         updates = {'allowedValues': self.check_regexp}
         self.update_map(updates)
 
-    def check_regexp(self, regexp):
-        pattern = re.compile(regexp)
+    def check_regexp(self, regexp_dict):
+        flag = 0
+        if 'flag' in regexp_dict:
+            if regexp_dict['flag'] == 'ignoreCase':
+                flag = re.IGNORECASE
+            elif regexp_dict['flag'] == 'verbose':
+                flag = re.VERBOSE
+            elif regexp_dict['flag'] == 'debug':
+                flag = re.DEBUG
+            elif regexp_dict['flag'] == 'locale':
+                flag = re.LOCALE
+            elif regexp_dict['flag'] == 'multiline':
+                flag = re.MULTILINE
+            elif regexp_dict['flag'] == 'dotAll':
+                flag = re.DOTALL
+
+        pattern = re.compile(regexp_dict['pattern'], flag)
         if pattern.match(self.value) == None:
             return str(self.value + " value not allowed")
 
