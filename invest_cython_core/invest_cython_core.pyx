@@ -1186,26 +1186,24 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
     for col_index in range(1, ncols - 1):
         LOGGER.debug('col_index %s' % col_index)
         for row_index in range(1, nrows - 1):
-            pixels_to_process.push(row_index)
             pixels_to_process.push(col_index)
+            pixels_to_process.push(row_index)
             while pixels_to_process.size() > 0:
                 i = pixels_to_process.pop()
                 j = pixels_to_process.pop()
-                #If we're on a nodata pixel, skip, sediment_retention is set to 
-                #nodata 
+                
+                #Set current pixel to 0 so we don't push it onto the queue
+                #later if there's a bit of overflow between pixels
+                sediment_retention_matrix[i, j] = 0
+                
+                #If we're on a nodata pixel, skip it
                 if potential_soil_loss_matrix[i, j] == \
                     potential_soil_loss_nodata:
-                    sediment_retention_matrix[i, j] = \
-                        sediment_retention_nodata
                     continue
         
                 #build list of uncalculated neighbors
                 calculate_inflow_neighbors_dinf(i, j, aspect_matrix,  aspect_nodata, 
                                                 neighbors)
-        
-                #Set current pixel to 0 so we don't push it onto the queue
-                #later if there's a bit of overflow between pixels
-                sediment_retention_matrix[i, j] = 0
                 
                 #check to see if any of the neighbors were uncalculated, if so, 
                 #calculate them
@@ -1219,6 +1217,8 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                     pi = neighbors[neighbor_index].i
                     pj = neighbors[neighbor_index].j
                     
+                    #LOGGER.debug("neighbor pi pj %s %s" % (pi,pj))
+                    
                     #see if neighbor is uncalculated
                     if sediment_retention_matrix[pi, pj] == -1:
                         #push the current pixel back on, note the indexes are in reverse
@@ -1226,9 +1226,15 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                         pixels_to_process.push(j)
                         pixels_to_process.push(i)
                             
+                        #now push the neighbor pixel on that hasn't been 
+                        #calculated.  It should be the first one popped off
+                        #on the next itration of the loop
                         pixels_to_process.push(pj)
                         pixels_to_process.push(pi)
+
                         #LOGGER.debug("Neighbors uncalculted i j pi pj queue size %s %s %s %s %s" % (i,j,pi,pj,pixels_to_process.size()))
+                        #LOGGER.debug("sediment_retention_matrix[i, j], sediment_retention_matrix[pi, pj] %s %s" % (sediment_retention_matrix[i, j], sediment_retention_matrix[pi, pj]))
+                        
                         neighbors_uncalculated = True
                         break
         
@@ -1255,6 +1261,11 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                     export_matrix[i, j] += \
                         retention_efficiency_matrix[i, j] * (1 - prop) * \
                         export_matrix[pi, pj]
+
+    sediment_retention_matrix[potential_soil_loss_matrix == \
+                              potential_soil_loss_nodata] = \
+        sediment_retention_nodata
+
 
     #Need to transpose the output for consistency in our array notation
     sediment_retention.GetRasterBand(1). \
