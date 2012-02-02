@@ -224,9 +224,10 @@ class TestInvestCore(unittest.TestCase):
     def test_wave_energy_pixel_size_in_meters(self):
         """Verify the correct output of wave_energy.pixel_size_in_meters()"""
         correct_pixel_path = './data/wave_energy_regression_data/npv_usd_regression.tif'
+#        correct_pixel_path = './data/wave_energy_data/wave_energy_testing/npv_usd'
         dataset_correct_pixel = gdal.Open(correct_pixel_path,
                                           gdal.GA_ReadOnly)
-        dataset = gdal.Open('./data/wave_energy_data/samp_input/global_dem',
+        dataset = gdal.Open('./data/wave_energy_data/dump_files/aoiWP.tif',
                             gdal.GA_ReadOnly)
         srs_prj = osr.SpatialReference()
         srs_prj.SetWellKnownGeogCS("WGS84")
@@ -234,12 +235,12 @@ class TestInvestCore(unittest.TestCase):
         trg_prj = osr.SpatialReference()
         trg_prj.ImportFromWkt(dataset_correct_pixel.GetProjectionRef())
         target_sr = trg_prj        
-        logger.debug('target_sr: %s', target_sr)
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         #Get the size of the pixels in meters
         pixel_size_tuple = invest_cython_core.pixel_size_in_meters(dataset,
                                                                    coord_trans)
         geo_tran = dataset_correct_pixel.GetGeoTransform()
+        logger.debug('correct pixel sizes : %s : %s', geo_tran[1], geo_tran[5])
         #assert that the x and y pixels are the same size.
         #this is a regression test
         self.assertEqual(pixel_size_tuple[0], geo_tran[1])
