@@ -146,7 +146,7 @@ def pixelArea(dataset):
     areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
     return areaMeters / (10 ** 4) #convert m^2 to Ha
 
-def pixel_size_in_meters(dataset, coord_trans):
+def pixel_size_in_meters(dataset, coord_trans, point):
     """Calculates the pixel width and height in meters. Takes the
        top left point given by the datasets geoTransform and adds the
        datasets pixel width to each coordinate (x,y).  The first point
@@ -162,8 +162,10 @@ def pixel_size_in_meters(dataset, coord_trans):
     geo_tran = dataset.GetGeoTransform()    
     pixel_size_x = geo_tran[1]
     pixel_size_y = geo_tran[5]
-    top_left_x = geo_tran[0]
-    top_left_y = geo_tran[3]
+    top_left_x = point[0]
+    top_left_y = point[1]
+#    top_left_x = geo_tran[0]
+#    top_left_y = geo_tran[3]
     LOGGER.debug('pixel_size_x: %s', pixel_size_x)
     LOGGER.debug('pixel_size_x: %s', pixel_size_y)
     LOGGER.debug('top_left_x : %s', top_left_x)
@@ -176,15 +178,11 @@ def pixel_size_in_meters(dataset, coord_trans):
     #Transform two points into meters
     point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
     point_2 = coord_trans.TransformPoint(new_x, new_y)
-    point_3 = coord_trans.TransformPoint(-129.416921199762, 50.1052911841226)
-    point_4 = coord_trans.TransformPoint(-123.542183334695, 47.8427132639456)
     #Calculate the x/y difference between two points
     pixel_diff_x = point_2[0] - point_1[0]
     pixel_diff_y = point_2[1] - point_1[1]
     LOGGER.debug('point1 : %s', point_1)
     LOGGER.debug('point2 : %s', point_2)
-    LOGGER.debug('point3 : %s', point_3)
-    LOGGER.debug('point4 : %s', point_4)
     LOGGER.debug('pixel_diff_x : %s', pixel_diff_x)
     LOGGER.debug('pixel_diff_y : %s', pixel_diff_y)
     return (pixel_diff_x, pixel_diff_y)
