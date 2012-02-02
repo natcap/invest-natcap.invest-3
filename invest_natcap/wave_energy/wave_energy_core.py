@@ -73,12 +73,22 @@ def biophysical(args):
         target_sr = cutter.GetLayer(0).GetSpatialRef()
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
+        analyis_layer = analysis_shape.GetLayer(0)
+        analysis_feat = analysis_layer.GetNextFeature()
+        analysis_geom = analysis_feat.GetGeometryRef()
+        analysis_lat = geom.GetX()
+        analysis_long = geom.GetY()
+        analysis_point = coord_trans_opposite.TransformPoint(analysis_lat, analysis_long)
         #Get the size of the pixels in meters
-        pixel_size_tuple = invest_cython_core.pixel_size_in_meters(global_dem, coord_trans)
+        pixel_size_tuple = invest_cython_core.pixel_size_in_meters(global_dem, coord_trans, analysis_point)
         pixel_xsize = pixel_size_tuple[0]
         pixel_ysize = pixel_size_tuple[1]
         logger.debug('X pixel size of DEM : %f', pixel_xsize)
         logger.debug('Y pixel size of DEM : %f', pixel_ysize)
+        analysis_layer.ResetReading()
+        analysis_layer = None
+        analysis_geom = None
+        analysis_feat = None
     else:
         cutter = args['analysis_area_extract']
         pixel_xsize = float(dem_gt[1])
