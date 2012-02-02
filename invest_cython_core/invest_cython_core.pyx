@@ -177,8 +177,8 @@ def pixel_size_in_meters(dataset, coord_trans):
     point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
     point_2 = coord_trans.TransformPoint(new_x, new_y)
     #Calculate the x/y difference between two points
-    pixel_diff_x = point_1[0] - point_2[0]
-    pixel_diff_y = point_1[1] - point_2[1]
+    pixel_diff_x = point_2[0] - point_1[0]
+    pixel_diff_y = point_2[1] - point_1[1]
     LOGGER.debug('point1 : %s', point_1)
     LOGGER.debug('point2 : %s', point_2)
     LOGGER.debug('pixel_diff_x : %s', pixel_diff_x)
