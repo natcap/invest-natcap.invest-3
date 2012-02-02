@@ -189,8 +189,8 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     """Create a blank raster based on a vector file extent.  This code is
         adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
     
-        xRes - the x resolution of the output dataset
-        yRes - the y resolution of the output dataset
+        xRes - the x size of a pixel in the output dataset
+        yRes - the y size of a pixel in the output dataset
         format - gdal GDT pixel type
         nodata - the output nodata value
         rasterFile - URI to file location for raster
