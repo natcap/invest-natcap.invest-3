@@ -70,14 +70,17 @@ def biophysical(args):
         cutter = args['aoi']
         analysis_shape = change_shape_projection(args['analysis_area'], args['aoi'].GetLayer(0).GetSpatialRef(),
                                              wave_shape_path)
+        #Create a new shapefile that is a copy of analysis_area but bounded by AOI
+        logger.debug('Binding the wave watch data shapefile to a smaller area of interest')
+        area_shape = clip_shape(analysis_shape, cutter, prj_shape_path)
+        area_layer = area_shape.GetLayer(0)
         target_sr = cutter.GetLayer(0).GetSpatialRef()
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
-        analyis_layer = analysis_shape.GetLayer(0)
-        analysis_feat = analysis_layer.GetNextFeature()
+        analysis_feat = area_layer.GetNextFeature()
         analysis_geom = analysis_feat.GetGeometryRef()
-        analysis_lat = geom.GetX()
-        analysis_long = geom.GetY()
+        analysis_lat = analysis_geom.GetX()
+        analysis_long = analysis_geom.GetY()
         analysis_point = coord_trans_opposite.TransformPoint(analysis_lat, analysis_long)
         #Get the size of the pixels in meters
         pixel_size_tuple = invest_cython_core.pixel_size_in_meters(global_dem, coord_trans, analysis_point)
@@ -85,7 +88,7 @@ def biophysical(args):
         pixel_ysize = pixel_size_tuple[1]
         logger.debug('X pixel size of DEM : %f', pixel_xsize)
         logger.debug('Y pixel size of DEM : %f', pixel_ysize)
-        analysis_layer.ResetReading()
+        area_layer.ResetReading()
         analysis_layer = None
         analysis_geom = None
         analysis_feat = None
@@ -98,10 +101,10 @@ def biophysical(args):
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     
-    #Create a new shapefile that is a copy of analysis_area but bounded by AOI
-    logger.debug('Binding the wave watch data shapefile to a smaller area of interest')
-    area_shape = clip_shape(analysis_shape, cutter, prj_shape_path)
-    area_layer = area_shape.GetLayer(0)
+#    #Create a new shapefile that is a copy of analysis_area but bounded by AOI
+#    logger.debug('Binding the wave watch data shapefile to a smaller area of interest')
+#    area_shape = clip_shape(analysis_shape, cutter, prj_shape_path)
+#    area_layer = area_shape.GetLayer(0)
     #We do all wave power calculations by manipulating the fields in
     #the wave data shapefile, thus we need to add proper depth values
     #from the raster DEM
