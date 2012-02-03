@@ -12,7 +12,7 @@ from invest_natcap.wave_energy import wave_energy_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-logger = logging.getLogger('carbon_biophysical')
+logger = logging.getLogger('wave_energy_biophysical')
 
 def execute(args):
     """This function invokes the biophysical part of the wave energy model 
