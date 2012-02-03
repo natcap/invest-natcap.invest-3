@@ -147,17 +147,20 @@ def pixelArea(dataset):
     return areaMeters / (10 ** 4) #convert m^2 to Ha
 
 def pixel_size_in_meters(dataset, coord_trans, point):
-    """Calculates the pixel width and height in meters. Takes the
-       top left point given by the datasets geoTransform and adds the
-       datasets pixel width to each coordinate (x,y).  The first point
-       and new second point are then converted into meters and the
-       x and y difference are taken to get the pixel width and height in
-       meters.
-    
+    """Calculates the pixel width and height in meters given a coordinate 
+        transform and reference point on the dataset that's close to the 
+        transform's projected coordiate sytem.  This is only necessary
+        if dataset is not already in a meter coordinate system, for example
+        dataset may be in lat/long (WGS84).  
+     
        dataset - A projected GDAL dataset in the form of lat/long decimal degrees
-       coord_trans - An OSR coordinate transformation from lat/long to meters
+       coord_trans - An OSR coordinate transformation from dataset coordinate
+           system to meters
+       point - a reference point close to the coordinate transform coordiate
+           system.  must be in the same coordiate system as dataset.
        
-       returns a tuple containing (pixel width in meters, pixel height in meters)"""
+       returns a tuple containing (pixel width in meters, pixel height in 
+           meters)"""
     #Get the first points (x,y) from geoTransform
     geo_tran = dataset.GetGeoTransform()    
     pixel_size_x = geo_tran[1]
@@ -179,8 +182,11 @@ def pixel_size_in_meters(dataset, coord_trans, point):
     point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
     point_2 = coord_trans.TransformPoint(new_x, new_y)
     #Calculate the x/y difference between two points
-    pixel_diff_x = point_2[0] - point_1[0]
-    pixel_diff_y = point_2[1] - point_1[1]
+    #taking the absolue value because the direction doesn't matter for pixel
+    #size in the case of most coordinate systems where y increases up and x
+    #increases to the right (right handed coordinate system).
+    pixel_diff_x = abs(point_2[0] - point_1[0])
+    pixel_diff_y = abs(point_2[1] - point_1[1])
     LOGGER.debug('point1 : %s', point_1)
     LOGGER.debug('point2 : %s', point_2)
     LOGGER.debug('pixel_diff_x : %s', pixel_diff_x)
@@ -191,8 +197,10 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     """Create a blank raster based on a vector file extent.  This code is
         adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
     
-        xRes - the x size of a pixel in the output dataset
-        yRes - the y size of a pixel in the output dataset
+        xRes - the x size of a pixel in the output dataset must be a positive 
+            value
+        yRes - the y size of a pixel in the output dataset must be a positive 
+            value
         format - gdal GDT pixel type
         nodata - the output nodata value
         rasterFile - URI to file location for raster
@@ -211,7 +219,7 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
-    #Set the transform based on the hupper left corner and given pixel
+    #Set the transform based on the upper left corner and given pixel
     #dimensions
     raster_transform = [shpExtent[0], xRes, 0.0, shpExtent[3], 0.0, -yRes]
     raster.SetGeoTransform(raster_transform)
