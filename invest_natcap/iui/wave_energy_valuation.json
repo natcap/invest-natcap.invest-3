@@ -25,7 +25,23 @@
                     "type": "file",
                     "label": "Path to Folder with Wave Base Data",
                     "defaultValue": "./WaveEnergy/Input/LandGridPts_WCVI.csv",
-                    "required": true
+                    "required": true,
+                    "validateAs": { "type": "CSV",
+                    				"fieldsExist": ["ID", "TYPE", "LAT", "LONG", "LOCATION"],
+                    				"restrictions": [{"field": "ID",
+                                    				"validateAs": {"type": "number",
+                                                   				   "allowedValues": {"pattern":"[0-9]"}},
+                                     				{"field": "TYPE",
+                                      				"validateAs": {"type": "string",
+                                                    "allowedValues":{"pattern":"LAND|GRID"}},
+                                                    {"field": "LAT",
+                                      				"validateAs": {"type": "number",
+                                                    "allowedValues":{"pattern":"[-+]?[0-9]*\.?[0-9]+$"}},
+                                                    {"field": "LONG",
+                                      				"validateAs": {"type": "number",
+                                                    "allowedValues":{"pattern":"[-+]?[0-9]*\.?[0-9]+$"}},
+                                        }                                    
+                                    }]}
                 },    
 		        {
 		            "id": "machine_econ_table",
@@ -33,7 +49,23 @@
 		            "type": "file",
 		            "label": "Machine Economic Table",
 		            "defaultValue": "./WaveEnergy/Input/MachineEconomicTable.csv",
-		            "required": true
+		            "required": true,
+		            "validateAs": { "type": "CSV",
+                    				"fieldsExist": ["NAME", "VALUE", "NOTE"],
+                    				"restrictions": [{"field": "ID",
+                                    				"validateAs": {"type": "number",
+                                                   				   "allowedValues": {"pattern":"[0-9]"}},
+                                     				{"field": "TYPE",
+                                      				"validateAs": {"type": "string",
+                                                    "allowedValues":{"pattern":"LAND|GRID"}},
+                                                    {"field": "LAT",
+                                      				"validateAs": {"type": "number",
+                                                    "allowedValues":{"pattern":"[-+]?[0-9]*\.?[0-9]+$"}},
+                                                    {"field": "LONG",
+                                      				"validateAs": {"type": "number",
+                                                    "allowedValues":{"pattern":"[-+]?[0-9]*\.?[0-9]+$"}},
+                                        }                                    
+                                    }]}
 		        },
                 {
                     "id" : "dem",
@@ -41,7 +73,8 @@
                     "type": "folder",
                     "label": "Global Digital Elevation Model (DEM)",
                     "defaultValue": "./Base_Data/Marine/DEMs/global_dem",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {
                     "id" : "wave_data",
@@ -49,7 +82,11 @@
                     "type": "file",
                     "label": "Wave Data Shapefile",
                     "defaultValue": "./WaveEnergy/Intermediate/WaveData_clipZ.shp",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type":"OGR",
+                    			   "layer": {"name": "layer_name",
+                                             "type": "polygons"},
+                                   "fieldsExist": ["Depth_M", "capWE_Sum"]}
                 }
             ]
         }

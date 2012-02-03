@@ -62,7 +62,7 @@
                 									                                "flag":"ignoreCase"}},
                 									 {"field": "VALUE",
                 									  "validateAs": {"type": "number",
-                									                 "allowedValues":{"pattern":"[0-9]*\.?[0-9]+"}}}}]}
+                									                 "allowedValues":{"pattern":"[0-9]*\.?[0-9]+$"}}}}]}
                 },
                 {
                     "id" : "dem",
