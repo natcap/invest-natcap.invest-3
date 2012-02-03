@@ -58,53 +58,56 @@ def biophysical(args):
     #Since the global dem is the finest resolution we get as an input,
     #use its pixel sizes as the sizes for the new rasters
     dem_gt = global_dem.GetGeoTransform()
-
+    #Set the source projection for a coordinate transformation
     srs_prj = osr.SpatialReference()
     srs_prj.SetWellKnownGeogCS("WGS84")
     source_sr = srs_prj
     #Determine which shapefile will be used to determine area of interest
     if 'aoi' in args:
-        #The AOI shapefile has a different projection than lat/long so by calling
-        #the clip_shape function with analysis_area_extract (which has lat/long projection
-        #which we would expect) and AOI, I am making a new AOI with the proper projection
+        #The polygon shapefile that specifies the area of interest
         cutter = args['aoi']
-        analysis_shape = change_shape_projection(args['analysis_area'], args['aoi'].GetLayer(0).GetSpatialRef(),
-                                             wave_shape_path)
-        #Create a new shapefile that is a copy of analysis_area but bounded by AOI
-        logger.debug('Binding the wave watch data shapefile to a smaller area of interest')
+        #Set the wave data shapefile to the same projection as the area of interest
+        analysis_shape = change_shape_projection(args['analysis_area'],
+                                                 args['aoi'].GetLayer(0).GetSpatialRef(),
+                                                 wave_shape_path)
+        #Clip the wave data shape by the bounds provided from the area of interest
         area_shape = clip_shape(analysis_shape, cutter, prj_shape_path)
+        #Get the coordinates of a point from the wave data shapefile
         area_layer = area_shape.GetLayer(0)
-        target_sr = cutter.GetLayer(0).GetSpatialRef()
-        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-        coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
         analysis_feat = area_layer.GetNextFeature()
         analysis_geom = analysis_feat.GetGeometryRef()
         analysis_lat = analysis_geom.GetX()
         analysis_long = analysis_geom.GetY()
-        analysis_point = coord_trans_opposite.TransformPoint(analysis_lat, analysis_long)
-        #Get the size of the pixels in meters
-        pixel_size_tuple = invest_cython_core.pixel_size_in_meters(global_dem, coord_trans, analysis_point)
-        pixel_xsize = pixel_size_tuple[0]
-        pixel_ysize = pixel_size_tuple[1]
-        logger.debug('X pixel size of DEM : %f', pixel_xsize)
-        logger.debug('Y pixel size of DEM : %f', pixel_ysize)
-        area_layer.ResetReading()
-        analysis_layer = None
-        analysis_geom = None
-        analysis_feat = None
-    else:
-        cutter = args['analysis_area_extract']
-        pixel_xsize = float(dem_gt[1])
-        pixel_ysize = np.absolute(float(dem_gt[5]))
-        analysis_shape = args['analysis_area']
+        #Create a coordinate transformation from lat/long to area of interest's projection
         target_sr = cutter.GetLayer(0).GetSpatialRef()
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
-    
-#    #Create a new shapefile that is a copy of analysis_area but bounded by AOI
-#    logger.debug('Binding the wave watch data shapefile to a smaller area of interest')
-#    area_shape = clip_shape(analysis_shape, cutter, prj_shape_path)
-#    area_layer = area_shape.GetLayer(0)
+        #Convert the point from meters to lat/long
+        analysis_point = coord_trans_opposite.TransformPoint(analysis_lat, analysis_long)
+        #Get the size of the pixels in meters, to be used for creating rasters
+        pixel_size_tuple = invest_cython_core.pixel_size_in_meters(global_dem, coord_trans,
+                                                                   analysis_point)
+        pixel_xsize = pixel_size_tuple[0]
+        pixel_ysize = pixel_size_tuple[1]
+        logger.debug('X pixel size in meters : %f', pixel_xsize)
+        logger.debug('Y pixel size in meters : %f', pixel_ysize)
+        area_layer.ResetReading()
+        analysis_layer = None
+        analysis_feat.Destroy()
+        analysis_geom = None
+    else:
+        #The polygon shapefile that specifies the area of interest
+        cutter = args['analysis_area_extract']
+        #Not sure if this is needed, as cutter is already an outline of analysis_area
+        area_shape = clip_shape(args['analysis_area'], cutter, prj_shape_path)
+        area_layer = area_shape.GetLayer(0)
+        #Set the pixel size to that of DEM, to be used for creating rasters
+        pixel_xsize = float(dem_gt[1])
+        pixel_ysize = np.absolute(float(dem_gt[5]))
+        #Create a coordinate transformation, because it is expected below
+        target_sr = cutter.GetLayer(0).GetSpatialRef()
+        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     #We do all wave power calculations by manipulating the fields in
     #the wave data shapefile, thus we need to add proper depth values
     #from the raster DEM
@@ -600,12 +603,22 @@ def valuation(args):
     target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
+    #Get a point from the wave data shapefile
+    wave_data_layer = wave_data_shape.GetLayer(0)
+    wave_data_feat = wave_data_layer.GetNextFeature()
+    wave_data_geom = wave_data_feat.GetGeometryRef()
+    wave_data_lat = wave_data_geom.GetX()
+    wave_data_long = wave_data_geom.GetY()
+    wave_data_point = coord_trans_opposite.TransformPoint(wave_data_lat, wave_data_long)
     #Get the size of the pixels in meters
-    pixel_size_tuple = invest_cython_core.pixel_size_in_meters(dem, coord_trans)
+    pixel_size_tuple = invest_cython_core.pixel_size_in_meters(dem, coord_trans, wave_data_point)
     pixel_xsize = pixel_size_tuple[0]
     pixel_ysize = pixel_size_tuple[1]
     logger.debug('X pixel size of DEM : %f', pixel_xsize)
     logger.debug('Y pixel size of DEM : %f', pixel_ysize)
+    wave_data_layer.ResetReading()
+    wave_data_feat.Destroy()
+    wave_data_geom = None
     #Number of machines for a given wave farm
     units = args['number_machines']
     #Extract the machine economic parameters
@@ -702,7 +715,6 @@ def valuation(args):
     logger.info('Calculating Distances.')
     wave_to_land_dist, wave_to_land_id = calculate_distance(we_points, landing_points)
     land_to_grid_dist, land_to_grid_id = calculate_distance(landing_points, grid_point)
-    wave_data_layer = wave_data_shape.GetLayer(0)
     #Add three new fields to the shapefile that will store the distances
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
