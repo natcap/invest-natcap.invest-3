@@ -53,16 +53,18 @@
                     "type": "file",
                     "label": "Machine Parameter Table",
                     "required": true,
-                    "defaultValue": "./WaveEnergy/Input/MachineParameterTable.csv"
+                    "defaultValue": "./WaveEnergy/Input/MachineParameterTable.csv",
                 	"validateAs": { "type": "CSV",
                 					"fieldExist": ["NAME", "VALUE", "NOTE"],
                 					"restrictions": [{"field": "NAME",
                 									"validateAs":{"type": "string",
                 									              "allowedValues": {"pattern":"capmax|hsmax|tpmax",
-                									                                "flag":"ignoreCase"}},
+                									                                "flag":"ignoreCase"}
+                									              }},
                 									 {"field": "VALUE",
                 									  "validateAs": {"type": "number",
-                									                 "allowedValues":{"pattern":"[0-9]*\.?[0-9]+$"}}}}]}
+                									                 "allowedValues":{"pattern":"[0-9]*\\.?[0-9]+$"}
+                									                 }}]}
                 },
                 {
                     "id" : "dem",
