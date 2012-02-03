@@ -457,7 +457,6 @@ def wave_energy_interp(wave_data, machine_perf):
     new_y = wave_data[1]
     #Interpolate machine performance table and return the interpolated matrix
     interp_z = invest_cython_core.interpolateMatrix(x_range, y_range, z_matrix, new_x, new_y)
-    logger.debug('Machine Performance Table Interpolated : %s', interp_z)
     return interp_z
 
 def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
