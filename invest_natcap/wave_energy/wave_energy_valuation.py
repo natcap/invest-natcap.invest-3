@@ -13,7 +13,7 @@ from invest_natcap.wave_energy import wave_energy_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-logger = logging.getLogger('carbon_valuation')
+logger = logging.getLogger('wave_energy_valuation')
 
 def execute(args):
     """This function invokes the valuation part of the wave energy model given URI inputs.
@@ -35,7 +35,7 @@ def execute(args):
     valuation_args['workspace_dir'] = args['workspace_dir']
     valuation_args['global_dem'] = gdal.Open(args['global_dem'])
     valuation_args['wave_data_shape'] = ogr.Open(args['wave_data_shape_path'], 1)
-    valuation_args['number_machines'] = args['number_of_machines']
+    valuation_args['number_machines'] = int(args['number_of_machines'])
     #Open/create the output directory
     output_dir = args['workspace_dir'] + os.sep + 'Output' + os.sep
     intermediate_dir = args['workspace_dir'] + os.sep + 'Intermediate' + os.sep
