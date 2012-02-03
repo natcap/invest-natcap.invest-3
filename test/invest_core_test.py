@@ -224,19 +224,17 @@ class TestInvestCore(unittest.TestCase):
     def test_wave_energy_pixel_size_in_meters(self):
         """Verify the correct output of wave_energy.pixel_size_in_meters()"""
         correct_pixel_path = './data/wave_energy_regression_data/npv_usd_regression.tif'
-#        correct_pixel_path = './data/wave_energy_data/wave_energy_testing/npv_usd'
         dataset_correct_pixel = gdal.Open(correct_pixel_path,
                                           gdal.GA_ReadOnly)
         dataset = gdal.Open('./data/wave_energy_data/samp_input/global_dem',
                             gdal.GA_ReadOnly)
-        shape = ogr.Open('./data/wave_energy_data/Intermediate/WEM_InputOutput_Pts.shp')
+        shape = ogr.Open('./data/wave_energy_regression_data/WEM_InputOutput_Pts_bio_regression.shp')
         layer = shape.GetLayer(0)
         feat = layer.GetNextFeature()
         geom = feat.GetGeometryRef()
         lat = geom.GetX()
         longitude = geom.GetY()
-        #Transform two points into meters
-        
+        #Create Coordinate Transformation from lat/long to meters
         srs_prj = osr.SpatialReference()
         srs_prj.SetWellKnownGeogCS("WGS84")
         source_sr = srs_prj
@@ -244,13 +242,16 @@ class TestInvestCore(unittest.TestCase):
         trg_prj.ImportFromWkt(dataset_correct_pixel.GetProjectionRef())
         target_sr = trg_prj        
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        #Convert the shapefiles geometry point to lat/long
         coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
         point_decimal_degree = coord_trans_opposite.TransformPoint(lat, longitude)
         #Get the size of the pixels in meters
         pixel_size_tuple = invest_cython_core.pixel_size_in_meters(dataset,
-                                                                   coord_trans, point_decimal_degree)
+                                                                   coord_trans,
+                                                                   point_decimal_degree)
         geo_tran = dataset_correct_pixel.GetGeoTransform()
         logger.debug('correct pixel sizes : %s : %s', geo_tran[1], geo_tran[5])
+        logger.debug('returned pixel sizes %s : %s', pixel_size_tuple[0], pixel_size_tuple[1])
         #assert that the x and y pixels are the same size.
         #this is a regression test
         self.assertEqual(pixel_size_tuple[0], geo_tran[1])
