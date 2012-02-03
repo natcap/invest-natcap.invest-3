@@ -167,8 +167,6 @@ def pixel_size_in_meters(dataset, coord_trans, point):
     pixel_size_y = geo_tran[5]
     top_left_x = point[0]
     top_left_y = point[1]
-#    top_left_x = geo_tran[0]
-#    top_left_y = geo_tran[3]
     LOGGER.debug('pixel_size_x: %s', pixel_size_x)
     LOGGER.debug('pixel_size_x: %s', pixel_size_y)
     LOGGER.debug('top_left_x : %s', top_left_x)
