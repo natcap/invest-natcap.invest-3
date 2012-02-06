@@ -295,8 +295,7 @@ class OGRChecker(TableChecker):
     def check_layers(self, layer_list):
         """Attempt to open the layer specified in self.valid."""
        
-        for layer_dict in layer_list
-
+        for layer_dict in layer_list:
             layer_name = str(layer_dict['name'])
             self.layer = self.file.GetLayerByName(layer_name)
             
