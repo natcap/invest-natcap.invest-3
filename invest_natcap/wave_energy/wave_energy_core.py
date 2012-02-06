@@ -122,8 +122,6 @@ def biophysical(args):
     #Create a new field for the depth attribute
     field_defn = ogr.FieldDefn('Depth_M', ogr.OFTReal)
     area_layer.CreateField(field_defn)
-    #ResetReading to make sure we start reading from the first feature
-    area_layer.ResetReading()
     feature = area_layer.GetNextFeature()
     #For all the features (points) add the proper depth value from the DEM
     while feature is not None:
