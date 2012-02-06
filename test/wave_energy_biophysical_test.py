@@ -54,12 +54,9 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
                                 [0., 0., 0., 0., 0., 12.0]])
 
             test_dict = {(580, 507): matrix1, (580, 508): matrix2}
-            keys = [(580, 507), (580, 508)]
-            for key in test_dict:
+            for key, value in test_dict.iteritems():
                 if key in wave_data:
-                    for i, ar in enumerate(test_dict[key]):
-                        for index, val in enumerate(ar):
-                            self.assertEqual(val, float(wave_data[key][i][index]))
+                    self.assertTrue((value == wave_data[key]).all, msg)
                 else:
                     self.assertEqual(0, 1, 'Keys do not match')
             for val, val2 in zip(row, wave_data[0]):
