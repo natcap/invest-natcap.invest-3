@@ -766,20 +766,20 @@ def valuation(args):
     field_defn_npv = ogr.FieldDefn('NPV_25Y', ogr.OFTReal)
     wave_data_layer.CreateField(field_defn_npv)
     wave_data_layer.ResetReading()
-    feat_grid = wave_data_layer.GetNextFeature()
+    feat_npv = wave_data_layer.GetNextFeature()
     #For all the wave farm sites, calculate npv and write to shapefile
     logger.info('Calculating the Net Present Value.')
-    while feat_grid is not None:
-        depth_index = feat_grid.GetFieldIndex('Depth_M')
-        wave_to_land_index = feat_grid.GetFieldIndex('W2L_MDIST')
-        land_to_grid_index = feat_grid.GetFieldIndex('L2G_MDIST')
-        captured_wave_energy_index = feat_grid.GetFieldIndex('CapWE_Sum')
-        npv_index = feat_grid.GetFieldIndex('NPV_25Y')
+    while feat_npv is not None:
+        depth_index = feat_npv.GetFieldIndex('Depth_M')
+        wave_to_land_index = feat_npv.GetFieldIndex('W2L_MDIST')
+        land_to_grid_index = feat_npv.GetFieldIndex('L2G_MDIST')
+        captured_wave_energy_index = feat_npv.GetFieldIndex('CapWE_Sum')
+        npv_index = feat_npv.GetFieldIndex('NPV_25Y')
         
-        depth = feat_grid.GetFieldAsDouble(depth_index)
-        wave_to_land = feat_grid.GetFieldAsDouble(wave_to_land_index)
-        land_to_grid = feat_grid.GetFieldAsDouble(land_to_grid_index)
-        captured_wave_energy = feat_grid.GetFieldAsDouble(captured_wave_energy_index)
+        depth = feat_npv.GetFieldAsDouble(depth_index)
+        wave_to_land = feat_npv.GetFieldAsDouble(wave_to_land_index)
+        land_to_grid = feat_npv.GetFieldAsDouble(land_to_grid_index)
+        captured_wave_energy = feat_npv.GetFieldAsDouble(captured_wave_energy_index)
         #Create a numpy array of length 25, filled with the captured wave energy
         #in kW/h. Represents the lifetime of this wave farm.
         captured_we = np.ones(len(time)) * int(captured_wave_energy) * 1000.0
@@ -797,11 +797,11 @@ def valuation(args):
         annual_cost[0] = initial_cost
         
         npv_result = npv_wave(annual_revenue, annual_cost) / 1000.0
-        feat_grid.SetField(npv_index, npv_result)
+        feat_npv.SetField(npv_index, npv_result)
         
-        wave_data_layer.SetFeature(feat_grid)
-        feat_grid.Destroy()
-        feat_grid = wave_data_layer.GetNextFeature()
+        wave_data_layer.SetFeature(feat_npv)
+        feat_npv.Destroy()
+        feat_npv = wave_data_layer.GetNextFeature()
 
     datatype = gdal.GDT_Float32
     nodata = 0
