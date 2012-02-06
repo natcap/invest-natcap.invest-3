@@ -230,7 +230,7 @@ others are optional.
                    "layers": [{"name": "layer_name",
                                "type": "polygons"},
                               {"name": "layer_name_2",
-                               "projection" : "UTM8"}],
+                               "projection" : "Transverse_Mercator"}],
                    "fieldsExist": ["field1", "field2", "field3", ...]}
 
 
