@@ -63,10 +63,8 @@ def biophysical(args):
     #use its pixel sizes as the sizes for the new rasters
     dem_gt = global_dem.GetGeoTransform()
     #Set the source projection for a coordinate transformation
-    #assuming that the 
-    srs_prj = osr.SpatialReference()
-    srs_prj.SetWellKnownGeogCS("WGS84")
-    source_sr = srs_prj
+    #to the input projection from the point shapefile
+    source_sr = args['analysis_area'].GetLayer(0).GetSpatialRef()
     #Determine which shapefile will be used to determine area of interest
     if 'aoi' in args:
         #The polygon shapefile that specifies the area of interest
