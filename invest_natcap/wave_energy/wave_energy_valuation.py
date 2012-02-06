@@ -23,14 +23,18 @@ def execute(args):
         
         args - A python dictionary with at least the following possible entries:
         args['workspace_dir'] - Where the intermediate and ouput folder/files will be saved.
-        args['land_gridPts_uri'] - A CSV file path containing the Landing and Power Grid Connection Points table.
+        args['land_gridPts_uri'] - A CSV file path containing the Landing and Power 
+                                   Grid Connection Points table.
         args['machine_econ_uri'] - A CSV file path for the machine economic parameters table.
-        args['number_of_machines'] - An integer specifying the number of machines for a wave farm site.
+        args['number_of_machines'] - An integer specifying the number of machines for a 
+                                     wave farm site.
         args['global_dem'] - The file path to the global dem.
-        args['wave_data_shape_path'] - The path to the point shapefile created during biophysical run.
+        args['wave_data_shape_path'] - The path to the point shapefile output created during 
+                                       biophysical run.
         
         returns - Nothing
         """
+    #Dictionary of the arguments to be passed to valuation
     valuation_args = {}
     valuation_args['workspace_dir'] = args['workspace_dir']
     valuation_args['global_dem'] = gdal.Open(args['global_dem'])
@@ -48,7 +52,7 @@ def execute(args):
         machine_econ_file = open(args['machine_econ_uri'])
         reader = csv.DictReader(machine_econ_file)
         logger.debug('reader fieldnames : %s ', reader.fieldnames)
-        #Use read in field names to cover lower/upper case issues
+        #Read in the field names from the column headers
         name_key = reader.fieldnames[0]
         value_key = reader.fieldnames[1]
         for row in reader:
