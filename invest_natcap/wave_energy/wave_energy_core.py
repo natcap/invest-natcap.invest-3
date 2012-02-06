@@ -21,8 +21,11 @@ def biophysical(args):
     Generates a wave power raster, wave energy capacity raster, 
     and a wave data shapefile that hosts various attributes for
     wave farm locations, such as depth, wave height, and wave period.
+    args - A python dictionary that has as least the following required 
+           inputs:
     Required:
-    args['workspace_dir'] - the workspace path
+    args['workspace_dir'] - the workspace path where Output/Intermediate
+                            files will be written
     args['wave_base_data'] - a dictionary of seastate bin data.
     args['analysis_area'] - a point geometry shapefile representing the 
                             relevant WW3 points
@@ -34,7 +37,7 @@ def biophysical(args):
     
     Optional (but required for valuation):
     args['aoi'] - a polygon geometry shapefile outlining a more 
-                  specific area of interest (Optional).
+                  specific area of interest.
 
     returns - Nothing
     """
@@ -46,11 +49,12 @@ def biophysical(args):
     #Output Directory path to store output rasters
     output_dir = workspace_dir + os.sep + 'Output'
     #Path for clipped wave point shapefile holding wave attribute information
+    prj_shape_path = intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
+    #Temporary shapefile needed for an intermediate step
     wave_shape_path = intermediate_dir + os.sep + 'WaveData_clipZ.shp'
     #Paths for wave energy and wave power raster
     wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
     wave_power_path = output_dir + os.sep + 'wp_kw.tif'
-    prj_shape_path = intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
     global_dem = args['dem']
     #Set nodata value and datatype for new rasters
     nodata = 0
@@ -59,6 +63,7 @@ def biophysical(args):
     #use its pixel sizes as the sizes for the new rasters
     dem_gt = global_dem.GetGeoTransform()
     #Set the source projection for a coordinate transformation
+    #assuming that the 
     srs_prj = osr.SpatialReference()
     srs_prj.SetWellKnownGeogCS("WGS84")
     source_sr = srs_prj
@@ -91,6 +96,8 @@ def biophysical(args):
         pixel_ysize = pixel_size_tuple[1]
         logger.debug('X pixel size in meters : %f', pixel_xsize)
         logger.debug('Y pixel size in meters : %f', pixel_ysize)
+        #Reset the layer to point at the first feature and clean up
+        #variables
         area_layer.ResetReading()
         analysis_layer = None
         analysis_feat.Destroy()
@@ -234,7 +241,6 @@ def wave_power(shape):
         wave_pow = (((swd * grav) / 16) * (np.square(height)) * wave_group_velocity) / 1000
         
         feat.SetField(wp_index, wave_pow)
-        
         layer.SetFeature(feat)
         feat.Destroy()
         feat = layer.GetNextFeature()
@@ -389,7 +395,7 @@ def get_points_values(shape, field):
         values.append(value)
         #Get the X,Y coordinate of the geometry of
         #the point and append it as a list [X,Y] to
-        #a list
+        #the list 'points'
         geom = shape_feat.GetGeometryRef()
         longitude = geom.GetX()
         latitude = geom.GetY()
@@ -425,7 +431,8 @@ def interp_points_over_raster(points, values, raster):
     logger.debug('gt[0], [1], [3], [5] : %f : %f : %f : %f', geo_tran[0], geo_tran[1], geo_tran[3], geo_tran[5])
     #Make a numpy array representing the points of the raster (the points are the pixels)
     new_points = np.array([[geo_tran[0] + geo_tran[1] * i,
-                            geo_tran[3] + geo_tran[5] * j] for i in np.arange(size_x) for j in np.arange(size_y)])
+                            geo_tran[3] + geo_tran[5] * j] 
+                           for i in np.arange(size_x) for j in np.arange(size_y)])
     logger.debug('New points from raster : %s', new_points)
     #Interpolate the points and values from the shapefile from earlier
     spl = ip(points, values, fill_value=0)
@@ -565,6 +572,7 @@ def valuation(args):
     and then a raster is created based off of the interpolation of these
     points. This function requires the following arguments:
     
+    args - A python dictionary that has at least the following arguments:
     args['workspace_dir'] - A path to where the Output and Intermediate folders
                             will be placed or currently are.
     args['wave_data_shape'] - A file path to the shapefile generated from the biophysical run
@@ -597,6 +605,7 @@ def valuation(args):
     dem = args['global_dem']
     #Create a coordinate transformation for lat/long to meters
     srs_prj = osr.SpatialReference()
+    #Using 'WGS84' as our well known lat/long projection
     srs_prj.SetWellKnownGeogCS("WGS84")
     source_sr = srs_prj
     target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
@@ -615,6 +624,7 @@ def valuation(args):
     pixel_ysize = pixel_size_tuple[1]
     logger.debug('X pixel size of DEM : %f', pixel_xsize)
     logger.debug('Y pixel size of DEM : %f', pixel_ysize)
+    #Reset variables to be used later
     wave_data_layer.ResetReading()
     wave_data_feat.Destroy()
     wave_data_geom = None
@@ -708,10 +718,13 @@ def valuation(args):
 
     landing_shape = ogr.Open(land_pt_path)
     grid_shape = ogr.Open(grid_pt_path)
+    #Get the coordinates of points of wave_data_shape, landing_shape,
+    #and grid_shape
     we_points = get_points_geometries(wave_data_shape)
     landing_points = get_points_geometries(landing_shape)
     grid_point = get_points_geometries(grid_shape)
     logger.info('Calculating Distances.')
+    #Calculate the distances between the relative point groups
     wave_to_land_dist, wave_to_land_id = calculate_distance(we_points, landing_points)
     land_to_grid_dist, land_to_grid_id = calculate_distance(landing_points, grid_point)
     #Add three new fields to the shapefile that will store the distances
@@ -753,7 +766,7 @@ def valuation(args):
         for i in range(len(time)):
             npv.append(rho ** i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
-    
+    #Add Net Present Value field to shapefile
     field_defn_npv = ogr.FieldDefn('NPV_25Y', ogr.OFTReal)
     wave_data_layer.CreateField(field_defn_npv)
     wave_data_layer.ResetReading()
