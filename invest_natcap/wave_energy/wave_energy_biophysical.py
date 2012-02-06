@@ -26,13 +26,16 @@ def execute(args):
         args['wave_base_data_uri'] - Directory location of wave base data 
                                      including WW3 data and analyis area shapefile.
         args['analysis_area_uri'] - A string identifying the analysis area of interest.
+                                    Used to determine wave data shapefile, wave data 
+                                    text file, and analysis area boundary shape.
         args['machine_perf_uri'] - The path of a CSV file that holds the machine 
                                    performace table. 
         args['machine_param_uri'] - The path of a CSV file that holds the machine 
                                     parameter table.
         args['dem_uri'] - The path of the Global Digital Elevation Model (DEM).
         args['aoi_uri'] - A polygon shapefile outlining a more detailed area 
-                          within the analyis area. (OPTIONAL)
+                          within the analyis area. (OPTIONAL, but required to
+                          run Valuation model)
         returns nothing.        
         """
 
@@ -43,7 +46,8 @@ def execute(args):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-    #Dictionary that will hold all the inputs to be passed to wave_energy_core
+    #Dictionary that will hold all the input arguments to be 
+    #passed to wave_energy_core.biophysical
     biophysical_args = {}
     biophysical_args['workspace_dir'] = args['workspace_dir']
     biophysical_args['dem'] = gdal.Open(args['dem_uri'])
@@ -66,8 +70,7 @@ def execute(args):
     except IOError, error:
         print 'File I/O error' + error
     #Create a dictionary whose keys are the 'NAMES' from the machine parameter table
-    #and whose corresponding values are dictionaries whose keys are the column headers of
-    #the machine parameter table with corresponding values
+    #and whose values are from the corresponding 'VALUES' field.
     try:
         machine_params = {}
         machine_param_file = open(args['machine_param_uri'])
@@ -168,7 +171,6 @@ def extrapolate_wave_data(wave_file):
             else:
                 wave_array.append(line.split(','))
                 wave_dict[key] = wave_array
-
         wave_open.close()
         #Add row/col header to dictionary
         logger.debug('WaveData row %s', wave_row)
