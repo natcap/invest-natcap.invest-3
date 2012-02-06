@@ -98,7 +98,8 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
             for fld_index in range(field_count):
                 field = feat.GetField(fld_index)
                 field_regression = feat_regression.GetField(fld_index)
-                unitTest.assertEqual(field, field_regression, 'The field values DO NOT match')
+                unitTest.assertEqual(field, field_regression,
+                                     'The field values DO NOT match')
             feat.Destroy()
             feat_regression.Destroy()
             feat = layer.GetNextFeature()
