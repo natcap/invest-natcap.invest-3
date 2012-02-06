@@ -276,10 +276,10 @@ class OGRChecker(TableChecker):
     def __init__(self):
         TableChecker.__init__(self)
 
-        updates = {'layer': self.open_layer}
+        updates = {'layers': self.check_layers}
         self.update_map(updates)
 
-        self.add_check_function(self.open_layer)
+        self.add_check_function(self.check_layers)
 
         self.layer_types = {'polygons' : ogr.wkbPolygon,
                             'points'  : ogr.wkbPoint}
@@ -292,17 +292,24 @@ class OGRChecker(TableChecker):
         if not isinstance(ogrFile, osgeo.ogr.DataSource):
             return str('Shapefile not compatible with OGR')
 
-    def open_layer(self, valid_dict):
+    def check_layers(self, layer_list):
         """Attempt to open the layer specified in self.valid."""
        
-        layer_dict = valid_dict['layer']
+        for layer_dict in layer_list
 
-        layer_name = str(layer_dict['name'])
-        self.layer = self.file.GetLayerByName(layer_name)
-        
-        if not isinstance(self.layer, osgeo.ogr.Layer):
-            return str('Shapefile must have a layer called ' + layer_name)
-   
+            layer_name = str(layer_dict['name'])
+            self.layer = self.file.GetLayerByName(layer_name)
+            
+            if not isinstance(self.layer, osgeo.ogr.Layer):
+                return str('Shapefile must have a layer called ' + layer_name)
+  
+            if 'projection' in valid_dict:
+                reference = self.layer.GetSpatialRef()
+                projection = reference.GetAttrValue('PROJECTION')
+                if projection != valid_dict['projection']:
+                    return str('Shapefile layer ' + layer_name + ' must be ' +
+                        'projected as ' + valid_dict['projection'])
+
     def _check_layer_type(self, type_string):
         for feature in self.layer:
             geometry = feature.GetGeometryRef()
