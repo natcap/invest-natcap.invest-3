@@ -190,7 +190,9 @@ def biophysical(args):
     wave_power_array = np.array(wave_power_raster.GetRasterBand(1).ReadAsArray())
     wave_energy_array = np.array(wave_energy_raster.GetRasterBand(1).ReadAsArray())
     wp_array = wave_power_array.flatten()
-    wp_percentiles = getPercentiles(wp_array)
+    wp_mask = np.ma.masked_array(wp_array, mask=wp_array == 0)
+    wp_comp = np.ma.compressed(wp_mask)
+    wp_percentiles = getPercentiles(wp_comp)
     logger.debug('wp_percentiles : %s', wp_percentiles)
     
     
