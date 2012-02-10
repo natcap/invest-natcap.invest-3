@@ -3,6 +3,7 @@
 
 import unittest
 import logging
+import random
 
 import numpy as np
 from osgeo import gdal
@@ -107,7 +108,8 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
     shape.Destroy()
     shape_regression.Destroy()
 
-def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
+def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff', min=0, max=1,
+                     type='int'):
     """Create a new raster with random int values.
         
         cols - an int, the number of columns in the output raster
@@ -116,6 +118,10 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
         format - a string representing the GDAL format code such as 
             'GTiff' or 'MEM'.  See http://gdal.org/formats_list.html for a
             complete list of formats.
+        min - the minimum value allowed for a given pixel.
+        max - the maximum value allowed for a given pixel.
+        type - a string. the type of number to be randomized.  Either 'int' or
+               'float'.
             
         returns a new dataset with random values."""
 
@@ -123,10 +129,17 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff'):
     dataset = driver.Create(uri, cols, rows, 1, gdal.GDT_Float32)
     band = dataset.GetRasterBand(1)
 
+    if type == 'int':
+        def get_rand():
+            return random.randint(min, max)
+    else:
+        def get_rand():
+            return random.random()*max
+
     for i in range(0, band.YSize):
         array = band.ReadAsArray(0, i, band.XSize, 1)
         for j in range(0, band.XSize):
-            array[0][j] = random.randint(0, 1)
+            array[0][j] = get_rand()
         dataset.GetRasterBand(1).WriteArray(array, 0, i)
 
     return dataset
