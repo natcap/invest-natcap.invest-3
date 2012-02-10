@@ -8,7 +8,10 @@ from invest_natcap.wave_energy import wave_energy_biophysical
 import invest_test_core
 
 class TestWaveEnergyBiophysical(unittest.TestCase):
-    def test_wave_energy_biophysical(self):
+    def test_wave_energy_biophysical_regression(self):
+        """A regression test for wave_energy_biophysical that passes
+           in sample inputs with the area of interest.  It runs the outputs
+           againts regression files that are known to be accurate"""
         args = {}
         args['workspace_dir'] = './data/wave_energy_data'
         args['wave_base_data_uri'] = args['workspace_dir'] + os.sep + 'samp_input/WaveData'
@@ -35,9 +38,14 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         invest_test_core.assertTwoShapesEqualURI(self, wave_data_shape_path, regression_shape_path)
 
     def test_wave_energy_extrapolate_wave_data(self):
+        """A test for the extrapolate_wate_data function that
+           compares hand calculated results against the returned
+           function generated results
+        """
         wave_base_data_uri = './data/wave_energy_data/test_input/sampWaveDataTest.txt'
         if os.path.isfile(wave_base_data_uri):
             wave_data = wave_energy_biophysical.extrapolate_wave_data(wave_base_data_uri)
+            #Hand generated results
             row = np.array([.25, 1.0, 2.0, 3.0, 4.0, 5.0])
             col = np.array([.125, .5, 1.0, 1.5, 2.0, 2.5])
             matrix1 = np.array([[0., 0., 0., 0., 0., 0.],
@@ -52,19 +60,18 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
                                 [0., 0., 0., 0., 3.0, 219.0],
                                 [0., 0., 0., 0., 0., 78.0],
                                 [0., 0., 0., 0., 0., 12.0]])
-
+            #Place hand generated results in dictionary
             test_dict = {(580, 507): matrix1, (580, 508): matrix2}
-            keys = [(580, 507), (580, 508)]
-            for key in test_dict:
+            #Check hand generated results vs. function results
+            for key, value in test_dict.iteritems():
                 if key in wave_data:
-                    for i, ar in enumerate(test_dict[key]):
-                        for index, val in enumerate(ar):
-                            self.assertEqual(val, float(wave_data[key][i][index]))
+                    self.assertTrue((value == wave_data[key]).all)
                 else:
                     self.assertEqual(0, 1, 'Keys do not match')
+            #Check rows/column header results
             for val, val2 in zip(row, wave_data[0]):
                 self.assertEqual(val, val2)
             for val, val2 in zip(col, wave_data[1]):
                 self.assertEqual(val, val2)
         else:
-            print 'NOT A FILE'
+            print 'NOT A FILE: ' + wave_base_data_uri
