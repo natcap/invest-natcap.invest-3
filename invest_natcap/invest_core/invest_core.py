@@ -131,7 +131,7 @@ def vectorize1ArgOp(rasterBand, op, outBand):
             
         returns nothing"""
 
-    vOp = np.vectorize(op)
+    vOp = np.vectorize(op, otypes=[np.float])
     for i in range(0, rasterBand.YSize):
         data = rasterBand.ReadAsArray(0, i, rasterBand.XSize, 1)
         out_array = vOp(data)
