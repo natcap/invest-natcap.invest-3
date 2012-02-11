@@ -131,7 +131,7 @@ def vectorize1ArgOp(rasterBand, op, outBand):
             
         returns nothing"""
 
-    vOp = np.vectorize(op)
+    vOp = np.vectorize(op, otypes=[np.float])
     for i in range(0, rasterBand.YSize):
         data = rasterBand.ReadAsArray(0, i, rasterBand.XSize, 1)
         out_array = vOp(data)
@@ -212,6 +212,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     for raster in rasterList:
         logging.debug('building interpolator for %s' % raster)
         gt = raster.GetGeoTransform()
+        logging.debug('gt = %s'%(str(gt)))
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
 
@@ -238,7 +239,15 @@ def vectorizeRasters(rasterList, op, rasterName=None,
                                                     matrix,
                                                     kx=1, ky=1)
         logger.debug('interpolating')
-        matrixList.append(spl(outYRange[::-1], outXRange)[::-1])
+
+        #This handles the case where Y is increasing downwards in the output.
+        #We encountered this when writing a testcase for a 50x50 box wih no
+        #geotransform.
+        if outGt[5] < 0:
+            matrixList.append(spl(outYRange[::-1], outXRange)[::-1])
+        else: 
+            matrixList.append(spl(outYRange, outXRange))
+
         nodataList.append(band.GetNoDataValue())
 
 
