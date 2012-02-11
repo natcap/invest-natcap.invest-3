@@ -195,7 +195,13 @@ def biophysical(args):
     wp_percentiles = getPercentiles(wp_comp)
     logger.debug('wp_percentiles : %s', wp_percentiles)
     
-    
+    wave_power_band = wave_power_raster.GetRasterBand(1)
+    att_table = gdal.RasterAttributeTable()
+    att_table.CreateColumn('VALUE', gdal.GFT_String, gdal.GFU_Generic)
+    att_table.SetValueAsString(1, 1, 'Hello World')
+    logger.debug('att_table value: %s', att_table.GetValueAsString(1, 1))
+    wave_power_band.SetDefaultRAT(att_table)
+    wave_power_band.FlushCache()
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
