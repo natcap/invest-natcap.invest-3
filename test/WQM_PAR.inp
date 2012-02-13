@@ -1,0 +1,27 @@
+C*******************************************
+C** Input Parameters for Water Quality Model
+C*******************************************
+C1 HYDRODYNAMIC CHARACTERISTICS 
+C  
+   U0 = [M/SEC] EAST-WEST COMPONENT OF ADVECTIVE VELOCITY
+   V0 = [M/SEC] SOUTH-NORTH COMPONENT OF ADVECTIVE VELOCITY
+   E  = [KM*KM/DAY] TIDAL DISPERSION COEFFICIENT  
+C1    U0    V0      E
+   	0.05  0.00    0.5   	  
+-------------------------------------------------------------------------------
+C2 POINT SOURCE LOADING                          
+C                                                            
+   NPS = [NUMBER] NUMBER OF POINT SOURCES                       
+   IPS = [ID] INDEX OF THE POINT SOURCE                        
+   WPS = [KG/DAY] DAILY LOADING FROM THE POINT SOURCE         
+   KPS = [1/day] DECAY RATE OF THE POINT SOURCE               
+   CPS = NAME OF THE POINT SOURCE                                                                              
+C2-1 NPS                                                     
+      5                                                      
+C2-2 IPS             WPS       KPS      CPS                 
+     211803          100       10.0     'PS-1'
+     207069          200       10.0     'PS-2'
+     203286          100       10.0     'PS-3'    
+     206699          100       10.0     'PS-4'
+     204421           50       10.0     'PS-5'
+C    
