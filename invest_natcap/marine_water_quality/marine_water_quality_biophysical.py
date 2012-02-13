@@ -21,7 +21,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 logger = logging.getLogger('marine_water_quality')
 
-def water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h, directSolve=False):
+def marine_water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h, directSolve=False):
     """2D Water quality model to track a pollutant in the ocean
     
     Keyword arguments:
