@@ -136,3 +136,15 @@ if __name__ == '__main__':
         raise ValueError("Wrong amount of command line arguments.\nUsage: \
 python % s landarray_filename parameter_filename" % (sys.argv[0]))
     MODULENAME, LANDARRAY_FILENAME, PARAMETER_FILENAME = sys.argv
+
+    #parse land array into a 1D array of booleans
+    #input file is of the form '1\t0\r\n...' 1's are True, 0's are False and
+    #separator characters are removed.  The \r comes from a DOS newline, will
+    #be ignored if a Unix based file.
+    LAND_FILE = open(LANDARRAY_FILENAME)
+    IN_WATER = map(lambda x: x == '1',
+                   LAND_FILE.read().replace('\n', '')\
+                                   .replace('\t', '')\
+                                   .replace('\r', ''))
+    #parse WQM file
+    PARAMETER_FILE = open(PARAMETER_FILENAME)
