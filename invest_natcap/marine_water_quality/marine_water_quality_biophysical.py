@@ -132,5 +132,7 @@ def marine_water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h,
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
 if __name__ == '__main__':
-    MODULENAME, JSON_ARGS = sys.argv
-    ARGS = json.loads(JSON_ARGS)
+    if len(sys.argv) != 3:
+        raise ValueError("Wrong amount of command line arguments.\nUsage: \
+python % s landarray_filename parameter_filename" % (sys.argv[0]))
+    MODULENAME, LANDARRAY_FILENAME, PARAMETER_FILENAME = sys.argv
