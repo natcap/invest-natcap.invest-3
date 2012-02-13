@@ -1,17 +1,13 @@
 """InVEST Marine Water Quality Biophysical module at the "uri" level"""
 
 import sys
-import os
 import logging
 
-from osgeo import gdal
-from osgeo import ogr
 import simplejson as json
 import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
 import time
-import matplotlib
 import scipy.linalg
 import math
 
@@ -19,9 +15,10 @@ import math
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-logger = logging.getLogger('marine_water_quality')
+LOGGER = logging.getLogger('marine_water_quality')
 
-def marine_water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h, directSolve=False):
+def marine_water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h,
+                         directSolve=False):
     """2D Water quality model to track a pollutant in the ocean
     
     Keyword arguments:
@@ -47,8 +44,9 @@ def marine_water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h, directSolve
     print 'initialize ...',
     t0 = time.clock()
 
-    #used to abstract the 2D to 1D index calculation below
+
     def calc_index(i, j):
+        """used to abstract the 2D to 1D index calculation below"""
         if i >= 0 and i < n and j >= 0 and j < m:
             return i * m + j
         else:
@@ -108,7 +106,8 @@ def marine_water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h, directSolve
 
     print 'building sparse matrix ...',
     t0 = time.clock()
-    matrix = spdiags(a_matrix, [-m, -1, 0, 1, m], n * m, n * m, "csc")
+    matrix = scipy.sparse.linalg.spdiags(a_matrix, [-m, -1, 0, 1, m], n * m,
+                                         n * m, "csc")
     print '(' + str(time.clock() - t0) + 's elapsed)'
 
     if directSolve:
@@ -133,6 +132,5 @@ def marine_water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h, directSolve
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
 if __name__ == '__main__':
-    modulename, json_args = sys.argv
-    args = json.loads(json_args)
-    execute(args)
+    MODULENAME, JSON_ARGS = sys.argv
+    ARGS = json.loads(JSON_ARGS)
