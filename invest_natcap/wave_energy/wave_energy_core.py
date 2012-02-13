@@ -10,6 +10,7 @@ from osgeo.gdalconst import GA_Update
 import osgeo.osr as osr
 from osgeo import ogr
 from scipy.interpolate import LinearNDInterpolator as ip
+from scipy import stats
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
@@ -176,6 +177,31 @@ def biophysical(args):
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
+    
+    #Generate Percentiles
+    def getPercentiles(value_list):
+        pct_list = []
+        pct_list.append(stats.scoreatpercentile(value_list, 25))
+        pct_list.append(stats.scoreatpercentile(value_list, 50))
+        pct_list.append(stats.scoreatpercentile(value_list, 75))
+        pct_list.append(stats.scoreatpercentile(value_list, 90))
+        return pct_list
+    
+    wave_power_array = np.array(wave_power_raster.GetRasterBand(1).ReadAsArray())
+    wave_energy_array = np.array(wave_energy_raster.GetRasterBand(1).ReadAsArray())
+    wp_array = wave_power_array.flatten()
+    wp_mask = np.ma.masked_array(wp_array, mask=wp_array == 0)
+    wp_comp = np.ma.compressed(wp_mask)
+    wp_percentiles = getPercentiles(wp_comp)
+    logger.debug('wp_percentiles : %s', wp_percentiles)
+    
+    wave_power_band = wave_power_raster.GetRasterBand(1)
+    att_table = gdal.RasterAttributeTable()
+    att_table.CreateColumn('VALUE', gdal.GFT_String, gdal.GFU_Generic)
+    att_table.SetValueAsString(1, 1, 'Hello World')
+    logger.debug('att_table value: %s', att_table.GetValueAsString(1, 1))
+    wave_power_band.SetDefaultRAT(att_table)
+    wave_power_band.FlushCache()
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
