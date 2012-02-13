@@ -2,6 +2,7 @@
 
 import sys
 import logging
+import re
 
 import simplejson as json
 import scipy.sparse.linalg
@@ -147,4 +148,32 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                                    .replace('\t', '')\
                                    .replace('\r', ''))
     #parse WQM file
+    #Default values
+    U0 = 0.0
+    V0 = 0.0
+    E = 0.5
+    #List of tubples of (index, WPS, KPS, CPS)
+    POINT_SOURCES = []
+
+    HYDRODYNAMIC_HEADER = re.compile('C1 +U0 +V0 +E')
+    POINT_SOURCE_HEADER = re.compile('C2-1 +NPS')
+
     PARAMETER_FILE = open(PARAMETER_FILENAME)
+    while True:
+        line = PARAMETER_FILE.readline()
+        if line == '': break #end of file
+        if HYDRODYNAMIC_HEADER.match(line):
+            #Next line will be hydrodynamic characteristics
+            line = PARAMETER_FILE.readline()
+            U0, V0, E = map(float, line.split())
+        if POINT_SOURCE_HEADER.match(line):
+            steps = int(PARAMETER_FILE.readline())
+            PARAMETER_FILE.readline() #read C2-2 header garbage
+            for step_number in range(steps):
+                point_parameters = PARAMETER_FILE.readline().split()
+                POINT_SOURCES.append((int(point_parameters[0]),
+                                     int(point_parameters[1]),
+                                     float(point_parameters[2]),
+                                     point_parameters[3]))
+    LOGGER.debug(POINT_SOURCES)
+
