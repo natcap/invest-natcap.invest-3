@@ -558,11 +558,13 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     #Using the restrictions find the max position (index) for period and height
     #in the wave_row/wave_column ranges
     for index_pos, value in enumerate(wave_row):
-        if (value > period_max) and (period_max_pos == -1):
+        if (value > period_max):
             period_max_pos = index_pos
+            break
     for index_pos, value in enumerate(wave_column):
-        if (value > height_max) and (height_max_pos == -1):
+        if (value > height_max):
             height_max_pos = index_pos
+            break
     logger.debug('Position of max period : %f', period_max_pos)
     logger.debug('Position of max height : %f', height_max_pos)
     #For all the wave watch points, multiply the occurence matrix by the interpolated
