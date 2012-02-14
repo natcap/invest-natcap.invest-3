@@ -41,7 +41,7 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
     
     """
 
-    print 'initialize ...',
+    LOGGER.info('initialize ...')
     t0 = time.clock()
 
     def calc_index(i, j):
@@ -57,11 +57,11 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
     #holds the columns for diagonal sparse matrix creation later
     a_matrix = np.zeros((5, n * m))
 
-    print '(' + str(time.clock() - t0) + 's elapsed)'
+    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
     t0 = time.clock()
 
     #iterate over the non-zero elments in grid to build the linear system
-    print 'building system a_matrix...',
+    LOGGER.info('building system a_matrix...')
     t0 = time.clock()
     for i in range(n):
         for j in range(m):
@@ -101,31 +101,31 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
             a_matrix[i, row_index + offset] = 0
         a_matrix[2, row_index] = 1
         b_vector[row_index] = point_sources[row_index]
-    print '(' + str(time.clock() - t0) + 's elapsed)'
+    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
 
-    print 'building sparse matrix ...',
+    LOGGER.info('building sparse matrix ...')
     t0 = time.clock()
     matrix = scipy.sparse.linalg.spdiags(a_matrix, [-m, -1, 0, 1, m], n * m,
                                          n * m, "csc")
-    print '(' + str(time.clock() - t0) + 's elapsed)'
+    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
 
     if direct_solve:
         t0 = time.clock()
-        print 'direct solving ...',
+        LOGGER.info('direct solving ...')
         result = spsolve(matrix, b_vector)
     else:
         print 'generating preconditioner via sparse ilu ',
         #normally factor will use m*(n*m) extra space, we restrict to 
         #\sqrt{m}*(n*m) extra space
         P = scipy.sparse.linalg.spilu(matrix, fill_factor=int(math.sqrt(m)))
-        print '(' + str(time.clock() - t0) + 's elapsed)'
+        LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
         t0 = time.clock()
-        print 'gmres iteration starting ',
+        LOGGER.info('gmres iteration starting ')
         #create linear operator for precondioner
         M_x = lambda x: P.solve(x)
         M = scipy.sparse.linalg.LinearOperator((n * m, n * m), M_x)
         result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
-    print '(' + str(time.clock() - t0) + 's elapsed)'
+    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
     return result
 
 #This part is for command line invocation and allows json objects to be passed
