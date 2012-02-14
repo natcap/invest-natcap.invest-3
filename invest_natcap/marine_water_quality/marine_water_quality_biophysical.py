@@ -95,13 +95,13 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
                         a_matrix[2, a_matrix_index] += term
 
     #define sources by erasing the rows in the matrix that have already been set
-    for a_matrix_index in point_sources:
-        #the magic numbers are the diagonals and their offsets due to gridsize
-        for i, offset in [(4, m), (0, -m), (3, 1), (1, -1)]:
-            #zero out that row
-            a_matrix[i, a_matrix_index + offset] = 0
-        a_matrix[2, a_matrix_index] = 1
-        b_vector[a_matrix_index] = point_sources[a_matrix_index]
+    #the magic numbers are the diagonals and their offsets due to gridsize
+    for i, offset in [(4, m), (0, -m), (3, 1), (1, -1)]:
+        #zero out that row
+        a_matrix[i, point_source['index'] + offset] = 0
+    #set diagonal to 1
+    a_matrix[2, point_source['index']] = 1
+    b_vector[point_source['index']] = point_source['wps']
     LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
 
     LOGGER.info('building sparse matrix ...')
