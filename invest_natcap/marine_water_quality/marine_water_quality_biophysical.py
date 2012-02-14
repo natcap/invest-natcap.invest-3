@@ -106,7 +106,7 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
 
     LOGGER.info('building sparse matrix ...')
     t0 = time.clock()
-    matrix = scipy.sparse.linalg.spdiags(a_matrix, [-m, -1, 0, 1, m], n * m,
+    matrix = scipy.sparse.spdiags(a_matrix, [-m, -1, 0, 1, m], n * m,
                                          n * m, "csc")
     LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
 
