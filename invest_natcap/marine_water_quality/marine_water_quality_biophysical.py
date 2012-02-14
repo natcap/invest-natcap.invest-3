@@ -179,3 +179,5 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                                      float(point_parameters[2]),
                                      point_parameters[3]))
 
+    H = 50 #50m x 50m grid cell size as specified directly by CK
+    marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0, POINT_SOURCES, H)
