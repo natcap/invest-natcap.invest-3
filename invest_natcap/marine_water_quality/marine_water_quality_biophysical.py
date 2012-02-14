@@ -8,11 +8,11 @@ import simplejson as json
 import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
+from numpy.ma import masked_array
 import time
 import scipy.linalg
 import math
-import matplotlib
-import matplotlib.pyplot
+import pylab
 
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -47,8 +47,8 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     LOGGER.info('initialize ...')
 
     #convert ux,uy from m/s to km/day
-    ux *= 86400.0 / 1000.0
-    uy *= 86400.0 / 1000.0
+    ux *= 86.4
+    uy *= 86.4
 
     #convert h from m to km
     h /= 1000.0
@@ -200,6 +200,22 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
         density += marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0,
                                        point_source, H)
     LOGGER.debug(density[density > 0.0])
-    matplotlib.pyplot.imshow(np.resize(density, (N_ROWS, N_COLS)), interpolation='bilinear',
-               cmap=matplotlib.cm.gray, origin='lower')
-    matplotlib.pyplot.show()
+    density = np.resize(density, (N_ROWS, N_COLS))
+    IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
+    #matplotlib.pyplot.imshow(np.resize(np.invert(IN_WATER), (N_ROWS, N_COLS)),
+    #                         interpolation='bilinear',
+    #                         cmap=matplotlib.cm.YlOrBr, origin='lower')
+    pylab.imshow(density, 
+                 interpolation='bilinear', 
+                 cmap=pylab.cm.gist_earth,
+                 origin='lower')
+
+    pylab.hold(True)
+    pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
+                 interpolation='bilinear',
+                 cmap = pylab.cm.PuOr,
+                 origin = 'lower')
+    #CS = matplotlib.pyplot.contour(np.resize(density, (N_ROWS, N_COLS)),
+    #                         norm=matplotlib.colors.Normalize(vmin=min(density), vmax=max(density), clip=False))
+    #matplotlib.pyplot.clabel(CS, inline=1, fontsize=10)
+    pylab.show()
