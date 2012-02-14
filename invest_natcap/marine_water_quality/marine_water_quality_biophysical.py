@@ -30,11 +30,12 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
         a list
     water - 1D list n * m elements long of booleans indicating land / water.  True
             is water, False is land.  
-    E - constant indicating tidal dispersion coefficient
-    ux - constant indicating x component of advective velocity
-    uy - constant indicating y component of advective velocity
-    point_source - dictionary of (index, wps, kps, id) for the point source
-    h - scalar describing grid cell size
+    E - constant indicating tidal dispersion coefficient: km ^ 2 / day
+    ux - constant indicating x component of advective velocity: m / s
+    uy - constant indicating y component of advective velocity: m / s
+    point_source - dictionary of (index, wps, kps, id) for the point source,
+        wps: kg / day, k: 1 / day
+    h - scalar describing grid cell size: m
     direct_solve - if True uses a direct solver that may be faster, but use
         more memory.  May crash in cases where memory is fragmented or low
         Default False.
@@ -44,6 +45,14 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     """
 
     LOGGER.info('initialize ...')
+
+    #convert ux,uy from m/s to km/day
+    ux *= 86400.0 / 1000.0
+    uy *= 86400.0 / 1000.0
+
+    #convert h from m to km
+    h /= 1000.0
+
     t0 = time.clock()
 
     def calc_index(i, j):
