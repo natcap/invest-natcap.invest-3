@@ -11,6 +11,8 @@ import numpy as np
 import time
 import scipy.linalg
 import math
+import matplotlib
+import matplotlib.pyplot
 
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -115,7 +117,7 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
         LOGGER.info('direct solving ...')
         result = spsolve(matrix, b_vector)
     else:
-        print 'generating preconditioner via sparse ilu ',
+        LOGGER.info('generating preconditioner via sparse ilu')
         #normally factor will use m*(n*m) extra space, we restrict to 
         #\sqrt{m}*(n*m) extra space
         P = scipy.sparse.linalg.spilu(matrix, fill_factor=int(math.sqrt(m)))
@@ -180,10 +182,15 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                                      point_parameters[3]))
 
     H = 50 #50m x 50m grid cell size as specified directly by CK
+    density = np.zeros(N_ROWS * N_COLS)
     for index, wps, kps, id in POINT_SOURCES:
         point_source = {'index': index,
                         'wps': wps,
                         'kps': kps,
                         'id': id}
-        marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0, point_source,
-                             H)
+        density += marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0,
+                                       point_source, H)
+    LOGGER.debug(density[density > 0.0])
+    matplotlib.pyplot.imshow(np.resize(density, (N_ROWS, N_COLS)), interpolation='bilinear',
+               cmap=matplotlib.cm.gray, origin='lower')
+    matplotlib.pyplot.show()
