@@ -723,63 +723,13 @@ def valuation(args):
         os.remove(grid_pt_path)
     #Make a point shapefile for landing points.
     logger.info('Creating Landing Points Shapefile.')
-    drv_landing = ogr.GetDriverByName('ESRI Shapefile')
-    ds_landing = drv_landing.CreateDataSource(land_pt_path)
-    layer_landing = ds_landing.CreateLayer('landpoints', target_sr, ogr.wkbPoint)    
-    field_defn_landing = ogr.FieldDefn('Id', ogr.OFTInteger)
-    layer_landing.CreateField(field_defn_landing)
-    #For all of the landing points create a point feature on the layer
-    for key, value in land_pts.iteritems():
-        landing_lat = value[0]
-        landing_long = value[1]
-        landing_geom = ogr.Geometry(ogr.wkbPoint)
-        landing_geom.AddPoint_2D(float(landing_long), float(landing_lat))
-        landing_geom.Transform(coord_trans)
-        #Create the feature, setting the id field to the corresponding id
-        #field from the csv file
-        feat_landing = ogr.Feature(layer_landing.GetLayerDefn())
-        layer_landing.CreateFeature(feat_landing)
-        index = feat_landing.GetFieldIndex('Id')
-        feat_landing.SetField(index, key)
-        feat_landing.SetGeometryDirectly(landing_geom)
-        #Save the feature modifications to the layer.
-        layer_landing.SetFeature(feat_landing)
-        feat_landing.Destroy()
-    layer_landing = None
-    drv_landing = None
-    ds_landing.Destroy()
-
+    landing_shape = build_point_shapefile('ESRI Shapefile', 'landpoints',
+                                          land_pt_path, land_pts, target_sr, coord_trans)
     #Make a point shapefile for grid points
     logger.info('Creating Grid Points Shapefile.')
-    drv_grid = ogr.GetDriverByName('ESRI Shapefile')
-    ds_grid = drv_grid.CreateDataSource(grid_pt_path)
-    layer_grid = ds_grid.CreateLayer('gridpoint', target_sr, ogr.wkbPoint)
-    field_defn_grid = ogr.FieldDefn('Id', ogr.OFTInteger)
-    layer_grid.CreateField(field_defn_grid)
-    #Create geometry for grid point location:
-    for key, value in grid_pts.iteritems():
-        grid_lat = value[0]
-        grid_long = value[1]
-        grid_geom = ogr.Geometry(ogr.wkbPoint)
-        grid_geom.AddPoint_2D(float(grid_long), float(grid_lat))    
-        grid_geom.Transform(coord_trans)
-        #Create the feature, setting the id field to the corresponding id
-        #field from the csv file
-        feat_grid = ogr.Feature(layer_grid.GetLayerDefn())
-        layer_grid.CreateFeature(feat_grid)
-        index = feat_grid.GetFieldIndex('Id')
-        feat_grid.SetField(index, key)    
-        feat_grid.SetGeometryDirectly(grid_geom)
-        #Save the feature modifications to the layer.
-        layer_grid.SetFeature(feat_grid)
-        feat_grid.Destroy()
-    #Close the necessary files and objects
-    layer_grid = None
-    drv_grid = None
-    ds_grid.Destroy()
+    grid_shape = build_point_shapefile('ESRI Shapefile', 'gridpoints',
+                                          grid_pt_path, grid_pts, target_sr, coord_trans)
 
-    landing_shape = ogr.Open(land_pt_path)
-    grid_shape = ogr.Open(grid_pt_path)
     #Get the coordinates of points of wave_data_shape, landing_shape,
     #and grid_shape
     we_points = get_points_geometries(wave_data_shape)
@@ -890,6 +840,48 @@ def valuation(args):
     wave_data_shape.Destroy()
     logger.debug('End of wave_energy_core.valuation')
     
+def build_point_shapefile(driver_name, layer_name, path, data, prj, coord_trans):
+    """This function creates and saves a point geometry shapefile to disk.
+    It specifically only creates one 'Id' field and creates as many features
+    as specified in 'data'
+    
+    driver_name - A string specifying a valid ogr driver type
+    layer_name - A string representing the name of the layer
+    path - A string of the output path of the file
+    data - A dictionary who's keys are the Id's for the field
+           and who's values are arrays with two elements being
+           latitude and longitude
+    prj - A spatial reference acting as the projection/datum
+    coord_trans - A coordinate transformation
+    
+    returns - The created shapefile
+    """
+    #Make a point shapefile for landing points.
+    driver = ogr.GetDriverByName(driver_name)
+    data_source = driver.CreateDataSource(path)
+    layer = data_source.CreateLayer(layer_name, prj, ogr.wkbPoint)    
+    field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
+    layer.CreateField(field_defn)
+    #For all of the landing points create a point feature on the layer
+    for key, value in data.iteritems():
+        lat = value[0]
+        long = value[1]
+        geom = ogr.Geometry(ogr.wkbPoint)
+        geom.AddPoint_2D(float(long), float(lat))
+        geom.Transform(coord_trans)
+        #Create the feature, setting the id field to the corresponding id
+        #field from the csv file
+        feat = ogr.Feature(layer.GetLayerDefn())
+        layer.CreateFeature(feat)
+        index = feat.GetFieldIndex('Id')
+        feat.SetField(index, key)
+        feat.SetGeometryDirectly(geom)
+        #Save the feature modifications to the layer.
+        layer.SetFeature(feat)
+        feat.Destroy()
+    layer.ResetReading()
+    return data_source
+
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
     the X and Y value from it's geometry. The X and Y value are stored in
