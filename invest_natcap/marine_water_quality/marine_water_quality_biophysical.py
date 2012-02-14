@@ -18,21 +18,20 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('marine_water_quality')
 
-def marine_water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h,
+def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
                          directSolve=False):
     """2D Water quality model to track a pollutant in the ocean
     
     Keyword arguments:
     n,m -- the number of rows, columns in the 2D grid.  Used to determine 
-        indices into list parameters 'water', 'E', 'ux', 'uy', and 'k_matrix' i*m+j in
+        indices into list parameters 'water', 'E', 'ux', 'uy', and i * m + j in
         a list
     water -- 1D list n*m elements long of booleans indicating land/water.  True
             is water, False is land.  
     E -- 1D list n*m elements long of dispersion coefficients
     ux -- 1D list n*m elements long of x component velocity vectors
     uy -- 1D list n*m elements long y component velocity vectors
-    k_matrix -- 1D list n*m elements long of decay coefficients
-    s0 -- map of sourceIndex to pollutant density
+    point_sources -- map of sourceIndex to pollutant density
     h -- scalar describing grid cell size
     directSolve -- if True uses a direct solver that may be faster, but use
         more memory.  May crash in cases where memory is fragmented or low
@@ -96,13 +95,13 @@ def marine_water_quality(n, m, in_water, E, ux, uy, k_matrix, s0, h,
                         a_matrix[2, row_index] += term
 
     #define sources by erasing the rows in the matrix that have already been set
-    for row_index in s0:
+    for row_index in point_sources:
         #the magic numbers are the diagonals and their offsets due to gridsize
         for i, offset in [(4, m), (0, -m), (3, 1), (1, -1)]:
             #zero out that row
             a_matrix[i, row_index + offset] = 0
         a_matrix[2, row_index] = 1
-        b_vector[row_index] = s0[row_index]
+        b_vector[row_index] = point_sources[row_index]
     print '(' + str(time.clock() - t0) + 's elapsed)'
 
     print 'building sparse matrix ...',
@@ -143,10 +142,14 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     #separator characters are removed.  The \r comes from a DOS newline, will
     #be ignored if a Unix based file.
     LAND_FILE = open(LANDARRAY_FILENAME)
+    LAND_STRING = LAND_FILE.read()
+    N_ROWS = LAND_STRING.count('\n')
+
     IN_WATER = map(lambda x: x == '1',
-                   LAND_FILE.read().replace('\n', '')\
-                                   .replace('\t', '')\
-                                   .replace('\r', ''))
+                   LAND_STRING.replace('\n', '')\
+                              .replace('\t', '')\
+                              .replace('\r', ''))
+    N_COLS = len(IN_WATER) / N_ROWS
     #parse WQM file
     #Default values
     U0 = 0.0
@@ -175,5 +178,4 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                                      int(point_parameters[1]),
                                      float(point_parameters[2]),
                                      point_parameters[3]))
-    LOGGER.debug(POINT_SOURCES)
 
