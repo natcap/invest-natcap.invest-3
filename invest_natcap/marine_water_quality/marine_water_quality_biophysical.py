@@ -74,9 +74,9 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
                 continue
 
             #formulate elements as a single array
-            term_a = 2 * E[row_index]
-            ux_tmp = ux[row_index] * h
-            uy_tmp = uy[row_index] * h
+            term_a = 2 * E
+            ux_tmp = ux * h
+            uy_tmp = uy * h
 
             elements = [
              (2, 0, row_index, -4.0 * (term_a + h * h * k_matrix[row_index])),
