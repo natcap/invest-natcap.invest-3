@@ -19,21 +19,21 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('marine_water_quality')
 
 def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
-                         directSolve=False):
+                         direct_solve=False):
     """2D Water quality model to track a pollutant in the ocean
     
     Keyword arguments:
-    n,m -- the number of rows, columns in the 2D grid.  Used to determine 
+    n, m - the number of rows, columns in the 2D grid.  Used to determine
         indices into list parameters 'water', 'E', 'ux', 'uy', and i * m + j in
         a list
-    water -- 1D list n*m elements long of booleans indicating land/water.  True
+    water - 1D list n * m elements long of booleans indicating land / water.  True
             is water, False is land.  
-    E -- 1D list n*m elements long of dispersion coefficients
-    ux -- 1D list n*m elements long of x component velocity vectors
-    uy -- 1D list n*m elements long y component velocity vectors
-    point_sources -- map of sourceIndex to pollutant density
-    h -- scalar describing grid cell size
-    directSolve -- if True uses a direct solver that may be faster, but use
+    E - constant indicating tidal dispersion coefficient
+    ux - constant indicating x component of advective velocity
+    uy - constant indicating y component of advective velocity
+    point_sources - list of (index, wps, kps, id) tuples for each point source
+    h - scalar describing grid cell size
+    direct_solve - if True uses a direct solver that may be faster, but use
         more memory.  May crash in cases where memory is fragmented or low
         Default False.
     
@@ -43,7 +43,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
 
     print 'initialize ...',
     t0 = time.clock()
-
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
@@ -110,7 +109,7 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
                                          n * m, "csc")
     print '(' + str(time.clock() - t0) + 's elapsed)'
 
-    if directSolve:
+    if direct_solve:
         t0 = time.clock()
         print 'direct solving ...',
         result = spsolve(matrix, b_vector)
