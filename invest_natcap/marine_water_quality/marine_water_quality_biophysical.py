@@ -18,7 +18,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger('marine_water_quality')
 
-def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
+def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
                          direct_solve=False):
     """2D Water quality model to track a pollutant in the ocean
     
@@ -31,7 +31,7 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
     E - constant indicating tidal dispersion coefficient
     ux - constant indicating x component of advective velocity
     uy - constant indicating y component of advective velocity
-    point_sources - list of (index, wps, kps, id) tuples for each point source
+    point_source - dictionary of (index, wps, kps, id) for the point source
     h - scalar describing grid cell size
     direct_solve - if True uses a direct solver that may be faster, but use
         more memory.  May crash in cases where memory is fragmented or low
@@ -66,11 +66,11 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
     for i in range(n):
         for j in range(m):
             #diagonal element i,j always in bounds, calculate directly
-            row_index = calc_index(i, j)
+            a_matrix_index = calc_index(i, j)
 
             #if land then s = 0 and quit
-            if not in_water[row_index]:
-                a_matrix[2, row_index] = 1
+            if not in_water[a_matrix_index]:
+                a_matrix[2, a_matrix_index] = 1
                 continue
 
             #formulate elements as a single array
@@ -79,7 +79,8 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
             uy_tmp = uy * h
 
             elements = [
-             (2, 0, row_index, -4.0 * (term_a + h * h * k_matrix[row_index])),
+             (2, 0, a_matrix_index, -4.0 * (term_a + h * h * \
+                                            point_source['kps'])),
              (4, m, calc_index(i + 1, j), term_a - uy_tmp),
              (0, -m, calc_index(i - 1, j), term_a + uy_tmp),
              (3, 1, calc_index(i, j + 1), term_a - ux_tmp),
@@ -88,19 +89,19 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_sources, h,
             for k, offset, colIndex, term in elements:
                 if colIndex >= 0: #make sure we're in the grid
                     if in_water[colIndex]: #if water
-                        a_matrix[k, row_index + offset] += term
+                        a_matrix[k, a_matrix_index + offset] += term
                     else:
                         #handle the land boundary case s_ij' = s_ij
-                        a_matrix[2, row_index] += term
+                        a_matrix[2, a_matrix_index] += term
 
     #define sources by erasing the rows in the matrix that have already been set
-    for row_index in point_sources:
+    for a_matrix_index in point_sources:
         #the magic numbers are the diagonals and their offsets due to gridsize
         for i, offset in [(4, m), (0, -m), (3, 1), (1, -1)]:
             #zero out that row
-            a_matrix[i, row_index + offset] = 0
-        a_matrix[2, row_index] = 1
-        b_vector[row_index] = point_sources[row_index]
+            a_matrix[i, a_matrix_index + offset] = 0
+        a_matrix[2, a_matrix_index] = 1
+        b_vector[a_matrix_index] = point_sources[a_matrix_index]
     LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
 
     LOGGER.info('building sparse matrix ...')
@@ -179,4 +180,10 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                                      point_parameters[3]))
 
     H = 50 #50m x 50m grid cell size as specified directly by CK
-    marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0, POINT_SOURCES, H)
+    for index, wps, kps, id in POINT_SOURCES:
+        point_source = {'index': index,
+                        'wps': wps,
+                        'kps': kps,
+                        'id': id}
+        marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0, point_source,
+                             H)
