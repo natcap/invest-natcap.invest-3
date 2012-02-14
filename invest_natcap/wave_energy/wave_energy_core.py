@@ -487,7 +487,8 @@ def interp_points_over_raster(points, values, raster):
     logger.debug('Size of X dimension of raster : %s', size_x)
     size_y = band.YSize
     logger.debug('Size of Y dimension of raster : %s', size_y)
-    logger.debug('gt[0], [1], [3], [5] : %f : %f : %f : %f', geo_tran[0], geo_tran[1], geo_tran[3], geo_tran[5])
+    logger.debug('gt[0], [1], [3], [5] : %f : %f : %f : %f',
+                 geo_tran[0], geo_tran[1], geo_tran[3], geo_tran[5])
     #Make a numpy array representing the points of the raster (the points are the pixels)
     new_points = np.array([[geo_tran[0] + geo_tran[1] * i,
                             geo_tran[3] + geo_tran[5] * j] 
