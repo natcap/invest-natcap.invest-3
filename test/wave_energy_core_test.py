@@ -126,34 +126,10 @@ class TestWaveEnergy(unittest.TestCase):
         self.assertEqual(attribute_unit, attribute_unit_calc)
         self.assertEqual(attribute_spheroid, attribute_spheroid_calc)
         
-        feat_count = lyr.GetFeatureCount()
-        feat_count_projected = layer.GetFeatureCount()
-        self.assertEqual(feat_count, feat_count_projected,
-                         'The layers DO NOT have the same number of features')
-
-        feat = lyr.GetNextFeature()
-        feat_projected = layer.GetNextFeature()
-        while feat is not None:
-            layer_def = lyr.GetLayerDefn()
-            layer_def_projected = layer.GetLayerDefn()
-
-            field_count = layer_def.GetFieldCount()
-            field_count_projected = layer_def_projected.GetFieldCount()
-            self.assertEqual(field_count, field_count_projected,
-                             'The shapes DO NOT have the same number of fields')
-
-            for fld_index in range(field_count):
-                field = feat.GetField(fld_index)
-                field_projected = feat_projected.GetField(fld_index)
-                self.assertEqual(field, field_projected, 'The field values DO NOT match')
-
-            feat.Destroy()
-            feat_projected.Destroy()
-            feat = lyr.GetNextFeature()
-            feat_projected = layer.GetNextFeature()
-        
         shape_to_reproject.Destroy()
         new_shape.Destroy()
+        
+        invest_test_core.assertTwoShapesEqualURI(self, shape_to_reproject_path, output_path)
         
     def test_wave_energy_clip_shape(self):
         """A trivial test case that makes sure clip_shape returns the proper shape
