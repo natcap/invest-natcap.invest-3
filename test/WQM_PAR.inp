@@ -5,9 +5,10 @@ C1 HYDRODYNAMIC CHARACTERISTICS
 C  
    U0 = [M/SEC] EAST-WEST COMPONENT OF ADVECTIVE VELOCITY
    V0 = [M/SEC] SOUTH-NORTH COMPONENT OF ADVECTIVE VELOCITY
-   E  = [KM*KM/DAY] TIDAL DISPERSION COEFFICIENT  
-C1    U0    V0      E
-      0.05  0.10    0.5   	  
+   E  = [KM*KM/DAY] TIDAL DISPERSION COEFFICIENT
+   H  = [M] GRID CELL SIZE
+C1    U0    V0      E    H
+      0.05  0.10    0.5  50 	  
 -------------------------------------------------------------------------------
 C2 POINT SOURCE LOADING                          
 C                                                            

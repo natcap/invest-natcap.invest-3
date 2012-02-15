@@ -155,10 +155,11 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     U0 = 0.0
     V0 = 0.0
     E = 0.5
+    H = 50
     #List of tubples of (index, WPS, KPS, CPS)
     POINT_SOURCES = []
 
-    HYDRODYNAMIC_HEADER = re.compile('C1 +U0 +V0 +E')
+    HYDRODYNAMIC_HEADER = re.compile('C1 +U0 +V0 +E +H')
     POINT_SOURCE_HEADER = re.compile('C2-1 +NPS')
 
     PARAMETER_FILE = open(PARAMETER_FILENAME)
@@ -168,7 +169,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
         if HYDRODYNAMIC_HEADER.match(line):
             #Next line will be hydrodynamic characteristics
             line = PARAMETER_FILE.readline()
-            U0, V0, E = map(float, line.split())
+            U0, V0, E, H = map(float, line.split())
         if POINT_SOURCE_HEADER.match(line):
             steps = int(PARAMETER_FILE.readline())
             PARAMETER_FILE.readline() #read C2-2 header garbage
@@ -180,7 +181,6 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                                      float(point_parameters[3]),
                                      point_parameters[4]))
 
-    H = 50 #50m x 50m grid cell size as specified directly by CK
     density = np.zeros(N_ROWS * N_COLS)
     POINT_COUNT = 1
     for xps, yps, wps, kps, id in POINT_SOURCES:
