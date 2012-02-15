@@ -34,7 +34,7 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     ux - constant indicating x component of advective velocity: m / s
     uy - constant indicating y component of advective velocity: m / s
     point_source - dictionary of (index, wps, kps, id) for the point source,
-        wps: kg / day, k: 1 / day
+        wps: kg / day, k: 1 / day.  index is in column major notation
     h - scalar describing grid cell size: m
     direct_solve - if True uses a direct solver that may be faster, but use
         more memory.  May crash in cases where memory is fragmented or low
@@ -49,6 +49,11 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     #convert ux,uy from m/s to km/day
     ux *= 86.4
     uy *= 86.4
+
+    #Convert point source index from column major to row major notation
+    point_row = point_source['index'] / m
+    point_col = point_source['index'] % n
+    point_index = point_row * m + (n - point_col)
 
     #convert h from m to km
     h /= 1000.0
@@ -109,10 +114,10 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     #the magic numbers are the diagonals and their offsets due to gridsize
     for i, offset in [(4, m), (0, -m), (3, 1), (1, -1)]:
         #zero out that row
-        a_matrix[i, point_source['index'] + offset] = 0
+        a_matrix[i, point_index + offset] = 0
     #set diagonal to 1
-    a_matrix[2, point_source['index']] = 1
-    b_vector[point_source['index']] = point_source['wps']
+    a_matrix[2, point_index] = 1
+    b_vector[point_index] = point_source['wps']
     LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
 
     LOGGER.info('building sparse matrix ...')
