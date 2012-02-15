@@ -151,11 +151,12 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                               .replace('\r', ''))
     N_COLS = len(IN_WATER) / N_ROWS
     #parse WQM file
-    #Default values
-    U0 = 0.0
-    V0 = 0.0
-    E = 0.5
-    H = 50
+    #Initialize variables that need to get set.  Putting None here so if they
+    #don't get parsed correctly something will crash.
+    U0 = None
+    V0 = None
+    E = None
+    H = None
     #List of tubples of (index, WPS, KPS, CPS)
     POINT_SOURCES = []
 
