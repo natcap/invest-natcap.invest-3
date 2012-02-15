@@ -1252,9 +1252,13 @@ class Root(DynamicElement):
                         fetched_value = self.find_value(value)
 
                     attributes[key] = fetched_value
-            elif key in ['elements', 'rows']:
+            elif key in ['elements', 'rows']: #guaranteed array of objects
                 for element in value:
                     value = self.find_inherited_elements(element)
+            elif key in ['args_id']: #list of strings or inheritance objects
+                for index, element in enumerate(value):
+                    if isinstance(element, dict):
+                        value[index] = self.find_value(element)
         return attributes
 
     def find_embedded_value(self, inherit):
@@ -1368,10 +1372,11 @@ class Root(DynamicElement):
 
         if len(list) > 0:
             if key not in dictionary:
-                dictionary[key] = {}
-            
-            dictionary[key] = self.set_dict_value(dictionary[key], list, 
-                element_value)
+                dict = {}
+            else:
+                dict = dictionary[key]
+
+            dictionary[key] = self.set_dict_value(dict, list, element_value)
         else:
             dictionary[key] = element_value
     
