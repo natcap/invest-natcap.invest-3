@@ -202,20 +202,18 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     LOGGER.debug(density[density > 0.0])
     density = np.resize(density, (N_ROWS, N_COLS))
     IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
-    #matplotlib.pyplot.imshow(np.resize(np.invert(IN_WATER), (N_ROWS, N_COLS)),
-    #                         interpolation='bilinear',
-    #                         cmap=matplotlib.cm.YlOrBr, origin='lower')
-    pylab.imshow(density, 
-                 interpolation='bilinear', 
+    #Plot the pollutant density
+    pylab.imshow(density,
+                 interpolation='bilinear',
                  cmap=pylab.cm.gist_earth,
                  origin='lower')
 
     pylab.hold(True)
+    #Plot the land by masking out water regions.  In non-water
+    #regions the data values will be 0, so okay to use PuOr to have
+    #an orangy land.
     pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
                  interpolation='bilinear',
-                 cmap = pylab.cm.PuOr,
-                 origin = 'lower')
-    #CS = matplotlib.pyplot.contour(np.resize(density, (N_ROWS, N_COLS)),
-    #                         norm=matplotlib.colors.Normalize(vmin=min(density), vmax=max(density), clip=False))
-    #matplotlib.pyplot.clabel(CS, inline=1, fontsize=10)
+                 cmap=pylab.cm.PuOr,
+                 origin='lower')
     pylab.show()
