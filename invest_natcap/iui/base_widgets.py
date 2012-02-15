@@ -1032,7 +1032,7 @@ class OperationDialog(QtGui.QDialog):
         self.exec_controller.start_executor()
 
         self.timer.timeout.connect(self.check_messages)
-        self.timer.start(25)
+        self.timer.start(100)
         
     def check_messages(self):
         if not self.exec_controller.is_finished():
