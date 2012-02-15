@@ -65,7 +65,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
             #Check hand generated results vs. function results
             for key, value in test_dict.iteritems():
                 if key in wave_data:
-                    self.assertTrue((value == wave_data[key]).all)
+                    self.assertTrue((value == np.array(wave_data[key], dtype='f')).all)
                 else:
                     self.assertEqual(0, 1, 'Keys do not match')
             #Check rows/column header results

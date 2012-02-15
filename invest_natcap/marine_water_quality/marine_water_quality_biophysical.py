@@ -8,11 +8,11 @@ import simplejson as json
 import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
+from numpy.ma import masked_array
 import time
 import scipy.linalg
 import math
-import matplotlib
-import matplotlib.pyplot
+import pylab
 
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -30,11 +30,12 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
         a list
     water - 1D list n * m elements long of booleans indicating land / water.  True
             is water, False is land.  
-    E - constant indicating tidal dispersion coefficient
-    ux - constant indicating x component of advective velocity
-    uy - constant indicating y component of advective velocity
-    point_source - dictionary of (index, wps, kps, id) for the point source
-    h - scalar describing grid cell size
+    E - constant indicating tidal dispersion coefficient: km ^ 2 / day
+    ux - constant indicating x component of advective velocity: m / s
+    uy - constant indicating y component of advective velocity: m / s
+    point_source - dictionary of (index, wps, kps, id) for the point source,
+        wps: kg / day, k: 1 / day.  index is in column major notation
+    h - scalar describing grid cell size: m
     direct_solve - if True uses a direct solver that may be faster, but use
         more memory.  May crash in cases where memory is fragmented or low
         Default False.
@@ -44,6 +45,19 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     """
 
     LOGGER.info('initialize ...')
+
+    #convert ux,uy from m/s to km/day
+    ux *= 86.4
+    uy *= 86.4
+
+    #Convert point source index from column major to row major notation
+    point_row = point_source['index'] / m
+    point_col = point_source['index'] % n
+    point_index = point_row * m + (n - point_col)
+
+    #convert h from m to km
+    h /= 1000.0
+
     t0 = time.clock()
 
     def calc_index(i, j):
@@ -100,10 +114,10 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     #the magic numbers are the diagonals and their offsets due to gridsize
     for i, offset in [(4, m), (0, -m), (3, 1), (1, -1)]:
         #zero out that row
-        a_matrix[i, point_source['index'] + offset] = 0
+        a_matrix[i, point_index + offset] = 0
     #set diagonal to 1
-    a_matrix[2, point_source['index']] = 1
-    b_vector[point_source['index']] = point_source['wps']
+    a_matrix[2, point_index] = 1
+    b_vector[point_index] = point_source['wps']
     LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
 
     LOGGER.info('building sparse matrix ...')
@@ -191,6 +205,20 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
         density += marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0,
                                        point_source, H)
     LOGGER.debug(density[density > 0.0])
-    matplotlib.pyplot.imshow(np.resize(density, (N_ROWS, N_COLS)), interpolation='bilinear',
-               cmap=matplotlib.cm.gray, origin='lower')
-    matplotlib.pyplot.show()
+    density = np.resize(density, (N_ROWS, N_COLS))
+    IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
+    #Plot the pollutant density
+    pylab.imshow(density,
+                 interpolation='bilinear',
+                 cmap=pylab.cm.gist_earth,
+                 origin='lower')
+
+    pylab.hold(True)
+    #Plot the land by masking out water regions.  In non-water
+    #regions the data values will be 0, so okay to use PuOr to have
+    #an orangy land.
+    pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
+                 interpolation='bilinear',
+                 cmap=pylab.cm.PuOr,
+                 origin='lower')
+    pylab.show()
