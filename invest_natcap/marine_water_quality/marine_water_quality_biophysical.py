@@ -194,10 +194,13 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                         'id': id}
         density += marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0,
                                        point_source, H)
+        break
 
     LOGGER.info("Done with point source diffusion.  Now plotting.")
     density = np.resize(density, (N_ROWS, N_COLS))
     IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
+
+    axes = pylab.subplot(111)
 
     #Plot the pollutant density
     pylab.imshow(density,
@@ -214,4 +217,28 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                  interpolation='bilinear',
                  cmap=pylab.cm.PuOr,
                  origin='lower')
+
+
+    class Cursor:
+        def __init__(self, ax):
+            self.ax = ax
+            self.lx = ax.axhline(color='w')  # the horiz line
+            self.ly = ax.axvline(color='w')  # the vert line
+
+            # text location in axes coords
+            self.txt = ax.text(0.7, 0.9, '', transform=ax.transAxes, color='w')
+
+        def mouse_move(self, event):
+            if not event.inaxes: return
+
+            x, y = event.xdata, event.ydata
+            # update the line positions
+            self.lx.set_ydata(y)
+            self.ly.set_xdata(x)
+
+            self.txt.set_text('s=%1.2f' % density[int(y), int(x)])
+            pylab.draw()
+    cursor = Cursor(axes)
+    pylab.connect('motion_notify_event', cursor.mouse_move)
+
     pylab.show()
