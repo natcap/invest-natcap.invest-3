@@ -4,7 +4,6 @@ import sys
 import logging
 import re
 
-import simplejson as json
 import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
