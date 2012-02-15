@@ -1032,7 +1032,7 @@ class OperationDialog(QtGui.QDialog):
         self.exec_controller.start_executor()
 
         self.timer.timeout.connect(self.check_messages)
-        self.timer.start(100)
+        self.timer.start(25)
         
     def check_messages(self):
         if not self.exec_controller.is_finished():
@@ -1353,12 +1353,14 @@ class Root(DynamicElement):
         outputDict = {}
 
         for id, element in self.allElements.iteritems():
+            print id
             if 'args_id' in element.attributes and element.isEnabled():
                 element_value = element.getOutputValue()
                 if element_value != None:
 
                     args_id = element.attributes['args_id']
                     if not isinstance(args_id, list):
+                        print '---- making %s an array' %args_id
                         args_id = [args_id]
                     
                     outputDict = self.set_dict_value(outputDict, args_id,
