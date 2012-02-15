@@ -1353,7 +1353,6 @@ class Root(DynamicElement):
         outputDict = {}
 
         for id, element in self.allElements.iteritems():
-            print id
             if 'args_id' in element.attributes and element.isEnabled():
                 element_value = element.getOutputValue()
                 if element_value != None:
@@ -1369,7 +1368,6 @@ class Root(DynamicElement):
 
     def set_dict_value(self, dictionary, key_list, element_value):
         key, list = (key_list[0], key_list[1:])
-        print (key, list)
 
         if len(list) > 0:
             if key not in dictionary:
@@ -1388,6 +1386,10 @@ class EmbeddedUI(Root):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
         Root.__init__(self, uri, layout, registrar)
+        
+        if self.attributes['id'] in self.allElements:
+            del self.allElements[self.attributes['id']]
+
         self.attributes['args_id'] = attributes['args_id']
         self.body.layout().insertStretch(-1)
 
