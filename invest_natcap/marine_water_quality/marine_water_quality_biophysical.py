@@ -211,6 +211,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                  interpolation='bilinear',
                  cmap=pylab.cm.gist_earth,
                  origin='lower')
+    pylab.colorbar()
 
     pylab.hold(True)
     #Plot the land by masking out water regions.  In non-water
