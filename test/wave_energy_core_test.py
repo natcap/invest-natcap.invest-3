@@ -177,51 +177,16 @@ class TestWaveEnergy(unittest.TestCase):
 
         new_shape = wave_energy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
 
-        layer_count = shape_to_clip.GetLayerCount()
-        layer_count_new = new_shape.GetLayerCount()
-        self.assertEqual(layer_count, layer_count_new,
-                         'The shapes DO NOT have the same number of layers')
-
-        for layer_num in range(layer_count):
-            layer = shape_to_clip.GetLayer(layer_num)
-            layer.ResetReading()
-            layer_new = new_shape.GetLayer(layer_num)
-
-            feat_count = layer.GetFeatureCount()
-            feat_count_new = layer_new.GetFeatureCount()
-            self.assertEqual(feat_count, feat_count_new,
-                             'The layers DO NOT have the same number of features')
-
-            feat = layer.GetNextFeature()
-            feat_new = layer_new.GetNextFeature()
-            while feat is not None:
-                layer_def = layer.GetLayerDefn()
-                layer_def_new = layer_new.GetLayerDefn()
-
-                field_count = layer_def.GetFieldCount()
-                field_count_new = layer_def_new.GetFieldCount()
-                self.assertEqual(field_count, field_count_new,
-                                 'The shapes DO NOT have the same number of fields')
-
-                for fld_index in range(field_count):
-                    field = feat.GetField(fld_index)
-                    field_new = feat_new.GetField(fld_index)
-                    self.assertEqual(field, field_new, 'The field values DO NOT match')
-
-                feat.Destroy()
-                feat_new.Destroy()
-                feat = layer.GetNextFeature()
-                feat_new = layer_new.GetNextFeature()
-
         new_shape.Destroy()
         shape_to_clip.Destroy()
         binding_shape.Destroy()
 
-    def test_wave_energy_clip_shape_zero(self):
-        """A trivial test case that makes sure clip_shape returns the proper shape
-        after it has been clipped by a polygon shapefile.  Here the clipping polygon is
-        the same size and form as the shape to be clipped so we would expect the output to be
-        equal to the input"""
+        invest_test_core.assertTwoShapesEqualURI(self, shape_to_clip_path, new_shape_path)
+
+    def test_wave_energy_clip_shape_empty(self):
+        """A trivial test case that makes sure clip_shape returns an empty
+        shapefile if the binding polygon does not intersect with the other
+        shape's features"""
 
         test_dir = './data/wave_energy_data'
         shape_to_clip_path = test_dir + os.sep + 'test_input/pointShapeTest.shp'
@@ -745,39 +710,13 @@ class TestWaveEnergy(unittest.TestCase):
 
         wave_energy_core.valuation(args)
         
-        #Check that output/intermediate files have been made
         regression_dir = './data/wave_energy_regression_data'
-        regression_shape = ogr.Open(regression_dir + 
-                                    '/WaveData_prj_regression.shp')
-        shape = ogr.Open(args['workspace_dir'] + 
-                         '/Intermediate/WaveData_prj.shp')
-        
-        regression_layer = regression_shape.GetLayer(0)
-        layer = shape.GetLayer(0)
-        
-        regression_feat_count = regression_layer.GetFeatureCount()
-        feat_count = layer.GetFeatureCount()
-        self.assertEqual(regression_feat_count, feat_count)
-        
-        layer_def = layer.GetLayerDefn()
-        reg_layer_def = regression_layer.GetLayerDefn()
-        field_count = layer_def.GetFieldCount()
-        reg_field_count = reg_layer_def.GetFieldCount()
-        self.assertEqual(field_count, reg_field_count,
-                         'The shapes DO NOT have the same number of fields')
-        
-        reg_feat = regression_layer.GetNextFeature()
-        feat = layer.GetNextFeature()
-        while reg_feat is not None:            
-            for fld_index in range(field_count):
-                field = feat.GetField(fld_index)
-                reg_field = reg_feat.GetField(fld_index)
-                self.assertEqual(field, reg_field, 'The field values DO NOT match')
-            feat.Destroy()
-            reg_feat.Destroy()
-            feat = layer.GetNextFeature()
-            reg_feat = regression_layer.GetNextFeature()
-                
+        regression_shape = regression_dir + 
+                                    '/WEM_InputOutput_Pts_val_regression.shp'
+        shape_path = args['workspace_dir'] + 
+                         '/Intermediate/WEM_InputOutput_Pts_val.shp'
+        #Check that resulting wave data shapefile is correct
+        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_path, shape_path)
         #Check that resulting rasters are correct
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + '/Output/npv_usd.tif',
