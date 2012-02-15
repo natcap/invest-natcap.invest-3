@@ -194,7 +194,6 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                         'id': id}
         density += marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0,
                                        point_source, H)
-        break
 
     LOGGER.info("Done with point source diffusion.  Now plotting.")
     density = np.resize(density, (N_ROWS, N_COLS))
