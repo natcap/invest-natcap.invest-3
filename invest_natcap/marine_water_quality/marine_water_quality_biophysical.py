@@ -157,11 +157,14 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     V0 = None
     E = None
     H = None
+    VMIN = None
+    VMAX = None
     #List of tubples of (index, WPS, KPS, CPS)
     POINT_SOURCES = []
 
     HYDRODYNAMIC_HEADER = re.compile('C1 +U0 +V0 +E +H')
     POINT_SOURCE_HEADER = re.compile('C2-1 +NPS')
+    DISPLAY_HEADER = re.compile('C3 +VMIN +VMAX')
 
     PARAMETER_FILE = open(PARAMETER_FILENAME)
     while True:
@@ -181,6 +184,10 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                                      int(point_parameters[2]),
                                      float(point_parameters[3]),
                                      point_parameters[4]))
+        if DISPLAY_HEADER.match(line):
+            #Next line will be hydrodynamic characteristics
+            line = PARAMETER_FILE.readline()
+            VMIN, VMAX = map(float, line.split())
 
     density = np.zeros(N_ROWS * N_COLS)
     POINT_COUNT = 1
@@ -203,9 +210,14 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     axes = pylab.subplot(111)
 
     #Plot the pollutant density
+    COLORMAP = pylab.cm.gist_earth
+    COLORMAP.set_over(color='#330000')
+    COLORMAP.set_under(color='#330000')
     pylab.imshow(density,
                  interpolation='bilinear',
-                 cmap=pylab.cm.gist_earth,
+                 cmap=COLORMAP,
+                 vmin=VMIN,
+                 vmax=VMAX,
                  origin='lower')
     pylab.colorbar()
 
