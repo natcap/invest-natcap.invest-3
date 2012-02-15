@@ -711,10 +711,8 @@ class TestWaveEnergy(unittest.TestCase):
         wave_energy_core.valuation(args)
         
         regression_dir = './data/wave_energy_regression_data'
-        regression_shape = regression_dir + 
-                                    '/WEM_InputOutput_Pts_val_regression.shp'
-        shape_path = args['workspace_dir'] + 
-                         '/Intermediate/WEM_InputOutput_Pts_val.shp'
+        regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_val_regression.shp'
+        shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts_val.shp'
         #Check that resulting wave data shapefile is correct
         invest_test_core.assertTwoShapesEqualURI(self, regression_shape_path, shape_path)
         #Check that resulting rasters are correct
