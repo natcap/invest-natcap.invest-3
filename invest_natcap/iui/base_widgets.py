@@ -1342,7 +1342,7 @@ class Root(DynamicElement):
             to their appropriate dataType where specified in the JSON config
             file.
         
-            returns nothing"""
+            returns a python dictionary"""
 
         #initialize the outputDict, in case it has been already written to
         #in a previous run.
@@ -1352,21 +1352,30 @@ class Root(DynamicElement):
             if 'args_id' in element.attributes and element.isEnabled():
                 element_value = element.getOutputValue()
                 if element_value != None:
-                    print element
+
                     args_id = element.attributes['args_id']
-                    if args_id not in outputDict:
-                        outputDict[args_id] = {}
-                    if 'sub_id' in element.attributes:
-                        sub_id = element.attributes['sub_id']
-
-                        if sub_id in self.allElements:
-                            sub_id = self.allElements[sub_id].getLabel()
-
-                        outputDict[args_id][sub_id] = element_value
-                    else:
-                        outputDict[args_id] = element_value
+                    if not isinstance(args_id, list):
+                        args_id = [args_id]
+                    
+                    outputDict = self.set_dict_value(outputDict, args_id,
+                        element_value)
 
         return outputDict
+
+    def set_dict_value(self, dictionary, key_list, element_value):
+        key, list = (key_list[0], key_list[1:])
+        print (key, list)
+
+        if len(list) > 0:
+            if key not in dictionary:
+                dictionary[key] = {}
+            
+            dictionary[key] = self.set_dict_value(dictionary[key], list, 
+                element_value)
+        else:
+            dictionary[key] = element_value
+    
+        return dictionary
 
 class EmbeddedUI(Root):
     def __init__(self, attributes, registrar):
