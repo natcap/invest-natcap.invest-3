@@ -1360,7 +1360,6 @@ class Root(DynamicElement):
 
                     args_id = element.attributes['args_id']
                     if not isinstance(args_id, list):
-                        print '---- making %s an array' %args_id
                         args_id = [args_id]
                     
                     outputDict = self.set_dict_value(outputDict, args_id,
