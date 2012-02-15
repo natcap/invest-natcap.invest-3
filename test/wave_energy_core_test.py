@@ -74,37 +74,9 @@ class TestWaveEnergy(unittest.TestCase):
         wave_energy_core.biophysical(args)
         regression_dir = './data/wave_energy_regression_data/'
         #Check that output/intermediate files have been made
-        regression_shape = ogr.Open(regression_dir + 
-                                    'WaveData_clipZ_regression.shp')
-        shape = ogr.Open(args['workspace_dir'] + 
-                         '/Intermediate/WaveData_clipZ.shp')
-        
-        regression_layer = regression_shape.GetLayer(0)
-        layer = shape.GetLayer(0)
-        
-        regression_feat_count = regression_layer.GetFeatureCount()
-        feat_count = layer.GetFeatureCount()
-        self.assertEqual(regression_feat_count, feat_count)
-        
-        layer_def = layer.GetLayerDefn()
-        reg_layer_def = regression_layer.GetLayerDefn()
-        field_count = layer_def.GetFieldCount()
-        reg_field_count = reg_layer_def.GetFieldCount()
-        self.assertEqual(field_count, reg_field_count,
-                         'The shapes DO NOT have the same number of fields')
-        
-        reg_feat = regression_layer.GetNextFeature()
-        feat = layer.GetNextFeature()
-        while reg_feat is not None:            
-            for fld_index in range(field_count):
-                field = feat.GetField(fld_index)
-                reg_field = reg_feat.GetField(fld_index)
-                self.assertEqual(field, reg_field, 'The field values DO NOT match')
-            feat.Destroy()
-            reg_feat.Destroy()
-            feat = layer.GetNextFeature()
-            reg_feat = regression_layer.GetNextFeature()
-                
+        wave_data_shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
+        regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_bio_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, wave_data_shape_path, regression_shape_path)                        
         #Check that resulting rasters are correct
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + '/Output/wp_kw.tif',
