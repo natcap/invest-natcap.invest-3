@@ -242,6 +242,8 @@ def biophysical(args):
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
+    args['analysis_area'].Destroy()
+    args['aoi'].Destroy()
     wave_energy_raster = None
     wave_power_raster = None
     #Clean up temporary files on disk
