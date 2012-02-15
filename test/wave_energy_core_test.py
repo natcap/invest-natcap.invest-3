@@ -131,6 +131,53 @@ class TestWaveEnergy(unittest.TestCase):
         
         invest_test_core.assertTwoShapesEqualURI(self, shape_to_reproject_path, output_path)
         
+    def test_wave_energy_build_point_shapefile(self):
+        wave_shape_path = './data/wave_energy_regression_data/landing_pts_regression.shp'
+        wave_data_shape = ''
+        #Since the global_dem is the only input raster, we base the pixel
+        #size of our output raster from the global_dem
+        dem = args['global_dem']
+        #Create a coordinate transformation for lat/long to meters
+        srs_prj = osr.SpatialReference()
+        #Using 'WGS84' as our well known lat/long projection
+        srs_prj.SetWellKnownGeogCS("WGS84")
+        source_sr = srs_prj
+        target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
+        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        driver_name = 'ESRI Shapefile'
+        layer_name = 'landpoints'
+        path = './data/test_output'
+        data = {1:[45.661,-123.938],2:[45.496,-123.972]}
+        prj = ''
+        driver_name, layer_name, path, data, prj, coord_trans
+
+        #Make a point shapefile for landing points.
+        driver = ogr.GetDriverByName(driver_name)
+        data_source = driver.CreateDataSource(path)
+        layer = data_source.CreateLayer(layer_name, prj, ogr.wkbPoint)    
+        field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
+        layer.CreateField(field_defn)
+        #For all of the landing points create a point feature on the layer
+        for key, value in data.iteritems():
+            lat = value[0]
+            long = value[1]
+            geom = ogr.Geometry(ogr.wkbPoint)
+            geom.AddPoint_2D(float(long), float(lat))
+            geom.Transform(coord_trans)
+            #Create the feature, setting the id field to the corresponding id
+            #field from the csv file
+            feat = ogr.Feature(layer.GetLayerDefn())
+            layer.CreateFeature(feat)
+            index = feat.GetFieldIndex('Id')
+            feat.SetField(index, key)
+            feat.SetGeometryDirectly(geom)
+            #Save the feature modifications to the layer.
+            layer.SetFeature(feat)
+            feat.Destroy()
+        layer.ResetReading()
+        return data_source
+        
+        
     def test_wave_energy_clip_shape(self):
         """A trivial test case that makes sure clip_shape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
