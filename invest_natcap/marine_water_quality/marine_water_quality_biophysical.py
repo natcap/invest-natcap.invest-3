@@ -14,10 +14,10 @@ import math
 import pylab
 
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('marine_water_quality')
+LOGGER = logging.getLogger('MAIN')
 
 def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
                          direct_solve=False):
@@ -42,8 +42,10 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     returns a 2D grid of pollutant densities in the same dimension as  'grid'
     
     """
-
-    LOGGER.info('initialize ...')
+    LOGGER = logging.getLogger('marine_water_quality')
+    LOGGER.info('Calculating advection diffusion for %s' % \
+                (point_source['id']))
+    t0 = time.clock()
 
     #convert ux,uy from m/s to km/day
     ux *= 86.4
@@ -52,7 +54,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     #convert h from m to km
     h /= 1000.0
 
-    t0 = time.clock()
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
@@ -70,12 +71,8 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     #holds the columns for diagonal sparse matrix creation later
     a_matrix = np.zeros((5, n * m))
 
-    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
-    t0 = time.clock()
-
     #iterate over the non-zero elments in grid to build the linear system
-    LOGGER.info('building system a_matrix...')
-    t0 = time.clock()
+    LOGGER.info('Building diagonals for linear advection diffusion system.')
     for i in range(n):
         for j in range(m):
             #diagonal element i,j always in bounds, calculate directly
@@ -115,31 +112,21 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     #set diagonal to 1
     a_matrix[2, point_index] = 1
     b_vector[point_index] = point_source['wps']
-    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
+    LOGGER.info('Building sparse matrix from diagonals.')
 
-    LOGGER.info('building sparse matrix ...')
-    t0 = time.clock()
     matrix = scipy.sparse.spdiags(a_matrix, [-m, -1, 0, 1, m], n * m,
                                          n * m, "csc")
-    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
-
-    if direct_solve:
-        t0 = time.clock()
-        LOGGER.info('direct solving ...')
-        result = spsolve(matrix, b_vector)
-    else:
-        LOGGER.info('generating preconditioner via sparse ilu')
-        #normally factor will use m*(n*m) extra space, we restrict to 
-        #\sqrt{m}*(n*m) extra space
-        P = scipy.sparse.linalg.spilu(matrix, fill_factor=int(math.sqrt(m)))
-        LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
-        t0 = time.clock()
-        LOGGER.info('gmres iteration starting ')
-        #create linear operator for precondioner
-        M_x = lambda x: P.solve(x)
-        M = scipy.sparse.linalg.LinearOperator((n * m, n * m), M_x)
-        result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
-    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
+    LOGGER.info('generating preconditioner via sparse incomplete lu decomposition')
+    #normally factor will use m*(n*m) extra space, we restrict to 
+    #\sqrt{m}*(n*m) extra space
+    P = scipy.sparse.linalg.spilu(matrix, fill_factor=int(math.sqrt(m)))
+    LOGGER.info('Solving via gmres iteration')
+    #create linear operator for precondioner
+    M_x = lambda x: P.solve(x)
+    M = scipy.sparse.linalg.LinearOperator((n * m, n * m), M_x)
+    result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
+    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed and done for %s)' % \
+                (point_source['id']))
     return result
 
 #This part is for command line invocation and allows json objects to be passed
@@ -195,7 +182,11 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
 
     H = 50 #50m x 50m grid cell size as specified directly by CK
     density = np.zeros(N_ROWS * N_COLS)
+    POINT_COUNT = 1
     for xps, yps, wps, kps, id in POINT_SOURCES:
+        LOGGER.info('Processing point %s of %s' % (POINT_COUNT,
+                                                   len(POINT_SOURCES)))
+        POINT_COUNT += 1
         point_source = {'xps': xps,
                         'yps': yps,
                         'wps': wps,
@@ -203,9 +194,11 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                         'id': id}
         density += marine_water_quality(N_ROWS, N_COLS, IN_WATER, E, U0, V0,
                                        point_source, H)
-    LOGGER.debug(density[density > 0.0])
+
+    LOGGER.info("Done with point source diffusion.  Now plotting.")
     density = np.resize(density, (N_ROWS, N_COLS))
     IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
+
     #Plot the pollutant density
     pylab.imshow(density,
                  interpolation='bilinear',
@@ -213,10 +206,10 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                  origin='lower')
     pylab.colorbar()
 
-    pylab.hold(True)
     #Plot the land by masking out water regions.  In non-water
     #regions the data values will be 0, so okay to use PuOr to have
     #an orangy land.
+    pylab.hold(True)
     pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
                  interpolation='bilinear',
                  cmap=pylab.cm.PuOr,
