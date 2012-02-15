@@ -74,37 +74,9 @@ class TestWaveEnergy(unittest.TestCase):
         wave_energy_core.biophysical(args)
         regression_dir = './data/wave_energy_regression_data/'
         #Check that output/intermediate files have been made
-        regression_shape = ogr.Open(regression_dir + 
-                                    'WaveData_clipZ_regression.shp')
-        shape = ogr.Open(args['workspace_dir'] + 
-                         '/Intermediate/WaveData_clipZ.shp')
-        
-        regression_layer = regression_shape.GetLayer(0)
-        layer = shape.GetLayer(0)
-        
-        regression_feat_count = regression_layer.GetFeatureCount()
-        feat_count = layer.GetFeatureCount()
-        self.assertEqual(regression_feat_count, feat_count)
-        
-        layer_def = layer.GetLayerDefn()
-        reg_layer_def = regression_layer.GetLayerDefn()
-        field_count = layer_def.GetFieldCount()
-        reg_field_count = reg_layer_def.GetFieldCount()
-        self.assertEqual(field_count, reg_field_count,
-                         'The shapes DO NOT have the same number of fields')
-        
-        reg_feat = regression_layer.GetNextFeature()
-        feat = layer.GetNextFeature()
-        while reg_feat is not None:            
-            for fld_index in range(field_count):
-                field = feat.GetField(fld_index)
-                reg_field = reg_feat.GetField(fld_index)
-                self.assertEqual(field, reg_field, 'The field values DO NOT match')
-            feat.Destroy()
-            reg_feat.Destroy()
-            feat = layer.GetNextFeature()
-            reg_feat = regression_layer.GetNextFeature()
-                
+        wave_data_shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
+        regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_bio_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, wave_data_shape_path, regression_shape_path)                        
         #Check that resulting rasters are correct
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + '/Output/wp_kw.tif',
@@ -154,34 +126,57 @@ class TestWaveEnergy(unittest.TestCase):
         self.assertEqual(attribute_unit, attribute_unit_calc)
         self.assertEqual(attribute_spheroid, attribute_spheroid_calc)
         
-        feat_count = lyr.GetFeatureCount()
-        feat_count_projected = layer.GetFeatureCount()
-        self.assertEqual(feat_count, feat_count_projected,
-                         'The layers DO NOT have the same number of features')
-
-        feat = lyr.GetNextFeature()
-        feat_projected = layer.GetNextFeature()
-        while feat is not None:
-            layer_def = lyr.GetLayerDefn()
-            layer_def_projected = layer.GetLayerDefn()
-
-            field_count = layer_def.GetFieldCount()
-            field_count_projected = layer_def_projected.GetFieldCount()
-            self.assertEqual(field_count, field_count_projected,
-                             'The shapes DO NOT have the same number of fields')
-
-            for fld_index in range(field_count):
-                field = feat.GetField(fld_index)
-                field_projected = feat_projected.GetField(fld_index)
-                self.assertEqual(field, field_projected, 'The field values DO NOT match')
-
-            feat.Destroy()
-            feat_projected.Destroy()
-            feat = lyr.GetNextFeature()
-            feat_projected = layer.GetNextFeature()
-        
         shape_to_reproject.Destroy()
         new_shape.Destroy()
+        
+        invest_test_core.assertTwoShapesEqualURI(self, shape_to_reproject_path, output_path)
+        
+    def test_wave_energy_build_point_shapefile(self):
+        wave_shape_path = './data/wave_energy_regression_data/landing_pts_regression.shp'
+        wave_data_shape = ''
+        #Since the global_dem is the only input raster, we base the pixel
+        #size of our output raster from the global_dem
+        dem = args['global_dem']
+        #Create a coordinate transformation for lat/long to meters
+        srs_prj = osr.SpatialReference()
+        #Using 'WGS84' as our well known lat/long projection
+        srs_prj.SetWellKnownGeogCS("WGS84")
+        source_sr = srs_prj
+        target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
+        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+        driver_name = 'ESRI Shapefile'
+        layer_name = 'landpoints'
+        path = './data/test_output'
+        data = {1:[45.661,-123.938],2:[45.496,-123.972]}
+        prj = ''
+        driver_name, layer_name, path, data, prj, coord_trans
+
+        #Make a point shapefile for landing points.
+        driver = ogr.GetDriverByName(driver_name)
+        data_source = driver.CreateDataSource(path)
+        layer = data_source.CreateLayer(layer_name, prj, ogr.wkbPoint)    
+        field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
+        layer.CreateField(field_defn)
+        #For all of the landing points create a point feature on the layer
+        for key, value in data.iteritems():
+            lat = value[0]
+            long = value[1]
+            geom = ogr.Geometry(ogr.wkbPoint)
+            geom.AddPoint_2D(float(long), float(lat))
+            geom.Transform(coord_trans)
+            #Create the feature, setting the id field to the corresponding id
+            #field from the csv file
+            feat = ogr.Feature(layer.GetLayerDefn())
+            layer.CreateFeature(feat)
+            index = feat.GetFieldIndex('Id')
+            feat.SetField(index, key)
+            feat.SetGeometryDirectly(geom)
+            #Save the feature modifications to the layer.
+            layer.SetFeature(feat)
+            feat.Destroy()
+        layer.ResetReading()
+        return data_source
+        
         
     def test_wave_energy_clip_shape(self):
         """A trivial test case that makes sure clip_shape returns the proper shape
