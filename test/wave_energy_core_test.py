@@ -4,6 +4,7 @@ import unittest
 import math
 import csv
 import osr
+import logging
 
 from osgeo import ogr
 from osgeo import gdal
@@ -14,6 +15,10 @@ import numpy as np
 from invest_natcap.wave_energy import wave_energy_core
 from invest_natcap.wave_energy import wave_energy_biophysical
 import invest_test_core
+
+LOGGER = logging.getLogger('wave_energy_core_test')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestWaveEnergy(unittest.TestCase):
 
@@ -58,18 +63,17 @@ class TestWaveEnergy(unittest.TestCase):
             print 'File I/O error' + e
 
         #Create a dictionary whose keys are the 'NAMES' from the machine parameter table
-        #and whose corresponding values are dictionaries whose keys are the column headers of
-        #the machine parameter table with corresponding values
+        #and whose values are from the corresponding 'VALUES' field.
         try:
             machine_params = {}
             machine_param_file = open(machine_param_path)
             reader = csv.DictReader(machine_param_file)
             for row in reader:
-                machine_params[row['NAME'].strip()] = row
+                machine_params[row['NAME'].strip().lower()] = row['VALUE']
             machine_param_file.close()
             args['machine_param'] = machine_params
-        except IOError, e:
-            print 'File I/O error' + e
+        except IOError, error:
+            print 'File I/O error' + error
 
         wave_energy_core.biophysical(args)
         regression_dir = './data/wave_energy_regression_data/'
@@ -135,12 +139,19 @@ class TestWaveEnergy(unittest.TestCase):
         """A regression test that uses known data and inputs to test
         the validity of the function build_point_shapefile"""
         
-        reg_shape_path = './data/wave_energy_regression_data/landing_pts_regression.shp'
+        reg_shape_path = './data/wave_energy_regression_data/LandPts_prj_regression.shp'
         reg_shape = ogr.Open(reg_shape_path)
         driver_name = 'ESRI Shapefile'
         layer_name = 'landpoints'
         path = './data/wave_energy_data/test_output/test_build_pt.shp'
         data = {1:[45.661,-123.938],2:[45.496,-123.972]}
+
+        #Add the Output directory onto the given workspace
+        output_dir = './data/wave_energy_data' + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        if os.path.isfile(path):
+            os.remove(path)
 
         #Create a coordinate transformation for lat/long to meters
         srs_prj = osr.SpatialReference()
@@ -150,11 +161,11 @@ class TestWaveEnergy(unittest.TestCase):
         target_sr = reg_shape.GetLayer(0).GetSpatialRef()
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
 
-        built_shape = wave_energy_core.build_point_shapefiles(driver_name, layer_name, 
-                                                path, data, target_sr, coord_trans)
+        built_shape = wave_energy_core.build_point_shapefile(driver_name, layer_name,
+                                                             path, data, target_sr, coord_trans)
         built_shape.Destroy()
         reg_shape.Destroy()
-        invest_test_core.assertTwoShapesEqualURI(self, path, wave_shape_path)
+        invest_test_core.assertTwoShapesEqualURI(self, path, reg_shape_path)
                 
     def test_wave_energy_clip_shape(self):
         """A trivial test case that makes sure clip_shape returns the proper shape
@@ -372,7 +383,7 @@ class TestWaveEnergy(unittest.TestCase):
         #An interpolated object from machine performace and wave_data ranges
         interpZ = [[0, 0, 1, 3, 8], [0, 3, 5, 9, 7], [1, 4, 5, 3, 0], [0, 0, 0, 0, 0]]
         #A dictionary with CapMax TpMax and HsMax as limitations
-        machine_param = {'CapMax':{'VALUE':20}, 'TpMax':{'VALUE':4}, 'HsMax':{'VALUE':3}}
+        machine_param = {'capmax':20, 'tpmax':4, 'hsmax':3}
         #Hand calculated results for the two points
         result = {(520, 490):0.0762, (521, 491):0.22116}
 
@@ -674,24 +685,32 @@ class TestWaveEnergy(unittest.TestCase):
         output.
         """
         test_dir = './data/wave_energy_data'
-        wave_data_shape_path = test_dir + os.sep + 'test_input/WaveData_clipZ.shp'
+        wave_data_shape_path = test_dir + os.sep + 'Intermediate/WEM_InputOutput_Pts.shp'
         number_of_machines = 28
         machine_econ_path = test_dir + os.sep + 'samp_input/Machine_PelamisEconCSV.csv'
-        land_grid_path = test_dir + os.sep + 'samp_input/LandGridPts_WCVI_CSV.csv'
+        land_grid_path = test_dir + os.sep + 'samp_input/LandGridPts_WCVI_221.csv'
         dem_path = test_dir + os.sep + 'samp_input/global_dem'
         #Set all arguments to be passed
         args = {}
         args['workspace_dir'] = test_dir
-        args['wave_data_shape'] = ogr.Open(wave_data_shape_path)
+        args['wave_data_shape'] = ogr.Open(wave_data_shape_path, 1)
         args['number_machines'] = number_of_machines
         args['global_dem'] = gdal.Open(dem_path)
+
         #Read machine economic parameters into a dictionary
         try:
             machine_econ = {}
             machine_econ_file = open(machine_econ_path)
             reader = csv.DictReader(machine_econ_file)
+            LOGGER.debug('reader fieldnames : %s ', reader.fieldnames)
+            #Read in the field names from the column headers
+            name_key = reader.fieldnames[0]
+            value_key = reader.fieldnames[1]
             for row in reader:
-                machine_econ[row['NAME'].strip()] = row
+                #Convert name to lowercase
+                name = row[name_key].strip().lower()
+                LOGGER.debug('Name : %s and Value : % s', name, row[value_key])
+                machine_econ[name] = row[value_key]
             machine_econ_file.close()
             args['machine_econ'] = machine_econ
         except IOError, error:
@@ -702,7 +721,14 @@ class TestWaveEnergy(unittest.TestCase):
             land_grid_pts_file = open(land_grid_path)
             reader = csv.DictReader(land_grid_pts_file)
             for row in reader:
-                land_grid_pts[row['ID'].strip()] = row
+                LOGGER.debug('Land Grid Row: %s', row)
+                if row['ID'] in land_grid_pts:
+                    land_grid_pts[row['ID'].strip()][row['TYPE']] = [row['LAT'],
+                                                                     row['LONG']]
+                else:
+                    land_grid_pts[row['ID'].strip()] = {row['TYPE']:[row['LAT'],
+                                                                     row['LONG']]}
+            LOGGER.debug('New Land_Grid Dict : %s', land_grid_pts)
             land_grid_pts_file.close()
             args['land_gridPts'] = land_grid_pts
         except IOError, error:
@@ -712,10 +738,9 @@ class TestWaveEnergy(unittest.TestCase):
         
         regression_dir = './data/wave_energy_regression_data'
         regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_val_regression.shp'
-        shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts_val.shp'
+        shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
         #Check that resulting wave data shapefile is correct
         invest_test_core.assertTwoShapesEqualURI(self, regression_shape_path, shape_path)
         #Check that resulting rasters are correct
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + '/Output/npv_usd.tif',
-            regression_dir + '/npv_usd_regression.tif')
+        invest_test_core.assertTwoDatasetEqualURI(self, args['workspace_dir'] + '/Output/npv_usd.tif', 
+                                                  regression_dir + '/npv_usd_regression.tif')
