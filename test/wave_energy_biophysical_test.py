@@ -1,11 +1,16 @@
 import os
 import sys
 import unittest
+import logging
 
 import numpy as np
 from osgeo import ogr
 from invest_natcap.wave_energy import wave_energy_biophysical
 import invest_test_core
+
+LOGGER = logging.getLogger('wave_energy_biophysical_test')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestWaveEnergyBiophysical(unittest.TestCase):
     def test_wave_energy_biophysical_regression(self):
