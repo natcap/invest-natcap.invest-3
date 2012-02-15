@@ -32,8 +32,8 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     E - constant indicating tidal dispersion coefficient: km ^ 2 / day
     ux - constant indicating x component of advective velocity: m / s
     uy - constant indicating y component of advective velocity: m / s
-    point_source - dictionary of (index, wps, kps, id) for the point source,
-        wps: kg / day, k: 1 / day.  index is in column major notation
+    point_source - dictionary of (xps, yps, wps, kps, id) for the point source,
+        xps, yps: cartesian coordinates of point wps: kg / day, k: 1 / day.
     h - scalar describing grid cell size: m
     direct_solve - if True uses a direct solver that may be faster, but use
         more memory.  May crash in cases where memory is fragmented or low
@@ -49,11 +49,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     ux *= 86.4
     uy *= 86.4
 
-    #Convert point source index from column major to row major notation
-    point_row = point_source['index'] / m
-    point_col = point_source['index'] % n
-    point_index = point_row * m + (n - point_col)
-
     #convert h from m to km
     h /= 1000.0
 
@@ -65,6 +60,9 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
             return i * m + j
         else:
             return -1
+
+    #convert point x,y to an index that coodinates with input arrays
+    point_index = calc_index(point_source['xps'], point_source['yps'])
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
@@ -191,13 +189,15 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                 point_parameters = PARAMETER_FILE.readline().split()
                 POINT_SOURCES.append((int(point_parameters[0]),
                                      int(point_parameters[1]),
-                                     float(point_parameters[2]),
-                                     point_parameters[3]))
+                                     int(point_parameters[2]),
+                                     float(point_parameters[3]),
+                                     point_parameters[4]))
 
     H = 50 #50m x 50m grid cell size as specified directly by CK
     density = np.zeros(N_ROWS * N_COLS)
-    for index, wps, kps, id in POINT_SOURCES:
-        point_source = {'index': index,
+    for xps, yps, wps, kps, id in POINT_SOURCES:
+        point_source = {'xps': xps,
+                        'yps': yps,
                         'wps': wps,
                         'kps': kps,
                         'id': id}
