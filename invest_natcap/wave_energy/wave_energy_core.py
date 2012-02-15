@@ -179,7 +179,7 @@ def biophysical(args):
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
     
 #    #Generate Percentiles
-#    def getPercentiles(value_list):
+#    def get_percentiles(value_list):
 #        pct_list = []
 #        pct_list.append(stats.scoreatpercentile(value_list, 25))
 #        pct_list.append(stats.scoreatpercentile(value_list, 50))
