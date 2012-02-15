@@ -728,8 +728,7 @@ def valuation(args):
     #Make a point shapefile for grid points
     logger.info('Creating Grid Points Shapefile.')
     grid_shape = build_point_shapefile('ESRI Shapefile', 'gridpoints',
-                                          grid_pt_path, grid_pts, target_sr, coord_trans)
-
+                                       grid_pt_path, grid_pts, target_sr, coord_trans)
     #Get the coordinates of points of wave_data_shape, landing_shape,
     #and grid_shape
     we_points = get_points_geometries(wave_data_shape)
