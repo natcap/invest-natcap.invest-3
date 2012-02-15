@@ -1386,7 +1386,12 @@ class EmbeddedUI(Root):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
         Root.__init__(self, uri, layout, registrar)
-        
+       
+        #removing the reference to self in self.allElements.  If a reference to
+        #self is in self.allElements and self has an args_id, the args_id is
+        #replicated at two levels: the embeddedUI level and in the super ui,
+        #even though it should only be used in the superUI level.  This is a
+        #bandaid fix.
         if self.attributes['id'] in self.allElements:
             del self.allElements[self.attributes['id']]
 
