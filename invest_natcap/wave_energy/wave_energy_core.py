@@ -177,25 +177,42 @@ def biophysical(args):
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
+    wave_power_raster.FlushCache()
+    wp_rc_path = workspace_dir + os.sep + 'Output/wp_rc.tif'
+    wp_rc_raster = gdal.GetDriverByName('GTiff').CreateCopy(wp_rc_path, wave_power_raster)
+    wp_rc_band = wp_rc_raster.GetRasterBand(1)
+    #Generate Percentiles
+    wp_percentiles = []
+    def get_percentiles(value_list):
+        pct_list = []
+        pct_list.append(int(stats.scoreatpercentile(value_list, 25)))
+        pct_list.append(int(stats.scoreatpercentile(value_list, 50)))
+        pct_list.append(int(stats.scoreatpercentile(value_list, 75)))
+        pct_list.append(int(stats.scoreatpercentile(value_list, 90)))
+        return pct_list
     
-#    #Generate Percentiles
-#    def get_percentiles(value_list):
-#        pct_list = []
-#        pct_list.append(stats.scoreatpercentile(value_list, 25))
-#        pct_list.append(stats.scoreatpercentile(value_list, 50))
-#        pct_list.append(stats.scoreatpercentile(value_list, 75))
-#        pct_list.append(stats.scoreatpercentile(value_list, 90))
-#        return pct_list
-#    
-#    wave_power_array = np.array(wave_power_raster.GetRasterBand(1).ReadAsArray())
-#    wave_energy_array = np.array(wave_energy_raster.GetRasterBand(1).ReadAsArray())
-#    wp_array = wave_power_array.flatten()
-#    wp_mask = np.ma.masked_array(wp_array, mask=wp_array == 0)
-#    wp_comp = np.ma.compressed(wp_mask)
-#    wp_percentiles = getPercentiles(wp_comp)
-#    logger.debug('wp_percentiles : %s', wp_percentiles)
-#    
-#    wave_power_band = wave_power_raster.GetRasterBand(1)
+    def raster_percentile(band):
+        if band > wp_percentiles[3]:
+            return 5
+        elif band > wp_percentiles[2]:
+            return 4
+        elif band > wp_percentiles[1]:
+            return 3
+        elif band > wp_percentiles[0]:
+            return 2
+        elif band > 0:
+            return 1
+        else:
+            return 0
+    wave_power_array = np.array(wave_power_raster.GetRasterBand(1).ReadAsArray())
+    wave_energy_array = np.array(wave_energy_raster.GetRasterBand(1).ReadAsArray())
+    wp_array = wave_power_array.flatten()
+    wp_mask = np.ma.masked_array(wp_array, mask=wp_array == 0)
+    wp_comp = np.ma.compressed(wp_mask)
+    wp_percentiles = get_percentiles(wp_comp)
+    logger.debug('wp_percentiles : %s', wp_percentiles)
+    wave_power_band = wave_power_raster.GetRasterBand(1)
+    invest_core.vectorize1ArgOp(wave_power_band, raster_percentile, wp_rc_band)
 #    att_table = gdal.RasterAttributeTable()
 #    att_table.CreateColumn('VALUE', gdal.GFT_Integer, gdal.GFU_MinMax)
 #    att_table.CreateColumn('COUNT', gdal.GFT_Integer, gdal.GFU_PixelCount)
@@ -244,6 +261,7 @@ def biophysical(args):
     cutter.Destroy()
     wave_energy_raster = None
     wave_power_raster = None
+    wp_rc_raster = None
     #Clean up temporary files on disk
     pattern = wave_shape_path[wave_shape_path.rfind(os.sep) + 1:
                               len(wave_shape_path) - 4] + ".*"
