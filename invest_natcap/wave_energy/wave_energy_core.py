@@ -12,6 +12,7 @@ from osgeo import ogr
 from scipy.interpolate import LinearNDInterpolator as ip
 from scipy import stats
 
+from invest_natcap.dbfpy import dbf
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
@@ -179,7 +180,8 @@ def biophysical(args):
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
     wave_power_raster.FlushCache()
     wp_rc_path = workspace_dir + os.sep + 'Output/wp_rc.tif'
-    wp_rc_raster = gdal.GetDriverByName('GTiff').CreateCopy(wp_rc_path, wave_power_raster)
+    wp_rc_raster = invest_cython_core.newRasterFromBase(wave_power_raster, wp_rc_path, 
+                                                        'GTiff', 0, gdal.GDT_Int32)
     wp_rc_band = wp_rc_raster.GetRasterBand(1)
     #Generate Percentiles
     wp_percentiles = []
@@ -190,17 +192,22 @@ def biophysical(args):
         pct_list.append(int(stats.scoreatpercentile(value_list, 75)))
         pct_list.append(int(stats.scoreatpercentile(value_list, 90)))
         return pct_list
-    
+    counter = [0,0,0,0,0]
     def raster_percentile(band):
         if band > wp_percentiles[3]:
+            counter[4] = counter[4]+1
             return 5
         elif band > wp_percentiles[2]:
+            counter[3] = counter[3]+1
             return 4
         elif band > wp_percentiles[1]:
+            counter[2] = counter[2]+1
             return 3
         elif band > wp_percentiles[0]:
+            counter[1] = counter[1]+1
             return 2
         elif band > 0:
+            counter[0] = counter[0]+1
             return 1
         else:
             return 0
@@ -213,49 +220,34 @@ def biophysical(args):
     logger.debug('wp_percentiles : %s', wp_percentiles)
     wave_power_band = wave_power_raster.GetRasterBand(1)
     invest_core.vectorize1ArgOp(wave_power_band, raster_percentile, wp_rc_band)
-#    att_table = gdal.RasterAttributeTable()
-#    att_table.CreateColumn('VALUE', gdal.GFT_Integer, gdal.GFU_MinMax)
-#    att_table.CreateColumn('COUNT', gdal.GFT_Integer, gdal.GFU_PixelCount)
-#    att_table.CreateColumn('VAL_RANGE', gdal.GFT_String, gdal.GFU_Generic)
-#    att_table.SetRowCount(5)
-#    att_table.SetValueAsInt(0, 0, 10)
-#    att_table.SetValueAsInt(0, 1, 100)
-#    att_table.SetValueAsInt(1, 0, 11)
-#    att_table.SetValueAsInt(1, 1, 200)
-#    att_table.SetValueAsInt(2, 0, 12)
-#    att_table.SetValueAsInt(2, 1, 90)
-#    
-#    att_table.SetValueAsInt(0, 0, 1)
-#    att_table.SetValueAsInt(1, 0, 2)
-#    att_table.SetValueAsInt(2, 0, 3)
-#    att_table.SetValueAsInt(3, 0, 4)
-#    att_table.SetValueAsInt(4, 0, 5)
-#    #Replace -1 with actual pixel count.
-#    att_table.SetValueAsInt(0, 1, -1)
-#    att_table.SetValueAsInt(1, 1, -1)
-#    att_table.SetValueAsInt(2, 1, -1)
-#    att_table.SetValueAsInt(3, 1, -1)
-#    att_table.SetValueAsInt(4, 1, -1)
-#    
-#    range_one = '1 - ' + str(wp_percentiles[0]) + ' kilowatts per square meter (kW/m)'
-#    range_two = str(wp_percentiles[0]) + ' - ' + str(wp_percentiles[1]) + ' kW/m'
-#    range_three = str(wp_percentiles[1]) + ' - ' + str(wp_percentiles[2]) + ' kW/m'
-#    range_four = str(wp_percentiles[2]) + ' - ' + str(wp_percentiles[3]) + ' kW/m'
-#    range_five = 'Greater than ' + str(wp_percentiles[3]) + ' kW/m'
-#    logger.debug('range_one %s ', range_one)
-#    logger.debug('range_two %s ', range_two)
-#    att_table.SetValueAsString(0, 2, range_one)
-#    att_table.SetValueAsString(1, 2, range_two)
-#    att_table.SetValueAsString(2, 2, range_three)
-#    att_table.SetValueAsString(3, 2, range_four)
-#    att_table.SetValueAsString(4, 2, range_five)
-#
-#    logger.debug('att_table value: %s', att_table.GetValueAsString(1, 1))
-#    wave_power_band.SetDefaultRAT(att_table)
-#    gdal.Band.SetDefaultRAT(wave_power_band, att_table)
-#    rat_s = gdal.RasterAttributeTable_swigregister
-#    rat_s(att_table)
-#    wave_power_band.FlushCache()
+    logging.debug('counter : %s', counter)
+    range_one = '1 - ' + str(wp_percentiles[0]) + ' kilowatts per square meter (kW/m)'
+    range_two = str(wp_percentiles[0]) + ' - ' + str(wp_percentiles[1]) + ' kW/m'
+    range_three = str(wp_percentiles[1]) + ' - ' + str(wp_percentiles[2]) + ' kW/m'
+    range_four = str(wp_percentiles[2]) + ' - ' + str(wp_percentiles[3]) + ' kW/m'
+    range_five = 'Greater than ' + str(wp_percentiles[3]) + ' kW/m'
+    attribute_values = [range_one, range_two, range_three, range_four, range_five]
+    #Create a new dbf file with the same name as the GTiff plus a .vat.dbf
+    dataset_attribute_table = dbf.Dbf(wp_rc_path + ".vat.dbf", new=True)
+    dataset_attribute_table.addField(
+                 #integer field
+                 ("VALUE", "N", 9),
+                 #integer field
+                 ("COUNT", "N", 9),
+                 #character field, I think header names need to be short?
+                 ("VAL_RANGE", "C", 254))
+    #Add all the records
+    for id_value in range(len(attribute_values)):
+        logging.debug('id_value: %s', id_value)
+        rec = dataset_attribute_table.newRecord()
+        rec["VALUE"] = id_value+1
+        rec["COUNT"] = int(counter[id_value])
+        rec["VAL_RANGE"] = attribute_values[id_value]
+
+        rec.store()
+    dataset_attribute_table.close()
+
+
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
