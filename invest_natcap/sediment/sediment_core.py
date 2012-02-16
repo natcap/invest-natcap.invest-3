@@ -107,8 +107,8 @@ def biophysical(args):
 
     #map lulc to a usle_c * usle_p raster
     LOGGER.info('mapping landuse types to crop and practice management values')
-    usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], 'c_p.tif',
-        'GTiff', usle_nodata, gdal.GDT_Float32)
+    usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], '',
+        'MEM', usle_nodata, gdal.GDT_Float32)
     def lulc_to_cp(lulc_code):
         """This is a helper function that's used to map an LULC code to the
             C * P values needed by the sediment model and defined
