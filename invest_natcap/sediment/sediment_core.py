@@ -209,21 +209,10 @@ def biophysical(args):
         lulc_to_retention, retention_efficiency_raster_raw.GetRasterBand(1))
 
     #now interpolate retention_efficiency_raster_raw to a raster that will
-    #overlay potential_soil_loss
-    def return_efficiency(soil_loss, efficiency):
-        """This is a function that's used to bastardize the interpolation and
-            cropping properties of vectorizeRaster.  We want the output to
-            be an interpolated efficiency raster that's the same size and
-            resolution of soil_loss.  So we vectorize over two rasters but
-            just return efficiency.  Oh what I do for a good PEP8 score.
-            
-            soil_loss - ignored
-            efficiency - return that
-            
-            returns efficiency
-        """
-        return efficiency
-    mult_op = np.vectorize(return_efficiency)
+    #overlay potential_soil_loss, bastardizing vectorizeRasters here for
+    #its interpolative functionality by only returning efficiency in the
+    #vectorized op.
+    mult_op = np.vectorize(lambda soil_loss, efficiency: efficiency)
     retention_efficiency_raster = \
         invest_core.vectorizeRasters([potential_soil_loss,
             retention_efficiency_raster_raw], mult_op, nodata=usle_nodata)
