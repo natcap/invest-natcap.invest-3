@@ -1252,9 +1252,13 @@ class Root(DynamicElement):
                         fetched_value = self.find_value(value)
 
                     attributes[key] = fetched_value
-            elif key in ['elements', 'rows']:
+            elif key in ['elements', 'rows']: #guaranteed array of objects
                 for element in value:
                     value = self.find_inherited_elements(element)
+            elif key in ['args_id']: #list of strings or inheritance objects
+                for index, element in enumerate(value):
+                    if isinstance(element, dict):
+                        value[index] = self.find_value(element)
         return attributes
 
     def find_embedded_value(self, inherit):
@@ -1364,14 +1368,14 @@ class Root(DynamicElement):
 
     def set_dict_value(self, dictionary, key_list, element_value):
         key, list = (key_list[0], key_list[1:])
-        print (key, list)
 
         if len(list) > 0:
             if key not in dictionary:
-                dictionary[key] = {}
-            
-            dictionary[key] = self.set_dict_value(dictionary[key], list, 
-                element_value)
+                dict = {}
+            else:
+                dict = dictionary[key]
+
+            dictionary[key] = self.set_dict_value(dict, list, element_value)
         else:
             dictionary[key] = element_value
     
@@ -1382,6 +1386,15 @@ class EmbeddedUI(Root):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
         Root.__init__(self, uri, layout, registrar)
+       
+        #removing the reference to self in self.allElements.  If a reference to
+        #self is in self.allElements and self has an args_id, the args_id is
+        #replicated at two levels: the embeddedUI level and in the super ui,
+        #even though it should only be used in the superUI level.  This is a
+        #bandaid fix.
+        if self.attributes['id'] in self.allElements:
+            del self.allElements[self.attributes['id']]
+
         self.attributes['args_id'] = attributes['args_id']
         self.body.layout().insertStretch(-1)
 

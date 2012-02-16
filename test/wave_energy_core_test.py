@@ -4,6 +4,7 @@ import unittest
 import math
 import csv
 import osr
+import logging
 
 from osgeo import ogr
 from osgeo import gdal
@@ -14,6 +15,10 @@ import numpy as np
 from invest_natcap.wave_energy import wave_energy_core
 from invest_natcap.wave_energy import wave_energy_biophysical
 import invest_test_core
+
+LOGGER = logging.getLogger('wave_energy_core_test')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestWaveEnergy(unittest.TestCase):
 
@@ -58,18 +63,17 @@ class TestWaveEnergy(unittest.TestCase):
             print 'File I/O error' + e
 
         #Create a dictionary whose keys are the 'NAMES' from the machine parameter table
-        #and whose corresponding values are dictionaries whose keys are the column headers of
-        #the machine parameter table with corresponding values
+        #and whose values are from the corresponding 'VALUES' field.
         try:
             machine_params = {}
             machine_param_file = open(machine_param_path)
             reader = csv.DictReader(machine_param_file)
             for row in reader:
-                machine_params[row['NAME'].strip()] = row
+                machine_params[row['NAME'].strip().lower()] = row['VALUE']
             machine_param_file.close()
             args['machine_param'] = machine_params
-        except IOError, e:
-            print 'File I/O error' + e
+        except IOError, error:
+            print 'File I/O error' + error
 
         wave_energy_core.biophysical(args)
         regression_dir = './data/wave_energy_regression_data/'
@@ -132,52 +136,37 @@ class TestWaveEnergy(unittest.TestCase):
         invest_test_core.assertTwoShapesEqualURI(self, shape_to_reproject_path, output_path)
         
     def test_wave_energy_build_point_shapefile(self):
-        wave_shape_path = './data/wave_energy_regression_data/landing_pts_regression.shp'
-        wave_data_shape = ''
-        #Since the global_dem is the only input raster, we base the pixel
-        #size of our output raster from the global_dem
-        dem = args['global_dem']
+        """A regression test that uses known data and inputs to test
+        the validity of the function build_point_shapefile"""
+        
+        reg_shape_path = './data/wave_energy_regression_data/LandPts_prj_regression.shp'
+        reg_shape = ogr.Open(reg_shape_path)
+        driver_name = 'ESRI Shapefile'
+        layer_name = 'landpoints'
+        path = './data/wave_energy_data/test_output/test_build_pt.shp'
+        data = {1:[45.661,-123.938],2:[45.496,-123.972]}
+
+        #Add the Output directory onto the given workspace
+        output_dir = './data/wave_energy_data' + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        if os.path.isfile(path):
+            os.remove(path)
+
         #Create a coordinate transformation for lat/long to meters
         srs_prj = osr.SpatialReference()
         #Using 'WGS84' as our well known lat/long projection
         srs_prj.SetWellKnownGeogCS("WGS84")
         source_sr = srs_prj
-        target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
+        target_sr = reg_shape.GetLayer(0).GetSpatialRef()
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-        driver_name = 'ESRI Shapefile'
-        layer_name = 'landpoints'
-        path = './data/test_output'
-        data = {1:[45.661,-123.938],2:[45.496,-123.972]}
-        prj = ''
-        driver_name, layer_name, path, data, prj, coord_trans
 
-        #Make a point shapefile for landing points.
-        driver = ogr.GetDriverByName(driver_name)
-        data_source = driver.CreateDataSource(path)
-        layer = data_source.CreateLayer(layer_name, prj, ogr.wkbPoint)    
-        field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
-        layer.CreateField(field_defn)
-        #For all of the landing points create a point feature on the layer
-        for key, value in data.iteritems():
-            lat = value[0]
-            long = value[1]
-            geom = ogr.Geometry(ogr.wkbPoint)
-            geom.AddPoint_2D(float(long), float(lat))
-            geom.Transform(coord_trans)
-            #Create the feature, setting the id field to the corresponding id
-            #field from the csv file
-            feat = ogr.Feature(layer.GetLayerDefn())
-            layer.CreateFeature(feat)
-            index = feat.GetFieldIndex('Id')
-            feat.SetField(index, key)
-            feat.SetGeometryDirectly(geom)
-            #Save the feature modifications to the layer.
-            layer.SetFeature(feat)
-            feat.Destroy()
-        layer.ResetReading()
-        return data_source
-        
-        
+        built_shape = wave_energy_core.build_point_shapefile(driver_name, layer_name,
+                                                             path, data, target_sr, coord_trans)
+        built_shape.Destroy()
+        reg_shape.Destroy()
+        invest_test_core.assertTwoShapesEqualURI(self, path, reg_shape_path)
+                
     def test_wave_energy_clip_shape(self):
         """A trivial test case that makes sure clip_shape returns the proper shape
         after it has been clipped by a polygon shapefile.  Here the clipping polygon is
@@ -199,51 +188,16 @@ class TestWaveEnergy(unittest.TestCase):
 
         new_shape = wave_energy_core.clip_shape(shape_to_clip, binding_shape, new_shape_path)
 
-        layer_count = shape_to_clip.GetLayerCount()
-        layer_count_new = new_shape.GetLayerCount()
-        self.assertEqual(layer_count, layer_count_new,
-                         'The shapes DO NOT have the same number of layers')
-
-        for layer_num in range(layer_count):
-            layer = shape_to_clip.GetLayer(layer_num)
-            layer.ResetReading()
-            layer_new = new_shape.GetLayer(layer_num)
-
-            feat_count = layer.GetFeatureCount()
-            feat_count_new = layer_new.GetFeatureCount()
-            self.assertEqual(feat_count, feat_count_new,
-                             'The layers DO NOT have the same number of features')
-
-            feat = layer.GetNextFeature()
-            feat_new = layer_new.GetNextFeature()
-            while feat is not None:
-                layer_def = layer.GetLayerDefn()
-                layer_def_new = layer_new.GetLayerDefn()
-
-                field_count = layer_def.GetFieldCount()
-                field_count_new = layer_def_new.GetFieldCount()
-                self.assertEqual(field_count, field_count_new,
-                                 'The shapes DO NOT have the same number of fields')
-
-                for fld_index in range(field_count):
-                    field = feat.GetField(fld_index)
-                    field_new = feat_new.GetField(fld_index)
-                    self.assertEqual(field, field_new, 'The field values DO NOT match')
-
-                feat.Destroy()
-                feat_new.Destroy()
-                feat = layer.GetNextFeature()
-                feat_new = layer_new.GetNextFeature()
-
         new_shape.Destroy()
         shape_to_clip.Destroy()
         binding_shape.Destroy()
 
-    def test_wave_energy_clip_shape_zero(self):
-        """A trivial test case that makes sure clip_shape returns the proper shape
-        after it has been clipped by a polygon shapefile.  Here the clipping polygon is
-        the same size and form as the shape to be clipped so we would expect the output to be
-        equal to the input"""
+        invest_test_core.assertTwoShapesEqualURI(self, shape_to_clip_path, new_shape_path)
+
+    def test_wave_energy_clip_shape_empty(self):
+        """A trivial test case that makes sure clip_shape returns an empty
+        shapefile if the binding polygon does not intersect with the other
+        shape's features"""
 
         test_dir = './data/wave_energy_data'
         shape_to_clip_path = test_dir + os.sep + 'test_input/pointShapeTest.shp'
@@ -429,7 +383,7 @@ class TestWaveEnergy(unittest.TestCase):
         #An interpolated object from machine performace and wave_data ranges
         interpZ = [[0, 0, 1, 3, 8], [0, 3, 5, 9, 7], [1, 4, 5, 3, 0], [0, 0, 0, 0, 0]]
         #A dictionary with CapMax TpMax and HsMax as limitations
-        machine_param = {'CapMax':{'VALUE':20}, 'TpMax':{'VALUE':4}, 'HsMax':{'VALUE':3}}
+        machine_param = {'capmax':20, 'tpmax':4, 'hsmax':3}
         #Hand calculated results for the two points
         result = {(520, 490):0.0762, (521, 491):0.22116}
 
@@ -731,24 +685,32 @@ class TestWaveEnergy(unittest.TestCase):
         output.
         """
         test_dir = './data/wave_energy_data'
-        wave_data_shape_path = test_dir + os.sep + 'test_input/WaveData_clipZ.shp'
+        wave_data_shape_path = test_dir + os.sep + 'Intermediate/WEM_InputOutput_Pts.shp'
         number_of_machines = 28
         machine_econ_path = test_dir + os.sep + 'samp_input/Machine_PelamisEconCSV.csv'
-        land_grid_path = test_dir + os.sep + 'samp_input/LandGridPts_WCVI_CSV.csv'
+        land_grid_path = test_dir + os.sep + 'samp_input/LandGridPts_WCVI_221.csv'
         dem_path = test_dir + os.sep + 'samp_input/global_dem'
         #Set all arguments to be passed
         args = {}
         args['workspace_dir'] = test_dir
-        args['wave_data_shape'] = ogr.Open(wave_data_shape_path)
+        args['wave_data_shape'] = ogr.Open(wave_data_shape_path, 1)
         args['number_machines'] = number_of_machines
         args['global_dem'] = gdal.Open(dem_path)
+
         #Read machine economic parameters into a dictionary
         try:
             machine_econ = {}
             machine_econ_file = open(machine_econ_path)
             reader = csv.DictReader(machine_econ_file)
+            LOGGER.debug('reader fieldnames : %s ', reader.fieldnames)
+            #Read in the field names from the column headers
+            name_key = reader.fieldnames[0]
+            value_key = reader.fieldnames[1]
             for row in reader:
-                machine_econ[row['NAME'].strip()] = row
+                #Convert name to lowercase
+                name = row[name_key].strip().lower()
+                LOGGER.debug('Name : %s and Value : % s', name, row[value_key])
+                machine_econ[name] = row[value_key]
             machine_econ_file.close()
             args['machine_econ'] = machine_econ
         except IOError, error:
@@ -759,7 +721,14 @@ class TestWaveEnergy(unittest.TestCase):
             land_grid_pts_file = open(land_grid_path)
             reader = csv.DictReader(land_grid_pts_file)
             for row in reader:
-                land_grid_pts[row['ID'].strip()] = row
+                LOGGER.debug('Land Grid Row: %s', row)
+                if row['ID'] in land_grid_pts:
+                    land_grid_pts[row['ID'].strip()][row['TYPE']] = [row['LAT'],
+                                                                     row['LONG']]
+                else:
+                    land_grid_pts[row['ID'].strip()] = {row['TYPE']:[row['LAT'],
+                                                                     row['LONG']]}
+            LOGGER.debug('New Land_Grid Dict : %s', land_grid_pts)
             land_grid_pts_file.close()
             args['land_gridPts'] = land_grid_pts
         except IOError, error:
@@ -767,40 +736,11 @@ class TestWaveEnergy(unittest.TestCase):
 
         wave_energy_core.valuation(args)
         
-        #Check that output/intermediate files have been made
         regression_dir = './data/wave_energy_regression_data'
-        regression_shape = ogr.Open(regression_dir + 
-                                    '/WaveData_prj_regression.shp')
-        shape = ogr.Open(args['workspace_dir'] + 
-                         '/Intermediate/WaveData_prj.shp')
-        
-        regression_layer = regression_shape.GetLayer(0)
-        layer = shape.GetLayer(0)
-        
-        regression_feat_count = regression_layer.GetFeatureCount()
-        feat_count = layer.GetFeatureCount()
-        self.assertEqual(regression_feat_count, feat_count)
-        
-        layer_def = layer.GetLayerDefn()
-        reg_layer_def = regression_layer.GetLayerDefn()
-        field_count = layer_def.GetFieldCount()
-        reg_field_count = reg_layer_def.GetFieldCount()
-        self.assertEqual(field_count, reg_field_count,
-                         'The shapes DO NOT have the same number of fields')
-        
-        reg_feat = regression_layer.GetNextFeature()
-        feat = layer.GetNextFeature()
-        while reg_feat is not None:            
-            for fld_index in range(field_count):
-                field = feat.GetField(fld_index)
-                reg_field = reg_feat.GetField(fld_index)
-                self.assertEqual(field, reg_field, 'The field values DO NOT match')
-            feat.Destroy()
-            reg_feat.Destroy()
-            feat = layer.GetNextFeature()
-            reg_feat = regression_layer.GetNextFeature()
-                
+        regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_val_regression.shp'
+        shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
+        #Check that resulting wave data shapefile is correct
+        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_path, shape_path)
         #Check that resulting rasters are correct
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + '/Output/npv_usd.tif',
-            regression_dir + '/npv_usd_regression.tif')
+        invest_test_core.assertTwoDatasetEqualURI(self, args['workspace_dir'] + '/Output/npv_usd.tif', 
+                                                  regression_dir + '/npv_usd_regression.tif')

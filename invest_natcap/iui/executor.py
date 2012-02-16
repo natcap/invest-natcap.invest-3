@@ -117,9 +117,13 @@ class PrintQueueChecker(threading.Thread):
             
             returns nothing."""
         while self.executor.is_alive() or self.executor.hasMessages():
+            #new_message = self.executor.getMessage()
             if self.message == None:
+                #self.message = new_message
                 self.message = self.executor.getMessage()
-            time.sleep(0.1)
+            #else:
+            #    self.message += new_message
+            time.sleep(0.025)
     
 class Executor(threading.Thread):
     def __init__(self):
