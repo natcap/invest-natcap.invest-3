@@ -107,8 +107,8 @@ def biophysical(args):
 
     #map lulc to a usle_c * usle_p raster
     LOGGER.info('mapping landuse types to crop and practice management values')
-    usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], '',
-        'MEM', usle_nodata, gdal.GDT_Float32)
+    usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], 'c_p.tif',
+        'GTiff', usle_nodata, gdal.GDT_Float32)
     def lulc_to_cp(lulc_code):
         """This is a helper function that's used to map an LULC code to the
             C * P values needed by the sediment model and defined
@@ -167,7 +167,7 @@ def biophysical(args):
     potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'],
         args['erosivity'], args['erodibility'], usle_c_p_raster,
         args['v_stream']], usle_vectorized_function, args['usle_uri'],
-        nodata = usle_nodata)
+        nodata=usle_nodata)
 
     #change units from tons per hectare to tons per cell.  We need to do this
     #after the vectorize raster operation since we won't know the cell size
@@ -227,12 +227,20 @@ def biophysical(args):
     #overlay potential_soil_loss, bastardizing vectorizeRasters here for
     #its interpolative functionality by only returning efficiency in the
     #vectorized op.
-    usle_vectorized_function = \
-        np.vectorize(lambda soil_loss, efficiency: efficiency)
+    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
+        """Used for interpolating efficiency raster to be the same dimensions
+            as soil_loss and also knocking out retention on the streams"""
+
+        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
+        #to scale efficiency especially if v_steram is interpolated 
+        #intelligently
+        return (1 - v_stream) * efficiency
+
+    usle_vectorized_function = np.vectorize(efficiency_raster_creator)
     retention_efficiency_raster = \
         invest_core.vectorizeRasters([potential_soil_loss,
-            retention_efficiency_raster_raw], usle_vectorized_function,
-                                     nodata = usle_nodata)
+            retention_efficiency_raster_raw, args['v_stream']],
+            usle_vectorized_function, nodata = usle_nodata)
 
     #Create an output raster for routed sediment retention
     sret_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
