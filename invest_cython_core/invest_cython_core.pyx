@@ -1274,6 +1274,11 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                               potential_soil_loss_nodata] = \
         sediment_retention_nodata
 
+    #sometimes we can get negative sediment at the endges because it's so close
+    #to nodata values and gets interpolated strangely.  We set those to 
+    #nodata so we don't misinterpret them
+    sediment_retention_matrix[sediment_retention_matrix < 0] = \
+        sediment_retention_nodata
 
     #Need to transpose the output for consistency in our array notation
     sediment_retention.GetRasterBand(1). \
