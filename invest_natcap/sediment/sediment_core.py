@@ -139,20 +139,35 @@ def biophysical(args):
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
+    def usle_function(ls_factor, erosivity, erodibility, usle_c_p, v_stream):
+        """Calculates the USLE equation 
+        
+        ls_factor - length/slope factor
+        erosivity - related to peak rainfall events
+        erodibility - related to the potential for soil to erode
+        usle_c_p - crop and practice factor which helps to abate soil erosion
+        v_stream - 1 or 0 depending if there is a stream there.  If so, no
+            potential soil loss due to USLE
+        
+        returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
+            defined, nodata if some are not defined, 0 if in a stream
+            (v_stream)"""
 
-
-    def mult_all(ls_factor, erosivity, erodibility, usle_c_p):
         if ls_factor == usle_nodata or erosivity == usle_nodata or \
-            erodibility == usle_nodata or usle_c_p == usle_nodata:
+            erodibility == usle_nodata or usle_c_p == usle_nodata or \
+            v_stream == v_stream_nodata:
             return usle_nodata
+        if v_stream == 1:
+            return 0
         return ls_factor * erosivity * erodibility * usle_c_p
-    mult_op = np.vectorize(mult_all)
+    usle_vectorized_function = np.vectorize(usle_function)
 
     LOGGER.info("calculating potential soil loss")
 
     potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'],
-        args['erosivity'], args['erodibility'], usle_c_p_raster], mult_op,
-        args['usle_uri'], nodata=usle_nodata)
+        args['erosivity'], args['erodibility'], usle_c_p_raster,
+        args['v_stream']], usle_vectorized_function, args['usle_uri'],
+        nodata = usle_nodata)
 
     #change units from tons per hectare to tons per cell.  We need to do this
     #after the vectorize raster operation since we won't know the cell size
@@ -209,24 +224,15 @@ def biophysical(args):
         lulc_to_retention, retention_efficiency_raster_raw.GetRasterBand(1))
 
     #now interpolate retention_efficiency_raster_raw to a raster that will
-    #overlay potential_soil_loss
-    def return_efficiency(soil_loss, efficiency):
-        """This is a function that's used to bastardize the interpolation and
-            cropping properties of vectorizeRaster.  We want the output to
-            be an interpolated efficiency raster that's the same size and
-            resolution of soil_loss.  So we vectorize over two rasters but
-            just return efficiency.  Oh what I do for a good PEP8 score.
-            
-            soil_loss - ignored
-            efficiency - return that
-            
-            returns efficiency
-        """
-        return efficiency
-    mult_op = np.vectorize(return_efficiency)
+    #overlay potential_soil_loss, bastardizing vectorizeRasters here for
+    #its interpolative functionality by only returning efficiency in the
+    #vectorized op.
+    usle_vectorized_function = \
+        np.vectorize(lambda soil_loss, efficiency: efficiency)
     retention_efficiency_raster = \
         invest_core.vectorizeRasters([potential_soil_loss,
-            retention_efficiency_raster_raw], mult_op, nodata=usle_nodata)
+            retention_efficiency_raster_raw], usle_vectorized_function,
+                                     nodata = usle_nodata)
 
     #Create an output raster for routed sediment retention
     sret_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
