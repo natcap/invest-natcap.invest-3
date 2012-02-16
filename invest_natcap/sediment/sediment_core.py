@@ -240,7 +240,7 @@ def biophysical(args):
     retention_efficiency_raster = \
         invest_core.vectorizeRasters([potential_soil_loss,
             retention_efficiency_raster_raw, args['v_stream']],
-            usle_vectorized_function, nodata = usle_nodata)
+            usle_vectorized_function, nodata=usle_nodata)
 
     #Create an output raster for routed sediment retention
     sret_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
@@ -248,17 +248,6 @@ def biophysical(args):
 
     #Route the sediment across the landscape and store the amount retained
     #per pixel
-    LOGGER.debug('potential soil loss dimensions %s %s' % \
-                 (potential_soil_loss.RasterXSize, \
-                  potential_soil_loss.RasterYSize))
-    LOGGER.debug('args["flow_direction"] dimensions %s %s' % \
-                 (args['flow_direction'].RasterXSize, \
-                  args['flow_direction'].RasterYSize))
-    LOGGER.debug('retention_efficiency_raster dimensions %s %s' % \
-                 (retention_efficiency_raster.RasterXSize, \
-                  retention_efficiency_raster.RasterYSize))
-    LOGGER.debug('sret_dr dimensions %s %s' % \
-                 (sret_dr.RasterXSize, sret_dr.RasterYSize))
     invest_cython_core.calc_retained_sediment(potential_soil_loss,
         args['flow_direction'], retention_efficiency_raster, sret_dr)
 
