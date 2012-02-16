@@ -178,32 +178,53 @@ def biophysical(args):
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
+   
+    wave_energy_raster.FlushCache()    
     wave_power_raster.FlushCache()
     wp_rc_path = workspace_dir + os.sep + 'Output/wp_rc.tif'
-    wp_rc_raster = invest_cython_core.newRasterFromBase(wave_power_raster, wp_rc_path, 
+    capwe_rc_path = workspace_dir + os.sep + 'Output/capwe_rc.tif'
+
+    capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, 
+                                         ' (MWh/yr)', ' megawatt hours per year (MWh/yr)')
+    wp_rc = create_percentile_rasters(wave_power_raster, wp_rc_path,
+                                      ' (kW/m)', ' wave power per unit width of wave crest length (kW/m)')
+
+    #Clean up Shapefiles and Rasters
+    area_shape.Destroy()
+    cutter.Destroy()
+    wave_energy_raster = None
+    wave_power_raster = None
+    wp_rc_raster = None
+    capwe_rc = None
+    #Clean up temporary files on disk
+    pattern = wave_shape_path[wave_shape_path.rfind(os.sep) + 1:
+                              len(wave_shape_path) - 4] + ".*"
+    logging.debug('Regex file pattern : %s', pattern)
+    for f in os.listdir(intermediate_dir):
+        if re.search(pattern, f):
+            os.remove(os.path.join(intermediate_dir, f))
+
+def create_percentile_rasters(raster_dataset, output_path, units_short, units_long):
+    if os.path.isfile(output_path):
+        os.remove(output_path)
+    percentile_raster = invest_cython_core.newRasterFromBase(raster_dataset, output_path, 
                                                         'GTiff', 0, gdal.GDT_Int32)
-    wp_rc_band = wp_rc_raster.GetRasterBand(1)
+    percentile_band = percentile_raster.GetRasterBand(1)
+    dataset_band = raster_dataset.GetRasterBand(1)
     #Generate Percentiles
-    wp_percentiles = []
-    def get_percentiles(value_list):
-        pct_list = []
-        pct_list.append(int(stats.scoreatpercentile(value_list, 25)))
-        pct_list.append(int(stats.scoreatpercentile(value_list, 50)))
-        pct_list.append(int(stats.scoreatpercentile(value_list, 75)))
-        pct_list.append(int(stats.scoreatpercentile(value_list, 90)))
-        return pct_list
+    percentiles = []
     counter = [0,0,0,0,0]
     def raster_percentile(band):
-        if band > wp_percentiles[3]:
+        if band > percentiles[3]:
             counter[4] = counter[4]+1
             return 5
-        elif band > wp_percentiles[2]:
+        elif band > percentiles[2]:
             counter[3] = counter[3]+1
             return 4
-        elif band > wp_percentiles[1]:
+        elif band > percentiles[1]:
             counter[2] = counter[2]+1
             return 3
-        elif band > wp_percentiles[0]:
+        elif band > percentiles[0]:
             counter[1] = counter[1]+1
             return 2
         elif band > 0:
@@ -211,24 +232,44 @@ def biophysical(args):
             return 1
         else:
             return 0
-    wave_power_array = np.array(wave_power_raster.GetRasterBand(1).ReadAsArray())
-    wave_energy_array = np.array(wave_energy_raster.GetRasterBand(1).ReadAsArray())
-    wp_array = wave_power_array.flatten()
-    wp_mask = np.ma.masked_array(wp_array, mask=wp_array == 0)
-    wp_comp = np.ma.compressed(wp_mask)
-    wp_percentiles = get_percentiles(wp_comp)
-    logger.debug('wp_percentiles : %s', wp_percentiles)
-    wave_power_band = wave_power_raster.GetRasterBand(1)
-    invest_core.vectorize1ArgOp(wave_power_band, raster_percentile, wp_rc_band)
+    
+    matrix = np.array(dataset_band.ReadAsArray())    
+    dataset_array = matrix.flatten()
+    dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_array == 0)
+    dataset_comp = np.ma.compressed(dataset_mask)
+    percentiles = get_percentiles(dataset_comp)
+    logger.debug('wp_percentiles : %s', percentiles)
+    invest_core.vectorize1ArgOp(dataset_band, raster_percentile, percentile_band)
     logging.debug('counter : %s', counter)
-    range_one = '1 - ' + str(wp_percentiles[0]) + ' kilowatts per square meter (kW/m)'
-    range_two = str(wp_percentiles[0]) + ' - ' + str(wp_percentiles[1]) + ' kW/m'
-    range_three = str(wp_percentiles[1]) + ' - ' + str(wp_percentiles[2]) + ' kW/m'
-    range_four = str(wp_percentiles[2]) + ' - ' + str(wp_percentiles[3]) + ' kW/m'
-    range_five = 'Greater than ' + str(wp_percentiles[3]) + ' kW/m'
+
+    attribute_values = create_percentile_ranges(percentiles, units_short, units_long)
+    create_attribute_table(output_path, attribute_values, counter)
+    
+    return percentile_raster
+
+def get_percentiles(value_list):
+    pct_list = []
+    pct_list.append(int(stats.scoreatpercentile(value_list, 25)))
+    pct_list.append(int(stats.scoreatpercentile(value_list, 50)))
+    pct_list.append(int(stats.scoreatpercentile(value_list, 75)))
+    pct_list.append(int(stats.scoreatpercentile(value_list, 90)))
+    return pct_list
+    
+def create_percentile_ranges(percentiles, units_short, units_long):
+    range_one = '1 - ' + str(percentiles[0]) + units_long
+    range_two = str(percentiles[0]) + ' - ' + str(percentiles[1]) + units_short
+    range_three = str(percentiles[1]) + ' - ' + str(percentiles[2]) + units_short
+    range_four = str(percentiles[2]) + ' - ' + str(percentiles[3]) + units_short
+    range_five = 'Greater than ' + str(percentiles[3]) + units_short
     attribute_values = [range_one, range_two, range_three, range_four, range_five]
+    return attribute_values
+
+def create_attribute_table(raster_uri, attribute_values, counter):
+    output_path = raster_uri + '.vat.dbf'
     #Create a new dbf file with the same name as the GTiff plus a .vat.dbf
-    dataset_attribute_table = dbf.Dbf(wp_rc_path + ".vat.dbf", new=True)
+    if os.path.isfile(output_path):
+        os.remove(output_path)
+    dataset_attribute_table = dbf.Dbf(output_path, new=True)
     dataset_attribute_table.addField(
                  #integer field
                  ("VALUE", "N", 9),
@@ -246,22 +287,7 @@ def biophysical(args):
 
         rec.store()
     dataset_attribute_table.close()
-
-
-    #Clean up Shapefiles and Rasters
-    area_shape.Destroy()
-    cutter.Destroy()
-    wave_energy_raster = None
-    wave_power_raster = None
-    wp_rc_raster = None
-    #Clean up temporary files on disk
-    pattern = wave_shape_path[wave_shape_path.rfind(os.sep) + 1:
-                              len(wave_shape_path) - 4] + ".*"
-    logging.debug('Regex file pattern : %s', pattern)
-    for f in os.listdir(intermediate_dir):
-        if re.search(pattern, f):
-            os.remove(os.path.join(intermediate_dir, f))
-
+    
 def wave_power(shape):
     """Calculates the wave power from the fields in the shapefile
     and writes the wave power value to a field for the corresponding
