@@ -139,20 +139,18 @@ def biophysical(args):
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
-
-
-    def mult_all(ls_factor, erosivity, erodibility, usle_c_p):
+    def usle_function(ls_factor, erosivity, erodibility, usle_c_p):
         if ls_factor == usle_nodata or erosivity == usle_nodata or \
             erodibility == usle_nodata or usle_c_p == usle_nodata:
             return usle_nodata
         return ls_factor * erosivity * erodibility * usle_c_p
-    mult_op = np.vectorize(mult_all)
+    usle_vectorized_function = np.vectorize(usle_function)
 
     LOGGER.info("calculating potential soil loss")
 
     potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'],
-        args['erosivity'], args['erodibility'], usle_c_p_raster], mult_op,
-        args['usle_uri'], nodata=usle_nodata)
+        args['erosivity'], args['erodibility'], usle_c_p_raster],
+        usle_vectorized_function, args['usle_uri'], nodata = usle_nodata)
 
     #change units from tons per hectare to tons per cell.  We need to do this
     #after the vectorize raster operation since we won't know the cell size
@@ -212,10 +210,10 @@ def biophysical(args):
     #overlay potential_soil_loss, bastardizing vectorizeRasters here for
     #its interpolative functionality by only returning efficiency in the
     #vectorized op.
-    mult_op = np.vectorize(lambda soil_loss, efficiency: efficiency)
+    usle_vectorized_function = np.vectorize(lambda soil_loss, efficiency: efficiency)
     retention_efficiency_raster = \
         invest_core.vectorizeRasters([potential_soil_loss,
-            retention_efficiency_raster_raw], mult_op, nodata=usle_nodata)
+            retention_efficiency_raster_raw], usle_vectorized_function, nodata=usle_nodata)
 
     #Create an output raster for routed sediment retention
     sret_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
