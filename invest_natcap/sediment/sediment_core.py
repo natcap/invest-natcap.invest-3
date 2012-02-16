@@ -220,10 +220,12 @@ def biophysical(args):
     #overlay potential_soil_loss, bastardizing vectorizeRasters here for
     #its interpolative functionality by only returning efficiency in the
     #vectorized op.
-    usle_vectorized_function = np.vectorize(lambda soil_loss, efficiency: efficiency)
+    usle_vectorized_function = \
+        np.vectorize(lambda soil_loss, efficiency: efficiency)
     retention_efficiency_raster = \
         invest_core.vectorizeRasters([potential_soil_loss,
-            retention_efficiency_raster_raw], usle_vectorized_function, nodata=usle_nodata)
+            retention_efficiency_raster_raw], usle_vectorized_function,
+                                     nodata = usle_nodata)
 
     #Create an output raster for routed sediment retention
     sret_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
