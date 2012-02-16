@@ -140,6 +140,16 @@ def biophysical(args):
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
     def usle_function(ls_factor, erosivity, erodibility, usle_c_p):
+        """Calculates the USLE equation 
+        
+        ls_factor - length/slope factor
+        erosivity - related to peak rainfall events
+        erodibility - related to the potential for soil to erode
+        usle_c_p - crop and practice factor which helps to abate soil erosion
+        
+        returns ls_factor * erosivity * erodibility * usle_c_p
+        """
+
         if ls_factor == usle_nodata or erosivity == usle_nodata or \
             erodibility == usle_nodata or usle_c_p == usle_nodata:
             return usle_nodata
