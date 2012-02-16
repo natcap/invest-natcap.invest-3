@@ -139,28 +139,35 @@ def biophysical(args):
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
-    def usle_function(ls_factor, erosivity, erodibility, usle_c_p):
+    def usle_function(ls_factor, erosivity, erodibility, usle_c_p, v_stream):
         """Calculates the USLE equation 
         
         ls_factor - length/slope factor
         erosivity - related to peak rainfall events
         erodibility - related to the potential for soil to erode
         usle_c_p - crop and practice factor which helps to abate soil erosion
+        v_stream - 1 or 0 depending if there is a stream there.  If so, no
+            potential soil loss due to USLE
         
-        returns ls_factor * erosivity * erodibility * usle_c_p
-        """
+        returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
+            defined, nodata if some are not defined, 0 if in a stream
+            (v_stream)"""
 
         if ls_factor == usle_nodata or erosivity == usle_nodata or \
-            erodibility == usle_nodata or usle_c_p == usle_nodata:
+            erodibility == usle_nodata or usle_c_p == usle_nodata or \
+            v_stream == v_stream_nodata:
             return usle_nodata
+        if v_stream == 1:
+            return 0
         return ls_factor * erosivity * erodibility * usle_c_p
     usle_vectorized_function = np.vectorize(usle_function)
 
     LOGGER.info("calculating potential soil loss")
 
     potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'],
-        args['erosivity'], args['erodibility'], usle_c_p_raster],
-        usle_vectorized_function, args['usle_uri'], nodata = usle_nodata)
+        args['erosivity'], args['erodibility'], usle_c_p_raster,
+        args['v_stream']], usle_vectorized_function, args['usle_uri'],
+        nodata = usle_nodata)
 
     #change units from tons per hectare to tons per cell.  We need to do this
     #after the vectorize raster operation since we won't know the cell size
