@@ -12,6 +12,7 @@ from osgeo import ogr
 from scipy.interpolate import LinearNDInterpolator as ip
 from scipy import stats
 
+from invest_natcap.dbfpy import dbf
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
@@ -56,6 +57,9 @@ def biophysical(args):
     #Paths for wave energy and wave power raster
     wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
     wave_power_path = output_dir + os.sep + 'wp_kw.tif'
+    #Paths for wave energy and wave power percentile rasters
+    wp_rc_path = output_dir + os.sep +  'wp_rc.tif'
+    capwe_rc_path = output_dir + os.sep + 'capwe_rc.tif'
     global_dem = args['dem']
     #Set nodata value and datatype for new rasters
     nodata = 0
@@ -177,73 +181,21 @@ def biophysical(args):
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
-    
-#    #Generate Percentiles
-#    def get_percentiles(value_list):
-#        pct_list = []
-#        pct_list.append(stats.scoreatpercentile(value_list, 25))
-#        pct_list.append(stats.scoreatpercentile(value_list, 50))
-#        pct_list.append(stats.scoreatpercentile(value_list, 75))
-#        pct_list.append(stats.scoreatpercentile(value_list, 90))
-#        return pct_list
-#    
-#    wave_power_array = np.array(wave_power_raster.GetRasterBand(1).ReadAsArray())
-#    wave_energy_array = np.array(wave_energy_raster.GetRasterBand(1).ReadAsArray())
-#    wp_array = wave_power_array.flatten()
-#    wp_mask = np.ma.masked_array(wp_array, mask=wp_array == 0)
-#    wp_comp = np.ma.compressed(wp_mask)
-#    wp_percentiles = getPercentiles(wp_comp)
-#    logger.debug('wp_percentiles : %s', wp_percentiles)
-#    
-#    wave_power_band = wave_power_raster.GetRasterBand(1)
-#    att_table = gdal.RasterAttributeTable()
-#    att_table.CreateColumn('VALUE', gdal.GFT_Integer, gdal.GFU_MinMax)
-#    att_table.CreateColumn('COUNT', gdal.GFT_Integer, gdal.GFU_PixelCount)
-#    att_table.CreateColumn('VAL_RANGE', gdal.GFT_String, gdal.GFU_Generic)
-#    att_table.SetRowCount(5)
-#    att_table.SetValueAsInt(0, 0, 10)
-#    att_table.SetValueAsInt(0, 1, 100)
-#    att_table.SetValueAsInt(1, 0, 11)
-#    att_table.SetValueAsInt(1, 1, 200)
-#    att_table.SetValueAsInt(2, 0, 12)
-#    att_table.SetValueAsInt(2, 1, 90)
-#    
-#    att_table.SetValueAsInt(0, 0, 1)
-#    att_table.SetValueAsInt(1, 0, 2)
-#    att_table.SetValueAsInt(2, 0, 3)
-#    att_table.SetValueAsInt(3, 0, 4)
-#    att_table.SetValueAsInt(4, 0, 5)
-#    #Replace -1 with actual pixel count.
-#    att_table.SetValueAsInt(0, 1, -1)
-#    att_table.SetValueAsInt(1, 1, -1)
-#    att_table.SetValueAsInt(2, 1, -1)
-#    att_table.SetValueAsInt(3, 1, -1)
-#    att_table.SetValueAsInt(4, 1, -1)
-#    
-#    range_one = '1 - ' + str(wp_percentiles[0]) + ' kilowatts per square meter (kW/m)'
-#    range_two = str(wp_percentiles[0]) + ' - ' + str(wp_percentiles[1]) + ' kW/m'
-#    range_three = str(wp_percentiles[1]) + ' - ' + str(wp_percentiles[2]) + ' kW/m'
-#    range_four = str(wp_percentiles[2]) + ' - ' + str(wp_percentiles[3]) + ' kW/m'
-#    range_five = 'Greater than ' + str(wp_percentiles[3]) + ' kW/m'
-#    logger.debug('range_one %s ', range_one)
-#    logger.debug('range_two %s ', range_two)
-#    att_table.SetValueAsString(0, 2, range_one)
-#    att_table.SetValueAsString(1, 2, range_two)
-#    att_table.SetValueAsString(2, 2, range_three)
-#    att_table.SetValueAsString(3, 2, range_four)
-#    att_table.SetValueAsString(4, 2, range_five)
-#
-#    logger.debug('att_table value: %s', att_table.GetValueAsString(1, 1))
-#    wave_power_band.SetDefaultRAT(att_table)
-#    gdal.Band.SetDefaultRAT(wave_power_band, att_table)
-#    rat_s = gdal.RasterAttributeTable_swigregister
-#    rat_s(att_table)
-#    wave_power_band.FlushCache()
+   
+    wave_energy_raster.FlushCache()    
+    wave_power_raster.FlushCache()
+    #Create the percentile rasters for wave energy and wave power
+    capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, 
+                                         ' (MWh/yr)', ' megawatt hours per year (MWh/yr)')
+    wp_rc = create_percentile_rasters(wave_power_raster, wp_rc_path,
+                                      ' (kW/m)', ' wave power per unit width of wave crest length (kW/m)')
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
     wave_energy_raster = None
     wave_power_raster = None
+    wp_rc_raster = None
+    capwe_rc = None
     #Clean up temporary files on disk
     pattern = wave_shape_path[wave_shape_path.rfind(os.sep) + 1:
                               len(wave_shape_path) - 4] + ".*"
@@ -252,6 +204,154 @@ def biophysical(args):
         if re.search(pattern, f):
             os.remove(os.path.join(intermediate_dir, f))
 
+def create_percentile_rasters(raster_dataset, output_path, units_short, units_long):
+    """Creates a percentile (quartile) raster based on the raster_dataset. An 
+    attribute table is also constructed for the raster_dataset that displays the
+    ranges provided by taking the quartile of values.  The following inputs are required:
+    
+    raster_dataset - A gdal raster dataset with data of type integer
+    output_path - A String for the destination of new raster
+    units_short - A String that represents the shorthand for the units of the
+                  raster values (ex: kW/m)
+    units_long - A String that represents the description of the units of the
+                 raster values (ex: wave power per unit width of wave crest length (kW/m))
+    
+    return - The new gdal raster
+    """
+    #If the output_path is already a file, delete it
+    if os.path.isfile(output_path):
+        os.remove(output_path)
+    #Create a blank raster from raster_dataset
+    percentile_raster = invest_cython_core.newRasterFromBase(raster_dataset, output_path, 
+                                                             'GTiff', 0, gdal.GDT_Int32)
+    #Get raster bands
+    percentile_band = percentile_raster.GetRasterBand(1)
+    dataset_band = raster_dataset.GetRasterBand(1)
+    #Generate Percentiles
+    #Initialize a list that will hold pixel counts for each
+    #percentile range
+    pixel_count = [0,0,0,0,0]
+    def raster_percentile(band):
+        """Operation to use in vectorize1ArgOp that takes
+        the pixels of 'band' and groups them together based on 
+        their percentile ranges. At the same time a count is kept of
+        how many pixels fall into each group
+        
+        band - A gdal raster band
+        
+        returns - An integer 0-5 that places each pixel into a group
+         """
+        if band > percentiles[3]:
+            pixel_count[4] = pixel_count[4]+1
+            return 5
+        elif band > percentiles[2]:
+            pixel_count[3] = pixel_count[3]+1
+            return 4
+        elif band > percentiles[1]:
+            pixel_count[2] = pixel_count[2]+1
+            return 3
+        elif band > percentiles[0]:
+            pixel_count[1] = pixel_count[1]+1
+            return 2
+        elif band > 0:
+            pixel_count[0] = pixel_count[0]+1
+            return 1
+        else:
+            return 0
+    #Read in the values of the raster we want to get percentiles from
+    matrix = np.array(dataset_band.ReadAsArray())
+    #Flatten the 2D numpy array into a 1D numpy array
+    dataset_array = matrix.flatten()
+    #Create a mask that makes all nodata values invalid.  Do this because
+    #having a bunch of nodata values will muttle the results of getting the
+    #percentiles
+    dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_array == 0)
+    #Get all of the non-masked (non-nodata) data
+    dataset_comp = np.ma.compressed(dataset_mask)
+    #Get the percentile marks
+    percentiles = get_percentiles(dataset_comp)
+    logger.debug('percentiles_list : %s', percentiles)
+    #Get the percentile ranges
+    attribute_values = create_percentile_ranges(percentiles, units_short, units_long)
+    #Classify the pixels of raster_dataset into group and write then to output band
+    invest_core.vectorize1ArgOp(dataset_band, raster_percentile, percentile_band)
+    logging.debug('number of pixels per group: : %s', pixel_count)
+    create_attribute_table(output_path, attribute_values, pixel_count)
+    
+    return percentile_raster
+
+def get_percentiles(value_list):
+    """Creates a list of integers of the four percentile marks
+    
+    value_list - A list of numbers
+    
+    returns - A list of four numbers which are the percentile marks
+    """
+    pct_list = []
+    pct_list.append(int(stats.scoreatpercentile(value_list, 25)))
+    pct_list.append(int(stats.scoreatpercentile(value_list, 50)))
+    pct_list.append(int(stats.scoreatpercentile(value_list, 75)))
+    pct_list.append(int(stats.scoreatpercentile(value_list, 90)))
+    return pct_list
+    
+def create_percentile_ranges(percentiles, units_short, units_long):
+    """Constructs the percentile ranges as Strings, with the first
+    range starting at 1 and the last range being greater than the last
+    percentile mark.  Each string range is stored in a list that gets returned
+    
+    percentiles - A 4 element list of the percentile marks in ascending order
+    units_short - A String that represents the shorthand for the units of the
+                  raster values (ex: kW/m)
+    units_long - A String that represents the description of the units of the
+                 raster values (ex: wave power per unit width of wave crest length (kW/m))
+    
+    returns - A list of Strings representing the ranges of the percentiles
+    """
+    range_one = '1 - ' + str(percentiles[0]) + units_long
+    range_two = str(percentiles[0]) + ' - ' + str(percentiles[1]) + units_short
+    range_three = str(percentiles[1]) + ' - ' + str(percentiles[2]) + units_short
+    range_four = str(percentiles[2]) + ' - ' + str(percentiles[3]) + units_short
+    range_five = 'Greater than ' + str(percentiles[3]) + units_short
+    attribute_values = [range_one, range_two, range_three, range_four, range_five]
+    return attribute_values
+
+def create_attribute_table(raster_uri, attribute_values, counter):
+    """Creates an attribute table of type '.vat.dbf'.  The attribute table
+    created is tied to the dataset of the raster_uri provided as input. 
+    The table has 3 fields (VALUE, COUNT, VAL_RANGE) where VALUE acts as
+    an ID, COUNT is the number of pixels, and VAL_RANGE is the corresponding
+    percentile range
+    
+    raster_uri - A String of the raster file the table should be associated with
+    attribute_values - A list of Strings representing the percentile ranges
+    counter - A list of integers that represent the pixel count
+    
+    returns - nothing
+    """
+    output_path = raster_uri + '.vat.dbf'
+    #If the dbf file already exists, delete it
+    if os.path.isfile(output_path):
+        os.remove(output_path)
+    #Create a new dbf file with the same name as the GTiff plus a .vat.dbf
+    dataset_attribute_table = dbf.Dbf(output_path, new=True)
+    dataset_attribute_table.addField(
+                 #integer field
+                 ("VALUE", "N", 9),
+                 #integer field
+                 ("COUNT", "N", 9),
+                 #character field, I think header names need to be short?
+                 ("VAL_RANGE", "C", 254))
+    #Add all the records
+    for id_value in range(len(attribute_values)):
+        logging.debug('id_value: %s', id_value)
+        rec = dataset_attribute_table.newRecord()
+        rec["VALUE"] = id_value+1
+        rec["COUNT"] = int(counter[id_value])
+        rec["VAL_RANGE"] = attribute_values[id_value]
+
+        rec.store()
+    dataset_attribute_table.close()
+    
 def wave_power(shape):
     """Calculates the wave power from the fields in the shapefile
     and writes the wave power value to a field for the corresponding
@@ -660,7 +760,8 @@ def valuation(args):
     grid_pt_path = output_dir + os.sep + 'GridPts_prj.shp'
     #Output path for the projected net present value raster
     raster_projected_path = output_dir + os.sep + 'npv_usd.tif'
-    
+    #Path for the net present value percentile raster
+    npv_rc_path = output_dir + os.sep + 'npv_rc.tif'
     wave_data_shape = args['wave_data_shape']
     #Since the global_dem is the only input raster, we base the pixel
     #size of our output raster from the global_dem
@@ -825,17 +926,21 @@ def valuation(args):
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                                      datatype, nodata, raster_projected_path, wave_data_shape)
     logger.debug('Completed Creating Raster From Vector Extents')
-    wave_farm_value_raster = gdal.Open(raster_projected_path, GA_Update)
+    npv_raster = gdal.Open(raster_projected_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
-    wave_farm_value_array = get_points_values(wave_data_shape, 'NPV_25Y')
+    npv_array = get_points_values(wave_data_shape, 'NPV_25Y')
     #Interpolate the NPV values based on the dimensions and 
     #corresponding points of the raster, then write the interpolated 
     #values to the raster
     logger.info('Generating Net Present Value Raster.')
-    interp_points_over_raster(wave_farm_value_array[0],
-                              wave_farm_value_array[1], wave_farm_value_raster)
+    interp_points_over_raster(npv_array[0],
+                              npv_array[1], npv_raster)
     logger.debug('Done interpolating NPV over raster.')
-    wave_farm_value_raster = None
+    #Create the percentile raster for net present value
+    npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, 
+                                         ' (US$)', ' thousands of US dollars (US$)')
+    npv_rc = None
+    npv_raster = None
     wave_data_shape.Destroy()
     logger.debug('End of wave_energy_core.valuation')
     
