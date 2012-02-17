@@ -871,6 +871,12 @@ def valuation(args):
     interp_points_over_raster(wave_farm_value_array[0],
                               wave_farm_value_array[1], wave_farm_value_raster)
     logger.debug('Done interpolating NPV over raster.')
+    
+    npv_rc_path = workspace_dir + os.sep + 'Output/npv_rc.tif'
+
+    npv_rc = create_percentile_rasters(wave_farm_value_raster, npv_rc_path, 
+                                         ' (US$)', ' thousands of US dollars (US$)')
+    npv_rc = None
     wave_farm_value_raster = None
     wave_data_shape.Destroy()
     logger.debug('End of wave_energy_core.valuation')
