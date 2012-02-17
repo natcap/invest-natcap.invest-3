@@ -679,6 +679,33 @@ class TestWaveEnergy(unittest.TestCase):
                         'Not all of the distances were equal to three decimal places.')
         self.assertTrue(mask_id.all(), 'Not all of the IDs matched.')
         
+    def test_wave_energy_create_percentile_raster(self):
+        #make a dummy 10 x 10 raster
+        
+        #hand calculate percentiles
+        
+        #hand calculate attribute table
+        
+        #assert percentile raster
+        
+        #assert table values and existence
+        return
+    def test_wave_energy_get_percentiles(self):
+        #hand make lists and check that correct percentiles are returned
+        return
+    
+    def test_wave_energy_create_percentile_ranges(self):
+        #Given a list make sure proper strings are being returned
+        return
+    
+    def test_wave_energy_create_attribute_table(self):
+        #make a dummy attribute table
+        
+        #make sure file exists
+        
+        #assert that dummy and returned tables are equal
+        return
+        
     def test_wave_energy_valuation_regression(self):
         """Runs the valuation part of the Wave Energy Model (WEM),
         and does regression tests against the raster outputs and shapefile
