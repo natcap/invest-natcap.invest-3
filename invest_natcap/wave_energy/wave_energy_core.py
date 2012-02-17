@@ -57,6 +57,9 @@ def biophysical(args):
     #Paths for wave energy and wave power raster
     wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
     wave_power_path = output_dir + os.sep + 'wp_kw.tif'
+    #Paths for wave energy and wave power percentile rasters
+    wp_rc_path = output_dir + os.sep +  'wp_rc.tif'
+    capwe_rc_path = output_dir + os.sep + 'capwe_rc.tif'
     global_dem = args['dem']
     #Set nodata value and datatype for new rasters
     nodata = 0
@@ -181,14 +184,11 @@ def biophysical(args):
    
     wave_energy_raster.FlushCache()    
     wave_power_raster.FlushCache()
-    wp_rc_path = workspace_dir + os.sep + 'Output/wp_rc.tif'
-    capwe_rc_path = workspace_dir + os.sep + 'Output/capwe_rc.tif'
-
+    #Create the percentile rasters for wave energy and wave power
     capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, 
                                          ' (MWh/yr)', ' megawatt hours per year (MWh/yr)')
     wp_rc = create_percentile_rasters(wave_power_raster, wp_rc_path,
                                       ' (kW/m)', ' wave power per unit width of wave crest length (kW/m)')
-
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
@@ -218,15 +218,19 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     
     return - The new gdal raster
     """
+    #If the output_path is already a file, delete it
     if os.path.isfile(output_path):
         os.remove(output_path)
+    #Create a blank raster from raster_dataset
     percentile_raster = invest_cython_core.newRasterFromBase(raster_dataset, output_path, 
-                                                        'GTiff', 0, gdal.GDT_Int32)
+                                                             'GTiff', 0, gdal.GDT_Int32)
+    #Get raster bands
     percentile_band = percentile_raster.GetRasterBand(1)
     dataset_band = raster_dataset.GetRasterBand(1)
     #Generate Percentiles
-    percentiles = []
-    counter = [0,0,0,0,0]
+    #Initialize a list that will hold pixel counts for each
+    #percentile range
+    pixel_count = [0,0,0,0,0]
     def raster_percentile(band):
         """Operation to use in vectorize1ArgOp that takes
         the pixels of 'band' and groups them together based on 
@@ -238,34 +242,41 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
         returns - An integer 0-5 that places each pixel into a group
          """
         if band > percentiles[3]:
-            counter[4] = counter[4]+1
+            pixel_count[4] = pixel_count[4]+1
             return 5
         elif band > percentiles[2]:
-            counter[3] = counter[3]+1
+            pixel_count[3] = pixel_count[3]+1
             return 4
         elif band > percentiles[1]:
-            counter[2] = counter[2]+1
+            pixel_count[2] = pixel_count[2]+1
             return 3
         elif band > percentiles[0]:
-            counter[1] = counter[1]+1
+            pixel_count[1] = pixel_count[1]+1
             return 2
         elif band > 0:
-            counter[0] = counter[0]+1
+            pixel_count[0] = pixel_count[0]+1
             return 1
         else:
             return 0
-    
-    matrix = np.array(dataset_band.ReadAsArray())    
+    #Read in the values of the raster we want to get percentiles from
+    matrix = np.array(dataset_band.ReadAsArray())
+    #Flatten the 2D numpy array into a 1D numpy array
     dataset_array = matrix.flatten()
+    #Create a mask that makes all nodata values invalid.  Do this because
+    #having a bunch of nodata values will muttle the results of getting the
+    #percentiles
     dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_array == 0)
+    #Get all of the non-masked (non-nodata) data
     dataset_comp = np.ma.compressed(dataset_mask)
+    #Get the percentile marks
     percentiles = get_percentiles(dataset_comp)
-    logger.debug('wp_percentiles : %s', percentiles)
-    invest_core.vectorize1ArgOp(dataset_band, raster_percentile, percentile_band)
-    logging.debug('counter : %s', counter)
-
+    logger.debug('percentiles_list : %s', percentiles)
+    #Get the percentile ranges
     attribute_values = create_percentile_ranges(percentiles, units_short, units_long)
-    create_attribute_table(output_path, attribute_values, counter)
+    #Classify the pixels of raster_dataset into group and write then to output band
+    invest_core.vectorize1ArgOp(dataset_band, raster_percentile, percentile_band)
+    logging.debug('number of pixels per group: : %s', pixel_count)
+    create_attribute_table(output_path, attribute_values, pixel_count)
     
     return percentile_raster
 
@@ -318,9 +329,10 @@ def create_attribute_table(raster_uri, attribute_values, counter):
     returns - nothing
     """
     output_path = raster_uri + '.vat.dbf'
-    #Create a new dbf file with the same name as the GTiff plus a .vat.dbf
+    #If the dbf file already exists, delete it
     if os.path.isfile(output_path):
         os.remove(output_path)
+    #Create a new dbf file with the same name as the GTiff plus a .vat.dbf
     dataset_attribute_table = dbf.Dbf(output_path, new=True)
     dataset_attribute_table.addField(
                  #integer field
@@ -748,7 +760,8 @@ def valuation(args):
     grid_pt_path = output_dir + os.sep + 'GridPts_prj.shp'
     #Output path for the projected net present value raster
     raster_projected_path = output_dir + os.sep + 'npv_usd.tif'
-    
+    #Path for the net present value percentile raster
+    npv_rc_path = output_dir + os.sep + 'npv_rc.tif'
     wave_data_shape = args['wave_data_shape']
     #Since the global_dem is the only input raster, we base the pixel
     #size of our output raster from the global_dem
@@ -913,23 +926,21 @@ def valuation(args):
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
                                                      datatype, nodata, raster_projected_path, wave_data_shape)
     logger.debug('Completed Creating Raster From Vector Extents')
-    wave_farm_value_raster = gdal.Open(raster_projected_path, GA_Update)
+    npv_raster = gdal.Open(raster_projected_path, GA_Update)
     #Get the corresponding points and values from the shapefile to be used for interpolation
-    wave_farm_value_array = get_points_values(wave_data_shape, 'NPV_25Y')
+    npv_array = get_points_values(wave_data_shape, 'NPV_25Y')
     #Interpolate the NPV values based on the dimensions and 
     #corresponding points of the raster, then write the interpolated 
     #values to the raster
     logger.info('Generating Net Present Value Raster.')
-    interp_points_over_raster(wave_farm_value_array[0],
-                              wave_farm_value_array[1], wave_farm_value_raster)
+    interp_points_over_raster(npv_array[0],
+                              npv_array[1], npv_raster)
     logger.debug('Done interpolating NPV over raster.')
-    
-    npv_rc_path = workspace_dir + os.sep + 'Output/npv_rc.tif'
-
-    npv_rc = create_percentile_rasters(wave_farm_value_raster, npv_rc_path, 
+    #Create the percentile raster for net present value
+    npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, 
                                          ' (US$)', ' thousands of US dollars (US$)')
     npv_rc = None
-    wave_farm_value_raster = None
+    npv_raster = None
     wave_data_shape.Destroy()
     logger.debug('End of wave_energy_core.valuation')
     
