@@ -652,6 +652,13 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
                 self.toggled.connect(self.toggleHiding)
 
+            if 'style' in self.attributes:
+                if self.attributes['style'] == 'arrows':
+                    self.setStyleSheet('QGroupBox::indicator:unchecked {' +
+                        'image: url(/home/jadoug06/projects/water-funds/warp/dialog-yes.png);}' + 
+                        'QGroupBox::indicator:checked {' +
+                        'image: url(/home/jadoug06/projects/water-funds/warp/dialog-no.png);}')
+
     def toggleHiding(self, state):
         """Show or hide all sub-elements of container (if collapsible) as
             necessary.  This function is a callback for the toggled() signal.
