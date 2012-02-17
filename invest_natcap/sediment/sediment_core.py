@@ -167,7 +167,7 @@ def biophysical(args):
     potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'],
         args['erosivity'], args['erodibility'], usle_c_p_raster,
         args['v_stream']], usle_vectorized_function, args['usle_uri'],
-        nodata = usle_nodata)
+        nodata=usle_nodata)
 
     #change units from tons per hectare to tons per cell.  We need to do this
     #after the vectorize raster operation since we won't know the cell size
@@ -227,12 +227,20 @@ def biophysical(args):
     #overlay potential_soil_loss, bastardizing vectorizeRasters here for
     #its interpolative functionality by only returning efficiency in the
     #vectorized op.
-    usle_vectorized_function = \
-        np.vectorize(lambda soil_loss, efficiency: efficiency)
+    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
+        """Used for interpolating efficiency raster to be the same dimensions
+            as soil_loss and also knocking out retention on the streams"""
+
+        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
+        #to scale efficiency especially if v_steram is interpolated 
+        #intelligently
+        return (1 - v_stream) * efficiency
+
+    usle_vectorized_function = np.vectorize(efficiency_raster_creator)
     retention_efficiency_raster = \
         invest_core.vectorizeRasters([potential_soil_loss,
-            retention_efficiency_raster_raw], usle_vectorized_function,
-                                     nodata = usle_nodata)
+            retention_efficiency_raster_raw, args['v_stream']],
+            usle_vectorized_function, nodata=usle_nodata)
 
     #Create an output raster for routed sediment retention
     sret_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
@@ -240,19 +248,15 @@ def biophysical(args):
 
     #Route the sediment across the landscape and store the amount retained
     #per pixel
-    LOGGER.debug('potential soil loss dimensions %s %s' % \
-                 (potential_soil_loss.RasterXSize, \
-                  potential_soil_loss.RasterYSize))
-    LOGGER.debug('args["flow_direction"] dimensions %s %s' % \
-                 (args['flow_direction'].RasterXSize, \
-                  args['flow_direction'].RasterYSize))
-    LOGGER.debug('retention_efficiency_raster dimensions %s %s' % \
-                 (retention_efficiency_raster.RasterXSize, \
-                  retention_efficiency_raster.RasterYSize))
-    LOGGER.debug('sret_dr dimensions %s %s' % \
-                 (sret_dr.RasterXSize, sret_dr.RasterYSize))
     invest_cython_core.calc_retained_sediment(potential_soil_loss,
         args['flow_direction'], retention_efficiency_raster, sret_dr)
+
+    #Create an output raster for routed sediment export
+    sexp_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
+        args['sret_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
+    invest_cython_core.calc_exported_sediment(potential_soil_loss,
+        args['flow_direction'], retention_efficiency_raster,
+        args['flow_accumulation'], args['v_stream'], sexp_dr)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a

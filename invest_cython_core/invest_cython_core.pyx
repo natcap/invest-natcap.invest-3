@@ -1182,6 +1182,8 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
     cdef np.ndarray [np.float_t,ndim=2] export_matrix = \
         np.empty((nrows,ncols))
     
+    LOGGER = logging.getLogger('calc_retained_sediment')
+    
     #default export is the potential soil loss from each pixel
     export_matrix[:] = potential_soil_loss_matrix
         
@@ -1274,6 +1276,11 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
                               potential_soil_loss_nodata] = \
         sediment_retention_nodata
 
+    #sometimes we can get negative sediment at the endges because it's so close
+    #to nodata values and gets interpolated strangely.  We set those to 
+    #nodata so we don't misinterpret them
+    sediment_retention_matrix[sediment_retention_matrix < 0] = \
+        sediment_retention_nodata
 
     #Need to transpose the output for consistency in our array notation
     sediment_retention.GetRasterBand(1). \
@@ -1283,7 +1290,7 @@ def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,
     LOGGER.info('done with calc_retained_sediment')
     
 def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
-                           flow_accumulation, stream_threshold, 
+                           flow_accumulation, v_stream, 
                            sediment_export):
     """This function calculates the sediment exported to stream from each pixel
         given the potential soil loss, flow direction, vegitation retention 
@@ -1299,15 +1306,15 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             efficiency
         flow_accumulation - (input) the flow accumulation to that pixel, 
             including the pixel
-        stream_threshold - (input) a floating point cutoff to indicate when
-            a pixel should be considered a stream
+        v_stream - (input) the v_stream raster indicating pixels that are 
+            classified as a stream or not
         sediment_export - (output) the amount of sediment exported from a given 
             cell to the stream based on the routed sediment inflow
             
         returns nothing"""
-        
-        #push all stream pixels onto a queue
-        #while pixels still left to process
-            #loop over neighbor pixels
-                #if neighbor pixel unprocessed, enqueue it
-                #to neighbor, add % of inflow to current cell * current cell export (river is 1.0) 
+    LOGGER = logging.getLogger('calc_exported_sediment')
+    #push all stream pixels onto a queue
+    #while pixels still left to process
+        #loop over neighbor pixels
+            #if neighbor pixel unprocessed, enqueue it
+            #to neighbor, add % of inflow to current cell * current cell export (river is 1.0) 
