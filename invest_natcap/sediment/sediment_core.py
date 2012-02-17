@@ -251,6 +251,13 @@ def biophysical(args):
     invest_cython_core.calc_retained_sediment(potential_soil_loss,
         args['flow_direction'], retention_efficiency_raster, sret_dr)
 
+    #Create an output raster for routed sediment export
+    sexp_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
+        args['sret_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
+    invest_cython_core.calc_exported_sediment(potential_soil_loss,
+        args['flow_direction'], retention_efficiency_raster,
+        args['flow_accumulation'], args['v_stream'], sexp_dr)
+
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
         LULC raster.
