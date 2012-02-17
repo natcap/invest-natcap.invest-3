@@ -209,7 +209,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     attribute table is also constructed for the raster_dataset that displays the
     ranges provided by taking the quartile of values.  The following inputs are required:
     
-    raster_dataset - A gdal raster dataset
+    raster_dataset - A gdal raster dataset with data of type integer
     output_path - A String for the destination of new raster
     units_short - A String that represents the shorthand for the units of the
                   raster values (ex: kW/m)
@@ -228,6 +228,15 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     percentiles = []
     counter = [0,0,0,0,0]
     def raster_percentile(band):
+        """Operation to use in vectorize1ArgOp that takes
+        the pixels of 'band' and groups them together based on 
+        their percentile ranges. At the same time a count is kept of
+        how many pixels fall into each group
+        
+        band - A gdal raster band
+        
+        returns - An integer 0-5 that places each pixel into a group
+         """
         if band > percentiles[3]:
             counter[4] = counter[4]+1
             return 5
@@ -261,6 +270,12 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     return percentile_raster
 
 def get_percentiles(value_list):
+    """Creates a list of integers of the four percentile marks
+    
+    value_list - A list of numbers
+    
+    returns - A list of four numbers which are the percentile marks
+    """
     pct_list = []
     pct_list.append(int(stats.scoreatpercentile(value_list, 25)))
     pct_list.append(int(stats.scoreatpercentile(value_list, 50)))
@@ -269,6 +284,18 @@ def get_percentiles(value_list):
     return pct_list
     
 def create_percentile_ranges(percentiles, units_short, units_long):
+    """Constructs the percentile ranges as Strings, with the first
+    range starting at 1 and the last range being greater than the last
+    percentile mark.  Each string range is stored in a list that gets returned
+    
+    percentiles - A 4 element list of the percentile marks in ascending order
+    units_short - A String that represents the shorthand for the units of the
+                  raster values (ex: kW/m)
+    units_long - A String that represents the description of the units of the
+                 raster values (ex: wave power per unit width of wave crest length (kW/m))
+    
+    returns - A list of Strings representing the ranges of the percentiles
+    """
     range_one = '1 - ' + str(percentiles[0]) + units_long
     range_two = str(percentiles[0]) + ' - ' + str(percentiles[1]) + units_short
     range_three = str(percentiles[1]) + ' - ' + str(percentiles[2]) + units_short
@@ -278,6 +305,18 @@ def create_percentile_ranges(percentiles, units_short, units_long):
     return attribute_values
 
 def create_attribute_table(raster_uri, attribute_values, counter):
+    """Creates an attribute table of type '.vat.dbf'.  The attribute table
+    created is tied to the dataset of the raster_uri provided as input. 
+    The table has 3 fields (VALUE, COUNT, VAL_RANGE) where VALUE acts as
+    an ID, COUNT is the number of pixels, and VAL_RANGE is the corresponding
+    percentile range
+    
+    raster_uri - A String of the raster file the table should be associated with
+    attribute_values - A list of Strings representing the percentile ranges
+    counter - A list of integers that represent the pixel count
+    
+    returns - nothing
+    """
     output_path = raster_uri + '.vat.dbf'
     #Create a new dbf file with the same name as the GTiff plus a .vat.dbf
     if os.path.isfile(output_path):
