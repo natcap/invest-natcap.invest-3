@@ -205,6 +205,19 @@ def biophysical(args):
             os.remove(os.path.join(intermediate_dir, f))
 
 def create_percentile_rasters(raster_dataset, output_path, units_short, units_long):
+    """Creates a percentile (quartile) raster based on the raster_dataset. An 
+    attribute table is also constructed for the raster_dataset that displays the
+    ranges provided by taking the quartile of values.  The following inputs are required:
+    
+    raster_dataset - A gdal raster dataset
+    output_path - A String for the destination of new raster
+    units_short - A String that represents the shorthand for the units of the
+                  raster values (ex: kW/m)
+    units_long - A String that represents the description of the units of the
+                 raster values (ex: wave power per unit width of wave crest length (kW/m))
+    
+    return - The new gdal raster
+    """
     if os.path.isfile(output_path):
         os.remove(output_path)
     percentile_raster = invest_cython_core.newRasterFromBase(raster_dataset, output_path, 
