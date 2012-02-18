@@ -242,19 +242,14 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
         returns - An integer 0-5 that places each pixel into a group
          """
         if band > percentiles[3]:
-            pixel_count[4] = pixel_count[4]+1
             return 5
         elif band > percentiles[2]:
-            pixel_count[3] = pixel_count[3]+1
             return 4
         elif band > percentiles[1]:
-            pixel_count[2] = pixel_count[2]+1
             return 3
         elif band > percentiles[0]:
-            pixel_count[1] = pixel_count[1]+1
             return 2
         elif band > 0:
-            pixel_count[0] = pixel_count[0]+1
             return 1
         else:
             return 0
@@ -275,6 +270,11 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     attribute_values = create_percentile_ranges(percentiles, units_short, units_long)
     #Classify the pixels of raster_dataset into group and write then to output band
     invest_core.vectorize1ArgOp(dataset_band, raster_percentile, percentile_band)
+
+    perc_array = percentile_band.ReadAsArray()
+    for percentile_class in [1,2,3,4,5]:
+        pixel_count[percentile_class-1] = np.where(perc_array == percentile_class)[0].size  
+    
     logging.debug('number of pixels per group: : %s', pixel_count)
     create_attribute_table(output_path, attribute_values, pixel_count)
     
