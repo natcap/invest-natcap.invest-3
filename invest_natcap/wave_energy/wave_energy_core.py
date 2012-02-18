@@ -273,6 +273,11 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
 
     perc_array = percentile_band.ReadAsArray()
     for percentile_class in [1,2,3,4,5]:
+        #This line of code takes the numpy array 'perc_array', which holds the values
+        #from the percentile_band after being grouped, and checks to see where the
+        #values are equal to a certain identifier, which in turn gives an array of
+        #the number indices where the case was true, then takes the size of that array,
+        #effectively giving us the number of pixels for that value.
         pixel_count[percentile_class-1] = np.where(perc_array == percentile_class)[0].size  
     
     logging.debug('number of pixels per group: : %s', pixel_count)
