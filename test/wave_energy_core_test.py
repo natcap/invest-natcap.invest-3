@@ -679,6 +679,101 @@ class TestWaveEnergy(unittest.TestCase):
                         'Not all of the distances were equal to three decimal places.')
         self.assertTrue(mask_id.all(), 'Not all of the IDs matched.')
         
+    def test_wave_energy_create_percentile_raster(self):
+        test_dir = './data/wave_energy_data'
+        perc_path = test_dir + os.sep + 'test_output/percentile_five_by_five.tif'
+        #Add the Output directory onto the given workspace
+        output_dir = test_dir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        if os.path.isfile(perc_path):
+            os.remove(perc_path)
+        #make a dummy 5 x 5 raster
+        raster_size = 10
+        driver = gdal.GetDriverByName('GTiff')
+        dataset = driver.Create(perc_path, raster_size, raster_size, 1, gdal.GDT_Int32)
+    
+        raster_data = np.reshape(np.arange(1,101),(10,10))
+        dataset.GetRasterBand(1).WriteArray(raster_data, 0, 0)
+        calculated_perc_list = [25,50,75,90]
+        calc_value_array = [1,2,3,4,5]
+        calc_count_array = [25, 25, 25, 15, 10]
+        calc_val_range_array = ['1 - 25 the amount of mice per cat (mice/cat)',
+                                '25 - 50 (mice/cat)',
+                                '50 - 75 (mice/cat)',
+                                '75 - 90 (mice/cat)',
+                                'Greater than 90 (mice/cat)']
+        calculated_output_raster = np.array([[1,1,1,1,1,1,1,1,1,1],
+                                            [1,1,1,1,1,1,1,1,1,1],
+                                            [1,1,1,1,1,2,2,2,2,2],
+                                            [2,2,2,2,2,2,2,2,2,2],
+                                            [2,2,2,2,2,2,2,2,2,2],
+                                            [3,3,3,3,3,3,3,3,3,3],
+                                            [3,3,3,3,3,3,3,3,3,3],
+                                            [3,3,3,3,3,4,4,4,4,4],
+                                            [4,4,4,4,4,4,4,4,4,4],
+                                            [5,5,5,5,5,5,5,5,5,5]])
+        units_short = ' (mice/cat)'
+        units_long = ' the amount of mice per cat (mice/cat)'
+        percentile_raster = wave_energy_core.create_percentile_rasters(dataset, perc_path, units_short, units_long)
+        perc_band = percentile_raster.GetRasterBand(1)
+        perc_matrix = perc_band.ReadAsArray()
+        LOGGER.debug('percentile matrix: %s', perc_matrix)
+        LOGGER.debug('matrix: %s', calculated_output_raster)
+        self.assertTrue((perc_matrix == calculated_output_raster).all())
+        
+        db_file = dbf.Dbf(perc_path+'.vat.dbf')
+        value_array = []
+        count_array = []
+        val_range_array = []
+        for rec in db_file:
+            value_array.append(rec['VALUE'])
+            count_array.append(rec['COUNT'])
+            val_range_array.append(rec['VAL_RANGE'])
+        
+        for i in range(5):
+            self.assertEqual(value_array[i], calc_value_array[i])
+            self.assertEqual(count_array[i], calc_count_array[i])
+            self.assertEqual(val_range_array[i], calc_val_range_array[i])      
+        #hand calculate percentiles
+        
+        #hand calculate attribute table
+#        dataset_attribute_table = dbf.Dbf(perc_path + ".vat.dbf", new=True)
+#        dataset_attribute_table.addField(
+#                     #integer field
+#                     ("VALUE", "N", 9),
+#                     ("COUNT", "N", 9),
+#                     #character field, I think header names need to be short?
+#                     ("DESCRIPTIO", "C", 254))
+#    
+#        #Add all the records
+#        for id_value in range(6):
+#            rec = dataset_attribute_table.newRecord()
+#            rec["VALUE"] = id_value
+#            rec["DESCRIPTIO"] = "The value of %s" % id_value
+#            rec.store()
+#        dataset_attribute_table.close()
+        
+        #assert percentile raster
+        
+        #assert table values and existence
+    
+    def test_wave_energy_get_percentiles(self):
+        #hand make lists and check that correct percentiles are returned
+        return
+    
+    def test_wave_energy_create_percentile_ranges(self):
+        #Given a list make sure proper strings are being returned
+        return
+    
+    def test_wave_energy_create_attribute_table(self):
+        #make a dummy attribute table
+        
+        #make sure file exists
+        
+        #assert that dummy and returned tables are equal
+        return
+        
     def test_wave_energy_valuation_regression(self):
         """Runs the valuation part of the Wave Energy Model (WEM),
         and does regression tests against the raster outputs and shapefile
