@@ -42,7 +42,11 @@ class Controller(object):
         
     def start_executor(self):
         """Starts the executor and message checker threads.  Returns nothing."""
-        
+
+        if not self.executor:
+            self.executor = Executor()
+            self.msg_checker = PrintQueueChecker(self.executor)
+
         self.thread_finished = False
         self.executor.start()
         self.msg_checker.start()
