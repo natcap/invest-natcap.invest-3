@@ -697,7 +697,7 @@ class TestWaveEnergy(unittest.TestCase):
         dataset.GetRasterBand(1).WriteArray(raster_data, 0, 0)
         calculated_perc_list = [25,50,75,90]
         calc_value_array = [1,2,3,4,5]
-        calc_count_array = [25, 25, 25, 15, 10]
+        calc_count_array = [24, 25, 25, 15, 11]
         calc_val_range_array = ['1 - 25 the amount of mice per cat (mice/cat)',
                                 '25 - 50 (mice/cat)',
                                 '50 - 75 (mice/cat)',
@@ -705,18 +705,19 @@ class TestWaveEnergy(unittest.TestCase):
                                 'Greater than 90 (mice/cat)']
         calculated_output_raster = np.array([[1,1,1,1,1,1,1,1,1,1],
                                             [1,1,1,1,1,1,1,1,1,1],
-                                            [1,1,1,1,1,2,2,2,2,2],
+                                            [1,1,1,1,2,2,2,2,2,2],
                                             [2,2,2,2,2,2,2,2,2,2],
-                                            [2,2,2,2,2,2,2,2,2,2],
+                                            [2,2,2,2,2,2,2,2,2,3],
                                             [3,3,3,3,3,3,3,3,3,3],
                                             [3,3,3,3,3,3,3,3,3,3],
-                                            [3,3,3,3,3,4,4,4,4,4],
-                                            [4,4,4,4,4,4,4,4,4,4],
+                                            [3,3,3,3,4,4,4,4,4,4],
+                                            [4,4,4,4,4,4,4,4,4,5],
                                             [5,5,5,5,5,5,5,5,5,5]])
         units_short = ' (mice/cat)'
         units_long = ' the amount of mice per cat (mice/cat)'
         percentile_raster = wave_energy_core.create_percentile_rasters(dataset, perc_path, 
-                                                                       units_short, units_long)
+                                                                       units_short, units_long, '1',
+                                                                       [25,50,75,90])
         perc_band = percentile_raster.GetRasterBand(1)
         perc_matrix = perc_band.ReadAsArray()
         LOGGER.debug('percentile matrix: %s', perc_matrix)
@@ -731,7 +732,7 @@ class TestWaveEnergy(unittest.TestCase):
             value_array.append(rec['VALUE'])
             count_array.append(rec['COUNT'])
             val_range_array.append(rec['VAL_RANGE'])
-        
+        LOGGER.debug('ranges : %s : %s', val_range_array, calc_val_range_array)
         for i in range(5):
             self.assertEqual(value_array[i], calc_value_array[i])
             self.assertEqual(count_array[i], calc_count_array[i])
@@ -741,7 +742,8 @@ class TestWaveEnergy(unittest.TestCase):
         #hand make lists and check that correct percentiles are returned
         values = np.arange(1,101)
         calc_percentiles = [25, 50, 75, 90]
-        percentiles = wave_energy_core.get_percentiles(values)
+        perc_list = [25,50,75,90]
+        percentiles = wave_energy_core.get_percentiles(values, perc_list)
         self.assertTrue(calc_percentiles == percentiles)
         return
     
@@ -750,7 +752,7 @@ class TestWaveEnergy(unittest.TestCase):
         units_short = ' (m/s)'
         units_long = ' the rate of time travel in meters per second (m/s)'
         percentiles = [4, 8, 12, 16]
-        ranges = wave_energy_core.create_percentile_ranges(percentiles, units_short, units_long)
+        ranges = wave_energy_core.create_percentile_ranges(percentiles, units_short, units_long, '1')
         calc_ranges = ['1 - 4 the rate of time travel in meters per second (m/s)',
                        '4 - 8 (m/s)', '8 - 12 (m/s)', '12 - 16 (m/s)', 'Greater than 16 (m/s)']
         self.assertTrue(ranges == calc_ranges)
@@ -760,7 +762,7 @@ class TestWaveEnergy(unittest.TestCase):
         #make a dummy attribute table
         
         
-        create_attribute_table(raster_uri, attribute_values, counter)
+        #create_attribute_table(raster_uri, attribute_values, counter)
         #make sure file exists
         
         #assert that dummy and returned tables are equal
