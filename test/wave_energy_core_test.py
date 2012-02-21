@@ -680,6 +680,11 @@ class TestWaveEnergy(unittest.TestCase):
 #        self.assertTrue(mask_id.all(), 'Not all of the IDs matched.')
         
     def test_wave_energy_create_percentile_raster(self):
+        """A non-trivial test case that passes in a generated 10x10 raster
+        with values from 1 - 100, along with the other necessary arguments.
+        It then compares the resulting percentile raster against hand
+        calculated results."""
+        
         test_dir = './data/wave_energy_data'
         perc_path = test_dir + os.sep + 'test_output/percentile_five_by_five.tif'
         #Add the Output directory onto the given workspace
@@ -724,21 +729,29 @@ class TestWaveEnergy(unittest.TestCase):
         LOGGER.debug('matrix: %s', calculated_output_raster)
         self.assertTrue((perc_matrix == calculated_output_raster).all())
         
-        db_file = dbf.Dbf(perc_path+'.vat.dbf')
-        value_array = []
-        count_array = []
-        val_range_array = []
-        for rec in db_file:
-            value_array.append(rec['VALUE'])
-            count_array.append(rec['COUNT'])
-            val_range_array.append(rec['VAL_RANGE'])
-        LOGGER.debug('ranges : %s : %s', val_range_array, calc_val_range_array)
-        for i in range(5):
-            self.assertEqual(value_array[i], calc_value_array[i])
-            self.assertEqual(count_array[i], calc_count_array[i])
-            self.assertEqual(val_range_array[i], calc_val_range_array[i])      
+        try:
+            db_file = dbf.Dbf(perc_path+'.vat.dbf')
+            value_array = []
+            count_array = []
+            val_range_array = []
+            for rec in db_file:
+                value_array.append(rec['VALUE'])
+                count_array.append(rec['COUNT'])
+                val_range_array.append(rec['VAL_RANGE'])
+            LOGGER.debug('ranges : %s : %s', val_range_array, calc_val_range_array)
+            for i in range(5):
+                self.assertEqual(value_array[i], calc_value_array[i])
+                self.assertEqual(count_array[i], calc_count_array[i])
+                self.assertEqual(val_range_array[i], calc_val_range_array[i])
+            db_file.close()
+        except IOError, error:
+            self.assertTrue(False, 'The dbf file could not be opened')
            
     def test_wave_energy_get_percentiles(self):
+        """A straight forward test that passes in a list of percentiles
+        and a list of values.  The returned percentile marks are compared
+        against hand calculated results."""
+        
         #hand make lists and check that correct percentiles are returned
         values = np.arange(1,101)
         calc_percentiles = [25, 50, 75, 90]
@@ -748,6 +761,10 @@ class TestWaveEnergy(unittest.TestCase):
         return
     
     def test_wave_energy_create_percentile_ranges(self):
+        """A non-trivial test case that compares hand calculated
+        percentile ranges with ranges returned from the function being
+        tested."""
+        
         #Given a list make sure proper strings are being returned
         units_short = ' (m/s)'
         units_long = ' the rate of time travel in meters per second (m/s)'
@@ -759,14 +776,43 @@ class TestWaveEnergy(unittest.TestCase):
         return
     
     def test_wave_energy_create_attribute_table(self):
+        """A non-trivial test case that compares hand calculated
+        attribute table values against the returned dbf's values
+        from the function being tested."""
+        
+        test_dir = './data/wave_energy_data'
+        raster_uri = test_dir + os.sep + 'test_attr_table.tif'
+        dbf_uri = raster_uri + '.vat.dbf'
+        #Add the Output directory onto the given workspace
+        output_dir = test_dir + os.sep + 'test_output/'
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        if os.path.isfile(dbf_uri):
+            os.remove(dbf_uri)
         #make a dummy attribute table
-        
-        
-        #create_attribute_table(raster_uri, attribute_values, counter)
+        calc_ranges = ['1 - 4 the rate of time travel in meters per second (m/s)',
+                            '4 - 8 (m/s)', '8 - 12 (m/s)', '12 - 16 (m/s)', 'Greater than 16 (m/s)']
+        calc_count = [24, 25, 25, 15, 11]
+        calc_values = [1,2,3,4,5]
+        wave_energy_core.create_attribute_table(raster_uri, calc_ranges, calc_count)
         #make sure file exists
-        
-        #assert that dummy and returned tables are equal
-        return
+        try:
+            db_file = dbf.Dbf(dbf_uri)
+            value_array = []
+            count_array = []
+            val_range_array = []
+            for rec in db_file:
+                value_array.append(rec['VALUE'])
+                count_array.append(rec['COUNT'])
+                val_range_array.append(rec['VAL_RANGE'])
+            LOGGER.debug('ranges : %s : %s', val_range_array, calc_ranges)
+            for i in range(5):
+                self.assertEqual(value_array[i], calc_values[i])
+                self.assertEqual(count_array[i], calc_count[i])
+                self.assertEqual(val_range_array[i], calc_ranges[i])
+            db_file.close()
+        except IOError, error:
+            self.assertTrue(False, 'The dbf file could not be opened')
         
 #    def test_wave_energy_valuation_regression(self):
 #        """Runs the valuation part of the Wave Energy Model (WEM),
