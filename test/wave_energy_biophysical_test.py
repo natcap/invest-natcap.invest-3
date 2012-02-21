@@ -7,6 +7,7 @@ import numpy as np
 from osgeo import ogr
 from invest_natcap.wave_energy import wave_energy_biophysical
 import invest_test_core
+from invest_natcap.dbfpy import dbf
 
 LOGGER = logging.getLogger('wave_energy_biophysical_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -37,10 +38,51 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
             args['workspace_dir'] + '/Output/wp_kw.tif',
             regression_dir + '/wp_kw_regression.tif')
         
+        #Regression Check for wave power percentile raster
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + '/Output/wp_rc.tif',
+            regression_dir + '/wp_rc_regression.tif')
+        
+        #Regression Check for captured wave energy percentile raster
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            args['workspace_dir'] + '/Output/capwe_rc.tif',
+            regression_dir + '/capwe_rc_regression.tif')        
+        
         #Regression Check for WEM_InputOutput_Pts shapefile
         wave_data_shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
         regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_bio_regression.shp'
         invest_test_core.assertTwoShapesEqualURI(self, wave_data_shape_path, regression_shape_path)
+        #Regression check to make sure the dbf files with the attributes for the
+        #percentile rasters are correct
+        try:
+            regression_table = dbf.Dbf(regression_dir + os.sep + 'wp_rc_regression.tif.vat.dbf')
+            db_file = dbf.Dbf(args['workspace_dir'] + os.sep + 'Output/wp_rc.tif.vat.dbf')
+            value_array = []
+            count_array = []
+            val_range_array = []
+            for rec, reg_rec in zip(db_file, regression_table):
+                self.assertEqual(rec['VALUE'], reg_rec['VALUE'])
+                self.assertEqual(rec['COUNT'], reg_rec['COUNT'])
+                self.assertEqual(rec['VAL_RANGE'], reg_rec['VAL_RANGE'])
+            db_file.close()
+            regression_table.close()
+        except IOError, error:
+            self.assertTrue(False, 'The dbf file could not be opened')
+
+        try:
+            regression_table = dbf.Dbf(regression_dir + os.sep + 'capwe_rc_regression.tif.vat.dbf')
+            db_file = dbf.Dbf(args['workspace_dir'] + os.sep + 'Output/capwe_rc.tif.vat.dbf')
+            value_array = []
+            count_array = []
+            val_range_array = []
+            for rec, reg_rec in zip(db_file, regression_table):
+                self.assertEqual(rec['VALUE'], reg_rec['VALUE'])
+                self.assertEqual(rec['COUNT'], reg_rec['COUNT'])
+                self.assertEqual(rec['VAL_RANGE'], reg_rec['VAL_RANGE'])
+            db_file.close()
+            regression_table.close()
+        except IOError, error:
+            self.assertTrue(False, 'The dbf file could not be opened')
 
     def test_wave_energy_extrapolate_wave_data(self):
         """A test for the extrapolate_wate_data function that
