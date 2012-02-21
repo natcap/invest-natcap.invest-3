@@ -11,6 +11,7 @@ import osgeo.osr as osr
 from osgeo import ogr
 from scipy.interpolate import LinearNDInterpolator as ip
 from scipy import stats
+from bisect import bisect
 
 from invest_natcap.dbfpy import dbf
 import invest_cython_core
@@ -235,29 +236,17 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     #Generate Percentiles
     #Initialize a list that will hold pixel counts for each
     #percentile range
-    pixel_count = [0,0,0,0,0]
     def raster_percentile(band):
         """Operation to use in vectorize1ArgOp that takes
         the pixels of 'band' and groups them together based on 
-        their percentile ranges. At the same time a count is kept of
-        how many pixels fall into each group
+        their percentile ranges.
         
         band - A gdal raster band
         
-        returns - An integer 0-5 that places each pixel into a group
-         """
-        if band > percentiles[3]:
-            return 5
-        elif band > percentiles[2]:
-            return 4
-        elif band > percentiles[1]:
-            return 3
-        elif band > percentiles[0]:
-            return 2
-        elif band > 0:
-            return 1
-        else:
-            return 0
+        returns - An integer that places each pixel into a group
+        """
+        return bisect(percentiles, band)
+    
     #Read in the values of the raster we want to get percentiles from
     matrix = np.array(dataset_band.ReadAsArray())
     #Flatten the 2D numpy array into a 1D numpy array
@@ -274,15 +263,18 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     #Get the percentile ranges
     attribute_values = create_percentile_ranges(percentiles, units_short, units_long, start_value)
     #Classify the pixels of raster_dataset into group and write then to output band
+    percentiles.insert(0, int(start_value))
     invest_core.vectorize1ArgOp(dataset_band, raster_percentile, percentile_band)
 
+    pixel_count = np.zeros(len(percentile_list) + 1)
     perc_array = percentile_band.ReadAsArray()
-    for percentile_class in [1,2,3,4,5]:
+    percentile_groups = np.arange(1, len(percentiles)+1)
+    for percentile_class in percentile_groups:
         #This line of code takes the numpy array 'perc_array', which holds the values
         #from the percentile_band after being grouped, and checks to see where the
-        #values are equal to a certain identifier, which in turn gives an array of
-        #the number indices where the case was true, then takes the size of that array,
-        #effectively giving us the number of pixels for that value.
+        #values are equal to a certain a group. This check gives an array of
+        #indices where the case was true, so we take the size of that array
+        #to give us the number of pixels that fall in that group.
         pixel_count[percentile_class-1] = np.where(perc_array == percentile_class)[0].size  
     
     logging.debug('number of pixels per group: : %s', pixel_count)
@@ -300,7 +292,7 @@ def get_percentiles(value_list, percentile_list):
     returns - A list of integers which are the percentile marks
     """
     pct_list = []
-    for percentile in enumerate(percentile_list):
+    for percentile in percentile_list:
         pct_list.append(int(stats.scoreatpercentile(value_list, percentile)))
     return pct_list
     
