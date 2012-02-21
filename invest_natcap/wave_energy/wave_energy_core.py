@@ -186,9 +186,9 @@ def biophysical(args):
     wave_power_raster.FlushCache()
     #Create the percentile rasters for wave energy and wave power
     capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, 
-                                         ' (MWh/yr)', ' megawatt hours per year (MWh/yr)')
+                                         ' (MWh/yr)', ' megawatt hours per year (MWh/yr)', '1')
     wp_rc = create_percentile_rasters(wave_power_raster, wp_rc_path,
-                                      ' (kW/m)', ' wave power per unit width of wave crest length (kW/m)')
+                                      ' (kW/m)', ' wave power per unit width of wave crest length (kW/m)', '1')
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
@@ -204,7 +204,7 @@ def biophysical(args):
         if re.search(pattern, f):
             os.remove(os.path.join(intermediate_dir, f))
 
-def create_percentile_rasters(raster_dataset, output_path, units_short, units_long):
+def create_percentile_rasters(raster_dataset, output_path, units_short, units_long, start_value):
     """Creates a percentile (quartile) raster based on the raster_dataset. An 
     attribute table is also constructed for the raster_dataset that displays the
     ranges provided by taking the quartile of values.  The following inputs are required:
@@ -215,7 +215,9 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
                   raster values (ex: kW/m)
     units_long - A String that represents the description of the units of the
                  raster values (ex: wave power per unit width of wave crest length (kW/m))
-    
+    start_value - A String representing the first value that goes to the first percentile
+                  range (start_value - percentile_one)
+                  
     return - The new gdal raster
     """
     #If the output_path is already a file, delete it
@@ -267,7 +269,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     percentiles = get_percentiles(dataset_comp)
     logger.debug('percentiles_list : %s', percentiles)
     #Get the percentile ranges
-    attribute_values = create_percentile_ranges(percentiles, units_short, units_long)
+    attribute_values = create_percentile_ranges(percentiles, units_short, units_long, start_value)
     #Classify the pixels of raster_dataset into group and write then to output band
     invest_core.vectorize1ArgOp(dataset_band, raster_percentile, percentile_band)
 
@@ -299,7 +301,7 @@ def get_percentiles(value_list):
     pct_list.append(int(stats.scoreatpercentile(value_list, 90)))
     return pct_list
     
-def create_percentile_ranges(percentiles, units_short, units_long):
+def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     """Constructs the percentile ranges as Strings, with the first
     range starting at 1 and the last range being greater than the last
     percentile mark.  Each string range is stored in a list that gets returned
@@ -309,16 +311,25 @@ def create_percentile_ranges(percentiles, units_short, units_long):
                   raster values (ex: kW/m)
     units_long - A String that represents the description of the units of the
                  raster values (ex: wave power per unit width of wave crest length (kW/m))
-    
+    start_value - A String representing the first value that goes to the first percentile
+                  range (start_value - percentile_one)
+                  
     returns - A list of Strings representing the ranges of the percentiles
     """
-    range_one = '1 - ' + str(percentiles[0]) + units_long
-    range_two = str(percentiles[0]) + ' - ' + str(percentiles[1]) + units_short
-    range_three = str(percentiles[1]) + ' - ' + str(percentiles[2]) + units_short
-    range_four = str(percentiles[2]) + ' - ' + str(percentiles[3]) + units_short
-    range_five = 'Greater than ' + str(percentiles[3]) + units_short
-    attribute_values = [range_one, range_two, range_three, range_four, range_five]
-    return attribute_values
+    length = len(percentiles)
+    range_values = []
+    #Add the first range with the starting value and long description of units
+    #This function will fail and cause an error if the percentile list is empty
+    range_first = start_value + ' - ' + str(percentiles[0]) + units_long
+    range_values.append(range_first)
+    for index in range(length - 1):
+        range_values.append(str(percentiles[index]) + ' - ' + 
+                            str(percentiles[index+1]) + units_short)
+    #Add the last range to the range of values list
+    range_last = 'Greater than ' + str(percentiles[length-1]) + units_short
+    range_values.append(range_last)
+    logger.debug('range_values : %s', range_values)
+    return range_values
 
 def create_attribute_table(raster_uri, attribute_values, counter):
     """Creates an attribute table of type '.vat.dbf'.  The attribute table
@@ -943,7 +954,7 @@ def valuation(args):
     logger.debug('Done interpolating NPV over raster.')
     #Create the percentile raster for net present value
     npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, 
-                                         ' (US$)', ' thousands of US dollars (US$)')
+                                         ' (US$)', ' thousands of US dollars (US$)', '1')
     npv_rc = None
     npv_raster = None
     wave_data_shape.Destroy()
