@@ -185,10 +185,12 @@ def biophysical(args):
     wave_energy_raster.FlushCache()    
     wave_power_raster.FlushCache()
     #Create the percentile rasters for wave energy and wave power
-    capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, 
-                                         ' (MWh/yr)', ' megawatt hours per year (MWh/yr)', '1')
-    wp_rc = create_percentile_rasters(wave_power_raster, wp_rc_path,
-                                      ' (kW/m)', ' wave power per unit width of wave crest length (kW/m)', '1')
+    percentiles = [25,50,75,90]
+    capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, ' (MWh/yr)', 
+                                         ' megawatt hours per year (MWh/yr)', '1', percentiles)
+    wp_rc = create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)', 
+                                      ' wave power per unit width of wave crest length (kW/m)', '1',
+                                      percentiles)
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
@@ -204,7 +206,8 @@ def biophysical(args):
         if re.search(pattern, f):
             os.remove(os.path.join(intermediate_dir, f))
 
-def create_percentile_rasters(raster_dataset, output_path, units_short, units_long, start_value):
+def create_percentile_rasters(raster_dataset, output_path, units_short, units_long, 
+                              start_value, percentile_list):
     """Creates a percentile (quartile) raster based on the raster_dataset. An 
     attribute table is also constructed for the raster_dataset that displays the
     ranges provided by taking the quartile of values.  The following inputs are required:
@@ -266,7 +269,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     #Get all of the non-masked (non-nodata) data
     dataset_comp = np.ma.compressed(dataset_mask)
     #Get the percentile marks
-    percentiles = get_percentiles(dataset_comp)
+    percentiles = get_percentiles(dataset_comp, percentile_list)
     logger.debug('percentiles_list : %s', percentiles)
     #Get the percentile ranges
     attribute_values = create_percentile_ranges(percentiles, units_short, units_long, start_value)
@@ -287,18 +290,18 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     
     return percentile_raster
 
-def get_percentiles(value_list):
+def get_percentiles(value_list, percentile_list):
     """Creates a list of integers of the four percentile marks
     
     value_list - A list of numbers
-    
-    returns - A list of four numbers which are the percentile marks
+    percentile_list - A list of ascending integers of the desired
+                      percentiles
+                      
+    returns - A list of integers which are the percentile marks
     """
     pct_list = []
-    pct_list.append(int(stats.scoreatpercentile(value_list, 25)))
-    pct_list.append(int(stats.scoreatpercentile(value_list, 50)))
-    pct_list.append(int(stats.scoreatpercentile(value_list, 75)))
-    pct_list.append(int(stats.scoreatpercentile(value_list, 90)))
+    for percentile in enumerate(percentile_list):
+        pct_list.append(int(stats.scoreatpercentile(value_list, percentile)))
     return pct_list
     
 def create_percentile_ranges(percentiles, units_short, units_long, start_value):
@@ -953,8 +956,9 @@ def valuation(args):
                               npv_array[1], npv_raster)
     logger.debug('Done interpolating NPV over raster.')
     #Create the percentile raster for net present value
-    npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, 
-                                         ' (US$)', ' thousands of US dollars (US$)', '1')
+    percentiles = [25,50,75,90]
+    npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, ' (US$)', 
+                                       ' thousands of US dollars (US$)', '1', percentiles)
     npv_rc = None
     npv_raster = None
     wave_data_shape.Destroy()
