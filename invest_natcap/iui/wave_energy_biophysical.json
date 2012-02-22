@@ -83,7 +83,8 @@
                     "defaultValue": "./WaveEnergy/Input/AOI_WCVI.shp",
                     "required": false,
                     "validateAs": {"type": "OGR", 
-                    			   "layer": {"type": "polygons"}
+                    			   "layers": [{"name": {'inheritFrom':'file'}, 
+                    			               "type": "polygons", "projection" : "Transverse_Mercator"}
                     			   }
                 }
             ]

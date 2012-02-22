@@ -30,10 +30,10 @@
                     				"fieldsExist": ["ID", "TYPE", "LAT", "LONG", "LOCATION"],
                     				"restrictions": [{"field": "ID",
                                     				"validateAs": {"type": "number",
-                                                   				   "allowedValues": {"pattern":"[0-9]"}}},
+                                                   				   "allowedValues": {"pattern":"[0-9]+"}}},
                                      				{"field": "TYPE",
                                       				"validateAs": {"type": "string",
-                                                    "allowedValues":{"pattern":"LAND|GRID"}}},
+                                                    "allowedValues":{"pattern":"LAND|GRID", "flag":"ignoreCase"}}},
                                                     {"field": "LAT",
                                       				"validateAs": {"type": "number",
                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}},
@@ -52,16 +52,11 @@
 		            "required": true,
 		            "validateAs": { "type": "CSV",
                     				"fieldsExist": ["NAME", "VALUE", "NOTE"],
-                    				"restrictions": [{"field": "ID",
-                                    				"validateAs": {"type": "number",
-                                                   				   "allowedValues": {"pattern":"[0-9]"}}},
-                                     				{"field": "TYPE",
-                                      				"validateAs": {"type": "string",
-                                                    "allowedValues":{"pattern":"LAND|GRID"}}},
-                                                    {"field": "LAT",
-                                      				"validateAs": {"type": "number",
-                                                    "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}},
-                                                    {"field": "LONG",
+                    				"restrictions": [{"field": "NAME",
+                                    				"validateAs": {"type": "string",
+                                                   				   "allowedValues": {"pattern":"capmax|cc|cml|cul|col|omc|p|r|smlpm", 
+                                                   				                     "flag": "ignoreCase"}}},
+                                     				{"field": "VALUE",
                                       				"validateAs": {"type": "number",
                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
                                         ]}                                    
@@ -84,8 +79,8 @@
                     "defaultValue": "./WaveEnergy/Intermediate/WaveData_clipZ.shp",
                     "required": true,
                     "validateAs": {"type":"OGR",
-                    			   "layer": {"name": "layer_name",
-                                             "type": "polygons"},
+                    			   "layers": [{"name": {"inheritFrom": "file"}",
+                                             "type": "polygons", "projection" : "Transverse_Mercator"}],
                                    "fieldsExist": ["Depth_M", "capWE_Sum"]}
                 },
                 {
@@ -95,7 +90,7 @@
                     "label": "Number Of Machines",
                     "defaultValue": "28",
                     "required": true,
-                    "validText": "[0-9]"
+                    "validText": "[0-9]+"
                 }
             ]
         }
