@@ -289,7 +289,7 @@ class OGRChecker(TableChecker):
 
         self.file = ogr.Open(str(self.uri))
         
-        if not isinstance(ogrFile, osgeo.ogr.DataSource):
+        if not isinstance(self.File, osgeo.ogr.DataSource):
             return str('Shapefile not compatible with OGR')
 
     def check_layers(self, layer_list):
