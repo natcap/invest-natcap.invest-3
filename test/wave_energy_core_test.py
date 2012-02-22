@@ -686,6 +686,7 @@ class TestWaveEnergy(unittest.TestCase):
         calculated results."""
         
         test_dir = './data/wave_energy_data'
+        #Output path for created raster
         perc_path = test_dir + os.sep + 'test_output/percentile_five_by_five.tif'
         #Add the Output directory onto the given workspace
         output_dir = test_dir + os.sep + 'test_output/'
@@ -693,11 +694,11 @@ class TestWaveEnergy(unittest.TestCase):
             os.mkdir(output_dir)
         if os.path.isfile(perc_path):
             os.remove(perc_path)
-        #make a dummy 5 x 5 raster
+        #Make a dummy 10 x 10 raster
         raster_size = 10
         driver = gdal.GetDriverByName('GTiff')
         dataset = driver.Create(perc_path, raster_size, raster_size, 1, gdal.GDT_Int32)
-    
+        #Create a 10 x 10 2D numpy array with values ranging from 1 to 100
         raster_data = np.reshape(np.arange(1,101),(10,10))
         dataset.GetRasterBand(1).WriteArray(raster_data, 0, 0)
         calculated_perc_list = [25,50,75,90]
@@ -727,8 +728,9 @@ class TestWaveEnergy(unittest.TestCase):
         perc_matrix = perc_band.ReadAsArray()
         LOGGER.debug('percentile matrix: %s', perc_matrix)
         LOGGER.debug('matrix: %s', calculated_output_raster)
+        #Assert that the resulting raster's data is what is expected
         self.assertTrue((perc_matrix == calculated_output_raster).all())
-        
+        #Verify the resulting dbf attribute table is what is expected
         try:
             db_file = dbf.Dbf(perc_path+'.vat.dbf')
             value_array = []
@@ -752,9 +754,12 @@ class TestWaveEnergy(unittest.TestCase):
         
         test_dir = './data/wave_energy_data'
         regression_dir = './data/wave_energy_regression_data'
+        #The raster dataset input
         regression_dataset_uri = regression_dir + os.sep + 'wp_kw_regression.tif'
+        #The raster dataset and dbf file to test against
         regression_perc_uri = regression_dir + os.sep + 'wp_rc_regression.tif'
         regression_table_uri = regression_dir + os.sep + 'wp_rc_regression.tif.vat.dbf'
+        #The resulting output raster location the function produces
         perc_path = test_dir + os.sep + 'test_output/wp_percentile.tif'
         #Add the Output directory onto the given workspace
         output_dir = test_dir + os.sep + 'test_output/'
@@ -771,10 +776,10 @@ class TestWaveEnergy(unittest.TestCase):
                                                                        [25,50,75,90])
         percentile_raster = None
         regression_dataset = None
-        
+        #Check the resulting raster against the regression raster
         invest_test_core.assertTwoDatasetEqualURI(self,
             regression_perc_uri, perc_path)
-        
+        #Verify the dbf attribute tables are correct
         try:
             regression_table = dbf.Dbf(regression_table_uri)
             db_file = dbf.Dbf(perc_path+'.vat.dbf')
@@ -789,14 +794,12 @@ class TestWaveEnergy(unittest.TestCase):
             regression_table.close()
         except IOError, error:
             self.assertTrue(False, 'The dbf file could not be opened')
-           
         
     def test_wave_energy_get_percentiles(self):
         """A straight forward test that passes in a list of percentiles
         and a list of values.  The returned percentile marks are compared
         against hand calculated results."""
         
-        #hand make lists and check that correct percentiles are returned
         values = np.arange(1,101)
         calc_percentiles = [25, 50, 75, 90]
         perc_list = [25,50,75,90]
@@ -809,13 +812,13 @@ class TestWaveEnergy(unittest.TestCase):
         percentile ranges with ranges returned from the function being
         tested."""
         
-        #Given a list make sure proper strings are being returned
         units_short = ' (m/s)'
         units_long = ' the rate of time travel in meters per second (m/s)'
         percentiles = [4, 8, 12, 16]
         ranges = wave_energy_core.create_percentile_ranges(percentiles, units_short, units_long, '1')
         calc_ranges = ['1 - 4 the rate of time travel in meters per second (m/s)',
                        '4 - 8 (m/s)', '8 - 12 (m/s)', '12 - 16 (m/s)', 'Greater than 16 (m/s)']
+        #Check that the returned ranges as Strings are correct
         self.assertTrue(ranges == calc_ranges)
         return
     
@@ -825,7 +828,7 @@ class TestWaveEnergy(unittest.TestCase):
         from the function being tested."""
         
         test_dir = './data/wave_energy_data'
-        raster_uri = test_dir + os.sep + 'test_attr_table.tif'
+        raster_uri = test_dir + os.sep + 'test_output/test_attr_table.tif'
         dbf_uri = raster_uri + '.vat.dbf'
         #Add the Output directory onto the given workspace
         output_dir = test_dir + os.sep + 'test_output/'
@@ -833,13 +836,15 @@ class TestWaveEnergy(unittest.TestCase):
             os.mkdir(output_dir)
         if os.path.isfile(dbf_uri):
             os.remove(dbf_uri)
-        #make a dummy attribute table
+        #Make pre-calculated attribute table that should match the results
+        #the function returns
         calc_ranges = ['1 - 4 the rate of time travel in meters per second (m/s)',
                             '4 - 8 (m/s)', '8 - 12 (m/s)', '12 - 16 (m/s)', 'Greater than 16 (m/s)']
         calc_count = [24, 25, 25, 15, 11]
         calc_values = [1,2,3,4,5]
         wave_energy_core.create_attribute_table(raster_uri, calc_ranges, calc_count)
-        #make sure file exists
+        #Check that the dbf attribute table returned is correct and what
+        #is expected
         try:
             db_file = dbf.Dbf(dbf_uri)
             value_array = []
