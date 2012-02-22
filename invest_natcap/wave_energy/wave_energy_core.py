@@ -233,9 +233,6 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     #Get raster bands
     percentile_band = percentile_raster.GetRasterBand(1)
     dataset_band = raster_dataset.GetRasterBand(1)
-    #Generate Percentiles
-    #Initialize a list that will hold pixel counts for each
-    #percentile range
     def raster_percentile(band):
         """Operation to use in vectorize1ArgOp that takes
         the pixels of 'band' and groups them together based on 
@@ -262,13 +259,16 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     logger.debug('percentiles_list : %s', percentiles)
     #Get the percentile ranges
     attribute_values = create_percentile_ranges(percentiles, units_short, units_long, start_value)
-    #Classify the pixels of raster_dataset into group and write then to output band
+    #Add the start_value to the beginning of the percentiles so that any value
+    #before the start value is set to nodata (zero)
     percentiles.insert(0, int(start_value))
+    #Classify the pixels of raster_dataset into groups and write then to output band
     invest_core.vectorize1ArgOp(dataset_band, raster_percentile, percentile_band)
-
+    #Initialize a list that will hold pixel counts for each group
     pixel_count = np.zeros(len(percentile_list) + 1)
+    #Read in percentile raster so that we can get the count of each group
     perc_array = percentile_band.ReadAsArray()
-    percentile_groups = np.arange(1, len(percentiles)+1)
+    percentile_groups = np.arange(1, len(percentile_list)+1)
     for percentile_class in percentile_groups:
         #This line of code takes the numpy array 'perc_array', which holds the values
         #from the percentile_band after being grouped, and checks to see where the
@@ -278,6 +278,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
         pixel_count[percentile_class-1] = np.where(perc_array == percentile_class)[0].size  
     
     logging.debug('number of pixels per group: : %s', pixel_count)
+    #Generate the attribute table for the percentile raster
     create_attribute_table(output_path, attribute_values, pixel_count)
     
     return percentile_raster
@@ -339,12 +340,14 @@ def create_attribute_table(raster_uri, attribute_values, counter):
     
     returns - nothing
     """
+    #Create a new dbf file with the same name as the GTiff plus a .vat.dbf
     output_path = raster_uri + '.vat.dbf'
     #If the dbf file already exists, delete it
     if os.path.isfile(output_path):
         os.remove(output_path)
-    #Create a new dbf file with the same name as the GTiff plus a .vat.dbf
+    #Create new table
     dataset_attribute_table = dbf.Dbf(output_path, new=True)
+    #Set the defined fields for the table
     dataset_attribute_table.addField(
                  #integer field
                  ("VALUE", "N", 9),
@@ -359,7 +362,6 @@ def create_attribute_table(raster_uri, attribute_values, counter):
         rec["VALUE"] = id_value+1
         rec["COUNT"] = int(counter[id_value])
         rec["VAL_RANGE"] = attribute_values[id_value]
-
         rec.store()
     dataset_attribute_table.close()
     
