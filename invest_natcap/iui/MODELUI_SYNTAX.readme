@@ -214,6 +214,10 @@ others are optional.
     input layer:
         "name" : Required.  A String.  The name of the layer.  If a layer with
                  this name is not found in the shapefile, an error is returned.
+                 If "name" correlates to a dictionary with the key "inheritFrom"
+                 and the value "file", the OGR datasource's filename will be
+                 examined and a layer will be opened with the file's name (minus
+                 the suffix).  Uses os.path.splitext for finding the layer name.
         "type" : Optional.  A string.  Allowed values: "polygons", "points".
                  This option allows the user to specify the type of the given
                  layer.  Returns an error if this layer is not of the correct
@@ -230,7 +234,9 @@ others are optional.
                    "layers": [{"name": "layer_name",
                                "type": "polygons"},
                               {"name": "layer_name_2",
-                               "projection" : "Transverse_Mercator"}],
+                               "projection" : "Transverse_Mercator"},
+                              {"name": {"inheritFrom": "file"},
+                               "type": "polygons"}],
                    "fieldsExist": ["field1", "field2", "field3", ...]}
 
 
