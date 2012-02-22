@@ -301,7 +301,8 @@ class OGRChecker(TableChecker):
             #used when the engineer wants to specify a layer that is the same as
             #the filename without the file suffix.
             if isinstance(layer_name, dict):
-                layer_name = os.path.splitext(self.file.GetName())[0]
+                tmp_name = os.path.basename(self.file.GetName())[0]
+                layer_name = os.path.splitext(tmp_name)
 
             self.layer = self.file.GetLayerByName(str(layer_name))
             
