@@ -83,19 +83,19 @@ def biophysical(args):
         area_shape = clip_shape(analysis_shape, cutter, prj_shape_path)
         #Get the coordinates of a point from the wave data shapefile
         area_layer = area_shape.GetLayer(0)
-        analysis_feat = area_layer.GetNextFeature()
-        analysis_geom = analysis_feat.GetGeometryRef()
-        analysis_lat = analysis_geom.GetX()
-        analysis_long = analysis_geom.GetY()
+        area_feat = area_layer.GetNextFeature()
+        area_geom = area_feat.GetGeometryRef()
+        area_lat = area_geom.GetX()
+        area_long = area_geom.GetY()
         #Create a coordinate transformation from lat/long to area of interest's projection
         target_sr = cutter.GetLayer(0).GetSpatialRef()
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
         #Convert the point from meters to lat/long
-        analysis_point = coord_trans_opposite.TransformPoint(analysis_lat, analysis_long)
+        area_point = coord_trans_opposite.TransformPoint(area_lat, area_long)
         #Get the size of the pixels in meters, to be used for creating rasters
         pixel_size_tuple = invest_cython_core.pixel_size_in_meters(global_dem, coord_trans,
-                                                                   analysis_point)
+                                                                   area_point)
         pixel_xsize = pixel_size_tuple[0]
         pixel_ysize = pixel_size_tuple[1]
         logger.debug('X pixel size in meters : %f', pixel_xsize)
@@ -103,9 +103,8 @@ def biophysical(args):
         #Reset the layer to point at the first feature and clean up
         #variables
         area_layer.ResetReading()
-        analysis_layer = None
-        analysis_feat.Destroy()
-        analysis_geom = None
+        area_feat.Destroy()
+        area_geom = None
     else:
         #The polygon shapefile that specifies the area of interest
         cutter = args['analysis_area_extract']
