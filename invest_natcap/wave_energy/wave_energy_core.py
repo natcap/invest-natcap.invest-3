@@ -268,7 +268,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     pixel_count = np.zeros(len(percentile_list) + 1)
     #Read in percentile raster so that we can get the count of each group
     perc_array = percentile_band.ReadAsArray()
-    percentile_groups = np.arange(1, len(percentile_list)+1)
+    percentile_groups = np.arange(1, len(percentiles)+1)
     for percentile_class in percentile_groups:
         #This line of code takes the numpy array 'perc_array', which holds the values
         #from the percentile_band after being grouped, and checks to see where the
