@@ -70,8 +70,8 @@ def execute(args):
         biophysical_args['machine_perf'] = machine_perf_array
     except IOError, error:
         print 'File I/O error' + error
-    #Create a dictionary whose keys are the 'NAMES' from the machine parameter table
-    #and whose values are from the corresponding 'VALUES' field.
+    #Create a dictionary whose keys are the 'NAMES' from the machine parameter
+    #table and whose values are from the corresponding 'VALUES' field.
     try:
         machine_params = {}
         machine_param_file = open(args['machine_param_uri'])
@@ -83,8 +83,10 @@ def execute(args):
     except IOError, error:
         print 'File I/O error' + error
     #Depending on which analysis area is selected:
-    #Extrapolate the corresponding WW3 Data and place in the biophysical_args dictionary.
-    #Open the point geometry analysis area shapefile containing the corresponding wave farm sites.
+    #Extrapolate the corresponding WW3 Data and place in the 
+    #biophysical_args dictionary.
+    #Open the point geometry analysis area shapefile containing the 
+    #corresponding wave farm sites.
     #Open the polygon geometry analysis area extract shapefile contaning the 
     #outline of the area of interest.
     if args['analysis_area_uri'] == 'West Coast of North America and Hawaii':

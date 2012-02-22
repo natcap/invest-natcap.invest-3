@@ -7,8 +7,6 @@ import logging
 from osgeo import ogr
 from osgeo import gdal
 
-import invest_cython_core
-from invest_natcap.invest_core import invest_core
 from invest_natcap.wave_energy import wave_energy_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
