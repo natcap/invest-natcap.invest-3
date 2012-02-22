@@ -279,7 +279,7 @@ class OGRChecker(TableChecker):
         updates = {'layers': self.check_layers}
         self.update_map(updates)
 
-        self.add_check_function(self.check_layers)
+        #self.add_check_function(self.check_layers)
 
         self.layer_types = {'polygons' : ogr.wkbPolygon,
                             'points'  : ogr.wkbPoint}
