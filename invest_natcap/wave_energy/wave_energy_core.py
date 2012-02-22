@@ -177,8 +177,8 @@ def biophysical(args):
     #Interpolate wave energy and wave power from the shapefile over the rasters
     logger.debug('Interpolate wave power and wave energy capacity onto rasters')
     logger.info('Generating Wave Power and Captured Wave Energy rasters.')
-    interp_points_over_raster(energy_sum_array[0], energy_sum_array[1], wave_energy_raster)
-    interp_points_over_raster(wave_power_array[0], wave_power_array[1], wave_power_raster)
+    interp_points_over_raster(energy_sum_array[0], energy_sum_array[1], wave_energy_raster, nodata)
+    interp_points_over_raster(wave_power_array[0], wave_power_array[1], wave_power_raster, nodata)
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
     wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
     wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
@@ -188,10 +188,10 @@ def biophysical(args):
     #Create the percentile rasters for wave energy and wave power
     percentiles = [25,50,75,90]
     capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, ' (MWh/yr)', 
-                                         ' megawatt hours per year (MWh/yr)', '1', percentiles)
+                                         ' megawatt hours per year (MWh/yr)', '1', percentiles, nodata)
     wp_rc = create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)', 
                                       ' wave power per unit width of wave crest length (kW/m)', '1',
-                                      percentiles)
+                                      percentiles, nodata)
     #Clean up Shapefiles and Rasters
     area_shape.Destroy()
     cutter.Destroy()
@@ -208,7 +208,7 @@ def biophysical(args):
             os.remove(os.path.join(intermediate_dir, f))
 
 def create_percentile_rasters(raster_dataset, output_path, units_short, units_long, 
-                              start_value, percentile_list):
+                              start_value, percentile_list, nodata):
     """Creates a percentile (quartile) raster based on the raster_dataset. An 
     attribute table is also constructed for the raster_dataset that displays the
     ranges provided by taking the quartile of values.  The following inputs are required:
@@ -251,7 +251,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     #Create a mask that makes all nodata values invalid.  Do this because
     #having a bunch of nodata values will muttle the results of getting the
     #percentiles
-    dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_array == 0)
+    dataset_mask = np.ma.masked_array(dataset_array, mask=dataset_array == nodata)
     #Get all of the non-masked (non-nodata) data
     dataset_comp = np.ma.compressed(dataset_mask)
     #Get the percentile marks
@@ -579,7 +579,7 @@ def get_points_values(shape, field):
     results = [points, values]
     return results
 
-def interp_points_over_raster(points, values, raster):
+def interp_points_over_raster(points, values, raster, nodata):
     """Interpolates a given set of points and values over new points
     provided by the raster and writes the interpolated matrix to the raster band.
     
@@ -587,6 +587,7 @@ def interp_points_over_raster(points, values, raster):
     values - A list of values corresponding to the points of 'points'
     raster - A raster to write the interpolated values too and to get the
              new dimensions from
+    nodata - An integer value that specifies the nodata value for the raster
     
     returns - Nothing
     """
@@ -608,7 +609,7 @@ def interp_points_over_raster(points, values, raster):
                            for i in np.arange(size_x) for j in np.arange(size_y)])
     logger.debug('New points from raster : %s', new_points)
     #Interpolate the points and values from the shapefile from earlier
-    spl = ip(points, values, fill_value=0)
+    spl = ip(points, values, fill_value=nodata)
     #Run the interpolator object over the new set of points from the raster. 
     #Will return a list of values.
     spl = spl(new_points)
@@ -933,7 +934,7 @@ def valuation(args):
         feat_npv = wave_data_layer.GetNextFeature()
 
     datatype = gdal.GDT_Float32
-    nodata = 0
+    nodata = -100000
     #Create a blank raster from the extents of the wave farm shapefile
     logger.debug('Creating Raster From Vector Extents')
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
@@ -946,13 +947,12 @@ def valuation(args):
     #corresponding points of the raster, then write the interpolated 
     #values to the raster
     logger.info('Generating Net Present Value Raster.')
-    interp_points_over_raster(npv_array[0],
-                              npv_array[1], npv_raster)
+    interp_points_over_raster(npv_array[0], npv_array[1], npv_raster, nodata)
     logger.debug('Done interpolating NPV over raster.')
     #Create the percentile raster for net present value
     percentiles = [25,50,75,90]
     npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, ' (US$)', 
-                                       ' thousands of US dollars (US$)', '1', percentiles)
+                                       ' thousands of US dollars (US$)', '1', percentiles, nodata)
     npv_rc = None
     npv_raster = None
     wave_data_shape.Destroy()

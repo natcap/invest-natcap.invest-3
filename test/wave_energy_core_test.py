@@ -516,7 +516,7 @@ class TestWaveEnergy(unittest.TestCase):
                            [  0., 11., 13., 15.],
                            [  0., 12., 14., 16.]])
 
-        wave_energy_core.interp_points_over_raster(points, values, raster)
+        wave_energy_core.interp_points_over_raster(points, values, raster, 0)
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray()
         self.assertEqual(matrix.size, result.size, 'The sizes are not the same')
@@ -723,7 +723,7 @@ class TestWaveEnergy(unittest.TestCase):
         units_long = ' the amount of mice per cat (mice/cat)'
         percentile_raster = wave_energy_core.create_percentile_rasters(dataset, perc_path, 
                                                                        units_short, units_long, '1',
-                                                                       [25,50,75,90])
+                                                                       [25,50,75,90], 0)
         perc_band = percentile_raster.GetRasterBand(1)
         perc_matrix = perc_band.ReadAsArray()
         LOGGER.debug('percentile matrix: %s', perc_matrix)
@@ -773,7 +773,7 @@ class TestWaveEnergy(unittest.TestCase):
         units_long = ' wave power per unit width of wave crest length (kW/m)'
         percentile_raster = wave_energy_core.create_percentile_rasters(regression_dataset, perc_path, 
                                                                        units_short, units_long, '1',
-                                                                       [25,50,75,90])
+                                                                       [25,50,75,90], 0)
         percentile_raster = None
         regression_dataset = None
         #Check the resulting raster against the regression raster
