@@ -186,10 +186,10 @@ def biophysical(args):
     wave_energy_raster.FlushCache()    
     wave_power_raster.FlushCache()
     #Create the percentile rasters for wave energy and wave power
-    percentiles = [25,50,75,90]
+    percentiles = [25, 50, 75, 90]
     capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, ' (MWh/yr)', 
                                          ' megawatt hours per year (MWh/yr)', '1', percentiles, nodata)
-    wp_rc = create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)', 
+    wp_rc_raster = create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)', 
                                       ' wave power per unit width of wave crest length (kW/m)', '1',
                                       percentiles, nodata)
     #Clean up Shapefiles and Rasters
@@ -203,9 +203,9 @@ def biophysical(args):
     pattern = wave_shape_path[wave_shape_path.rfind(os.sep) + 1:
                               len(wave_shape_path) - 4] + ".*"
     logging.debug('Regex file pattern : %s', pattern)
-    for f in os.listdir(intermediate_dir):
-        if re.search(pattern, f):
-            os.remove(os.path.join(intermediate_dir, f))
+    for file in os.listdir(intermediate_dir):
+        if re.search(pattern, file):
+            os.remove(os.path.join(intermediate_dir, file))
 
 def create_percentile_rasters(raster_dataset, output_path, units_short, units_long, 
                               start_value, percentile_list, nodata):
@@ -950,7 +950,7 @@ def valuation(args):
     interp_points_over_raster(npv_array[0], npv_array[1], npv_raster, nodata)
     logger.debug('Done interpolating NPV over raster.')
     #Create the percentile raster for net present value
-    percentiles = [25,50,75,90]
+    percentiles = [25, 50, 75, 90]
     npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, ' (US$)', 
                                        ' thousands of US dollars (US$)', '1', percentiles, nodata)
     npv_rc = None
