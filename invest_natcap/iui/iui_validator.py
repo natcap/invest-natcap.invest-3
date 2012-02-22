@@ -301,20 +301,20 @@ class OGRChecker(TableChecker):
             #used when the engineer wants to specify a layer that is the same as
             #the filename without the file suffix.
             if isinstance(layer_name, dict):
-                tmp_name = os.path.basename(self.file.GetName())[0]
-                layer_name = os.path.splitext(tmp_name)
+                tmp_name = os.path.basename(self.file.GetName())
+                layer_name = os.path.splitext(tmp_name)[0]
 
             self.layer = self.file.GetLayerByName(str(layer_name))
             
             if not isinstance(self.layer, osgeo.ogr.Layer):
                 return str('Shapefile must have a layer called ' + layer_name)
   
-            if 'projection' in valid_dict:
+            if 'projection' in layer_dict:
                 reference = self.layer.GetSpatialRef()
                 projection = reference.GetAttrValue('PROJECTION')
-                if projection != valid_dict['projection']:
+                if projection != layer_dict['projection']:
                     return str('Shapefile layer ' + layer_name + ' must be ' +
-                        'projected as ' + valid_dict['projection'])
+                        'projected as ' + layer_dict['projection'])
 
     def _check_layer_type(self, type_string):
         for feature in self.layer:
