@@ -297,6 +297,12 @@ class OGRChecker(TableChecker):
        
         for layer_dict in layer_list:
             layer_name = str(layer_dict['name'])
+
+            #used when the engineer wants to specify a layer that is the same as
+            #the filename without the file suffix.
+            if isinstance(layer_name, dict):
+                layer_name = os.path.splitext(self.file.GetName())[0]
+
             self.layer = self.file.GetLayerByName(layer_name)
             
             if not isinstance(self.layer, osgeo.ogr.Layer):
