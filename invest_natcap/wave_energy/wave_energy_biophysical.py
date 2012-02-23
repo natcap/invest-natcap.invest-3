@@ -184,9 +184,6 @@ def extrapolate_wave_data(wave_file_uri):
             else:
                 wave_array.append(line.split(','))
 
-
-
-
         wave_file.close()
         #Add row/col header to dictionary
         LOGGER.debug('WaveData row %s', wave_periods)

@@ -90,30 +90,26 @@ def biophysical(args):
         #Clip the wave data shape by the bounds provided from the area of interest
         clipped_wave_shape = \
             clip_shape(wave_shape, aoi_shape, clipped_wave_shape_path)
-
-        #Get the coordinates of a point from the wave data shapefile
-
+        
         #Get a point in the clipped shape to determine output grid size
-        clipped_wave_shape_geom = \
-            clipped_wave_shape.GetLayer(0).GetNextFeature().GetGeometryRef()
+        clipped_wave_shape_feat = clipped_wave_shape.GetLayer(0).GetNextFeature()
+        clipped_wave_shape_geom = clipped_wave_shape_feat.GetGeometryRef()
         reference_point_x = clipped_wave_shape_geom.GetX()
         reference_point_y = clipped_wave_shape_geom.GetY()
-
+        
         #Create a coordinate transformation from geom_x/long to area of interest's projection
         aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
         coord_trans = osr.CoordinateTransformation(analysis_area_sr, aoi_sr)
         coord_trans_opposite = osr.CoordinateTransformation(aoi_sr, analysis_area_sr)
-
+        
         #Convert the point from meters to geom_x/long
         reference_point_latlng = \
             coord_trans_opposite.TransformPoint(reference_point_x, \
                                                 reference_point_y)
-
         #Get the size of the pixels in meters, to be used for creating rasters
         pixel_size_tuple = \
             invest_cython_core.pixel_size_in_meters(global_dem, coord_trans,
                                                     reference_point_latlng)
-
         pixel_xsize, pixel_ysize = pixel_size_tuple
 
         LOGGER.debug('X pixel size in meters : %f', pixel_xsize)
