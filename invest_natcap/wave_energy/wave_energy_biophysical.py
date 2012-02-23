@@ -12,7 +12,7 @@ from invest_natcap.wave_energy import wave_energy_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-logger = logging.getLogger('wave_energy_biophysical')
+LOGGER = logging.getLogger('wave_energy_biophysical')
 
 def execute(args):
     """This function invokes the biophysical part of the wave energy model 
@@ -65,8 +65,8 @@ def execute(args):
             machine_perf_array[1].append(row.pop(0))
             machine_perf_array.append(row)
         machine_perf_file.close()
-        logger.debug('Machine Performance Rows : %s', machine_perf_array[0])
-        logger.debug('Machine Performance Cols : %s', machine_perf_array[1])
+        LOGGER.debug('Machine Performance Rows : %s', machine_perf_array[0])
+        LOGGER.debug('Machine Performance Cols : %s', machine_perf_array[1])
         biophysical_args['machine_perf'] = machine_perf_array
     except IOError, error:
         print 'File I/O error' + error
@@ -118,20 +118,20 @@ def execute(args):
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     else:
-        logger.debug('Analysis Area : %s', args['analysis_area_uri'])
+        LOGGER.debug('Analysis Area : %s', args['analysis_area_uri'])
         print 'Analysis Area ERROR. The Analysis Area Specified is not handled by this model.'
     #If the area of interest is present add it to the dictionary arguments
     if 'aoi_uri' in args:
         try:
-            logger.debug('AOI File : %s', args['aoi_uri'])
+            LOGGER.debug('AOI File : %s', args['aoi_uri'])
             aoi = ogr.Open(args['aoi_uri'])
             biophysical_args['aoi'] = aoi
         except IOError, error:
             print 'File I/O error' + error
     #Fire up the biophysical function in wave_energy_core with the gathered arguments
-    logger.info('Starting Wave Energy Biophysical.')
+    LOGGER.info('Starting Wave Energy Biophysical.')
     wave_energy_core.biophysical(biophysical_args)
-    logger.info('Completed Wave Energy Biophysical.')
+    LOGGER.info('Completed Wave Energy Biophysical.')
 
 def extrapolate_wave_data(wave_file_uri):
     """The extrapolate_wave_data function converts WW3 text data into a dictionary who's
@@ -143,7 +143,7 @@ def extrapolate_wave_data(wave_file_uri):
     
     returns - A dictionary of matrices representing hours of specific seastates.  
     """
-    logger.debug('Extrapolating wave data from text to a dictionary')
+    LOGGER.debug('Extrapolating wave data from text to a dictionary')
     try:
         wave_file = open(wave_file_uri)
         wave_dict = {}
@@ -189,11 +189,11 @@ def extrapolate_wave_data(wave_file_uri):
 
         wave_file.close()
         #Add row/col header to dictionary
-        logger.debug('WaveData row %s', wave_periods)
+        LOGGER.debug('WaveData row %s', wave_periods)
         wave_dict[0] = np.array(wave_periods, dtype='f')
-        logger.debug('WaveData col %s', wave_heights)
+        LOGGER.debug('WaveData col %s', wave_heights)
         wave_dict[1] = np.array(wave_heights, dtype='f')
-        logger.debug('Finished extrapolating wave data to dictionary')
+        LOGGER.debug('Finished extrapolating wave data to dictionary')
         return wave_dict
 
     except IOError, error:

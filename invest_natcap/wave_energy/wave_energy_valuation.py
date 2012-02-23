@@ -11,7 +11,7 @@ from invest_natcap.wave_energy import wave_energy_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-logger = logging.getLogger('wave_energy_valuation')
+LOGGER = logging.getLogger('wave_energy_valuation')
 
 def execute(args):
     """This function invokes the valuation part of the wave energy model given URI inputs.
@@ -49,14 +49,14 @@ def execute(args):
         machine_econ = {}
         machine_econ_file = open(args['machine_econ_uri'])
         reader = csv.DictReader(machine_econ_file)
-        logger.debug('reader fieldnames : %s ', reader.fieldnames)
+        LOGGER.debug('reader fieldnames : %s ', reader.fieldnames)
         #Read in the field names from the column headers
         name_key = reader.fieldnames[0]
         value_key = reader.fieldnames[1]
         for row in reader:
             #Convert name to lowercase
             name = row[name_key].strip().lower()
-            logger.debug('Name : %s and Value : % s', name, row[value_key])
+            LOGGER.debug('Name : %s and Value : % s', name, row[value_key])
             machine_econ[name] = row[value_key]
         machine_econ_file.close()
         valuation_args['machine_econ'] = machine_econ
@@ -68,19 +68,19 @@ def execute(args):
         land_grid_pts_file = open(args['land_gridPts_uri'])
         reader = csv.DictReader(land_grid_pts_file)
         for row in reader:
-            logger.debug('Land Grid Row: %s', row)
+            LOGGER.debug('Land Grid Row: %s', row)
             if row['ID'] in land_grid_pts:
                 land_grid_pts[row['ID'].strip()][row['TYPE']] = [row['LAT'],
                                                                  row['LONG']]
             else:
                 land_grid_pts[row['ID'].strip()] = {row['TYPE']:[row['LAT'],
                                                                  row['LONG']]}
-        logger.debug('New Land_Grid Dict : %s', land_grid_pts)
+        LOGGER.debug('New Land_Grid Dict : %s', land_grid_pts)
         land_grid_pts_file.close()
         valuation_args['land_gridPts'] = land_grid_pts
     except IOError, error:
         print 'File I/O error' + error
     #Call the valuation core module with attached arguments to run the economic valuation
-    logger.info('Beginning Wave Energy Valuation.')
+    LOGGER.info('Beginning Wave Energy Valuation.')
     wave_energy_core.valuation(valuation_args)
-    logger.info('Wave Energy Valuation Completed.')
+    LOGGER.info('Wave Energy Valuation Completed.')
