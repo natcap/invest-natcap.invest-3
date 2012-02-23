@@ -92,28 +92,28 @@ def execute(args):
     if args['analysis_area_uri'] == 'West Coast of North America and Hawaii':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri'] 
+        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
                                                                    + os.sep + 'NAmerica_WestCoast_4m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'East Coast of North America and Puerto Rico':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri'] 
+        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
                                                                    + os.sep + 'NAmerica_EastCoast_4m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global(Eastern Hemisphere)':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri'] 
+        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
                                                                    + os.sep + 'Global_EastHemi_30m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global(Western Hemisphere)':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri'] 
+        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
                                                                    + os.sep + 'Global_WestHemi_30m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
@@ -133,53 +133,66 @@ def execute(args):
     wave_energy_core.biophysical(biophysical_args)
     logger.info('Completed Wave Energy Biophysical.')
 
-def extrapolate_wave_data(wave_file):
+def extrapolate_wave_data(wave_file_uri):
     """The extrapolate_wave_data function converts WW3 text data into a dictionary who's
     keys are the corresponding (I,J) values and whose value is a two-dimensional array
     representing a matrix of the number of hours a seastate occurs over a 5 year period.
     The row and column headers are extracted once and stored in the dictionary as well.
     
-    wave_file - The path to a text document that holds the WW3 data.
+    wave_file_uri - The path to a text document that holds the WW3 data.
     
     returns - A dictionary of matrices representing hours of specific seastates.  
     """
     logger.debug('Extrapolating wave data from text to a dictionary')
     try:
-        wave_open = open(wave_file)
+        wave_file = open(wave_file_uri)
         wave_dict = {}
-        wave_array = []
-        wave_row = []
-        wave_col = []
-        key = ''
-        row_indicator = True
-        col_indicator = True
-        row_col_grab = 0
-        for line in wave_open:
+        wave_array = None
+        wave_periods = []
+        wave_heights = []
+        key = None
+
+        #get the periods and heights 
+        wave_file.readline() #skipping first I,J line
+        wave_periods = wave_file.readline().split(',')
+        wave_heights = wave_file.readline().split(',')
+
+        wave_file.seek(0) #reset to the first line in the file
+
+        while True:
+            line = wave_file.readline()
+            if len(line) == 0:
+                #end of file
+                wave_dict[key] = wave_array
+                break
+
             #If it is the start of a new location, get (I,J) values
             if line[0] == 'I':
-                key = (int(line.split(',')[1]), int(line.split(',')[3]))
+                #If key is not None that means there is a full array waiting
+                #to be written to the dictionary, so write it
+                if key != None:
+                    wave_dict[key] = wave_array
+
+                #Clear out array
                 wave_array = []
-                row_col_grab = 1
-            #If the lines are corresponding to row and column header, save them
-            #as lists.
-            elif row_col_grab == 1 or row_col_grab == 2:
-                row_col_grab = row_col_grab + 1
-                if row_indicator:
-                    wave_row = line.split(',')
-                    row_indicator = False
-                elif col_indicator:
-                    wave_col = line.split(',')
-                    col_indicator = False
-            #If the lines correspond to the seastate bin, save them
+
+                key = (int(line.split(',')[1]), int(line.split(',')[3]))
+
+                #Skip the next two lines that are period and height
+                wave_file.readline()
+                wave_file.readline()
             else:
                 wave_array.append(line.split(','))
-                wave_dict[key] = wave_array
-        wave_open.close()
+
+
+
+
+        wave_file.close()
         #Add row/col header to dictionary
-        logger.debug('WaveData row %s', wave_row)
-        wave_dict[0] = np.array(wave_row, dtype='f')
-        logger.debug('WaveData col %s', wave_col)
-        wave_dict[1] = np.array(wave_col, dtype='f')
+        logger.debug('WaveData row %s', wave_periods)
+        wave_dict[0] = np.array(wave_periods, dtype='f')
+        logger.debug('WaveData col %s', wave_heights)
+        wave_dict[1] = np.array(wave_heights, dtype='f')
         logger.debug('Finished extrapolating wave data to dictionary')
         return wave_dict
 
