@@ -696,6 +696,11 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     is the wave energy capacity.
     
     wave_data - A dictionary containing wave watch data
+    {'wave_periods:...
+    ...
+    (i0,j0)..
+    (i1,j1)...
+
     interp_z - A 2D array of the interpolated values for the machine
                 performance table
     machine_param - A dictionary containing the restrictions for the machines
@@ -709,29 +714,39 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     #interp_z = np.where(interp_z>cap_max, cap_max, interp_z)
 
     energy_cap = {}
+
     #Get the row,col headers (ranges) for the wave watch data
-    wave_row = wave_data.pop(0)
-    wave_column = wave_data.pop(1)
+    #row is wave period label
+    #col is wave height label
+    wave_periods = wave_data.pop(0)
+    wave_heights = wave_data.pop(1)
+
     #Get the machine parameter restriction values
     cap_max = float(machine_param['capmax'])
     period_max = float(machine_param['tpmax'])
     height_max = float(machine_param['hsmax'])
+
     #Set position variables to use as a check and as an end
     #point for rows/cols if restrictions limit the ranges
-    period_max_pos = -1
-    height_max_pos = -1
+    period_max_index = -1
+    height_max_index = -1
+
     #Using the restrictions find the max position (index) for period and height
-    #in the wave_row/wave_column ranges
-    for index_pos, value in enumerate(wave_row):
+    #in the wave_periods/wave_heights ranges
+
+    for index_pos, value in enumerate(wave_periods):
         if (value > period_max):
-            period_max_pos = index_pos
+            period_max_index = index_pos
             break
-    for index_pos, value in enumerate(wave_column):
+
+    for index_pos, value in enumerate(wave_heights):
         if (value > height_max):
-            height_max_pos = index_pos
+            height_max_index = index_pos
             break
-    logger.debug('Position of max period : %f', period_max_pos)
-    logger.debug('Position of max height : %f', height_max_pos)
+
+    logger.debug('Position of max period : %f', period_max_index)
+    logger.debug('Position of max height : %f', height_max_index)
+
     #For all the wave watch points, multiply the occurence matrix by the interpolated
     #machine performance matrix to get the captured wave energy
     for key, val in wave_data.iteritems():
@@ -740,16 +755,19 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
         mult_array = np.multiply(temp_array, interp_z)
         #Set any value that is outside the restricting ranges provided by 
         #machine parameters to zero
-        if period_max_pos != -1:
-            mult_array[:, period_max_pos:] = 0
-        if height_max_pos != -1:
-            mult_array[height_max_pos:, :] = 0
+        if period_max_index != -1:
+            mult_array[:, period_max_index:] = 0
+        if height_max_index != -1:
+            mult_array[height_max_index:, :] = 0
+
         #Divide the matrix by 5 to get the yearly values
         valid_array = np.divide(mult_array, 5.0)
+
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero. So here
         #we drive any negative values to zero.
         valid_array = np.where(valid_array < 0, 0, valid_array)
+
         #Sum all of the values from the matrix to get the total captured wave energy
         #and convert into mega watts
         sum_we = (valid_array.sum() / 1000)
