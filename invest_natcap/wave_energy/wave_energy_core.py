@@ -52,14 +52,14 @@ def biophysical(args):
     #Output Directory path to store output rasters
     output_dir = workspace_dir + os.sep + 'Output'
     #Path for clipped wave point shapefile holding wave attribute information
-    prj_shape_path = intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
+    clipped_wave_shape_path = intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
     #Temporary shapefile needed for an intermediate step
     wave_shape_path = intermediate_dir + os.sep + 'WaveData_clipZ.shp'
     #Paths for wave energy and wave power raster
     wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
     wave_power_path = output_dir + os.sep + 'wp_kw.tif'
     #Paths for wave energy and wave power percentile rasters
-    wp_rc_path = output_dir + os.sep +  'wp_rc.tif'
+    wp_rc_path = output_dir + os.sep + 'wp_rc.tif'
     capwe_rc_path = output_dir + os.sep + 'capwe_rc.tif'
     global_dem = args['dem']
     #Set nodata value and datatype for new rasters
@@ -70,135 +70,186 @@ def biophysical(args):
     dem_gt = global_dem.GetGeoTransform()
     #Set the source projection for a coordinate transformation
     #to the input projection from the point shapefile
-    source_sr = args['analysis_area'].GetLayer(0).GetSpatialRef()
+    analysis_area_sr = args['analysis_area'].GetLayer(0).GetSpatialRef()
     #Determine which shapefile will be used to determine area of interest
+
+    #This if statement differentiates between having an AOI or a global run
+    #on all the wave watch points.
     if 'aoi' in args:
+
+        #There is an AOI, so we need to reproject WWIII points into that the
+        #output can be in the same projection as the AOI.
+
         #The polygon shapefile that specifies the area of interest
-        cutter = args['aoi']
+        aoi_shape = args['aoi']
         #Set the wave data shapefile to the same projection as the area of interest
-        analysis_shape = change_shape_projection(args['analysis_area'],
+        wave_shape = change_shape_projection(args['analysis_area'],
                                                  args['aoi'].GetLayer(0).GetSpatialRef(),
                                                  wave_shape_path)
+
         #Clip the wave data shape by the bounds provided from the area of interest
-        area_shape = clip_shape(analysis_shape, cutter, prj_shape_path)
+        clipped_wave_shape = \
+            clip_shape(wave_shape, aoi_shape, clipped_wave_shape_path)
+
         #Get the coordinates of a point from the wave data shapefile
-        area_layer = area_shape.GetLayer(0)
-        area_feat = area_layer.GetNextFeature()
-        area_geom = area_feat.GetGeometryRef()
-        area_lat = area_geom.GetX()
-        area_long = area_geom.GetY()
-        #Create a coordinate transformation from lat/long to area of interest's projection
-        target_sr = cutter.GetLayer(0).GetSpatialRef()
-        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-        coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
-        #Convert the point from meters to lat/long
-        area_point = coord_trans_opposite.TransformPoint(area_lat, area_long)
+
+        #Get a point in the clipped shape to determine output grid size
+        clipped_wave_shape_geom = \
+            clipped_wave_shape.GetLayer(0).GetNextFeature().GetGeometryRef()
+        reference_point_x = clipped_wave_shape_geom.GetX()
+        reference_point_y = clipped_wave_shape_geom.GetY()
+
+        #Create a coordinate transformation from geom_x/long to area of interest's projection
+        aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
+        coord_trans = osr.CoordinateTransformation(analysis_area_sr, aoi_sr)
+        coord_trans_opposite = osr.CoordinateTransformation(aoi_sr, analysis_area_sr)
+
+        #Convert the point from meters to geom_x/long
+        reference_point_latlng = \
+            coord_trans_opposite.TransformPoint(reference_point_x, \
+                                                reference_point_y)
+
         #Get the size of the pixels in meters, to be used for creating rasters
-        pixel_size_tuple = invest_cython_core.pixel_size_in_meters(global_dem, coord_trans,
-                                                                   area_point)
-        pixel_xsize = pixel_size_tuple[0]
-        pixel_ysize = pixel_size_tuple[1]
+        pixel_size_tuple = \
+            invest_cython_core.pixel_size_in_meters(global_dem, coord_trans,
+                                                    reference_point_latlng)
+
+        pixel_xsize, pixel_ysize = pixel_size_tuple
+
         logger.debug('X pixel size in meters : %f', pixel_xsize)
         logger.debug('Y pixel size in meters : %f', pixel_ysize)
-        #Reset the layer to point at the first feature and clean up
-        #variables
-        area_layer.ResetReading()
-        area_feat.Destroy()
-        area_geom = None
+
+        #OGR examples always None out the variables, probably can remove
+        clipped_wave_shape_geom = None
+
     else:
+        #If no AOI we can use the pixel size directly from the DEM, but this
+        #is necessary to make the following while loop simpler.
+
         #The polygon shapefile that specifies the area of interest
-        cutter = args['analysis_area_extract']
-        #Not sure if this is needed, as cutter is already an outline of analysis_area
-        area_shape = clip_shape(args['analysis_area'], cutter, prj_shape_path)
-        area_layer = area_shape.GetLayer(0)
+        aoi_shape = args['analysis_area_extract']
+
+        #Not sure if this is needed, as aoi_shape is already an outline of analysis_area
+        clipped_wave_shape = clip_shape(args['analysis_area'], aoi_shape, \
+                                        clipped_wave_shape_path)
+
         #Set the pixel size to that of DEM, to be used for creating rasters
-        pixel_xsize = float(dem_gt[1])
-        pixel_ysize = np.absolute(float(dem_gt[5]))
+        pixel_xsize, pixel_ysize = \
+            float(dem_gt[1]), np.absolute(float(dem_gt[5]))
+
         #Create a coordinate transformation, because it is expected below
-        target_sr = cutter.GetLayer(0).GetSpatialRef()
-        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-        coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
+        aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
+        coord_trans = osr.CoordinateTransformation(analysis_area_sr, aoi_sr)
+        coord_trans_opposite = osr.CoordinateTransformation(aoi_sr, analysis_area_sr)
+
     #We do all wave power calculations by manipulating the fields in
     #the wave data shapefile, thus we need to add proper depth values
     #from the raster DEM
     logger.debug('Adding a depth field to the shapefile from the DEM raster')
-    dem_band = global_dem.GetRasterBand(1)
-    dem_matrix = dem_band.ReadAsArray()
+    dem_matrix = global_dem.GetRasterBand(1).ReadAsArray()
+
     #Create a new field for the depth attribute
     field_defn = ogr.FieldDefn('Depth_M', ogr.OFTReal)
+
+    area_layer = clipped_wave_shape.GetLayer(0)
+    area_layer.ResetReading()
     area_layer.CreateField(field_defn)
     feature = area_layer.GetNextFeature()
+
     #For all the features (points) add the proper depth value from the DEM
     while feature is not None:
-        depth_index = feature.GetFieldIndex('Depth_M')    
+        depth_index = feature.GetFieldIndex('Depth_M')
         geom = feature.GetGeometryRef()
-        lat = geom.GetX()
-        longitude = geom.GetY()
+        geom_x, geom_y = geom.GetX(), geom.GetY()
+
         #Transform two points into meters
-        point_decimal_degree = coord_trans_opposite.TransformPoint(lat, longitude)
+        point_decimal_degree = \
+            coord_trans_opposite.TransformPoint(geom_x, geom_y)
+
         #To get proper depth value we must index into the dem matrix
         #by getting where the point is located in terms of the matrix
         i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
         j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
-        depth = dem_matrix[j][i]        
-        feature.SetField(depth_index, depth)        
+        depth = dem_matrix[j][i]
+        feature.SetField(depth_index, depth)
         area_layer.SetFeature(feature)
         feature.Destroy()
         feature = area_layer.GetNextFeature()
+
     logger.debug('Finished adding depth field to shapefile from DEM raster')
+
     #Generate an interpolate object for wave_energy_capacity
     logger.debug('Interpolating machine performance table')
-    energy_interp = wave_energy_interp(args['wave_base_data'], args['machine_perf'])
+    energy_interp = \
+        wave_energy_interp(args['wave_base_data'], args['machine_perf'])
+
     #Create a dictionary with the wave energy capacity sums from each location
     logger.debug('Summing the wave energy capacity at each wave farm and saving to dictionary')
     logger.info('Calculating Captured Wave Energy.')
-    energy_cap = compute_wave_energy_capacity(args['wave_base_data'],
-                                              energy_interp, args['machine_param'])
+    energy_cap = compute_wave_energy_capacity(args['wave_base_data'], \
+        energy_interp, args['machine_param'])
+
     #Add the sum as a field to the shapefile for the corresponding points
     logger.debug('Adding the wave energy sums to the WaveData shapefile')
-    captured_wave_energy_to_shape(energy_cap, area_shape)
+    captured_wave_energy_to_shape(energy_cap, clipped_wave_shape)
+
     #Calculate wave power for each wave point and add it as a field to the shapefile
     logger.debug('Calculating wave power for each farm site and saving as field to shapefile')
     logger.info('Calculating Wave Power.')
-    area_shape = wave_power(area_shape)
+    clipped_wave_shape = wave_power(clipped_wave_shape)
+
     #Create blank rasters bounded by the shape file of analyis area
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                              datatype, nodata, wave_energy_path, cutter)
+                                              datatype, nodata, wave_energy_path, aoi_shape)
     invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                              datatype, nodata, wave_power_path, cutter)
+                                              datatype, nodata, wave_power_path, aoi_shape)
+
     #Open created rasters
     wave_power_raster = gdal.Open(wave_power_path, GA_Update)
     wave_energy_raster = gdal.Open(wave_energy_path, GA_Update)
+
     #Get the corresponding points and values from the shapefile to be used for interpolation
     logger.debug('Getting the points and corresponding values of wave power and captured wave energy')
-    energy_sum_array = get_points_values(area_shape, 'capWE_Sum')
-    wave_power_array = get_points_values(area_shape, 'wp_Kw')
+    energy_sum_array = get_points_values(clipped_wave_shape, 'capWE_Sum')
+    wave_power_array = get_points_values(clipped_wave_shape, 'wp_Kw')
+
     #Interpolate wave energy and wave power from the shapefile over the rasters
     logger.debug('Interpolate wave power and wave energy capacity onto rasters')
     logger.info('Generating Wave Power and Captured Wave Energy rasters.')
-    interp_points_over_raster(energy_sum_array[0], energy_sum_array[1], wave_energy_raster, nodata)
-    interp_points_over_raster(wave_power_array[0], wave_power_array[1], wave_power_raster, nodata)
+    interp_points_over_raster(energy_sum_array[0], energy_sum_array[1], \
+                              wave_energy_raster, nodata)
+    interp_points_over_raster(wave_power_array[0], wave_power_array[1], \
+                              wave_power_raster, nodata)
+
     #Clip the wave energy and wave power rasters so that they are confined to the AOI
-    wave_power_raster = clip_raster_from_polygon(cutter, wave_power_raster, wave_power_path)
-    wave_energy_raster = clip_raster_from_polygon(cutter, wave_energy_raster, wave_energy_path)
-   
-    wave_energy_raster.FlushCache()    
+    wave_power_raster = clip_raster_from_polygon(aoi_shape, \
+        wave_power_raster, wave_power_path)
+    wave_energy_raster = clip_raster_from_polygon(aoi_shape, \
+        wave_energy_raster, wave_energy_path)
+
+    wave_energy_raster.FlushCache()
     wave_power_raster.FlushCache()
+
     #Create the percentile rasters for wave energy and wave power
+    #This is hard coded in because it's specified explicitly in the user's 
+    #guide
     percentiles = [25, 50, 75, 90]
-    capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, ' (MWh/yr)', 
+    capwe_rc = create_percentile_rasters(wave_energy_raster, capwe_rc_path, ' (MWh/yr)',
                                          ' megawatt hours per year (MWh/yr)', '1', percentiles, nodata)
-    wp_rc_raster = create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)', 
+    wp_rc_raster = create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)',
                                       ' wave power per unit width of wave crest length (kW/m)', '1',
                                       percentiles, nodata)
+
     #Clean up Shapefiles and Rasters
-    area_shape.Destroy()
-    cutter.Destroy()
+    clipped_wave_shape.Destroy()
+    aoi_shape.Destroy()
     wave_energy_raster = None
     wave_power_raster = None
     wp_rc_raster = None
     capwe_rc = None
+
     #Clean up temporary files on disk
+    #Creating a match pattern like /home/blath/../name_of_shape.*
     pattern = wave_shape_path[wave_shape_path.rfind(os.sep) + 1:
                               len(wave_shape_path) - 4] + ".*"
     logging.debug('Regex file pattern : %s', pattern)
@@ -206,7 +257,7 @@ def biophysical(args):
         if re.search(pattern, file):
             os.remove(os.path.join(intermediate_dir, file))
 
-def create_percentile_rasters(raster_dataset, output_path, units_short, units_long, 
+def create_percentile_rasters(raster_dataset, output_path, units_short, units_long,
                               start_value, percentile_list, nodata):
     """Creates a percentile (quartile) raster based on the raster_dataset. An 
     attribute table is also constructed for the raster_dataset that displays the
@@ -227,7 +278,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     if os.path.isfile(output_path):
         os.remove(output_path)
     #Create a blank raster from raster_dataset
-    percentile_raster = invest_cython_core.newRasterFromBase(raster_dataset, output_path, 
+    percentile_raster = invest_cython_core.newRasterFromBase(raster_dataset, output_path,
                                                              'GTiff', 0, gdal.GDT_Int32)
     #Get raster bands
     percentile_band = percentile_raster.GetRasterBand(1)
@@ -242,7 +293,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
         returns - An integer that places each pixel into a group
         """
         return bisect(percentiles, band)
-    
+
     #Read in the values of the raster we want to get percentiles from
     matrix = np.array(dataset_band.ReadAsArray())
     #Flatten the 2D numpy array into a 1D numpy array
@@ -267,19 +318,19 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, units_lo
     pixel_count = np.zeros(len(percentile_list) + 1)
     #Read in percentile raster so that we can get the count of each group
     perc_array = percentile_band.ReadAsArray()
-    percentile_groups = np.arange(1, len(percentiles)+1)
+    percentile_groups = np.arange(1, len(percentiles) + 1)
     for percentile_class in percentile_groups:
         #This line of code takes the numpy array 'perc_array', which holds the values
         #from the percentile_band after being grouped, and checks to see where the
         #values are equal to a certain a group. This check gives an array of
         #indices where the case was true, so we take the size of that array
         #to give us the number of pixels that fall in that group.
-        pixel_count[percentile_class-1] = np.where(perc_array == percentile_class)[0].size  
-    
+        pixel_count[percentile_class - 1] = np.where(perc_array == percentile_class)[0].size
+
     logging.debug('number of pixels per group: : %s', pixel_count)
     #Generate the attribute table for the percentile raster
     create_attribute_table(output_path, attribute_values, pixel_count)
-    
+
     return percentile_raster
 
 def get_percentiles(value_list, percentile_list):
@@ -295,7 +346,7 @@ def get_percentiles(value_list, percentile_list):
     for percentile in percentile_list:
         pct_list.append(int(stats.scoreatpercentile(value_list, percentile)))
     return pct_list
-    
+
 def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     """Constructs the percentile ranges as Strings, with the first
     range starting at 1 and the last range being greater than the last
@@ -318,10 +369,10 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     range_first = start_value + ' - ' + str(percentiles[0]) + units_long
     range_values.append(range_first)
     for index in range(length - 1):
-        range_values.append(str(percentiles[index]) + ' - ' + 
-                            str(percentiles[index+1]) + units_short)
+        range_values.append(str(percentiles[index]) + ' - ' +
+                            str(percentiles[index + 1]) + units_short)
     #Add the last range to the range of values list
-    range_last = 'Greater than ' + str(percentiles[length-1]) + units_short
+    range_last = 'Greater than ' + str(percentiles[length - 1]) + units_short
     range_values.append(range_last)
     logger.debug('range_values : %s', range_values)
     return range_values
@@ -358,12 +409,12 @@ def create_attribute_table(raster_uri, attribute_values, counter):
     for id_value in range(len(attribute_values)):
         logging.debug('id_value: %s', id_value)
         rec = dataset_attribute_table.newRecord()
-        rec["VALUE"] = id_value+1
+        rec["VALUE"] = id_value + 1
         rec["COUNT"] = int(counter[id_value])
         rec["VAL_RANGE"] = attribute_values[id_value]
         rec.store()
     dataset_attribute_table.close()
-    
+
 def wave_power(shape):
     """Calculates the wave power from the fields in the shapefile
     and writes the wave power value to a field for the corresponding
@@ -406,18 +457,18 @@ def wave_power(shape):
         k = np.square(tem) / (grav * np.sqrt(np.tanh((np.square(tem)) * (depth / grav))))
         #wave group velocity calculation (expressed as a 
         #function of wave energy period and water depth)
-        wave_group_velocity = ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) 
+        wave_group_velocity = ((1 + ((2 * k * depth) / np.sinh(2 * k * depth)))
                                * np.sqrt((grav / k) * np.tanh(k * depth))) / 2
         #wave power calculation
         wave_pow = (((swd * grav) / 16) * (np.square(height)) * wave_group_velocity) / 1000
-        
+
         feat.SetField(wp_index, wave_pow)
         layer.SetFeature(feat)
         feat.Destroy()
         feat = layer.GetNextFeature()
-    
+
     return shape
-    
+
 def clip_raster_from_polygon(shape, raster, path):
     """Returns a raster where any value outside the bounds of the
     polygon shape are set to nodata values. This represents clipping 
@@ -457,7 +508,7 @@ def clip_raster_from_polygon(shape, raster, path):
     invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copy_band,
                                 fill_bound_data, copy_band)
     return copy_raster
-    
+
 def clip_shape(shape_to_clip, binding_shape, output_path):
     """Copies a polygon or point geometry shapefile, only keeping the features
     that intersect or are within a binding polygon shape.
@@ -604,7 +655,7 @@ def interp_points_over_raster(points, values, raster, nodata):
                  geo_tran[0], geo_tran[1], geo_tran[3], geo_tran[5])
     #Make a numpy array representing the points of the raster (the points are the pixels)
     new_points = np.array([[geo_tran[0] + geo_tran[1] * i,
-                            geo_tran[3] + geo_tran[5] * j] 
+                            geo_tran[3] + geo_tran[5] * j]
                            for i in np.arange(size_x) for j in np.arange(size_y)])
     logger.debug('New points from raster : %s', new_points)
     #Interpolate the points and values from the shapefile from earlier
@@ -656,7 +707,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     #the machine performance table. However, if it needed to be
     #restricted the following line could be used:
     #interp_z = np.where(interp_z>cap_max, cap_max, interp_z)
-    
+
     energy_cap = {}
     #Get the row,col headers (ranges) for the wave watch data
     wave_row = wave_data.pop(0)
@@ -734,7 +785,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape):
         value_i = feat.GetField(index_i)
         value_j = feat.GetField(index_j)
         we_value = energy_cap[(value_i, value_j)]
-        
+
         index = feat.GetFieldIndex('capWE_Sum')
         feat.SetField(index, we_value)
         #Save the feature modifications to the layer.
@@ -864,20 +915,20 @@ def valuation(args):
     while feature is not None:
         wave_to_land_index = feature.GetFieldIndex('W2L_MDIST')
         land_to_grid_index = feature.GetFieldIndex('L2G_MDIST')
-        id_index = feature.GetFieldIndex('LAND_ID')    
-        
+        id_index = feature.GetFieldIndex('LAND_ID')
+
         land_id = int(wave_to_land_id[iterate_feat])
-        
+
         feature.SetField(wave_to_land_index, wave_to_land_dist[iterate_feat])
         feature.SetField(land_to_grid_index, land_to_grid_dist[land_id])
         feature.SetField(id_index, land_id)
-        
+
         iterate_feat = iterate_feat + 1
-        
+
         wave_data_layer.SetFeature(feature)
         feature.Destroy()
         feature = wave_data_layer.GetNextFeature()
-    
+
     def npv_wave(annual_revenue, annual_cost):
         """Calculates the NPV for a wave farm site based on the
         annual revenue and annual cost
@@ -904,7 +955,7 @@ def valuation(args):
         land_to_grid_index = feat_npv.GetFieldIndex('L2G_MDIST')
         captured_wave_energy_index = feat_npv.GetFieldIndex('CapWE_Sum')
         npv_index = feat_npv.GetFieldIndex('NPV_25Y')
-        
+
         depth = feat_npv.GetFieldAsDouble(depth_index)
         wave_to_land = feat_npv.GetFieldAsDouble(wave_to_land_index)
         land_to_grid = feat_npv.GetFieldAsDouble(land_to_grid_index)
@@ -924,10 +975,10 @@ def valuation(args):
         annual_cost = omc * captured_we * units
         #The first year's costs are the initial start up costs
         annual_cost[0] = initial_cost
-        
+
         npv_result = npv_wave(annual_revenue, annual_cost) / 1000.0
         feat_npv.SetField(npv_index, npv_result)
-        
+
         wave_data_layer.SetFeature(feat_npv)
         feat_npv.Destroy()
         feat_npv = wave_data_layer.GetNextFeature()
@@ -950,13 +1001,13 @@ def valuation(args):
     logger.debug('Done interpolating NPV over raster.')
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
-    npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, ' (US$)', 
+    npv_rc = create_percentile_rasters(npv_raster, npv_rc_path, ' (US$)',
                                        ' thousands of US dollars (US$)', '1', percentiles, nodata)
     npv_rc = None
     npv_raster = None
     wave_data_shape.Destroy()
     logger.debug('End of wave_energy_core.valuation')
-    
+
 def build_point_shapefile(driver_name, layer_name, path, data, prj, coord_trans):
     """This function creates and saves a point geometry shapefile to disk.
     It specifically only creates one 'Id' field and creates as many features
@@ -976,7 +1027,7 @@ def build_point_shapefile(driver_name, layer_name, path, data, prj, coord_trans)
     #Make a point shapefile for landing points.
     driver = ogr.GetDriverByName(driver_name)
     data_source = driver.CreateDataSource(path)
-    layer = data_source.CreateLayer(layer_name, prj, ogr.wkbPoint)    
+    layer = data_source.CreateLayer(layer_name, prj, ogr.wkbPoint)
     field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
     layer.CreateField(field_defn)
     #For all of the landing points create a point feature on the layer
@@ -1020,9 +1071,9 @@ def get_points_geometries(shape):
         point.append([x_location, y_location])
         feat.Destroy()
         feat = layer.GetNextFeature()
-    
+
     return np.array(point)
-    
+
 def calculate_distance(xy_1, xy_2):
     """For all points in xy_1, this function calculates the distance
     from point xy_1 to various points in xy_2,
@@ -1081,7 +1132,7 @@ def change_shape_projection(shape_to_reproject, srs_prj, output_path):
         fd_def.SetWidth(src_fd.GetWidth())
         fd_def.SetPrecision(src_fd.GetPrecision())
         shp_layer.CreateField(fd_def)
-    
+
     in_layer.ResetReading()
     in_feat = in_layer.GetNextFeature()
     #Copy all of the features in shape_to_reproject to the new shapefile
