@@ -149,15 +149,15 @@ def pixelArea(dataset):
 def pixel_size_in_meters(dataset, coord_trans, point):
     """Calculates the pixel width and height in meters given a coordinate 
         transform and reference point on the dataset that's close to the 
-        transform's projected coordiate sytem.  This is only necessary
+        transform's projected coordinate sytem.  This is only necessary
         if dataset is not already in a meter coordinate system, for example
         dataset may be in lat/long (WGS84).  
      
        dataset - A projected GDAL dataset in the form of lat/long decimal degrees
        coord_trans - An OSR coordinate transformation from dataset coordinate
            system to meters
-       point - a reference point close to the coordinate transform coordiate
-           system.  must be in the same coordiate system as dataset.
+       point - a reference point close to the coordinate transform coordinate
+           system.  must be in the same coordinate system as dataset.
        
        returns a tuple containing (pixel width in meters, pixel height in 
            meters)"""
