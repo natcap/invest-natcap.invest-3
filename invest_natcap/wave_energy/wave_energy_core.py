@@ -34,8 +34,11 @@ def biophysical(args):
                             relevant WW3 points
     args['analysis_area_extract'] - a polygon geometry shapefile encompassing 
                                     the broader range of interest.
-    args['machine_perf'] - a 2D array representing the machine 
-                           performance table.
+    args['machine_perf'] - a dictionary that holds the machine performance
+                           information with the following keys and structure:
+                           machine_perf['periods'] - [1,2,3,...]
+                           machine_perf['heights'] - [.5,1,1.5,...]
+                           machine_perf['bin_matrix'] - [[1,2],[5,6],...].
     args['machine_param'] - a dictionary which holds the machine 
                             parameter values.
     args['dem'] - a GIS raster file of the global elevation model
@@ -710,15 +713,18 @@ def wave_energy_interp(wave_data, machine_perf):
     machine performance table using new ranges from wave watch data.
     
     wave_data - A dictionary holding the new x range and y range values
-    machine_perf - A 2D array representation of the machine performance
-                   table that also includes the ranges
+    machine_perf - a dictionary that holds the machine performance
+                   information with the following keys and structure:
+                   machine_perf['periods'] - [1,2,3,...]
+                   machine_perf['heights'] - [.5,1,1.5,...]
+                   machine_perf['bin_matrix'] - [[1,2,3,...],[5,6,7,...],...].
     
     returns - The interpolated matrix
     """
     #Get ranges and matrix for machine performance table
-    x_range = np.array(machine_perf.pop(0), dtype='f')
-    y_range = np.array(machine_perf.pop(0), dtype='f')
-    z_matrix = np.array(machine_perf, dtype='f')
+    x_range = np.array(machine_perf['periods'], dtype='f')
+    y_range = np.array(machine_perf['heights'], dtype='f')
+    z_matrix = np.array(machine_perf['bin_matrix'], dtype='f')
     #Get new ranges to interpolate to, from wave_data table
     new_x = wave_data[0]
     new_y = wave_data[1]

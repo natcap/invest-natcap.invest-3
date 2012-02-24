@@ -54,22 +54,29 @@ def execute(args):
     biophysical_args['workspace_dir'] = args['workspace_dir']
     biophysical_args['dem'] = gdal.Open(args['dem_uri'])
     
-    #Create a 2D array of the machine performance table and place the row
-    #and column headers as the first two arrays in the list of arrays
-    machine_perf_array = [[], []]
+    #Create a dictionary that stores the wave periods and wave heights as
+    #arrays. Also store the amount of energy the machine produces 
+    #in a certain wave period/height state as a 2D array
+    machine_perf_dict = {}
     machine_perf_file = open(args['machine_perf_uri'])
     reader = csv.reader(machine_perf_file)
     #Get the column header which is the first row in the file
-    first_row = reader.next()
-    machine_perf_array[0] = first_row[1:]
+    #and specifies the range of wave periods
+    periods = reader.next()
+    machine_perf_dict['periods'] = periods[1:]
+    #Set the keys for storing wave height range and the machine performance
+    #at each state
+    machine_perf_dict['heights'] = []
+    machine_perf_dict['bin_matrix'] = []
     for row in reader:
         #Build up the row header by taking the first element in each row
-        machine_perf_array[1].append(row.pop(0))
-        machine_perf_array.append(row)
+        #This is the range of heights
+        machine_perf_dict['heights'].append(row.pop(0))
+        machine_perf_dict['bin_matrix'].append(row)
     machine_perf_file.close()
-    LOGGER.debug('Machine Performance Rows : %s', machine_perf_array[0])
-    LOGGER.debug('Machine Performance Cols : %s', machine_perf_array[1])
-    biophysical_args['machine_perf'] = machine_perf_array
+    LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
+    LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
+    biophysical_args['machine_perf'] = machine_perf_dict
     
     #Create a dictionary whose keys are the 'NAMES' from the machine parameter
     #table and whose values are from the corresponding 'VALUES' field.
