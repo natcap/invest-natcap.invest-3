@@ -90,3 +90,29 @@ class DBFCheckerTester(CheckerTester):
         def test_nonexistent_fields(self):
             self.validate_as['fieldsExist'].append('nonexistent_field')
             self.assertError()
+
+        def test_restrictions(self):
+            regexp_int = {'pattern': '[0-9]*'}
+            num_restriction = {'field': 'BCEF_cur',
+                               'validateAs': {'type': 'number',
+                                              'allowedValues': regexp_int}}
+            const_restriction = {'field': 'BCEF_cur',
+                                 'validateAs': {'type': 'number',
+                                                'greaterThan': 0,
+                                                'gteq': 1,
+                                                'lteq': 2,
+                                                'lessThan': 2}}
+            field_restriction = {'field': 'C_den_cur',
+                                 'validateAs': {'type': 'number',
+                                                'lessThan': 'BCEF_cur'}}
+
+            self.validate_as['restrictions'] = [num_restriction,
+                                                const_restriction,
+                                                field_restriction]
+            self.assertNoError()
+
+
+
+
+
+
