@@ -12,7 +12,7 @@ from invest_natcap.wave_energy import wave_energy_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-logger = logging.getLogger('wave_energy_biophysical')
+LOGGER = logging.getLogger('wave_energy_biophysical')
 
 def execute(args):
     """This function invokes the biophysical part of the wave energy model 
@@ -51,136 +51,139 @@ def execute(args):
     biophysical_args = {}
     biophysical_args['workspace_dir'] = args['workspace_dir']
     biophysical_args['dem'] = gdal.Open(args['dem_uri'])
+    
     #Create a 2D array of the machine performance table and place the row
     #and column headers as the first two arrays in the list of arrays
-    try:
-        machine_perf_array = [[], []]
-        machine_perf_file = open(args['machine_perf_uri'])
-        reader = csv.reader(machine_perf_file)
-        #Get the column header which is the first row in the file
-        first_row = reader.next()
-        machine_perf_array[0] = first_row[1:]
-        for row in reader:
-            #Build up the row header by taking the first element in each row
-            machine_perf_array[1].append(row.pop(0))
-            machine_perf_array.append(row)
-        machine_perf_file.close()
-        logger.debug('Machine Performance Rows : %s', machine_perf_array[0])
-        logger.debug('Machine Performance Cols : %s', machine_perf_array[1])
-        biophysical_args['machine_perf'] = machine_perf_array
-    except IOError, error:
-        print 'File I/O error' + error
-    #Create a dictionary whose keys are the 'NAMES' from the machine parameter table
-    #and whose values are from the corresponding 'VALUES' field.
-    try:
-        machine_params = {}
-        machine_param_file = open(args['machine_param_uri'])
-        reader = csv.DictReader(machine_param_file)
-        for row in reader:
-            machine_params[row['NAME'].strip().lower()] = row['VALUE']
-        machine_param_file.close()
-        biophysical_args['machine_param'] = machine_params
-    except IOError, error:
-        print 'File I/O error' + error
+    machine_perf_array = [[], []]
+    machine_perf_file = open(args['machine_perf_uri'])
+    reader = csv.reader(machine_perf_file)
+    #Get the column header which is the first row in the file
+    first_row = reader.next()
+    machine_perf_array[0] = first_row[1:]
+    for row in reader:
+        #Build up the row header by taking the first element in each row
+        machine_perf_array[1].append(row.pop(0))
+        machine_perf_array.append(row)
+    machine_perf_file.close()
+    LOGGER.debug('Machine Performance Rows : %s', machine_perf_array[0])
+    LOGGER.debug('Machine Performance Cols : %s', machine_perf_array[1])
+    biophysical_args['machine_perf'] = machine_perf_array
+    
+    #Create a dictionary whose keys are the 'NAMES' from the machine parameter
+    #table and whose values are from the corresponding 'VALUES' field.
+    machine_params = {}
+    machine_param_file = open(args['machine_param_uri'])
+    reader = csv.DictReader(machine_param_file)
+    for row in reader:
+        machine_params[row['NAME'].strip().lower()] = row['VALUE']
+    machine_param_file.close()
+    biophysical_args['machine_param'] = machine_params
+    
     #Depending on which analysis area is selected:
-    #Extrapolate the corresponding WW3 Data and place in the biophysical_args dictionary.
-    #Open the point geometry analysis area shapefile containing the corresponding wave farm sites.
+    #Extrapolate the corresponding WW3 Data and place in the 
+    #biophysical_args dictionary.
+    #Open the point geometry analysis area shapefile containing the 
+    #corresponding wave farm sites.
     #Open the polygon geometry analysis area extract shapefile contaning the 
     #outline of the area of interest.
     if args['analysis_area_uri'] == 'West Coast of North America and Hawaii':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri'] 
+        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
                                                                    + os.sep + 'NAmerica_WestCoast_4m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'East Coast of North America and Puerto Rico':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri'] 
+        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
                                                                    + os.sep + 'NAmerica_EastCoast_4m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global(Eastern Hemisphere)':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri'] 
+        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
                                                                    + os.sep + 'Global_EastHemi_30m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global(Western Hemisphere)':
         analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.shp'
         analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri'] 
+        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
                                                                    + os.sep + 'Global_WestHemi_30m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
     else:
-        logger.debug('Analysis Area : %s', args['analysis_area_uri'])
-        print 'Analysis Area ERROR. The Analysis Area Specified is not handled by this model.'
+        LOGGER.debug('Analysis Area : %s', args['analysis_area_uri'])
+        LOGGER.error('Analysis Area ERROR.')
+        
     #If the area of interest is present add it to the dictionary arguments
     if 'aoi_uri' in args:
-        try:
-            logger.debug('AOI File : %s', args['aoi_uri'])
-            aoi = ogr.Open(args['aoi_uri'])
-            biophysical_args['aoi'] = aoi
-        except IOError, error:
-            print 'File I/O error' + error
+        LOGGER.debug('AOI File : %s', args['aoi_uri'])
+        aoi = ogr.Open(args['aoi_uri'])
+        biophysical_args['aoi'] = aoi
+        
     #Fire up the biophysical function in wave_energy_core with the gathered arguments
-    logger.info('Starting Wave Energy Biophysical.')
+    LOGGER.info('Starting Wave Energy Biophysical.')
     wave_energy_core.biophysical(biophysical_args)
-    logger.info('Completed Wave Energy Biophysical.')
+    LOGGER.info('Completed Wave Energy Biophysical.')
 
-def extrapolate_wave_data(wave_file):
+def extrapolate_wave_data(wave_file_uri):
     """The extrapolate_wave_data function converts WW3 text data into a dictionary who's
     keys are the corresponding (I,J) values and whose value is a two-dimensional array
     representing a matrix of the number of hours a seastate occurs over a 5 year period.
     The row and column headers are extracted once and stored in the dictionary as well.
     
-    wave_file - The path to a text document that holds the WW3 data.
+    wave_file_uri - The path to a text document that holds the WW3 data.
     
     returns - A dictionary of matrices representing hours of specific seastates.  
     """
-    logger.debug('Extrapolating wave data from text to a dictionary')
-    try:
-        wave_open = open(wave_file)
-        wave_dict = {}
-        wave_array = []
-        wave_row = []
-        wave_col = []
-        key = ''
-        row_indicator = True
-        col_indicator = True
-        row_col_grab = 0
-        for line in wave_open:
-            #If it is the start of a new location, get (I,J) values
-            if line[0] == 'I':
-                key = (int(line.split(',')[1]), int(line.split(',')[3]))
-                wave_array = []
-                row_col_grab = 1
-            #If the lines are corresponding to row and column header, save them
-            #as lists.
-            elif row_col_grab == 1 or row_col_grab == 2:
-                row_col_grab = row_col_grab + 1
-                if row_indicator:
-                    wave_row = line.split(',')
-                    row_indicator = False
-                elif col_indicator:
-                    wave_col = line.split(',')
-                    col_indicator = False
-            #If the lines correspond to the seastate bin, save them
-            else:
-                wave_array.append(line.split(','))
-                wave_dict[key] = wave_array
-        wave_open.close()
-        #Add row/col header to dictionary
-        logger.debug('WaveData row %s', wave_row)
-        wave_dict[0] = np.array(wave_row, dtype='f')
-        logger.debug('WaveData col %s', wave_col)
-        wave_dict[1] = np.array(wave_col, dtype='f')
-        logger.debug('Finished extrapolating wave data to dictionary')
-        return wave_dict
+    LOGGER.debug('Extrapolating wave data from text to a dictionary')
+    wave_file = open(wave_file_uri)
+    wave_dict = {}
+    wave_array = None
+    wave_periods = []
+    wave_heights = []
+    key = None
 
-    except IOError, error:
-        print 'File I/O error'
-        print error
+    #get the periods and heights 
+    wave_file.readline() #skipping first I,J line
+    wave_periods = wave_file.readline().split(',')
+    wave_heights = wave_file.readline().split(',')
+
+    wave_file.seek(0) #reset to the first line in the file
+
+    while True:
+        line = wave_file.readline()
+        if len(line) == 0:
+            #end of file
+            wave_dict[key] = wave_array
+            break
+
+        #If it is the start of a new location, get (I,J) values
+        if line[0] == 'I':
+            #If key is not None that means there is a full array waiting
+            #to be written to the dictionary, so write it
+            if key != None:
+                wave_dict[key] = wave_array
+
+            #Clear out array
+            wave_array = []
+
+            key = (int(line.split(',')[1]), int(line.split(',')[3]))
+
+            #Skip the next two lines that are period and height
+            wave_file.readline()
+            wave_file.readline()
+        else:
+            wave_array.append(line.split(','))
+
+    wave_file.close()
+    #Add row/col header to dictionary
+    LOGGER.debug('WaveData row %s', wave_periods)
+    wave_dict[0] = np.array(wave_periods, dtype='f')
+    LOGGER.debug('WaveData col %s', wave_heights)
+    wave_dict[1] = np.array(wave_heights, dtype='f')
+    LOGGER.debug('Finished extrapolating wave data to dictionary')
+    return wave_dict

@@ -16,7 +16,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "./WaveEnergy",
+                    "defaultValue": "../../test/data/wave_energy_data/iui_test_space",
                     "required": true
                 },          
 				{        
@@ -24,7 +24,7 @@
                     "args_id" : "wave_base_data_uri",
                     "type": "folder",
                     "label": "Path to Folder with Wave Base Data",
-                    "defaultValue": "./WaveEnergy/Input/WaveData",
+                    "defaultValue": "../../test/data/wave_energy_data/samp_input/WaveData",
                     "required": true
                 },    
 		        {
@@ -43,7 +43,7 @@
                     "args_id": "machine_perf_uri",
                     "type": "file",
                     "label": "Machine Performance Table",
-                    "defaultValue": "./WaveEnergy/Input/MachinePerformanceTable.csv",
+                    "defaultValue": "../../test/data/wave_energy_data/samp_input/Machine_PelamisPerfCSV.csv",
                     "required": true,
                     "validateAs": {"type":"CSV"}
                 },
@@ -53,7 +53,7 @@
                     "type": "file",
                     "label": "Machine Parameter Table",
                     "required": true,
-                    "defaultValue": "./WaveEnergy/Input/MachineParameterTable.csv",
+                    "defaultValue": "../../test/data/wave_energy_data/samp_input/Machine_PelamisParamCSV.csv",
                 	"validateAs": { "type": "CSV",
                 					"fieldExist": ["NAME", "VALUE", "NOTE"],
                 					"restrictions": [{"field": "NAME",
@@ -71,7 +71,7 @@
                     "args_id": "dem_uri",
                     "type": "folder",
                     "label": "Global Digital Elevation Model (DEM)",
-                    "defaultValue": "./Base_Data/Marine/DEMs/global_dem",
+                    "defaultValue": "../../test/data/wave_energy_data/samp_input/global_dem",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
@@ -80,13 +80,14 @@
                     "args_id": "aoi_uri",
                     "type": "file",
                     "label": "Area of Interest (AOI)(Optional)",
-                    "defaultValue": "./WaveEnergy/Input/AOI_WCVI.shp",
+                    "defaultValue": "../../test/data/wave_energy_data/samp_input/AOI_WCVI.shp",
                     "required": false,
                     "validateAs": {"type": "OGR", 
-                    			   "layers": [{"name": {'inheritFrom':'file'}, 
-                    			               "type": "polygons", "projection" : "Transverse_Mercator"}
+                    			   "layers": [{"name": {"inheritFrom": "file"}, 
+                    			               "type": "polygons", 
+                    			               "projection" : "Transverse_Mercator"}]
                     			   }
-                }
+                 }
             ]
         }
     ]

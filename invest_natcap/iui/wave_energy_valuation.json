@@ -16,7 +16,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "./WaveEnergy",
+                    "defaultValue": "../../test/data/wave_energy_data/iui_test_space",
                     "required": true
                 },          
 				{        
@@ -24,7 +24,7 @@
                     "args_id" : "land_gridPts_uri",
                     "type": "file",
                     "label": "Land and Grid Points Table",
-                    "defaultValue": "./WaveEnergy/Input/LandGridPts_WCVI.csv",
+                    "defaultValue": "../../test/data/wave_energy_data/samp_input/LandGridPts_WCVI_221.csv",
                     "required": true,
                     "validateAs": { "type": "CSV",
                     				"fieldsExist": ["ID", "TYPE", "LAT", "LONG", "LOCATION"],
@@ -48,7 +48,7 @@
 		            "args_id": "machine_econ_uri",
 		            "type": "file",
 		            "label": "Machine Economic Table",
-		            "defaultValue": "./WaveEnergy/Input/MachineEconomicTable.csv",
+		            "defaultValue": "../../test/data/wave_energy_data/samp_input/Machine_PelamisEconCSV.csv",
 		            "required": true,
 		            "validateAs": { "type": "CSV",
                     				"fieldsExist": ["NAME", "VALUE", "NOTE"],
@@ -67,7 +67,7 @@
                     "args_id": "global_dem",
                     "type": "folder",
                     "label": "Global Digital Elevation Model (DEM)",
-                    "defaultValue": "./Base_Data/Marine/DEMs/global_dem",
+                    "defaultValue": "../../test/data/wave_energy_data/samp_input/global_dem",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
@@ -76,11 +76,11 @@
                     "args_id": "wave_data_shape_path",
                     "type": "file",
                     "label": "Wave Data Shapefile",
-                    "defaultValue": "./WaveEnergy/Intermediate/WaveData_clipZ.shp",
+                    "defaultValue": "../../test/data/wave_energy_data/iui_test_space/Intermediate/WEM_InputOutput_Pts.shp",
                     "required": true,
                     "validateAs": {"type":"OGR",
-                    			   "layers": [{"name": {"inheritFrom": "file"}",
-                                             "type": "polygons", "projection" : "Transverse_Mercator"}],
+                    			   "layers": [{"name": {"inheritFrom": "file"},
+                                               "type": "polygons", "projection" : "Transverse_Mercator"}],
                                    "fieldsExist": ["Depth_M", "capWE_Sum"]}
                 },
                 {
