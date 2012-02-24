@@ -5,13 +5,17 @@ from invest_natcap.iui import iui_validator
 TEST_DATA = 'data/'
 
 class CheckerTester(unittest.TestCase):
-    def assertNoError(self, error):
+    def check(self):
+        return self.checker.run_checks(self.validate_as)
+
+    def assertNoError(self):
+        error = self.check()
         if error != None:
             self.assertEqual(error, '')
 
-    def assertError(self, error):
-        if error != None:
-            self.assertNotEqual(error, '')
+    def assertError(self):
+        error = self.check()
+        self.assertNotEqual(error, '')
 
 class FileCheckerTester(CheckerTester):
     def setUp(self):
@@ -21,14 +25,12 @@ class FileCheckerTester(CheckerTester):
         self.checker = iui_validator.FileChecker()
 
     def test_uri_exists(self):
-        error = self.checker.run_checks(self.validate_as)
-        self.assertNoError(error)
+        self.assertNoError()
 
     def test_nonexistent_uri(self):
         #this should fail, so we check that an error message is there.
         self.validate_as['value'] += 'a'
-        error = self.checker.run_checks(self.validate_as)
-        self.assertError(error)
+        self.assertError()
 
 
 class FolderCheckerTester(CheckerTester):
@@ -38,12 +40,10 @@ class FolderCheckerTester(CheckerTester):
         self.checker = iui_validator.FolderChecker()
 
     def test_folder_exists(self):
-        error = self.checker.run_checks(self.validate_as)
-        self.assertNoError(error)
+        self.assertNoError()
 
     def test_not_folder(self):
-        error = self.checker.run_checks(self.validate_as)
-        self.assertError(error)
+        self.assertError()
 
 
 class OGRCheckerTester(CheckerTester):
@@ -63,21 +63,17 @@ class OGRCheckerTester(CheckerTester):
 
         for key, value in incremental_additions:
             self.validate_as['layers'][0][key] = value
-            error = self.checker.run_checks(self.validate_as)
-            self.assertNoError(error)
+            self.assertNoError()
 
     def test_fields_exist(self):
         updates = {'layers': [{'name': 'harv_samp_cur'}],
                    'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp',
                    'fieldsExist': ['Start_date', 'Cut_cur', 'BCEF_cur']}
         self.validate_as.update(updates)
-
-        error = self.checker.run_checks(self.validate_as)
-        self.assertNoError(error)
+        self.assertNoError()
 
         self.validate_as['fieldsExist'].append('nonexistent_field')
-        error = self.checker.run_checks(self.validate_as)
-        self.assertError(error)
+        self.assertError()
 
 class DBFCheckerTester(CheckerTester):
         def setUp(self):
@@ -89,10 +85,8 @@ class DBFCheckerTester(CheckerTester):
 
         def test_fields_exist(self):
             self.validate_as['fieldsExist'] = ['C_above', 'LULC', 'C_soil']
-            error = self.checker.run_checks(self.validate_as)
-            self.assertNoError(error)
+            self.assertNoError()
 
         def test_nonexistent_fields(self):
             self.validate_as['fieldsExist'].append('nonexistent_field')
-            error = self.checker.run_checks(self.validate_as)
-            self.assertError(error)
+            self.assertError()
