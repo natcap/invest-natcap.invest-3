@@ -79,3 +79,20 @@ class OGRCheckerTester(CheckerTester):
         error = self.checker.run_checks(self.validate_as)
         self.assertNotError(error)
 
+class DBFCheckerTester(CheckerTester):
+        def setUp(self):
+            self.validate_as = {'type': 'DBF',
+                                'value': TEST_DATA +
+                                '/carbon/input/carbon_pools_samp.dbf',
+                                'fieldsExist': []}
+            self.checker = iui_validator.DBFChecker()
+
+        def test_fields_exist(self):
+            self.validate_as['fieldsExist'] = ['C_above', 'LULC', 'C_soil']
+            error = self.checker.run_checks(self.validate_as)
+            self.assertError(error)
+
+        def test_nonexistent_fields(self):
+            self.validate_as['fieldsExist'].append('nonexistent_field')
+            error = self.checker.run_checks(self.validate_as)
+            self.assertNotError(error)
