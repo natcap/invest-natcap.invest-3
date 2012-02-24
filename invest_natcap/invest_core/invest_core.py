@@ -212,7 +212,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     for raster in rasterList:
         logging.debug('building interpolator for %s' % raster)
         gt = raster.GetGeoTransform()
-        logging.debug('gt = %s'%(str(gt)))
+        logging.debug('gt = %s' % (str(gt)))
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
 
@@ -245,7 +245,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         #geotransform.
         if outGt[5] < 0:
             matrixList.append(spl(outYRange[::-1], outXRange)[::-1])
-        else: 
+        else:
             matrixList.append(spl(outYRange, outXRange))
 
         nodataList.append(band.GetNoDataValue())
@@ -270,12 +270,12 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     #return the new raster
     return outRaster
 
-def bounding_box_index(ogr_geometry, gdal_dataset):
+def bounding_box_index(ogr_feature, gdal_dataset):
     """Calculates the bounding box in GDAL raster index coordinates given the
         geotransform object corresponding to a raster in the same projection as
         ogr_geometry.
         
-        ogr_geometry - an OGRGeometry object
+        ogr_feature - an OGR Feature object
         gdal_dataset - the GDAL dataset object to calculate ogr_geometry 
             coordinates for
 
@@ -283,7 +283,8 @@ def bounding_box_index(ogr_geometry, gdal_dataset):
             range of gdal_dataset
 
         returns [xoff, yoff, win_xsize, win_ysize]"""
-        
+
+    feature_geometry = watershed_feature.GetGeometryRef()
     geometry_bounding_box = ogr_geometry.GetEnvelope()
     dataset_geotransform = gdal_dataset.GetGeoTransform()
 
@@ -294,4 +295,3 @@ def bounding_box_index(ogr_geometry, gdal_dataset):
     max_row = int((watershed_bounding_box[3] - dem_geotransform[3]) / abs(dem_geotransform[5]))
 
     return [min_col, min_row, max_col - min_col, max_row - min_row]
-
