@@ -93,6 +93,7 @@ class DBFCheckerTester(CheckerTester):
 
         def test_restrictions(self):
             regexp_int = {'pattern': '[0-9]*'}
+            date_regexp = {'pattern': '[0-9]{4}|0'}
             num_restriction = {'field': 'BCEF_cur',
                                'validateAs': {'type': 'number',
                                               'allowedValues': regexp_int}}
@@ -105,10 +106,14 @@ class DBFCheckerTester(CheckerTester):
             field_restriction = {'field': 'C_den_cur',
                                  'validateAs': {'type': 'number',
                                                 'lessThan': 'BCEF_cur'}}
+            str_restriction = {'field': 'Start_date',
+                               'validateAs': {'type': 'string',
+                                              'allowedValues': date_regexp}}
 
             self.validate_as['restrictions'] = [num_restriction,
                                                 const_restriction,
-                                                field_restriction]
+                                                field_restriction,
+                                                str_restriction]
             self.assertNoError()
 
 
