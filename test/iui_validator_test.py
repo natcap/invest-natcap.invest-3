@@ -66,4 +66,16 @@ class OGRCheckerTester(CheckerTester):
             error = self.checker.run_checks(self.validate_as)
             self.assertError(error)
 
+    def test_fields_exist(self):
+        updates = {'layers': [{'name': 'harv_samp_cur'}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp',
+                   'fieldsExist': ['Start_date', 'Cut_cur', 'BCEF_cur']}
+        self.validate_as.update(updates)
+
+        error = self.checker.run_checks(self.validate_as)
+        self.assertError(error)
+
+        self.validate_as['fieldsExist'].append('nonexistent_field')
+        error = self.checker.run_checks(self.validate_as)
+        self.assertNotError(error)
 
