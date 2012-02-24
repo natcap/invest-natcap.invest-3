@@ -269,3 +269,29 @@ def vectorizeRasters(rasterList, op, rasterName=None,
 
     #return the new raster
     return outRaster
+
+def bounding_box_index(ogr_geometry, gdal_dataset):
+    """Calculates the bounding box in GDAL raster index coordinates given the
+        geotransform object corresponding to a raster in the same projection as
+        ogr_geometry.
+        
+        ogr_geometry - an OGRGeometry object
+        gdal_dataset - the GDAL dataset object to calculate ogr_geometry 
+            coordinates for
+
+        raises an exception if the dataset index bounding box is outside the
+            range of gdal_dataset
+
+        returns [xoff, yoff, win_xsize, win_ysize]"""
+        
+    geometry_bounding_box = ogr_geometry.GetEnvelope()
+    dataset_geotransform = gdal_dataset.GetGeoTransform()
+
+    min_col = int((watershed_bounding_box[0] - dem_geotransform[0]) / dem_geotransform[1])
+    max_col = int((watershed_bounding_box[1] - dem_geotransform[0]) / dem_geotransform[1])
+
+    min_row = int((watershed_bounding_box[2] - dem_geotransform[3]) / abs(dem_geotransform[5]))
+    max_row = int((watershed_bounding_box[3] - dem_geotransform[3]) / abs(dem_geotransform[5]))
+
+    return [min_col, min_row, max_col - min_col, max_row - min_row]
+
