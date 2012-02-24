@@ -343,7 +343,7 @@ class OGRChecker(TableChecker):
         return table_rows
                 
 class DBFChecker(TableChecker):
-    def open(self):
+    def open(self, valid_dict):
         """Attempt to open the DBF."""
         
         self.file = dbf.Dbf(str(self.uri))
@@ -352,7 +352,7 @@ class DBFChecker(TableChecker):
             return str('Must be a DBF file')
       
     def _get_fieldnames(self):
-        return self.file.fieldNames()
+        return self.file.header.fields
 
     def _build_table(self):
         table_rows = []
