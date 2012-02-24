@@ -28,7 +28,7 @@ class Validator(registrar.Registrar):
                    'OGR': OGRChecker,
                    'number': NumberChecker,
                    'file': FileChecker,
-                   'folder': URIChecker,
+                   'folder': FolderChecker,
                    'DBF': DBFChecker,
                    'CSV': CSVChecker,
                    'string': PrimitiveChecker}
