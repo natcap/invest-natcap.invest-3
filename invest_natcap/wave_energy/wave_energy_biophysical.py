@@ -21,17 +21,19 @@ def execute(args):
         It may write log, warning, or error messages to stdout.
         
         args - A python dictionary with at least the following possible entries:
-        args['workspace_dir'] - Where the intermediate and ouput folder/files will 
-                                be saved.
+        args['workspace_dir'] - Where the intermediate and ouput folder/files  
+                                will be saved.
         args['wave_base_data_uri'] - Directory location of wave base data 
-                                     including WW3 data and analyis area shapefile.
-        args['analysis_area_uri'] - A string identifying the analysis area of interest.
-                                    Used to determine wave data shapefile, wave data 
-                                    text file, and analysis area boundary shape.
-        args['machine_perf_uri'] - The path of a CSV file that holds the machine 
-                                   performace table. 
-        args['machine_param_uri'] - The path of a CSV file that holds the machine 
-                                    parameter table.
+                                     including WW3 data and analyis area 
+                                     shapefile.
+        args['analysis_area_uri'] - A string identifying the analysis area of 
+                                    interest. Used to determine wave data 
+                                    shapefile, wave data text file, and 
+                                    analysis area boundary shape.
+        args['machine_perf_uri'] - The path of a CSV file that holds the 
+                                   machine performace table. 
+        args['machine_param_uri'] - The path of a CSV file that holds the 
+                                    machine parameter table.
         args['dem_uri'] - The path of the Global Digital Elevation Model (DEM).
         args['aoi_uri'] - A polygon shapefile outlining a more detailed area 
                           within the analyis area. (OPTIONAL, but required to
@@ -87,33 +89,50 @@ def execute(args):
     #Open the polygon geometry analysis area extract shapefile contaning the 
     #outline of the area of interest.
     if args['analysis_area_uri'] == 'West Coast of North America and Hawaii':
-        analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp'
-        analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
-                                                                   + os.sep + 'NAmerica_WestCoast_4m.txt')
+        analysis_area_path = \
+            args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp'
+        analysis_area_extract_path = \
+            args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
+        biophysical_args['wave_base_data'] = \
+            extrapolate_wave_data(args['wave_base_data_uri']
+                                  + os.sep + 'NAmerica_WestCoast_4m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
-        biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
-    elif args['analysis_area_uri'] == 'East Coast of North America and Puerto Rico':
-        analysis_area_path = args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp'
-        analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
-                                                                   + os.sep + 'NAmerica_EastCoast_4m.txt')
+        biophysical_args['analysis_area_extract'] = \
+            ogr.Open(analysis_area_extract_path)
+    elif args['analysis_area_uri'] == \
+             'East Coast of North America and Puerto Rico':
+        analysis_area_path = \
+            args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp'
+        analysis_area_extract_path = \
+            args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
+        biophysical_args['wave_base_data'] = \
+            extrapolate_wave_data(args['wave_base_data_uri']
+                                  + os.sep + 'NAmerica_EastCoast_4m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
-        biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
+        biophysical_args['analysis_area_extract'] = \
+            ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global(Eastern Hemisphere)':
-        analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.shp'
-        analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
-                                                                   + os.sep + 'Global_EastHemi_30m.txt')
+        analysis_area_path = \
+            args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.shp'
+        analysis_area_extract_path = \
+            args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
+        biophysical_args['wave_base_data'] = \
+            extrapolate_wave_data(args['wave_base_data_uri']
+                                  + os.sep + 'Global_EastHemi_30m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
-        biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
+        biophysical_args['analysis_area_extract'] = \
+            ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global(Western Hemisphere)':
-        analysis_area_path = args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.shp'
-        analysis_area_extract_path = args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysical_args['wave_base_data'] = extrapolate_wave_data(args['wave_base_data_uri']
-                                                                   + os.sep + 'Global_WestHemi_30m.txt')
+        analysis_area_path = \
+            args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.shp'
+        analysis_area_extract_path = \
+            args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
+        biophysical_args['wave_base_data'] = \
+            extrapolate_wave_data(args['wave_base_data_uri']
+                                  + os.sep + 'Global_WestHemi_30m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
-        biophysical_args['analysis_area_extract'] = ogr.Open(analysis_area_extract_path)
+        biophysical_args['analysis_area_extract'] = \
+            ogr.Open(analysis_area_extract_path)
     else:
         LOGGER.debug('Analysis Area : %s', args['analysis_area_uri'])
         LOGGER.error('Analysis Area ERROR.')
@@ -124,16 +143,18 @@ def execute(args):
         aoi = ogr.Open(args['aoi_uri'])
         biophysical_args['aoi'] = aoi
         
-    #Fire up the biophysical function in wave_energy_core with the gathered arguments
+    #Fire up the biophysical function in wave_energy_core with the 
+    #gathered arguments
     LOGGER.info('Starting Wave Energy Biophysical.')
     wave_energy_core.biophysical(biophysical_args)
     LOGGER.info('Completed Wave Energy Biophysical.')
 
 def extrapolate_wave_data(wave_file_uri):
-    """The extrapolate_wave_data function converts WW3 text data into a dictionary who's
-    keys are the corresponding (I,J) values and whose value is a two-dimensional array
-    representing a matrix of the number of hours a seastate occurs over a 5 year period.
-    The row and column headers are extracted once and stored in the dictionary as well.
+    """The extrapolate_wave_data function converts WW3 text data into a 
+    dictionary who's keys are the corresponding (I,J) values and whose value 
+    is a two-dimensional array representing a matrix of the number of hours 
+    a seastate occurs over a 5 year period. The row and column headers are 
+    extracted once and stored in the dictionary as well.
     
     wave_file_uri - The path to a text document that holds the WW3 data.
     
