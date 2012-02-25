@@ -284,14 +284,19 @@ def bounding_box_index(ogr_feature, gdal_dataset):
 
         returns [xoff, yoff, win_xsize, win_ysize]"""
 
-    feature_geometry = watershed_feature.GetGeometryRef()
-    geometry_bounding_box = ogr_geometry.GetEnvelope()
+    feature_geometry = ogr_feature.GetGeometryRef()
+    geometry_bounding_box = feature_geometry.GetEnvelope()
     dataset_geotransform = gdal_dataset.GetGeoTransform()
 
-    min_col = int((watershed_bounding_box[0] - dem_geotransform[0]) / dem_geotransform[1])
-    max_col = int((watershed_bounding_box[1] - dem_geotransform[0]) / dem_geotransform[1])
 
-    min_row = int((watershed_bounding_box[2] - dem_geotransform[3]) / abs(dem_geotransform[5]))
-    max_row = int((watershed_bounding_box[3] - dem_geotransform[3]) / abs(dem_geotransform[5]))
+    min_col = int((geometry_bounding_box[0] - dataset_geotransform[0]) / \
+                  dataset_geotransform[1])
+    max_col = int((geometry_bounding_box[1] - dataset_geotransform[0]) / \
+                  dataset_geotransform[1])
+
+    min_row = int((geometry_bounding_box[2] - dataset_geotransform[3]) / \
+                  abs(dataset_geotransform[5]))
+    max_row = int((geometry_bounding_box[3] - dataset_geotransform[3]) / \
+                  abs(dataset_geotransform[5]))
 
     return [min_col, min_row, max_col - min_col, max_row - min_row]
