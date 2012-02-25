@@ -20,8 +20,7 @@ class CheckerTester(unittest.TestCase):
 class FileCheckerTester(CheckerTester):
     def setUp(self):
         self.validate_as = {'type': 'file',
-                       'value': TEST_DATA +
-                       '/base_data/terrestrial/lulc_samp_cur/hdr.adf'}
+                            'value': TEST_DATA + 'iui/text_test.txt'}
         self.checker = iui_validator.FileChecker()
 
     def test_uri_exists(self):
