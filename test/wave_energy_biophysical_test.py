@@ -92,6 +92,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         wave_base_data_uri = './data/wave_energy_data/test_input/sampWaveDataTest.txt'
         if os.path.isfile(wave_base_data_uri):
             wave_data = wave_energy_biophysical.extrapolate_wave_data(wave_base_data_uri)
+            LOGGER.debug('Extrapolated Wave Data : %s', wave_data)
             #Hand generated results
             row = np.array([.25, 1.0, 2.0, 3.0, 4.0, 5.0])
             col = np.array([.125, .5, 1.0, 1.5, 2.0, 2.5])
@@ -111,14 +112,16 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
             test_dict = {(580, 507): matrix1, (580, 508): matrix2}
             #Check hand generated results vs. function results
             for key, value in test_dict.iteritems():
-                if key in wave_data:
-                    self.assertTrue((value == np.array(wave_data[key], dtype='f')).all)
+                if key in wave_data['bin_matrix']:
+                    self.assertTrue((value == \
+                                     np.array(wave_data['bin_matrix'][key], 
+                                              dtype='f')).all)
                 else:
                     self.assertEqual(0, 1, 'Keys do not match')
             #Check rows/column header results
-            for val, val2 in zip(row, wave_data[0]):
+            for val, val2 in zip(row, wave_data['periods']):
                 self.assertEqual(val, val2)
-            for val, val2 in zip(col, wave_data[1]):
+            for val, val2 in zip(col, wave_data['heights']):
                 self.assertEqual(val, val2)
         else:
             print 'NOT A FILE: ' + wave_base_data_uri

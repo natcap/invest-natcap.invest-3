@@ -29,7 +29,17 @@ def biophysical(args):
     Required:
     args['workspace_dir'] - the workspace path where Output/Intermediate
                             files will be written
-    args['wave_base_data'] - a dictionary of seastate bin data.
+    args['wave_base_data'] - a dictionary of seastate bin data with the ranges
+                             of period and height. The dictionary has the 
+                             following structure:
+               {'periods': [1,2,3,4,...],
+                'heights': [.5,1.0,1.5,...],
+                'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 ...
+                                (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                              }
+               }
     args['analysis_area'] - a point geometry shapefile representing the 
                             relevant WW3 points
     args['analysis_area_extract'] - a polygon geometry shapefile encompassing 
@@ -712,7 +722,17 @@ def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
     machine performance table using new ranges from wave watch data.
     
-    wave_data - A dictionary holding the new x range and y range values
+    wave_data - A dictionary holding the new x range (period) and 
+                y range (height) values for the interpolation.  The
+                dictionary has the following structure:
+               {'periods': [1,2,3,4,...],
+                'heights': [.5,1.0,1.5,...],
+                'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 ...
+                                (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                              }
+               }
     machine_perf - a dictionary that holds the machine performance
                    information with the following keys and structure:
                    machine_perf['periods'] - [1,2,3,...]
@@ -726,8 +746,8 @@ def wave_energy_interp(wave_data, machine_perf):
     y_range = np.array(machine_perf['heights'], dtype='f')
     z_matrix = np.array(machine_perf['bin_matrix'], dtype='f')
     #Get new ranges to interpolate to, from wave_data table
-    new_x = wave_data[0]
-    new_y = wave_data[1]
+    new_x = wave_data['periods']
+    new_y = wave_data['heights']
     #Interpolate machine performance table and return the interpolated matrix
     interp_z = invest_cython_core.interpolateMatrix(x_range, y_range, 
                                                     z_matrix, new_x, new_y)
@@ -738,12 +758,16 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     generates a dictionary whos keys are the points (I,J) and whos value
     is the wave energy capacity.
     
-    wave_data - A dictionary containing wave watch data
-    {'wave_periods:...
-    ...
-    (i0,j0)..
-    (i1,j1)...
-
+    wave_data - A dictionary containing wave watch data with the following
+                structure:
+               {'periods': [1,2,3,4,...],
+                'heights': [.5,1.0,1.5,...],
+                'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 ...
+                                (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                              }
+               }
     interp_z - A 2D array of the interpolated values for the machine
                 performance table
     machine_param - A dictionary containing the restrictions for the machines
@@ -762,8 +786,8 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     #Get the row,col headers (ranges) for the wave watch data
     #row is wave period label
     #col is wave height label
-    wave_periods = wave_data.pop(0)
-    wave_heights = wave_data.pop(1)
+    wave_periods = wave_data['periods']
+    wave_heights = wave_data['heights']
 
     #Get the machine parameter restriction values
     cap_max = float(machine_param['capmax'])
@@ -793,7 +817,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
 
     #For all the wave watch points, multiply the occurence matrix by the 
     #interpolated machine performance matrix to get the captured wave energy
-    for key, val in wave_data.iteritems():
+    for key, val in wave_data['bin_matrix'].iteritems():
         #Convert all values to type float
         temp_array = np.array(val, dtype='f')
         mult_array = np.multiply(temp_array, interp_z)

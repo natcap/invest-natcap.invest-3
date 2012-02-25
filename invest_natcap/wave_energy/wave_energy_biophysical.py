@@ -165,11 +165,24 @@ def extrapolate_wave_data(wave_file_uri):
     
     wave_file_uri - The path to a text document that holds the WW3 data.
     
-    returns - A dictionary of matrices representing hours of specific seastates.  
+    returns - A dictionary of matrices representing hours of specific seastates,
+              as well as the period and height ranges.  It has the following
+              structure:
+               {'periods': [1,2,3,4,...],
+                'heights': [.5,1.0,1.5,...],
+                'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 ...
+                                (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                              }
+               }  
     """
     LOGGER.debug('Extrapolating wave data from text to a dictionary')
     wave_file = open(wave_file_uri)
     wave_dict = {}
+    #Create a key that hosts another dictionary where the matrix representation
+    #of the seastate bins will be saved
+    wave_dict['bin_matrix'] = {}
     wave_array = None
     wave_periods = []
     wave_heights = []
@@ -186,7 +199,7 @@ def extrapolate_wave_data(wave_file_uri):
         line = wave_file.readline()
         if len(line) == 0:
             #end of file
-            wave_dict[key] = wave_array
+            wave_dict['bin_matrix'][key] = wave_array
             break
 
         #If it is the start of a new location, get (I,J) values
@@ -194,7 +207,7 @@ def extrapolate_wave_data(wave_file_uri):
             #If key is not None that means there is a full array waiting
             #to be written to the dictionary, so write it
             if key != None:
-                wave_dict[key] = wave_array
+                wave_dict['bin_matrix'][key] = wave_array
 
             #Clear out array
             wave_array = []
@@ -210,8 +223,8 @@ def extrapolate_wave_data(wave_file_uri):
     wave_file.close()
     #Add row/col header to dictionary
     LOGGER.debug('WaveData row %s', wave_periods)
-    wave_dict[0] = np.array(wave_periods, dtype='f')
+    wave_dict['periods'] = np.array(wave_periods, dtype='f')
     LOGGER.debug('WaveData col %s', wave_heights)
-    wave_dict[1] = np.array(wave_heights, dtype='f')
+    wave_dict['heights'] = np.array(wave_heights, dtype='f')
     LOGGER.debug('Finished extrapolating wave data to dictionary')
     return wave_dict
