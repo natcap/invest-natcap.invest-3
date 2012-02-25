@@ -7,6 +7,7 @@ import math
 from osgeo import ogr, gdal, osr
 from osgeo.gdalconst import *
 import numpy as np
+from nose.plugins.skip import SkipTest
 
 from invest_natcap.dbfpy import dbf
 import invest_cython_core
@@ -18,6 +19,14 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestInvestCore(unittest.TestCase):
+    def test_bounding_box(self):
+        dem = gdal.Open('./data/sediment_test_data/dem')
+        watersheds = ogr.Open('./data/sediment_test_data/watersheds.shp')
+        watershed_layer = watersheds.GetLayer()
+        watershed_feature = watershed_layer.GetFeature(0)
+        bounding_box = invest_core.bounding_box_index(watershed_feature, dem)
+        self.assertEqual(bounding_box, [199, 0, 251, 349])
+
     def testflowDirectionD8(self):
         """Regression test for flow direction on a DEM"""
         dem = gdal.Open('./data/sediment_test_data/dem')
@@ -116,7 +125,6 @@ class TestInvestCore(unittest.TestCase):
 
     def testinterpolateMatrix(self):
         """Test the matrix interpolation function"""
-
         def assertEqualInterpPoints(x, y, newx, newy, z):
             for xVal in x:
                 for yVal in y:
@@ -125,7 +133,7 @@ class TestInvestCore(unittest.TestCase):
                     ii = newx.tolist().index(xVal)
                     jj = newy.tolist().index(yVal)
                     self.assertAlmostEquals(z[j][i], interpz[jj][ii], 5,
-                                    "z[%s][%s], interpz[%s][%s], %s != %s" % 
+                                    "z[%s][%s], interpz[%s][%s], %s != %s" %
                                     (i, j, ii, jj, z[j][i], interpz[jj][ii]))
 
         #Create a non-trivial somewhat random matrix
@@ -220,7 +228,7 @@ class TestInvestCore(unittest.TestCase):
         #assert the output of pixelArea against the known value 
         #(it's 30x30 meters) so 0.09 Ha
         self.assertEqual(0.09, area)
-        
+
     def test_wave_energy_pixel_size_in_meters(self):
         """Verify the correct output of wave_energy.pixel_size_in_meters()"""
         #This file is known/tested to have the right conversion
@@ -242,7 +250,7 @@ class TestInvestCore(unittest.TestCase):
         source_sr = srs_prj
         trg_prj = osr.SpatialReference()
         trg_prj.ImportFromWkt(dataset_correct_pixel.GetProjectionRef())
-        target_sr = trg_prj        
+        target_sr = trg_prj
         coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         #Convert the shapefiles geometry point to lat/long
         coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
@@ -259,7 +267,7 @@ class TestInvestCore(unittest.TestCase):
         #but size.
         self.assertEqual(pixel_size_tuple[0], abs(geo_tran[1]))
         self.assertEqual(pixel_size_tuple[1], abs(geo_tran[5]))
-        
+
     def test_createRasterFromVectorExtents(self):
         fsencoding = sys.getfilesystemencoding()
         shp = ogr.Open('./data/sediment_test_data/subwatersheds.shp'.\

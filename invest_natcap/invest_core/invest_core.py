@@ -212,7 +212,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     for raster in rasterList:
         logging.debug('building interpolator for %s' % raster)
         gt = raster.GetGeoTransform()
-        logging.debug('gt = %s'%(str(gt)))
+        logging.debug('gt = %s' % (str(gt)))
         band = raster.GetRasterBand(1)
         matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
 
@@ -245,7 +245,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         #geotransform.
         if outGt[5] < 0:
             matrixList.append(spl(outYRange[::-1], outXRange)[::-1])
-        else: 
+        else:
             matrixList.append(spl(outYRange, outXRange))
 
         nodataList.append(band.GetNoDataValue())
@@ -269,3 +269,38 @@ def vectorizeRasters(rasterList, op, rasterName=None,
 
     #return the new raster
     return outRaster
+
+def bounding_box_index(ogr_feature, gdal_dataset):
+    """Calculates the bounding box in GDAL raster index coordinates given the
+        geotransform object corresponding to a raster in the same projection as
+        ogr_geometry.
+        
+        ogr_feature - an OGR Feature object
+        gdal_dataset - the GDAL dataset object to calculate ogr_geometry 
+            coordinates for
+
+        raises an exception if the dataset index bounding box is outside the
+            range of gdal_dataset
+
+        returns [xoff, yoff, win_xsize, win_ysize]"""
+
+    feature_geometry = ogr_feature.GetGeometryRef()
+    geometry_bounding_box = feature_geometry.GetEnvelope()
+    dataset_geotransform = gdal_dataset.GetGeoTransform()
+
+
+    min_col = int((geometry_bounding_box[0] - dataset_geotransform[0]) / \
+                  dataset_geotransform[1])
+    max_col = int((geometry_bounding_box[1] - dataset_geotransform[0]) / \
+                  dataset_geotransform[1])
+
+    #Recall that rows increase going DOWN, so the "max" row is really the
+    #bottom row. that's the index of geometry_bounding_box[2].
+    #This is really confusing, so check out the class structure here:
+    #http://www.gdal.org/ogr/ogr__core_8h-source.html
+    max_row = int((geometry_bounding_box[2] - dataset_geotransform[3]) / \
+                  dataset_geotransform[5])
+    min_row = int((geometry_bounding_box[3] - dataset_geotransform[3]) / \
+                  dataset_geotransform[5])
+
+    return [min_col, min_row, max_col - min_col, max_row - min_row]

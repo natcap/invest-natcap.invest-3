@@ -59,6 +59,14 @@ def biophysical(args):
         returns nothing"""
 
     LOGGER = logging.getLogger('sediment_core: biophysical')
+    for watershed_feature in args['watersheds'].GetLayer():
+        LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())
+        watershed_bounding_box = \
+            invest_core.bounding_box_index(watershed_feature, args['dem'])
+        LOGGER.info('Bounding box %s' % (watershed_bounding_box))
+
+
+
     LOGGER.info("calculating flow direction")
     invest_cython_core.flow_direction_inf(args['dem'], args['flow_direction'])
 

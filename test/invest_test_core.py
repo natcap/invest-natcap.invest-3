@@ -51,7 +51,12 @@ def assertTwoDatasetsEqual(unitTest, a, b):
 
         aArray = bandA.ReadAsArray(0, 0, bandA.XSize, bandA.YSize)
         bArray = bandB.ReadAsArray(0, 0, bandB.XSize, bandB.YSize)
-        np.testing.assert_array_almost_equal(aArray, bArray)
+        try:
+            np.testing.assert_array_almost_equal(aArray, bArray)
+        except AssertionError:
+            for a, b in zip(aArray[0], bArray[0]):
+                unitTest.assertAlmostEqual(a, b, msg=str('%s != %s ... Failed at' +
+                    ' row %s')%(a, b, bandNumber))
 
 def assertTwoShapesEqualURI(unitTest, aUri, bUri):
     """Tests if shapes a and b are equal to each other on a
