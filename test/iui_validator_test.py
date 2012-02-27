@@ -16,6 +16,7 @@ class CheckerTester(unittest.TestCase):
     def assertError(self):
         error = self.check()
         self.assertNotEqual(error, '')
+        self.assertNotEqual(error, None)
 
 class FileCheckerTester(CheckerTester):
     def setUp(self):
@@ -115,8 +116,56 @@ class DBFCheckerTester(CheckerTester):
                                                 str_restriction]
             self.assertNoError()
 
+class PrimitiveCheckerTester(CheckerTester):
+    def setUp(self):
+        self.validate_as = {'type': 'string',
+                            'allowedValues': {'pattern': '[a-z]+'}}
+        self.checker = iui_validator.PrimitiveChecker()
 
+    def test_value(self):
+        self.validate_as['value'] = 'aaaabasd'
+        self.assertNoError()
 
+    def test_value_not_allowed(self):
+        self.validate_as['value'] = '12341aasd'
+        self.assertError()
 
+    def test_ignore_case_flag(self):
+        self.validate_as['value'] = 'AsdAdnS'
+        self.validate_as['allowedValues']['flag'] = 'ignoreCase'
+        self.assertNoError()
 
+    def test_dot_all_flag(self):
+        self.validate_as['value'] = 'asda\n'
+        self.validate_as['allowedValues']['flag'] = 'dotAll'
+        self.validate_as['allowedValues']['pattern'] = '[a-z]+.+'
+        self.assertNoError()
 
+class NumberCheckerTester(CheckerTester):
+    def setUp(self):
+        self.validate_as = {'type':'number',
+                            'value': 5}
+        self.checker = iui_validator.NumberChecker()
+
+    def test_gt(self):
+        self.validate_as['greaterThan'] = 2
+        self.assertNoError()
+
+    def test_lt(self):
+        self.validate_as['lessThan'] = 7
+        self.assertError()
+
+    def test_gteq(self):
+        self.validate_as['gteq'] = 5
+        self.assertNoError()
+
+    def test_lteq(self):
+        self.validate_as['lteq'] = 5
+        self.assertNoError()
+
+    def test_all(self):
+        self.validate_as['lteq'] = 5
+        self.validate_as['lessThan'] = 6
+        self.validate_as['gteq'] = 5
+        self.validate_as['greaterThan'] = 4
+        self.assertNoError()
