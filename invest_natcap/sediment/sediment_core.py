@@ -66,14 +66,17 @@ def biophysical(args):
         LOGGER.info('Bounding box %s' % (watershed_bounding_box))
 
         #Read the subraster that overlaps the watershed bounding box
-        dem_matrix = \
-            args['dem'].GetRasterBand(1).ReadAsArray(*watershed_bounding_box)
+        #dem_matrix = \
+        #    args['dem'].GetRasterBand(1).ReadAsArray(watershed_bounding_box)
+        invest_cython_core.flow_direction_inf(args['dem'],
+                                              watershed_bounding_box,
+                                              args['flow_direction'])
 
-
+    return
 
 
     LOGGER.info("calculating flow direction")
-    invest_cython_core.flow_direction_inf(args['dem'], args['flow_direction'])
+
 
     LOGGER.info("calculating flow accumulation")
     invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
