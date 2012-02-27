@@ -112,14 +112,15 @@ def biophysical(args):
         invest_cython_core.calculate_slope(args['dem'], 
             watershed_bounding_box, args['slope'])
 
+        LOGGER.info("calculating LS factor accumulation")
+        invest_cython_core.calculate_ls_factor(args['flow_accumulation'],
+                                               args['slope'],
+                                               args['flow_direction'],
+                                               watershed_bounding_box,
+                                               args['ls_factor'])
     return
 
 
-    LOGGER.info("calculating LS factor accumulation")
-    invest_cython_core.calculate_ls_factor(args['flow_accumulation'],
-                                           args['slope'],
-                                           args['flow_direction'],
-                                           args['ls_factor'])
 
     #Nodata value to use for output raster
     usle_nodata = -1.0

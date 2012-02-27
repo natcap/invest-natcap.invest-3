@@ -1019,8 +1019,8 @@ def calculate_slope(dem, bounding_box, slope):
     slope.GetRasterBand(1).WriteArray(slopeMatrix,*bounding_box[0:2])
     invest_core.calculateRasterStats(slope.GetRasterBand(1))
 
-def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
-    slope_threshold = 0.075):
+def calculate_ls_factor(upslope_area, slope_raster, aspect, 
+                        bounding_box, ls_factor):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
@@ -1037,16 +1037,15 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
             direction that slopes are facing in terms of radians east and
             increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
             0 or 2pi is east.
+        bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
         ls_factor - (modified output) a single band raster dataset that will
             have the per-pixel ls factor written to it
-        slope_threshold - the cutoff for areas that the LS factor should be
-            calcualted with the Huan and Lu formula from the InVEST 2.2.0 user's
-            guide 
             
         returns a raster of the same dimensions as inputs whose elements """
     
-    cdef int nrows = upslope_area.RasterXSize, \
-             ncols = upslope_area.RasterYSize, \
+    cdef int nrows = bounding_box[2], \
+             ncols = bounding_box[3], \
              row_index, col_index
     
     #Assumes that cells are square
@@ -1062,16 +1061,16 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     cdef float ls_nodata = ls_factor.GetRasterBand(1).GetNoDataValue()
     
     cdef np.ndarray [np.float_t,ndim=2] upslope_area_matrix = \
-        upslope_area.GetRasterBand(1).ReadAsArray(0, 0, \
-        nrows,ncols).transpose().astype(np.float)
+        upslope_area.GetRasterBand(1).ReadAsArray(*bounding_box) \
+        .transpose().astype(np.float)
     
     cdef np.ndarray [np.float_t,ndim=2] slope_matrix = \
-        slope_raster.GetRasterBand(1).ReadAsArray(0, 0, \
-        nrows,ncols).transpose().astype(np.float)
+        slope_raster.GetRasterBand(1).ReadAsArray(*bounding_box) \
+        .transpose().astype(np.float)
         
     cdef np.ndarray [np.float_t,ndim=2] aspect_matrix = \
-        aspect.GetRasterBand(1).ReadAsArray(0, 0, \
-        nrows, ncols).transpose().astype(np.float)
+        aspect.GetRasterBand(1).ReadAsArray(*bounding_box) \
+        .transpose().astype(np.float)
         
     cdef np.ndarray [np.float_t,ndim=2] ls_factor_matrix = \
         np.zeros((nrows,ncols))
@@ -1142,11 +1141,13 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
                 
             ls_factor_matrix[row_index,col_index] *= slope_factor
 
-    ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(),0,0)
-    mraster.GetRasterBand(1).WriteArray(m_matrix.transpose(),0,0)
-    xijraster.GetRasterBand(1).WriteArray(xij_matrix.transpose(),0,0)
+    ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(), \
+                                          *bounding_box[0:2])
+    mraster.GetRasterBand(1).WriteArray(m_matrix.transpose(), \
+                                          *bounding_box[0:2])
+    xijraster.GetRasterBand(1).WriteArray(xij_matrix.transpose(), \
+                                          *bounding_box[0:2])
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
-
     
 def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,  
                            sediment_retention):
