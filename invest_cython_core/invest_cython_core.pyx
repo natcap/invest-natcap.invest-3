@@ -678,17 +678,20 @@ cdef void d_p_area(CQueue pixels_to_process,
             accumulation_matrix[i, j] += prop * accumulation_matrix[pi, pj]
             #LOGGER.debug("prop %s accumulation_matrix[i, j] = %s" % (prop, accumulation_matrix[i, j]))
 
-def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
+def flow_accumulation_dinf(flow_direction, dem, bounding_box, 
+                           flow_accumulation):
     """Creates a raster of accumulated flow to each cell.
     
-        flow_direction - A raster showing direction of flow out of each cell
-            with direcitonal values given in radians.
-        flow_accumulation - The output flow accumulation raster set
-        dem - heightmap raster for the area of interest
+        flow_direction - (input) A raster showing direction of flow out of 
+            each cell with directional values given in radians.
+        dem - (input) heightmap raster for the area of interest
+        bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
+        flow_accumulation - (output) The output flow accumulation raster set
         
         returns nothing"""
 
-    cdef int nodata_flow_direction, i, j
+    cdef int nodata_flow_direction, i, j, n_cols, n_rows
     cdef float nodata_flow_accumulation
     cdef CQueue q
     LOGGER = logging.getLogger('flow_accumulation_dinf')
@@ -696,24 +699,31 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     #Load the input flow into a numpy array
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
+    
+    n_cols = bounding_box[2]
+    n_rows = bounding_box[3]
     cdef np.ndarray[np.float_t,ndim=2] flow_direction_matrix = \
-        flow_direction.GetRasterBand(1).ReadAsArray(0, 0,
-        flow_direction.RasterXSize, flow_direction.RasterYSize).transpose().astype(np.float)
-    cdef np.ndarray[np.float_t,ndim=2] dem_pixels  = \
-        dem.GetRasterBand(1).ReadAsArray(0, 0,
-        dem.RasterXSize, dem.RasterYSize).transpose().astype(np.float)
+        flow_direction.GetRasterBand(1).ReadAsArray(*bounding_box) \
+            .transpose().astype(np.float)
+            
+    cdef np.ndarray[np.float_t,ndim=2] dem_pixels =  dem.GetRasterBand(1). \
+        ReadAsArray(*bounding_box).transpose().astype(np.float)
+        
     nodata_flow_direction = flow_direction.GetRasterBand(1).GetNoDataValue()
-    nodata_flow_accumulation = flow_accumulation.GetRasterBand(1).GetNoDataValue()
+    nodata_flow_accumulation = \
+        flow_accumulation.GetRasterBand(1).GetNoDataValue()
     nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
+    
     gp = flow_direction.GetGeoTransform()
     cellXSize = gp[1]
     cellYSize = gp[5]
+    
     #Create the output flow, initialize to -1 as undefined
     idim, jdim = flow_direction_matrix.shape[0], flow_direction_matrix.shape[1]
     cdef np.ndarray[np.float_t,ndim=2] accumulation_matrix = \
         np.zeros([idim, jdim],dtype=np.float)
     cdef Pair *dem_pixel_pairs = \
-        <Pair *>malloc(flow_direction.RasterXSize*flow_direction.RasterYSize * sizeof(Pair))
+        <Pair *>malloc(n_cols * n_rows * sizeof(Pair))
         
     #initalize to -2 to indicate no processing has occured.  This will change
     #to -1 to indicate it's been enqueued, and something else when value is
@@ -752,7 +762,7 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
                           dem_pixels)
 
     flow_accumulation.GetRasterBand(1).WriteArray(\
-        accumulation_matrix.transpose(), 0, 0)
+        accumulation_matrix.transpose(), *bounding_box[0:2])
     invest_core.calculateRasterStats(flow_accumulation.GetRasterBand(1))
     
     free(dem_pixel_pairs)
