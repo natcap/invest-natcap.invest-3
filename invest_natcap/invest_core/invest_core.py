@@ -289,10 +289,10 @@ def bounding_box_index(ogr_feature, gdal_dataset):
     dataset_geotransform = gdal_dataset.GetGeoTransform()
 
 
-    min_col = int((geometry_bounding_box[0] - dataset_geotransform[0]) / \
-                  dataset_geotransform[1])
-    max_col = int((geometry_bounding_box[1] - dataset_geotransform[0]) / \
-                  dataset_geotransform[1])
+    min_col = int(math.ceil((geometry_bounding_box[0] - dataset_geotransform[0]) / \
+                  dataset_geotransform[1]))
+    max_col = int(math.ceil((geometry_bounding_box[1] - dataset_geotransform[0]) / \
+                  dataset_geotransform[1]))
 
     #Recall that rows increase going DOWN, so the "max" row is really the
     #bottom row. that's the index of geometry_bounding_box[2].
