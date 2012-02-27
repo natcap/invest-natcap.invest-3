@@ -104,14 +104,16 @@ def biophysical(args):
 
         #classify streams from the flow accumulation raster
         LOGGER.info("Classifying streams from flow accumulation raster")
-
         invest_core.vectorize1ArgOp(args['flow_accumulation'].GetRasterBand(1),
             stream_classifier, args['v_stream'].GetRasterBand(1),
             watershed_bounding_box)
 
+        LOGGER.info("Calculating slope")
+        invest_cython_core.calculate_slope(args['dem'], 
+            watershed_bounding_box, args['slope'])
+
     return
 
-    invest_cython_core.calculate_slope(args['dem'], args['slope'])
 
     LOGGER.info("calculating LS factor accumulation")
     invest_cython_core.calculate_ls_factor(args['flow_accumulation'],

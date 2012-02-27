@@ -963,12 +963,14 @@ def flow_direction_inf(dem, bounding_box, flow):
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), *bounding_box[0:2])
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
 
-def calculate_slope(dem, slope):
+def calculate_slope(dem, bounding_box, slope):
     """Generates raster maps of slope.  Follows the algorithm described here:
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
         
         dem - (input) a single band raster of z values.  z units should be identical
             to ground units.
+        bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
         slope - (modified output) a single band raster of the same dimensions 
             as dem whose elements are percent rise
             
@@ -977,7 +979,7 @@ def calculate_slope(dem, slope):
     LOGGER = logging.getLogger('calculateSlope')
     #Read the DEM directly into an array
     demBand = dem.GetRasterBand(1)
-    demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
+    demBandMatrix = demBand.ReadAsArray(*bounding_box)
     LOGGER.debug('demBandMatrix size %s' % (demBandMatrix.size))
 
     #Create an empty slope matrix
@@ -1011,9 +1013,10 @@ def calculate_slope(dem, slope):
     offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
                (-1, -1)]
     for offset in offsets:
-        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = slope.GetRasterBand(1).GetNoDataValue()
+        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = \
+            slope.GetRasterBand(1).GetNoDataValue()
 
-    slope.GetRasterBand(1).WriteArray(slopeMatrix,0,0)
+    slope.GetRasterBand(1).WriteArray(slopeMatrix,*bounding_box[0:2])
     invest_core.calculateRasterStats(slope.GetRasterBand(1))
 
 def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
