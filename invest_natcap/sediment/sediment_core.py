@@ -65,6 +65,11 @@ def biophysical(args):
             invest_core.bounding_box_index(watershed_feature, args['dem'])
         LOGGER.info('Bounding box %s' % (watershed_bounding_box))
 
+        #Read the subraster that overlaps the watershed bounding box
+        dem_matrix = \
+            args['dem'].GetRasterBand(1).ReadAsArray(*watershed_bounding_box)
+
+
 
 
     LOGGER.info("calculating flow direction")
