@@ -43,6 +43,7 @@ class FolderCheckerTester(CheckerTester):
         self.assertNoError()
 
     def test_not_folder(self):
+        self.validate_as['value'] += 'a'
         self.assertError()
 
 
