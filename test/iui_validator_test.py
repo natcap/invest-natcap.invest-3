@@ -117,6 +117,40 @@ class DBFCheckerTester(CheckerTester):
                                                 str_restriction]
             self.assertNoError()
 
+class CSVCheckerTester(CheckerTester):
+        def setUp(self):
+            self.validate_as = {'type': 'CSV',
+                                'value': TEST_DATA +
+                                '/wave_energy_data/samp_input/Machine_PelamisParamCSV.csv',
+                                'fieldsExist': []}
+            self.checker = iui_validator.CSVChecker()
+
+        def test_fields_exist(self):
+            self.validate_as['fieldsExist'] = ['NAME', 'VALUE', 'NOTE']
+            self.assertNoError()
+
+        def test_nonexistent_fields(self):
+            self.validate_as['fieldsExist'].append('nonexistent_field')
+            self.assertError()
+
+        def test_restrictions(self):
+            regexp_name = {'pattern': '[a-z]+', 'flag': 'ignoreCase'}
+            regexp_float = {'pattern': '[0-9]*\\.?[0-9]+'}
+            num_restriction = {'field': 'VALUE',
+                               'validateAs': {'type': 'number',
+                                              'allowedValues': regexp_float}}
+            const_restriction = {'field': 'VALUE',
+                                 'validateAs': {'type': 'number',
+                                                'greaterThan': 0}}
+            str_restriction = {'field': 'NAME',
+                               'validateAs': {'type': 'string',
+                                              'allowedValues': regexp_name}}
+
+            self.validate_as['restrictions'] = [num_restriction,
+                                                const_restriction,
+                                                str_restriction]
+            self.assertNoError()
+
 class PrimitiveCheckerTester(CheckerTester):
     def setUp(self):
         self.validate_as = {'type': 'string',
@@ -170,3 +204,5 @@ class NumberCheckerTester(CheckerTester):
         self.validate_as['gteq'] = 5
         self.validate_as['greaterThan'] = 4
         self.assertNoError()
+
+
