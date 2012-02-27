@@ -53,8 +53,14 @@ def biophysical(args):
             on each pixel
         args['v_stream'] - An output raster indicating the areas that are
             classified as streams based on flow_direction
-        args['sret_dr'] - An output raster showing the amount of sediment
-            retained on each pixel during routing.
+        args['sret_dr_uri'] - An output raster uri showing the amount of
+            sediment retained on each pixel during routing.  It breaks
+            convention to pass a URI here, but we won't know the shape of
+            the raster until after all the input rasters are rasterized.
+        args['sexp_dr_uri'] - An output raster uri showing the amount of
+            sediment exported from each pixel during routing.  It breaks
+            convention to pass a URI here, but we won't know the shape of
+            the raster until after all the input rasters are rasterized.
             
         returns nothing"""
     LOGGER = logging.getLogger('sediment_core: biophysical')
@@ -274,11 +280,11 @@ def biophysical(args):
         args['flow_direction'], retention_efficiency_raster, sret_dr)
 
     #Create an output raster for routed sediment export
-    #sexp_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
-    #    args['sexp_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
-    #invest_cython_core.calc_exported_sediment(potential_soil_loss,
-    #    args['flow_direction'], retention_efficiency_raster,
-    #    args['flow_accumulation'], args['v_stream'], sexp_dr)
+    sexp_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
+        args['sexp_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
+    invest_cython_core.calc_exported_sediment(potential_soil_loss,
+        args['flow_direction'], retention_efficiency_raster,
+        args['flow_accumulation'], args['v_stream'], sexp_dr)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
