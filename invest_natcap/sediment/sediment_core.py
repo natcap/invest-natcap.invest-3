@@ -57,6 +57,7 @@ def biophysical(args):
             retained on each pixel during routing.
             
         returns nothing"""
+    LOGGER = logging.getLogger('sediment_core: biophysical')
 
     flow_accumulation_nodata = \
             args['flow_accumulation'].GetRasterBand(1).GetNoDataValue()
@@ -136,8 +137,40 @@ def biophysical(args):
         return ls_factor * erosivity * erodibility * usle_c_p
     usle_vectorized_function = np.vectorize(usle_function)
 
+    retention_efficiency_raster_raw = \
+        invest_cython_core.newRasterFromBase(args['landuse'], '', 'MEM',
+                                             usle_nodata, gdal.GDT_Float32)
 
-    LOGGER = logging.getLogger('sediment_core: biophysical')
+    def lulc_to_retention(lulc_code):
+        """This is a helper function that's used to map an LULC code to the
+            retention values needed by the sediment model and defined
+            in the biophysical table in the closure above.  The intent is this
+            function is used in a vectorize operation for a single raster.
+            
+            lulc_code - an integer representing a LULC value in a raster
+            
+            returns C*P where C and P are defined in the 
+                args['biophysical_table']
+        """
+        #There are string casts here because the biophysical table is all 
+        #strings thanks to the csv table conversion.
+        if str(lulc_code) not in args['biophysical_table']:
+            return usle_nodata
+        #We need to divide the retention efficiency by 100  because they're 
+        #stored in the table as sedret_eff * 100.  See the user's guide:
+        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
+        return float(args['biophysical_table'] \
+                     [str(lulc_code)]['sedret_eff']) / 100.0
+
+    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
+        """Used for interpolating efficiency raster to be the same dimensions
+            as soil_loss and also knocking out retention on the streams"""
+
+        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
+        #to scale efficiency especially if v_steram is interpolated 
+        #intelligently
+        return (1 - v_stream) * efficiency
+
     for watershed_feature in args['watersheds'].GetLayer():
         LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())
         watershed_bounding_box = \
@@ -183,13 +216,19 @@ def biophysical(args):
             lulc_to_cp, usle_c_p_raster.GetRasterBand(1),
             lulc_watershed_bounding_box)
 
-        LOGGER.info("calculating potential soil loss")
+        #map lulc to a usle_c * usle_p raster
+        LOGGER.info('mapping landuse types to vegetation retention efficiencies')
+        invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
+            lulc_to_retention,
+            retention_efficiency_raster_raw.GetRasterBand(1),
+            lulc_watershed_bounding_box)
 
-
+    LOGGER.info("calculating potential soil loss")
     potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'],
         args['erosivity'], args['erodibility'], usle_c_p_raster,
         args['v_stream']], usle_vectorized_function, args['usle_uri'],
         nodata=usle_nodata)
+
     #change units from tons per hectare to tons per cell.  We need to do this
     #after the vectorize raster operation since we won't know the cell size
     #until then.  Convert cell_area to meters (in Ha by default)
@@ -212,53 +251,13 @@ def biophysical(args):
         WriteArray(potential_soil_loss_matrix, 0, 0)
     invest_core.calculateRasterStats(potential_soil_loss.GetRasterBand(1))
 
-    return
-
-    #map lulc to a usle_c * usle_p raster
-    LOGGER.info('mapping landuse types to vegetation retention efficiencies')
-    retention_efficiency_raster_raw = \
-        invest_cython_core.newRasterFromBase(args['landuse'], '', 'MEM',
-                                             usle_nodata, gdal.GDT_Float32)
-
-    def lulc_to_retention(lulc_code):
-        """This is a helper function that's used to map an LULC code to the
-            retention values needed by the sediment model and defined
-            in the biophysical table in the closure above.  The intent is this
-            function is used in a vectorize operation for a single raster.
-            
-            lulc_code - an integer representing a LULC value in a raster
-            
-            returns C*P where C and P are defined in the 
-                args['biophysical_table']
-        """
-        #There are string casts here because the biophysical table is all 
-        #strings thanks to the csv table conversion.
-        if str(lulc_code) not in args['biophysical_table']:
-            return usle_nodata
-        #We need to divide the retention efficiency by 100  because they're 
-        #stored in the table as sedret_eff * 100.  See the user's guide:
-        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
-        return float(args['biophysical_table'] \
-                     [str(lulc_code)]['sedret_eff']) / 100.0
-
     sret_dr_raw = invest_cython_core.newRasterFromBase(potential_soil_loss,
         '', 'MEM', -1.0, gdal.GDT_Float32)
-    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
-        lulc_to_retention, retention_efficiency_raster_raw.GetRasterBand(1))
 
     #now interpolate retention_efficiency_raster_raw to a raster that will
     #overlay potential_soil_loss, bastardizing vectorizeRasters here for
     #its interpolative functionality by only returning efficiency in the
     #vectorized op.
-    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
-        """Used for interpolating efficiency raster to be the same dimensions
-            as soil_loss and also knocking out retention on the streams"""
-
-        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
-        #to scale efficiency especially if v_steram is interpolated 
-        #intelligently
-        return (1 - v_stream) * efficiency
-
     usle_vectorized_function = np.vectorize(efficiency_raster_creator)
     retention_efficiency_raster = \
         invest_core.vectorizeRasters([potential_soil_loss,
@@ -275,11 +274,11 @@ def biophysical(args):
         args['flow_direction'], retention_efficiency_raster, sret_dr)
 
     #Create an output raster for routed sediment export
-    sexp_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
-        args['sret_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
-    invest_cython_core.calc_exported_sediment(potential_soil_loss,
-        args['flow_direction'], retention_efficiency_raster,
-        args['flow_accumulation'], args['v_stream'], sexp_dr)
+    #sexp_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
+    #    args['sexp_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
+    #invest_cython_core.calc_exported_sediment(potential_soil_loss,
+    #    args['flow_direction'], retention_efficiency_raster,
+    #    args['flow_accumulation'], args['v_stream'], sexp_dr)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
