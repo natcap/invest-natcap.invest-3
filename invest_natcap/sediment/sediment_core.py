@@ -58,6 +58,62 @@ def biophysical(args):
             
         returns nothing"""
 
+    #Nodata value to use for usle output raster
+    usle_nodata = -1.0
+    usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], '',
+        'MEM', usle_nodata, gdal.GDT_Float32)
+    def lulc_to_cp(lulc_code):
+        """This is a helper function that's used to map an LULC code to the
+            C * P values needed by the sediment model and defined
+            in the biophysical table in the closure above.  The intent is this
+            function is used in a vectorize operation for a single raster.
+            
+            lulc_code - an integer representing a LULC value in a raster
+            
+            returns C*P where C and P are defined in the 
+                args['biophysical_table']
+        """
+        #There are string casts here because the biophysical table is all 
+        #strings thanks to the csv table conversion.
+        if str(lulc_code) not in args['biophysical_table']:
+            return usle_nodata
+        #We need to divide the c and p factors by 1000 (10*6 == 1000*1000) 
+        #because they're stored in the table as C * 1000 and P * 1000.  See 
+        #the user's guide:
+        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
+        return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
+            float(args['biophysical_table'][str(lulc_code)]['usle_p']) / \
+                10 ** 6
+
+    #Set up structures and functions for USLE calculation
+    ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
+    erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
+    erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
+
+    def usle_function(ls_factor, erosivity, erodibility, usle_c_p, v_stream):
+        """Calculates the USLE equation 
+        
+        ls_factor - length/slope factor
+        erosivity - related to peak rainfall events
+        erodibility - related to the potential for soil to erode
+        usle_c_p - crop and practice factor which helps to abate soil erosion
+        v_stream - 1 or 0 depending if there is a stream there.  If so, no
+            potential soil loss due to USLE
+        
+        returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
+            defined, nodata if some are not defined, 0 if in a stream
+            (v_stream)"""
+
+        if ls_factor == usle_nodata or erosivity == usle_nodata or \
+            erodibility == usle_nodata or usle_c_p == usle_nodata or \
+            v_stream == v_stream_nodata:
+            return usle_nodata
+        if v_stream == 1:
+            return 0
+        return ls_factor * erosivity * erodibility * usle_c_p
+    usle_vectorized_function = np.vectorize(usle_function)
+
+
     LOGGER = logging.getLogger('sediment_core: biophysical')
     for watershed_feature in args['watersheds'].GetLayer():
         LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())
@@ -109,7 +165,7 @@ def biophysical(args):
             watershed_bounding_box)
 
         LOGGER.info("Calculating slope")
-        invest_cython_core.calculate_slope(args['dem'], 
+        invest_cython_core.calculate_slope(args['dem'],
             watershed_bounding_box, args['slope'])
 
         LOGGER.info("calculating LS factor accumulation")
@@ -118,69 +174,13 @@ def biophysical(args):
                                                args['flow_direction'],
                                                watershed_bounding_box,
                                                args['ls_factor'])
+        #map lulc to a usle_c * usle_p raster
+        LOGGER.info('mapping landuse types to crop and practice management values')
+
+        invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
+            lulc_to_cp, usle_c_p_raster.GetRasterBand(1),
+            watershed_bounding_box)
     return
-
-
-
-    #Nodata value to use for output raster
-    usle_nodata = -1.0
-
-    #map lulc to a usle_c * usle_p raster
-    LOGGER.info('mapping landuse types to crop and practice management values')
-    usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], '',
-        'MEM', usle_nodata, gdal.GDT_Float32)
-    def lulc_to_cp(lulc_code):
-        """This is a helper function that's used to map an LULC code to the
-            C * P values needed by the sediment model and defined
-            in the biophysical table in the closure above.  The intent is this
-            function is used in a vectorize operation for a single raster.
-            
-            lulc_code - an integer representing a LULC value in a raster
-            
-            returns C*P where C and P are defined in the 
-                args['biophysical_table']
-        """
-        #There are string casts here because the biophysical table is all 
-        #strings thanks to the csv table conversion.
-        if str(lulc_code) not in args['biophysical_table']:
-            return usle_nodata
-        #We need to divide the c and p factors by 1000 (10*6 == 1000*1000) 
-        #because they're stored in the table as C * 1000 and P * 1000.  See 
-        #the user's guide:
-        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
-        return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
-            float(args['biophysical_table'][str(lulc_code)]['usle_p']) / \
-                10 ** 6
-    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1), lulc_to_cp,
-                                usle_c_p_raster.GetRasterBand(1))
-
-    #Set up structures for USLE calculation
-    ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
-    erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
-    erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
-
-    def usle_function(ls_factor, erosivity, erodibility, usle_c_p, v_stream):
-        """Calculates the USLE equation 
-        
-        ls_factor - length/slope factor
-        erosivity - related to peak rainfall events
-        erodibility - related to the potential for soil to erode
-        usle_c_p - crop and practice factor which helps to abate soil erosion
-        v_stream - 1 or 0 depending if there is a stream there.  If so, no
-            potential soil loss due to USLE
-        
-        returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
-            defined, nodata if some are not defined, 0 if in a stream
-            (v_stream)"""
-
-        if ls_factor == usle_nodata or erosivity == usle_nodata or \
-            erodibility == usle_nodata or usle_c_p == usle_nodata or \
-            v_stream == v_stream_nodata:
-            return usle_nodata
-        if v_stream == 1:
-            return 0
-        return ls_factor * erosivity * erodibility * usle_c_p
-    usle_vectorized_function = np.vectorize(usle_function)
 
     LOGGER.info("calculating potential soil loss")
 
