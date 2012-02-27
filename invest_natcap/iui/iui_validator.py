@@ -316,6 +316,13 @@ class OGRChecker(TableChecker):
                     return str('Shapefile layer ' + layer_name + ' must be ' +
                         'projected as ' + layer_dict['projection'])
 
+            if 'datum' in layer_dict:
+                reference = self.layer.GetSpatialRef()
+                datum = reference.GetAttrValue('DATUM')
+                if datum != layer_dict['datum']:
+                    return str('Shapefile layer ' + layer_name + ' must ' +
+                        'have the datum ' + layer_dict['datum'])
+
     def _check_layer_type(self, type_string):
         for feature in self.layer:
             geometry = feature.GetGeometryRef()
@@ -402,20 +409,20 @@ class NumberChecker(PrimitiveChecker):
         self.update_map(updates)
         
     def greater_than(self, b):
-        if not self.value < b:
-            return 'Value must be greater than ' + str(b)
+        if not self.value > b:
+            return str(self.value) + ' must be greater than ' + str(b)
     
     def less_than(self, b):
         if not self.value < b:
-            return 'Value must be less than ' + str(b)
+            return str(self.value) + ' must be less than ' + str(b)
         
     def less_than_equal_to(self, b):
         if not self.value <= b:
-            return 'Value must be less than or equal to ' + str(b)
+            return str(self.value) + ' must be less than or equal to ' + str(b)
     
     def greater_than_equal_to(self, b):
         if not self.value >= b:
-            return 'Value must be greater than or equal to ' + str(b)
+            return str(self.value) + ' must be greater than or equal to ' + str(b)
         
 class CSVChecker(TableChecker):
     def open(self, valid_dict):
