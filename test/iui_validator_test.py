@@ -46,6 +46,19 @@ class FolderCheckerTester(CheckerTester):
         self.validate_as['value'] += 'a'
         self.assertError()
 
+class GDALCheckerTester(CheckerTester):
+    def setUp(self):
+        self.validate_as = {'type': 'GDAL',
+                            'value': TEST_DATA +
+                            'base_data/terrestrial/lulc_samp_cur'}
+        self.checker = iui_validator.GDALChecker()
+
+    def test_opens(self):
+        self.assertNoError()
+
+    def test_not_exists(self):
+        self.validate_as['value'] += 'aaa'
+        self.assertError()
 
 class OGRCheckerTester(CheckerTester):
     def setUp(self):
