@@ -15,8 +15,8 @@ class CheckerTester(unittest.TestCase):
 
     def assertError(self):
         error = self.check()
-        self.assertNotEqual(error, '')
-        self.assertNotEqual(error, None)
+        self.assertNotEqual(error, '', msg='No error message produced')
+        self.assertNotEqual(error, None, msg='No error message produced')
 
 class FileCheckerTester(CheckerTester):
     def setUp(self):
@@ -154,7 +154,7 @@ class NumberCheckerTester(CheckerTester):
 
     def test_lt(self):
         self.validate_as['lessThan'] = 7
-        self.assertError()
+        self.assertNoError()
 
     def test_gteq(self):
         self.validate_as['gteq'] = 5
