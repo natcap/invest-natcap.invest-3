@@ -69,8 +69,6 @@ def biophysical(args):
     #Path for clipped wave point shapefile holding wave attribute information
     clipped_wave_shape_path = \
         intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
-    #Temporary shapefile needed for an intermediate step
-    wave_shape_path = intermediate_dir + os.sep + 'WaveData_clipZ.shp'
     #Paths for wave energy and wave power raster
     wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
     wave_power_path = output_dir + os.sep + 'wp_kw.tif'
@@ -85,41 +83,45 @@ def biophysical(args):
     #use its pixel sizes as the sizes for the new rasters
     dem_gt = global_dem.GetGeoTransform()
     #Set the source projection for a coordinate transformation
-    #to the input projection from the point shapefile
+    #to the input projection from the wave watch point shapefile
     analysis_area_sr = args['analysis_area'].GetLayer(0).GetSpatialRef()
-    #Determine which shapefile will be used to determine area of interest
 
-    #This if statement differentiates between having an AOI or a global run
-    #on all the wave watch points.
+    #This if statement differentiates between having an AOI or doing a broad
+    #run on all the wave watch points specified by args['analysis_area'].
     if 'aoi' in args:
-
         #There is an AOI, so we need to reproject WWIII points into that the
         #output can be in the same projection as the AOI.
 
+        #Temporary shapefile path needed for an intermediate step when
+        #changing the projection
+        projected_wave_shape_path = \
+            intermediate_dir + os.sep + 'projected_wave_data.shp'
+
         #The polygon shapefile that specifies the area of interest
         aoi_shape = args['aoi']
+        
         #Set the wave data shapefile to the same projection as the 
         #area of interest
-        wave_shape = \
-           change_shape_projection(args['analysis_area'], 
-                                   args['aoi'].GetLayer(0).GetSpatialRef(),
-                                   wave_shape_path)
+        projected_wave_shape = change_shape_projection(args['analysis_area'], \
+                                   aoi_shape.GetLayer(0).GetSpatialRef(), \
+                                   projected_wave_shape_path)
 
         #Clip the wave data shape by the bounds provided from the 
         #area of interest
-        clipped_wave_shape = \
-            clip_shape(wave_shape, aoi_shape, clipped_wave_shape_path)
+        clipped_wave_shape = clip_shape(projected_wave_shape, aoi_shape, \
+                                        clipped_wave_shape_path)
         
-        #Create a coordinate transformation from geom_x/long to area of 
-        #interest's projection
+        #Create a coordinate transformation from the given
+        #WWIII point shapefile (args['analysis_area']), to the 
+        #area of interest's projection (args['aoi'])
         aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
-
         coord_trans, coord_trans_opposite = \
             get_coordinate_transformation(analysis_area_sr, aoi_sr)
 
-        #Get the size of the pixels in meters, to be used for creating rasters
+        #Get the size of the pixels in meters, to be used for creating 
+        #projected wave power and wave energy capacity rasters
         pixel_xsize, pixel_ysize = \
-            pixel_size_helper(clipped_wave_shape, coord_trans, 
+            pixel_size_helper(clipped_wave_shape, coord_trans, \
                               coord_trans_opposite, global_dem)
 
         LOGGER.debug('X pixel size in meters : %f', pixel_xsize)
@@ -129,10 +131,10 @@ def biophysical(args):
         clipped_wave_shape_geom = None
 
     else:
-        #If no AOI we can use the pixel size directly from the DEM, but this
+        #If no AOI, we can use the pixel size directly from the DEM, but this
         #is necessary to make the following while loop simpler.
 
-        #The polygon shapefile that specifies the area of interest
+        #The polygon shapefile that specifies the broader area of interest
         aoi_shape = args['analysis_area_extract']
 
         #Not sure if this is needed, as aoi_shape is already an outline 
@@ -146,7 +148,6 @@ def biophysical(args):
 
         #Create a coordinate transformation, because it is expected below
         aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
-
         coord_trans, coord_trans_opposite = \
             get_coordinate_transformation(analysis_area_sr, aoi_sr)
 
@@ -159,10 +160,10 @@ def biophysical(args):
     #Create a new field for the depth attribute
     field_defn = ogr.FieldDefn('Depth_M', ogr.OFTReal)
 
-    area_layer = clipped_wave_shape.GetLayer(0)
-    area_layer.ResetReading()
-    area_layer.CreateField(field_defn)
-    feature = area_layer.GetNextFeature()
+    clipped_wave_layer = clipped_wave_shape.GetLayer(0)
+    clipped_wave_layer.ResetReading()
+    clipped_wave_layer.CreateField(field_defn)
+    feature = clipped_wave_layer.GetNextFeature()
 
     #For all the features (points) add the proper depth value from the DEM
     while feature is not None:
@@ -180,22 +181,23 @@ def biophysical(args):
         j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
         depth = dem_matrix[j][i]
         feature.SetField(depth_index, depth)
-        area_layer.SetFeature(feature)
+        clipped_wave_layer.SetFeature(feature)
         feature.Destroy()
-        feature = area_layer.GetNextFeature()
+        feature = clipped_wave_layer.GetNextFeature()
 
     LOGGER.debug('Finished adding depth field to shapefile from DEM raster')
 
     #Generate an interpolate object for wave_energy_capacity
     LOGGER.debug('Interpolating machine performance table')
-    energy_interp = \
-        wave_energy_interp(args['wave_base_data'], args['machine_perf'])
+    energy_interp = wave_energy_interp(args['wave_base_data'], \
+                                       args['machine_perf'])
 
     #Create a dictionary with the wave energy capacity sums from each location
     LOGGER.debug('Summing the wave energy capacity at each wave farm')
     LOGGER.info('Calculating Captured Wave Energy.')
-    energy_cap = compute_wave_energy_capacity(args['wave_base_data'], \
-        energy_interp, args['machine_param'])
+    energy_cap = \
+        compute_wave_energy_capacity(args['wave_base_data'], \
+                                     energy_interp, args['machine_param'])
 
     #Add the sum as a field to the shapefile for the corresponding points
     LOGGER.debug('Adding the wave energy sums to the WaveData shapefile')
@@ -208,12 +210,12 @@ def biophysical(args):
     clipped_wave_shape = wave_power(clipped_wave_shape)
 
     #Create blank rasters bounded by the shape file of analyis area
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                                     datatype, nodata, 
-                                                     wave_energy_path, 
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,\
+                                                     datatype, nodata, \
+                                                     wave_energy_path, \
                                                      aoi_shape)
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
-                                                     datatype, nodata, 
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,\
+                                                     datatype, nodata, \
                                                      wave_power_path, aoi_shape)
 
     #Open created rasters
@@ -240,7 +242,8 @@ def biophysical(args):
         wave_power_raster, wave_power_path)
     wave_energy_raster = clip_raster_from_polygon(aoi_shape, \
         wave_energy_raster, wave_energy_path)
-
+    #Flush the cache to make sure all data has been saved to disk and nothing
+    #is waiting in a buffer to be written
     wave_energy_raster.FlushCache()
     wave_power_raster.FlushCache()
 
@@ -250,11 +253,11 @@ def biophysical(args):
     percentiles = [25, 50, 75, 90]
     capwe_rc = \
        create_percentile_rasters(wave_energy_raster, capwe_rc_path, ' (MWh/yr)',
-                                 ' megawatt hours per year (MWh/yr)', 
+                                 ' megawatt hours per year (MWh/yr)', \
                                  '1', percentiles, nodata)
     wp_rc_raster = \
-        create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)',
-                    ' wave power per unit width of wave crest length (kW/m)', 
+        create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)', \
+                    ' wave power per unit width of wave crest length (kW/m)', \
                     '1', percentiles, nodata)
 
     #Clean up Shapefiles and Rasters
@@ -266,9 +269,12 @@ def biophysical(args):
     capwe_rc = None
 
     #Clean up temporary files on disk
-    #Creating a match pattern like /home/blath/../name_of_shape.*
-    pattern = wave_shape_path[wave_shape_path.rfind(os.sep) + 1:
-                              len(wave_shape_path) - 4] + ".*"
+    #Creating a match pattern that finds the last directory seperator
+    #in a path like '/home/blath/../name_of_shape.*' and focuses just on the
+    #string after that separator and before the '.' extension.
+    pattern = \
+        projected_wave_shape_path[projected_wave_shape_path.rfind(os.sep) + 1:
+                                  len(projected_wave_shape_path) - 4] + ".*"
     logging.debug('Regex file pattern : %s', pattern)
     for file in os.listdir(intermediate_dir):
         if re.search(pattern, file):
@@ -320,7 +326,7 @@ def get_coordinate_transformation(source_sr, target_sr):
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     return (coord_trans, coord_trans_opposite)
     
-def create_percentile_rasters(raster_dataset, output_path, units_short, 
+def create_percentile_rasters(raster_dataset, output_path, units_short, \
                               units_long, start_value, percentile_list, nodata):
     """Creates a percentile (quartile) raster based on the raster_dataset. An 
     attribute table is also constructed for the raster_dataset that displays the
@@ -344,7 +350,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short,
         os.remove(output_path)
     #Create a blank raster from raster_dataset
     percentile_raster = \
-        invest_cython_core.newRasterFromBase(raster_dataset, output_path,
+        invest_cython_core.newRasterFromBase(raster_dataset, output_path, \
                                              'GTiff', 0, gdal.GDT_Int32)
     #Get raster bands
     percentile_band = percentile_raster.GetRasterBand(1)
@@ -367,7 +373,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short,
     #Create a mask that makes all nodata values invalid.  Do this because
     #having a bunch of nodata values will muttle the results of getting the
     #percentiles
-    dataset_mask = np.ma.masked_array(dataset_array, 
+    dataset_mask = np.ma.masked_array(dataset_array, \
                                       mask=dataset_array == nodata)
     #Get all of the non-masked (non-nodata) data
     dataset_comp = np.ma.compressed(dataset_mask)
@@ -375,14 +381,14 @@ def create_percentile_rasters(raster_dataset, output_path, units_short,
     percentiles = get_percentiles(dataset_comp, percentile_list)
     LOGGER.debug('percentiles_list : %s', percentiles)
     #Get the percentile ranges
-    attribute_values = create_percentile_ranges(percentiles, units_short, 
+    percentile_ranges = create_percentile_ranges(percentiles, units_short, \
                                                 units_long, start_value)
     #Add the start_value to the beginning of the percentiles so that any value
     #before the start value is set to nodata (zero)
     percentiles.insert(0, int(start_value))
     #Classify the pixels of raster_dataset into groups and write 
     #then to output band
-    invest_core.vectorize1ArgOp(dataset_band, raster_percentile, 
+    invest_core.vectorize1ArgOp(dataset_band, raster_percentile, \
                                 percentile_band)
     #Initialize a list that will hold pixel counts for each group
     pixel_count = np.zeros(len(percentile_list) + 1)
@@ -401,12 +407,12 @@ def create_percentile_rasters(raster_dataset, output_path, units_short,
 
     logging.debug('number of pixels per group: : %s', pixel_count)
     #Generate the attribute table for the percentile raster
-    create_attribute_table(output_path, attribute_values, pixel_count)
+    create_attribute_table(output_path, percentile_ranges, pixel_count)
 
     return percentile_raster
 
 def get_percentiles(value_list, percentile_list):
-    """Creates a list of integers of the four percentile marks
+    """Creates a list of integers of the percentile marks
     
     value_list - A list of numbers
     percentile_list - A list of ascending integers of the desired
@@ -424,7 +430,7 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     range starting at 1 and the last range being greater than the last
     percentile mark.  Each string range is stored in a list that gets returned
     
-    percentiles - A 4 element list of the percentile marks in ascending order
+    percentiles - A list of the percentile marks in ascending order
     units_short - A String that represents the shorthand for the units of the
                   raster values (ex: kW/m)
     units_long - A String that represents the description of the units of the
@@ -442,7 +448,7 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     range_first = start_value + ' - ' + str(percentiles[0]) + units_long
     range_values.append(range_first)
     for index in range(length - 1):
-        range_values.append(str(percentiles[index]) + ' - ' +
+        range_values.append(str(percentiles[index]) + ' - ' + \
                             str(percentiles[index + 1]) + units_short)
     #Add the last range to the range of values list
     range_last = 'Greater than ' + str(percentiles[length - 1]) + units_short
@@ -450,7 +456,7 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     LOGGER.debug('range_values : %s', range_values)
     return range_values
 
-def create_attribute_table(raster_uri, attribute_values, counter):
+def create_attribute_table(raster_uri, percentile_ranges, counter):
     """Creates an attribute table of type '.vat.dbf'.  The attribute table
     created is tied to the dataset of the raster_uri provided as input. 
     The table has 3 fields (VALUE, COUNT, VAL_RANGE) where VALUE acts as
@@ -458,7 +464,7 @@ def create_attribute_table(raster_uri, attribute_values, counter):
     percentile range
     
     raster_uri - A String of the raster file the table should be associated with
-    attribute_values - A list of Strings representing the percentile ranges
+    percentile_ranges - A list of Strings representing the percentile ranges
     counter - A list of integers that represent the pixel count
     
     returns - nothing
@@ -479,12 +485,12 @@ def create_attribute_table(raster_uri, attribute_values, counter):
                  #character field, I think header names need to be short?
                  ("VAL_RANGE", "C", 254))
     #Add all the records
-    for id_value in range(len(attribute_values)):
+    for id_value in range(len(percentile_ranges)):
         logging.debug('id_value: %s', id_value)
         rec = dataset_attribute_table.newRecord()
         rec["VALUE"] = id_value + 1
         rec["COUNT"] = int(counter[id_value])
-        rec["VAL_RANGE"] = attribute_values[id_value]
+        rec["VAL_RANGE"] = percentile_ranges[id_value]
         rec.store()
     dataset_attribute_table.close()
 
@@ -511,7 +517,7 @@ def wave_power(shape):
     layer.CreateField(field_defn)
     layer.ResetReading()
     feat = layer.GetNextFeature()
-    #For ever feature (point) calculate the wave power and add the value
+    #For every feature (point) calculate the wave power and add the value
     #to itself in a new field
     while feat is not None:
         height_index = feat.GetFieldIndex('HSAVG_M')
@@ -531,8 +537,9 @@ def wave_power(shape):
                                                      (depth / grav))))
         #wave group velocity calculation (expressed as a 
         #function of wave energy period and water depth)
-        wave_group_velocity = ((1 + ((2 * k * depth) / np.sinh(2 * k * depth)))
-                               * np.sqrt((grav / k) * np.tanh(k * depth))) / 2
+        wave_group_velocity = \
+            ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) * \
+             np.sqrt((grav / k) * np.tanh(k * depth))) / 2
         #wave power calculation
         wave_pow = (((swd * grav) / 16) * (np.square(height)) * \
                     wave_group_velocity) / 1000
@@ -580,7 +587,7 @@ def clip_raster_from_polygon(shape, raster, path):
         else:
             return value
     #Vectorize the two rasters using the operation fill_bound_data
-    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copy_band,
+    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copy_band, \
                                 fill_bound_data, copy_band)
     return copy_raster
 
@@ -698,9 +705,9 @@ def get_points_values(shape, field):
         #the point and append it as a list [X,Y] to
         #the list 'points'
         geom = shape_feat.GetGeometryRef()
-        longitude = geom.GetX()
-        latitude = geom.GetY()
-        points.append([longitude, latitude])
+        reference_x = geom.GetX()
+        reference_y = geom.GetY()
+        points.append([reference_x, reference_y])
         geom = None
         shape_feat.Destroy()
         shape_feat = shape_layer.GetNextFeature()
@@ -853,17 +860,17 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     #interpolated machine performance matrix to get the captured wave energy
     for key, val in wave_data['bin_matrix'].iteritems():
         #Convert all values to type float
-        temp_array = np.array(val, dtype='f')
-        mult_array = np.multiply(temp_array, interp_z)
+        temp_matrix = np.array(val, dtype='f')
+        mult_matrix = np.multiply(temp_matrix, interp_z)
         #Set any value that is outside the restricting ranges provided by 
         #machine parameters to zero
         if period_max_index != -1:
-            mult_array[:, period_max_index:] = 0
+            mult_matrix[:, period_max_index:] = 0
         if height_max_index != -1:
-            mult_array[height_max_index:, :] = 0
+            mult_matrix[height_max_index:, :] = 0
 
         #Divide the matrix by 5 to get the yearly values
-        valid_array = np.divide(mult_array, 5.0)
+        valid_array = np.divide(mult_matrix, 5.0)
 
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero. So here
@@ -948,6 +955,8 @@ def valuation(args):
     raster_projected_path = output_dir + os.sep + 'npv_usd.tif'
     #Path for the net present value percentile raster
     npv_rc_path = output_dir + os.sep + 'npv_rc.tif'
+    #The datasource of the modified wave watch 3 shapefile from
+    #the output of the biophysical run
     wave_data_shape = args['wave_data_shape']
     #Since the global_dem is the only input raster, we base the pixel
     #size of our output raster from the global_dem
@@ -956,30 +965,17 @@ def valuation(args):
     srs_prj = osr.SpatialReference()
     #Using 'WGS84' as our well known lat/long projection
     srs_prj.SetWellKnownGeogCS("WGS84")
-    source_sr = srs_prj
-    target_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
-    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-    coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
-    #Get a point from the wave data shapefile
-    wave_data_layer = wave_data_shape.GetLayer(0)
-    wave_data_feat = wave_data_layer.GetNextFeature()
-    wave_data_geom = wave_data_feat.GetGeometryRef()
-    wave_data_lat = wave_data_geom.GetX()
-    wave_data_long = wave_data_geom.GetY()
-    wave_data_point = coord_trans_opposite.TransformPoint(wave_data_lat, 
-                                                          wave_data_long)
+    wgs_84_sr = srs_prj
+    wave_data_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
+    coord_trans, coord_trans_opposite = \
+        get_coordinate_transform(wgs_84_sr, wave_data_sr)
     #Get the size of the pixels in meters
-    pixel_size_tuple = \
-        invest_cython_core.pixel_size_in_meters(dem, coord_trans, 
-                                                wave_data_point)
-    pixel_xsize = pixel_size_tuple[0]
-    pixel_ysize = pixel_size_tuple[1]
+    pixel_xsize, pixel_ysize = \
+        pixel_size_helper(wave_data_shape, coord_trans, coord_trans_opposite, 
+                          dem)
+
     LOGGER.debug('X pixel size of DEM : %f', pixel_xsize)
     LOGGER.debug('Y pixel size of DEM : %f', pixel_ysize)
-    #Reset variables to be used later
-    wave_data_layer.ResetReading()
-    wave_data_feat.Destroy()
-    wave_data_geom = None
     #Number of machines for a given wave farm
     units = args['number_machines']
     #Extract the machine economic parameters
@@ -1013,13 +1009,13 @@ def valuation(args):
         os.remove(grid_pt_path)
     #Make a point shapefile for landing points.
     LOGGER.info('Creating Landing Points Shapefile.')
-    landing_shape = build_point_shapefile('ESRI Shapefile', 'landpoints',
-                                          land_pt_path, land_pts, target_sr, 
+    landing_shape = build_point_shapefile('ESRI Shapefile', 'landpoints', \
+                                          land_pt_path, land_pts, wave_data_sr, 
                                           coord_trans)
     #Make a point shapefile for grid points
     LOGGER.info('Creating Grid Points Shapefile.')
-    grid_shape = build_point_shapefile('ESRI Shapefile', 'gridpoints',
-                                       grid_pt_path, grid_pts, target_sr, 
+    grid_shape = build_point_shapefile('ESRI Shapefile', 'gridpoints', \
+                                       grid_pt_path, grid_pts, wave_data_sr, 
                                        coord_trans)
     #Get the coordinates of points of wave_data_shape, landing_shape,
     #and grid_shape
@@ -1028,9 +1024,9 @@ def valuation(args):
     grid_point = get_points_geometries(grid_shape)
     LOGGER.info('Calculating Distances.')
     #Calculate the distances between the relative point groups
-    wave_to_land_dist, wave_to_land_id = calculate_distance(we_points, 
+    wave_to_land_dist, wave_to_land_id = calculate_distance(we_points, \
                                                             landing_points)
-    land_to_grid_dist, land_to_grid_id = calculate_distance(landing_points, 
+    land_to_grid_dist, land_to_grid_id = calculate_distance(landing_points, \
                                                             grid_point)
     #Add three new fields to the shapefile that will store the distances
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
@@ -1144,8 +1140,8 @@ def valuation(args):
     wave_data_shape.Destroy()
     LOGGER.debug('End of wave_energy_core.valuation')
 
-def build_point_shapefile(driver_name, layer_name, path, data, 
-                          prj, coord_trans):
+def build_point_shapefile(driver_name, layer_name, path, data, prj, 
+                          coord_trans):
     """This function creates and saves a point geometry shapefile to disk.
     It specifically only creates one 'Id' field and creates as many features
     as specified in 'data'
