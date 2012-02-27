@@ -177,9 +177,11 @@ def biophysical(args):
         #map lulc to a usle_c * usle_p raster
         LOGGER.info('mapping landuse types to crop and practice management values')
 
+        lulc_watershed_bounding_box = \
+            invest_core.bounding_box_index(watershed_feature, args['landuse'])
         invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
             lulc_to_cp, usle_c_p_raster.GetRasterBand(1),
-            watershed_bounding_box)
+            lulc_watershed_bounding_box)
 
         LOGGER.info("calculating potential soil loss")
 

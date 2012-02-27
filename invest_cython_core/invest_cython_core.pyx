@@ -228,8 +228,9 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     srs.ImportFromWkt(shp.GetLayer(0).GetSpatialRef().__str__())
     raster.SetProjection(srs.ExportToWkt())
 
-    #Initalize everything to nodata
+    #Initialize everything to nodata
     raster.GetRasterBand(1).Fill(nodata)
+    raster.GetRasterBand(1).FlushCache()
 
 def calculateIntersectionRectangle(rasterList):
     """Return a bounding box of the intersections of all the rasters in the
@@ -501,6 +502,7 @@ def flowDirectionD8(dem, bounding_box, flow):
         gdal.GDT_Float32)
     distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),
                                                *bounding_box[0:2])
+    distanceRaster.GetRasterBand(1).FlushCache()
     
     return flow
 
@@ -763,6 +765,7 @@ def flow_accumulation_dinf(flow_direction, dem, bounding_box,
 
     flow_accumulation.GetRasterBand(1).WriteArray(\
         accumulation_matrix.transpose(), *bounding_box[0:2])
+    flow_accumulation.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(flow_accumulation.GetRasterBand(1))
     
     free(dem_pixel_pairs)
@@ -961,6 +964,7 @@ def flow_direction_inf(dem, bounding_box, flow):
 
     LOGGER.info("writing flow data to raster")
     flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), *bounding_box[0:2])
+    flow.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
 
 def calculate_slope(dem, bounding_box, slope):
@@ -1017,6 +1021,7 @@ def calculate_slope(dem, bounding_box, slope):
             slope.GetRasterBand(1).GetNoDataValue()
 
     slope.GetRasterBand(1).WriteArray(slopeMatrix,*bounding_box[0:2])
+    slope.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(slope.GetRasterBand(1))
 
 def calculate_ls_factor(upslope_area, slope_raster, aspect, 
@@ -1147,6 +1152,9 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect,
                                           *bounding_box[0:2])
     xijraster.GetRasterBand(1).WriteArray(xij_matrix.transpose(), \
                                           *bounding_box[0:2])
+    ls_factor.GetRasterBand(1).FlushCache()
+    mraster.GetRasterBand(1).FlushCache()
+    xijraster.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
     
 def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,  
