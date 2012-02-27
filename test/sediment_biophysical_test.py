@@ -48,7 +48,8 @@ class TestSedimentBiophysical(unittest.TestCase):
                               [130, 130, 130, 130, 130, 130]])
         dem.GetRasterBand(1).WriteArray(dem_array, 0, 0)
 
-        invest_cython_core.flow_direction_inf(dem, flow_direction)
+        invest_cython_core.flow_direction_inf(dem, flow_direction,
+                                              [0, 0, 6, 6])
 
         invest_cython_core.flow_accumulation_dinf(flow_direction,
                                                   flow_accumulation, dem)
@@ -107,7 +108,7 @@ class TestSedimentBiophysical(unittest.TestCase):
                           [105, 102, 999]])
 
         dem.GetRasterBand(1).WriteArray(array, 0, 0)
-        invest_cython_core.flow_direction_inf(dem, flow_raster)
+        invest_cython_core.flow_direction_inf(dem, [0, 0, 3, 3], flow_raster)
         flow_array = flow_raster.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
 
         #Direction 4.712385 was calculated by hand
@@ -132,7 +133,7 @@ class TestSedimentBiophysical(unittest.TestCase):
                           [241, 238, 235],
                           [233, 231, 228]])
         dem.GetRasterBand(1).WriteArray(array, 0, 0)
-        invest_cython_core.flow_direction_inf(dem, flow)
+        invest_cython_core.flow_direction_inf(dem, [0, 0, 3, 3], flow)
         flowArray = flow.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
 
         #Direction 5.117281 was calculated by hand
@@ -157,7 +158,7 @@ class TestSedimentBiophysical(unittest.TestCase):
                           [120, 106, 103],
                           [120, 109, 106]])
         dem.GetRasterBand(1).WriteArray(array, 0, 0)
-        invest_cython_core.flow_direction_inf(dem, flow)
+        invest_cython_core.flow_direction_inf(dem, [0, 0, 3, 3], flow)
         flowArray = flow.GetRasterBand(1).ReadAsArray(1, 1, 1, 1)
 
         #Direction 5.117281 was calculated by hand
