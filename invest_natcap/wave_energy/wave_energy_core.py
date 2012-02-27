@@ -280,11 +280,10 @@ def biophysical(args):
 
 def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
     #Get a point in the clipped shape to determine output grid size
-    clipped_wave_shape_feat = \
-        clipped_wave_shape.GetLayer(0).GetNextFeature()
-    clipped_wave_shape_geom = clipped_wave_shape_feat.GetGeometryRef()
-    reference_point_x = clipped_wave_shape_geom.GetX()
-    reference_point_y = clipped_wave_shape_geom.GetY()
+    feat = shape.GetLayer(0).GetNextFeature()
+    geom = feat.GetGeometryRef()
+    reference_point_x = geom.GetX()
+    reference_point_y = geom.GetY()
     #Convert the point from meters to geom_x/long
     reference_point_latlng = \
         coord_trans_opposite.TransformPoint(reference_point_x, \
@@ -297,7 +296,7 @@ def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
 
 def get_coordinate_transformation(source_sr, target_sr):
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
-    coord_trans_opposite = osr.CoordinateTransformation(source_sr, target_sr)
+    coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     return (coord_trans, coord_trans_opposite)
     
 def create_percentile_rasters(raster_dataset, output_path, units_short, 
