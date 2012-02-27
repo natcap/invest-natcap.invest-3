@@ -47,19 +47,20 @@ class CheckerTester(unittest.TestCase):
         self.assertNotEqual(error, None, msg='No error message produced')
 
 class FileCheckerTester(CheckerTester):
+    """Test the class iui_validator.FileChecker"""
     def setUp(self):
         self.validate_as = {'type': 'file',
                             'value': TEST_DATA + 'iui/text_test.txt'}
         self.checker = iui_validator.FileChecker()
 
     def test_uri_exists(self):
+        """Assert that the FileChecker can open a file."""
         self.assertNoError()
 
     def test_nonexistent_uri(self):
-        #this should fail, so we check that an error message is there.
+        """Assert that the FileChecker fails if given a false URI."""
         self.validate_as['value'] += 'a'
         self.assertError()
-
 
 class FolderCheckerTester(CheckerTester):
     def setUp(self):
