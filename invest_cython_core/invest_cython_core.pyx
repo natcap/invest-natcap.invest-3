@@ -1044,9 +1044,9 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect,
             
         returns a raster of the same dimensions as inputs whose elements """
     
-    cdef int nrows = bounding_box[2], \
-             ncols = bounding_box[3], \
-             row_index, col_index
+    cdef int ncols = bounding_box[2], \
+             nrows = bounding_box[3], \
+             col_index, row_index
     
     #Assumes that cells are square
     cdef float cell_size = abs(upslope_area.GetGeoTransform()[1])
@@ -1073,7 +1073,7 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect,
         .transpose().astype(np.float)
         
     cdef np.ndarray [np.float_t,ndim=2] ls_factor_matrix = \
-        np.zeros((nrows,ncols))
+        np.zeros((ncols,nrows))
     
     #This is necessary to avoid not setting the outside boundary
     ls_factor_matrix[:] = ls_nodata
@@ -1081,30 +1081,30 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect,
     mraster = newRasterFromBase(aspect, '', 'MEM', -5.0, gdal.GDT_Float32)
     xijraster = newRasterFromBase(aspect, '', 'MEM', -5.0, gdal.GDT_Float32)
         
-    cdef np.ndarray [np.float_t,ndim=2] m_matrix = np.zeros((nrows,ncols))
-    cdef np.ndarray [np.float_t,ndim=2] xij_matrix = np.zeros((nrows,ncols))
+    cdef np.ndarray [np.float_t,ndim=2] m_matrix = np.zeros((ncols,nrows))
+    cdef np.ndarray [np.float_t,ndim=2] xij_matrix = np.zeros((ncols,nrows))
     
-    for row_index in range(1,nrows-1):
-        LOGGER.debug('row_index %s' % row_index)
-        for col_index in range(1,ncols-1):
+    for col_index in range(1,ncols-1):
+        LOGGER.debug('col_index %s' % col_index)
+        for row_index in range(1,nrows-1):
             #Skip the calculation if any of the inputs are nodata
-            if aspect_matrix[row_index, col_index] == aspect_nodata or \
-                slope_matrix[row_index, col_index] == slope_nodata or \
-                upslope_area_matrix[row_index, col_index] == upslope_nodata:
+            if aspect_matrix[col_index, row_index] == aspect_nodata or \
+                slope_matrix[col_index, row_index] == slope_nodata or \
+                upslope_area_matrix[col_index, row_index] == upslope_nodata:
                 continue
                 
             #Here the aspect direciton can range from 0 to 2PI, but the purpose
             #of the term is to determine the length of the flow path on the
             #pixel, thus we take the absolute value of each trigometric
             #function to keep the computation in the first quadrant
-            alpha = aspect_matrix[row_index, col_index]
+            alpha = aspect_matrix[col_index, row_index]
             xij = abs(sin(alpha))+ abs(cos(alpha))
             
             contributing_area = \
-                (upslope_area_matrix[row_index,col_index]-1) * cell_area
+                (upslope_area_matrix[col_index,row_index]-1) * cell_area
 
             #A placeholder for simplified slope stuff
-            slope = slope_matrix[row_index, col_index]
+            slope = slope_matrix[col_index, row_index]
             slope_in_radians = atan(slope)
             
             #From Equation 4 in "Extension and validataion of a geographic 
@@ -1125,21 +1125,21 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect,
             #Use the bisect function to do a nifty range 
             #lookup. http://docs.python.org/library/bisect.html#other-examples
             m = exponent_table[bisect.bisect(slope_table,slope)]
-            m_matrix[row_index,col_index] = m
+            m_matrix[col_index,row_index] = m
             #The length part of the ls_factor:
-            ls_factor_matrix[row_index,col_index] = \
+            ls_factor_matrix[col_index,row_index] = \
                 ((contributing_area+cell_area)**(m+1)-
                  contributing_area**(m+1)) / \
                 ((cell_size**(m+2))*(xij**m)*(22.13**m))
                 
-            xij_matrix[row_index,col_index] = xij
+            xij_matrix[col_index,row_index] = xij
 
             #From the paper "as a final check against exessively long slope
             #length calculations ... cap of 333m"
-            if ls_factor_matrix[row_index,col_index] > 333:
-                ls_factor_matrix[row_index,col_index] = 333
+            if ls_factor_matrix[col_index,row_index] > 333:
+                ls_factor_matrix[col_index,row_index] = 333
                 
-            ls_factor_matrix[row_index,col_index] *= slope_factor
+            ls_factor_matrix[col_index,row_index] *= slope_factor
 
     ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(), \
                                           *bounding_box[0:2])
