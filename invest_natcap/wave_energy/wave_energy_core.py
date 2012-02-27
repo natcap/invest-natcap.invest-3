@@ -110,29 +110,17 @@ def biophysical(args):
         clipped_wave_shape = \
             clip_shape(wave_shape, aoi_shape, clipped_wave_shape_path)
         
-        #Get a point in the clipped shape to determine output grid size
-        clipped_wave_shape_feat = \
-            clipped_wave_shape.GetLayer(0).GetNextFeature()
-        clipped_wave_shape_geom = clipped_wave_shape_feat.GetGeometryRef()
-        reference_point_x = clipped_wave_shape_geom.GetX()
-        reference_point_y = clipped_wave_shape_geom.GetY()
-        
         #Create a coordinate transformation from geom_x/long to area of 
         #interest's projection
         aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
-        coord_trans = osr.CoordinateTransformation(analysis_area_sr, aoi_sr)
-        coord_trans_opposite = \
-            osr.CoordinateTransformation(aoi_sr, analysis_area_sr)
-        
-        #Convert the point from meters to geom_x/long
-        reference_point_latlng = \
-            coord_trans_opposite.TransformPoint(reference_point_x, \
-                                                reference_point_y)
+
+        coord_trans, coord_trans_opposite = \
+            get_coordinate_transformation(analysis_area_sr, aoi_sr)
+
         #Get the size of the pixels in meters, to be used for creating rasters
-        pixel_size_tuple = \
-            invest_cython_core.pixel_size_in_meters(global_dem, coord_trans,
-                                                    reference_point_latlng)
-        pixel_xsize, pixel_ysize = pixel_size_tuple
+        pixel_xsize, pixel_ysize = \
+            pixel_size_helper(clipped_wave_shape, coord_trans, 
+                              coord_trans_opposite, global_dem)
 
         LOGGER.debug('X pixel size in meters : %f', pixel_xsize)
         LOGGER.debug('Y pixel size in meters : %f', pixel_ysize)
@@ -158,9 +146,9 @@ def biophysical(args):
 
         #Create a coordinate transformation, because it is expected below
         aoi_sr = aoi_shape.GetLayer(0).GetSpatialRef()
-        coord_trans = osr.CoordinateTransformation(analysis_area_sr, aoi_sr)
-        coord_trans_opposite = \
-            osr.CoordinateTransformation(aoi_sr, analysis_area_sr)
+
+        coord_trans, coord_trans_opposite = \
+            get_coordinate_transformation(analysis_area_sr, aoi_sr)
 
     #We do all wave power calculations by manipulating the fields in
     #the wave data shapefile, thus we need to add proper depth values
@@ -286,6 +274,52 @@ def biophysical(args):
         if re.search(pattern, file):
             os.remove(os.path.join(intermediate_dir, file))
 
+def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
+    """This function helps retrieve the pixel sizes of the global DEM 
+    when given an area of interest that has a certain projection.
+    
+    shape - A point shapefile datasource indicating where in the world we
+            are interested in
+    coord_trans - A coordinate transformation
+    coord_trans_opposite - A coordinate transformation that transforms in the
+                           opposite direction of 'coord_trans'
+    global_dem - The global DEM dataset to get the pixel size from
+    
+    returns - A tuple of the x and y pixel sizes of the global DEM 
+              given in the units of what 'shape' is projected in
+    """
+    #Get a point in the clipped shape to determine output grid size
+    feat = shape.GetLayer(0).GetNextFeature()
+    geom = feat.GetGeometryRef()
+    reference_point_x = geom.GetX()
+    reference_point_y = geom.GetY()
+    
+    #Convert the point from meters to geom_x/long
+    reference_point_latlng = \
+        coord_trans_opposite.TransformPoint(reference_point_x, \
+                                            reference_point_y)
+        
+    #Get the size of the pixels in meters, to be used for creating rasters
+    pixel_size_tuple = \
+        invest_cython_core.pixel_size_in_meters(global_dem, coord_trans,
+                                                reference_point_latlng)
+    return pixel_size_tuple
+
+def get_coordinate_transformation(source_sr, target_sr):
+    """This function takes a source and target spatial reference and creates
+    a coordinate transformation from source to target, and one from target 
+    to source.
+    
+    source_sr - A spatial reference
+    target_sr - A spatial reference
+    
+    return - A tuple, coord_trans (source to target) and coord_trans_opposite 
+             (target to source)
+    """
+    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+    coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
+    return (coord_trans, coord_trans_opposite)
+    
 def create_percentile_rasters(raster_dataset, output_path, units_short, 
                               units_long, start_value, percentile_list, nodata):
     """Creates a percentile (quartile) raster based on the raster_dataset. An 
