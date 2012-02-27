@@ -1002,11 +1002,7 @@ def valuation(args):
     for key, value in land_grid_pts.iteritems():
         grid_pts[key] = [value['GRID'][0], value['GRID'][1]]
         land_pts[key] = [value['LAND'][0], value['LAND'][1]]
-    #If either shapefile, landing or grid exist, remove them
-    if os.path.isfile(land_pt_path):
-        os.remove(land_pt_path)
-    if os.path.isfile(grid_pt_path):
-        os.remove(grid_pt_path)
+
     #Make a point shapefile for landing points.
     LOGGER.info('Creating Landing Points Shapefile.')
     landing_shape = build_point_shapefile('ESRI Shapefile', 'landpoints', \
@@ -1157,6 +1153,9 @@ def build_point_shapefile(driver_name, layer_name, path, data, prj,
     
     returns - The created shapefile
     """
+    #If the shapefile exists, remove it.
+    if os.path.isfile(path):
+        os.remove(path)
     #Make a point shapefile for landing points.
     driver = ogr.GetDriverByName(driver_name)
     data_source = driver.CreateDataSource(path)
@@ -1189,7 +1188,7 @@ def get_points_geometries(shape):
     a numpy array as a point [x_location,y_location], which is returned 
     when all the features have been iterated through.
     
-    shape - A shapefile
+    shape - An OGR shapefile datasource
     
     returns - A numpy array of points, which represent the shape's feature's
               geometries.
@@ -1230,14 +1229,14 @@ def calculate_distance(xy_1, xy_2):
         min_dist[index], min_id[index] = dists.min(), dists.argmin()
     return min_dist, min_id
 
-def change_shape_projection(shape_to_reproject, srs_prj, output_path):
+def change_shape_projection(shape_to_reproject, target_sr, output_path):
     """Changes the projection of a shapefile by creating a new shapefile 
     based on the projection passed in.  The new shapefile then copies all the 
     features and fields of the shapefile to reproject as its own. 
     The reprojected shapefile is written to 'outputpath' and is returned.
     
     shape_to_reproject - A shapefile to be copied and reprojected.
-    srs_prj - The desired projection as a SpatialReference from a WKT string.
+    target_sr - The desired projection as a SpatialReference from a WKT string.
     output_path - The path to where the new shapefile should be written to disk.
     
     returns - The reprojected shapefile.
@@ -1256,7 +1255,7 @@ def change_shape_projection(shape_to_reproject, srs_prj, output_path):
     shp_ds = shp_driver.CreateDataSource(shape_source)
     #Create the new layer for the shapefile using same name and geometry
     #type from shape_to_reproject, but different projection
-    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), srs_prj, 
+    shp_layer = shp_ds.CreateLayer(in_defn.GetName(), target_sr, \
                                    in_defn.GetGeomType())
     #Get the number of fields in the current point shapefile
     in_field_count = in_defn.GetFieldCount()
@@ -1270,16 +1269,15 @@ def change_shape_projection(shape_to_reproject, srs_prj, output_path):
         shp_layer.CreateField(fd_def)
 
     in_layer.ResetReading()
+    #Get the spatial reference of the source layer to use in transforming
+    source_sr = in_layer.GetSpatialReference()
+    #Create a coordinate transformation
+    coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
+    #Get the first feature from the shapefile
     in_feat = in_layer.GetNextFeature()
     #Copy all of the features in shape_to_reproject to the new shapefile
     while in_feat is not None:
         geom = in_feat.GetGeometryRef()
-        #Get the spatial reference of the source geometry to use in transforming
-        source_sr = geom.GetSpatialReference()
-        #Get the spatial reference of the target geometry to use in transforming
-        target_sr = srs_prj
-        #Create a coordinate transformation
-        coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
         #Transform the geometry into a format desired for the new projection
         geom.Transform(coord_trans)
         #Copy shape_to_reproject's feature and set as new shapes feature
