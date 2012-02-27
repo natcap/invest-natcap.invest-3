@@ -63,6 +63,8 @@ def biophysical(args):
             the raster until after all the input rasters are rasterized.
             
         returns nothing"""
+
+    ##############Set up vectorize functions and function-wide values
     LOGGER = logging.getLogger('sediment_core: biophysical')
 
     flow_accumulation_nodata = \
@@ -176,6 +178,8 @@ def biophysical(args):
         #to scale efficiency especially if v_steram is interpolated 
         #intelligently
         return (1 - v_stream) * efficiency
+
+    ############## Calculation Starts here
 
     for watershed_feature in args['watersheds'].GetLayer():
         LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())

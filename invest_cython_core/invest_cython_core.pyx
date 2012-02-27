@@ -963,7 +963,10 @@ def flow_direction_inf(dem, bounding_box, flow):
                     d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
-    flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), *bounding_box[0:2])
+    #Don't write the outer uncalculated part that's the [1:-1,1:-1] below
+    flow.GetRasterBand(1).WriteArray(flow_matrix[1:-1,1:-1].transpose(), 
+                                     bounding_box[0]+1,
+                                     bounding_box[1]+1)
     flow.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
 
