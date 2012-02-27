@@ -43,25 +43,29 @@ class TestWaveEnergy(unittest.TestCase):
         args['aoi'] = ogr.Open(aoi_path)
         args['dem'] = gdal.Open(dem_path)
         args['workspace_dir'] = test_dir
-        #Create a 2D array of the machine performance table and place the row
-        #and column headers as the first two arrays in the list of arrays
-        try:
-            machine_perf_twoDArray = [[], []]
-            machine_perf_file = open(machine_perf_path)
-            reader = csv.reader(machine_perf_file)
-            get_row = True
-            for row in reader:
-                if get_row:
-                    machine_perf_twoDArray[0] = row[1:]
-                    get_row = False
-                else:
-                    machine_perf_twoDArray[1].append(row.pop(0))
-                    machine_perf_twoDArray.append(row)
-            machine_perf_file.close()
-            args['machine_perf'] = machine_perf_twoDArray
-        except IOError, e:
-            print 'File I/O error' + e
-
+        
+        #Create a dictionary that stores the wave periods and wave heights as
+        #arrays. Also store the amount of energy the machine produces 
+        #in a certain wave period/height state as a 2D array
+        machine_perf_dict = {}
+        machine_perf_file = open(machine_perf_path)
+        reader = csv.reader(machine_perf_file)
+        #Get the column header which is the first row in the file
+        #and specifies the range of wave periods
+        periods = reader.next()
+        machine_perf_dict['periods'] = periods[1:]
+        #Set the keys for storing wave height range and the machine performance
+        #at each state
+        machine_perf_dict['heights'] = []
+        machine_perf_dict['bin_matrix'] = []
+        for row in reader:
+            #Build up the row header by taking the first element in each row
+            #This is the range of heights
+            machine_perf_dict['heights'].append(row.pop(0))
+            machine_perf_dict['bin_matrix'].append(row)
+        machine_perf_file.close()
+        args['machine_perf'] = machine_perf_dict
+        
         #Create a dictionary whose keys are the 'NAMES' from the machine parameter table
         #and whose values are from the corresponding 'VALUES' field.
         try:
@@ -370,15 +374,16 @@ class TestWaveEnergy(unittest.TestCase):
 
         #A dictionary representing a mini version of what would be produced
         #from the wave watch text file
-        wave_data = {0:[1, 2, 3, 4, 5], 1:[1, 2, 3, 4],
-                    (520, 490):[[0, 10, 13, 9, 7],
-                                [8, 15, 17, 13, 3],
-                                [0, 3, 11, 9, 7],
-                                [11, 17, 23, 19, 12]],
-                    (521, 491):[[-1, 6.5, 13.3, 9, 7],
-                                [-8, -5, 170, 13, 0],
-                                [2, 3, 11.5, 9, 7.25],
-                                [11, 17, 23, 19, 12]]
+        wave_data = {'periods':[1, 2, 3, 4, 5], 'heights':[1, 2, 3, 4],
+                     'bin_matrix':{(520, 490):[[0, 10, 13, 9, 7],
+                                               [8, 15, 17, 13, 3],
+                                               [0, 3, 11, 9, 7],
+                                               [11, 17, 23, 19, 12]],
+                                   (521, 491):[[-1, 6.5, 13.3, 9, 7],
+                                               [-8, -5, 170, 13, 0],
+                                               [2, 3, 11.5, 9, 7.25],
+                                               [11, 17, 23, 19, 12]]
+                                   }
                     }
         #An interpolated object from machine performace and wave_data ranges
         interpZ = [[0, 0, 1, 3, 8], [0, 3, 5, 9, 7], [1, 4, 5, 3, 0], [0, 0, 0, 0, 0]]
@@ -402,12 +407,13 @@ class TestWaveEnergy(unittest.TestCase):
         calculated results based on the given inputs.
         """
         #Rows/Col
-        wave_data = {0:[1, 2, 3, 4, 5, 6, 7, 8], 1:[.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]}
+        wave_data = {'periods':[1, 2, 3, 4, 5, 6, 7, 8], 'heights':[.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]}
         #Machine performace table with first two arrays being rows/col
-        machine_perf = [[2, 3, 4, 7], [1, 2, 3],
-                       [0, 8, 20, 10],
-                       [6, 18, 23, 13],
-                       [0, 8, 20, 0]]
+        machine_perf = {'periods':[2, 3, 4, 7], 'heights': [1, 2, 3],
+                        'bin_matrix':[[0, 8, 20, 10],
+                                      [6, 18, 23, 13],
+                                      [0, 8, 20, 0]]
+                        }
         result = [[0, 0, 8, 20, 16.6666667, 13.33333, 10, 10],
                   [0, 0, 8, 20, 16.66666667, 13.33333333, 10, 10],
                   [3, 3, 13, 21.5, 18.16666667, 14.83333333, 11.5, 11.5],

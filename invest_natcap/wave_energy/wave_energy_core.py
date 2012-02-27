@@ -968,7 +968,7 @@ def valuation(args):
     wgs_84_sr = srs_prj
     wave_data_sr = wave_data_shape.GetLayer(0).GetSpatialRef()
     coord_trans, coord_trans_opposite = \
-        get_coordinate_transform(wgs_84_sr, wave_data_sr)
+        get_coordinate_transformation(wgs_84_sr, wave_data_sr)
     #Get the size of the pixels in meters
     pixel_xsize, pixel_ysize = \
         pixel_size_helper(wave_data_shape, coord_trans, coord_trans_opposite, 
@@ -1024,6 +1024,7 @@ def valuation(args):
                                                             landing_points)
     land_to_grid_dist, land_to_grid_id = calculate_distance(landing_points, \
                                                             grid_point)
+    wave_data_layer = wave_data_shape.GetLayer(0)
     #Add three new fields to the shapefile that will store the distances
     for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
@@ -1270,7 +1271,7 @@ def change_shape_projection(shape_to_reproject, target_sr, output_path):
 
     in_layer.ResetReading()
     #Get the spatial reference of the source layer to use in transforming
-    source_sr = in_layer.GetSpatialReference()
+    source_sr = in_layer.GetSpatialRef()
     #Create a coordinate transformation
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     #Get the first feature from the shapefile
