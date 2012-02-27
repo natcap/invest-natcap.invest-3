@@ -63,15 +63,18 @@ class FileCheckerTester(CheckerTester):
         self.assertError()
 
 class FolderCheckerTester(CheckerTester):
+    """Test the class iui_validator.FileChecker"""
     def setUp(self):
         self.validate_as = {'type': 'folder',
                        'value': TEST_DATA}
         self.checker = iui_validator.FolderChecker()
 
     def test_folder_exists(self):
+        """Assert that the FolderChecker can verify a folder exists."""
         self.assertNoError()
 
     def test_not_folder(self):
+        """Assert that the FolderChecker fails if given a false URI."""
         self.validate_as['value'] += 'a'
         self.assertError()
 
