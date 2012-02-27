@@ -290,17 +290,23 @@ def bounding_box_index(ogr_feature, gdal_dataset):
 
 
     min_col = int((geometry_bounding_box[0] - dataset_geotransform[0]) / \
-                  dataset_geotransform[1])
+                  dataset_geotransform[1]) - 1
     max_col = int((geometry_bounding_box[1] - dataset_geotransform[0]) / \
-                  dataset_geotransform[1])
+                  dataset_geotransform[1]) + 1
 
     #Recall that rows increase going DOWN, so the "max" row is really the
     #bottom row. that's the index of geometry_bounding_box[2].
     #This is really confusing, so check out the class structure here:
     #http://www.gdal.org/ogr/ogr__core_8h-source.html
     max_row = int(math.ceil((geometry_bounding_box[2] - dataset_geotransform[3]) / \
-                  dataset_geotransform[5]))
+                  dataset_geotransform[5])) + 1
     min_row = int(math.ceil((geometry_bounding_box[3] - dataset_geotransform[3]) / \
-                  dataset_geotransform[5]))
+                  dataset_geotransform[5])) - 1
+
+    if min_row < 0: min_row = 0
+    if min_col < 0: min_col = 0
+    if max_col >= gdal_dataset.RasterXSize: gdal_dataset.RasterXSize - 1
+    if max_row >= gdal_dataset.RasterYSize: gdal_dataset.RasterYSize - 1
 
     return [min_col, min_row, max_col - min_col, max_row - min_row]
+
