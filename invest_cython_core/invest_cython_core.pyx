@@ -128,6 +128,7 @@ def newRaster(cols, rows, projection, geotransform, format, nodata, datatype,
     newRaster.SetGeoTransform(geotransform)
     for i in range(bands):
         newRaster.GetRasterBand(i + 1).SetNoDataValue(nodata)
+        newRaster.GetRasterBand(i + 1).Fill(nodata)
 
     return newRaster
 
