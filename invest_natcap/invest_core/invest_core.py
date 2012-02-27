@@ -122,20 +122,26 @@ def vectorize2ArgOp(rasterBandA, rasterBandB, op, outBand):
         out_array = vOp(dataA, dataB)
         outBand.WriteArray(out_array, 0, i)
 
-def vectorize1ArgOp(rasterBand, op, outBand):
+def vectorize1ArgOp(rasterBand, op, outBand, bounding_box=None):
     """Applies the function 'op' over rasterBand and outputs to outBand
     
-        rasterBand - a GDAL raster
-        op- a function that that takes 2 arguments and returns 1 value
-        outBand - the result of vectorizing op over rasterBand
+        rasterBand - (input) a GDAL raster
+        op - (input) a function that that takes 2 arguments and returns 1 value
+        outBand - (output) the result of vectorizing op over rasterBand
+        bounding_box - (input, optional) a 4 element list that corresponds
+            to the bounds in GDAL's ReadAsArray to limit the vectorization
+            over that region in rasterBand and writing to the corresponding
+            outBand.  If left None, defaults to the size of the band
             
         returns nothing"""
 
     vOp = np.vectorize(op, otypes=[np.float])
-    for i in range(0, rasterBand.YSize):
-        data = rasterBand.ReadAsArray(0, i, rasterBand.XSize, 1)
-        out_array = vOp(data)
-        outBand.WriteArray(out_array, 0, i)
+    if bounding_box == None:
+        bounding_box = [0, 0, rasterBand.XSize, rasterBand.YSize]
+
+    data = rasterBand.ReadAsArray(*bounding_box)
+    out_array = vOp(data)
+    outBand.WriteArray(out_array, *bounding_box[0:2])
 
 def vectorizeRasters(rasterList, op, rasterName=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):

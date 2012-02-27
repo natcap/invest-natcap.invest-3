@@ -79,43 +79,37 @@ def biophysical(args):
                                                   watershed_bounding_box,
                                                   args['flow_accumulation'])
 
+        flow_accumulation_nodata = \
+            args['flow_accumulation'].GetRasterBand(1).GetNoDataValue()
+        v_stream_nodata = \
+            args['v_stream'].GetRasterBand(1).GetNoDataValue()
+
+        def stream_classifier(flow_accumulation):
+            """This function classifies pixels into streams or no streams based
+                on the threshold_flow_accumulation value.
+
+                flow_accumulation - GIS definition of flow accumulation (upstream
+                    pixel inflow)
+
+                returns 1 if flow_accumulation exceeds
+                    args['threshold_flow_accumulation'], 0 if not, and nodata
+                    if in a nodata region
+            """
+            if flow_accumulation == flow_accumulation_nodata:
+                return v_stream_nodata
+            if flow_accumulation >= args['threshold_flow_accumulation']:
+                return 1.0
+            else:
+                return 0.0
+
+        #classify streams from the flow accumulation raster
+        LOGGER.info("Classifying streams from flow accumulation raster")
+
+        invest_core.vectorize1ArgOp(args['flow_accumulation'].GetRasterBand(1),
+            stream_classifier, args['v_stream'].GetRasterBand(1),
+            watershed_bounding_box)
+
     return
-
-
-
-
-
-    LOGGER.info("calculating flow accumulation")
-    invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
-                                              args['flow_accumulation'],
-                                              args['dem'])
-    flow_accumulation_nodata = \
-        args['flow_accumulation'].GetRasterBand(1).GetNoDataValue()
-    v_stream_nodata = \
-        args['v_stream'].GetRasterBand(1).GetNoDataValue()
-
-    #classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
-    def stream_classifier(flow_accumulation):
-        """This function classifies pixels into streams or no streams based
-            on the threshold_flow_accumulation value.
-
-            flow_accumulation - GIS definition of flow accumulation (upstream
-                pixel inflow)
-
-            returns 1 if flow_accumulation exceeds
-                args['threshold_flow_accumulation'], 0 if not, and nodata
-                if in a nodata region
-        """
-        if flow_accumulation == flow_accumulation_nodata:
-            return v_stream_nodata
-        if flow_accumulation >= args['threshold_flow_accumulation']:
-            return 1.0
-        else:
-            return 0.0
-
-    invest_core.vectorize1ArgOp(args['flow_accumulation'].GetRasterBand(1),
-        stream_classifier, args['v_stream'].GetRasterBand(1))
 
     invest_cython_core.calculate_slope(args['dem'], args['slope'])
 
