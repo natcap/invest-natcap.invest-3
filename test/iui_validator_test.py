@@ -1,3 +1,6 @@
+"""This file contains test cases for classes contained within the module
+invest_natcap.iui.iui_validator."""
+
 import unittest
 
 from invest_natcap.iui import iui_validator
@@ -5,15 +8,40 @@ from invest_natcap.iui import iui_validator
 TEST_DATA = 'data/'
 
 class CheckerTester(unittest.TestCase):
+    """This class defines commonly-used methods for checker classes in
+    iui_validator.  Since all of the checker classes have a uniform call
+    structure, we can abstract certain logic away from the actual test classes
+    into this convenient superclass."""
+
     def check(self):
+        """Call the established checker's run_checks function with
+        self.validate_as as input.
+
+        prerequisites:
+            * a checker object has been created at self.checker
+            * the validation dictionary has been saved at self.validate_as.
+
+        returns a string with length > 0 if an error is found.  None or '' if
+        no error is found."""
+
         return self.checker.run_checks(self.validate_as)
 
     def assertNoError(self):
+        """Call self.check and assert that no error is found with the input
+        dictionary.
+
+        returns nothing"""
+
         error = self.check()
         if error != None:
             self.assertEqual(error, '')
 
     def assertError(self):
+        """Call self.check and assert that an error is found with the input
+        dictionary.
+
+        returns nothing"""
+
         error = self.check()
         self.assertNotEqual(error, '', msg='No error message produced')
         self.assertNotEqual(error, None, msg='No error message produced')
