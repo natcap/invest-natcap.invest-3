@@ -79,6 +79,7 @@ class FolderCheckerTester(CheckerTester):
         self.assertError()
 
 class GDALCheckerTester(CheckerTester):
+    """Test the class iui_validate.GDALChecker"""
     def setUp(self):
         self.validate_as = {'type': 'GDAL',
                             'value': TEST_DATA +
@@ -86,9 +87,11 @@ class GDALCheckerTester(CheckerTester):
         self.checker = iui_validator.GDALChecker()
 
     def test_opens(self):
+        """Assert that GDALChecker can open a file."""
         self.assertNoError()
 
     def test_not_exists(self):
+        """Assert that GDALChecker fails if given a bad URI"""
         self.validate_as['value'] += 'aaa'
         self.assertError()
 
