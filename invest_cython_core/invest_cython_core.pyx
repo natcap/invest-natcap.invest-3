@@ -310,7 +310,7 @@ cdef int pairCompare(const_void *a, const_void *b):
     if v > 0: return 1
     return 0
 
-def flowDirectionD8(dem, flow):
+def flowDirectionD8(dem, bounding_box, flow):
     """Calculates the D8 pour point algorithm.  The output is a integer
         raster whose values range from 1 to 255.  The values for each direction
         from the center are:
@@ -338,6 +338,8 @@ def flowDirectionD8(dem, flow):
           equal to zero, the cell will flow out of the surface raster.
           
        dem - (input) a single band raster with elevation values
+       bounding_box - (input) a 4 element array defining GDAL ReadAsArray 
+           bounds of interest
        flow - (output) a single band integer raster of same dimensions as
            dem.  After the function call it will have flow direction in it 
        
@@ -366,8 +368,7 @@ def flowDirectionD8(dem, flow):
 
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
-    demMatrixTmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,\
-        dem.RasterYSize).transpose()
+    demMatrixTmp = dem.GetRasterBand(1).ReadAsArray(*bounding_box).transpose()
 
     #Incoming matrix type could be anything numerical.  Cast to a floating
     #point for cython speed and because it's the most general form.
@@ -491,12 +492,14 @@ def flowDirectionD8(dem, flow):
                     dcur = d
             flowMatrix[x,y] = dcur
 
-    flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
+    flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 
+                                     *bounding_box[0:2])
     free(demPixels)
     
     distanceRaster = newRasterFromBase(flow,'distance.tiff', 'GTiff', -5.0,
         gdal.GDT_Float32)
-    distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),0,0)
+    distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),
+                                               *bounding_box[0:2])
     
     return flow
 
@@ -753,7 +756,7 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     
     free(dem_pixel_pairs)
 
-def flow_direction_inf(dem, flow):
+def flow_direction_inf(dem, bounding_box, flow):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         Algorithm from: Tarboton, "A new method for the determination of flow
@@ -761,6 +764,8 @@ def flow_direction_inf(dem, flow):
         Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
 
        dem - (input) a single band raster with elevation values
+       bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
        flow - (output) a single band float raster of same dimensions as
            dem.  After the function call it will have flow direction in it 
        
@@ -777,8 +782,8 @@ def flow_direction_inf(dem, flow):
     #back out later on gdal arrays, so we invert the col_index and row_index 
     #offsets here
     LOGGER.info("loading DEM")
-    dem_matrix_tmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, 
-                                         dem.RasterYSize).transpose()
+    dem_matrix_tmp = \
+        dem.GetRasterBand(1).ReadAsArray(*bounding_box).transpose()
 
     #Incoming matrix type could be anything numerical.  Cast to a floating
     #point for cython speed and because it'slope the most general form.
@@ -920,9 +925,8 @@ def flow_direction_inf(dem, flow):
     #Calculate D8 flow to resolve undefined flows in D-inf
     d8_flow_dataset = newRasterFromBase(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
     LOGGER.info("calculating D8 flow")
-    flowDirectionD8(dem, d8_flow_dataset)
-    d8_flow_matrix = d8_flow_dataset.ReadAsArray(0, 0, dem.RasterXSize, 
-                                    dem.RasterYSize).transpose()
+    flowDirectionD8(dem, bounding_box, d8_flow_dataset)
+    d8_flow_matrix = d8_flow_dataset.ReadAsArray(*bounding_box).transpose()
     
     nodata_d8 = d8_flow_dataset.GetRasterBand(1).GetNoDataValue()
 
@@ -945,7 +949,7 @@ def flow_direction_inf(dem, flow):
                     d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
-    flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
+    flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), *bounding_box[0:2])
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
 
 def calculate_slope(dem, slope):
