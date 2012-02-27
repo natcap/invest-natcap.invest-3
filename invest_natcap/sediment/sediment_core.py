@@ -58,6 +58,29 @@ def biophysical(args):
             
         returns nothing"""
 
+    flow_accumulation_nodata = \
+            args['flow_accumulation'].GetRasterBand(1).GetNoDataValue()
+    v_stream_nodata = \
+        args['v_stream'].GetRasterBand(1).GetNoDataValue()
+
+    def stream_classifier(flow_accumulation):
+        """This function classifies pixels into streams or no streams based
+            on the threshold_flow_accumulation value.
+
+            flow_accumulation - GIS definition of flow accumulation (upstream
+                pixel inflow)
+
+            returns 1 if flow_accumulation exceeds
+                args['threshold_flow_accumulation'], 0 if not, and nodata
+                if in a nodata region
+        """
+        if flow_accumulation == flow_accumulation_nodata:
+            return v_stream_nodata
+        if flow_accumulation >= args['threshold_flow_accumulation']:
+            return 1.0
+        else:
+            return 0.0
+
     #Nodata value to use for usle output raster
     usle_nodata = -1.0
     usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], '',
@@ -135,29 +158,6 @@ def biophysical(args):
                                                   watershed_bounding_box,
                                                   args['flow_accumulation'])
 
-        flow_accumulation_nodata = \
-            args['flow_accumulation'].GetRasterBand(1).GetNoDataValue()
-        v_stream_nodata = \
-            args['v_stream'].GetRasterBand(1).GetNoDataValue()
-
-        def stream_classifier(flow_accumulation):
-            """This function classifies pixels into streams or no streams based
-                on the threshold_flow_accumulation value.
-
-                flow_accumulation - GIS definition of flow accumulation (upstream
-                    pixel inflow)
-
-                returns 1 if flow_accumulation exceeds
-                    args['threshold_flow_accumulation'], 0 if not, and nodata
-                    if in a nodata region
-            """
-            if flow_accumulation == flow_accumulation_nodata:
-                return v_stream_nodata
-            if flow_accumulation >= args['threshold_flow_accumulation']:
-                return 1.0
-            else:
-                return 0.0
-
         #classify streams from the flow accumulation raster
         LOGGER.info("Classifying streams from flow accumulation raster")
         invest_core.vectorize1ArgOp(args['flow_accumulation'].GetRasterBand(1),
@@ -180,15 +180,14 @@ def biophysical(args):
         invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
             lulc_to_cp, usle_c_p_raster.GetRasterBand(1),
             watershed_bounding_box)
-    return
 
-    LOGGER.info("calculating potential soil loss")
+        LOGGER.info("calculating potential soil loss")
+
 
     potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'],
         args['erosivity'], args['erodibility'], usle_c_p_raster,
         args['v_stream']], usle_vectorized_function, args['usle_uri'],
         nodata=usle_nodata)
-
     #change units from tons per hectare to tons per cell.  We need to do this
     #after the vectorize raster operation since we won't know the cell size
     #until then.  Convert cell_area to meters (in Ha by default)
@@ -210,6 +209,8 @@ def biophysical(args):
     potential_soil_loss.GetRasterBand(1). \
         WriteArray(potential_soil_loss_matrix, 0, 0)
     invest_core.calculateRasterStats(potential_soil_loss.GetRasterBand(1))
+
+    return
 
     #map lulc to a usle_c * usle_p raster
     LOGGER.info('mapping landuse types to vegetation retention efficiencies')
