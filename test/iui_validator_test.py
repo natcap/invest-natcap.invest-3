@@ -110,7 +110,8 @@ class OGRCheckerTester(CheckerTester):
 
         incremental_additions = [('name', {'inheritFrom': 'file'}),
                                  ('type', 'polygons'),
-                                 ('projection', 'Transverse_Mercator')]
+                                 ('projection', 'Transverse_Mercator'),
+                                 ('datum', 'WGS_1984')]
 
         for key, value in incremental_additions:
             self.validate_as['layers'][0][key] = value

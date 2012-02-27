@@ -316,6 +316,13 @@ class OGRChecker(TableChecker):
                     return str('Shapefile layer ' + layer_name + ' must be ' +
                         'projected as ' + layer_dict['projection'])
 
+            if 'datum' in layer_dict:
+                reference = self.layer.GetSpatialRef()
+                datum = reference.GetAttrValue('DATUM')
+                if datum != layer_dict['datum']:
+                    return str('Shapefile layer ' + layer_name + ' must ' +
+                        'have the datum ' + layer_dict['datum'])
+
     def _check_layer_type(self, type_string):
         for feature in self.layer:
             geometry = feature.GetGeometryRef()
