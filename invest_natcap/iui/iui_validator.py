@@ -227,7 +227,7 @@ class Checker(registrar.Registrar):
 
         self.value = valid_dict['value']
         for key, value in valid_dict.iteritems():
-            if key not in self.ignore:
+            if key not in self.ignore and self.map[key] not in self.checks:
                 error = self.eval(key, value)
                 if error != None:
                     return error
