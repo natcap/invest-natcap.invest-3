@@ -128,6 +128,7 @@ def newRaster(cols, rows, projection, geotransform, format, nodata, datatype,
     newRaster.SetGeoTransform(geotransform)
     for i in range(bands):
         newRaster.GetRasterBand(i + 1).SetNoDataValue(nodata)
+        newRaster.GetRasterBand(i + 1).Fill(nodata)
 
     return newRaster
 
@@ -227,8 +228,9 @@ def createRasterFromVectorExtents(xRes, yRes, format, nodata, rasterFile, shp):
     srs.ImportFromWkt(shp.GetLayer(0).GetSpatialRef().__str__())
     raster.SetProjection(srs.ExportToWkt())
 
-    #Initalize everything to nodata
+    #Initialize everything to nodata
     raster.GetRasterBand(1).Fill(nodata)
+    raster.GetRasterBand(1).FlushCache()
 
 def calculateIntersectionRectangle(rasterList):
     """Return a bounding box of the intersections of all the rasters in the
@@ -310,7 +312,7 @@ cdef int pairCompare(const_void *a, const_void *b):
     if v > 0: return 1
     return 0
 
-def flowDirectionD8(dem, flow):
+def flowDirectionD8(dem, bounding_box, flow):
     """Calculates the D8 pour point algorithm.  The output is a integer
         raster whose values range from 1 to 255.  The values for each direction
         from the center are:
@@ -338,6 +340,8 @@ def flowDirectionD8(dem, flow):
           equal to zero, the cell will flow out of the surface raster.
           
        dem - (input) a single band raster with elevation values
+       bounding_box - (input) a 4 element array defining GDAL ReadAsArray 
+           bounds of interest
        flow - (output) a single band integer raster of same dimensions as
            dem.  After the function call it will have flow direction in it 
        
@@ -366,8 +370,7 @@ def flowDirectionD8(dem, flow):
 
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
-    demMatrixTmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize,\
-        dem.RasterYSize).transpose()
+    demMatrixTmp = dem.GetRasterBand(1).ReadAsArray(*bounding_box).transpose()
 
     #Incoming matrix type could be anything numerical.  Cast to a floating
     #point for cython speed and because it's the most general form.
@@ -491,12 +494,15 @@ def flowDirectionD8(dem, flow):
                     dcur = d
             flowMatrix[x,y] = dcur
 
-    flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 0, 0)
+    flow.GetRasterBand(1).WriteArray(flowMatrix.transpose(), 
+                                     *bounding_box[0:2])
     free(demPixels)
     
     distanceRaster = newRasterFromBase(flow,'distance.tiff', 'GTiff', -5.0,
         gdal.GDT_Float32)
-    distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),0,0)
+    distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),
+                                               *bounding_box[0:2])
+    distanceRaster.GetRasterBand(1).FlushCache()
     
     return flow
 
@@ -674,17 +680,20 @@ cdef void d_p_area(CQueue pixels_to_process,
             accumulation_matrix[i, j] += prop * accumulation_matrix[pi, pj]
             #LOGGER.debug("prop %s accumulation_matrix[i, j] = %s" % (prop, accumulation_matrix[i, j]))
 
-def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
+def flow_accumulation_dinf(flow_direction, dem, bounding_box, 
+                           flow_accumulation):
     """Creates a raster of accumulated flow to each cell.
     
-        flow_direction - A raster showing direction of flow out of each cell
-            with direcitonal values given in radians.
-        flow_accumulation - The output flow accumulation raster set
-        dem - heightmap raster for the area of interest
+        flow_direction - (input) A raster showing direction of flow out of 
+            each cell with directional values given in radians.
+        dem - (input) heightmap raster for the area of interest
+        bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
+        flow_accumulation - (output) The output flow accumulation raster set
         
         returns nothing"""
 
-    cdef int nodata_flow_direction, i, j
+    cdef int nodata_flow_direction, i, j, n_cols, n_rows
     cdef float nodata_flow_accumulation
     cdef CQueue q
     LOGGER = logging.getLogger('flow_accumulation_dinf')
@@ -692,24 +701,31 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
     #Load the input flow into a numpy array
     #GDal inverts x and y, so it's easier to transpose in and back out later
     #on gdal arrays, so we invert the x and y offsets here
+    
+    n_cols = bounding_box[2]
+    n_rows = bounding_box[3]
     cdef np.ndarray[np.float_t,ndim=2] flow_direction_matrix = \
-        flow_direction.GetRasterBand(1).ReadAsArray(0, 0,
-        flow_direction.RasterXSize, flow_direction.RasterYSize).transpose().astype(np.float)
-    cdef np.ndarray[np.float_t,ndim=2] dem_pixels  = \
-        dem.GetRasterBand(1).ReadAsArray(0, 0,
-        dem.RasterXSize, dem.RasterYSize).transpose().astype(np.float)
+        flow_direction.GetRasterBand(1).ReadAsArray(*bounding_box) \
+            .transpose().astype(np.float)
+            
+    cdef np.ndarray[np.float_t,ndim=2] dem_pixels =  dem.GetRasterBand(1). \
+        ReadAsArray(*bounding_box).transpose().astype(np.float)
+        
     nodata_flow_direction = flow_direction.GetRasterBand(1).GetNoDataValue()
-    nodata_flow_accumulation = flow_accumulation.GetRasterBand(1).GetNoDataValue()
+    nodata_flow_accumulation = \
+        flow_accumulation.GetRasterBand(1).GetNoDataValue()
     nodata_dem = dem.GetRasterBand(1).GetNoDataValue()
+    
     gp = flow_direction.GetGeoTransform()
     cellXSize = gp[1]
     cellYSize = gp[5]
+    
     #Create the output flow, initialize to -1 as undefined
     idim, jdim = flow_direction_matrix.shape[0], flow_direction_matrix.shape[1]
     cdef np.ndarray[np.float_t,ndim=2] accumulation_matrix = \
         np.zeros([idim, jdim],dtype=np.float)
     cdef Pair *dem_pixel_pairs = \
-        <Pair *>malloc(flow_direction.RasterXSize*flow_direction.RasterYSize * sizeof(Pair))
+        <Pair *>malloc(n_cols * n_rows * sizeof(Pair))
         
     #initalize to -2 to indicate no processing has occured.  This will change
     #to -1 to indicate it's been enqueued, and something else when value is
@@ -748,12 +764,13 @@ def flow_accumulation_dinf(flow_direction, flow_accumulation, dem):
                           dem_pixels)
 
     flow_accumulation.GetRasterBand(1).WriteArray(\
-        accumulation_matrix.transpose(), 0, 0)
+        accumulation_matrix.transpose(), *bounding_box[0:2])
+    flow_accumulation.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(flow_accumulation.GetRasterBand(1))
     
     free(dem_pixel_pairs)
 
-def flow_direction_inf(dem, flow):
+def flow_direction_inf(dem, bounding_box, flow):
     """Calculates the D-infinity flow algorithm.  The output is a float
         raster whose values range from 0 to 2pi.
         Algorithm from: Tarboton, "A new method for the determination of flow
@@ -761,6 +778,8 @@ def flow_direction_inf(dem, flow):
         Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
 
        dem - (input) a single band raster with elevation values
+       bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
        flow - (output) a single band float raster of same dimensions as
            dem.  After the function call it will have flow direction in it 
        
@@ -777,8 +796,8 @@ def flow_direction_inf(dem, flow):
     #back out later on gdal arrays, so we invert the col_index and row_index 
     #offsets here
     LOGGER.info("loading DEM")
-    dem_matrix_tmp = dem.GetRasterBand(1).ReadAsArray(0, 0, dem.RasterXSize, 
-                                         dem.RasterYSize).transpose()
+    dem_matrix_tmp = \
+        dem.GetRasterBand(1).ReadAsArray(*bounding_box).transpose()
 
     #Incoming matrix type could be anything numerical.  Cast to a floating
     #point for cython speed and because it'slope the most general form.
@@ -920,9 +939,8 @@ def flow_direction_inf(dem, flow):
     #Calculate D8 flow to resolve undefined flows in D-inf
     d8_flow_dataset = newRasterFromBase(flow, '', 'MEM', -5.0, gdal.GDT_Float32)
     LOGGER.info("calculating D8 flow")
-    flowDirectionD8(dem, d8_flow_dataset)
-    d8_flow_matrix = d8_flow_dataset.ReadAsArray(0, 0, dem.RasterXSize, 
-                                    dem.RasterYSize).transpose()
+    flowDirectionD8(dem, bounding_box, d8_flow_dataset)
+    d8_flow_matrix = d8_flow_dataset.ReadAsArray(*bounding_box).transpose()
     
     nodata_d8 = d8_flow_dataset.GetRasterBand(1).GetNoDataValue()
 
@@ -945,15 +963,21 @@ def flow_direction_inf(dem, flow):
                     d8_to_radians[d8_flow_matrix[col_index, row_index]]
 
     LOGGER.info("writing flow data to raster")
-    flow.GetRasterBand(1).WriteArray(flow_matrix.transpose(), 0, 0)
+    #Don't write the outer uncalculated part that's the [1:-1,1:-1] below
+    flow.GetRasterBand(1).WriteArray(flow_matrix[1:-1,1:-1].transpose(), 
+                                     bounding_box[0]+1,
+                                     bounding_box[1]+1)
+    flow.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
 
-def calculate_slope(dem, slope):
+def calculate_slope(dem, bounding_box, slope):
     """Generates raster maps of slope.  Follows the algorithm described here:
         http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
         
         dem - (input) a single band raster of z values.  z units should be identical
             to ground units.
+        bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
         slope - (modified output) a single band raster of the same dimensions 
             as dem whose elements are percent rise
             
@@ -962,7 +986,7 @@ def calculate_slope(dem, slope):
     LOGGER = logging.getLogger('calculateSlope')
     #Read the DEM directly into an array
     demBand = dem.GetRasterBand(1)
-    demBandMatrix = demBand.ReadAsArray(0, 0, demBand.XSize, demBand.YSize)
+    demBandMatrix = demBand.ReadAsArray(*bounding_box)
     LOGGER.debug('demBandMatrix size %s' % (demBandMatrix.size))
 
     #Create an empty slope matrix
@@ -996,13 +1020,15 @@ def calculate_slope(dem, slope):
     offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
                (-1, -1)]
     for offset in offsets:
-        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = slope.GetRasterBand(1).GetNoDataValue()
+        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = \
+            slope.GetRasterBand(1).GetNoDataValue()
 
-    slope.GetRasterBand(1).WriteArray(slopeMatrix,0,0)
+    slope.GetRasterBand(1).WriteArray(slopeMatrix,*bounding_box[0:2])
+    slope.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(slope.GetRasterBand(1))
 
-def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
-    slope_threshold = 0.075):
+def calculate_ls_factor(upslope_area, slope_raster, aspect, 
+                        bounding_box, ls_factor):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
@@ -1019,17 +1045,16 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
             direction that slopes are facing in terms of radians east and
             increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
             0 or 2pi is east.
+        bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
         ls_factor - (modified output) a single band raster dataset that will
             have the per-pixel ls factor written to it
-        slope_threshold - the cutoff for areas that the LS factor should be
-            calcualted with the Huan and Lu formula from the InVEST 2.2.0 user's
-            guide 
             
         returns a raster of the same dimensions as inputs whose elements """
     
-    cdef int nrows = upslope_area.RasterXSize, \
-             ncols = upslope_area.RasterYSize, \
-             row_index, col_index
+    cdef int ncols = bounding_box[2], \
+             nrows = bounding_box[3], \
+             col_index, row_index
     
     #Assumes that cells are square
     cdef float cell_size = abs(upslope_area.GetGeoTransform()[1])
@@ -1044,19 +1069,19 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     cdef float ls_nodata = ls_factor.GetRasterBand(1).GetNoDataValue()
     
     cdef np.ndarray [np.float_t,ndim=2] upslope_area_matrix = \
-        upslope_area.GetRasterBand(1).ReadAsArray(0, 0, \
-        nrows,ncols).transpose().astype(np.float)
+        upslope_area.GetRasterBand(1).ReadAsArray(*bounding_box) \
+        .transpose().astype(np.float)
     
     cdef np.ndarray [np.float_t,ndim=2] slope_matrix = \
-        slope_raster.GetRasterBand(1).ReadAsArray(0, 0, \
-        nrows,ncols).transpose().astype(np.float)
+        slope_raster.GetRasterBand(1).ReadAsArray(*bounding_box) \
+        .transpose().astype(np.float)
         
     cdef np.ndarray [np.float_t,ndim=2] aspect_matrix = \
-        aspect.GetRasterBand(1).ReadAsArray(0, 0, \
-        nrows, ncols).transpose().astype(np.float)
+        aspect.GetRasterBand(1).ReadAsArray(*bounding_box) \
+        .transpose().astype(np.float)
         
     cdef np.ndarray [np.float_t,ndim=2] ls_factor_matrix = \
-        np.zeros((nrows,ncols))
+        np.zeros((ncols,nrows))
     
     #This is necessary to avoid not setting the outside boundary
     ls_factor_matrix[:] = ls_nodata
@@ -1064,30 +1089,30 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
     mraster = newRasterFromBase(aspect, '', 'MEM', -5.0, gdal.GDT_Float32)
     xijraster = newRasterFromBase(aspect, '', 'MEM', -5.0, gdal.GDT_Float32)
         
-    cdef np.ndarray [np.float_t,ndim=2] m_matrix = np.zeros((nrows,ncols))
-    cdef np.ndarray [np.float_t,ndim=2] xij_matrix = np.zeros((nrows,ncols))
+    cdef np.ndarray [np.float_t,ndim=2] m_matrix = np.zeros((ncols,nrows))
+    cdef np.ndarray [np.float_t,ndim=2] xij_matrix = np.zeros((ncols,nrows))
     
-    for row_index in range(1,nrows-1):
-        LOGGER.debug('row_index %s' % row_index)
-        for col_index in range(1,ncols-1):
+    for col_index in range(1,ncols-1):
+        LOGGER.debug('col_index %s' % col_index)
+        for row_index in range(1,nrows-1):
             #Skip the calculation if any of the inputs are nodata
-            if aspect_matrix[row_index, col_index] == aspect_nodata or \
-                slope_matrix[row_index, col_index] == slope_nodata or \
-                upslope_area_matrix[row_index, col_index] == upslope_nodata:
+            if aspect_matrix[col_index, row_index] == aspect_nodata or \
+                slope_matrix[col_index, row_index] == slope_nodata or \
+                upslope_area_matrix[col_index, row_index] == upslope_nodata:
                 continue
                 
             #Here the aspect direciton can range from 0 to 2PI, but the purpose
             #of the term is to determine the length of the flow path on the
             #pixel, thus we take the absolute value of each trigometric
             #function to keep the computation in the first quadrant
-            alpha = aspect_matrix[row_index, col_index]
+            alpha = aspect_matrix[col_index, row_index]
             xij = abs(sin(alpha))+ abs(cos(alpha))
             
             contributing_area = \
-                (upslope_area_matrix[row_index,col_index]-1) * cell_area
+                (upslope_area_matrix[col_index,row_index]-1) * cell_area
 
             #A placeholder for simplified slope stuff
-            slope = slope_matrix[row_index, col_index]
+            slope = slope_matrix[col_index, row_index]
             slope_in_radians = atan(slope)
             
             #From Equation 4 in "Extension and validataion of a geographic 
@@ -1108,27 +1133,32 @@ def calculate_ls_factor(upslope_area, slope_raster, aspect, ls_factor,
             #Use the bisect function to do a nifty range 
             #lookup. http://docs.python.org/library/bisect.html#other-examples
             m = exponent_table[bisect.bisect(slope_table,slope)]
-            m_matrix[row_index,col_index] = m
+            m_matrix[col_index,row_index] = m
             #The length part of the ls_factor:
-            ls_factor_matrix[row_index,col_index] = \
+            ls_factor_matrix[col_index,row_index] = \
                 ((contributing_area+cell_area)**(m+1)-
                  contributing_area**(m+1)) / \
                 ((cell_size**(m+2))*(xij**m)*(22.13**m))
                 
-            xij_matrix[row_index,col_index] = xij
+            xij_matrix[col_index,row_index] = xij
 
             #From the paper "as a final check against exessively long slope
             #length calculations ... cap of 333m"
-            if ls_factor_matrix[row_index,col_index] > 333:
-                ls_factor_matrix[row_index,col_index] = 333
+            if ls_factor_matrix[col_index,row_index] > 333:
+                ls_factor_matrix[col_index,row_index] = 333
                 
-            ls_factor_matrix[row_index,col_index] *= slope_factor
+            ls_factor_matrix[col_index,row_index] *= slope_factor
 
-    ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(),0,0)
-    mraster.GetRasterBand(1).WriteArray(m_matrix.transpose(),0,0)
-    xijraster.GetRasterBand(1).WriteArray(xij_matrix.transpose(),0,0)
+    ls_factor.GetRasterBand(1).WriteArray(ls_factor_matrix.transpose(), \
+                                          *bounding_box[0:2])
+    mraster.GetRasterBand(1).WriteArray(m_matrix.transpose(), \
+                                          *bounding_box[0:2])
+    xijraster.GetRasterBand(1).WriteArray(xij_matrix.transpose(), \
+                                          *bounding_box[0:2])
+    ls_factor.GetRasterBand(1).FlushCache()
+    mraster.GetRasterBand(1).FlushCache()
+    xijraster.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
-
     
 def calc_retained_sediment(potential_soil_loss, aspect, retention_efficiency,  
                            sediment_retention):

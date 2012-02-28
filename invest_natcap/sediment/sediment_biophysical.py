@@ -145,6 +145,7 @@ def execute(args):
     #biophysical part.
     biophysical_args['usle_uri'] = outputDirectoryPrefix + 'usle_sm.tif'
     biophysical_args['sret_dr_uri'] = outputDirectoryPrefix + 'sret_dr.tif'
+    biophysical_args['sexp_dr_uri'] = outputDirectoryPrefix + 'sexp_dr.tif'
 
     LOGGER.info('starting biophysical model')
     sediment_core.biophysical(biophysical_args)

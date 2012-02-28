@@ -15,11 +15,18 @@ import registrar
 
 class Validator(registrar.Registrar):
     """Validator class contains a reference to an object's type-specific checker.
-        It is assumed that one single iui input element will have its own 
+        It is assumed that one single iui input element will have its own
         validator.
-        
+
+        Validation can be performed at will and is performed in a new thread to
+        allow other processes (such as the UI) to proceed without interruption.
+
+        Validation is available for a number of different values: files of
+        various types (see the FileChecker and its subclasses), strings (see the
+        PrimitiveChecker class) and numbers (see the NumberChecker class).
+
         element - a reference to the element in question."""
-        
+
     def __init__(self, type):
         #allElements is a pointer to a python dict: str id -> obj pointer.
         registrar.Registrar.__init__(self)
@@ -38,15 +45,15 @@ class Validator(registrar.Registrar):
         self.thread = None
 
     def validate(self, valid_dict):
-        """Validate the element.  This is a two step process: first, all 
+        """Validate the element.  This is a two step process: first, all
             functions in the Validator's validateFuncs list are executed.  Then,
-            The validator's type checker class is invoked to actually check the 
+            The validator's type checker class is invoked to actually check the
             input against the defined restrictions.
-           
+
             Note that this is done in a separate thread.
 
             returns a string if an error is found.  Returns None otherwise."""
-      
+
         if self.thread == None or not self.thread.is_alive():
            self.thread = ValidationThread(self.validate_funcs,
                 self.type_checker, valid_dict)
@@ -61,9 +68,9 @@ class Validator(registrar.Registrar):
 
     def init_type_checker(self, type):
         """Initialize the type checker.
-        
+
             returns nothing."""
-        
+
         try:
             self.type_checker = self.get_func(type)()
         except KeyError:
@@ -93,7 +100,7 @@ class ValidationThread(threading.Thread):
 class ValidationAssembler(object):
     def __init__(self):
         object.__init__(self)
-        self.primitive_keys = {'number': ['lessThan', 'greaterThan', 'lteq', 
+        self.primitive_keys = {'number': ['lessThan', 'greaterThan', 'lteq',
                                           'gteq'],
                                'string': []}
 
@@ -145,38 +152,93 @@ class ValidationAssembler(object):
         return False
 
 class Checker(registrar.Registrar):
+    """The Checker class defines a superclass for all classes that actually
+        perform validation.  Specific subclasses exist for validating specific
+        features.  These can be broken up into two separate groups based on the
+        value of the field in the UI:
+
+            * URI-based values (such as files and folders)
+                * Represented by the URIChecker class and its subclasses
+            * Scalar values (such as strings and numbers)
+                * Represented by the PrimitiveChecker class and its subclasses
+
+        There are two steps to validating a user's input:
+            * First, the user's input is preprocessed by looping through a list
+              of operations.  Functions can be added to this list by calling
+              self.add_check_function().  All functions that are added to this
+              list must take a single argument, which is the entire validation
+              dictionary.  This is useful for guaranteeing that a given function
+              is performed (such as opening a file and saving its reference to
+              self.file) before any other validation happens.
+
+            * Second, the user's input is validated according to the
+              validation dictionary in no particular order.  All functions in
+              this step must take a single argument which represents the
+              user-defined value for this particular key.
+
+              For example, if we have the following validation dictionary:
+                  valid_dict = {'type': 'OGR',
+                                'value': '/tmp/example.shp',
+                                'layers: [{layer_def ...}]}
+                  The OGRChecker class would expect the function associated with
+                  the 'layers' key to take a list of python dictionaries.
+
+            """
     #self.map is used for restrictions
     def __init__(self):
         registrar.Registrar.__init__(self)
         self.checks = []
         self.ignore = ['type', 'value']
-        
+
     def add_check_function(self, func, index=None):
+        """Add a function to the list of check functions.
+
+            func - A function.  Must accept a single argument: the entire
+                validation dictionary for this element.
+            index=None - an int.  If provided, the function will be inserted
+                into the check function list at this index.  If no index is
+                provided, the check function will be appended to the list of
+                check functions.
+
+        returns nothing"""
+
         if index == None:
             self.checks.append(func)
         else:
             self.checks.insert(index, func)
-    
+
     def run_checks(self, valid_dict):
+        """Run all checks in their appropriate order.  This operation is done in
+            two steps:
+                * preprocessing
+                    In the preprocessing step, all functions in the list of
+                    check functions are executed.  All functions in this list
+                    must take a single argument: the dictionary passed in as
+                    valid_dict.
+
+                * attribute validation
+                    In this step, key-value pairs in the valid_dict dictionary
+                    are evaluated in arbitrary order unless the key of a
+                    key-value pair is present in the list self.ignore."""
         for check_func in self.checks:
             error = check_func(valid_dict)
             if error != None:
                 return error
-        
+
         self.value = valid_dict['value']
         for key, value in valid_dict.iteritems():
-            if key not in self.ignore:
+            if key not in self.ignore and self.map[key] not in self.checks:
                 error = self.eval(key, value)
                 if error != None:
                     return error
         return None
-        
+
 class URIChecker(Checker):
     def __init__(self):
         Checker.__init__(self)
         self.uri = None #initialize to none
         self.add_check_function(self.check_exists)
-     
+
     def check_exists(self, valid_dict):
         """Verify that the file at valid_dict['value'] exists."""
 

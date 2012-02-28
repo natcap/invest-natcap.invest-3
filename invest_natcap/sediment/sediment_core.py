@@ -53,34 +53,25 @@ def biophysical(args):
             on each pixel
         args['v_stream'] - An output raster indicating the areas that are
             classified as streams based on flow_direction
-        args['sret_dr'] - An output raster showing the amount of sediment
-            retained on each pixel during routing.
+        args['sret_dr_uri'] - An output raster uri showing the amount of
+            sediment retained on each pixel during routing.  It breaks
+            convention to pass a URI here, but we won't know the shape of
+            the raster until after all the input rasters are rasterized.
+        args['sexp_dr_uri'] - An output raster uri showing the amount of
+            sediment exported from each pixel during routing.  It breaks
+            convention to pass a URI here, but we won't know the shape of
+            the raster until after all the input rasters are rasterized.
             
         returns nothing"""
 
+    ##############Set up vectorize functions and function-wide values
     LOGGER = logging.getLogger('sediment_core: biophysical')
-    for watershed_feature in args['watersheds'].GetLayer():
-        LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())
-        watershed_bounding_box = \
-            invest_core.bounding_box_index(watershed_feature, args['dem'])
-        LOGGER.info('Bounding box %s' % (watershed_bounding_box))
 
-
-
-    LOGGER.info("calculating flow direction")
-    invest_cython_core.flow_direction_inf(args['dem'], args['flow_direction'])
-
-    LOGGER.info("calculating flow accumulation")
-    invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
-                                              args['flow_accumulation'],
-                                              args['dem'])
     flow_accumulation_nodata = \
-        args['flow_accumulation'].GetRasterBand(1).GetNoDataValue()
+            args['flow_accumulation'].GetRasterBand(1).GetNoDataValue()
     v_stream_nodata = \
         args['v_stream'].GetRasterBand(1).GetNoDataValue()
 
-    #classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
     def stream_classifier(flow_accumulation):
         """This function classifies pixels into streams or no streams based
             on the threshold_flow_accumulation value.
@@ -99,22 +90,8 @@ def biophysical(args):
         else:
             return 0.0
 
-    invest_core.vectorize1ArgOp(args['flow_accumulation'].GetRasterBand(1),
-        stream_classifier, args['v_stream'].GetRasterBand(1))
-
-    invest_cython_core.calculate_slope(args['dem'], args['slope'])
-
-    LOGGER.info("calculating LS factor accumulation")
-    invest_cython_core.calculate_ls_factor(args['flow_accumulation'],
-                                           args['slope'],
-                                           args['flow_direction'],
-                                           args['ls_factor'])
-
-    #Nodata value to use for output raster
+    #Nodata value to use for usle output raster
     usle_nodata = -1.0
-
-    #map lulc to a usle_c * usle_p raster
-    LOGGER.info('mapping landuse types to crop and practice management values')
     usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], '',
         'MEM', usle_nodata, gdal.GDT_Float32)
     def lulc_to_cp(lulc_code):
@@ -139,10 +116,8 @@ def biophysical(args):
         return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
             float(args['biophysical_table'][str(lulc_code)]['usle_p']) / \
                 10 ** 6
-    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1), lulc_to_cp,
-                                usle_c_p_raster.GetRasterBand(1))
 
-    #Set up structures for USLE calculation
+    #Set up structures and functions for USLE calculation
     ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
@@ -170,8 +145,95 @@ def biophysical(args):
         return ls_factor * erosivity * erodibility * usle_c_p
     usle_vectorized_function = np.vectorize(usle_function)
 
-    LOGGER.info("calculating potential soil loss")
+    retention_efficiency_raster_raw = \
+        invest_cython_core.newRasterFromBase(args['landuse'], '', 'MEM',
+                                             usle_nodata, gdal.GDT_Float32)
 
+    def lulc_to_retention(lulc_code):
+        """This is a helper function that's used to map an LULC code to the
+            retention values needed by the sediment model and defined
+            in the biophysical table in the closure above.  The intent is this
+            function is used in a vectorize operation for a single raster.
+            
+            lulc_code - an integer representing a LULC value in a raster
+            
+            returns C*P where C and P are defined in the 
+                args['biophysical_table']
+        """
+        #There are string casts here because the biophysical table is all 
+        #strings thanks to the csv table conversion.
+        if str(lulc_code) not in args['biophysical_table']:
+            return usle_nodata
+        #We need to divide the retention efficiency by 100  because they're 
+        #stored in the table as sedret_eff * 100.  See the user's guide:
+        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
+        return float(args['biophysical_table'] \
+                     [str(lulc_code)]['sedret_eff']) / 100.0
+
+    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
+        """Used for interpolating efficiency raster to be the same dimensions
+            as soil_loss and also knocking out retention on the streams"""
+
+        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
+        #to scale efficiency especially if v_steram is interpolated 
+        #intelligently
+        return (1 - v_stream) * efficiency
+
+    ############## Calculation Starts here
+
+    for watershed_feature in args['watersheds'].GetLayer():
+        LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())
+        watershed_bounding_box = \
+            invest_core.bounding_box_index(watershed_feature, args['dem'])
+        LOGGER.info('Bounding box %s' % (watershed_bounding_box))
+
+        #Read the subraster that overlaps the watershed bounding box
+        #dem_matrix = \
+        #    args['dem'].GetRasterBand(1).ReadAsArray(watershed_bounding_box)
+        LOGGER.info("calculating flow direction")
+        invest_cython_core.flow_direction_inf(args['dem'],
+                                              watershed_bounding_box,
+                                              args['flow_direction'])
+
+        LOGGER.info("calculating flow accumulation")
+        invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
+                                                  args['dem'],
+                                                  watershed_bounding_box,
+                                                  args['flow_accumulation'])
+
+        #classify streams from the flow accumulation raster
+        LOGGER.info("Classifying streams from flow accumulation raster")
+        invest_core.vectorize1ArgOp(args['flow_accumulation'].GetRasterBand(1),
+            stream_classifier, args['v_stream'].GetRasterBand(1),
+            watershed_bounding_box)
+
+        LOGGER.info("Calculating slope")
+        invest_cython_core.calculate_slope(args['dem'],
+            watershed_bounding_box, args['slope'])
+
+        LOGGER.info("calculating LS factor accumulation")
+        invest_cython_core.calculate_ls_factor(args['flow_accumulation'],
+                                               args['slope'],
+                                               args['flow_direction'],
+                                               watershed_bounding_box,
+                                               args['ls_factor'])
+        #map lulc to a usle_c * usle_p raster
+        LOGGER.info('mapping landuse types to crop and practice management values')
+
+        lulc_watershed_bounding_box = \
+            invest_core.bounding_box_index(watershed_feature, args['landuse'])
+        invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
+            lulc_to_cp, usle_c_p_raster.GetRasterBand(1),
+            lulc_watershed_bounding_box)
+
+        #map lulc to a usle_c * usle_p raster
+        LOGGER.info('mapping landuse types to vegetation retention efficiencies')
+        invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
+            lulc_to_retention,
+            retention_efficiency_raster_raw.GetRasterBand(1),
+            lulc_watershed_bounding_box)
+
+    LOGGER.info("calculating potential soil loss")
     potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'],
         args['erosivity'], args['erodibility'], usle_c_p_raster,
         args['v_stream']], usle_vectorized_function, args['usle_uri'],
@@ -199,51 +261,13 @@ def biophysical(args):
         WriteArray(potential_soil_loss_matrix, 0, 0)
     invest_core.calculateRasterStats(potential_soil_loss.GetRasterBand(1))
 
-    #map lulc to a usle_c * usle_p raster
-    LOGGER.info('mapping landuse types to vegetation retention efficiencies')
-    retention_efficiency_raster_raw = \
-        invest_cython_core.newRasterFromBase(args['landuse'], '', 'MEM',
-                                             usle_nodata, gdal.GDT_Float32)
-
-    def lulc_to_retention(lulc_code):
-        """This is a helper function that's used to map an LULC code to the
-            retention values needed by the sediment model and defined
-            in the biophysical table in the closure above.  The intent is this
-            function is used in a vectorize operation for a single raster.
-            
-            lulc_code - an integer representing a LULC value in a raster
-            
-            returns C*P where C and P are defined in the 
-                args['biophysical_table']
-        """
-        #There are string casts here because the biophysical table is all 
-        #strings thanks to the csv table conversion.
-        if str(lulc_code) not in args['biophysical_table']:
-            return usle_nodata
-        #We need to divide the retention efficiency by 100  because they're 
-        #stored in the table as sedret_eff * 100.  See the user's guide:
-        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
-        return float(args['biophysical_table'] \
-                     [str(lulc_code)]['sedret_eff']) / 100.0
-
     sret_dr_raw = invest_cython_core.newRasterFromBase(potential_soil_loss,
         '', 'MEM', -1.0, gdal.GDT_Float32)
-    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
-        lulc_to_retention, retention_efficiency_raster_raw.GetRasterBand(1))
 
     #now interpolate retention_efficiency_raster_raw to a raster that will
     #overlay potential_soil_loss, bastardizing vectorizeRasters here for
     #its interpolative functionality by only returning efficiency in the
     #vectorized op.
-    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
-        """Used for interpolating efficiency raster to be the same dimensions
-            as soil_loss and also knocking out retention on the streams"""
-
-        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
-        #to scale efficiency especially if v_steram is interpolated 
-        #intelligently
-        return (1 - v_stream) * efficiency
-
     usle_vectorized_function = np.vectorize(efficiency_raster_creator)
     retention_efficiency_raster = \
         invest_core.vectorizeRasters([potential_soil_loss,
@@ -261,7 +285,7 @@ def biophysical(args):
 
     #Create an output raster for routed sediment export
     sexp_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
-        args['sret_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
+        args['sexp_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
     invest_cython_core.calc_exported_sediment(potential_soil_loss,
         args['flow_direction'], retention_efficiency_raster,
         args['flow_accumulation'], args['v_stream'], sexp_dr)

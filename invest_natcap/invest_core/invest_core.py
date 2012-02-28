@@ -122,20 +122,26 @@ def vectorize2ArgOp(rasterBandA, rasterBandB, op, outBand):
         out_array = vOp(dataA, dataB)
         outBand.WriteArray(out_array, 0, i)
 
-def vectorize1ArgOp(rasterBand, op, outBand):
+def vectorize1ArgOp(rasterBand, op, outBand, bounding_box=None):
     """Applies the function 'op' over rasterBand and outputs to outBand
     
-        rasterBand - a GDAL raster
-        op- a function that that takes 2 arguments and returns 1 value
-        outBand - the result of vectorizing op over rasterBand
+        rasterBand - (input) a GDAL raster
+        op - (input) a function that that takes 2 arguments and returns 1 value
+        outBand - (output) the result of vectorizing op over rasterBand
+        bounding_box - (input, optional) a 4 element list that corresponds
+            to the bounds in GDAL's ReadAsArray to limit the vectorization
+            over that region in rasterBand and writing to the corresponding
+            outBand.  If left None, defaults to the size of the band
             
         returns nothing"""
 
     vOp = np.vectorize(op, otypes=[np.float])
-    for i in range(0, rasterBand.YSize):
-        data = rasterBand.ReadAsArray(0, i, rasterBand.XSize, 1)
-        out_array = vOp(data)
-        outBand.WriteArray(out_array, 0, i)
+    if bounding_box == None:
+        bounding_box = [0, 0, rasterBand.XSize, rasterBand.YSize]
+
+    data = rasterBand.ReadAsArray(*bounding_box)
+    out_array = vOp(data)
+    outBand.WriteArray(out_array, *bounding_box[0:2])
 
 def vectorizeRasters(rasterList, op, rasterName=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
@@ -290,17 +296,23 @@ def bounding_box_index(ogr_feature, gdal_dataset):
 
 
     min_col = int((geometry_bounding_box[0] - dataset_geotransform[0]) / \
-                  dataset_geotransform[1])
+                  dataset_geotransform[1]) - 1
     max_col = int((geometry_bounding_box[1] - dataset_geotransform[0]) / \
-                  dataset_geotransform[1])
+                  dataset_geotransform[1]) + 1
 
     #Recall that rows increase going DOWN, so the "max" row is really the
     #bottom row. that's the index of geometry_bounding_box[2].
     #This is really confusing, so check out the class structure here:
     #http://www.gdal.org/ogr/ogr__core_8h-source.html
-    max_row = int((geometry_bounding_box[2] - dataset_geotransform[3]) / \
-                  dataset_geotransform[5])
-    min_row = int((geometry_bounding_box[3] - dataset_geotransform[3]) / \
-                  dataset_geotransform[5])
+    max_row = int(math.ceil((geometry_bounding_box[2] - dataset_geotransform[3]) / \
+                  dataset_geotransform[5])) + 1
+    min_row = int(math.ceil((geometry_bounding_box[3] - dataset_geotransform[3]) / \
+                  dataset_geotransform[5])) - 1
+
+    if min_row < 0: min_row = 0
+    if min_col < 0: min_col = 0
+    if max_col >= gdal_dataset.RasterXSize: gdal_dataset.RasterXSize - 1
+    if max_row >= gdal_dataset.RasterYSize: gdal_dataset.RasterYSize - 1
 
     return [min_col, min_row, max_col - min_col, max_row - min_row]
+
