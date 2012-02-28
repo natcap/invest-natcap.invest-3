@@ -158,7 +158,7 @@ def biophysical(args):
     dem_matrix = global_dem.GetRasterBand(1).ReadAsArray()
 
     #Create a new field for the depth attribute
-    field_defn = ogr.FieldDefn('Depth_M', ogr.OFTReal)
+    field_defn = ogr.FieldDefn('DEPTH_M', ogr.OFTReal)
 
     clipped_wave_layer = clipped_wave_shape.GetLayer(0)
     clipped_wave_layer.ResetReading()
@@ -167,7 +167,7 @@ def biophysical(args):
 
     #For all the features (points) add the proper depth value from the DEM
     while feature is not None:
-        depth_index = feature.GetFieldIndex('Depth_M')
+        depth_index = feature.GetFieldIndex('DEPTH_M')
         geom = feature.GetGeometryRef()
         geom_x, geom_y = geom.GetX(), geom.GetY()
 
@@ -225,8 +225,8 @@ def biophysical(args):
     #Get the corresponding points and values from the shapefile to be used 
     #for interpolation
     LOGGER.debug('Getting the points and values of wave power and wave energy')
-    energy_sum_array = get_points_values(clipped_wave_shape, 'capWE_Sum')
-    wave_power_array = get_points_values(clipped_wave_shape, 'wp_Kw')
+    energy_sum_array = get_points_values(clipped_wave_shape, 'CAPWE_MWHY')
+    wave_power_array = get_points_values(clipped_wave_shape, 'WE_kWM')
 
     #Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.debug('Interpolate wave power and wave energy capacity onto rasters')
@@ -513,7 +513,7 @@ def wave_power(shape):
     alfa = 0.86
     #Add a waver power field to the shapefile.
     layer = shape.GetLayer(0)
-    field_defn = ogr.FieldDefn('wp_Kw', ogr.OFTReal)
+    field_defn = ogr.FieldDefn('WE_kWM', ogr.OFTReal)
     layer.CreateField(field_defn)
     layer.ResetReading()
     feat = layer.GetNextFeature()
@@ -522,8 +522,8 @@ def wave_power(shape):
     while feat is not None:
         height_index = feat.GetFieldIndex('HSAVG_M')
         period_index = feat.GetFieldIndex('TPAVG_S')
-        depth_index = feat.GetFieldIndex('Depth_M')
-        wp_index = feat.GetFieldIndex('wp_Kw')
+        depth_index = feat.GetFieldIndex('DEPTH_M')
+        wp_index = feat.GetFieldIndex('WE_kWM')
         height = feat.GetFieldAsDouble(height_index)
         period = feat.GetFieldAsDouble(period_index)
         depth = feat.GetFieldAsInteger(depth_index)
@@ -901,7 +901,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape):
     #reset it to start from the beginning
     wave_layer.ResetReading()
     #Create a new field for the shapefile
-    field_def = ogr.FieldDefn('capWE_Sum', ogr.OFTReal)
+    field_def = ogr.FieldDefn('CAPWE_MWHY', ogr.OFTReal)
     wave_layer.CreateField(field_def)
     #For all of the features (points) in the shapefile, get the 
     #corresponding point/value from the dictionary and set the 'capWE_Sum'
@@ -913,7 +913,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape):
         value_j = feat.GetField(index_j)
         we_value = energy_cap[(value_i, value_j)]
 
-        index = feat.GetFieldIndex('capWE_Sum')
+        index = feat.GetFieldIndex('CAPWE_MWHY')
         feat.SetField(index, we_value)
         #Save the feature modifications to the layer.
         wave_layer.SetFeature(feat)
@@ -1065,25 +1065,30 @@ def valuation(args):
         for i in range(len(time)):
             npv.append(rho ** i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
-    #Add Net Present Value field to shapefile
-    field_defn_npv = ogr.FieldDefn('NPV_25Y', ogr.OFTReal)
-    wave_data_layer.CreateField(field_defn_npv)
+    #Add Net Present Value field, Total Captured Wave Energy field, and
+    #Units field to shapefile
+    for field_name in ['NPV_25Y', 'CAPWE_ALL', 'UNITS']:
+        field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+        wave_data_layer.CreateField(field_defn)
     wave_data_layer.ResetReading()
     feat_npv = wave_data_layer.GetNextFeature()
     #For all the wave farm sites, calculate npv and write to shapefile
     LOGGER.info('Calculating the Net Present Value.')
     while feat_npv is not None:
-        depth_index = feat_npv.GetFieldIndex('Depth_M')
+        depth_index = feat_npv.GetFieldIndex('DEPTH_M')
         wave_to_land_index = feat_npv.GetFieldIndex('W2L_MDIST')
         land_to_grid_index = feat_npv.GetFieldIndex('L2G_MDIST')
-        captured_wave_energy_index = feat_npv.GetFieldIndex('CapWE_Sum')
+        captured_wave_energy_index = feat_npv.GetFieldIndex('CAPWE_MWHY')
         npv_index = feat_npv.GetFieldIndex('NPV_25Y')
+        capwe_all_index = feat_npv.GetFieldIndex('CAPWE_ALL')
+        units_index = feat_npv.GetFieldIndex('UNITS')
 
         depth = feat_npv.GetFieldAsDouble(depth_index)
         wave_to_land = feat_npv.GetFieldAsDouble(wave_to_land_index)
         land_to_grid = feat_npv.GetFieldAsDouble(land_to_grid_index)
         captured_wave_energy = \
             feat_npv.GetFieldAsDouble(captured_wave_energy_index)
+        capwe_all_result = captured_wave_energy * units
         #Create a numpy array of length 25, filled with the captured wave energy
         #in kW/h. Represents the lifetime of this wave farm.
         captured_we = np.ones(len(time)) * int(captured_wave_energy) * 1000.0
@@ -1103,6 +1108,8 @@ def valuation(args):
 
         npv_result = npv_wave(annual_revenue, annual_cost) / 1000.0
         feat_npv.SetField(npv_index, npv_result)
+        feat_npv.SetField(capwe_all_index, capwe_all_result)
+        feat_npv.SetField(units_index, units)
 
         wave_data_layer.SetFeature(feat_npv)
         feat_npv.Destroy()
