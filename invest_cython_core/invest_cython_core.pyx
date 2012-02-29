@@ -1382,6 +1382,10 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
     cdef np.ndarray [np.float_t,ndim=2] export_matrix = \
         np.empty((nrows,ncols))
     
+    #Initalize export matrix to be -1's everywhere to indicate no export
+    #has been calcualted
+    export_matrix[:] = -1 
+    
     LOGGER = logging.getLogger('calc_exported_sediment')
 
     #push all stream pixels onto a queue
@@ -1390,7 +1394,8 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             if v_stream_matrix[row_index,col_index] == 1:
                 work_queue.append(row_index)
                 work_queue.append(col_index)
-                
+                export_matrix[row_index, col_index] = 0
+
     LOGGER.info("v_stream_pixels = %s" % (len(work_queue)/2))
     
     #while pixels still left to process
@@ -1401,7 +1406,46 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
         calculate_inflow_neighbors_dinf(row_index,col_index, 
             aspect_matrix, aspect_nodata, neighbors)
         
-        
+        #check to see if any of the neighbors were uncalculated, if so, 
+        #calculate them
+        neighbors_uncalculated = False
+        #Visit each uncalculated neighbor and push on the work queue
+        for neighbor_index in range(8):
+            #-1 prop marks the end of the neighbor list
+            if neighbors[neighbor_index].prop == -1: break 
+            
+            neighbor_row = neighbors[neighbor_index].i
+            neighbor_col = neighbors[neighbor_index].j
+            
+            #see if neighbor is uncalculated
+            #if accumulation_matrix[neighbor_row, neighbor_col] == -1:
+                #push the current pixel back on, note the indexes are in reverse
+                #order so they can be popped off in order
+                #pixels_to_process.push(j)
+                #pixels_to_process.push(i)
+                    
+                #pixels_to_process.push(pj)
+                #pixels_to_process.push(pi)
+                #neighbors_uncalculated = True
+                #break
+        #this skips over the calculation of pixel i,j until neighbors 
+        #are calculated
+        #if neighbors_uncalculated:
+        #    continue 
+
+        #If we get here then this pixel and its neighbors have been processed
+        #accumulation_matrix[i, j] = 1
+        #Add contribution from each neighbor to current pixel 
+        #for neighbor_index in range(8):
+            #prop = neighbors[neighbor_index].prop
+            #if prop == -1: break 
+            
+            #pi = neighbors[neighbor_index].i
+            #pj = neighbors[neighbor_index].j
+
+            #calculate the contribution of pi,pj to i,j
+            #accumulation_matrix[i, j] += prop * accumulation_matrix[pi, pj]
+            #LOGGER.debug("prop %s accumulation_matrix[i, j] = %s" % (prop, accumulation_matrix[i, j]))
         
         #loop over neighbor pixels
             #if neighbor pixel unprocessed, enqueue it
