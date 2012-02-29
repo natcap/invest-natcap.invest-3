@@ -1342,9 +1342,62 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             cell to the stream based on the routed sediment inflow
             
         returns nothing"""
+    cdef int ncols = potential_soil_loss.RasterXSize, \
+             nrows = potential_soil_loss.RasterYSize, \
+             row_index, col_index
+    
+    cdef NeighborFlow *neighbors = <NeighborFlow *>malloc(9 * sizeof(Pair))
+    
+    cdef CQueue work_queue = CQueue()
+    
+    cdef float potential_soil_loss_nodata = \
+        potential_soil_loss.GetRasterBand(1).GetNoDataValue()
+    cdef float aspect_nodata = aspect.GetRasterBand(1).GetNoDataValue()
+    cdef float retention_efficiency_nodata = \
+        retention_efficiency.GetRasterBand(1).GetNoDataValue()
+    cdef float sediment_export_nodata = \
+        sediment_export.GetRasterBand(1).GetNoDataValue()
+    
+    cdef float prop
+    
+    cdef np.ndarray [np.float_t,ndim=2] potential_soil_loss_matrix = \
+        potential_soil_loss.GetRasterBand(1).ReadAsArray(0, 0, \
+        ncols,nrows).astype(np.float)
+    
+    cdef np.ndarray [np.float_t,ndim=2] aspect_matrix = \
+        aspect.GetRasterBand(1).ReadAsArray(0, 0, \
+        ncols,nrows).astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] retention_efficiency_matrix = \
+        retention_efficiency.GetRasterBand(1).ReadAsArray(0, 0, \
+        ncols,nrows).astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] v_stream_matrix = \
+        v_stream.GetRasterBand(1).ReadAsArray(0, 0, ncols, nrows) \
+            .astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] sediment_retention_matrix = \
+        np.empty((nrows,ncols))
+    
+    cdef np.ndarray [np.float_t,ndim=2] export_matrix = \
+        np.empty((nrows,ncols))
+    
     LOGGER = logging.getLogger('calc_exported_sediment')
     #push all stream pixels onto a queue
+    v_stream_pixels = 0
+    for row_index in range(nrows):
+        for col_index in range(ncols):
+            if v_stream_matrix[row_index,col_index] == 1:
+                work_queue.append(row_index)
+                work_queue.append(col_index)
+                v_stream_pixels += 1
+                
+    LOGGER.debug("v_stream_pixels = %s, queue length = %s" % (v_stream_pixels, len(work_queue)))
     #while pixels still left to process
         #loop over neighbor pixels
             #if neighbor pixel unprocessed, enqueue it
-            #to neighbor, add % of inflow to current cell * current cell export (river is 1.0) 
+            #to neighbor, add % of inflow to current cell * current cell export (river is 1.0)
+            
+    free(neighbors) 
+
+
