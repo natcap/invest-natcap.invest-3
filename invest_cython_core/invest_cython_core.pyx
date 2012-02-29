@@ -1380,9 +1380,8 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
         np.empty((nrows,ncols))
     
     #Initalize export matrix to be -2's everywhere to indicate no export
-    #has been calcualted.  A -1 will indicate it's been visited, but
-    #it's the queue for processing
-    export_matrix[:] = -2 
+    #has been calcualted.  Kick to -1 when enququed in the work loop.
+    export_matrix[:] = -2
     
     LOGGER = logging.getLogger('calc_exported_sediment')
 
@@ -1392,32 +1391,33 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             if v_stream_matrix[row_index,col_index] == 1:
                 work_queue.append(row_index)
                 work_queue.append(col_index)
-                export_matrix[row_index, col_index] = 0
+                export_matrix[row_index, col_index] = -1
 
     LOGGER.info("v_stream_pixels = %s" % (len(work_queue)/2))
-    
+    total_pixels_processed = 0
     #while pixels still left to process
     while len(work_queue) > 0:
         row_index = work_queue.pop()
         col_index = work_queue.pop()
         
+        total_pixels_processed += 1
+        
+        
         if export_matrix[row_index, col_index] >= 0:
             #already calcualted, skip
             continue
-        
-        #mark as visisted so it doesn't get enqueued as a neighbor of somebody 
-        export_matrix[row_index, col_index] = -1 
 
-        #if export_matrix is -1 here it means that it's already been visited
-        #once, and we're doing BFS so we should be able to process it now...
-        #right?
+        if v_stream_matrix[row_index,col_index] == 1:
+            export_matrix[row_index, col_index] = 0
+        else:
+            #Calculate export factor NOT ONE
+            export_matrix[row_index, col_index] = 1
         
+        #LOGGER.info("total pixels processed = %s" % (total_pixels_processed))
+
         calculate_inflow_neighbors_dinf(row_index,col_index, 
             aspect_matrix, aspect_nodata, neighbors)
         
-        #check to see if any of the neighbors were uncalculated, if so, 
-        #calculate them
-        neighbors_uncalculated = False
         #Visit each uncalculated neighbor and push on the work queue
         for neighbor_index in range(8):
             #-1 prop marks the end of the neighbor list
@@ -1430,47 +1430,9 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             if export_matrix[neighbor_row, neighbor_col] == -2:
                 work_queue.append(neighbor_row)
                 work_queue.append(neighbor_col)
+                #setting to -1 prevents it from getting double queued
                 export_matrix[neighbor_row, neighbor_col] = -1
-                neighbors_uncalculated = True
-                continue
-        
-        #if neighbors_uncalculated:
-            #enqueue the original pixel so it gets revisted after they're
-            #processed
-                
-                
-            #if accumulation_matrix[neighbor_row, neighbor_col] == -1:
-                #push the current pixel back on, note the indexes are in reverse
-                #order so they can be popped off in order
-                #pixels_to_process.push(j)
-                #pixels_to_process.push(i)
-                    
-                #pixels_to_process.push(pj)
-                #pixels_to_process.push(pi)
-                #neighbors_uncalculated = True
-                #break
-        #this skips over the calculation of pixel i,j until neighbors 
-        #are calculated
-        #if neighbors_uncalculated:
-        #    continue 
-
-        #If we get here then this pixel and its neighbors have been processed
-        #accumulation_matrix[i, j] = 1
-        #Add contribution from each neighbor to current pixel 
-        #for neighbor_index in range(8):
-            #prop = neighbors[neighbor_index].prop
-            #if prop == -1: break 
-            
-            #pi = neighbors[neighbor_index].i
-            #pj = neighbors[neighbor_index].j
-
-            #calculate the contribution of pi,pj to i,j
-            #accumulation_matrix[i, j] += prop * accumulation_matrix[pi, pj]
-            #LOGGER.debug("prop %s accumulation_matrix[i, j] = %s" % (prop, accumulation_matrix[i, j]))
-        
-        #loop over neighbor pixels
-            #if neighbor pixel unprocessed, enqueue it
-            #to neighbor, add % of inflow to current cell * current cell export (river is 1.0)
     
+    LOGGER.info("total pixels processed = %s" % (total_pixels_processed))
     sediment_export.GetRasterBand(1).WriteArray(export_matrix)
     free(neighbors) 
