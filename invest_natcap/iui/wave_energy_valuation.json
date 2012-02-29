@@ -81,7 +81,7 @@
                     "validateAs": {"type":"OGR",
                     			   "layers": [{"name": {"inheritFrom": "file"},
                                                "type": "polygons", "projection" : "Transverse_Mercator"}],
-                                   "fieldsExist": ["Depth_M", "capWE_Sum"]}
+                                   "fieldsExist": ["DEPTH_M", "CAPWE_MWHY"]}
                 },
                 {
                     "id" : "number_of_machines",
