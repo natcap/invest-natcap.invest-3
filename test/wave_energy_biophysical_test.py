@@ -19,44 +19,61 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
            in sample inputs with the area of interest.  It runs the outputs
            againts regression files that are known to be accurate"""
         args = {}
-        args['workspace_dir'] = './data/wave_energy_data'
-        args['wave_base_data_uri'] = args['workspace_dir'] + os.sep + 'samp_input/WaveData'
+        test_dir = './data/wave_energy_data/'
+        output_dir = './data/test_out/wave_energy_biophysical_output'
+        args['workspace_dir'] = output_dir
+        args['wave_base_data_uri'] = test_dir + 'samp_input/WaveData'
         args['analysis_area_uri'] = 'West Coast of North America and Hawaii'
-        args['machine_perf_uri'] = args['workspace_dir'] + os.sep + 'samp_input/Machine_PelamisPerfCSV.csv'
-        args['machine_param_uri'] = args['workspace_dir'] + os.sep + 'samp_input/Machine_PelamisParamCSV.csv'
-        args['dem_uri'] = args['workspace_dir'] + os.sep + 'samp_input/global_dem'
-        args['aoi_uri'] = args['workspace_dir'] + os.sep + 'samp_input/AOI_WCVI.shp'
-        wave_energy_biophysical.execute(args)
-        regression_dir = './data/wave_energy_regression_data'
-        #assert that the output raster is equivalent to the regression test
-        invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + '/Output/capwe_mwh.tif',
-            regression_dir + '/capwe_mwh_regression.tif')
+        args['machine_perf_uri'] = \
+            test_dir + 'samp_input/Machine_PelamisPerfCSV.csv'
+        args['machine_param_uri'] = \
+            test_dir + 'samp_input/Machine_PelamisParamCSV.csv'
+        args['dem_uri'] = test_dir + 'samp_input/global_dem'
+        args['aoi_uri'] = test_dir + 'samp_input/AOI_WCVI.shp'
         
-        #assert that the output raster is equivalent to the regression test
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+
+        wave_energy_biophysical.execute(args)
+        
+        regression_dir = './data/wave_energy_regression_data/'
+        
+        #assert that the captured wave energy output raster is equivalent 
+        #to the regression test
         invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + '/Output/wp_kw.tif',
-            regression_dir + '/wp_kw_regression.tif')
+            output_dir + os.sep + 'Output/capwe_mwh.tif',
+            regression_dir + 'capwe_mwh_regression.tif')
+        
+        #assert that the wave power output raster is equivalent to the 
+        #regression test
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            output_dir + os.sep + 'Output/wp_kw.tif',
+            regression_dir + 'wp_kw_regression.tif')
         
         #Regression Check for wave power percentile raster
         invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + '/Output/wp_rc.tif',
+            output_dir + os.sep + 'Output/wp_rc.tif',
             regression_dir + '/wp_rc_regression.tif')
         
         #Regression Check for captured wave energy percentile raster
         invest_test_core.assertTwoDatasetEqualURI(self,
-            args['workspace_dir'] + '/Output/capwe_rc.tif',
-            regression_dir + '/capwe_rc_regression.tif')        
+            output_dir + os.sep + 'Output/capwe_rc.tif',
+            regression_dir + 'capwe_rc_regression.tif')        
         
         #Regression Check for WEM_InputOutput_Pts shapefile
-        wave_data_shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
-        regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_bio_regression.shp'
-        invest_test_core.assertTwoShapesEqualURI(self, wave_data_shape_path, regression_shape_path)
+        wave_data_shape_path = \
+            output_dir + os.sep + 'Intermediate/WEM_InputOutput_Pts.shp'
+        regression_shape_path = \
+            regression_dir + 'WEM_InputOutput_Pts_bio_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, wave_data_shape_path, 
+                                                 regression_shape_path)
+        
         #Regression check to make sure the dbf files with the attributes for the
         #percentile rasters are correct
         try:
-            regression_table = dbf.Dbf(regression_dir + os.sep + 'wp_rc_regression.tif.vat.dbf')
-            db_file = dbf.Dbf(args['workspace_dir'] + os.sep + 'Output/wp_rc.tif.vat.dbf')
+            regression_table = \
+                dbf.Dbf(regression_dir + 'wp_rc_regression.tif.vat.dbf')
+            db_file = dbf.Dbf(output_dir + os.sep + 'Output/wp_rc.tif.vat.dbf')
             value_array = []
             count_array = []
             val_range_array = []
@@ -70,8 +87,9 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
             self.assertTrue(False, 'The dbf file could not be opened')
 
         try:
-            regression_table = dbf.Dbf(regression_dir + os.sep + 'capwe_rc_regression.tif.vat.dbf')
-            db_file = dbf.Dbf(args['workspace_dir'] + os.sep + 'Output/capwe_rc.tif.vat.dbf')
+            regression_table = \
+                dbf.Dbf(regression_dir + 'capwe_rc_regression.tif.vat.dbf')
+            db_file = dbf.Dbf(output_dir + os.sep + 'Output/capwe_rc.tif.vat.dbf')
             value_array = []
             count_array = []
             val_range_array = []
@@ -89,9 +107,11 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
            compares hand calculated results against the returned
            function generated results
         """
-        wave_base_data_uri = './data/wave_energy_data/test_input/sampWaveDataTest.txt'
+        wave_base_data_uri = \
+            './data/wave_energy_data/test_input/sampWaveDataTest.txt'
         if os.path.isfile(wave_base_data_uri):
-            wave_data = wave_energy_biophysical.extrapolate_wave_data(wave_base_data_uri)
+            wave_data = \
+               wave_energy_biophysical.extrapolate_wave_data(wave_base_data_uri)
             LOGGER.debug('Extrapolated Wave Data : %s', wave_data)
             #Hand generated results
             row = np.array([.25, 1.0, 2.0, 3.0, 4.0, 5.0])
