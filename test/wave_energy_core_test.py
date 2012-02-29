@@ -347,7 +347,7 @@ class TestWaveEnergy(unittest.TestCase):
         comp_dict = {}
         while feat is not None:
             temp_array = []
-            for fld in ('I', 'J', 'capWE_Sum'):
+            for fld in ('I', 'J', 'CAPWE_MWHY'):
                 index = feat.GetFieldIndex(fld)
                 field_val = feat.GetField(index)
                 temp_array.append(field_val)
@@ -554,7 +554,7 @@ class TestWaveEnergy(unittest.TestCase):
         
         shape_copy = ogr.GetDriverByName('ESRI Shapefile').CopyDataSource(shape, shape_copy_path)
         layer = shape_copy.GetLayer(0)
-        for field in ['Depth_M', 'HSAVG_M', 'TPAVG_S']:
+        for field in ['DEPTH_M', 'HSAVG_M', 'TPAVG_S']:
             fld_defn = ogr.FieldDefn(field, ogr.OFTReal)
             layer.CreateField(fld_defn)
         layer.ResetReading()
@@ -563,7 +563,7 @@ class TestWaveEnergy(unittest.TestCase):
         while feat is not None:
             height_index = feat.GetFieldIndex('HSAVG_M')
             period_index = feat.GetFieldIndex('TPAVG_S')
-            depth_index = feat.GetFieldIndex('Depth_M')
+            depth_index = feat.GetFieldIndex('DEPTH_M')
         
             feat.SetField(depth_index, depth_list[i])
             feat.SetField(height_index, height_list[i])
@@ -581,7 +581,7 @@ class TestWaveEnergy(unittest.TestCase):
         feat = layer.GetNextFeature()
         i = 0
         while feat is not None:
-            wave_power_index = feat.GetFieldIndex('wp_Kw')
+            wave_power_index = feat.GetFieldIndex('WE_kWM')
             wave_power = feat.GetField(wave_power_index)
             self.assertAlmostEqual(wave_power, calculations_by_hand[i], 1,
                                    'Wave Power calculations do not match.')
@@ -617,8 +617,8 @@ class TestWaveEnergy(unittest.TestCase):
         feat = layer.GetNextFeature()
         feat_reg = layer_reg.GetNextFeature()
         while feat is not None:
-            wave_power_index = feat.GetFieldIndex('wp_Kw')
-            wave_power_index_reg = feat_reg.GetFieldIndex('wp_Kw')
+            wave_power_index = feat.GetFieldIndex('WE_kWM')
+            wave_power_index_reg = feat_reg.GetFieldIndex('WE_kWM')
             wave_power = feat.GetField(wave_power_index)
             wave_power_reg = feat_reg.GetField(wave_power_index_reg)
             self.assertEqual(wave_power, wave_power_reg,
@@ -875,15 +875,29 @@ class TestWaveEnergy(unittest.TestCase):
         output.
         """
         test_dir = './data/wave_energy_data'
-        wave_data_shape_path = test_dir + os.sep + 'Intermediate/WEM_InputOutput_Pts.shp'
+        wave_data_shape_path = \
+            test_dir + os.sep + 'Intermediate/WEM_InputOutput_Pts.shp'
+        wave_data_copy_path = \
+            test_dir + os.sep + 'test_output/WEM_InputOutput_copy.shp'
         number_of_machines = 28
-        machine_econ_path = test_dir + os.sep + 'samp_input/Machine_PelamisEconCSV.csv'
-        land_grid_path = test_dir + os.sep + 'samp_input/LandGridPts_WCVI_221.csv'
+        machine_econ_path = \
+            test_dir + os.sep + 'samp_input/Machine_PelamisEconCSV.csv'
+        land_grid_path = \
+            test_dir + os.sep + 'samp_input/LandGridPts_WCVI_221.csv'
         dem_path = test_dir + os.sep + 'samp_input/global_dem'
+
+        if os.path.isfile(wave_data_copy_path):
+            os.remove(wave_data_copy_path)
+
+        wave_data_shape = ogr.Open(wave_data_shape_path)
+        wave_data_shape_copy = \
+            ogr.GetDriverByName('ESRI Shapefile').\
+                CopyDataSource(wave_data_shape, wave_data_copy_path)
+        
         #Set all arguments to be passed
         args = {}
         args['workspace_dir'] = test_dir
-        args['wave_data_shape'] = ogr.Open(wave_data_shape_path, 1)
+        args['wave_data_shape'] = wave_data_shape_copy
         args['number_machines'] = number_of_machines
         args['global_dem'] = gdal.Open(dem_path)
 
@@ -904,7 +918,8 @@ class TestWaveEnergy(unittest.TestCase):
             machine_econ_file.close()
             args['machine_econ'] = machine_econ
         except IOError, error:
-            print 'File I/O error' + error
+            LOGGER.error('File I/O error' + error)
+        
         #Read landing and power grid connection points into a dictionary
         try:
             land_grid_pts = {}
@@ -913,24 +928,30 @@ class TestWaveEnergy(unittest.TestCase):
             for row in reader:
                 LOGGER.debug('Land Grid Row: %s', row)
                 if row['ID'] in land_grid_pts:
-                    land_grid_pts[row['ID'].strip()][row['TYPE']] = [row['LAT'],
-                                                                     row['LONG']]
+                    land_grid_pts[row['ID'].strip()][row['TYPE']] = \
+                        [row['LAT'], row['LONG']]
                 else:
-                    land_grid_pts[row['ID'].strip()] = {row['TYPE']:[row['LAT'],
-                                                                     row['LONG']]}
+                    land_grid_pts[row['ID'].strip()] = \
+                        {row['TYPE']:[row['LAT'], row['LONG']]}
             LOGGER.debug('New Land_Grid Dict : %s', land_grid_pts)
             land_grid_pts_file.close()
             args['land_gridPts'] = land_grid_pts
         except IOError, error:
-            print 'File I/O error' + error
+            LOGGER.error('File I/O error' + error) 
 
         wave_energy_core.valuation(args)
         
+        #wave_data_shape.Destroy()
+        #wave_data_shape_copy.Destroy()
+        
         regression_dir = './data/wave_energy_regression_data'
-        regression_shape_path = regression_dir + '/WEM_InputOutput_Pts_val_regression.shp'
-        shape_path = args['workspace_dir'] + '/Intermediate/WEM_InputOutput_Pts.shp'
+        regression_shape_path = \
+            regression_dir + '/WEM_InputOutput_Pts_val_regression.shp'
+        shape_path = test_dir + os.sep + '/Intermediate/WEM_InputOutput_Pts.shp'
         #Check that resulting wave data shapefile is correct
-        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_path, shape_path)
+        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_path, 
+                                                 wave_data_copy_path)
         #Check that resulting rasters are correct
-        invest_test_core.assertTwoDatasetEqualURI(self, args['workspace_dir'] + '/Output/npv_usd.tif', 
-                                                  regression_dir + '/npv_usd_regression.tif')
+        invest_test_core.\
+            assertTwoDatasetEqualURI(self, test_dir + '/Output/npv_usd.tif', 
+                                     regression_dir + '/npv_usd_regression.tif')
