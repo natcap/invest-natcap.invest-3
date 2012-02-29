@@ -1344,7 +1344,7 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
         returns nothing"""
     cdef int ncols = potential_soil_loss.RasterXSize, \
              nrows = potential_soil_loss.RasterYSize, \
-             row_index, col_index
+             row_index, col_index, neighbor_index
     
     cdef NeighborFlow *neighbors = <NeighborFlow *>malloc(9 * sizeof(Pair))
     
@@ -1383,21 +1383,28 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
         np.empty((nrows,ncols))
     
     LOGGER = logging.getLogger('calc_exported_sediment')
+
     #push all stream pixels onto a queue
-    v_stream_pixels = 0
     for row_index in range(nrows):
         for col_index in range(ncols):
             if v_stream_matrix[row_index,col_index] == 1:
                 work_queue.append(row_index)
                 work_queue.append(col_index)
-                v_stream_pixels += 1
                 
-    LOGGER.debug("v_stream_pixels = %s, queue length = %s" % (v_stream_pixels, len(work_queue)))
+    LOGGER.info("v_stream_pixels = %s" % (len(work_queue)/2))
+    
     #while pixels still left to process
+    while len(work_queue) > 0:
+        row_index = work_queue.pop()
+        col_index = work_queue.pop()
+        
+        calculate_inflow_neighbors_dinf(row_index,col_index, 
+            aspect_matrix, aspect_nodata, neighbors)
+        
+        
+        
         #loop over neighbor pixels
             #if neighbor pixel unprocessed, enqueue it
             #to neighbor, add % of inflow to current cell * current cell export (river is 1.0)
             
     free(neighbors) 
-
-
