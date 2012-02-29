@@ -1342,9 +1342,97 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             cell to the stream based on the routed sediment inflow
             
         returns nothing"""
+    cdef int ncols = potential_soil_loss.RasterXSize, \
+             nrows = potential_soil_loss.RasterYSize, \
+             row_index, col_index, neighbor_index
+    
+    cdef NeighborFlow *neighbors = <NeighborFlow *>malloc(9 * sizeof(Pair))
+    
+    cdef CQueue work_queue = CQueue()
+    
+    cdef float potential_soil_loss_nodata = \
+        potential_soil_loss.GetRasterBand(1).GetNoDataValue()
+    cdef float aspect_nodata = aspect.GetRasterBand(1).GetNoDataValue()
+    cdef float retention_efficiency_nodata = \
+        retention_efficiency.GetRasterBand(1).GetNoDataValue()
+    cdef float sediment_export_nodata = \
+        sediment_export.GetRasterBand(1).GetNoDataValue()
+    
+    cdef float prop
+    
+    cdef np.ndarray [np.float_t,ndim=2] potential_soil_loss_matrix = \
+        potential_soil_loss.GetRasterBand(1).ReadAsArray().astype(np.float)
+    
+    cdef np.ndarray [np.float_t,ndim=2] aspect_matrix = \
+        aspect.GetRasterBand(1).ReadAsArray(0, 0, \
+        ncols,nrows).astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] retention_efficiency_matrix = \
+        retention_efficiency.GetRasterBand(1).ReadAsArray().astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] v_stream_matrix = \
+        v_stream.GetRasterBand(1).ReadAsArray().astype(np.float)
+        
+    cdef np.ndarray [np.float_t,ndim=2] sediment_retention_matrix = \
+        np.empty((nrows,ncols))
+    
+    cdef np.ndarray [np.float_t,ndim=2] export_matrix = \
+        np.empty((nrows,ncols))
+    
+    #Initalize export matrix to be -2's everywhere to indicate no export
+    #has been calcualted.  Kick to -1 when enququed in the work loop.
+    export_matrix[:] = -2
+    
     LOGGER = logging.getLogger('calc_exported_sediment')
+
     #push all stream pixels onto a queue
+    for row_index in range(nrows):
+        for col_index in range(ncols):
+            if v_stream_matrix[row_index,col_index] == 1:
+                work_queue.append(row_index)
+                work_queue.append(col_index)
+                export_matrix[row_index, col_index] = -1
+
+    LOGGER.info("v_stream_pixels = %s" % (len(work_queue)/2))
+    total_pixels_processed = 0
     #while pixels still left to process
-        #loop over neighbor pixels
-            #if neighbor pixel unprocessed, enqueue it
-            #to neighbor, add % of inflow to current cell * current cell export (river is 1.0) 
+    while len(work_queue) > 0:
+        row_index = work_queue.pop()
+        col_index = work_queue.pop()
+        
+        total_pixels_processed += 1
+        
+        
+        if export_matrix[row_index, col_index] >= 0:
+            #already calcualted, skip
+            continue
+
+        if v_stream_matrix[row_index,col_index] == 1:
+            export_matrix[row_index, col_index] = 0
+        else:
+            #Calculate export factor NOT ONE
+            export_matrix[row_index, col_index] = 1
+        
+        #LOGGER.info("total pixels processed = %s" % (total_pixels_processed))
+
+        calculate_inflow_neighbors_dinf(row_index,col_index, 
+            aspect_matrix, aspect_nodata, neighbors)
+        
+        #Visit each uncalculated neighbor and push on the work queue
+        for neighbor_index in range(8):
+            #-1 prop marks the end of the neighbor list
+            if neighbors[neighbor_index].prop == -1: break 
+            
+            neighbor_row = neighbors[neighbor_index].i
+            neighbor_col = neighbors[neighbor_index].j
+            
+            #see if neighbor is uncalculated
+            if export_matrix[neighbor_row, neighbor_col] == -2:
+                work_queue.append(neighbor_row)
+                work_queue.append(neighbor_col)
+                #setting to -1 prevents it from getting double queued
+                export_matrix[neighbor_row, neighbor_col] = -1
+    
+    LOGGER.info("total pixels processed = %s" % (total_pixels_processed))
+    sediment_export.GetRasterBand(1).WriteArray(export_matrix)
+    free(neighbors) 
