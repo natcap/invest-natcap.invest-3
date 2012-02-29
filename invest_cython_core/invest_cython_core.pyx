@@ -1361,20 +1361,17 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
     cdef float prop
     
     cdef np.ndarray [np.float_t,ndim=2] potential_soil_loss_matrix = \
-        potential_soil_loss.GetRasterBand(1).ReadAsArray(0, 0, \
-        ncols,nrows).astype(np.float)
+        potential_soil_loss.GetRasterBand(1).ReadAsArray().astype(np.float)
     
     cdef np.ndarray [np.float_t,ndim=2] aspect_matrix = \
         aspect.GetRasterBand(1).ReadAsArray(0, 0, \
         ncols,nrows).astype(np.float)
         
     cdef np.ndarray [np.float_t,ndim=2] retention_efficiency_matrix = \
-        retention_efficiency.GetRasterBand(1).ReadAsArray(0, 0, \
-        ncols,nrows).astype(np.float)
+        retention_efficiency.GetRasterBand(1).ReadAsArray().astype(np.float)
         
     cdef np.ndarray [np.float_t,ndim=2] v_stream_matrix = \
-        v_stream.GetRasterBand(1).ReadAsArray(0, 0, ncols, nrows) \
-            .astype(np.float)
+        v_stream.GetRasterBand(1).ReadAsArray().astype(np.float)
         
     cdef np.ndarray [np.float_t,ndim=2] sediment_retention_matrix = \
         np.empty((nrows,ncols))
@@ -1436,8 +1433,10 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
                 export_matrix[neighbor_row, neighbor_col] = -1
                 neighbors_uncalculated = True
                 continue
-        if neighbors_uncalculated:
-            
+        
+        #if neighbors_uncalculated:
+            #enqueue the original pixel so it gets revisted after they're
+            #processed
                 
                 
             #if accumulation_matrix[neighbor_row, neighbor_col] == -1:
