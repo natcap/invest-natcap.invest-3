@@ -1382,9 +1382,10 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
     cdef np.ndarray [np.float_t,ndim=2] export_matrix = \
         np.empty((nrows,ncols))
     
-    #Initalize export matrix to be -1's everywhere to indicate no export
-    #has been calcualted
-    export_matrix[:] = -1 
+    #Initalize export matrix to be -2's everywhere to indicate no export
+    #has been calcualted.  A -1 will indicate it's been visited, but
+    #it's the queue for processing
+    export_matrix[:] = -2 
     
     LOGGER = logging.getLogger('calc_exported_sediment')
 
@@ -1403,6 +1404,17 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
         row_index = work_queue.pop()
         col_index = work_queue.pop()
         
+        if export_matrix[row_index, col_index] >= 0:
+            #already calcualted, skip
+            continue
+        
+        #mark as visisted so it doesn't get enqueued as a neighbor of somebody 
+        export_matrix[row_index, col_index] = -1 
+
+        #if export_matrix is -1 here it means that it's already been visited
+        #once, and we're doing BFS so we should be able to process it now...
+        #right?
+        
         calculate_inflow_neighbors_dinf(row_index,col_index, 
             aspect_matrix, aspect_nodata, neighbors)
         
@@ -1418,6 +1430,16 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             neighbor_col = neighbors[neighbor_index].j
             
             #see if neighbor is uncalculated
+            if export_matrix[neighbor_row, neighbor_col] == -2:
+                work_queue.append(neighbor_row)
+                work_queue.append(neighbor_col)
+                export_matrix[neighbor_row, neighbor_col] = -1
+                neighbors_uncalculated = True
+                continue
+        if neighbors_uncalculated:
+            
+                
+                
             #if accumulation_matrix[neighbor_row, neighbor_col] == -1:
                 #push the current pixel back on, note the indexes are in reverse
                 #order so they can be popped off in order
@@ -1450,5 +1472,6 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
         #loop over neighbor pixels
             #if neighbor pixel unprocessed, enqueue it
             #to neighbor, add % of inflow to current cell * current cell export (river is 1.0)
-            
+    
+    sediment_export.GetRasterBand(1).WriteArray(export_matrix)
     free(neighbors) 
