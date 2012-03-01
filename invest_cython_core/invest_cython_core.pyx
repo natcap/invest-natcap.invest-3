@@ -578,6 +578,92 @@ cdef void calculate_inflow_neighbors_dinf(int i, int j,
     #Placing a -1 in prop marks the end of the neighbor array
     neighbors[neighbor_index].prop = -1
 
+cdef void calculate_outflow_neighbors_dinf(int row_index, int col_index, 
+                    np.ndarray[np.float_t,ndim=2] flow_direction_matrix, 
+                    float nodata_flow_direction,
+                    NeighborFlow *neighbors):
+    
+    """Returns a list of the neighboring pixels to i,j that are in bounds
+        and also flow out of the point.  This information is inferred from
+        the flow_direction_matrix
+        
+        col_index - column of pixel to calculate neighbors for
+        row_index - row of pixel to calculate neighbors for
+        flow_direction_matrix - a 2D numpy float array whose values indicate
+            outward flow directions in terms of radians
+        nodata_flow_direction - the value that corresponds to a nodata entry
+            in flow_direction_matrix
+        neighbors - an output as an array of NeighborFlow structs 
+            (row_index, col_index, prop). Valid entries start at index 0 and 
+            end when the NeighborFlow.prop value == -1
+            
+        returns nothing
+        """
+
+    #consider neighbors who flow into i,j, third argument is the inflow
+    #radian direction
+    cdef float PI = 3.14159265, alpha, beta, prop, outflow_direction
+    cdef int *shift_indexes = [
+                                   0, 1,
+                                   -1, 1,
+                                   -1, 0,
+                                   -1, -1,
+                                   0, -1,
+                                   1, -1,
+                                   1, 0,
+                                   1, 1
+                               ]
+    
+    cdef float *outflow_angles = [
+                                     0.0,
+                                     PI/4.0,
+                                     PI/2.0,
+                                     3.0*PI/4.0,
+                                     PI,
+                                     5.0*PI/4.0,
+                                     3.0*PI/2.0,
+                                     7.0*PI/4.0
+                                 ]
+    
+    outflow_direction = flow_direction_matrix(row_index, col_index)
+    flow_indexes = bisect.bisect(outflow_angles, outflow_direction) % \
+        len(outflow_angles)
+        
+    
+    cdef int pi, pj, k, n, neighbor_index = 0
+    
+    
+    
+    for k in range(8):
+        #alpha is the angle that flows from pixel pi, pj, to i, j
+        alpha = inflow_angles[k]
+        pi = i + shift_indexes[k*2+0]
+        pj = j + shift_indexes[k*2+1]
+        #LOGGER.debug('visiting pi pj %s %s' % (pi,pj))
+        #ensure that the offsets are within bounds of the matrix
+        if pi >= 0 and pj >= 0 and pi < flow_direction_matrix.shape[0] and \
+            pj < flow_direction_matrix.shape[1]:
+            #beta is the current outflow direction from pi,pj 
+            beta = flow_direction_matrix[pi, pj]
+            if beta == nodata_flow_direction:
+                continue
+            prop = -1 #initialize
+            if abs(alpha-beta) < PI/4.0 or \
+                (alpha == 0 and abs(2*PI-beta) < PI/4.0):
+                neighbors[neighbor_index].i = pi
+                neighbors[neighbor_index].j = pj
+
+                #The proporation is 1-the proportion of beta pointing to alpha
+                #if alpha == beta then prop == 1, otherwise it's less than 1
+                #but greater than 0 because of the if statement guard above
+                if alpha == 0 and beta > PI: alpha = 2*PI
+                prop = 1-abs(alpha-beta)/(PI/4.0)
+                neighbors[neighbor_index].prop = prop
+                neighbor_index += 1
+    #Placing a -1 in prop marks the end of the neighbor array
+    neighbors[neighbor_index].prop = -1
+
+
 cdef void d_p_area(CQueue pixels_to_process,
                    np.ndarray[np.float_t,ndim=2] accumulation_matrix,
                    np.ndarray[np.float_t,ndim=2] flow_direction_matrix,
@@ -1411,7 +1497,13 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             export_matrix[row_index, col_index] = 0
         else:
             #Calculate export factor NOT ONE
-            export_matrix[row_index, col_index] = 1
+            calculate_outflow_neighbors_dinf(row_index, col_index,
+                    aspect_matrix, nodata_aspect, neighbors)
+            export_matrix[row_index, col_index] = \
+                retention_efficiency_matrix[neighbors[0].i,neighbors[0].j] \
+                    * neighbors[0].prop +
+                retention_efficiency_matrix[neighbors[1].i,neighbors[1].j] \
+                    * neighbors[1].prop
         
         #LOGGER.info("total pixels processed = %s" % (total_pixels_processed))
 
