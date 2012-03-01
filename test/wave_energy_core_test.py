@@ -1022,17 +1022,50 @@ class TestWaveEnergy(unittest.TestCase):
 
         wave_energy_core.valuation(args)
         
-        #wave_data_shape.Destroy()
-        #wave_data_shape_copy.Destroy()
+        regression_dir = './data/wave_energy_regression_data/'
         
-        regression_dir = './data/wave_energy_regression_data'
-        regression_shape_path = \
-            regression_dir + '/WEM_InputOutput_Pts_val_regression.shp'
-        shape_path = test_dir + os.sep + '/Intermediate/WEM_InputOutput_Pts.shp'
-        #Check that resulting wave data shapefile is correct
-        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_path, 
-                                                 wave_data_copy_path)
-        #Check that resulting rasters are correct
-        invest_test_core.\
-            assertTwoDatasetEqualURI(self, test_dir + '/Output/npv_usd.tif', 
-                                     regression_dir + '/npv_usd_regression.tif')
+        #Regression Check for NPV raster
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            output_dir + os.sep + 'Output/npv_usd.tif',
+            regression_dir + 'npv_usd_regression.tif')
+        
+        #Regression Check for NPV percentile raster
+        invest_test_core.assertTwoDatasetEqualURI(self,
+            output_dir + os.sep + 'Output/npv_rc.tif',
+            regression_dir + 'npv_rc_regression.tif')
+        
+        #Regression Check for LandPts_prj shapefile
+        landing_shape_path = output_dir + os.sep + 'Output/LandPts_prj.shp'
+        regression_landing_shape_path = \
+            regression_dir + 'LandPts_prj_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, landing_shape_path, 
+                                                 regression_landing_shape_path)
+        
+        #Regression Check for GridPts_prj shapefile
+        grid_shape_path = output_dir + os.sep + 'Output/GridPts_prj.shp'
+        regression_grid_shape_path = \
+            regression_dir + 'GridPts_prj_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, grid_shape_path, 
+                                                 regression_grid_shape_path)
+        
+        #Regression Check for WEM_InputOutput_Pts shapefile
+        regression_wave_data_shape_path = \
+            regression_dir + 'WEM_InputOutput_Pts_val_regression.shp'
+        invest_test_core.assertTwoShapesEqualURI(self, wave_data_copy_path, 
+                                                 regression_wave_data_shape_path)
+
+        try:
+            regression_table = dbf.Dbf(regression_dir + os.sep + \
+                                      'npv_rc_regression.tif.vat.dbf')
+            db_file = dbf.Dbf(output_dir + os.sep + 'Output/npv_rc.tif.vat.dbf')
+            value_array = []
+            count_array = []
+            val_range_array = []
+            for rec, reg_rec in zip(db_file, regression_table):
+                self.assertEqual(rec['VALUE'], reg_rec['VALUE'])
+                self.assertEqual(rec['COUNT'], reg_rec['COUNT'])
+                self.assertEqual(rec['VAL_RANGE'], reg_rec['VAL_RANGE'])
+            db_file.close()
+            regression_table.close()
+        except IOError, error:
+            self.assertTrue(False, 'The dbf file could not be opened')
