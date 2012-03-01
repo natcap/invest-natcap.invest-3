@@ -85,7 +85,8 @@ def biophysical(args):
     #Set the source projection for a coordinate transformation
     #to the input projection from the wave watch point shapefile
     analysis_area_sr = args['analysis_area'].GetLayer(0).GetSpatialRef()
-
+    #Holds any temporary files we want to clean up at the end of the model run
+    file_list = []
     #This if statement differentiates between having an AOI or doing a broad
     #run on all the wave watch points specified by args['analysis_area'].
     if 'aoi' in args:
@@ -96,7 +97,7 @@ def biophysical(args):
         #changing the projection
         projected_wave_shape_path = \
             intermediate_dir + os.sep + 'projected_wave_data.shp'
-
+        file_list.append(projected_wave_shape_path)
         #The polygon shapefile that specifies the area of interest
         aoi_shape = args['aoi']
         
@@ -272,19 +273,19 @@ def biophysical(args):
     file_cleanup_handler(file_list)
 
 def file_cleanup_handler(file_list):
+    LOGGER.debug('Cleaning up files : %s', file_list)
     for file in file_list:
-            
+        LOGGER.debug('Cleaning up file : %s', file)    
         #Clean up temporary files on disk
         #Creating a match pattern that finds the last directory seperator
         #in a path like '/home/blath/../name_of_shape.*' and focuses just on the
         #string after that separator and before the '.' extension.
-        pattern = \
-            file[file.rfind(os.sep) + 1:
-                                      len(projected_wave_shape_path) - 4] + ".*"
+        pattern = file[file.rfind(os.sep) + 1:len(file) - 4] + ".*"
+        directory = file[0:file.rfind(os.sep) + 1]
         logging.debug('Regex file pattern : %s', pattern)
-        for file in os.listdir(intermediate_dir):
-            if re.search(pattern, file):
-                os.remove(os.path.join(intermediate_dir, file))
+        for item in os.listdir(directory):
+            if re.search(pattern, item):
+                os.remove(os.path.join(directory, item))
 
 def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
     """This function helps retrieve the pixel sizes of the global DEM 

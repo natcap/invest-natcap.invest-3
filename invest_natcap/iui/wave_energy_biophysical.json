@@ -80,6 +80,7 @@
                     "args_id": "aoi_uri",
                     "type": "file",
                     "label": "Area of Interest (AOI)(Optional)",
+                    "defaultValue": "../../test/data/wave_energy_data/samp_input/AOI_WCVI.shp",
                     "required": false,
                     "validateAs": {"type": "OGR", 
                     			   "layers": [{"name": {"inheritFrom": "file"}, 
