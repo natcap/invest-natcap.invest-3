@@ -625,7 +625,7 @@ cdef void calculate_outflow_neighbors_dinf(int row_index, int col_index,
                                      7.0*PI/4.0
                                  ]
     
-    outflow_direction = flow_direction_matrix(row_index, col_index)
+    outflow_direction = flow_direction_matrix[row_index, col_index]
     
     #doing linear search because it's cython and I can't use bisect
     for neighbor_index in range(8):
