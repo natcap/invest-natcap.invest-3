@@ -82,7 +82,7 @@ class TestWaveEnergyValuation(unittest.TestCase):
         try:
             regression_table = dbf.Dbf(regression_dir + os.sep + \
                                       'npv_rc_regression.tif.vat.dbf')
-            db_file = dbf.Dbf(test_dir + os.sep + 'Output/npv_rc.tif.vat.dbf')
+            db_file = dbf.Dbf(output_dir + os.sep + 'Output/npv_rc.tif.vat.dbf')
             value_array = []
             count_array = []
             val_range_array = []
