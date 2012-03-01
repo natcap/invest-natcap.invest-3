@@ -626,42 +626,18 @@ cdef void calculate_outflow_neighbors_dinf(int row_index, int col_index,
                                  ]
     
     outflow_direction = flow_direction_matrix(row_index, col_index)
-    flow_indexes = bisect.bisect(outflow_angles, outflow_direction) % \
+    neighbor_index = bisect.bisect(outflow_angles, outflow_direction) % \
         len(outflow_angles)
-        
     
-    cdef int pi, pj, k, n, neighbor_index = 0
+    neighbors[0].i = row_index + shift_indexes[neighbor_index*2]
+    neighbors[0].j = col_index + shift_indexes[neighbor_index*2+1]
+    neighbors[0].prop = 0.5
     
+    neighbors[1].i = row_index + shift_indexes[(neighbor_index-1)*2]
+    neighbors[1].j = col_index + shift_indexes[(neighbor_index-1)*2+1]
+    neighbors[1].prop = 0.5
     
-    
-    for k in range(8):
-        #alpha is the angle that flows from pixel pi, pj, to i, j
-        alpha = inflow_angles[k]
-        pi = i + shift_indexes[k*2+0]
-        pj = j + shift_indexes[k*2+1]
-        #LOGGER.debug('visiting pi pj %s %s' % (pi,pj))
-        #ensure that the offsets are within bounds of the matrix
-        if pi >= 0 and pj >= 0 and pi < flow_direction_matrix.shape[0] and \
-            pj < flow_direction_matrix.shape[1]:
-            #beta is the current outflow direction from pi,pj 
-            beta = flow_direction_matrix[pi, pj]
-            if beta == nodata_flow_direction:
-                continue
-            prop = -1 #initialize
-            if abs(alpha-beta) < PI/4.0 or \
-                (alpha == 0 and abs(2*PI-beta) < PI/4.0):
-                neighbors[neighbor_index].i = pi
-                neighbors[neighbor_index].j = pj
-
-                #The proporation is 1-the proportion of beta pointing to alpha
-                #if alpha == beta then prop == 1, otherwise it's less than 1
-                #but greater than 0 because of the if statement guard above
-                if alpha == 0 and beta > PI: alpha = 2*PI
-                prop = 1-abs(alpha-beta)/(PI/4.0)
-                neighbors[neighbor_index].prop = prop
-                neighbor_index += 1
-    #Placing a -1 in prop marks the end of the neighbor array
-    neighbors[neighbor_index].prop = -1
+    neighbors[2].prop = -1
 
 
 cdef void d_p_area(CQueue pixels_to_process,
