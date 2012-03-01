@@ -635,6 +635,10 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
         fd_def.SetWidth(src_fd.GetWidth())
         fd_def.SetPrecision(src_fd.GetPrecision())
         shp_layer.CreateField(fd_def)
+    LOGGER.debug('Binding Shapes Feature Count : %s', 
+                 clip_layer.GetFeatureCount())
+    LOGGER.debug('Shape to be Bounds Feature Count : %s', 
+                 in_layer.GetFeatureCount())
     #Retrieve the binding polygon feature and get it's geometry reference
     clip_feat = clip_layer.GetNextFeature()
     while clip_feat is not None:
@@ -747,12 +751,22 @@ def interp_points_over_raster(points, values, raster, nodata):
     LOGGER.debug('Size of Y dimension of raster : %s', size_y)
     LOGGER.debug('gt[0], [1], [3], [5] : %f : %f : %f : %f',
                  geo_tran[0], geo_tran[1], geo_tran[3], geo_tran[5])
-    #Make a numpy array representing the points of the 
-    #raster (the points are the pixels)
-    new_points = \
-        np.array([[geo_tran[0] + geo_tran[1] * i, geo_tran[3] + geo_tran[5] * j]
-                           for i in np.arange(size_x) 
-                           for j in np.arange(size_y)])
+    
+    #This was the old way of getting the points to represent the pixels in 
+    #the raster.  It ran anywhere from 40-70 times slower than the way below.
+#    new_points = \
+#      np.array([[geo_tran[0] + geo_tran[1] * i, geo_tran[3] + geo_tran[5] * j]
+#                           for i in np.arange(size_x) 
+#                           for j in np.arange(size_y)])
+    
+    #For interpolating we need a new set of points, which will represent
+    #each pixel in the raster.  Thus, we first step through and get all of our
+    #'x' points, then all of our 'y' points, then combine them.
+    x_range = \
+        np.array([geo_tran[0] + geo_tran[1] * i for i in np.arange(size_x)])
+    y_range = \
+        np.array([geo_tran[3] + geo_tran[5] * j for j in np.arange(size_y)])
+    new_points = np.array([(x,y) for x in x_range for y in y_range])
     LOGGER.debug('New points from raster : %s', new_points)
     #Interpolate the points and values from the shapefile from earlier
     spl = ip(points, values, fill_value=nodata)
