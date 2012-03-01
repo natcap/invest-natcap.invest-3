@@ -267,18 +267,24 @@ def biophysical(args):
     wave_power_raster = None
     wp_rc_raster = None
     capwe_rc = None
+    
+    #Clean up any temporary files that the user does not need to know about
+    file_cleanup_handler(file_list)
 
-    #Clean up temporary files on disk
-    #Creating a match pattern that finds the last directory seperator
-    #in a path like '/home/blath/../name_of_shape.*' and focuses just on the
-    #string after that separator and before the '.' extension.
-    pattern = \
-        projected_wave_shape_path[projected_wave_shape_path.rfind(os.sep) + 1:
-                                  len(projected_wave_shape_path) - 4] + ".*"
-    logging.debug('Regex file pattern : %s', pattern)
-    for file in os.listdir(intermediate_dir):
-        if re.search(pattern, file):
-            os.remove(os.path.join(intermediate_dir, file))
+def file_cleanup_handler(file_list):
+    for file in file_list:
+            
+        #Clean up temporary files on disk
+        #Creating a match pattern that finds the last directory seperator
+        #in a path like '/home/blath/../name_of_shape.*' and focuses just on the
+        #string after that separator and before the '.' extension.
+        pattern = \
+            file[file.rfind(os.sep) + 1:
+                                      len(projected_wave_shape_path) - 4] + ".*"
+        logging.debug('Regex file pattern : %s', pattern)
+        for file in os.listdir(intermediate_dir):
+            if re.search(pattern, file):
+                os.remove(os.path.join(intermediate_dir, file))
 
 def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
     """This function helps retrieve the pixel sizes of the global DEM 
