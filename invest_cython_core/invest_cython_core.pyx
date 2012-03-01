@@ -1494,16 +1494,18 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
             continue
 
         if v_stream_matrix[row_index,col_index] == 1:
-            export_matrix[row_index, col_index] = 0
+            export_matrix[row_index, col_index] = 1
+            retention_efficiency_matrix[row_index, col_index] = 1
         else:
             #Calculate export factor NOT ONE
             calculate_outflow_neighbors_dinf(row_index, col_index,
                     aspect_matrix, nodata_aspect, neighbors)
             export_matrix[row_index, col_index] = \
-                retention_efficiency_matrix[neighbors[0].i,neighbors[0].j] \
+                ((export_matrix[neighbors[0].i,neighbors[0].j]) \
                     * neighbors[0].prop +
-                retention_efficiency_matrix[neighbors[1].i,neighbors[1].j] \
-                    * neighbors[1].prop
+                (export_matrix[neighbors[1].i,neighbors[1].j]) \
+                    * neighbors[1].prop) * 
+                (1-retention_efficiency_matrix[row_index, col_index])
         
         #LOGGER.info("total pixels processed = %s" % (total_pixels_processed))
 
