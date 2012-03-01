@@ -626,15 +626,24 @@ cdef void calculate_outflow_neighbors_dinf(int row_index, int col_index,
                                  ]
     
     outflow_direction = flow_direction_matrix(row_index, col_index)
-    neighbor_index = bisect.bisect(outflow_angles, outflow_direction) % \
-        len(outflow_angles)
+    
+    #doing linear search because it's cython and I can't use bisect
+    for neighbor_index in range(8):
+        if outflow_angles[neighbor_index] <= outflow_direction:
+            break
+    
     
     neighbors[0].i = row_index + shift_indexes[neighbor_index*2]
     neighbors[0].j = col_index + shift_indexes[neighbor_index*2+1]
     neighbors[0].prop = 0.5
     
-    neighbors[1].i = row_index + shift_indexes[(neighbor_index-1)*2]
-    neighbors[1].j = col_index + shift_indexes[(neighbor_index-1)*2+1]
+    #Might need to wrap around if at end, and it's C arrays so we can't
+    #use negative indexing
+    if neighbor_index == 7:
+        neighbor_index = -1
+    
+    neighbors[1].i = row_index + shift_indexes[(neighbor_index+1)*2]
+    neighbors[1].j = col_index + shift_indexes[(neighbor_index+1)*2+1]
     neighbors[1].prop = 0.5
     
     neighbors[2].prop = -1
@@ -1475,12 +1484,12 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
         else:
             #Calculate export factor NOT ONE
             calculate_outflow_neighbors_dinf(row_index, col_index,
-                    aspect_matrix, nodata_aspect, neighbors)
+                    aspect_matrix, aspect_nodata, neighbors)
             export_matrix[row_index, col_index] = \
                 ((export_matrix[neighbors[0].i,neighbors[0].j]) \
                     * neighbors[0].prop +
                 (export_matrix[neighbors[1].i,neighbors[1].j]) \
-                    * neighbors[1].prop) * 
+                    * neighbors[1].prop) * \
                 (1-retention_efficiency_matrix[row_index, col_index])
         
         #LOGGER.info("total pixels processed = %s" % (total_pixels_processed))
