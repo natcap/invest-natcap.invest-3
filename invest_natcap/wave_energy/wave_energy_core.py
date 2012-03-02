@@ -273,6 +273,12 @@ def biophysical(args):
     file_cleanup_handler(file_list)
 
 def file_cleanup_handler(file_list):
+    """Handles removing any shape files and any necessary extensions
+    
+    file_list - A list of strings representing paths to shape files
+    
+    returns - nothing
+    """
     LOGGER.debug('Cleaning up files : %s', file_list)
     for file in file_list:
         LOGGER.debug('Cleaning up file : %s', file)    
