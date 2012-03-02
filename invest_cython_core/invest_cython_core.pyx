@@ -603,6 +603,7 @@ cdef void calculate_outflow_neighbors_dinf(int row_index, int col_index,
     #consider neighbors who flow into i,j, third argument is the inflow
     #radian direction
     cdef float PI = 3.14159265, alpha, beta, prop, outflow_direction
+    cdef int neighbor_index
     cdef int *shift_indexes = [
                                    0, 1,
                                    -1, 1,
@@ -628,10 +629,10 @@ cdef void calculate_outflow_neighbors_dinf(int row_index, int col_index,
     outflow_direction = flow_direction_matrix[row_index, col_index]
     
     #doing linear search because it's cython and I can't use bisect
+    neighbor_index = 0
     for neighbor_index in range(8):
-        if outflow_angles[neighbor_index] <= outflow_direction:
+        if outflow_angles[neighbor_index] > outflow_direction:
             break
-    
     
     neighbors[0].i = row_index + shift_indexes[neighbor_index*2]
     neighbors[0].j = col_index + shift_indexes[neighbor_index*2+1]
@@ -1491,6 +1492,11 @@ def calc_exported_sediment(potential_soil_loss, aspect, retention_efficiency,
                 (export_matrix[neighbors[1].i,neighbors[1].j]) \
                     * neighbors[1].prop) * \
                 (1-retention_efficiency_matrix[row_index, col_index])
+            LOGGER.debug("flow_direction[%s, %s] = %s" % (row_index, col_index, aspect_matrix[row_index, col_index]))
+            LOGGER.debug("neighbors[0].i,neighbors[0].j = %s %s" % (neighbors[0].i,neighbors[0].j))
+            LOGGER.debug("neighbors[1].i,neighbors[1].j = %s %s" % (neighbors[1].i,neighbors[1].j))
+            LOGGER.debug("export_matrix[%s, %s] = %s" % (neighbors[0].i,neighbors[0].j, export_matrix[neighbors[0].i,neighbors[0].j]))
+            LOGGER.debug("retention_efficiency_matrix[%s, %s] = %s" % (row_index, col_index, retention_efficiency_matrix[row_index, col_index]))
         
         #LOGGER.info("total pixels processed = %s" % (total_pixels_processed))
 
