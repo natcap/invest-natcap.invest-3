@@ -639,8 +639,10 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
                  clip_layer.GetFeatureCount())
     LOGGER.debug('Shape to be Bounds Feature Count : %s', 
                  in_layer.GetFeatureCount())
-    #Retrieve the binding polygon feature and get it's geometry reference
+    #Retrieve all the binding polygon features and save their cloned 
+    #geometry references to a list
     clip_feat = clip_layer.GetNextFeature()
+    clip_geom_list = []
     while clip_feat is not None:
         clip_geom = clip_feat.GetGeometryRef()
         #Get the spatial reference of the geometry to use in transforming
@@ -657,13 +659,23 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
         #Transform the polygon geometry into the same format as the 
         #point shape geometry
         clip_geom.Transform(coord_trans)
-        #For all the features in the current point shape (for all the points)
-        #Check to see if they Intersect with the binding polygons geometry and
-        #if they do, then add all of the fields and values from that 
-        #point to the new shape
-        while in_feat is not None:
+        #Add geometry to list
+        clip_geom_list.append(clip_geom.Clone())
+        in_feat.Destroy()
+        clip_feat.Destroy()
+        clip_feat = clip_layer.GetNextFeature()
+
+    in_layer.ResetReading()
+    in_feat = in_layer.GetNextFeature()
+    #For all the features in the current point shape (for all the points)
+    #Check to see if they Intersect with any of the binding polygons geometry 
+    #and if they do, copy that point and it's fields to the new shape
+    while in_feat is not None:
+        #Check to see if the point falls in any of the polygons
+        for clip_geom in clip_geom_list:
             geom = in_feat.GetGeometryRef()
-            #Intersection returns a new geometry if they intersect
+            #Intersection returns a new geometry if they intersect, null
+            #otherwise.
             geom = geom.Intersection(clip_geom)
             if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
                 #Create a new feature from the input feature and set 
@@ -676,14 +688,13 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
                 for fld_index2 in range(out_feat.GetFieldCount()):
                     src_field = in_feat.GetField(fld_index2)
                     out_feat.SetField(fld_index2, src_field)
-
+    
                 shp_layer.CreateFeature(out_feat)
                 out_feat.Destroy()
-
-            in_feat.Destroy()
-            in_feat = in_layer.GetNextFeature()
-        clip_feat.Destroy()
-        clip_feat = clip_layer.GetNextFeature()
+                break
+            
+        in_feat.Destroy()
+        in_feat = in_layer.GetNextFeature()
 
     return shp_ds
 
