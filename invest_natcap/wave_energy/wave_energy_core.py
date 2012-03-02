@@ -128,9 +128,6 @@ def biophysical(args):
         LOGGER.debug('X pixel size in meters : %f', pixel_xsize)
         LOGGER.debug('Y pixel size in meters : %f', pixel_ysize)
 
-        #OGR examples always None out the variables, probably can remove
-        clipped_wave_shape_geom = None
-
     else:
         #If no AOI, we can use the pixel size directly from the DEM, but this
         #is necessary to make the following while loop simpler.
@@ -211,11 +208,11 @@ def biophysical(args):
     clipped_wave_shape = wave_power(clipped_wave_shape)
 
     #Create blank rasters bounded by the shape file of analyis area
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,\
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize, 
                                                      datatype, nodata, \
                                                      wave_energy_path, \
                                                      aoi_shape)
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,\
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize, 
                                                      datatype, nodata, \
                                                      wave_power_path, aoi_shape)
 
@@ -258,13 +255,14 @@ def biophysical(args):
     wp_units_long = ' wave power per unit width of wave crest length (kW/m)'
     starting_percentile_range = '1'
     capwe_rc = \
-       create_percentile_rasters(wave_energy_raster, capwe_rc_path, 
-                                 capwe_units_short, capwe_units_long,  
+       create_percentile_rasters(wave_energy_raster, capwe_rc_path, \
+                                 capwe_units_short, capwe_units_long, \
                                  starting_percentile_range, percentiles, nodata)
     wp_rc_raster = \
-        create_percentile_rasters(wave_power_raster, wp_rc_path, wp_units_short, 
-                                  wp_units_long, starting_percentile_range, 
-                                  percentiles, nodata)
+        create_percentile_rasters(wave_power_raster, wp_rc_path, \
+                                  wp_units_short, wp_units_long, \
+                                  starting_percentile_range, percentiles, \
+                                  nodata)
 
     #Clean up Shapefiles and Rasters
     clipped_wave_shape.Destroy()
@@ -285,15 +283,15 @@ def file_cleanup_handler(file_list):
     returns - nothing
     """
     LOGGER.debug('Cleaning up files : %s', file_list)
-    for file in file_list:
-        LOGGER.debug('Cleaning up file : %s', file)    
+    for file_name in file_list:
+        LOGGER.debug('Cleaning up file_name : %s', file_name)    
         #Clean up temporary files on disk
         #Creating a match pattern that finds the last directory seperator
         #in a path like '/home/blath/../name_of_shape.*' and focuses just on the
         #string after that separator and before the '.' extension.
-        pattern = file[file.rfind(os.sep) + 1:len(file) - 4] + ".*"
-        directory = file[0:file.rfind(os.sep) + 1]
-        logging.debug('Regex file pattern : %s', pattern)
+        pattern = file_name[file_name.rfind(os.sep) + 1:len(file_name) - 4] + ".*"
+        directory = file_name[0:file_name.rfind(os.sep) + 1]
+        logging.debug('Regex file_name pattern : %s', pattern)
         for item in os.listdir(directory):
             if re.search(pattern, item):
                 os.remove(os.path.join(directory, item))
@@ -788,7 +786,7 @@ def interp_points_over_raster(points, values, raster, nodata):
         np.array([geo_tran[0] + geo_tran[1] * i for i in np.arange(size_x)])
     y_range = \
         np.array([geo_tran[3] + geo_tran[5] * j for j in np.arange(size_y)])
-    new_points = np.array([(x,y) for x in x_range for y in y_range])
+    new_points = np.array([(x, y) for x in x_range for y in y_range])
     LOGGER.debug('New points from raster : %s', new_points)
     #Interpolate the points and values from the shapefile from earlier
     spl = ip(points, values, fill_value=nodata)
@@ -986,8 +984,6 @@ def valuation(args):
     #Set variables for common output paths
     #Workspace Directory path
     workspace_dir = args['workspace_dir']
-    #Intermediate Directory path to store information
-    inter_dir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
     output_dir = workspace_dir + os.sep + 'Output'
     #Output path for landing point shapefile
@@ -1108,6 +1104,7 @@ def valuation(args):
         for i in range(len(time)):
             npv.append(rho ** i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
+    
     #Add Net Present Value field, Total Captured Wave Energy field, and
     #Units field to shapefile
     for field_name in ['NPV_25Y', 'CAPWE_ALL', 'UNITS']:
@@ -1215,10 +1212,10 @@ def build_point_shapefile(driver_name, layer_name, path, data, prj,
     layer.CreateField(field_defn)
     #For all of the landing points create a point feature on the layer
     for key, value in data.iteritems():
-        lat = value[0]
-        long = value[1]
+        latitude = value[0]
+        longitude = value[1]
         geom = ogr.Geometry(ogr.wkbPoint)
-        geom.AddPoint_2D(float(long), float(lat))
+        geom.AddPoint_2D(float(longitude), float(latitude))
         geom.Transform(coord_trans)
         #Create the feature, setting the id field to the corresponding id
         #field from the csv file
