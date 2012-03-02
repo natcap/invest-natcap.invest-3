@@ -379,8 +379,13 @@ class DynamicPrimitive(DynamicElement):
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required')
         else:
-            if self.isEnabled():
-                if self.validator != None:
+            if self.isEnabled() and self.validator != None:
+                if self.requirementsMet():
+                    validate = True
+                else:
+                    validate = False
+
+                if validate:
                     rendered_dict = self.root.assembler.assemble(self.value(),
                         self.attributes['validateAs'])
                     self.validator.validate(rendered_dict)
@@ -518,6 +523,7 @@ class DynamicText(LabeledElement):
             if self.isRequired() and not self.requirementsMet():
                 self.setBGcolorSatisfied(False)
             else:
+                self.set_error('')
                 self.setBGcolorSatisfied(True)
 
         #This function attempts to enable or disable elements as appropriate.

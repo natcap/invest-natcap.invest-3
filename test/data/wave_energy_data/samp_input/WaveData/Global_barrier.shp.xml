@@ -1,0 +1,608 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xml:lang="en">
+	<idinfo>
+		<native>Microsoft Windows XP Version 5.1 (Build 2600) Service Pack 1; ESRI ArcCatalog 9.1.0.722</native>
+		<descript>
+			<abstract>World Map Background represents grid cells of 30 by 30 degrees that cover the world.</abstract>
+			<purpose>World Map Background provides for displaying a shaded background on which other data can be displayed. For example, use the World Map Background to quickly display a blue ocean theme behind other land-based themes such as World Countries.</purpose>
+		</descript>
+		<citation>
+			<citeinfo>
+				<pubdate>20061001</pubdate>
+				<title>World Map Background</title>
+				<geoform>vector digital data</geoform>
+				<edition>2006</edition>
+				<serinfo>
+					<sername>ESRI® Data &amp; Maps</sername>
+					<issue>2006 World, Europe, United States, Canada, and Mexico</issue>
+				</serinfo>
+				<pubinfo>
+					<pubplace>Redlands, California, USA</pubplace>
+					<publish>ESRI</publish>
+				</pubinfo>
+				<othercit>Location: \world\data</othercit>
+				<origin>ESRI</origin>
+				<onlink>\\SASQUATCH\GIS\templates\worldbg</onlink></citeinfo>
+		</citation>
+		<timeperd>
+			<current>publication date</current>
+			<timeinfo>
+				<sngdate>
+					<caldate>1996</caldate>
+				</sngdate>
+			</timeinfo>
+		</timeperd>
+		<status>
+			<progress>Complete</progress>
+			<update>Annually</update>
+		</status>
+		<spdom>
+			<bounding>
+				<westbc>-180.000000</westbc>
+				<eastbc>180.000000</eastbc>
+				<northbc>90.000000</northbc>
+				<southbc>-90.000000</southbc>
+			</bounding>
+		</spdom>
+		<keywords>
+			<theme>
+				<themekt>None</themekt>
+				<themekey>polygon</themekey>
+				<themekey>map background</themekey>
+				<themekey>grid cells</themekey>
+				<themekey>grids</themekey>
+				<themekey>latitudes</themekey>
+				<themekey>longitudes</themekey>
+				<themekey>location</themekey>
+			</theme>
+			<place>
+				<placekey>World</placekey>
+				<placekt>None</placekt>
+			</place>
+			<temporal>
+				<tempkt>None</tempkt>
+				<tempkey>1996</tempkey>
+			</temporal>
+		</keywords>
+		<accconst>Access granted to Licensee only.</accconst>
+		<useconst>The data are provided by multiple, third party data vendors under license to ESRI for inclusion on ESRI Data &amp; Maps for use with ESRI® software.  Each data vendor has its own data licensing policies and may grant varying redistribution rights to end users. Please consult the redistribution rights below for this data set provided on ESRI Data &amp; Maps. As used herein, “Geodata” shall mean any digital data set consisting of geographic data coordinates and associated attributes.
+
+The redistribution rights for this data set: Redistribution rights are granted by the data vendor for hard-copy renditions or static, electronic map images (e.g. .gif, .jpeg, etc.) that are plotted, printed, or publicly displayed with proper metadata and source/copyright attribution to the respective data vendor(s).  Geodata is redistributable with a Value-Added Software Application developed by ESRI Business Partners on a royalty-free basis with proper metadata and source/copyright attribution to the respective data vendor(s). Geodata is redistributable without a Value-Added Software Application (i.e., adding the sample data to an existing, [non]commercial data set for redistribution) with proper metadata and source/copyright attribution to the respective data vendor(s).
+
+The terms and conditions below apply to all the data sets provided on ESRI Data &amp; Maps.
+
+Proprietary Rights and Copyright: Licensee acknowledges that the Data and Related Materials contain proprietary and confidential property of ESRI and its licensor(s). The Data and Related Materials are owned by ESRI and its licensor(s) and are protected by United States copyright laws and applicable international copyright treaties and/or conventions.
+
+Limited Warranty and Disclaimer: ESRI warrants that the media upon which the Data and Related Materials are provided will be free from defects in materials and workmanship under normal use and service for a period of ninety (90) days from the date of receipt.
+
+THE DATA AND RELATED MATERIALS ARE EXCLUDED FROM THE LIMITED WARRANTY, AND THE LICENSEE EXPRESSLY ACKNOWLEDGES THAT THE DATA CONTAINS SOME NONCONFORMITIES, DEFECTS, OR ERRORS. ESRI DOES NOT WARRANT THAT THE DATA WILL MEET LICENSEE'S NEEDS OR EXPECTATIONS; THAT THE USE OF THE DATA WILL BE UNINTERRUPTED; OR THAT ALL NONCONFORMITIES, DEFECTS, OR ERRORS CAN OR WILL BE CORRECTED. ESRI IS NOT INVITING RELIANCE ON THIS DATA, AND THE LICENSEE SHOULD ALWAYS VERIFY ACTUAL DATA.
+
+EXCEPT FOR THE LIMITED WARRANTY SET FORTH ABOVE, THE DATA AND RELATED MATERIALS CONTAINED THEREIN ARE PROVIDED "AS-IS," WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+HIGH RISK ACTIVITIES: 
+(A) THE DATA AND RELATED MATERIALS ARE NOT FAULT-TOLERANT AND ARE NOT DESIGNED, MANUFACTURED, OR INTENDED FOR USE OR RESALE FOR INSURANCE UNDERWRITING OR WITH CRITICAL HEALTH AND SAFETY OR ONLINE CONTROL EQUIPMENT IN HAZARDOUS ENVIRONMENTS THAT REQUIRE FAIL-SAFE PERFORMANCE, INCLUDING, BUT NOT LIMITED TO THE OPERATION OF NUCLEAR FACILITIES, NAVIGATION OR GUIDANCE (I.E., AIRCRAFT, NAUTICAL VEHICLE, ETC.), OR COMMUNICATION SYSTEMS, AIR TRAFFIC CONTROL, EMERGENCY RESPONSE, TERRORISM PREVENTION OR RESPONSE, LIFE SUPPORT, OR WEAPONS SYSTEMS ("HIGH RISK ACTIVITIES"). ESRI SPECIFICALLY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
+
+(B) TO THE EXTENT PERMITTED BY LAW, LICENSEE AGREES TO INDEMNIFY, DEFEND, AND HOLD ESRI, ITS OFFICERS, DIRECTORS, EMPLOYEES, AGENTS, SUBCONTRACTORS, LICENSORS, SUCCESSORS, AND ASSIGNS HARMLESS FROM AND AGAINST ANY AND ALL LIABILITY, LOSSES, CLAIMS, EXPENSES (INCLUDING ATTORNEYS' FEES), DEMANDS, OR DAMAGES OF ANY KIND, INCLUDING DIRECT, INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, ARISING OUT OF OR IN ANY WAY CONNECTED WITH LICENSEE'S USE OR PERMITTING THE USE BY OTHERS OF THE DATA, AND VENDOR'S HARDWARE OR SOFTWARE FOR HIGH RISK ACTIVITIES. DELIVERY OF THE DATA, AND VENDOR'S HARDWARE OR SOFTWARE DOES NOT CONSTITUTE A WAIVER OF THE RIGHTS AND OBLIGATIONS SET FORTH IN THIS ARTICLE.
+
+Exclusive Remedy and Limitation of Liability: The entire liability of ESRI or its licensor(s) and Licensee's exclusive remedy shall be to terminate the Agreement upon Licensee returning the Data and Related Materials to ESRI with a copy of Licensee's invoice/receipt and ESRI returning the license fees paid to Licensee.
+
+IN NO EVENT SHALL ESRI AND/OR ITS LICENSOR(S) BE LIABLE FOR COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOST PROFITS, LOST SALES, OR BUSINESS EXPENDITURES, INVESTMENTS, OR COMMITMENTS IN CONNECTION WITH ANY BUSINESS; LOSS OF ANY GOODWILL; OR FOR ANY INDIRECT, SPECIAL, INCIDENTAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT OR USE OF THE DATA AND RELATED MATERIALS, HOWEVER CAUSED, ON ANY THEORY OF LIABILITY, AND WHETHER OR NOT ESRI OR ITS LICENSOR(S) HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE OF ANY EXCLUSIVE REMEDY.
+
+Third Party Beneficiary: ESRI's licensor(s) has (have) authorized ESRI to (sub)distribute and (sub)license its (their) data as incorporated into the Data and Related Materials. As an intended third party beneficiary to this Agreement, the ESRI licensor(s) is (are) entitled to directly enforce, in its own name, the rights and obligations undertaken by the Licensee and to seek all legal and equitable remedies as are afforded to ESRI.
+
+In the event that the data vendor(s) has (have) granted the end user permission to redistribute the Geodata, please use proper proprietary or copyright attribution for the various data vendor(s), and provide the associated metadata file(s) with the Geodata. In compliance with FGDC metadata standards, ESRI has attempted to practice proper metadata methodologies by providing any data source information, descriptions, and file names to assist in this effort.</useconst>
+		<ptcontac>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>ESRI</cntorg>
+					<cntper>Data Team</cntper>
+				</cntorgp>
+				<cntaddr>
+					<addrtype>mailing and physical address</addrtype>
+					<address>380 New York Street</address>
+					<city>Redlands</city>
+					<state>California</state>
+					<postal>92373-8100</postal>
+					<country>USA</country>
+				</cntaddr>
+				<cntvoice>909-793-2853</cntvoice>
+				<cntfax>909-793-5953</cntfax>
+				<cntemail>info@esri.com</cntemail>
+				<hours>7:00 a.m.–5:30 p.m. Pacific time, Monday–Friday</hours>
+				<cntinst>In the United States–
+Please direct all inquiries regarding software/data pricing and consulting services to your local ESRI Regional Office.  For support, you may contact Technical Support by telephone (voice) between 6:00 a.m. and 5:00 p.m. Pacific time, Monday through Friday, by dialing 888-377-4575; facsimile (fax) available at 909-792-0960; electronic mail (e-mail) support@esri.com; or visit http://support.esri.com; ESRI holidays excluded. 
+
+Outside the United States–
+Please direct all inquiries regarding software/data pricing, sales, support, and consulting services to your local ESRI International Distributor.  This information can be found at http://gis.esri.com/intldist/contactint.cfm.  
+
+For other questions or comments, you may contact ESRI headquarters by e-mail, telephone, or fax or write to us.</cntinst>
+			</cntinfo>
+		</ptcontac>
+	</idinfo>
+	<metainfo>
+		<metstdn>FGDC Content Standards for Digital Geospatial Metadata</metstdn>
+		<metstdv>FGDC-STD-001-1998</metstdv>
+		<mettc>local time</mettc>
+		<metc>
+			<cntinfo>
+				<cntorgp>
+					<cntper>Data Team</cntper>
+					<cntorg>ESRI</cntorg>
+				</cntorgp>
+				<cntaddr>
+					<addrtype>mailing and physical address</addrtype>
+					<city>Redlands</city>
+					<state>California</state>
+					<postal>92373-8100</postal>
+					<address>380 New York Street</address>
+					<country>USA</country>
+				</cntaddr>
+				<cntvoice>909-793-2853</cntvoice>
+				<cntfax>909-793-5953</cntfax>
+				<cntemail>info@esri.com</cntemail>
+				<hours>7:00 a.m.–5:30 p.m. Pacific time, Monday–Friday</hours>
+			</cntinfo>
+		</metc>
+		<metd>20060403</metd>
+	</metainfo>
+	<spdoinfo>
+		<direct>Vector</direct>
+		<ptvctinf>
+			<sdtsterm>
+				<sdtstype>G-polygon</sdtstype>
+				<ptvctcnt>72</ptvctcnt>
+			</sdtsterm>
+		</ptvctinf>
+	</spdoinfo>
+	<spref>
+		<horizsys>
+			<geograph>
+				<geogunit>Decimal degrees</geogunit>
+				<latres>0.000001</latres>
+				<longres>0.000001</longres>
+			</geograph>
+			<geodetic>
+				<horizdn>This data set was mathematically generated. You can define or use it unchanged with data based on any datum.</horizdn>
+				<ellips>WGS_1984</ellips>
+				<semiaxis>6378137.000000</semiaxis>
+				<denflat>298.257224</denflat>
+			</geodetic>
+		</horizsys>
+	</spref>
+	<eainfo>
+		<detailed>
+			<enttyp>
+				<enttypl>world30</enttypl>
+				<enttypd>The polygons represent grid cells of 30 by 30 degrees for the world.</enttypd>
+				<enttypds>ESRI</enttypds>
+			</enttyp>
+			<attr>
+				<attrlabl>ObjectID</attrlabl>
+				<attrdef>Internal feature number.</attrdef>
+				<attrdefs>ESRI</attrdefs>
+				<attrdomv>
+					<udom>Sequential unique whole numbers that are automatically generated.</udom>
+				</attrdomv>
+			</attr>
+			<attr>
+				<attrlabl>Shape</attrlabl>
+				<attrdef>Feature geometry.</attrdef>
+				<attrdefs>ESRI</attrdefs>
+				<attrdomv>
+					<udom>Coordinates defining the features.</udom>
+				</attrdomv>
+			</attr>
+			<attr>
+				<attrlabl>WRLD_ID</attrlabl>
+				<attrdef>The unique identifier of the grid cell.</attrdef>
+				<attrdefs>ESRI</attrdefs>
+				<attrdomv>
+					<udom>Unique numbers for the features.</udom>
+				</attrdomv>
+			</attr>
+		</detailed>
+	</eainfo>
+	<distinfo>
+		<stdorder>
+			<digform>
+				<digtinfo>
+					<transize>0.023</transize>
+					<formname>SDC</formname>
+					<filedec>ArcGIS® software</filedec>
+					<formspec>The SDC file contains the geospatial and attribute data. The SDI file contains the spatial index. The PRJ file contains the coordinate system information (optional). The XML file (*.sdc.xml) contains the metadata describing the data set (optional).</formspec>
+				</digtinfo>
+				<digtopt>
+					<offoptn>
+						<offmedia>DVD–ROM</offmedia>
+						<reccap>
+							<recden>4.38</recden>
+							<recdenu>GB (gigabytes)</recdenu>
+						</reccap>
+						<recfmt>UDF (Universal Disc Format)</recfmt>
+					</offoptn>
+				</digtopt>
+			</digform>
+			<fees>Software purchase price</fees>
+			<ordering>ESRI Data &amp; Maps is available only as part of ESRI® software.</ordering>
+		</stdorder>
+		<distrib>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>ESRI; ESRI International Distributors</cntorg>
+				</cntorgp>
+				<cntinst>In the United States, contact the ESRI Telebusiness staff at 800-447-9778 for more information about our software and data.
+
+Outside the United States, please direct all inquiries to your local ESRI International Distributor.  This information can be found at http://gis.esri.com/intldist/contactint.cfm.</cntinst>
+				<cntaddr>
+					<addrtype>mailing and physical address</addrtype>
+					<address>380 New York Street</address>
+					<city>Redlands</city>
+					<state>California</state>
+					<postal>92373-8100</postal>
+					<country>USA</country>
+				</cntaddr>
+				<cntvoice>800-447-9778</cntvoice>
+			</cntinfo>
+		</distrib>
+		<techpreq>To use this data requires software that supports SDC files.</techpreq>
+		<distliab>See use constraints.</distliab>
+		<resdesc>Offline Data</resdesc>
+	</distinfo>
+	<dataqual>
+		<lineage>
+			<procstep>
+				<procdesc>The following steps were performed by ESRI: Generated the geospatial part of this data set mathematically using the ARC/INFO® GRID extension.  Added unique values attribute.</procdesc>
+				<srcprod>ESRI D&amp;M V.1</srcprod>
+				<procdate>1996</procdate>
+			</procstep>
+			<procstep>
+				<procdesc>The following steps were performed by ESRI: Extracted data set from ESRI Data &amp; Maps Volume 1. Created ArcGIS® layer file (.lyr).  Created projection file (.prj).  Created spatial indices. Converted the data set to SDC.</procdesc>
+				<srcused>ESRI D&amp;M V.1</srcused>
+				<procdate>19980603</procdate>
+			</procstep>
+			<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>ESRI Data &amp; Maps Volume 1</title>
+						<origin>ESRI</origin>
+						<pubdate>1996</pubdate>
+						<edition>1</edition>
+						<geoform>vector digital data</geoform>
+						<serinfo>
+							<sername>ESRI® Data &amp; Maps</sername>
+							<issue>Volume 1</issue>
+						</serinfo>
+						<pubinfo>
+							<pubplace>Redlands, California, USA</pubplace>
+							<publish>ESRI</publish>
+						</pubinfo>
+					</citeinfo>
+				</srccite>
+				<typesrc>CD–ROM</typesrc>
+				<srctime>
+					<timeinfo>
+						<sngdate>
+							<caldate>1996</caldate>
+						</sngdate>
+					</timeinfo>
+					<srccurr>publication date</srccurr>
+				</srctime>
+				<srccitea>ESRI D&amp;M V.1</srccitea>
+				<srccontr>Attribute and geospatial data</srccontr>
+			</srcinfo>
+			<procstep><procdesc>The following steps were performed by ESRI: Corrected the north and east geographic extents. Renamed WRLD30_ID to WRLD_ID and reduced its width.  Converted the data set to SDC.  Created ArcGIS® layer file (.lyr), projection file (.prj), and spatial indices.</procdesc><procdate>20060328</procdate></procstep><procstep><procdesc>Dataset copied.</procdesc><srcused/><date>20070719</date><time>12445600</time></procstep><procstep><procdesc>Dataset copied.</procdesc><srcused/><date>20070719</date><time>23500900</time></procstep><procstep><procdesc>Dataset copied.</procdesc><srcused/><date>20071010</date><time>11042400</time></procstep><procstep><procdesc>Dataset moved.</procdesc><srcused>L:\templates\worldbg</srcused><date>20080414</date><time>20461400</time></procstep><procstep><procdesc>Dataset copied.</procdesc><srcused>L:\users\huang\Maps\35_priority_places\35_PP_and_MEOW\worldbg</srcused><date>20080414</date><time>20550300</time></procstep><procstep><procdesc Sync="TRUE">Dataset copied.</procdesc><srcused Sync="TRUE"></srcused><procdate Sync="TRUE">20101117</procdate><proctime Sync="TRUE">13281500</proctime></procstep><procstep><procdesc Sync="TRUE">Dataset moved.</procdesc><srcused Sync="TRUE">E:\Marine_InVEST\Wave_Energy\WW3\GRID\noEEZ_mask</srcused><procdate Sync="TRUE">20101121</procdate><proctime Sync="TRUE">13334600</proctime></procstep><procstep><procdesc Sync="TRUE">Dataset moved.</procdesc><srcused Sync="TRUE">E:\Marine_InVEST\MarineInVEST\GuerreyPaper\Input\noEEZ_mask</srcused><procdate Sync="TRUE">20101121</procdate><proctime Sync="TRUE">13351000</proctime></procstep></lineage>
+		<posacc>
+			<horizpa>
+				<horizpar>The geospatial part of this data set was mathematically generated using the ARC/INFO® GRID™ extension.  In this manner, the locations were computed.  The positional accuracy is limited only by the resolution of the data set, which is less than a meter.</horizpar>
+			</horizpa>
+		</posacc>
+		<logic>The shapefile is converted to SDC (Smart Data Compression) format using either ESRI SDC Data Development Kit Professional 2 (DDKP2) or tools in ArcGIS.  The SDC data set is then loaded into ArcSDE® to verify and validate the geometry.</logic>
+		<complete>After processing, the data set is checked for drawing display and number of records and file sizes compared with source materials.</complete>
+	</dataqual>
+	<dataIdInfo>
+		<envirDesc>Microsoft Windows XP Version 5.1 (Build 2600) Service Pack 1; ESRI ArcCatalog 9.1.0.722</envirDesc>
+		<dataLang>
+			<languageCode value="en"/>
+		</dataLang>
+		<idCitation>
+			<resTitle>World Map Background</resTitle>
+			<presForm>
+				<PresFormCd value="005"/>
+			</presForm>
+			<resEd>2006</resEd>
+			<resEdDate>20061001</resEdDate>
+			<resRefDate>
+				<refDate>19980603</refDate>
+				<refDateType>
+					<DateTypCd value="001"/>
+				</refDateType>
+			</resRefDate>
+			<citRespParty>
+				<rpIndName>Data Team</rpIndName>
+				<rpOrgName>ESRI</rpOrgName>
+				<rpPosName>Data Team</rpPosName>
+				<role>
+					<RoleCd value="007"/>
+				</role>
+				<rpCntInfo>
+					<cntAddress>
+						<delPoint>380 New York Street</delPoint>
+						<city>Redlands</city>
+						<adminArea>California</adminArea>
+						<postCode>92373-8100</postCode>
+						<eMailAdd>info@esri.com</eMailAdd>
+						<country>us</country>
+					</cntAddress>
+					<cntPhone>
+						<voiceNum>909-793-2853</voiceNum>
+						<faxNum>909-793-5953</faxNum>
+					</cntPhone>
+				</rpCntInfo>
+			</citRespParty>
+			<resRefDate>
+				<refDate>20061001</refDate>
+				<refDateType>
+					<DateTypCd value="002"/>
+				</refDateType>
+			</resRefDate>
+		</idCitation>
+		<spatRpType>
+			<SpatRepTypCd value="001"/>
+		</spatRpType>
+		<dataExt>
+			<geoEle>
+				<GeoBndBox esriExtentType="native">
+					<westBL>-180</westBL>
+					<eastBL>180</eastBL>
+					<northBL>90</northBL>
+					<southBL>-90</southBL>
+					<exTypeCode>1</exTypeCode>
+				</GeoBndBox>
+			</geoEle>
+			<tempEle>
+				<TempExtent>
+					<exTemp>
+						<TM_GeometricPrimitive>
+							<TM_Instant>
+								<tmPosition>
+									<TM_CalDate>
+										<calDate>1996</calDate>
+									</TM_CalDate>
+								</tmPosition>
+							</TM_Instant>
+						</TM_GeometricPrimitive>
+					</exTemp>
+				</TempExtent>
+			</tempEle>
+		</dataExt>
+		<geoBox esriExtentType="decdegrees">
+			<westBL>-180</westBL>
+			<eastBL>180</eastBL>
+			<northBL>90</northBL>
+			<southBL>-90</southBL>
+			<exTypeCode>1</exTypeCode>
+		</geoBox>
+		<idAbs>World Map Background represents grid cells of 30 by 30 degrees that cover the world.</idAbs>
+		<tpCat>
+			<TopicCatCd value="013"/>
+		</tpCat>
+		<resConst>
+			<Consts>
+				<useLimit>See legal constraints.</useLimit>
+			</Consts>
+			<LegConsts>
+				<accessConsts>
+					<RestrictCd value="005"/>
+				</accessConsts>
+				<othConsts>The data are provided by multiple, third party data vendors under license to ESRI for inclusion on ESRI Data &amp; Maps for use with ESRI® software.  Each data vendor has its own data licensing policies and may grant varying redistribution rights to end users. Please consult the redistribution rights below for this data set provided on ESRI Data &amp; Maps. As used herein, “Geodata” shall mean any digital data set consisting of geographic data coordinates and associated attributes.
+
+The redistribution rights for this data set: Redistribution rights are granted by the data vendor for hard-copy renditions or static, electronic map images (e.g. .gif, .jpeg, etc.) that are plotted, printed, or publicly displayed with proper metadata and source/copyright attribution to the respective data vendor(s).  Geodata is redistributable with a Value-Added Software Application developed by ESRI Business Partners on a royalty-free basis with proper metadata and source/copyright attribution to the respective data vendor(s). Geodata is redistributable without a Value-Added Software Application (i.e., adding the sample data to an existing, [non]commercial data set for redistribution) with proper metadata and source/copyright attribution to the respective data vendor(s).
+
+The terms and conditions below apply to all the data sets provided on ESRI Data &amp; Maps.
+
+Proprietary Rights and Copyright: Licensee acknowledges that the Data and Related Materials contain proprietary and confidential property of ESRI and its licensor(s). The Data and Related Materials are owned by ESRI and its licensor(s) and are protected by United States copyright laws and applicable international copyright treaties and/or conventions.
+
+Limited Warranty and Disclaimer: ESRI warrants that the media upon which the Data and Related Materials are provided will be free from defects in materials and workmanship under normal use and service for a period of ninety (90) days from the date of receipt.
+
+THE DATA AND RELATED MATERIALS ARE EXCLUDED FROM THE LIMITED WARRANTY, AND THE LICENSEE EXPRESSLY ACKNOWLEDGES THAT THE DATA CONTAINS SOME NONCONFORMITIES, DEFECTS, OR ERRORS. ESRI DOES NOT WARRANT THAT THE DATA WILL MEET LICENSEE'S NEEDS OR EXPECTATIONS; THAT THE USE OF THE DATA WILL BE UNINTERRUPTED; OR THAT ALL NONCONFORMITIES, DEFECTS, OR ERRORS CAN OR WILL BE CORRECTED. ESRI IS NOT INVITING RELIANCE ON THIS DATA, AND THE LICENSEE SHOULD ALWAYS VERIFY ACTUAL DATA.
+
+EXCEPT FOR THE LIMITED WARRANTY SET FORTH ABOVE, THE DATA AND RELATED MATERIALS CONTAINED THEREIN ARE PROVIDED "AS-IS," WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+HIGH RISK ACTIVITIES: 
+(A) THE DATA AND RELATED MATERIALS ARE NOT FAULT-TOLERANT AND ARE NOT DESIGNED, MANUFACTURED, OR INTENDED FOR USE OR RESALE FOR INSURANCE UNDERWRITING OR WITH CRITICAL HEALTH AND SAFETY OR ONLINE CONTROL EQUIPMENT IN HAZARDOUS ENVIRONMENTS THAT REQUIRE FAIL-SAFE PERFORMANCE, INCLUDING, BUT NOT LIMITED TO THE OPERATION OF NUCLEAR FACILITIES, NAVIGATION OR GUIDANCE (I.E., AIRCRAFT, NAUTICAL VEHICLE, ETC.), OR COMMUNICATION SYSTEMS, AIR TRAFFIC CONTROL, EMERGENCY RESPONSE, TERRORISM PREVENTION OR RESPONSE, LIFE SUPPORT, OR WEAPONS SYSTEMS ("HIGH RISK ACTIVITIES"). ESRI SPECIFICALLY DISCLAIMS ANY EXPRESS OR IMPLIED WARRANTY OF FITNESS FOR HIGH RISK ACTIVITIES.
+
+(B) TO THE EXTENT PERMITTED BY LAW, LICENSEE AGREES TO INDEMNIFY, DEFEND, AND HOLD ESRI, ITS OFFICERS, DIRECTORS, EMPLOYEES, AGENTS, SUBCONTRACTORS, LICENSORS, SUCCESSORS, AND ASSIGNS HARMLESS FROM AND AGAINST ANY AND ALL LIABILITY, LOSSES, CLAIMS, EXPENSES (INCLUDING ATTORNEYS' FEES), DEMANDS, OR DAMAGES OF ANY KIND, INCLUDING DIRECT, INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, ARISING OUT OF OR IN ANY WAY CONNECTED WITH LICENSEE'S USE OR PERMITTING THE USE BY OTHERS OF THE DATA, AND VENDOR'S HARDWARE OR SOFTWARE FOR HIGH RISK ACTIVITIES. DELIVERY OF THE DATA, AND VENDOR'S HARDWARE OR SOFTWARE DOES NOT CONSTITUTE A WAIVER OF THE RIGHTS AND OBLIGATIONS SET FORTH IN THIS ARTICLE.
+
+Exclusive Remedy and Limitation of Liability: The entire liability of ESRI or its licensor(s) and Licensee's exclusive remedy shall be to terminate the Agreement upon Licensee returning the Data and Related Materials to ESRI with a copy of Licensee's invoice/receipt and ESRI returning the license fees paid to Licensee.
+
+IN NO EVENT SHALL ESRI AND/OR ITS LICENSOR(S) BE LIABLE FOR COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOST PROFITS, LOST SALES, OR BUSINESS EXPENDITURES, INVESTMENTS, OR COMMITMENTS IN CONNECTION WITH ANY BUSINESS; LOSS OF ANY GOODWILL; OR FOR ANY INDIRECT, SPECIAL, INCIDENTAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT OR USE OF THE DATA AND RELATED MATERIALS, HOWEVER CAUSED, ON ANY THEORY OF LIABILITY, AND WHETHER OR NOT ESRI OR ITS LICENSOR(S) HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE OF ANY EXCLUSIVE REMEDY.
+
+Third Party Beneficiary: ESRI's licensor(s) has (have) authorized ESRI to (sub)distribute and (sub)license its (their) data as incorporated into the Data and Related Materials. As an intended third party beneficiary to this Agreement, the ESRI licensor(s) is (are) entitled to directly enforce, in its own name, the rights and obligations undertaken by the Licensee and to seek all legal and equitable remedies as are afforded to ESRI.
+
+In the event that the data vendor(s) has (have) granted the end user permission to redistribute the Geodata, please use proper proprietary or copyright attribution for the various data vendor(s), and provide the associated metadata file(s) with the Geodata. In compliance with FGDC metadata standards, ESRI has attempted to practice proper metadata methodologies by providing any data source information, descriptions, and file names to assist in this effort.</othConsts>
+				<useConsts>
+					<RestrictCd value="008"/>
+				</useConsts>
+			</LegConsts>
+		</resConst>
+		<descKeys KeyTypCd="005">
+			<keyTyp>
+				<KeyTypCd value="005"/>
+			</keyTyp>
+			<keyword>polygon, map background, grid cells, grids, latitudes, longitudes, location</keyword>
+		</descKeys>
+		<descKeys KeyTypCd="002">
+			<keyTyp>
+				<KeyTypCd value="002"/>
+			</keyTyp>
+			<keyword>World</keyword>
+		</descKeys>
+		<descKeys KeyTypCd="004">
+			<keyTyp>
+				<KeyTypCd value="004"/>
+			</keyTyp>
+			<keyword>1996</keyword>
+		</descKeys>
+		<resMaint>
+			<maintFreq>
+				<MaintFreqCd value="008"/>
+			</maintFreq>
+		</resMaint>
+		<idPoC>
+			<rpIndName>Data Team</rpIndName>
+			<rpOrgName>ESRI</rpOrgName>
+			<rpPosName>Data Team</rpPosName>
+			<rpCntInfo>
+				<cntPhone>
+					<voiceNum>909-793-2853</voiceNum>
+					<faxNum>909-793-5953</faxNum>
+				</cntPhone>
+				<cntAddress>
+					<delPoint>380 New York Street</delPoint>
+					<city>Redlands</city>
+					<adminArea>California</adminArea>
+					<postCode>92373-8100</postCode>
+					<country>us</country>
+					<eMailAdd>info@esri.com</eMailAdd>
+				</cntAddress>
+			</rpCntInfo>
+			<role>
+				<RoleCd value="007"/>
+			</role>
+		</idPoC>
+	</dataIdInfo>
+	<mdLang>
+		<languageCode value="en"/>
+	</mdLang>
+	<mdStanName>ISO 19115 Geographic Information - Metadata</mdStanName>
+	<mdStanVer>DIS_ESRI1.0</mdStanVer>
+	<mdChar>
+		<CharSetCd value="005"/>
+	</mdChar>
+	<mdHrLv>
+		<ScopeCd value="005"/>
+	</mdHrLv>
+	<mdHrLvName>dataset</mdHrLvName>
+	<distInfo>
+		<distributor>
+			<distorTran>
+				<onLineSrc>
+					<orDesc>003</orDesc>
+					<linkage>file://\\SASQUATCH\GIS\templates\worldbg</linkage><protocol>Local Area Network</protocol></onLineSrc>
+				<transSize>0.023</transSize>
+				<offLineMed>
+					<medName>
+						<MedNameCd value="003"/>
+					</medName>
+				</offLineMed>
+			</distorTran>
+			<distorFormat>
+				<formatName>SDC Feature Database</formatName>
+			</distorFormat>
+			<distorCont>
+				<rpOrgName>ESRI; ESRI International Distributors</rpOrgName>
+				<rpCntInfo>
+					<cntAddress>
+						<delPoint>380 New York Street</delPoint>
+						<city>Redlands</city>
+						<adminArea>California</adminArea>
+						<postCode>92373-8100</postCode>
+						<country>us</country>
+					</cntAddress>
+					<cntPhone>
+						<voiceNum>800-447-9778</voiceNum>
+					</cntPhone>
+				</rpCntInfo>
+				<role>
+					<RoleCd value="005"/>
+				</role>
+			</distorCont>
+			<distorOrdPrc>
+				<ordInstr>ESRI Data &amp; Maps is available only as part of ESRI® software.
+
+In the United States, contact the ESRI Telebusiness staff at 800-447-9778 for more information about our software and data.
+
+Outside the United States, please direct all inquiries to your local ESRI International Distributor.  This information can be found at http://gis.esri.com/intldist/contactint.cfm.</ordInstr>
+				<resFees>Software purchase price. ESRI Data &amp; Maps is available only as part of ESRI® software. To use this data requires software that supports SDC files.</resFees>
+			</distorOrdPrc>
+		</distributor>
+	</distInfo>
+	<refSysInfo>
+		<RefSystem>
+			<refSysID>
+				<identCode>GCS_WGS_1984</identCode>
+			</refSysID>
+		</RefSystem>
+	</refSysInfo>
+	<spatRepInfo>
+		<VectSpatRep>
+			<topLvl>
+				<TopoLevCd value="001"/>
+			</topLvl>
+			<geometObjs>
+				<geoObjTyp>
+					<GeoObjTypCd value="001"/>
+				</geoObjTyp>
+				<geoObjCnt>72</geoObjCnt>
+			</geometObjs>
+		</VectSpatRep>
+	</spatRepInfo>
+	<mdDateSt>20060403</mdDateSt>
+	<mdContact>
+		<rpIndName>Data Team</rpIndName>
+		<rpOrgName>ESRI</rpOrgName>
+		<rpPosName>Data Team</rpPosName>
+		<rpCntInfo>
+			<cntAddress>
+				<delPoint>380 New York Street</delPoint>
+				<city>Redlands</city>
+				<adminArea>California</adminArea>
+				<postCode>92373-8100</postCode>
+				<eMailAdd>info@esri.com</eMailAdd>
+				<country>us</country>
+			</cntAddress>
+			<cntPhone>
+				<voiceNum>909-793-2853</voiceNum>
+				<faxNum>909-793-5953</faxNum>
+			</cntPhone>
+		</rpCntInfo>
+		<role>
+			<RoleCd value="010"/>
+		</role>
+	</mdContact>
+	<dqInfo>
+		<dataLineage>
+			<statement>ESRI D&amp;M V.1 (source 1 of 1) 
+
+ESRI, 1996, ESRI Data &amp; Maps Volume 1: ESRI® Data &amp; Maps Volume 1, ESRI, Redlands, California, USA. 
+
+Type of source media: CD–ROM
+Source contribution:
+Attribute and geospatial data
+
+
+Date: 1996 (change 1 of 3) 
+The following steps were performed by ESRI: Generated the geospatial part of this data set mathematically using the ARC/INFO® GRID extension.  Added unique values attribute.
+
+Data sources produced in this process: 
+ESRI D&amp;M V.1 
+
+
+Date: 19980603 (change 2 of 3) 
+The following steps were performed by ESRI: Extracted data set from ESRI Data &amp; Maps Volume 1. Created ArcGIS® layer file (.lyr).  Created projection file (.prj).  Created spatial indices. Converted the data set to SDC.
+
+Data sources used in this process: 
+ESRI D&amp;M V.1 
+
+
+Date: 20060328 (change 3 of 3) 
+The following steps were performed by ESRI: Corrected the north and east geographic extents. Renamed WRLD30_ID to WRLD_ID and reduced its width.  Converted the data set to SDC.  Created ArcGIS® layer file (.lyr), projection file (.prj), and spatial indices.</statement>
+		</dataLineage>
+		<dqScope>
+			<scpLvl>
+				<ScopeCd value="005"/>
+			</scpLvl>
+		</dqScope>
+	</dqInfo>
+	<mdFileID>{7D07682E-379D-449B-8099-55262A467860}</mdFileID>
+	<Esri><DataProperties><itemProps><itemLocation><linkage Sync="TRUE">file://\\NCP-VERUTES\C$\MarineInVEST\WaveEnergy\Input\WaveData\Global_barrier</linkage><protocol Sync="TRUE">Local Area Network</protocol></itemLocation></itemProps><copyHistory><copy source="E:\BETA_R2\MarineInVEST\WaveEnergy\Input\WaveData\Global_barrier" dest="\\NCP-VERUTES\C$\MarineInVEST\WaveEnergy\Input\WaveData\Global_barrier" date="20110124" time="07575400"></copy></copyHistory></DataProperties><CreaDate>20110124</CreaDate><CreaTime>07575400</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce></Esri></metadata>

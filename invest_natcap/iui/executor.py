@@ -170,7 +170,7 @@ class Executor(threading.Thread):
             return None
 
     def cancel(self):
-        self.LOGGER.debug('Cancellation request received; finishing current operation')
+        LOGGER.debug('Cancellation request received; finishing current operation')
         self.cancelFlag.set()
 
     def isCancelled(self):
