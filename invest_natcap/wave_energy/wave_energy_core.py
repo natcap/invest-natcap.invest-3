@@ -249,17 +249,22 @@ def biophysical(args):
     wave_power_raster.FlushCache()
 
     #Create the percentile rasters for wave energy and wave power
-    #This is hard coded in because it's specified explicitly in the user's 
-    #guide
+    #These values are hard coded in because it's specified explicitly in  
+    #the user's guide what the percentile ranges are and what the units will be.
     percentiles = [25, 50, 75, 90]
+    capwe_units_short = ' (MWh/yr)'
+    capwe_units_long = ' megawatt hours per year (MWh/yr)'
+    wp_units_short = ' (kW/m)'
+    wp_units_long = ' wave power per unit width of wave crest length (kW/m)'
+    starting_percentile_range = '1'
     capwe_rc = \
-       create_percentile_rasters(wave_energy_raster, capwe_rc_path, ' (MWh/yr)',
-                                 ' megawatt hours per year (MWh/yr)', \
-                                 '1', percentiles, nodata)
+       create_percentile_rasters(wave_energy_raster, capwe_rc_path, 
+                                 capwe_units_short, capwe_units_long,  
+                                 starting_percentile_range, percentiles, nodata)
     wp_rc_raster = \
-        create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)', \
-                    ' wave power per unit width of wave crest length (kW/m)', \
-                    '1', percentiles, nodata)
+        create_percentile_rasters(wave_power_raster, wp_rc_path, wp_units_short, 
+                                  wp_units_long, starting_percentile_range, 
+                                  percentiles, nodata)
 
     #Clean up Shapefiles and Rasters
     clipped_wave_shape.Destroy()
