@@ -25,7 +25,7 @@ class DatatypeRegistrar(Registrar):
         self.update_map(updates)
 
     def eval(self, mapKey, opValues):
-        cast_value = Registrar.eval(mapKey, opValues)
+        cast_value = Registrar.eval(self, mapKey, opValues)
 
         if cast_value == None:
             return str(opValues)
