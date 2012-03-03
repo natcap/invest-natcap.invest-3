@@ -34,7 +34,7 @@
 		            "label": "Analysis Area",
 		            "options": ["West Coast of North America and Hawaii",
 		            			"East Coast of North America and Puerto Rico", 
-		            			"Global (Eastern Hemisphere)", "Global (Western Hemisphere)"],
+		            			"Global(Eastern Hemisphere)", "Global(Western Hemisphere)"],
 		            "defaultValue": "West Coast of North America and Hawaii",
 		            "required": true
 		        },
@@ -55,7 +55,7 @@
                     "required": true,
                     "defaultValue": "../../test/data/wave_energy_data/samp_input/Machine_PelamisParamCSV.csv",
                 	"validateAs": { "type": "CSV",
-                					"fieldExist": ["NAME", "VALUE", "NOTE"],
+                					"fieldsExist": ["NAME", "VALUE", "NOTE"],
                 					"restrictions": [{"field": "NAME",
                 									"validateAs":{"type": "string",
                 									              "allowedValues": {"pattern":"capmax|hsmax|tpmax",

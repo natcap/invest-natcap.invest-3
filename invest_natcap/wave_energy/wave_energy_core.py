@@ -85,7 +85,8 @@ def biophysical(args):
     #Set the source projection for a coordinate transformation
     #to the input projection from the wave watch point shapefile
     analysis_area_sr = args['analysis_area'].GetLayer(0).GetSpatialRef()
-
+    #Holds any temporary files we want to clean up at the end of the model run
+    file_list = []
     #This if statement differentiates between having an AOI or doing a broad
     #run on all the wave watch points specified by args['analysis_area'].
     if 'aoi' in args:
@@ -96,7 +97,7 @@ def biophysical(args):
         #changing the projection
         projected_wave_shape_path = \
             intermediate_dir + os.sep + 'projected_wave_data.shp'
-
+        file_list.append(projected_wave_shape_path)
         #The polygon shapefile that specifies the area of interest
         aoi_shape = args['aoi']
         
@@ -126,9 +127,6 @@ def biophysical(args):
 
         LOGGER.debug('X pixel size in meters : %f', pixel_xsize)
         LOGGER.debug('Y pixel size in meters : %f', pixel_ysize)
-
-        #OGR examples always None out the variables, probably can remove
-        clipped_wave_shape_geom = None
 
     else:
         #If no AOI, we can use the pixel size directly from the DEM, but this
@@ -210,11 +208,11 @@ def biophysical(args):
     clipped_wave_shape = wave_power(clipped_wave_shape)
 
     #Create blank rasters bounded by the shape file of analyis area
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,\
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize, 
                                                      datatype, nodata, \
                                                      wave_energy_path, \
                                                      aoi_shape)
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,\
+    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize, 
                                                      datatype, nodata, \
                                                      wave_power_path, aoi_shape)
 
@@ -248,17 +246,23 @@ def biophysical(args):
     wave_power_raster.FlushCache()
 
     #Create the percentile rasters for wave energy and wave power
-    #This is hard coded in because it's specified explicitly in the user's 
-    #guide
+    #These values are hard coded in because it's specified explicitly in  
+    #the user's guide what the percentile ranges are and what the units will be.
     percentiles = [25, 50, 75, 90]
+    capwe_units_short = ' (MWh/yr)'
+    capwe_units_long = ' megawatt hours per year (MWh/yr)'
+    wp_units_short = ' (kW/m)'
+    wp_units_long = ' wave power per unit width of wave crest length (kW/m)'
+    starting_percentile_range = '1'
     capwe_rc = \
-       create_percentile_rasters(wave_energy_raster, capwe_rc_path, ' (MWh/yr)',
-                                 ' megawatt hours per year (MWh/yr)', \
-                                 '1', percentiles, nodata)
+       create_percentile_rasters(wave_energy_raster, capwe_rc_path, \
+                                 capwe_units_short, capwe_units_long, \
+                                 starting_percentile_range, percentiles, nodata)
     wp_rc_raster = \
-        create_percentile_rasters(wave_power_raster, wp_rc_path, ' (kW/m)', \
-                    ' wave power per unit width of wave crest length (kW/m)', \
-                    '1', percentiles, nodata)
+        create_percentile_rasters(wave_power_raster, wp_rc_path, \
+                                  wp_units_short, wp_units_long, \
+                                  starting_percentile_range, percentiles, \
+                                  nodata)
 
     #Clean up Shapefiles and Rasters
     clipped_wave_shape.Destroy()
@@ -267,18 +271,30 @@ def biophysical(args):
     wave_power_raster = None
     wp_rc_raster = None
     capwe_rc = None
+    
+    #Clean up any temporary files that the user does not need to know about
+    file_cleanup_handler(file_list)
 
-    #Clean up temporary files on disk
-    #Creating a match pattern that finds the last directory seperator
-    #in a path like '/home/blath/../name_of_shape.*' and focuses just on the
-    #string after that separator and before the '.' extension.
-    pattern = \
-        projected_wave_shape_path[projected_wave_shape_path.rfind(os.sep) + 1:
-                                  len(projected_wave_shape_path) - 4] + ".*"
-    logging.debug('Regex file pattern : %s', pattern)
-    for file in os.listdir(intermediate_dir):
-        if re.search(pattern, file):
-            os.remove(os.path.join(intermediate_dir, file))
+def file_cleanup_handler(file_list):
+    """Handles removing any shape files and any necessary extensions
+    
+    file_list - A list of strings representing paths to shape files
+    
+    returns - nothing
+    """
+    LOGGER.debug('Cleaning up files : %s', file_list)
+    for file_name in file_list:
+        LOGGER.debug('Cleaning up file_name : %s', file_name)    
+        #Clean up temporary files on disk
+        #Creating a match pattern that finds the last directory seperator
+        #in a path like '/home/blath/../name_of_shape.*' and focuses just on the
+        #string after that separator and before the '.' extension.
+        pattern = file_name[file_name.rfind(os.sep) + 1:len(file_name) - 4] + ".*"
+        directory = file_name[0:file_name.rfind(os.sep) + 1]
+        logging.debug('Regex file_name pattern : %s', pattern)
+        for item in os.listdir(directory):
+            if re.search(pattern, item):
+                os.remove(os.path.join(directory, item))
 
 def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
     """This function helps retrieve the pixel sizes of the global DEM 
@@ -628,8 +644,14 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
         fd_def.SetWidth(src_fd.GetWidth())
         fd_def.SetPrecision(src_fd.GetPrecision())
         shp_layer.CreateField(fd_def)
-    #Retrieve the binding polygon feature and get it's geometry reference
+    LOGGER.debug('Binding Shapes Feature Count : %s', 
+                 clip_layer.GetFeatureCount())
+    LOGGER.debug('Shape to be Bounds Feature Count : %s', 
+                 in_layer.GetFeatureCount())
+    #Retrieve all the binding polygon features and save their cloned 
+    #geometry references to a list
     clip_feat = clip_layer.GetNextFeature()
+    clip_geom_list = []
     while clip_feat is not None:
         clip_geom = clip_feat.GetGeometryRef()
         #Get the spatial reference of the geometry to use in transforming
@@ -646,13 +668,23 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
         #Transform the polygon geometry into the same format as the 
         #point shape geometry
         clip_geom.Transform(coord_trans)
-        #For all the features in the current point shape (for all the points)
-        #Check to see if they Intersect with the binding polygons geometry and
-        #if they do, then add all of the fields and values from that 
-        #point to the new shape
-        while in_feat is not None:
+        #Add geometry to list
+        clip_geom_list.append(clip_geom.Clone())
+        in_feat.Destroy()
+        clip_feat.Destroy()
+        clip_feat = clip_layer.GetNextFeature()
+
+    in_layer.ResetReading()
+    in_feat = in_layer.GetNextFeature()
+    #For all the features in the current point shape (for all the points)
+    #Check to see if they Intersect with any of the binding polygons geometry 
+    #and if they do, copy that point and it's fields to the new shape
+    while in_feat is not None:
+        #Check to see if the point falls in any of the polygons
+        for clip_geom in clip_geom_list:
             geom = in_feat.GetGeometryRef()
-            #Intersection returns a new geometry if they intersect
+            #Intersection returns a new geometry if they intersect, null
+            #otherwise.
             geom = geom.Intersection(clip_geom)
             if(geom.GetGeometryCount() + geom.GetPointCount()) != 0:
                 #Create a new feature from the input feature and set 
@@ -665,14 +697,13 @@ def clip_shape(shape_to_clip, binding_shape, output_path):
                 for fld_index2 in range(out_feat.GetFieldCount()):
                     src_field = in_feat.GetField(fld_index2)
                     out_feat.SetField(fld_index2, src_field)
-
+    
                 shp_layer.CreateFeature(out_feat)
                 out_feat.Destroy()
-
-            in_feat.Destroy()
-            in_feat = in_layer.GetNextFeature()
-        clip_feat.Destroy()
-        clip_feat = clip_layer.GetNextFeature()
+                break
+            
+        in_feat.Destroy()
+        in_feat = in_layer.GetNextFeature()
 
     return shp_ds
 
@@ -740,12 +771,22 @@ def interp_points_over_raster(points, values, raster, nodata):
     LOGGER.debug('Size of Y dimension of raster : %s', size_y)
     LOGGER.debug('gt[0], [1], [3], [5] : %f : %f : %f : %f',
                  geo_tran[0], geo_tran[1], geo_tran[3], geo_tran[5])
-    #Make a numpy array representing the points of the 
-    #raster (the points are the pixels)
-    new_points = \
-        np.array([[geo_tran[0] + geo_tran[1] * i, geo_tran[3] + geo_tran[5] * j]
-                           for i in np.arange(size_x) 
-                           for j in np.arange(size_y)])
+    
+    #This was the old way of getting the points to represent the pixels in 
+    #the raster.  It ran anywhere from 40-70 times slower than the way below.
+#    new_points = \
+#      np.array([[geo_tran[0] + geo_tran[1] * i, geo_tran[3] + geo_tran[5] * j]
+#                           for i in np.arange(size_x) 
+#                           for j in np.arange(size_y)])
+    
+    #For interpolating we need a new set of points, which will represent
+    #each pixel in the raster.  Thus, we first step through and get all of our
+    #'x' points, then all of our 'y' points, then combine them.
+    x_range = \
+        np.array([geo_tran[0] + geo_tran[1] * i for i in np.arange(size_x)])
+    y_range = \
+        np.array([geo_tran[3] + geo_tran[5] * j for j in np.arange(size_y)])
+    new_points = np.array([(x, y) for x in x_range for y in y_range])
     LOGGER.debug('New points from raster : %s', new_points)
     #Interpolate the points and values from the shapefile from earlier
     spl = ip(points, values, fill_value=nodata)
@@ -943,8 +984,6 @@ def valuation(args):
     #Set variables for common output paths
     #Workspace Directory path
     workspace_dir = args['workspace_dir']
-    #Intermediate Directory path to store information
-    inter_dir = workspace_dir + os.sep + 'Intermediate'
     #Output Directory path to store output rasters
     output_dir = workspace_dir + os.sep + 'Output'
     #Output path for landing point shapefile
@@ -1065,6 +1104,7 @@ def valuation(args):
         for i in range(len(time)):
             npv.append(rho ** i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
+    
     #Add Net Present Value field, Total Captured Wave Energy field, and
     #Units field to shapefile
     for field_name in ['NPV_25Y', 'CAPWE_ALL', 'UNITS']:
@@ -1172,10 +1212,10 @@ def build_point_shapefile(driver_name, layer_name, path, data, prj,
     layer.CreateField(field_defn)
     #For all of the landing points create a point feature on the layer
     for key, value in data.iteritems():
-        lat = value[0]
-        long = value[1]
+        latitude = value[0]
+        longitude = value[1]
         geom = ogr.Geometry(ogr.wkbPoint)
-        geom.AddPoint_2D(float(long), float(lat))
+        geom.AddPoint_2D(float(longitude), float(latitude))
         geom.Transform(coord_trans)
         #Create the feature, setting the id field to the corresponding id
         #field from the csv file
