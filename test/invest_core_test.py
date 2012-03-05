@@ -32,7 +32,8 @@ class TestInvestCore(unittest.TestCase):
         dem = gdal.Open('./data/sediment_test_data/dem')
         flow = invest_cython_core.newRasterFromBase(dem,
             './data/test_out/flow.tif', 'GTiff', 0, gdal.GDT_Float32)
-        invest_cython_core.flowDirectionD8(dem, flow)
+        invest_cython_core.flowDirectionD8(dem,
+            [0, 0, dem.RasterXSize, dem.RasterYSize], flow)
         regressionFlow = \
             gdal.Open('./data/sediment_test_data/flowregression.tif')
         invest_test_core.assertTwoDatasetsEqual(self, flow, regressionFlow)
@@ -49,7 +50,8 @@ class TestInvestCore(unittest.TestCase):
 
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
-        invest_cython_core.flowDirectionD8(dem, flow)
+        invest_cython_core.flowDirectionD8(dem,
+            [0, 0, dem.RasterSizeX, dem.RasterSizeY], flow)
         flowMatrix = flow.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(128, flowMatrix[1][1],
                          'Incorrect flow, should be 128 != %s' % flowMatrix[1][1])
@@ -57,7 +59,8 @@ class TestInvestCore(unittest.TestCase):
         dem.GetRasterBand(1).WriteArray(np.array([[190, 185, 181], [189, 185, 182], [189, 185, 182]]).transpose())
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
-        flowDir = invest_cython_core.flowDirectionD8(dem, flow)
+        flowDir = invest_cython_core.flowDirectionD8(dem,
+            [0, 0, dem.RasterSizeX, dem.RasterSizeY], flow)
         flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(8, flowMatrix[1][1],
                          'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
@@ -67,7 +70,8 @@ class TestInvestCore(unittest.TestCase):
                                                       [345, 338, 343]]).transpose())
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
-        flowDir = invest_cython_core.flowDirectionD8(dem, flow)
+        flowDir = invest_cython_core.flowDirectionD8(dem,
+            [0, 0, dem.RasterSizeX, dem.RasterSizeY], flow)
         flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(16, flowMatrix[1][1],
                          'Incorrect flow, should be 16 != %s' % flowMatrix[1][1])
@@ -77,7 +81,8 @@ class TestInvestCore(unittest.TestCase):
                                                       [191, 189, 189]]).transpose())
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
-        flowDir = invest_cython_core.flowDirectionD8(dem, flow)
+        flowDir = invest_cython_core.flowDirectionD8(dem,
+            [0, 0, dem.RasterSizeX, dem.RasterSizeY], flow)
         flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(4, flowMatrix[1][1],
                          'Incorrect flow, should be 4 != %s' % flowMatrix[1][1])
@@ -87,7 +92,10 @@ class TestInvestCore(unittest.TestCase):
     def testslopeCalculation(self):
         """Regression test for slope calculation"""
         dem = gdal.Open('./data/sediment_test_data/dem')
-        slope = invest_cython_core.calculateSlope(dem, uri='./data/test_out/slope.tif')
+        slope_output = invest_cython_core.newRasterFromBase(dem,
+            './data/test_out/slope.tif', 'GTiff', -5, gdal.GDT_Float32)
+        slope = invest_cython_core.calculate_slope(dem,
+            [0, 0, dem.RasterXSize, dem.RasterYSize], slope_output)
         regressionSlope = \
             gdal.Open('./data/sediment_test_data/slopeRegression.tif')
         invest_test_core.assertTwoDatasetsEqual(self, slope, regressionSlope)
