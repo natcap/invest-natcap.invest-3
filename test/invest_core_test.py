@@ -37,18 +37,6 @@ class TestInvestCore(unittest.TestCase):
             gdal.Open('./data/sediment_test_data/flowregression.tif')
         invest_test_core.assertTwoDatasetsEqual(self, flow, regressionFlow)
 
-    def testflowAccumulation(self):
-        """Regression test for flowDirectionD8 accumulation on a DEM"""
-        dem = gdal.Open('./data/sediment_test_data/dem')
-        flowDirection = invest_cython_core.newRasterFromBase(dem,
-            './data/test_out/flowDirection.tif', 'GTiff', 0, gdal.GDT_Byte)
-        invest_cython_core.flowDirectionD8(dem,
-            [0, 0, dem.RasterXSize, dem.RasterYSize], flowDirection)
-
-        accumulation = invest_cython_core.newRasterFromBase(dem,
-            './data/test_out/accumulation.tif', 'GTiff', -1, gdal.GDT_Float32)
-        invest_cython_core.flowAccumulation(flowDirection, accumulation)
-
     def testflowDirectionD8Simple(self):
         """Regression test for flow direction on a DEM with an example
         constructed by hand"""
