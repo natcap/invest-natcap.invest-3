@@ -104,8 +104,8 @@ class TestInvestCore(unittest.TestCase):
         invest_test_core.assertTwoDatasetsEqual(self, slope, regressionSlope)
 
     def testvectorizeRasters(self):
-        r1 = gdal.Open('./data/test_data/lulc_samp_cur')
-        r2 = gdal.Open('./data/test_data/precip')
+        r1 = gdal.Open('./data/base_data/terrestrial/lulc_samp_cur')
+        r2 = gdal.Open('./data/base_data/Freshwater/precip')
 
         def op(a, b):
             return np.sqrt(a ** 2 + b ** 2)
@@ -114,7 +114,7 @@ class TestInvestCore(unittest.TestCase):
             rasterName='./data/test_out/rasterizeRasters.tiff', datatype=gdal.GDT_Float32)
 
     def testvectorizeRastersWaveEnergy(self):
-        r1 = gdal.Open('./data/test_data/wave_Energy/samp_data/input/global_dem')
+        r1 = gdal.Open('./data/wave_energy_data/samp_input/global_dem')
         r2 = gdal.Open('./data/test_data/wave_Energy/waveHeight.tif')
 
         def op(a, b):
@@ -221,7 +221,7 @@ class TestInvestCore(unittest.TestCase):
     def test_carbon_pixel_area(self):
         """Verify the correct output of carbon.pixelArea()"""
 
-        dataset = gdal.Open('./data/test_data/carbon_regression.tif',
+        dataset = gdal.Open('./data/carbon_regression_data/sequest_regression.tif',
                             gdal.GA_ReadOnly)
         area = invest_cython_core.pixelArea(dataset)
 
