@@ -42,7 +42,8 @@ class TestInvestCore(unittest.TestCase):
         dem = gdal.Open('./data/sediment_test_data/dem')
         flowDirection = invest_cython_core.newRasterFromBase(dem,
             './data/test_out/flowDirection.tif', 'GTiff', 0, gdal.GDT_Byte)
-        invest_cython_core.flowDirectionD8(dem, flowDirection)
+        invest_cython_core.flowDirectionD8(dem,
+            [0, 0, dem.RasterXSize, dem.RasterYSize], flowDirection)
 
         accumulation = invest_cython_core.newRasterFromBase(dem,
             './data/test_out/accumulation.tif', 'GTiff', -1, gdal.GDT_Float32)
