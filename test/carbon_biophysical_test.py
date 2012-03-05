@@ -50,36 +50,36 @@ do sequestration and harvested wood products on lulc maps."""
         #./data/carbon_output/Output/tot_C_cur.tif
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Output/tot_C_cur.tif",
-            './data/test_data/tot_C_cur_regression.tif')
+            './data/carbon_regression_data/tot_C_cur_regression.tif')
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Output/tot_C_fut.tif",
-            './data/test_data/tot_C_fut_regression.tif')
+            './data/carbon_regression_data/tot_C_fut_regression.tif')
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Output/sequest.tif",
-            './data/test_data/sequest_regression.tif')
+            './data/carbon_regression_data/sequest_regression.tif')
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Intermediate/bio_hwp_cur.tif",
-            './data/test_data/bio_hwp_cur_regression.tif')
+            './data/carbon_regression_data/bio_hwp_cur_regression.tif')
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Intermediate/bio_hwp_fut.tif",
-            './data/test_data/bio_hwp_fut_regression.tif')
+            './data/carbon_regression_data/bio_hwp_fut_regression.tif')
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Intermediate/c_hwp_cur.tif",
-            './data/test_data/c_hwp_cur_regression.tif')
+            './data/carbon_regression_data/c_hwp_cur_regression.tif')
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Intermediate/c_hwp_fut.tif",
-            './data/test_data/c_hwp_fut_regression.tif')
+            './data/carbon_regression_data/c_hwp_fut_regression.tif')
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Intermediate/vol_hwp_cur.tif",
-            './data/test_data/vol_hwp_cur_regression.tif')
+            './data/carbon_regression_data/vol_hwp_cur_regression.tif')
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Intermediate/vol_hwp_fut.tif",
-            './data/test_data/vol_hwp_fut_regression.tif')
+            './data/carbon_regression_data/vol_hwp_fut_regression.tif')
