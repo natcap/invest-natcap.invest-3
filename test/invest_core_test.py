@@ -51,7 +51,7 @@ class TestInvestCore(unittest.TestCase):
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
         invest_cython_core.flowDirectionD8(dem,
-            [0, 0, dem.RasterSizeX, dem.RasterSizeY], flow)
+            [0, 0, dem.RasterXSize, dem.RasterYSize], flow)
         flowMatrix = flow.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(128, flowMatrix[1][1],
                          'Incorrect flow, should be 128 != %s' % flowMatrix[1][1])
@@ -60,7 +60,7 @@ class TestInvestCore(unittest.TestCase):
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
         flowDir = invest_cython_core.flowDirectionD8(dem,
-            [0, 0, dem.RasterSizeX, dem.RasterSizeY], flow)
+            [0, 0, dem.RasterXSize, dem.RasterYSize], flow)
         flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(8, flowMatrix[1][1],
                          'Incorrect flow, should be 8 != %s' % flowMatrix[1][1])
@@ -71,7 +71,7 @@ class TestInvestCore(unittest.TestCase):
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
         flowDir = invest_cython_core.flowDirectionD8(dem,
-            [0, 0, dem.RasterSizeX, dem.RasterSizeY], flow)
+            [0, 0, dem.RasterXSize, dem.RasterYSize], flow)
         flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(16, flowMatrix[1][1],
                          'Incorrect flow, should be 16 != %s' % flowMatrix[1][1])
@@ -82,7 +82,7 @@ class TestInvestCore(unittest.TestCase):
         flow = invest_cython_core.newRasterFromBase(dem,
             '', 'MEM', 0, gdal.GDT_Byte)
         flowDir = invest_cython_core.flowDirectionD8(dem,
-            [0, 0, dem.RasterSizeX, dem.RasterSizeY], flow)
+            [0, 0, dem.RasterXSize, dem.RasterYSize], flow)
         flowMatrix = flowDir.ReadAsArray(0, 0, 3, 3)
         self.assertEqual(4, flowMatrix[1][1],
                          'Incorrect flow, should be 4 != %s' % flowMatrix[1][1])
