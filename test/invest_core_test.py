@@ -94,11 +94,11 @@ class TestInvestCore(unittest.TestCase):
         dem = gdal.Open('./data/sediment_test_data/dem')
         slope_output = invest_cython_core.newRasterFromBase(dem,
             './data/test_out/slope.tif', 'GTiff', -5, gdal.GDT_Float32)
-        slope = invest_cython_core.calculate_slope(dem,
+        invest_cython_core.calculate_slope(dem,
             [0, 0, dem.RasterXSize, dem.RasterYSize], slope_output)
         regressionSlope = \
             gdal.Open('./data/sediment_test_data/slopeRegression.tif')
-        invest_test_core.assertTwoDatasetsEqual(self, slope, regressionSlope)
+        invest_test_core.assertTwoDatasetsEqual(self, slope_output, regressionSlope)
 
     def testvectorizeRasters(self):
         r1 = gdal.Open('./data/base_data/terrestrial/lulc_samp_cur')
