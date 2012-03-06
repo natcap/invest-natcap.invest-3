@@ -1378,7 +1378,7 @@ class Root(DynamicElement):
                     args_id = element.attributes['args_id']
                     if not isinstance(args_id, list):
                         args_id = [args_id]
-                    
+
                     outputDict = self.set_dict_value(outputDict, args_id,
                         element_value)
 
@@ -1389,11 +1389,11 @@ class Root(DynamicElement):
 
         if len(list) > 0:
             if key not in dictionary:
-                dict = {}
+                temp_dict = {}
             else:
-                dict = dictionary[key]
+                temp_dict = dictionary[key]
 
-            dictionary[key] = self.set_dict_value(dict, list, element_value)
+            dictionary[key] = self.set_dict_value(temp_dict, list, element_value)
         else:
             dictionary[key] = element_value
     

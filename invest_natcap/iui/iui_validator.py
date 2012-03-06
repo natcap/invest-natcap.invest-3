@@ -1,8 +1,10 @@
-import sys
+"""This module provides validation functionality for the IUI package.  In a
+nutshell, this module will validate a value if given a dictionary that
+specifies how the value should be validated."""
+
 import os
 import re
 import csv
-import string
 import threading
 
 import osgeo
@@ -14,7 +16,8 @@ from invest_natcap.carbon import carbon_core
 import registrar
 
 class Validator(registrar.Registrar):
-    """Validator class contains a reference to an object's type-specific checker.
+    """Validator class contains a reference to an object's type-specific
+        checker.
         It is assumed that one single iui input element will have its own
         validator.
 
@@ -27,7 +30,7 @@ class Validator(registrar.Registrar):
 
         element - a reference to the element in question."""
 
-    def __init__(self, type):
+    def __init__(self, validator_type):
         #allElements is a pointer to a python dict: str id -> obj pointer.
         registrar.Registrar.__init__(self)
 
@@ -40,7 +43,7 @@ class Validator(registrar.Registrar):
                    'CSV': CSVChecker,
                    'string': PrimitiveChecker}
         self.update_map(updates)
-        self.init_type_checker(str(type))
+        self.type_checker = self.init_type_checker(str(validator_type))
         self.validate_funcs = []
         self.thread = None
 
@@ -55,28 +58,47 @@ class Validator(registrar.Registrar):
             returns a string if an error is found.  Returns None otherwise."""
 
         if self.thread == None or not self.thread.is_alive():
-           self.thread = ValidationThread(self.validate_funcs,
+            self.thread = ValidationThread(self.validate_funcs,
                 self.type_checker, valid_dict)
 
         self.thread.start()
 
     def thread_finished(self):
+        """Check to see whether the validator has finished.  This is done by
+        calling the active thread's is_alive() function.
+
+        Returns a boolean.  True if the thread is alive."""
+
         return not self.thread.is_alive()
 
     def get_error(self):
+        """Gets the error message returned by the validator.
+
+        Returns None if no error found.  String error message if an error was
+        found."""
+
         return self.thread.error_msg
 
-    def init_type_checker(self, type):
-        """Initialize the type checker.
+    def init_type_checker(self, validator_type):
+        """Initialize the type checker based on the input validator_type.
 
-            returns nothing."""
+            validator_type - a string representation of the validator type.
+
+            Returns an instance of a checker class if validator_type matches an
+                existing checker class.  Returns None otherwise."""
 
         try:
-            self.type_checker = self.get_func(type)()
+            return self.get_func(validator_type)()
         except KeyError:
-            self.type_checker = None
+            return None
 
 class ValidationThread(threading.Thread):
+    """This class subclasses threading.Thread to provide validation in a
+        separate thread of control.  Functionally, this allows the work of
+        validation to be offloaded from the user interface thread, thus
+        providing a snappier UI.  Generally, this thread is created and managed
+        by the Validator class."""
+
     def __init__(self, validate_funcs, type_checker, valid_dict):
         threading.Thread.__init__(self)
         self.validate_funcs = validate_funcs
@@ -85,9 +107,20 @@ class ValidationThread(threading.Thread):
         self.error_msg = None
 
     def set_error(self, error):
+        """Set the local variable error_msg to the input error message.  This
+        local variable is necessary to allow for another thread to be able to
+        retrieve it from this thread object.
+
+            error - a string.
+
+        returns nothing."""
+
         self.error_msg = error
 
     def run(self):
+        """Reimplemented from threading.Thread.run().  Performs the actual work
+        of the thread."""
+
         for func in self.validate_funcs:
             error = func()
             if error != None:
@@ -98,6 +131,12 @@ class ValidationThread(threading.Thread):
             self.set_error(error)
 
 class ValidationAssembler(object):
+    """This class allows other checker classes (such as the abstract
+    TableChecker class) to assemble sub-elements for evaluation as primitive
+    values.  In other words, if an input validation dictionary contains two
+    fields in a table, the ValidationAssembler class provides a framework to
+    fetch the value from the table."""
+
     def __init__(self):
         object.__init__(self)
         self.primitive_keys = {'number': ['lessThan', 'greaterThan', 'lteq',
@@ -105,6 +144,8 @@ class ValidationAssembler(object):
                                'string': []}
 
     def assemble(self, value, valid_dict):
+        """Assembles a dictionary containing the input value and the assembled
+        values."""
         assembled_dict = valid_dict.copy()
         assembled_dict['value'] = value
 
@@ -117,6 +158,8 @@ class ValidationAssembler(object):
         return assembled_dict
 
     def _assemble_primitive(self, valid_dict):
+        """Based on the input valid_dict, this function returns a dictionary
+        containing the value of the comparator defined in valid_dict."""
         assembled_dict = valid_dict.copy()
         for attribute in self.primitive_keys[valid_dict['type']]:
             if attribute in valid_dict:
@@ -147,6 +190,12 @@ class ValidationAssembler(object):
         return 0
 
     def _is_primitive(self, valid_dict):
+        """Check to see if a validation dictionary is a primitive, as defined by
+        the keys in self.primitive_keys.
+
+        valid_dict - a validation dictionary.
+
+        Returns True if valid_dict represents a primitive, False if not."""
         if valid_dict['type'] in self.primitive_keys:
             return True
         return False
@@ -189,6 +238,7 @@ class Checker(registrar.Registrar):
         registrar.Registrar.__init__(self)
         self.checks = []
         self.ignore = ['type', 'value']
+        self.value = None
 
     def add_check_function(self, func, index=None):
         """Add a function to the list of check functions.
@@ -234,9 +284,10 @@ class Checker(registrar.Registrar):
         return None
 
 class URIChecker(Checker):
+    """This subclass of Checker provides functionality for URI-based inputs."""
     def __init__(self):
         Checker.__init__(self)
-        self.uri = None #initialize to none
+        self.uri = None  # initialize to none
         self.add_check_function(self.check_exists)
 
     def check_exists(self, valid_dict):
@@ -246,32 +297,57 @@ class URIChecker(Checker):
 
         if os.path.exists(self.uri) == False:
             return str('Not found')
-        
+
 class FolderChecker(URIChecker):
+    """This subclass of URIChecker is tweaked to validate a folder."""
     def __init__(self):
         URIChecker.__init__(self)
         self.add_check_function(self.open)
-    
+
     def open(self, valid_dict):
+        """Check to see if the folder URI at self.uri is a folder on the
+        filesystem.
+
+        Return None if no error found, return a string if otherwise."""
+
         if not os.path.isdir(self.uri):
             return 'Must be a folder'
 
 class FileChecker(URIChecker):
+    """This subclass of URIChecker is tweaked to validate a file on disk.
+
+        In contrast to the FolderChecker class, this class validates that a
+        specific file exists on disk."""
+
     def __init__(self):
         URIChecker.__init__(self)
         self.uri = None #initialize to None
         self.add_check_function(self.open)
-        
+
     def open(self, valid_dict):
+        """Checks to see if the file at self.uri can be opened by python.
+
+            This function can be overridden by subclasses as appropriate for the
+            filetype.
+
+            Returns an error string if the file cannot be opened.  None if
+            otherwise."""
+
         try:
             file_handler = open(self.uri, 'w')
             file_handler.close()
-        except:
+        except IOError:
             return 'Unable to open file'
-        
+
 class GDALChecker(FileChecker):
+    """This class subclasses FileChecker to provide GDAL-specific validation.
+    """
+
     def open(self, valid_dict):
-        """Attempt to open the GDAL object.  URI must exist."""
+        """Attempt to open the GDAL object.  URI must exist.  This is an
+        overridden FileChecker.open()
+
+        Returns an error string if in error.  Returns none otherwise."""
 
         gdal.PushErrorHandler('CPLQuietErrorHandler')
         file_obj = gdal.Open(str(self.uri))
@@ -279,6 +355,8 @@ class GDALChecker(FileChecker):
             return str('Must be a raster that GDAL can open')
 
 class TableChecker(FileChecker, ValidationAssembler):
+    """This class provides a template for validation of table-based files."""
+
     def __init__(self):
         FileChecker.__init__(self)
         ValidationAssembler.__init__(self)
@@ -287,13 +365,13 @@ class TableChecker(FileChecker, ValidationAssembler):
         self.update_map(updates)
         self.num_checker = NumberChecker()
         self.str_checker = PrimitiveChecker()
-       
+
     def verify_fields_exist(self, field_list):
         """This is a function stub for reimplementation.  field_list is a python
         list of strings where each string in the list is a required fieldname.
         List order is not validated.  Returns the error string if an error is
         found.  Returns None if no error found."""
-        
+
         available_fields = self._get_fieldnames()
         for required_field in field_list:
             if required_field not in available_fields:
@@ -305,7 +383,7 @@ class TableChecker(FileChecker, ValidationAssembler):
                 assembled_dict = {}
                 value = row[restriction['field']]
                 assembled_dict = self.assemble(value, restriction['validateAs'])
-                
+
                 if row['type'] == 'number':
                     error = self.num_checker(assembled_dict)
                 elif row['type'] == 'string':
@@ -313,11 +391,11 @@ class TableChecker(FileChecker, ValidationAssembler):
 
                 if error != None and error != '':
                     return error
-                
+
     def _build_table(self):
         """This is a function stub for reimplementation.  Must return a list of
         dictionaries, where the keys to each dictionary are the fieldnames."""
-        
+
         return [{}]
 
     def _get_value(self, fieldname):
@@ -326,7 +404,7 @@ class TableChecker(FileChecker, ValidationAssembler):
             """
 
         return 0
-    
+
     def _get_fieldnames(self):
         """This is a function stub for reimplementation.  Function should fetch
             a python list of strings where each string is a fieldname in the
@@ -484,7 +562,8 @@ class NumberChecker(PrimitiveChecker):
     
     def greater_than_equal_to(self, b):
         if not self.value >= b:
-            return str(self.value) + ' must be greater than or equal to ' + str(b)
+            return str(str(self.value) + ' must be greater than or equal to ' +
+                str(b))
         
 class CSVChecker(TableChecker):
     def open(self, valid_dict):

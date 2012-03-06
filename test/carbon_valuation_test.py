@@ -29,7 +29,7 @@ class TestCarbonBiophysical(unittest.TestCase):
 
         args = {}
         args['workspace_dir'] = './data/carbon_valuation_output'
-        args['sequest_uri'] = './data/test_data/sequest_regression.tif'
+        args['sequest_uri'] = './data/carbon_regression_data/sequest_regression.tif'
         args['V'] = 43.0
         args['r'] = 7.0
         args['c'] = 0.0
@@ -42,4 +42,4 @@ class TestCarbonBiophysical(unittest.TestCase):
         #test
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + "/Output/value_seq.tif",
-            './data/test_data/value_seq_regression.tif')
+            './data/carbon_regression_data/value_seq_regression.tif')
