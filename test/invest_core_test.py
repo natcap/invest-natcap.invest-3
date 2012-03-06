@@ -93,7 +93,7 @@ class TestInvestCore(unittest.TestCase):
         """Regression test for slope calculation"""
         dem = gdal.Open('./data/sediment_test_data/dem')
         slope_output = invest_cython_core.newRasterFromBase(dem,
-            './data/test_out/slope.tif', 'GTiff', -5, gdal.GDT_Float32)
+            './data/test_out/slope.tif', 'GTiff', -1, gdal.GDT_Float32)
         invest_cython_core.calculate_slope(dem,
             [0, 0, dem.RasterXSize, dem.RasterYSize], slope_output)
         regressionSlope = \
