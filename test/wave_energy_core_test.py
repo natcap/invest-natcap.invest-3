@@ -3,9 +3,9 @@ import os
 import unittest
 import math
 import csv
-import osr
 import logging
 
+from osgeo import osr
 from osgeo import ogr
 from osgeo import gdal
 from osgeo.gdalconst import *
