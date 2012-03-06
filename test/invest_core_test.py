@@ -25,7 +25,7 @@ class TestInvestCore(unittest.TestCase):
         watershed_layer = watersheds.GetLayer()
         watershed_feature = watershed_layer.GetFeature(0)
         bounding_box = invest_core.bounding_box_index(watershed_feature, dem)
-        self.assertEqual(bounding_box, [199, 0, 251, 349])
+        self.assertEqual(bounding_box, [198, 0, 253, 351])
 
     def testflowDirectionD8(self):
         """Regression test for flow direction on a DEM"""
