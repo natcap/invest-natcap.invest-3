@@ -26,7 +26,6 @@ def execute(args):
     args['market_disc_rate']  - The market discount rate as a float (Required, Default: 7)
     
     """
-    os.chdir(os.path.dirname(os.path.realpath(__file__)))
     filesystemencoding = sys.getfilesystemencoding()
 
     timber_shape = ogr.Open(args['timber_shape_uri'].encode(filesystemencoding), 1)
