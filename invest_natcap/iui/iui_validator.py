@@ -11,9 +11,25 @@ import osgeo
 from osgeo import ogr
 from osgeo import gdal
 
-from invest_natcap.dbfpy import dbf
-from invest_natcap.carbon import carbon_core
+from dbfpy import dbf
 import registrar
+
+def get_fields(feature):
+    """Return a dict with all fields in the given feature.
+        
+        feature - an OGR feature.
+        
+        Returns an assembled python dict with a mapping of 
+        fieldname -> fieldvalue"""
+
+    fields = {}
+    for i in range(feature.GetFieldCount()):
+        field_def = feature.GetFieldDefnRef(i)
+        name = field_def.GetNameRef()
+        value = feature.GetField(i)
+        fields[name] = value
+
+    return fields
 
 class Validator(registrar.Registrar):
     """Validator class contains a reference to an object's type-specific
@@ -485,7 +501,7 @@ class OGRChecker(TableChecker):
     def _build_table(self):
         table_rows = []
         for feature in self.layer:
-            table_rows.append(carbon_core.getFields(feature))
+            table_rows.append(get_fields(feature))
 
         return table_rows
                 
