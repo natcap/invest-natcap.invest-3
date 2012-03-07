@@ -106,6 +106,13 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
                 field_regression = feat_regression.GetField(fld_index)
                 unitTest.assertEqual(field, field_regression,
                                      'The field values DO NOT match')
+                field_ref = feat.GetFieldDefnRef(fld_index)
+                field_ref_regression = \
+                    feat_regression.GetFieldDefnRef(fld_index)
+                field_name = field_ref.GetNameRef()
+                field_name_regression = field_ref_regression.GetNameRef()
+                unitTest.assertEqual(field_name, field_name_regression, 
+                                     'The fields DO NOT have the same name')
             feat.Destroy()
             feat_regression.Destroy()
             feat = layer.GetNextFeature()
