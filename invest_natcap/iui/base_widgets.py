@@ -937,7 +937,16 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         """Get the value of this checkbox.
         
             returns a boolean."""
-        return self.isChecked()
+
+        check_state = self.isChecked()
+        if 'returns' in self.attributes:
+            value_map = self.attributes['returns']['mapValues']
+            try:
+                return value_map[str(check_state)]
+            except KeyError:
+                return check_state
+        else:
+            return check_state
 
     def setValue(self, value):
         """Set the value of this element to value.
