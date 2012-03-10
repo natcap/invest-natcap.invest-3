@@ -7,7 +7,7 @@ import logging
 from osgeo import gdal
 from osgeo import ogr
 
-from invest_natcap.hydropower import hydropower_core
+#from invest_natcap.hydropower import hydropower_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -48,7 +48,7 @@ def execute(args):
         args['sub_watersheds_uri'] - a uri to an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds_uri' shape provided as input. (required)
-        args['biophysical_table_uri'] - a uri to an input dbf table of 
+        args['biophysical_table_uri'] - a uri to an input CSV table of 
             land use/land cover classes, containing data on biophysical 
             coefficients such as root_depth and etk. NOTE: these data are 
             attributes of each LULC class rather than attributes of individual 
@@ -80,11 +80,14 @@ def execute(args):
     
     #Open/read in the dbf files into a dictionary and add to
     #dictionary
-    biophysical_table = dbf.Dbf(args['biophysical_table_uri'])
     biophysical_table_map = {}
-    for rec in biophysical_table:
-        biophysical_table_map[rec['lucode']] = {'etk':rec['etk'], \
-                                                'root_depth':rec['root_depth'], \
-                                                'LULC_desc':rec['LULC_desc']}
-    
+    biophysical_table_file = open(args['biophysical_table_uri'])
+    reader = csv.DictReader(biophsyical_table_file)
+    for row in biophysical_table:
+        biophysical_table_map[row['lucode']] = {'etk':row['etk'], \
+                                              'root_depth':row['root_depth'], \
+                                              'LULC_desc':row['LULC_desc']}
+    args['biophysical_dictionary'] = biophysical_table_map
+        
+    LOGGER.debug('bio_table_map : %s', biophysical_table_map)
     #Call water_yield_core.py
