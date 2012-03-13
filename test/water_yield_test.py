@@ -24,7 +24,7 @@ class TestWaterYield(unittest.TestCase):
         args['workspace_dir'] = base
         args['lulc_uri'] = base + 'test_input/landuse_90'
         args['soil_depth_uri'] = base + 'test_input/soil_depth'
-        args['precipitaion_uri'] = base + 'test_input/precip'
+        args['precipitation_uri'] = base + 'test_input/precip'
         args['pawc_uri'] = base + 'test_input/pawc'
         args['ape_uri'] = base + 'test_input/eto'
         args['watersheds_uri'] = base + 'test_input/watersheds.shp'
