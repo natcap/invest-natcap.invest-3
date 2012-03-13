@@ -8,7 +8,7 @@ import csv
 from osgeo import gdal
 from osgeo import ogr
 
-#from invest_natcap.hydropower import hydropower_core
+from invest_natcap.hydropower import hydropower_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -55,11 +55,13 @@ def execute(args):
             attributes of each LULC class rather than attributes of individual 
             cells in the raster map (required)
         args['zhang'] - floating point value between 1 and 10 corresponding
-            to the seasonal distribution of precipitation
+            to the seasonal distribution of precipitation (required)
             
         returns - nothing"""
     
     workspace_dir = args['workspace_dir']
+    water_yield_args = {}
+    water_yield_args['workspace_dir'] = workspace_dir
     
     #Create the output directories
     for folder_name in ['Output', 'Service', 'Intermediate']:
@@ -68,16 +70,15 @@ def execute(args):
             os.mkdir(folder_path)
             
     #Open all of the gdal files and place in dictionary
-    args['precipitation'] = gdal.Open(args['precipitation_uri'])
-    args['soil_depth'] = gdal.Open(args['soil_depth_uri'])
-    args['lulc'] = gdal.Open(args['lulc_uri'])
-    args['pawc'] = gdal.Open(args['pawc_uri'])
-    args['ape'] = gdal.Open(args['ape_uri'])
-    
+    water_yield_args['precipitation'] = gdal.Open(args['precipitation_uri'])
+    water_yield_args['soil_depth'] = gdal.Open(args['soil_depth_uri'])
+    water_yield_args['lulc'] = gdal.Open(args['lulc_uri'])
+    water_yield_args['pawc'] = gdal.Open(args['pawc_uri'])
+    water_yield_args['ape'] = gdal.Open(args['ape_uri'])
     
     #Open all the shapefiles and place in dictionary
-    args['watersheds'] = ogr.Open(args['watersheds_uri'])
-    args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
+    water_yield_args['watersheds'] = ogr.Open(args['watersheds_uri'])
+    water_yield_args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
     
     #Open/read in the dbf files into a dictionary and add to
     #dictionary
@@ -88,7 +89,9 @@ def execute(args):
         biophysical_table_map[row['lucode']] = {'etk':row['etk'], \
                                               'root_depth':row['root_depth'], \
                                               'LULC_desc':row['LULC_desc']}
-    args['biophysical_dictionary'] = biophysical_table_map
-        
-    LOGGER.debug('bio_table_map : %s', biophysical_table_map)
-    #Call water_yield_core.py
+    water_yield_args['biophysical_dictionary'] = biophysical_table_map
+#    LOGGER.debug('bio_table_map : %s', biophysical_table_map)
+    #Add zhang constant to dictionary
+    water_yield_args['zhang'] = args['zhang']
+    #Call water_yield in hydropower_core.py
+    hydropower_core.water_yield(water_yield_args)
