@@ -63,26 +63,68 @@ def water_yield(args):
     lulc_raster = args['lulc']
     ape_raster = args['ape']
     precip_raster = args['precipitation']
-    
+    soil_depth_raster = args['soil_depth']
+    pawc_raster = args['pawc']
+    zhang = float(args['zhang'])
     #brute force create raster from table values
     tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk_path.tiff'
     tmp_etk_raster = create_etk_root_rasters(lulc_raster, tmp_etk_path, 255.0,
                                              bio_dict, 'etk')
     
-    def op(etk, ape, precip):
-        val = (etk * ape) / 1000
-        result = val / precip
-        return result
-    
-    tmp_DI = intermediate_dir + os.sep + 'tmp_DI.tiff'
-    tmp_DI_raster = \
-        invest_core.vectorizeRasters([tmp_etk_raster, ape_raster, precip_raster],
-                                     op, rasterName=tmp_DI)
-    
     #brute force create raster from table values
     tmp_root_path = intermediate_dir + os.sep + 'tmp_root_path.tiff'
     tmp_root_raster = create_etk_root_rasters(lulc_raster, tmp_root_path, 255.0,
                                              bio_dict, 'root_depth')
+   
+    def op(etk, ape, precip, root, soil, pawc):
+        val = (etk * ape) / 1000
+        tmp_DI = val / precip
+        
+        awc = (np.minimum(root, soil) * pawc)
+        
+        tmp_w = (awc / (precip + 1)) * zhang
+        
+        tmp_max_aet = np.copy(tmp_DI)
+        np.putmask(tmp_max_aet, tmp_max_aet > 1, 1)
+        
+        tmp_calc = ((tmp_w * tmp_DI + 1) / (( 1/ tmp_DI) + (tmp_w * tmp_DI + 1)))
+        fractp = np.minimum(tmp_max_aet, tmp_calc)
+        return fractp
+    
+    fractp_path = intermediate_dir + os.sep + 'fractp.tif'
+    raster_list = [tmp_etk_raster, ape_raster, precip_raster, tmp_root_raster,
+                   soil_depth_raster, pawc_raster]
+    fractp_raster = \
+        invest_core.vectorizeRasters(raster_list, op, rasterName=fractp_path)
+#    
+#    def op2(root, soil, pawc):
+#        depth = np.minimum(root, soil)
+#        return (depth * pawc)
+#    
+#    tmp_AWC = intermediate_dir + os.sep + 'tmp_AWC.tiff'
+#    tmp_AWC_raster = \
+#        invest_core.vectorizeRasters([tmp_root_raster, soil_raster, pawc_raster],
+#                                     op2, rasterName=tmp_AWC)
+#        
+#    def op3(awc, precip, di):
+#        tmp = awc / (precip + 1)
+#        return (tmp * zhang)
+#    
+#    tmp_w = ''
+#    
+#    def op4(di):
+#        if di > 1:
+#            return 1
+#        else:
+#            return di
+#    
+#    tmp_max_aet = ''
+#    
+#    def op5(aet, tmp_w, di):
+#        result = np.minimum(aet, ((tmp_w * (di + 1)) / ((1/di) + (tmp_w * (di + 1)))))
+#        return result
+#        
+#    fractp = ''
     
     
 def create_etk_root_rasters(key_raster, new_path, nodata, bio_dict, field):
