@@ -3,6 +3,7 @@
 import sys
 import os
 import logging
+import csv
 
 from osgeo import gdal
 from osgeo import ogr
@@ -31,7 +32,7 @@ def execute(args):
             properties of the landscape.  (required)
         args['soil_depth_uri'] - a uri to an input raster describing the 
             average soil depth value for each cell (mm) (required)
-        args['precipitaion_uri'] - a uri to an input raster describing the 
+        args['precipitation_uri'] - a uri to an input raster describing the 
             average annual precipitation value for each cell (mm) (required)
         args['pawc_uri'] - a uri to an input raster describing the 
             plant available water content value for each cell. Plant Available
@@ -64,7 +65,7 @@ def execute(args):
     for folder_name in ['Output', 'Service', 'Intermediate']:
         folder_path = workspace_dir + os.sep + folder_name
         if not os.path.isdir(folder_path):
-            os.path.mkdir(folder_path)
+            os.mkdir(folder_path)
             
     #Open all of the gdal files and place in dictionary
     args['precipitation'] = gdal.Open(args['precipitation_uri'])
@@ -82,8 +83,8 @@ def execute(args):
     #dictionary
     biophysical_table_map = {}
     biophysical_table_file = open(args['biophysical_table_uri'])
-    reader = csv.DictReader(biophsyical_table_file)
-    for row in biophysical_table:
+    reader = csv.DictReader(biophysical_table_file)
+    for row in reader:
         biophysical_table_map[row['lucode']] = {'etk':row['etk'], \
                                               'root_depth':row['root_depth'], \
                                               'LULC_desc':row['LULC_desc']}
