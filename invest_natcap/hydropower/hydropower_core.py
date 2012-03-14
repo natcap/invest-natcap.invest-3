@@ -67,16 +67,16 @@ def water_yield(args):
     pawc_raster = args['pawc']
     zhang = float(args['zhang'])
     #brute force create raster from table values
-    tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk_path.tiff'
+    tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk.tif'
     tmp_etk_raster = create_etk_root_rasters(lulc_raster, tmp_etk_path, 255.0,
                                              bio_dict, 'etk')
     
     #brute force create raster from table values
-    tmp_root_path = intermediate_dir + os.sep + 'tmp_root_path.tiff'
+    tmp_root_path = intermediate_dir + os.sep + 'tmp_root.tif'
     tmp_root_raster = create_etk_root_rasters(lulc_raster, tmp_root_path, 255.0,
                                              bio_dict, 'root_depth')
    
-    def op(etk, ape, precip, root, soil, pawc):
+    def fractp(etk, ape, precip, root, soil, pawc):
         val = (etk * ape) / 1000
         tmp_DI = val / precip
         
@@ -95,8 +95,22 @@ def water_yield(args):
     raster_list = [tmp_etk_raster, ape_raster, precip_raster, tmp_root_raster,
                    soil_depth_raster, pawc_raster]
     fractp_raster = \
-        invest_core.vectorizeRasters(raster_list, op, rasterName=fractp_path)
-
+        invest_core.vectorizeRasters(raster_list, fractp, rasterName=fractp_path)
+        
+    def wyield(fractp, precip):
+        return (1 - fractp) * precip
+     
+    wyield_path = intermediate_dir + os.sep + 'wyield.tif'
+    wyield_raster = \
+        invest_cython_core.newRasterFromBase(fractp_raster, wyield_path, 
+                                            'GTiff', 255.0, gdal.GDT_Float32)
+    fractp_band = fractp_raster.GetRasterBand(1)
+    precip_band = precip_raster.GetRasterBand(1)
+    wyield_band = wyield_raster.GetRasterBand(1)
+    wyield_raster = invest_core.vectorize2ArgOp(fractp_band, precip_band, 
+                                                wyield, wyield_band)
+    
+    
     
 def create_etk_root_rasters(key_raster, new_path, nodata, bio_dict, field):
     #brute force create raster from table values
