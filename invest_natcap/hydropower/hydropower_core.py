@@ -122,6 +122,37 @@ def water_yield(args):
                                                      fractp_clipped_path)
     wyield_clipped_raster = None
     
+    fractp_mean_path = intermediate_dir + os.sep + 'fractp_mn.tif'
+    fractp_copy_path = intermediate_dir + os.sep + 'fractp_copy.tif'
+    #Create a new raster as a copy from 'raster'
+    fractp_mean = gdal.GetDriverByName('GTIFF').CreateCopy(fractp_mean_path, 
+                                                           fractp_clipped_raster)
+    fractp_copy = gdal.GetDriverByName('GTIFF').CreateCopy(fractp_copy_path, 
+                                                           fractp_clipped_raster)
+    fractp_copy_band = fractp_copy.GetRasterBand(1)
+    #Set the copied rasters values to nodata to create a blank raster.
+    fractp_nodata = fractp_copy_band.GetNoDataValue()
+    fractp_copy_band.Fill(fractp_nodata)
+    gdal.RasterizeLayer(fractp_copy, [1], sub_sheds.GetLayer(0), 
+                        options = ['ATTRIBUTE=subws_id'])
+    fractp_copy_array = fractp_copy_band.ReadAsArray()
+    fractp_array = fractp_mean.GetRasterBand(1).ReadAsArray()
+    dummy_array = np.copy(fractp_array)
+    for feat in sub_sheds.GetLayer(0):
+        index = feat.GetFieldIndex('subws_id')
+        value = feat.GetFieldAsInteger(index)
+        
+        mask_val = fractp_copy_array != value
+        set_mask_val = fractp_copy_array == value
+        masked_array = np.ma.array(fractp_array, mask = mask_val)
+        comp_array = np.ma.compressed(masked_array)
+        mean = sum(comp_array) / len(comp_array)
+        np.putmask(dummy_array, set_mask_val, mean)
+        
+        feat.Destroy()
+        
+    fractp_mean.GetRasterBand(1).WriteArray(dummy_array, 0, 0)
+
 def clip_raster_from_polygon(shape, raster, path):
     """Returns a raster where any value outside the bounds of the
     polygon shape are set to nodata values. This represents clipping 
