@@ -96,36 +96,7 @@ def water_yield(args):
                    soil_depth_raster, pawc_raster]
     fractp_raster = \
         invest_core.vectorizeRasters(raster_list, op, rasterName=fractp_path)
-#    
-#    def op2(root, soil, pawc):
-#        depth = np.minimum(root, soil)
-#        return (depth * pawc)
-#    
-#    tmp_AWC = intermediate_dir + os.sep + 'tmp_AWC.tiff'
-#    tmp_AWC_raster = \
-#        invest_core.vectorizeRasters([tmp_root_raster, soil_raster, pawc_raster],
-#                                     op2, rasterName=tmp_AWC)
-#        
-#    def op3(awc, precip, di):
-#        tmp = awc / (precip + 1)
-#        return (tmp * zhang)
-#    
-#    tmp_w = ''
-#    
-#    def op4(di):
-#        if di > 1:
-#            return 1
-#        else:
-#            return di
-#    
-#    tmp_max_aet = ''
-#    
-#    def op5(aet, tmp_w, di):
-#        result = np.minimum(aet, ((tmp_w * (di + 1)) / ((1/di) + (tmp_w * (di + 1)))))
-#        return result
-#        
-#    fractp = ''
-    
+
     
 def create_etk_root_rasters(key_raster, new_path, nodata, bio_dict, field):
     #brute force create raster from table values
@@ -136,12 +107,14 @@ def create_etk_root_rasters(key_raster, new_path, nodata, bio_dict, field):
     key_nodata = key_band.GetNoDataValue()
     array = key_band.ReadAsArray()
     #http://stackoverflow.com/questions/3403973/fast-replacement-of-values-in-a-numpy-array
-    new_array = np.copy(array)
+    new_array = array.astype(np.float)
     for k, v in bio_dict.iteritems(): 
-        new_array[array==k] = v['etk']
-    
+        new_array[array==int(k)] = float(v[field])
+        if k=='57':
+            LOGGER.debug('new_array : %s : %s', k, v)
+    LOGGER.debug('new_array')
     tmp_band = tmp_raster.GetRasterBand(1)
-    tmp_band.WriteArray(new_array)
+    tmp_band.WriteArray(new_array, 0, 0)
     return tmp_raster
 
 def water_scarcity(args):
