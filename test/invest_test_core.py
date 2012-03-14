@@ -121,7 +121,7 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
     shape_regression.Destroy()
 
 def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff', min=0, max=1,
-                     type='int'):
+                     type='int', projection=None, geotransform=None):
     """Create a new raster with random int values.
         
         cols - an int, the number of columns in the output raster
@@ -138,9 +138,15 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff', min=0, max=1,
         returns a new dataset with random values."""
 
     driver = gdal.GetDriverByName(format)
-    dataset = driver.Create(uri, cols, rows, 1, gdal.GDT_Float32)
+    dataset = driver.Create(uri, cols, rows, 1, gdal.GDT_Int32)
+    if projection != None:
+        dataset.SetProjection(projection)
+    if geotransform != None:
+        dataset.SetGeoTransform(geotransform)
+    else:
+        dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
     band = dataset.GetRasterBand(1)
-
+    band.SetNoDataValue(-1)
     if type == 'int':
         def get_rand():
             return random.randint(min, max)
