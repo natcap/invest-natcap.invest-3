@@ -65,6 +65,8 @@ def water_yield(args):
     precip_raster = args['precipitation']
     soil_depth_raster = args['soil_depth']
     pawc_raster = args['pawc']
+    sub_sheds = args['sub_watersheds']
+    sheds = args['watersheds']
     zhang = float(args['zhang'])
     #brute force create raster from table values
     tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk.tif'
@@ -87,7 +89,7 @@ def water_yield(args):
         tmp_max_aet = np.copy(tmp_DI)
         np.putmask(tmp_max_aet, tmp_max_aet > 1, 1)
         
-        tmp_calc = ((tmp_w * tmp_DI + 1) / (( 1/ tmp_DI) + (tmp_w * tmp_DI + 1)))
+        tmp_calc = ((tmp_w * tmp_DI + 1) / (( 1 / tmp_DI) + (tmp_w * tmp_DI + 1)))
         fractp = np.minimum(tmp_max_aet, tmp_calc)
         return fractp
     
@@ -103,14 +105,64 @@ def water_yield(args):
     wyield_path = intermediate_dir + os.sep + 'wyield.tif'
     wyield_raster = \
         invest_cython_core.newRasterFromBase(fractp_raster, wyield_path, 
-                                            'GTiff', 255.0, gdal.GDT_Float32)
+                                            'GTiff', 0.0, gdal.GDT_Float32)
     fractp_band = fractp_raster.GetRasterBand(1)
     precip_band = precip_raster.GetRasterBand(1)
     wyield_band = wyield_raster.GetRasterBand(1)
-    wyield_raster = invest_core.vectorize2ArgOp(fractp_band, precip_band, 
-                                                wyield, wyield_band)
+    invest_core.vectorize2ArgOp(fractp_band, precip_band, wyield, wyield_band)
     
+    fractp_clipped_path = intermediate_dir + os.sep + 'fractp_clipped.tif'
+    wyield_clipped_path = intermediate_dir + os.sep + 'wyield_clipped.tif'
+    wyield_band.FlushCache()
+    wyield_raster = None
+    wyield_raster = gdal.Open(wyield_path)
+    wyield_clipped_raster = clip_raster_from_polygon(sheds, wyield_raster, \
+                                                     wyield_clipped_path)
+    fractp_clipped_raster = clip_raster_from_polygon(sheds, fractp_raster, \
+                                                     fractp_clipped_path)
+    wyield_clipped_raster = None
     
+def clip_raster_from_polygon(shape, raster, path):
+    """Returns a raster where any value outside the bounds of the
+    polygon shape are set to nodata values. This represents clipping 
+    the raster to the dimensions of the polygon.
+    
+    shape - A polygon shapefile representing the bounds for the raster
+    raster - A raster to be bounded by shape
+    path - The path for the clipped output raster
+    
+    returns - The clipped raster    
+    """
+    shape.GetLayer(0).ResetReading()
+    #Create a new raster as a copy from 'raster'
+    copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    copy_band = copy_raster.GetRasterBand(1)
+    #Set the copied rasters values to nodata to create a blank raster.
+    nodata = copy_band.GetNoDataValue()
+    LOGGER.debug('nodata: %s', nodata)
+    copy_band.Fill(nodata)
+    #Rasterize the polygon layer onto the copied raster
+    gdal.RasterizeLayer(copy_raster, [1], shape.GetLayer(0))
+    def fill_bound_data(value, copy_value):
+        """If the copied raster's value is nodata then the pixel is not within
+        the polygon and should write nodata back. If copied raster's value
+        is not nodata, then pixel lies within polygon and the value 
+        from 'raster' should be written out.
+        
+        value - The pixel value of the raster to be bounded by the shape
+        copy_value - The pixel value of a copied raster where every pixel
+                     is nodata except for where the polygon was rasterized
+        
+        returns - Either a nodata value or relevant pixel value
+        """
+        if copy_value == nodata:
+            return copy_value
+        else:
+            return value
+    #Vectorize the two rasters using the operation fill_bound_data
+    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copy_band, \
+                                fill_bound_data, copy_band)
+    return copy_raster
     
 def create_etk_root_rasters(key_raster, new_path, nodata, bio_dict, field):
     #brute force create raster from table values
