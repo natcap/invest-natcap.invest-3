@@ -15,9 +15,15 @@ if platform.system() == 'Windows':
     import py2exe
     options = {"py2exe":{"includes":["sip"]}}
     console = ['invest_carbon_biophysical.py',
-               'invest_carbon_valuation.py']
+               'invest_carbon_valuation.py',
+               'invest_wave_energy_biophysical.py',
+               'invest_wave_energy_valuation.py',
+               'invest_timber.py']
     data_files = ['invest_natcap/iui/carbon_biophysical.json',
-                  'invest_natcap/iui/carbon_valuation.json']
+                  'invest_natcap/iui/carbon_valuation.json',
+                  'invest_natcap/iui/wave_energy_valuation.json',
+                  'invest_natcap/iui/wave_energy_biophysical.json',
+                  'invest_natcap/iui/timber.json']
 
 
 setup(name='invest_natcap',
