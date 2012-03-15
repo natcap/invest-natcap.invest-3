@@ -523,6 +523,9 @@ in the JSON configuration.  The user may opt to have the string value of the
 user's selection returned as the element's value or to have the numeric ordinal
 of the user's selection returned instead.
 
+Note that the defaultValue attribute should be a zero-based integer that
+corresponds to one of the options specified.
+
 Attributes
 -------------------------------
     "options": Required.  An array of strings.  This is the ordered list of
@@ -541,7 +544,8 @@ Example dropdown object:
     "type": "dropdown",
     "label": "What is your cell phone carrier?",
     "options":["verizon", "t-mobile", "sprint", "at&t", "other"],
-    "returns": "strings"
+    "returns": "strings",
+    "defaultValue": 0
 }
 
 
