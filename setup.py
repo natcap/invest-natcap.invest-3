@@ -10,10 +10,14 @@ cython_source_files = ['invest_cython_core/invest_cython_core.pyx',
 
 options = {}
 console = []
+data_files = []
 if platform.system() == 'Windows':
     import py2exe
     options = {"py2exe":{"includes":["sip"]}}
-    console = ['invest_carbon.py']
+    console = ['invest_carbon_biophysical.py',
+               'invest_carbon_valuation.py']
+    data_files = ['invest_natcap/iui/carbon_biophysical.json',
+                  'invest_natcap/iui/carbon_valuation.json']
 
 
 setup(name='invest_natcap',
@@ -34,5 +38,6 @@ setup(name='invest_natcap',
       ext_modules=[Extension(name="invest_cython_core",
                              sources = cython_source_files)],
       console = console,
+      data_files = data_files,
       options = options
       )
