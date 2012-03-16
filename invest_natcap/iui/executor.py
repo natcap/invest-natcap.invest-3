@@ -149,6 +149,7 @@ class Executor(threading.Thread):
         threading.Thread.__init__(self)
 
         self.printQueue = deque([])
+        self.printQueueLock = threading.Lock()
         self.threadFailed = False
         self.cancelFlag = threading.Event()
         self.operations = []
@@ -157,20 +158,31 @@ class Executor(threading.Thread):
                         'saveParams': self.saveParamsToDisk}
 
     def write(self, string):
+        self.printQueueLock.acquire()
         self.printQueue.append(string)
+        self.printQueueLock.release()
 
     def hasMessages(self):
-        try:
-            if self.printQueue[0]:
-                return True
-        except IndexError:
-            return False
+        self.printQueueLock.acquire()
+        has_messages = len(self.printQueue) > 0
+        self.printQueueLock.release()
+        return has_messages
 
     def getMessage(self):
+        self.printQueueLock.acquire()
+        msg = None
         try:
-            return self.printQueue.popleft()
+            msg = self.printQueue.popleft()
+            #For some reason this thing barfs out if the printQueue only has
+            #1 element on it.  I have *no* idea what is going on here. Can't
+            #debug it either.  If you change this to > 0 nothing will print out.
+            while len(self.printQueue) > 1:
+                msg += self.printQueue.popleft()
+            self.printQueueLock.release()
+            return msg
         except IndexError:
-            return None
+            self.printQueueLock.release()
+            return msg
 
     def cancel(self):
         LOGGER.debug('Cancellation request received; finishing current ' +

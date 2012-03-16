@@ -3,7 +3,7 @@ import imp
 import os
 import platform
 import time
-import simplejson as json
+import json
 from optparse import OptionParser
 
 from PyQt4 import QtGui, QtCore
