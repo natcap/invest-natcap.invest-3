@@ -106,6 +106,7 @@ def water_yield(args):
     wyield_raster = \
         invest_cython_core.newRasterFromBase(fractp_raster, wyield_path, 
                                             'GTiff', 0.0, gdal.GDT_Float32)
+    
     fractp_band = fractp_raster.GetRasterBand(1)
     precip_band = precip_raster.GetRasterBand(1)
     wyield_band = wyield_raster.GetRasterBand(1)
@@ -113,45 +114,126 @@ def water_yield(args):
     
     fractp_clipped_path = intermediate_dir + os.sep + 'fractp_clipped.tif'
     wyield_clipped_path = intermediate_dir + os.sep + 'wyield_clipped.tif'
-    wyield_band.FlushCache()
-    wyield_raster = None
-    wyield_raster = gdal.Open(wyield_path)
+
     wyield_clipped_raster = clip_raster_from_polygon(sheds, wyield_raster, \
                                                      wyield_clipped_path)
     fractp_clipped_raster = clip_raster_from_polygon(sheds, fractp_raster, \
                                                      fractp_clipped_path)
-    wyield_clipped_raster = None
     
     fractp_mean_path = intermediate_dir + os.sep + 'fractp_mn.tif'
-    fractp_copy_path = intermediate_dir + os.sep + 'fractp_copy.tif'
-    #Create a new raster as a copy from 'raster'
-    fractp_mean = gdal.GetDriverByName('GTIFF').CreateCopy(fractp_mean_path, 
-                                                           fractp_clipped_raster)
-    fractp_copy = gdal.GetDriverByName('GTIFF').CreateCopy(fractp_copy_path, 
-                                                           fractp_clipped_raster)
-    fractp_copy_band = fractp_copy.GetRasterBand(1)
-    #Set the copied rasters values to nodata to create a blank raster.
-    fractp_nodata = fractp_copy_band.GetNoDataValue()
-    fractp_copy_band.Fill(fractp_nodata)
-    gdal.RasterizeLayer(fractp_copy, [1], sub_sheds.GetLayer(0), 
-                        options = ['ATTRIBUTE=subws_id'])
-    fractp_copy_array = fractp_copy_band.ReadAsArray()
-    fractp_array = fractp_mean.GetRasterBand(1).ReadAsArray()
-    dummy_array = np.copy(fractp_array)
+    wyield_mean_path = intermediate_dir + os.sep + 'wyield_mn.tif'
+    wyield_area_path = intermediate_dir + os.sep + 'wyield_area.tif'
+    wyield_volume_path = intermediate_dir + os.sep + 'wyield_volume.tif'
+    
+    fractp_mean = create_mean_raster(fractp_clipped_raster, fractp_mean_path,
+                                     sub_sheds, 'subws_id')
+    wyield_mean = create_mean_raster(wyield_clipped_raster, wyield_mean_path,
+                                     sub_sheds, 'subws_id')
+    
+    wyield_area = create_volume_raster(wyield_clipped_raster, wyield_area_path,
+                                     sub_sheds, 'subws_id')
+    
+    def volume(wyield_mn, wyield_area):
+        return (wyield_mn * wyield_area / 1000)
+    
+    wyield_vol_raster = \
+        invest_cython_core.newRasterFromBase(wyield_raster, wyield_volume_path, 
+                                            'GTiff', 0.0, gdal.GDT_Float32)
+    wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
+    wyield_mean_band = wyield_mean.GetRasterBand(1)
+    wyield_area_band = wyield_area.GetRasterBand(1)
+    invest_core.vectorize2ArgOp(wyield_mean_band, wyield_area_band, 
+                                volume, wyield_vol_band)
+    
+    wyield_ha_path = intermediate_dir + os.sep + 'wyield_ha.tif'
+    wyield_ha_raster = \
+        invest_cython_core.newRasterFromBase(wyield_raster, wyield_ha_path, 
+                                            'GTiff', 0.0, gdal.GDT_Float32)
+    wyield_ha_band = wyield_ha_raster.GetRasterBand(1)
+                                                    
+    def ha(wyield_vol, wyield_area):
+        if wyield_vol == 0.0 and wyield_area == 0.0:
+            return 0.0
+        else:
+            return wyield_vol / (0.0001 * wyield_area)
+    
+    invest_core.vectorize2ArgOp(wyield_vol_band, wyield_area_band, 
+                                ha, wyield_ha_band)
+    
+    aet_path = intermediate_dir + os.sep + 'aet.tif'
+    aet_mean_path = intermediate_dir + os.sep + 'aet_mn.tif'
+    aet_raster = \
+        invest_cython_core.newRasterFromBase(wyield_area, aet_path, 
+                                            'GTiff', 0.0, gdal.GDT_Float32)
+    aet_band = aet_raster.GetRasterBand(1)
+    fractp_band = fractp_clipped_raster.GetRasterBand(1)
+    
+    def aet(fractp, precip):
+        return fractp * precip
+    
+    invest_core.vectorize2ArgOp(fractp_band, aet_band, aet, aet_band)
+    
+    aet_mean = create_mean_raster(aet_raster, aet_mean_path,
+                                  sub_sheds, 'subws_id')
+    
+def create_volume_raster(raster, path, sub_sheds, field_name):
+    raster_area = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    band_area = raster_area.GetRasterBand(1)
+    pixel_data_array = band_area.ReadAsArray()
+    nodata = band_area.GetNoDataValue()
+    band_area.Fill(nodata)
+    attribute_string = 'ATTRIBUTE=' + field_name
+    gdal.RasterizeLayer(raster_area, [1], sub_sheds.GetLayer(0),
+                        options = [attribute_string])
+    sub_sheds_id_array = band_area.ReadAsArray()
+    new_data_array = np.copy(pixel_data_array)
+    
     for feat in sub_sheds.GetLayer(0):
-        index = feat.GetFieldIndex('subws_id')
+        geom = feat.GetGeometryRef()
+        geom_type = geom.GetGeometryType()
+        LOGGER.debug('AREA OF Poly : %s', geom.GetArea())
+        index = feat.GetFieldIndex(field_name)
         value = feat.GetFieldAsInteger(index)
-        
-        mask_val = fractp_copy_array != value
-        set_mask_val = fractp_copy_array == value
-        masked_array = np.ma.array(fractp_array, mask = mask_val)
+        mask_val = sub_sheds_id_array != value
+        set_mask_val = sub_sheds_id_array == value
+        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
-        mean = sum(comp_array) / len(comp_array)
-        np.putmask(dummy_array, set_mask_val, mean)
+        np.putmask(new_data_array, set_mask_val, geom.GetArea())
         
         feat.Destroy()
         
-    fractp_mean.GetRasterBand(1).WriteArray(dummy_array, 0, 0)
+    band_area.WriteArray(new_data_array, 0, 0)  
+    return raster_area
+
+def create_mean_raster(raster, path, sub_sheds, field_name):
+    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    band_mean = raster_mean.GetRasterBand(1)
+    pixel_data_array = band_mean.ReadAsArray()
+    nodata = band_mean.GetNoDataValue()
+    band_mean.Fill(nodata)
+    attribute_string = 'ATTRIBUTE=' + field_name
+    gdal.RasterizeLayer(raster_mean, [1], sub_sheds.GetLayer(0),
+                        options = [attribute_string])
+    sub_sheds_id_array = band_mean.ReadAsArray()
+    new_data_array = np.copy(pixel_data_array)
+    
+    for feat in sub_sheds.GetLayer(0):
+        geom = feat.GetGeometryRef()
+        geom_type = geom.GetGeometryType()
+        LOGGER.debug('AREA OF Poly : %s', geom.GetArea())
+        index = feat.GetFieldIndex(field_name)
+        value = feat.GetFieldAsInteger(index)
+        mask_val = sub_sheds_id_array != value
+        set_mask_val = sub_sheds_id_array == value
+        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
+        comp_array = np.ma.compressed(masked_array)
+        mean = sum(comp_array) / len(comp_array)
+        np.putmask(new_data_array, set_mask_val, mean)
+        
+        feat.Destroy()
+        
+    band_mean.WriteArray(new_data_array, 0, 0)  
+    return raster_mean
 
 def clip_raster_from_polygon(shape, raster, path):
     """Returns a raster where any value outside the bounds of the
