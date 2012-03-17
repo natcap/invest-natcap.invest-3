@@ -1,7 +1,7 @@
 {
     "id": "window",
     "label": "Valuation of Carbon Sequestration",
-    "targetScript": "./python/invest_core/carbon_valuation.py",
+    "targetScript": "invest_natcap.carbon.carbon_valuation",
     "modelName": "carbon_valuation",
     "localDocURI": "./documentation/carbonstorage.html",
     "height": 200,
