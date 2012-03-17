@@ -13,6 +13,29 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger()
 
+def locate_module(module_list, path=None):
+    """Search for and return an executable module object as long as the target
+        module is within the pythonpath.  This method recursively uses the
+        find_module and load_module functions of the python imp module to
+        locate the target module by its heirarchical module name.
+        
+        module_list - a python list of strings, where each element is the name
+            of a contained module.  For example, os.path would be represented
+            here as ['os', 'path'].
+        path=None - the base path to search.  If None, the pythonpath will be
+            used.
+            
+        returns an executeable python module object if it can be found.
+        Returns None if not."""
+
+    current_name = module_list[0]
+    module_info = imp.find_module(current_name, path)
+    imported_module = imp.load_module(current_name, *module_info)
+
+    if len(module_list) > 1:
+        return locate_module(module_list[1:], imported_module.__path__)
+    else:
+        return imported_module
 
 class Controller(object):
     """The Controller class manages two Thread objects: Executor and
@@ -262,10 +285,11 @@ class Executor(threading.Thread):
         self.outputObj.saveLastRun()
         LOGGER.info('Parameters saved to disk')
 
-    def runModel(self, uri, args):
+    def runModel(self, module, args):
         try:
             LOGGER.info('Loading the queued model')
-            model = imp.load_source('model', uri)
+            module_list = module.split('.')
+            model = locate_module(module_list)
             LOGGER.info('Executing the loaded model')
             model.execute(args)
         except:
