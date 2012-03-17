@@ -1421,9 +1421,9 @@ class EmbeddedUI(Root):
         #bandaid fix.
         if self.attributes['id'] in self.allElements:
             del self.allElements[self.attributes['id']]
+        self.body.layout().insertStretch(-1)
 
         self.attributes['args_id'] = attributes['args_id']
-        self.body.layout().insertStretch(-1)
 
     def getOutputValue(self):
         return self.assembleOutputDict()
