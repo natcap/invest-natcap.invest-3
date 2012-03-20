@@ -145,11 +145,10 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     LAND_STRING = LAND_FILE.read()
     N_ROWS = LAND_STRING.count('\n')
 
-    IN_WATER = map(lambda x: x == '1',
-                   LAND_STRING.replace('\n', '')\
-                              .replace('\t', '')\
-                              .replace('\r', ''))
+    #Remove any instances of spacing characters
+    IN_WATER = map(lambda x: x == '1', re.sub('[\n\t\r, ]', '', LAND_STRING))
     N_COLS = len(IN_WATER) / N_ROWS
+    print N_ROWS, N_COLS, IN_WATER
     #parse WQM file
     #Initialize variables that need to get set.  Putting None here so if they
     #don't get parsed correctly something will crash.
@@ -223,14 +222,16 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
 
     #Plot the land by masking out water regions.  In non-water
     #regions the data values will be 0, so okay to use PuOr to have
-    #an orangy land.
-    pylab.hold(True)
-    pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
-                 interpolation='bilinear',
-                 cmap=pylab.cm.PuOr,
-                 origin='lower')
+    #an orangy land.  pylab doesn't behave well if the mask is all 
+    #True, so we check to see if its false first.
+    if False in IN_WATER:
+        pylab.hold(True)
+        pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
+                     interpolation='bilinear',
+                     cmap=pylab.cm.PuOr,
+                     origin='lower')
 
-
+    #This is for a handy overlap graph mouse explorer on the plot.
     class Cursor:
         def __init__(self, ax):
             self.ax = ax
