@@ -1020,29 +1020,29 @@ class OperationDialog(QtGui.QDialog):
         #create Quit and Cancel buttons for the window        
         self.quitButton = QtGui.QPushButton(' Quit')
         self.backButton = QtGui.QPushButton(' Back')
-        self.cancelButton = QtGui.QPushButton(' Cancel')
+#        self.cancelButton = QtGui.QPushButton(' Cancel')
 
         #add button icons
         self.quitButton.setIcon(QtGui.QIcon('dialog-close.png'))
         self.backButton.setIcon(QtGui.QIcon('dialog-ok.png'))
-        self.cancelButton.setIcon(QtGui.QIcon('dialog-cancel.png'))
+#        self.cancelButton.setIcon(QtGui.QIcon('dialog-cancel.png'))
 
         #disable the 'Back' button by default
         self.backButton.setDisabled(True)
         self.quitButton.setDisabled(True)
-        self.cancelButton.setDisabled(False)
+#        self.cancelButton.setDisabled(False)
 
         #create the buttonBox (a container for buttons) and add the buttons to
         #the buttonBox.
         self.buttonBox = QtGui.QDialogButtonBox()
         self.buttonBox.addButton(self.quitButton, QtGui.QDialogButtonBox.RejectRole)
         self.buttonBox.addButton(self.backButton, QtGui.QDialogButtonBox.AcceptRole)
-        self.buttonBox.addButton(self.cancelButton, QtGui.QDialogButtonBox.ResetRole)
+#        self.buttonBox.addButton(self.cancelButton, QtGui.QDialogButtonBox.ResetRole)
 
         #connect the buttons to their callback functions.
         self.backButton.clicked.connect(self.closeWindow)
         self.quitButton.clicked.connect(sys.exit)
-        self.cancelButton.clicked.connect(self.exec_controller.cancel_executor)
+#        self.cancelButton.clicked.connect(self.exec_controller.cancel_executor)
 
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
@@ -1051,7 +1051,7 @@ class OperationDialog(QtGui.QDialog):
 
     def showEvent(self, event):
         QtCore.QTimer.singleShot(100, self.startExecutor)
-    
+
     def startExecutor(self):
         self.statusArea.clear()
         self.start_buttons()
@@ -1060,7 +1060,7 @@ class OperationDialog(QtGui.QDialog):
 
         self.timer.timeout.connect(self.check_messages)
         self.timer.start(100)
-        
+
     def check_messages(self):
         if not self.exec_controller.is_finished():
             message = self.exec_controller.get_message()
@@ -1073,20 +1073,20 @@ class OperationDialog(QtGui.QDialog):
         self.progressBar.setMaximum(0) #start the progressbar.
         self.backButton.setDisabled(True)
         self.quitButton.setDisabled(True)
-        self.cancelButton.setDisabled(False)
-                
+#        self.cancelButton.setDisabled(False)
+
     def stop_buttons(self):
         self.progressBar.setMaximum(1) #stops the progressbar.
         self.backButton.setDisabled(False)
         self.quitButton.setDisabled(False)
-        self.cancelButton.setDisabled(True)
-        
+#        self.cancelButton.setDisabled(True)
+
     def write(self, text):
         """Write text.  If printing to the status area, also scrolls to the end 
             of the text region after writing to it.  Otherwise, print to stdout.
-            
+
             text - a string to be written to self.statusArea.
-            
+
             returns nothing."""
 
         self.statusArea.insertPlainText(QtCore.QString(text))
@@ -1095,7 +1095,7 @@ class OperationDialog(QtGui.QDialog):
 
     def finished(self):
         """Notify the user that model processing has finished.
-        
+
             returns nothing."""
 
         self.timer.stop()
@@ -1103,7 +1103,7 @@ class OperationDialog(QtGui.QDialog):
 
     def closeEvent(self, data=None):
         """When a closeEvent is detected, run self.closeWindow().
-        
+
             returns nothing."""
 
         self.closeWindow()
@@ -1111,7 +1111,7 @@ class OperationDialog(QtGui.QDialog):
     def okPressed(self):
         """When self.runButton is pressed, halt the statusbar and close the 
             window with a siccessful status code.
-            
+
             returns nothing."""
 
         self.threadFinished()
@@ -1119,7 +1119,7 @@ class OperationDialog(QtGui.QDialog):
 
     def closeWindow(self):
         """Close the window and ensure the modelProcess has completed.
-        
+
             returns nothing."""
 
         self.cancel = False
@@ -1421,9 +1421,9 @@ class EmbeddedUI(Root):
         #bandaid fix.
         if self.attributes['id'] in self.allElements:
             del self.allElements[self.attributes['id']]
+        self.body.layout().insertStretch(-1)
 
         self.attributes['args_id'] = attributes['args_id']
-        self.body.layout().insertStretch(-1)
 
     def getOutputValue(self):
         return self.assembleOutputDict()
