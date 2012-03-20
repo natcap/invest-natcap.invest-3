@@ -1380,7 +1380,7 @@ class Root(DynamicElement):
         outputDict = {}
 
         for id, element in self.allElements.iteritems():
-            if element.isEnabled() or element.attributes['type'] in ['checkbox']
+            if element.isEnabled() or element.attributes['type'] in ['checkbox']:
                 if 'args_id' in element.attributes:
                     element_value = element.getOutputValue()
                     if element_value != None:
