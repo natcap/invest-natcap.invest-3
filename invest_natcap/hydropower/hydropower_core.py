@@ -128,14 +128,19 @@ def water_yield(args):
     wyield_area_path = intermediate_dir + os.sep + 'wyield_area.tif'
     wyield_volume_path = intermediate_dir + os.sep + 'wyield_volume.tif'
     wyield_ha_path = intermediate_dir + os.sep + 'wyield_ha.tif'
+
+    sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask.tif'
+    sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path,
+                               sub_sheds, 'subws_id')
+    
     #Create mean rasters for fractp/wyield
     fractp_mean = create_mean_raster(fractp_clipped_raster, fractp_mean_path,
-                                     sub_sheds, 'subws_id')
+                                     sub_sheds, 'subws_id', sub_mask)
     wyield_mean = create_mean_raster(wyield_clipped_raster, wyield_mean_path,
-                                     sub_sheds, 'subws_id')
+                                     sub_sheds, 'subws_id', sub_mask)
     #Create area raster so that the volume can be computed.
     wyield_area = create_area_raster(wyield_clipped_raster, wyield_area_path,
-                                     sub_sheds, 'subws_id')
+                                     sub_sheds, 'subws_id', sub_mask)
     #Operation to compute the water yield volume raster
     def volume(wyield_mn, wyield_area):
         return (wyield_mn * wyield_area / 1000)
@@ -178,11 +183,8 @@ def water_yield(args):
     invest_core.vectorize2ArgOp(fractp_band, aet_band, aet, aet_band)
     
     aet_mean = create_mean_raster(aet_raster, aet_mean_path,
-                                  sub_sheds, 'subws_id')
+                                  sub_sheds, 'subws_id', sub_mask)
 
-    sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask.tif'
-    sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path,
-                               sub_sheds, 'subws_id')
 
 def get_mask(raster, path, sub_sheds, field_name):
     raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
@@ -196,16 +198,42 @@ def get_mask(raster, path, sub_sheds, field_name):
     
     return sub_sheds_id_array
     
-def create_area_raster(raster, path, sub_sheds, field_name):
+#def create_area_raster(raster, path, sub_sheds, field_name):
+#    raster_area = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+#    band_area = raster_area.GetRasterBand(1)
+#    pixel_data_array = band_area.ReadAsArray()
+#    nodata = band_area.GetNoDataValue()
+#    band_area.Fill(nodata)
+#    attribute_string = 'ATTRIBUTE=' + field_name
+#    gdal.RasterizeLayer(raster_area, [1], sub_sheds.GetLayer(0),
+#                        options = [attribute_string])
+#    sub_sheds_id_array = band_area.ReadAsArray()
+#    new_data_array = np.copy(pixel_data_array)
+#    
+#    for feat in sub_sheds.GetLayer(0):
+#        geom = feat.GetGeometryRef()
+#        geom_type = geom.GetGeometryType()
+#        LOGGER.debug('AREA OF Poly : %s', geom.GetArea())
+#        index = feat.GetFieldIndex(field_name)
+#        value = feat.GetFieldAsInteger(index)
+#        mask_val = sub_sheds_id_array != value
+#        set_mask_val = sub_sheds_id_array == value
+#        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
+#        comp_array = np.ma.compressed(masked_array)
+#        np.putmask(new_data_array, set_mask_val, geom.GetArea())
+#        
+#        feat.Destroy()
+#        
+#    band_area.WriteArray(new_data_array, 0, 0)  
+#    return raster_area
+
+def create_area_raster(raster, path, sub_sheds, field_name, shed_mask):
     raster_area = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_area = raster_area.GetRasterBand(1)
     pixel_data_array = band_area.ReadAsArray()
     nodata = band_area.GetNoDataValue()
     band_area.Fill(nodata)
-    attribute_string = 'ATTRIBUTE=' + field_name
-    gdal.RasterizeLayer(raster_area, [1], sub_sheds.GetLayer(0),
-                        options = [attribute_string])
-    sub_sheds_id_array = band_area.ReadAsArray()
+    sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     
     for feat in sub_sheds.GetLayer(0):
@@ -225,16 +253,40 @@ def create_area_raster(raster, path, sub_sheds, field_name):
     band_area.WriteArray(new_data_array, 0, 0)  
     return raster_area
 
-def create_mean_raster(raster, path, sub_sheds, field_name):
+#def create_mean_raster(raster, path, sub_sheds, field_name):
+#    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+#    band_mean = raster_mean.GetRasterBand(1)
+#    pixel_data_array = band_mean.ReadAsArray()
+#    nodata = band_mean.GetNoDataValue()
+#    band_mean.Fill(nodata)
+#    attribute_string = 'ATTRIBUTE=' + field_name
+#    gdal.RasterizeLayer(raster_mean, [1], sub_sheds.GetLayer(0),
+#                        options = [attribute_string])
+#    sub_sheds_id_array = band_mean.ReadAsArray()
+#    new_data_array = np.copy(pixel_data_array)
+#    
+#    for feat in sub_sheds.GetLayer(0):
+#        index = feat.GetFieldIndex(field_name)
+#        value = feat.GetFieldAsInteger(index)
+#        mask_val = sub_sheds_id_array != value
+#        set_mask_val = sub_sheds_id_array == value
+#        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
+#        comp_array = np.ma.compressed(masked_array)
+#        mean = sum(comp_array) / len(comp_array)
+#        np.putmask(new_data_array, set_mask_val, mean)
+#        
+#        feat.Destroy()
+#        
+#    band_mean.WriteArray(new_data_array, 0, 0)  
+#    return raster_mean
+
+def create_mean_raster(raster, path, sub_sheds, field_name, shed_mask):
     raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_mean = raster_mean.GetRasterBand(1)
     pixel_data_array = band_mean.ReadAsArray()
     nodata = band_mean.GetNoDataValue()
     band_mean.Fill(nodata)
-    attribute_string = 'ATTRIBUTE=' + field_name
-    gdal.RasterizeLayer(raster_mean, [1], sub_sheds.GetLayer(0),
-                        options = [attribute_string])
-    sub_sheds_id_array = band_mean.ReadAsArray()
+    sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     
     for feat in sub_sheds.GetLayer(0):
