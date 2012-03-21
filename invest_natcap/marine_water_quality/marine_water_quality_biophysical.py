@@ -203,6 +203,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
 
     LOGGER.info("Done with point source diffusion.  Now plotting.")
     density = np.resize(density, (N_ROWS, N_COLS))
+    print density
     IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
 
     axes = pylab.subplot(111)
@@ -251,12 +252,16 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
             self.lx.set_ydata(y)
             self.ly.set_xdata(x)
 
+            #This section does a translation from axis coordinates to the 
+            #index values in the density array.
             index_x = int((x - axis_extent[0]) / (axis_extent[1] - axis_extent[0]) * N_COLS)
             index_y = int((y - axis_extent[2]) / (axis_extent[3] - axis_extent[2]) * N_ROWS)
             try:
                 self.txt.set_text('s=%1.2f' % \
                                   (density[int(index_y), int(index_x)]))
             except IndexError:
+                #Sometimes they very slightly overlap and throw an exception.  
+                #This is okay which is why we silently pass here
                 pass
             pylab.draw()
     cursor = Cursor(axes)
