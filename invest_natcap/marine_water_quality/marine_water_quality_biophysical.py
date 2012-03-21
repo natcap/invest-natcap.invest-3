@@ -207,17 +207,19 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
 
     axes = pylab.subplot(111)
-
     #Plot the pollutant density
     COLORMAP = pylab.cm.gist_earth
     COLORMAP.set_over(color='#330000')
     COLORMAP.set_under(color='#330000')
+    axis_extent = [0, H / 1000.0 * N_COLS, 0, H / 1000.0 * N_ROWS]
     pylab.imshow(density,
                  interpolation='bilinear',
                  cmap=COLORMAP,
                  vmin=VMIN,
                  vmax=VMAX,
-                 origin='lower')
+                 origin = 'lower',
+                 extent = axis_extent)
+
     pylab.colorbar()
 
     #Plot the land by masking out water regions.  In non-water
@@ -229,7 +231,8 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
         pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
                      interpolation='bilinear',
                      cmap=pylab.cm.PuOr,
-                     origin='lower')
+                     origin = 'lower',
+                     extent = axis_extent)
 
     #This is for a handy overlap graph mouse explorer on the plot.
     class Cursor:
@@ -249,7 +252,13 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
             self.lx.set_ydata(y)
             self.ly.set_xdata(x)
 
-            self.txt.set_text('s=%1.2f' % density[int(y), int(x)])
+            index_x = int((x - axis_extent[0]) / (axis_extent[1] - axis_extent[0]) * N_COLS)
+            index_y = int((y - axis_extent[2]) / (axis_extent[3] - axis_extent[2]) * N_ROWS)
+            try:
+                self.txt.set_text('s=%1.2f' % \
+                                  (density[int(index_y), int(index_x)]))
+            except IndexError:
+                pass
             pylab.draw()
     cursor = Cursor(axes)
     pylab.connect('motion_notify_event', cursor.mouse_move)
