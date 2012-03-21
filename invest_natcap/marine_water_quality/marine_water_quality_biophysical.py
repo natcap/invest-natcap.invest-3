@@ -27,8 +27,8 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     n, m - the number of rows, columns in the 2D grid.  Used to determine
         indices into list parameters 'water', 'E', 'ux', 'uy', and i * m + j in
         a list
-    water - 1D list n * m elements long of booleans indicating land / water.  True
-            is water, False is land.  
+    water - 1D list n * m elements long of booleans indicating land / water.
+        True is water, False is land.
     E - constant indicating tidal dispersion coefficient: km ^ 2 / day
     ux - constant indicating x component of advective velocity: m / s
     uy - constant indicating y component of advective velocity: m / s
@@ -40,7 +40,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
         Default False.
     
     returns a 2D grid of pollutant densities in the same dimension as  'grid'
-    
     """
     LOGGER = logging.getLogger('marine_water_quality')
     LOGGER.info('Calculating advection diffusion for %s' % \
@@ -52,8 +51,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     uy *= 86.4
 
     #convert h from m to km
-    h /= 1000.0
-
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
@@ -63,7 +60,11 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
             return -1
 
     #convert point x,y to an index that coodinates with input arrays
-    point_index = calc_index(point_source['xps'], point_source['yps'])
+    point_index = calc_index(int(point_source['yps'] / h),
+                             int(point_source['xps'] / h))
+
+    #Convert h to km for calculation since other parameters are in KM
+    h /= 1000.0
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
@@ -145,10 +146,8 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     LAND_STRING = LAND_FILE.read()
     N_ROWS = LAND_STRING.count('\n')
 
-    IN_WATER = map(lambda x: x == '1',
-                   LAND_STRING.replace('\n', '')\
-                              .replace('\t', '')\
-                              .replace('\r', ''))
+    #Remove any instances of spacing characters
+    IN_WATER = map(lambda x: x == '1', re.sub('[\n\t\r, ]', '', LAND_STRING))
     N_COLS = len(IN_WATER) / N_ROWS
     #parse WQM file
     #Initialize variables that need to get set.  Putting None here so if they
@@ -205,32 +204,38 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
 
     LOGGER.info("Done with point source diffusion.  Now plotting.")
     density = np.resize(density, (N_ROWS, N_COLS))
+    np.savetxt('CON.txt', density, delimiter=',')
     IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
 
     axes = pylab.subplot(111)
-
     #Plot the pollutant density
     COLORMAP = pylab.cm.gist_earth
     COLORMAP.set_over(color='#330000')
     COLORMAP.set_under(color='#330000')
+    axis_extent = [0, H * N_COLS, 0, H * N_ROWS]
     pylab.imshow(density,
                  interpolation='bilinear',
                  cmap=COLORMAP,
                  vmin=VMIN,
                  vmax=VMAX,
-                 origin='lower')
+                 origin='lower',
+                 extent=axis_extent)
+
     pylab.colorbar()
 
     #Plot the land by masking out water regions.  In non-water
     #regions the data values will be 0, so okay to use PuOr to have
-    #an orangy land.
-    pylab.hold(True)
-    pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
-                 interpolation='bilinear',
-                 cmap=pylab.cm.PuOr,
-                 origin='lower')
+    #an orangy land.  pylab doesn't behave well if the mask is all 
+    #True, so we check to see if its false first.
+    if False in IN_WATER:
+        pylab.hold(True)
+        pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
+                     interpolation='bilinear',
+                     cmap=pylab.cm.PuOr,
+                     origin='lower',
+                     extent=axis_extent)
 
-
+    #This is for a handy overlap graph mouse explorer on the plot.
     class Cursor:
         def __init__(self, ax):
             self.ax = ax
@@ -248,7 +253,19 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
             self.lx.set_ydata(y)
             self.ly.set_xdata(x)
 
-            self.txt.set_text('s=%1.2f' % density[int(y), int(x)])
+            #This section does a translation from axis coordinates to the 
+            #index values in the density array.
+            index_x = int((x - axis_extent[0]) / (axis_extent[1] -
+                                                  axis_extent[0]) * N_COLS)
+            index_y = int((y - axis_extent[2]) / (axis_extent[3] -
+                                                  axis_extent[2]) * N_ROWS)
+            try:
+                self.txt.set_text('s=%1.2f' % \
+                                  (density[int(index_y), int(index_x)]))
+            except IndexError:
+                #Sometimes they very slightly overlap and throw an exception.  
+                #This is okay which is why we silently pass here
+                pass
             pylab.draw()
     cursor = Cursor(axes)
     pylab.connect('motion_notify_event', cursor.mouse_move)

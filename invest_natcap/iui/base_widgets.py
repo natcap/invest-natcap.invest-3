@@ -356,10 +356,9 @@ class DynamicPrimitive(DynamicElement):
 
     def getOutputValue(self):
         if 'args_id' in self.attributes:
-            if self.isEnabled():
-                value = str(self.value())
-                if value != '':
-                    return self.cast_value()
+            value = str(self.value())
+            if value != '':
+                return self.cast_value()
 
     def set_error(self, error):
         if error == None or error == '':
@@ -779,10 +778,10 @@ class FileButton(QtGui.QPushButton):
         oldText = self.URIfield.text()
         filename = ''
 
-        if self.filetype == 'file':
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Select ' + self.text, '.')
-        elif self.filetype == 'folder':
+        if self.filetype == 'folder':
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
+        else:
+            filename = QtGui.QFileDialog.getOpenFileName(self, 'Select ' + self.text, '.')
 
         #Set the value of the URIfield.
         if filename == '':
@@ -836,12 +835,12 @@ class HideableElement(LabeledElement):
         self.checkbox = QtGui.QCheckBox(attributes['label'])
         self.checkbox.toggled.connect(self.toggleHiding)
         self.checkbox.toggled.connect(self.toggle)
+        self.hideableElements = []
 
         #remove the label, as it is being subsumed by the new checkbox's label.
         self.elements.remove(self.label)
         self.elements.insert(0, self.checkbox)
         self.error.set_setting('start', 2)
-        self.hideableElements = [self.textField, self.button]
         
         self.toggleHiding(False)
 
@@ -857,14 +856,17 @@ class HideableElement(LabeledElement):
 
 class HideableFileEntry(HideableElement, FileEntry):
     def __init__(self, attributes):
-        HideableElement.__init__(self, attributes)
         FileEntry.__init__(self, attributes)
+        HideableElement.__init__(self, attributes)
+        self.elements = [self.checkbox, self.textField, self.button]
+        self.hideableElements = [self.textField, self.button]
+        self.toggleHiding(False)
+        self.error.set_setting('start', 1)
 
     def requirementsMet(self):
         if self.checkbox.isChecked():
             return FileEntry.requirementsMet(self)
         return False
-
 
 class Dropdown(LabeledElement):
     def __init__(self, attributes):
@@ -1020,29 +1022,29 @@ class OperationDialog(QtGui.QDialog):
         #create Quit and Cancel buttons for the window        
         self.quitButton = QtGui.QPushButton(' Quit')
         self.backButton = QtGui.QPushButton(' Back')
-        self.cancelButton = QtGui.QPushButton(' Cancel')
+#        self.cancelButton = QtGui.QPushButton(' Cancel')
 
         #add button icons
         self.quitButton.setIcon(QtGui.QIcon('dialog-close.png'))
         self.backButton.setIcon(QtGui.QIcon('dialog-ok.png'))
-        self.cancelButton.setIcon(QtGui.QIcon('dialog-cancel.png'))
+#        self.cancelButton.setIcon(QtGui.QIcon('dialog-cancel.png'))
 
         #disable the 'Back' button by default
         self.backButton.setDisabled(True)
         self.quitButton.setDisabled(True)
-        self.cancelButton.setDisabled(False)
+#        self.cancelButton.setDisabled(False)
 
         #create the buttonBox (a container for buttons) and add the buttons to
         #the buttonBox.
         self.buttonBox = QtGui.QDialogButtonBox()
         self.buttonBox.addButton(self.quitButton, QtGui.QDialogButtonBox.RejectRole)
         self.buttonBox.addButton(self.backButton, QtGui.QDialogButtonBox.AcceptRole)
-        self.buttonBox.addButton(self.cancelButton, QtGui.QDialogButtonBox.ResetRole)
+#        self.buttonBox.addButton(self.cancelButton, QtGui.QDialogButtonBox.ResetRole)
 
         #connect the buttons to their callback functions.
         self.backButton.clicked.connect(self.closeWindow)
         self.quitButton.clicked.connect(sys.exit)
-        self.cancelButton.clicked.connect(self.exec_controller.cancel_executor)
+#        self.cancelButton.clicked.connect(self.exec_controller.cancel_executor)
 
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
@@ -1051,7 +1053,7 @@ class OperationDialog(QtGui.QDialog):
 
     def showEvent(self, event):
         QtCore.QTimer.singleShot(100, self.startExecutor)
-    
+
     def startExecutor(self):
         self.statusArea.clear()
         self.start_buttons()
@@ -1060,7 +1062,7 @@ class OperationDialog(QtGui.QDialog):
 
         self.timer.timeout.connect(self.check_messages)
         self.timer.start(100)
-        
+
     def check_messages(self):
         if not self.exec_controller.is_finished():
             message = self.exec_controller.get_message()
@@ -1073,20 +1075,20 @@ class OperationDialog(QtGui.QDialog):
         self.progressBar.setMaximum(0) #start the progressbar.
         self.backButton.setDisabled(True)
         self.quitButton.setDisabled(True)
-        self.cancelButton.setDisabled(False)
-                
+#        self.cancelButton.setDisabled(False)
+
     def stop_buttons(self):
         self.progressBar.setMaximum(1) #stops the progressbar.
         self.backButton.setDisabled(False)
         self.quitButton.setDisabled(False)
-        self.cancelButton.setDisabled(True)
-        
+#        self.cancelButton.setDisabled(True)
+
     def write(self, text):
         """Write text.  If printing to the status area, also scrolls to the end 
             of the text region after writing to it.  Otherwise, print to stdout.
-            
+
             text - a string to be written to self.statusArea.
-            
+
             returns nothing."""
 
         self.statusArea.insertPlainText(QtCore.QString(text))
@@ -1095,7 +1097,7 @@ class OperationDialog(QtGui.QDialog):
 
     def finished(self):
         """Notify the user that model processing has finished.
-        
+
             returns nothing."""
 
         self.timer.stop()
@@ -1103,7 +1105,7 @@ class OperationDialog(QtGui.QDialog):
 
     def closeEvent(self, data=None):
         """When a closeEvent is detected, run self.closeWindow().
-        
+
             returns nothing."""
 
         self.closeWindow()
@@ -1111,7 +1113,7 @@ class OperationDialog(QtGui.QDialog):
     def okPressed(self):
         """When self.runButton is pressed, halt the statusbar and close the 
             window with a siccessful status code.
-            
+
             returns nothing."""
 
         self.threadFinished()
@@ -1119,7 +1121,7 @@ class OperationDialog(QtGui.QDialog):
 
     def closeWindow(self):
         """Close the window and ensure the modelProcess has completed.
-        
+
             returns nothing."""
 
         self.cancel = False
@@ -1172,7 +1174,7 @@ class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
-
+        self.super = None
         self.obj_registrar = object_registrar
 
         self.find_and_replace(attributes)
@@ -1380,16 +1382,22 @@ class Root(DynamicElement):
         outputDict = {}
 
         for id, element in self.allElements.iteritems():
-            if 'args_id' in element.attributes and element.isEnabled():
-                element_value = element.getOutputValue()
-                if element_value != None:
+            always_return = False
+            if 'returns' in element.attributes:
+                if 'alwaysReturn' in element.attributes['returns']:
+                    always_return = element.attributes['returns']['alwaysReturn']
 
-                    args_id = element.attributes['args_id']
-                    if not isinstance(args_id, list):
-                        args_id = [args_id]
+            if element.isEnabled() or always_return:
+                if 'args_id' in element.attributes:
+                    element_value = element.getOutputValue()
+                    if element_value != None:
 
-                    outputDict = self.set_dict_value(outputDict, args_id,
-                        element_value)
+                        args_id = element.attributes['args_id']
+                        if not isinstance(args_id, list):
+                            args_id = [args_id]
+
+                        outputDict = self.set_dict_value(outputDict, args_id,
+                            element_value)
 
         return outputDict
 
@@ -1408,6 +1416,16 @@ class Root(DynamicElement):
     
         return dictionary
 
+    def find_element_ptr(self, element_id):
+        """Return an element pointer if found.  None if not found."""
+        #if the element id can be found in the current UI, return that
+        #otherwise, get the element from this element's root.
+        if element_id in self.allElements:
+            return self.allElements[element_id]
+        else:
+            if self.super != None:
+                return self.super.find_element_ptr(element_id)
+
 class EmbeddedUI(Root):
     def __init__(self, attributes, registrar):
         uri = attributes['configURI']
@@ -1421,12 +1439,16 @@ class EmbeddedUI(Root):
         #bandaid fix.
         if self.attributes['id'] in self.allElements:
             del self.allElements[self.attributes['id']]
+        self.body.layout().insertStretch(-1)
 
         self.attributes['args_id'] = attributes['args_id']
-        self.body.layout().insertStretch(-1)
 
     def getOutputValue(self):
         return self.assembleOutputDict()
+
+    def updateLinks(self, rootPointer):
+        self.super = rootPointer
+        Root.updateLinks(self, rootPointer)
 
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
