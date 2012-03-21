@@ -181,12 +181,35 @@ def water_yield(args):
     def aet(fractp, precip):
         return fractp * precip
     
-    invest_core.vectorize2ArgOp(fractp_band, aet_band, aet, aet_band)
+    invest_core.vectorize2ArgOp(fractp_band, precip_band, aet, aet_band)
     
     aet_mean = create_mean_raster(aet_raster, aet_mean_path,
                                   sub_sheds, 'subws_id', sub_mask)
 
-    water_shed_relationship = polygon_contains_polygons(sheds, sub_sheds)
+    sub_table_path = intermediate_dir + os.sep + 'water_yield_subwatershed.csv'
+    sub_table_file = open(sub_table_path, 'wb')
+    wr = csv.DictWriter(sub_table_file, ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 
+                                         'AET_mn', 'wyield_mn', 'wyield_sum'])
+    wr.writerow({'ws_id':'ws_id','subws_id':'subws_id','precip_mn':'precip_mn',
+                           'PET_mn':'PET_mn','AET_mn':'AET_mn','wyield_mn':'wyield_mn',
+                           'wyield_sum':'wyield_sum'})
+    
+    wsr = polygon_contains_polygons(sheds, sub_sheds)
+    
+    precip_mn_d = get_mean(precip_raster, sub_sheds, 'subws_id', sub_mask)
+    pet_mn_d = get_mean(ape_raster, sub_sheds, 'subws_id', sub_mask)
+    aet_mn_d = get_mean(aet_raster, sub_sheds, 'subws_id', sub_mask)
+    wyield_mn_d = get_mean(wyield_raster, sub_sheds, 'subws_id', sub_mask)
+    wyield_sum_d = get_sum(wyield_raster, sub_sheds, 'subws_id', sub_mask)
+    
+    for key in precip_mn_d.iterkeys():
+        row_d = {'ws_id':wsr[key],'subws_id':key,'precip_mn':precip_mn_d[key],
+                 'PET_mn':pet_mn_d[key],'AET_mn':aet_mn_d[key],
+                 'wyield_mn':wyield_mn_d[key],'wyield_sum':wyield_sum_d[key]}
+        LOGGER.debug('writerow : %s', row_d)
+        wr.writerow(row_d)
+    
+    sub_table_file.close()
     
 def polygon_contains_polygons(shape, sub_shape):
     layer = shape.GetLayer(0)
@@ -198,21 +221,74 @@ def polygon_contains_polygons(shape, sub_shape):
         id = feat.GetFieldAsInteger(index)
         geom = feat.GetGeometryRef()
         sub_layer.ResetReading()
-        sub_id_list = []
+#        sub_id_list = []
         for sub_feat in sub_layer:
             sub_index = sub_feat.GetFieldIndex('subws_id')
             sub_id = sub_feat.GetFieldAsInteger(sub_index)
             sub_geom = sub_feat.GetGeometryRef()
             u_geom = sub_geom.Union(geom)
             if abs(geom.GetArea() - u_geom.GetArea()) < (math.e**-5):
-                sub_id_list.append(sub_id)
+#                sub_id_list.append(sub_id)
+                collection[sub_id] = id
             
             sub_feat.Destroy()
             
-        collection[id] = sub_id_list
         feat.Destroy()
         
     return collection
+
+
+def get_mean(raster, sub_sheds, field_name, shed_mask):
+    LOGGER.debug('GET_MEAN')
+#    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    band_mean = raster.GetRasterBand(1)
+    pixel_data_array = np.copy(band_mean.ReadAsArray())
+#    nodata = band_mean.GetNoDataValue()
+#    band_mean.Fill(nodata)
+    sub_sheds_id_array = np.copy(shed_mask)
+    new_data_array = np.copy(pixel_data_array)
+    dict = {}
+    sub_sheds.GetLayer(0).ResetReading()
+    for feat in sub_sheds.GetLayer(0):
+        index = feat.GetFieldIndex(field_name)
+        value = feat.GetFieldAsInteger(index)
+        mask_val = sub_sheds_id_array != value
+        set_mask_val = sub_sheds_id_array == value
+        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
+        comp_array = np.ma.compressed(masked_array)
+        mean = sum(comp_array) / len(comp_array)
+#        np.putmask(new_data_array, set_mask_val, mean)
+        dict[value] = mean
+#        LOGGER.debug('dict get_mean : %s', dict)
+        feat.Destroy()
+        
+#    band_mean.WriteArray(new_data_array, 0, 0)  
+    return dict
+
+def get_sum(raster, sub_sheds, field_name, shed_mask):
+#    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    band_mean = raster.GetRasterBand(1)
+    pixel_data_array = np.copy(band_mean.ReadAsArray())
+#    nodata = band_mean.GetNoDataValue()
+#    band_mean.Fill(nodata)
+    sub_sheds_id_array = np.copy(shed_mask)
+    new_data_array = np.copy(pixel_data_array)
+    dict = {}
+    sub_sheds.GetLayer(0).ResetReading()
+    for feat in sub_sheds.GetLayer(0):
+        index = feat.GetFieldIndex(field_name)
+        value = feat.GetFieldAsInteger(index)
+        mask_val = sub_sheds_id_array != value
+        set_mask_val = sub_sheds_id_array == value
+        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
+        comp_array = np.ma.compressed(masked_array)
+        mean = sum(comp_array)
+#        np.putmask(new_data_array, set_mask_val, mean)
+        dict[value] = mean
+        feat.Destroy()
+        
+#    band_mean.WriteArray(new_data_array, 0, 0)  
+    return dict
 
 def get_mask(raster, path, sub_sheds, field_name):
     raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
