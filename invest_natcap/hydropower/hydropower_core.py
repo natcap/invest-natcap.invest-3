@@ -4,6 +4,7 @@
 import logging
 import os
 import csv
+import math
 
 import numpy as np
 from osgeo import gdal
@@ -185,6 +186,33 @@ def water_yield(args):
     aet_mean = create_mean_raster(aet_raster, aet_mean_path,
                                   sub_sheds, 'subws_id', sub_mask)
 
+    water_shed_relationship = polygon_contains_polygons(sheds, sub_sheds)
+    
+def polygon_contains_polygons(shape, sub_shape):
+    layer = shape.GetLayer(0)
+    sub_layer = sub_shape.GetLayer(0)
+    collection = {}
+    
+    for feat in layer:
+        index = feat.GetFieldIndex('ws_id')
+        id = feat.GetFieldAsInteger(index)
+        geom = feat.GetGeometryRef()
+        sub_layer.ResetReading()
+        sub_id_list = []
+        for sub_feat in sub_layer:
+            sub_index = sub_feat.GetFieldIndex('subws_id')
+            sub_id = sub_feat.GetFieldAsInteger(sub_index)
+            sub_geom = sub_feat.GetGeometryRef()
+            u_geom = sub_geom.Union(geom)
+            if abs(geom.GetArea() - u_geom.GetArea()) < (math.e**-5):
+                sub_id_list.append(sub_id)
+            
+            sub_feat.Destroy()
+            
+        collection[id] = sub_id_list
+        feat.Destroy()
+        
+    return collection
 
 def get_mask(raster, path, sub_sheds, field_name):
     raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
@@ -360,7 +388,6 @@ def create_etk_root_rasters(key_raster, new_path, nodata, bio_dict, field):
         new_array[array==int(k)] = float(v[field])
         if k=='57':
             LOGGER.debug('new_array : %s : %s', k, v)
-    LOGGER.debug('new_array')
     tmp_band = tmp_raster.GetRasterBand(1)
     tmp_band.WriteArray(new_array, 0, 0)
     return tmp_raster
