@@ -356,10 +356,9 @@ class DynamicPrimitive(DynamicElement):
 
     def getOutputValue(self):
         if 'args_id' in self.attributes:
-            if self.isEnabled():
-                value = str(self.value())
-                if value != '':
-                    return self.cast_value()
+            value = str(self.value())
+            if value != '':
+                return self.cast_value()
 
     def set_error(self, error):
         if error == None or error == '':
