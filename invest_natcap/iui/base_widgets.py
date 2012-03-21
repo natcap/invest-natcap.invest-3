@@ -778,10 +778,10 @@ class FileButton(QtGui.QPushButton):
         oldText = self.URIfield.text()
         filename = ''
 
-        if self.filetype == 'file':
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Select ' + self.text, '.')
-        elif self.filetype == 'folder':
+        if self.filetype == 'folder':
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
+        else:
+            filename = QtGui.QFileDialog.getOpenFileName(self, 'Select ' + self.text, '.')
 
         #Set the value of the URIfield.
         if filename == '':
@@ -835,12 +835,12 @@ class HideableElement(LabeledElement):
         self.checkbox = QtGui.QCheckBox(attributes['label'])
         self.checkbox.toggled.connect(self.toggleHiding)
         self.checkbox.toggled.connect(self.toggle)
+        self.hideableElements = []
 
         #remove the label, as it is being subsumed by the new checkbox's label.
         self.elements.remove(self.label)
         self.elements.insert(0, self.checkbox)
         self.error.set_setting('start', 2)
-        self.hideableElements = [self.textField, self.button]
         
         self.toggleHiding(False)
 
@@ -856,14 +856,17 @@ class HideableElement(LabeledElement):
 
 class HideableFileEntry(HideableElement, FileEntry):
     def __init__(self, attributes):
-        HideableElement.__init__(self, attributes)
         FileEntry.__init__(self, attributes)
+        HideableElement.__init__(self, attributes)
+        self.elements = [self.checkbox, self.textField, self.button]
+        self.hideableElements = [self.textField, self.button]
+        self.toggleHiding(False)
+        self.error.set_setting('start', 1)
 
     def requirementsMet(self):
         if self.checkbox.isChecked():
             return FileEntry.requirementsMet(self)
         return False
-
 
 class Dropdown(LabeledElement):
     def __init__(self, attributes):
@@ -1171,7 +1174,7 @@ class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
-
+        self.super = None
         self.obj_registrar = object_registrar
 
         self.find_and_replace(attributes)
@@ -1379,6 +1382,7 @@ class Root(DynamicElement):
         outputDict = {}
 
         for id, element in self.allElements.iteritems():
+            always_return = False
             if 'returns' in element.attributes:
                 if 'alwaysReturn' in element.attributes['returns']:
                     always_return = element.attributes['returns']['alwaysReturn']
@@ -1412,6 +1416,16 @@ class Root(DynamicElement):
     
         return dictionary
 
+    def find_element_ptr(self, element_id):
+        """Return an element pointer if found.  None if not found."""
+        #if the element id can be found in the current UI, return that
+        #otherwise, get the element from this element's root.
+        if element_id in self.allElements:
+            return self.allElements[element_id]
+        else:
+            if self.super != None:
+                return self.super.find_element_ptr(element_id)
+
 class EmbeddedUI(Root):
     def __init__(self, attributes, registrar):
         uri = attributes['configURI']
@@ -1431,6 +1445,10 @@ class EmbeddedUI(Root):
 
     def getOutputValue(self):
         return self.assembleOutputDict()
+
+    def updateLinks(self, rootPointer):
+        self.super = rootPointer
+        Root.updateLinks(self, rootPointer)
 
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
