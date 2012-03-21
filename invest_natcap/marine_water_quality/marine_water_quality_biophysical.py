@@ -51,7 +51,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     uy *= 86.4
 
     #convert h from m to km
-    h /= 1000.0
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
@@ -61,7 +60,13 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
             return -1
 
     #convert point x,y to an index that coodinates with input arrays
-    point_index = calc_index(point_source['xps'], point_source['yps'])
+    LOGGER.debug("%s %s" % (int(point_source['yps'] / h),
+                             int(point_source['xps'] / h)))
+    point_index = calc_index(int(point_source['yps'] / h),
+                             int(point_source['xps'] / h))
+
+    #Convert h to km for calculation since other parameters are in KM
+    h /= 1000.0
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
@@ -209,7 +214,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     COLORMAP = pylab.cm.gist_earth
     COLORMAP.set_over(color='#330000')
     COLORMAP.set_under(color='#330000')
-    axis_extent = [0, H / 1000.0 * N_COLS, 0, H / 1000.0 * N_ROWS]
+    axis_extent = [0, H * N_COLS, 0, H * N_ROWS]
     pylab.imshow(density,
                  interpolation='bilinear',
                  cmap=COLORMAP,
