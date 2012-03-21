@@ -1379,7 +1379,11 @@ class Root(DynamicElement):
         outputDict = {}
 
         for id, element in self.allElements.iteritems():
-            if element.isEnabled() or element.attributes['type'] in ['checkbox']:
+            if 'returns' in element.attributes:
+                if 'alwaysReturn' in element.attributes['returns']:
+                    always_return = element.attributes['returns']['alwaysReturn']
+
+            if element.isEnabled() or always_return:
                 if 'args_id' in element.attributes:
                     element_value = element.getOutputValue()
                     if element_value != None:
