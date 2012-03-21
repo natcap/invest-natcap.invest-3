@@ -201,7 +201,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
 
     LOGGER.info("Done with point source diffusion.  Now plotting.")
     density = np.resize(density, (N_ROWS, N_COLS))
-    print density
+    np.savetxt('CON.txt', density, delimiter=',')
     IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
 
     axes = pylab.subplot(111)
