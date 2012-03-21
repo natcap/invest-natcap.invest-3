@@ -60,8 +60,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
             return -1
 
     #convert point x,y to an index that coodinates with input arrays
-    LOGGER.debug("%s %s" % (int(point_source['yps'] / h),
-                             int(point_source['xps'] / h)))
     point_index = calc_index(int(point_source['yps'] / h),
                              int(point_source['xps'] / h))
 
