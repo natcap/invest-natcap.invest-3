@@ -148,7 +148,6 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     #Remove any instances of spacing characters
     IN_WATER = map(lambda x: x == '1', re.sub('[\n\t\r, ]', '', LAND_STRING))
     N_COLS = len(IN_WATER) / N_ROWS
-    print N_ROWS, N_COLS, IN_WATER
     #parse WQM file
     #Initialize variables that need to get set.  Putting None here so if they
     #don't get parsed correctly something will crash.
@@ -217,8 +216,8 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
                  cmap=COLORMAP,
                  vmin=VMIN,
                  vmax=VMAX,
-                 origin = 'lower',
-                 extent = axis_extent)
+                 origin='lower',
+                 extent=axis_extent)
 
     pylab.colorbar()
 
@@ -231,8 +230,8 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
         pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
                      interpolation='bilinear',
                      cmap=pylab.cm.PuOr,
-                     origin = 'lower',
-                     extent = axis_extent)
+                     origin='lower',
+                     extent=axis_extent)
 
     #This is for a handy overlap graph mouse explorer on the plot.
     class Cursor:
