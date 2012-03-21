@@ -27,8 +27,8 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     n, m - the number of rows, columns in the 2D grid.  Used to determine
         indices into list parameters 'water', 'E', 'ux', 'uy', and i * m + j in
         a list
-    water - 1D list n * m elements long of booleans indicating land / water.  True
-            is water, False is land.  
+    water - 1D list n * m elements long of booleans indicating land / water.
+        True is water, False is land.
     E - constant indicating tidal dispersion coefficient: km ^ 2 / day
     ux - constant indicating x component of advective velocity: m / s
     uy - constant indicating y component of advective velocity: m / s
@@ -40,7 +40,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
         Default False.
     
     returns a 2D grid of pollutant densities in the same dimension as  'grid'
-    
     """
     LOGGER = logging.getLogger('marine_water_quality')
     LOGGER.info('Calculating advection diffusion for %s' % \
@@ -53,7 +52,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
 
     #convert h from m to km
     h /= 1000.0
-
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
@@ -254,8 +252,10 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
 
             #This section does a translation from axis coordinates to the 
             #index values in the density array.
-            index_x = int((x - axis_extent[0]) / (axis_extent[1] - axis_extent[0]) * N_COLS)
-            index_y = int((y - axis_extent[2]) / (axis_extent[3] - axis_extent[2]) * N_ROWS)
+            index_x = int((x - axis_extent[0]) / (axis_extent[1] -
+                                                  axis_extent[0]) * N_COLS)
+            index_y = int((y - axis_extent[2]) / (axis_extent[3] -
+                                                  axis_extent[2]) * N_ROWS)
             try:
                 self.txt.set_text('s=%1.2f' % \
                                   (density[int(index_y), int(index_x)]))
