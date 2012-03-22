@@ -317,8 +317,19 @@ def create_writer_table(table_path, field_list, water_dict, wsr=None):
     return table_file
 
 def write_table_rows(water_dict, writer, wsr):
-    """
-    """
+    """Writes output rows to the CSV file for water yield subwatershed and
+       water yield watershed
+       
+       water_dict - water_dict - a dictionary with keys as strings that corresponds to
+                    a dictionary that holds values for the table:
+                    water_dict['precip_mn']:{1:650.2, 2:354, 3:908.32, ...}
+                    water_dict['AET_mn']:{1:1231, 2:3545.23, 3:809.23, ...}
+       writer - the handle on the CSV DictWriter object
+       wsr - either a None value or a dictionary that holds the relationship 
+             between watersheds and subwatersheds.
+             
+       returns - nothing"""
+    #If wsr is not None then we want to write out the subwatershed table   
     if wsr != None:
         for key in water_dict['precip_mn'].iterkeys():
             row_d = {'ws_id':wsr[key],'subws_id':key,
@@ -328,7 +339,7 @@ def write_table_rows(water_dict, writer, wsr):
                      'wyield_mn':water_dict['wyield_mn'][key],
                      'wyield_sum':water_dict['wyield_sum'][key]}
             writer.writerow(row_d)
-    
+    #If wsr is None then we want to write out the watershed table
     else:
         for key in water_dict['precip_mn'].iterkeys():
             row_d = {'ws_id':key,'precip_mn':water_dict['precip_mn'][key],
@@ -339,12 +350,22 @@ def write_table_rows(water_dict, writer, wsr):
             writer.writerow(row_d)
         
 def polygon_contains_polygons(shape, sub_shape):
-    """
+    """Stores which sub watersheds belong to which watershed
+       
+       shape - an OGR shapefile of the watersheds
+       sub_shape - an OGR shapefile of the sub watersheds
+       
+       returns - a dictionary where the keys are the sub watersheds id's
+                 and whose value is the watersheds id it belongs to
     """
     layer = shape.GetLayer(0)
     sub_layer = sub_shape.GetLayer(0)
     collection = {}
-    
+    #For all the polygons in the watershed check to see if any of the polygons
+    #in the sub watershed belong to that watershed by checking the area of the
+    #watershed against the area of the Union of the watershed and sub watershed
+    #polygon.  The areas will be the same if the sub watershed is part of the
+    #watershed and will be different if it is not
     for feat in layer:
         index = feat.GetFieldIndex('ws_id')
         id = feat.GetFieldAsInteger(index)
@@ -355,6 +376,9 @@ def polygon_contains_polygons(shape, sub_shape):
             sub_id = sub_feat.GetFieldAsInteger(sub_index)
             sub_geom = sub_feat.GetGeometryRef()
             u_geom = sub_geom.Union(geom)
+            #We can't be sure that the areas will be identical because of
+            #floating point issues and complete accuracy so we make sure the
+            #difference in areas is within reason
             if abs(geom.GetArea() - u_geom.GetArea()) < (math.e**-5):
                 collection[sub_id] = id
             
@@ -365,16 +389,25 @@ def polygon_contains_polygons(shape, sub_shape):
     return collection
 
 
-def get_mean(raster, sub_sheds, field_name, shed_mask):
-    """
+def get_mean(raster, shed_shape, field_name, shed_mask):
+    """Calculates the mean per watershed or sub watershed based on groups of
+       pixels from a raster that fall within each watershed or sub watershed
+       
+       raster - a GDAL raster dataset of the values to find the mean 
+       shed_shape - a OGR shapefile of either the watersheds or sub watersheds
+       field_name - a string of the id field name from shed_shape
+       shed_mask - a numpy array that represents the mask for where the 
+                   watersheds/sub watersheds fall on the raster
+       
+       returns - a dictionary whose keys are the sheds id's and values the mean
     """
     band_mean = raster.GetRasterBand(1)
     pixel_data_array = np.copy(band_mean.ReadAsArray())
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     dict = {}
-    sub_sheds.GetLayer(0).ResetReading()
-    for feat in sub_sheds.GetLayer(0):
+    shed_shape.GetLayer(0).ResetReading()
+    for feat in shed_shape.GetLayer(0):
         index = feat.GetFieldIndex(field_name)
         value = feat.GetFieldAsInteger(index)
         mask_val = sub_sheds_id_array != value
@@ -387,30 +420,51 @@ def get_mean(raster, sub_sheds, field_name, shed_mask):
         
     return dict
 
-def get_sum(raster, sub_sheds, field_name, shed_mask):
+def get_sum(raster, shed_shape, field_name, shed_mask):
+    """Calculates the sum per watershed or sub watershed based on groups of
+       pixels from a raster that fall within each watershed or sub watershed
+       
+       raster - a GDAL raster dataset of the values to find the sum
+       shed_shape - a OGR shapefile of either the watersheds or sub watersheds
+       field_name - a string of the id field name from shed_shape
+       shed_mask - a numpy array that represents the mask for where the 
+                   watersheds/sub watersheds fall on the raster
+       
+       returns - a dictionary whose keys are the sheds id's and values the sum
     """
-    """
-    band_mean = raster.GetRasterBand(1)
-    pixel_data_array = np.copy(band_mean.ReadAsArray())
+    
+    band_sum = raster.GetRasterBand(1)
+    pixel_data_array = np.copy(band_sum.ReadAsArray())
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     dict = {}
-    sub_sheds.GetLayer(0).ResetReading()
-    for feat in sub_sheds.GetLayer(0):
+    shed_shape.GetLayer(0).ResetReading()
+    for feat in shed_shape.GetLayer(0):
         index = feat.GetFieldIndex(field_name)
         value = feat.GetFieldAsInteger(index)
         mask_val = sub_sheds_id_array != value
         set_mask_val = sub_sheds_id_array == value
         masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
-        mean = sum(comp_array)
-        dict[value] = mean
+        sum_val = sum(comp_array)
+        dict[value] = sum_val
         feat.Destroy()
         
     return dict
 
-def get_mask(raster, path, sub_sheds, field_name):
-    """
+def get_mask(raster, path, shed_shape, field_name):
+    """Creates a copy of a raster and fills it with nodata values.  It then
+       rasterizes the id field from shed_shape onto that raster and returns
+       a numpy array representation of the raster
+       
+       raster - a GDAL raster dataset that has the desired pixel size and
+                dimensions
+       path - a uri string path for the creation of the copied raster
+       shed_shape - an OGR shapefile, either watershed or sub watershed
+       field_name - a string of the field name from shed_shape to rasterize
+       
+       returns - a numpy array representation of the rasterized shapes id 
+                 values
     """
     
     raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
@@ -418,14 +472,24 @@ def get_mask(raster, path, sub_sheds, field_name):
     nodata = band.GetNoDataValue()
     band.Fill(-1)
     attribute_string = 'ATTRIBUTE=' + field_name
-    gdal.RasterizeLayer(raster, [1], sub_sheds.GetLayer(0),
+    gdal.RasterizeLayer(raster, [1], shed_shape.GetLayer(0),
                         options = [attribute_string])
     sub_sheds_id_array = band.ReadAsArray()
     
     return sub_sheds_id_array
     
-def create_area_raster(raster, path, sub_sheds, field_name, shed_mask):
-    """
+def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
+    """Creates a new raster representing the area per watershed or per
+       sub watershed 
+    
+       raster - a GDAL raster dataset that has the desired pixel size and
+                dimensions
+       path - a uri string path for the creation of the area raster
+       shed_shape - an OGR shapefile, either watershed or sub watershed
+       field_name - a string of the id field from shed_shape
+       shed_mask - a numpy array representing the shed/sub shed id mask
+       
+       returns - a raster       
     """
     raster_area = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_area = raster_area.GetRasterBand(1)
@@ -435,7 +499,7 @@ def create_area_raster(raster, path, sub_sheds, field_name, shed_mask):
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     
-    for feat in sub_sheds.GetLayer(0):
+    for feat in shed_shape.GetLayer(0):
         geom = feat.GetGeometryRef()
         geom_type = geom.GetGeometryType()
         LOGGER.debug('AREA OF Poly : %s', geom.GetArea())
@@ -452,8 +516,18 @@ def create_area_raster(raster, path, sub_sheds, field_name, shed_mask):
     band_area.WriteArray(new_data_array, 0, 0)  
     return raster_area
 
-def create_mean_raster(raster, path, sub_sheds, field_name, shed_mask):
-    """
+def create_mean_raster(raster, path, shed_shape, field_name, shed_mask):
+    """Creates a new raster representing the mean per watershed or per
+       sub watershed 
+    
+       raster - a GDAL raster dataset that has the desired pixel size and
+                dimensions as well as the values we want to take the mean of
+       path - a uri string path for the creation of the mean raster
+       shed_shape - an OGR shapefile, either watershed or sub watershed
+       field_name - a string of the id field from shed_shape
+       shed_mask - a numpy array representing the shed/sub shed id mask
+       
+       returns - a raster       
     """
     raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_mean = raster_mean.GetRasterBand(1)
@@ -463,7 +537,7 @@ def create_mean_raster(raster, path, sub_sheds, field_name, shed_mask):
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     
-    for feat in sub_sheds.GetLayer(0):
+    for feat in shed_shape.GetLayer(0):
         index = feat.GetFieldIndex(field_name)
         value = feat.GetFieldAsInteger(index)
         mask_val = sub_sheds_id_array != value
@@ -521,9 +595,16 @@ def clip_raster_from_polygon(shape, raster, path):
     return copy_raster
     
 def create_etk_root_rasters(key_raster, new_path, nodata, bio_dict, field):
+    """Creates a raster based on data from a column in a table
+    
+       key_raster - a GDAL raster dataset 
+       new_path - a uri string for where the new raster should be written to
+       nodata - an integer value
+       bio_dict - a dictionary representing the biophysical csv table
+       field - a string of which field in the table to use
+       
+       returns - a raster
     """
-    """
-    #brute force create raster from table values
     tmp_raster = \
         invest_cython_core.newRasterFromBase(key_raster, new_path, 
                                             'GTiff', nodata, gdal.GDT_Float32)
