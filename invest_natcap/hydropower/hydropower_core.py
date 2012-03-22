@@ -70,6 +70,7 @@ def water_yield(args):
     sub_sheds = args['sub_watersheds']
     sheds = args['watersheds']
     zhang = float(args['zhang'])
+    
     #brute force create raster from table values
     tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk.tif'
     tmp_etk_raster = create_etk_root_rasters(lulc_raster, tmp_etk_path, 255.0,
@@ -79,6 +80,7 @@ def water_yield(args):
     tmp_root_path = intermediate_dir + os.sep + 'tmp_root.tif'
     tmp_root_raster = create_etk_root_rasters(lulc_raster, tmp_root_path, 255.0,
                                              bio_dict, 'root_depth')
+    
     #Operation for creating the fractp raster
     def fractp(etk, ape, precip, root, soil, pawc):
         val = (etk * ape) / 1000
@@ -95,6 +97,7 @@ def water_yield(args):
             ((tmp_w * tmp_DI + 1) / (( 1 / tmp_DI) + (tmp_w * tmp_DI + 1)))
         fractp = np.minimum(tmp_max_aet, tmp_calc)
         return fractp
+    
     #Create the fractp raster
     fractp_path = intermediate_dir + os.sep + 'fractp.tif'
     raster_list = [tmp_etk_raster, ape_raster, precip_raster, tmp_root_raster,
@@ -105,19 +108,24 @@ def water_yield(args):
     #Operation for creating the water yield raster
     def wyield(fractp, precip):
         return (1 - fractp) * precip
+    
     #Create the water yield raster 
     wyield_path = intermediate_dir + os.sep + 'wyield.tif'
     wyield_raster = \
         invest_cython_core.newRasterFromBase(fractp_raster, wyield_path, 
                                             'GTiff', -1, gdal.GDT_Float32)
+        
     #Get relevant raster bands for creating water yield raster
     fractp_band = fractp_raster.GetRasterBand(1)
     precip_band = precip_raster.GetRasterBand(1)
     wyield_band = wyield_raster.GetRasterBand(1)
+    
     invest_core.vectorize2ArgOp(fractp_band, precip_band, wyield, wyield_band)
+    
     #Paths for clipping the fractp/wyield raster to watershed polygons
     fractp_clipped_path = intermediate_dir + os.sep + 'fractp_clipped.tif'
     wyield_clipped_path = intermediate_dir + os.sep + 'wyield_clipped.tif'
+    
     #Clip fractp/wyield rasters to watershed polygons
     wyield_clipped_raster = clip_raster_from_polygon(sheds, wyield_raster, \
                                                      wyield_clipped_path)
@@ -133,6 +141,7 @@ def water_yield(args):
     sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask.tif'
     sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path,
                                sub_sheds, 'subws_id')
+    
     shed_mask_raster_path = intermediate_dir + os.sep + 'shed_mask.tif'
     shed_mask = get_mask(fractp_clipped_raster, shed_mask_raster_path,
                                sheds, 'ws_id')
@@ -142,26 +151,32 @@ def water_yield(args):
                                      sub_sheds, 'subws_id', sub_mask)
     wyield_mean = create_mean_raster(wyield_clipped_raster, wyield_mean_path,
                                      sub_sheds, 'subws_id', sub_mask)
+    
     #Create area raster so that the volume can be computed.
     wyield_area = create_area_raster(wyield_clipped_raster, wyield_area_path,
                                      sub_sheds, 'subws_id', sub_mask)
+    
     #Operation to compute the water yield volume raster
     def volume(wyield_mn, wyield_area):
         return (wyield_mn * wyield_area / 1000)
+    
     #Make blank raster for volume
     wyield_vol_raster = \
         invest_cython_core.newRasterFromBase(wyield_raster, wyield_volume_path, 
                                             'GTiff', -1, gdal.GDT_Float32)
+        
     #Get the relevant bands and create volume raster
     wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
     wyield_mean_band = wyield_mean.GetRasterBand(1)
     wyield_area_band = wyield_area.GetRasterBand(1)
     invest_core.vectorize2ArgOp(wyield_mean_band, wyield_area_band, 
                                 volume, wyield_vol_band)
+    
     #Make blank raster for hectare volume
     wyield_ha_raster = \
         invest_cython_core.newRasterFromBase(wyield_raster, wyield_ha_path, 
                                             'GTiff', -1, gdal.GDT_Float32)
+        
     wyield_ha_band = wyield_ha_raster.GetRasterBand(1)
     #Operation for making ha volume raster           
     def ha(wyield_vol, wyield_area):
@@ -169,17 +184,22 @@ def water_yield(args):
             return 0.0
         else:
             return wyield_vol / (0.0001 * wyield_area)
+        
     #Make ha volume raster
     invest_core.vectorize2ArgOp(wyield_vol_band, wyield_area_band, 
                                 ha, wyield_ha_band)
+    
     #Create aet and aet mean raster
     aet_path = intermediate_dir + os.sep + 'aet.tif'
     aet_mean_path = intermediate_dir + os.sep + 'aet_mn.tif'
+    
     aet_raster = \
         invest_cython_core.newRasterFromBase(wyield_area, aet_path, 
                                             'GTiff', -1, gdal.GDT_Float32)
+        
     aet_band = aet_raster.GetRasterBand(1)
     fractp_band = fractp_clipped_raster.GetRasterBand(1)
+    
     #Operation for creating aet raster
     def aet(fractp, precip):
         return fractp * precip
@@ -191,11 +211,14 @@ def water_yield(args):
 
     sub_table_path = intermediate_dir + os.sep + 'water_yield_subwatershed.csv'
     sub_table_file = open(sub_table_path, 'wb')
-    wr = csv.DictWriter(sub_table_file, ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 
-                                         'AET_mn', 'wyield_mn', 'wyield_sum'])
+    wr = \
+        csv.DictWriter(sub_table_file, ['ws_id', 'subws_id', 'precip_mn', 
+                                        'PET_mn','AET_mn', 'wyield_mn', 
+                                        'wyield_sum'])
+        
     wr.writerow({'ws_id':'ws_id','subws_id':'subws_id','precip_mn':'precip_mn',
-                           'PET_mn':'PET_mn','AET_mn':'AET_mn','wyield_mn':'wyield_mn',
-                           'wyield_sum':'wyield_sum'})
+                 'PET_mn':'PET_mn','AET_mn':'AET_mn','wyield_mn':'wyield_mn',
+                 'wyield_sum':'wyield_sum'})
     
     wsr = polygon_contains_polygons(sheds, sub_sheds)
     
@@ -216,14 +239,14 @@ def water_yield(args):
     
     shed_table_path = intermediate_dir + os.sep + 'water_yield_watershed.csv'
     shed_table_file = open(shed_table_path, 'wb')
-    shed_wr = csv.DictWriter(shed_table_file, ['ws_id', 'precip_mn', 'PET_mn', 
+    shed_wr = \
+        csv.DictWriter(shed_table_file, ['ws_id', 'precip_mn', 'PET_mn', 
                                          'AET_mn', 'wyield_mn', 'wyield_sum'])
-    shed_wr.writerow({'ws_id':'ws_id','precip_mn':'precip_mn',
-                           'PET_mn':'PET_mn','AET_mn':'AET_mn','wyield_mn':'wyield_mn',
-                           'wyield_sum':'wyield_sum'})
+    shed_wr.writerow({'ws_id':'ws_id','precip_mn':'precip_mn','PET_mn':'PET_mn',
+                      'AET_mn':'AET_mn','wyield_mn':'wyield_mn',
+                      'wyield_sum':'wyield_sum'})
     
     precip_mn_ds = get_mean(precip_raster, sheds, 'ws_id', shed_mask)
-    LOGGER.debug('precip mean : %s', precip_mn_ds)
     pet_mn_ds = get_mean(ape_raster, sheds, 'ws_id', shed_mask)
     aet_mn_ds = get_mean(aet_raster, sheds, 'ws_id', shed_mask)
     wyield_mn_ds = get_mean(wyield_raster, sheds, 'ws_id', shed_mask)
@@ -248,14 +271,12 @@ def polygon_contains_polygons(shape, sub_shape):
         id = feat.GetFieldAsInteger(index)
         geom = feat.GetGeometryRef()
         sub_layer.ResetReading()
-#        sub_id_list = []
         for sub_feat in sub_layer:
             sub_index = sub_feat.GetFieldIndex('subws_id')
             sub_id = sub_feat.GetFieldAsInteger(sub_index)
             sub_geom = sub_feat.GetGeometryRef()
             u_geom = sub_geom.Union(geom)
             if abs(geom.GetArea() - u_geom.GetArea()) < (math.e**-5):
-#                sub_id_list.append(sub_id)
                 collection[sub_id] = id
             
             sub_feat.Destroy()
@@ -266,12 +287,8 @@ def polygon_contains_polygons(shape, sub_shape):
 
 
 def get_mean(raster, sub_sheds, field_name, shed_mask):
-    LOGGER.debug('GET_MEAN')
-#    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_mean = raster.GetRasterBand(1)
     pixel_data_array = np.copy(band_mean.ReadAsArray())
-#    nodata = band_mean.GetNoDataValue()
-#    band_mean.Fill(nodata)
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     dict = {}
@@ -284,20 +301,14 @@ def get_mean(raster, sub_sheds, field_name, shed_mask):
         masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         mean = sum(comp_array) / len(comp_array)
-#        np.putmask(new_data_array, set_mask_val, mean)
         dict[value] = mean
-#        LOGGER.debug('dict get_mean : %s', dict)
         feat.Destroy()
         
-#    band_mean.WriteArray(new_data_array, 0, 0)  
     return dict
 
 def get_sum(raster, sub_sheds, field_name, shed_mask):
-#    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_mean = raster.GetRasterBand(1)
     pixel_data_array = np.copy(band_mean.ReadAsArray())
-#    nodata = band_mean.GetNoDataValue()
-#    band_mean.Fill(nodata)
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     dict = {}
@@ -310,11 +321,9 @@ def get_sum(raster, sub_sheds, field_name, shed_mask):
         masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         mean = sum(comp_array)
-#        np.putmask(new_data_array, set_mask_val, mean)
         dict[value] = mean
         feat.Destroy()
         
-#    band_mean.WriteArray(new_data_array, 0, 0)  
     return dict
 
 def get_mask(raster, path, sub_sheds, field_name):
@@ -329,35 +338,6 @@ def get_mask(raster, path, sub_sheds, field_name):
     
     return sub_sheds_id_array
     
-#def create_area_raster(raster, path, sub_sheds, field_name):
-#    raster_area = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-#    band_area = raster_area.GetRasterBand(1)
-#    pixel_data_array = band_area.ReadAsArray()
-#    nodata = band_area.GetNoDataValue()
-#    band_area.Fill(nodata)
-#    attribute_string = 'ATTRIBUTE=' + field_name
-#    gdal.RasterizeLayer(raster_area, [1], sub_sheds.GetLayer(0),
-#                        options = [attribute_string])
-#    sub_sheds_id_array = band_area.ReadAsArray()
-#    new_data_array = np.copy(pixel_data_array)
-#    
-#    for feat in sub_sheds.GetLayer(0):
-#        geom = feat.GetGeometryRef()
-#        geom_type = geom.GetGeometryType()
-#        LOGGER.debug('AREA OF Poly : %s', geom.GetArea())
-#        index = feat.GetFieldIndex(field_name)
-#        value = feat.GetFieldAsInteger(index)
-#        mask_val = sub_sheds_id_array != value
-#        set_mask_val = sub_sheds_id_array == value
-#        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
-#        comp_array = np.ma.compressed(masked_array)
-#        np.putmask(new_data_array, set_mask_val, geom.GetArea())
-#        
-#        feat.Destroy()
-#        
-#    band_area.WriteArray(new_data_array, 0, 0)  
-#    return raster_area
-
 def create_area_raster(raster, path, sub_sheds, field_name, shed_mask):
     raster_area = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_area = raster_area.GetRasterBand(1)
@@ -383,33 +363,6 @@ def create_area_raster(raster, path, sub_sheds, field_name, shed_mask):
         
     band_area.WriteArray(new_data_array, 0, 0)  
     return raster_area
-
-#def create_mean_raster(raster, path, sub_sheds, field_name):
-#    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-#    band_mean = raster_mean.GetRasterBand(1)
-#    pixel_data_array = band_mean.ReadAsArray()
-#    nodata = band_mean.GetNoDataValue()
-#    band_mean.Fill(nodata)
-#    attribute_string = 'ATTRIBUTE=' + field_name
-#    gdal.RasterizeLayer(raster_mean, [1], sub_sheds.GetLayer(0),
-#                        options = [attribute_string])
-#    sub_sheds_id_array = band_mean.ReadAsArray()
-#    new_data_array = np.copy(pixel_data_array)
-#    
-#    for feat in sub_sheds.GetLayer(0):
-#        index = feat.GetFieldIndex(field_name)
-#        value = feat.GetFieldAsInteger(index)
-#        mask_val = sub_sheds_id_array != value
-#        set_mask_val = sub_sheds_id_array == value
-#        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
-#        comp_array = np.ma.compressed(masked_array)
-#        mean = sum(comp_array) / len(comp_array)
-#        np.putmask(new_data_array, set_mask_val, mean)
-#        
-#        feat.Destroy()
-#        
-#    band_mean.WriteArray(new_data_array, 0, 0)  
-#    return raster_mean
 
 def create_mean_raster(raster, path, sub_sheds, field_name, shed_mask):
     raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
