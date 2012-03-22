@@ -186,8 +186,8 @@ def water_yield(args):
             return wyield_vol / (0.0001 * wyield_area)
         
     #Make ha volume raster
-    invest_core.vectorize2ArgOp(wyield_vol_band, wyield_area_band, 
-                                ha, wyield_ha_band)
+    invest_core.vectorize2ArgOp(wyield_vol_band, wyield_area_band, ha, 
+                                wyield_ha_band)
     
     #Create aet and aet mean raster
     aet_path = intermediate_dir + os.sep + 'aet.tif'
@@ -210,57 +210,66 @@ def water_yield(args):
                                   sub_sheds, 'subws_id', sub_mask)
 
     sub_table_path = intermediate_dir + os.sep + 'water_yield_subwatershed.csv'
-    sub_table_file = open(sub_table_path, 'wb')
-    wr = \
-        csv.DictWriter(sub_table_file, ['ws_id', 'subws_id', 'precip_mn', 
-                                        'PET_mn','AET_mn', 'wyield_mn', 
-                                        'wyield_sum'])
-        
-    wr.writerow({'ws_id':'ws_id','subws_id':'subws_id','precip_mn':'precip_mn',
-                 'PET_mn':'PET_mn','AET_mn':'AET_mn','wyield_mn':'wyield_mn',
-                 'wyield_sum':'wyield_sum'})
-    
+
     wsr = polygon_contains_polygons(sheds, sub_sheds)
-    
-    precip_mn_d = get_mean(precip_raster, sub_sheds, 'subws_id', sub_mask)
-    pet_mn_d = get_mean(ape_raster, sub_sheds, 'subws_id', sub_mask)
-    aet_mn_d = get_mean(aet_raster, sub_sheds, 'subws_id', sub_mask)
-    wyield_mn_d = get_mean(wyield_raster, sub_sheds, 'subws_id', sub_mask)
-    wyield_sum_d = get_sum(wyield_raster, sub_sheds, 'subws_id', sub_mask)
-    
-    for key in precip_mn_d.iterkeys():
-        row_d = {'ws_id':wsr[key],'subws_id':key,'precip_mn':precip_mn_d[key],
-                 'PET_mn':pet_mn_d[key],'AET_mn':aet_mn_d[key],
-                 'wyield_mn':wyield_mn_d[key],'wyield_sum':wyield_sum_d[key]}
-        LOGGER.debug('writerow : %s', row_d)
-        wr.writerow(row_d)
-    
-    sub_table_file.close()
+    sub_value_dict = {}
+    sub_value_dict['precip_mn'] = \
+        get_mean(precip_raster, sub_sheds, 'subws_id', sub_mask)
+    sub_value_dict['PET_mn'] = \
+        get_mean(ape_raster, sub_sheds, 'subws_id', sub_mask)
+    sub_value_dict['AET_mn'] = \
+        get_mean(aet_raster, sub_sheds, 'subws_id', sub_mask)
+    sub_value_dict['wyield_mn'] = \
+        get_mean(wyield_raster, sub_sheds, 'subws_id', sub_mask)
+    sub_value_dict['wyield_sum'] = \
+        get_sum(wyield_raster, sub_sheds, 'subws_id', sub_mask)
+    sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
+                      'wyield_mn', 'wyield_sum']
+    create_writer_table(sub_table_path, sub_field_list, sub_value_dict, wsr)
     
     shed_table_path = intermediate_dir + os.sep + 'water_yield_watershed.csv'
-    shed_table_file = open(shed_table_path, 'wb')
-    shed_wr = \
-        csv.DictWriter(shed_table_file, ['ws_id', 'precip_mn', 'PET_mn', 
-                                         'AET_mn', 'wyield_mn', 'wyield_sum'])
-    shed_wr.writerow({'ws_id':'ws_id','precip_mn':'precip_mn','PET_mn':'PET_mn',
-                      'AET_mn':'AET_mn','wyield_mn':'wyield_mn',
-                      'wyield_sum':'wyield_sum'})
+
+    value_dict = {}
+    value_dict['precip_mn'] = get_mean(precip_raster, sheds, 'ws_id', shed_mask)
+    value_dict['PET_mn'] = get_mean(ape_raster, sheds, 'ws_id', shed_mask)
+    value_dict['AET_mn'] = get_mean(aet_raster, sheds, 'ws_id', shed_mask)
+    value_dict['wyield_mn'] = get_mean(wyield_raster, sheds, 'ws_id', shed_mask)
+    value_dict['wyield_sum'] = get_sum(wyield_raster, sheds, 'ws_id', shed_mask)
+    field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
+                  'wyield_sum']
+    create_writer_table(shed_table_path, field_list, value_dict)
     
-    precip_mn_ds = get_mean(precip_raster, sheds, 'ws_id', shed_mask)
-    pet_mn_ds = get_mean(ape_raster, sheds, 'ws_id', shed_mask)
-    aet_mn_ds = get_mean(aet_raster, sheds, 'ws_id', shed_mask)
-    wyield_mn_ds = get_mean(wyield_raster, sheds, 'ws_id', shed_mask)
-    wyield_sum_ds = get_sum(wyield_raster, sheds, 'ws_id', shed_mask)
+def create_writer_table(table_path, field_list, water_dict, wsr=None):
+    table_file = open(table_path, 'wb')
+    writer = csv.DictWriter(table_file, field_list)
+    field_dict = {}
+    for field in field_list:
+        field_dict[field] = field
+    writer.writerow(field_dict)
     
-    for key in precip_mn_ds.iterkeys():
-        row_ds = {'ws_id':key,'precip_mn':precip_mn_ds[key],
-                 'PET_mn':pet_mn_ds[key],'AET_mn':aet_mn_ds[key],
-                 'wyield_mn':wyield_mn_ds[key],'wyield_sum':wyield_sum_ds[key]}
-        LOGGER.debug('writerow : %s', row_ds)
-        shed_wr.writerow(row_ds)
+    write_table_rows(water_dict, writer, wsr)
+    return table_file
+
+def write_table_rows(water_dict, writer, wsr):
+    if wsr != None:
+        for key in water_dict['precip_mn'].iterkeys():
+            row_d = {'ws_id':wsr[key],'subws_id':key,
+                     'precip_mn':water_dict['precip_mn'][key],
+                     'PET_mn':water_dict['PET_mn'][key],
+                     'AET_mn':water_dict['AET_mn'][key],
+                     'wyield_mn':water_dict['wyield_mn'][key],
+                     'wyield_sum':water_dict['wyield_sum'][key]}
+            writer.writerow(row_d)
     
-    shed_table_file.close()
-    
+    else:
+        for key in water_dict['precip_mn'].iterkeys():
+            row_d = {'ws_id':key,'precip_mn':water_dict['precip_mn'][key],
+                     'PET_mn':water_dict['PET_mn'][key],
+                     'AET_mn':water_dict['AET_mn'][key],
+                     'wyield_mn':water_dict['wyield_mn'][key],
+                     'wyield_sum':water_dict['wyield_sum'][key]}
+            writer.writerow(row_d)
+        
 def polygon_contains_polygons(shape, sub_shape):
     layer = shape.GetLayer(0)
     sub_layer = sub_shape.GetLayer(0)
