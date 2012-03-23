@@ -65,14 +65,15 @@ def execute(args):
         if not os.path.isdir(folder_path):
             os.path.mkdir(folder_path)
             
+    water_scarcity_args['workspace_dir'] = args['workspace_dir']
     #Open all of the gdal files and place in dictionary
-    args['lulc'] = gdal.Open(args['lulc_uri'])
-    args['water_yield_vol'] = gdal.Open(args['water_yield_vol_uri'])
-    args['water_yield_mn'] = gdal.Open(args['water_yield_mean_uri'])
+    water_scarcity_args['lulc'] = gdal.Open(args['lulc_uri'])
+    water_scarcity_args['water_yield_vol'] = gdal.Open(args['water_yield_vol_uri'])
+    water_scarcity_args['water_yield_mn'] = gdal.Open(args['water_yield_mean_uri'])
     
     #Open all the shapefiles and place in dictionary
-    args['watersheds'] = ogr.Open(args['watersheds_uri'])
-    args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
+    water_scarcity_args['watersheds'] = ogr.Open(args['watersheds_uri'])
+    water_scarcity_args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
     
     #Open/read in the dbf files into a dictionary and add to
     #dictionary
@@ -86,7 +87,7 @@ def execute(args):
                                               'wyield_mn':row['wyield_mn'],
                                               'wyield_sum':row['wyield_sum']}
         
-    args['watershed_yield_table'] = watershed_yield_table_map
+    water_scarcity_args['watershed_yield_table'] = watershed_yield_table_map
     watershed_yield_table_file.close()
     
     subwatershed_yield_table_map = {}
@@ -100,7 +101,7 @@ def execute(args):
                                               'wyield_mn':row['wyield_mn'],
                                               'wyield_sum':row['wyield_sum']}
         
-    args['subwatershed_yield_table'] = subwatershed_yield_table_map
+    water_scarcity_args['subwatershed_yield_table'] = subwatershed_yield_table_map
     subwatershed_yield_table_file.close()
     
     demand_table_map = {}
@@ -110,7 +111,7 @@ def execute(args):
         demand_table_map[row['lucode']] = {'demand':row['demand'], \
                                               'LULC_desc':row['LULC_desc']}
         
-    args['demand_table'] = demand_table_map
+    water_scarcity_args['demand_table'] = demand_table_map
     demand_table_file.close()
     
     
@@ -121,8 +122,8 @@ def execute(args):
         hydro_cal_table_map[row['id']] = {'ws_id':row['ws_id'], \
                                               'calib':row['calib']}
         
-    args['hydro_cal_table'] = hydro_cal_table_map
+    water_scarcity_args['hydro_cal_table'] = hydro_cal_table_map
     hydro_cal_table_file.close()
     
     #Call water_scarcity_core.py
-    hydropower_core.water_scarcity(args)
+    hydropower_core.water_scarcity(water_scarcity_args)
