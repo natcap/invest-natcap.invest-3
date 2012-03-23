@@ -229,3 +229,66 @@ class TestHydropowerCore(unittest.TestCase):
         invest_test_core.assertTwoDatasetsEqual(self, aet_regression_raster, 
                                                 new_raster)
 
+    def test_create_mean_raster_byhand(self):
+        
+        out_dir = './data/test_out/hydropower_create_mean_raster'
+        output_path = out_dir + os.sep + 'mean_aet.tif'
+        
+        if not os.path.isdir(out_dir):
+            os.mkdir(out_dir)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        wrk_dir = './data/hydropower_data/test_input'
+        
+        sub_sheds_path = wrk_dir + os.sep + 'subwatersheds.shp'
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        
+        field_name = 'subws_id'
+        
+        #Create two 3x3 rasters in memory
+        base = gdal.Open('./data/hydropower_data/test_input/test_aet_mn.tif', 
+                         gdal.GA_ReadOnly)
+        cols = 4
+        rows = 4
+        projection = base.GetProjection()
+        geotransform = base.GetGeoTransform()
+        value_raster = invest_cython_core.newRaster(cols, rows, projection,
+            geotransform, 'GTiff', -1, gdal.GDT_Float32, 1,
+            './data/test_out/hydropower_create_mean_raster/mean_byhand.tif')
+
+        #This is a test case that was calculated by hand
+        array = np.array([[111, 115, 999, 1],
+                          [108, 109, 999, 1],
+                          [105, 102, 999, 1],
+                          [100, 124, 888, 1]])
+
+        value_raster.GetRasterBand(1).WriteArray(array, 0, 0)
+
+        mask = np.array([[9, 8, 7, 7],
+                         [6, 6, 5, 5],
+                         [4, 4, 3, 3],
+                         [2, 2, 1, 1]])
+        
+        mean_calc = np.array([[111, 115, 500, 500],
+                              [108.5, 108.5, 500, 500],
+                              [103.5, 103.5, 500, 500],
+                              [112, 112, 444.5, 444.5]])
+        
+        new_raster = hydropower_core.create_mean_raster(value_raster, output_path, 
+                                                        sub_sheds, field_name, 
+                                                        mask)
+
+        new_array = new_raster.GetRasterBand(1).ReadAsArray()
+        
+        self.assertTrue(mean_calc.shape == new_array.shape)
+        
+        for i, j in zip(mean_calc, new_array):
+            for m, n in zip(i,j):
+                self.assertAlmostEqual(m, n, 4)
+        
+        
+        
+        
+        
