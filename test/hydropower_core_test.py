@@ -6,6 +6,7 @@ import os
 import csv
 
 from osgeo import gdal
+from osgeo import ogr
 from nose.plugins.skip import SkipTest
 import numpy as np
 
@@ -159,3 +160,38 @@ class TestHydropowerCore(unittest.TestCase):
                 i = i+1
             except:
                 self.fail('The CSV files are not the same')
+                
+                
+    def test_polygons_in_polygons(self):
+        
+        wrk_dir = './data/hydropower_data/test_input'
+        sub_sheds_path = wrk_dir + os.sep + 'subwatersheds.shp'
+        sheds_path = wrk_dir + os.sep + 'watersheds.shp'
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        sheds = ogr.Open(sheds_path)
+        
+        shed_relationship = \
+            hydropower_core.polygon_contains_polygons(sheds, sub_sheds)
+        
+        expected_dict = {}
+        expected_dict[1] = 0
+        expected_dict[2] = 0
+        expected_dict[3] = 0
+        expected_dict[4] = 1
+        expected_dict[5] = 1
+        expected_dict[6] = 1
+        expected_dict[7] = 2
+        expected_dict[8] = 2
+        expected_dict[9] = 2
+        
+        for key, val in shed_relationship.iteritems():
+            if key in expected_dict:
+                self.assertEqual(val, expected_dict[key])
+            else:
+                self.fail('Keys do not match')
+                
+        sub_sheds.Destroy()
+        sheds.Destroy()
+        
+        
