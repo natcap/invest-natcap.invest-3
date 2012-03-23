@@ -607,10 +607,52 @@ def create_etk_root_rasters(key_raster, new_path, nodata, bio_dict, field):
     return tmp_raster
 
 def water_scarcity(args):
-    """
-    """
+    """Executest the water scarcity model
+        
+        args - a python dictionary with at the following possible entries:
+    
+        args['workspace_dir'] - a uri to the directory that will write output
+            and other temporary files during calculation. (required)
+        args['water_yield_vol'] - a GDAL raster dataset, generated from
+            the water_yield model, describing the total water yield per
+            sub-watershed. The approximate absolute annual water yield across
+            the landscape (cubic meters) (required) 
+        args['water_yield_mean'] - a GDAL raster dataset, generated from
+            the water_yield model, describing the mean water yield per
+            sub-watershed (mm) (required)
+        args['lulc_uri'] - a GDAL raster dataset of land use/land cover whose
+            LULC indexes correspond to indexs in the biophysical table input.
+            Used for determining soil retention and other biophysical 
+            properties of the landscape.  (required)
+        args['watersheds'] - a OGR shapefile of the watersheds
+            of interest as polygons. (required)
+        args['sub_watersheds'] - a OGR shapefile of the 
+            subwatersheds of interest that are contained in the
+            'watersheds' shape provided as input. (required)
+        args['watershed_yield_table'] - a dictionary, 
+            generated from the water_yield model, containing values for mean 
+            precipitation, potential and actual evapotranspiration and water
+            yield per watershed
+        args['subwatershed_yield_table'] - a dictionary, 
+            generated from the water_yield model, containing values for mean 
+            precipitation, potential and actual evapotranspiration and water
+            yield per sub watershed
+        args['demand_table'] - a dictionary of LULC classes,
+            showing consumptive water use for each landuse / land-cover type
+            (required)
+        args['hydro_calibration_table'] - a dictionary of 
+            hydropower stations with associated calibration values (required)
+        
+        returns nothing"""
     #water yield functionality goes here    
     LOGGER.info('Starting Water Scarcity Calculation')
+    
+    workspace_dir = args['workspace_dir']
+    #Construct folder paths
+    output_dir = workspace_dir + os.sep + 'Output'
+    intermediate_dir = workspace_dir + os.sep + 'Intermediate'
+    service_dir = workspace_dir + os.sep + 'Service'
+    
         
 def valuation(args):
     """
