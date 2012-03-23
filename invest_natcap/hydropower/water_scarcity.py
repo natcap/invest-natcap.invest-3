@@ -38,6 +38,14 @@ def execute(args):
             properties of the landscape.  (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
+        args['watershed_yield_table_uri'] - a uri to an input CSV table, 
+            generated from the water_yield model, containing values for mean 
+            precipitation, potential and actual evapotranspiration and water
+            yield per watershed
+        args['subwatershed_yield_table_uri'] - a uri to an input CSV table, 
+            generated from the water_yield model, containing values for mean 
+            precipitation, potential and actual evapotranspiration and water
+            yield per sub watershed
         args['sub_watersheds_uri'] - a uri to an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds_uri' shape provided as input. (required)
@@ -49,7 +57,6 @@ def execute(args):
         
         returns nothing"""
     
-    
     workspace_dir = args['workspace']
     #Create the output directories
     for folder_name in ['Output', 'Service', 'Intermediate']:
@@ -59,6 +66,8 @@ def execute(args):
             
     #Open all of the gdal files and place in dictionary
     args['lulc'] = gdal.Open(args['lulc_uri'])
+    args['water_yield_vol'] = gdal.Open(args['water_yield_vol_uri'])
+    args['water_yield_mn'] = gdal.Open(args['water_yield_mean_uri'])
     
     #Open all the shapefiles and place in dictionary
     args['watersheds'] = ogr.Open(args['watersheds_uri'])
@@ -66,5 +75,33 @@ def execute(args):
     
     #Open/read in the dbf files into a dictionary and add to
     #dictionary
+    watershed_yield_table_map = {}
+    watershed_yield_table_file = open(args['watershed_yield_table_uri'])
+    reader = csv.DictReader(watershed_yield_table_file)
+    for row in reader:
+        watershed_yield_table_map[row['ws_id']] = {'precip_mn':row['precip_mn'], \
+                                              'PET_mn':row['PET_mn'], \
+                                              'AET_mn':row['AET_mn'],
+                                              'wyield_mn':row['wyield_mn'],
+                                              'wyield_sum':row['wyield_sum']}
+        
+    args['watershed_yield_table'] = watershed_yield_table_map
+    watershed_yield_table_file.close()
+    
+    subwatershed_yield_table_map = {}
+    subwatershed_yield_table_file = open(args['subwatershed_yield_table_uri'])
+    reader = csv.DictReader(subwatershed_yield_table_file)
+    for row in reader:
+        subwatershed_yield_table_map[row['subws_id']] = {'ws_id':row['ws_id'],
+                                              'precip_mn':row['precip_mn'], \
+                                              'PET_mn':row['PET_mn'], \
+                                              'AET_mn':row['AET_mn'],
+                                              'wyield_mn':row['wyield_mn'],
+                                              'wyield_sum':row['wyield_sum']}
+        
+    args['subwatershed_yield_table'] = subwatershed_yield_table_map
+    subwatershed_yield_table_file.close()
+    
     
     #Call water_scarcity_core.py
+    hydropower_core.water_scarcity(args)
