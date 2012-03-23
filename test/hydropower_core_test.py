@@ -118,3 +118,44 @@ class TestHydropowerCore(unittest.TestCase):
                 i = i+1
             except:
                 self.fail('The CSV files are not the same')
+                
+    def test_create_writer_table_subwatershed(self):
+        
+        wrk_dir = './data/test_out/hydropower_water_yield_tables/'
+        table_path = wrk_dir + os.sep + 'water_yield_subwatershed.csv'
+        if not os.path.isdir(wrk_dir):
+            os.mkdir(wrk_dir)
+        if os.path.isfile(table_path):
+            os.remove(table_path)
+        
+        field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
+                      'wyield_mn','wyield_sum']
+        wsr = {1:1, 2:2, 3:2, 4:1}
+        water_dict = {}
+        water_dict['precip_mn'] = {1:1654.32, 2:1432, 3:1948.593, 4:1212.12}
+        water_dict['PET_mn'] = {1:432.65, 2:123.43, 3:342.34, 4:2323.23}
+        water_dict['AET_mn'] = {1:88.88, 2:99.99, 3:111.11, 4:343.43}
+        water_dict['wyield_mn'] = {1:2222.22, 2:4444.44, 3:3333, 4:5656}
+        water_dict['wyield_sum'] = {1:555.55, 2:666.66, 3:777, 4:6767}
+        
+        new_table = hydropower_core.create_writer_table(table_path, field_list, 
+                                                        water_dict, wsr)
+        
+        new_table.close()
+        
+        expected_rows = \
+            np.array([['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 'wyield_sum'],
+             [1, 1, 1654.32, 432.65, 88.88, 2222.22, 555.55],
+             [2, 2, 1432, 123.43, 99.99, 4444.44, 666.66],
+             [2, 3, 1948.593, 342.34, 111.11, 3333, 777],
+             [1, 4, 1212.12, 2323.23, 343.43, 5656, 6767]])
+        
+        new_table = open(table_path, 'rb')
+        reader = csv.reader(new_table)
+        i = 0
+        for row in reader:
+            try:
+                self.assertTrue((expected_rows[i]==row).all())
+                i = i+1
+            except:
+                self.fail('The CSV files are not the same')
