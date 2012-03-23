@@ -332,6 +332,8 @@ def create_writer_table(table_path, field_list, water_dict, wsr=None):
                      'wyield_sum':water_dict['wyield_sum'][key]}
             writer.writerow(row_d)
         
+    return table_file
+    
 def polygon_contains_polygons(shape, sub_shape):
     """Stores which sub watersheds belong to which watershed
        
