@@ -194,4 +194,38 @@ class TestHydropowerCore(unittest.TestCase):
         sub_sheds.Destroy()
         sheds.Destroy()
         
+    def test_create_mean_raster_regression(self):
         
+        out_dir = './data/test_out/hydropower_create_mean_raster'
+        output_path = out_dir + os.sep + 'mean_aet.tif'
+        
+        if not os.path.isdir(out_dir):
+            os.mkdir(out_dir)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        wrk_dir = './data/hydropower_data/test_input'
+        regression_dir = './data/hydropower_regression_data'
+        
+        sub_sheds_path = wrk_dir + os.sep + 'subwatersheds.shp'
+        aet_path = wrk_dir + os.sep + 'test_aet_mn.tif'
+        mask_path = regression_dir + os.sep + 'sub_shed_mask_regression.tif'
+        reg_mean_path = regression_dir + os.sep + 'aet_mn_regression.tif'
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        aet_raster = gdal.Open(aet_path)
+        aet_regression_raster = gdal.Open(reg_mean_path)
+        
+        mask_raster = gdal.Open(mask_path)
+        mask_band = mask_raster.GetRasterBand(1)
+        mask = mask_band.ReadAsArray()
+        
+        field_name = 'subws_id'
+        
+        new_raster = hydropower_core.create_mean_raster(aet_raster, output_path, 
+                                                        sub_sheds, field_name, 
+                                                        mask)
+        
+        invest_test_core.assertTwoDatasetsEqual(self, aet_regression_raster, 
+                                                new_raster)
+
