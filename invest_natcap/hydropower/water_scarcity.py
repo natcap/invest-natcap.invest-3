@@ -3,6 +3,7 @@
 import sys
 import os
 import logging
+import csv
 
 from osgeo import gdal
 from osgeo import ogr
@@ -102,6 +103,26 @@ def execute(args):
     args['subwatershed_yield_table'] = subwatershed_yield_table_map
     subwatershed_yield_table_file.close()
     
+    demand_table_map = {}
+    demand_table_file = open(args['demand_table_uri'])
+    reader = csv.DictReader(demand_table_file)
+    for row in reader:
+        demand_table_map[row['lucode']] = {'demand':row['demand'], \
+                                              'LULC_desc':row['LULC_desc']}
+        
+    args['demand_table'] = demand_table_map
+    demand_table_file.close()
+    
+    
+    hydro_cal_table_map = {}
+    hydro_cal_table_file = open(args['hydro_calibration_table_uri'])
+    reader = csv.DictReader(hydro_cal_table_file)
+    for row in reader:
+        hydro_cal_table_map[row['id']] = {'ws_id':row['ws_id'], \
+                                              'calib':row['calib']}
+        
+    args['hydro_cal_table'] = hydro_cal_table_map
+    hydro_cal_table_file.close()
     
     #Call water_scarcity_core.py
     hydropower_core.water_scarcity(args)
