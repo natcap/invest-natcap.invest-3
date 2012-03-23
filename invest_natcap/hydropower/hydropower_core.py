@@ -312,23 +312,6 @@ def create_writer_table(table_path, field_list, water_dict, wsr=None):
     #Write column header row
     writer.writerow(field_dict)
     
-    write_table_rows(water_dict, writer, wsr)
-    
-    return table_file
-
-def write_table_rows(water_dict, writer, wsr):
-    """Writes output rows to the CSV file for water yield subwatershed and
-       water yield watershed
-       
-       water_dict - water_dict - a dictionary with keys as strings that corresponds to
-                    a dictionary that holds values for the table:
-                    water_dict['precip_mn']:{1:650.2, 2:354, 3:908.32, ...}
-                    water_dict['AET_mn']:{1:1231, 2:3545.23, 3:809.23, ...}
-       writer - the handle on the CSV DictWriter object
-       wsr - either a None value or a dictionary that holds the relationship 
-             between watersheds and subwatersheds.
-             
-       returns - nothing"""
     #If wsr is not None then we want to write out the subwatershed table   
     if wsr != None:
         for key in water_dict['precip_mn'].iterkeys():
