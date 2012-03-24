@@ -8,6 +8,7 @@ import random
 import numpy as np
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 
 logger = logging.getLogger('invest_core')
 
@@ -141,10 +142,18 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff', min=0, max=1,
     dataset = driver.Create(uri, cols, rows, 1, gdal.GDT_Int32)
     if projection != None:
         dataset.SetProjection(projection)
+    else:
+        #Random spatial reference from http://www.gdal.org/gdal_tutorial.html
+        srs = osr.SpatialReference()
+        srs.SetUTM( 11, 1 )
+        srs.SetWellKnownGeogCS( 'NAD27' )
+        dataset.SetProjection( srs.ExportToWkt() )
+
     if geotransform != None:
         dataset.SetGeoTransform(geotransform)
     else:
-        dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
+        #Random geotransform from http://www.gdal.org/gdal_tutorial.html
+        dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
 
     raster = None
     if type == 'int':
