@@ -145,20 +145,15 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff', min=0, max=1,
         dataset.SetGeoTransform(geotransform)
     else:
         dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
-    band = dataset.GetRasterBand(1)
-    band.SetNoDataValue(-1)
-    if type == 'int':
-        def get_rand():
-            return random.randint(min, max)
-    else:
-        def get_rand():
-            return random.random()*max
 
-    for i in range(0, band.YSize):
-        array = band.ReadAsArray(0, i, band.XSize, 1)
-        for j in range(0, band.XSize):
-            array[0][j] = get_rand()
-        dataset.GetRasterBand(1).WriteArray(array, 0, i)
+    raster = None
+    if type == 'int':
+        raster = np.random.random_integers(min,max, (rows,cols))
+    else:
+        raster = min+np.random.random_sample((rows,cols))*(max-min)
+
+    dataset.GetRasterBand(1).WriteArray(raster)
+    dataset.GetRasterBand(1).SetNoDataValue(-1)
 
     return dataset
 
