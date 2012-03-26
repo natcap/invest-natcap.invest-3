@@ -8,6 +8,7 @@ import random
 import numpy as np
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 
 logger = logging.getLogger('invest_core')
 
@@ -141,24 +142,27 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff', min=0, max=1,
     dataset = driver.Create(uri, cols, rows, 1, gdal.GDT_Int32)
     if projection != None:
         dataset.SetProjection(projection)
+    else:
+        #Random spatial reference from http://www.gdal.org/gdal_tutorial.html
+        srs = osr.SpatialReference()
+        srs.SetUTM( 11, 1 )
+        srs.SetWellKnownGeogCS( 'NAD27' )
+        dataset.SetProjection( srs.ExportToWkt() )
+
     if geotransform != None:
         dataset.SetGeoTransform(geotransform)
     else:
-        dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
-    band = dataset.GetRasterBand(1)
-    band.SetNoDataValue(-1)
-    if type == 'int':
-        def get_rand():
-            return random.randint(min, max)
-    else:
-        def get_rand():
-            return random.random()*max
+        #Random geotransform from http://www.gdal.org/gdal_tutorial.html
+        dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
 
-    for i in range(0, band.YSize):
-        array = band.ReadAsArray(0, i, band.XSize, 1)
-        for j in range(0, band.XSize):
-            array[0][j] = get_rand()
-        dataset.GetRasterBand(1).WriteArray(array, 0, i)
+    raster = None
+    if type == 'int':
+        raster = np.random.random_integers(min,max, (rows,cols))
+    else:
+        raster = min+np.random.random_sample((rows,cols))*(max-min)
+
+    dataset.GetRasterBand(1).WriteArray(raster)
+    dataset.GetRasterBand(1).SetNoDataValue(-1)
 
     return dataset
 
