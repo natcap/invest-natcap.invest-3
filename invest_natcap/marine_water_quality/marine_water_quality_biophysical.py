@@ -46,11 +46,8 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
                 (point_source['id']))
     t0 = time.clock()
 
-    #convert ux,uy from m/s to km/day
-    ux *= 86.4
-    uy *= 86.4
-
-    #convert h from m to km
+    #convert E from km^2/day to m^2/sec
+    E *= 10 ** 6 / 86400.0
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
@@ -63,8 +60,6 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     point_index = calc_index(int(point_source['yps'] / h),
                              int(point_source['xps'] / h))
 
-    #Convert h to km for calculation since other parameters are in KM
-    h /= 1000.0
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
@@ -90,8 +85,9 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
             uy_tmp = uy * h
 
             elements = [
+                        #convert kps to 1/sec
              (4, 0, a_matrix_index, -4.0 * (term_a + h * h * \
-                                            point_source['kps'])),
+                                            point_source['kps'] / 86400.0)),
              (7, m, calc_index(i + 1, j), term_a - uy_tmp),
              (1, -m, calc_index(i - 1, j), term_a + uy_tmp),
              (5, 1, calc_index(i, j + 1), term_a - ux_tmp),
