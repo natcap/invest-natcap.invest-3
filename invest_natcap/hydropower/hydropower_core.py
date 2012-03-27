@@ -653,6 +653,35 @@ def water_scarcity(args):
     intermediate_dir = workspace_dir + os.sep + 'Intermediate'
     service_dir = workspace_dir + os.sep + 'Service'
     
+    #Output files:
+    wyield_calib = output_dir + os.sep + 'cyield_vol'
+    consump_vol = output_dir + os.sep + 'consum_vol'
+    consump_mean = output_dir + os.sep + 'consum_mn'
+    rsupply_vol = output_dir + os.sep + 'rsup_vol'
+    rsupply_mean = output_dir + os.sep + 'rsup_mn'
+    ws_out_table_name = 'water_scarcity_watershed.csv' 
+    sws_out_table_name = 'water_scarcity_subwatershed.csv'
+    
+        
+    #Make raster for calibration (if necessary) values based on watersheds
+    
+    #Multiply calibration raster with wyield_vol raster
+    
+    #Create raster from land use raster, subsituting in demand value
+    
+    #Make raster 'consump' by saying if consump_rc is NULL, put 0, else
+    #consump_rc. Make float
+    
+    #Take sum of consump over sub watersheds making consump_vol
+    
+    #Take mean of consump over sub watersheds making conusmp_mean
+    
+    #Make rsupply_vol by wyield_calib minus consump_vol
+    
+    #Make rsupply_mean by wyield_mean minus consump_mean
+    
+    #Make sub watershed and watershed tables by adding values onto the tables
+    #provided from sub watershed yield and watershed yield
         
 def valuation(args):
     """
