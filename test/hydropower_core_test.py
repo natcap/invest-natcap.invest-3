@@ -194,4 +194,186 @@ class TestHydropowerCore(unittest.TestCase):
         sub_sheds.Destroy()
         sheds.Destroy()
         
+    def test_create_mean_raster_regression(self):
+        
+        out_dir = './data/test_out/hydropower_create_mean_raster'
+        output_path = out_dir + os.sep + 'mean_aet.tif'
+        
+        if not os.path.isdir(out_dir):
+            os.mkdir(out_dir)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        wrk_dir = './data/hydropower_data/test_input'
+        regression_dir = './data/hydropower_regression_data'
+        
+        sub_sheds_path = wrk_dir + os.sep + 'subwatersheds.shp'
+        aet_path = wrk_dir + os.sep + 'test_aet_mn.tif'
+        mask_path = regression_dir + os.sep + 'sub_shed_mask_regression.tif'
+        reg_mean_path = regression_dir + os.sep + 'aet_mn_regression.tif'
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        aet_raster = gdal.Open(aet_path)
+        aet_regression_raster = gdal.Open(reg_mean_path)
+        
+        mask_raster = gdal.Open(mask_path)
+        mask_band = mask_raster.GetRasterBand(1)
+        mask = mask_band.ReadAsArray()
+        
+        field_name = 'subws_id'
+        
+        new_raster = hydropower_core.create_mean_raster(aet_raster, output_path, 
+                                                        sub_sheds, field_name, 
+                                                        mask)
+        
+        invest_test_core.assertTwoDatasetsEqual(self, aet_regression_raster, 
+                                                new_raster)
+
+    def test_create_mean_raster_byhand(self):
+        
+        out_dir = './data/test_out/hydropower_create_mean_raster'
+        output_path = out_dir + os.sep + 'mean_byhand.tif'
+        
+        if not os.path.isdir(out_dir):
+            os.mkdir(out_dir)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        wrk_dir = './data/hydropower_data/test_input'
+        
+        sub_sheds_path = wrk_dir + os.sep + 'subwatersheds.shp'
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        
+        field_name = 'subws_id'
+        
+        #Create two 3x3 rasters in memory
+        base = gdal.Open('./data/hydropower_data/test_input/test_aet_mn.tif', 
+                         gdal.GA_ReadOnly)
+        cols = 4
+        rows = 4
+        projection = base.GetProjection()
+        geotransform = base.GetGeoTransform()
+        value_raster = invest_cython_core.newRaster(cols, rows, projection,
+            geotransform, 'GTiff', -1, gdal.GDT_Float32, 1,
+            './data/test_out/hydropower_create_mean_raster/mean_byhand.tif')
+
+        #This is a test case that was calculated by hand
+        array = np.array([[111, 115, 999, 1],
+                          [108, 109, 999, 1],
+                          [105, 102, 999, 1],
+                          [100, 124, 888, 1]])
+
+        value_raster.GetRasterBand(1).WriteArray(array, 0, 0)
+
+        mask = np.array([[9, 8, 7, 7],
+                         [6, 6, 5, 5],
+                         [4, 4, 3, 3],
+                         [2, 2, 1, 1]])
+        
+        mean_calc = np.array([[111, 115, 500, 500],
+                              [108.5, 108.5, 500, 500],
+                              [103.5, 103.5, 500, 500],
+                              [112, 112, 444.5, 444.5]])
+        
+        new_raster = hydropower_core.create_mean_raster(value_raster, output_path, 
+                                                        sub_sheds, field_name, 
+                                                        mask)
+
+        new_array = new_raster.GetRasterBand(1).ReadAsArray()
+        
+        self.assertTrue(mean_calc.shape == new_array.shape)
+        
+        for i, j in zip(mean_calc, new_array):
+            for m, n in zip(i,j):
+                self.assertAlmostEqual(m, n, 4)
+        
+        
+    def test_create_area_raster_regression(self):
+        
+        out_dir = './data/test_out/hydropower_create_area_raster'
+        output_path = out_dir + os.sep + 'area_wyield.tif'
+        
+        if not os.path.isdir(out_dir):
+            os.mkdir(out_dir)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        wrk_dir = './data/hydropower_data/test_input'
+        regression_dir = './data/hydropower_regression_data'
+        
+        sub_sheds_path = wrk_dir + os.sep + 'subwatersheds.shp'
+        wyield_path = wrk_dir + os.sep + 'test_wyield.tif'
+        mask_path = regression_dir + os.sep + 'sub_shed_mask_regression.tif'
+        reg_area_path = regression_dir + os.sep + 'wyield_area_regression.tif'
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        wyield_raster = gdal.Open(wyield_path)
+        wyield_regression_raster = gdal.Open(reg_area_path)
+        
+        mask_raster = gdal.Open(mask_path)
+        mask_band = mask_raster.GetRasterBand(1)
+        mask = mask_band.ReadAsArray()
+        
+        field_name = 'subws_id'
+        
+        new_raster = hydropower_core.create_area_raster(wyield_raster, output_path, 
+                                                        sub_sheds, field_name, 
+                                                        mask)
+        
+        invest_test_core.assertTwoDatasetsEqual(self, wyield_regression_raster, 
+                                                new_raster)
+
+    def test_create_area_raster_byhand(self):
+        
+        out_dir = './data/test_out/hydropower_create_area_raster'
+        output_path = out_dir + os.sep + 'area_byhand.tif'
+        
+        if not os.path.isdir(out_dir):
+            os.mkdir(out_dir)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        wrk_dir = './data/hydropower_data/test_input'
+        
+        sub_sheds_path = wrk_dir + os.sep + 'subwatersheds.shp'
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        
+        field_name = 'subws_id'
+        
+        #Create two 3x3 rasters in memory
+        base = gdal.Open('./data/hydropower_data/test_input/test_aet_mn.tif', 
+                         gdal.GA_ReadOnly)
+        cols = 4
+        rows = 4
+        projection = base.GetProjection()
+        geotransform = base.GetGeoTransform()
+        value_raster = invest_cython_core.newRaster(cols, rows, projection,
+            geotransform, 'GTiff', -1, gdal.GDT_Float32, 1,
+            './data/test_out/hydropower_create_area_raster/area_byhand.tif')
+
+        #This is a test case that was calculated by hand
+        area_calc = np.array([[964800, 7857000, 10057500, 10057500],
+                          [11385900, 11385900, 32837400, 32837400],
+                          [39781800, 39781800, 19117800, 19117800],
+                          [5412600, 5412600, 17784900, 17784900]])
+
+        mask = np.array([[9, 8, 7, 7],
+                         [6, 6, 5, 5],
+                         [4, 4, 3, 3],
+                         [2, 2, 1, 1]])
+
+        new_raster = hydropower_core.create_area_raster(value_raster, output_path, 
+                                                        sub_sheds, field_name, 
+                                                        mask)
+
+        new_array = new_raster.GetRasterBand(1).ReadAsArray()
+        
+        self.assertTrue(area_calc.shape == new_array.shape)
+        
+        for i, j in zip(area_calc, new_array):
+            for m, n in zip(i,j):
+                self.assertAlmostEqual(m, n, 4)
+        
         
