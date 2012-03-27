@@ -19,17 +19,17 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestWaterScarcity(unittest.TestCase):
     """Main testing class for the water scarcity tests"""
     def test_water_scarcity_re(self):
-        base = './data/hydropower_data/water_scarcity'
+        base = './data/hydropower_data/'
         args = {}
         args['workspace_dir'] = base
         args['lulc_uri'] = base + 'test_input/landuse_90'
         args['watersheds_uri'] = base + 'test_input/watersheds.shp'
         args['sub_watersheds_uri'] = base + 'test_input/subwatersheds.shp'
-        args['water_yield_vol_uri'] = base + 'test_input/'
-        args['water_yield_mean_uri'] = base + 'test_input/'
-        args['watershed_yield_table_uri'] = base + 'test_input/'
-        args['subwatershed_yield_table_uri'] = base + 'test_input/'
-        args['hydro_calibration_table_uri'] = base + 'test_input/'
-        args['demand_table_uri'] = base + 'test_input/'
+        args['water_yield_vol_uri'] = base + 'water_scarcity/test_input/wyield_vol'
+        args['water_yield_mean_uri'] = base + 'water_scarcity/test_input/wyield_mn'
+        args['watershed_yield_table_uri'] = base + 'test_input/water_yield_watershed_input.csv'
+        args['subwatershed_yield_table_uri'] = base + 'test_input/water_yield_subwatershed_input.csv'
+        args['hydro_calibration_table_uri'] = base + 'test_input/hydro_calib_table.csv'
+        args['demand_table_uri'] = base + 'test_input/demand_table.csv'
          
         water_scarcity.execute(args)
