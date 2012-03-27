@@ -654,7 +654,7 @@ def water_scarcity(args):
     service_dir = workspace_dir + os.sep + 'Service'
     
     #Output files:
-    wyield_calib = output_dir + os.sep + 'cyield_vol'
+    wyield_calib_path = output_dir + os.sep + 'cyield_vol'
     consump_vol = output_dir + os.sep + 'consum_vol'
     consump_mean = output_dir + os.sep + 'consum_mn'
     rsupply_vol = output_dir + os.sep + 'rsup_vol'
@@ -664,9 +664,28 @@ def water_scarcity(args):
     
         
     #Make raster for calibration (if necessary) values based on watersheds
-    
+    calib_dict = args['hydro_calibration_table']
+    wyield_vol_raster = args['water_yield_vol']
+    watersheds = args['watersheds']
+    tmp_calib_path = intermediate_dir + os.sep + 'tmp_calib.tif'
+    nodata = -1
+    tmp_calib = invest_cython_core.newRasterFromBase(wyield_vol_raster, tmp_calib_path,
+                                                     'GTiff', nodata, gdal.GDT_Float32)
+    attribute_string = 'ATTRIBUTE=ws_id'
+    gdal.RasterizeLayer(tmp_calib, [1], watersheds.GetLayer(0),
+                        options = [attribute_string])
+
     #Multiply calibration raster with wyield_vol raster
+    def cyield_vol_op(wyield_vol, calib):
+        return wyield_vol * calib
     
+    wyield_calib = invest_cython_core.newRasterFromBase(tmp_calib, wyield_calib_path,
+                                                     'GTiff', nodata, gdal.GDT_Float32)
+    wyield_calib_band = wyield_calib.GetRasterBand(1)
+    tmp_calib_band = tmp_calib.GetRasterBand(1)
+    wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
+    
+    invest_core.vectorize2ArgOp(wyield_calib_band, tmp_calib_band, cyield_vol_op, wyield_vol_band)
     #Create raster from land use raster, subsituting in demand value
     
     #Make raster 'consump' by saying if consump_rc is NULL, put 0, else
