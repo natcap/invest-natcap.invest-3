@@ -164,6 +164,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     HYDRODYNAMIC_HEADER = re.compile('C1 +U0 +V0 +E +H')
     POINT_SOURCE_HEADER = re.compile('C2-1 +NPS')
     DISPLAY_HEADER = re.compile('C3 +VMIN +VMAX')
+    OUTFILE_HEADER = re.compile('C4 OUTPUT FILE NAME')
 
     PARAMETER_FILE = open(PARAMETER_FILENAME)
     while True:
@@ -187,6 +188,9 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
             #Next line will be hydrodynamic characteristics
             line = PARAMETER_FILE.readline()
             VMIN, VMAX = map(float, line.split())
+        if OUTFILE_HEADER.match(line):
+            line = PARAMETER_FILE.readline()
+            OUTFILE_NAME = line.split('"')[1]
 
     density = np.zeros(N_ROWS * N_COLS)
     POINT_COUNT = 1
@@ -204,7 +208,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
 
     LOGGER.info("Done with point source diffusion.  Now plotting.")
     density = np.resize(density, (N_ROWS, N_COLS))
-    np.savetxt('CON.txt', density, delimiter=',')
+    np.savetxt(OUTFILE_NAME, density, delimiter=',')
     IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
 
     axes = pylab.subplot(111)
