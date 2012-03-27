@@ -46,11 +46,8 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
                 (point_source['id']))
     t0 = time.clock()
 
-    #convert ux,uy from m/s to km/day
-    ux *= 86.4
-    uy *= 86.4
-
-    #convert h from m to km
+    #convert E from km^2/day to m^2/sec
+    E *= 10 ** 6 / 86400.0
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
@@ -63,14 +60,12 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     point_index = calc_index(int(point_source['yps'] / h),
                              int(point_source['xps'] / h))
 
-    #Convert h to km for calculation since other parameters are in KM
-    h /= 1000.0
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
     b_vector = np.zeros(n * m)
     #holds the columns for diagonal sparse matrix creation later
-    a_matrix = np.zeros((5, n * m))
+    a_matrix = np.zeros((9, n * m))
 
     #iterate over the non-zero elments in grid to build the linear system
     LOGGER.info('Building diagonals for linear advection diffusion system.')
@@ -90,12 +85,13 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
             uy_tmp = uy * h
 
             elements = [
-             (2, 0, a_matrix_index, -4.0 * (term_a + h * h * \
-                                            point_source['kps'])),
-             (4, m, calc_index(i + 1, j), term_a - uy_tmp),
-             (0, -m, calc_index(i - 1, j), term_a + uy_tmp),
-             (3, 1, calc_index(i, j + 1), term_a - ux_tmp),
-             (1, -1, calc_index(i, j - 1), term_a + ux_tmp)]
+                        #convert kps to 1/sec
+             (4, 0, a_matrix_index, -4.0 * (term_a + h * h * \
+                                            point_source['kps'] / 86400.0)),
+             (7, m, calc_index(i + 1, j), term_a - uy_tmp),
+             (1, -m, calc_index(i - 1, j), term_a + uy_tmp),
+             (5, 1, calc_index(i, j + 1), term_a - ux_tmp),
+             (3, -1, calc_index(i, j - 1), term_a + ux_tmp)]
 
             for k, offset, colIndex, term in elements:
                 if colIndex >= 0: #make sure we're in the grid
@@ -107,16 +103,16 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
 
     #define sources by erasing the rows in the matrix that have already been set
     #the magic numbers are the diagonals and their offsets due to gridsize
-    for i, offset in [(4, m), (0, -m), (3, 1), (1, -1)]:
+    for i, offset in [(7, m), (1, -m), (5, 1), (3, -1)]:
         #zero out that row
         a_matrix[i, point_index + offset] = 0
     #set diagonal to 1
-    a_matrix[2, point_index] = 1
+    a_matrix[4, point_index] = 1
     b_vector[point_index] = point_source['wps']
     LOGGER.info('Building sparse matrix from diagonals.')
 
-    matrix = scipy.sparse.spdiags(a_matrix, [-m, -1, 0, 1, m], n * m,
-                                         n * m, "csc")
+    matrix = scipy.sparse.spdiags(a_matrix,
+        [-2 * m, -m, -2, -1, 0, 1, 2, m, 2 * m], n * m, n * m, "csc")
     LOGGER.info('generating preconditioner via sparse incomplete lu decomposition')
     #normally factor will use m*(n*m) extra space, we restrict to 
     #\sqrt{m}*(n*m) extra space
@@ -164,6 +160,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     HYDRODYNAMIC_HEADER = re.compile('C1 +U0 +V0 +E +H')
     POINT_SOURCE_HEADER = re.compile('C2-1 +NPS')
     DISPLAY_HEADER = re.compile('C3 +VMIN +VMAX')
+    OUTFILE_HEADER = re.compile('C4 OUTPUT FILE NAME')
 
     PARAMETER_FILE = open(PARAMETER_FILENAME)
     while True:
@@ -187,6 +184,9 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
             #Next line will be hydrodynamic characteristics
             line = PARAMETER_FILE.readline()
             VMIN, VMAX = map(float, line.split())
+        if OUTFILE_HEADER.match(line):
+            line = PARAMETER_FILE.readline()
+            OUTFILE_NAME = line.split('"')[1]
 
     density = np.zeros(N_ROWS * N_COLS)
     POINT_COUNT = 1
@@ -204,7 +204,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
 
     LOGGER.info("Done with point source diffusion.  Now plotting.")
     density = np.resize(density, (N_ROWS, N_COLS))
-    np.savetxt('CON.txt', density, delimiter=',')
+    np.savetxt(OUTFILE_NAME, density, delimiter=',')
     IN_WATER = np.resize(IN_WATER, (N_ROWS, N_COLS))
 
     axes = pylab.subplot(111)
