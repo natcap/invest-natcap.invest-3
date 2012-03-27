@@ -58,13 +58,13 @@ def execute(args):
         
         returns nothing"""
     
-    workspace_dir = args['workspace']
+    workspace_dir = args['workspace_dir']
     #Create the output directories
     for folder_name in ['Output', 'Service', 'Intermediate']:
         folder_path = workspace_dir + os.sep + folder_name
         if not os.path.isdir(folder_path):
             os.path.mkdir(folder_path)
-            
+    water_scarcity_args = {}
     water_scarcity_args['workspace_dir'] = args['workspace_dir']
     #Open all of the gdal files and place in dictionary
     water_scarcity_args['lulc'] = gdal.Open(args['lulc_uri'])
@@ -86,7 +86,7 @@ def execute(args):
                                               'AET_mn':row['AET_mn'],
                                               'wyield_mn':row['wyield_mn'],
                                               'wyield_sum':row['wyield_sum']}
-        
+    LOGGER.debug('ws_yield_table : %s', watershed_yield_table_map)    
     water_scarcity_args['watershed_yield_table'] = watershed_yield_table_map
     watershed_yield_table_file.close()
     
@@ -100,7 +100,7 @@ def execute(args):
                                               'AET_mn':row['AET_mn'],
                                               'wyield_mn':row['wyield_mn'],
                                               'wyield_sum':row['wyield_sum']}
-        
+    LOGGER.debug('sws_yield_table : %s', subwatershed_yield_table_map)    
     water_scarcity_args['subwatershed_yield_table'] = subwatershed_yield_table_map
     subwatershed_yield_table_file.close()
     
@@ -110,7 +110,7 @@ def execute(args):
     for row in reader:
         demand_table_map[row['lucode']] = {'demand':row['demand'], \
                                               'LULC_desc':row['LULC_desc']}
-        
+    LOGGER.debug('demand_table : %s', demand_table_map)    
     water_scarcity_args['demand_table'] = demand_table_map
     demand_table_file.close()
     
@@ -119,10 +119,10 @@ def execute(args):
     hydro_cal_table_file = open(args['hydro_calibration_table_uri'])
     reader = csv.DictReader(hydro_cal_table_file)
     for row in reader:
-        hydro_cal_table_map[row['id']] = {'ws_id':row['ws_id'], \
-                                              'calib':row['calib']}
+        hydro_cal_table_map[row['ws_id']] = row['calib']
         
-    water_scarcity_args['hydro_cal_table'] = hydro_cal_table_map
+    LOGGER.debug('hydro_cal_table : %s', hydro_cal_table_map)    
+    water_scarcity_args['hydro_calibration_table'] = hydro_cal_table_map
     hydro_cal_table_file.close()
     
     #Call water_scarcity_core.py
