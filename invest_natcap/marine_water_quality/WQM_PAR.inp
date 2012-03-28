@@ -8,7 +8,7 @@ C
    E  = [KM*KM/DAY] TIDAL DISPERSION COEFFICIENT
    H  = [M] GRID CELL SIZE
 C1    U0    V0      E    H
-      0.00  0.50   0.1  500
+      0.00  0.00   0.1  500
 -------------------------------------------------------------------------------
 C2 POINT SOURCE LOADING                          
 C                                                            

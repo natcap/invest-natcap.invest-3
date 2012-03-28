@@ -42,15 +42,17 @@ class OGRHandler(object):
             returns a list of strings."""
 
         shapefile = ogr.Open(str(uri))
-        layer = shapefile.GetLayer(0)
-        layer_def = layer.GetLayerDefn()
+        if shapefile != None:
+            layer = shapefile.GetLayer(0)
+            layer_def = layer.GetLayerDefn()
 
-        field_list = []
-        for index in range(layer_def.GetFieldCount()):
-            field_def = layer_def.GetFieldDefn(index)
-            field_list.append(field_def.GetNameRef())
+            field_list = []
+            for index in range(layer_def.GetFieldCount()):
+                field_def = layer_def.GetFieldDefn(index)
+                field_list.append(field_def.GetNameRef())
 
-        return field_list
-
+            return field_list
+        else:
+            return []
 
 
