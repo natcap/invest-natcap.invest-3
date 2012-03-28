@@ -84,26 +84,31 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     for i in range(n):
         for j in range(m):
             #diagonal element i,j always in bounds, calculate directly
-            a_matrix_index = calc_index(i, j)
+            a_diagonal_index = calc_index(i, j)
+            a_up_index = calc_index(i + 1, j)
+            a_down_index = calc_index(i - 1, j)
+            a_left_index = calc_index(i, j + 1)
+            a_right_index = calc_index(i, j - 1)
+
 
             #if land then s = 0 and quit
-            if not in_water[a_matrix_index]:
-                a_matrix[2, a_matrix_index] = 1
+            if not in_water[a_diagonal_index]:
+                a_matrix[2, a_diagonal_index] = 1
                 continue
 
-            if point_index == a_matrix_index:
+            if point_index == a_diagonal_index:
                 a_matrix[4, point_index] = 1
                 b_vector[point_index] = point_source['wps']
                 continue
 
             #Build up terms
             #Ey
-            a_matrix[4, calc_index(i, j)] += -2.0 * E / h ** 2
+            a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
             a_matrix[7, calc_index(i + 1, j)] += E / h ** 2
             a_matrix[1, calc_index(i - 1, j)] += E / h ** 2
 
             #Ex
-            a_matrix[4, calc_index(i, j)] += -2.0 * E / h ** 2
+            a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
             a_matrix[5, calc_index(i, j + 1)] += E / h ** 2
             a_matrix[3, calc_index(i, j - 1)] += E / h ** 2
 
@@ -116,7 +121,7 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
             a_matrix[3, calc_index(i, j - 1)] += -ux / (2.0 * h)
 
             #K
-            a_matrix[4, calc_index(i, j)] += -k
+            a_matrix[4, a_diagonal_index] += -k
 
     LOGGER.info('Building sparse matrix from diagonals.')
 
