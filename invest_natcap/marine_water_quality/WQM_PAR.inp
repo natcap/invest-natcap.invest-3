@@ -8,7 +8,7 @@ C
    E  = [KM*KM/DAY] TIDAL DISPERSION COEFFICIENT
    H  = [M] GRID CELL SIZE
 C1    U0    V0      E    H
-      0.00  0.00   0.1  500
+      1.00  2.00   0.2  500
 -------------------------------------------------------------------------------
 C2 POINT SOURCE LOADING                          
 C                                                            
@@ -22,7 +22,7 @@ C
 C2-1 NPS                                                     
       1                                                     
 C2-2 XPS    YPS      WPS       KPS      CPS                 
-      2500      2500       100       1.0     'PS-1'
+      2500      2500       100       2.0     'PS-1'
 -------------------------------------------------------------------------------
 C3 DISPLAY PROPERTIES (OPTIONAL)
 C
