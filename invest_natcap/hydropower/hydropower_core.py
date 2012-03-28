@@ -537,6 +537,42 @@ def create_mean_raster(raster, path, shed_shape, field_name, shed_mask):
     band_mean.WriteArray(new_data_array, 0, 0)  
     return raster_mean
 
+def create_sum_raster(raster, path, shed_shape, field_name, shed_mask):
+    """Creates a new raster representing the mean per watershed or per
+       sub watershed 
+    
+       raster - a GDAL raster dataset that has the desired pixel size and
+                dimensions as well as the values we want to take the mean of
+       path - a uri string path for the creation of the mean raster
+       shed_shape - an OGR shapefile, either watershed or sub watershed
+       field_name - a string of the id field from shed_shape
+       shed_mask - a numpy array representing the shed/sub shed id mask
+       
+       returns - a raster       
+    """
+    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    band_mean = raster_mean.GetRasterBand(1)
+    pixel_data_array = band_mean.ReadAsArray()
+    nodata = band_mean.GetNoDataValue()
+    band_mean.Fill(nodata)
+    sub_sheds_id_array = np.copy(shed_mask)
+    new_data_array = np.copy(pixel_data_array)
+    
+    for feat in shed_shape.GetLayer(0):
+        index = feat.GetFieldIndex(field_name)
+        value = feat.GetFieldAsInteger(index)
+        mask_val = sub_sheds_id_array != value
+        set_mask_val = sub_sheds_id_array == value
+        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
+        comp_array = np.ma.compressed(masked_array)
+        mean = sum(comp_array)
+        np.putmask(new_data_array, set_mask_val, mean)
+        
+        feat.Destroy()
+        
+    band_mean.WriteArray(new_data_array, 0, 0)  
+    return raster_mean
+
 def clip_raster_from_polygon(shape, raster, path):
     """Returns a raster where any value outside the bounds of the
     polygon shape are set to nodata values. This represents clipping 
@@ -655,10 +691,10 @@ def water_scarcity(args):
     
     #Output files:
     wyield_calib_path = output_dir + os.sep + 'cyield_vol.tif'
-    consump_vol = output_dir + os.sep + 'consum_vol'
-    consump_mean = output_dir + os.sep + 'consum_mn'
-    rsupply_vol = output_dir + os.sep + 'rsup_vol'
-    rsupply_mean = output_dir + os.sep + 'rsup_mn'
+    consump_vol_path = output_dir + os.sep + 'consum_vol.tif'
+    consump_mean = output_dir + os.sep + 'consum_mn.tif'
+    rsupply_vol = output_dir + os.sep + 'rsup_vol.tif'
+    rsupply_mean = output_dir + os.sep + 'rsup_mn.tif'
     ws_out_table_name = 'water_scarcity_watershed.csv' 
     sws_out_table_name = 'water_scarcity_subwatershed.csv'
     
@@ -707,12 +743,12 @@ def water_scarcity(args):
     lulc_band = lulc_raster.GetRasterBand(1)
     lulc_nodata = lulc_band.GetNoDataValue()
     tmp_consump = invest_cython_core.newRasterFromBase(lulc_raster, '',
-                                                     'MEM', lulc_nodata, gdal.GDT_Float32)
+                                                     'MEM', -1, gdal.GDT_Float32)
     tmp_consump_band = tmp_consump.GetRasterBand(1)
     
     def lulc_demand(lulc):
-        if lulc in demand_dict:
-            return demand_dict[lulc]['demand']
+        if str(lulc) in demand_dict:
+            return demand_dict[str(lulc)]['demand']
         else:
             return 0.0
     
@@ -730,10 +766,11 @@ def water_scarcity(args):
     #calculating mean and sum values at a sub watershed basis
     sub_sheds = args['sub_watersheds']
     sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask2.tif'
-    sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path,
+    sub_mask = get_mask(clipped_consump, sub_mask_raster_path,
                                sub_sheds, 'subws_id')
     
-    
+    sum_raster = \
+        create_sum_raster(clipped_consump, consump_vol_path, sub_sheds, 'subws_id', sub_mask)
     #Take mean of consump over sub watersheds making conusmp_mean
     
     #Make rsupply_vol by wyield_calib minus consump_vol
