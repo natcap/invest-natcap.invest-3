@@ -63,14 +63,21 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     point_index = calc_index(int(point_source['yps'] / h),
                              int(point_source['xps'] / h))
 
+    #Absorption parameter
+    k = point_source['kps']
+
     #Convert h to km for calculation since other parameters are in KM
     h /= 1000.0
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
     b_vector = np.zeros(n * m)
-    #holds the columns for diagonal sparse matrix creation later
+
+    #holds the rows for diagonal sparse matrix creation later, row 4 is 
+    #the diagonal
     a_matrix = np.zeros((9, n * m))
+    diags = np.array([-2 * m, -m, -2, -1, 0, 1, 2, m, 2 * m])
+
 
     #iterate over the non-zero elments in grid to build the linear system
     LOGGER.info('Building diagonals for linear advection diffusion system.')
@@ -84,35 +91,33 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
                 a_matrix[2, a_matrix_index] = 1
                 continue
 
-            #formulate elements as a single array
-            term_a = 2 * E
-            ux_tmp = ux * h
-            uy_tmp = uy * h
+            if point_index == a_matrix_index:
+                a_matrix[4, point_index] = 1
+                b_vector[point_index] = point_source['wps']
+                continue
 
-            elements = [
-             (4, 0, a_matrix_index, -4.0 * (term_a + h * h * \
-                                            point_source['kps'])),
-             (7, m, calc_index(i + 1, j), term_a - uy_tmp),
-             (1, -m, calc_index(i - 1, j), term_a + uy_tmp),
-             (5, 1, calc_index(i, j + 1), term_a - ux_tmp),
-             (3, -1, calc_index(i, j - 1), term_a + ux_tmp)]
+            #Build up terms
+            #Ey
+            a_matrix[4, calc_index(i, j)] += -2.0 * E / h ** 2
+            a_matrix[7, calc_index(i + 1, j)] += E / h ** 2
+            a_matrix[1, calc_index(i - 1, j)] += E / h ** 2
 
-            for k, offset, colIndex, term in elements:
-                if colIndex >= 0: #make sure we're in the grid
-                    if in_water[colIndex]: #if water
-                        a_matrix[k, a_matrix_index + offset] += term
-                    else:
-                        #handle the land boundary case s_ij' = s_ij
-                        a_matrix[2, a_matrix_index] += term
+            #Ex
+            a_matrix[4, calc_index(i, j)] += -2.0 * E / h ** 2
+            a_matrix[5, calc_index(i, j + 1)] += E / h ** 2
+            a_matrix[3, calc_index(i, j - 1)] += E / h ** 2
 
-    #define sources by erasing the rows in the matrix that have already been set
-    #the magic numbers are the diagonals and their offsets due to gridsize
-    for i, offset in [(7, m), (1, -m), (5, 1), (3, -1)]:
-        #zero out that row
-        a_matrix[i, point_index + offset] = 0
-    #set diagonal to 1
-    a_matrix[4, point_index] = 1
-    b_vector[point_index] = point_source['wps']
+            #Uy
+            a_matrix[7, calc_index(i + 1, j)] += uy / (2.0 * h)
+            a_matrix[1, calc_index(i - 1, j)] += -uy / (2.0 * h)
+
+            #Ux
+            a_matrix[5, calc_index(i, j + 1)] += ux / (2.0 * h)
+            a_matrix[3, calc_index(i, j - 1)] += -ux / (2.0 * h)
+
+            #K
+            a_matrix[4, calc_index(i, j)] += -k
+
     LOGGER.info('Building sparse matrix from diagonals.')
 
     matrix = scipy.sparse.spdiags(a_matrix,
