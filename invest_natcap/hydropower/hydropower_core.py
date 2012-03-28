@@ -653,6 +653,67 @@ def water_scarcity(args):
     intermediate_dir = workspace_dir + os.sep + 'Intermediate'
     service_dir = workspace_dir + os.sep + 'Service'
     
+    #Output files:
+    wyield_calib_path = output_dir + os.sep + 'cyield_vol.tif'
+    consump_vol = output_dir + os.sep + 'consum_vol'
+    consump_mean = output_dir + os.sep + 'consum_mn'
+    rsupply_vol = output_dir + os.sep + 'rsup_vol'
+    rsupply_mean = output_dir + os.sep + 'rsup_mn'
+    ws_out_table_name = 'water_scarcity_watershed.csv' 
+    sws_out_table_name = 'water_scarcity_subwatershed.csv'
+    
+        
+    #Make raster for calibration (if necessary) values based on watersheds
+    calib_dict = args['hydro_calibration_table']
+    wyield_vol_raster = args['water_yield_vol']
+    watersheds = args['watersheds']
+    tmp_calib_path = intermediate_dir + os.sep + 'tmp_calib.tif'
+    tmp_calib2_path = intermediate_dir + os.sep + 'tmp_calib2.tif'
+    nodata = -1
+    tmp_calib = invest_cython_core.newRasterFromBase(wyield_vol_raster, tmp_calib_path,
+                                                     'GTiff', nodata, gdal.GDT_Float32)
+    attribute_string = 'ATTRIBUTE=ws_id'
+    gdal.RasterizeLayer(tmp_calib, [1], watersheds.GetLayer(0),
+                        options = [attribute_string])
+    def calib_op(tmp_calib_band):
+        if tmp_calib_band != nodata:
+            return calib_dict[str(int(tmp_calib_band))]
+        else:
+            return nodata
+    
+    tmp_calib2 = invest_cython_core.newRasterFromBase(wyield_vol_raster, tmp_calib2_path,
+                                                     'GTiff', nodata, gdal.GDT_Float32)
+    
+    tmp_calib_band = tmp_calib.GetRasterBand(1)
+    tmp_calib2_band = tmp_calib2.GetRasterBand(1)
+    
+    invest_core.vectorize1ArgOp(tmp_calib_band, calib_op, tmp_calib2_band)
+    #Multiply calibration raster with wyield_vol raster
+    def cyield_vol_op(wyield_vol, calib):
+        return wyield_vol * calib
+    
+    wyield_calib = invest_cython_core.newRasterFromBase(tmp_calib, wyield_calib_path,
+                                                     'GTiff', nodata, gdal.GDT_Float32)
+    wyield_calib_band = wyield_calib.GetRasterBand(1)
+#    tmp_calib_band = tmp_calib.GetRasterBand(1)
+    wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
+    
+    invest_core.vectorize2ArgOp(wyield_vol_band, tmp_calib2_band, cyield_vol_op, wyield_calib_band)
+    #Create raster from land use raster, subsituting in demand value
+    
+    #Make raster 'consump' by saying if consump_rc is NULL, put 0, else
+    #consump_rc. Make float
+    
+    #Take sum of consump over sub watersheds making consump_vol
+    
+    #Take mean of consump over sub watersheds making conusmp_mean
+    
+    #Make rsupply_vol by wyield_calib minus consump_vol
+    
+    #Make rsupply_mean by wyield_mean minus consump_mean
+    
+    #Make sub watershed and watershed tables by adding values onto the tables
+    #provided from sub watershed yield and watershed yield
         
 def valuation(args):
     """
