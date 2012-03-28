@@ -30,7 +30,7 @@ C
    VMAX = [SCALAR] MAXIMUM VALUE TO MAP ON THE COLORBAR
 C
 C3   VMIN    VMAX
-     0       100
+     0       100.1
 -------------------------------------------------------------------------------
 C4 OUTPUT FILE NAME
    "conout.txt"
