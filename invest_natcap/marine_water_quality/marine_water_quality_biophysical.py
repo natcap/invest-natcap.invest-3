@@ -117,14 +117,23 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
                 a_matrix[1, a_up_index] += E / h ** 2
 
             #Ex
-            a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-            a_matrix[5, a_right_index] += E / h ** 2
-            a_matrix[3, a_left_index] += E / h ** 2
+            if a_left_index > 0 and a_right_index > 0:
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[5, a_right_index] += E / h ** 2
+                a_matrix[3, a_left_index] += E / h ** 2
+            if a_left_index < 0:
+                #we're on left boundary, expand right
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[5, a_right_index] += E / h ** 2
+            if a_right_index < 0:
+                #we're on right boundary, expand left
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[3, a_left_index] += E / h ** 2
 
             #Uy
-            #if a_up_index > 0 and a_down_index > 0:
-            a_matrix[7, a_down_index] += uy / (2.0 * h)
-            a_matrix[1, a_up_index] += -uy / (2.0 * h)
+            if a_up_index > 0 and a_down_index > 0:
+                a_matrix[7, a_down_index] += uy / (2.0 * h)
+                a_matrix[1, a_up_index] += -uy / (2.0 * h)
             if a_up_index < 0:
                 #we're at the top boundary, forward expansion down
                 a_matrix[7, a_down_index] += uy / (2.0 * h)
@@ -135,11 +144,22 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
                 a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
 
             #Ux
-            a_matrix[5, a_right_index] += ux / (2.0 * h)
-            a_matrix[3, a_left_index] += -ux / (2.0 * h)
+            if a_left_index > 0 and a_right_index > 0:
+                a_matrix[5, a_right_index] += ux / (2.0 * h)
+                a_matrix[3, a_left_index] += -ux / (2.0 * h)
+            if a_left_index < 0:
+                #we're on left boundary, expand right
+                a_matrix[5, a_right_index] += ux / (2.0 * h)
+                a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
+            if a_right_index < 0:
+                #we're on left boundary, expand right
+                a_matrix[3, a_left_index] += ux / (2.0 * h)
+                a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
 
             #K
             a_matrix[4, a_diagonal_index] += -k
+
+    #The whole thing needs a divide by 2
 
     LOGGER.info('Building sparse matrix from diagonals.')
 
