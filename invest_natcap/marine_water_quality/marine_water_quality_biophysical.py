@@ -85,10 +85,10 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
         for j in range(m):
             #diagonal element i,j always in bounds, calculate directly
             a_diagonal_index = calc_index(i, j)
-            a_up_index = calc_index(i + 1, j)
-            a_down_index = calc_index(i - 1, j)
-            a_left_index = calc_index(i, j + 1)
-            a_right_index = calc_index(i, j - 1)
+            a_up_index = calc_index(i - 1, j)
+            a_down_index = calc_index(i + 1, j)
+            a_left_index = calc_index(i, j - 1)
+            a_right_index = calc_index(i, j + 1)
 
 
             #if land then s = 0 and quit
@@ -103,22 +103,40 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
 
             #Build up terms
             #Ey
-            a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-            a_matrix[7, calc_index(i + 1, j)] += E / h ** 2
-            a_matrix[1, calc_index(i - 1, j)] += E / h ** 2
+            if a_up_index > 0 and a_down_index > 0:
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[7, a_down_index] += E / h ** 2
+                a_matrix[1, a_up_index] += E / h ** 2
+            if a_up_index < 0:
+                #we're at the top boundary, forward expansion down
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[7, a_down_index] += E / h ** 2
+            if a_down_index < 0:
+                #we're at the bottom boundary, forward expansion up
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[1, a_up_index] += E / h ** 2
 
             #Ex
             a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-            a_matrix[5, calc_index(i, j + 1)] += E / h ** 2
-            a_matrix[3, calc_index(i, j - 1)] += E / h ** 2
+            a_matrix[5, a_right_index] += E / h ** 2
+            a_matrix[3, a_left_index] += E / h ** 2
 
             #Uy
-            a_matrix[7, calc_index(i + 1, j)] += uy / (2.0 * h)
-            a_matrix[1, calc_index(i - 1, j)] += -uy / (2.0 * h)
+            #if a_up_index > 0 and a_down_index > 0:
+            a_matrix[7, a_down_index] += uy / (2.0 * h)
+            a_matrix[1, a_up_index] += -uy / (2.0 * h)
+            if a_up_index < 0:
+                #we're at the top boundary, forward expansion down
+                a_matrix[7, a_down_index] += uy / (2.0 * h)
+                a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
+            if a_down_index < 0:
+                #we're at the bottom boundary, forward expansion up
+                a_matrix[1, a_up_index] += uy / (2.0 * h)
+                a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
 
             #Ux
-            a_matrix[5, calc_index(i, j + 1)] += ux / (2.0 * h)
-            a_matrix[3, calc_index(i, j - 1)] += -ux / (2.0 * h)
+            a_matrix[5, a_right_index] += ux / (2.0 * h)
+            a_matrix[3, a_left_index] += -ux / (2.0 * h)
 
             #K
             a_matrix[4, a_diagonal_index] += -k
