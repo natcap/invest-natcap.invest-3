@@ -341,7 +341,6 @@ class FileChecker(URIChecker):
 
     def __init__(self):
         URIChecker.__init__(self)
-        self.uri = None #initialize to None
         self.add_check_function(self.open)
 
     def open(self, valid_dict):
@@ -608,11 +607,10 @@ class CSVChecker(TableChecker):
         return table_rows
 
     def _get_fieldnames(self):
-        if not hasattr(self, 'fieldnames'):
-            if not hasattr(self.file, 'fieldnames'):
-                self.fieldnames = self.file.next()
-            else:
-                self.fieldnames = self.file.fieldnames
+        if not hasattr(self.file, 'fieldnames'):
+            self.fieldnames = self.file.next()
+        else:
+            self.fieldnames = self.file.fieldnames
 
         return self.fieldnames
 
