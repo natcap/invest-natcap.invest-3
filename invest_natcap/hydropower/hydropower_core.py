@@ -620,7 +620,7 @@ def water_scarcity(args):
         args['water_yield_mean'] - a GDAL raster dataset, generated from
             the water_yield model, describing the mean water yield per
             sub-watershed (mm) (required)
-        args['lulc_uri'] - a GDAL raster dataset of land use/land cover whose
+        args['lulc'] - a GDAL raster dataset of land use/land cover whose
             LULC indexes correspond to indexs in the biophysical table input.
             Used for determining soil retention and other biophysical 
             properties of the landscape.  (required)
@@ -670,8 +670,8 @@ def water_scarcity(args):
     tmp_calib_path = intermediate_dir + os.sep + 'tmp_calib.tif'
     tmp_calib2_path = intermediate_dir + os.sep + 'tmp_calib2.tif'
     nodata = -1
-    tmp_calib = invest_cython_core.newRasterFromBase(wyield_vol_raster, tmp_calib_path,
-                                                     'GTiff', nodata, gdal.GDT_Float32)
+    tmp_calib = invest_cython_core.newRasterFromBase(wyield_vol_raster, '',
+                                                     'MEM', nodata, gdal.GDT_Float32)
     attribute_string = 'ATTRIBUTE=ws_id'
     gdal.RasterizeLayer(tmp_calib, [1], watersheds.GetLayer(0),
                         options = [attribute_string])
@@ -681,13 +681,14 @@ def water_scarcity(args):
         else:
             return nodata
     
-    tmp_calib2 = invest_cython_core.newRasterFromBase(wyield_vol_raster, tmp_calib2_path,
-                                                     'GTiff', nodata, gdal.GDT_Float32)
+    tmp_calib2 = invest_cython_core.newRasterFromBase(wyield_vol_raster, '',
+                                                     'MEM', nodata, gdal.GDT_Float32)
     
     tmp_calib_band = tmp_calib.GetRasterBand(1)
     tmp_calib2_band = tmp_calib2.GetRasterBand(1)
     
     invest_core.vectorize1ArgOp(tmp_calib_band, calib_op, tmp_calib2_band)
+    
     #Multiply calibration raster with wyield_vol raster
     def cyield_vol_op(wyield_vol, calib):
         return wyield_vol * calib
@@ -699,12 +700,39 @@ def water_scarcity(args):
     wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
     
     invest_core.vectorize2ArgOp(wyield_vol_band, tmp_calib2_band, cyield_vol_op, wyield_calib_band)
-    #Create raster from land use raster, subsituting in demand value
     
+    #Create raster from land use raster, subsituting in demand value
+    demand_dict = args['demand_table']
+    lulc_raster = args['lulc']
+    lulc_band = lulc_raster.GetRasterBand(1)
+    lulc_nodata = lulc_band.GetNoDataValue()
+    tmp_consump = invest_cython_core.newRasterFromBase(lulc_raster, '',
+                                                     'MEM', lulc_nodata, gdal.GDT_Float32)
+    tmp_consump_band = tmp_consump.GetRasterBand(1)
+    
+    def lulc_demand(lulc):
+        if lulc in demand_dict:
+            return demand_dict[lulc]['demand']
+        else:
+            return 0.0
+    
+    invest_core.vectorize1ArgOp(lulc_band, lulc_demand, tmp_consump_band)
+    
+    clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, tmp_calib_path)
+        
     #Make raster 'consump' by saying if consump_rc is NULL, put 0, else
     #consump_rc. Make float
     
     #Take sum of consump over sub watersheds making consump_vol
+    
+    #Get a numpy array from rasterizing the sub watershed id values into
+    #a raster. The numpy array will be the sub watershed mask used for
+    #calculating mean and sum values at a sub watershed basis
+    sub_sheds = args['sub_watersheds']
+    sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask2.tif'
+    sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path,
+                               sub_sheds, 'subws_id')
+    
     
     #Take mean of consump over sub watersheds making conusmp_mean
     
