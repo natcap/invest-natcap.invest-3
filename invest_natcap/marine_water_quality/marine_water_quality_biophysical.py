@@ -262,7 +262,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     COLORMAP.set_under(color='#330000')
     axis_extent = [0, H * N_COLS, 0, H * N_ROWS]
     pylab.imshow(density,
-                 interpolation='bilinear',
+                 interpolation = 'nearest',
                  cmap=COLORMAP,
                  vmin=VMIN,
                  vmax=VMAX,
