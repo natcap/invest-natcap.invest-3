@@ -286,17 +286,21 @@ class Checker(registrar.Registrar):
                     In this step, key-value pairs in the valid_dict dictionary
                     are evaluated in arbitrary order unless the key of a
                     key-value pair is present in the list self.ignore."""
-        for check_func in self.checks:
-            error = check_func(valid_dict)
-            if error != None:
-                return error
-
-        self.value = valid_dict['value']
-        for key, value in valid_dict.iteritems():
-            if key not in self.ignore and self.map[key] not in self.checks:
-                error = self.eval(key, value)
+        try:
+            print self.checks
+            for check_func in self.checks:
+                error = check_func(valid_dict)
                 if error != None:
                     return error
+
+            self.value = valid_dict['value']
+            for key, value in valid_dict.iteritems():
+                if key not in self.ignore and self.map[key] not in self.checks:
+                    error = self.eval(key, value)
+                    if error != None:
+                        return error
+        except Exception as e:
+            return str(e)
         return None
 
 class URIChecker(Checker):
@@ -599,7 +603,7 @@ class CSVChecker(TableChecker):
             row = {}
             for field_name, value in zip(fieldnames, record):
                 row[field_name] = value
-    
+
             table_rows.append(row)
         return table_rows
 
@@ -609,7 +613,7 @@ class CSVChecker(TableChecker):
                 self.fieldnames = self.file.next()
             else:
                 self.fieldnames = self.file.fieldnames
-        
+
         return self.fieldnames
 
     #all check functions take a single value, which is returned by the
