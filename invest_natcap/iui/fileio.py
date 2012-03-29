@@ -75,9 +75,9 @@ class CSVHandler(TableHandler):
     def get_field_names(self, uri):
         csv_file = self.open(uri)
         if not hasattr(csv_file, 'fieldnames'):
-            return self.file.next()
+            return csv_file.next()
         else:
-            return self.file.fieldnames
+            return csv_file.fieldnames
 
     def get_map(self, uri, key_field, value_field):
         csv_file = self.open(uri)
