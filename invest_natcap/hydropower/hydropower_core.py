@@ -8,6 +8,7 @@ import math
 
 import numpy as np
 from osgeo import gdal
+from osgeo import ogr
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
@@ -537,7 +538,7 @@ def create_mean_raster(raster, path, shed_shape, field_name, shed_mask):
     band_mean.WriteArray(new_data_array, 0, 0)  
     return raster_mean
 
-def create_sum_raster(raster, path, shed_shape, field_name, shed_mask):
+def create_sum_raster(raster, path, shed_shape, field_name, shed_mask, dict):
     """Creates a new raster representing the mean per watershed or per
        sub watershed 
     
@@ -567,7 +568,7 @@ def create_sum_raster(raster, path, shed_shape, field_name, shed_mask):
         comp_array = np.ma.compressed(masked_array)
         mean = sum(comp_array)
         np.putmask(new_data_array, set_mask_val, mean)
-        
+        dict[value] = mean
         feat.Destroy()
         
     band_mean.WriteArray(new_data_array, 0, 0)  
@@ -778,11 +779,11 @@ def water_scarcity(args):
     sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask2.tif'
     sub_mask = get_mask(clipped_consump, sub_mask_raster_path,
                                sub_sheds, 'subws_id')
-    
+    sum_dict = {}
     sum_raster = \
         create_sum_raster(clipped_consump, consump_vol_path, sub_sheds, 
-                          'subws_id', sub_mask)
-    
+                          'subws_id', sub_mask, sum_dict)
+    LOGGER.debug('sum_dict : %s', sum_dict)
     #Take mean of consump over sub watersheds making conusmp_mean
     mean_raster = \
         create_mean_raster(clipped_consump, consump_mean_path, sub_sheds, 
@@ -816,9 +817,126 @@ def water_scarcity(args):
     
     #Make sub watershed and watershed tables by adding values onto the tables
     #provided from sub watershed yield and watershed yield
+    mask_raster_path = intermediate_dir + os.sep + 'shed_mask2.tif'
+    sub_mask_raster_path2 = intermediate_dir + os.sep + 'sub_shed_mask3.tif'
+    sub_mask2 = get_mask(wyield_calib, sub_mask_raster_path2,
+                               sub_sheds, 'subws_id')
+    shed_mask = get_mask(wyield_calib, mask_raster_path, watersheds, 'ws_id')
+
+    water_shed_table = args['watershed_yield_table']
+    sub_shed_table = args['subwatershed_yield_table']
     
+    #cyielc_vl per watershed
+    shed_subshed_map = {}
+    for key, val in sub_shed_table.iteritems():
+        if val['ws_id'] in shed_subshed_map:
+            shed_subshed_map[val['ws_id']].append(key)
+        else:
+            shed_subshed_map[val['ws_id']] = [key]
+            
+    LOGGER.debug('shed_subshed_map : %s', shed_subshed_map) 
     
-        
+    new_keys_ws = {}
+    new_keys_sws = {}
+    
+    field_name = 'ws_id'
+    cyield_d = get_mean(wyield_calib, sub_sheds, 'subws_id', sub_mask2)
+    cyield_vol_d = sum_mean_dict(shed_subshed_map, cyield_d, 'sum')
+    new_keys_ws['cyield_vl'] = cyield_vol_d
+    new_keys_sws['cyield_vl'] = cyield_d
+    
+    #consump_vl per watershed
+    consump_vl_d = sum_mean_dict(shed_subshed_map, sum_dict, 'sum')
+    new_keys_ws['consump_vl'] = consump_vl_d
+    new_keys_sws['consump_vl'] = sum_dict
+    
+    #consump_mean per watershed
+    consump_mn_d = sum_mean_dict(shed_subshed_map, sum_dict, 'mean')
+    new_keys_ws['consump_mn'] = consump_mn_d
+    new_keys_sws['consump_mn'] = sum_dict
+    
+    #rsupply_vl per watershed
+    rsupply_vl_raster = gdal.Open(rsupply_vol_path)
+    field_name = 'ws_id'
+    rsupply_vl_d = get_mean(rsupply_vl_raster, sub_sheds, 'subws_id', sub_mask2)
+    rsupply_vl_dt = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'sum')
+    new_keys_ws['rsupply_vl'] = rsupply_vl_dt
+    new_keys_sws['rsupply_vl'] = rsupply_vl_d
+    
+    #rsupply_mn per watershed
+    field_name = 'ws_id'
+    rsupply_vl_d = get_mean(rsupply_vl_raster, sub_sheds, 'subws_id', sub_mask2)
+    rsupply_mn_d = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'mean')
+    new_keys_ws['rsupply_mn'] = rsupply_mn_d
+    new_keys_sws['rsupply_mn'] = rsupply_vl_d
+    
+    field_list_ws = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
+                  'wyield_sum', 'cyield_vl', 'consump_vl', 'consump_mn',
+                  'rsupply_vl', 'rsupply_mn']
+    
+    field_list_sws = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
+                      'wyield_mn', 'wyield_sum', 'cyield_vl', 'consump_vl', 
+                      'consump_mn','rsupply_vl', 'rsupply_mn']
+    
+    for key, val in water_shed_table.iteritems():
+        for index, item in new_keys_ws.iteritems():
+            val[index] = item[key]
+    LOGGER.debug('updated ws table : %s', water_shed_table)
+    
+    for key, val in sub_shed_table.iteritems():
+        for index, item in new_keys_sws.iteritems():
+            val[index] = item[int(key)]
+    LOGGER.debug('updated sws table : %s', sub_shed_table)
+    
+    shed_path = output_dir + os.sep + 'water_scarcity_watershed.csv'
+    sub_shed_path = output_dir + os.sep + 'water_scarcity_subwatershed.csv'
+    
+    shed_file = open(shed_path, 'wb')
+    writer = csv.DictWriter(shed_file, field_list_ws)
+    field_dict = {}
+    #Create a dictionary with field names as keys and the same field name
+    #as values, to use as first row in CSV file which will be the column header
+    for field in field_list_ws:
+        field_dict[field] = field
+    #Write column header row
+    writer.writerow(field_dict)
+    
+    for key, dict in water_shed_table.iteritems():
+        writer.writerow(dict)
+    
+    shed_file.close()
+    
+    sub_shed_file = open(sub_shed_path, 'wb')
+    writer = csv.DictWriter(sub_shed_file, field_list_sws)
+    field_dict = {}
+    #Create a dictionary with field names as keys and the same field name
+    #as values, to use as first row in CSV file which will be the column header
+    for field in field_list_sws:
+        field_dict[field] = field
+    #Write column header row
+    writer.writerow(field_dict)
+    
+    for key, dict in sub_shed_table.iteritems():
+        writer.writerow(dict)
+    
+    sub_shed_file.close()
+    
+def sum_mean_dict(dict1, dict2, op):
+    new_dict = {}
+    for key, val in dict1.iteritems():
+        sum_ws = 0
+        counter = 0
+        for item in val:
+            counter = counter + 1
+            sum_ws = sum_ws + dict2[int(item)]
+        if op == 'sum':
+            new_dict[key] = sum_ws
+        else:
+            new_dict[key] = sum_ws / counter
+    
+    LOGGER.debug('sum_ws_dict rsupply_mean: %s', new_dict)
+    return new_dict
+
 def valuation(args):
     """
     """
