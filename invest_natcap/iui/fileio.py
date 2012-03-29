@@ -1,6 +1,9 @@
 import json
 import ogr
 from platform import node
+import csv
+
+from dbfpy import dbf
 
 class JSONHandler(object):
     def __init__(self, uri):
@@ -33,7 +36,12 @@ class LastRunHandler(JSONHandler):
         uri = './cfg' + modelname + '_lastrun_' + node() + '.json'
         JSONHandler.__init__(self, uri)
 
-class OGRHandler(object):
+class TableHandler(object):
+    def get_field_names(self, uri):
+        """Function stub for reimplementation."""
+        return []
+
+class OGRHandler(TableHandler):
     def get_field_names(self, uri):
         """Get a list of the fieldnames in the specified OGR file.
 
@@ -55,4 +63,15 @@ class OGRHandler(object):
         else:
             return []
 
+class DBFHandler(TableHandler):
+    def get_field_names(self, uri):
+        dbf_file = dbf.Dbf(str(uri))
+        return dbf_file.header.fields
 
+class CSVHandler(TableHandler):
+    def get_field_names(self, uri):
+        csv_file = csv.DictReader(open(uri))
+        if not hasattr(csv_file, 'fieldnames'):
+            return self.file.next()
+        else:
+            return self.file.fieldnames
