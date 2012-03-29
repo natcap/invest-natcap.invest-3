@@ -836,29 +836,90 @@ def water_scarcity(args):
             
     LOGGER.debug('shed_subshed_map : %s', shed_subshed_map) 
     
+    new_keys_ws = {}
+    new_keys_sws = {}
+    
     field_name = 'ws_id'
     cyield_d = get_mean(wyield_calib, sub_sheds, 'subws_id', sub_mask2)
     cyield_vol_d = sum_mean_dict(shed_subshed_map, cyield_d, 'sum')
+    new_keys_ws['cyield_vl'] = cyield_vol_d
+    new_keys_sws['cyield_vl'] = cyield_d
     
     #consump_vl per watershed
-    cosnump_vl_d = sum_mean_dict(shed_subshed_map, sum_dict, 'sum')
+    consump_vl_d = sum_mean_dict(shed_subshed_map, sum_dict, 'sum')
+    new_keys_ws['consump_vl'] = consump_vl_d
+    new_keys_sws['consump_vl'] = sum_dict
     
     #consump_mean per watershed
     consump_mn_d = sum_mean_dict(shed_subshed_map, sum_dict, 'mean')
+    new_keys_ws['consump_mn'] = consump_mn_d
+    new_keys_sws['consump_mn'] = sum_dict
     
     #rsupply_vl per watershed
     rsupply_vl_raster = gdal.Open(rsupply_vol_path)
     field_name = 'ws_id'
     rsupply_vl_d = get_mean(rsupply_vl_raster, sub_sheds, 'subws_id', sub_mask2)
     rsupply_vl_dt = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'sum')
+    new_keys_ws['rsupply_vl'] = rsupply_vl_dt
+    new_keys_sws['rsupply_vl'] = rsupply_vl_d
     
     #rsupply_mn per watershed
     field_name = 'ws_id'
     rsupply_vl_d = get_mean(rsupply_vl_raster, sub_sheds, 'subws_id', sub_mask2)
     rsupply_mn_d = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'mean')
+    new_keys_ws['rsupply_mn'] = rsupply_mn_d
+    new_keys_sws['rsupply_mn'] = rsupply_vl_d
     
+    field_list_ws = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
+                  'wyield_sum', 'cyield_vl', 'consump_vl', 'consump_mn',
+                  'rsupply_vl', 'rsupply_mn']
     
+    field_list_sws = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
+                      'wyield_mn', 'wyield_sum', 'cyield_vl', 'consump_vl', 
+                      'consump_mn','rsupply_vl', 'rsupply_mn']
     
+    for key, val in water_shed_table.iteritems():
+        for index, item in new_keys_ws.iteritems():
+            val[index] = item[key]
+    LOGGER.debug('updated ws table : %s', water_shed_table)
+    
+    for key, val in sub_shed_table.iteritems():
+        for index, item in new_keys_sws.iteritems():
+            val[index] = item[int(key)]
+    LOGGER.debug('updated sws table : %s', sub_shed_table)
+    
+    shed_path = output_dir + os.sep + 'water_scarcity_watershed.csv'
+    sub_shed_path = output_dir + os.sep + 'water_scarcity_subwatershed.csv'
+    
+    shed_file = open(shed_path, 'wb')
+    writer = csv.DictWriter(shed_file, field_list_ws)
+    field_dict = {}
+    #Create a dictionary with field names as keys and the same field name
+    #as values, to use as first row in CSV file which will be the column header
+    for field in field_list_ws:
+        field_dict[field] = field
+    #Write column header row
+    writer.writerow(field_dict)
+    
+    for key, dict in water_shed_table.iteritems():
+        writer.writerow(dict)
+    
+    shed_file.close()
+    
+    sub_shed_file = open(sub_shed_path, 'wb')
+    writer = csv.DictWriter(sub_shed_file, field_list_sws)
+    field_dict = {}
+    #Create a dictionary with field names as keys and the same field name
+    #as values, to use as first row in CSV file which will be the column header
+    for field in field_list_sws:
+        field_dict[field] = field
+    #Write column header row
+    writer.writerow(field_dict)
+    
+    for key, dict in sub_shed_table.iteritems():
+        writer.writerow(dict)
+    
+    sub_shed_file.close()
     
 def sum_mean_dict(dict1, dict2, op):
     new_dict = {}
@@ -873,7 +934,7 @@ def sum_mean_dict(dict1, dict2, op):
         else:
             new_dict[key] = sum_ws / counter
     
-    LOGGER.debug('sum_ws_dict rsupply_mean: %s', sum_ws_dict)
+    LOGGER.debug('sum_ws_dict rsupply_mean: %s', new_dict)
     return new_dict
 
 def valuation(args):
