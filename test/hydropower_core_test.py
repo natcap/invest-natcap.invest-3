@@ -38,7 +38,9 @@ class TestHydropowerCore(unittest.TestCase):
 #        water_yield.execute(args)
 
 #    def test_create_raster(self):
-#        
+#        #TEST create_etk_root function to see how it handles if a LULC Code
+#         in the table does not exist on the lulc raster
+
 #        dict = {1 : {'etk': '25'}, 2: {'etk': '1000'}, 
 #                3 : {'etk': '250'}, 4: {'etk': '500'}}
 #        driver = gdal.GetDriverByName("GTIFF")
@@ -409,26 +411,26 @@ class TestHydropowerCore(unittest.TestCase):
             for m, n in zip(i,j):
                 self.assertAlmostEqual(m, n, 4)
 
-    def test_make_raster(self):
-        
-        out_dir = './data/test_out/hydropower_get_mask'
-        output_path = out_dir + os.sep + 'new_mask.tif'
-        
-        if not os.path.isdir(out_dir):
-            os.mkdir(out_dir)
-        if os.path.isfile(output_path):
-            os.remove(output_path)
-        
-        wrk_dir = './data/hydropower_data/test_input'
-        regression_dir = './data/hydropower_regression_data'
-        
-        sub_sheds_path = wrk_dir + os.sep + 'subwatersheds.shp'
-        wyield_path = wrk_dir + os.sep + 'test_wyield.tif'
-        regression_mask_path = regression_dir + os.sep + 'sub_shed_mask_regression.tif'
-        new_raster_path = 
-        sub_sheds = ogr.Open(sub_sheds_path)
-        wyield = gdal.Open(wyield_path)
-        reg_mask_raster = gdal.Open(regression_mask_path)
-        
-        reg_mask = reg_mask_raster.GetRasterBand(1).ReadAsArray()
-        field_name = 'subws_id'
+#    def test_make_raster(self):
+#        
+#        out_dir = './data/test_out/hydropower_get_mask'
+#        output_path = out_dir + os.sep + 'new_mask.tif'
+#        
+#        if not os.path.isdir(out_dir):
+#            os.mkdir(out_dir)
+#        if os.path.isfile(output_path):
+#            os.remove(output_path)
+#        
+#        wrk_dir = './data/hydropower_data/test_input'
+#        regression_dir = './data/hydropower_regression_data'
+#        
+#        sub_sheds_path = wrk_dir + os.sep + 'subwatersheds.shp'
+#        wyield_path = wrk_dir + os.sep + 'test_wyield.tif'
+#        regression_mask_path = regression_dir + os.sep + 'sub_shed_mask_regression.tif'
+#        new_raster_path = 
+#        sub_sheds = ogr.Open(sub_sheds_path)
+#        wyield = gdal.Open(wyield_path)
+#        reg_mask_raster = gdal.Open(regression_mask_path)
+#        
+#        reg_mask = reg_mask_raster.GetRasterBand(1).ReadAsArray()
+#        field_name = 'subws_id'

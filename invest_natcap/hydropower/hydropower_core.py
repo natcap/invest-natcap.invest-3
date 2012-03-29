@@ -537,6 +537,42 @@ def create_mean_raster(raster, path, shed_shape, field_name, shed_mask):
     band_mean.WriteArray(new_data_array, 0, 0)  
     return raster_mean
 
+def create_sum_raster(raster, path, shed_shape, field_name, shed_mask):
+    """Creates a new raster representing the mean per watershed or per
+       sub watershed 
+    
+       raster - a GDAL raster dataset that has the desired pixel size and
+                dimensions as well as the values we want to take the mean of
+       path - a uri string path for the creation of the mean raster
+       shed_shape - an OGR shapefile, either watershed or sub watershed
+       field_name - a string of the id field from shed_shape
+       shed_mask - a numpy array representing the shed/sub shed id mask
+       
+       returns - a raster       
+    """
+    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    band_mean = raster_mean.GetRasterBand(1)
+    pixel_data_array = band_mean.ReadAsArray()
+    nodata = band_mean.GetNoDataValue()
+    band_mean.Fill(nodata)
+    sub_sheds_id_array = np.copy(shed_mask)
+    new_data_array = np.copy(pixel_data_array)
+    
+    for feat in shed_shape.GetLayer(0):
+        index = feat.GetFieldIndex(field_name)
+        value = feat.GetFieldAsInteger(index)
+        mask_val = sub_sheds_id_array != value
+        set_mask_val = sub_sheds_id_array == value
+        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
+        comp_array = np.ma.compressed(masked_array)
+        mean = sum(comp_array)
+        np.putmask(new_data_array, set_mask_val, mean)
+        
+        feat.Destroy()
+        
+    band_mean.WriteArray(new_data_array, 0, 0)  
+    return raster_mean
+
 def clip_raster_from_polygon(shape, raster, path):
     """Returns a raster where any value outside the bounds of the
     polygon shape are set to nodata values. This represents clipping 
@@ -617,10 +653,10 @@ def water_scarcity(args):
             the water_yield model, describing the total water yield per
             sub-watershed. The approximate absolute annual water yield across
             the landscape (cubic meters) (required) 
-        args['water_yield_mean'] - a GDAL raster dataset, generated from
+        args['water_yield_mn'] - a GDAL raster dataset, generated from
             the water_yield model, describing the mean water yield per
             sub-watershed (mm) (required)
-        args['lulc_uri'] - a GDAL raster dataset of land use/land cover whose
+        args['lulc'] - a GDAL raster dataset of land use/land cover whose
             LULC indexes correspond to indexs in the biophysical table input.
             Used for determining soil retention and other biophysical 
             properties of the landscape.  (required)
@@ -655,10 +691,10 @@ def water_scarcity(args):
     
     #Output files:
     wyield_calib_path = output_dir + os.sep + 'cyield_vol.tif'
-    consump_vol = output_dir + os.sep + 'consum_vol'
-    consump_mean = output_dir + os.sep + 'consum_mn'
-    rsupply_vol = output_dir + os.sep + 'rsup_vol'
-    rsupply_mean = output_dir + os.sep + 'rsup_mn'
+    consump_vol_path = output_dir + os.sep + 'consum_vol.tif'
+    consump_mean_path = output_dir + os.sep + 'consum_mn.tif'
+    rsupply_vol_path = output_dir + os.sep + 'rsup_vol.tif'
+    rsupply_mean_path = output_dir + os.sep + 'rsup_mn.tif'
     ws_out_table_name = 'water_scarcity_watershed.csv' 
     sws_out_table_name = 'water_scarcity_subwatershed.csv'
     
@@ -667,53 +703,121 @@ def water_scarcity(args):
     calib_dict = args['hydro_calibration_table']
     wyield_vol_raster = args['water_yield_vol']
     watersheds = args['watersheds']
-    tmp_calib_path = intermediate_dir + os.sep + 'tmp_calib.tif'
-    tmp_calib2_path = intermediate_dir + os.sep + 'tmp_calib2.tif'
+    
+    clipped_consump_path = intermediate_dir + os.sep + 'clipped_consump.tif'
+    
     nodata = -1
-    tmp_calib = invest_cython_core.newRasterFromBase(wyield_vol_raster, tmp_calib_path,
-                                                     'GTiff', nodata, gdal.GDT_Float32)
+    
+    tmp_calib = \
+        invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', 
+                                             nodata, gdal.GDT_Float32)
     attribute_string = 'ATTRIBUTE=ws_id'
     gdal.RasterizeLayer(tmp_calib, [1], watersheds.GetLayer(0),
                         options = [attribute_string])
+    
     def calib_op(tmp_calib_band):
         if tmp_calib_band != nodata:
             return calib_dict[str(int(tmp_calib_band))]
         else:
             return nodata
     
-    tmp_calib2 = invest_cython_core.newRasterFromBase(wyield_vol_raster, tmp_calib2_path,
-                                                     'GTiff', nodata, gdal.GDT_Float32)
+    tmp_calib2 = \
+        invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', 
+                                             nodata, gdal.GDT_Float32)
     
     tmp_calib_band = tmp_calib.GetRasterBand(1)
     tmp_calib2_band = tmp_calib2.GetRasterBand(1)
     
     invest_core.vectorize1ArgOp(tmp_calib_band, calib_op, tmp_calib2_band)
-    #Multiply calibration raster with wyield_vol raster
-    def cyield_vol_op(wyield_vol, calib):
-        return wyield_vol * calib
     
-    wyield_calib = invest_cython_core.newRasterFromBase(tmp_calib, wyield_calib_path,
-                                                     'GTiff', nodata, gdal.GDT_Float32)
+    #Multiply calibration raster with wyield_vol raster
+    nodata_vol = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
+    nodata_calibtmp = tmp_calib2_band.GetNoDataValue()
+    
+    def cyield_vol_op(wyield_vol, calib):
+        if wyield_vol != nodata_vol and calib != nodata_calibtmp:
+            return wyield_vol * calib
+        else:
+            return -1
+    wyield_calib = \
+        invest_cython_core.newRasterFromBase(tmp_calib, wyield_calib_path,
+                                             'GTiff', nodata, gdal.GDT_Float32)
     wyield_calib_band = wyield_calib.GetRasterBand(1)
-#    tmp_calib_band = tmp_calib.GetRasterBand(1)
     wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
     
-    invest_core.vectorize2ArgOp(wyield_vol_band, tmp_calib2_band, cyield_vol_op, wyield_calib_band)
-    #Create raster from land use raster, subsituting in demand value
+    invest_core.vectorize2ArgOp(wyield_vol_band, tmp_calib2_band, cyield_vol_op, 
+                                wyield_calib_band)
     
-    #Make raster 'consump' by saying if consump_rc is NULL, put 0, else
-    #consump_rc. Make float
+    #Create raster from land use raster, subsituting in demand value
+    demand_dict = args['demand_table']
+    lulc_raster = args['lulc']
+    
+    lulc_band = lulc_raster.GetRasterBand(1)
+    lulc_nodata = lulc_band.GetNoDataValue()
+    tmp_consump = invest_cython_core.newRasterFromBase(lulc_raster, '', 'MEM', 
+                                                       -1, gdal.GDT_Float32)
+    tmp_consump_band = tmp_consump.GetRasterBand(1)
+    
+    def lulc_demand(lulc):
+        if str(lulc) in demand_dict:
+            return demand_dict[str(lulc)]['demand']
+        else:
+            return 0.0
+    
+    invest_core.vectorize1ArgOp(lulc_band, lulc_demand, tmp_consump_band)
+    
+    clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, 
+                                               clipped_consump_path)
     
     #Take sum of consump over sub watersheds making consump_vol
     
+    #Get a numpy array from rasterizing the sub watershed id values into
+    #a raster. The numpy array will be the sub watershed mask used for
+    #calculating mean and sum values at a sub watershed basis
+    sub_sheds = args['sub_watersheds']
+    sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask2.tif'
+    sub_mask = get_mask(clipped_consump, sub_mask_raster_path,
+                               sub_sheds, 'subws_id')
+    
+    sum_raster = \
+        create_sum_raster(clipped_consump, consump_vol_path, sub_sheds, 
+                          'subws_id', sub_mask)
+    
     #Take mean of consump over sub watersheds making conusmp_mean
+    mean_raster = \
+        create_mean_raster(clipped_consump, consump_mean_path, sub_sheds, 
+                           'subws_id', sub_mask)
     
     #Make rsupply_vol by wyield_calib minus consump_vol
+
+    nodata_calib = wyield_calib.GetRasterBand(1).GetNoDataValue()
+    nodata_consump = sum_raster.GetRasterBand(1).GetNoDataValue()
+
+    def rsupply_vol_op(wyield_calib, consump_vol):
+        if (wyield_calib != nodata_calib and consump_vol != nodata_consump):
+            return wyield_calib - consump_vol
+        else:
+            return 0
+        
+    vop = np.vectorize(rsupply_vol_op)
+
+    invest_core.vectorizeRasters([wyield_calib, sum_raster], vop, 
+                                 rasterName=rsupply_vol_path)
     
     #Make rsupply_mean by wyield_mean minus consump_mean
     
+    wyield_mean = args['water_yield_mn']
+    
+    def rsupply_mean_op(wyield_mean, consump_mean):
+        return wyield_mean - consump_mean
+
+    invest_core.vectorizeRasters([wyield_mean, mean_raster], rsupply_mean_op, 
+                                 rasterName=rsupply_mean_path)
+    
     #Make sub watershed and watershed tables by adding values onto the tables
     #provided from sub watershed yield and watershed yield
+    
+    
         
 def valuation(args):
     """

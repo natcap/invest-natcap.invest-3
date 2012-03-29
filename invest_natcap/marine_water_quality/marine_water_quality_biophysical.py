@@ -90,7 +90,7 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
 
             #if land then s = 0 and quit
             if not in_water[a_diagonal_index]:
-                a_matrix[2, a_diagonal_index] = 1
+                a_matrix[4, a_diagonal_index] = 1
                 continue
 
             if point_index == a_diagonal_index:
@@ -100,63 +100,107 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
 
             #Build up terms
             #Ey
-            if a_up_index > 0 and a_down_index > 0:
+            if a_up_index > 0 and a_down_index > 0 and \
+                in_water[a_up_index] and in_water[a_down_index]:
+                #Ey
                 a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
                 a_matrix[7, a_down_index] += E / h ** 2
                 a_matrix[1, a_up_index] += E / h ** 2
-            if a_up_index < 0:
-                #we're at the top boundary, forward expansion down
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[7, a_down_index] += E / h ** 2
-            if a_down_index < 0:
-                #we're at the bottom boundary, forward expansion up
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[1, a_up_index] += E / h ** 2
 
-            #Ex
-            if a_left_index > 0 and a_right_index > 0:
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[5, a_right_index] += E / h ** 2
-                a_matrix[3, a_left_index] += E / h ** 2
-            if a_left_index < 0:
-                #we're on left boundary, expand right
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[5, a_right_index] += E / h ** 2
-            if a_right_index < 0:
-                #we're on right boundary, expand left
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[3, a_left_index] += E / h ** 2
-
-            #Uy
-            if a_up_index > 0 and a_down_index > 0:
+                #Uy
                 a_matrix[7, a_down_index] += uy / (2.0 * h)
                 a_matrix[1, a_up_index] += -uy / (2.0 * h)
-            if a_up_index < 0:
+            if a_up_index < 0 and in_water[a_down_index]:
                 #we're at the top boundary, forward expansion down
+                #Ey
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[7, a_down_index] += E / h ** 2
+
+                #Uy
                 a_matrix[7, a_down_index] += uy / (2.0 * h)
                 a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
-            if a_down_index < 0:
+            if a_down_index < 0 and in_water[a_up_index]:
                 #we're at the bottom boundary, forward expansion up
+                #Ey
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[1, a_up_index] += E / h ** 2
+
+                #Uy
                 a_matrix[1, a_up_index] += uy / (2.0 * h)
                 a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
+            if not in_water[a_up_index]:
+                #Ey
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[7, a_down_index] += E / h ** 2
 
-            #Ux
-            if a_left_index > 0 and a_right_index > 0:
+                #Uy
+                a_matrix[7, a_down_index] += uy / (2.0 * h)
+            if not in_water[a_down_index]:
+                #Ey
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[1, a_up_index] += E / h ** 2
+
+                #Uy
+                a_matrix[1, a_up_index] += -uy / (2.0 * h)
+
+
+
+            if a_left_index > 0 and a_right_index > 0 and \
+                in_water[a_left_index] and in_water[a_right_index]:
+                #Ex
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[5, a_right_index] += E / h ** 2
+                a_matrix[3, a_left_index] += E / h ** 2
+
+                #Ux
                 a_matrix[5, a_right_index] += ux / (2.0 * h)
                 a_matrix[3, a_left_index] += -ux / (2.0 * h)
-            if a_left_index < 0:
+            if a_left_index < 0 and in_water[a_right_index]:
                 #we're on left boundary, expand right
+                #Ex
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[5, a_right_index] += E / h ** 2
+
                 a_matrix[5, a_right_index] += ux / (2.0 * h)
                 a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
-            if a_right_index < 0:
-                #we're on left boundary, expand right
+                #Ux
+            if a_right_index < 0 and in_water[a_left_index]:
+                #we're on right boundary, expand left
+                #Ex
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[3, a_left_index] += E / h ** 2
+
+                #Ux
                 a_matrix[3, a_left_index] += ux / (2.0 * h)
                 a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
+
+            if not in_water[a_right_index]:
+                #Ex
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[3, a_left_index] += E / h ** 2
+
+                #Ux
+                a_matrix[3, a_left_index] += -ux / (2.0 * h)
+
+            if not in_water[a_left_index]:
+                #Ex
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[5, a_right_index] += E / h ** 2
+
+                #Ux
+                a_matrix[5, a_right_index] += ux / (2.0 * h)
 
             #K
             a_matrix[4, a_diagonal_index] += -k
 
-    #The whole thing needs a divide by 2
+            if not in_water[a_up_index]:
+                a_matrix[1, a_up_index] = 0
+            if not in_water[a_down_index]:
+                a_matrix[7, a_down_index] = 0
+            if not in_water[a_left_index]:
+                a_matrix[3, a_left_index] = 0
+            if not in_water[a_right_index]:
+                a_matrix[5, a_right_index] = 0
 
     LOGGER.info('Building sparse matrix from diagonals.')
 
@@ -263,7 +307,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     COLORMAP.set_under(color='#330000')
     axis_extent = [0, H * N_COLS, 0, H * N_ROWS]
     pylab.imshow(density,
-                 interpolation='bilinear',
+                 interpolation='nearest',
                  cmap=COLORMAP,
                  vmin=VMIN,
                  vmax=VMAX,
@@ -279,7 +323,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     if False in IN_WATER:
         pylab.hold(True)
         pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
-                     interpolation='bilinear',
+                     interpolation = 'nearest',
                      cmap=pylab.cm.PuOr,
                      origin='lower',
                      extent=axis_extent)
