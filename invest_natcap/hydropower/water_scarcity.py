@@ -81,7 +81,8 @@ def execute(args):
     watershed_yield_table_file = open(args['watershed_yield_table_uri'])
     reader = csv.DictReader(watershed_yield_table_file)
     for row in reader:
-        watershed_yield_table_map[row['ws_id']] = {'precip_mn':row['precip_mn'], \
+        watershed_yield_table_map[row['ws_id']] = {'ws_id':row['ws_id'],
+                                              'precip_mn':row['precip_mn'], \
                                               'PET_mn':row['PET_mn'], \
                                               'AET_mn':row['AET_mn'],
                                               'wyield_mn':row['wyield_mn'],
@@ -94,7 +95,8 @@ def execute(args):
     subwatershed_yield_table_file = open(args['subwatershed_yield_table_uri'])
     reader = csv.DictReader(subwatershed_yield_table_file)
     for row in reader:
-        subwatershed_yield_table_map[row['subws_id']] = {'ws_id':row['ws_id'],
+        subwatershed_yield_table_map[row['subws_id']] = {'subws_id':row['subws_id'],
+                                              'ws_id':row['ws_id'],
                                               'precip_mn':row['precip_mn'], \
                                               'PET_mn':row['PET_mn'], \
                                               'AET_mn':row['AET_mn'],
