@@ -60,55 +60,148 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     point_index = calc_index(int(point_source['yps'] / h),
                              int(point_source['xps'] / h))
 
+    #Absorption parameter
+    k = point_source['kps']
+
+    #Convert h to km for calculation since other parameters are in KM
+    h /= 1000.0
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
     b_vector = np.zeros(n * m)
-    #holds the columns for diagonal sparse matrix creation later
+
+    #holds the rows for diagonal sparse matrix creation later, row 4 is 
+    #the diagonal
     a_matrix = np.zeros((9, n * m))
+    diags = np.array([-2 * m, -m, -2, -1, 0, 1, 2, m, 2 * m])
+
 
     #iterate over the non-zero elments in grid to build the linear system
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for i in range(n):
         for j in range(m):
             #diagonal element i,j always in bounds, calculate directly
-            a_matrix_index = calc_index(i, j)
+            a_diagonal_index = calc_index(i, j)
+            a_up_index = calc_index(i - 1, j)
+            a_down_index = calc_index(i + 1, j)
+            a_left_index = calc_index(i, j - 1)
+            a_right_index = calc_index(i, j + 1)
+
 
             #if land then s = 0 and quit
-            if not in_water[a_matrix_index]:
-                a_matrix[2, a_matrix_index] = 1
+            if not in_water[a_diagonal_index]:
+                a_matrix[4, a_diagonal_index] = 1
                 continue
 
-            #formulate elements as a single array
-            term_a = 2 * E
-            ux_tmp = ux * h
-            uy_tmp = uy * h
+            if point_index == a_diagonal_index:
+                a_matrix[4, point_index] = 1
+                b_vector[point_index] = point_source['wps']
+                continue
 
-            elements = [
-                        #convert kps to 1/sec
-             (4, 0, a_matrix_index, -4.0 * (term_a + h * h * \
-                                            point_source['kps'] / 86400.0)),
-             (7, m, calc_index(i + 1, j), term_a - uy_tmp),
-             (1, -m, calc_index(i - 1, j), term_a + uy_tmp),
-             (5, 1, calc_index(i, j + 1), term_a - ux_tmp),
-             (3, -1, calc_index(i, j - 1), term_a + ux_tmp)]
+            #Build up terms
+            #Ey
+            if a_up_index > 0 and a_down_index > 0 and \
+                in_water[a_up_index] and in_water[a_down_index]:
+                #Ey
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[7, a_down_index] += E / h ** 2
+                a_matrix[1, a_up_index] += E / h ** 2
 
-            for k, offset, colIndex, term in elements:
-                if colIndex >= 0: #make sure we're in the grid
-                    if in_water[colIndex]: #if water
-                        a_matrix[k, a_matrix_index + offset] += term
-                    else:
-                        #handle the land boundary case s_ij' = s_ij
-                        a_matrix[2, a_matrix_index] += term
+                #Uy
+                a_matrix[7, a_down_index] += uy / (2.0 * h)
+                a_matrix[1, a_up_index] += -uy / (2.0 * h)
+            if a_up_index < 0 and in_water[a_down_index]:
+                #we're at the top boundary, forward expansion down
+                #Ey
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[7, a_down_index] += E / h ** 2
 
-    #define sources by erasing the rows in the matrix that have already been set
-    #the magic numbers are the diagonals and their offsets due to gridsize
-    for i, offset in [(7, m), (1, -m), (5, 1), (3, -1)]:
-        #zero out that row
-        a_matrix[i, point_index + offset] = 0
-    #set diagonal to 1
-    a_matrix[4, point_index] = 1
-    b_vector[point_index] = point_source['wps']
+                #Uy
+                a_matrix[7, a_down_index] += uy / (2.0 * h)
+                a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
+            if a_down_index < 0 and in_water[a_up_index]:
+                #we're at the bottom boundary, forward expansion up
+                #Ey
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[1, a_up_index] += E / h ** 2
+
+                #Uy
+                a_matrix[1, a_up_index] += uy / (2.0 * h)
+                a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
+            if not in_water[a_up_index]:
+                #Ey
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[7, a_down_index] += E / h ** 2
+
+                #Uy
+                a_matrix[7, a_down_index] += uy / (2.0 * h)
+            if not in_water[a_down_index]:
+                #Ey
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[1, a_up_index] += E / h ** 2
+
+                #Uy
+                a_matrix[1, a_up_index] += -uy / (2.0 * h)
+
+
+
+            if a_left_index > 0 and a_right_index > 0 and \
+                in_water[a_left_index] and in_water[a_right_index]:
+                #Ex
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[5, a_right_index] += E / h ** 2
+                a_matrix[3, a_left_index] += E / h ** 2
+
+                #Ux
+                a_matrix[5, a_right_index] += ux / (2.0 * h)
+                a_matrix[3, a_left_index] += -ux / (2.0 * h)
+            if a_left_index < 0 and in_water[a_right_index]:
+                #we're on left boundary, expand right
+                #Ex
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[5, a_right_index] += E / h ** 2
+
+                a_matrix[5, a_right_index] += ux / (2.0 * h)
+                a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
+                #Ux
+            if a_right_index < 0 and in_water[a_left_index]:
+                #we're on right boundary, expand left
+                #Ex
+                a_matrix[4, a_diagonal_index] += -E / h ** 2
+                a_matrix[3, a_left_index] += E / h ** 2
+
+                #Ux
+                a_matrix[3, a_left_index] += ux / (2.0 * h)
+                a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
+
+            if not in_water[a_right_index]:
+                #Ex
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[3, a_left_index] += E / h ** 2
+
+                #Ux
+                a_matrix[3, a_left_index] += -ux / (2.0 * h)
+
+            if not in_water[a_left_index]:
+                #Ex
+                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
+                a_matrix[5, a_right_index] += E / h ** 2
+
+                #Ux
+                a_matrix[5, a_right_index] += ux / (2.0 * h)
+
+            #K
+            a_matrix[4, a_diagonal_index] += -k
+
+            if not in_water[a_up_index]:
+                a_matrix[1, a_up_index] = 0
+            if not in_water[a_down_index]:
+                a_matrix[7, a_down_index] = 0
+            if not in_water[a_left_index]:
+                a_matrix[3, a_left_index] = 0
+            if not in_water[a_right_index]:
+                a_matrix[5, a_right_index] = 0
+
     LOGGER.info('Building sparse matrix from diagonals.')
 
     matrix = scipy.sparse.spdiags(a_matrix,
@@ -214,7 +307,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     COLORMAP.set_under(color='#330000')
     axis_extent = [0, H * N_COLS, 0, H * N_ROWS]
     pylab.imshow(density,
-                 interpolation='bilinear',
+                 interpolation='nearest',
                  cmap=COLORMAP,
                  vmin=VMIN,
                  vmax=VMAX,
@@ -230,7 +323,7 @@ python % s landarray_filename parameter_filename" % (sys.argv[0]))
     if False in IN_WATER:
         pylab.hold(True)
         pylab.imshow(masked_array(data=density, mask=(IN_WATER)),
-                     interpolation='bilinear',
+                     interpolation = 'nearest',
                      cmap=pylab.cm.PuOr,
                      origin='lower',
                      extent=axis_extent)

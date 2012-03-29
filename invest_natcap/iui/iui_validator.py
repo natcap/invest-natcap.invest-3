@@ -286,17 +286,20 @@ class Checker(registrar.Registrar):
                     In this step, key-value pairs in the valid_dict dictionary
                     are evaluated in arbitrary order unless the key of a
                     key-value pair is present in the list self.ignore."""
-        for check_func in self.checks:
-            error = check_func(valid_dict)
-            if error != None:
-                return error
-
-        self.value = valid_dict['value']
-        for key, value in valid_dict.iteritems():
-            if key not in self.ignore and self.map[key] not in self.checks:
-                error = self.eval(key, value)
+        try:
+            for check_func in self.checks:
+                error = check_func(valid_dict)
                 if error != None:
                     return error
+
+            self.value = valid_dict['value']
+            for key, value in valid_dict.iteritems():
+                if key not in self.ignore and self.map[key] not in self.checks:
+                    error = self.eval(key, value)
+                    if error != None:
+                        return error
+        except Exception as e:
+            return str(e)
         return None
 
 class URIChecker(Checker):
@@ -337,7 +340,6 @@ class FileChecker(URIChecker):
 
     def __init__(self):
         URIChecker.__init__(self)
-        self.uri = None #initialize to None
         self.add_check_function(self.open)
 
     def open(self, valid_dict):
@@ -439,18 +441,18 @@ class OGRChecker(TableChecker):
 
         self.layer_types = {'polygons' : ogr.wkbPolygon,
                             'points'  : ogr.wkbPoint}
-        
+
     def open(self, valid_dict):
         """Attempt to open the shapefile."""
 
         self.file = ogr.Open(str(self.uri))
-        
+
         if not isinstance(self.file, osgeo.ogr.DataSource):
             return str('Shapefile not compatible with OGR')
 
     def check_layers(self, layer_list):
         """Attempt to open the layer specified in self.valid."""
-       
+
         for layer_dict in layer_list:
             layer_name = layer_dict['name']
 
@@ -461,10 +463,10 @@ class OGRChecker(TableChecker):
                 layer_name = os.path.splitext(tmp_name)[0]
 
             self.layer = self.file.GetLayerByName(str(layer_name))
-            
+
             if not isinstance(self.layer, osgeo.ogr.Layer):
                 return str('Shapefile must have a layer called ' + layer_name)
-  
+
             if 'projection' in layer_dict:
                 reference = self.layer.GetSpatialRef()
                 projection = reference.GetAttrValue('PROJECTION')
@@ -504,16 +506,16 @@ class OGRChecker(TableChecker):
             table_rows.append(get_fields(feature))
 
         return table_rows
-                
+
 class DBFChecker(TableChecker):
     def open(self, valid_dict):
         """Attempt to open the DBF."""
-        
+
         self.file = dbf.Dbf(str(self.uri))
-        
+
         if not isinstance(self.file, dbf.Dbf):
             return str('Must be a DBF file')
-      
+
     def _get_fieldnames(self):
         return self.file.header.fields
 
@@ -524,7 +526,7 @@ class DBFChecker(TableChecker):
             row = {}
             for fieldname in self._get_fieldnames():
                 row[fieldname] = self.file[record][fieldname]
-            
+
             table_rows.append(row)
 
         return table_rows
@@ -563,24 +565,24 @@ class NumberChecker(PrimitiveChecker):
                    'lteq':  self.less_than_equal_to,
                    'lessThan':  self.less_than}
         self.update_map(updates)
-        
+
     def greater_than(self, b):
         if not self.value > b:
             return str(self.value) + ' must be greater than ' + str(b)
-    
+
     def less_than(self, b):
         if not self.value < b:
             return str(self.value) + ' must be less than ' + str(b)
-        
+
     def less_than_equal_to(self, b):
         if not self.value <= b:
             return str(self.value) + ' must be less than or equal to ' + str(b)
-    
+
     def greater_than_equal_to(self, b):
         if not self.value >= b:
             return str(str(self.value) + ' must be greater than or equal to ' +
                 str(b))
-        
+
 class CSVChecker(TableChecker):
     def open(self, valid_dict):
         """Attempt to open the CSV file"""
@@ -599,17 +601,16 @@ class CSVChecker(TableChecker):
             row = {}
             for field_name, value in zip(fieldnames, record):
                 row[field_name] = value
-    
+
             table_rows.append(row)
         return table_rows
 
     def _get_fieldnames(self):
-        if not hasattr(self, 'fieldnames'):
-            if not hasattr(self.file, 'fieldnames'):
-                self.fieldnames = self.file.next()
-            else:
-                self.fieldnames = self.file.fieldnames
-        
+        if not hasattr(self.file, 'fieldnames'):
+            self.fieldnames = self.file.next()
+        else:
+            self.fieldnames = self.file.fieldnames
+
         return self.fieldnames
 
     #all check functions take a single value, which is returned by the
