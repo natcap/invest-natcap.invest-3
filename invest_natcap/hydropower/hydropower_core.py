@@ -56,11 +56,12 @@ def water_yield(args):
         
     LOGGER.info('Starting Water Yield Calculation')
 
-    workspace_dir = args['workspace_dir']
     #Construct folder paths
+    workspace_dir = args['workspace_dir']
     output_dir = workspace_dir + os.sep + 'Output'
     intermediate_dir = workspace_dir + os.sep + 'Intermediate'
     service_dir = workspace_dir + os.sep + 'Service'
+
     #Get inputs from the args dictionary
     bio_dict = args['biophysical_dictionary']
     lulc_raster = args['lulc']
@@ -74,13 +75,13 @@ def water_yield(args):
     
     #Create etk raster from table values to use in future calculations
     tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk.tif'
-    tmp_etk_raster = create_etk_root_rasters(lulc_raster, tmp_etk_path, 255.0,
-                                             bio_dict, 'etk')
+    tmp_etk_raster = \
+        raster_from_table_values(lulc_raster, tmp_etk_path, bio_dict, 'etk')
     
     #Create root raster from table values to use in future calculations
     tmp_root_path = intermediate_dir + os.sep + 'tmp_root.tif'
-    tmp_root_raster = create_etk_root_rasters(lulc_raster, tmp_root_path, 255.0,
-                                             bio_dict, 'root_depth')
+    tmp_root_raster = raster_from_table_values(lulc_raster, tmp_root_path, 
+                                              bio_dict, 'root_depth')
     
     def fractp(etk, ape, precip, root, soil, pawc):
         """Vectorized function that calculates the fractp raster
@@ -616,31 +617,51 @@ def clip_raster_from_polygon(shape, raster, path):
                                 fill_bound_data, copy_band)
     return copy_raster
     
-def create_etk_root_rasters(key_raster, new_path, nodata, bio_dict, field):
-    """Creates a raster based on data from a column in a table
+def raster_from_table_values(base_raster, new_path, bio_dict, field):
+    """Creates a new raster from 'base_raster' whose values are data from a 
+       dictionary that directly relates to the pixel value from 'base_raster'
     
-       key_raster - a GDAL raster dataset 
-       new_path - a uri string for where the new raster should be written to
-       nodata - an integer value
-       bio_dict - a dictionary representing the biophysical csv table
-       field - a string of which field in the table to use
+       base_raster - a GDAL raster dataset whose pixel values relate to the 
+                     keys in 'bio_dict'
+       new_path - a uri string for where the new raster should be written
+       bio_dict - a dictionary representing the biophysical csv table, whose
+                  keys are the lulc codes and whose values are the etk and root
+                  depth values.
+                  bio_dict[1] = {'etk':500, 'root_depth':700}
+                  bio_dict[11] = {'etk':100, 'root_depth':10}...
+                  
+       field - a string of which field in the table to use as the new raster
+               pixel values
        
-       returns - a raster
+       returns - a GDAL raster
     """
+    base_band = base_raster.GetRasterBand(1)
+    base_nodata = base_band.GetNoDataValue()
+    array = base_band.ReadAsArray()
+
     tmp_raster = \
-        invest_cython_core.newRasterFromBase(key_raster, new_path, 
-                                            'GTiff', nodata, gdal.GDT_Float32)
-    key_band = key_raster.GetRasterBand(1)
-    key_nodata = key_band.GetNoDataValue()
-    array = key_band.ReadAsArray()
+        invest_cython_core.newRasterFromBase(base_raster, new_path, 'GTiff', 
+                                             base_nodata, gdal.GDT_Float32)
+    
     #http://stackoverflow.com/questions/3403973/fast-replacement-of-values-in-a-numpy-array
     new_array = array.astype(np.float)
+    
     for k, v in bio_dict.iteritems(): 
-        new_array[array==int(k)] = float(v[field])
-        if k=='57':
-            LOGGER.debug('new_array : %s : %s', k, v)
+        #For all the lulc codes in the dictionary, if the lulc code is found
+        #on the lulc raster, then replace that value with the corresponding
+        #desired value, else replace that value with a nodata value.
+        if (array==int(k)).any():
+            #array==int(k) provides a truth mask, so new_array[array==int(k)] 
+            #is saying to replace all of the values that are true with 
+            #float(v[field])
+             new_array[array==int(k)] = float(v[field])
+        else:
+            new_array[array==int(k)] = nodata
+            
+    #Write the newly developed numpy array to the raster band
     tmp_band = tmp_raster.GetRasterBand(1)
     tmp_band.WriteArray(new_array, 0, 0)
+    
     return tmp_raster
 
 def water_scarcity(args):
