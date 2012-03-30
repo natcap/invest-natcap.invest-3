@@ -49,7 +49,7 @@ def water_yield(args):
             coefficients such as root_depth and etk. NOTE: these data are 
             attributes of each LULC class rather than attributes of individual 
             cells in the raster map (required)
-        args['zhang'] - floating point value between 1 and 10 corresponding
+        args['seasonality_constant'] - floating point value between 1 and 10 corresponding
             to the seasonal distribution of precipitation (required)
             
         returns nothing"""
@@ -71,7 +71,7 @@ def water_yield(args):
     pawc_raster = args['pawc']
     sub_sheds = args['sub_watersheds']
     sheds = args['watersheds']
-    zhang = float(args['zhang'])
+    seasonality_constant = float(args['seasonality_constant'])
     
     #Create etk raster from table values to use in future calculations
     tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk.tif'
@@ -84,41 +84,45 @@ def water_yield(args):
                                               bio_dict, 'root_depth')
     
     def fractp(etk, ape, precip, root, soil, pawc):
-        """Vectorized function that calculates the fractp raster
+        """Function that calculates the fractp (actual evapotranspiration
+           fraction of precipitation) raster
         
-            etk - numpy array with the etk raster values
+            etk - numpy array with the etk (plant evapotranspiration 
+                  coefficient) raster values
             ape - numpy array with the potential evapotranspiration raster 
                   values
             precip - numpy array with the precipitation raster values
-            root - numpy array with the root raster values
+            root - numpy array with the root depth (maximum root depth for
+                   vegetated land use classes) raster values
             soil - numpy array with the soil depth raster values
             pawc - numpy array with the plant available water content raster 
                    values
             
         returns - fractp value"""
         
-        val = (etk * ape) / 1000
-        tmp_DI = val / precip
-        
-        awc = (np.minimum(root, soil) * pawc)
-        
-        tmp_w = (awc / (precip + 1)) * zhang
+        tmp_pet = (etk * ape) / 1000
+        tmp_DI = tmp_pet / precip        
+        awc = (np.minimum(root, soil) * pawc)        
+        tmp_w = (awc / (precip + 1)) * seasonality_constant
         
         tmp_max_aet = np.copy(tmp_DI)
+        
         #Replace any value greater than 1 with 1
         np.putmask(tmp_max_aet, tmp_max_aet > 1, 1)
         
         tmp_calc = \
             ((tmp_w * tmp_DI + 1) / (( 1 / tmp_DI) + (tmp_w * tmp_DI + 1)))
+        
         fractp = np.minimum(tmp_max_aet, tmp_calc)
+        
         return fractp
     
     #Create the fractp raster
     fractp_path = intermediate_dir + os.sep + 'fractp.tif'
     raster_list = [tmp_etk_raster, ape_raster, precip_raster, tmp_root_raster,
                    soil_depth_raster, pawc_raster]
-    fractp_raster = \
-        invest_core.vectorizeRasters(raster_list, fractp, rasterName=fractp_path)
+    fractp_raster = invest_core.vectorizeRasters(raster_list, fractp, 
+                                                 rasterName=fractp_path)
     
     def wyield(fractp, precip):
         """Vectorized function that calculates the water yeild raster
@@ -656,7 +660,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
             #float(v[field])
              new_array[array==int(k)] = float(v[field])
         else:
-            new_array[array==int(k)] = nodata
+            new_array[array==int(k)] = base_nodata
             
     #Write the newly developed numpy array to the raster band
     tmp_band = tmp_raster.GetRasterBand(1)
