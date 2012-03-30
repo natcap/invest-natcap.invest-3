@@ -247,6 +247,8 @@ def water_yield(args):
         
     aet_band = aet_raster.GetRasterBand(1)
     fractp_band = fractp_clipped_raster.GetRasterBand(1)
+    fractp_nodata = fractp_band.GetNoDataValue()
+    precip_nodata = precip_band.GetNoDataValue()
     
     def aet(fractp, precip):
         """Vectorized function to compute the actual evapotranspiration values
@@ -255,8 +257,10 @@ def water_yield(args):
             precip - numpy array with the precipitation raster values
             
             returns - actual evapotranspiration values"""
-            
-        return fractp * precip
+        if fractp != fractp_nodata and precip != precip_nodata:
+            return fractp * precip
+        else:
+            return nodata
     
     invest_core.vectorize2ArgOp(fractp_band, precip_band, aet, aet_band)
     
@@ -266,7 +270,7 @@ def water_yield(args):
     
     #Create the water yield subwatershed table
     sub_table_path = intermediate_dir + os.sep + 'water_yield_subwatershed.csv'
-    wsr = polygon_contains_polygons(sheds, sub_sheds)
+    wsr = sheds_map_subsheds(sheds, sub_sheds)
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
         get_mean(precip_raster, sub_sheds, 'subws_id', sub_mask)
@@ -345,7 +349,7 @@ def create_writer_table(table_path, field_list, water_dict, wsr=None):
         
     return table_file
     
-def polygon_contains_polygons(shape, sub_shape):
+def sheds_map_subsheds(shape, sub_shape):
     """Stores which sub watersheds belong to which watershed
        
        shape - an OGR shapefile of the watersheds
@@ -354,6 +358,7 @@ def polygon_contains_polygons(shape, sub_shape):
        returns - a dictionary where the keys are the sub watersheds id's
                  and whose value is the watersheds id it belongs to
     """
+    LOGGER.debug('Starting sheds_map_subsheds')
     layer = shape.GetLayer(0)
     sub_layer = sub_shape.GetLayer(0)
     collection = {}
@@ -397,6 +402,7 @@ def get_mean(raster, shed_shape, field_name, shed_mask):
        
        returns - a dictionary whose keys are the sheds id's and values the mean
     """
+    LOGGER.debug('Starting get_mean')
     band_mean = raster.GetRasterBand(1)
     pixel_data_array = np.copy(band_mean.ReadAsArray())
     sub_sheds_id_array = np.copy(shed_mask)
@@ -428,7 +434,7 @@ def get_sum(raster, shed_shape, field_name, shed_mask):
        
        returns - a dictionary whose keys are the sheds id's and values the sum
     """
-    
+    LOGGER.debug('Starting get_sum')
     band_sum = raster.GetRasterBand(1)
     pixel_data_array = np.copy(band_sum.ReadAsArray())
     sub_sheds_id_array = np.copy(shed_mask)
@@ -462,7 +468,7 @@ def get_mask(raster, path, shed_shape, field_name):
        returns - a numpy array representation of the rasterized shapes id 
                  values
     """
-    
+    LOGGER.debug('Starting get_mask')
     raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
@@ -487,6 +493,7 @@ def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
        
        returns - a raster       
     """
+    LOGGER.debug('Starting create_area_raster')
     raster_area = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_area = raster_area.GetRasterBand(1)
     pixel_data_array = band_area.ReadAsArray()
@@ -499,7 +506,6 @@ def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     for feat in layer:
         geom = feat.GetGeometryRef()
         geom_type = geom.GetGeometryType()
-        LOGGER.debug('AREA OF Poly : %s', geom.GetArea())
         index = feat.GetFieldIndex(field_name)
         value = feat.GetFieldAsInteger(index)
         mask_val = sub_sheds_id_array != value
@@ -526,6 +532,7 @@ def create_mean_raster(raster, path, shed_shape, field_name, shed_mask):
        
        returns - a raster       
     """
+    LOGGER.debug('Starting create_mean_raster')
     raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_mean = raster_mean.GetRasterBand(1)
     pixel_data_array = band_mean.ReadAsArray()
@@ -563,6 +570,7 @@ def create_sum_raster(raster, path, shed_shape, field_name, shed_mask, dict):
        
        returns - a raster       
     """
+    LOGGER.debug('Starting create_sum_raster')
     raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_mean = raster_mean.GetRasterBand(1)
     pixel_data_array = band_mean.ReadAsArray()
@@ -646,6 +654,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
        
        returns - a GDAL raster
     """
+    LOGGER.debug('Starting raster_from_table_values')
     base_band = base_raster.GetRasterBand(1)
     base_nodata = base_band.GetNoDataValue()
     array = base_band.ReadAsArray()
@@ -665,7 +674,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
             #array==int(k) provides a truth mask, so new_array[array==int(k)] 
             #is saying to replace all of the values that are true with 
             #float(v[field])
-             new_array[array==int(k)] = float(v[field])
+            new_array[array==int(k)] = float(v[field])
         else:
             new_array[array==int(k)] = base_nodata
             
