@@ -357,7 +357,7 @@ class DynamicPrimitive(DynamicElement):
     def getOutputValue(self):
         if 'args_id' in self.attributes:
             value = self.value()
-            if value != '' and not isinstance(value, dict):
+            if value != '' and value != None and not isinstance(value, dict):
                 return self.cast_value()
             return value
 
@@ -892,7 +892,10 @@ class Dropdown(LabeledElement):
         self.dropdown.setCurrentIndex(index)
 
     def value(self):
-        if 'returns' in self.attributes:
+        if self.dropdown.count > 0:
+            #if there are no elements in the dropdown, don't return a value
+            return None
+        elif 'returns' in self.attributes:
             if self.attributes['returns'] == 'strings':
                 return self.dropdown.currentText()
             else: #return the ordinal
