@@ -871,8 +871,8 @@ def water_scarcity(args):
     new_keys_sws['rsupply_mn'] = rsupply_vl_d
     
     field_list_ws = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
-                  'wyield_sum', 'cyield_vl', 'consump_vl', 'consump_mn',
-                  'rsupply_vl', 'rsupply_mn']
+                     'wyield_sum', 'cyield_vl', 'consump_vl', 'consump_mn',
+                     'rsupply_vl', 'rsupply_mn']
     
     field_list_sws = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum', 'cyield_vl', 'consump_vl', 
@@ -891,36 +891,25 @@ def water_scarcity(args):
     shed_path = output_dir + os.sep + 'water_scarcity_watershed.csv'
     sub_shed_path = output_dir + os.sep + 'water_scarcity_subwatershed.csv'
     
-    shed_file = open(shed_path, 'wb')
-    writer = csv.DictWriter(shed_file, field_list_ws)
+    write_scarcity_table(water_shed_table, field_list_ws, shed_path)
+    write_scarcity_table(sub_shed_table, field_list_sws, sub_shed_path)
+    
+def write_scarcity_table(shed_table, field_list, file_path):
+    shed_file = open(file_path, 'wb')
+    writer = csv.DictWriter(shed_file, field_list)
     field_dict = {}
     #Create a dictionary with field names as keys and the same field name
     #as values, to use as first row in CSV file which will be the column header
-    for field in field_list_ws:
+    for field in field_list:
         field_dict[field] = field
     #Write column header row
     writer.writerow(field_dict)
     
-    for key, dict in water_shed_table.iteritems():
+    for key, dict in shed_table.iteritems():
         writer.writerow(dict)
     
     shed_file.close()
-    
-    sub_shed_file = open(sub_shed_path, 'wb')
-    writer = csv.DictWriter(sub_shed_file, field_list_sws)
-    field_dict = {}
-    #Create a dictionary with field names as keys and the same field name
-    #as values, to use as first row in CSV file which will be the column header
-    for field in field_list_sws:
-        field_dict[field] = field
-    #Write column header row
-    writer.writerow(field_dict)
-    
-    for key, dict in sub_shed_table.iteritems():
-        writer.writerow(dict)
-    
-    sub_shed_file.close()
-    
+
 def sum_mean_dict(dict1, dict2, op):
     new_dict = {}
     for key, val in dict1.iteritems():
