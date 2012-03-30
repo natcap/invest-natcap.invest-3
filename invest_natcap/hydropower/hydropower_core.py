@@ -13,7 +13,7 @@ from osgeo import ogr
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
-LOGGER = logging.getLogger('sediment_core')
+LOGGER = logging.getLogger('hydropower_core')
 
 def water_yield(args):
     """Executes the water_yield model
@@ -725,8 +725,8 @@ def water_scarcity(args):
     #water yield functionality goes here    
     LOGGER.info('Starting Water Scarcity Calculation')
     
-    workspace_dir = args['workspace_dir']
     #Construct folder paths
+    workspace_dir = args['workspace_dir']
     output_dir = workspace_dir + os.sep + 'Output'
     intermediate_dir = workspace_dir + os.sep + 'Intermediate'
     service_dir = workspace_dir + os.sep + 'Service'
@@ -756,46 +756,52 @@ def water_scarcity(args):
     
     nodata = -1
     
-    tmp_calib = \
-        invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', 
-                                             nodata, gdal.GDT_Float32)
+    #Create watershed mask raster
+    ws_mask = invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', 
+                                                   nodata, gdal.GDT_Float32)
 
-    gdal.RasterizeLayer(tmp_calib, [1], watersheds.GetLayer(0),
+    gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
                         options = ['ATTRIBUTE=ws_id'])
     
-    def calib_op(tmp_calib_band):
-        if tmp_calib_band != nodata:
-            return calib_dict[str(int(tmp_calib_band))]
+    #Create the calibration raster
+    
+    def calib_op(ws_band_val):
+        """
+        """
+        if ws_band_val != nodata:
+            return calib_dict[str(int(ws_band_val))]
         else:
             return nodata
     
-    tmp_calib2 = \
+    tmp_calib = \
         invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', 
                                              nodata, gdal.GDT_Float32)
     
+    ws_band = ws_mask.GetRasterBand(1)
     tmp_calib_band = tmp_calib.GetRasterBand(1)
-    tmp_calib2_band = tmp_calib2.GetRasterBand(1)
     
-    invest_core.vectorize1ArgOp(tmp_calib_band, calib_op, tmp_calib2_band)
+    invest_core.vectorize1ArgOp(ws_band, calib_op, tmp_calib_band)
     
-    #Multiply calibration raster with wyield_vol raster
+    #Multiply calibration raster with wyield_vol raster to get cyield_vol
+    
     nodata_vol = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
-    nodata_calibtmp = tmp_calib2_band.GetNoDataValue()
     
     def cyield_vol_op(wyield_vol, calib):
-        if wyield_vol != nodata_vol and calib != nodata_calibtmp:
+        """
+        """
+        if wyield_vol != nodata_vol and calib != nodata:
             return wyield_vol * calib
         else:
-            return -1
+            return nodata
         
     wyield_calib = \
-        invest_cython_core.newRasterFromBase(tmp_calib, wyield_calib_path,
+        invest_cython_core.newRasterFromBase(ws_mask, wyield_calib_path,
                                              'GTiff', nodata, gdal.GDT_Float32)
         
     wyield_calib_band = wyield_calib.GetRasterBand(1)
     wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
     
-    invest_core.vectorize2ArgOp(wyield_vol_band, tmp_calib2_band, cyield_vol_op, 
+    invest_core.vectorize2ArgOp(wyield_vol_band, tmp_calib_band, cyield_vol_op, 
                                 wyield_calib_band)
     
     #Create raster from land use raster, subsituting in demand value
@@ -803,14 +809,16 @@ def water_scarcity(args):
     lulc_band = lulc_raster.GetRasterBand(1)
     lulc_nodata = lulc_band.GetNoDataValue()
     tmp_consump = invest_cython_core.newRasterFromBase(lulc_raster, '', 'MEM', 
-                                                       -1, gdal.GDT_Float32)
+                                                       nodata, gdal.GDT_Float32)
     tmp_consump_band = tmp_consump.GetRasterBand(1)
     
     def lulc_demand(lulc):
+        """
+        """
         if str(lulc) in demand_dict:
             return demand_dict[str(lulc)]['demand']
         else:
-            return 0.0
+            return nodata
     
     invest_core.vectorize1ArgOp(lulc_band, lulc_demand, tmp_consump_band)
     
@@ -843,6 +851,8 @@ def water_scarcity(args):
     nodata_consump = sum_raster.GetRasterBand(1).GetNoDataValue()
 
     def rsupply_vol_op(wyield_calib, consump_vol):
+        """
+        """
         if (wyield_calib != nodata_calib and consump_vol != nodata_consump):
             return wyield_calib - consump_vol
         else:
@@ -858,6 +868,8 @@ def water_scarcity(args):
     wyield_mean = args['water_yield_mn']
     
     def rsupply_mean_op(wyield_mean, consump_mean):
+        """
+        """
         return wyield_mean - consump_mean
 
     invest_core.vectorizeRasters([wyield_mean, mean_raster], rsupply_mean_op, 
@@ -941,6 +953,8 @@ def water_scarcity(args):
     write_scarcity_table(sub_shed_table, field_list_sws, sub_shed_path)
     
 def write_scarcity_table(shed_table, field_list, file_path):
+    """
+    """
     shed_file = open(file_path, 'wb')
     writer = csv.DictWriter(shed_file, field_list)
     field_dict = {}
@@ -957,6 +971,8 @@ def write_scarcity_table(shed_table, field_list, file_path):
     shed_file.close()
 
 def sum_mean_dict(dict1, dict2, op):
+    """
+    """
     new_dict = {}
     for key, val in dict1.iteritems():
         sum_ws = 0
