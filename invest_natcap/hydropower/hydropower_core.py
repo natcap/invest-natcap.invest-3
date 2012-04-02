@@ -1032,7 +1032,31 @@ def sum_mean_dict(dict1, dict2, op):
     return new_dict
 
 def valuation(args):
-    """
-    """
+    """This function invokes the valuation model for hydropower
+        
+        args - a python dictionary with at the following possible entries:
+    
+        args['workspace_dir'] - a uri to the directory that will write output
+            and other temporary files during calculation. (required)
+        args['cal_water_yield'] - 
+        args['water_consump'] - 
+        args['watersheds_uri'] - a uri to an input shapefile of the watersheds
+            of interest as polygons. (required)
+        args['sub_watersheds_uri'] - a uri to an input shapefile of the 
+            subwatersheds of interest that are contained in the
+            'watersheds_uri' shape provided as input. (required)
+        args['watershed_scarcity_table'] - 
+        args['subwatershed_scarcity_table'] - 
+        args['valuation_table_uri'] - a uri to an input CSV table of 
+            land use/land cover classes, containing data on biophysical 
+            coefficients such as root_depth and etk. NOTE: these data are 
+            attributes of each LULC class rather than attributes of individual 
+            cells in the raster map (required)
+        args['seasonality_constant'] - floating point value between 1 and 10 
+            corresponding to the seasonal distribution of precipitation 
+            (required)
+            
+        returns - nothing"""
+        
     #water yield functionality goes here
     LOGGER.info('Starting Valuation Calculation')
