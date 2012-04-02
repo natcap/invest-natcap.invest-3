@@ -54,8 +54,9 @@ def execute(args):
             coefficients such as root_depth and etk. NOTE: these data are 
             attributes of each LULC class rather than attributes of individual 
             cells in the raster map (required)
-        args['zhang'] - floating point value between 1 and 10 corresponding
-            to the seasonal distribution of precipitation (required)
+        args['seasonality_constant'] - floating point value between 1 and 10 
+            corresponding to the seasonal distribution of precipitation 
+            (required)
             
         returns - nothing"""
     
@@ -91,7 +92,7 @@ def execute(args):
                                               'LULC_desc':row['LULC_desc']}
     water_yield_args['biophysical_dictionary'] = biophysical_table_map
 #    LOGGER.debug('bio_table_map : %s', biophysical_table_map)
-    #Add zhang constant to dictionary
-    water_yield_args['zhang'] = args['zhang']
+    #Add seasonality_constant constant to dictionary
+    water_yield_args['seasonality_constant'] = args['seasonality_constant']
     #Call water_yield in hydropower_core.py
     hydropower_core.water_yield(water_yield_args)
