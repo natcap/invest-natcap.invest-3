@@ -355,10 +355,11 @@ class DynamicPrimitive(DynamicElement):
             return str(self.value())
 
     def getOutputValue(self):
-        if 'args_id' in self.attributes:
-            value = str(self.value())
-            if value != '':
+        if 'args_id' in self.attributes and self.isEnabled():
+            value = self.value()
+            if value != '' and value != None and not isinstance(value, dict):
                 return self.cast_value()
+            return value
 
     def set_error(self, error):
         if error == None or error == '':
@@ -444,6 +445,13 @@ class LabeledElement(DynamicPrimitive):
 
         if state == True:
             self.validate()
+
+    def isEnabled(self):
+        #Labeled elements are designed to have more than one element, but in
+        #case there isn't, the label still should have an enabled() attribute.
+        if len(self.elements) == 0:
+            return self.elements[0].isEnabled
+        return self.elements[1].isEnabled()
 
 class DynamicText(LabeledElement):
     """Creates an object containing a label and a sigle-line text field for
@@ -891,7 +899,10 @@ class Dropdown(LabeledElement):
         self.dropdown.setCurrentIndex(index)
 
     def value(self):
-        if 'returns' in self.attributes:
+        if self.dropdown.count > 0:
+            #if there are no elements in the dropdown, don't return a value
+            return None
+        elif 'returns' in self.attributes:
             if self.attributes['returns'] == 'strings':
                 return self.dropdown.currentText()
             else: #return the ordinal

@@ -18,13 +18,13 @@ def locate_module(module_list, path=None):
         module is within the pythonpath.  This method recursively uses the
         find_module and load_module functions of the python imp module to
         locate the target module by its heirarchical module name.
-        
+
         module_list - a python list of strings, where each element is the name
             of a contained module.  For example, os.path would be represented
             here as ['os', 'path'].
         path=None - the base path to search.  If None, the pythonpath will be
             used.
-            
+
         returns an executeable python module object if it can be found.
         Returns None if not."""
 
@@ -288,8 +288,13 @@ class Executor(threading.Thread):
     def runModel(self, module, args):
         try:
             LOGGER.info('Loading the queued model')
-            module_list = module.split('.')
-            model = locate_module(module_list)
+            if os.path.isfile(module):
+                LOGGER.debug('Loading the model from %s', module)
+                model = imp.load_source('model', module)
+            else:
+                LOGGER.debug('Locating the module %s in the PATH', module)
+                module_list = module.split('.')
+                model = locate_module(module_list)
             LOGGER.info('Executing the loaded model')
             model.execute(args)
         except:

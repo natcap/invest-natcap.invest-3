@@ -69,9 +69,20 @@ class DBFHandler(TableHandler):
         return dbf_file.header.fields
 
 class CSVHandler(TableHandler):
+    def open(self, uri):
+        return csv.DictReader(open(uri))
+
     def get_field_names(self, uri):
-        csv_file = csv.DictReader(open(uri))
+        csv_file = self.open(uri)
         if not hasattr(csv_file, 'fieldnames'):
-            return self.file.next()
+            return csv_file.next()
         else:
-            return self.file.fieldnames
+            return csv_file.fieldnames
+
+    def get_map(self, uri, key_field, value_field):
+        csv_file = self.open(uri)
+        output_dict = {}
+        for row in csv_file:
+            output_dict[row[key_field]] = row[value_field]
+
+        return output_dict
