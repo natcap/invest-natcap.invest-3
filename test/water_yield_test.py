@@ -31,6 +31,6 @@ class TestWaterYield(unittest.TestCase):
         args['sub_watersheds_uri'] = base + 'test_input/subwatersheds.shp'
         args['biophysical_table_uri'] = \
             base + 'test_input/Biophysical_Models.csv'
-        args['zhang'] = 5.0
+        args['seasonality_constant'] = 5.0
         
         water_yield.execute(args)
