@@ -939,12 +939,12 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
 
         self.setState(isChecked, includeSelf=False)
 
-    def isEnabled(self):
-        """Check to see if this element is checked.
-        
-            returns a boolean"""
-
-        return self.isChecked()
+#    def isEnabled(self):
+#        """Check to see if this element is checked.
+#        
+#            returns a boolean"""
+#
+#        return self.isChecked()
 
     def value(self):
         """Get the value of this checkbox.
