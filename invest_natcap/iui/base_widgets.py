@@ -449,7 +449,7 @@ class LabeledElement(DynamicPrimitive):
     def isEnabled(self):
         #Labeled elements are designed to have more than one element, but in
         #case there isn't, the label still should have an enabled() attribute.
-        if len(self.element) == 0:
+        if len(self.elements) == 0:
             return self.elements[0].isEnabled
         return self.elements[1].isEnabled()
 
