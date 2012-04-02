@@ -171,6 +171,7 @@ def water_yield(args):
     sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask.tif'
     sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path,
                                sub_sheds, 'subws_id')
+    sws_id_list = get_shed_ids(sub_mask, nodata)
     
     #Get a numpy array from rasterizing the watershed id values into
     #a raster. The numpy array will be the watershed mask used for
@@ -178,12 +179,13 @@ def water_yield(args):
     shed_mask_raster_path = intermediate_dir + os.sep + 'shed_mask.tif'
     shed_mask = get_mask(fractp_clipped_raster, shed_mask_raster_path,
                                sheds, 'ws_id')
+    ws_id_list = get_shed_ids(shed_mask, nodata)
     
     #Create mean rasters for fractp and water yield
     fractp_mean = create_mean_raster(fractp_clipped_raster, fractp_mean_path,
-                                     sub_sheds, 'subws_id', sub_mask)
+                                     sws_id_list, 'subws_id', sub_mask)
     wyield_mean = create_mean_raster(wyield_clipped_raster, wyield_mean_path,
-                                     sub_sheds, 'subws_id', sub_mask)
+                                     sws_id_list, 'subws_id', sub_mask)
     
     #Create area raster so that the volume can be computed.
     wyield_area = create_area_raster(wyield_clipped_raster, wyield_area_path,
@@ -266,22 +268,23 @@ def water_yield(args):
     
     #Create the mean actual evapotranspiration raster
     aet_mean = create_mean_raster(aet_raster, aet_mean_path,
-                                  sub_sheds, 'subws_id', sub_mask)
+                                  sws_id_list, 'subws_id', sub_mask)
     
     #Create the water yield subwatershed table
     sub_table_path = intermediate_dir + os.sep + 'water_yield_subwatershed.csv'
     wsr = sheds_map_subsheds(sheds, sub_sheds)
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
-        get_mean(precip_raster, sub_sheds, 'subws_id', sub_mask)
+        get_mean(precip_raster, sws_id_list, 'subws_id', sub_mask)
     sub_value_dict['PET_mn'] = \
-        get_mean(ape_raster, sub_sheds, 'subws_id', sub_mask)
+        get_mean(ape_raster, sws_id_list, 'subws_id', sub_mask)
     sub_value_dict['AET_mn'] = \
-        get_mean(aet_raster, sub_sheds, 'subws_id', sub_mask)
+        get_mean(aet_raster, sws_id_list, 'subws_id', sub_mask)
     sub_value_dict['wyield_mn'] = \
-        get_mean(wyield_raster, sub_sheds, 'subws_id', sub_mask)
+        get_mean(wyield_raster, sws_id_list, 'subws_id', sub_mask)
     sub_value_dict['wyield_sum'] = \
-        get_sum(wyield_raster, sub_sheds, 'subws_id', sub_mask)
+        get_sum(wyield_raster, sws_id_list, 'subws_id', sub_mask)
+    
     sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum']
     
@@ -290,11 +293,17 @@ def water_yield(args):
     #Create the water yield watershed table
     shed_table_path = intermediate_dir + os.sep + 'water_yield_watershed.csv'
     value_dict = {}
-    value_dict['precip_mn'] = get_mean(precip_raster, sheds, 'ws_id', shed_mask)
-    value_dict['PET_mn'] = get_mean(ape_raster, sheds, 'ws_id', shed_mask)
-    value_dict['AET_mn'] = get_mean(aet_raster, sheds, 'ws_id', shed_mask)
-    value_dict['wyield_mn'] = get_mean(wyield_raster, sheds, 'ws_id', shed_mask)
-    value_dict['wyield_sum'] = get_sum(wyield_raster, sheds, 'ws_id', shed_mask)
+    value_dict['precip_mn'] = \
+        get_mean(precip_raster, ws_id_list, 'ws_id', shed_mask)
+    value_dict['PET_mn'] = \
+        get_mean(ape_raster, ws_id_list, 'ws_id', shed_mask)
+    value_dict['AET_mn'] = \
+        get_mean(aet_raster, ws_id_list, 'ws_id', shed_mask)
+    value_dict['wyield_mn'] = \
+        get_mean(wyield_raster, ws_id_list, 'ws_id', shed_mask)
+    value_dict['wyield_sum'] = \
+        get_sum(wyield_raster, ws_id_list, 'ws_id', shed_mask)
+    
     field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
                   'wyield_sum']
     
@@ -390,7 +399,7 @@ def sheds_map_subsheds(shape, sub_shape):
     return collection
 
 
-def get_mean(raster, shed_shape, field_name, shed_mask):
+def get_mean(raster, id_list, field_name, shed_mask):
     """Calculates the mean per watershed or sub watershed based on groups of
        pixels from a raster that fall within each watershed or sub watershed
        
@@ -408,21 +417,18 @@ def get_mean(raster, shed_shape, field_name, shed_mask):
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     dict = {}
-    shed_shape.GetLayer(0).ResetReading()
-    for feat in shed_shape.GetLayer(0):
-        index = feat.GetFieldIndex(field_name)
-        value = feat.GetFieldAsInteger(index)
-        mask_val = sub_sheds_id_array != value
-        set_mask_val = sub_sheds_id_array == value
+
+    for id in id_list:
+        mask_val = sub_sheds_id_array != id
+        set_mask_val = sub_sheds_id_array == id
         masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         mean = sum(comp_array) / len(comp_array)
-        dict[value] = mean
-        feat.Destroy()
+        dict[id] = mean
         
     return dict
 
-def get_sum(raster, shed_shape, field_name, shed_mask):
+def get_sum(raster, id_list, field_name, shed_mask):
     """Calculates the sum per watershed or sub watershed based on groups of
        pixels from a raster that fall within each watershed or sub watershed
        
@@ -440,17 +446,14 @@ def get_sum(raster, shed_shape, field_name, shed_mask):
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     dict = {}
-    shed_shape.GetLayer(0).ResetReading()
-    for feat in shed_shape.GetLayer(0):
-        index = feat.GetFieldIndex(field_name)
-        value = feat.GetFieldAsInteger(index)
-        mask_val = sub_sheds_id_array != value
-        set_mask_val = sub_sheds_id_array == value
+
+    for id in id_list:
+        mask_val = sub_sheds_id_array != id
+        set_mask_val = sub_sheds_id_array == id
         masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         sum_val = sum(comp_array)
-        dict[value] = sum_val
-        feat.Destroy()
+        dict[id] = sum_val
         
     return dict
 
@@ -479,6 +482,12 @@ def get_mask(raster, path, shed_shape, field_name):
     sub_sheds_id_array = band.ReadAsArray()
     
     return sub_sheds_id_array
+
+def get_shed_ids(arr, nodata):
+    tmp_ar = np.copy(arr)
+    tmp_aru = np.unique(tmp_ar.flatten())
+    tmp_ard = np.delete(tmp_aru, np.where(tmp_aru == nodata))
+    return tmp_ard
     
 def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     """Creates a new raster representing the area per watershed or per
@@ -514,12 +523,10 @@ def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
         comp_array = np.ma.compressed(masked_array)
         np.putmask(new_data_array, set_mask_val, geom.GetArea())
         
-        feat.Destroy()
-        
     band_area.WriteArray(new_data_array, 0, 0)  
     return raster_area
 
-def create_mean_raster(raster, path, shed_shape, field_name, shed_mask):
+def create_mean_raster(raster, path, id_list, field_name, shed_mask):
     """Creates a new raster representing the mean per watershed or per
        sub watershed 
     
@@ -540,24 +547,19 @@ def create_mean_raster(raster, path, shed_shape, field_name, shed_mask):
     band_mean.Fill(nodata)
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
-    layer = shed_shape.GetLayer(0)
-    layer.ResetReading()
-    for feat in layer:
-        index = feat.GetFieldIndex(field_name)
-        value = feat.GetFieldAsInteger(index)
-        mask_val = sub_sheds_id_array != value
-        set_mask_val = sub_sheds_id_array == value
+
+    for id in id_list:
+        mask_val = sub_sheds_id_array != id
+        set_mask_val = sub_sheds_id_array == id
         masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         mean = sum(comp_array) / len(comp_array)
         np.putmask(new_data_array, set_mask_val, mean)
         
-        feat.Destroy()
-        
     band_mean.WriteArray(new_data_array, 0, 0)  
     return raster_mean
 
-def create_sum_raster(raster, path, shed_shape, field_name, shed_mask, dict):
+def create_sum_raster(raster, path, id_list, field_name, shed_mask, dict):
     """Creates a new raster representing the mean per watershed or per
        sub watershed 
     
@@ -579,17 +581,14 @@ def create_sum_raster(raster, path, shed_shape, field_name, shed_mask, dict):
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
     
-    for feat in shed_shape.GetLayer(0):
-        index = feat.GetFieldIndex(field_name)
-        value = feat.GetFieldAsInteger(index)
-        mask_val = sub_sheds_id_array != value
-        set_mask_val = sub_sheds_id_array == value
+    for id in id_list:
+        mask_val = sub_sheds_id_array != id
+        set_mask_val = sub_sheds_id_array == id
         masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         mean = sum(comp_array)
         np.putmask(new_data_array, set_mask_val, mean)
-        dict[value] = mean
-        feat.Destroy()
+        dict[id] = mean
         
     band_mean.WriteArray(new_data_array, 0, 0)  
     return raster_mean
@@ -749,6 +748,7 @@ def water_scarcity(args):
     sub_sheds = args['sub_watersheds']
     water_shed_table = args['watershed_yield_table']
     sub_shed_table = args['subwatershed_yield_table']
+    wyield_mean = args['water_yield_mn']
         
     #Make raster for calibration (if necessary) values based on watersheds
     
@@ -766,7 +766,12 @@ def water_scarcity(args):
     #Create the calibration raster
     
     def calib_op(ws_band_val):
-        """
+        """Function that maps the calibration values to the corresponding
+           lulc_id's
+           
+           ws_band_val - 
+           
+           returns - 
         """
         if ws_band_val != nodata:
             return calib_dict[str(int(ws_band_val))]
@@ -787,7 +792,12 @@ def water_scarcity(args):
     nodata_vol = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
     
     def cyield_vol_op(wyield_vol, calib):
-        """
+        """Function that computes the cyield volume
+        
+           wyield_vol - 
+           calib - 
+           
+           returns - 
         """
         if wyield_vol != nodata_vol and calib != nodata:
             return wyield_vol * calib
@@ -813,7 +823,11 @@ def water_scarcity(args):
     tmp_consump_band = tmp_consump.GetRasterBand(1)
     
     def lulc_demand(lulc):
-        """
+        """Function that maps demand values to the corresponding lulc_id
+        
+           lulc - 
+           
+           returns - 
         """
         if str(lulc) in demand_dict:
             return demand_dict[str(lulc)]['demand']
@@ -833,16 +847,18 @@ def water_scarcity(args):
     sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask2.tif'
     sub_mask = get_mask(clipped_consump, sub_mask_raster_path,
                                sub_sheds, 'subws_id')
+    sws_id_list = get_shed_ids(sub_mask, nodata)
+    LOGGER.debug('shed_id_list : %s', sws_id_list)
     sum_dict = {}
     sum_raster = \
-        create_sum_raster(clipped_consump, consump_vol_path, sub_sheds, 
+        create_sum_raster(clipped_consump, consump_vol_path, sws_id_list, 
                           'subws_id', sub_mask, sum_dict)
         
     LOGGER.debug('sum_dict : %s', sum_dict)
     
     #Take mean of consump over sub watersheds making conusmp_mean
     mean_raster = \
-        create_mean_raster(clipped_consump, consump_mean_path, sub_sheds, 
+        create_mean_raster(clipped_consump, consump_mean_path, sws_id_list, 
                            'subws_id', sub_mask)
     
     #Make rsupply_vol by wyield_calib minus consump_vol
@@ -851,7 +867,12 @@ def water_scarcity(args):
     nodata_consump = sum_raster.GetRasterBand(1).GetNoDataValue()
 
     def rsupply_vol_op(wyield_calib, consump_vol):
-        """
+        """Function that computes the rsupply volume
+        
+           wyield_calib - 
+           consump_vol - 
+           
+           returns - 
         """
         if (wyield_calib != nodata_calib and consump_vol != nodata_consump):
             return wyield_calib - consump_vol
@@ -865,10 +886,14 @@ def water_scarcity(args):
     
     #Make rsupply_mean by wyield_mean minus consump_mean
     
-    wyield_mean = args['water_yield_mn']
     
     def rsupply_mean_op(wyield_mean, consump_mean):
-        """
+        """Function that computes the mean rsupply
+        
+           wyield_mean - 
+           consump_mean - 
+           
+           returns - 
         """
         return wyield_mean - consump_mean
 
@@ -881,6 +906,7 @@ def water_scarcity(args):
     sub_mask_raster_path2 = intermediate_dir + os.sep + 'sub_shed_mask3.tif'
     sub_mask2 = get_mask(wyield_calib, sub_mask_raster_path2,
                                sub_sheds, 'subws_id')
+    sws_id_list2 = get_shed_ids(sub_mask2, nodata)
     shed_mask = get_mask(wyield_calib, mask_raster_path, watersheds, 'ws_id')
 
     
@@ -898,7 +924,7 @@ def water_scarcity(args):
     new_keys_sws = {}
     
     field_name = 'ws_id'
-    cyield_d = get_mean(wyield_calib, sub_sheds, 'subws_id', sub_mask2)
+    cyield_d = get_mean(wyield_calib, sws_id_list2, 'subws_id', sub_mask2)
     cyield_vol_d = sum_mean_dict(shed_subshed_map, cyield_d, 'sum')
     new_keys_ws['cyield_vl'] = cyield_vol_d
     new_keys_sws['cyield_vl'] = cyield_d
@@ -916,14 +942,14 @@ def water_scarcity(args):
     #rsupply_vl per watershed
     rsupply_vl_raster = gdal.Open(rsupply_vol_path)
     field_name = 'ws_id'
-    rsupply_vl_d = get_mean(rsupply_vl_raster, sub_sheds, 'subws_id', sub_mask2)
+    rsupply_vl_d = get_mean(rsupply_vl_raster, sws_id_list2, 'subws_id', sub_mask2)
     rsupply_vl_dt = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'sum')
     new_keys_ws['rsupply_vl'] = rsupply_vl_dt
     new_keys_sws['rsupply_vl'] = rsupply_vl_d
     
     #rsupply_mn per watershed
     field_name = 'ws_id'
-    rsupply_vl_d = get_mean(rsupply_vl_raster, sub_sheds, 'subws_id', sub_mask2)
+    rsupply_vl_d = get_mean(rsupply_vl_raster, sws_id_list2, 'subws_id', sub_mask2)
     rsupply_mn_d = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'mean')
     new_keys_ws['rsupply_mn'] = rsupply_mn_d
     new_keys_sws['rsupply_mn'] = rsupply_vl_d
@@ -953,7 +979,15 @@ def water_scarcity(args):
     write_scarcity_table(sub_shed_table, field_list_sws, sub_shed_path)
     
 def write_scarcity_table(shed_table, field_list, file_path):
-    """
+    """Creates a CSV table and writes it to disk
+    
+       shed_table - a dictionary where each key points to another dictionary 
+                    which is a row of the csv table
+       field_list - a python list of Strings that contain the ordered fields
+                    for the csv file output
+       file_path - a String uri that is the destination of the csv file
+       
+       returns - Nothing
     """
     shed_file = open(file_path, 'wb')
     writer = csv.DictWriter(shed_file, field_list)
@@ -972,6 +1006,15 @@ def write_scarcity_table(shed_table, field_list, file_path):
 
 def sum_mean_dict(dict1, dict2, op):
     """
+    
+       dict1 - a dictionary whose keys are the watershed id's, which point to
+               a python list whose values are the sub wateshed id's that fall
+               within that watershed
+       dict2 - a dictionary whose keys are sub watershed id's and
+               whose values are the desired numbers to be summed or meaned
+       op - a string indicating which operation to do ('sum' or 'mean')
+       
+       returns - a dictionary
     """
     new_dict = {}
     for key, val in dict1.iteritems():
