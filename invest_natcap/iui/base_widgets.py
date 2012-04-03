@@ -327,6 +327,14 @@ class DynamicPrimitive(DynamicElement):
         if 'showError' in attributes:
             self.set_display_error(attributes['showError'])
 
+    def setState(self, state, includeSelf=True, recursive=True):
+        if state == False:
+            self.set_error('')
+        else:
+            self.validate()
+
+        DynamicElement.setState(self, state, includeSelf, recursive)
+
     def resetValue(self):
         """If a default value has been specified, reset this element to its
             default.  Otherwise, leave the element alone.
@@ -982,6 +990,9 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
 
     def requirementsMet(self):
         return self.value()
+
+    def setBGcolorSatisfied(self, state):
+        pass
 
 class OperationDialog(QtGui.QDialog):
     """ModelDialog is a class defining a modal window presented to the user
