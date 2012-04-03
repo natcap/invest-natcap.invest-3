@@ -47,7 +47,7 @@ def execute(args):
             hydropower stations with associated model values (required)
             
         returns - nothing"""
-        
+    LOGGER.info('Starting hydropower_valuation')
     #Set up the file directories
     workspace_dir = args['workspace_dir']
     val_args = {}
@@ -71,7 +71,6 @@ def execute(args):
     reader = csv.DictReader(valuation_table_file)
     for row in reader:
         valuation_table_map[row['ws_id']] = row
-    LOGGER.debug('valuation_table : %s', valuation_table_map)    
     val_args['valuation_table'] = valuation_table_map
     valuation_table_file.close()
     
@@ -80,7 +79,6 @@ def execute(args):
     reader = csv.DictReader(water_scarcity_table_file)
     for row in reader:
         water_scarcity_map[row['ws_id']] = row
-    LOGGER.debug('water_scarcity_table : %s', water_scarcity_map)    
     val_args['water_scarcity_table'] = water_scarcity_map
     water_scarcity_table_file.close()
 
@@ -90,7 +88,6 @@ def execute(args):
     reader = csv.DictReader(subwater_scarcity_table_file)
     for row in reader:
         subwater_scarcity_map[row['subws_id']] = row
-    LOGGER.debug('subwatershed_scarcity_table : %s', subwater_scarcity_map)    
     val_args['subwater_scarcity_table'] = subwater_scarcity_map
     subwater_scarcity_table_file.close()    
     
