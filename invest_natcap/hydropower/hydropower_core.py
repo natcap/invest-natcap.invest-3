@@ -575,16 +575,16 @@ def create_sum_raster(raster, path, id_list, field_name, shed_mask, dict):
     LOGGER.debug('Starting create_sum_raster')
     raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_mean = raster_mean.GetRasterBand(1)
-    pixel_data_array = band_mean.ReadAsArray()
     nodata = band_mean.GetNoDataValue()
+    pixel_data_array = band_mean.ReadAsArray()
+    pixel_data_array_nodata = np.where(pixel_data_array == nodata, 0, pixel_data_array)
     band_mean.Fill(nodata)
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
-    
     for id in id_list:
         mask_val = sub_sheds_id_array != id
         set_mask_val = sub_sheds_id_array == id
-        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
+        masked_array = np.ma.array(pixel_data_array_nodata, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         mean = sum(comp_array)
         np.putmask(new_data_array, set_mask_val, mean)
@@ -830,7 +830,7 @@ def water_scarcity(args):
            returns - 
         """
         if str(lulc) in demand_dict:
-            return demand_dict[str(lulc)]['demand']
+            return int(demand_dict[str(lulc)]['demand'])
         else:
             return nodata
     
