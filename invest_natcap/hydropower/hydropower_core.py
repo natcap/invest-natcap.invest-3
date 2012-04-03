@@ -1038,25 +1038,43 @@ def valuation(args):
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['cal_water_yield'] - 
-        args['water_consump'] - 
-        args['watersheds_uri'] - a uri to an input shapefile of the watersheds
+        args['cal_water_yield'] - a Gdal raster of the calibrated
+            water yield volume per sub-watershed, generated as an output
+            of the water scarcity model (required)
+        args['water_consump'] - a Gdal raster of the total water
+            consumptive use for each sub-watershed, generated as an output
+            of the water scarcity model (required)
+        args['watersheds'] - a OGR shapefile of the watersheds
             of interest as polygons. (required)
-        args['sub_watersheds_uri'] - a uri to an input shapefile of the 
+        args['sub_watersheds'] - a OGR shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds_uri' shape provided as input. (required)
-        args['watershed_scarcity_table'] - 
-        args['subwatershed_scarcity_table'] - 
-        args['valuation_table_uri'] - a uri to an input CSV table of 
-            land use/land cover classes, containing data on biophysical 
-            coefficients such as root_depth and etk. NOTE: these data are 
-            attributes of each LULC class rather than attributes of individual 
-            cells in the raster map (required)
-        args['seasonality_constant'] - floating point value between 1 and 10 
-            corresponding to the seasonal distribution of precipitation 
-            (required)
+        args['watershed_scarcity_table'] - a dictionary, that holds
+            relevant values for each watershed. (required)
+        args['subwatershed_scarcity_table'] - a dictionary, that holds
+            relevant values for each sub watershed. (required)
+        args['valuation_table'] - a dictionary containing values of the 
+            hydropower stations with associated model values (required)
             
         returns - nothing"""
         
     #water yield functionality goes here
     LOGGER.info('Starting Valuation Calculation')
+    
+    #Power at dam d
+    #power = water_density * flow_rate * gravity * height
+    
+    #Hydropower energy production
+    #energy = 0.00272 * turbine_efficiency * perc_inflow * height * vin
+    
+    #NPVH
+    #sum = 0
+    #for t in T:
+    #    sum = sum + (1 / (1 + r)**t)
+    #npvh = (value * energy - op_cost) * sum
+    
+    #Energy production over lifetime of dam d is attributed to each
+    #   sub_watershed as follows:
+    #energy = (elec_prod_life) * (water_vol_sub / water_vol_whole)
+    
+    #NPVH_x = NPVH_d * (water_vol_sub / water_vol_whole)
