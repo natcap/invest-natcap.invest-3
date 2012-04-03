@@ -321,8 +321,11 @@ class DynamicPrimitive(DynamicElement):
             self.timer = QtCore.QTimer()
         else:
             self.validator = None
+
         self.error = ErrorString()
-        self.set_display_error(True)
+        self._display_error = True
+        if 'showError' in attributes:
+            self.set_display_error(attributes['showError'])
 
     def resetValue(self):
         """If a default value has been specified, reset this element to its
