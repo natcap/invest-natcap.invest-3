@@ -87,9 +87,7 @@ def execute(args):
     biophysical_table_file = open(args['biophysical_table_uri'])
     reader = csv.DictReader(biophysical_table_file)
     for row in reader:
-        biophysical_table_map[row['lucode']] = {'etk':row['etk'], \
-                                              'root_depth':row['root_depth'], \
-                                              'LULC_desc':row['LULC_desc']}
+        biophysical_table_map[row['lucode']] = row
     water_yield_args['biophysical_dictionary'] = biophysical_table_map
 #    LOGGER.debug('bio_table_map : %s', biophysical_table_map)
     #Add seasonality_constant constant to dictionary
