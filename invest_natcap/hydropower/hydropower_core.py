@@ -169,8 +169,8 @@ def water_yield(args):
     #a raster. The numpy array will be the sub watershed mask used for
     #calculating mean and sum values at a sub watershed basis
     sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask.tif'
-    sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path,
-                               sub_sheds, 'subws_id')
+    sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path, sub_sheds, 
+                        'subws_id')
     sws_id_list = get_shed_ids(sub_mask, nodata)
     
     #Get a numpy array from rasterizing the watershed id values into
@@ -269,23 +269,23 @@ def water_yield(args):
     invest_core.vectorize2ArgOp(fractp_band, precip_band, aet, aet_band)
     
     #Create the mean actual evapotranspiration raster
-    aet_mean = create_mean_raster(aet_raster, aet_mean_path,
-                                  sws_id_list, 'subws_id', sub_mask, mean_dict)
+    aet_mean = create_mean_raster(aet_raster, aet_mean_path, sws_id_list, 
+                                  'subws_id', sub_mask, mean_dict)
     
     #Create the water yield subwatershed table
     sub_table_path = intermediate_dir + os.sep + 'water_yield_subwatershed.csv'
     wsr = sheds_map_subsheds(sheds, sub_sheds)
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
-        get_mean(precip_raster, sws_id_list, 'subws_id', sub_mask)
+        get_mean(precip_raster, sws_id_list, sub_mask)
     sub_value_dict['PET_mn'] = \
-        get_mean(ape_raster, sws_id_list, 'subws_id', sub_mask)
+        get_mean(ape_raster, sws_id_list, sub_mask)
     sub_value_dict['AET_mn'] = \
-        get_mean(aet_raster, sws_id_list, 'subws_id', sub_mask)
+        get_mean(aet_raster, sws_id_list, sub_mask)
     sub_value_dict['wyield_mn'] = \
-        get_mean(wyield_raster, sws_id_list, 'subws_id', sub_mask)
+        get_mean(wyield_raster, sws_id_list, sub_mask)
     sub_value_dict['wyield_sum'] = \
-        get_sum(wyield_raster, sws_id_list, 'subws_id', sub_mask)
+        get_sum(wyield_raster, sws_id_list, sub_mask)
     
     sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum']
@@ -296,15 +296,15 @@ def water_yield(args):
     shed_table_path = intermediate_dir + os.sep + 'water_yield_watershed.csv'
     value_dict = {}
     value_dict['precip_mn'] = \
-        get_mean(precip_raster, ws_id_list, 'ws_id', shed_mask)
+        get_mean(precip_raster, ws_id_list, shed_mask)
     value_dict['PET_mn'] = \
-        get_mean(ape_raster, ws_id_list, 'ws_id', shed_mask)
+        get_mean(ape_raster, ws_id_list, shed_mask)
     value_dict['AET_mn'] = \
-        get_mean(aet_raster, ws_id_list, 'ws_id', shed_mask)
+        get_mean(aet_raster, ws_id_list, shed_mask)
     value_dict['wyield_mn'] = \
-        get_mean(wyield_raster, ws_id_list, 'ws_id', shed_mask)
+        get_mean(wyield_raster, ws_id_list, shed_mask)
     value_dict['wyield_sum'] = \
-        get_sum(wyield_raster, ws_id_list, 'ws_id', shed_mask)
+        get_sum(wyield_raster, ws_id_list, shed_mask)
     
     field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
                   'wyield_sum']
@@ -400,14 +400,12 @@ def sheds_map_subsheds(shape, sub_shape):
         
     return collection
 
-
-def get_mean(raster, id_list, field_name, shed_mask):
+def get_mean(raster, id_list, shed_mask):
     """Calculates the mean per watershed or sub watershed based on groups of
        pixels from a raster that fall within each watershed or sub watershed
        
        raster - a GDAL raster dataset of the values to find the mean 
        shed_shape - a OGR shapefile of either the watersheds or sub watersheds
-       field_name - a string of the id field name from shed_shape
        shed_mask - a numpy array that represents the mask for where the 
                    watersheds/sub watersheds fall on the raster
        
@@ -430,7 +428,7 @@ def get_mean(raster, id_list, field_name, shed_mask):
         
     return dict
 
-def get_sum(raster, id_list, field_name, shed_mask):
+def get_sum(raster, id_list, shed_mask):
     """Calculates the sum per watershed or sub watershed based on groups of
        pixels from a raster that fall within each watershed or sub watershed
        
@@ -907,12 +905,10 @@ def water_scarcity(args):
     
     #Make sub watershed and watershed tables by adding values onto the tables
     #provided from sub watershed yield and watershed yield
-    mask_raster_path = intermediate_dir + os.sep + 'shed_mask2.tif'
     sub_mask_raster_path2 = intermediate_dir + os.sep + 'sub_shed_mask3.tif'
     sub_mask2 = get_mask(wyield_calib, sub_mask_raster_path2,
                                sub_sheds, 'subws_id')
     sws_id_list2 = get_shed_ids(sub_mask2, nodata)
-    shed_mask = get_mask(wyield_calib, mask_raster_path, watersheds, 'ws_id')
 
     
     #cyielc_vl per watershed
@@ -929,7 +925,7 @@ def water_scarcity(args):
     new_keys_sws = {}
     
     field_name = 'ws_id'
-    cyield_d = get_mean(wyield_calib, sws_id_list2, 'subws_id', sub_mask2)
+    cyield_d = get_mean(wyield_calib, sws_id_list2, sub_mask2)
     cyield_vol_d = sum_mean_dict(shed_subshed_map, cyield_d, 'sum')
     new_keys_ws['cyield_vl'] = cyield_vol_d
     new_keys_sws['cyield_vl'] = cyield_d
@@ -947,7 +943,7 @@ def water_scarcity(args):
     #rsupply_vl per watershed
     rsupply_vl_raster = gdal.Open(rsupply_vol_path)
     field_name = 'ws_id'
-    rsupply_vl_d = get_mean(rsupply_vl_raster, sws_id_list2, 'subws_id', sub_mask2)
+    rsupply_vl_d = get_mean(rsupply_vl_raster, sws_id_list2, sub_mask2)
     rsupply_vl_dt = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'sum')
     new_keys_ws['rsupply_vl'] = rsupply_vl_dt
     new_keys_sws['rsupply_vl'] = rsupply_vl_d
@@ -955,7 +951,7 @@ def water_scarcity(args):
     #rsupply_mn per watershed
     rsupply_mn_raster = gdal.Open(rsupply_mean_path)
     field_name = 'ws_id'
-    rsupply_mn_d = get_mean(rsupply_mn_raster, sws_id_list2, 'subws_id', sub_mask2)
+    rsupply_mn_d = get_mean(rsupply_mn_raster, sws_id_list2, sub_mask2)
     rsupply_mn_dt = sum_mean_dict(shed_subshed_map, rsupply_mn_d, 'mean')
     new_keys_ws['rsupply_mn'] = rsupply_mn_dt
     new_keys_sws['rsupply_mn'] = rsupply_mn_d
@@ -1078,16 +1074,20 @@ def valuation(args):
     sub_sheds = args['sub_watersheds']
     ws_scarcity_table = args['watershed_scarcity_table']
     sws_scarcity_table = args['subwatershed_scarcity_table']
-    LOGGER.debug('scarcity table : %s', ws_scarcity_table)
     valuation_table = args['valuation_table']
+
     energy_dict = {}
     npv_dict = {}
+    
     for key in ws_scarcity_table.keys():
         val_row = valuation_table[key]
         ws_row = ws_scarcity_table[key]
-        energy = \
-            float(val_row['efficiency']) * float(val_row['fraction']) * \
-            float(val_row['height']) * float(ws_row['rsupply_vl']) * 0.00272
+        efficiency = float(val_row['efficiency'])
+        fraction = float(val_row['fraction'])
+        height = float(val_row['height'])
+        rsupply_vl = float(ws_row['rsupply_vl'])
+        
+        energy = efficiency * fraction * height * rsupply_vl * 0.00272
         energy_dict[key] = energy
         
         time = float(val_row['time_span'])
@@ -1112,15 +1112,20 @@ def valuation(args):
     #to rsupply_vl of water shed
     sws_npv_dict = {}
     sws_energy_dict = {}
+    
     for key, val in sws_scarcity_table.iteritems():
         ws_id = val['ws_id']
-        npv = npv_dict[ws_id] * (float(val['rsupply_vl']) / float(ws_scarcity_table[ws_id]['rsupply_vl']))
-        energy = energy_dict[ws_id] * (float(val['rsupply_vl']) / float(ws_scarcity_table[ws_id]['rsupply_vl']))
+        subws_rsupply_vl = float(val['rsupply_vl'])
+        ws_rsupply_vl = float(ws_scarcity_table[ws_id]['rsupply_vl'])
+        
+        npv = npv_dict[ws_id] * (subws_rsupply_vl / ws_rsupply_vl)
+        energy = energy_dict[ws_id] * (subws_rsupply_vl / ws_rsupply_vl)
+        
         sws_npv_dict[key] = npv
         sws_energy_dict[key] = energy
+        
         sws_scarcity_table[key]['hp_value'] = npv
         sws_scarcity_table[key]['hp_energy'] = energy
- 
     
     LOGGER.debug('sub energy dict : %s', sws_energy_dict)
     LOGGER.debug('sub npv dict : %s', sws_npv_dict)
@@ -1131,7 +1136,8 @@ def valuation(args):
     
     field_list_sws = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum', 'cyield_vl', 'consump_vl', 
-                      'consump_mn','rsupply_vl', 'rsupply_mn', 'hp_energy', 'hp_value']
+                      'consump_mn','rsupply_vl', 'rsupply_mn', 'hp_energy', 
+                      'hp_value']
     
     shed_path = output_dir + os.sep + 'hydropower_value_watershed.csv'
     sub_shed_path = output_dir + os.sep + 'hydropower_value_subwatershed.csv'
@@ -1144,10 +1150,10 @@ def valuation(args):
     hp_val_path = output_dir + os.sep + 'hp_val.tif'
     
     invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                         -1, hp_val_tmppath, sub_sheds)
+                                                     -1, hp_val_tmppath, sub_sheds)
     
     invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                         -1, hp_val_path, sub_sheds)
+                                                     -1, hp_val_path, sub_sheds)
     
     hp_val = gdal.Open(hp_val_path, gdal.GA_Update)
     hp_val_tmp = gdal.Open(hp_val_tmppath, gdal.GA_Update)
@@ -1168,10 +1174,10 @@ def valuation(args):
     hp_energy_path = output_dir + os.sep + 'hp_energy.tif'
     
     invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                         -1, hp_energy_tmppath, sub_sheds)
+                                                     -1, hp_energy_tmppath, sub_sheds)
     
     invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                         -1, hp_energy_path, sub_sheds)
+                                                     -1, hp_energy_path, sub_sheds)
     
     hp_energy = gdal.Open(hp_energy_path, gdal.GA_Update)
     hp_energy_tmp = gdal.Open(hp_energy_tmppath, gdal.GA_Update)
