@@ -182,10 +182,12 @@ def water_yield(args):
     ws_id_list = get_shed_ids(shed_mask, nodata)
     
     #Create mean rasters for fractp and water yield
+    fract_mn_dict = {}
+    wyield_mn_dict = {}
     fractp_mean = create_mean_raster(fractp_clipped_raster, fractp_mean_path,
-                                     sws_id_list, 'subws_id', sub_mask)
+                                     sws_id_list, 'subws_id', sub_mask, fract_mn_dict)
     wyield_mean = create_mean_raster(wyield_clipped_raster, wyield_mean_path,
-                                     sws_id_list, 'subws_id', sub_mask)
+                                     sws_id_list, 'subws_id', sub_mask, wyield_mn_dict)
     
     #Create area raster so that the volume can be computed.
     wyield_area = create_area_raster(wyield_clipped_raster, wyield_area_path,
@@ -268,7 +270,7 @@ def water_yield(args):
     
     #Create the mean actual evapotranspiration raster
     aet_mean = create_mean_raster(aet_raster, aet_mean_path,
-                                  sws_id_list, 'subws_id', sub_mask)
+                                  sws_id_list, 'subws_id', sub_mask, mean_dict)
     
     #Create the water yield subwatershed table
     sub_table_path = intermediate_dir + os.sep + 'water_yield_subwatershed.csv'
@@ -526,7 +528,7 @@ def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     band_area.WriteArray(new_data_array, 0, 0)  
     return raster_area
 
-def create_mean_raster(raster, path, id_list, field_name, shed_mask):
+def create_mean_raster(raster, path, id_list, field_name, shed_mask, dict):
     """Creates a new raster representing the mean per watershed or per
        sub watershed 
     
@@ -542,8 +544,9 @@ def create_mean_raster(raster, path, id_list, field_name, shed_mask):
     LOGGER.debug('Starting create_mean_raster')
     raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_mean = raster_mean.GetRasterBand(1)
-    pixel_data_array = band_mean.ReadAsArray()
     nodata = band_mean.GetNoDataValue()
+    pixel_data_array = band_mean.ReadAsArray()
+    pixel_data_array_nodata = np.where(pixel_data_array == nodata, 0, pixel_data_array)
     band_mean.Fill(nodata)
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
@@ -551,10 +554,11 @@ def create_mean_raster(raster, path, id_list, field_name, shed_mask):
     for id in id_list:
         mask_val = sub_sheds_id_array != id
         set_mask_val = sub_sheds_id_array == id
-        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
+        masked_array = np.ma.array(pixel_data_array_nodata, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         mean = sum(comp_array) / len(comp_array)
         np.putmask(new_data_array, set_mask_val, mean)
+        dict[id] = mean
         
     band_mean.WriteArray(new_data_array, 0, 0)  
     return raster_mean
@@ -857,10 +861,11 @@ def water_scarcity(args):
     LOGGER.debug('sum_dict : %s', sum_dict)
     
     #Take mean of consump over sub watersheds making conusmp_mean
+    mean_dict = {}
     mean_raster = \
         create_mean_raster(clipped_consump, consump_mean_path, sws_id_list, 
-                           'subws_id', sub_mask)
-    
+                           'subws_id', sub_mask, mean_dict)
+    LOGGER.debug('mean_dict : %s', mean_dict)
     #Make rsupply_vol by wyield_calib minus consump_vol
 
     nodata_calib = wyield_calib.GetRasterBand(1).GetNoDataValue()
@@ -935,9 +940,9 @@ def water_scarcity(args):
     new_keys_sws['consump_vl'] = sum_dict
     
     #consump_mean per watershed
-    consump_mn_d = sum_mean_dict(shed_subshed_map, sum_dict, 'mean')
+    consump_mn_d = sum_mean_dict(shed_subshed_map, mean_dict, 'mean')
     new_keys_ws['consump_mn'] = consump_mn_d
-    new_keys_sws['consump_mn'] = sum_dict
+    new_keys_sws['consump_mn'] = mean_dict
     
     #rsupply_vl per watershed
     rsupply_vl_raster = gdal.Open(rsupply_vol_path)
@@ -948,11 +953,12 @@ def water_scarcity(args):
     new_keys_sws['rsupply_vl'] = rsupply_vl_d
     
     #rsupply_mn per watershed
+    rsupply_mn_raster = gdal.Open(rsupply_mean_path)
     field_name = 'ws_id'
-    rsupply_vl_d = get_mean(rsupply_vl_raster, sws_id_list2, 'subws_id', sub_mask2)
-    rsupply_mn_d = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'mean')
-    new_keys_ws['rsupply_mn'] = rsupply_mn_d
-    new_keys_sws['rsupply_mn'] = rsupply_vl_d
+    rsupply_mn_d = get_mean(rsupply_mn_raster, sws_id_list2, 'subws_id', sub_mask2)
+    rsupply_mn_dt = sum_mean_dict(shed_subshed_map, rsupply_mn_d, 'mean')
+    new_keys_ws['rsupply_mn'] = rsupply_mn_dt
+    new_keys_sws['rsupply_mn'] = rsupply_mn_d
     
     field_list_ws = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
                      'wyield_sum', 'cyield_vl', 'consump_vl', 'consump_mn',
