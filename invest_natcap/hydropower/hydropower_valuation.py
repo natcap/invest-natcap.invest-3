@@ -26,26 +26,28 @@ def execute(args):
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['cal_water_yield'] - 
-        args['water_consump'] - 
+        args['cal_water_yield'] - a uri to a Gdal raster of the calibrated
+            water yield volume per sub-watershed, generated as an output
+            of the water scarcity model (required)
+        args['water_consump'] - a uri to a Gdal raster of the total water
+            consumptive use for each sub-watershed, generated as an output
+            of the water scarcity model (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
         args['sub_watersheds_uri'] - a uri to an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds_uri' shape provided as input. (required)
-        args['watershed_scarcity_table'] - 
-        args['subwatershed_scarcity_table'] - 
+        args['watershed_scarcity_table_uri'] - a uri to an input CSV table,
+            generated as an output of the water scarcity model, that holds
+            relevant values for each watershed. (required)
+        args['subwatershed_scarcity_table_uri'] - a uri to an input CSV table,
+            generated as an output of the water scarcity model, that holds
+            relevant values for each sub watershed. (required)
         args['valuation_table_uri'] - a uri to an input CSV table of 
-            land use/land cover classes, containing data on biophysical 
-            coefficients such as root_depth and etk. NOTE: these data are 
-            attributes of each LULC class rather than attributes of individual 
-            cells in the raster map (required)
-        args['seasonality_constant'] - floating point value between 1 and 10 
-            corresponding to the seasonal distribution of precipitation 
-            (required)
+            hydropower stations with associated model values (required)
             
         returns - nothing"""
-        
+    LOGGER.info('Starting hydropower_valuation')
     #Set up the file directories
     workspace_dir = args['workspace_dir']
     val_args = {}
@@ -58,11 +60,36 @@ def execute(args):
             os.mkdir(folder_path)
     
     #Open gdal raster files and pass to new dictionary
-        
+    val_args['cyield_vol'] = gdal.Open(args['cal_water_yield'])
+    val_args['consump_vol'] = gdal.Open(args['water_consump'])
     #Open ogr shapefiles and pass to new dicitonary
-        
+    val_args['watersheds'] = ogr.Open(args['watersheds_uri'])
+    val_args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
     #Open csv tables and store in dictionaries
-        
+    valuation_table_map = {}
+    valuation_table_file = open(args['valuation_table_uri'])
+    reader = csv.DictReader(valuation_table_file)
+    for row in reader:
+        valuation_table_map[row['ws_id']] = row
+    val_args['valuation_table'] = valuation_table_map
+    valuation_table_file.close()
+    
+    water_scarcity_map = {}
+    water_scarcity_table_file = open(args['watershed_scarcity_table_uri'])
+    reader = csv.DictReader(water_scarcity_table_file)
+    for row in reader:
+        water_scarcity_map[row['ws_id']] = row
+    val_args['water_scarcity_table'] = water_scarcity_map
+    water_scarcity_table_file.close()
+
+
+    subwater_scarcity_map = {}
+    subwater_scarcity_table_file = open(args['subwatershed_scarcity_table_uri'])
+    reader = csv.DictReader(subwater_scarcity_table_file)
+    for row in reader:
+        subwater_scarcity_map[row['subws_id']] = row
+    val_args['subwater_scarcity_table'] = subwater_scarcity_map
+    subwater_scarcity_table_file.close()    
+    
     #Call hydropower_core.valuation
-        
-#    hydropower_core.valuation(val_args)
+    hydropower_core.valuation(val_args)

@@ -81,12 +81,7 @@ def execute(args):
     watershed_yield_table_file = open(args['watershed_yield_table_uri'])
     reader = csv.DictReader(watershed_yield_table_file)
     for row in reader:
-        watershed_yield_table_map[row['ws_id']] = {'ws_id':row['ws_id'],
-                                              'precip_mn':row['precip_mn'], \
-                                              'PET_mn':row['PET_mn'], \
-                                              'AET_mn':row['AET_mn'],
-                                              'wyield_mn':row['wyield_mn'],
-                                              'wyield_sum':row['wyield_sum']}
+        watershed_yield_table_map[row['ws_id']] = row
     LOGGER.debug('ws_yield_table : %s', watershed_yield_table_map)    
     water_scarcity_args['watershed_yield_table'] = watershed_yield_table_map
     watershed_yield_table_file.close()
@@ -95,13 +90,7 @@ def execute(args):
     subwatershed_yield_table_file = open(args['subwatershed_yield_table_uri'])
     reader = csv.DictReader(subwatershed_yield_table_file)
     for row in reader:
-        subwatershed_yield_table_map[row['subws_id']] = {'subws_id':row['subws_id'],
-                                              'ws_id':row['ws_id'],
-                                              'precip_mn':row['precip_mn'], \
-                                              'PET_mn':row['PET_mn'], \
-                                              'AET_mn':row['AET_mn'],
-                                              'wyield_mn':row['wyield_mn'],
-                                              'wyield_sum':row['wyield_sum']}
+        subwatershed_yield_table_map[row['subws_id']] = row
     LOGGER.debug('sws_yield_table : %s', subwatershed_yield_table_map)    
     water_scarcity_args['subwatershed_yield_table'] = subwatershed_yield_table_map
     subwatershed_yield_table_file.close()
@@ -110,8 +99,7 @@ def execute(args):
     demand_table_file = open(args['demand_table_uri'])
     reader = csv.DictReader(demand_table_file)
     for row in reader:
-        demand_table_map[row['lucode']] = {'demand':row['demand'], \
-                                              'LULC_desc':row['LULC_desc']}
+        demand_table_map[row['lucode']] = row
     LOGGER.debug('demand_table : %s', demand_table_map)    
     water_scarcity_args['demand_table'] = demand_table_map
     demand_table_file.close()
