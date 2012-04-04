@@ -910,7 +910,7 @@ class Dropdown(LabeledElement):
         self.dropdown.setCurrentIndex(index)
 
     def value(self):
-        if self.dropdown.count > 0:
+        if self.dropdown.count == 0:
             #if there are no elements in the dropdown, don't return a value
             return None
         elif 'returns' in self.attributes:
@@ -1077,7 +1077,8 @@ class OperationDialog(QtGui.QDialog):
         self.timer = QtCore.QTimer()
 
     def showEvent(self, event):
-        QtCore.QTimer.singleShot(100, self.startExecutor)
+        if self.exec_controller.is_finished() or not self.timer.isActive():
+            QtCore.QTimer.singleShot(100, self.startExecutor)
 
     def startExecutor(self):
         self.statusArea.clear()
