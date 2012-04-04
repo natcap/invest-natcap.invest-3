@@ -910,7 +910,7 @@ class Dropdown(LabeledElement):
         self.dropdown.setCurrentIndex(index)
 
     def value(self):
-        if self.dropdown.count > 0:
+        if self.dropdown.count == 0:
             #if there are no elements in the dropdown, don't return a value
             return None
         elif 'returns' in self.attributes:
