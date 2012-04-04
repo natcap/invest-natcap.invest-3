@@ -560,7 +560,7 @@ def create_mean_raster(raster, path, id_list, field_name, shed_mask, dict):
         np.putmask(new_data_array, set_mask_val, mean)
         dict[id] = mean
         
-    band_mean.WriteArray(new_data_array, 0, 0)  
+    band_mean.WriteArray(new_data_array, 0, 0)
     return raster_mean
 
 def create_sum_raster(raster, path, id_list, field_name, shed_mask, dict):
@@ -1067,20 +1067,123 @@ def valuation(args):
     #water yield functionality goes here
     LOGGER.info('Starting Valuation Calculation')
     
-    #Power at dam d
-    #power = water_density * flow_rate * gravity * height
+    #Construct folder paths
+    workspace_dir = args['workspace_dir']
+    output_dir = workspace_dir + os.sep + 'Output'
+    intermediate_dir = workspace_dir + os.sep + 'Intermediate'
+    service_dir = workspace_dir + os.sep + 'Service'
     
-    #Hydropower energy production
-    #energy = 0.00272 * turbine_efficiency * perc_inflow * height * vin
+    #Get arguments
+    watersheds = args['watersheds']
+    sub_sheds = args['sub_watersheds']
+    ws_scarcity_table = args['watershed_scarcity_table']
+    sws_scarcity_table = args['subwatershed_scarcity_table']
+    LOGGER.debug('scarcity table : %s', ws_scarcity_table)
+    valuation_table = args['valuation_table']
+    energy_dict = {}
+    npv_dict = {}
+    for key in ws_scarcity_table.keys():
+        val_row = valuation_table[key]
+        ws_row = ws_scarcity_table[key]
+        energy = \
+            float(val_row['efficiency']) * float(val_row['fraction']) * \
+            float(val_row['height']) * float(ws_row['rsupply_vl']) * 0.00272
+        energy_dict[key] = energy
+        
+        time = float(val_row['time_span'])
+        kwval = float(val_row['kw_price'])
+        disc = float(val_row['discount'])
+        cost = float(val_row['cost'])
+        
+        dsum = 0
+        
+        for t in range (0, time):
+            dsum = dsum + (1 / np.square(1 + (disc / 100)))
+            
+        NPV = ((kwval * energy) - cost) * dsum
+        npv_dict[key] = NPV
+        ws_scarcity_table[key]['hp_value'] = NPV
+        ws_scarcity_table[key]['hp_energy'] = energy
+        
+    LOGGER.debug('energy dict : %s', energy_dict)
+    LOGGER.debug('npv dict : %s', npv_dict)
+
+    #NPV for sub shed is NPV for water shed times ratio of rsupply_vl of sub shed
+    #to rsupply_vl of water shed
+    sws_npv_dict = {}
+    sws_energy_dict = {}
+    for key, val in sws_scarcity_table.iteritems():
+        ws_id = val['ws_id']
+        npv = npv_dict[ws_id] * (float(val['rsupply_vl']) / float(ws_scarcity_table[ws_id]['rsupply_vl']))
+        energy = energy_dict[ws_id] * (float(val['rsupply_vl']) / float(ws_scarcity_table[ws_id]['rsupply_vl']))
+        sws_npv_dict[key] = npv
+        sws_energy_dict[key] = energy
+        sws_scarcity_table[key]['hp_value'] = npv
+        sws_scarcity_table[key]['hp_energy'] = energy
+ 
     
-    #NPVH
-    #sum = 0
-    #for t in T:
-    #    sum = sum + (1 / (1 + r)**t)
-    #npvh = (value * energy - op_cost) * sum
+    LOGGER.debug('sub energy dict : %s', sws_energy_dict)
+    LOGGER.debug('sub npv dict : %s', sws_npv_dict)
     
-    #Energy production over lifetime of dam d is attributed to each
-    #   sub_watershed as follows:
-    #energy = (elec_prod_life) * (water_vol_sub / water_vol_whole)
+    field_list_ws = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
+                     'wyield_sum', 'cyield_vl', 'consump_vl', 'consump_mn',
+                     'rsupply_vl', 'rsupply_mn', 'hp_energy', 'hp_value']
     
-    #NPVH_x = NPVH_d * (water_vol_sub / water_vol_whole)
+    field_list_sws = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
+                      'wyield_mn', 'wyield_sum', 'cyield_vl', 'consump_vl', 
+                      'consump_mn','rsupply_vl', 'rsupply_mn', 'hp_energy', 'hp_value']
+    
+    shed_path = output_dir + os.sep + 'hydropower_value_watershed.csv'
+    sub_shed_path = output_dir + os.sep + 'hydropower_value_subwatershed.csv'
+    
+    write_scarcity_table(ws_scarcity_table, field_list_ws, shed_path)
+    write_scarcity_table(sws_scarcity_table, field_list_sws, sub_shed_path)
+    
+    
+    hp_val_tmppath = output_dir + os.sep + 'hp_val_tmp.tif'
+    hp_val_path = output_dir + os.sep + 'hp_val.tif'
+    
+    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
+                                                         -1, hp_val_tmppath, sub_sheds)
+    
+    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
+                                                         -1, hp_val_path, sub_sheds)
+    
+    hp_val = gdal.Open(hp_val_path, gdal.GA_Update)
+    hp_val_tmp = gdal.Open(hp_val_tmppath, gdal.GA_Update)
+    
+    gdal.RasterizeLayer(hp_val_tmp, [1], sub_sheds.GetLayer(0),
+                        options = ['ATTRIBUTE=subws_id'])
+    def npv_op(hp_val):
+        if hp_val != -1:
+            return sws_npv_dict[str(int(hp_val))]
+        else:
+            return -1
+        
+    hp_val_band = hp_val.GetRasterBand(1)
+    hp_val_band_tmp = hp_val_tmp.GetRasterBand(1)    
+    invest_core.vectorize1ArgOp(hp_val_band_tmp, npv_op, hp_val_band)
+    
+    hp_energy_tmppath = output_dir + os.sep + 'hp_energy_tmp.tif'
+    hp_energy_path = output_dir + os.sep + 'hp_energy.tif'
+    
+    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
+                                                         -1, hp_energy_tmppath, sub_sheds)
+    
+    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
+                                                         -1, hp_energy_path, sub_sheds)
+    
+    hp_energy = gdal.Open(hp_energy_path, gdal.GA_Update)
+    hp_energy_tmp = gdal.Open(hp_energy_tmppath, gdal.GA_Update)
+    
+    gdal.RasterizeLayer(hp_energy_tmp, [1], sub_sheds.GetLayer(0),
+                        options = ['ATTRIBUTE=subws_id'])
+    def energy_op(energy_val):
+        if energy_val != -1:
+            return sws_energy_dict[str(int(energy_val))]
+        else:
+            return -1
+        
+    hp_energy_band = hp_energy.GetRasterBand(1)
+    hp_energy_band_tmp = hp_energy_tmp.GetRasterBand(1)    
+    invest_core.vectorize1ArgOp(hp_energy_band_tmp, energy_op, hp_energy_band)
