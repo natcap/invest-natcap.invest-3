@@ -1077,7 +1077,7 @@ class OperationDialog(QtGui.QDialog):
         self.timer = QtCore.QTimer()
 
     def showEvent(self, event):
-        if self.exec_controller.is_finished():
+        if self.exec_controller.is_finished() or not self.timer.isActive():
             QtCore.QTimer.singleShot(100, self.startExecutor)
 
     def startExecutor(self):
