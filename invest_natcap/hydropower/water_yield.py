@@ -27,9 +27,9 @@ def execute(args):
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
         args['lulc_uri'] - a uri to a land use/land cover raster whose
-            LULC indexes correspond to indexs in the biophysical table input.
+            LULC indexes correspond to indexes in the biophysical table input.
             Used for determining soil retention and other biophysical 
-            properties of the landscape.  (required)
+            properties of the landscape. (required)
         args['soil_depth_uri'] - a uri to an input raster describing the 
             average soil depth value for each cell (mm) (required)
         args['precipitation_uri'] - a uri to an input raster describing the 
@@ -57,7 +57,9 @@ def execute(args):
         args['seasonality_constant'] - floating point value between 1 and 10 
             corresponding to the seasonal distribution of precipitation 
             (required)
-            
+        args['results_suffix'] - a string that will be concatenated onto the
+           end of file names (optional)
+           
         returns - nothing"""
     
     workspace_dir = args['workspace_dir']
@@ -75,22 +77,24 @@ def execute(args):
     water_yield_args['soil_depth'] = gdal.Open(args['soil_depth_uri'])
     water_yield_args['lulc'] = gdal.Open(args['lulc_uri'])
     water_yield_args['pawc'] = gdal.Open(args['pawc_uri'])
-    water_yield_args['ape'] = gdal.Open(args['eto_uri'])
+    water_yield_args['eto'] = gdal.Open(args['eto_uri'])
     
     #Open all the shapefiles and place in dictionary
     water_yield_args['watersheds'] = ogr.Open(args['watersheds_uri'])
     water_yield_args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
     
-    #Open/read in the dbf files into a dictionary and add to
-    #dictionary
+    #Open/read in the csv files into a dictionary and add to arguments
     biophysical_table_map = {}
     biophysical_table_file = open(args['biophysical_table_uri'])
     reader = csv.DictReader(biophysical_table_file)
     for row in reader:
         biophysical_table_map[row['lucode']] = row
+    
     water_yield_args['biophysical_dictionary'] = biophysical_table_map
-#    LOGGER.debug('bio_table_map : %s', biophysical_table_map)
+
     #Add seasonality_constant constant to dictionary
-    water_yield_args['seasonality_constant'] = args['seasonality_constant']
+    water_yield_args['seasonality_constant'] = int(args['seasonality_constant'])
+    water_yield_args['results_suffix'] = args['results_suffix']
+    
     #Call water_yield in hydropower_core.py
     hydropower_core.water_yield(water_yield_args)
