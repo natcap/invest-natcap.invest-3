@@ -18,7 +18,7 @@ LOGGER = logging.getLogger('hydropower_valuation')
 def execute(args):
     """This function invokes the valuation model for hydropower given
         URI inputs of files. It will do filehandling and open/create
-        appropriate objects to pass to the core sediment biophysical 
+        appropriate objects to pass to the core hydropower valuation
         processing function.  It may write log, warning, or error messages to 
         stdout.
         
@@ -26,10 +26,10 @@ def execute(args):
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['cal_water_yield'] - a uri to a Gdal raster of the calibrated
+        args['cal_water_yield_uri'] - a uri to a Gdal raster of the calibrated
             water yield volume per sub-watershed, generated as an output
             of the water scarcity model (required)
-        args['water_consump'] - a uri to a Gdal raster of the total water
+        args['water_consump_uri'] - a uri to a Gdal raster of the total water
             consumptive use for each sub-watershed, generated as an output
             of the water scarcity model (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
@@ -45,9 +45,13 @@ def execute(args):
             relevant values for each sub watershed. (required)
         args['valuation_table_uri'] - a uri to an input CSV table of 
             hydropower stations with associated model values (required)
-            
+        args['results_suffix'] - a string that will be concatenated onto the
+           end of file names (optional)
+               
         returns - nothing"""
-    LOGGER.info('Starting hydropower_valuation')
+    
+    LOGGER.info('Starting Hydropower Valuation File Handling')
+    
     #Set up the file directories
     workspace_dir = args['workspace_dir']
     val_args = {}
@@ -59,18 +63,21 @@ def execute(args):
         if not os.path.isdir(folder_path):
             os.mkdir(folder_path)
     
-    #Open gdal raster files and pass to new dictionary
+    #Open gdal raster files and pass to the arguments
     val_args['cyield_vol'] = gdal.Open(args['cal_water_yield'])
     val_args['consump_vol'] = gdal.Open(args['water_consump'])
+    
     #Open ogr shapefiles and pass to new dicitonary
     val_args['watersheds'] = ogr.Open(args['watersheds_uri'])
     val_args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
-    #Open csv tables and store in dictionaries
+    
+    #Open csv tables and add to the arguments
     valuation_table_map = {}
     valuation_table_file = open(args['valuation_table_uri'])
     reader = csv.DictReader(valuation_table_file)
     for row in reader:
         valuation_table_map[row['ws_id']] = row
+    
     val_args['valuation_table'] = valuation_table_map
     valuation_table_file.close()
     
@@ -79,17 +86,21 @@ def execute(args):
     reader = csv.DictReader(water_scarcity_table_file)
     for row in reader:
         water_scarcity_map[row['ws_id']] = row
+    
     val_args['watershed_scarcity_table'] = water_scarcity_map
     water_scarcity_table_file.close()
-
 
     subwater_scarcity_map = {}
     subwater_scarcity_table_file = open(args['subwatershed_scarcity_table_uri'])
     reader = csv.DictReader(subwater_scarcity_table_file)
     for row in reader:
         subwater_scarcity_map[row['subws_id']] = row
+    
     val_args['subwatershed_scarcity_table'] = subwater_scarcity_map
     subwater_scarcity_table_file.close()    
+    
+    #Add the suffix string to arguments
+    val_args['results_suffix'] = args['results_suffix']
     
     #Call hydropower_core.valuation
     hydropower_core.valuation(val_args)
