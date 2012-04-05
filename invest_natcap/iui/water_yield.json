@@ -1,0 +1,123 @@
+{
+    "id" : "window",
+    "label": "Water Yield",
+    "targetScript" : "invest_natcap.hydropower.water_yield",
+    "modelName" : "water_yield",
+    "localDocURI": "./documentation/water_yield.html",
+    "height": 900,
+    "width" : 700,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "./Hydropower",
+                    "required": true
+                },          
+				{        
+                    "id" : "precipitation",
+                    "args_id" : "precipitation_uri",
+                    "type": "folder",
+                    "label": "Precipitation",
+                    "defaultValue": "./Base_Data/Freshwater/precip",
+                    "required": true
+                },
+                {        
+                    "id" : "potential_evapotranspiration",
+                    "args_id" : "eto_uri",
+                    "type": "folder",
+                    "label": "Potential Evapotranspiration",
+                    "defaultValue": "./Base_Data/Freshwater/eto",
+                    "required": true
+                },
+                {        
+                    "id" : "soil_depth",
+                    "args_id" : "soil_depth_uri",
+                    "type": "folder",
+                    "label": "Soil Depth",
+                    "defaultValue": "./Base_Data/Freshwater/soil_depth",
+                    "required": true
+                },
+                {        
+                    "id" : "plant_available_water_fraction",
+                    "args_id" : "pawc_uri",
+                    "type": "folder",
+                    "label": "Precipitation",
+                    "defaultValue": "./Base_Data/Freshwater/precip",
+                    "required": true
+                },
+                {        
+                    "id" : "land_use",
+                    "args_id" : "lulc_uri",
+                    "type": "folder",
+                    "label": "Land Use",
+                    "defaultValue": "./Base_Data/Freshwater/landuse_90",
+                    "required": true
+                },    
+                {
+                    "id" : "watersheds",
+                    "args_id": "watersheds_uri",
+                    "type": "file",
+                    "label": "Watersheds",
+                    "defaultValue": "./Base_Data/Freshwater/watersheds.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR", 
+                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                                               "type": "polygons", 
+                                               "projection" : "Transverse_Mercator",
+                                               "datum" : "WGS_1984"}]
+                                   }
+                 },
+                 {
+                    "id" : "sub_watersheds",
+                    "args_id": "sub_watersheds_uri",
+                    "type": "file",
+                    "label": "Sub-Watersheds",
+                    "defaultValue": "./Base_Data/Freshwater/subwatersheds.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR", 
+                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                                               "type": "polygons"
+                                             }]
+                                   }
+                 },
+		         {
+                    "id" : "biophysical_table",
+                    "args_id": "biophysical_table_uri",
+                    "type": "file",
+                    "label": "Biophysical Table",
+                    "defaultValue": "./Hydropower/input/biophysical_table.csv",
+                    "required": true,
+                    "validateAs": { "type": "CSV",
+                                    "fieldsExist": ["lucode", "etk", "root_depth"],
+                                    "restrictions": [{"field": "lucode",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  }},
+                                                     {"field": "etk",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[^0-9]+"}
+                                                                     }},
+                                                     {"field": "root_depth",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[^0-9]+"}
+                                                                     }}]}
+                 },
+                 {        
+                    "id" : "seasonality_constant",
+                    "args_id" : "seasonality_constant",
+                    "type": "text",
+                    "label": "Seasonality Constant",
+                    "defaultValue": "5",
+                    "required": true
+                 }
+                
+            ]
+        }
+    ]
+}

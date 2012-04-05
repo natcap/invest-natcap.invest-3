@@ -1,0 +1,223 @@
+{
+    "id" : "window",
+    "label": "Hydropower Valuation",
+    "targetScript" : "invest_natcap.hydropower.hydropower_valuation",
+    "modelName" : "hydropower_valuation",
+    "localDocURI": "./documentation/hydropower.html",
+    "height": 900,
+    "width" : 700,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "./Hydropower",
+                    "required": true
+                },          
+                {        
+                    "id" : "calibrated_water_yield_vol",
+                    "args_id" : "cal_water_yield",
+                    "type": "folder",
+                    "label": "Calibrated Water Yield (volume)",
+                    "defaultValue": "./Hydropower/Service/cyield_vol.tif",
+                    "required": true
+                },
+                {        
+                    "id" : "water_consumption",
+                    "args_id" : "water_consump",
+                    "type": "folder",
+                    "label": "Water Consumption (volume)",
+                    "defaultValue": "./Hydropower/Service/consump_vl.tif",
+                    "required": true
+                },       
+                {
+                    "id" : "watersheds",
+                    "args_id": "watersheds_uri",
+                    "type": "file",
+                    "label": "Watersheds",
+                    "defaultValue": "./Base_Data/Freshwater/watersheds.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR", 
+                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                                               "type": "polygons", 
+                                               "projection" : "Transverse_Mercator",
+                                               "datum" : "WGS_1984"}]
+                                   }
+                 },
+                 {
+                    "id" : "sub_watersheds",
+                    "args_id": "sub_watersheds_uri",
+                    "type": "file",
+                    "label": "Sub-Watersheds",
+                    "defaultValue": "./Base_Data/Freshwater/subwatersheds.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR", 
+                                   "layers": [{"name": {"inheritFrom": "file"}, 
+                                               "type": "polygons"
+                                             }]
+                                   }
+                 },
+                 {
+                    "id" : "watershed_scarcity_table",
+                    "args_id": "watershed_scarcity_table_uri",
+                    "type": "file",
+                    "label": "Watershed Scarcity Output Table",
+                    "defaultValue": "./Hydropower/Output/watershed_scarcity_table.csv",
+                    "required": true,
+                    "validateAs": { "type": "CSV",
+                                    "fieldsExist": ["ws_id", "precip_mn", "PET_mn", "AET_mn", "wyield_mn", "wyield_sum", "cyield_vl", "consump_vl", "consump_mn", "rsupply_vl", "rsupply_mn"],
+                                    "restrictions": [{"field": "ws_id",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  }},
+                                                     {"field": "precip_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "PET_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "AET_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "wyield_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "wyield_sum",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "cyield_vl",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "consump_vl",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "consump_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "rsupply_vl",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "rsupply_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }}]}
+                 },
+                 {
+                    "id" : "subwatershed_scarcity_table",
+                    "args_id": "subwatershed_scarcity_table_uri",
+                    "type": "file",
+                    "label": "Sub-Watershed Scarcity Output Table",
+                    "defaultValue": "./Hydropower/Output/subwatershed_scarcity_table.csv",
+                    "required": true,
+                    "validateAs": { "type": "CSV",
+                                    "fieldsExist": ["ws_id", "subws_id", "precip_mn", "PET_mn", "AET_mn", "wyield_mn", "wyield_sum", "cyield_vl", "consump_vl", "consump_mn", "rsupply_vl", "rsupply_mn"],
+                                    "restrictions": [{"field": "ws_id",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  }},
+                                                     {"field": "subws_id",
+                                                      "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  }},
+                                                     {"field": "precip_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "PET_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "AET_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "wyield_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "wyield_sum",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "cyield_vl",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "consump_vl",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "consump_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "rsupply_vl",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},
+                                                     {"field": "rsupply_mn",
+                                                      "validateAs": {"type": "number",
+                                                                     "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }}]}
+                 },
+                 {
+                    "id" : "hydropower_valuation_table",
+                    "args_id": "valuation_table_uri",
+                    "type": "file",
+                    "label": "Hydropower Valuation Table",
+                    "defaultValue": "./Hydropower/input/hydropower_valuation_table.csv",
+                    "required": true,
+                    "validateAs": { "type": "CSV",
+                                    "fieldsExist": ["ws_id", "time_span", "discount", "efficiencey", "fraction", "cost", "height", "kw_price"],
+                                    "restrictions": [{"field": "ws_id",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  }},
+                                                    {"field": "time_span",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  }},                                                    
+                                                    {"field": "discount",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},                                                    
+                                                    {"field": "efficiency",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},                                                    
+                                                    {"field": "fraction",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},                                                    
+                                                    {"field": "cost",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }},                                                    
+                                                    {"field": "height",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  }},
+                                                    
+                                                    {"field": "kw_price",
+                                                    "validateAs":{"type": "number",
+                                                                  "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
+                                                                  }}]}
+                 }                   
+            ]
+        }
+    ]
+}
