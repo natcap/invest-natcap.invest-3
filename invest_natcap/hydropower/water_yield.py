@@ -18,8 +18,8 @@ LOGGER = logging.getLogger('water_yield')
 def execute(args):
     """This function invokes the water yield model given
         URI inputs of files. It will do filehandling and open/create
-        appropriate objects to pass to the core sediment biophysical 
-        processing function.  It may write log, warning, or error messages to 
+        appropriate objects to pass to the core water yield processing 
+        function.  It may write log, warning, or error messages to 
         stdout.
         
         args - a python dictionary with at the following possible entries:
@@ -62,6 +62,8 @@ def execute(args):
            
         returns - nothing"""
     
+    LOGGER.info('Starting Water Yield File Handling')
+    
     workspace_dir = args['workspace_dir']
     water_yield_args = {}
     water_yield_args['workspace_dir'] = workspace_dir
@@ -72,14 +74,14 @@ def execute(args):
         if not os.path.isdir(folder_path):
             os.mkdir(folder_path)
             
-    #Open all of the gdal files and place in dictionary
+    #Open all of the gdal files and add to the arguments
     water_yield_args['precipitation'] = gdal.Open(args['precipitation_uri'])
     water_yield_args['soil_depth'] = gdal.Open(args['soil_depth_uri'])
     water_yield_args['lulc'] = gdal.Open(args['lulc_uri'])
     water_yield_args['pawc'] = gdal.Open(args['pawc_uri'])
     water_yield_args['eto'] = gdal.Open(args['eto_uri'])
     
-    #Open all the shapefiles and place in dictionary
+    #Open all the shapefiles and add to the arguments
     water_yield_args['watersheds'] = ogr.Open(args['watersheds_uri'])
     water_yield_args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
     
@@ -92,7 +94,7 @@ def execute(args):
     
     water_yield_args['biophysical_dictionary'] = biophysical_table_map
 
-    #Add seasonality_constant constant to dictionary
+    #Add seasonality_constant and suffix to the arguments
     water_yield_args['seasonality_constant'] = int(args['seasonality_constant'])
     water_yield_args['results_suffix'] = args['results_suffix']
     
