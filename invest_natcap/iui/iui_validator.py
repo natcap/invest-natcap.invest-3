@@ -85,6 +85,8 @@ class Validator(registrar.Registrar):
 
         Returns a boolean.  True if the thread is alive."""
 
+        if self.thread == None:
+            return True
         return not self.thread.is_alive()
 
     def get_error(self):
