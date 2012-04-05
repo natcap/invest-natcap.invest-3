@@ -464,6 +464,13 @@ class LabeledElement(DynamicPrimitive):
             return self.elements[0].isEnabled
         return self.elements[1].isEnabled()
 
+class Label(QtGui.QLabel, DynamicPrimitive):
+    def __init__(self, attribute):
+        QtGui.QLabel.__init__(self)
+        DynamicPrimitive.__init__(self, attribute)
+        self.setText(attributes['label'])
+        self.setWordWrap(True)
+
 class DynamicText(LabeledElement):
     """Creates an object containing a label and a sigle-line text field for
         user input.
@@ -1578,7 +1585,8 @@ class ElementRegistrar(registrar.Registrar):
                    'dropdown': Dropdown,
                    'embeddedUI': EmbeddedUI,
                    'checkbox': CheckBox,
-                   'scrollGroup': ScrollArea
+                   'scrollGroup': ScrollArea,
+                   'label': Label
                    }
         self.update_map(updates)
         
