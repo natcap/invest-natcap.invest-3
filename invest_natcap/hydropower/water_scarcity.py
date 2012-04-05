@@ -18,7 +18,7 @@ LOGGER = logging.getLogger('water_scarcity')
 def execute(args):
     """This function invokes the water scarcity model given
         URI inputs of files. It will do filehandling and open/create
-        appropriate objects to pass to the core sediment biophysical 
+        appropriate objects to pass to the core water scarcity
         processing function.  It may write log, warning, or error messages to 
         stdout.
         
@@ -55,8 +55,12 @@ def execute(args):
             (required)
         args['hydro_calibration_table_uri'] - a  uri to an input dbf table of 
             hydropower stations with associated calibration values (required)
-        
+        args['results_suffix'] - a string that will be concatenated onto the
+           end of file names (optional)
+           
         returns nothing"""
+    
+    LOGGER.info('Starting Water Scarcity File Handling')
     
     workspace_dir = args['workspace_dir']
     #Create the output directories
@@ -64,25 +68,26 @@ def execute(args):
         folder_path = workspace_dir + os.sep + folder_name
         if not os.path.isdir(folder_path):
             os.path.mkdir(folder_path)
+    
     water_scarcity_args = {}
     water_scarcity_args['workspace_dir'] = args['workspace_dir']
-    #Open all of the gdal files and place in dictionary
+    
+    #Open all of the gdal files and add to the arguments
     water_scarcity_args['lulc'] = gdal.Open(args['lulc_uri'])
     water_scarcity_args['water_yield_vol'] = gdal.Open(args['water_yield_vol_uri'])
     water_scarcity_args['water_yield_mn'] = gdal.Open(args['water_yield_mean_uri'])
     
-    #Open all the shapefiles and place in dictionary
+    #Open all the shapefiles and add to the arguments
     water_scarcity_args['watersheds'] = ogr.Open(args['watersheds_uri'])
     water_scarcity_args['sub_watersheds'] = ogr.Open(args['sub_watersheds_uri'])
     
-    #Open/read in the dbf files into a dictionary and add to
-    #dictionary
+    #Open/read in the csv files into a dictionary and add to arguments
     watershed_yield_table_map = {}
     watershed_yield_table_file = open(args['watershed_yield_table_uri'])
     reader = csv.DictReader(watershed_yield_table_file)
     for row in reader:
         watershed_yield_table_map[row['ws_id']] = row
-    LOGGER.debug('ws_yield_table : %s', watershed_yield_table_map)    
+    
     water_scarcity_args['watershed_yield_table'] = watershed_yield_table_map
     watershed_yield_table_file.close()
     
@@ -91,7 +96,7 @@ def execute(args):
     reader = csv.DictReader(subwatershed_yield_table_file)
     for row in reader:
         subwatershed_yield_table_map[row['subws_id']] = row
-    LOGGER.debug('sws_yield_table : %s', subwatershed_yield_table_map)    
+    
     water_scarcity_args['subwatershed_yield_table'] = subwatershed_yield_table_map
     subwatershed_yield_table_file.close()
     
@@ -100,10 +105,9 @@ def execute(args):
     reader = csv.DictReader(demand_table_file)
     for row in reader:
         demand_table_map[row['lucode']] = row
-    LOGGER.debug('demand_table : %s', demand_table_map)    
+    
     water_scarcity_args['demand_table'] = demand_table_map
     demand_table_file.close()
-    
     
     hydro_cal_table_map = {}
     hydro_cal_table_file = open(args['hydro_calibration_table_uri'])
@@ -111,9 +115,11 @@ def execute(args):
     for row in reader:
         hydro_cal_table_map[row['ws_id']] = row['calib']
         
-    LOGGER.debug('hydro_cal_table : %s', hydro_cal_table_map)    
     water_scarcity_args['hydro_calibration_table'] = hydro_cal_table_map
     hydro_cal_table_file.close()
+    
+    #Add the suffix string to the arguments
+    water_yield_args['results_suffix'] = args['results_suffix']
     
     #Call water_scarcity_core.py
     hydropower_core.water_scarcity(water_scarcity_args)
