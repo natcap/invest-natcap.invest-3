@@ -34,7 +34,7 @@ def water_yield(args):
             Water Content fraction (PAWC) is the fraction of water that can be
             stored in the soil profile that is available for plants' use. 
             PAWC is a fraction from 0 to 1 (required)
-        args['ape'] - an input raster describing the 
+        args['eto'] - an input raster describing the 
             annual average evapotranspiration value for each cell. Potential
             evapotranspiration is the potential loss of water from soil by
             both evaporation from the soil and transpiration by healthy Alfalfa
@@ -51,10 +51,12 @@ def water_yield(args):
             cells in the raster map (required)
         args['seasonality_constant'] - floating point value between 1 and 10 corresponding
             to the seasonal distribution of precipitation (required)
-            
+        args['results_suffix'] - a string that will be concatenated onto the
+           end of file names (optional)    
+           
         returns nothing"""
         
-    LOGGER.info('Starting Water Yield Calculation')
+    LOGGER.info('Starting Water Yield Core Calculations')
 
     #Construct folder paths
     workspace_dir = args['workspace_dir']
@@ -63,9 +65,10 @@ def water_yield(args):
     service_dir = workspace_dir + os.sep + 'Service'
 
     #Get inputs from the args dictionary
+    suffix = args['results_suffix']
     bio_dict = args['biophysical_dictionary']
     lulc_raster = args['lulc']
-    ape_raster = args['ape']
+    eto_raster = args['ape']
     precip_raster = args['precipitation']
     soil_depth_raster = args['soil_depth']
     pawc_raster = args['pawc']
@@ -73,25 +76,67 @@ def water_yield(args):
     sheds = args['watersheds']
     seasonality_constant = float(args['seasonality_constant'])
     
+    #Collection of output and temporary path names
+    suffix_tif = '_' + suffix + '.tif'
+    suffix_csv = '_' + suffix + '.csv'
+    
+    #Paths for the etk and root_depth rasters from the biophysical table
+    tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk' + suffix_tif
+    tmp_root_path = intermediate_dir + os.sep + 'tmp_root' + suffix_tif
+    
+    #Paths for the actual evapotranspiration fraction of precipitation raster
+    #and water yield raster
+    fractp_path = intermediate_dir + os.sep + 'fractp' + suffix_tif
+    wyield_path = intermediate_dir + os.sep + 'wyield' + suffix_tif
+    
+    #Paths for clipping the fractp/wyield raster to watershed polygons
+    fractp_clipped_path = \
+        intermediate_dir + os.sep + 'fractp_clipped' + suffix_tif
+    wyield_clipped_path = \
+        intermediate_dir + os.sep + 'wyield_clipped' + suffix_tif
+    
+    #Paths for the fractp mean and water yield mean, area, and volume rasters
+    fractp_mean_path = output_dir + os.sep + 'fractp_mn' + suffix_tif
+    wyield_mean_path = service_dir + os.sep + 'wyield_mn' + suffix_tif
+    wyield_area_path = intermediate_dir + os.sep + 'wyield_area' + suffix_tif
+    wyield_volume_path = \
+        service_dir + os.sep + 'wyield_volume' + suffix_tif
+    wyield_ha_path = service_dir + os.sep + 'wyield_ha' + suffix_tif
+    
+    #Paths for the actual evapotranspiration rasters
+    aet_path = intermediate_dir + os.sep + 'aet' + suffix_tif
+    aet_mean_path = output_dir + os.sep + 'aet_mn' + suffix_tif
+    
+    #Paths for the watershed and subwatershed mask rasters
+    sub_mask_raster_path = \
+        intermediate_dir + os.sep + 'sub_shed_mask' + suffix_tif
+    shed_mask_raster_path = \
+        intermediate_dir + os.sep + 'shed_mask' + suffix_tif
+    
+    #Paths for the watershed and subwatershed tables
+    shed_table_path = \
+        output_dir + os.sep + 'water_yield_watershed' + suffix_csv
+    sub_table_path = \
+        output_dir + os.sep + 'water_yield_subwatershed' + suffix_csv
+    
+    #The nodata value that will be used for created output rasters
     nodata = -1
     
     #Create etk raster from table values to use in future calculations
-    tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk.tif'
     tmp_etk_raster = \
         raster_from_table_values(lulc_raster, tmp_etk_path, bio_dict, 'etk')
     
     #Create root raster from table values to use in future calculations
-    tmp_root_path = intermediate_dir + os.sep + 'tmp_root.tif'
     tmp_root_raster = raster_from_table_values(lulc_raster, tmp_root_path, 
-                                              bio_dict, 'root_depth')
+                                               bio_dict, 'root_depth')
     
-    def fractp(etk, ape, precip, root, soil, pawc):
+    def fractp(etk, eto, precip, root, soil, pawc):
         """Function that calculates the fractp (actual evapotranspiration
            fraction of precipitation) raster
         
             etk - numpy array with the etk (plant evapotranspiration 
                   coefficient) raster values
-            ape - numpy array with the potential evapotranspiration raster 
+            eto - numpy array with the potential evapotranspiration raster 
                   values
             precip - numpy array with the precipitation raster values
             root - numpy array with the root depth (maximum root depth for
@@ -102,7 +147,7 @@ def water_yield(args):
             
         returns - fractp value"""
         
-        tmp_pet = (etk * ape) / 1000
+        tmp_pet = (etk * eto) / 1000
         tmp_DI = tmp_pet / precip        
         awc = (np.minimum(root, soil) * pawc)        
         tmp_w = (awc / (precip + 1)) * seasonality_constant
@@ -120,8 +165,7 @@ def water_yield(args):
         return fractp
     
     #Create the fractp raster
-    fractp_path = intermediate_dir + os.sep + 'fractp.tif'
-    raster_list = [tmp_etk_raster, ape_raster, precip_raster, tmp_root_raster,
+    raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
                    soil_depth_raster, pawc_raster]
     fractp_raster = invest_core.vectorizeRasters(raster_list, fractp, 
                                                  rasterName=fractp_path)
@@ -137,7 +181,6 @@ def water_yield(args):
         return (1 - fractp) * precip
     
     #Create the water yield raster 
-    wyield_path = intermediate_dir + os.sep + 'wyield.tif'
     wyield_raster = \
         invest_cython_core.newRasterFromBase(fractp_raster, wyield_path, 
                                             'GTiff', nodata, gdal.GDT_Float32)
@@ -149,26 +192,15 @@ def water_yield(args):
     
     invest_core.vectorize2ArgOp(fractp_band, precip_band, wyield, wyield_band)
     
-    #Paths for clipping the fractp/wyield raster to watershed polygons
-    fractp_clipped_path = intermediate_dir + os.sep + 'fractp_clipped.tif'
-    wyield_clipped_path = intermediate_dir + os.sep + 'wyield_clipped.tif'
-    
     #Clip fractp/wyield rasters to watershed polygons
     wyield_clipped_raster = clip_raster_from_polygon(sheds, wyield_raster, \
                                                      wyield_clipped_path)
     fractp_clipped_raster = clip_raster_from_polygon(sheds, fractp_raster, \
                                                      fractp_clipped_path)
-    #Create paths for the mean/volume rasters
-    fractp_mean_path = intermediate_dir + os.sep + 'fractp_mn.tif'
-    wyield_mean_path = intermediate_dir + os.sep + 'wyield_mn.tif'
-    wyield_area_path = intermediate_dir + os.sep + 'wyield_area.tif'
-    wyield_volume_path = intermediate_dir + os.sep + 'wyield_volume.tif'
-    wyield_ha_path = intermediate_dir + os.sep + 'wyield_ha.tif'
     
     #Get a numpy array from rasterizing the sub watershed id values into
     #a raster. The numpy array will be the sub watershed mask used for
     #calculating mean and sum values at a sub watershed basis
-    sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask.tif'
     sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path, sub_sheds, 
                         'subws_id')
     sws_id_list = get_shed_ids(sub_mask, nodata)
@@ -176,7 +208,6 @@ def water_yield(args):
     #Get a numpy array from rasterizing the watershed id values into
     #a raster. The numpy array will be the watershed mask used for
     #calculating mean and sum values at a per watershed basis
-    shed_mask_raster_path = intermediate_dir + os.sep + 'shed_mask.tif'
     shed_mask = get_mask(fractp_clipped_raster, shed_mask_raster_path,
                                sheds, 'ws_id')
     ws_id_list = get_shed_ids(shed_mask, nodata)
@@ -185,9 +216,11 @@ def water_yield(args):
     fract_mn_dict = {}
     wyield_mn_dict = {}
     fractp_mean = create_mean_raster(fractp_clipped_raster, fractp_mean_path,
-                                     sws_id_list, 'subws_id', sub_mask, fract_mn_dict)
+                                     sws_id_list, 'subws_id', sub_mask, 
+                                     fract_mn_dict)
     wyield_mean = create_mean_raster(wyield_clipped_raster, wyield_mean_path,
-                                     sws_id_list, 'subws_id', sub_mask, wyield_mn_dict)
+                                     sws_id_list, 'subws_id', sub_mask, 
+                                     wyield_mn_dict)
     
     #Create area raster so that the volume can be computed.
     wyield_area = create_area_raster(wyield_clipped_raster, wyield_area_path,
@@ -241,13 +274,9 @@ def water_yield(args):
     invest_core.vectorize2ArgOp(wyield_vol_band, wyield_area_band, ha_vol, 
                                 wyield_ha_band)
     
-    #Create aet and aet mean raster
-    aet_path = intermediate_dir + os.sep + 'aet.tif'
-    aet_mean_path = intermediate_dir + os.sep + 'aet_mn.tif'
-    
     aet_raster = \
-        invest_cython_core.newRasterFromBase(wyield_area, aet_path, 
-                                            'GTiff', nodata, gdal.GDT_Float32)
+        invest_cython_core.newRasterFromBase(wyield_area, aet_path, 'GTiff', 
+                                             nodata, gdal.GDT_Float32)
         
     aet_band = aet_raster.GetRasterBand(1)
     fractp_band = fractp_clipped_raster.GetRasterBand(1)
@@ -273,7 +302,6 @@ def water_yield(args):
                                   'subws_id', sub_mask, mean_dict)
     
     #Create the water yield subwatershed table
-    sub_table_path = intermediate_dir + os.sep + 'water_yield_subwatershed.csv'
     wsr = sheds_map_subsheds(sheds, sub_sheds)
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
@@ -293,7 +321,6 @@ def water_yield(args):
     create_writer_table(sub_table_path, sub_field_list, sub_value_dict, wsr)
     
     #Create the water yield watershed table
-    shed_table_path = intermediate_dir + os.sep + 'water_yield_watershed.csv'
     value_dict = {}
     value_dict['precip_mn'] = \
         get_mean(precip_raster, ws_id_list, shed_mask)
