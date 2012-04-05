@@ -39,7 +39,7 @@ def execute(args):
             Water Content fraction (PAWC) is the fraction of water that can be
             stored in the soil profile that is available for plants' use. 
             PAWC is a fraction from 0 to 1 (required)
-        args['ape_uri'] - a uri to an input raster describing the 
+        args['eto_uri'] - a uri to an input raster describing the 
             annual average evapotranspiration value for each cell. Potential
             evapotranspiration is the potential loss of water from soil by
             both evaporation from the soil and transpiration by healthy Alfalfa
@@ -75,7 +75,7 @@ def execute(args):
     water_yield_args['soil_depth'] = gdal.Open(args['soil_depth_uri'])
     water_yield_args['lulc'] = gdal.Open(args['lulc_uri'])
     water_yield_args['pawc'] = gdal.Open(args['pawc_uri'])
-    water_yield_args['ape'] = gdal.Open(args['ape_uri'])
+    water_yield_args['ape'] = gdal.Open(args['eto_uri'])
     
     #Open all the shapefiles and place in dictionary
     water_yield_args['watersheds'] = ogr.Open(args['watersheds_uri'])
