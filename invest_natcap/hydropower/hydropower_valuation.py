@@ -79,7 +79,7 @@ def execute(args):
     reader = csv.DictReader(water_scarcity_table_file)
     for row in reader:
         water_scarcity_map[row['ws_id']] = row
-    val_args['water_scarcity_table'] = water_scarcity_map
+    val_args['watershed_scarcity_table'] = water_scarcity_map
     water_scarcity_table_file.close()
 
 
@@ -88,7 +88,7 @@ def execute(args):
     reader = csv.DictReader(subwater_scarcity_table_file)
     for row in reader:
         subwater_scarcity_map[row['subws_id']] = row
-    val_args['subwater_scarcity_table'] = subwater_scarcity_map
+    val_args['subwatershed_scarcity_table'] = subwater_scarcity_map
     subwater_scarcity_table_file.close()    
     
     #Call hydropower_core.valuation
