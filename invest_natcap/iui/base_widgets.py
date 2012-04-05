@@ -465,9 +465,9 @@ class LabeledElement(DynamicPrimitive):
         return self.elements[1].isEnabled()
 
 class Label(QtGui.QLabel, DynamicPrimitive):
-    def __init__(self, attribute):
+    def __init__(self, attributes):
         QtGui.QLabel.__init__(self)
-        DynamicPrimitive.__init__(self, attribute)
+        DynamicPrimitive.__init__(self, attributes)
         self.setText(attributes['label'])
         self.setWordWrap(True)
 
