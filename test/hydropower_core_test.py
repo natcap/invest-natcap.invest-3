@@ -411,6 +411,103 @@ class TestHydropowerCore(unittest.TestCase):
             for m, n in zip(i,j):
                 self.assertAlmostEqual(m, n, 4)
 
+    def test_sheds_map_subsheds(self):
+        """A by hand test for the sheds_map_subsheds function
+        
+        """
+        
+        #place code here
+        
+        
+    def test_get_operation_value(self):
+        """A by hand test for the get_operation_value function
+        
+        """
+        
+        #place code here
+        
+        
+    def test_get_shed_ids(self):
+        """A by hand test for get_shed_ids function
+        
+        """
+        
+        #place code here
+        
+    def test_create_operation_raster_hand(self):
+        """A by hand test for the create_operation_raster function
+        
+        """
+        
+        #place code here
+        
+        
+    def test_create_operation_raster_regression(self):
+        """A regression test for create_operation_raster function
+        
+        """
+        
+        #place code here
+        
+        
+        
+    def test_clip_raster_from_polygon(self):
+        """A test case for this function.  I should already have some test
+        cases for this function from wave energy model
+        
+        """
+        
+        #place code here
+        
+
+    def test_raster_from_table_values_hand(self):
+        """A by hand test for the raster_from_table_values function
+        
+        """
+        
+        #place code here
+        
+
+    def test_raster_from_table_values_regression(self):
+        """A regression test for the raster_from_table_values function
+        
+        """
+        
+        #place code here
+        
+
+    def test_water_scarcity_regression(self):
+        """A regression test for the core water scarcity functionality
+        
+        """
+        
+        #place code here
+        
+
+    def test_write_scarcity_table(self):
+        """A by hand test for the write_scarcity_table function
+        
+        """
+        
+        #place code here
+        
+
+    def test_sum_mean_dict(self):
+        """A by hand test for the sum_mean_dict function
+        
+        """
+        
+        #place code here
+        
+
+    def test_valuation_regression(self):
+        """A regression test for the core valuation functionality
+        
+        """
+        
+        #place code here
+        
+                
 #    def test_make_raster(self):
 #        
 #        out_dir = './data/test_out/hydropower_get_mask'
