@@ -32,5 +32,6 @@ class TestHydropowerValuation(unittest.TestCase):
             base + 'test_input/water_scarcity_subwatershed.csv'
         args['valuation_table_uri'] = \
             base + 'test_input/hydro_valuation_table.csv'
-         
+        args['results_suffix'] = ''
+        
         hydropower_valuation.execute(args)

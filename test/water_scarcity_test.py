@@ -31,5 +31,6 @@ class TestWaterScarcity(unittest.TestCase):
         args['subwatershed_yield_table_uri'] = base + 'test_input/water_yield_subwatershed_input.csv'
         args['hydro_calibration_table_uri'] = base + 'test_input/hydro_calib_table.csv'
         args['demand_table_uri'] = base + 'test_input/demand_table.csv'
-         
+        args['results_suffix'] = ''
+        
         water_scarcity.execute(args)

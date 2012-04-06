@@ -32,5 +32,6 @@ class TestWaterYield(unittest.TestCase):
         args['biophysical_table_uri'] = \
             base + 'test_input/Biophysical_Models.csv'
         args['seasonality_constant'] = 5.0
+        args['results_suffix'] = ''
         
         water_yield.execute(args)
