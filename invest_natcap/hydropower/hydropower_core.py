@@ -49,8 +49,9 @@ def water_yield(args):
             coefficients such as root_depth and etk. NOTE: these data are 
             attributes of each LULC class rather than attributes of individual 
             cells in the raster map (required)
-        args['seasonality_constant'] - floating point value between 1 and 10 corresponding
-            to the seasonal distribution of precipitation (required)
+        args['seasonality_constant'] - floating point value between 1 and 10 
+            corresponding to the seasonal distribution of precipitation 
+            (required)
         args['results_suffix'] - a string that will be concatenated onto the
            end of file names (optional)    
            
@@ -219,12 +220,12 @@ def water_yield(args):
     #Create mean rasters for fractp and water yield
     fract_mn_dict = {}
     wyield_mn_dict = {}
-    fractp_mean = create_operation_raster(fractp_clipped_raster, fractp_mean_path,
-                                     sws_id_list, 'mean', sub_mask, 
-                                     fract_mn_dict)
-    wyield_mean = create_operation_raster(wyield_clipped_raster, wyield_mean_path,
-                                     sws_id_list, 'mean', sub_mask, 
-                                     wyield_mn_dict)
+    fractp_mean = \
+        create_operation_raster(fractp_clipped_raster, fractp_mean_path,
+                                sws_id_list, 'mean', sub_mask, fract_mn_dict)
+    wyield_mean = \
+        create_operation_raster(wyield_clipped_raster, wyield_mean_path,
+                                sws_id_list, 'mean', sub_mask, wyield_mn_dict)
     
     #Create area raster so that the volume can be computed.
     wyield_area = create_area_raster(wyield_clipped_raster, wyield_area_path,
@@ -422,6 +423,8 @@ def sheds_map_subsheds(shape, sub_shape):
             #We can't be sure that the areas will be identical because of
             #floating point issues and complete accuracy so we make sure the
             #difference in areas is within reason
+            #It also could be the case that the polygons were intended to 
+            #overlap but do not overlap exactly
             if abs(geom.GetArea() - u_geom.GetArea()) < (math.e**-5):
                 collection[sub_id] = id
             
@@ -490,6 +493,12 @@ def get_mask(raster, path, shed_shape, field_name):
     return sub_sheds_id_array
 
 def get_shed_ids(arr, nodata):
+    """
+       arr - 
+       nodata - 
+       
+       returns - 
+    """
     tmp_ar = np.copy(arr)
     tmp_aru = np.unique(tmp_ar.flatten())
     tmp_ard = np.delete(tmp_aru, np.where(tmp_aru == nodata))
@@ -550,7 +559,8 @@ def create_operation_raster(raster, path, id_list, operation, shed_mask, dict):
     band_op = raster_op.GetRasterBand(1)
     nodata = band_op.GetNoDataValue()
     pixel_data_array = band_op.ReadAsArray()
-    pixel_data_array_nodata = np.where(pixel_data_array == nodata, 0, pixel_data_array)
+    pixel_data_array_nodata = \
+        np.where(pixel_data_array == nodata, 0, pixel_data_array)
     band_op.Fill(nodata)
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
@@ -825,7 +835,7 @@ def water_scarcity(args):
     sum_dict = {}
     sum_raster = \
         create_operation_raster(clipped_consump, consump_vol_path, sws_id_list, 
-                          'sum', sub_mask, sum_dict)
+                                'sum', sub_mask, sum_dict)
         
     LOGGER.debug('sum_dict : %s', sum_dict)
     
@@ -833,7 +843,7 @@ def water_scarcity(args):
     mean_dict = {}
     mean_raster = \
         create_operation_raster(clipped_consump, consump_mean_path, sws_id_list, 
-                           'mean', sub_mask, mean_dict)
+                                'mean', sub_mask, mean_dict)
     LOGGER.debug('mean_dict : %s', mean_dict)
     #Make rsupply_vol by wyield_calib minus consump_vol
 
@@ -894,7 +904,8 @@ def water_scarcity(args):
     new_keys_sws = {}
     
     field_name = 'ws_id'
-    cyield_d = get_operation_value(wyield_calib, sws_id_list2, sub_mask2, 'mean')
+    cyield_d = \
+        get_operation_value(wyield_calib, sws_id_list2, sub_mask2, 'mean')
     cyield_vol_d = sum_mean_dict(shed_subshed_map, cyield_d, 'sum')
     new_keys_ws['cyield_vl'] = cyield_vol_d
     new_keys_sws['cyield_vl'] = cyield_d
@@ -912,7 +923,8 @@ def water_scarcity(args):
     #rsupply_vl per watershed
     rsupply_vl_raster = gdal.Open(rsupply_vol_path)
     field_name = 'ws_id'
-    rsupply_vl_d = get_operation_value(rsupply_vl_raster, sws_id_list2, sub_mask2, 'mean')
+    rsupply_vl_d = \
+        get_operation_value(rsupply_vl_raster, sws_id_list2, sub_mask2, 'mean')
     rsupply_vl_dt = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'sum')
     new_keys_ws['rsupply_vl'] = rsupply_vl_dt
     new_keys_sws['rsupply_vl'] = rsupply_vl_d
@@ -920,7 +932,8 @@ def water_scarcity(args):
     #rsupply_mn per watershed
     rsupply_mn_raster = gdal.Open(rsupply_mean_path)
     field_name = 'ws_id'
-    rsupply_mn_d = get_operation_value(rsupply_mn_raster, sws_id_list2, sub_mask2, 'mean')
+    rsupply_mn_d = \
+        get_operation_value(rsupply_mn_raster, sws_id_list2, sub_mask2, 'mean')
     rsupply_mn_dt = sum_mean_dict(shed_subshed_map, rsupply_mn_d, 'mean')
     new_keys_ws['rsupply_mn'] = rsupply_mn_dt
     new_keys_sws['rsupply_mn'] = rsupply_mn_d
