@@ -219,11 +219,11 @@ def water_yield(args):
     #Create mean rasters for fractp and water yield
     fract_mn_dict = {}
     wyield_mn_dict = {}
-    fractp_mean = create_mean_raster(fractp_clipped_raster, fractp_mean_path,
-                                     sws_id_list, 'subws_id', sub_mask, 
+    fractp_mean = create_operation_raster(fractp_clipped_raster, fractp_mean_path,
+                                     sws_id_list, 'mean', sub_mask, 
                                      fract_mn_dict)
-    wyield_mean = create_mean_raster(wyield_clipped_raster, wyield_mean_path,
-                                     sws_id_list, 'subws_id', sub_mask, 
+    wyield_mean = create_operation_raster(wyield_clipped_raster, wyield_mean_path,
+                                     sws_id_list, 'mean', sub_mask, 
                                      wyield_mn_dict)
     
     #Create area raster so that the volume can be computed.
@@ -302,8 +302,8 @@ def water_yield(args):
     invest_core.vectorize2ArgOp(fractp_band, precip_band, aet, aet_band)
     
     #Create the mean actual evapotranspiration raster
-    aet_mean = create_mean_raster(aet_raster, aet_mean_path, sws_id_list, 
-                                  'subws_id', sub_mask, mean_dict)
+    aet_mean = create_operation_raster(aet_raster, aet_mean_path, sws_id_list, 
+                                  'mean', sub_mask, mean_dict)
     
     #Create the water yield subwatershed table
     wsr = sheds_map_subsheds(sheds, sub_sheds)
@@ -557,7 +557,7 @@ def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     band_area.WriteArray(new_data_array, 0, 0)  
     return raster_area
 
-def create_mean_raster(raster, path, id_list, field_name, shed_mask, dict):
+def create_operation_raster(raster, path, id_list, operation, shed_mask, dict):
     """Creates a new raster representing the mean per watershed or per
        sub watershed 
     
@@ -570,13 +570,13 @@ def create_mean_raster(raster, path, id_list, field_name, shed_mask, dict):
        
        returns - a raster       
     """
-    LOGGER.debug('Starting create_mean_raster')
-    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-    band_mean = raster_mean.GetRasterBand(1)
-    nodata = band_mean.GetNoDataValue()
-    pixel_data_array = band_mean.ReadAsArray()
+    LOGGER.debug('Starting create_operation_raster')
+    raster_op = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
+    band_op = raster_op.GetRasterBand(1)
+    nodata = band_op.GetNoDataValue()
+    pixel_data_array = band_op.ReadAsArray()
     pixel_data_array_nodata = np.where(pixel_data_array == nodata, 0, pixel_data_array)
-    band_mean.Fill(nodata)
+    band_op.Fill(nodata)
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
 
@@ -585,46 +585,16 @@ def create_mean_raster(raster, path, id_list, field_name, shed_mask, dict):
         set_mask_val = sub_sheds_id_array == id
         masked_array = np.ma.array(pixel_data_array_nodata, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
-        mean = sum(comp_array) / len(comp_array)
-        np.putmask(new_data_array, set_mask_val, mean)
-        dict[id] = mean
+        op_val = None
+        if operation == 'mean':
+            op_val = sum(comp_array) / len(comp_array)
+        elif operation == 'sum':
+            op_val = sum(comp_array)
+        np.putmask(new_data_array, set_mask_val, op_val)
+        dict[id] = op_val
         
-    band_mean.WriteArray(new_data_array, 0, 0)
-    return raster_mean
-
-def create_sum_raster(raster, path, id_list, field_name, shed_mask, dict):
-    """Creates a new raster representing the mean per watershed or per
-       sub watershed 
-    
-       raster - a GDAL raster dataset that has the desired pixel size and
-                dimensions as well as the values we want to take the mean of
-       path - a uri string path for the creation of the mean raster
-       shed_shape - an OGR shapefile, either watershed or sub watershed
-       field_name - a string of the id field from shed_shape
-       shed_mask - a numpy array representing the shed/sub shed id mask
-       
-       returns - a raster       
-    """
-    LOGGER.debug('Starting create_sum_raster')
-    raster_mean = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-    band_mean = raster_mean.GetRasterBand(1)
-    nodata = band_mean.GetNoDataValue()
-    pixel_data_array = band_mean.ReadAsArray()
-    pixel_data_array_nodata = np.where(pixel_data_array == nodata, 0, pixel_data_array)
-    band_mean.Fill(nodata)
-    sub_sheds_id_array = np.copy(shed_mask)
-    new_data_array = np.copy(pixel_data_array)
-    for id in id_list:
-        mask_val = sub_sheds_id_array != id
-        set_mask_val = sub_sheds_id_array == id
-        masked_array = np.ma.array(pixel_data_array_nodata, mask = mask_val)
-        comp_array = np.ma.compressed(masked_array)
-        mean = sum(comp_array)
-        np.putmask(new_data_array, set_mask_val, mean)
-        dict[id] = mean
-        
-    band_mean.WriteArray(new_data_array, 0, 0)  
-    return raster_mean
+    band_op.WriteArray(new_data_array, 0, 0)
+    return raster_op
 
 def clip_raster_from_polygon(shape, raster, path):
     """Returns a raster where any value outside the bounds of the
@@ -879,16 +849,16 @@ def water_scarcity(args):
     
     sum_dict = {}
     sum_raster = \
-        create_sum_raster(clipped_consump, consump_vol_path, sws_id_list, 
-                          'subws_id', sub_mask, sum_dict)
+        create_operation_raster(clipped_consump, consump_vol_path, sws_id_list, 
+                          'sum', sub_mask, sum_dict)
         
     LOGGER.debug('sum_dict : %s', sum_dict)
     
     #Take mean of consump over sub watersheds making conusmp_mean
     mean_dict = {}
     mean_raster = \
-        create_mean_raster(clipped_consump, consump_mean_path, sws_id_list, 
-                           'subws_id', sub_mask, mean_dict)
+        create_operation_raster(clipped_consump, consump_mean_path, sws_id_list, 
+                           'mean', sub_mask, mean_dict)
     LOGGER.debug('mean_dict : %s', mean_dict)
     #Make rsupply_vol by wyield_calib minus consump_vol
 
