@@ -74,8 +74,10 @@ def execute(args):
     
     #Open all of the gdal files and add to the arguments
     water_scarcity_args['lulc'] = gdal.Open(args['lulc_uri'])
-    water_scarcity_args['water_yield_vol'] = gdal.Open(args['water_yield_vol_uri'])
-    water_scarcity_args['water_yield_mn'] = gdal.Open(args['water_yield_mean_uri'])
+    water_scarcity_args['water_yield_vol'] = \
+        gdal.Open(args['water_yield_vol_uri'])
+    water_scarcity_args['water_yield_mn'] = \
+        gdal.Open(args['water_yield_mean_uri'])
     
     #Open all the shapefiles and add to the arguments
     water_scarcity_args['watersheds'] = ogr.Open(args['watersheds_uri'])
@@ -97,7 +99,8 @@ def execute(args):
     for row in reader:
         subwatershed_yield_table_map[row['subws_id']] = row
     
-    water_scarcity_args['subwatershed_yield_table'] = subwatershed_yield_table_map
+    water_scarcity_args['subwatershed_yield_table'] = \
+        subwatershed_yield_table_map
     subwatershed_yield_table_file.close()
     
     demand_table_map = {}
@@ -119,7 +122,7 @@ def execute(args):
     hydro_cal_table_file.close()
     
     #Add the suffix string to the arguments
-    water_yield_args['results_suffix'] = args['results_suffix']
+    water_scarcity_args['results_suffix'] = args['results_suffix']
     
     #Call water_scarcity_core.py
     hydropower_core.water_scarcity(water_scarcity_args)
