@@ -1078,7 +1078,9 @@ def valuation(args):
             relevant values for each sub watershed. (required)
         args['valuation_table'] - a dictionary containing values of the 
             hydropower stations with associated model values (required)
-            
+        args['results_suffix'] - a string that will be concatenated onto the
+           end of file names (optional) 
+           
         returns - nothing"""
         
     #water yield functionality goes here
@@ -1096,7 +1098,28 @@ def valuation(args):
     ws_scarcity_table = args['watershed_scarcity_table']
     sws_scarcity_table = args['subwatershed_scarcity_table']
     valuation_table = args['valuation_table']
-
+    
+    #Suffix handling
+    suffix = args['results_suffix']
+    if len(suffix) > 0:
+        suffix_tif = '_' + suffix + '.tif'
+        suffix_csv = '_' + suffix + '.csv'
+    else:
+        suffix_tif = '.tif'
+        suffix_csv = '.csv'
+    
+    #Paths for the watershed and subwatershed tables
+    watershed_value_table = \
+        output_dir + os.sep + 'hydropower_value_watershed' + suffix_csv
+    subwatershed_value_table = \
+        output_dir + os.sep + 'hydropower_value_subwatershed' + suffix_csv
+    #Paths for the hydropower value raster
+    hp_val_tmppath = output_dir + os.sep + 'hp_val_tmp' + suffix_tif
+    hp_val_path = output_dir + os.sep + 'hp_val' + suffix_tif
+    #Paths for the hydropower energy raster
+    hp_energy_tmppath = output_dir + os.sep + 'hp_energy_tmp' + suffix_tif
+    hp_energy_path = output_dir + os.sep + 'hp_energy' + suffix_tif
+    
     energy_dict = {}
     npv_dict = {}
     
@@ -1129,8 +1152,8 @@ def valuation(args):
     LOGGER.debug('energy dict : %s', energy_dict)
     LOGGER.debug('npv dict : %s', npv_dict)
 
-    #NPV for sub shed is NPV for water shed times ratio of rsupply_vl of sub shed
-    #to rsupply_vl of water shed
+    #NPV for sub shed is NPV for water shed times ratio of rsupply_vl of 
+    #sub shed to rsupply_vl of water shed
     sws_npv_dict = {}
     sws_energy_dict = {}
     
@@ -1160,18 +1183,16 @@ def valuation(args):
                       'consump_mn','rsupply_vl', 'rsupply_mn', 'hp_energy', 
                       'hp_value']
     
-    shed_path = output_dir + os.sep + 'hydropower_value_watershed.csv'
-    sub_shed_path = output_dir + os.sep + 'hydropower_value_subwatershed.csv'
     
-    write_scarcity_table(ws_scarcity_table, field_list_ws, shed_path)
-    write_scarcity_table(sws_scarcity_table, field_list_sws, sub_shed_path)
+    write_scarcity_table(ws_scarcity_table, field_list_ws, \
+                         watershed_value_table)
+    write_scarcity_table(sws_scarcity_table, field_list_sws, \
+                         subwatershed_value_table)
     
-    
-    hp_val_tmppath = output_dir + os.sep + 'hp_val_tmp.tif'
-    hp_val_path = output_dir + os.sep + 'hp_val.tif'
     
     invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                     -1, hp_val_tmppath, sub_sheds)
+                                                     -1, hp_val_tmppath, 
+                                                     sub_sheds)
     
     invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
                                                      -1, hp_val_path, sub_sheds)
@@ -1181,6 +1202,7 @@ def valuation(args):
     
     gdal.RasterizeLayer(hp_val_tmp, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
+    
     def npv_op(hp_val):
         if hp_val != -1:
             return sws_npv_dict[str(int(hp_val))]
@@ -1189,22 +1211,23 @@ def valuation(args):
         
     hp_val_band = hp_val.GetRasterBand(1)
     hp_val_band_tmp = hp_val_tmp.GetRasterBand(1)    
+    
     invest_core.vectorize1ArgOp(hp_val_band_tmp, npv_op, hp_val_band)
     
-    hp_energy_tmppath = output_dir + os.sep + 'hp_energy_tmp.tif'
-    hp_energy_path = output_dir + os.sep + 'hp_energy.tif'
+    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
+                                                     -1, hp_energy_tmppath, 
+                                                     sub_sheds)
     
     invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                     -1, hp_energy_tmppath, sub_sheds)
-    
-    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                     -1, hp_energy_path, sub_sheds)
+                                                     -1, hp_energy_path, 
+                                                     sub_sheds)
     
     hp_energy = gdal.Open(hp_energy_path, gdal.GA_Update)
     hp_energy_tmp = gdal.Open(hp_energy_tmppath, gdal.GA_Update)
     
     gdal.RasterizeLayer(hp_energy_tmp, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
+    
     def energy_op(energy_val):
         if energy_val != -1:
             return sws_energy_dict[str(int(energy_val))]
@@ -1213,4 +1236,5 @@ def valuation(args):
         
     hp_energy_band = hp_energy.GetRasterBand(1)
     hp_energy_band_tmp = hp_energy_tmp.GetRasterBand(1)    
+    
     invest_core.vectorize1ArgOp(hp_energy_band_tmp, energy_op, hp_energy_band)
