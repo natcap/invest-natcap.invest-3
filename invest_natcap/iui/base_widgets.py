@@ -396,7 +396,7 @@ class DynamicPrimitive(DynamicElement):
                 else:
                     validate = False
 
-                if validate:
+                if validate and self.validator.thread_finished():
                     rendered_dict = self.root.assembler.assemble(self.value(),
                         self.attributes['validateAs'])
                     self.validator.validate(rendered_dict)
@@ -463,6 +463,13 @@ class LabeledElement(DynamicPrimitive):
         if len(self.elements) == 0:
             return self.elements[0].isEnabled
         return self.elements[1].isEnabled()
+
+class Label(QtGui.QLabel, DynamicPrimitive):
+    def __init__(self, attributes):
+        QtGui.QLabel.__init__(self)
+        DynamicPrimitive.__init__(self, attributes)
+        self.setText(attributes['label'])
+        self.setWordWrap(True)
 
 class DynamicText(LabeledElement):
     """Creates an object containing a label and a sigle-line text field for
@@ -1578,7 +1585,8 @@ class ElementRegistrar(registrar.Registrar):
                    'dropdown': Dropdown,
                    'embeddedUI': EmbeddedUI,
                    'checkbox': CheckBox,
-                   'scrollGroup': ScrollArea
+                   'scrollGroup': ScrollArea,
+                   'label': Label
                    }
         self.update_map(updates)
         
