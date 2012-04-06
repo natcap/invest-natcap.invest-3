@@ -77,8 +77,12 @@ def water_yield(args):
     seasonality_constant = float(args['seasonality_constant'])
     
     #Collection of output and temporary path names
-    suffix_tif = '_' + suffix + '.tif'
-    suffix_csv = '_' + suffix + '.csv'
+    if len(suffix) > 0:
+        suffix_tif = '_' + suffix + '.tif'
+        suffix_csv = '_' + suffix + '.csv'
+    else:
+        suffix_tif = '.tif'
+        suffix_csv = '.csv'
     
     #Paths for the etk and root_depth rasters from the biophysical table
     tmp_etk_path = intermediate_dir + os.sep + 'tmp_etk' + suffix_tif
@@ -713,7 +717,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
     return tmp_raster
 
 def water_scarcity(args):
-    """Executest the water scarcity model
+    """Executes the water scarcity model
         
         args - a python dictionary with at the following possible entries:
     
@@ -748,25 +752,18 @@ def water_scarcity(args):
             (required)
         args['hydro_calibration_table'] - a dictionary of 
             hydropower stations with associated calibration values (required)
+        args['results_suffix'] - a string that will be concatenated onto the
+           end of file names (optional) 
         
         returns nothing"""
-    #water yield functionality goes here    
-    LOGGER.info('Starting Water Scarcity Calculation')
+
+    LOGGER.info('Starting Water Scarcity Core Calculations')
     
     #Construct folder paths
     workspace_dir = args['workspace_dir']
     output_dir = workspace_dir + os.sep + 'Output'
     intermediate_dir = workspace_dir + os.sep + 'Intermediate'
     service_dir = workspace_dir + os.sep + 'Service'
-    
-    #Output files:
-    wyield_calib_path = output_dir + os.sep + 'cyield_vol.tif'
-    consump_vol_path = output_dir + os.sep + 'consum_vol.tif'
-    consump_mean_path = output_dir + os.sep + 'consum_mn.tif'
-    rsupply_vol_path = output_dir + os.sep + 'rsup_vol.tif'
-    rsupply_mean_path = output_dir + os.sep + 'rsup_mn.tif'
-    ws_out_table_name = 'water_scarcity_watershed.csv' 
-    sws_out_table_name = 'water_scarcity_subwatershed.csv'
     
     #Get arguments
     demand_dict = args['demand_table']
@@ -779,10 +776,35 @@ def water_scarcity(args):
     sub_shed_table = args['subwatershed_yield_table']
     wyield_mean = args['water_yield_mn']
         
-    #Make raster for calibration (if necessary) values based on watersheds
+    #Suffix handling
+    suffix = args['results_suffix']
+    if len(suffix) > 0:
+        suffix_tif = '_' + suffix + '.tif'
+        suffix_csv = '_' + suffix + '.csv'
+    else:
+        suffix_tif = '.tif'
+        suffix_csv = '.csv'
+        
+    #Path for the calibrated water yield volume per sub-watershed
+    wyield_calib_path = output_dir + os.sep + 'cyield_vol' + suffix_tif
+    #Path for mean and total water consumptive volume
+    consump_vol_path = output_dir + os.sep + 'consum_vol' + suffix_tif
+    consump_mean_path = output_dir + os.sep + 'consum_mn' + suffix_tif
+    clipped_consump_path = \
+        intermediate_dir + os.sep + 'clipped_consump' + suffix_tif
+    #Paths for realized and mean realized water supply volume
+    rsupply_vol_path = output_dir + os.sep + 'rsup_vol' + suffix_tif
+    rsupply_mean_path = output_dir + os.sep + 'rsup_mn' + suffix_tif
+    #Paths for watershed and sub watershed scarcity tables
+    ws_out_table_name = \
+        output_dir + os.sep + 'water_scarcity_watershed' + suffix_csv 
+    sws_out_table_name = \
+        output_dir + os.sep + 'water_scarcity_subwatershed' + suffix_csv
+    #Paths for sub watershed masks
+    sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask2.tif'
+    sub_mask_raster_path2 = intermediate_dir + os.sep + 'sub_shed_mask3.tif'
     
-    clipped_consump_path = intermediate_dir + os.sep + 'clipped_consump.tif'
-    
+    #The nodata value to use for the output rasters
     nodata = -1
     
     #Create watershed mask raster
@@ -792,31 +814,7 @@ def water_scarcity(args):
     gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
                         options = ['ATTRIBUTE=ws_id'])
     
-    #Create the calibration raster
-    
-    def calib_op(ws_band_val):
-        """Function that maps the calibration values to the corresponding
-           lulc_id's
-           
-           ws_band_val - 
-           
-           returns - 
-        """
-        if ws_band_val != nodata:
-            return calib_dict[str(int(ws_band_val))]
-        else:
-            return nodata
-    
-    tmp_calib = \
-        invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', 
-                                             nodata, gdal.GDT_Float32)
-    
-    ws_band = ws_mask.GetRasterBand(1)
-    tmp_calib_band = tmp_calib.GetRasterBand(1)
-    
-    invest_core.vectorize1ArgOp(ws_band, calib_op, tmp_calib_band)
-    
-    #Multiply calibration raster with wyield_vol raster to get cyield_vol
+    #Multiply calibration with wyield_vol raster to get cyield_vol
     
     nodata_vol = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
     
@@ -829,7 +827,7 @@ def water_scarcity(args):
            returns - 
         """
         if wyield_vol != nodata_vol and calib != nodata:
-            return wyield_vol * calib
+            return wyield_vol * int(calib_dict[str(int(calib))])
         else:
             return nodata
         
@@ -837,10 +835,11 @@ def water_scarcity(args):
         invest_cython_core.newRasterFromBase(ws_mask, wyield_calib_path,
                                              'GTiff', nodata, gdal.GDT_Float32)
         
+    ws_band = ws_mask.GetRasterBand(1)
     wyield_calib_band = wyield_calib.GetRasterBand(1)
     wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
     
-    invest_core.vectorize2ArgOp(wyield_vol_band, tmp_calib_band, cyield_vol_op, 
+    invest_core.vectorize2ArgOp(wyield_vol_band, ws_band, cyield_vol_op, 
                                 wyield_calib_band)
     
     #Create raster from land use raster, subsituting in demand value
@@ -873,11 +872,11 @@ def water_scarcity(args):
     #Get a numpy array from rasterizing the sub watershed id values into
     #a raster. The numpy array will be the sub watershed mask used for
     #calculating mean and sum values at a sub watershed basis
-    sub_mask_raster_path = intermediate_dir + os.sep + 'sub_shed_mask2.tif'
-    sub_mask = get_mask(clipped_consump, sub_mask_raster_path,
-                               sub_sheds, 'subws_id')
+    sub_mask = get_mask(clipped_consump, sub_mask_raster_path, sub_sheds, 
+                        'subws_id')
     sws_id_list = get_shed_ids(sub_mask, nodata)
     LOGGER.debug('shed_id_list : %s', sws_id_list)
+    
     sum_dict = {}
     sum_raster = \
         create_sum_raster(clipped_consump, consump_vol_path, sws_id_list, 
@@ -932,11 +931,9 @@ def water_scarcity(args):
     
     #Make sub watershed and watershed tables by adding values onto the tables
     #provided from sub watershed yield and watershed yield
-    sub_mask_raster_path2 = intermediate_dir + os.sep + 'sub_shed_mask3.tif'
-    sub_mask2 = get_mask(wyield_calib, sub_mask_raster_path2,
-                               sub_sheds, 'subws_id')
+    sub_mask2 = get_mask(wyield_calib, sub_mask_raster_path2, sub_sheds, 
+                         'subws_id')
     sws_id_list2 = get_shed_ids(sub_mask2, nodata)
-
     
     #cyielc_vl per watershed
     shed_subshed_map = {}
@@ -1001,11 +998,8 @@ def water_scarcity(args):
             val[index] = item[int(key)]
     LOGGER.debug('updated sws table : %s', sub_shed_table)
     
-    shed_path = output_dir + os.sep + 'water_scarcity_watershed.csv'
-    sub_shed_path = output_dir + os.sep + 'water_scarcity_subwatershed.csv'
-    
-    write_scarcity_table(water_shed_table, field_list_ws, shed_path)
-    write_scarcity_table(sub_shed_table, field_list_sws, sub_shed_path)
+    write_scarcity_table(water_shed_table, field_list_ws, ws_out_table_name)
+    write_scarcity_table(sub_shed_table, field_list_sws, sws_out_table_name)
     
 def write_scarcity_table(shed_table, field_list, file_path):
     """Creates a CSV table and writes it to disk
