@@ -214,7 +214,7 @@ def water_yield(args):
     #a raster. The numpy array will be the watershed mask used for
     #calculating mean and sum values at a per watershed basis
     shed_mask = get_mask(fractp_clipped_raster, shed_mask_raster_path,
-                               sheds, 'ws_id')
+                         sheds, 'ws_id')
     ws_id_list = get_shed_ids(shed_mask, nodata)
     
     #Create mean rasters for fractp and water yield
@@ -232,12 +232,13 @@ def water_yield(args):
                                      sub_sheds, 'subws_id', sub_mask)
     
     def volume(wyield_mn, wyield_area):
-        """Vectorized function to compute the water yield volume raster
+        """Function to compute the water yield volume raster
         
             wyield_mn - numpy array with the water yield mean raster values
             wyield_area - numpy array with the water yield area raster values
             
-            returns - water yield volume value """
+            returns - water yield volume value"""
+            
         if wyield_mn != nodata and wyield_area != nodata:
             return (wyield_mn * wyield_area / 1000)
         else:
@@ -263,7 +264,7 @@ def water_yield(args):
     wyield_ha_band = wyield_ha_raster.GetRasterBand(1)
 
     def ha_vol(wyield_vol, wyield_area):
-        """Vectorized function to compute water yield volume in units of ha
+        """Function to compute water yield volume in units of ha
         
             wyield_vol - numpy array with the water yield volume raster values
             wyield_area - numpy array with the water yield area raster values
@@ -289,12 +290,13 @@ def water_yield(args):
     precip_nodata = precip_band.GetNoDataValue()
     
     def aet(fractp, precip):
-        """Vectorized function to compute the actual evapotranspiration values
+        """Function to compute the actual evapotranspiration values
         
             fractp - numpy array with the fractp raster values
             precip - numpy array with the precipitation raster values
             
             returns - actual evapotranspiration values"""
+        
         if fractp != fractp_nodata and precip != precip_nodata:
             return fractp * precip
         else:
@@ -435,15 +437,17 @@ def sheds_map_subsheds(shape, sub_shape):
     return collection
 
 def get_operation_value(raster, id_list, shed_mask, operation):
-    """Calculates the mean per watershed or sub watershed based on groups of
-       pixels from a raster that fall within each watershed or sub watershed
+    """Calculates the mean or sum per watershed or sub watershed based on 
+       groups of pixels from a raster that fall within each watershed or sub 
+       watershed
        
-       raster - a GDAL raster dataset of the values to find the mean 
+       raster - a GDAL raster dataset of the values to find the mean or sum
        shed_shape - a OGR shapefile of either the watersheds or sub watersheds
        shed_mask - a numpy array that represents the mask for where the 
                    watersheds/sub watersheds fall on the raster
        
        returns - a dictionary whose keys are the sheds id's and values the mean
+                 or sum
     """
     LOGGER.debug('Starting get_operation_value')
     band_mean = raster.GetRasterBand(1)
@@ -492,17 +496,20 @@ def get_mask(raster, path, shed_shape, field_name):
     
     return sub_sheds_id_array
 
-def get_shed_ids(arr, nodata):
-    """
-       arr - 
-       nodata - 
+def get_shed_ids(value_array, nodata):
+    """Creates a list of unique values from the input numpy array that are not
+       a nodata value
        
-       returns - 
+       value_array - a numpy array with type of integer 
+       nodata - an integer to ignore when collecting unique values
+       
+       returns - a numpy array of only one occurence of the unique values
+                 from value_array
     """
-    tmp_ar = np.copy(arr)
-    tmp_aru = np.unique(tmp_ar.flatten())
-    tmp_ard = np.delete(tmp_aru, np.where(tmp_aru == nodata))
-    return tmp_ard
+    tmp_array = np.copy(value_array)
+    unique_array = np.unique(tmp_array.flatten())
+    result_array = np.delete(unique_array, np.where(unique_array == nodata))
+    return result_array
     
 def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     """Creates a new raster representing the area per watershed or per
@@ -542,18 +549,22 @@ def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     return raster_area
 
 def create_operation_raster(raster, path, id_list, operation, shed_mask, dict):
-    """Creates a new raster representing the mean per watershed or per
+    """Creates a new raster representing the mean or sum per watershed or per
        sub watershed 
     
        raster - a GDAL raster dataset that has the desired pixel size and
-                dimensions as well as the values we want to take the mean of
-       path - a uri string path for the creation of the mean raster
-       shed_shape - an OGR shapefile, either watershed or sub watershed
-       field_name - a string of the id field from shed_shape
+                dimensions as well as the values we want to take the mean or 
+                sum of
+       path - a uri string path for the creation of the new raster
+       id_list - a list of either the sub watershed or watershed id's
+       operation - a string of the operation to perform
        shed_mask - a numpy array representing the shed/sub shed id mask
-       
+       dict - a python dictionary to map the id's from id_list to the resulting
+              values
+              
        returns - a raster       
     """
+    
     LOGGER.debug('Starting create_operation_raster')
     raster_op = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
     band_op = raster_op.GetRasterBand(1)
@@ -641,6 +652,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
        
        returns - a GDAL raster
     """
+    
     LOGGER.debug('Starting raster_from_table_values')
     base_band = base_raster.GetRasterBand(1)
     base_nodata = base_band.GetNoDataValue()
@@ -773,16 +785,19 @@ def water_scarcity(args):
     
     nodata_vol = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
     
-    def cyield_vol_op(wyield_vol, calib):
-        """Function that computes the cyield volume
+    def cyield_vol_op(wyield_vol, shed_id):
+        """Function that computes the calibrated water yield volume
+           per sub-watershed
         
-           wyield_vol - 
-           calib - 
-           
-           returns - 
+           wyield_vol - a numpy array of water yield volume values
+           shed_id - a numpy array where the values correspond to watershed
+                     locations
+                                
+           returns - the calibrated water yield volume value
         """
-        if wyield_vol != nodata_vol and calib != nodata:
-            return wyield_vol * int(calib_dict[str(int(calib))])
+        
+        if wyield_vol != nodata_vol and shed_id != nodata:
+            return wyield_vol * int(calib_dict[str(int(shed_id))])
         else:
             return nodata
         
@@ -808,10 +823,11 @@ def water_scarcity(args):
     def lulc_demand(lulc):
         """Function that maps demand values to the corresponding lulc_id
         
-           lulc - 
+           lulc - a numpy array of the lulc code values
            
-           returns - 
+           returns - the demand value corresponding to the lulc code
         """
+        
         if str(lulc) in demand_dict:
             return int(demand_dict[str(lulc)]['demand'])
         else:
@@ -851,12 +867,13 @@ def water_scarcity(args):
     nodata_consump = sum_raster.GetRasterBand(1).GetNoDataValue()
 
     def rsupply_vol_op(wyield_calib, consump_vol):
-        """Function that computes the rsupply volume
+        """Function that computes the realized water supply volume
         
-           wyield_calib - 
-           consump_vol - 
+           wyield_calib - a numpy array with the calibrated water yield values
+           consump_vol - a numpy array with the total water consumptive use
+                         values
            
-           returns - 
+           returns - the realized water supply volume value
         """
         if (wyield_calib != nodata_calib and consump_vol != nodata_consump):
             return wyield_calib - consump_vol
@@ -872,13 +889,16 @@ def water_scarcity(args):
     
     
     def rsupply_mean_op(wyield_mean, consump_mean):
-        """Function that computes the mean rsupply
+        """Function that computes the mean realized water supply
         
-           wyield_mean - 
-           consump_mean - 
+           wyield_mean - a numpy array with the mean calibrated water yield 
+                         values
+           consump_mean - a numpy array with the mean water consumptive use
+                         values 
            
-           returns - 
+           returns - the mean realized water supply value
         """
+        
         return wyield_mean - consump_mean
 
     invest_core.vectorizeRasters([wyield_mean, mean_raster], rsupply_mean_op, 
@@ -986,7 +1006,8 @@ def write_scarcity_table(shed_table, field_list, file_path):
     shed_file.close()
 
 def sum_mean_dict(dict1, dict2, op):
-    """
+    """Creates a dictionary by calculating the mean or sum of values over
+       sub watersheds for the watershed
     
        dict1 - a dictionary whose keys are the watershed id's, which point to
                a python list whose values are the sub wateshed id's that fall
@@ -1162,6 +1183,14 @@ def valuation(args):
                         options = ['ATTRIBUTE=subws_id'])
     
     def npv_op(hp_val):
+        """Maps the net present value to the correct sub watershed
+        
+           hp_val - a numpy array with values of the sub watershed id's, which
+                    correspond to their location
+        
+           returns - the correct net present value at the correct location
+        """
+
         if hp_val != -1:
             return sws_npv_dict[str(int(hp_val))]
         else:
@@ -1187,6 +1216,14 @@ def valuation(args):
                         options = ['ATTRIBUTE=subws_id'])
     
     def energy_op(energy_val):
+        """Maps the energy value to the correct sub watershed
+        
+           energy_val - a numpy array with values of the sub watershed id's, which
+                        correspond to their location
+        
+           returns - the correct energy value at the correct location
+        """
+
         if energy_val != -1:
             return sws_energy_dict[str(int(energy_val))]
         else:
