@@ -309,15 +309,15 @@ def water_yield(args):
     wsr = sheds_map_subsheds(sheds, sub_sheds)
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
-        get_mean(precip_raster, sws_id_list, sub_mask)
+        get_operation_value(precip_raster, sws_id_list, sub_mask, 'mean')
     sub_value_dict['PET_mn'] = \
-        get_mean(ape_raster, sws_id_list, sub_mask)
+        get_operation_value(ape_raster, sws_id_list, sub_mask, 'mean')
     sub_value_dict['AET_mn'] = \
-        get_mean(aet_raster, sws_id_list, sub_mask)
+        get_operation_value(aet_raster, sws_id_list, sub_maskj, 'mean')
     sub_value_dict['wyield_mn'] = \
-        get_mean(wyield_raster, sws_id_list, sub_mask)
+        get_operation_value(wyield_raster, sws_id_list, sub_mask, 'mean')
     sub_value_dict['wyield_sum'] = \
-        get_sum(wyield_raster, sws_id_list, sub_mask)
+        get_operation_value(wyield_raster, sws_id_list, sub_mask, 'sum')
     
     sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum']
@@ -327,15 +327,15 @@ def water_yield(args):
     #Create the water yield watershed table
     value_dict = {}
     value_dict['precip_mn'] = \
-        get_mean(precip_raster, ws_id_list, shed_mask)
+        get_operation_value(precip_raster, ws_id_list, shed_mask, 'mean')
     value_dict['PET_mn'] = \
-        get_mean(ape_raster, ws_id_list, shed_mask)
+        get_operation_value(ape_raster, ws_id_list, shed_mask, 'mean')
     value_dict['AET_mn'] = \
-        get_mean(aet_raster, ws_id_list, shed_mask)
+        get_operation_value(aet_raster, ws_id_list, shed_mask, 'mean')
     value_dict['wyield_mn'] = \
-        get_mean(wyield_raster, ws_id_list, shed_mask)
+        get_operation_value(wyield_raster, ws_id_list, shed_mask, 'mean')
     value_dict['wyield_sum'] = \
-        get_sum(wyield_raster, ws_id_list, shed_mask)
+        get_operation_value(wyield_raster, ws_id_list, shed_mask, 'sum')
     
     field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
                   'wyield_sum']
@@ -431,7 +431,7 @@ def sheds_map_subsheds(shape, sub_shape):
         
     return collection
 
-def get_mean(raster, id_list, shed_mask):
+def get_operation_value(raster, id_list, shed_mask, operation):
     """Calculates the mean per watershed or sub watershed based on groups of
        pixels from a raster that fall within each watershed or sub watershed
        
@@ -442,7 +442,7 @@ def get_mean(raster, id_list, shed_mask):
        
        returns - a dictionary whose keys are the sheds id's and values the mean
     """
-    LOGGER.debug('Starting get_mean')
+    LOGGER.debug('Starting get_operation_value')
     band_mean = raster.GetRasterBand(1)
     pixel_data_array = np.copy(band_mean.ReadAsArray())
     sub_sheds_id_array = np.copy(shed_mask)
@@ -454,37 +454,12 @@ def get_mean(raster, id_list, shed_mask):
         set_mask_val = sub_sheds_id_array == id
         masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
-        mean = sum(comp_array) / len(comp_array)
-        dict[id] = mean
-        
-    return dict
-
-def get_sum(raster, id_list, shed_mask):
-    """Calculates the sum per watershed or sub watershed based on groups of
-       pixels from a raster that fall within each watershed or sub watershed
-       
-       raster - a GDAL raster dataset of the values to find the sum
-       shed_shape - a OGR shapefile of either the watersheds or sub watersheds
-       field_name - a string of the id field name from shed_shape
-       shed_mask - a numpy array that represents the mask for where the 
-                   watersheds/sub watersheds fall on the raster
-       
-       returns - a dictionary whose keys are the sheds id's and values the sum
-    """
-    LOGGER.debug('Starting get_sum')
-    band_sum = raster.GetRasterBand(1)
-    pixel_data_array = np.copy(band_sum.ReadAsArray())
-    sub_sheds_id_array = np.copy(shed_mask)
-    new_data_array = np.copy(pixel_data_array)
-    dict = {}
-
-    for id in id_list:
-        mask_val = sub_sheds_id_array != id
-        set_mask_val = sub_sheds_id_array == id
-        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
-        comp_array = np.ma.compressed(masked_array)
-        sum_val = sum(comp_array)
-        dict[id] = sum_val
+        op_val = None
+        if operation == 'mean':
+            op_val = sum(comp_array) / len(comp_array)
+        else:
+            op_val = sum(comp_array)
+        dict[id] = op_val
         
     return dict
 
@@ -588,7 +563,7 @@ def create_operation_raster(raster, path, id_list, operation, shed_mask, dict):
         op_val = None
         if operation == 'mean':
             op_val = sum(comp_array) / len(comp_array)
-        elif operation == 'sum':
+        else:
             op_val = sum(comp_array)
         np.putmask(new_data_array, set_mask_val, op_val)
         dict[id] = op_val
@@ -919,7 +894,7 @@ def water_scarcity(args):
     new_keys_sws = {}
     
     field_name = 'ws_id'
-    cyield_d = get_mean(wyield_calib, sws_id_list2, sub_mask2)
+    cyield_d = get_operation_value(wyield_calib, sws_id_list2, sub_mask2, 'mean')
     cyield_vol_d = sum_mean_dict(shed_subshed_map, cyield_d, 'sum')
     new_keys_ws['cyield_vl'] = cyield_vol_d
     new_keys_sws['cyield_vl'] = cyield_d
@@ -937,7 +912,7 @@ def water_scarcity(args):
     #rsupply_vl per watershed
     rsupply_vl_raster = gdal.Open(rsupply_vol_path)
     field_name = 'ws_id'
-    rsupply_vl_d = get_mean(rsupply_vl_raster, sws_id_list2, sub_mask2)
+    rsupply_vl_d = get_operation_value(rsupply_vl_raster, sws_id_list2, sub_mask2, 'mean')
     rsupply_vl_dt = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'sum')
     new_keys_ws['rsupply_vl'] = rsupply_vl_dt
     new_keys_sws['rsupply_vl'] = rsupply_vl_d
@@ -945,7 +920,7 @@ def water_scarcity(args):
     #rsupply_mn per watershed
     rsupply_mn_raster = gdal.Open(rsupply_mean_path)
     field_name = 'ws_id'
-    rsupply_mn_d = get_mean(rsupply_mn_raster, sws_id_list2, sub_mask2)
+    rsupply_mn_d = get_operation_value(rsupply_mn_raster, sws_id_list2, sub_mask2, 'mean')
     rsupply_mn_dt = sum_mean_dict(shed_subshed_map, rsupply_mn_d, 'mean')
     new_keys_ws['rsupply_mn'] = rsupply_mn_dt
     new_keys_sws['rsupply_mn'] = rsupply_mn_d
