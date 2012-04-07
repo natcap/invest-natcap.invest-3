@@ -144,7 +144,7 @@ def make_random_raster_from_base(base, low, high, out_uri):
     dataset.SetProjection(projection)
     dataset.SetGeoTransform(geotransform)
 
-    raster_data = numpy.random(low,high,(rows,cols))
+    raster_data = np.random.random_integers(low,high,(rows,cols))
     dataset.GetRasterBand(1).WriteArray(raster_data)
 
     return dataset
