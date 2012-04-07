@@ -146,6 +146,7 @@ def make_random_raster_from_base(base, low, high, out_uri):
 
     raster_data = np.random.random_integers(low,high,(rows,cols))
     dataset.GetRasterBand(1).WriteArray(raster_data)
+    dataset.GetRasterBand(1).SetNoDataValue(-1)
 
     return dataset
 
