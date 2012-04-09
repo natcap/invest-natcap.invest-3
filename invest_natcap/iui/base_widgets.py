@@ -471,6 +471,10 @@ class Label(QtGui.QLabel, DynamicPrimitive):
         self.setText(attributes['label'])
         self.setWordWrap(True)
 
+    def value(self):
+        if 'returns' in self.attributes:
+            return self.attributes['returns']
+
 class DynamicText(LabeledElement):
     """Creates an object containing a label and a sigle-line text field for
         user input.
