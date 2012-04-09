@@ -69,7 +69,7 @@ def water_yield(args):
     suffix = args['results_suffix']
     bio_dict = args['biophysical_dictionary']
     lulc_raster = args['lulc']
-    eto_raster = args['ape']
+    eto_raster = args['eto']
     precip_raster = args['precipitation']
     soil_depth_raster = args['soil_depth']
     pawc_raster = args['pawc']
@@ -305,8 +305,9 @@ def water_yield(args):
     invest_core.vectorize2ArgOp(fractp_band, precip_band, aet, aet_band)
     
     #Create the mean actual evapotranspiration raster
+    aet_mn_dict = {}
     aet_mean = create_operation_raster(aet_raster, aet_mean_path, sws_id_list, 
-                                  'mean', sub_mask, mean_dict)
+                                  'mean', sub_mask, aet_mn_dict)
     
     #Create the water yield subwatershed table
     wsr = sheds_map_subsheds(sheds, sub_sheds)
@@ -314,9 +315,9 @@ def water_yield(args):
     sub_value_dict['precip_mn'] = \
         get_operation_value(precip_raster, sws_id_list, sub_mask, 'mean')
     sub_value_dict['PET_mn'] = \
-        get_operation_value(ape_raster, sws_id_list, sub_mask, 'mean')
+        get_operation_value(eto_raster, sws_id_list, sub_mask, 'mean')
     sub_value_dict['AET_mn'] = \
-        get_operation_value(aet_raster, sws_id_list, sub_maskj, 'mean')
+        get_operation_value(aet_raster, sws_id_list, sub_mask, 'mean')
     sub_value_dict['wyield_mn'] = \
         get_operation_value(wyield_raster, sws_id_list, sub_mask, 'mean')
     sub_value_dict['wyield_sum'] = \
@@ -332,7 +333,7 @@ def water_yield(args):
     value_dict['precip_mn'] = \
         get_operation_value(precip_raster, ws_id_list, shed_mask, 'mean')
     value_dict['PET_mn'] = \
-        get_operation_value(ape_raster, ws_id_list, shed_mask, 'mean')
+        get_operation_value(eto_raster, ws_id_list, shed_mask, 'mean')
     value_dict['AET_mn'] = \
         get_operation_value(aet_raster, ws_id_list, shed_mask, 'mean')
     value_dict['wyield_mn'] = \
