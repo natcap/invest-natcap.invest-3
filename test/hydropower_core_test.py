@@ -20,23 +20,88 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestHydropowerCore(unittest.TestCase):
     """Main testing class for the water yield tests"""
-#    def test_water_yield_re(self):
-#        base = './data/hydropower_data/'
-#        args = {}
-#        args['workspace_dir'] = base
-#        args['lulc_uri'] = base + 'test_input/landuse_90'
-#        args['soil_depth_uri'] = base + 'test_input/soil_depth'
-#        args['precipitation_uri'] = base + 'test_input/precip'
-#        args['pawc_uri'] = base + 'test_input/pawc'
-#        args['ape_uri'] = base + 'test_input/eto'
-#        args['watersheds_uri'] = base + 'test_input/watersheds.shp'
-#        args['sub_watersheds_uri'] = base + 'test_input/subwatersheds.shp'
-#        args['biophysical_table_uri'] = \
-#            base + 'test_input/Biophysical_Models.csv'
-#        args['zhang'] = 5.0
-#        
-#        water_yield.execute(args)
+    def test_water_yield_re(self):
+        base = './data/hydropower_data/'
+        output_base = './data/test_out/water_yield_out/'
+        args = {}
+        args['workspace_dir'] = base
+        args['lulc'] = gdal.Open(base + 'test_input/landuse_90')
+        args['soil_depth'] = gdal.Open(base + 'test_input/soil_depth')
+        args['precipitation'] = gdal.Open(base + 'test_input/precip')
+        args['pawc'] = gdal.Open(base + 'test_input/pawc')
+        args['eto'] = gdal.Open(base + 'test_input/eto')
+        args['watersheds'] = ogr.Open(base + 'test_input/watersheds.shp')
+        args['sub_watersheds'] = ogr.Open(base + 'test_input/subwatersheds.shp')
+        args['seasonality_constant'] = 5
 
+        biophysical_table_uri = base + 'test_input/Biophysical_Models.csv'
+        
+        #Create the output directories
+        for folder_name in ['Output', 'Service', 'Intermediate']:
+            folder_path = output_base + os.sep + folder_name
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
+                
+        pixel_dir = output_base + os.sep + 'Output/Pixel'
+        
+        if not os.path.isdir(pixel_dir):
+            os.mkdir(pixel_dir)
+        
+        #Open/read in the csv files into a dictionary and add to arguments
+        biophysical_table_map = {}
+        biophysical_table_file = open(biophysical_table_uri)
+        reader = csv.DictReader(biophysical_table_file)
+        for row in reader:
+            biophysical_table_map[row['lucode']] = row
+        
+        args['biophysical_dictionary'] = biophysical_table_map
+        
+        water_yield.execute(args)
+        
+        regression_dir = './data/hydropower_regression_data/'
+        reg_pixel_aet_uri = regression_dir + 'aet_regression.tif'
+        reg_pixel_fractp_uri = regression_dir + 'fractp_regression.tif'
+        reg_pixel_wyield_uri = regression_dir + 'wyield_regression.tif'
+        reg_fractp_mn_uri = regression_dir + 'fractp_mn_regression.tif'
+        reg_wyield_ha_uri = regression_dir + 'wyield_ha_regression.tif'
+        reg_wyield_vol_uri = regression_dir + 'wyield_vol_regression.tif'
+        reg_wyield_mn_uri = regression_dir + 'wyield_mn_regression.tif'
+        reg_aet_mn_uri = regression_dir + 'aet_mn_regression.tif'
+        reg_ws_table_uri = regression_dir + 'ws_wyield_table_regression.csv'
+        reg_sws_table_uri = regression_dir + 'sws_wyield_table_regression.csv'
+        
+        pixel_aet_uri = output_base + 'Pixel/aet_regression.tif'
+        pixel_fractp_uri = output_base + 'Pixel/fractp_regression.tif'
+        pixel_wyield_uri = output_base + 'Pixel/wyield_regression.tif'
+        fractp_mn_uri = output_base + 'Output/fractp_mn_regression.tif'
+        wyield_ha_uri = output_base + 'Service/wyield_ha_regression.tif'
+        wyield_vol_uri = output_base + 'Service/wyield_vol_regression.tif'
+        wyield_mn_uri = output_base + 'Service/wyield_mn_regression.tif'
+        aet_mn_uri = output_base + 'Output/aet_mn_regression.tif'
+        ws_table_uri = output_base + 'Output/ws_wyield_table_regression.csv'
+        sws_table_uri = output_base + 'Output/sws_wyield_table_regression.csv'
+        
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_pixel_aet_uri, 
+                                                  pixel_aet_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_pixel_fractp_uri, 
+                                                  pixel_fractp_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_pixel_wyield_uri, 
+                                                  pixel_wyield_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_fractp_mn_uri, 
+                                                  fractp_mn_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_wyield_ha_uri, 
+                                                  wyield_ha_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_wyield_vol_uri, 
+                                                  wyield_vol_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_wyield_mn_uri, 
+                                                  wyield_mn_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_aet_mn_uri, 
+                                                  aet_mn_uri)
+#        invest_test_core.assertTwoCSVEqualURI(self, reg_ws_table_uri, 
+#                                                  ws_table_uri)
+#        invest_test_core.assertTwoCSVEqualURI(self, reg_sws_table_uri, 
+#                                                  sws_table_uri)
+#        
 #    def test_create_raster(self):
 #        #TEST create_etk_root function to see how it handles if a LULC Code
 #         in the table does not exist on the lulc raster
