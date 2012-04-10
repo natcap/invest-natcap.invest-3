@@ -157,7 +157,36 @@ def assertTwoCSVEqual(unitTest, a, b):
 
     unitTest.assertEqual(a_list.shape, b_list.shape)
     unitTest.assertTrue((a_list==b_list).all())
-    
+  
+def make_random_raster_from_base(base, low, high, out_uri):
+    """Create a new, GDAL raster dataset with the spatial references,
+        dimensions and geotranforms of the base GDAL raster dataset that 
+        contains random integer values ranging from low to high.
+        
+        base - a the GDAL raster dataset to base output size, and transforms on
+        low - low integer range of random numbers
+        high - high (inclusive) integer range of random numbers
+        out_uri - a string URI to the new output raster dataset.
+                
+        returns a new GDAL raster dataset of the same size and projection as
+        base with random numbers ranging from low to high."""
+
+    projection = base.GetProjection()
+    geotransform = base.GetGeoTransform()
+    driver = gdal.GetDriverByName('GTiff')
+    dataset_type = gdal.GDT_Int32
+    rows = base.RasterYSize
+    cols = base.RasterXSize
+    dataset = driver.Create(out_uri, cols, rows, 1, dataset_type)
+    dataset.SetProjection(projection)
+    dataset.SetGeoTransform(geotransform)
+
+    raster_data = np.random.random_integers(low,high,(rows,cols))
+    dataset.GetRasterBand(1).WriteArray(raster_data)
+    dataset.GetRasterBand(1).SetNoDataValue(-1)
+
+    return dataset
+  
 def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff', min=0.0, max=1.0,
                      type='int', projection=None, geotransform=None):
     """Create a new raster with random int values.
