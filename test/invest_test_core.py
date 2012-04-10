@@ -9,6 +9,7 @@ import numpy as np
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+import csv
 
 logger = logging.getLogger('invest_core')
 
@@ -121,6 +122,42 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
     shape.Destroy()
     shape_regression.Destroy()
 
+def assertTwoCSVEqualURI(unitTest, aUri, bUri):
+    """Tests if csv files a and b are 'almost equal' to each other on a per
+        cell basis
+        
+        unitTest - an instance of a unittest object
+        aUri - a URI to a csv file
+        bUri - a URI to a csv file
+        
+        returns True if a and b are equal to each other"""
+
+    assertTwoCSVEqual(unitTest, open(aUri), open(bUri))
+
+def assertTwoCSVEqual(unitTest, a, b):
+    """Tests if csv files a and b are 'almost equal' to each other on a per
+        cell basis
+        
+        unitTest - an instance of a unittest object
+        a - a csv file
+        b - a csv file
+        
+        returns True if a and b are equal to each other"""
+        
+    reader_a = csv.reader(a)
+    reader_b = csv.reader(b)
+    a_list = np.array([])
+    b_list = np.array([])
+    
+    for row in reader_a:
+        np.append(a_list, row)
+
+    for row in reader_b:
+        np.append(b_list, row)
+
+    unitTest.assertEqual(a_list.shape, b_list.shape)
+    unitTest.assertTrue((a_list==b_list).all())
+    
 def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff', min=0.0, max=1.0,
                      type='int', projection=None, geotransform=None):
     """Create a new raster with random int values.
