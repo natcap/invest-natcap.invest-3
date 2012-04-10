@@ -307,7 +307,7 @@ def water_yield(args):
     #Create the mean actual evapotranspiration raster
     aet_mn_dict = {}
     aet_mean = create_operation_raster(aet_raster, aet_mean_path, sws_id_list, 
-                                  'mean', sub_mask, aet_mn_dict)
+                                       'mean', sub_mask, aet_mn_dict)
     
     #Create the water yield subwatershed table
     wsr = sheds_map_subsheds(sheds, sub_sheds)
