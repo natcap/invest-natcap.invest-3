@@ -98,18 +98,18 @@ def water_yield(args):
     fractp_clipped_path = \
         output_dir + os.sep + 'Pixel/fractp' + suffix_tif
     wyield_clipped_path = \
-        intermediate_dir + os.sep + 'Pixel/wyield' + suffix_tif
+        output_dir + os.sep + 'Pixel/wyield' + suffix_tif
     
     #Paths for the fractp mean and water yield mean, area, and volume rasters
     fractp_mean_path = output_dir + os.sep + 'fractp_mn' + suffix_tif
     wyield_mean_path = service_dir + os.sep + 'wyield_mn' + suffix_tif
     wyield_area_path = intermediate_dir + os.sep + 'wyield_area' + suffix_tif
     wyield_volume_path = \
-        service_dir + os.sep + 'wyield_volume' + suffix_tif
+        service_dir + os.sep + 'wyield_vol' + suffix_tif
     wyield_ha_path = service_dir + os.sep + 'wyield_ha' + suffix_tif
     
     #Paths for the actual evapotranspiration rasters
-    aet_path = intermediate_dir + os.sep + 'Pixel/aet' + suffix_tif
+    aet_path = output_dir + os.sep + 'Pixel/aet' + suffix_tif
     aet_mean_path = output_dir + os.sep + 'aet_mn' + suffix_tif
     
     #Paths for the watershed and subwatershed mask rasters
