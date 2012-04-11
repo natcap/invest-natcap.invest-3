@@ -787,7 +787,7 @@ class FileButton(QtGui.QPushButton):
     def __init__(self, text, URIfield, filetype='file'):
         super(FileButton, self).__init__()
         self.text = text
-        self.setIcon(QtGui.QIcon(CMD_FOLDER + '/document-open.png'))
+        self.setIcon(QtGui.QIcon(CMD_FOLDER + '/iui/document-open.png'))
         self.URIfield = URIfield
         self.filetype = filetype
 
@@ -1029,7 +1029,7 @@ class OperationDialog(QtGui.QDialog):
         self.setLayout(QtGui.QVBoxLayout())
         self.setWindowTitle("Running the model")
         self.setGeometry(400, 400, 700, 400)
-        self.setWindowIcon(QtGui.QIcon('natcap_logo.png'))
+        self.setWindowIcon(QtGui.QIcon('warp/natcap_logo.png'))
 
         self.cancel = False
 
@@ -1061,8 +1061,8 @@ class OperationDialog(QtGui.QDialog):
 #        self.cancelButton = QtGui.QPushButton(' Cancel')
 
         #add button icons
-        self.quitButton.setIcon(QtGui.QIcon('dialog-close.png'))
-        self.backButton.setIcon(QtGui.QIcon('dialog-ok.png'))
+        self.quitButton.setIcon(QtGui.QIcon('warp/dialog-close.png'))
+        self.backButton.setIcon(QtGui.QIcon('warp/dialog-ok.png'))
 #        self.cancelButton.setIcon(QtGui.QIcon('dialog-cancel.png'))
 
         #disable the 'Back' button by default
@@ -1511,7 +1511,7 @@ class ExecRoot(Root):
             self.setWindowTitle(self.attributes['label'])
 
         self.setGeometry(400, 400, width, height)
-        self.setWindowIcon(QtGui.QIcon('natcap_logo.png'))
+        self.setWindowIcon(QtGui.QIcon('warp/natcap_logo.png'))
 
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
@@ -1553,13 +1553,13 @@ class ExecRoot(Root):
             returns nothing."""
 
         self.runButton = QtGui.QPushButton(' Run')
-        self.runButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/dialog-ok.png'))
+        self.runButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/warp/dialog-ok.png'))
 
         self.cancelButton = QtGui.QPushButton(' Quit')
-        self.cancelButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/dialog-close.png'))
+        self.cancelButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/warp/dialog-close.png'))
 
         self.resetButton = QtGui.QPushButton(' Reset')
-        self.resetButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/edit-undo.png'))
+        self.resetButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/iui/edit-undo.png'))
 
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()
