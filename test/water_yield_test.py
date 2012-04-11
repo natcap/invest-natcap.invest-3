@@ -19,19 +19,68 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestWaterYield(unittest.TestCase):
     """Main testing class for the water yield tests"""
     def test_water_yield_re(self):
-        base = './data/hydropower_data/'
+        output_base = './data/test_out/hydropower_water_yield_uri/'
+        input_dir = './data/hydropower_data/'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        
         args = {}
-        args['workspace_dir'] = base
-        args['lulc_uri'] = base + 'test_input/landuse_90'
-        args['soil_depth_uri'] = base + 'test_input/soil_depth'
-        args['precipitation_uri'] = base + 'test_input/precip'
-        args['pawc_uri'] = base + 'test_input/pawc'
-        args['eto_uri'] = base + 'test_input/eto'
-        args['watersheds_uri'] = base + 'test_input/watersheds.shp'
-        args['sub_watersheds_uri'] = base + 'test_input/subwatersheds.shp'
+        args['workspace_dir'] = output_base
+        args['lulc_uri'] = input_dir + 'test_input/landuse_90'
+        args['soil_depth_uri'] = input_dir + 'test_input/soil_depth'
+        args['precipitation_uri'] = input_dir + 'test_input/precip'
+        args['pawc_uri'] = input_dir + 'test_input/pawc'
+        args['eto_uri'] = input_dir + 'test_input/eto'
+        args['watersheds_uri'] = input_dir + 'test_input/watersheds.shp'
+        args['sub_watersheds_uri'] = input_dir + 'test_input/subwatersheds.shp'
         args['biophysical_table_uri'] = \
-            base + 'test_input/Biophysical_Models.csv'
+            input_dir + 'test_input/Biophysical_Models.csv'
         args['seasonality_constant'] = 5.0
         args['results_suffix'] = ''
         
         water_yield.execute(args)
+        
+        regression_dir = './data/hydropower_regression_data/'
+        reg_pixel_aet_uri = regression_dir + 'aet_regression.tif'
+        reg_pixel_fractp_uri = regression_dir + 'fractp_regression.tif'
+        reg_pixel_wyield_uri = regression_dir + 'wyield_regression.tif'
+        reg_fractp_mn_uri = regression_dir + 'fractp_mn_regression.tif'
+        reg_wyield_ha_uri = regression_dir + 'wyield_ha_regression.tif'
+        reg_wyield_vol_uri = regression_dir + 'wyield_vol_regression.tif'
+        reg_wyield_mn_uri = regression_dir + 'wyield_mn_regression.tif'
+        reg_aet_mn_uri = regression_dir + 'aet_mn_regression.tif'
+        reg_ws_table_uri = regression_dir + 'ws_wyield_table_regression.csv'
+        reg_sws_table_uri = regression_dir + 'sws_wyield_table_regression.csv'
+        
+        pixel_aet_uri = output_base + 'Output/Pixel/aet.tif'
+        pixel_fractp_uri = output_base + 'Output/Pixel/fractp.tif'
+        pixel_wyield_uri = output_base + 'Output/Pixel/wyield.tif'
+        fractp_mn_uri = output_base + 'Output/fractp_mn.tif'
+        wyield_ha_uri = output_base + 'Service/wyield_ha.tif'
+        wyield_vol_uri = output_base + 'Service/wyield_vol.tif'
+        wyield_mn_uri = output_base + 'Service/wyield_mn.tif'
+        aet_mn_uri = output_base + 'Output/aet_mn.tif'
+        ws_table_uri = output_base + 'Output/water_yield_watershed.csv'
+        sws_table_uri = output_base + 'Output/water_yield_subwatershed.csv'
+        
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_pixel_aet_uri, 
+                                                  pixel_aet_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_pixel_fractp_uri, 
+                                                  pixel_fractp_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_pixel_wyield_uri, 
+                                                  pixel_wyield_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_fractp_mn_uri, 
+                                                  fractp_mn_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_wyield_ha_uri, 
+                                                  wyield_ha_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_wyield_vol_uri, 
+                                                  wyield_vol_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_wyield_mn_uri, 
+                                                  wyield_mn_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_aet_mn_uri, 
+                                                  aet_mn_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_ws_table_uri, 
+                                              ws_table_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_sws_table_uri, 
+                                              sws_table_uri)
