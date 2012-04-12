@@ -134,8 +134,25 @@ def water_yield(args):
     #Create root raster from table values to use in future calculations
     tmp_root_raster = raster_from_table_values(lulc_raster, tmp_root_path, 
                                                bio_dict, 'root_depth')
+   
+    #Get nodata values so that we can avoid any issues when running operations
+    etk_nodata = tmp_etk_raster.GetRasterBand(1).GetNoDataValue()
+    root_nodata = tmp_root_raster.GetRasterBand(1).GetNoDataValue()
+    precip_nodata = precip_raster.GetRasterBand(1).GetNoDataValue()
+    eto_nodata = eto_raster.GetRasterBand(1).GetNoDataValue()
+    soil_depth_nodata = soil_depth_raster.GetRasterBand(1).GetNoDataValue()
+    pawc_nodata = pawc_raster.GetRasterBand(1).GetNoDataValue()
     
-    def fractp(etk, eto, precip, root, soil, pawc):
+    #Dictionary of nodata values corresponding to values for fractp_op that 
+    #will help avoid any nodata calculation issues
+    fractp_nodata = {'etk':etk_nodata, 
+                     'root':root_nodata,
+                     'precip':precip_nodata,
+                     'eto':eto_nodata,
+                     'soil':soil_depth_nodata,
+                     'pawc':pawc_nodata}
+    
+    def fractp_op(etk, eto, precip, root, soil, pawc):
         """Function that calculates the fractp (actual evapotranspiration
            fraction of precipitation) raster
         
@@ -152,7 +169,19 @@ def water_yield(args):
             
         returns - fractp value"""
         
+        #If any of the local variables which are in the 'fractp_nodata' 
+        #dictionary are equal to a nodata value, then return nodata
+        for var_name, value in locals().items():
+            if var_name in fractp_nodata and value == fractp_nodata[var_name]:
+                return nodata
+        
         tmp_pet = (etk * eto) / 1000
+        
+        #Check to make sure that variables are not zero to avoid dividing by
+        #zero error
+        if precip == 0 or tmp_pet == 0:
+            return nodata
+        
         tmp_DI = tmp_pet / precip        
         awc = (np.minimum(root, soil) * pawc)        
         tmp_w = (awc / (precip + 1)) * seasonality_constant
@@ -169,10 +198,12 @@ def water_yield(args):
         
         return fractp
     
+    fractp_vec = np.vectorize(fractp_op)
+    
     #Create the fractp raster
     raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
                    soil_depth_raster, pawc_raster]
-    fractp_raster = invest_core.vectorizeRasters(raster_list, fractp, 
+    fractp_raster = invest_core.vectorizeRasters(raster_list, fractp_vec, 
                                                  rasterName=fractp_path)
     
     def wyield(fractp, precip):
@@ -658,7 +689,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
     LOGGER.debug('Starting raster_from_table_values')
     base_band = base_raster.GetRasterBand(1)
     base_nodata = base_band.GetNoDataValue()
-
+    LOGGER.debug('raster_from_table_values.base_nodata : %s', base_nodata)
     tmp_raster = \
         invest_cython_core.newRasterFromBase(base_raster, new_path, 'GTiff', 
                                              base_nodata, gdal.GDT_Float32)
