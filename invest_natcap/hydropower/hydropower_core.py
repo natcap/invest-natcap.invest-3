@@ -145,7 +145,7 @@ def water_yield(args):
     
     #Dictionary of nodata values corresponding to values for fractp_op that 
     #will help avoid any nodata calculation issues
-    fractp_nodata = {'etk':etk_nodata, 
+    fractp_nodata_dict = {'etk':etk_nodata, 
                      'root':root_nodata,
                      'precip':precip_nodata,
                      'eto':eto_nodata,
@@ -169,10 +169,10 @@ def water_yield(args):
             
         returns - fractp value"""
         
-        #If any of the local variables which are in the 'fractp_nodata' 
+        #If any of the local variables which are in the 'fractp_nodata_dict' 
         #dictionary are equal to a nodata value, then return nodata
         for var_name, value in locals().items():
-            if var_name in fractp_nodata and value == fractp_nodata[var_name]:
+            if var_name in fractp_nodata_dict and value == fractp_nodata_dict[var_name]:
                 return nodata
         
         tmp_pet = (etk * eto) / 1000
@@ -206,6 +206,8 @@ def water_yield(args):
     fractp_raster = invest_core.vectorizeRasters(raster_list, fractp_vec, 
                                                  rasterName=fractp_path)
     
+    fractp_nodata = fractp_raster.GetRasterBand(1).GetNoDataValue()
+    
     def wyield(fractp, precip):
         """Function that calculates the water yeild raster
         
@@ -213,8 +215,11 @@ def water_yield(args):
            precip - numpy array with the precipitation raster values
            
            returns - water yield value"""
-           
-        return (1 - fractp) * precip
+        
+        if fractp == fractp_nodata or precip == precip_nodata:
+            return nodata
+        else:
+            return (1 - fractp) * precip
     
     #Create the water yield raster 
     wyield_raster = \
@@ -316,9 +321,7 @@ def water_yield(args):
                                              nodata, gdal.GDT_Float32)
         
     aet_band = aet_raster.GetRasterBand(1)
-    fractp_band = fractp_clipped_raster.GetRasterBand(1)
-    fractp_nodata = fractp_band.GetNoDataValue()
-    precip_nodata = precip_band.GetNoDataValue()
+    fractp_clipped_band = fractp_clipped_raster.GetRasterBand(1)
     
     def aet(fractp, precip):
         """Function to compute the actual evapotranspiration values
@@ -333,7 +336,7 @@ def water_yield(args):
         else:
             return nodata
     
-    invest_core.vectorize2ArgOp(fractp_band, precip_band, aet, aet_band)
+    invest_core.vectorize2ArgOp(fractp_clipped_band, precip_band, aet, aet_band)
     
     #Create the mean actual evapotranspiration raster
     aet_mn_dict = {}
