@@ -658,30 +658,28 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
     LOGGER.debug('Starting raster_from_table_values')
     base_band = base_raster.GetRasterBand(1)
     base_nodata = base_band.GetNoDataValue()
-    array = base_band.ReadAsArray()
 
     tmp_raster = \
         invest_cython_core.newRasterFromBase(base_raster, new_path, 'GTiff', 
                                              base_nodata, gdal.GDT_Float32)
+        
+    #Add the nodata value as a field to the dictionary so that the vectorized
+    #operation can just look it up instead of having an if,else statement
+    bio_dict[base_nodata] = {field:float(base_nodata)}
     
-    #http://stackoverflow.com/questions/3403973/fast-replacement-of-values-in-a-numpy-array
-    new_array = array.astype(np.float)
+    def vop(lulc):
+        """Operation returns the 'field' value that directly corresponds to
+           it's lulc type
+           
+           lulc - a numpy array with the lulc type values as integers
+        
+           returns - the 'field' value corresponding to the lulc type
+        """
+        
+        return bio_dict[lulc][field]
     
-    for k, v in bio_dict.iteritems(): 
-        #For all the lulc codes in the dictionary, if the lulc code is found
-        #on the lulc raster, then replace that value with the corresponding
-        #desired value, else replace that value with a nodata value.
-        if (array==int(k)).any():
-            #array==int(k) provides a truth mask, so new_array[array==int(k)] 
-            #is saying to replace all of the values that are true with 
-            #float(v[field])
-            new_array[array==int(k)] = float(v[field])
-        else:
-            new_array[array==int(k)] = base_nodata
-            
-    #Write the newly developed numpy array to the raster band
-    tmp_band = tmp_raster.GetRasterBand(1)
-    tmp_band.WriteArray(new_array, 0, 0)
+    out_band = tmp_raster.GetRasterBand(1)
+    invest_core.vectorize1ArgOp(base_band, vop, out_band)
     
     return tmp_raster
 
