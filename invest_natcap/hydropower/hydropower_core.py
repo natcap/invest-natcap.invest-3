@@ -817,7 +817,7 @@ def water_scarcity(args):
     
     #Multiply calibration with wyield_vol raster to get cyield_vol
     
-    nodata_vol = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
+    wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
     
     def cyield_vol_op(wyield_vol, shed_id):
         """Function that computes the calibrated water yield volume
@@ -830,7 +830,7 @@ def water_scarcity(args):
            returns - the calibrated water yield volume value
         """
         
-        if wyield_vol != nodata_vol and shed_id != nodata:
+        if wyield_vol != wyield_vol_nodata and shed_id != nodata:
             return wyield_vol * int(calib_dict[str(int(shed_id))])
         else:
             return nodata
@@ -854,6 +854,8 @@ def water_scarcity(args):
                                                        nodata, gdal.GDT_Float32)
     tmp_consump_band = tmp_consump.GetRasterBand(1)
     
+    demand_dict[lulc_nodata] = lulc_nodata
+    
     def lulc_demand(lulc):
         """Function that maps demand values to the corresponding lulc_id
         
@@ -862,8 +864,8 @@ def water_scarcity(args):
            returns - the demand value corresponding to the lulc code
         """
         
-        if str(lulc) in demand_dict:
-            return int(demand_dict[str(lulc)]['demand'])
+        if lulc in demand_dict:
+            return demand_dict[lulc]
         else:
             return nodata
     
@@ -912,15 +914,15 @@ def water_scarcity(args):
         if (wyield_calib != nodata_calib and consump_vol != nodata_consump):
             return wyield_calib - consump_vol
         else:
-            return 0
+            return nodata
         
-    vop = np.vectorize(rsupply_vol_op)
+    rsupply_vol_vec = np.vectorize(rsupply_vol_op)
 
-    invest_core.vectorizeRasters([wyield_calib, sum_raster], vop, 
+    invest_core.vectorizeRasters([wyield_calib, sum_raster], rsupply_vol_vec, 
                                  rasterName=rsupply_vol_path)
     
-    #Make rsupply_mean by wyield_mean minus consump_mean
-    
+    wyield_mn_nodata = wyield_mean.GetRasterBand(1).GetNoDataValue()
+    mn_raster_nodata = mean_raster.GetRasterBand(1).GetNoDataValue()
     
     def rsupply_mean_op(wyield_mean, consump_mean):
         """Function that computes the mean realized water supply
@@ -932,10 +934,14 @@ def water_scarcity(args):
            
            returns - the mean realized water supply value
         """
+        if wyield_mean != wyield_mn_nodata and consump_mean != mn_raster_nodata:
+            return wyield_mean - consump_mean
+        else:
+            return nodata
         
-        return wyield_mean - consump_mean
-
-    invest_core.vectorizeRasters([wyield_mean, mean_raster], rsupply_mean_op, 
+    rsupply_mn_vec = np.vectorize(rsupply_mean_op)
+    
+    invest_core.vectorizeRasters([wyield_mean, mean_raster], rsupply_mn_vec, 
                                  rasterName=rsupply_mean_path)
     
     #Make sub watershed and watershed tables by adding values onto the tables
