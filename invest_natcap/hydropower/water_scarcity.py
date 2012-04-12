@@ -107,7 +107,7 @@ def execute(args):
     demand_table_file = open(args['demand_table_uri'])
     reader = csv.DictReader(demand_table_file)
     for row in reader:
-        demand_table_map[row['lucode']] = row
+        demand_table_map[int(row['lucode'])] = int(row['demand'])
     
     water_scarcity_args['demand_table'] = demand_table_map
     demand_table_file.close()
