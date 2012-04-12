@@ -95,7 +95,8 @@ def execute(args):
     biophysical_table_file = open(args['biophysical_table_uri'])
     reader = csv.DictReader(biophysical_table_file)
     for row in reader:
-        biophysical_table_map[row['lucode']] = row
+        biophysical_table_map[int(row['lucode'])] = \
+            {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
     
     water_yield_args['biophysical_dictionary'] = biophysical_table_map
 
