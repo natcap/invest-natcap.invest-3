@@ -120,13 +120,13 @@ class TestHydropowerCore(unittest.TestCase):
         if not os.path.isdir(output_base):
             os.mkdir(output_base)
         
-        dict = {1 : {'etk': '25'}, 2: {'etk': '1000'}, 
-                3 : {'etk': '250'}, 4: {'etk': '500'}}
+        dict = {1 : {'etk': 25.0}, 2: {'etk': 1000.0}, 
+                3 : {'etk': 250.0}, 4: {'etk': 500.0}}
         
         driver = gdal.GetDriverByName("GTIFF")
         #Create a blank xDim x yDim raster
         lulc = driver.Create(output_base + 'test_10x10_lulc.tif', 10,
-                             10, 1, gdal.GDT_Float32)
+                             10, 1, gdal.GDT_Int32)
         lulc.GetRasterBand(1).SetNoDataValue(255)
         #Fill raster with nodata 
         lulc.GetRasterBand(1).Fill(lulc.GetRasterBand(1).GetNoDataValue())
@@ -160,7 +160,7 @@ class TestHydropowerCore(unittest.TestCase):
                       [500, 500, 1000, 1000, 25, 255, 255, 255, 255, 1000]])
         
         array_result = new_raster.GetRasterBand(1).ReadAsArray()
-        
+        LOGGER.debug('array_result : %s', array_result)
         self.assertTrue((array_result==result_array).all())
 
     def test_hydropower_core_raster_from_table_values_re(self):
@@ -183,8 +183,9 @@ class TestHydropowerCore(unittest.TestCase):
         biophysical_table_file = open(input_dir + 'Biophysical_Models.csv')
         reader = csv.DictReader(biophysical_table_file)
         for row in reader:
-            bio_dict[row['lucode']] = row
-    
+            bio_dict[int(row['lucode'])] = \
+                {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
+            
         new_path = output_base + 'test_etk_reg.tif'
         
         new_raster = \
