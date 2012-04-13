@@ -831,7 +831,7 @@ def water_scarcity(args):
         """
         
         if wyield_vol != wyield_vol_nodata and shed_id != nodata:
-            return wyield_vol * int(calib_dict[str(int(shed_id))])
+            return wyield_vol * calib_dict[shed_id]
         else:
             return nodata
         
