@@ -116,7 +116,7 @@ def execute(args):
     hydro_cal_table_file = open(args['hydro_calibration_table_uri'])
     reader = csv.DictReader(hydro_cal_table_file)
     for row in reader:
-        hydro_cal_table_map[row['ws_id']] = row['calib']
+        hydro_cal_table_map[int(row['ws_id'])] = int(row['calib'])
         
     water_scarcity_args['hydro_calibration_table'] = hydro_cal_table_map
     hydro_cal_table_file.close()
