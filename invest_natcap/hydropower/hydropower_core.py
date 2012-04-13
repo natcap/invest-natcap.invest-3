@@ -645,7 +645,6 @@ def clip_raster_from_polygon(shape, raster, path):
     copy_band = copy_raster.GetRasterBand(1)
     #Set the copied rasters values to nodata to create a blank raster.
     nodata = copy_band.GetNoDataValue()
-    LOGGER.debug('nodata: %s', nodata)
     copy_band.Fill(nodata)
     #Rasterize the polygon layer onto the copied raster
     gdal.RasterizeLayer(copy_raster, [1], shape.GetLayer(0))
@@ -818,7 +817,7 @@ def water_scarcity(args):
     #Multiply calibration with wyield_vol raster to get cyield_vol
     
     wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
-    
+    LOGGER.info('Creating cyield raster')
     def cyield_vol_op(wyield_vol, shed_id):
         """Function that computes the calibrated water yield volume
            per sub-watershed
@@ -855,7 +854,7 @@ def water_scarcity(args):
     tmp_consump_band = tmp_consump.GetRasterBand(1)
     
     demand_dict[lulc_nodata] = lulc_nodata
-    
+    LOGGER.info('Creating demand raster')
     def lulc_demand(lulc):
         """Function that maps demand values to the corresponding lulc_id
         
@@ -870,7 +869,7 @@ def water_scarcity(args):
             return nodata
     
     invest_core.vectorize1ArgOp(lulc_band, lulc_demand, tmp_consump_band)
-    
+    LOGGER.info('Clip raster from polygons')
     clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, 
                                                clipped_consump_path)
     
@@ -879,11 +878,13 @@ def water_scarcity(args):
     #Get a numpy array from rasterizing the sub watershed id values into
     #a raster. The numpy array will be the sub watershed mask used for
     #calculating mean and sum values at a sub watershed basis
+    LOGGER.info('Get subshed mask')
     sub_mask = get_mask(clipped_consump, sub_mask_raster_path, sub_sheds, 
                         'subws_id')
+    LOGGER.info('Get the shed id')
     sws_id_list = get_shed_ids(sub_mask, nodata)
     LOGGER.debug('shed_id_list : %s', sws_id_list)
-    
+    LOGGER.info('Creating consump_vol raster')
     sum_dict = {}
     sum_raster = \
         create_operation_raster(clipped_consump, consump_vol_path, sws_id_list, 
@@ -892,6 +893,7 @@ def water_scarcity(args):
     LOGGER.debug('sum_dict : %s', sum_dict)
     
     #Take mean of consump over sub watersheds making conusmp_mean
+    LOGGER.info('Creating consump_mn raster')
     mean_dict = {}
     mean_raster = \
         create_operation_raster(clipped_consump, consump_mean_path, sws_id_list, 
@@ -901,7 +903,7 @@ def water_scarcity(args):
 
     nodata_calib = wyield_calib.GetRasterBand(1).GetNoDataValue()
     nodata_consump = sum_raster.GetRasterBand(1).GetNoDataValue()
-
+    LOGGER.info('Creating rsupply_vol raster')
     def rsupply_vol_op(wyield_calib, consump_vol):
         """Function that computes the realized water supply volume
         
@@ -923,7 +925,7 @@ def water_scarcity(args):
     
     wyield_mn_nodata = wyield_mean.GetRasterBand(1).GetNoDataValue()
     mn_raster_nodata = mean_raster.GetRasterBand(1).GetNoDataValue()
-    
+    LOGGER.info('Creating rsupply_mn raster')
     def rsupply_mean_op(wyield_mean, consump_mean):
         """Function that computes the mean realized water supply
         
@@ -1009,13 +1011,12 @@ def water_scarcity(args):
     for key, val in water_shed_table.iteritems():
         for index, item in new_keys_ws.iteritems():
             val[index] = item[key]
-    LOGGER.debug('updated ws table : %s', water_shed_table)
     
     for key, val in sub_shed_table.iteritems():
         for index, item in new_keys_sws.iteritems():
             val[index] = item[int(key)]
-    LOGGER.debug('updated sws table : %s', sub_shed_table)
     
+    LOGGER.info('Creating CSV Files')
     write_scarcity_table(water_shed_table, field_list_ws, ws_out_table_name)
     write_scarcity_table(sub_shed_table, field_list_sws, sws_out_table_name)
     
