@@ -344,6 +344,9 @@ class DynamicPrimitive(DynamicElement):
         if 'defaultValue' in self.attributes:
             self.setValue(self.attributes['defaultValue'])
 
+        if 'enabled' in self.attributes:
+            self.setState(self.attributes['enabled'])
+
     def getElementsDictionary(self):
         """Assemble a python dictionary mapping this object's string ID to its
             pointer.
