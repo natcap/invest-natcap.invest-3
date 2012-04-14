@@ -13,6 +13,7 @@ import fileio
 #This is for something
 CMD_FOLDER = '.'
 INVEST_ROOT = './'
+MIN_WIDGET_HEIGHT = 28  # used to ensure elements don't get squished
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -212,6 +213,7 @@ class DynamicGroup(DynamicElement):
             #to add a new clause to this conditional block.
             if isinstance(self.layout(), QtGui.QGridLayout):
                 j = 0
+                self.layout().setRowMinimumHeight(j, MIN_WIDGET_HEIGHT)
                 for subElement in widget.elements:
                     self.layout().addWidget(subElement, i, j)
                     j += 1
@@ -219,6 +221,7 @@ class DynamicGroup(DynamicElement):
                 if (issubclass(widget.__class__, DynamicPrimitive) and 
                     widget.display_error()):
                     i += 1 #display the error on the row below
+                    self.layout().setRowMinimumHeight(j, MIN_WIDGET_HEIGHT)
                     self.layout().addWidget(widget.error, i,
                         widget.error.get_setting('start'),
                         widget.error.get_setting('width'), 1)
@@ -426,9 +429,10 @@ class ErrorString(QtGui.QLabel):
              'width': int}"""
              
         QtGui.QLabel.__init__(self)
+        self.setMinimumHeight(MIN_WIDGET_HEIGHT)
         self._settings = display_settings
         self.setStyleSheet('QLabel { color: red; font-weight: normal; ' + 
-            'padding-bottom: 10px}')
+            '}')
         #set a stylesheet here
 
     def get_setting(self, key):
@@ -445,10 +449,12 @@ class LabeledElement(DynamicPrimitive):
         DynamicPrimitive.__init__(self, attributes)
         self.label = QtGui.QLabel(attributes['label'])
         self.elements = [self.label]
+        self.label.setMinimumHeight(MIN_WIDGET_HEIGHT)
         self.error.set_setting('start', 1)
 
     def addElement(self, element):
         self.elements.append(element)
+        element.setMinimumHeight(MIN_WIDGET_HEIGHT)
 
     def initState(self):
         if self.isEnabled():
@@ -736,6 +742,7 @@ class GridList(DynamicGroup):
             returns an instance of the GridList class."""
 
         super(GridList, self).__init__(attributes, QtGui.QGridLayout(), registrar)
+        self.layout().setVerticalSpacing(MIN_WIDGET_HEIGHT)
 
 class FileEntry(DynamicText):
     """This object represents a file.  It has three components, all of which
