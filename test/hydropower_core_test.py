@@ -762,13 +762,105 @@ class TestHydropowerCore(unittest.TestCase):
 #        
 #        
 
-#    def test_hydropower_core_water_scarcity_regression(self):
-#        """A regression test for the core water scarcity functionality
-#        
-#        """
-#        
-#        #place code here
-#        
+    def test_hydropower_core_water_scarcity_regression(self):
+        """A regression test for the core water scarcity functionality
+        
+        """
+        
+        #place code here
+        base = './data/hydropower_data'
+        output_base = './data/test_out/hydropower_water_scarcity/'
+        args = {}
+        args['workspace_dir'] = output_base
+        args['water_yield_vol_uri'] = \
+            gdal.Open(base + '/test_input/wyield_vol.tif')
+        args['water_yield_mean_uri'] = \
+            gdal.Open(base + '/test_input/wyield_mn.tif')
+        args['lulc_uri'] = gdal.Open(base + '/test_input/landuse_90')
+        args['watersheds'] = ogr.Open(base + '/test_input/watersheds.shp')
+        args['sub_watersheds'] = \
+            ogr.Open(base + '/test_input/subwatersheds.shp')
+        args['results_suffix'] = ''
+        
+        watershed_yield_table_uri = \
+            base + '/test_input/water_yield_watershed.csv'
+        subwatershed_yield_table_uri = \
+            base + '/test_input/water_yield_subwatershed.csv'
+        demand_table_uri = base + '/test_input/demand_table.csv'
+        hydro_calibration_table_uri = \
+            base + '/test_input/hydro_calibration_table.csv'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        
+        #Create the output directories
+        for folder_name in ['Output', 'Service', 'Intermediate']:
+            folder_path = output_base + os.sep + folder_name
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
+
+        #Open/read in the csv files into a dictionary and add to arguments
+        watershed_yield_table_map = {}
+        watershed_yield_table_file = open(watershed_yield_table_uri)
+        reader = csv.DictReader(watershed_yield_table_file)
+        for row in reader:
+            watershed_yield_table_map[row['ws_id']] = row
+        
+        args['watershed_yield_table'] = watershed_yield_table_map
+        watershed_yield_table_file.close()
+        
+        subwatershed_yield_table_map = {}
+        subwatershed_yield_table_file = open(subwatershed_yield_table_uri)
+        reader = csv.DictReader(subwatershed_yield_table_file)
+        for row in reader:
+            subwatershed_yield_table_map[row['subws_id']] = row
+        
+        water_scarcity_args['subwatershed_yield_table'] = \
+            subwatershed_yield_table_map
+        subwatershed_yield_table_file.close()
+        
+        demand_table_map = {}
+        demand_table_file = open(args['demand_table_uri'])
+        reader = csv.DictReader(demand_table_file)
+        for row in reader:
+            demand_table_map[int(row['lucode'])] = int(row['demand'])
+        
+        args['demand_table'] = demand_table_map
+        demand_table_file.close()
+        
+        hydro_cal_table_map = {}
+        hydro_cal_table_file = open(hydro_calibration_table_uri)
+        reader = csv.DictReader(hydro_cal_table_file)
+        for row in reader:
+            hydro_cal_table_map[int(row['ws_id'])] = int(row['calib'])
+            
+        args['hydro_calibration_table'] = hydro_cal_table_map
+        hydro_cal_table_file.close()
+        
+        hydropower_core.valuation(args)
+        
+        regression_dir = './data/hydropower_regression_data/'
+        reg_hp_energy_uri = regression_dir + 'Service/hp_energy_regression.tif'
+        reg_hp_val_uri = regression_dir + 'Service/hp_val_regression.tif'
+        reg_hp_val_ws_uri = \
+            regression_dir + 'Service/hydropower_value_watershed_regression.csv'
+        reg_hp_val_sws_uri = \
+            regression_dir + 'Service/hydropower_value_subwatershed_regression.csv'
+        
+        hp_energy_uri = output_base + 'Service/hp_energy.tif'
+        hp_val_uri = output_base + 'Service/hp_val.tif'
+        hp_val_ws_uri = output_base + 'hydropower_value_watershed.csv'
+        hp_val_sws_uri = \
+            output_base + 'Service/hydropower_value_subwatershed.csv'
+        
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_hp_energy_uri, 
+                                                  hp_energy_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_hp_val_uri, 
+                                                  hp_val_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_hp_val_ws_uri, 
+                                              hp_val_ws_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_hp_val_sws_uri, 
+                                              hp_val_sws_uri)
 
     def test_hydropower_core_write_scarcity_table(self):
         """A by hand test for the write_scarcity_table function
@@ -832,14 +924,88 @@ class TestHydropowerCore(unittest.TestCase):
             else:
                 self.fail('keys do not match')
 
-#    def test_hydropower_core_valuation_regression(self):
-#        """A regression test for the core valuation functionality
-#        
-#        """
-#        
-#        #place code here
-#        
-#                
+    def test_hydropower_core_valuation_regression(self):
+        """A regression test for the core valuation functionality
+        
+        """
+        
+        #place code here
+        base = './data/hydropower_data'
+        output_base = './data/test_out/hydropower_valuation/'
+        args = {}
+        args['workspace_dir'] = output_base
+        args['cal_water_yield_uri'] = gdal.Open(base + '/test_input/cyield_vol.tif')
+        args['water_consump_uri'] = gdal.Open(base + '/test_input/consum_vol.tif')
+        args['watersheds'] = ogr.Open(base + '/test_input/watersheds.shp')
+        args['sub_watersheds'] = ogr.Open(base + '/test_input/subwatersheds.shp')
+        args['results_suffix'] = ''
+        
+        watershed_scarcity_table_uri = base + '/test_input/water_scarcity_watershed.csv'
+        subwatershed_scarcity_table_uri = base + '/test_input/water_scarcity_subwatershed.csv'
+        valuation_table_uri = base + '/test_input/valuation_table.csv'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        
+        #Create the output directories
+        for folder_name in ['Output', 'Service', 'Intermediate']:
+            folder_path = output_base + os.sep + folder_name
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
+
+        #Open csv tables and add to the arguments
+        valuation_table_map = {}
+        valuation_table_file = open(valuation_table_uri)
+        reader = csv.DictReader(valuation_table_file)
+        for row in reader:
+            valuation_table_map[row['ws_id']] = row
+        
+        args['valuation_table'] = valuation_table_map
+        valuation_table_file.close()
+        
+        water_scarcity_map = {}
+        water_scarcity_table_file = open(watershed_scarcity_table_uri)
+        reader = csv.DictReader(water_scarcity_table_file)
+        for row in reader:
+            water_scarcity_map[row['ws_id']] = row
+        
+        val_args['watershed_scarcity_table'] = water_scarcity_map
+        water_scarcity_table_file.close()
+    
+        subwater_scarcity_map = {}
+        subwater_scarcity_table_file = open(subwatershed_scarcity_table_uri)
+        reader = csv.DictReader(subwater_scarcity_table_file)
+        for row in reader:
+            subwater_scarcity_map[row['subws_id']] = row
+        
+        val_args['subwatershed_scarcity_table'] = subwater_scarcity_map
+        subwater_scarcity_table_file.close()    
+        
+        hydropower_core.valuation(args)
+        
+        regression_dir = './data/hydropower_regression_data/'
+        reg_hp_energy_uri = regression_dir + 'Service/hp_energy_regression.tif'
+        reg_hp_val_uri = regression_dir + 'Service/hp_val_regression.tif'
+        reg_hp_val_ws_uri = \
+            regression_dir + 'Service/hydropower_value_watershed_regression.csv'
+        reg_hp_val_sws_uri = \
+            regression_dir + 'Service/hydropower_value_subwatershed_regression.csv'
+        
+        hp_energy_uri = output_base + 'Service/hp_energy.tif'
+        hp_val_uri = output_base + 'Service/hp_val.tif'
+        hp_val_ws_uri = output_base + 'hydropower_value_watershed.csv'
+        hp_val_sws_uri = \
+            output_base + 'Service/hydropower_value_subwatershed.csv'
+        
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_hp_energy_uri, 
+                                                  hp_energy_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_hp_val_uri, 
+                                                  hp_val_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_hp_val_ws_uri, 
+                                              hp_val_ws_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_hp_val_sws_uri, 
+                                              hp_val_sws_uri)
+                
 #    def test_hydropower_core_make_raster(self):
 #        
 #        out_dir = './data/test_out/hydropower_get_mask'
