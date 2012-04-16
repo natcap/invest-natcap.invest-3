@@ -23,11 +23,17 @@ class TestWaterScarcity(unittest.TestCase):
         output_base = './data/test_out/hydropower_water_scarcity_uri/'
         input_dir = './data/hydropower_data/'
         
+        #Create the output directories
         if not os.path.isdir(output_base):
             os.mkdir(output_base)
+
+        for folder_name in ['Output', 'Service', 'Intermediate']:
+            folder_path = output_base + os.sep + folder_name
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
         
         args = {}
-        args['workspace_dir'] = input_dir
+        args['workspace_dir'] = output_base
         args['lulc_uri'] = input_dir + 'test_input/landuse_90'
         args['watersheds_uri'] = input_dir + 'test_input/watersheds.shp'
         args['sub_watersheds_uri'] = input_dir + 'test_input/subwatersheds.shp'
