@@ -708,9 +708,11 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
         
            returns - the 'field' value corresponding to the lulc type
         """
+        if lulc in bio_dict:
+            return bio_dict[lulc][field]
+        else:
+            return base_nodata
         
-        return bio_dict[lulc][field]
-    
     out_band = tmp_raster.GetRasterBand(1)
     invest_core.vectorize1ArgOp(base_band, vop, out_band)
     
