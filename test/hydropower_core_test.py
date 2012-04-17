@@ -840,27 +840,40 @@ class TestHydropowerCore(unittest.TestCase):
         hydropower_core.valuation(args)
         
         regression_dir = './data/hydropower_regression_data/'
-        reg_hp_energy_uri = regression_dir + 'Service/hp_energy_regression.tif'
-        reg_hp_val_uri = regression_dir + 'Service/hp_val_regression.tif'
-        reg_hp_val_ws_uri = \
-            regression_dir + 'Service/hydropower_value_watershed_regression.csv'
-        reg_hp_val_sws_uri = \
-            regression_dir + 'Service/hydropower_value_subwatershed_regression.csv'
+        reg_consum_vol_uri = regression_dir + 'Output/consum_vol_regression.tif'
+        reg_consum_mn_uri = regression_dir + 'Output/consum_mn_regression.tif'
+        reg_rsup_vol_uri = regression_dir + 'Output/rsup_vol_regression.tif'
+        reg_rsup_mn_uri = regression_dir + 'Output/rsup_mn_regression.tif'
+        reg_cyield_vol_uri = regression_dir + 'Output/cyield_vol_regression.tif'
+        reg_ws_table_uri = \
+            regression_dir + 'Output/water_scarcity_watershed_regression.csv'
+        reg_sws_table_uri = \
+            regression_dir + 'Output/water_scarcity_subwatershed_regression.csv'
         
-        hp_energy_uri = output_base + 'Service/hp_energy.tif'
-        hp_val_uri = output_base + 'Service/hp_val.tif'
-        hp_val_ws_uri = output_base + 'hydropower_value_watershed.csv'
-        hp_val_sws_uri = \
-            output_base + 'Service/hydropower_value_subwatershed.csv'
+        consum_vol_uri = output_base + 'Output/consum_vol.tif'
+        consum_mn_uri = output_base + 'Output/consum_mn.tif'
+        rsup_vol_uri = output_base + 'Output/rsup_vol.tif'
+        rsup_mn_uri = output_base + 'Output/rsup_mn.tif'
+        cyield_vol_uri = output_base + 'Output/cyield_vol.tif'
         
-        invest_test_core.assertTwoDatasetEqualURI(self, reg_hp_energy_uri, 
-                                                  hp_energy_uri)
-        invest_test_core.assertTwoDatasetEqualURI(self, reg_hp_val_uri, 
-                                                  hp_val_uri)
-        invest_test_core.assertTwoCSVEqualURI(self, reg_hp_val_ws_uri, 
-                                              hp_val_ws_uri)
-        invest_test_core.assertTwoCSVEqualURI(self, reg_hp_val_sws_uri, 
-                                              hp_val_sws_uri)
+        ws_table_uri = output_base + 'Output/water_scarcity_watershed.csv'
+        sws_table_uri = \
+            output_base + 'Output/water_scarcity_subwatershed.csv'
+        
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_consum_vol_uri, 
+                                                  consum_vol_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_consum_mn_uri, 
+                                                  consum_mn_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rsup_vol_uri, 
+                                                  rsup_vol_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rsup_mn_uri, 
+                                                  rsup_mn_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_cyield_vol_uri, 
+                                                  cyield_vol_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_ws_table_uri, 
+                                              ws_table_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_sws_table_uri, 
+                                              sws_table_uri)
 
     def test_hydropower_core_write_scarcity_table(self):
         """A by hand test for the write_scarcity_table function
@@ -993,7 +1006,7 @@ class TestHydropowerCore(unittest.TestCase):
         
         hp_energy_uri = output_base + 'Service/hp_energy.tif'
         hp_val_uri = output_base + 'Service/hp_val.tif'
-        hp_val_ws_uri = output_base + 'hydropower_value_watershed.csv'
+        hp_val_ws_uri = output_base + 'Service/hydropower_value_watershed.csv'
         hp_val_sws_uri = \
             output_base + 'Service/hydropower_value_subwatershed.csv'
         
