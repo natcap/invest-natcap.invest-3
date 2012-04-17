@@ -140,7 +140,7 @@ class TestHydropowerCore(unittest.TestCase):
                           [255, 4, 4, 2, 2, 1, 1, 1, 1, 3],
                           [1, 3, 3, 2, 2, 1, 1, 2, 3, 4],
                           [1, 2, 3, 4, 1, 2, 3, 4, 1, 2],
-                          [4, 4, 2, 2, 1, 255, 255, 255, 255, 2]])
+                          [4, 4, 2, 2, 1, 255, 255, 255, 255, 8]])
         
         lulc.GetRasterBand(1).WriteArray(array, 0, 0)
         new_path = output_base + 'test_10x10_etk_root.tif'
@@ -157,10 +157,10 @@ class TestHydropowerCore(unittest.TestCase):
                       [255, 500, 500, 1000, 1000, 25, 25, 25, 25, 250],
                       [25, 250, 250, 1000, 1000, 25, 25, 1000, 250, 500],
                       [25, 1000, 250, 500, 25, 1000, 250, 500, 25, 1000],
-                      [500, 500, 1000, 1000, 25, 255, 255, 255, 255, 1000]])
+                      [500, 500, 1000, 1000, 25, 255, 255, 255, 255, 255]])
         
         array_result = new_raster.GetRasterBand(1).ReadAsArray()
-        LOGGER.debug('array_result : %s', array_result)
+
         self.assertTrue((array_result==result_array).all())
 
     def test_hydropower_core_raster_from_table_values_re(self):
