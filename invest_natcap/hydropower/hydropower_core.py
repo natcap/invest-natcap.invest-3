@@ -171,9 +171,9 @@ def water_yield(args):
         
         #If any of the local variables which are in the 'fractp_nodata_dict' 
         #dictionary are equal to a nodata value, then return nodata
-        for var_name, value in locals().items():
-            if var_name in fractp_nodata_dict and value == fractp_nodata_dict[var_name]:
-                return nodata
+#        for var_name, value in locals().items():
+#            if var_name in fractp_nodata_dict and value == fractp_nodata_dict[var_name]:
+#                return nodata
         
         tmp_pet = (etk * eto) / 1000
         
@@ -204,10 +204,11 @@ def water_yield(args):
     raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
                    soil_depth_raster, pawc_raster]
     fractp_raster = invest_core.vectorizeRasters(raster_list, fractp_vec, 
-                                                 rasterName=fractp_path)
+                                                 rasterName=fractp_path, 
+                                                 nodata=nodata)
     
     fractp_nodata = fractp_raster.GetRasterBand(1).GetNoDataValue()
-    
+    LOGGER.debug('fractp_nodata : %s', fractp_nodata)
     def wyield(fractp, precip):
         """Function that calculates the water yeild raster
         
@@ -345,6 +346,15 @@ def water_yield(args):
     
     #Create the water yield subwatershed table
     wsr = sheds_map_subsheds(sheds, sub_sheds)
+    
+    ws_dict = {}
+    sws_dict = {}
+    #Build the foundation for the watershed and subwatershed dictionaries
+    for key, val in wsr.iteritems():
+        sws_dict[key] = {'ws_id':val, 'subws_id':key}
+        if not val in ws_dict:
+            ws_dict[val] = {'ws_id':val}
+    
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
         get_operation_value(precip_raster, sws_id_list, sub_mask, 'mean')
@@ -359,8 +369,6 @@ def water_yield(args):
     
     sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum']
-    
-    create_writer_table(sub_table_path, sub_field_list, sub_value_dict, wsr)
     
     #Create the water yield watershed table
     value_dict = {}
@@ -378,56 +386,18 @@ def water_yield(args):
     field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
                   'wyield_sum']
     
-    create_writer_table(shed_table_path, field_list, value_dict)
+    #Fill in the watershed and subwatershed dictionaries with proper values and
+    #format to be able to be written out to a CSV file
+    for key, val in ws_dict.iteritems():
+        for index, item in value_dict.iteritems():
+            val[index] = item[key]
     
-def create_writer_table(table_path, field_list, water_dict, wsr=None):
-    """Creates a CSV table for the water yield subwatershed and water yield
-       watershed
-       
-       table_path - an output uri string for where the table should be written
-       field_list - a list of strings representing the column field headers for
-                    the table
-       water_dict - a dictionary with keys as strings that corresponds to
-                    a dictionary that holds values for the table:
-                    water_dict['precip_mn']:{1:650.2, 2:354, 3:908.32, ...}
-                    water_dict['AET_mn']:{1:1231, 2:3545.23, 3:809.23, ...}
-       wsr - an optional argument whose default value is None. Looking for
-             an optional dictionary that holds the relationship between
-             watersheds and subwatersheds.
-             
-       returns - a CSV table"""
-       
-    table_file = open(table_path, 'wb')
-    writer = csv.DictWriter(table_file, field_list)
-    field_dict = {}
-    #Create a dictionary with field names as keys and the same field name
-    #as values, to use as first row in CSV file which will be the column header
-    for field in field_list:
-        field_dict[field] = field
-    #Write column header row
-    writer.writerow(field_dict)
-    
-    #If wsr is not None then we want to write out the subwatershed table   
-    if wsr != None:
-        for key in water_dict['precip_mn'].iterkeys():
-            row_d = {'ws_id':wsr[key],'subws_id':key,
-                     'precip_mn':water_dict['precip_mn'][key],
-                     'PET_mn':water_dict['PET_mn'][key],
-                     'AET_mn':water_dict['AET_mn'][key],
-                     'wyield_mn':water_dict['wyield_mn'][key],
-                     'wyield_sum':water_dict['wyield_sum'][key]}
-            writer.writerow(row_d)
-    #If wsr is None then we want to write out the watershed table
-    else:
-        for key in water_dict['precip_mn'].iterkeys():
-            row_d = {'ws_id':key,'precip_mn':water_dict['precip_mn'][key],
-                     'PET_mn':water_dict['PET_mn'][key],
-                     'AET_mn':water_dict['AET_mn'][key],
-                     'wyield_mn':water_dict['wyield_mn'][key],
-                     'wyield_sum':water_dict['wyield_sum'][key]}
-            writer.writerow(row_d)
-        
-    return table_file
+    for key, val in sws_dict.iteritems():
+        for index, item in sub_value_dict.iteritems():
+            val[index] = item[int(key)]
+            
+    write_csv_table(ws_dict, field_list, shed_table_path)
+    write_csv_table(sws_dict, sub_field_list, sub_table_path)
     
 def sheds_map_subsheds(shape, sub_shape):
     """Stores which sub watersheds belong to which watershed
@@ -1019,10 +989,10 @@ def water_scarcity(args):
             val[index] = item[int(key)]
     
     LOGGER.info('Creating CSV Files')
-    write_scarcity_table(water_shed_table, field_list_ws, ws_out_table_name)
-    write_scarcity_table(sub_shed_table, field_list_sws, sws_out_table_name)
+    write_csv_table(water_shed_table, field_list_ws, ws_out_table_name)
+    write_csv_table(sub_shed_table, field_list_sws, sws_out_table_name)
     
-def write_scarcity_table(shed_table, field_list, file_path):
+def write_csv_table(shed_table, field_list, file_path):
     """Creates a CSV table and writes it to disk
     
        shed_table - a dictionary where each key points to another dictionary 
@@ -1206,9 +1176,9 @@ def valuation(args):
                       'hp_value']
     
     
-    write_scarcity_table(ws_scarcity_table, field_list_ws, \
+    write_csv_table(ws_scarcity_table, field_list_ws, \
                          watershed_value_table)
-    write_scarcity_table(sws_scarcity_table, field_list_sws, \
+    write_csv_table(sws_scarcity_table, field_list_sws, \
                          subwatershed_value_table)
     
     
