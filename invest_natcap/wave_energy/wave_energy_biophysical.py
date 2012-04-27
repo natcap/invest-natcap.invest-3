@@ -145,8 +145,9 @@ def execute(args):
         LOGGER.error('Analysis Area ERROR.')
         
     #If the area of interest is present add it to the dictionary arguments
-    if 'aoi_uri' in args:
+    if 'aoi_uri' in args and len(args['aoi_uri']) > 0:
         LOGGER.debug('AOI File : %s', args['aoi_uri'])
+        LOGGER.debug(args['aoi_uri'].__class__)
         aoi = ogr.Open(args['aoi_uri'])
         biophysical_args['aoi'] = aoi
         

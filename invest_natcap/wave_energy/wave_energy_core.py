@@ -178,7 +178,7 @@ def biophysical(args):
         i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
         j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
         depth = dem_matrix[j][i]
-        feature.SetField(depth_index, depth)
+        feature.SetField(int(depth_index), float(depth))
         clipped_wave_layer.SetFeature(feature)
         feature.Destroy()
         feature = clipped_wave_layer.GetNextFeature()
