@@ -37,6 +37,43 @@ class LastRunHandler(JSONHandler):
         JSONHandler.__init__(self, uri)
 
 class TableHandler(object):
+    def __init__(self, uri):
+        object.__init__(self)
+        self.filetypes = {'csv': CSVHandler,
+                          'dbf': DBFHandler,
+                          'shp': OGRHandler}
+
+        self.uri = uri
+        self.handler = self.find_handler(self.uri)
+
+    def find_handler(self, uri):
+        """Attempt to open the file provided by uri.
+
+                uri - a string URI to a table on disk.
+
+            returns the appropriate file's Handler.  Returns None if an
+            appropriate handler cannot be found."""
+
+        class InvalidExtension(Exception): pass
+        # determine the filetype of the URI
+        base, ext = os.path.splitext(uri)
+        handler = None
+        try:
+            # attempt to open the file with the filetype identified by the
+            # extension.  Raise an exception if it can't be opened.
+            handler = self.filetypes[ext.lower()]
+            open_file = handler.open(uri)
+            if open_file == None: raise InvalidExtension
+
+        except KeyError, InvalidExtension:
+            # if for some reason, the defined filetype doesn't exist in the
+            # filetypes dictionary, loop through all of the available handlers
+            for class_reference in self.filetypes.values():
+                handler = class_reference.open(uri)
+                if handler != None: break
+
+        return handler
+
     def get_field_names(self, uri):
         """Function stub for reimplementation."""
         return []
