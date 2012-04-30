@@ -46,6 +46,15 @@ class TableHandler(object):
         self.uri = uri
         self.handler = self.find_handler(self.uri)
 
+    def open(self, uri=self.uri):
+        self.handler.open(uri)
+
+    def get_field_names(self, uri=self.uri):
+        self.handler.get_field_names(uri)
+
+    def get_map(self, uri=self.uri):
+        self.handler.get_map(uri)
+
     def find_handler(self, uri):
         """Attempt to open the file provided by uri.
 
