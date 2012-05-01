@@ -109,6 +109,14 @@ class CSVHandler(TableHandler):
     def open(self, uri):
         return csv.DictReader(open(uri))
 
+    def get_table_list(self, uri):
+        reader = self.open(uri)
+        output_list = []
+        for row in reader:
+            output_list.append(row)
+
+        return output_list
+
     def get_field_names(self, uri):
         csv_file = self.open(uri)
         if not hasattr(csv_file, 'fieldnames'):
