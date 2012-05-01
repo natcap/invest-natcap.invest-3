@@ -186,7 +186,6 @@ def find_handler(uri):
         if open_file == None: raise InvalidExtension
 
     except KeyError, InvalidExtension:
-        print ext.lower()
         # if for some reason, the defined filetype doesn't exist in the
         # filetypes dictionary, loop through all of the available handlers
         for class_reference in FILETYPES.values():
