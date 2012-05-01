@@ -3,7 +3,7 @@
 from osgeo import gdal
 
 import pollination_core
-import invest_natcap.iui.fileio
+from invest_natcap.iui import fileio
 
 import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -42,6 +42,5 @@ def execute(args):
     # Retrieve a list of row dictionaries as a representation of the input
     # attributes table.
     biophysical_args['landuse_attributes'] = att_table_handler.get_table_list()
-
 
 
