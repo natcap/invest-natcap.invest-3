@@ -38,19 +38,65 @@ class LastRunHandler(JSONHandler):
         JSONHandler.__init__(self, uri)
 
 class AbstractTableHandler(object):
+    """This class provides an abstract class for specific reimplementation for
+        each tabular filetype"""
+
     def __init__(self, uri):
+        """This function initializes the AbstractTableHandler object.  The user
+            is required to specify a URI to a tabular object.  In this way, a
+            single AbstractTableHandler object (or one of its subclasses) will
+            effectively represent a single file.
+
+            Should a user wish to change the file URI associated with this
+            instance of AbstractTableHandler, the update() function is available
+            to this end.
+
+            uri - a python string URI to a tabular file.
+
+            returns nothing."""
+
+        object.__init__(self)
+        self.uri = uri
+
+    def update(self, uri):
+        """Update the URI associated with this AbstractTableHandler object.
+
+            uri - a python string target URI to be set as the new URI of this
+                AbstractTableHandler.
+
+            Returns nothing."""
+
         self.uri = uri
 
     def open(self):
+        """Function stub for reimplementation.
+
+            Returns the opened file object of the currently set URI.  The actual
+            object type returned differs based on the file type and libraries
+            used in the specific subclass."""
         pass
 
     def get_field_names(self):
+        """Function stub for reimplementation.
+
+            Returns a python list of string names of all fields in this tabular
+            object."""
         pass
 
     def get_table_list(self):
+        """Function stub for reimplementation.
+
+            Returns a python list of dictionaries where the list represents the
+            entire table structure.  Each dictionary in this list maps the
+            column name to the column value for the given row."""
         pass
 
-    def get_map(self):
+    def get_map(self, key_field, value_field):
+        """Function stub for reimplementation.
+
+            Returns a python dictionary mapping values contained in key_field to
+            values contained in value_field.  If duplicate keys are found, they
+            are overwritten in the output dictionary."""
         pass
 
 class OGRHandler(AbstractTableHandler):
