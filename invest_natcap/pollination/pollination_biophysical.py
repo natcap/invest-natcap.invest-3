@@ -37,7 +37,7 @@ def execute(args):
                                            gdal.GA_ReadOnly)
 
     # Open a Table Handler for the land use attributes table
-    att_table_handler = fileio.TableHandler(args['landuse_attributes_uri'])
+    att_table_handler = fileio.find_handler(args['landuse_attributes_uri'])
 
     # Retrieve a list of row dictionaries as a representation of the input
     # attributes table.
