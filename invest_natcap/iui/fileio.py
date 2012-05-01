@@ -2,6 +2,7 @@ import json
 import ogr
 from platform import node
 import csv
+import os
 
 from dbfpy import dbf
 
@@ -39,9 +40,9 @@ class LastRunHandler(JSONHandler):
 class TableHandler(object):
     def __init__(self, uri):
         object.__init__(self)
-        self.filetypes = {'csv': CSVHandler,
-                          'dbf': DBFHandler,
-                          'shp': OGRHandler}
+        self.filetypes = {'.csv': CSVHandler,
+                          '.dbf': DBFHandler,
+                          '.shp': OGRHandler}
 
         self.uri = uri
         self.handler = self.find_handler(self.uri)
@@ -73,16 +74,18 @@ class TableHandler(object):
         try:
             # attempt to open the file with the filetype identified by the
             # extension.  Raise an exception if it can't be opened.
-            handler = self.filetypes[ext.lower()]
-            open_file = handler.open(uri)
+            handler = self.filetypes[ext.lower()](uri)
+            open_file = handler.open()
             if open_file == None: raise InvalidExtension
 
         except KeyError, InvalidExtension:
+            print ext.lower()
             # if for some reason, the defined filetype doesn't exist in the
             # filetypes dictionary, loop through all of the available handlers
             for class_reference in self.filetypes.values():
-                handler = class_reference.open(uri)
-                if handler != None: break
+                handler = class_reference(uri)
+                opened_file = handler.open(uri)
+                if opened_file != None: break
 
         return handler
 
@@ -90,8 +93,27 @@ class TableHandler(object):
         """Function stub for reimplementation."""
         return []
 
-class OGRHandler(TableHandler):
-    def get_field_names(self, uri):
+class AbstractTableHandler(object):
+    def __init__(self, uri):
+        self.uri = uri
+
+    def open(self):
+        pass
+
+    def get_field_names(self):
+        pass
+
+    def get_table_list(self):
+        pass
+
+    def get_map(self):
+        pass
+
+class OGRHandler(AbstractTableHandler):
+    def open(self):
+        return ogr.Open(uri)
+
+    def get_field_names(self):
         """Get a list of the fieldnames in the specified OGR file.
 
             uri = a uri to an ogr DataSource
@@ -112,16 +134,19 @@ class OGRHandler(TableHandler):
         else:
             return []
 
-class DBFHandler(TableHandler):
-    def get_field_names(self, uri):
+class DBFHandler(AbstractTableHandler):
+    def open(self):
+        return dbf.Dbf(uri)
+
+    def get_field_names(self):
         dbf_file = dbf.Dbf(str(uri))
         return dbf_file.header.fields
 
-class CSVHandler(TableHandler):
-    def open(self, uri):
+class CSVHandler(AbstractTableHandler):
+    def open(self):
         return csv.DictReader(open(uri))
 
-    def get_table_list(self, uri):
+    def get_table_list(self):
         reader = self.open(uri)
         output_list = []
         for row in reader:
@@ -129,7 +154,7 @@ class CSVHandler(TableHandler):
 
         return output_list
 
-    def get_field_names(self, uri):
+    def get_field_names(self):
         csv_file = self.open(uri)
         if not hasattr(csv_file, 'fieldnames'):
             return csv_file.next()
