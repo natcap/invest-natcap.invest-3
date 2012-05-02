@@ -5,6 +5,7 @@ from osgeo import gdal
 import pollination_core
 from invest_natcap.iui import fileio
 
+import re
 import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -44,8 +45,6 @@ def execute(args):
     att_table_handler = fileio.find_handler(args['landuse_attributes_uri'])
     guilds_handler = fileio.find_handler(args['guilds_uri'])
 
-    # Retrieve a list of row dictionaries as a representation of the input
-    # attributes table and for the input guilds table.
     biophysical_args['landuse_attributes'] = att_table_handler
     biophysical_args['guilds'] = guilds_handler
 
@@ -63,6 +62,23 @@ def execute(args):
         ag_class_list = []
 
     biophysical_args['ag_classes'] = ag_class_list
+
+    # Create new LULC-mapped files for later processing.  There are an arbitrary
+    # number of rasters that will need to be created, which are entirely
+    # dependent on the columns of the input table files.  There are two
+    # categories of mapped rasters: nesting resources (column labels prefixed with 
+    # 'N_') and floral resources (column labels prefixed with 'F_').
+    landuse_fields = att_table_handler.get_field_names()
+
+    # Get nesting fieldnames with a combination of regular expressions and a
+    # list comprehension.
+    nesting_types = [ r.lower() for r in landuse_fields if re.match('^n_', r.lower()) ]
+    LOGGER.debug('Nesting types: %s' , nesting_types)
+
+    # Get floral seasons fieldnames with a combination of regular expressions
+    # and a list comprehension.
+    floral_seasons = [ r.lower() for r in landuse_fields if re.match('^f_', r.lower()) ]
+    LOGGER.debug('Floral seasons: %s', floral_seasons)
 
     pollination_core.biophysical(biophysical_args)
 
