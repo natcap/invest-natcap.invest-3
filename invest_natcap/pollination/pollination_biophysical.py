@@ -4,7 +4,9 @@ from osgeo import gdal
 
 import pollination_core
 from invest_natcap.iui import fileio
+import invest_cython_core
 
+import os.path
 import re
 import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -34,7 +36,18 @@ def execute(args):
     gdal.AllRegister()
 
     biophysical_args = {}
+
     workspace = args['workspace_dir']
+
+    # Check to see if each of the workspace folders exists.  If not, create the
+    # folder in the filesystem.
+    inter_dir = os.path.join(workspace, 'intermediate')
+    out_dir = os.path.join(workspace, 'output')
+
+    for folder in [ inter_dir, out_dir ]:
+        if not os.path.isdir(folder):
+            os.makedirs(folder)
+
 
     # Open the landcover raster
     biophysical_args['landuse'] = gdal.Open(str(args['landuse_uri']),
@@ -69,16 +82,34 @@ def execute(args):
     # categories of mapped rasters: nesting resources (column labels prefixed with 
     # 'N_') and floral resources (column labels prefixed with 'F_').
     landuse_fields = att_table_handler.get_field_names()
+    groupings = [('Floral seasons: %s', 'floral', '^f_'),
+                 ('Nesting types: %s', 'nesting', '^n_')]
+    mapped_columns = []
+    for group_details in groupings:
+        # Separate out the individual details of the grouping tuple for use
+        logger_msg, out_dict_key, col_regexp = group_details
 
-    # Get nesting fieldnames with a combination of regular expressions and a
-    # list comprehension.
-    nesting_types = [ r.lower() for r in landuse_fields if re.match('^n_', r.lower()) ]
-    LOGGER.debug('Nesting types: %s' , nesting_types)
+        # Creteate a python list of fields matching the grouping touple's
+        # identifying regular expression.
+        matching_fields =[ r.lower() for r in landuse_fields if \
+            re.match(col_regexp, r.lower()) ]
+        LOGGER.debug(logger_msg, matching_fields)
 
-    # Get floral seasons fieldnames with a combination of regular expressions
-    # and a list comprehension.
-    floral_seasons = [ r.lower() for r in landuse_fields if re.match('^f_', r.lower()) ]
-    LOGGER.debug('Floral seasons: %s', floral_seasons)
+        # Loop through all fields that were matched, create the appropriate
+        # raster based off of the landuse raster and save it to the group's
+        # dictionary.  The group's dictionary will be used in biophysical_args.
+        group_dict = {}
+        for field in matching_fields:
+            raster_uri = os.path.join(inter_dir, field + '.tif')
+            LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
+            dataset = invest_cython_core.newRasterFromBase(\
+                biophysical_args['landuse'], raster_uri, 'GTiff', -1,
+                gdal.GDT_Float32)
+            group_dict[field] = dataset
+
+        # Save the newly created rasters to biophysical_args based on the
+        # grouping's out_dict_key (e.g. 'floral' or 'nesting')
+        biophysical_args[out_dict_key] = group_dict
 
     pollination_core.biophysical(biophysical_args)
 
