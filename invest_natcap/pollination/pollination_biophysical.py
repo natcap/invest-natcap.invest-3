@@ -9,6 +9,8 @@ import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+LOGGER = logging.getLogger('pollination_biophysical')
+
 def execute(args):
     """Open files necessary for the biophysical portion of the pollination
         model.
@@ -42,5 +44,4 @@ def execute(args):
     # Retrieve a list of row dictionaries as a representation of the input
     # attributes table.
     biophysical_args['landuse_attributes'] = att_table_handler.get_table_list()
-
 
