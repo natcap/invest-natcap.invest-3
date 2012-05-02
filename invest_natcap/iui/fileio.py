@@ -130,7 +130,19 @@ class DBFHandler(AbstractTableHandler):
 
     def get_field_names(self):
         dbf_file = dbf.Dbf(str(self.uri))
-        return dbf_file.header.fields
+        return dbf_file.fieldNames
+
+    def get_table_list(self):
+        db_file = self.open()
+        table_list = []
+        for record in db_file:
+            record_dict = {}
+            for fieldname in self.get_field_names():
+                record_dict[fieldname] = record[fieldname]
+            table_list.append(record_dict)
+
+        return table_list
+
 
 class CSVHandler(AbstractTableHandler):
     def open(self):
