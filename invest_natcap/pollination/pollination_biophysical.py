@@ -46,8 +46,8 @@ def execute(args):
 
     # Retrieve a list of row dictionaries as a representation of the input
     # attributes table and for the input guilds table.
-    biophysical_args['landuse_attributes'] = att_table_handler.get_table_list()
-    biophysical_args['guilds'] = guilds_handler.get_table_list()
+    biophysical_args['landuse_attributes'] = att_table_handler
+    biophysical_args['guilds'] = guilds_handler
 
     # Convert agricultural classes (a space-separated list of ints) into a 
     # list of ints.  If the user has not provided a string list of ints, then
