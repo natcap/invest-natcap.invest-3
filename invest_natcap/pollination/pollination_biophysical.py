@@ -25,7 +25,8 @@ def execute(args):
             species or guild of pollinator to be modeled.
         args['ag_classes'] - a python string of space-separated integers
             representing land cover classes in the input land use/land cover
-            map where each class specified is agricultural. (optional)
+            map where each class specified is agricultural.  This string may be
+            either a python string or a unicode string. (optional)
 
         returns nothing."""
 
@@ -38,10 +39,30 @@ def execute(args):
     biophysical_args['landuse'] = gdal.Open(str(args['landuse_uri']),
                                            gdal.GA_ReadOnly)
 
-    # Open a Table Handler for the land use attributes table
+    # Open a Table Handler for the land use attributes table and a different
+    # table handler for the Guilds table.
     att_table_handler = fileio.find_handler(args['landuse_attributes_uri'])
+    guilds_handler = fileio.find_handler(args['guilds_uri'])
 
     # Retrieve a list of row dictionaries as a representation of the input
-    # attributes table.
+    # attributes table and for the input guilds table.
     biophysical_args['landuse_attributes'] = att_table_handler.get_table_list()
+    biophysical_args['guilds'] = guilds_handler.get_table_list()
+
+    # Convert agricultural classes (a space-separated list of ints) into a 
+    # list of ints.  If the user has not provided a string list of ints, then
+    # use an empty list instead.
+    try:
+        # This approach will create a list with only ints, even if the user has
+        # accidentally entered additional spaces.  Any other incorrect input
+        # will throw a ValueError exception.
+        ag_class_list = [ int(r) for r in args['ag_classes'].split(' ') if r != '' ]
+    except KeyError:
+        # If the 'ag_classes' key is not present in the args dictionary, use an
+        # empty list in its stead.
+        ag_class_list = []
+
+    biophysical_args['ag_classes'] = ag_class_list
+
+    pollination_core.biophysical(biophysical_args)
 
