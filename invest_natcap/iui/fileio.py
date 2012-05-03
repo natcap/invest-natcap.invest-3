@@ -144,6 +144,7 @@ class DBFHandler(AbstractTableHandler):
         for record in db_file:
             record_dict = {}
             for fieldname in self.get_field_names():
+                fieldname = fieldname.lower()
                 record_dict[fieldname] = record[fieldname]
             table_list.append(record_dict)
 

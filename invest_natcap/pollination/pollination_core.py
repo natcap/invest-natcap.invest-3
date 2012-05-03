@@ -29,8 +29,51 @@ def biophysical(args):
     # mask agricultural classes to ag_map.
     make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
 
-    # preprocess landcover rasters f_* and n_*
-    pass
+    # preprocess landcover rasters f_* and n_* by mapping the appropriate column
+    # value from the landuse_attributes table to the landuse pixel.  The output
+    # value is then saved to the appropriate dataset.
+    rasters = args['floral']
+    rasters.update(args['nesting'])  # Combine the floral and nesting dicts
+    for var_name, dataset in rasters.iteritems():
+        map_attribute(args['landuse'], args['landuse_attributes'], 'lulc',
+            var_name, dataset)
+
+def map_attribute(base_raster, table, key_field, value_field, out_raster):
+    """Make an intermediate raster where values are mapped from the base raster
+        according to the mapping specified by key_field and value_field.
+
+        base_raster - a GDAL dataset
+        table - a subclass of fileio.AbstractTableHandler
+        key_field - a python string
+        value_field - a python string
+        out_raster - a GDAL dataset
+
+        returns nothing."""
+
+    # Get the input raster's nodata value
+    base_nodata = base_raster.GetRasterBand(1).GetNoDataValue()
+
+    # Get the output raster's nodata value
+    out_nodata = out_raster.GetRasterBand(1).GetNoDataValue()
+
+    # Get the map of values from the specified table object and create an
+    # entry for the nodata values.
+    value_map = table.get_map(key_field, value_field)
+    value_map[base_nodata] = out_nodata
+
+    # Define a vectorized function to map values to the base raster
+    def map_values(pixel_value):
+        """Take the input pixel value and return the appropriate value based
+            on the table's map.  If the value cannot be found, return the
+            output raster's nodata value."""
+        try:
+            return value_map[pixel_value]
+        except:
+            return out_nodata
+
+    # Vectorize this operation.
+    invest_core.vectorize1ArgOp(base_raster.GetRasterBand(1), map_values,
+        out_raster.GetRasterBand(1))
 
 def make_ag_raster(landuse_raster, ag_classes, ag_raster):
     """Make an intermediate raster where values of ag_raster are 1 if the
