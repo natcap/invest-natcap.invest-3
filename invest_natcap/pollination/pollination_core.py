@@ -43,18 +43,32 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
 
         returns nothing."""
 
-    # Preprocess ag_classes into a dictionary to improve access times in the
-    # vectorized function.  Using a dictionary will, on average, make this a
-    # constant-time access (O(1)) instead of a linear access time (O(n))
-    ag_dict = dict((k, True) for k in ag_classes)
+    # If the user has provided agricultural classes, we should only consider
+    # those classes as agricultural.  If the user has not provided a list of
+    # agricultural classes, we should consider the entire landuse raster as
+    # agricultural.
+    # This case is triggered when the user provides agricultural classes.
+    if len(ag_classes) > 0:
+        # Preprocess ag_classes into a dictionary to improve access times in the
+        # vectorized function.  Using a dictionary will, on average, make this a
+        # constant-time access (O(1)) instead of a linear access time (O(n))
+        ag_dict = dict((k, True) for k in ag_classes)
 
-    def ag_func(lu_class):
-        """Check to see if the input pixel value is an agricultural pixel.  If
-            so, return 1.  Otherwise, return 0."""
-        if lu_class in ag_dict:
+        def ag_func(lu_class):
+            """Check to see if the input pixel value is an agricultural pixel.  If
+                so, return 1.  Otherwise, return 0."""
+            if lu_class in ag_dict:
+                return 1
+            else:
+                return 0
+    else:
+        # This case is triggered if the user does not provide any land cover
+        # classes.  In this case, we fill the raster with 1's to indicate that
+        # all pixels are to be considered agricultural.
+        def ag_func(lu_class):
+            """Indicate that we want all land cover classes considered as
+                agricultural.  Always return 1."""
             return 1
-        else:
-            return 0
 
     # Vectorize all of this to the output (ag) raster.
     invest_core.vectorize1ArgOp(landuse_raster, ag_func, ag_dict, ag_raster)
