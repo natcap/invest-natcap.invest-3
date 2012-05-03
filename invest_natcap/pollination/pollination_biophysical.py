@@ -87,7 +87,7 @@ def execute(args):
     # dependent on the columns of the input table files.  There are two
     # categories of mapped rasters: nesting resources (column labels prefixed with 
     # 'N_') and floral resources (column labels prefixed with 'F_').
-    landuse_fields = att_table_handler.get_field_names()
+    landuse_fields = att_table_handler.fieldnames
     groupings = [('Floral seasons: %s', 'floral', '^f_'),
                  ('Nesting types: %s', 'nesting', '^n_')]
     mapped_columns = []

@@ -56,6 +56,10 @@ class AbstractTableHandler(object):
             returns nothing."""
 
         object.__init__(self)
+        self.file_obj = None
+        self.orig_fieldnames = {}
+        self.fieldnames = []
+        self.table = []
         self.uri = uri
 
     def update(self, uri):
@@ -67,28 +71,41 @@ class AbstractTableHandler(object):
             Returns nothing."""
 
         self.uri = uri
+        self._get_field_names()
+        self._get_table_list()
 
-    def open(self):
+    def _open(self):
         """Function stub for reimplementation.
 
-            Returns the opened file object of the currently set URI.  The actual
-            object type returned differs based on the file type and libraries
-            used in the specific subclass."""
+            Sets self.file_obj to be a pointer to the relevant file object."""
         pass
 
-    def get_field_names(self):
+    def get_file_object(self):
+        """Getter function for the underlying file object.  If the file object
+            has not been retrieved, retrieve it before returning the file
+            object.
+
+            returns a file object."""
+
+        if self.file_obj == None:
+            self._open()
+        return self.file_obj
+
+    def _get_field_names(self):
         """Function stub for reimplementation.
 
-            Returns a python list of string names of all fields in this tabular
-            object."""
+            Sets self.fieldnames to a python list of lower-case versions of
+            the actual fieldnames.  Also sets self.orig_fieldnames to a python
+            dictionary mapping the lower-case name of each field to its
+            original, case-sensitive name."""
         pass
 
-    def get_table_list(self):
+    def _get_table_list(self):
         """Function stub for reimplementation.
 
-            Returns a python list of dictionaries where the list represents the
-            entire table structure.  Each dictionary in this list maps the
-            column name to the column value for the given row."""
+            Sets self.table to a python list of dictionaries where each
+            dictionary maps lower-case column names to the appropriate value.
+            """
         pass
 
     def get_map(self, key_field, value_field):
@@ -100,24 +117,21 @@ class AbstractTableHandler(object):
             self.get_table_list(), so there shouldn't be a need to reimplement
             this for each subclass of AbstractTableHandler.
 
+            If the table list has not been retrieved, it is retrieved before
+            generating the map.
+
             returns a python dictionary mapping key_fields to value_fields."""
 
-        table = self.get_table_list()
-        return dict((row[key_field], row[value_field]) for row in table)
+        if self.table == []:
+            self._get_table_list()
+        return dict((row[key_field], row[value_field]) for row in self.table)
 
 class OGRHandler(AbstractTableHandler):
-    def open(self):
-        return ogr.Open(self.uri)
+    def _open(self):
+        self.file_obj = ogr.Open(str(self.uri))
 
-    def get_field_names(self):
-        """Get a list of the fieldnames in the specified OGR file.
-
-            uri = a uri to an ogr DataSource
-
-            returns a list of strings."""
-
-        shapefile = ogr.Open(str(self.uri))
-        if shapefile != None:
+    def _get_field_names(self):
+        if self.file_obj != None:
             layer = shapefile.GetLayer(0)
             layer_def = layer.GetLayerDefn()
 
@@ -126,49 +140,55 @@ class OGRHandler(AbstractTableHandler):
                 field_def = layer_def.GetFieldDefn(index)
                 field_list.append(field_def.GetNameRef())
 
-            return field_list
+            self.fieldnames = [f.lower() for f in field_list]
+            self.orig_fieldnames = dict((f.lower(), f) for f in field_list)
         else:
-            return []
+            self.fieldnames = []
+            self.orig_fieldnames = {}
 
 class DBFHandler(AbstractTableHandler):
-    def open(self):
-        return dbf.Dbf(self.uri)
+    def _open(self):
+        self.file_obj = dbf.Dbf(self.uri)
 
-    def get_field_names(self):
-        dbf_file = dbf.Dbf(str(self.uri))
-        return dbf_file.fieldNames
+    def _get_field_names(self):
+        dbf_file = self.file_object()
+        self.orig_fieldnames = dict((name.lower(), name) for name in
+            dbf_file.fieldNames)
+        self.fieldnames = [r.lower() for r in dbf_file.fieldNames]
 
-    def get_table_list(self):
+    def _get_table_list(self):
         db_file = self.open()
         table_list = []
         for record in db_file:
             record_dict = {}
-            for fieldname in self.get_field_names():
+            for fieldname in self.fieldnames:
                 fieldname = fieldname.lower()
                 record_dict[fieldname] = record[fieldname]
             table_list.append(record_dict)
 
-        return table_list
-
+        self.table = table_list
 
 class CSVHandler(AbstractTableHandler):
-    def open(self):
-        return csv.DictReader(open(self.uri))
+    def _open(self):
+        self.file_obj = csv.DictReader(open(self.uri))
 
-    def get_table_list(self):
-        reader = self.open(self.uri)
+    def _get_table_list(self):
         output_list = []
-        for row in reader:
+        for row in self.file_obj:
             output_list.append(row)
 
-        return output_list
+        self.table = output_list
 
-    def get_field_names(self):
+    def _get_field_names(self):
         csv_file = self.open(self.uri)
         if not hasattr(csv_file, 'fieldnames'):
-            return csv_file.next()
+            fieldnames = csv_file.next()
         else:
-            return csv_file.fieldnames
+            fieldnames = csv_file.fieldnames
+
+        self.fieldnames = [name.lower() for name in fieldnames]
+        self.orig_fieldnames = dict((name.lower(), name) for name in
+            fieldnames)
 
 # Define a lookup dictionary of what filetypes are associated with a particular
 # file extension.  For use with find_handler().
@@ -192,7 +212,7 @@ def find_handler(uri):
         # attempt to open the file with the filetype identified by the
         # extension.  Raise an exception if it can't be opened.
         handler = FILETYPES[ext.lower()](uri)
-        open_file = handler.open()
+        open_file = handler.get_file_object()
         if open_file == None: raise InvalidExtension
 
     except KeyError, InvalidExtension:
