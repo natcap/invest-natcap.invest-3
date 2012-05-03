@@ -11,6 +11,7 @@ def biophysical(args):
             classes in the landuse map.  This list may be empty to represent the
             fact that no landuse classes are to be designated as strictly
             agricultural.
+        args['ag_map'] - a GDAL dataset
         args['floral'] - a python dictionary with the following structure:
             {'f_<season>': gdal dataset for the floral season}, where
             'f_<season>' is taken from the appropriate column label in the
@@ -21,4 +22,40 @@ def biophysical(args):
             landuse_attributes table.
 
         returns nothing."""
+
+    # mask agricultural classes to ag_map.
+    make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
+
+    # preprocess landcover rasters f_* and n_*
     pass
+
+def make_ag_raster(landuse_raster, ag_classes, ag_raster):
+    """Make an intermediate raster where values of ag_raster are 1 if the
+        landcover class is agricultural, 0 if not.
+
+        This function loops through all pixels of landuse_raster.  If the pixel
+        value is in ag_classes, the corresponding ag_raster pixel is set to 1.
+        Otherwise, the corresponding ag_raster pixel is set to 0.
+
+        landuse_raster - a GDAL dataset
+        ag_classes - a python list of ints
+        ag_raster - a GDAL dataset
+
+        returns nothing."""
+
+    # Preprocess ag_classes into a dictionary to improve access times in the
+    # vectorized function.  Using a dictionary will, on average, make this a
+    # constant-time access (O(1)) instead of a linear access time (O(n))
+    ag_dict = dict((k, True) for k in ag_classes)
+
+    def ag_func(lu_class):
+        """Check to see if the input pixel value is an agricultural pixel.  If
+            so, return 1.  Otherwise, return 0."""
+        if lu_class in ag_dict:
+            return 1
+        else:
+            return 0
+
+    # Vectorize all of this to the output (ag) raster.
+    invest_core.vectorize1ArgOp(landuse_raster, ag_func, ag_dict, ag_raster)
+
