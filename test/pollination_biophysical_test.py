@@ -20,3 +20,9 @@ class PollinationBiophysicalTest(unittest.TestCase):
     def test_smoke(self):
         """Smoke test for pollination_biophysical."""
         pollination_biophysical.execute(self.args)
+
+    def test_ag_classes(self):
+        """Smoke test for pollination_biophysical.  Includes ag classes."""
+        self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
+            + '83 84 85 88 90 91 92')
+        pollination_biophysical.execute(self.args)
