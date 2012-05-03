@@ -92,12 +92,18 @@ class AbstractTableHandler(object):
         pass
 
     def get_map(self, key_field, value_field):
-        """Function stub for reimplementation.
-
-            Returns a python dictionary mapping values contained in key_field to
+        """Returns a python dictionary mapping values contained in key_field to
             values contained in value_field.  If duplicate keys are found, they
-            are overwritten in the output dictionary."""
-        pass
+            are overwritten in the output dictionary.
+
+            This is implemented as a dictionary comprehension on top of
+            self.get_table_list(), so there shouldn't be a need to reimplement
+            this for each subclass of AbstractTableHandler.
+
+            returns a python dictionary mapping key_fields to value_fields."""
+
+        table = self.get_table_list()
+        return dict((row[key_field], row[value_field]) for row in table)
 
 class OGRHandler(AbstractTableHandler):
     def open(self):
@@ -162,15 +168,6 @@ class CSVHandler(AbstractTableHandler):
             return csv_file.next()
         else:
             return csv_file.fieldnames
-
-    def get_map(self, uri, key_field, value_field):
-        csv_file = self.open(self.uri)
-        output_dict = {}
-        for row in csv_file:
-            output_dict[row[key_field]] = row[value_field]
-
-        return output_dict
-
 
 # Define a lookup dictionary of what filetypes are associated with a particular
 # file extension.  For use with find_handler().
