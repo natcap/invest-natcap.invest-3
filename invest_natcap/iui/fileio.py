@@ -60,7 +60,7 @@ class AbstractTableHandler(object):
         self.orig_fieldnames = {}
         self.fieldnames = []
         self.table = []
-        self.uri = uri
+        self.update(uri)
 
     def update(self, uri):
         """Update the URI associated with this AbstractTableHandler object.
