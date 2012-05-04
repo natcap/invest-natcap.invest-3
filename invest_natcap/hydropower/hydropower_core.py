@@ -1,5 +1,5 @@
 """Module that contains the core computational components for the hydropower
-    model including the water yield, water scarcity , and valuation functions"""
+    model including the water yield, water scarcity, and valuation functions"""
 
 import logging
 import os
