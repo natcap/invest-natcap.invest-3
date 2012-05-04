@@ -60,6 +60,8 @@ class AbstractTableHandler(object):
         self.orig_fieldnames = {}
         self.fieldnames = []
         self.table = []
+        self.mask_regexp = None
+        self.mask_trim = 0
         self.update(uri)
 
     def update(self, uri):
@@ -72,7 +74,20 @@ class AbstractTableHandler(object):
 
         self.uri = uri
         self._get_field_names()
+        if self.mask_regexp != None:
+            self.fieldnames = [f[self.mask_trim:] if re.match(self.mask_regexp,
+                f) else f for f in self.fieldnames]
+
         self._get_table_list()
+
+    def set_field_mask(self, regexp=None, trim=0):
+        """Set a mask for the table's self.fieldnames.  Any fieldnames that
+            match regexp will have trim number of characters stripped off the
+            front."""
+
+        self.mask_regexp = regexp
+        self.mask_trim = trim
+        self.update(self.uri)
 
     def _open(self):
         """Function stub for reimplementation.
