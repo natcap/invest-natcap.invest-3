@@ -75,7 +75,7 @@ class AbstractTableHandler(object):
         self._get_table_list()
 
     def _open(self):
-        """Function stub for reimplementation.
+        """Attempt to open the file provided by uri.
 
             Sets self.file_obj to be a pointer to the relevant file object."""
         pass
