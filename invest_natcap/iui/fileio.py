@@ -180,8 +180,7 @@ class CSVHandler(AbstractTableHandler):
         self.table = output_list
 
     def _get_field_names(self):
-        csv_file = self.open(self.uri)
-        if not hasattr(csv_file, 'fieldnames'):
+        if not hasattr(self.file_obj, 'fieldnames'):
             fieldnames = csv_file.next()
         else:
             fieldnames = csv_file.fieldnames
