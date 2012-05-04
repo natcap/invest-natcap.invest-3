@@ -82,41 +82,21 @@ def execute(args):
     biophysical_args['ag_map'] =\
         make_raster_from_lulc(biophysical_args['landuse'], ag_map_uri)
 
-    # Create new LULC-mapped files for later processing.  There are an arbitrary
-    # number of rasters that will need to be created, which are entirely
-    # dependent on the columns of the input table files.  There are two
-    # categories of mapped rasters: nesting resources (column labels prefixed with 
-    # 'N_') and floral resources (column labels prefixed with 'F_').
-    landuse_fields = att_table_handler.fieldnames
-    groupings = [('Floral seasons: %s', 'floral', '^f_'),
-                 ('Nesting types: %s', 'nesting', '^n_')]
-    mapped_columns = []
-    for group_details in groupings:
-        # Separate out the individual details of the grouping tuple for use
-        logger_msg, out_dict_key, col_regexp = group_details
+    # Fetch a list of all species from the guilds table.
+    species_list = [row['species'] for row in guilds_handler.table]
 
-        # Creteate a python list of fields matching the grouping touple's
-        # identifying regular expression.
-        matching_fields =[ r.lower() for r in landuse_fields if \
-            re.match(col_regexp, r.lower()) ]
-        LOGGER.debug(logger_msg, matching_fields)
-
-        # Create a dictionary for storing the individual group's rasters in
-        # memory.
-        group_dict = {}
-
-        # Loop through all fields that were matched, create the appropriate
-        # raster based off of the landuse raster and save it to the group's
-        # dictionary.  The group's dictionary will be used in biophysical_args.
-        for field in matching_fields:
-            raster_uri = os.path.join(inter_dir, field + '.tif')
-            dataset = make_raster_from_lulc(biophysical_args['landuse'],
-                raster_uri)
-            group_dict[field] = dataset
-
-        # Save the newly created rasters to biophysical_args based on the
-        # grouping's out_dict_key (e.g. 'floral' or 'nesting')
-        biophysical_args[out_dict_key] = group_dict
+    # Make new rasters for each species.  In this list of tuples, the first
+    # value of each tuple is the args dictionary key, and the second value of
+    # each tuple is the raster prefix. 
+    species_rasters =[('nesting', 'hn'),
+                      ('floral', 'hf'),
+                      ('species_abundance', 'sup'),
+                      ('farm_abundance', 'frm')]
+    for species in species_list:
+        for group, prefix in species_rasters:
+            raster_uri = os.path.join(inter_dir, prefix + '_' + species + '.tif')
+            dataset = make_raster_from_lulc(args['landuse'], raster_uri)
+            biophysical_args['species'][species][group] = dataset
 
     pollination_core.biophysical(biophysical_args)
 

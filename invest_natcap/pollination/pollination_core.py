@@ -15,37 +15,35 @@ def biophysical(args):
             fact that no landuse classes are to be designated as strictly
             agricultural.
         args['ag_map'] - a GDAL dataset
-        args['floral'] - a python dictionary with the following structure:
-            {'f_<season>': gdal dataset for the floral season}, where
-            'f_<season>' is taken from the appropriate column label in the
-            landuse_attributes table.
-        args['nesting'] - a python dictionary with the following structure:
-            {'n_<type>': gdal dataset for the nesting type}, where
-            'n_<type>' is taken from the appropriate column label in the
-            landuse_attributes table.
+        args['species'] - a python dictionary with the following entries:
+        args['species'][species_name] - a python dictionary where 'species_name'
+            is the string name of the pollinator species in question.  This
+            dictionary should have the following contents:
+        args['species'][species_name]['floral'] - a GDAL dataset
+        args['species'][species_name]['nesting'] - a GDAL dataset
+        args['species'][species_name]['species_abundance'] - a GDAL dataset
+        args['species'][species_name]['farm_abundance'] - a GDAL dataset
 
         returns nothing."""
 
     # mask agricultural classes to ag_map.
     make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
 
-    # preprocess landcover rasters f_* and n_* by mapping the appropriate column
-    # value from the landuse_attributes table to the landuse pixel.  The output
-    # value is then saved to the appropriate dataset.
-    rasters = args['floral']
-    rasters.update(args['nesting'])  # Combine the floral and nesting dicts
-    for var_name, dataset in rasters.iteritems():
-        map_attribute(args['landuse'], args['landuse_attributes'], 'lulc',
-            var_name, dataset)
+    for species, species_dict in args['species'].iteritems():
+        for resource_tuple in ['floral', 'nesting']:
+            resource, lu_regexp, guild_regexp = resource_tuple
+            guild_dict = args['guilds'].get_table_dictionary(species)
+            map_attribute(args['landuse'], args['landuse_attributes'], guild_dict,
+                args[resource + '_attributes'], species_dict[resource])
 
-def map_attribute(base_raster, table, key_field, value_field, out_raster):
+
+def map_attribute(base_raster, attr_table, species_dict, attr_list, out_raster):
     """Make an intermediate raster where values are mapped from the base raster
         according to the mapping specified by key_field and value_field.
 
         base_raster - a GDAL dataset
-        table - a subclass of fileio.AbstractTableHandler
-        key_field - a python string
-        value_field - a python string
+        attr_table - a subclass of fileio.AbstractTableHandler
+        guilds - a subclass of fileio.AbstractTableHandler
         out_raster - a GDAL dataset
 
         returns nothing."""
@@ -56,20 +54,11 @@ def map_attribute(base_raster, table, key_field, value_field, out_raster):
     # Get the output raster's nodata value
     out_nodata = out_raster.GetRasterBand(1).GetNoDataValue()
 
-    # Get the map of values from the specified table object and create an
-    # entry for the nodata values.
-    value_map = table.get_map(key_field, value_field)
-    value_map[base_nodata] = out_nodata
-
     # Define a vectorized function to map values to the base raster
     def map_values(pixel_value):
         """Take the input pixel value and return the appropriate value based
             on the table's map.  If the value cannot be found, return the
             output raster's nodata value."""
-        try:
-            return value_map[pixel_value]
-        except:
-            return out_nodata
 
     # Vectorize this operation.
     invest_core.vectorize1ArgOp(base_raster.GetRasterBand(1), map_values,
