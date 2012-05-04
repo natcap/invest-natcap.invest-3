@@ -108,6 +108,17 @@ class AbstractTableHandler(object):
             """
         pass
 
+    def get_table_dictionary(self, key_field):
+        """Returns a python dictionary mapping a key value to all values in that
+            particular row dictionary.  If duplicate keys are found, the are
+            overwritten in the output dictionary.
+
+            returns a python dictionary of dictionaries."""
+
+        if self.table == []:
+            self._get_table_list()
+        return dict((row[key_field], row) for row in self.table)
+
     def get_map(self, key_field, value_field):
         """Returns a python dictionary mapping values contained in key_field to
             values contained in value_field.  If duplicate keys are found, they
