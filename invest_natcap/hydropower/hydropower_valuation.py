@@ -1,6 +1,5 @@
 """InVEST Hydropower Valuation module at the "uri" level"""
 
-import sys
 import os
 import logging
 import csv
@@ -17,12 +16,12 @@ LOGGER = logging.getLogger('hydropower_valuation')
 
 def execute(args):
     """This function invokes the valuation model for hydropower given
-        URI inputs of files. It will do filehandling and open/create
+        URI inputs of files. It will do file handling and open/create
         appropriate objects to pass to the core hydropower valuation
         processing function.  It may write log, warning, or error messages to 
         stdout.
         
-        args - a python dictionary with at the following possible entries:
+        args - a python dictionary with at least the following possible entries:
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
