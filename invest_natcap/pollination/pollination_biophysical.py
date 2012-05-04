@@ -76,12 +76,18 @@ def execute(args):
 
     biophysical_args['ag_classes'] = ag_class_list
 
+    # Create a new raster for use as a raster of booleans, either 1 if the land
+    # cover class is in the ag list, or 0 if the land cover class is not.
+    ag_map_uri = os.path.join(inter_dir, 'agmap.tif')
+    biophysical_args['ag_map'] =\
+        make_raster_from_lulc(biophysical_args['landuse'], ag_map_uri)
+
     # Create new LULC-mapped files for later processing.  There are an arbitrary
     # number of rasters that will need to be created, which are entirely
     # dependent on the columns of the input table files.  There are two
     # categories of mapped rasters: nesting resources (column labels prefixed with 
     # 'N_') and floral resources (column labels prefixed with 'F_').
-    landuse_fields = att_table_handler.get_field_names()
+    landuse_fields = att_table_handler.fieldnames
     groupings = [('Floral seasons: %s', 'floral', '^f_'),
                  ('Nesting types: %s', 'nesting', '^n_')]
     mapped_columns = []
@@ -95,16 +101,17 @@ def execute(args):
             re.match(col_regexp, r.lower()) ]
         LOGGER.debug(logger_msg, matching_fields)
 
+        # Create a dictionary for storing the individual group's rasters in
+        # memory.
+        group_dict = {}
+
         # Loop through all fields that were matched, create the appropriate
         # raster based off of the landuse raster and save it to the group's
         # dictionary.  The group's dictionary will be used in biophysical_args.
-        group_dict = {}
         for field in matching_fields:
             raster_uri = os.path.join(inter_dir, field + '.tif')
-            LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
-            dataset = invest_cython_core.newRasterFromBase(\
-                biophysical_args['landuse'], raster_uri, 'GTiff', -1,
-                gdal.GDT_Float32)
+            dataset = make_raster_from_lulc(biophysical_args['landuse'],
+                raster_uri)
             group_dict[field] = dataset
 
         # Save the newly created rasters to biophysical_args based on the
@@ -113,3 +120,8 @@ def execute(args):
 
     pollination_core.biophysical(biophysical_args)
 
+def make_raster_from_lulc(lulc_dataset, raster_uri):
+    LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
+    dataset = invest_cython_core.newRasterFromBase(\
+        lulc_dataset, raster_uri, 'GTiff', -1, gdal.GDT_Float32)
+    return dataset
