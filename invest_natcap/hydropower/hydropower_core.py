@@ -182,17 +182,17 @@ def water_yield(args):
         if precip == 0 or tmp_pet == 0:
             return nodata
         
-        tmp_DI = tmp_pet / precip        
+        tmp_di = tmp_pet / precip        
         awc = (np.minimum(root, soil) * pawc)        
         tmp_w = (awc / (precip + 1)) * seasonality_constant
         
-        tmp_max_aet = np.copy(tmp_DI)
+        tmp_max_aet = np.copy(tmp_di)
         
         #Replace any value greater than 1 with 1
         np.putmask(tmp_max_aet, tmp_max_aet > 1, 1)
         
         tmp_calc = \
-            ((tmp_w * tmp_DI + 1) / (( 1 / tmp_DI) + (tmp_w * tmp_DI + 1)))
+            ((tmp_w * tmp_di + 1) / (( 1 / tmp_di) + (tmp_w * tmp_di + 1)))
         
         fractp = np.minimum(tmp_max_aet, tmp_calc)
         
@@ -420,7 +420,7 @@ def sheds_map_subsheds(shape, sub_shape):
     #watershed and will be different if it is not
     for feat in layer:
         index = feat.GetFieldIndex('ws_id')
-        id = feat.GetFieldAsInteger(index)
+        ws_id = feat.GetFieldAsInteger(index)
         geom = feat.GetGeometryRef()
         sub_layer.ResetReading()
         for sub_feat in sub_layer:
@@ -434,7 +434,7 @@ def sheds_map_subsheds(shape, sub_shape):
             #It also could be the case that the polygons were intended to 
             #overlap but do not overlap exactly
             if abs(geom.GetArea() - u_geom.GetArea()) < (math.e**-5):
-                collection[sub_id] = id
+                collection[sub_id] = ws_id
             
             sub_feat.Destroy()
             
@@ -459,12 +459,12 @@ def get_operation_value(raster, id_list, shed_mask, operation):
     band_mean = raster.GetRasterBand(1)
     pixel_data_array = np.copy(band_mean.ReadAsArray())
     sub_sheds_id_array = np.copy(shed_mask)
-    new_data_array = np.copy(pixel_data_array)
-    dict = {}
+#    new_data_array = np.copy(pixel_data_array)
+    op_dict = {}
 
-    for id in id_list:
-        mask_val = sub_sheds_id_array != id
-        set_mask_val = sub_sheds_id_array == id
+    for shed_id in id_list:
+        mask_val = sub_sheds_id_array != shed_id
+#        set_mask_val = sub_sheds_id_array == shed_id
         masked_array = np.ma.array(pixel_data_array, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         op_val = None
@@ -472,9 +472,9 @@ def get_operation_value(raster, id_list, shed_mask, operation):
             op_val = sum(comp_array) / len(comp_array)
         else:
             op_val = sum(comp_array)
-        dict[id] = op_val
+        op_dict[shed_id] = op_val
         
-    return dict
+    return op_dict
 
 def get_mask(raster, path, shed_shape, field_name):
     """Creates a copy of a raster and fills it with nodata values.  It then
@@ -554,7 +554,7 @@ def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     band_area.WriteArray(new_data_array, 0, 0)  
     return raster_area
 
-def create_operation_raster(raster, path, id_list, operation, shed_mask, dict):
+def create_operation_raster(raster, path, id_list, operation, shed_mask, op_dict):
     """Creates a new raster representing the mean or sum per watershed or per
        sub watershed 
     
@@ -565,7 +565,7 @@ def create_operation_raster(raster, path, id_list, operation, shed_mask, dict):
        id_list - a list of either the sub watershed or watershed id's
        operation - a string of the operation to perform
        shed_mask - a numpy array representing the shed/sub shed id mask
-       dict - a python dictionary to map the id's from id_list to the resulting
+       op_dict - a python dictionary to map the id's from id_list to the resulting
               values
               
        returns - a raster       
@@ -582,9 +582,9 @@ def create_operation_raster(raster, path, id_list, operation, shed_mask, dict):
     sub_sheds_id_array = np.copy(shed_mask)
     new_data_array = np.copy(pixel_data_array)
 
-    for id in id_list:
-        mask_val = sub_sheds_id_array != id
-        set_mask_val = sub_sheds_id_array == id
+    for shed_id in id_list:
+        mask_val = sub_sheds_id_array != shed_id
+        set_mask_val = sub_sheds_id_array == shed_id
         masked_array = np.ma.array(pixel_data_array_nodata, mask = mask_val)
         comp_array = np.ma.compressed(masked_array)
         op_val = None
@@ -593,7 +593,7 @@ def create_operation_raster(raster, path, id_list, operation, shed_mask, dict):
         else:
             op_val = sum(comp_array)
         np.putmask(new_data_array, set_mask_val, op_val)
-        dict[id] = op_val
+        op_dict[shed_id] = op_val
         
     band_op.WriteArray(new_data_array, 0, 0)
     return raster_op
@@ -780,8 +780,9 @@ def water_scarcity(args):
     nodata = -1
     
     #Create watershed mask raster
-    ws_mask = invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', 
-                                                   nodata, gdal.GDT_Float32)
+    ws_mask = \
+        invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', \
+                                             nodata, gdal.GDT_Float32)
 
     gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
                         options = ['ATTRIBUTE=ws_id'])
@@ -868,8 +869,8 @@ def water_scarcity(args):
     LOGGER.info('Creating consump_mn raster')
     mean_dict = {}
     mean_raster = \
-        create_operation_raster(clipped_consump, consump_mean_path, sws_id_list, 
-                                'mean', sub_mask, mean_dict)
+        create_operation_raster(clipped_consump, consump_mean_path, 
+                                sws_id_list, 'mean', sub_mask, mean_dict)
     LOGGER.debug('mean_dict : %s', mean_dict)
     #Make rsupply_vol by wyield_calib minus consump_vol
 
@@ -1013,12 +1014,12 @@ def write_csv_table(shed_table, field_list, file_path):
     #Write column header row
     writer.writerow(field_dict)
     
-    for key, dict in shed_table.iteritems():
-        writer.writerow(dict)
+    for sub_dict in shed_table.itervalues():
+        writer.writerow(sub_dict)
     
     shed_file.close()
 
-def sum_mean_dict(dict1, dict2, op):
+def sum_mean_dict(dict1, dict2, op_val):
     """Creates a dictionary by calculating the mean or sum of values over
        sub watersheds for the watershed
     
@@ -1027,7 +1028,7 @@ def sum_mean_dict(dict1, dict2, op):
                within that watershed
        dict2 - a dictionary whose keys are sub watershed id's and
                whose values are the desired numbers to be summed or meaned
-       op - a string indicating which operation to do ('sum' or 'mean')
+       op_val - a string indicating which operation to do ('sum' or 'mean')
        
        returns - a dictionary
     """
@@ -1038,7 +1039,7 @@ def sum_mean_dict(dict1, dict2, op):
         for item in val:
             counter = counter + 1
             sum_ws = sum_ws + dict2[int(item)]
-        if op == 'sum':
+        if op_val == 'sum':
             new_dict[key] = sum_ws
         else:
             new_dict[key] = sum_ws / counter
@@ -1136,15 +1137,15 @@ def valuation(args):
         for t in range (0, time):
             dsum = dsum + (1 / np.square(1 + (disc / 100)))
             
-        NPV = ((kwval * energy) - cost) * dsum
-        npv_dict[key] = NPV
-        ws_scarcity_table[key]['hp_value'] = NPV
+        npv = ((kwval * energy) - cost) * dsum
+        npv_dict[key] = npv
+        ws_scarcity_table[key]['hp_value'] = npv
         ws_scarcity_table[key]['hp_energy'] = energy
         
     LOGGER.debug('energy dict : %s', energy_dict)
     LOGGER.debug('npv dict : %s', npv_dict)
 
-    #NPV for sub shed is NPV for water shed times ratio of rsupply_vl of 
+    #npv for sub shed is npv for water shed times ratio of rsupply_vl of 
     #sub shed to rsupply_vl of water shed
     sws_npv_dict = {}
     sws_energy_dict = {}
