@@ -75,6 +75,9 @@ class AbstractTableHandler(object):
         self.uri = uri
         self._get_field_names()
         if self.mask_regexp != None:
+            self.orig_fieldnames = dict((k[self.mask_trim:], v) if
+                re.match(self.mask_regexp, k) else (k, v) for (k, v) in
+                self.orig_fieldnames.iteritems())
             self.fieldnames = [f[self.mask_trim:] if re.match(self.mask_regexp,
                 f) else f for f in self.fieldnames]
 
