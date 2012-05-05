@@ -56,6 +56,12 @@ def execute(args):
     # Open a Table Handler for the land use attributes table and a different
     # table handler for the Guilds table.
     att_table_handler = fileio.find_handler(args['landuse_attributes_uri'])
+    att_table_fields = att_table_handler.get_fieldnames()
+    nesting_fields = [f[2:] if re.match('^n_', f) for f in att_table_fields]
+    floral_fields = [f[2:] if re.match('^f_', f) for f in att_table_fields]
+    biophysical_args['nesting_fields'] = nesting_fields
+    biophysical_args['floral_fields'] = floral_fields
+
     att_table_handler.set_field_mask('(^n_)|(^f_)', trim=2)
     guilds_handler = fileio.find_handler(args['guilds_uri'])
     guilds_handler.set_field_mask('(^ns_)|(^fs_)', trim=3)
