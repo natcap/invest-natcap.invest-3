@@ -90,7 +90,7 @@ class AbstractTableHandler(object):
         self.update(self.uri)
 
     def _open(self):
-        """Function stub for reimplementation.
+        """Attempt to open the file provided by uri.
 
             Sets self.file_obj to be a pointer to the relevant file object."""
         pass
@@ -105,6 +105,20 @@ class AbstractTableHandler(object):
         if self.file_obj == None:
             self._open()
         return self.file_obj
+
+    def get_fieldnames(self, case='lower'):
+        """Returns a python list of the original fieldnames, true to their
+            original case.
+
+            case='lower' - a python string representing the desired status of the
+                fieldnames.  'lower' for lower case, 'orig' for original case.
+
+            returns a python list of strings."""
+
+        if case == 'lower':
+            return self.fieldnames
+        if case == 'orig':
+            return [self.orig_fieldnames[f] for f in self.fieldnames]
 
     def _get_field_names(self):
         """Function stub for reimplementation.
@@ -157,7 +171,8 @@ class OGRHandler(AbstractTableHandler):
         self.file_obj = ogr.Open(str(self.uri))
 
     def _get_field_names(self):
-        if self.file_obj != None:
+        shapefile = self.get_file_object()
+        if shapefile != None:
             layer = shapefile.GetLayer(0)
             layer_def = layer.GetLayerDefn()
 
@@ -177,7 +192,7 @@ class DBFHandler(AbstractTableHandler):
         self.file_obj = dbf.Dbf(self.uri)
 
     def _get_field_names(self):
-        dbf_file = self.file_object()
+        dbf_file = self.get_file_object()
         self.orig_fieldnames = dict((name.lower(), name) for name in
             dbf_file.fieldNames)
         self.fieldnames = [r.lower() for r in dbf_file.fieldNames]
@@ -206,7 +221,8 @@ class CSVHandler(AbstractTableHandler):
         self.table = output_list
 
     def _get_field_names(self):
-        if not hasattr(self.file_obj, 'fieldnames'):
+        csv_file = self.get_file_object()
+        if not hasattr(csv_file, 'fieldnames'):
             fieldnames = csv_file.next()
         else:
             fieldnames = csv_file.fieldnames
