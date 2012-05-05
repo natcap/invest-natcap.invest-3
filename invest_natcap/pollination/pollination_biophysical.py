@@ -57,6 +57,7 @@ def execute(args):
     # table handler for the Guilds table.
     att_table_handler = fileio.find_handler(args['landuse_attributes_uri'])
     guilds_handler = fileio.find_handler(args['guilds_uri'])
+    guilds_handler.set_field_mask('(^ns_)|(^fs_)', replace='')
 
     biophysical_args['landuse_attributes'] = att_table_handler
     biophysical_args['guilds'] = guilds_handler
