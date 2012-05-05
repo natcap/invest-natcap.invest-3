@@ -75,12 +75,20 @@ class AbstractTableHandler(object):
         self.uri = uri
         self._get_field_names()
         if self.mask_regexp != None:
+            # If the user has set a mask for the fieldnames, create a dictionary
+            # mapping the masked fieldnames to the original fieldnames and
+            # create a new (masked) list of fieldnames according to the user's
+            # mask.  Eventually, this will need to accommodate multiple forms of
+            # masking ... maybe a function call inside of the comprehension?
             self.orig_fieldnames = dict((k[self.mask_trim:], v) if
                 re.match(self.mask_regexp, k) else (k, v) for (k, v) in
                 self.orig_fieldnames.iteritems())
             self.fieldnames = [f[self.mask_trim:] if re.match(self.mask_regexp,
                 f) else f for f in self.fieldnames]
 
+        # Now that the orig_fieldnames dict and the fieldnames list have been
+        # set appropriately (masked or not), regenerate the table attribute to
+        # reflect these changes to the fieldnames.
         self._get_table_list()
 
     def set_field_mask(self, regexp=None, trim=0):
