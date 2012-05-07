@@ -57,8 +57,8 @@ def execute(args):
     # table handler for the Guilds table.
     att_table_handler = fileio.find_handler(args['landuse_attributes_uri'])
     att_table_fields = att_table_handler.get_fieldnames()
-    nesting_fields = [f[2:] if re.match('^n_', f) for f in att_table_fields]
-    floral_fields = [f[2:] if re.match('^f_', f) for f in att_table_fields]
+    nesting_fields = [f[2:] for f in att_table_fields if re.match('^n_', f)]
+    floral_fields = [f[2:] for f in att_table_fields if re.match('^f_', f)]
     biophysical_args['nesting_fields'] = nesting_fields
     biophysical_args['floral_fields'] = floral_fields
 
@@ -100,10 +100,14 @@ def execute(args):
                       ('floral', 'hf'),
                       ('species_abundance', 'sup'),
                       ('farm_abundance', 'frm')]
+
+    biophysical_args['species'] = {}
     for species in species_list:
+        biophysical_args['species'][species] = {}
         for group, prefix in species_rasters:
             raster_uri = os.path.join(inter_dir, prefix + '_' + species + '.tif')
-            dataset = make_raster_from_lulc(args['landuse'], raster_uri)
+            dataset = make_raster_from_lulc(biophysical_args['landuse'],
+                raster_uri)
             biophysical_args['species'][species][group] = dataset
 
     pollination_core.biophysical(biophysical_args)

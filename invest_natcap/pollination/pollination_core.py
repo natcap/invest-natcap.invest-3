@@ -3,6 +3,10 @@
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
+import logging
+
+LOGGER = logging.getLogger('pollination_core')
+
 def biophysical(args):
     """Execute the biophysical component of the pollination model.
 
@@ -23,6 +27,8 @@ def biophysical(args):
         args['species'][species_name]['nesting'] - a GDAL dataset
         args['species'][species_name]['species_abundance'] - a GDAL dataset
         args['species'][species_name]['farm_abundance'] - a GDAL dataset
+        args['nesting_fields'] - a python list of string nesting field basenames
+        args['floral fields'] - a python list of string floral fields
 
         returns nothing."""
 
@@ -30,11 +36,11 @@ def biophysical(args):
     make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
 
     for species, species_dict in args['species'].iteritems():
-        for resource_tuple in ['floral', 'nesting']:
-            resource, lu_regexp, guild_regexp = resource_tuple
-            guild_dict = args['guilds'].get_table_dictionary(species)
+        for resource in ['floral', 'nesting']:
+            resource_fields = args[resource + '_fields']
+            guild_dict = args['guilds'].get_table_row('species', species)
             map_attribute(args['landuse'], args['landuse_attributes'], guild_dict,
-                args[resource + '_attributes'], species_dict[resource])
+                resource_fields, species_dict[resource])
 
 
 def map_attribute(base_raster, attr_table, species_dict, attr_list, out_raster):
