@@ -60,6 +60,8 @@ class AbstractTableHandler(object):
         self.orig_fieldnames = {}
         self.fieldnames = []
         self.table = []
+        self.mask_regexp = None
+        self.mask_trim = 0
         self.update(uri)
 
     def update(self, uri):
@@ -72,7 +74,31 @@ class AbstractTableHandler(object):
 
         self.uri = uri
         self._get_field_names()
+        if self.mask_regexp != None:
+            # If the user has set a mask for the fieldnames, create a dictionary
+            # mapping the masked fieldnames to the original fieldnames and
+            # create a new (masked) list of fieldnames according to the user's
+            # mask.  Eventually, this will need to accommodate multiple forms of
+            # masking ... maybe a function call inside of the comprehension?
+            self.orig_fieldnames = dict((k[self.mask_trim:], v) if
+                re.match(self.mask_regexp, k) else (k, v) for (k, v) in
+                self.orig_fieldnames.iteritems())
+            self.fieldnames = [f[self.mask_trim:] if re.match(self.mask_regexp,
+                f) else f for f in self.fieldnames]
+
+        # Now that the orig_fieldnames dict and the fieldnames list have been
+        # set appropriately (masked or not), regenerate the table attribute to
+        # reflect these changes to the fieldnames.
         self._get_table_list()
+
+    def set_field_mask(self, regexp=None, trim=0):
+        """Set a mask for the table's self.fieldnames.  Any fieldnames that
+            match regexp will have trim number of characters stripped off the
+            front."""
+
+        self.mask_regexp = regexp
+        self.mask_trim = trim
+        self.update(self.uri)
 
     def _open(self):
         """Attempt to open the file provided by uri.
@@ -121,6 +147,17 @@ class AbstractTableHandler(object):
             dictionary maps lower-case column names to the appropriate value.
             """
         pass
+
+    def get_table_dictionary(self, key_field):
+        """Returns a python dictionary mapping a key value to all values in that
+            particular row dictionary.  If duplicate keys are found, the are
+            overwritten in the output dictionary.
+
+            returns a python dictionary of dictionaries."""
+
+        if self.table == []:
+            self._get_table_list()
+        return dict((row[key_field], row) for row in self.table)
 
     def get_map(self, key_field, value_field):
         """Returns a python dictionary mapping values contained in key_field to
