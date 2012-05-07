@@ -43,13 +43,15 @@ def biophysical(args):
                 resource_fields, species_dict[resource])
 
 
-def map_attribute(base_raster, attr_table, species_dict, attr_list, out_raster):
+def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_raster):
     """Make an intermediate raster where values are mapped from the base raster
         according to the mapping specified by key_field and value_field.
 
         base_raster - a GDAL dataset
         attr_table - a subclass of fileio.AbstractTableHandler
-        guilds - a subclass of fileio.AbstractTableHandler
+        guild_dict - a python dictionary representing the guild row for this
+            species.
+        resource_fields - a python list of string resource fields
         out_raster - a GDAL dataset
 
         returns nothing."""
@@ -60,11 +62,21 @@ def map_attribute(base_raster, attr_table, species_dict, attr_list, out_raster):
     # Get the output raster's nodata value
     out_nodata = out_raster.GetRasterBand(1).GetNoDataValue()
 
+    lu_table_dict = attr_table.get_table_dictionary('lulc')
+
+    value_list = dict((r, guild_dict[r]) for r in resource_fields)
     # Define a vectorized function to map values to the base raster
-    def map_values(pixel_value):
+    def map_values(lu_code):
         """Take the input pixel value and return the appropriate value based
             on the table's map.  If the value cannot be found, return the
             output raster's nodata value."""
+        try:
+            if lu_code == base_nodata:
+                return out_nodata
+            return sum([value_list[r] * lu_table_dict[lu_code][r] for r in
+                resource_fields])
+        except KeyError:
+            return out_nodata
 
     # Vectorize this operation.
     invest_core.vectorize1ArgOp(base_raster.GetRasterBand(1), map_values,
