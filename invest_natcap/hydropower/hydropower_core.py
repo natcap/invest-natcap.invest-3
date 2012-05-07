@@ -1151,7 +1151,7 @@ def valuation(args):
         dsum = 0
         
         for t in range (0, time):
-            dsum = dsum + (1 / np.square(1 + (disc / 100)))
+            dsum = dsum + (1 / math.pow(1 + (disc / 100), t))
             
         npv = ((kwval * energy) - cost) * dsum
         npv_dict[key] = npv
