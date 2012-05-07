@@ -181,7 +181,7 @@ def water_yield(args):
         for var_name, value in locals().items():
             if var_name in fractp_nodata_dict and value == fractp_nodata_dict[var_name]:
                 return out_nodata
-        
+        #Converting to a percent because stored in the table as int(percent * 1000)
         tmp_pet = (etk * eto) / 1000
         
         #Check to make sure that variables are not zero to avoid dividing by
@@ -288,7 +288,7 @@ def water_yield(args):
             wyield_area - numpy array with the water yield area raster values
             
             returns - water yield volume value"""
-            
+        #Figure out why dividing my 1000
         if wyield_mn != out_nodata and wyield_area != out_nodata:
             return (wyield_mn * wyield_area / 1000)
         else:
@@ -322,7 +322,7 @@ def water_yield(args):
             wyield_area - numpy array with the water yield area raster values
             
             returns - water yield volume in ha value"""
-
+        #Converting area from square meters to hectares
         if wyield_vol != out_nodata and wyield_area != out_nodata:
             return wyield_vol / (0.0001 * wyield_area)
         else:
@@ -1143,7 +1143,7 @@ def valuation(args):
         energy = efficiency * fraction * height * rsupply_vl * 0.00272
         energy_dict[key] = energy
         
-        time = float(val_row['time_span'])
+        time = int(val_row['time_span'])
         kwval = float(val_row['kw_price'])
         disc = float(val_row['discount'])
         cost = float(val_row['cost'])
