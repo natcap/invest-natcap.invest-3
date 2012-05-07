@@ -793,12 +793,12 @@ def water_scarcity(args):
     sub_mask_raster_path2 = intermediate_dir + os.sep + 'sub_shed_mask3.tif'
     
     #The nodata value to use for the output rasters
-    nodata = -1
+    out_nodata = -1
     
     #Create watershed mask raster
     ws_mask = \
         invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', \
-                                             nodata, gdal.GDT_Float32)
+                                             out_nodata, gdal.GDT_Float32)
 
     gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
                         options = ['ATTRIBUTE=ws_id'])
@@ -818,14 +818,15 @@ def water_scarcity(args):
            returns - the calibrated water yield volume value
         """
         
-        if wyield_vol != wyield_vol_nodata and shed_id != nodata:
+        if wyield_vol != wyield_vol_nodata and shed_id != out_nodata:
             return wyield_vol * calib_dict[shed_id]
         else:
-            return nodata
+            return out_nodata
         
     wyield_calib = \
         invest_cython_core.newRasterFromBase(ws_mask, wyield_calib_path,
-                                             'GTiff', nodata, gdal.GDT_Float32)
+                                             'GTiff', out_nodata, 
+                                             gdal.GDT_Float32)
         
     ws_band = ws_mask.GetRasterBand(1)
     wyield_calib_band = wyield_calib.GetRasterBand(1)
@@ -839,7 +840,8 @@ def water_scarcity(args):
     lulc_band = lulc_raster.GetRasterBand(1)
     lulc_nodata = lulc_band.GetNoDataValue()
     tmp_consump = invest_cython_core.newRasterFromBase(lulc_raster, '', 'MEM', 
-                                                       nodata, gdal.GDT_Float32)
+                                                       out_nodata, 
+                                                       gdal.GDT_Float32)
     tmp_consump_band = tmp_consump.GetRasterBand(1)
     
     demand_dict[lulc_nodata] = lulc_nodata
@@ -855,14 +857,12 @@ def water_scarcity(args):
         if lulc in demand_dict:
             return demand_dict[lulc]
         else:
-            return nodata
+            return out_nodata
     
     invest_core.vectorize1ArgOp(lulc_band, lulc_demand, tmp_consump_band)
     LOGGER.info('Clip raster from polygons')
     clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, 
                                                clipped_consump_path)
-    
-    #Take sum of consump over sub watersheds making consump_vol
     
     #Get a numpy array from rasterizing the sub watershed id values into
     #a raster. The numpy array will be the sub watershed mask used for
@@ -871,7 +871,7 @@ def water_scarcity(args):
     sub_mask = get_mask(clipped_consump, sub_mask_raster_path, sub_sheds, 
                         'subws_id')
     LOGGER.info('Get the shed id')
-    sws_id_list = get_shed_ids(sub_mask, nodata)
+    sws_id_list = get_shed_ids(sub_mask, out_nodata)
     LOGGER.debug('shed_id_list : %s', sws_id_list)
     LOGGER.info('Creating consump_vol raster')
     sum_dict = {}
@@ -905,7 +905,7 @@ def water_scarcity(args):
         if (wyield_calib != nodata_calib and consump_vol != nodata_consump):
             return wyield_calib - consump_vol
         else:
-            return nodata
+            return out_nodata
         
     rsupply_vol_vec = np.vectorize(rsupply_vol_op)
 
@@ -928,7 +928,7 @@ def water_scarcity(args):
         if wyield_mean != wyield_mn_nodata and consump_mean != mn_raster_nodata:
             return wyield_mean - consump_mean
         else:
-            return nodata
+            return out_nodata
         
     rsupply_mn_vec = np.vectorize(rsupply_mean_op)
     
@@ -939,7 +939,7 @@ def water_scarcity(args):
     #provided from sub watershed yield and watershed yield
     sub_mask2 = get_mask(wyield_calib, sub_mask_raster_path2, sub_sheds, 
                          'subws_id')
-    sws_id_list2 = get_shed_ids(sub_mask2, nodata)
+    sws_id_list2 = get_shed_ids(sub_mask2, out_nodata)
     
     #cyielc_vl per watershed
     shed_subshed_map = {}
