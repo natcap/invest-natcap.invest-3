@@ -22,10 +22,10 @@ class TestHydropowerValuation(unittest.TestCase):
         base = './data/hydropower_data/'
         args = {}
         args['workspace_dir'] = base
-        args['cal_water_yield'] = base + 'test_input/cyield.tif'
+        args['cal_water_yield'] = base + 'samp_input/cyield_vol.tif'
         args['watersheds_uri'] = base + 'test_input/watersheds.shp'
         args['sub_watersheds_uri'] = base + 'test_input/subwatersheds.shp'
-        args['water_consump'] = base + 'test_input/consum_vol.tif'
+        args['water_consump'] = base + 'samp_input/consum_vol.tif'
         args['watershed_scarcity_table_uri'] = \
             base + 'test_input/water_scarcity_watershed.csv'
         args['subwatershed_scarcity_table_uri'] = \
