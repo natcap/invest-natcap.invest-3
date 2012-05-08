@@ -126,7 +126,9 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_rast
         try:
             if lu_code == base_nodata:
                 return out_nodata
-            return sum([value_list[r] * lu_table_dict[lu_code][r] for r in
+            # Max() is how InVEST 2.2 pollination does this, although I think
+            # that sum() should actually be used.
+            return max([value_list[r] * lu_table_dict[lu_code][r] for r in
                 resource_fields])
         except KeyError:
             return out_nodata
