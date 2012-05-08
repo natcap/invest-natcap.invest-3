@@ -95,6 +95,30 @@ def biophysical(args):
         args['species'][species]['species_abundance'].GetRasterBand(1).\
             WriteArray(supply_matrix)
 
+        # Calculate the foraging ('farm abundance') index
+        foraging_raster = args['species'][species]['farm_abundance'].\
+            GetRasterBand(1)
+
+        # Replace all values less than 0 with 0 so as not to affect the gaussian
+        # filter.
+        np.putmask(supply_matrix, supply_matrix < 0, 0)
+
+        # Use a gaussian blur on the pollinator supply raster
+        foraging_matrix = ndimage.gaussian_filter(supply_matrix, sigma)
+
+        # Re-mask the raster to the LULC boundary (we'll use the nesting raster
+        # as a proxy for the LULC raster).
+        np.putmask(foraging_matrix, nesting_raster.ReadAsArray() < 0,
+            foraging_raster.GetNoDataValue())
+
+        # Wherever a pixel is not an ag pixel, replace it with the foraging
+        # raster's nodata value.
+        np.putmask(foraging_matrix, args['ag_map'].GetRasterBand(1).\
+                   ReadAsArray() == 0, foraging_raster.GetNoDataValue())
+
+        # Write the foraging matrix to disk 
+        foraging_raster.WriteArray(foraging_matrix)
+
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_raster):
     """Make an intermediate raster where values are mapped from the base raster
