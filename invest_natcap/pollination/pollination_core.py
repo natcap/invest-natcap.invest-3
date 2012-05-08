@@ -75,6 +75,26 @@ def biophysical(args):
         args['species'][species]['floral'].GetRasterBand(1).WriteArray(
             filtered_matrix)
 
+        # Calculate the pollinator abundance index (using Math! to simplify the
+        # equation in the documentation.  Still need to verify with Rich.
+        # This looks like it's just floral resources*nesting resources.
+        nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
+        nesting_matrix =nesting_raster.ReadAsArray()
+
+        # Mask the nesting matrix so that any values less than 1 are used as 0
+        np.putmask(nesting_matrix, nesting_matrix < 0, 0)
+
+        # This is the actual per-multiplication.
+        supply_matrix = np.multiply(filtered_matrix, nesting_matrix)
+
+        # Re-mask the raster to the LULC boundary.
+        np.putmask(supply_matrix, nesting_raster.ReadAsArray() < 0,
+            nesting_raster.GetNoDataValue())
+
+        # Save the pollinator supply matrix to the pollinator supply raster
+        args['species'][species]['species_abundance'].GetRasterBand(1).\
+            WriteArray(supply_matrix)
+
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_raster):
     """Make an intermediate raster where values are mapped from the base raster
