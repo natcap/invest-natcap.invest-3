@@ -27,10 +27,10 @@ def execute(args):
             and other temporary files during calculation. (required)
         args['cal_water_yield_uri'] - a uri to a Gdal raster of the calibrated
             water yield volume per sub-watershed, generated as an output
-            of the water scarcity model (required)
+            of the water scarcity model (cubic meters) (required)
         args['water_consump_uri'] - a uri to a Gdal raster of the total water
             consumptive use for each sub-watershed, generated as an output
-            of the water scarcity model (required)
+            of the water scarcity model (cubic meters) (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
         args['sub_watersheds_uri'] - a uri to an input shapefile of the 
@@ -43,7 +43,9 @@ def execute(args):
             generated as an output of the water scarcity model, that holds
             relevant values for each sub watershed. (required)
         args['valuation_table_uri'] - a uri to an input CSV table of 
-            hydropower stations with associated model values (required)
+            hydropower stations with the following fields (required):
+            ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
+            'cost', 'height', 'kw_price')
         args['results_suffix'] - a string that will be concatenated onto the
            end of file names (optional)
                
