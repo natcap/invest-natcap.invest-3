@@ -3,6 +3,10 @@
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
+import numpy as np
+import scipy.ndimage as ndimage
+
+import math
 import logging
 
 LOGGER = logging.getLogger('pollination_core')
@@ -36,11 +40,40 @@ def biophysical(args):
     make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
 
     for species, species_dict in args['species'].iteritems():
-        for resource in ['floral', 'nesting']:
-            resource_fields = args[resource + '_fields']
-            guild_dict = args['guilds'].get_table_row('species', species)
+        guild_dict = args['guilds'].get_table_row('species', species)
+
+        for resource in ['nesting', 'floral']:
+            # Calculate the attribute's resources
             map_attribute(args['landuse'], args['landuse_attributes'], guild_dict,
-                resource_fields, species_dict[resource])
+                args[resource + '_fields'], species_dict[resource])
+
+        # Now that the per-pixel nesting and floral resources have been calculated,
+        # the floral resources still need to factor in neighborhoods.
+        # The sigma size is 2 times the pixel size, presumable since the
+        # raster's pixel width is a radius for the gaussian blur when we want
+        # the diameter of the blur.
+        pixel_size = abs(args['landuse'].GetGeoTransform()[1])
+        sigma = float(guild_dict['alpha']/(2 * pixel_size))
+
+        # Fetch the floral resources raster and matrix from the args dictionary
+        floral_raster = args['species'][species]['floral'].GetRasterBand(1)
+        floral_matrix = floral_raster.ReadAsArray()
+
+        # The gaussian filter isn't sensitive to nodata values, so we need to
+        # replace any values below 0 with 0.
+        np.putmask(floral_matrix, floral_matrix < 0, 0)
+
+        # Apply the gaussian filter to the masked floral matrix.
+        filtered_matrix = ndimage.gaussian_filter(floral_matrix, sigma)
+
+        # Clip the gaussian-filtered matrix to the outline of the landcover map,
+        # which is anywhere the floral_raster matrix's values are below 0.
+        np.putmask(filtered_matrix, floral_raster.ReadAsArray() < 0,
+            floral_raster.GetNoDataValue())
+
+        # Write the filtered floral resource matrix to its raster
+        args['species'][species]['floral'].GetRasterBand(1).WriteArray(
+            filtered_matrix)
 
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_raster):
