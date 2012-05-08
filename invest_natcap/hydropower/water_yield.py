@@ -1,6 +1,5 @@
 """InVEST Water Yield module at the "uri" level"""
 
-import sys
 import os
 import logging
 import csv
@@ -17,12 +16,12 @@ LOGGER = logging.getLogger('water_yield')
 
 def execute(args):
     """This function invokes the water yield model given
-        URI inputs of files. It will do filehandling and open/create
+        URI inputs of files. It will do file handling and open/create
         appropriate objects to pass to the core water yield processing 
         function.  It may write log, warning, or error messages to 
         stdout.
         
-        args - a python dictionary with at the following possible entries:
+        args - a python dictionary with at least the following possible entries:
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
@@ -51,9 +50,9 @@ def execute(args):
             'watersheds_uri' shape provided as input. (required)
         args['biophysical_table_uri'] - a uri to an input CSV table of 
             land use/land cover classes, containing data on biophysical 
-            coefficients such as root_depth and etk. NOTE: these data are 
-            attributes of each LULC class rather than attributes of individual 
-            cells in the raster map (required)
+            coefficients such as root_depth (mm) and etk, which are required. 
+            NOTE: these data are attributes of each LULC class rather than 
+            attributes of individual cells in the raster map (required)
         args['seasonality_constant'] - floating point value between 1 and 10 
             corresponding to the seasonal distribution of precipitation 
             (required)

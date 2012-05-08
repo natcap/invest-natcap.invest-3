@@ -1,6 +1,5 @@
 """InVEST Water Scarcity module at the "uri" level"""
 
-import sys
 import os
 import logging
 import csv
@@ -17,12 +16,12 @@ LOGGER = logging.getLogger('water_scarcity')
 
 def execute(args):
     """This function invokes the water scarcity model given
-        URI inputs of files. It will do filehandling and open/create
+        URI inputs of files. It will do file handling and open/create
         appropriate objects to pass to the core water scarcity
         processing function.  It may write log, warning, or error messages to 
         stdout.
         
-        args - a python dictionary with at the following possible entries:
+        args - a python dictionary with at least the following possible entries:
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
@@ -34,11 +33,14 @@ def execute(args):
             the water_yield model, describing the mean water yield per
             sub-watershed (mm) (required)
         args['lulc_uri'] - a uri to a land use/land cover raster whose
-            LULC indexes correspond to indexs in the biophysical table input.
+            LULC indexes correspond to indexes in the biophysical table input.
             Used for determining soil retention and other biophysical 
             properties of the landscape.  (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
+        args['sub_watersheds_uri'] - a uri to an input shapefile of the 
+            subwatersheds of interest that are contained in the
+            'watersheds_uri' shape provided as input. (required)
         args['watershed_yield_table_uri'] - a uri to an input CSV table, 
             generated from the water_yield model, containing values for mean 
             precipitation, potential and actual evapotranspiration and water
@@ -47,13 +49,10 @@ def execute(args):
             generated from the water_yield model, containing values for mean 
             precipitation, potential and actual evapotranspiration and water
             yield per sub watershed
-        args['sub_watersheds_uri'] - a uri to an input shapefile of the 
-            subwatersheds of interest that are contained in the
-            'watersheds_uri' shape provided as input. (required)
-        args['demand_table_uri'] - a uri to an input dbf table of LULC classes,
+        args['demand_table_uri'] - a uri to an input CSV table of LULC classes,
             showing consumptive water use for each landuse / land-cover type
-            (required)
-        args['hydro_calibration_table_uri'] - a  uri to an input dbf table of 
+            (cubic meters per year) (required)
+        args['hydro_calibration_table_uri'] - a  uri to an input CSV table of 
             hydropower stations with associated calibration values (required)
         args['results_suffix'] - a string that will be concatenated onto the
            end of file names (optional)
@@ -67,7 +66,7 @@ def execute(args):
     for folder_name in ['Output', 'Service', 'Intermediate']:
         folder_path = workspace_dir + os.sep + folder_name
         if not os.path.isdir(folder_path):
-            os.path.mkdir(folder_path)
+            os.mkdir(folder_path)
     
     water_scarcity_args = {}
     water_scarcity_args['workspace_dir'] = args['workspace_dir']
@@ -116,7 +115,7 @@ def execute(args):
     hydro_cal_table_file = open(args['hydro_calibration_table_uri'])
     reader = csv.DictReader(hydro_cal_table_file)
     for row in reader:
-        hydro_cal_table_map[int(row['ws_id'])] = int(row['calib'])
+        hydro_cal_table_map[int(row['ws_id'])] = float(row['calib'])
         
     water_scarcity_args['hydro_calibration_table'] = hydro_cal_table_map
     hydro_cal_table_file.close()

@@ -1,6 +1,5 @@
 """InVEST Hydropower Valuation module at the "uri" level"""
 
-import sys
 import os
 import logging
 import csv
@@ -17,21 +16,21 @@ LOGGER = logging.getLogger('hydropower_valuation')
 
 def execute(args):
     """This function invokes the valuation model for hydropower given
-        URI inputs of files. It will do filehandling and open/create
+        URI inputs of files. It will do file handling and open/create
         appropriate objects to pass to the core hydropower valuation
         processing function.  It may write log, warning, or error messages to 
         stdout.
         
-        args - a python dictionary with at the following possible entries:
+        args - a python dictionary with at least the following possible entries:
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
         args['cal_water_yield_uri'] - a uri to a Gdal raster of the calibrated
             water yield volume per sub-watershed, generated as an output
-            of the water scarcity model (required)
+            of the water scarcity model (cubic meters) (required)
         args['water_consump_uri'] - a uri to a Gdal raster of the total water
             consumptive use for each sub-watershed, generated as an output
-            of the water scarcity model (required)
+            of the water scarcity model (cubic meters) (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
         args['sub_watersheds_uri'] - a uri to an input shapefile of the 
@@ -44,7 +43,9 @@ def execute(args):
             generated as an output of the water scarcity model, that holds
             relevant values for each sub watershed. (required)
         args['valuation_table_uri'] - a uri to an input CSV table of 
-            hydropower stations with associated model values (required)
+            hydropower stations with the following fields (required):
+            ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
+            'cost', 'height', 'kw_price')
         args['results_suffix'] - a string that will be concatenated onto the
            end of file names (optional)
                
