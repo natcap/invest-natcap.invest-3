@@ -1,0 +1,1 @@
+"""This script filters land cover type. Woah!"""
