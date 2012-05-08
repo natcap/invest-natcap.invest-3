@@ -47,7 +47,7 @@ def water_yield(args):
             'watersheds_uri' shape provided as input. (required)
         args['biophysical_dictionary'] - a python dictionary representing the 
             land use/land cover classes, containing data on the biophysical 
-            coefficients root_depth and etk. The dictionary is structured as
+            coefficients root_depth (mm) and etk. The dictionary is structured as
             follows, where the key is lulc_code and value is another 
             dictionary (required):
             
@@ -166,31 +166,39 @@ def water_yield(args):
             etk - numpy array with the etk (plant evapotranspiration 
                   coefficient) raster values
             eto - numpy array with the potential evapotranspiration raster 
-                  values
-            precip - numpy array with the precipitation raster values
+                  values (mm)
+            precip - numpy array with the precipitation raster values (mm)
             root - numpy array with the root depth (maximum root depth for
-                   vegetated land use classes) raster values
-            soil - numpy array with the soil depth raster values
+                   vegetated land use classes) raster values (mm)
+            soil - numpy array with the soil depth raster values (mm)
             pawc - numpy array with the plant available water content raster 
                    values
             
-        returns - fractp value"""
+        returns - fractp value """
         
         #If any of the local variables which are in the 'fractp_nodata_dict' 
         #dictionary are equal to a out_nodata value, then return out_nodata
         for var_name, value in locals().items():
             if var_name in fractp_nodata_dict and value == fractp_nodata_dict[var_name]:
                 return out_nodata
-        #Converting to a percent because stored in the table as int(percent * 1000)
-        tmp_pet = (etk * eto) / 1000
-        
+
         #Check to make sure that variables are not zero to avoid dividing by
         #zero error
-        if precip == 0 or tmp_pet == 0:
+        if precip == 0 or etk == 0 or eto == 0:
             return out_nodata
         
-        tmp_di = tmp_pet / precip        
-        awc = (np.minimum(root, soil) * pawc)        
+        #Compute Budyko Dryness index
+        #Converting to a percent because 'etk' is stored in the table 
+        #as int(percent * 1000)
+        tmp_di = (etk * eto) / (precip * 1000)
+#        tmp_pet = (etk * eto) / 1000
+#        tmp_di = tmp_pet / precip        
+        
+        #Calculate plant available water conent (mm)
+        awc = (np.minimum(root, soil) * pawc)  
+        
+        #Calculate dimensionless ratio of plant accessible water
+        #storage to expected precipitation during the year      
         tmp_w = (awc / (precip + 1)) * seasonality_constant
         
         tmp_max_aet = np.copy(tmp_di)
@@ -198,6 +206,7 @@ def water_yield(args):
         #Replace any value greater than 1 with 1
         np.putmask(tmp_max_aet, tmp_max_aet > 1, 1)
         
+        #Compute evapotranspiration partition of the water balance
         tmp_calc = \
             ((tmp_w * tmp_di + 1) / (( 1 / tmp_di) + (tmp_w * tmp_di + 1)))
         
@@ -220,9 +229,9 @@ def water_yield(args):
         """Function that calculates the water yeild raster
         
            fractp - numpy array with the fractp raster values
-           precip - numpy array with the precipitation raster values
+           precip - numpy array with the precipitation raster values (mm)
            
-           returns - water yield value"""
+           returns - water yield value (mm)"""
         
         if fractp == out_nodata or precip == precip_nodata:
             return out_nodata
@@ -284,11 +293,12 @@ def water_yield(args):
     def volume(wyield_mn, wyield_area):
         """Function to compute the water yield volume raster
         
-            wyield_mn - numpy array with the water yield mean raster values
-            wyield_area - numpy array with the water yield area raster values
+            wyield_mn - numpy array with the water yield mean raster values (mm)
+            wyield_area - numpy array with the water yield area raster 
+                          values (square meters)
             
-            returns - water yield volume value"""
-        #Figure out why dividing my 1000
+            returns - water yield volume value (cubic meters)"""
+        #Divide by 1000 because wyield is in mm, so convert to meters
         if wyield_mn != out_nodata and wyield_area != out_nodata:
             return (wyield_mn * wyield_area / 1000)
         else:
@@ -319,8 +329,10 @@ def water_yield(args):
         """Function to compute water yield volume in units of ha
         
             wyield_vol - numpy array with the water yield volume raster values
+                         (cubic meters)
             wyield_area - numpy array with the water yield area raster values
-            
+                          (squared meters)
+                          
             returns - water yield volume in ha value"""
         #Converting area from square meters to hectares
         if wyield_vol != out_nodata and wyield_area != out_nodata:
@@ -345,9 +357,9 @@ def water_yield(args):
         """Function to compute the actual evapotranspiration values
         
             fractp - numpy array with the fractp raster values
-            precip - numpy array with the precipitation raster values
+            precip - numpy array with the precipitation raster values (mm)
             
-            returns - actual evapotranspiration values"""
+            returns - actual evapotranspiration values (mm)"""
         
         if fractp != out_nodata and precip != precip_nodata:
             return fractp * precip

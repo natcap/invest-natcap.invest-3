@@ -50,7 +50,7 @@ def execute(args):
             'watersheds_uri' shape provided as input. (required)
         args['biophysical_table_uri'] - a uri to an input CSV table of 
             land use/land cover classes, containing data on biophysical 
-            coefficients such as root_depth and etk, which are required. 
+            coefficients such as root_depth (mm) and etk, which are required. 
             NOTE: these data are attributes of each LULC class rather than 
             attributes of individual cells in the raster map (required)
         args['seasonality_constant'] - floating point value between 1 and 10 

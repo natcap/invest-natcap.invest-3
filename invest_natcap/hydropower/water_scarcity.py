@@ -51,7 +51,7 @@ def execute(args):
             yield per sub watershed
         args['demand_table_uri'] - a uri to an input CSV table of LULC classes,
             showing consumptive water use for each landuse / land-cover type
-            (required)
+            (cubic meters per year) (required)
         args['hydro_calibration_table_uri'] - a  uri to an input CSV table of 
             hydropower stations with associated calibration values (required)
         args['results_suffix'] - a string that will be concatenated onto the
