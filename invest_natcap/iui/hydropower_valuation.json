@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Hydropower Valuation",
-    "targetScript" : "invest_natcap.hydropower.hydropower_valuation",
+    "targetScript" : "invest_natcap/hydropower/hydropower_valuation.py",
     "modelName" : "hydropower_valuation",
     "localDocURI": "./documentation/hydropower.html",
     "height": 900,

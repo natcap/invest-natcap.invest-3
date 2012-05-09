@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Water Yield",
-    "targetScript" : "invest_natcap.hydropower.water_yield",
+    "targetScript" : "invest_natcap/hydropower/water_yield.py",
     "modelName" : "water_yield",
     "localDocURI": "./documentation/water_yield.html",
     "height": 900,
