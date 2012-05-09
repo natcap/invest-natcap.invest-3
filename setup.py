@@ -18,13 +18,16 @@ if platform.system() == 'Windows':
                'invest_carbon_valuation.py',
                'invest_wave_energy_biophysical.py',
                'invest_wave_energy_valuation.py',
-               'invest_timber.py']
+               'invest_timber.py',
+               'invest_hydropower_valuation.py',
+               'invest_water_scarcity.py']
     data_files = ['invest_natcap/iui/carbon_biophysical.json',
                   'invest_natcap/iui/carbon_valuation.json',
                   'invest_natcap/iui/wave_energy_valuation.json',
                   'invest_natcap/iui/wave_energy_biophysical.json',
+                  'invest_natcap/iui/hydropower_valuation.json',
+                  'invest_natcap/iui/water_scarcity.json',
                   'invest_natcap/iui/timber.json']
-
 
 setup(name='invest_natcap',
       version='tip',
