@@ -25,7 +25,8 @@
                     "type": "folder",
                     "label": "Calibrated Water Yield (volume)",
                     "defaultValue": "./Hydropower/Service/cyield_vol.tif",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "water_consumption",
@@ -33,7 +34,8 @@
                     "type": "folder",
                     "label": "Water Consumption (volume)",
                     "defaultValue": "./Hydropower/Service/consump_vl.tif",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },       
                 {
                     "id" : "watersheds",
@@ -44,9 +46,9 @@
                     "required": true,
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
-                                               "type": "polygons", 
-                                               "projection" : "Transverse_Mercator",
-                                               "datum" : "WGS_1984"}]
+                                               "type": "polygons"
+                                             }],
+                                   "fieldsExist": ["ws_id"]
                                    }
                  },
                  {
@@ -59,7 +61,8 @@
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
                                                "type": "polygons"
-                                             }]
+                                             }],
+                                   "fieldsExist": ["subws_id"]
                                    }
                  },
                  {
@@ -73,7 +76,7 @@
                                     "fieldsExist": ["ws_id", "precip_mn", "PET_mn", "AET_mn", "wyield_mn", "wyield_sum", "cyield_vl", "consump_vl", "consump_mn", "rsupply_vl", "rsupply_mn"],
                                     "restrictions": [{"field": "ws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                      {"field": "precip_mn",
                                                       "validateAs": {"type": "number",
@@ -127,11 +130,11 @@
                                     "fieldsExist": ["ws_id", "subws_id", "precip_mn", "PET_mn", "AET_mn", "wyield_mn", "wyield_sum", "cyield_vl", "consump_vl", "consump_mn", "rsupply_vl", "rsupply_mn"],
                                     "restrictions": [{"field": "ws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                      {"field": "subws_id",
                                                       "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                      {"field": "precip_mn",
                                                       "validateAs": {"type": "number",
@@ -182,14 +185,14 @@
                     "defaultValue": "./Hydropower/input/hydropower_valuation_table.csv",
                     "required": true,
                     "validateAs": { "type": "CSV",
-                                    "fieldsExist": ["ws_id", "time_span", "discount", "efficiencey", "fraction", "cost", "height", "kw_price"],
+                                    "fieldsExist": ["ws_id", "time_span", "discount", "efficiency", "fraction", "cost", "height", "kw_price"],
                                     "restrictions": [{"field": "ws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                     {"field": "time_span",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},                                                    
                                                     {"field": "discount",
                                                     "validateAs":{"type": "number",
@@ -209,7 +212,7 @@
                                                                   }},                                                    
                                                     {"field": "height",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                     
                                                     {"field": "kw_price",
