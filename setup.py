@@ -27,6 +27,7 @@ if platform.system() == 'Windows':
                   'invest_natcap/iui/wave_energy_biophysical.json',
                   'invest_natcap/iui/hydropower_valuation.json',
                   'invest_natcap/iui/water_scarcity.json',
+                  'invest_natcap/iui/water_yield.json',
                   'invest_natcap/iui/timber.json']
 
 setup(name='invest_natcap',
