@@ -95,6 +95,11 @@ def execute(args):
     biophysical_args['foraging_average'] = make_raster_from_lulc(
         biophysical_args['landuse'], frm_avg_uri)
 
+    # Create a new raster for the total of all pollinator supply rasters.
+    sup_tot_uri = os.path.join(out_dir, 'sup_tot.tif')
+    biophysical_args['abundance_total'] = make_raster_from_lulc(
+        biophysical_args['landuse'], sup_tot_uri)
+
     # Fetch a list of all species from the guilds table.
     species_list = [row['species'] for row in guilds_handler.table]
 

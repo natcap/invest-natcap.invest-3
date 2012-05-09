@@ -34,6 +34,7 @@ def biophysical(args):
         args['nesting_fields'] - a python list of string nesting field basenames
         args['floral fields'] - a python list of string floral fields
         args['foraging_average'] - a GDAL dataset
+        args['abundance_total'] - a GDAL dataset
 
         returns nothing."""
 
@@ -45,6 +46,12 @@ def biophysical(args):
     foraging_total_raster = args['foraging_average'].GetRasterBand(1)
     foraging_matrix_shape = foraging_total_raster.ReadAsArray().shape
     foraging_total_matrix = np.zeros(foraging_matrix_shape)
+
+    # Open the abundance total raster for use in the loop over all species and
+    # ensure that it's filled entirely with 0's.
+    abundance_total_raster = args['abundance_total'].GetRasterBand(1)
+    abundance_matrix_shape = abundance_total_raster.ReadAsArray().shape
+    abundance_total_matrix = np.zeros(abundance_matrix_shape)
 
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
@@ -79,6 +86,8 @@ def biophysical(args):
         nesting_matrix = nesting_raster.ReadAsArray()
         supply_matrix = clip_and_op(nesting_matrix, filtered_matrix,
             np.multiply, nesting_raster.GetNoDataValue())
+        abundance_total_matrix = clip_and_op(abundance_total_matrix,
+            supply_matrix, np.add, nesting_raster.GetNoDataValue())
         args['species'][species]['species_abundance'].GetRasterBand(1).\
             WriteArray(supply_matrix)
 
@@ -111,6 +120,13 @@ def biophysical(args):
     foraging_total_matrix = clip_and_op(foraging_total_matrix,
         num_species, divide, foraging_total_raster.GetNoDataValue())
     foraging_total_raster.WriteArray(foraging_total_matrix)
+
+    # Save the abundance_total_matrix to its raster
+    abundance_total_matrix = clip_and_op(foraging_total_matrix,
+        abundance_total_matrix, np.add, abundance_total_raster.GetNoDataValue())
+    abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
+        divide, abundance_total_raster.GetNoDataValue())
+    abundance_total_raster.WriteArray(abundance_total_matrix)
 
 
 def clip_and_op(in_matrix, arg1, op, matrix_nodata):
