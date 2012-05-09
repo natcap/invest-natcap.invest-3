@@ -59,19 +59,9 @@ def biophysical(args):
         floral_raster = args['species'][species]['floral'].GetRasterBand(1)
         floral_matrix = floral_raster.ReadAsArray()
 
-        # The gaussian filter isn't sensitive to nodata values, so we need to
-        # replace any values below 0 with 0.
-        np.putmask(floral_matrix, floral_matrix < 0, 0)
-
-        # Apply the gaussian filter to the masked floral matrix.
-        filtered_matrix = ndimage.gaussian_filter(floral_matrix, sigma)
-
-        # Clip the gaussian-filtered matrix to the outline of the landcover map,
-        # which is anywhere the floral_raster matrix's values are below 0.
-        np.putmask(filtered_matrix, floral_raster.ReadAsArray() < 0,
+        # Calculate and Write the filtered floral resource matrix to its raster
+        filtered_matrix = blur_and_clip(floral_matrix, sigma,
             floral_raster.GetNoDataValue())
-
-        # Write the filtered floral resource matrix to its raster
         args['species'][species]['floral'].GetRasterBand(1).WriteArray(
             filtered_matrix)
 
@@ -99,16 +89,8 @@ def biophysical(args):
         foraging_raster = args['species'][species]['farm_abundance'].\
             GetRasterBand(1)
 
-        # Replace all values less than 0 with 0 so as not to affect the gaussian
-        # filter.
-        np.putmask(supply_matrix, supply_matrix < 0, 0)
-
-        # Use a gaussian blur on the pollinator supply raster
-        foraging_matrix = ndimage.gaussian_filter(supply_matrix, sigma)
-
-        # Re-mask the raster to the LULC boundary (we'll use the nesting raster
-        # as a proxy for the LULC raster).
-        np.putmask(foraging_matrix, nesting_raster.ReadAsArray() < 0,
+        # Blur and clip the foraging raster
+        foraging_matrix = blur_and_clip(supply_matrix, sigma,
             foraging_raster.GetNoDataValue())
 
         # Wherever a pixel is not an ag pixel, replace it with the foraging
@@ -119,6 +101,28 @@ def biophysical(args):
         # Write the foraging matrix to disk 
         foraging_raster.WriteArray(foraging_matrix)
 
+def blur_and_clip(in_matrix, sigma, matrix_nodata):
+    """Apply a gaussian filter to the input matrix after converting all values
+        below 0 to 0.
+        in_matrix - a numpy matrix
+        sigma - a python int or float used for the gaussian blur
+        matrix_nodata - a python int or float
+
+        returns a numpy matrix."""
+
+    # Making a copy of the in_matrix so as to avoid side effects
+    matrix = in_matrix.copy()
+
+    # Convert values < 0 to 0
+    np.putmask(matrix, matrix < 0, 0)
+
+    # Apply the gaussian blur
+    filtered_matrix = ndimage.gaussian_filter(matrix, sigma)
+
+    # Apply the clip based on the mask raster's nodata values
+    np.putmask(filtered_matrix, in_matrix < 0, matrix_nodata)
+
+    return filtered_matrix
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_raster):
     """Make an intermediate raster where values are mapped from the base raster
