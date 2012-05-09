@@ -17,9 +17,9 @@ class PollinationBiophysicalTest(unittest.TestCase):
                      'landuse_attributes_uri': TEST_DATA_DIR + '/LU.dbf',
                      'guilds_uri': TEST_DATA_DIR + '/Guild.dbf'}
 
-    def test_smoke(self):
-        """Smoke test for pollination_biophysical."""
-        pollination_biophysical.execute(self.args)
+#    def test_smoke(self):
+#        """Smoke test for pollination_biophysical."""
+#        pollination_biophysical.execute(self.args)
 
     def test_ag_classes(self):
         """Smoke test for pollination_biophysical.  Includes ag classes."""

@@ -3,6 +3,14 @@
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
+import numpy as np
+import scipy.ndimage as ndimage
+
+import math
+import logging
+
+LOGGER = logging.getLogger('pollination_core')
+
 def biophysical(args):
     """Execute the biophysical component of the pollination model.
 
@@ -23,6 +31,9 @@ def biophysical(args):
         args['species'][species_name]['nesting'] - a GDAL dataset
         args['species'][species_name]['species_abundance'] - a GDAL dataset
         args['species'][species_name]['farm_abundance'] - a GDAL dataset
+        args['nesting_fields'] - a python list of string nesting field basenames
+        args['floral fields'] - a python list of string floral fields
+        args['foraging_total'] - a GDAL dataset
 
         returns nothing."""
 
@@ -30,20 +41,97 @@ def biophysical(args):
     make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
 
     for species, species_dict in args['species'].iteritems():
-        for resource_tuple in ['floral', 'nesting']:
-            resource, lu_regexp, guild_regexp = resource_tuple
-            guild_dict = args['guilds'].get_table_dictionary(species)
+        guild_dict = args['guilds'].get_table_row('species', species)
+
+        for resource in ['nesting', 'floral']:
+            # Calculate the attribute's resources
             map_attribute(args['landuse'], args['landuse_attributes'], guild_dict,
-                args[resource + '_attributes'], species_dict[resource])
+                args[resource + '_fields'], species_dict[resource])
 
+        # Now that the per-pixel nesting and floral resources have been calculated,
+        # the floral resources still need to factor in neighborhoods.
+        # The sigma size is 2 times the pixel size, presumable since the
+        # raster's pixel width is a radius for the gaussian blur when we want
+        # the diameter of the blur.
+        pixel_size = abs(args['landuse'].GetGeoTransform()[1])
+        sigma = float(guild_dict['alpha']/(2 * pixel_size))
 
-def map_attribute(base_raster, attr_table, species_dict, attr_list, out_raster):
+        # Fetch the floral resources raster and matrix from the args dictionary,
+        # apply a gaussian filter and save the floral resources raster to the
+        # dataset.
+        floral_raster = args['species'][species]['floral'].GetRasterBand(1)
+        floral_matrix = floral_raster.ReadAsArray()
+        filtered_matrix = clip_and_op(floral_matrix, sigma,
+            ndimage.gaussian_filter, floral_raster.GetNoDataValue())
+        args['species'][species]['floral'].GetRasterBand(1).WriteArray(
+            filtered_matrix)
+
+        # Calculate the pollinator abundance index (using Math! to simplify the
+        # equation in the documentation.
+        # This looks like it's just floral resources*nesting resources.
+        nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
+        nesting_matrix = nesting_raster.ReadAsArray()
+        supply_matrix = clip_and_op(nesting_matrix, filtered_matrix,
+            np.multiply, nesting_raster.GetNoDataValue())
+        args['species'][species]['species_abundance'].GetRasterBand(1).\
+            WriteArray(supply_matrix)
+
+        # Calculate the foraging ('farm abundance') index by applying a gaussian
+        # filter to the foraging raster and then culling all pixels that are not
+        # agricultural before saving it to the output raster.
+        foraging_raster = args['species'][species]['farm_abundance'].\
+            GetRasterBand(1)
+        foraging_matrix = clip_and_op(supply_matrix, sigma,
+            ndimage.gaussian_filter, foraging_raster.GetNoDataValue())
+        np.putmask(foraging_matrix, args['ag_map'].GetRasterBand(1).\
+                   ReadAsArray() == 0, foraging_raster.GetNoDataValue())
+        foraging_raster.WriteArray(foraging_matrix)
+
+        # Add the current foraging raster to the existing 'foraging_total'
+        # raster and save it to the foraging_total_raster
+        foraging_total_raster = args['foraging_total'].GetRasterBand(1)
+        foraging_total_matrix = clip_and_op(foraging_matrix,
+            foraging_total_raster.ReadAsArray(), np.add,
+            foraging_raster.GetNoDataValue())
+        foraging_total_raster.WriteArray(foraging_total_matrix)
+
+def clip_and_op(in_matrix, arg1, op, matrix_nodata):
+    """Apply an operation to a matrix after the matrix is adjusted for nodata
+        values.  After the operation is complete, the matrix will have pixels
+        culled based on the input matrix's original values that were less than 0
+        (which assumes a nodata value of below zero).
+
+        in_matrix - a numpy matrix for use as the first argument to op
+        arg1 - an argument of whatever type is necessary for the second argument
+            of op
+        op - a python callable object with two arguments: in_matrix and arg1
+        matrix_nodata - a python int or float
+
+        returns a numpy matrix."""
+
+    # Making a copy of the in_matrix so as to avoid side effects from putmask
+    matrix = in_matrix.copy()
+
+    # Convert values < 0 to 0
+    np.putmask(matrix, matrix < 0, 0)
+
+    # Apply the gaussian blur
+    filtered_matrix = op(matrix, arg1)
+
+    # Apply the clip based on the mask raster's nodata values
+    np.putmask(filtered_matrix, in_matrix < 0, matrix_nodata)
+
+    return filtered_matrix
+
+def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_raster):
     """Make an intermediate raster where values are mapped from the base raster
         according to the mapping specified by key_field and value_field.
 
         base_raster - a GDAL dataset
         attr_table - a subclass of fileio.AbstractTableHandler
-        guilds - a subclass of fileio.AbstractTableHandler
+        guild_dict - a python dictionary representing the guild row for this
+            species.
+        resource_fields - a python list of string resource fields
         out_raster - a GDAL dataset
 
         returns nothing."""
@@ -54,11 +142,23 @@ def map_attribute(base_raster, attr_table, species_dict, attr_list, out_raster):
     # Get the output raster's nodata value
     out_nodata = out_raster.GetRasterBand(1).GetNoDataValue()
 
+    lu_table_dict = attr_table.get_table_dictionary('lulc')
+
+    value_list = dict((r, guild_dict[r]) for r in resource_fields)
     # Define a vectorized function to map values to the base raster
-    def map_values(pixel_value):
+    def map_values(lu_code):
         """Take the input pixel value and return the appropriate value based
             on the table's map.  If the value cannot be found, return the
             output raster's nodata value."""
+        try:
+            if lu_code == base_nodata:
+                return out_nodata
+            # Max() is how InVEST 2.2 pollination does this, although I think
+            # that sum() should actually be used.
+            return max([value_list[r] * lu_table_dict[lu_code][r] for r in
+                resource_fields])
+        except KeyError:
+            return out_nodata
 
     # Vectorize this operation.
     invest_core.vectorize1ArgOp(base_raster.GetRasterBand(1), map_values,

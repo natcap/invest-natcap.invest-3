@@ -25,7 +25,8 @@
                     "type": "folder",
                     "label": "Precipitation",
                     "defaultValue": "./Base_Data/Freshwater/precip",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "potential_evapotranspiration",
@@ -33,7 +34,8 @@
                     "type": "folder",
                     "label": "Potential Evapotranspiration",
                     "defaultValue": "./Base_Data/Freshwater/eto",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "soil_depth",
@@ -41,7 +43,8 @@
                     "type": "folder",
                     "label": "Soil Depth",
                     "defaultValue": "./Base_Data/Freshwater/soil_depth",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "plant_available_water_fraction",
@@ -49,7 +52,8 @@
                     "type": "folder",
                     "label": "Precipitation",
                     "defaultValue": "./Base_Data/Freshwater/precip",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "land_use",
@@ -57,7 +61,8 @@
                     "type": "folder",
                     "label": "Land Use",
                     "defaultValue": "./Base_Data/Freshwater/landuse_90",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },    
                 {
                     "id" : "watersheds",
@@ -68,9 +73,9 @@
                     "required": true,
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
-                                               "type": "polygons", 
-                                               "projection" : "Transverse_Mercator",
-                                               "datum" : "WGS_1984"}]
+                                               "type": "polygons"
+                                             }],
+                                   "fieldsExist": ["ws_id"]
                                    }
                  },
                  {
@@ -83,7 +88,8 @@
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
                                                "type": "polygons"
-                                             }]
+                                             }],
+                                   "fieldsExist": ["subws_id"]
                                    }
                  },
 		         {
@@ -97,15 +103,15 @@
                                     "fieldsExist": ["lucode", "etk", "root_depth"],
                                     "restrictions": [{"field": "lucode",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                      {"field": "etk",
                                                       "validateAs": {"type": "number",
-                                                                     "allowedValues":{"pattern":"[^0-9]+"}
+                                                                     "allowedValues":{"pattern":"^[0-9]+"}
                                                                      }},
                                                      {"field": "root_depth",
                                                       "validateAs": {"type": "number",
-                                                                     "allowedValues":{"pattern":"[^0-9]+"}
+                                                                     "allowedValues":{"pattern":"^[0-9]+"}
                                                                      }}]}
                  },
                  {        
@@ -114,7 +120,8 @@
                     "type": "text",
                     "label": "Seasonality Constant",
                     "defaultValue": "5",
-                    "required": true
+                    "required": true,
+                    "validText": "[0-9]+"
                  },
                  {        
                     "id" : "results_suffix",

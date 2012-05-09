@@ -57,8 +57,8 @@ def execute(args):
     # table handler for the Guilds table.
     att_table_handler = fileio.find_handler(args['landuse_attributes_uri'])
     att_table_fields = att_table_handler.get_fieldnames()
-    nesting_fields = [f[2:] if re.match('^n_', f) for f in att_table_fields]
-    floral_fields = [f[2:] if re.match('^f_', f) for f in att_table_fields]
+    nesting_fields = [f[2:] for f in att_table_fields if re.match('^n_', f)]
+    floral_fields = [f[2:] for f in att_table_fields if re.match('^f_', f)]
     biophysical_args['nesting_fields'] = nesting_fields
     biophysical_args['floral_fields'] = floral_fields
 
@@ -90,6 +90,11 @@ def execute(args):
     biophysical_args['ag_map'] =\
         make_raster_from_lulc(biophysical_args['landuse'], ag_map_uri)
 
+    # Create a new raster for a sum of all foraging rasters.
+    frm_tot_uri = os.path.join(inter_dir, 'frm_tot.tif')
+    biophysical_args['foraging_total'] = make_raster_from_lulc(
+        biophysical_args['landuse'], frm_tot_uri)
+
     # Fetch a list of all species from the guilds table.
     species_list = [row['species'] for row in guilds_handler.table]
 
@@ -100,10 +105,14 @@ def execute(args):
                       ('floral', 'hf'),
                       ('species_abundance', 'sup'),
                       ('farm_abundance', 'frm')]
+
+    biophysical_args['species'] = {}
     for species in species_list:
+        biophysical_args['species'][species] = {}
         for group, prefix in species_rasters:
             raster_uri = os.path.join(inter_dir, prefix + '_' + species + '.tif')
-            dataset = make_raster_from_lulc(args['landuse'], raster_uri)
+            dataset = make_raster_from_lulc(biophysical_args['landuse'],
+                raster_uri)
             biophysical_args['species'][species][group] = dataset
 
     pollination_core.biophysical(biophysical_args)

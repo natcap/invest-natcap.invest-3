@@ -3,6 +3,7 @@ import ogr
 from platform import node
 import csv
 import os
+import re
 
 from dbfpy import dbf
 
@@ -159,6 +160,20 @@ class AbstractTableHandler(object):
             self._get_table_list()
         return dict((row[key_field], row) for row in self.table)
 
+    def get_table_row(self, key_field, key_value):
+        """Return the first full row where the value of key_field is equivalent
+            to key_value.
+
+            returns a python dictionary of the row, or None if the row does not
+            exist."""
+
+        if self.table == []:
+            self._get_table_list()
+        for row in self.table:
+            if row[key_field] == key_value:
+                return row
+        return None
+
     def get_map(self, key_field, value_field):
         """Returns a python dictionary mapping values contained in key_field to
             values contained in value_field.  If duplicate keys are found, they
@@ -209,13 +224,14 @@ class DBFHandler(AbstractTableHandler):
         self.fieldnames = [r.lower() for r in dbf_file.fieldNames]
 
     def _get_table_list(self):
-        db_file = self.open()
+        db_file = self.get_file_object()
         table_list = []
         for record in db_file:
             record_dict = {}
             for fieldname in self.fieldnames:
                 fieldname = fieldname.lower()
-                record_dict[fieldname] = record[fieldname]
+                orig_fieldname = self.orig_fieldnames[fieldname]
+                record_dict[fieldname] = record[orig_fieldname]
             table_list.append(record_dict)
 
         self.table = table_list
