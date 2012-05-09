@@ -33,6 +33,7 @@ def biophysical(args):
         args['species'][species_name]['farm_abundance'] - a GDAL dataset
         args['nesting_fields'] - a python list of string nesting field basenames
         args['floral fields'] - a python list of string floral fields
+        args['foraging_total'] - a GDAL dataset
 
         returns nothing."""
 
