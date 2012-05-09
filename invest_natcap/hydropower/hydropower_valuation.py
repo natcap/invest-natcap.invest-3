@@ -28,9 +28,17 @@ def execute(args):
         args['cal_water_yield_uri'] - a uri to a Gdal raster of the calibrated
             water yield volume per sub-watershed, generated as an output
             of the water scarcity model (cubic meters) (required)
+            NOTE: This input is currently only being used to get a pixel size
+            for output rasters. It is not needed otherwise unless we later
+            want to add in per pixel applications.  All calculations are being
+            taken from the water_scarcity_tables.
         args['water_consump_uri'] - a uri to a Gdal raster of the total water
             consumptive use for each sub-watershed, generated as an output
             of the water scarcity model (cubic meters) (required)
+            NOTE: This input is currently only being used to get a pixel size
+            for output rasters. It is not needed otherwise unless we later
+            want to add in per pixel applications.  All calculations are being
+            taken from the water_scarcity_tables.
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
         args['sub_watersheds_uri'] - a uri to an input shapefile of the 
