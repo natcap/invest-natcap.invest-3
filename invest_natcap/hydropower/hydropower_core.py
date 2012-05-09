@@ -827,7 +827,7 @@ def water_scarcity(args):
            shed_id - a numpy array where the values correspond to watershed
                      locations
                                 
-           returns - the calibrated water yield volume value
+           returns - the calibrated water yield volume value (cubic meters)
         """
         
         if wyield_vol != wyield_vol_nodata and shed_id != out_nodata:
@@ -848,7 +848,6 @@ def water_scarcity(args):
                                 wyield_calib_band)
     
     #Create raster from land use raster, subsituting in demand value
-    
     lulc_band = lulc_raster.GetRasterBand(1)
     lulc_nodata = lulc_band.GetNoDataValue()
     tmp_consump = invest_cython_core.newRasterFromBase(lulc_raster, '', 'MEM', 
@@ -864,6 +863,7 @@ def water_scarcity(args):
            lulc - a numpy array of the lulc code values
            
            returns - the demand value corresponding to the lulc code
+                     (cubic meters per year)
         """
         
         if lulc in demand_dict:
@@ -909,10 +909,11 @@ def water_scarcity(args):
         """Function that computes the realized water supply volume
         
            wyield_calib - a numpy array with the calibrated water yield values
+                          (cubic meters)
            consump_vol - a numpy array with the total water consumptive use
-                         values
+                         values (cubic meters)
            
-           returns - the realized water supply volume value
+           returns - the realized water supply volume value (cubic meters)
         """
         if (wyield_calib != nodata_calib and consump_vol != nodata_consump):
             return wyield_calib - consump_vol
@@ -931,12 +932,13 @@ def water_scarcity(args):
         """Function that computes the mean realized water supply
         
            wyield_mean - a numpy array with the mean calibrated water yield 
-                         values
+                         values (mm)
            consump_mean - a numpy array with the mean water consumptive use
-                         values 
+                         values (cubic meters)
            
            returns - the mean realized water supply value
         """
+        #THIS MAY BE WRONG. DOING OPERATION ON (mm) and (cubic m)#
         if wyield_mean != wyield_mn_nodata and consump_mean != mn_raster_nodata:
             return wyield_mean - consump_mean
         else:
@@ -1084,10 +1086,10 @@ def valuation(args):
             and other temporary files during calculation. (required)
         args['cal_water_yield'] - a Gdal raster of the calibrated
             water yield volume per sub-watershed, generated as an output
-            of the water scarcity model (required)
+            of the water scarcity model (cubic meters) (required)
         args['water_consump'] - a Gdal raster of the total water
             consumptive use for each sub-watershed, generated as an output
-            of the water scarcity model (required)
+            of the water scarcity model (cubic meters) (required)
         args['watersheds'] - a OGR shapefile of the watersheds
             of interest as polygons. (required)
         args['sub_watersheds'] - a OGR shapefile of the 
@@ -1098,7 +1100,14 @@ def valuation(args):
         args['subwatershed_scarcity_table'] - a dictionary, that holds
             relevant values for each sub watershed. (required)
         args['valuation_table'] - a dictionary containing values of the 
-            hydropower stations with associated model values (required)
+            hydropower stations with the keys being watershed id and
+            the values be a dictionary representing valuation information 
+            corresponding to that id with the following structure (required):
+            
+                valuation_table[1] = {'ws_id':1, 'time_span':100, 'discount':5,
+                                      'efficiency':0.75, 'fraction':0.6, 'cost':0,
+                                      'height':25, 'kw_price':0.07}
+            
         args['results_suffix'] - a string that will be concatenated onto the
            end of file names (optional) 
            
@@ -1119,6 +1128,8 @@ def valuation(args):
     ws_scarcity_table = args['watershed_scarcity_table']
     sws_scarcity_table = args['subwatershed_scarcity_table']
     valuation_table = args['valuation_table']
+    cyield_vol = args['cal_water_yield']
+    water_consump = args['water_consump']
     
     #Suffix handling
     suffix = args['results_suffix']
@@ -1143,7 +1154,7 @@ def valuation(args):
     
     energy_dict = {}
     npv_dict = {}
-    
+    #For each watershed compute the energy production and npv
     for key in ws_scarcity_table.keys():
         val_row = valuation_table[key]
         ws_row = ws_scarcity_table[key]
@@ -1152,6 +1163,9 @@ def valuation(args):
         height = float(val_row['height'])
         rsupply_vl = float(ws_row['rsupply_vl'])
         
+        #Compute hydropower energy production (KWH)
+        #Not confident about units here and the constant 0.00272 is 
+        #for conversion??
         energy = efficiency * fraction * height * rsupply_vl * 0.00272
         energy_dict[key] = energy
         
@@ -1209,14 +1223,19 @@ def valuation(args):
                          watershed_value_table)
     write_csv_table(sws_scarcity_table, field_list_sws, \
                          subwatershed_value_table)
+    out_nodata = -1
+    cyield_gt = cyield_vol.GetGeoTransform()
+    consump_gt = water_consump.GetGeoTransform()
+    pixel_width = min(cyield_gt[1], consump_gt[1], key=abs)
+    pixel_height = min(cyield_gt[5], consump_gt[5], key=abs)
     
+    invest_cython_core.createRasterFromVectorExtents(pixel_width, pixel_height, 
+                                                     gdal.GDT_Float32, out_nodata, 
+                                                     hp_val_tmppath, sub_sheds)
     
-    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                     -1, hp_val_tmppath, 
-                                                     sub_sheds)
-    
-    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                     -1, hp_val_path, sub_sheds)
+    invest_cython_core.createRasterFromVectorExtents(pixel_width, pixel_height, 
+                                                     gdal.GDT_Float32, out_nodata, 
+                                                     hp_val_path, sub_sheds)
     
     hp_val = gdal.Open(hp_val_path, gdal.GA_Update)
     hp_val_tmp = gdal.Open(hp_val_tmppath, gdal.GA_Update)
@@ -1233,23 +1252,23 @@ def valuation(args):
            returns - the correct net present value at the correct location
         """
 
-        if hp_val != -1:
+        if hp_val != out_nodata:
             return sws_npv_dict[str(int(hp_val))]
         else:
-            return -1
+            return out_nodata
         
     hp_val_band = hp_val.GetRasterBand(1)
     hp_val_band_tmp = hp_val_tmp.GetRasterBand(1)    
     
     invest_core.vectorize1ArgOp(hp_val_band_tmp, npv_op, hp_val_band)
     
-    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                     -1, hp_energy_tmppath, 
-                                                     sub_sheds)
+    invest_cython_core.createRasterFromVectorExtents(pixel_width, pixel_height, 
+                                                     gdal.GDT_Float32, out_nodata,
+                                                     hp_energy_tmppath, sub_sheds)
     
-    invest_cython_core.createRasterFromVectorExtents(30, 30, gdal.GDT_Float32, 
-                                                     -1, hp_energy_path, 
-                                                     sub_sheds)
+    invest_cython_core.createRasterFromVectorExtents(pixel_width, pixel_height, 
+                                                     gdal.GDT_Float32, out_nodata,
+                                                     hp_energy_path, sub_sheds)
     
     hp_energy = gdal.Open(hp_energy_path, gdal.GA_Update)
     hp_energy_tmp = gdal.Open(hp_energy_tmppath, gdal.GA_Update)
@@ -1266,10 +1285,10 @@ def valuation(args):
            returns - the correct energy value at the correct location
         """
 
-        if energy_val != -1:
+        if energy_val != out_nodata:
             return sws_energy_dict[str(int(energy_val))]
         else:
-            return -1
+            return out_nodata
         
     hp_energy_band = hp_energy.GetRasterBand(1)
     hp_energy_band_tmp = hp_energy_tmp.GetRasterBand(1)    

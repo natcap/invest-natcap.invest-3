@@ -25,7 +25,8 @@
                     "type": "folder",
                     "label": "Precipitation",
                     "defaultValue": "./Base_Data/Freshwater/precip",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "potential_evapotranspiration",
@@ -33,7 +34,8 @@
                     "type": "folder",
                     "label": "Potential Evapotranspiration",
                     "defaultValue": "./Base_Data/Freshwater/eto",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "soil_depth",
@@ -41,7 +43,8 @@
                     "type": "folder",
                     "label": "Soil Depth",
                     "defaultValue": "./Base_Data/Freshwater/soil_depth",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "plant_available_water_fraction",
@@ -49,7 +52,8 @@
                     "type": "folder",
                     "label": "Precipitation",
                     "defaultValue": "./Base_Data/Freshwater/precip",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "land_use",
@@ -57,7 +61,8 @@
                     "type": "folder",
                     "label": "Land Use",
                     "defaultValue": "./Base_Data/Freshwater/landuse_90",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },    
                 {
                     "id" : "watersheds",
@@ -71,6 +76,7 @@
                                                "type": "polygons", 
                                                "projection" : "Transverse_Mercator",
                                                "datum" : "WGS_1984"}]
+                                   "fieldsExist": ["ws_id"]
                                    }
                  },
                  {
@@ -84,6 +90,7 @@
                                    "layers": [{"name": {"inheritFrom": "file"}, 
                                                "type": "polygons"
                                              }]
+                                   "fieldsExist": ["subws_id"]
                                    }
                  },
 		         {
@@ -114,7 +121,8 @@
                     "type": "text",
                     "label": "Seasonality Constant",
                     "defaultValue": "5",
-                    "required": true
+                    "required": true,
+                    "validText": "[0-9]+"
                  },
                  {        
                     "id" : "results_suffix",
