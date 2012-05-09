@@ -56,69 +56,67 @@ def biophysical(args):
         pixel_size = abs(args['landuse'].GetGeoTransform()[1])
         sigma = float(guild_dict['alpha']/(2 * pixel_size))
 
-        # Fetch the floral resources raster and matrix from the args dictionary
+        # Fetch the floral resources raster and matrix from the args dictionary,
+        # apply a gaussian filter and save the floral resources raster to the
+        # dataset.
         floral_raster = args['species'][species]['floral'].GetRasterBand(1)
         floral_matrix = floral_raster.ReadAsArray()
-
-        # Calculate and Write the filtered floral resource matrix to its raster
-        filtered_matrix = blur_and_clip(floral_matrix, sigma,
-            floral_raster.GetNoDataValue())
+        filtered_matrix = clip_and_op(floral_matrix, sigma,
+            ndimage.gaussian_filter, floral_raster.GetNoDataValue())
         args['species'][species]['floral'].GetRasterBand(1).WriteArray(
             filtered_matrix)
 
         # Calculate the pollinator abundance index (using Math! to simplify the
-        # equation in the documentation.  Still need to verify with Rich.
+        # equation in the documentation.
         # This looks like it's just floral resources*nesting resources.
         nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
-        nesting_matrix =nesting_raster.ReadAsArray()
-
-        # Mask the nesting matrix so that any values less than 1 are used as 0
-        np.putmask(nesting_matrix, nesting_matrix < 0, 0)
-
-        # This is the actual per-multiplication.
-        supply_matrix = np.multiply(filtered_matrix, nesting_matrix)
-
-        # Re-mask the raster to the LULC boundary.
-        np.putmask(supply_matrix, nesting_raster.ReadAsArray() < 0,
-            nesting_raster.GetNoDataValue())
-
-        # Save the pollinator supply matrix to the pollinator supply raster
+        nesting_matrix = nesting_raster.ReadAsArray()
+        supply_matrix = clip_and_op(nesting_matrix, filtered_matrix,
+            np.multiply, nesting_raster.GetNoDataValue())
         args['species'][species]['species_abundance'].GetRasterBand(1).\
             WriteArray(supply_matrix)
 
-        # Calculate the foraging ('farm abundance') index
+        # Calculate the foraging ('farm abundance') index by applying a gaussian
+        # filter to the foraging raster and then culling all pixels that are not
+        # agricultural before saving it to the output raster.
         foraging_raster = args['species'][species]['farm_abundance'].\
             GetRasterBand(1)
-
-        # Blur and clip the foraging raster
-        foraging_matrix = blur_and_clip(supply_matrix, sigma,
-            foraging_raster.GetNoDataValue())
-
-        # Wherever a pixel is not an ag pixel, replace it with the foraging
-        # raster's nodata value.
+        foraging_matrix = clip_and_op(supply_matrix, sigma,
+            ndimage.gaussian_filter, foraging_raster.GetNoDataValue())
         np.putmask(foraging_matrix, args['ag_map'].GetRasterBand(1).\
                    ReadAsArray() == 0, foraging_raster.GetNoDataValue())
-
-        # Write the foraging matrix to disk 
         foraging_raster.WriteArray(foraging_matrix)
 
-def blur_and_clip(in_matrix, sigma, matrix_nodata):
-    """Apply a gaussian filter to the input matrix after converting all values
-        below 0 to 0.
-        in_matrix - a numpy matrix
-        sigma - a python int or float used for the gaussian blur
+        # Add the current foraging raster to the existing 'foraging_total'
+        # raster and save it to the foraging_total_raster
+        foraging_total_raster = args['foraging_total'].GetRasterBand(1)
+        foraging_total_matrix = clip_and_op(foraging_matrix,
+            foraging_total_raster.ReadAsArray(), np.add,
+            foraging_raster.GetNoDataValue())
+        foraging_total_raster.WriteArray(foraging_total_matrix)
+
+def clip_and_op(in_matrix, arg1, op, matrix_nodata):
+    """Apply an operation to a matrix after the matrix is adjusted for nodata
+        values.  After the operation is complete, the matrix will have pixels
+        culled based on the input matrix's original values that were less than 0
+        (which assumes a nodata value of below zero).
+
+        in_matrix - a numpy matrix for use as the first argument to op
+        arg1 - an argument of whatever type is necessary for the second argument
+            of op
+        op - a python callable object with two arguments: in_matrix and arg1
         matrix_nodata - a python int or float
 
         returns a numpy matrix."""
 
-    # Making a copy of the in_matrix so as to avoid side effects
+    # Making a copy of the in_matrix so as to avoid side effects from putmask
     matrix = in_matrix.copy()
 
     # Convert values < 0 to 0
     np.putmask(matrix, matrix < 0, 0)
 
     # Apply the gaussian blur
-    filtered_matrix = ndimage.gaussian_filter(matrix, sigma)
+    filtered_matrix = op(matrix, arg1)
 
     # Apply the clip based on the mask raster's nodata values
     np.putmask(filtered_matrix, in_matrix < 0, matrix_nodata)
