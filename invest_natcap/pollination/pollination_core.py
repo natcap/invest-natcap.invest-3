@@ -56,10 +56,10 @@ def biophysical(args):
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
 
-        for resource in ['nesting', 'floral']:
+        for resource, op in [('nesting', max), ('floral', sum)]:
             # Calculate the attribute's resources
             map_attribute(args['landuse'], args['landuse_attributes'], guild_dict,
-                args[resource + '_fields'], species_dict[resource])
+                args[resource + '_fields'], species_dict[resource], op)
 
         # Now that the per-pixel nesting and floral resources have been calculated,
         # the floral resources still need to factor in neighborhoods.
@@ -129,7 +129,7 @@ def biophysical(args):
     abundance_total_raster.WriteArray(abundance_total_matrix)
 
 
-def clip_and_op(in_matrix, arg1, op, matrix_nodata):
+def clip_and_op(in_matrix, arg1, op, matrix_nodata, kwargs={}):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
         values.  After the operation is complete, the matrix will have pixels
         culled based on the input matrix's original values that were less than 0
@@ -140,6 +140,8 @@ def clip_and_op(in_matrix, arg1, op, matrix_nodata):
             of op
         op - a python callable object with two arguments: in_matrix and arg1
         matrix_nodata - a python int or float
+        kwargs={} - a python dictionary of keyword arguments to be passed in to
+            op when it is called.
 
         returns a numpy matrix."""
 
@@ -150,14 +152,15 @@ def clip_and_op(in_matrix, arg1, op, matrix_nodata):
     np.putmask(matrix, matrix < 0, 0)
 
     # Apply the gaussian blur
-    filtered_matrix = op(matrix, arg1)
+    filtered_matrix = op(matrix, arg1, **kwargs)
 
     # Apply the clip based on the mask raster's nodata values
     np.putmask(filtered_matrix, in_matrix < 0, matrix_nodata)
 
     return filtered_matrix
 
-def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_raster):
+def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
+                  out_raster, list_op):
     """Make an intermediate raster where values are mapped from the base raster
         according to the mapping specified by key_field and value_field.
 
@@ -167,6 +170,8 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_rast
             species.
         resource_fields - a python list of string resource fields
         out_raster - a GDAL dataset
+        list_op - a python callable that takes a list of numerical arguments and
+            returns a python scalar.  Examples: sum; max
 
         returns nothing."""
 
@@ -189,7 +194,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_rast
                 return out_nodata
             # Max() is how InVEST 2.2 pollination does this, although I think
             # that sum() should actually be used.
-            return max([value_list[r] * lu_table_dict[lu_code][r] for r in
+            return list_op([value_list[r] * lu_table_dict[lu_code][r] for r in
                 resource_fields])
         except KeyError:
             return out_nodata
