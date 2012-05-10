@@ -33,12 +33,25 @@ def biophysical(args):
         args['species'][species_name]['farm_abundance'] - a GDAL dataset
         args['nesting_fields'] - a python list of string nesting field basenames
         args['floral fields'] - a python list of string floral fields
-        args['foraging_total'] - a GDAL dataset
+        args['foraging_average'] - a GDAL dataset
+        args['abundance_total'] - a GDAL dataset
 
         returns nothing."""
 
     # mask agricultural classes to ag_map.
     make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
+
+    # Open the average foraging matrix for use in the loop over all species, but
+    # first we need to ensure that the matrix is filled with 0's.
+    foraging_total_raster = args['foraging_average'].GetRasterBand(1)
+    foraging_matrix_shape = foraging_total_raster.ReadAsArray().shape
+    foraging_total_matrix = np.zeros(foraging_matrix_shape)
+
+    # Open the abundance total raster for use in the loop over all species and
+    # ensure that it's filled entirely with 0's.
+    abundance_total_raster = args['abundance_total'].GetRasterBand(1)
+    abundance_matrix_shape = abundance_total_raster.ReadAsArray().shape
+    abundance_total_matrix = np.zeros(abundance_matrix_shape)
 
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
@@ -73,6 +86,8 @@ def biophysical(args):
         nesting_matrix = nesting_raster.ReadAsArray()
         supply_matrix = clip_and_op(nesting_matrix, filtered_matrix,
             np.multiply, nesting_raster.GetNoDataValue())
+        abundance_total_matrix = clip_and_op(abundance_total_matrix,
+            supply_matrix, np.add, nesting_raster.GetNoDataValue())
         args['species'][species]['species_abundance'].GetRasterBand(1).\
             WriteArray(supply_matrix)
 
@@ -89,11 +104,30 @@ def biophysical(args):
 
         # Add the current foraging raster to the existing 'foraging_total'
         # raster and save it to the foraging_total_raster
-        foraging_total_raster = args['foraging_total'].GetRasterBand(1)
         foraging_total_matrix = clip_and_op(foraging_matrix,
-            foraging_total_raster.ReadAsArray(), np.add,
-            foraging_raster.GetNoDataValue())
-        foraging_total_raster.WriteArray(foraging_total_matrix)
+            foraging_total_matrix, np.add, foraging_raster.GetNoDataValue())
+
+    # Calculate the average foraging index based on the total
+    def divide(matrix, divisor):
+        """Divide matrix by divisor.  Matrix must be a numpy matrix.  Divisor
+            must be a scalar.  Returns a numpy matrix."""
+        return matrix / divisor
+
+    # Divide the total pollination foraging index by the number of pollinators
+    # to get the mean pollinator foraging index and save that to its raster.
+    num_species = float(len(args['species'].values()))
+    LOGGER.debug('Number of species: %s', num_species)
+    foraging_total_matrix = clip_and_op(foraging_total_matrix,
+        num_species, divide, foraging_total_raster.GetNoDataValue())
+    foraging_total_raster.WriteArray(foraging_total_matrix)
+
+    # Save the abundance_total_matrix to its raster
+    abundance_total_matrix = clip_and_op(foraging_total_matrix,
+        abundance_total_matrix, np.add, abundance_total_raster.GetNoDataValue())
+    abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
+        divide, abundance_total_raster.GetNoDataValue())
+    abundance_total_raster.WriteArray(abundance_total_matrix)
+
 
 def clip_and_op(in_matrix, arg1, op, matrix_nodata):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
