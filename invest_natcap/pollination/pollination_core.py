@@ -131,6 +131,10 @@ def biophysical(args):
         divide, abundance_total_raster.GetNoDataValue())
     abundance_total_raster.WriteArray(abundance_total_matrix)
 
+def valuation(args):
+    """Perform the computation of the valuation component of the pollination
+        model."""
+    pass
 
 def clip_and_op(in_matrix, arg1, op, matrix_nodata, kwargs={}):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
