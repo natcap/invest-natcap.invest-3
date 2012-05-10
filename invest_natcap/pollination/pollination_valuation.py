@@ -1,5 +1,10 @@
 """InVEST Pollination model valuation URI module"""
 
+from osgeo import gdal
+
+import pollination_core
+from invest_natcap.iui import fileio
+
 import os.path
 
 def execute(args):
@@ -33,11 +38,11 @@ def execute(args):
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
 
-    guilds_table = fileio.file_handler(args['guilds_uri'])
+    guilds_table = fileio.find_handler(args['guilds_uri'])
 
     # Open rasters that we need from the workspace, which should have been
     # created from the run of the pollination biophysical model.
-    foraging_avg_uri = os.path.join(workspace, 'frm_avg.tif')
+    foraging_avg_uri = os.path.join(out_dir, 'frm_avg.tif')
     valuation_args['foraging_average'] = gdal.Open(foraging_avg_uri)
 
     valuation_args['species'] = {}
