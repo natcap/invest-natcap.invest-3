@@ -5,6 +5,8 @@ import unittest
 
 import invest_natcap.pollination.pollination_biophysical as\
     pollination_biophysical
+import invest_natcap.pollination.pollination_valuation as\
+    pollination_valuation
 
 TEST_DATA_DIR = 'data/pollination/samp_input'
 
@@ -17,6 +19,11 @@ class PollinationBiophysicalTest(unittest.TestCase):
                      'landuse_attributes_uri': TEST_DATA_DIR + '/LU.dbf',
                      'guilds_uri': TEST_DATA_DIR + '/Guild.dbf'}
 
+        self.valuation_args = {'workspace_dir': self.args['workspace_dir'],
+                               'guilds_uri': self.args['guilds_uri'],
+                               'half_saturation': 0.125,
+                               'wild_pollination_proportion': 1}
+
 #    def test_smoke(self):
 #        """Smoke test for pollination_biophysical."""
 #        pollination_biophysical.execute(self.args)
@@ -26,3 +33,4 @@ class PollinationBiophysicalTest(unittest.TestCase):
         self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
             + '83 84 85 88 90 91 92')
         pollination_biophysical.execute(self.args)
+        pollination_valuation.execute(self.valuation_args)
