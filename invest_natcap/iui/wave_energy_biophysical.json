@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Wave Energy Biophysical",
-    "targetScript" : "invest_natcap.wave_energy.wave_energy_biophysical",
+    "targetScript" : "invest_natcap/wave_energy/wave_energy_biophysical.py",
     "modelName" : "wave_energy_biophysical",
     "localDocURI": "./documentation/wave_energy.html",
     "height": 600,

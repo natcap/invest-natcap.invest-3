@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Water Scarcity",
-    "targetScript" : "invest_natcap.hydropower.water_scarcity",
+    "targetScript" : "invest_natcap/hydropower/water_scarcity.py",
     "modelName" : "water_scarcity",
     "localDocURI": "./documentation/water_scarcity.html",
     "height": 900,
@@ -25,7 +25,8 @@
                     "type": "folder",
                     "label": "Water Yield (volume)",
                     "defaultValue": "./Hydropower/Service/wyield_vol.tif",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "water_yield_mn",
@@ -33,7 +34,8 @@
                     "type": "folder",
                     "label": "Water Yield (mean)",
                     "defaultValue": "./Hydropower/Service/wyield_mn.tif",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "land_use",
@@ -41,7 +43,8 @@
                     "type": "folder",
                     "label": "Land Use",
                     "defaultValue": "./Base_Data/Freshwater/landuse_90",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },       
                 {
                     "id" : "watersheds",
@@ -52,9 +55,9 @@
                     "required": true,
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
-                                               "type": "polygons", 
-                                               "projection" : "Transverse_Mercator",
-                                               "datum" : "WGS_1984"}]
+                                               "type": "polygons"
+                                             }],
+                                   "fieldsExist": ["ws_id"]
                                    }
                  },
                  {
@@ -67,7 +70,8 @@
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
                                                "type": "polygons"
-                                             }]
+                                             }],
+                                   "fieldsExist": ["subws_id"]
                                    }
                  },
                  {
@@ -81,7 +85,7 @@
                                     "fieldsExist": ["ws_id", "precip_mn", "PET_mn", "AET_mn", "wyield_mn", "wyield_sum"],
                                     "restrictions": [{"field": "ws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                      {"field": "precip_mn",
                                                       "validateAs": {"type": "number",
@@ -109,17 +113,17 @@
                     "args_id": "subwatershed_yield_table_uri",
                     "type": "file",
                     "label": "Sub-Watershed Yield Table",
-                    "defaultValue": "./Hydropower/Output/watershed_yield_table.csv",
+                    "defaultValue": "./Hydropower/Output/subwatershed_yield_table.csv",
                     "required": true,
                     "validateAs": { "type": "CSV",
                                     "fieldsExist": ["ws_id", "subws_id", "precip_mn", "PET_mn", "AET_mn", "wyield_mn", "wyield_sum"],
                                     "restrictions": [{"field": "ws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                     {"field": "subws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                      {"field": "precip_mn",
                                                       "validateAs": {"type": "number",
@@ -153,11 +157,11 @@
                                     "fieldsExist": ["lucode", "demand"],
                                     "restrictions": [{"field": "lucode",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                     {"field": "demand",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }}]}
                  },   
                  {
@@ -171,11 +175,11 @@
                                     "fieldsExist": ["ws_id", "calib"],
                                     "restrictions": [{"field": "ws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+"}
                                                                   }},
                                                     {"field": "calib",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"[^0-9]+"}
+                                                                  "allowedValues": {"pattern":"[0-9]*\\.?[0-9]+$"}
                                                                   }}]}
                  },
                  {        
