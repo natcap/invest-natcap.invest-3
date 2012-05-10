@@ -3,7 +3,7 @@
 import sys, os
 
 from osgeo import gdal, ogr
-import simplejson as json
+import json
 
 import carbon_core
 from invest_natcap.dbfpy import dbf
