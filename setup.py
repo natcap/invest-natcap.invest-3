@@ -2,6 +2,7 @@ from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import platform
+import os
 
 import numpy as np
 
@@ -21,14 +22,21 @@ if platform.system() == 'Windows':
                'invest_timber.py',
                'invest_hydropower_valuation.py',
                'invest_water_scarcity.py']
-    data_files = ['invest_natcap/iui/carbon_biophysical.json',
+    data_files = [('.',['invest_natcap/iui/carbon_biophysical.json',
                   'invest_natcap/iui/carbon_valuation.json',
                   'invest_natcap/iui/wave_energy_valuation.json',
                   'invest_natcap/iui/wave_energy_biophysical.json',
                   'invest_natcap/iui/hydropower_valuation.json',
                   'invest_natcap/iui/water_scarcity.json',
                   'invest_natcap/iui/water_yield.json',
-                  'invest_natcap/iui/timber.json']
+                  'invest_natcap/iui/timber.json'])]
+
+    for root, subFolders, files in os.walk('invest_natcap'):
+        local_files = (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
+        data_files.append(local_files)
+        print local_files, '\n\n'
+
+
 
 setup(name='invest_natcap',
       version='tip',
