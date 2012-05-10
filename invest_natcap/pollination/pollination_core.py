@@ -73,19 +73,19 @@ def biophysical(args):
         # apply a gaussian filter and save the floral resources raster to the
         # dataset.
         floral_raster = args['species'][species]['floral'].GetRasterBand(1)
-        floral_matrix = floral_raster.ReadAsArray()
-        filtered_matrix = clip_and_op(floral_matrix, sigma,
+        filtered_matrix = clip_and_op(floral_raster.ReadAsArray(), sigma,
             ndimage.gaussian_filter, floral_raster.GetNoDataValue())
         args['species'][species]['floral'].GetRasterBand(1).WriteArray(
             filtered_matrix)
 
         # Calculate the pollinator abundance index (using Math! to simplify the
-        # equation in the documentation.
-        # This looks like it's just floral resources*nesting resources.
+        # equation in the documentation.  We're still waiting on Taylor
+        # Rickett's reply to see if this is correct.
+        # Once the pollination supply has been calculated, we add it to the
+        # total abundance matrix.
         nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
-        nesting_matrix = nesting_raster.ReadAsArray()
-        supply_matrix = clip_and_op(nesting_matrix, filtered_matrix,
-            np.multiply, nesting_raster.GetNoDataValue())
+        supply_matrix = clip_and_op(nesting_raster.ReadAsArray(),
+            filtered_matrix, np.multiply, nesting_raster.GetNoDataValue())
         abundance_total_matrix = clip_and_op(abundance_total_matrix,
             supply_matrix, np.add, nesting_raster.GetNoDataValue())
         args['species'][species]['species_abundance'].GetRasterBand(1).\
@@ -103,11 +103,13 @@ def biophysical(args):
         foraging_raster.WriteArray(foraging_matrix)
 
         # Add the current foraging raster to the existing 'foraging_total'
-        # raster and save it to the foraging_total_raster
+        # raster 
         foraging_total_matrix = clip_and_op(foraging_matrix,
             foraging_total_matrix, np.add, foraging_raster.GetNoDataValue())
 
     # Calculate the average foraging index based on the total
+    # This is a function that meets the criteria for the operation passed in to
+    # clip_and_op.
     def divide(matrix, divisor):
         """Divide matrix by divisor.  Matrix must be a numpy matrix.  Divisor
             must be a scalar.  Returns a numpy matrix."""
@@ -121,9 +123,10 @@ def biophysical(args):
         num_species, divide, foraging_total_raster.GetNoDataValue())
     foraging_total_raster.WriteArray(foraging_total_matrix)
 
-    # Save the abundance_total_matrix to its raster
-    abundance_total_matrix = clip_and_op(foraging_total_matrix,
-        abundance_total_matrix, np.add, abundance_total_raster.GetNoDataValue())
+    # Calculate the mean pollinator supply (pollinator abundance) by taking the
+    # abundance_total_matrix and dividing it by the number of pollinators.
+    # Then, save the resulting matrix to its raster
+    np.putmask(foraging_total_matrix, foraging_total_matrix < 0, 0)
     abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
         divide, abundance_total_raster.GetNoDataValue())
     abundance_total_raster.WriteArray(abundance_total_matrix)
