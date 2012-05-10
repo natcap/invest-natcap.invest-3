@@ -56,10 +56,10 @@ def biophysical(args):
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
 
-        for resource in ['nesting', 'floral']:
+        for resource, op in [('nesting', max), ('floral', sum)]:
             # Calculate the attribute's resources
             map_attribute(args['landuse'], args['landuse_attributes'], guild_dict,
-                args[resource + '_fields'], species_dict[resource])
+                args[resource + '_fields'], species_dict[resource], op)
 
         # Now that the per-pixel nesting and floral resources have been calculated,
         # the floral resources still need to factor in neighborhoods.
@@ -73,19 +73,19 @@ def biophysical(args):
         # apply a gaussian filter and save the floral resources raster to the
         # dataset.
         floral_raster = args['species'][species]['floral'].GetRasterBand(1)
-        floral_matrix = floral_raster.ReadAsArray()
-        filtered_matrix = clip_and_op(floral_matrix, sigma,
+        filtered_matrix = clip_and_op(floral_raster.ReadAsArray(), sigma,
             ndimage.gaussian_filter, floral_raster.GetNoDataValue())
         args['species'][species]['floral'].GetRasterBand(1).WriteArray(
             filtered_matrix)
 
         # Calculate the pollinator abundance index (using Math! to simplify the
-        # equation in the documentation.
-        # This looks like it's just floral resources*nesting resources.
+        # equation in the documentation.  We're still waiting on Taylor
+        # Rickett's reply to see if this is correct.
+        # Once the pollination supply has been calculated, we add it to the
+        # total abundance matrix.
         nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
-        nesting_matrix = nesting_raster.ReadAsArray()
-        supply_matrix = clip_and_op(nesting_matrix, filtered_matrix,
-            np.multiply, nesting_raster.GetNoDataValue())
+        supply_matrix = clip_and_op(nesting_raster.ReadAsArray(),
+            filtered_matrix, np.multiply, nesting_raster.GetNoDataValue())
         abundance_total_matrix = clip_and_op(abundance_total_matrix,
             supply_matrix, np.add, nesting_raster.GetNoDataValue())
         args['species'][species]['species_abundance'].GetRasterBand(1).\
@@ -103,11 +103,13 @@ def biophysical(args):
         foraging_raster.WriteArray(foraging_matrix)
 
         # Add the current foraging raster to the existing 'foraging_total'
-        # raster and save it to the foraging_total_raster
+        # raster 
         foraging_total_matrix = clip_and_op(foraging_matrix,
             foraging_total_matrix, np.add, foraging_raster.GetNoDataValue())
 
     # Calculate the average foraging index based on the total
+    # This is a function that meets the criteria for the operation passed in to
+    # clip_and_op.
     def divide(matrix, divisor):
         """Divide matrix by divisor.  Matrix must be a numpy matrix.  Divisor
             must be a scalar.  Returns a numpy matrix."""
@@ -121,15 +123,16 @@ def biophysical(args):
         num_species, divide, foraging_total_raster.GetNoDataValue())
     foraging_total_raster.WriteArray(foraging_total_matrix)
 
-    # Save the abundance_total_matrix to its raster
-    abundance_total_matrix = clip_and_op(foraging_total_matrix,
-        abundance_total_matrix, np.add, abundance_total_raster.GetNoDataValue())
+    # Calculate the mean pollinator supply (pollinator abundance) by taking the
+    # abundance_total_matrix and dividing it by the number of pollinators.
+    # Then, save the resulting matrix to its raster
+    np.putmask(foraging_total_matrix, foraging_total_matrix < 0, 0)
     abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
         divide, abundance_total_raster.GetNoDataValue())
     abundance_total_raster.WriteArray(abundance_total_matrix)
 
 
-def clip_and_op(in_matrix, arg1, op, matrix_nodata):
+def clip_and_op(in_matrix, arg1, op, matrix_nodata, kwargs={}):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
         values.  After the operation is complete, the matrix will have pixels
         culled based on the input matrix's original values that were less than 0
@@ -140,6 +143,8 @@ def clip_and_op(in_matrix, arg1, op, matrix_nodata):
             of op
         op - a python callable object with two arguments: in_matrix and arg1
         matrix_nodata - a python int or float
+        kwargs={} - a python dictionary of keyword arguments to be passed in to
+            op when it is called.
 
         returns a numpy matrix."""
 
@@ -150,14 +155,15 @@ def clip_and_op(in_matrix, arg1, op, matrix_nodata):
     np.putmask(matrix, matrix < 0, 0)
 
     # Apply the gaussian blur
-    filtered_matrix = op(matrix, arg1)
+    filtered_matrix = op(matrix, arg1, **kwargs)
 
     # Apply the clip based on the mask raster's nodata values
     np.putmask(filtered_matrix, in_matrix < 0, matrix_nodata)
 
     return filtered_matrix
 
-def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_raster):
+def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
+                  out_raster, list_op):
     """Make an intermediate raster where values are mapped from the base raster
         according to the mapping specified by key_field and value_field.
 
@@ -167,6 +173,8 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_rast
             species.
         resource_fields - a python list of string resource fields
         out_raster - a GDAL dataset
+        list_op - a python callable that takes a list of numerical arguments and
+            returns a python scalar.  Examples: sum; max
 
         returns nothing."""
 
@@ -189,7 +197,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields, out_rast
                 return out_nodata
             # Max() is how InVEST 2.2 pollination does this, although I think
             # that sum() should actually be used.
-            return max([value_list[r] * lu_table_dict[lu_code][r] for r in
+            return list_op([value_list[r] * lu_table_dict[lu_code][r] for r in
                 resource_fields])
         except KeyError:
             return out_nodata
