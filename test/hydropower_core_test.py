@@ -23,7 +23,7 @@ class TestHydropowerCore(unittest.TestCase):
     def test_hydropower_core_water_yield_re(self):
         """Regression test for the water_yield function in hydropower_core"""
         
-        base = './data/hydropower_data'
+        base = './data/hydropower_regression_data/hydro_regression_byhand/'
         output_base = './data/test_out/hydro_regression_byhand/'
         
         if not os.path.isdir(output_base):
@@ -42,56 +42,28 @@ class TestHydropowerCore(unittest.TestCase):
         
         args = {}
         args['workspace_dir'] = output_base
-        lulc_orig = gdal.Open(base + '/test_input/landuse_90')
-#        prj = lulc_orig.GetProjection()
-#        gt = lulc_orig.GetGeoTransform()
-#        up_left = gt[0]
-#        up_right = gt[3]
-#        col_width = gt[1]
-#        row_width = gt[5]
-#        gt_sub = ([up_left, 30, 0, (up_right + (5 * row_width)), 0, -30 ])
-#        args['lulc'] = \
-#            invest_test_core.makeRandomRaster(100,100,uri=output_base + 'lulc.tif',
-#                                              format='GTiff', min=1.0, max=60.0,
-#                                              projection=prj, geotransform=gt)
-#        
-#        args['soil_depth'] = \
-#            invest_test_core.makeRandomRaster(100,100,uri=output_base + 'soil_depth.tif',
-#                                              format='GTiff', min=1490.0, max=1500.0,
-#                                              projection=prj, geotransform=gt)
-#        args['precipitation'] = \
-#            invest_test_core.makeRandomRaster(50,70,uri=output_base + 'precipitation.tif',
-#                                              format='GTiff', min=1000.0, max=4000.0,
-#                                              projection=prj, geotransform=gt_sub)
-#        args['pawc'] = \
-#            invest_test_core.makeRandomRaster(100,100,uri=output_base + 'pawc.tif',
-#                                              format='GTiff', min=0.0, max=1.0,
-#                                              type='float', projection=prj, geotransform=gt)
-#        args['eto'] = \
-#            invest_test_core.makeRandomRaster(50,70,uri=output_base + 'eto.tif',
-#                                              format='GTiff', min=900.0, max=1300.0,
-#                                              projection=prj, geotransform=gt_sub)
-#        
-#        args['soil_depth'] = gdal.Open(base + '/test_input/soil_depth')
-#        args['precipitation'] = gdal.Open(base + '/test_input/precip')
-#        args['pawc'] = gdal.Open(base + '/test_input/pawc')
-#        args['eto'] = gdal.Open(base + '/test_input/eto')
-#        args['watersheds'] = ogr.Open(base + '/test_input/watersheds.shp')
-#        args['sub_watersheds'] = ogr.Open(base + '/test_input/subwatersheds.shp')
-#        args['seasonality_constant'] = 5
-#        args['results_suffix'] = ''
-#        
-#        biophysical_table_uri = base + '/test_input/Biophysical_Models.csv'
-#        #Open/read in the csv files into a dictionary and add to arguments
-#        biophysical_table_map = {}
-#        biophysical_table_file = open(biophysical_table_uri)
-#        reader = csv.DictReader(biophysical_table_file)
-#        for row in reader:
-#            biophysical_table_map[row['lucode']] = row
-#        
-#        args['biophysical_dictionary'] = biophysical_table_map
-#        
-#        hydropower_core.water_yield(args)
+        args['lulc'] = gdal.Open(base + 'lulc.tif')
+        args['soil_depth'] = gdal.Open(base + 'soil_depth.tif')
+        args['precipitation'] = gdal.Open(base + 'precipitation.tif')
+        args['pawc'] = gdal.Open(base + 'pawc.tif')
+        args['eto'] = gdal.Open(base + 'eto.tif')
+        args['watersheds'] = ogr.Open(base + 'simple_reg_ws.shp')
+        args['sub_watersheds'] = ogr.Open(base + 'simple_reg_subws.shp')
+        args['seasonality_constant'] = 5
+        args['results_suffix'] = ''
+        
+        #Open/read in the csv files into a dictionary and add to arguments
+        biophysical_table_uri = base + 'Biophysical_Models.csv'
+        biophysical_table_map = {}
+        biophysical_table_file = open(biophysical_table_uri)
+        reader = csv.DictReader(biophysical_table_file)
+        for row in reader:
+            biophysical_table_map[int(row['lucode'])] = \
+                {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
+
+        args['biophysical_dictionary'] = biophysical_table_map
+        
+        hydropower_core.water_yield(args)
 #        
 #        regression_dir = './data/hydropower_regression_data/'
 #        reg_pixel_aet_uri = regression_dir + 'aet_regression.tif'

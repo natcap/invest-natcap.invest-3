@@ -191,10 +191,9 @@ def water_yield(args):
         #Converting to a percent because 'etk' is stored in the table 
         #as int(percent * 1000)
         tmp_di = (etk * eto) / (precip * 1000)
-#        tmp_pet = (etk * eto) / 1000
-#        tmp_di = tmp_pet / precip        
         
-        #Calculate plant available water conent (mm)
+        #Calculate plant available water content (mm) using the minimum
+        #of soil depth and root depth
         awc = (np.minimum(root, soil) * pawc)  
         
         #Calculate dimensionless ratio of plant accessible water
@@ -209,6 +208,13 @@ def water_yield(args):
         #Compute evapotranspiration partition of the water balance
         tmp_calc = \
             ((tmp_w * tmp_di + 1) / (( 1 / tmp_di) + (tmp_w * tmp_di + 1)))
+        
+        #Currently as of release 2.2.2 the following operation is not
+        #documented in the users guide. We take the minimum of the
+        #following values (Rxj, (AETxj/Pxj) to determine the evapotranspiration
+        #partition of the water balance (see users guide for variable
+        #and equation references). This was confirmed by Yonas Ghile on
+        #5/10/12
         
         fractp = np.minimum(tmp_max_aet, tmp_calc)
         
@@ -334,7 +340,7 @@ def water_yield(args):
                           (squared meters)
                           
             returns - water yield volume in ha value"""
-        #Converting area from square meters to hectares
+        #Converting area from square meters to hectares 1 meter = .0001 hectare
         if wyield_vol != out_nodata and wyield_area != out_nodata:
             return wyield_vol / (0.0001 * wyield_area)
         else:
@@ -384,8 +390,6 @@ def water_yield(args):
         sws_dict[key] = {'ws_id':val, 'subws_id':key}
         if not val in ws_dict:
             ws_dict[val] = {'ws_id':val}
-    
-    LOGGER.debug('wsr map : %s', wsr)
     
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
