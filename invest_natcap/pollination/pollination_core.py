@@ -3,6 +3,7 @@
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
+from osgeo import gdal
 import numpy as np
 import scipy.ndimage as ndimage
 
@@ -133,8 +134,49 @@ def biophysical(args):
 
 def valuation(args):
     """Perform the computation of the valuation component of the pollination
-        model."""
-    pass
+        model.
+
+        args - a python dictionary with at least the following entries:
+        args['half_saturation'] - a python int or float
+        args['wild_pollination_proportion'] - a python int or float between 0
+            and 1.
+        args['species'][<species_name>]['species_abundance'] - a GDAL dataset
+        args['species'][<species_name>]['farm_abundance'] - a GDAL dataset
+        args['service_value'] - a GDAL dataset
+        args['farm_value'] - a GDAL dataset
+        args['foraging_average'] - a GDAL dataset
+        """
+
+    calculate_yield(args['foraging_average'], args['farm_value'],
+        args['half_saturation'], args['wild_pollination_proportion'])
+
+def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
+    """Calculate the yield raster.
+
+        in_raster - a GDAL dataset
+        out_raster -a GDAL dataset
+        half_sat - the half-saturation constant, a python int or float
+        wild_poll - the proportion of crops that are pollinated by wild
+            pollinators.  An int or float from 0 to 1.
+
+        returns nothing"""
+
+    # Calculate the yield raster
+    k = float(half_sat)
+    v = float(wild_poll)
+    in_nodata = in_raster.GetRasterBand(1).GetNoDataValue()
+    out_nodata = out_raster.GetRasterBand(1).GetNoDataValue()
+
+    # This function is a vectorize-compatible implementation of the yield
+    # function from the documentation.
+    def calc_yield(frm_avg):
+        if frm_avg == in_nodata:
+            return out_nodata
+        return (1.0 - v) + (v * (frm_avg / (frm_avg + k)))
+
+    # Apply the yield calculation to the foraging_average raster
+    invest_core.vectorize1ArgOp(in_raster.GetRasterBand(1), calc_yield,
+        out_raster.GetRasterBand(1))
 
 def clip_and_op(in_matrix, arg1, op, matrix_nodata, kwargs={}):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
@@ -260,4 +302,10 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
     # Vectorize all of this to the output (ag) raster.
     invest_core.vectorize1ArgOp(landuse_raster.GetRasterBand(1), ag_func,
         ag_raster.GetRasterBand(1))
+
+def make_raster_from_lulc(lulc_dataset, raster_uri):
+    LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
+    dataset = invest_cython_core.newRasterFromBase(\
+        lulc_dataset, raster_uri, 'GTiff', -1, gdal.GDT_Float32)
+    return dataset
 
