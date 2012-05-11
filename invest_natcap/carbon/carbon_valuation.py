@@ -4,7 +4,7 @@ import sys
 import os
 import logging
 
-import simplejson as json
+import json
 from osgeo import gdal
 
 import invest_cython_core

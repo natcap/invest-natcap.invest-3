@@ -12,5 +12,7 @@ def after_install(options, home_dir):
                      'scipy'])
     subprocess.call([join(home_dir, 'bin', 'easy_install'),
                      'nose'])
+    subprocess.call([join(home_dir, 'bin', 'easy_install'),
+                     'setuptools'])
 """))
 print output
