@@ -33,8 +33,6 @@ def execute(args):
 
         returns nothing."""
 
-    gdal.AllRegister()
-
     biophysical_args = {}
 
     workspace = args['workspace_dir']
@@ -88,16 +86,16 @@ def execute(args):
     # cover class is in the ag list, or 0 if the land cover class is not.
     ag_map_uri = os.path.join(inter_dir, 'agmap.tif')
     biophysical_args['ag_map'] =\
-        make_raster_from_lulc(biophysical_args['landuse'], ag_map_uri)
+        pollination_core.make_raster_from_lulc(biophysical_args['landuse'], ag_map_uri)
 
     # Create a new raster for a mean of all foraging rasters.
     frm_avg_uri = os.path.join(out_dir, 'frm_avg.tif')
-    biophysical_args['foraging_average'] = make_raster_from_lulc(
+    biophysical_args['foraging_average'] = pollination_core.make_raster_from_lulc(
         biophysical_args['landuse'], frm_avg_uri)
 
     # Create a new raster for the total of all pollinator supply rasters.
     sup_tot_uri = os.path.join(out_dir, 'sup_tot.tif')
-    biophysical_args['abundance_total'] = make_raster_from_lulc(
+    biophysical_args['abundance_total'] = pollination_core.make_raster_from_lulc(
         biophysical_args['landuse'], sup_tot_uri)
 
     # Fetch a list of all species from the guilds table.
@@ -116,14 +114,9 @@ def execute(args):
         biophysical_args['species'][species] = {}
         for group, prefix in species_rasters:
             raster_uri = os.path.join(inter_dir, prefix + '_' + species + '.tif')
-            dataset = make_raster_from_lulc(biophysical_args['landuse'],
+            dataset = pollination_core.make_raster_from_lulc(biophysical_args['landuse'],
                 raster_uri)
             biophysical_args['species'][species][group] = dataset
 
     pollination_core.biophysical(biophysical_args)
 
-def make_raster_from_lulc(lulc_dataset, raster_uri):
-    LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
-    dataset = invest_cython_core.newRasterFromBase(\
-        lulc_dataset, raster_uri, 'GTiff', -1, gdal.GDT_Float32)
-    return dataset

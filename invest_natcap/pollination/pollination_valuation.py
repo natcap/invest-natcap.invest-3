@@ -6,6 +6,9 @@ import pollination_core
 from invest_natcap.iui import fileio
 
 import os.path
+import logging
+
+LOGGER = logging.getLogger('pollination_valuation')
 
 def execute(args):
     """Open files necessary for the valuation portion of the pollination model
@@ -39,19 +42,37 @@ def execute(args):
     out_dir = os.path.join(workspace, 'output')
 
     guilds_table = fileio.find_handler(args['guilds_uri'])
+    valuation_args['guilds'] = guilds_table
 
     # Open rasters that we need from the workspace, which should have been
     # created from the run of the pollination biophysical model.
     foraging_avg_uri = os.path.join(out_dir, 'frm_avg.tif')
+    LOGGER.debug('Opening raster from biophysical: %s', foraging_avg_uri)
     valuation_args['foraging_average'] = gdal.Open(foraging_avg_uri)
 
     valuation_args['species'] = {}
     for species in [row['species'] for row in guilds_table.table]:
         valuation_args['species'][species] = {}
+        supply_uri = os.path.join(inter_dir, 'sup_' + species + '.tif')
+        foraging_uri = os.path.join(inter_dir, 'frm_' + species + '.tif')
+        LOGGER.debug('Opening raster from biophysical: %s', foraging_uri)
+        LOGGER.debug('Opening raster from biophysical: %s', supply_uri)
         valuation_args['species'][species]['species_abundance'] = gdal.Open(
-            os.path.join(inter_dir, 'sup_' + species + '.tif'))
+            supply_uri)
         valuation_args['species'][species]['farm_abundance'] = gdal.Open(
-            os.path.join(inter_dir, 'frm_' + species + '.tif'))
+            foraging_uri)
 
+    # Create the total supply raster using the foraging average raster as a base
+    service_value_uri = os.path.join(out_dir, 'sup_val.tif')
+    valuation_args['service_value'] = pollination_core.make_raster_from_lulc(
+        valuation_args['foraging_average'], service_value_uri)
+
+    # Create the total farm value raster using the foraging average raster as a
+    # base
+    farm_value_uri = os.path.join(inter_dir, 'frm_val.tif')
+    valuation_args['farm_value'] = pollination_core.make_raster_from_lulc(
+        valuation_args['foraging_average'], farm_value_uri)
+
+    # Execute the model.
     pollination_core.valuation(valuation_args)
 
