@@ -42,6 +42,7 @@ def execute(args):
     out_dir = os.path.join(workspace, 'output')
 
     guilds_table = fileio.find_handler(args['guilds_uri'])
+    valuation_args['guilds'] = guilds_table
 
     # Open rasters that we need from the workspace, which should have been
     # created from the run of the pollination biophysical model.
