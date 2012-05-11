@@ -145,10 +145,57 @@ def valuation(args):
         args['service_value'] - a GDAL dataset
         args['farm_value'] - a GDAL dataset
         args['foraging_average'] - a GDAL dataset
-        """
+        args['guilds'] - a fileio tablehandler class
+
+        returns nothing"""
 
     calculate_yield(args['foraging_average'], args['farm_value'],
         args['half_saturation'], args['wild_pollination_proportion'])
+
+    num_species = len(args['species'].values())
+
+    def multiply(matrix, multiplicand):
+        return matrix * multiplicand
+
+    farm_value_matrix = args['farm_value'].GetRasterBand(1).ReadAsArray()
+    farm_avg_matrix = args['foraging_average'].GetRasterBand(1).ReadAsArray()
+
+    # Calculate the total foraging matrix by multiplying the foraging average
+    # raster by the number of species.
+    farm_tot_matrix = clip_and_op(farm_avg_matrix, num_species, multiply,
+        args['farm_value'].GetRasterBand(1).GetNoDataValue())
+
+    farm_tot_matrix.fill(0)
+
+    # Loop through all species and calculate the pollinator service value
+    for species, species_dict in args['species'].iteritems():
+        farm_abund_matrix = species_dict['farm_abundance'].GetRasterBand(1).\
+            ReadAsArray()
+        species_abund_matrix = species_dict['species_abundance'].\
+            GetRasterBand(1).ReadAsArray()
+        species_val = clip_and_op(farm_value_matrix, farm_abund_matrix,
+            np.multiply, args['farm_value'].GetRasterBand(1).GetNoDataValue())
+        species_contribution = clip_and_op(species_val, farm_tot_matrix,
+            np.divide, args['farm_value'].GetRasterBand(1).GetNoDataValue())
+
+        guild_dict = args['guilds'].get_table_row('species', species)
+        pixel_size = abs(args['farm_value'].GetGeoTransform()[1])
+        sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
+        # Apply a gaussian blur to the species' supply raster
+        blurred_supply = clip_and_op(species_abund_matrix, sigma,
+            ndimage.gaussian_filter, args['farm_value'].GetRasterBand(1).\
+            GetNoDataValue())
+        val_numerator = clip_and_op(species_contribution, blurred_supply,
+            np.multiply, args['farm_value'].GetRasterBand(1).GetNoDataValue())
+        pollinator_supply_value = clip_and_op(val_numerator, farm_abund_matrix,
+            np.divide, args['farm_value'].GetRasterBand(1).GetNoDataValue())
+
+        # Add the pollinator service value to the total value raster
+        farm_tot_matrix = clip_and_op(farm_tot_matrix, pollinator_supply_value,
+            np.add, args['farm_value'].GetRasterBand(1).GetNoDataValue())
+
+    # Write the pollination service value to its raster
+    args['service_value'].GetRasterBand(1).WriteArray(farm_tot_matrix)
 
 def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
     """Calculate the yield raster.
