@@ -51,6 +51,7 @@ try:
     land_poly_file = sys.argv[1]
     aoi_poly_file = sys.argv[2]
     cell_size = int(sys.argv[3])
+    outfile_name = sys.argv[4]
 
 except:
     print "Usage create_grid.py land_poly_file aoi_poly_file cell_size"
@@ -63,8 +64,16 @@ aoi_ds = ogr.Open(aoi_poly_file)
 aoi_extent = aoi_ds.GetLayer(0).GetExtent()
 xleft,xright,ybot,ytop = aoi_extent
 
-x_ticks = int((xright-xleft)/cell_size)
-y_ticks = int((ytop-ybot)/cell_size)
+srs = osr.SpatialReference()
+srs.ImportFromWkt(land_ds.GetLayer(0).GetSpatialRef().__str__())
+linear_units = srs.GetLinearUnits()
+
+print xright-xleft
+
+print linear_units
+
+x_ticks = int((xright-xleft)/float(cell_size))
+y_ticks = int((ytop-ybot)/float(cell_size))
     
 print aoi_extent
 print x_ticks, y_ticks
@@ -72,7 +81,23 @@ print x_ticks, y_ticks
     #Get the land layer
 land_layer = land_ds.GetLayer(0)
 
-output_dataset = createRasterFromVectorExtents(x_ticks, y_ticks, gdal.GDT_Byte, 255, 'grid.tif', aoi_ds)
+output_dataset = createRasterFromVectorExtents(cell_size, cell_size, gdal.GDT_Byte, 255, 'grid.tif', aoi_ds)
+output_band = output_dataset.GetRasterBand(1)
+
+#First fill it up with water (bit == 1)
+output_dataset.GetRasterBand(1).Fill(1)
+
+#Then fill it up with land (bit == 0)
+gdal.RasterizeLayer(output_dataset, [1], land_layer, burn_values=[0])
+
+land_array = output_dataset.GetRasterBand(1).ReadAsArray()
+
+f=open(outfile_name,'w')
+
+for y in range(land_array.shape[0]):
+    for x in range(land_array.shape[1]):
+        f.write(str(land_array[land_array.shape[0]-y-1][x]))
+    f.write('\n')
 
 #    for x_index in range(x_ticks):
 #        for y_index in range(y_ticks):
