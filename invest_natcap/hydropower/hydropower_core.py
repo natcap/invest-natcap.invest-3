@@ -1266,8 +1266,6 @@ def valuation(args):
         invest_cython_core.newRasterFromBase(water_consump, hp_energy_path, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
 
-    hp_energy_tmp = gdal.Open(hp_energy_tmppath, gdal.GA_Update)
- 
     gdal.RasterizeLayer(hp_energy_tmp, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
