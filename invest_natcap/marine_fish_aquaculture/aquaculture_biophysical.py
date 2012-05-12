@@ -1,5 +1,7 @@
 """inVEST finfish aquaculture filehandler"""
 
+import os
+
 def execute(args):
     """This function will take care of preparing files passed into 
     the finfish aquaculture model. It will handle all files/inputs associated
@@ -21,6 +23,12 @@ def execute(args):
     args['farm_op_tbl']- URI to CSV table of static variables for calculations
     """ 
     
-    #initialize new dictionary of purely biophysical arguments which will be
+    #initialize new dictionary of purely biophysical/general arguments which will be
     #passed to the aquaculture core module. Then get desirable arguments that 
     #are being passed in, and load them into the biophysical dictionary.
+    
+    biophysical_args = {}
+    
+    
+    
+    
