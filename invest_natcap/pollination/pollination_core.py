@@ -150,45 +150,61 @@ def valuation(args):
 
         returns nothing"""
 
+    # Apply the half-saturation yield function from the documentation.
     calculate_yield(args['foraging_average'], args['farm_value'],
         args['half_saturation'], args['wild_pollination_proportion'])
 
-    num_species = len(args['species'].values())
-
-    def multiply(matrix, multiplicand):
-        return matrix * multiplicand
-
+    # Open matrices for use later.
     farm_value_matrix = args['farm_value'].GetRasterBand(1).ReadAsArray()
     farm_avg_matrix = args['foraging_average'].GetRasterBand(1).ReadAsArray()
     agmap_raster = args['ag_map'].GetRasterBand(1)
     agmap_matrix = agmap_raster.ReadAsArray()
+
+    # Define necessary scalars based on inputs.
     agmap_nodata = agmap_raster.GetNoDataValue()
     out_nodata = args['farm_value'].GetRasterBand(1).GetNoDataValue()
+    num_species = len(args['species'].values())
 
     # Calculate the total foraging matrix by multiplying the foraging average
     # raster by the number of species.
+    def multiply(matrix, multiplicand):
+        return matrix * multiplicand
     farm_tot_matrix = clip_and_op(farm_avg_matrix, num_species, multiply,
         args['farm_value'].GetRasterBand(1).GetNoDataValue())
 
+    # Fill the farm total matrix with 0's ... this is not done automatically
+    # when creating a new raster, so we need to do it here.
     farm_tot_matrix.fill(0)
 
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
+        # Open necessary matrices
         species_foraging_matrix = species_dict['farm_abundance'].\
             GetRasterBand(1).ReadAsArray()
         species_supply_matrix = species_dict['species_abundance'].\
             GetRasterBand(1).ReadAsArray()
 
         def ps_vectorized(agmap, frm_val, frm_s, frm_avg, sup_s):
+            """Apply the pollinator service value function from the
+                documentation.
+                    agmap - the boolean matrix of ag pixels
+                    frm_val - the farm value matrix (from the yield function)
+                    frm_s - the species foraging abundance matrix
+                    frm_avg - the average foraging abundance matrix
+                    sup_s - the species abundance matrix."""
+
             if agmap == agmap_nodata:
                 return out_nodata
             contrib = (frm_val * frm_s) / (frm_avg * num_species)
-            return(agmap * ((contrib * sup_s) / frm_s))
+            return (agmap * ((contrib * sup_s) / frm_s))
 
+        # Vectorize the ps_vectorized function
         vOp = np.vectorize(ps_vectorized)
         ag_masked_matrix = vOp(agmap_matrix, farm_value_matrix,
             species_foraging_matrix, farm_avg_matrix, species_supply_matrix)
 
+        # Calculate sigma for the gaussian blur.  Sigma is based on the species'
+        # alpha (from the guilds table) and twice the pixel size.
         guild_dict = args['guilds'].get_table_row('species', species)
         pixel_size = abs(args['farm_value'].GetGeoTransform()[1])
         sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
