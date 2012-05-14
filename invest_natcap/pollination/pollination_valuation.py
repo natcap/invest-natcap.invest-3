@@ -49,6 +49,9 @@ def execute(args):
     foraging_avg_uri = os.path.join(out_dir, 'frm_avg.tif')
     LOGGER.debug('Opening raster from biophysical: %s', foraging_avg_uri)
     valuation_args['foraging_average'] = gdal.Open(foraging_avg_uri)
+    agmap_uri = os.path.join(inter_dir, 'agmap.tif')
+    LOGGER.debug('Opening raster from biophysical: %s', foraging_avg_uri)
+    valuation_args['ag_map'] = gdal.Open(agmap_uri)
 
     valuation_args['species'] = {}
     for species in [row['species'] for row in guilds_table.table]:
