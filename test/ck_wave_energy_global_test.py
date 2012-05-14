@@ -20,7 +20,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
            againts regression files that are known to be accurate"""
         args = {}
         test_dir = './data/wave_energy_data/'
-        output_dir = './data/test_out/ck_we_global_out4'
+        output_dir = './data/test_out/ck_we_global_out_WD'
         args['workspace_dir'] = output_dir
         args['wave_base_data_uri'] = test_dir + 'samp_input/WaveData'
         args['analysis_area_uri'] = 'Global(Eastern Hemisphere)'
@@ -29,6 +29,11 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         args['machine_param_uri'] = \
             test_dir + 'samp_input/Machine_WaveDragon_Param.csv'
         args['dem_uri'] = test_dir + 'samp_input/global_dem'
+        
+        #New input for the global shapefile information
+        args['bin_attributes'] = test_dir + 'ck_new_input/new_grid.csv'
+        args['global_shape'] = test_dir + 'ck_new_input/new_global_shape.shp'
+        
 #        args['aoi_uri'] = test_dir + 'samp_input/AOI_WCVI.shp'
         
         if not os.path.isdir(output_dir):

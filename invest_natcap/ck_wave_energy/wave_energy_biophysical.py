@@ -38,6 +38,9 @@ def execute(args):
         args['aoi_uri'] - A polygon shapefile outlining a more detailed area 
                           within the analyis area. (OPTIONAL, but required to
                           run Valuation model)
+        args['bin_attributes'] - Path to a text file that has information
+                                 to wave bin site, including: I,J,LONG,LATI,HSAVG,TPAVG
+                                 values
         returns nothing.        
         """
 
@@ -125,8 +128,15 @@ def execute(args):
             args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
         biophysical_args['wave_base_data'] = \
             extrapolate_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'ck_clean.txt')
-        biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
+                                  + os.sep + 'ck_clean2.txt')
+#        biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
+        
+        
+        #new_dict = extrapolate_bin_info(args['bin_attributes'])
+#        path = args['workspace_dir'] + os.sep + 'new_global_shape.shp'
+        #create_new_shape(path, biophysical_args['analysis_area'], new_dict)
+        biophysical_args['analysis_area'] = ogr.Open(args['global_shape'])
+        
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global(Western Hemisphere)':
@@ -156,6 +166,67 @@ def execute(args):
     LOGGER.info('Starting Wave Energy Biophysical.')
     wave_energy_core.biophysical(biophysical_args)
     LOGGER.info('Completed Wave Energy Biophysical.')
+
+
+def extrapolate_bin_info(path):
+    LOGGER.debug('extrapolating_bin_info')
+    #Open/read in the csv files into a dictionary and add to arguments
+    table_map = {}
+    table_file = open(path)
+    reader = csv.DictReader(table_file)
+    for row in reader:
+#        LOGGER.debug('row : %s', row)
+        table_map[(int(row['I']),int(row['J']))] = \
+            {'long':float(row['LONG']), 
+             'lati':float(row['LATI']),
+             'hsavg':float(row['HSAVG']),
+             'tpavg':float(row['TPAVG']),
+             }
+            
+    table_file.close()
+
+    return table_map
+
+
+def create_new_shape(path, shape, table):
+    LOGGER.debug('CREATING NEW SHAPE FILE')
+    fields_list = ['HSAVG_M','I','J','LATI','LONG','TPAVG_S']
+    
+    dr = ogr.GetDriverByName('ESRI Shapefile')
+    ds = dr.CreateDataSource(path)
+    ds.CreateLayer('new_global_shape', shape.GetLayer().GetSpatialRef(), 
+                   ogr.wkbPoint)
+    layer = ds.GetLayer()
+    for field in fields_list:
+        fld_def = ogr.FieldDefn(field, ogr.OFTReal)
+        layer.CreateField(fld_def)
+        
+    for key, val in table.iteritems():
+        i_val = key[0]
+        j_val = key[1]
+        long = val['long']
+        lati = val['lati']
+        height = val['hsavg']
+        period = val['tpavg']
+        
+        out_feat = ogr.Feature(feature_def=layer.GetLayerDefn())
+        out_feat.SetField('I', i_val)
+        out_feat.SetField('J', j_val)
+        out_feat.SetField('LATI', lati)
+        out_feat.SetField('LONG', long)
+        out_feat.SetField('HSAVG_M', height)
+        out_feat.SetField('TPAVG_S', period)
+                
+        pt = ogr.Geometry(ogr.wkbPoint)
+        pt.SetPoint_2D(0, long, lati)
+        out_feat.SetGeometry(pt)
+        
+        layer.CreateFeature(out_feat)
+        out_feat.Destroy()
+    
+    ds = None
+    LOGGER.debug('DONE CREATING NEW SHAPE FILE')
+        
 
 def extrapolate_wave_data(wave_file_uri):
     """The extrapolate_wave_data function converts WW3 text data into a 
