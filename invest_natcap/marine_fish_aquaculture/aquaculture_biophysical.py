@@ -2,6 +2,9 @@
 
 import os
 
+from osgeo import gdal
+from osgeo import ogr
+
 def execute(args):
     """This function will take care of preparing files passed into 
     the finfish aquaculture model. It will handle all files/inputs associated
@@ -28,6 +31,18 @@ def execute(args):
     #are being passed in, and load them into the biophysical dictionary.
     
     biophysical_args = {}
+    
+    workspace = args['workspace_dir']
+    output_dir = workspace + os.sep + 'Output'
+    
+    if not (os.path.exists(output_dir)):
+        os.mkdir(output_dir)
+        
+    biophysical_args['workspace_dir'] = args['workspace_dir']
+    biophysical_args['ff_farm_loc'] = ogr.Open(args['ff_farm_loc']);
+    biophysical_args['farm_ID'] = args['farms_ID']
+    biophysical_args['g_param_a'] = args['g_param_a']
+    biophysical_args['g_param_b'] = args['g_param_b']
     
     
     
