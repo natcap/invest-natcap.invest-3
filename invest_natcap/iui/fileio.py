@@ -29,13 +29,13 @@ class JSONHandler(object):
         return self.dict
 
     def write_to_disk(self, dict):
-        file = open(self.uri)
+        file = open(self.uri, mode='w+')
         file.writelines(json.dumps(dict))
         file.close()
 
 class LastRunHandler(JSONHandler):
     def __init__(self, modelname):
-        uri = './cfg' + modelname + '_lastrun_' + node() + '.json'
+        uri = './cfg/' + modelname + '_lastrun_' + node() + '.json'
         JSONHandler.__init__(self, uri)
 
 class AbstractTableHandler(object):
