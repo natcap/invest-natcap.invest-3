@@ -1543,7 +1543,9 @@ class ExecRoot(Root):
 
         if not self.errors_exist():
             # Save the last run to the json dictionary
-            self.last_run_handler.write_to_dict(self.assembleOutputDict())
+            last_run = dict((id_str, ptr.getOutputValue()) for id_str, ptr in
+                self.allElements.iteritems())
+            self.last_run_handler.write_to_disk(self.allElements)
             self.queueOperations()
             self.runProgram()
 
