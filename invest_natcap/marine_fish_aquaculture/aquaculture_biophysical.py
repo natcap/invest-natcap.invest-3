@@ -1,4 +1,4 @@
-"""inVEST finfish aquaculture filehandler"""
+"""inVEST finfish aquaculture filehandler for biophysical data"""
 
 import os
 import csv
@@ -40,24 +40,21 @@ def execute(args):
         os.mkdir(output_dir)
         
     biophysical_args['workspace_dir'] = args['workspace_dir']
-    biophysical_args['ff_farm_loc'] = ogr.Open(args['ff_farm_loc']);
+    biophysical_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc']);
     biophysical_args['farm_ID'] = args['farms_ID']
     biophysical_args['g_param_a'] = args['g_param_a']
     biophysical_args['g_param_b'] = args['g_param_b']
     
-    #Need to create a dictReader for the CSV file, for now just pass in read
-    #in its entirely, but find out what you want to sort them by
-    
-    # TODO: find out if reader is a dictionary, and/or how I want to actually sort 
-    
+    #Need to create a dictReader for the CSV file, but then can leave it,
+    #since there are no arbitrary pairings. Should be noted that this is passed
+    #as an iterable, since there is no single key.
     water_temp_file = open(args['water_temp_tbl'])
     reader = csv.DictReader(water_temp_file)
     
-    
-    biophysical_args['water_temp_dict'] = reader
+    biophysical_args['water_temp_rdr'] = reader
     
     #Now create a dictionary for the operations table, then set up the values so 
-    #that they are iterrable in a way that makes sense
+    #that they are iterable in a way that makes sense
     
     #TODO: CHECK TO SEE IF WE NEED ALL COLUMNS
     new_dict_temp = {}
