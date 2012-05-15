@@ -40,7 +40,7 @@ def execute(args):
         os.mkdir(output_dir)
         
     biophysical_args['workspace_dir'] = args['workspace_dir']
-    biophysical_args['ff_farm_loc'] = ogr.Open(args['ff_farm_loc']);
+    biophysical_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc']);
     biophysical_args['farm_ID'] = args['farms_ID']
     biophysical_args['g_param_a'] = args['g_param_a']
     biophysical_args['g_param_b'] = args['g_param_b']
