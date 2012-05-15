@@ -167,6 +167,7 @@ def valuation(args):
 
     # Define necessary scalars based on inputs.
     agmap_nodata = agmap_raster.GetNoDataValue()
+    in_nodata = args['foraging_average'].GetRasterBand(1).GetNoDataValue()
     out_nodata = args['farm_value'].GetRasterBand(1).GetNoDataValue()
     num_species = len(args['species'].values())
 
@@ -175,7 +176,7 @@ def valuation(args):
     def multiply(matrix, multiplicand):
         return matrix * multiplicand
     farm_tot_matrix = clip_and_op(farm_avg_matrix, num_species, multiply,
-        args['farm_value'].GetRasterBand(1).GetNoDataValue())
+        in_nodata, out_nodata)
 
     # Fill the farm total matrix with 0's ... this is not done automatically
     # when creating a new raster, so we need to do it here.
@@ -216,11 +217,11 @@ def valuation(args):
 
         # Apply a gaussian blur to the species' supply raster
         blurred_supply = clip_and_op(ag_masked_matrix, sigma,
-            ndimage.gaussian_filter, out_nodata)
+            ndimage.gaussian_filter, in_nodata, out_nodata)
 
         # Add the pollinator service value to the total value raster
         farm_tot_matrix = clip_and_op(farm_tot_matrix, blurred_supply,
-            np.add, out_nodata)
+            np.add, in_nodata, out_nodata)
 
     # Write the pollination service value to its raster
     args['service_value'].GetRasterBand(1).WriteArray(farm_tot_matrix)
@@ -255,7 +256,7 @@ def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
         out_raster.GetRasterBand(1))
 
 
-def clip_and_op(in_matrix, arg1, op, matrix_nodata, kwargs={}):
+def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
         values.  After the operation is complete, the matrix will have pixels
         culled based on the input matrix's original values that were less than
@@ -265,7 +266,8 @@ def clip_and_op(in_matrix, arg1, op, matrix_nodata, kwargs={}):
         arg1 - an argument of whatever type is necessary for the second
             argument of op
         op - a python callable object with two arguments: in_matrix and arg1
-        matrix_nodata - a python int or float
+        in_matrix_nodata - a python int or float
+        out_matrix_nodata - a python int or float
         kwargs={} - a python dictionary of keyword arguments to be passed in to
             op when it is called.
 
@@ -274,14 +276,14 @@ def clip_and_op(in_matrix, arg1, op, matrix_nodata, kwargs={}):
     # Making a copy of the in_matrix so as to avoid side effects from putmask
     matrix = in_matrix.copy()
 
-    # Convert values < 0 to 0
-    np.putmask(matrix, matrix < 0, 0)
+    # Convert nodata values to 0
+    np.putmask(matrix, matrix == in_matrix_nodata, 0)
 
-    # Apply the gaussian blur
+    # Apply the operation specified by the user
     filtered_matrix = op(matrix, arg1, **kwargs)
 
-    # Apply the clip based on the mask raster's nodata values
-    np.putmask(filtered_matrix, in_matrix < 0, matrix_nodata)
+    # Restore nodata values to their proper places.
+    np.putmask(filtered_matrix, in_matrix == in_matrix_nodata, out_matrix_nodata)
 
     return filtered_matrix
 
