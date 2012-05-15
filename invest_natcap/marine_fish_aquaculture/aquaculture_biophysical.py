@@ -1,6 +1,7 @@
 """inVEST finfish aquaculture filehandler"""
 
 import os
+import csv
 
 from osgeo import gdal
 from osgeo import ogr
@@ -44,6 +45,35 @@ def execute(args):
     biophysical_args['g_param_a'] = args['g_param_a']
     biophysical_args['g_param_b'] = args['g_param_b']
     
+    #Need to create a dictReader for the CSV file, for now just pass in read
+    #in its entirely, but find out what you want to sort them by
+    
+    # TODO: find out if reader is a dictionary, and/or how I want to actually sort 
+    
+    water_temp_file = open(args['water_temp_tbl'])
+    reader = csv.DictReader(water_temp_file)
     
     
+    biophysical_args['water_temp_dict'] = reader
+    
+    #Now create a dictionary for the operations table, then set up the values so 
+    #that they are iterrable in a way that makes sense
+    
+    #TODO: CHECK TO SEE IF WE NEED ALL COLUMNS
+    new_dict_temp = {}
+    
+    farm_op_file = open(args['farm_op_tbl'])
+    reader = csv.DictReader(farm_op_file)
+    
+    for row in reader:
+        
+        sub_dict = {}
+        
+        for key in row:
+            if (key != row['farm_ID']):
+                sub_dict[key] = row[key]
+    
+        new_dict_op[row['farm_ID']] = sub_dict
+    
+    biophysical_args['farm_op_dict'] = new_dict_temp
     
