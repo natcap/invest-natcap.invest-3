@@ -1,4 +1,4 @@
-"""inVEST finfish aquaculture filehandler"""
+"""inVEST finfish aquaculture filehandler for biophysical data"""
 
 import os
 import csv
