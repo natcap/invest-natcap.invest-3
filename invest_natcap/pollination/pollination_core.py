@@ -12,6 +12,7 @@ import logging
 
 LOGGER = logging.getLogger('pollination_core')
 
+
 def biophysical(args):
     """Execute the biophysical component of the pollination model.
 
@@ -20,19 +21,20 @@ def biophysical(args):
         args['landuse_attributes'] - A fileio AbstractTableHandler object
         args['guilds'] - A fileio AbstractTableHandler object
         args['ag_classes'] - a python list of ints representing agricultural
-            classes in the landuse map.  This list may be empty to represent the
-            fact that no landuse classes are to be designated as strictly
+            classes in the landuse map.  This list may be empty to represent
+            the fact that no landuse classes are to be designated as strictly
             agricultural.
         args['ag_map'] - a GDAL dataset
         args['species'] - a python dictionary with the following entries:
-        args['species'][species_name] - a python dictionary where 'species_name'
-            is the string name of the pollinator species in question.  This
-            dictionary should have the following contents:
+        args['species'][species_name] - a python dictionary where 'species
+            name' is the string name of the pollinator species in question.
+            This dictionary should have the following contents:
         args['species'][species_name]['floral'] - a GDAL dataset
         args['species'][species_name]['nesting'] - a GDAL dataset
         args['species'][species_name]['species_abundance'] - a GDAL dataset
         args['species'][species_name]['farm_abundance'] - a GDAL dataset
-        args['nesting_fields'] - a python list of string nesting field basenames
+        args['nesting_fields'] - a python list of string nesting field
+            basenames
         args['floral fields'] - a python list of string floral fields
         args['foraging_average'] - a GDAL dataset
         args['abundance_total'] - a GDAL dataset
@@ -42,8 +44,8 @@ def biophysical(args):
     # mask agricultural classes to ag_map.
     make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
 
-    # Open the average foraging matrix for use in the loop over all species, but
-    # first we need to ensure that the matrix is filled with 0's.
+    # Open the average foraging matrix for use in the loop over all species,
+    # but first we need to ensure that the matrix is filled with 0's.
     foraging_total_raster = args['foraging_average'].GetRasterBand(1)
     foraging_matrix_shape = foraging_total_raster.ReadAsArray().shape
     foraging_total_matrix = np.zeros(foraging_matrix_shape)
@@ -59,18 +61,20 @@ def biophysical(args):
 
         for resource, op in [('nesting', max), ('floral', sum)]:
             # Calculate the attribute's resources
-            map_attribute(args['landuse'], args['landuse_attributes'], guild_dict,
-                args[resource + '_fields'], species_dict[resource], op)
+            map_attribute(args['landuse'], args['landuse_attributes'],
+                guild_dict, args[resource + '_fields'],
+                species_dict[resource], op)
 
-        # Now that the per-pixel nesting and floral resources have been calculated,
-        # the floral resources still need to factor in neighborhoods.
+        # Now that the per-pixel nesting and floral resources have been
+        # calculated, the floral resources still need to factor in
+        # neighborhoods.
         # The sigma size is 2 times the pixel size, presumable since the
         # raster's pixel width is a radius for the gaussian blur when we want
         # the diameter of the blur.
         pixel_size = abs(args['landuse'].GetGeoTransform()[1])
-        sigma = float(guild_dict['alpha']/(2 * pixel_size))
+        sigma = float(guild_dict['alpha'] / (2 * pixel_size))
 
-        # Fetch the floral resources raster and matrix from the args dictionary,
+        # Fetch the floral resources raster and matrix from the args dictionary
         # apply a gaussian filter and save the floral resources raster to the
         # dataset.
         floral_raster = args['species'][species]['floral'].GetRasterBand(1)
@@ -92,9 +96,9 @@ def biophysical(args):
         args['species'][species]['species_abundance'].GetRasterBand(1).\
             WriteArray(supply_matrix)
 
-        # Calculate the foraging ('farm abundance') index by applying a gaussian
-        # filter to the foraging raster and then culling all pixels that are not
-        # agricultural before saving it to the output raster.
+        # Calculate the foraging ('farm abundance') index by applying a
+        # gaussian filter to the foraging raster and then culling all pixels
+        # that are not agricultural before saving it to the output raster.
         foraging_raster = args['species'][species]['farm_abundance'].\
             GetRasterBand(1)
         foraging_matrix = clip_and_op(supply_matrix, sigma,
@@ -104,7 +108,7 @@ def biophysical(args):
         foraging_raster.WriteArray(foraging_matrix)
 
         # Add the current foraging raster to the existing 'foraging_total'
-        # raster 
+        # raster
         foraging_total_matrix = clip_and_op(foraging_matrix,
             foraging_total_matrix, np.add, foraging_raster.GetNoDataValue())
 
@@ -131,6 +135,7 @@ def biophysical(args):
     abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
         divide, abundance_total_raster.GetNoDataValue())
     abundance_total_raster.WriteArray(abundance_total_matrix)
+
 
 def valuation(args):
     """Perform the computation of the valuation component of the pollination
@@ -203,7 +208,7 @@ def valuation(args):
         ag_masked_matrix = vOp(agmap_matrix, farm_value_matrix,
             species_foraging_matrix, farm_avg_matrix, species_supply_matrix)
 
-        # Calculate sigma for the gaussian blur.  Sigma is based on the species'
+        # Calculate sigma for the gaussian blur.  Sigma is based on the species
         # alpha (from the guilds table) and twice the pixel size.
         guild_dict = args['guilds'].get_table_row('species', species)
         pixel_size = abs(args['farm_value'].GetGeoTransform()[1])
@@ -219,6 +224,7 @@ def valuation(args):
 
     # Write the pollination service value to its raster
     args['service_value'].GetRasterBand(1).WriteArray(farm_tot_matrix)
+
 
 def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
     """Calculate the yield raster.
@@ -248,15 +254,16 @@ def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
     invest_core.vectorize1ArgOp(in_raster.GetRasterBand(1), calc_yield,
         out_raster.GetRasterBand(1))
 
+
 def clip_and_op(in_matrix, arg1, op, matrix_nodata, kwargs={}):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
         values.  After the operation is complete, the matrix will have pixels
-        culled based on the input matrix's original values that were less than 0
-        (which assumes a nodata value of below zero).
+        culled based on the input matrix's original values that were less than
+        0 (which assumes a nodata value of below zero).
 
         in_matrix - a numpy matrix for use as the first argument to op
-        arg1 - an argument of whatever type is necessary for the second argument
-            of op
+        arg1 - an argument of whatever type is necessary for the second
+            argument of op
         op - a python callable object with two arguments: in_matrix and arg1
         matrix_nodata - a python int or float
         kwargs={} - a python dictionary of keyword arguments to be passed in to
@@ -278,6 +285,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_nodata, kwargs={}):
 
     return filtered_matrix
 
+
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
                   out_raster, list_op):
     """Make an intermediate raster where values are mapped from the base raster
@@ -289,8 +297,8 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
             species.
         resource_fields - a python list of string resource fields
         out_raster - a GDAL dataset
-        list_op - a python callable that takes a list of numerical arguments and
-            returns a python scalar.  Examples: sum; max
+        list_op - a python callable that takes a list of numerical arguments
+            and returns a python scalar.  Examples: sum; max
 
         returns nothing."""
 
@@ -303,6 +311,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     lu_table_dict = attr_table.get_table_dictionary('lulc')
 
     value_list = dict((r, guild_dict[r]) for r in resource_fields)
+
     # Define a vectorized function to map values to the base raster
     def map_values(lu_code):
         """Take the input pixel value and return the appropriate value based
@@ -321,6 +330,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     # Vectorize this operation.
     invest_core.vectorize1ArgOp(base_raster.GetRasterBand(1), map_values,
         out_raster.GetRasterBand(1))
+
 
 def make_ag_raster(landuse_raster, ag_classes, ag_raster):
     """Make an intermediate raster where values of ag_raster are 1 if the
@@ -344,15 +354,15 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
 
     # This case is triggered when the user provides agricultural classes.
     if len(ag_classes) > 0:
-        # Preprocess ag_classes into a dictionary to improve access times in the
-        # vectorized function.  Using a dictionary will, on average, make this a
-        # constant-time access (O(1)) instead of a linear access time (O(n))
+        # Preprocess ag_classes into a dictionary to improve access times in
+        # the vectorized function.  Using a dictionary will, on average, make
+        # this a constant-time access instead of a linear time access.
         ag_dict = dict((k, True) for k in ag_classes)
 
         def ag_func(lu_class):
-            """Check to see if the input pixel value is an agricultural pixel.  If
-                so, return 1.  Otherwise, return 0.  If the pixel is a nodata
-                pixel, return nodata."""
+            """Check to see if the input pixel value is an agricultural pixel.
+                If so, return 1.  Otherwise, return 0.  If the pixel is a
+                nodata pixel, return nodata."""
             if lu_class == lu_nodata:
                 return ag_nodata
             if lu_class in ag_dict:
@@ -373,9 +383,9 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
     invest_core.vectorize1ArgOp(landuse_raster.GetRasterBand(1), ag_func,
         ag_raster.GetRasterBand(1))
 
+
 def make_raster_from_lulc(lulc_dataset, raster_uri):
     LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
     dataset = invest_cython_core.newRasterFromBase(\
         lulc_dataset, raster_uri, 'GTiff', -1, gdal.GDT_Float32)
     return dataset
-

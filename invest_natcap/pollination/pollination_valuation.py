@@ -10,21 +10,22 @@ import logging
 
 LOGGER = logging.getLogger('pollination_valuation')
 
+
 def execute(args):
     """Open files necessary for the valuation portion of the pollination model
         and execute the valuation component.
 
         args - a python dictionary with at least the following entries:
-        args['workspace_dir'] - a uri to a directory that contains files for the
-            previous run of the pollination biophysical model and that will
+        args['workspace_dir'] - a uri to a directory that contains files for
+            the previous run of the pollination biophysical model and that will
             contain files produced by this model.
         args['guilds_uri'] - a uri to an inut CSV table containing data on each
             species or guild of pollinator to be modeled.
         args['half_saturation'] - a python int or float representing the
             half-saturation constant.
-        args['wild_pollination_proportion'] - a python int or float representing
-            the proportion of total crop yield attributed only to wild
-            pollination.
+        args['wild_pollination_proportion'] - a python int or float
+            representing the proportion of total crop yield attributed only
+            to wild pollination.
 
         returns nothing"""
 
@@ -32,7 +33,6 @@ def execute(args):
     valuation_args['half_saturation'] = args['half_saturation']
     valuation_args['wild_pollination_proportion'] =\
         args['wild_pollination_proportion']
-
 
     # It should be safe to assume that this workspace should already contain
     # intermediate and output folders, since we expect those folders to exist
@@ -65,7 +65,8 @@ def execute(args):
         valuation_args['species'][species]['farm_abundance'] = gdal.Open(
             foraging_uri)
 
-    # Create the total supply raster using the foraging average raster as a base
+    # Create the total supply raster using the foraging average raster as a
+    # base
     service_value_uri = os.path.join(out_dir, 'sup_val.tif')
     valuation_args['service_value'] = pollination_core.make_raster_from_lulc(
         valuation_args['foraging_average'], service_value_uri)
@@ -78,4 +79,3 @@ def execute(args):
 
     # Execute the model.
     pollination_core.valuation(valuation_args)
-
