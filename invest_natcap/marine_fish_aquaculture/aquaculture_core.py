@@ -51,5 +51,15 @@ def biophysical(args):
     
     workspace_dir = args[workspace_dir]
     output_dir = workspace_dir + os.sep + 'Output' + os.sep
+  
+def count_cycles(water_temps, farm_ops):
     
+    #need to define a function that will take in water temp table and size at
+    #outplanting (weight of fish @ start on the farm_op table), and return how
+    #many days it will take to reach the target weight of fish at harvest (another
+    #param on the farm_op table), and then return that number of days. That equals
+    #one cycle, and we need to return how many cycles are completed during the run
+    #Unsure if that means how many in a year. Will also have to take into account the 
+    #fallowing period for each one, because that affects how many cycles can be completed
+    #in a year
     
