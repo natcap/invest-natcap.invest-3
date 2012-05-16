@@ -22,7 +22,8 @@ class PollinationBiophysicalTest(unittest.TestCase):
         self.valuation_args = {'workspace_dir': self.args['workspace_dir'],
                                'guilds_uri': self.args['guilds_uri'],
                                'half_saturation': 0.125,
-                               'wild_pollination_proportion': 1}
+                               'wild_pollination_proportion': 1,
+                               'value_future': False}
 
 #    def test_smoke(self):
 #        """Smoke test for pollination_biophysical."""
