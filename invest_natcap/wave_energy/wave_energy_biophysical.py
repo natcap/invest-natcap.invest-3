@@ -21,22 +21,22 @@ def execute(args):
         It may write log, warning, or error messages to stdout.
         
         args - A python dictionary with at least the following possible entries:
-        args['workspace_dir'] - Where the intermediate and ouput folder/files  
+        args['workspace_dir'] - Where the intermediate and output folder/files  
                                 will be saved.
         args['wave_base_data_uri'] - Directory location of wave base data 
-                                     including WW3 data and analyis area 
+                                     including WW3 data and analysis area 
                                      shapefile.
         args['analysis_area_uri'] - A string identifying the analysis area of 
                                     interest. Used to determine wave data 
                                     shapefile, wave data text file, and 
                                     analysis area boundary shape.
         args['machine_perf_uri'] - The path of a CSV file that holds the 
-                                   machine performace table. 
+                                   machine performance table. 
         args['machine_param_uri'] - The path of a CSV file that holds the 
                                     machine parameter table.
         args['dem_uri'] - The path of the Global Digital Elevation Model (DEM).
         args['aoi_uri'] - A polygon shapefile outlining a more detailed area 
-                          within the analyis area. (OPTIONAL, but required to
+                          within the analysis area. (OPTIONAL, but required to
                           run Valuation model)
         returns nothing.        
         """

@@ -592,10 +592,17 @@ class DynamicText(LabeledElement):
             
             returns a boolean"""
 
-        if len(self.value()) > 0:
+        try:
+            input_length = len(self.value())
+        except TypeError:
+            # A TypeError is returned if self.value() returns None, which may
+            # happen when the json-defined blank value is set to 'isEmpty':
+            # 'pass'.
+            input_length = 0
+
+        if input_length > 0:
             return True
-        else:
-            return False
+        return False
 
     def setBGcolorSatisfied(self, satisfied=True):
         """Color the background of this element's label.
@@ -645,7 +652,13 @@ class DynamicText(LabeledElement):
         """Fetch the value of the user's input, stored in self.textField.
         
             returns a string."""
-        return self.textField.text()
+        value = self.textField.text()
+        if 'returns' in self.attributes:
+            if 'ifEmpty' in self.attributes['returns']:
+                if self.attributes['returns']['ifEmpty'] == 'pass':
+                    return None
+
+        return value
 
     def setValue(self, text):
         """Set the value of self.textField.
@@ -1411,8 +1424,11 @@ class Root(DynamicElement):
             self.resetParametersToDefaults()
         else:
             for id, value in self.lastRun.iteritems():
-                element = self.allElements[id]
-                element.setValue(value)
+                try:
+                    element = self.allElements[str(id)]
+                    element.setValue(value)
+                except:
+                    pass
 
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
@@ -1529,6 +1545,8 @@ class ExecRoot(Root):
             returns nothing."""
 
         if not self.errors_exist():
+            # Save the last run to the json dictionary
+            self.saveLastRun()
             self.queueOperations()
             self.runProgram()
 
