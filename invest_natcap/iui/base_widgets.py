@@ -1424,8 +1424,11 @@ class Root(DynamicElement):
             self.resetParametersToDefaults()
         else:
             for id, value in self.lastRun.iteritems():
-                element = self.allElements[id]
-                element.setValue(value)
+                try:
+                    element = self.allElements[str(id)]
+                    element.setValue(value)
+                except:
+                    pass
 
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
@@ -1543,9 +1546,7 @@ class ExecRoot(Root):
 
         if not self.errors_exist():
             # Save the last run to the json dictionary
-            last_run = dict((id_str, ptr.getOutputValue()) for id_str, ptr in
-                self.allElements.iteritems())
-            self.last_run_handler.write_to_disk(self.allElements)
+            self.saveLastRun()
             self.queueOperations()
             self.runProgram()
 
