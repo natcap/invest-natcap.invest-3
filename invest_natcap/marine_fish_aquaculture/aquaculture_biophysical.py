@@ -45,32 +45,105 @@ def execute(args):
     biophysical_args['g_param_a'] = args['g_param_a']
     biophysical_args['g_param_b'] = args['g_param_b']
     
-    #Need to create a dictReader for the CSV file, but then can leave it,
-    #since there are no arbitrary pairings. Should be noted that this is passed
-    #as an iterable, since there is no single key.
-    water_temp_file = open(args['water_temp_tbl'])
-    reader = csv.DictReader(water_temp_file)
+    #Both CSVs are being pulled in, but need to do some maintenence to remove undesirable
+    #information before they can be passed into core
+
+    format_temp_table(args['farm_op_tbl'])
+    format_ops_table(args['farm_op_tbl'], args['farm_ID'])
     
-    biophysical_args['water_temp_rdr'] = reader
-    
-    #Now create a dictionary for the operations table, then set up the values so 
-    #that they are iterable in a way that makes sense
-    
-    #TODO: CHECK TO SEE IF WE NEED ALL COLUMNS
-    new_dict_temp = {}
-    
-    farm_op_file = open(args['farm_op_tbl'])
-    reader = csv.DictReader(farm_op_file)
-    
-    for row in reader:
+    def format_ops_table(op_path, farm_ID):
         
-        sub_dict = {}
+        #Now create a dictionary for the operations table, then set up the values so 
+        #that they are iterable in a way that makes sense
+        #NOTE: Have to do some explicit calls to strings here. This is BAD. Don't do it if
+        #you don't have to.
         
-        for key in row:
-            if (key != row['farm_ID']):
-                sub_dict[key] = row[key]
+        #THESE EXPLICIT STRINGS COME FROM THE "Farm Operations" table
     
-        new_dict_op[row['farm_ID']] = sub_dict
+        new_dict_op = {}
+        csv_file = open(op_path, farm_ID)
     
-    biophysical_args['farm_op_dict'] = new_dict_temp
+        line = None
+        
+        #this will be separate arguments that are passed along straight into 
+        #biophysical_args
+        general_ops = {}
+        while True:
+            line = csv_file.readline().rstrip('\r\n')
+        
+            if farm_ID in line:
+                break
+        
+            split_line = line.split(',')
+            if 'Fraction of fish remaing after processing' in split_line[0]:
+                general_ops['frac_post_process'] = float(split_line[1][:-1])/100
+        
+            if 'Natural mortality rate on the farm (daily)' in split_line[0]:
+                general_ops['mort_rate_daily'] = split_line[1]
+        
+            if 'Duration of simulation (years)' in split_line[0]:
+                general_ops['duration'] = split_line[1]
+        
+        
+        #this is explicitly telling it the fields that I want to get data for
+        #want to remove the 'Total Value' field, since there is not data inside there, then
+        #tell the dictreader to set up a reader with dictionaries of only those fields, where
+        #the overarching dictionary uses the Farm ID as the key for each of the sub dictionaries
+        fieldnames =  line.split(',')
+        fieldnames.remove('Total value')
+        
+        reader = csv.DictReader(csv_file,fieldnames=fieldnames)
+        
+        for row in reader:
+            
+            sub_dict = {}
+            
+            for key in row:
+                if (key != farm_ID):
+                    sub_dict[key] = row[key]
+        
+            new_dict_op[row[farm_ID]] = sub_dict
+        
+        biophysical_args['farm_op_dict'] = new_dict_op
+        
+        #add the gen args in
+        for key in general_ops.keys():
+            biophysical_args[key] = general_ops[key]    
     
+    def format_temp_table(temp_path):
+        
+        #EXPLICIT STRINGS FROM "Temp_Daily"
+        
+        water_temp_file = open(temp_path)
+        reader = csv.DictReader(water_temp_file)
+       
+        new_dict_temp = {}
+        line = None
+        #This is what I will use at the key for the key->dictionary pairing w/in the
+        #outer dictionary
+        day_marker = 'Day #'
+        
+        while True:
+            line = csv_file.readline().rstrip('\r\n')
+            if day_marker in line:
+                break
+        
+        #this is explicitly telling it the fields that I want to get data for, and am removing
+        #the Day/Month Field Since it's unecessary
+
+        fieldnames =  line.split(',')
+        fieldnames.remove('Day/Month')
+        
+        reader = csv.DictReader(csv_file,fieldnames=fieldnames)
+        
+        for row in reader:
+            
+            sub_dict = {}
+            
+            for key in row:
+                if (key != day_marker):
+                    sub_dict[key] = row[key]
+        
+            new_dict_temp[row[day_marker]] = sub_dict
+        
+        biophysical_args['water_temp_dict'] = new_dict_temp 
