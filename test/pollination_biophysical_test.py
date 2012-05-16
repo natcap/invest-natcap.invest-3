@@ -15,7 +15,7 @@ class PollinationBiophysicalTest(unittest.TestCase):
     def setUp(self):
         """Set up arguments dictionary and other inputs."""
         self.args = {'workspace_dir': 'data/pollination/test_workspace',
-                     'landuse_uri': 'data/base_data/terrestrial/lulc_samp_cur',
+                     'landuse_cur_uri': 'data/base_data/terrestrial/lulc_samp_cur',
                      'landuse_attributes_uri': TEST_DATA_DIR + '/LU.dbf',
                      'guilds_uri': TEST_DATA_DIR + '/Guild.dbf'}
 
