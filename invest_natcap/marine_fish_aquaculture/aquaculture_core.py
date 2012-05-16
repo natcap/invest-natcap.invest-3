@@ -28,7 +28,7 @@ def biophysical(args):
                             should be int or a float.
     args['g_param_b']- Growth parameter beta, used in modeling fish growth, 
                             should be int or a float.
-    args['water_temp_rdr']- An iterable containing dictionaries which link the column
+    args['water_temp_dict']- An iterable containing dictionaries which link the column
                         headings (date, day/month, and individual farm #'s) of the water
                         temperature table to their value (either specific day or the
                         temperature itself at a farm on that day.
