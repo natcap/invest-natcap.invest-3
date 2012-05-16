@@ -196,61 +196,61 @@ class TestHydropowerCore(unittest.TestCase):
 #        invest_test_core.assertTwoCSVEqualURI(self, reg_sws_table_uri, 
 #                                              sws_table_uri)
 #        
-#    def test_hydropower_core_raster_from_table_values_hand(self):
-#        """Hand calculated test to make sure that rasters are being
-#           created from table values correctly
-#        """
-#        #TEST create_etk_root function to see how it handles if a LULC Code
-#        #in the table does not exist on the lulc raster
-#        
-#        output_base = './data/test_out/hydropower_raster_from_table/'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        
-#        dict = {1 : {'etk': 25.0}, 2: {'etk': 1000.0}, 
-#                3 : {'etk': 250.0}, 4: {'etk': 500.0}}
-#        
-#        driver = gdal.GetDriverByName("GTIFF")
-#        #Create a blank xDim x yDim raster
-#        lulc = driver.Create(output_base + 'test_10x10_lulc.tif', 10,
-#                             10, 1, gdal.GDT_Int32)
-#        lulc.GetRasterBand(1).SetNoDataValue(255)
-#        #Fill raster with nodata 
-#        lulc.GetRasterBand(1).Fill(lulc.GetRasterBand(1).GetNoDataValue())
-#        
-#        array = np.array([[255, 1, 2, 255, 255, 3, 4, 4, 1, 2],
-#                          [255, 1, 2, 2, 3, 3, 4, 4, 1, 2],
-#                          [255, 1, 2, 2, 3, 3, 4, 4, 1, 2],
-#                          [1, 1, 2, 2, 3, 3, 4, 4, 255, 255],
-#                          [1, 1, 2, 2, 3, 3, 4, 4, 255, 255],
-#                          [255, 1, 2, 2, 2, 2, 3, 3, 3, 3],
-#                          [255, 4, 4, 2, 2, 1, 1, 1, 1, 3],
-#                          [1, 3, 3, 2, 2, 1, 1, 2, 3, 4],
-#                          [1, 2, 3, 4, 1, 2, 3, 4, 1, 2],
-#                          [4, 4, 2, 2, 1, 255, 255, 255, 255, 8]])
-#        
-#        lulc.GetRasterBand(1).WriteArray(array, 0, 0)
-#        new_path = output_base + 'test_10x10_etk_root.tif'
-#        new_raster = \
-#            hydropower_core.raster_from_table_values(lulc, new_path,dict, 'etk')
-#
-#        result_array = \
-#            np.array([[255, 25, 1000, 255, 255, 250, 500, 500, 25, 1000],
-#                      [255, 25, 1000, 1000, 250, 250, 500, 500, 25, 1000],
-#                      [255, 25, 1000, 1000, 250, 250, 500, 500, 25, 1000],
-#                      [25, 25, 1000, 1000, 250, 250, 500, 500, 255, 255],
-#                      [25, 25, 1000, 1000, 250, 250, 500, 500, 255, 255],
-#                      [255, 25, 1000, 1000, 1000, 1000, 250, 250, 250, 250],
-#                      [255, 500, 500, 1000, 1000, 25, 25, 25, 25, 250],
-#                      [25, 250, 250, 1000, 1000, 25, 25, 1000, 250, 500],
-#                      [25, 1000, 250, 500, 25, 1000, 250, 500, 25, 1000],
-#                      [500, 500, 1000, 1000, 25, 255, 255, 255, 255, 255]])
-#        
-#        array_result = new_raster.GetRasterBand(1).ReadAsArray()
-#
-#        self.assertTrue((array_result==result_array).all())
-#
+    def test_hydropower_core_raster_from_table_values_hand(self):
+        """Hand calculated test to make sure that rasters are being
+           created from table values correctly
+        """
+        #TEST create_etk_root function to see how it handles if a LULC Code
+        #in the table does not exist on the lulc raster
+        
+        output_base = './data/test_out/hydropower_raster_from_table/'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        
+        calc_dict = {1 : {'etk': 25.0}, 2: {'etk': 1000.0}, 
+                     3 : {'etk': 250.0}, 4: {'etk': 500.0}}
+        
+        driver = gdal.GetDriverByName("GTIFF")
+        #Create a blank xDim x yDim raster
+        lulc = driver.Create(output_base + 'test_10x10_lulc.tif', 10,
+                             10, 1, gdal.GDT_Int32)
+        lulc.GetRasterBand(1).SetNoDataValue(255)
+        #Fill raster with nodata 
+        lulc.GetRasterBand(1).Fill(lulc.GetRasterBand(1).GetNoDataValue())
+        
+        array = np.array([[255, 1, 2, 255, 255, 3, 4, 4, 1, 2],
+                          [255, 1, 2, 2, 3, 3, 4, 4, 1, 2],
+                          [255, 1, 2, 2, 3, 3, 4, 4, 1, 2],
+                          [1, 1, 2, 2, 3, 3, 4, 4, 255, 255],
+                          [1, 1, 2, 2, 3, 3, 4, 4, 255, 255],
+                          [255, 1, 2, 2, 2, 2, 3, 3, 3, 3],
+                          [255, 4, 4, 2, 2, 1, 1, 1, 1, 3],
+                          [1, 3, 3, 2, 2, 1, 1, 2, 3, 4],
+                          [1, 2, 3, 4, 1, 2, 3, 4, 1, 2],
+                          [4, 4, 2, 2, 1, 255, 255, 255, 255, 8]])
+        
+        lulc.GetRasterBand(1).WriteArray(array, 0, 0)
+        new_path = output_base + 'test_10x10_etk_root.tif'
+        new_raster = \
+            hydropower_core.raster_from_table_values(lulc, new_path ,calc_dict,                                                      'etk')
+
+        result_array = \
+            np.array([[255, 25, 1000, 255, 255, 250, 500, 500, 25, 1000],
+                      [255, 25, 1000, 1000, 250, 250, 500, 500, 25, 1000],
+                      [255, 25, 1000, 1000, 250, 250, 500, 500, 25, 1000],
+                      [25, 25, 1000, 1000, 250, 250, 500, 500, 255, 255],
+                      [25, 25, 1000, 1000, 250, 250, 500, 500, 255, 255],
+                      [255, 25, 1000, 1000, 1000, 1000, 250, 250, 250, 250],
+                      [255, 500, 500, 1000, 1000, 25, 25, 25, 25, 250],
+                      [25, 250, 250, 1000, 1000, 25, 25, 1000, 250, 500],
+                      [25, 1000, 250, 500, 25, 1000, 250, 500, 25, 1000],
+                      [500, 500, 1000, 1000, 25, 255, 255, 255, 255, 255]])
+        
+        array_result = new_raster.GetRasterBand(1).ReadAsArray()
+
+        self.assertTrue((array_result==result_array).all())
+
 #    def test_hydropower_core_raster_from_table_values_re(self):
 #        """ A regression test to make sure that rasters created from table
 #            values are correct
