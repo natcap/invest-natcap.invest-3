@@ -251,42 +251,42 @@ class TestHydropowerCore(unittest.TestCase):
 
         self.assertTrue((array_result==result_array).all())
 
-#    def test_hydropower_core_raster_from_table_values_re(self):
-#        """ A regression test to make sure that rasters created from table
-#            values are correct
-#        """
-#        #TEST create_etk_root function to see how it handles if a LULC Code
-#        #in the table does not exist on the lulc raster
-#        
-#        input_dir = './data/hydropower_data/test_input/'
-#        output_base = './data/test_out/hydropower_raster_from_table/'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        
-#        lulc = gdal.Open(input_dir + 'landuse_90')
-#        
-#        #Open/read in the csv files into a dictionary and add to arguments
-#        bio_dict = {}
-#        biophysical_table_file = open(input_dir + 'Biophysical_Models.csv')
-#        reader = csv.DictReader(biophysical_table_file)
-#        for row in reader:
-#            bio_dict[int(row['lucode'])] = \
-#                {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
-#            
-#        new_path = output_base + 'test_etk_reg.tif'
-#        
-#        new_raster = \
-#            hydropower_core.raster_from_table_values(lulc, new_path, bio_dict, 
-#                                                     'etk')
-#        new_raster = None
-#        
-#        reg_raster_uri = \
-#            './data/hydropower_regression_data/test_etk_regression.tif'
-#        
-#        invest_test_core.assertTwoDatasetEqualURI(self, reg_raster_uri, 
-#                                                  new_path)
-#        
+    def test_hydropower_core_raster_from_table_values_re(self):
+        """ A regression test to make sure that rasters created from table
+            values are correct
+        """
+        #TEST create_etk_root function to see how it handles if a LULC Code
+        #in the table does not exist on the lulc raster
+        
+        input_dir = './data/hydropower_regression_data/hydro_regression_byhand/'
+        output_base = './data/test_out/hydropower_raster_from_table/'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        
+        lulc = gdal.Open(input_dir + 'lulc.tif')
+        
+        #Open/read in the csv files into a dictionary and add to arguments
+        bio_dict = {}
+        biophysical_table_file = open(input_dir + 'Biophysical_Models.csv')
+        reader = csv.DictReader(biophysical_table_file)
+        for row in reader:
+            bio_dict[int(row['lucode'])] = \
+                {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
+            
+        new_path = output_base + 'test_etk_reg.tif'
+        
+        new_raster = \
+            hydropower_core.raster_from_table_values(lulc, new_path, bio_dict, 
+                                                     'etk')
+        new_raster = None
+        
+        reg_raster_uri = \
+            './data/hydropower_regression_data/tmp_etk.tif'
+        
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_raster_uri, 
+                                                  new_path)
+        
 #    def test_hydropower_core_create_writer_table_watershed(self):
 #        """A hand calculated test case to make sure that the water yield
 #           tables are getting created correctly
