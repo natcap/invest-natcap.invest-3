@@ -36,7 +36,7 @@
                     "args_id": "half_saturation",
                     "required": true,
                     "width": 60,
-                    "defaultValue": 0.125,
+                    "defaultValue": "0.125",
                     "dataType": "float"
                 },
                 {
@@ -46,8 +46,21 @@
                     "args_id": "wild_pollination_proportion",
                     "required": true,
                     "width": 60,
-                    "defaultValue": 1,
+                    "defaultValue": "1",
                     "dataType": "string"
+                },
+                {
+                    "id": "value_future",
+                    "type": "checkbox",
+                    "label": "Perform valuation on future scenario",
+                    "args_id": "value_future"
+                },
+                {
+                    "id": "results_suffix",
+                    "type": "text",
+                    "label": "Results suffix",
+                    "args_id": "results_suffix",
+                    "width": 60
                 }
             ]
         }
