@@ -22,6 +22,8 @@ def biophysical(args):
     args['workspace_dir']- The directory in which to place all result files.
     args['ff_farm_file']- An open shape file containing the locations of individual
                         fisheries
+    args['farm_ID']- column heading used to describe individual farms. Used to link
+                            GIS location data to later inputs.
     args['g_param_a']- Growth parameter alpha, used in modeling fish growth, 
                             should be int or a float.
     args['g_param_b']- Growth parameter beta, used in modeling fish growth, 
@@ -67,7 +69,14 @@ def biophysical(args):
     layer = sf_copy.GetLayer()
     
     cycle_field = ogr.FieldDefn('NUM_CYCLES', ogr.OFTReal)
-    layer.CreateField(cycle_field)   
+    layer.CreateField(cycle_field)
+    
+    for feature in layer:
+        
+        feature_ID = feature.items()[args['farm_ID']]
+        feature.SetField('NUM_CYCLES', cycles['feature_ID'])
+        
+        layer.SetFeature(feature)
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
