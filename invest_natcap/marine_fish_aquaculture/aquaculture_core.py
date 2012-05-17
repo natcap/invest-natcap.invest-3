@@ -54,11 +54,20 @@ def biophysical(args):
     
     output_dir = workspace_dir + os.sep + 'Output' + os.sep
 
-    #using a tuple to get data back from function
+    #using a tuple to get data back from function, then update the shape files to reflect
+    #these new attributes
     weights, cycles = calc_farm_cycles(args['g_param_a'], args['g_param_b'], 
                                           args['water_temp_dict'], args['farm_op_dict'],
                                           args['duration'])
     
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
+    
+    sf_copy = ds_copy = driver.CopyDataSource(args['ff_farm_file'], out_path)
+    layer = sf_copy.GetLayer()
+    
+    cycle_field = ogr.FieldDefn('NUM_CYCLES', ogr.OFTReal)
+    layer.CreateField(cycle_field)   
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -125,4 +134,4 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     #Now, want to make a tuple from the two dictionaries, and send them back 
     #to the main function
     return (cycles_completed, fish_weights)
-            
+
