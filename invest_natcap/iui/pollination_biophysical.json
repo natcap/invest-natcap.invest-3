@@ -8,13 +8,6 @@
     "width" : 500,
     "elements": [
         {
-            "id" : "do_future_scenario",
-            "type": "checkbox",
-            "label": "Process future scenario",
-            "defaultValue": false,
-            "required": false
-        },
-        {
             "id" : "workspace_list",
             "type": "list",
             "elements":[
@@ -36,13 +29,11 @@
                 },
                 {
                     "id" : "fut_lulc_raster",
-                    "type": "file",
-                    "label": "Future land cover scenario raster",
+                    "type": "hideableFileEntry",
+                    "label": "Calculate future scenario",
                     "args_id": "lulc_fut_uri",
                     "required": false,
-                    "enabledBy": "do_future_scenario",
-                    "defaultValue": "./base_data/terrestrial/lulc_samp_fut/hdr.adf",
-                    "requiredIf": ["do_future_scenario"]
+                    "defaultValue": "./base_data/terrestrial/lulc_samp_fut/hdr.adf"
                 },
                 {
                     "id" : "guilds",
