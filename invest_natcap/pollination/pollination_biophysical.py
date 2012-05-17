@@ -2,7 +2,7 @@
 
 from osgeo import gdal
 
-import pollination_core
+from invest_natcap.pollination import pollination_core
 from invest_natcap.iui import fileio
 import invest_cython_core
 

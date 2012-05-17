@@ -32,7 +32,8 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/hydropower_valuation.json',
                'invest_natcap/iui/water_scarcity.json',
                'invest_natcap/iui/water_yield.json',
-               'invest_natcap/iui/timber.json'])]
+               'invest_natcap/iui/timber.json',
+               'invest_natcap/iui/pollination_biophysical.json'])]
 
     for root, subFolders, files in os.walk('invest_natcap'):
         local_files = (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
