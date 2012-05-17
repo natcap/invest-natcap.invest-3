@@ -64,6 +64,7 @@ def biophysical(args):
 
         for resource, op in [('nesting', max), ('floral', sum)]:
             # Calculate the attribute's resources
+            LOGGER.debug('Calculating %s resource raster', resource)
             map_attribute(args['landuse'], args['landuse_attributes'],
                 guild_dict, args[resource + '_fields'],
                 species_dict[resource], op)
@@ -76,10 +77,13 @@ def biophysical(args):
         # the diameter of the blur.
         pixel_size = abs(args['landuse'].GetGeoTransform()[1])
         sigma = float(guild_dict['alpha'] / (2 * pixel_size))
+        LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
 
         # Fetch the floral resources raster and matrix from the args dictionary
         # apply a gaussian filter and save the floral resources raster to the
         # dataset.
+        LOGGER.debug('Applying neighborhood mappings to %s floral resources',
+            species)
         floral_raster = args['species'][species]['floral'].GetRasterBand(1)
         filtered_matrix = clip_and_op(floral_raster.ReadAsArray(), sigma,
             ndimage.gaussian_filter, floral_raster.GetNoDataValue())
@@ -91,6 +95,7 @@ def biophysical(args):
         # Rickett's reply to see if this is correct.
         # Once the pollination supply has been calculated, we add it to the
         # total abundance matrix.
+        LOGGER.debug('Calculating %s abundance index', species)
         nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
         supply_matrix = clip_and_op(nesting_raster.ReadAsArray(),
             filtered_matrix, np.multiply, nesting_raster.GetNoDataValue())
@@ -102,6 +107,7 @@ def biophysical(args):
         # Calculate the foraging ('farm abundance') index by applying a
         # gaussian filter to the foraging raster and then culling all pixels
         # that are not agricultural before saving it to the output raster.
+        LOGGER.debug('Calculating %s foraging/farm abundance index', species)
         foraging_raster = args['species'][species]['farm_abundance'].\
             GetRasterBand(1)
         foraging_matrix = clip_and_op(supply_matrix, sigma,
@@ -112,6 +118,7 @@ def biophysical(args):
 
         # Add the current foraging raster to the existing 'foraging_total'
         # raster
+        LOGGER.debug('Adding %s foraging abundance raster to total', species)
         foraging_total_matrix = clip_and_op(foraging_matrix,
             foraging_total_matrix, np.add, foraging_raster.GetNoDataValue())
 
@@ -134,6 +141,7 @@ def biophysical(args):
     # Calculate the mean pollinator supply (pollinator abundance) by taking the
     # abundance_total_matrix and dividing it by the number of pollinators.
     # Then, save the resulting matrix to its raster
+    LOGGER.debug('Calculating mean pollinator supply')
     np.putmask(foraging_total_matrix, foraging_total_matrix < 0, 0)
     abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
         divide, abundance_total_raster.GetNoDataValue())
@@ -222,12 +230,16 @@ def valuation(args):
         guild_dict = args['guilds'].get_table_row('species', species)
         pixel_size = abs(args['farm_value'].GetGeoTransform()[1])
         sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
+        LOGGER.debug('Pixel size: %s, sigma: %s')
 
         # Apply a gaussian blur to the species' supply raster
+        LOGGER.debug('Applying neighborhood calculations for %s supply',
+            species)
         blurred_supply = clip_and_op(ag_masked_matrix, sigma,
             ndimage.gaussian_filter, in_nodata, out_nodata)
 
         # Add the pollinator service value to the total value raster
+        LOGGER.debug('Adding %s service value to total value raster', species)
         farm_tot_matrix = clip_and_op(farm_tot_matrix, blurred_supply,
             np.add, in_nodata, out_nodata)
 
