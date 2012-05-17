@@ -42,6 +42,8 @@ def biophysical(args):
 
         returns nothing."""
 
+    LOGGER.debug('Starting pollination biophysical calculations')
+
     # mask agricultural classes to ag_map.
     make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
 
@@ -137,6 +139,8 @@ def biophysical(args):
         divide, abundance_total_raster.GetNoDataValue())
     abundance_total_raster.WriteArray(abundance_total_matrix)
 
+    LOGGER.debug('Finished pollination biophysical calculations')
+
 
 def valuation(args):
     """Perform the computation of the valuation component of the pollination
@@ -155,6 +159,8 @@ def valuation(args):
         args['ag_map'] - a GDAL dataset
 
         returns nothing"""
+
+    LOGGER.debug('Starting valuation')
 
     # Apply the half-saturation yield function from the documentation.
     calculate_yield(args['foraging_average'], args['farm_value'],
@@ -185,6 +191,7 @@ def valuation(args):
 
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
+        LOGGER.debug('Calculating service value for %s', species)
         # Open necessary matrices
         species_foraging_matrix = species_dict['farm_abundance'].\
             GetRasterBand(1).ReadAsArray()
@@ -226,7 +233,7 @@ def valuation(args):
 
     # Write the pollination service value to its raster
     args['service_value'].GetRasterBand(1).WriteArray(farm_tot_matrix)
-
+    LOGGER.debug('Finished calculating service value')
 
 def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
     """Calculate the yield raster.
@@ -238,6 +245,8 @@ def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
             pollinators.  An int or float from 0 to 1.
 
         returns nothing"""
+
+    LOGGER.debug('Calculating yield')
 
     # Calculate the yield raster
     k = float(half_sat)
@@ -256,6 +265,7 @@ def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
     invest_core.vectorize1ArgOp(in_raster.GetRasterBand(1), calc_yield,
         out_raster.GetRasterBand(1))
 
+    LOGGER.debug('Finished calculating yield')
 
 def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
@@ -349,6 +359,8 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
 
         returns nothing."""
 
+    LOGGER.debug('Making agricultural raster')
+
     # Fetch the landcover raster's nodata value
     lu_nodata = landuse_raster.GetRasterBand(1).GetNoDataValue()
 
@@ -386,6 +398,7 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
     invest_core.vectorize1ArgOp(landuse_raster.GetRasterBand(1), ag_func,
         ag_raster.GetRasterBand(1))
 
+    LOGGER.debug('Finished making agricultural raster')
 
 def make_raster_from_lulc(lulc_dataset, raster_uri):
     LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
