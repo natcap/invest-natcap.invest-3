@@ -55,7 +55,7 @@ def biophysical(args):
     output_dir = workspace_dir + os.sep + 'Output' + os.sep
 
     #using a tuple to get data back from function
-    weights_and_cycles = calc_farm_cycles(args['g_param_a'], args['g_param_b'], 
+    weights, cycles = calc_farm_cycles(args['g_param_a'], args['g_param_b'], 
                                           args['water_temp_dict'], args['farm_op_dict'],
                                           args['duration'])
     
@@ -69,20 +69,60 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     #2. A dictionary that holds the number of cycles that each farm completed, with a
     #key->value as int->float
     
+    #tau is explicitly defined in the model documentation
     fish_weights = {}
-    
-    for i in range (0, (365*dur)):
+    tau = 0.8
+    cycles_completed = {}
+     
+    for f in range (1, len(farm_op_dict)+1):
+        #pre-load vars for fallowing period and pre-fish
+        start_day = farm_op_dict[f['start day for growing']]
+        fallow_per = farm_op_dict[f['Length of Fallowing period']]
+        spec_farm_weights = {}
         
-        #pre-load the t=0 weights into the dictionary, have to go through all the farms,
-        #find out how long until outplanting, and go through 0 to that number, and mark
-        #fish weight as 
-        f_num = len(farm_op_dict.keys())
+        fall_count = fallow_per
         
-        for f in range(0, f_num):
+        #this just establishes zero weights for when the fish aren't there during the
+        #initial pre-fishception period
+        for i in range(1, start_day):
+            spec_farm_weights[i] = 0
             
-            r
+        #Now, for the remaining time, need to cycle through fish growth and fallowing
+        for i in range (start_day, (365*dur)):
             
+            #this is the day that the fish are placed in the pens, should catch the 
+            #fisheries where there is no fallowing period. One you put down today as 
+            #fishception, then want to reset fallow count so you don't get caught in 
+            #this statement again
+            if fall_count == 0:
+                spec_farm_weights[i] = \
+                    farm_opt_dict[f['weight of fish at start (kg)']]
+                fall_count = fallow_per
             
-            
-            
+            #Marks the completion of a growth cycle
+            elif spec_farm_weights[i-1] >= 5.4:
+                spec_farm_weight[i] = 0
+                fall_count -= 1
+                
+                x = 1
+                if cycles_completed.has_key(f):
+                    x = cycles_completed[f] + 1
+                    cycles_completed[f] = x   
+                    
+            elif spec_farm_weights[i-1] == 0:
+                spec_farm_weight[i] = 0
+                fall_count -= 1
+                
+            #Grow 'dem fishies!
+            else:
+                g_weight = (a * (spec_farm_weights[i-1] ** b) * 
+                    water_temp_dict[(i % 365)[f]] * tau) + spec_farm_weights[i-1]
+                
+                spec_farm_weights[i] = g_weight        
+        
+        fish_weights[f] = spec_farm_weights
+        
+    #Now, want to make a tuple from the two dictionaries, and send them back 
+    #to the main function
+    return (cycles_completed, fish_weights)
             
