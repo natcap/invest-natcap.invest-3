@@ -69,6 +69,15 @@
                     "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
                     "validText": "[0-9 ]*",
                     "dataType": "string"
+                },
+                {
+                    "id" : "results_suffix",
+                    "type": "text",
+                    "label": "Results suffix",
+                    "args_id": "results_suffix",
+                    "required": false,
+                    "validText": "[0-9a-zA-Z]*",
+                    "dataType": "string"
                 }
             ]
         }
