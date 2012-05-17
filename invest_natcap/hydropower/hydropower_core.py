@@ -191,10 +191,9 @@ def water_yield(args):
         #Converting to a percent because 'etk' is stored in the table 
         #as int(percent * 1000)
         tmp_di = (etk * eto) / (precip * 1000)
-#        tmp_pet = (etk * eto) / 1000
-#        tmp_di = tmp_pet / precip        
         
-        #Calculate plant available water conent (mm)
+        #Calculate plant available water content (mm) using the minimum
+        #of soil depth and root depth
         awc = (np.minimum(root, soil) * pawc)  
         
         #Calculate dimensionless ratio of plant accessible water
@@ -209,6 +208,13 @@ def water_yield(args):
         #Compute evapotranspiration partition of the water balance
         tmp_calc = \
             ((tmp_w * tmp_di + 1) / (( 1 / tmp_di) + (tmp_w * tmp_di + 1)))
+        
+        #Currently as of release 2.2.2 the following operation is not
+        #documented in the users guide. We take the minimum of the
+        #following values (Rxj, (AETxj/Pxj) to determine the evapotranspiration
+        #partition of the water balance (see users guide for variable
+        #and equation references). This was confirmed by Yonas Ghile on
+        #5/10/12
         
         fractp = np.minimum(tmp_max_aet, tmp_calc)
         
@@ -334,7 +340,7 @@ def water_yield(args):
                           (squared meters)
                           
             returns - water yield volume in ha value"""
-        #Converting area from square meters to hectares
+        #Converting area from square meters to hectares 1 meter = .0001 hectare
         if wyield_vol != out_nodata and wyield_area != out_nodata:
             return wyield_vol / (0.0001 * wyield_area)
         else:
@@ -376,7 +382,7 @@ def water_yield(args):
     
     #Create the water yield subwatershed table
     wsr = sheds_map_subsheds(sheds, sub_sheds)
-    
+    LOGGER.debug('wsr : %s', wsr)
     ws_dict = {}
     sws_dict = {}
     #Build the foundation for the watershed and subwatershed dictionaries
@@ -384,9 +390,8 @@ def water_yield(args):
         sws_dict[key] = {'ws_id':val, 'subws_id':key}
         if not val in ws_dict:
             ws_dict[val] = {'ws_id':val}
-    
-    LOGGER.debug('wsr map : %s', wsr)
-    
+    LOGGER.debug('ws_dict : %s', ws_dict)
+    LOGGER.debug('sws_dict : %s', sws_dict)
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
         get_operation_value(precip_raster, sws_id_list, sub_mask, 'mean')
@@ -399,7 +404,7 @@ def water_yield(args):
     
     sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum']
-    
+    LOGGER.debug('sub_value_dict : %s', sub_value_dict)
     #Create the water yield watershed table
     value_dict = {}
     value_dict['precip_mn'] = \
@@ -1175,17 +1180,18 @@ def valuation(args):
         cost = float(val_row['cost'])
         
         dsum = 0
+        #Divide by 100 because it is input at a percent and we need
+        #decimal value
+        disc = disc / 100
+        #To calculate the summation of the discount rate term over the life 
+        #span of the dam we can use a geometric series
+        ratio = 1 / (1+disc)
+        dsum = (1 - math.pow(ratio, time)) / (1 - ratio)
         
-        for t in range (0, time):
-            dsum = dsum + (1 / math.pow(1 + (disc / 100), t))
-            
         npv = ((kwval * energy) - cost) * dsum
         npv_dict[key] = npv
         ws_scarcity_table[key]['hp_value'] = npv
         ws_scarcity_table[key]['hp_energy'] = energy
-        
-    LOGGER.debug('energy dict : %s', energy_dict)
-    LOGGER.debug('npv dict : %s', npv_dict)
 
     #npv for sub shed is npv for water shed times ratio of rsupply_vl of 
     #sub shed to rsupply_vl of water shed
@@ -1218,27 +1224,18 @@ def valuation(args):
                       'consump_mn','rsupply_vl', 'rsupply_mn', 'hp_energy', 
                       'hp_value']
     
-    
     write_csv_table(ws_scarcity_table, field_list_ws, \
                          watershed_value_table)
     write_csv_table(sws_scarcity_table, field_list_sws, \
                          subwatershed_value_table)
     out_nodata = -1
-    cyield_gt = cyield_vol.GetGeoTransform()
-    consump_gt = water_consump.GetGeoTransform()
-    pixel_width = min(cyield_gt[1], consump_gt[1], key=abs)
-    pixel_height = min(cyield_gt[5], consump_gt[5], key=abs)
-    
-    invest_cython_core.createRasterFromVectorExtents(pixel_width, pixel_height, 
-                                                     gdal.GDT_Float32, out_nodata, 
-                                                     hp_val_tmppath, sub_sheds)
-    
-    invest_cython_core.createRasterFromVectorExtents(pixel_width, pixel_height, 
-                                                     gdal.GDT_Float32, out_nodata, 
-                                                     hp_val_path, sub_sheds)
-    
-    hp_val = gdal.Open(hp_val_path, gdal.GA_Update)
-    hp_val_tmp = gdal.Open(hp_val_tmppath, gdal.GA_Update)
+
+    hp_val_tmp = \
+        invest_cython_core.newRasterFromBase(water_consump, hp_val_tmppath, 'GTiff', 
+                                             out_nodata, gdal.GDT_Float32)
+    hp_val = \
+        invest_cython_core.newRasterFromBase(water_consump, hp_val_path, 'GTiff', 
+                                             out_nodata, gdal.GDT_Float32)
     
     gdal.RasterizeLayer(hp_val_tmp, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
@@ -1262,17 +1259,13 @@ def valuation(args):
     
     invest_core.vectorize1ArgOp(hp_val_band_tmp, npv_op, hp_val_band)
     
-    invest_cython_core.createRasterFromVectorExtents(pixel_width, pixel_height, 
-                                                     gdal.GDT_Float32, out_nodata,
-                                                     hp_energy_tmppath, sub_sheds)
-    
-    invest_cython_core.createRasterFromVectorExtents(pixel_width, pixel_height, 
-                                                     gdal.GDT_Float32, out_nodata,
-                                                     hp_energy_path, sub_sheds)
-    
-    hp_energy = gdal.Open(hp_energy_path, gdal.GA_Update)
-    hp_energy_tmp = gdal.Open(hp_energy_tmppath, gdal.GA_Update)
-    
+    hp_energy_tmp = \
+        invest_cython_core.newRasterFromBase(water_consump, hp_energy_tmppath, 'GTiff', 
+                                             out_nodata, gdal.GDT_Float32)
+    hp_energy = \
+        invest_cython_core.newRasterFromBase(water_consump, hp_energy_path, 'GTiff', 
+                                             out_nodata, gdal.GDT_Float32)
+
     gdal.RasterizeLayer(hp_energy_tmp, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     

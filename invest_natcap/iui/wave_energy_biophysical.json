@@ -87,7 +87,8 @@
                     			               "type": "polygons", 
                     			               "projection" : "Transverse_Mercator",
                     			               "datum" : "WGS_1984"}]
-                    			   }
+                    			   },
+                    "returns": {"ifEmpty": "pass"}
                  }
             ]
         }
