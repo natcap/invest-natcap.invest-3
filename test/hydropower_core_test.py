@@ -286,96 +286,6 @@ class TestHydropowerCore(unittest.TestCase):
         
         invest_test_core.assertTwoDatasetEqualURI(self, reg_raster_uri, 
                                                   new_path)
-        
-#    def test_hydropower_core_create_writer_table_watershed(self):
-#        """A hand calculated test case to make sure that the water yield
-#           tables are getting created correctly
-#        """
-#        
-#        output_base = './data/test_out/hydropower_water_yield_tables/'
-#        table_path = output_base + 'test_wyield_watershed.csv'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(table_path):
-#            os.remove(table_path)
-#        
-#        field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
-#                      'wyield_sum']
-#        
-#        water_dict = {}
-#        water_dict['precip_mn'] = {1:1654.32, 2:1432, 3:1948.593}
-#        water_dict['PET_mn'] = {1:432.65, 2:123.43, 3:342.34}
-#        water_dict['AET_mn'] = {1:88.88, 2:99.99, 3:111.11}
-#        water_dict['wyield_mn'] = {1:2222.22, 2:4444.44, 3:3333}
-#        water_dict['wyield_sum'] = {1:555.55, 2:666.66, 3:777}
-#        
-#        new_table = hydropower_core.create_writer_table(table_path, field_list, 
-#                                                        water_dict)
-#        
-#        new_table.close()
-#        
-#        expected_rows = np.array([['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
-#                                   'wyield_mn', 'wyield_sum'],
-#                                  [1, 1654.32, 432.65, 88.88, 2222.22, 555.55],
-#                                  [2, 1432, 123.43, 99.99, 4444.44, 666.66],
-#                                  [3, 1948.593, 342.34, 111.11, 3333, 777]])
-#        
-#        new_table = open(table_path, 'rb')
-#        reader = csv.reader(new_table)
-#        i = 0
-#        for row in reader:
-#            row = np.array(row)
-#            try:
-#                self.assertTrue((expected_rows[i]==row).all())
-#                i = i+1
-#            except:
-#                self.fail('The CSV files are not the same')
-#        
-#    def test_hydropower_core_create_writer_table_subwatershed(self):
-#        """Similar test to the one above for checking the water yield table
-#           function, but this time using subwatershed properties
-#        """
-#        output_base = './data/test_out/hydropower_water_yield_tables/'
-#        table_path = output_base + 'test_wyield_subwatershed.csv'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(table_path):
-#            os.remove(table_path)
-#        
-#        field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
-#                      'wyield_mn','wyield_sum']
-#        wsr = {1:1, 2:2, 3:2, 4:1}
-#        water_dict = {}
-#        water_dict['precip_mn'] = {1:1654.32, 2:1432, 3:1948.593, 4:1212.12}
-#        water_dict['PET_mn'] = {1:432.65, 2:123.43, 3:342.34, 4:2323.23}
-#        water_dict['AET_mn'] = {1:88.88, 2:99.99, 3:111.11, 4:343.43}
-#        water_dict['wyield_mn'] = {1:2222.22, 2:4444.44, 3:3333, 4:5656}
-#        water_dict['wyield_sum'] = {1:555.55, 2:666.66, 3:777, 4:6767}
-#        
-#        new_table = hydropower_core.create_writer_table(table_path, field_list, 
-#                                                        water_dict, wsr)
-#        
-#        new_table.close()
-#        
-#        expected_rows = np.array([['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 
-#                                   'AET_mn', 'wyield_mn', 'wyield_sum'],
-#                                [1, 1, 1654.32, 432.65, 88.88, 2222.22, 555.55],
-#                                [2, 2, 1432, 123.43, 99.99, 4444.44, 666.66],
-#                                [2, 3, 1948.593, 342.34, 111.11, 3333, 777],
-#                                [1, 4, 1212.12, 2323.23, 343.43, 5656, 6767]])
-#        
-#        new_table = open(table_path, 'rb')
-#        reader = csv.reader(new_table)
-#        i = 0
-#        for row in reader:
-#            row = np.array(row)
-#            try:
-#                self.assertTrue((expected_rows[i]==row).all())
-#                i = i+1
-#            except:
-#                self.fail('The CSV files are not the same')
 #                
 #    def test_hydropower_core_sheds_map_subsheds(self):
 #        """A hand calculated test to make sure that sub watersheds can be
@@ -961,33 +871,67 @@ class TestHydropowerCore(unittest.TestCase):
                                               ws_table_uri)
         invest_test_core.assertTwoCSVEqualURI(self, reg_sws_table_uri, 
                                               sws_table_uri)
-#
-#    def test_hydropower_core_write_scarcity_table(self):
-#        """A by hand test for the write_scarcity_table function
-#        
-#        """
-#        
-#        #place code here
-#        output_base = './data/test_out/write_scarcity_table/'
-#        output_path = output_base + 'test_scarcity_table.csv'
-#        regression_dir = './data/hydropower_regression_data/'
-#        reg_table_path = regression_dir + 'scarcity_reg_table.csv'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(output_path):
-#            os.remove(output_path)
-#            
-#        field_list = 'ws_id, area, volume, avg_weight'
-#        shed_table = {0: {'ws_id':0, 'area':32, 'volume': 54, 'avg_weight':5},
-#                      1: {'ws_id':1, 'area':28, 'volume': 48, 'avg_weight':8},
-#                      2: {'ws_id':2, 'area':16, 'volume': 78, 'avg_weight':10}}
-#        
-#        hydropower_core.write_scarcity_table(shed_table, field_list, 
-#                                             output_path)
-#        
-#        invest_test_core.assertTwoCSVEqualURI(self, reg_table_path, output_path)
-#        
+
+    def test_hydropower_core_write_csv_table_ws(self):
+        """A by hand test for the write_csv_table function
+           at the watershed level
+        """
+        
+        #place code here
+        output_base = './data/test_out/write_csv_table/'
+        output_path = output_base + 'test_csv_table_ws.csv'
+        regression_dir = './data/hydropower_regression_data/'
+        reg_table_path = regression_dir + 'hand_calc_table_ws.csv'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+            
+        field_list = ['ws_id','wyield', 'wyield_mn', 'cyield']
+        shed_table = {0: {'ws_id':0, 'wyield':32, 
+                          'wyield_mn': 54.05, 'cyield':5},
+                      1: {'ws_id':1, 'wyield':28, 
+                          'wyield_mn': 48.34, 'cyield':8},
+                      2: {'ws_id':2, 'wyield':16, 
+                          'wyield_mn': 78.73, 'cyield':10}}
+        
+        hydropower_core.write_csv_table(shed_table, field_list, 
+                                             output_path)
+        
+        invest_test_core.assertTwoCSVEqualURI(self, reg_table_path, output_path)
+        
+    def test_hydropower_core_write_csv_table_sws(self):
+        """A by hand test for the write_csv_table function
+           at the subwatershed level
+        """
+        
+        #place code here
+        output_base = './data/test_out/write_csv_table/'
+        output_path = output_base + 'test_csv_table_sws.csv'
+        regression_dir = './data/hydropower_regression_data/'
+        reg_table_path = regression_dir + 'hand_calc_table_sws.csv'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+            
+        field_list = ['ws_id', 'subws_id', 'wyield', 'wyield_mn', 'cyield']
+        shed_table = {1: {'ws_id':0, 'subws_id':1, 'wyield':32, 
+                          'wyield_mn': 54.05, 'cyield':5},
+                      2: {'ws_id':1, 'subws_id':2, 'wyield':28, 
+                          'wyield_mn': 48.34, 'cyield':8},
+                      3: {'ws_id':2, 'subws_id':3, 'wyield':16, 
+                          'wyield_mn': 78.73, 'cyield':10},
+                      4: {'ws_id':2, 'subws_id':4, 'wyield':116, 
+                          'wyield_mn': 178.173, 'cyield':110}}
+
+        hydropower_core.write_csv_table(shed_table, field_list, 
+                                             output_path)
+        
+        invest_test_core.assertTwoCSVEqualURI(self, reg_table_path, output_path)
+        
 #    def test_hydropower_core_sum_mean_dict_sum(self):
 #        """A by hand test for the sum_mean_dict function
 #        
