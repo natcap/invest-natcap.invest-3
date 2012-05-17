@@ -1,0 +1,76 @@
+{
+    "id" : "window",
+    "label": "Crop Pollination: Biophysical",
+    "targetScript" : "invest_natcap/pollination/pollination_biophysical.py",
+    "modelName" : "pollination_biophysical",
+    "localDocURI": "./documentation/croppollination.html",
+    "height": 400,
+    "width" : 500,
+    "elements": [
+        {
+            "id" : "do_future_scenario",
+            "type": "checkbox",
+            "label": "Process future scenario",
+            "defaultValue": false,
+            "required": false
+        },
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "./carbon",
+                    "required": true
+                },
+                {
+                   "id" : "cur_lulc_raster",
+                    "args_id" : "lulc_cur_uri",
+                    "type": "file",
+                    "label": "Current land cover scenario raster",
+                    "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
+                    "required": true
+                },
+                {
+                    "id" : "fut_lulc_raster",
+                    "type": "file",
+                    "label": "Future land cover scenario raster",
+                    "args_id": "lulc_fut_uri",
+                    "required": false,
+                    "enabledBy": "do_future_scenario",
+                    "defaultValue": "./base_data/terrestrial/lulc_samp_fut/hdr.adf",
+                    "requiredIf": ["do_future_scenario"]
+                },
+                {
+                    "id" : "guilds",
+                    "type": "file",
+                    "label": "Guilds table",
+                    "defaultValue": "./carbon/input/carbon_pools_samp.dbf",
+                    "args_id": "guilds_uri",
+                    "required": true
+                },
+                {
+                    "id" : "landcover_attribute_table",
+                    "type": "file",
+                    "label": "Landcover attribute table",
+                    "args_id": "landuse_attributes_uri",
+                    "required": false,
+                    "defaultValue": "./carbon/input/harv_samp_cur.shp"
+                },
+                {
+                    "id" : "ag_classes",
+                    "type": "text",
+                    "label": "Agricultural classes",
+                    "args_id": "ag_classes",
+                    "required": false,
+                    "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
+                    "validText": "[0-9 ]*",
+                    "dataType": "string"
+                }
+            ]
+        }
+    ]
+}
