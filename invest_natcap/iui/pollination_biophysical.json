@@ -16,7 +16,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "./carbon",
+                    "defaultValue": "Pollination",
                     "required": true
                 },
                 {
@@ -24,7 +24,7 @@
                     "args_id" : "lulc_cur_uri",
                     "type": "file",
                     "label": "Current land cover scenario raster",
-                    "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
+                    "defaultValue": "Base_Data/terrestrial/lulc_samp_cur/hdr.adf",
                     "required": true
                 },
                 {
@@ -33,13 +33,13 @@
                     "label": "Calculate future scenario",
                     "args_id": "lulc_fut_uri",
                     "required": false,
-                    "defaultValue": "./base_data/terrestrial/lulc_samp_fut/hdr.adf"
+                    "defaultValue": "Base_Data/terrestrial/lulc_samp_fut/hdr.adf"
                 },
                 {
                     "id" : "guilds",
                     "type": "file",
                     "label": "Guilds table",
-                    "defaultValue": "./carbon/input/carbon_pools_samp.dbf",
+                    "defaultValue": "Pollination/Input/Guild.dbf",
                     "args_id": "guilds_uri",
                     "required": true
                 },
@@ -48,8 +48,8 @@
                     "type": "file",
                     "label": "Landcover attribute table",
                     "args_id": "landuse_attributes_uri",
-                    "required": false,
-                    "defaultValue": "./carbon/input/harv_samp_cur.shp"
+                    "required": true,
+                    "defaultValue": "Pollination/Input/LU.dbf"
                 },
                 {
                     "id" : "ag_classes",
