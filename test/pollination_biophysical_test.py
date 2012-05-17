@@ -16,6 +16,7 @@ class PollinationBiophysicalTest(unittest.TestCase):
         """Set up arguments dictionary and other inputs."""
         self.args = {'workspace_dir': 'data/pollination/test_workspace',
                      'landuse_cur_uri': 'data/base_data/terrestrial/lulc_samp_cur',
+                     'landuse_fut_uri': 'data/base_data/terrestrial/lulc_samp_fut',
                      'landuse_attributes_uri': TEST_DATA_DIR + '/LU.dbf',
                      'guilds_uri': TEST_DATA_DIR + '/Guild.dbf'}
 
@@ -23,7 +24,7 @@ class PollinationBiophysicalTest(unittest.TestCase):
                                'guilds_uri': self.args['guilds_uri'],
                                'half_saturation': 0.125,
                                'wild_pollination_proportion': 1,
-                               'value_future': False}
+                               'value_future': True}
 
 #    def test_smoke(self):
 #        """Smoke test for pollination_biophysical."""
