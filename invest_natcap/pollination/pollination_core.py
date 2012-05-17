@@ -7,6 +7,7 @@ from osgeo import gdal
 import numpy as np
 import scipy.ndimage as ndimage
 
+import os.path
 import math
 import logging
 
@@ -391,3 +392,28 @@ def make_raster_from_lulc(lulc_dataset, raster_uri):
     dataset = invest_cython_core.newRasterFromBase(\
         lulc_dataset, raster_uri, 'GTiff', -1, gdal.GDT_Float32)
     return dataset
+
+def build_uri(directory, basename, suffix=[]):
+    """Take the input directory and basename, inserting the provided suffixes
+        just before the file extension.  Each string in the suffix list will be
+        underscore-separated.
+
+        directory - a python string folder path
+        basename - a python string filename
+        suffix='' - a python list of python strings to be separated by
+            underscores and concatenated with the basename just before the
+            extension.
+
+        returns a python string of the complete path with the correct
+        filename."""
+
+    file_base, extension = os.path.splitext(basename)
+
+    # If a siffix is provided, we want the suffix to be prepended with an
+    # underscore, so as to separate the file basename and the suffix.  If a
+    # suffix is an empty string, ignore it.
+    if len(suffix) > 0:
+        suffix = '_' + '_'.join([s for s in suffix if s != ''])
+
+    new_filepath = file_base + suffix + extension
+    return os.path.join(directory, new_filepath)
