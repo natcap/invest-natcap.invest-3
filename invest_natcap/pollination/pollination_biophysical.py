@@ -63,6 +63,7 @@ def execute(args):
         landuse_scenarios.append('fut')
 
     for scenario in landuse_scenarios:
+        LOGGER.info('Starting pollination model for the %s scenario', scenario)
         biophysical_args = {}  # Re-initialize the biophysical args
 
         # Open the landcover raster
@@ -99,6 +100,7 @@ def execute(args):
             # empty list in its stead.
             ag_class_list = []
 
+        LOGGER.debug('Parsed ag classes: %s', ag_class_list)
         biophysical_args['ag_classes'] = ag_class_list
 
         # Create a new raster for use as a raster of booleans, either 1 if the land
