@@ -927,7 +927,7 @@ class HideableFileEntry(HideableElement, FileEntry):
             on whether this element is greyed out but whether its value should
             be retrieved (and the value should only be retrieved when the
             checkbox is checked)."""
-        if not self.isEnabled():  # If this element is actually disabled, False
+        if not self.checkbox.isEnabled():  # If this element is actually disabled, False
             return False
 
         # If the user can interact with the element, return this element's check
