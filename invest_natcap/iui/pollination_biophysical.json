@@ -33,7 +33,7 @@
                     "elements":[
                         {
                            "id" : "cur_lulc_raster",
-                            "args_id" : "lulc_cur_uri",
+                            "args_id" : "landuse_cur_uri",
                             "type": "file",
                             "label": "Current land cover scenario raster",
                             "defaultValue": "Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
@@ -44,7 +44,7 @@
                             "id" : "fut_lulc_raster",
                             "type": "hideableFileEntry",
                             "label": "Calculate future scenario",
-                            "args_id": "lulc_fut_uri",
+                            "args_id": "landuse_fut_uri",
                             "required": false,
                             "defaultValue": "Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
                             "validateAs": {"type": "GDAL"}
