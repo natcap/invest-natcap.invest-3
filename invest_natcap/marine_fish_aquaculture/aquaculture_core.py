@@ -22,44 +22,67 @@ def biophysical(args):
     args['workspace_dir']- The directory in which to place all result files.
     args['ff_farm_file']- An open shape file containing the locations of individual
                         fisheries
-    args['farm_ID']- column heading used to describe individual farms. Used to link
-                            GIS location data to later inputs.
     args['g_param_a']- Growth parameter alpha, used in modeling fish growth, 
                             should be int or a float.
     args['g_param_b']- Growth parameter beta, used in modeling fish growth, 
                             should be int or a float.
-    args['water_temp_dict']- An iterable containing dictionaries which link the column
-                        headings (date, day/month, and individual farm #'s) of the water
-                        temperature table to their value (either specific day or the
-                        temperature itself at a farm on that day.
-                        
-                        Format: {'date':'1', 'Day/Month':'1-Jan', '1':'8.447', ...}
-                                {'date':'2', 'Day/Month':'2-Jan', '1':'8.406', ...}
+    args['water_temp_dict']- A dictionary which links a specific date to the farm numbers,
+                        and their temperature values on that day. (Note: in this case, the
+                        outer keys 1 and 2 are calendar days out of 365, starting 
+                        with January 1, and the inner 1, 2, and 3 are farm numbers.)
+                           
+                        Format: {'1': '{'1': '8.447, '2': '8.447', '3':'8.947', ...}' ,
+                                 '2': '{'1': '8.406, '2': '8.406', '3':'8.906', ...}' ,
                                 .                        .                    .
                                 .                        .                    .
-                                .                        .                    .
+                                .                        .                    .       }
     args['farm_op_dict']- Dictionary which links a specific farm ID # to another
                         dictionary containing operating parameters mapped to their value
-                        for that particular farm
+                        for that particular farm (Note: in this case, the 1 and 2
+                        are farm ID's, not dates out of 365.)
                         
                         Format: {'1': '{'Wt of Fish': '0.06', 'Tar Weight': '5.4', ...}',
                                 '2': '{'Wt of Fish': '0.06', 'Tar Weight': '5.4', ...}',
                                 .                        .                    .
                                 .                        .                    .
                                 .                        .                    .       }
+    args['frac_post_process']- the fraction of edible fish left after processing is done to
+                        remove underirable parts
+    args['mort_rate_daily']- mortality rate among fish  in a year, divided by 365
+    args['duration']- duration of the simulation, in years
     '''
     
-    workspace_dir = args[workspace_dir]
     output_dir = workspace_dir + os.sep + 'Output' + os.sep
-  
-def count_cycles(water_temps, farm_ops):
+
+    #using a tuple to get data back from function
+    weights_and_cycles = calc_farm_cycles(args['g_param_a'], args['g_param_b'], 
+                                          args['water_temp_dict'], args['farm_op_dict'],
+                                          args['duration'])
     
-    #need to define a function that will take in water temp table and size at
-    #outplanting (weight of fish @ start on the farm_op table), and return how
-    #many days it will take to reach the target weight of fish at harvest (another
-    #param on the farm_op table), and then return that number of days. That equals
-    #one cycle, and we need to return how many cycles are completed during the run
-    #Unsure if that means how many in a year. Will also have to take into account the 
-    #fallowing period for each one, because that affects how many cycles can be completed
-    #in a year
+
+def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
+    #Two outputs: 
+    #1. Want to create a dictionary to hold all of a farm's data from the period of time that
+    #the model is simulating. Similar to the two CSV files, it will be a key->dictionary
+    #pairing within the outer dictionary, where the keys are farm numbers.
+    #2. A dictionary that holds the number of cycles that each farm completed, with a
+    #key->value as int->float
+    
+    fish_weights = {}
+    
+    for i in range (0, (365*dur)):
+        
+        #pre-load the t=0 weights into the dictionary, have to go through all the farms,
+        #find out how long until outplanting, and go through 0 to that number, and mark
+        #fish weight as 
+        f_num = len(farm_op_dict.keys())
+        
+        for f in range(0, f_num):
+            
+            r
+            
+            
+            
+            
+            

@@ -41,7 +41,8 @@ def execute(args):
         
     biophysical_args['workspace_dir'] = args['workspace_dir']
     biophysical_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc']);
-    biophysical_args['farm_ID'] = args['farms_ID']
+    #Unsure if we actually ever need this later, since we have pre-unpacked
+    #biophysical_args['farm_ID'] = args['farms_ID']
     biophysical_args['g_param_a'] = args['g_param_a']
     biophysical_args['g_param_b'] = args['g_param_b']
     
@@ -75,7 +76,7 @@ def execute(args):
                 break
         
             split_line = line.split(',')
-            if 'Fraction of fish remaing after processing' in split_line[0]:
+            if 'Fraction of fish remaining after processing' in split_line[0]:
                 general_ops['frac_post_process'] = float(split_line[1][:-1])/100
         
             if 'Natural mortality rate on the farm (daily)' in split_line[0]:

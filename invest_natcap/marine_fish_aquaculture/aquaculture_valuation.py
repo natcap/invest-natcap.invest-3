@@ -12,7 +12,7 @@ def exectute(args):
     args: a python dictionary containing the following data:
     args['names']: Numeric text string (positive int or float)
     args['f_type']:text string
-    args['p_per_kg']: MArket price per kilogram of processed fish
+    args['p_per_kg']: Market price per kilogram of processed fish
     args['frac_p']: Fraction of market price that accounts for costs rather than
                     profit
     args['discount']: Daily market discount rate
