@@ -19,25 +19,53 @@
                     "defaultValue": "Pollination",
                     "required": true,
                     "validateAs": {"type": "folder"}
-                },
+                }
+            ]
+        },
+        {
+            "id": "landcover_container",
+            "type": "container",
+            "label": "Land Use/Land Cover",
+            "elements": [
                 {
-                   "id" : "cur_lulc_raster",
-                    "args_id" : "lulc_cur_uri",
-                    "type": "file",
-                    "label": "Current land cover scenario raster",
-                    "defaultValue": "Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
-                    "required": true,
-                    "validateAs": {"type": "GDAL"}
-                },
-                {
-                    "id" : "fut_lulc_raster",
-                    "type": "hideableFileEntry",
-                    "label": "Calculate future scenario",
-                    "args_id": "lulc_fut_uri",
-                    "required": false,
-                    "defaultValue": "Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
-                    "validateAs": {"type": "GDAL"}
-                },
+                    "id": "landcover_list",
+                    "type": "list",
+                    "elements":[
+                        {
+                           "id" : "cur_lulc_raster",
+                            "args_id" : "lulc_cur_uri",
+                            "type": "file",
+                            "label": "Current land cover scenario raster",
+                            "defaultValue": "Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
+                            "required": true,
+                            "validateAs": {"type": "GDAL"}
+                        },
+                        {
+                            "id" : "fut_lulc_raster",
+                            "type": "hideableFileEntry",
+                            "label": "Calculate future scenario",
+                            "args_id": "lulc_fut_uri",
+                            "required": false,
+                            "defaultValue": "Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
+                            "validateAs": {"type": "GDAL"}
+                        },
+                        {
+                            "id" : "landcover_attribute_table",
+                            "type": "file",
+                            "label": "Landcover attribute table",
+                            "args_id": "landuse_attributes_uri",
+                            "required": true,
+                            "defaultValue": "Pollination/Input/LU.dbf",
+                            "validateAs": {"type": "dbf"}
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "remaining_items_list",
+            "type": "list",
+            "elements": [
                 {
                     "id" : "guilds",
                     "type": "file",
@@ -46,15 +74,6 @@
                     "args_id": "guilds_uri",
                     "required": true,
                     "validateAs": {"type": "DBF"}
-                },
-                {
-                    "id" : "landcover_attribute_table",
-                    "type": "file",
-                    "label": "Landcover attribute table",
-                    "args_id": "landuse_attributes_uri",
-                    "required": true,
-                    "defaultValue": "Pollination/Input/LU.dbf",
-                    "validateAs": {"type": "dbf"}
                 },
                 {
                     "id" : "ag_classes",
@@ -72,6 +91,7 @@
                     "label": "Results suffix",
                     "args_id": "results_suffix",
                     "required": false,
+                    "width": 120,
                     "validText": "[0-9a-zA-Z]*",
                     "dataType": "string"
                 }
