@@ -17,15 +17,17 @@
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "Pollination",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "folder"}
                 },
                 {
                    "id" : "cur_lulc_raster",
                     "args_id" : "lulc_cur_uri",
                     "type": "file",
                     "label": "Current land cover scenario raster",
-                    "defaultValue": "Base_Data/terrestrial/lulc_samp_cur/hdr.adf",
-                    "required": true
+                    "defaultValue": "Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"}
                 },
                 {
                     "id" : "fut_lulc_raster",
@@ -33,7 +35,8 @@
                     "label": "Calculate future scenario",
                     "args_id": "lulc_fut_uri",
                     "required": false,
-                    "defaultValue": "Base_Data/terrestrial/lulc_samp_fut/hdr.adf"
+                    "defaultValue": "Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
+                    "validateAs": {"type": "GDAL"}
                 },
                 {
                     "id" : "guilds",
@@ -41,7 +44,8 @@
                     "label": "Guilds table",
                     "defaultValue": "Pollination/Input/Guild.dbf",
                     "args_id": "guilds_uri",
-                    "required": true
+                    "required": true,
+                    "validateAs": {"type": "DBF"}
                 },
                 {
                     "id" : "landcover_attribute_table",
@@ -49,7 +53,8 @@
                     "label": "Landcover attribute table",
                     "args_id": "landuse_attributes_uri",
                     "required": true,
-                    "defaultValue": "Pollination/Input/LU.dbf"
+                    "defaultValue": "Pollination/Input/LU.dbf",
+                    "validateAs": {"type": "dbf"}
                 },
                 {
                     "id" : "ag_classes",
