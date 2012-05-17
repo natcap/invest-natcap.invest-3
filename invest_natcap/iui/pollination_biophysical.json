@@ -78,7 +78,7 @@
                 {
                     "id" : "ag_classes",
                     "type": "text",
-                    "label": "Agricultural classes",
+                    "label": "Agricultural classes (space-separated)",
                     "args_id": "ag_classes",
                     "required": false,
                     "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
