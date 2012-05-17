@@ -1,0 +1,55 @@
+{
+    "id" : "window",
+    "label": "Crop Pollination: Valuation",
+    "targetScript" : "invest_natcap/pollination/pollination_valuation.py",
+    "modelName" : "pollination_valuation",
+    "localDocURI": "./documentation/croppollination.html",
+    "height": 400,
+    "width" : 500,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "Pollination",
+                    "required": true,
+                    "validateAs": {"type": "folder"}
+                },
+                {
+                    "id" : "guilds",
+                    "type": "file",
+                    "label": "Guilds table",
+                    "defaultValue": "Pollination/Input/Guild.dbf",
+                    "args_id": "guilds_uri",
+                    "required": true,
+                    "validateAs": {"type": "DBF"}
+                },
+                {
+                    "id" : "half_saturation_const",
+                    "type": "text",
+                    "label": "Half-saturation constant",
+                    "args_id": "half_saturation",
+                    "required": true,
+                    "width": 60,
+                    "defaultValue": 0.125,
+                    "dataType": "float"
+                },
+                {
+                    "id" : "wild_pollination_proportion",
+                    "type": "text",
+                    "label": "Proportion of total yield due to wild pollinators",
+                    "args_id": "wild_pollination_proportion",
+                    "required": true,
+                    "width": 60,
+                    "defaultValue": 1,
+                    "dataType": "string"
+                }
+            ]
+        }
+    ]
+}
