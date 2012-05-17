@@ -251,466 +251,413 @@ class TestHydropowerCore(unittest.TestCase):
 
         self.assertTrue((array_result==result_array).all())
 
-#    def test_hydropower_core_raster_from_table_values_re(self):
-#        """ A regression test to make sure that rasters created from table
-#            values are correct
-#        """
-#        #TEST create_etk_root function to see how it handles if a LULC Code
-#        #in the table does not exist on the lulc raster
-#        
-#        input_dir = './data/hydropower_data/test_input/'
-#        output_base = './data/test_out/hydropower_raster_from_table/'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        
-#        lulc = gdal.Open(input_dir + 'landuse_90')
-#        
-#        #Open/read in the csv files into a dictionary and add to arguments
-#        bio_dict = {}
-#        biophysical_table_file = open(input_dir + 'Biophysical_Models.csv')
-#        reader = csv.DictReader(biophysical_table_file)
-#        for row in reader:
-#            bio_dict[int(row['lucode'])] = \
-#                {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
-#            
-#        new_path = output_base + 'test_etk_reg.tif'
-#        
-#        new_raster = \
-#            hydropower_core.raster_from_table_values(lulc, new_path, bio_dict, 
-#                                                     'etk')
-#        new_raster = None
-#        
-#        reg_raster_uri = \
-#            './data/hydropower_regression_data/test_etk_regression.tif'
-#        
-#        invest_test_core.assertTwoDatasetEqualURI(self, reg_raster_uri, 
-#                                                  new_path)
-#        
-#    def test_hydropower_core_create_writer_table_watershed(self):
-#        """A hand calculated test case to make sure that the water yield
-#           tables are getting created correctly
-#        """
-#        
-#        output_base = './data/test_out/hydropower_water_yield_tables/'
-#        table_path = output_base + 'test_wyield_watershed.csv'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(table_path):
-#            os.remove(table_path)
-#        
-#        field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
-#                      'wyield_sum']
-#        
-#        water_dict = {}
-#        water_dict['precip_mn'] = {1:1654.32, 2:1432, 3:1948.593}
-#        water_dict['PET_mn'] = {1:432.65, 2:123.43, 3:342.34}
-#        water_dict['AET_mn'] = {1:88.88, 2:99.99, 3:111.11}
-#        water_dict['wyield_mn'] = {1:2222.22, 2:4444.44, 3:3333}
-#        water_dict['wyield_sum'] = {1:555.55, 2:666.66, 3:777}
-#        
-#        new_table = hydropower_core.create_writer_table(table_path, field_list, 
-#                                                        water_dict)
-#        
-#        new_table.close()
-#        
-#        expected_rows = np.array([['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
-#                                   'wyield_mn', 'wyield_sum'],
-#                                  [1, 1654.32, 432.65, 88.88, 2222.22, 555.55],
-#                                  [2, 1432, 123.43, 99.99, 4444.44, 666.66],
-#                                  [3, 1948.593, 342.34, 111.11, 3333, 777]])
-#        
-#        new_table = open(table_path, 'rb')
-#        reader = csv.reader(new_table)
-#        i = 0
-#        for row in reader:
-#            row = np.array(row)
-#            try:
-#                self.assertTrue((expected_rows[i]==row).all())
-#                i = i+1
-#            except:
-#                self.fail('The CSV files are not the same')
-#        
-#    def test_hydropower_core_create_writer_table_subwatershed(self):
-#        """Similar test to the one above for checking the water yield table
-#           function, but this time using subwatershed properties
-#        """
-#        output_base = './data/test_out/hydropower_water_yield_tables/'
-#        table_path = output_base + 'test_wyield_subwatershed.csv'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(table_path):
-#            os.remove(table_path)
-#        
-#        field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
-#                      'wyield_mn','wyield_sum']
-#        wsr = {1:1, 2:2, 3:2, 4:1}
-#        water_dict = {}
-#        water_dict['precip_mn'] = {1:1654.32, 2:1432, 3:1948.593, 4:1212.12}
-#        water_dict['PET_mn'] = {1:432.65, 2:123.43, 3:342.34, 4:2323.23}
-#        water_dict['AET_mn'] = {1:88.88, 2:99.99, 3:111.11, 4:343.43}
-#        water_dict['wyield_mn'] = {1:2222.22, 2:4444.44, 3:3333, 4:5656}
-#        water_dict['wyield_sum'] = {1:555.55, 2:666.66, 3:777, 4:6767}
-#        
-#        new_table = hydropower_core.create_writer_table(table_path, field_list, 
-#                                                        water_dict, wsr)
-#        
-#        new_table.close()
-#        
-#        expected_rows = np.array([['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 
-#                                   'AET_mn', 'wyield_mn', 'wyield_sum'],
-#                                [1, 1, 1654.32, 432.65, 88.88, 2222.22, 555.55],
-#                                [2, 2, 1432, 123.43, 99.99, 4444.44, 666.66],
-#                                [2, 3, 1948.593, 342.34, 111.11, 3333, 777],
-#                                [1, 4, 1212.12, 2323.23, 343.43, 5656, 6767]])
-#        
-#        new_table = open(table_path, 'rb')
-#        reader = csv.reader(new_table)
-#        i = 0
-#        for row in reader:
-#            row = np.array(row)
-#            try:
-#                self.assertTrue((expected_rows[i]==row).all())
-#                i = i+1
-#            except:
-#                self.fail('The CSV files are not the same')
-#                
-#    def test_hydropower_core_sheds_map_subsheds(self):
-#        """A hand calculated test to make sure that sub watersheds can be
-#           identified with watersheds
-#        """
-#        
-#        input_dir = './data/hydropower_data/test_input/'
-#        output_base = './data/test_out/hydropower_sheds_map_subsheds/'
-#
-#        sub_sheds_path = input_dir + 'subwatersheds.shp'
-#        sheds_path = input_dir + 'watersheds.shp'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#            
-#        sub_sheds = ogr.Open(sub_sheds_path)
-#        sheds = ogr.Open(sheds_path)
-#        
-#        shed_relationship = \
-#            hydropower_core.sheds_map_subsheds(sheds, sub_sheds)
-#        
-#        expected_dict = {}
-#        expected_dict[1] = 0
-#        expected_dict[2] = 0
-#        expected_dict[3] = 0
-#        expected_dict[4] = 1
-#        expected_dict[5] = 1
-#        expected_dict[6] = 1
-#        expected_dict[7] = 2
-#        expected_dict[8] = 2
-#        expected_dict[9] = 2
-#        
-#        for key, val in shed_relationship.iteritems():
-#            if key in expected_dict:
-#                self.assertEqual(val, expected_dict[key])
-#            else:
-#                self.fail('Keys do not match')
-#                
-#        sub_sheds.Destroy()
-#        sheds.Destroy()
-#        
-#    def test_hydropower_core_sheds_map_subsheds_calc(self):
-#        """A test to see if the function sheds_map_subsheds can correctly 
-#           match polygons from two different shapefiles that overlap each other.
-#           Here, I created two polygon shapefiles by hand and test them
-#        """
-#        
-#        input_dir = './data/hydropower_data/test_input/'
-#        output_base = './data/test_out/hydropower_sheds_map_subsheds/'
-#
-#        sub_sheds_path = input_dir + 'test_hydro_sheds.shp'
-#        sheds_path = input_dir + 'test_hydro_subsheds.shp'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#            
-#        sub_sheds = ogr.Open(sub_sheds_path)
-#        sheds = ogr.Open(sheds_path)
-#        
-#        shed_relationship = \
-#            hydropower_core.sheds_map_subsheds(sheds, sub_sheds)
-#        
-#        expected_dict = {}
-#        expected_dict[1] = 3
-#        expected_dict[2] = 3
-#        expected_dict[3] = 2
-#        expected_dict[4] = 1
-#        expected_dict[5] = 1
-#        
-#        for key, val in shed_relationship.iteritems():
-#            if key in expected_dict:
-#                self.assertEqual(val, expected_dict[key])
-#            else:
-#                self.fail('Keys do not match')
-#                
-#        sub_sheds.Destroy()
-#        sheds.Destroy()
-#        
-#    def test_hydropower_core_create_operation_raster_re(self):
-#        """A regression test to ensure that the proper mean raster is
-#           being created
-#        """
-#        
-#        output_base = './data/test_out/hydropower_create_mean_raster'
-#        output_path = output_base + 'test_mean_aet.tif'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(output_path):
-#            os.remove(output_path)
-#        
-#        input_dir = './data/hydropower_data/test_input/'
-#        regression_dir = './data/hydropower_regression_data/'
-#        
-#        aet_path = input_dir + 'test_aet_mn.tif'
-#        mask_path = regression_dir + 'sub_shed_mask_regression.tif'
-#        reg_mean_path = regression_dir + 'aet_mn_regression.tif'
-#        
-#        aet_raster = gdal.Open(aet_path)
-#        
-#        mask_raster = gdal.Open(mask_path)
-#        mask_band = mask_raster.GetRasterBand(1)
-#        mask = mask_band.ReadAsArray()
-#
-#        id_list = [1,2,3,4,5,6,7,8,9]        
-#        dict = {}
-#        
-#        new_raster = \
-#            hydropower_core.create_operation_raster(aet_raster, output_path, 
-#                                                    id_list, 'mean', mask, dict)
-#       
-#        new_raster = None
-#        mask_raster = None
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self, reg_mean_path, 
-#                                                  output_path)
-#        
-#    def test_hydropower_core_create_operation_raster_re2(self):
-#        """A regression test to ensure that the proper sum raster is
-#           being created
-#        """
-#        
-#        output_base = './data/test_out/hydropower_create_mean_raster'
-#        output_path = output_base + 'test_sum_consum_vol.tif'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(output_path):
-#            os.remove(output_path)
-#        
-#        input_dir = './data/hydropower_data/test_input/'
-#        regression_dir = './data/hydropower_regression_data/'
-#        
-#        base_raster_path = regression_dir + 'clipped_consum_regression.tif'
-#        mask_path = regression_dir + 'sub_shed_mask2_regression.tif'
-#        reg_sum_path = regression_dir + 'consum_vol_regression.tif'
-#        
-#        base_raster = gdal.Open(base_raster_path)
-#        
-#        mask_raster = gdal.Open(mask_path)
-#        mask_band = mask_raster.GetRasterBand(1)
-#        mask = mask_band.ReadAsArray()
-#
-#        id_list = [1,2,3,4,5,6,7,8,9]        
-#        dict = {}
-#        
-#        new_raster = \
-#            hydropower_core.create_operation_raster(base_raster, output_path, 
-#                                                    id_list, 'sum', mask, dict)
-#       
-#        new_raster = None
-#        mask_raster = None
-#
-#        invest_test_core.assertTwoDatasetEqualURI(self, reg_sum_path, 
-#                                                  output_path)
-#        
-#    def test_hydropower_core_create_operation_raster_byhand(self):
-#        """A test to make sure that the mean raster output is correct
-#           by passing in a hand calculated raster
-#        """
-#        input_dir = './data/hydropower_data/test_input/'
-#        output_base = './data/test_out/hydropower_create_mean_raster/'
-#        output_path = output_base + 'test_mean_byhand.tif'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(output_path):
-#            os.remove(output_path)
-#        
-#        field_name = 'subws_id'
-#        id_list = [1,2,3,4,5,6,7,8,9]
-#        
-#        #Create two 4x4 rasters in memory
-#        base = gdal.Open(input_dir + 'test_aet_mn.tif', gdal.GA_ReadOnly)
-#        cols = 4
-#        rows = 4
-#        projection = base.GetProjection()
-#        geotransform = base.GetGeoTransform()
-#        value_raster = \
-#            invest_cython_core.newRaster(cols, rows, projection, geotransform, \
-#                                         'GTiff', -1, gdal.GDT_Float32, 1, \
-#                                          output_path)
-#
-#        #This is a test case that was calculated by hand
-#        array = np.array([[111, 115, 999, 1],
-#                          [108, 109, 999, 1],
-#                          [105, 102, 999, 1],
-#                          [100, 124, 888, 1]])
-#
-#        value_raster.GetRasterBand(1).WriteArray(array, 0, 0)
-#
-#        mask = np.array([[9, 8, 7, 7],
-#                         [6, 6, 5, 5],
-#                         [4, 4, 3, 3],
-#                         [2, 2, 1, 1]])
-#        
-#        mean_calc = np.array([[111, 115, 500, 500],
-#                              [108.5, 108.5, 500, 500],
-#                              [103.5, 103.5, 500, 500],
-#                              [112, 112, 444.5, 444.5]])
-#        
-#        dict = {}
-#        
-#        new_raster = \
-#            hydropower_core.create_operation_raster(value_raster, output_path, 
-#                                                    id_list, 'mean', mask, dict)
-#
-#        new_array = new_raster.GetRasterBand(1).ReadAsArray()
-#        
-#        self.assertTrue(mean_calc.shape == new_array.shape)
-#        
-#        for i, j in zip(mean_calc, new_array):
-#            for m, n in zip(i,j):
-#                self.assertAlmostEqual(m, n, 4)
-#        
-#    def test_hydropower_core_create_area_raster_regression(self):
-#        """A regression test to make sure that the area rasters are being
-#           created properly
-#        """
-#        output_base = './data/test_out/hydropower_create_area_raster/'
-#        output_path = output_base + 'test_area_wyield.tif'
-#        
-#        input_dir = './data/hydropower_data/test_input/'
-#        regression_dir = './data/hydropower_regression_data/'
-#        
-#        sub_sheds_path = input_dir + 'subwatersheds.shp'
-#        wyield_path = input_dir + 'test_wyield.tif'
-#        mask_path = regression_dir + 'sub_shed_mask_regression.tif'
-#        reg_area_path = regression_dir + 'wyield_area_regression.tif'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(output_path):
-#            os.remove(output_path)
-#        
-#        sub_sheds = ogr.Open(sub_sheds_path)
-#        wyield_raster = gdal.Open(wyield_path)
-#        wyield_regression_raster = gdal.Open(reg_area_path)
-#        
-#        mask_raster = gdal.Open(mask_path)
-#        mask_band = mask_raster.GetRasterBand(1)
-#        mask = mask_band.ReadAsArray()
-#        
-#        field_name = 'subws_id'
-#        
-#        new_raster = \
-#            hydropower_core.create_area_raster(wyield_raster, output_path, 
-#                                               sub_sheds, field_name, mask)
-#        
-#        invest_test_core.assertTwoDatasetsEqual(self, wyield_regression_raster, 
-#                                                new_raster)
-#
-#    def test_hydropower_core_create_area_raster_byhand(self):
-#        """A test to make sure the area rasters are being created properly
-#           by making hand calculated input data
-#        """
-#        input_dir = './data/hydropower_data/test_input/'
-#        output_base = './data/test_out/hydropower_create_area_raster/'
-#        output_path = output_base + 'test_area_byhand.tif'
-#        sub_sheds_path = input_dir + 'subwatersheds.shp'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(output_path):
-#            os.remove(output_path)
-#        
-#        sub_sheds = ogr.Open(sub_sheds_path)
-#        
-#        field_name = 'subws_id'
-#        
-#        #Create two 4x4 rasters in memory
-#        base = gdal.Open(input_dir + 'test_aet_mn.tif', gdal.GA_ReadOnly)
-#        cols = 4
-#        rows = 4
-#        projection = base.GetProjection()
-#        geotransform = base.GetGeoTransform()
-#        value_raster = invest_cython_core.newRaster(cols, rows, projection,
-#            geotransform, 'GTiff', -1, gdal.GDT_Float32, 1, output_path)
-#
-#        #This is a test case that was calculated by hand
-#        area_calc = np.array([[964800, 7857000, 10057500, 10057500],
-#                          [11385900, 11385900, 32837400, 32837400],
-#                          [39781800, 39781800, 19117800, 19117800],
-#                          [5412600, 5412600, 17784900, 17784900]])
-#
-#        mask = np.array([[9, 8, 7, 7],
-#                         [6, 6, 5, 5],
-#                         [4, 4, 3, 3],
-#                         [2, 2, 1, 1]])
-#
-#        new_raster = \
-#            hydropower_core.create_area_raster(value_raster, output_path, 
-#                                               sub_sheds, field_name, mask)
-#
-#        new_array = new_raster.GetRasterBand(1).ReadAsArray()
-#        
-#        self.assertTrue(area_calc.shape == new_array.shape)
-#        
-#        for i, j in zip(area_calc, new_array):
-#            for m, n in zip(i,j):
-#                self.assertAlmostEqual(m, n, 4)
-#        
-#    def test_hydropower_core_get_mask(self):
-#        """A regression test that makes sure the proper mask is being
-#           generated given a watershed shapefile
-#        """
-#        input_dir = './data/hydropower_data/test_input/'
-#        regression_dir = './data/hydropower_regression_data/'
-#        output_base = './data/test_out/hydropower_get_mask/'
-#        output_path = output_base + 'test_new_mask.tif'
-#        sub_sheds_path = input_dir + 'subwatersheds.shp'
-#        wyield_path = input_dir + 'test_wyield.tif'
-#        regression_mask_path = regression_dir + 'sub_shed_mask_regression.tif'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(output_path):
-#            os.remove(output_path)
-#        
-#        sub_sheds = ogr.Open(sub_sheds_path)
-#        wyield = gdal.Open(wyield_path)
-#        reg_mask_raster = gdal.Open(regression_mask_path)
-#        
-#        reg_mask = reg_mask_raster.GetRasterBand(1).ReadAsArray()
-#        field_name = 'subws_id'
-#        
-#        new_mask = \
-#            hydropower_core.get_mask(wyield, output_path, sub_sheds, field_name)
-#        
-#        self.assertTrue(new_mask.shape == reg_mask.shape)
-#        
-#        for i, j in zip(reg_mask, new_mask):
-#            for m, n in zip(i,j):
-#                self.assertAlmostEqual(m, n, 4)
-#        
+    def test_hydropower_core_raster_from_table_values_re(self):
+        """ A regression test to make sure that rasters created from table
+            values are correct
+        """
+        #TEST create_etk_root function to see how it handles if a LULC Code
+        #in the table does not exist on the lulc raster
+        
+        input_dir = './data/hydropower_regression_data/hydro_regression_byhand/'
+        output_base = './data/test_out/hydropower_raster_from_table/'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        
+        lulc = gdal.Open(input_dir + 'lulc.tif')
+        
+        #Open/read in the csv files into a dictionary and add to arguments
+        bio_dict = {}
+        biophysical_table_file = open(input_dir + 'Biophysical_Models.csv')
+        reader = csv.DictReader(biophysical_table_file)
+        for row in reader:
+            bio_dict[int(row['lucode'])] = \
+                {'etk':float(row['etk']), 'root_depth':float(row['root_depth'])}
+            
+        new_path = output_base + 'test_etk_reg.tif'
+        
+        new_raster = \
+            hydropower_core.raster_from_table_values(lulc, new_path, bio_dict, 
+                                                     'etk')
+        new_raster = None
+        
+        reg_raster_uri = \
+            './data/hydropower_regression_data/tmp_etk.tif'
+        
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_raster_uri, 
+                                                  new_path)
+                
+    def test_hydropower_core_sheds_map_subsheds(self):
+        """A hand calculated test to make sure that sub watersheds can be
+           identified with watersheds
+        """
+        
+        input_dir = './data/hydropower_data/test_input/'
+        output_base = './data/test_out/hydropower_sheds_map_subsheds/'
+
+        sub_sheds_path = input_dir + 'subwatersheds.shp'
+        sheds_path = input_dir + 'watersheds.shp'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+            
+        sub_sheds = ogr.Open(sub_sheds_path)
+        sheds = ogr.Open(sheds_path)
+        
+        shed_relationship = \
+            hydropower_core.sheds_map_subsheds(sheds, sub_sheds)
+        
+        expected_dict = {}
+        expected_dict[1] = 0
+        expected_dict[2] = 0
+        expected_dict[3] = 0
+        expected_dict[4] = 1
+        expected_dict[5] = 1
+        expected_dict[6] = 1
+        expected_dict[7] = 2
+        expected_dict[8] = 2
+        expected_dict[9] = 2
+        
+        for key, val in shed_relationship.iteritems():
+            if key in expected_dict:
+                self.assertEqual(val, expected_dict[key])
+            else:
+                self.fail('Keys do not match')
+                
+        sub_sheds.Destroy()
+        sheds.Destroy()
+        
+    def test_hydropower_core_sheds_map_subsheds_calc(self):
+        """A test to see if the function sheds_map_subsheds can correctly 
+           match polygons from two different shapefiles that overlap each other.
+           Here, I created two polygon shapefiles by hand and test them
+        """
+        
+        input_dir = './data/hydropower_data/test_input/'
+        output_base = './data/test_out/hydropower_sheds_map_subsheds/'
+
+        sub_sheds_path = input_dir + 'test_hydro_sheds.shp'
+        sheds_path = input_dir + 'test_hydro_subsheds.shp'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+            
+        sub_sheds = ogr.Open(sub_sheds_path)
+        sheds = ogr.Open(sheds_path)
+        
+        shed_relationship = \
+            hydropower_core.sheds_map_subsheds(sheds, sub_sheds)
+        
+        expected_dict = {}
+        expected_dict[1] = 3
+        expected_dict[2] = 3
+        expected_dict[3] = 2
+        expected_dict[4] = 1
+        expected_dict[5] = 1
+        
+        for key, val in shed_relationship.iteritems():
+            if key in expected_dict:
+                self.assertEqual(val, expected_dict[key])
+            else:
+                self.fail('Keys do not match')
+                
+        sub_sheds.Destroy()
+        sheds.Destroy()
+        
+    def test_hydropower_core_sheds_map_subsheds_calc2(self):
+        """A test to see if the function sheds_map_subsheds can correctly 
+           match polygons from two different shapefiles that overlap each other.
+           Here, I created two polygon shapefiles by hand and test them
+        """
+        
+        input_dir = './data/hydropower_regression_data/hydro_regression_byhand/'
+        output_base = './data/test_out/hydropower_sheds_map_subsheds/'
+
+        sub_sheds_path = input_dir + 'simple_reg_subws.shp'
+        sheds_path = input_dir + 'simple_reg_ws.shp'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+            
+        sub_sheds = ogr.Open(sub_sheds_path)
+        sheds = ogr.Open(sheds_path)
+        
+        shed_relationship = \
+            hydropower_core.sheds_map_subsheds(sheds, sub_sheds)
+        
+        expected_dict = {}
+        expected_dict[1] = 0
+        expected_dict[2] = 1
+        expected_dict[3] = 1
+        
+        for key, val in shed_relationship.iteritems():
+            if key in expected_dict:
+                self.assertEqual(val, expected_dict[key])
+            else:
+                self.fail('Keys do not match')
+                
+        sub_sheds.Destroy()
+        sheds.Destroy()
+        
+    def test_hydropower_core_create_operation_raster_re(self):
+        """A regression test to ensure that the proper mean raster is
+           being created
+        """
+        
+        output_base = './data/test_out/hydropower_create_mean_raster'
+        output_path = output_base + 'test_mean_aet.tif'
+        
+        regression_dir = './data/hydropower_regression_data/'
+        
+        aet_path = regression_dir + 'aet_pixel.tif'
+        mask_path = regression_dir + 'sub_shed_mask.tif'
+        reg_mean_path = regression_dir + 'aet_mn.tif'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        aet_raster = gdal.Open(aet_path)
+        
+        mask_raster = gdal.Open(mask_path)
+        mask_band = mask_raster.GetRasterBand(1)
+        mask = mask_band.ReadAsArray()
+
+        id_list = [1,2,3]        
+        result_dict = {}
+        
+        new_raster = \
+            hydropower_core.create_operation_raster(aet_raster, output_path, 
+                                                    id_list, 'mean', mask, 
+                                                    result_dict)
+       
+        new_raster = None
+        mask_raster = None
+
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_mean_path, 
+                                                  output_path)
+        
+    def test_hydropower_core_create_operation_raster_re2(self):
+        """A regression test to ensure that the proper sum raster is
+           being created
+        """
+        
+        output_base = './data/test_out/hydropower_create_mean_raster/'
+        output_path = output_base + 'test_sum_consum_vol.tif'
+        
+        regression_dir = './data/hydropower_regression_data/'
+        
+        base_raster_path = regression_dir + 'clipped_consump.tif'
+        mask_path = regression_dir + 'sub_shed_mask2.tif'
+        reg_sum_path = regression_dir + 'consum_vol.tif'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        base_raster = gdal.Open(base_raster_path)
+        
+        mask_raster = gdal.Open(mask_path)
+        mask_band = mask_raster.GetRasterBand(1)
+        mask = mask_band.ReadAsArray()
+
+        id_list = [1,2,3]        
+        result_dict = {}
+        
+        new_raster = \
+            hydropower_core.create_operation_raster(base_raster, output_path, 
+                                                    id_list, 'sum', mask, 
+                                                    result_dict)
+       
+        new_raster = None
+        mask_raster = None
+
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_sum_path, 
+                                                  output_path)
+        
+    def test_hydropower_core_create_operation_raster_byhand(self):
+        """A test to make sure that the mean raster output is correct
+           by passing in a hand calculated raster
+        """
+        regression_dir = './data/hydropower_regression_data/'
+        output_base = './data/test_out/hydropower_create_mean_raster/'
+        output_path = output_base + 'test_mean_byhand.tif'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        field_name = 'subws_id'
+        id_list = [1,2,3,4,5,6,7,8,9]
+        
+        #Create two 4x4 rasters in memory
+        base = gdal.Open(regression_dir + 'aet_mn.tif', gdal.GA_ReadOnly)
+        cols = 4
+        rows = 4
+        projection = base.GetProjection()
+        geotransform = base.GetGeoTransform()
+        value_raster = \
+            invest_cython_core.newRaster(cols, rows, projection, geotransform, \
+                                         'GTiff', -1, gdal.GDT_Float32, 1, \
+                                          output_path)
+
+        #This is a test case that was calculated by hand
+        array = np.array([[111, 115, 999, 1],
+                          [108, 109, 999, 1],
+                          [105, 102, 999, 1],
+                          [100, 124, 888, 1]])
+
+        value_raster.GetRasterBand(1).WriteArray(array, 0, 0)
+
+        mask = np.array([[9, 8, 7, 7],
+                         [6, 6, 5, 5],
+                         [4, 4, 3, 3],
+                         [2, 2, 1, 1]])
+        
+        mean_calc = np.array([[111, 115, 500, 500],
+                              [108.5, 108.5, 500, 500],
+                              [103.5, 103.5, 500, 500],
+                              [112, 112, 444.5, 444.5]])
+        
+        result_dict = {}
+        
+        new_raster = \
+            hydropower_core.create_operation_raster(value_raster, output_path, 
+                                                    id_list, 'mean', mask, 
+                                                    result_dict)
+
+        new_array = new_raster.GetRasterBand(1).ReadAsArray()
+        
+        self.assertTrue(mean_calc.shape == new_array.shape)
+        
+        for i, j in zip(mean_calc, new_array):
+            for m, n in zip(i,j):
+                self.assertAlmostEqual(m, n, 4)
+        
+    def test_hydropower_core_create_area_raster_regression(self):
+        """A regression test to make sure that the area rasters are being
+           created properly
+        """
+        output_base = './data/test_out/hydropower_create_area_raster/'
+        output_path = output_base + 'test_area_wyield.tif'
+        
+        regression_dir = './data/hydropower_regression_data/'
+        
+        sub_sheds_path = \
+            regression_dir + 'hydro_regression_byhand/simple_reg_subws.shp'
+        wyield_path = regression_dir + 'wyield_mn.tif'
+        mask_path = regression_dir + 'sub_shed_mask.tif'
+        reg_area_path = regression_dir + 'wyield_area.tif'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        wyield_raster = gdal.Open(wyield_path)
+        wyield_regression_raster = gdal.Open(reg_area_path)
+        
+        mask_raster = gdal.Open(mask_path)
+        mask_band = mask_raster.GetRasterBand(1)
+        mask = mask_band.ReadAsArray()
+        
+        field_name = 'subws_id'
+        
+        new_raster = \
+            hydropower_core.create_area_raster(wyield_raster, output_path, 
+                                               sub_sheds, field_name, mask)
+        
+        invest_test_core.assertTwoDatasetsEqual(self, wyield_regression_raster, 
+                                                new_raster)
+
+    def test_hydropower_core_create_area_raster_byhand(self):
+        """A test to make sure the area rasters are being created properly
+           by making hand calculated input data
+        """
+        output_base = './data/test_out/hydropower_create_area_raster/'
+        output_path = output_base + 'test_area_byhand.tif'
+        regression_dir = './data/hydropower_regression_data/' 
+        sub_sheds_path = \
+            regression_dir + '/hydro_regression_byhand/simple_reg_subws.shp'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        
+        field_name = 'subws_id'
+        
+        #Create two 4x4 rasters in memory
+        base = gdal.Open(regression_dir + 'aet_mn.tif', gdal.GA_ReadOnly)
+        cols = 4
+        rows = 4
+        projection = base.GetProjection()
+        geotransform = base.GetGeoTransform()
+        value_raster = invest_cython_core.newRaster(cols, rows, projection,
+            geotransform, 'GTiff', -1, gdal.GDT_Float32, 1, output_path)
+
+        #This is a test case that was calculated by hand
+        area_calc = np.array([[3502.457, 3502.457, 3502.457, 3502.457],
+                              [1789.688, 1789.688, 1789.688, 1789.688],
+                              [3556.819, 3556.819, 1789.688, 1789.688],
+                              [3556.819, 3556.819, 3556.819, 3556.819]])
+
+        mask = np.array([[3, 3, 3, 3],
+                         [2, 2, 2, 2],
+                         [1, 1, 2, 2],
+                         [1, 1, 1, 1]])
+
+        new_raster = \
+            hydropower_core.create_area_raster(value_raster, output_path, 
+                                               sub_sheds, field_name, mask)
+
+        new_array = new_raster.GetRasterBand(1).ReadAsArray()
+        
+        self.assertTrue(area_calc.shape == new_array.shape)
+        
+        for i, j in zip(area_calc, new_array):
+            for m, n in zip(i,j):
+                self.assertAlmostEqual(m, n, 2)
+        
+    def test_hydropower_core_get_mask(self):
+        """A regression test that makes sure the proper mask is being
+           generated given a watershed shapefile
+        """
+        regression_dir = './data/hydropower_regression_data/'
+        output_base = './data/test_out/hydropower_get_mask/'
+        output_path = output_base + 'test_new_mask.tif'
+        sub_sheds_path = \
+            regression_dir + '/hydro_regression_byhand/simple_reg_subws.shp'
+        wyield_path = regression_dir + 'wyield_mn.tif'
+        regression_mask_path = regression_dir + 'sub_shed_mask.tif'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        
+        sub_sheds = ogr.Open(sub_sheds_path)
+        wyield = gdal.Open(wyield_path)
+        reg_mask_raster = gdal.Open(regression_mask_path)
+        
+        reg_mask = reg_mask_raster.GetRasterBand(1).ReadAsArray()
+        field_name = 'subws_id'
+        
+        new_mask = \
+            hydropower_core.get_mask(wyield, output_path, sub_sheds, field_name)
+        
+        self.assertTrue(new_mask.shape == reg_mask.shape)
+        
+        for i, j in zip(reg_mask, new_mask):
+            for m, n in zip(i,j):
+                self.assertAlmostEqual(m, n, 4)
+        
 #    def test_hydropower_core_get_operation_value(self):
 #        """Test the get_operation_value function with the mean operation"""
 #        
@@ -961,33 +908,67 @@ class TestHydropowerCore(unittest.TestCase):
                                               ws_table_uri)
         invest_test_core.assertTwoCSVEqualURI(self, reg_sws_table_uri, 
                                               sws_table_uri)
-#
-#    def test_hydropower_core_write_scarcity_table(self):
-#        """A by hand test for the write_scarcity_table function
-#        
-#        """
-#        
-#        #place code here
-#        output_base = './data/test_out/write_scarcity_table/'
-#        output_path = output_base + 'test_scarcity_table.csv'
-#        regression_dir = './data/hydropower_regression_data/'
-#        reg_table_path = regression_dir + 'scarcity_reg_table.csv'
-#        
-#        if not os.path.isdir(output_base):
-#            os.mkdir(output_base)
-#        if os.path.isfile(output_path):
-#            os.remove(output_path)
-#            
-#        field_list = 'ws_id, area, volume, avg_weight'
-#        shed_table = {0: {'ws_id':0, 'area':32, 'volume': 54, 'avg_weight':5},
-#                      1: {'ws_id':1, 'area':28, 'volume': 48, 'avg_weight':8},
-#                      2: {'ws_id':2, 'area':16, 'volume': 78, 'avg_weight':10}}
-#        
-#        hydropower_core.write_scarcity_table(shed_table, field_list, 
-#                                             output_path)
-#        
-#        invest_test_core.assertTwoCSVEqualURI(self, reg_table_path, output_path)
-#        
+
+    def test_hydropower_core_write_csv_table_ws(self):
+        """A by hand test for the write_csv_table function
+           at the watershed level
+        """
+        
+        #place code here
+        output_base = './data/test_out/write_csv_table/'
+        output_path = output_base + 'test_csv_table_ws.csv'
+        regression_dir = './data/hydropower_regression_data/'
+        reg_table_path = regression_dir + 'hand_calc_table_ws.csv'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+            
+        field_list = ['ws_id','wyield', 'wyield_mn', 'cyield']
+        shed_table = {0: {'ws_id':0, 'wyield':32, 
+                          'wyield_mn': 54.05, 'cyield':5},
+                      1: {'ws_id':1, 'wyield':28, 
+                          'wyield_mn': 48.34, 'cyield':8},
+                      2: {'ws_id':2, 'wyield':16, 
+                          'wyield_mn': 78.73, 'cyield':10}}
+        
+        hydropower_core.write_csv_table(shed_table, field_list, 
+                                             output_path)
+        
+        invest_test_core.assertTwoCSVEqualURI(self, reg_table_path, output_path)
+        
+    def test_hydropower_core_write_csv_table_sws(self):
+        """A by hand test for the write_csv_table function
+           at the subwatershed level
+        """
+        
+        #place code here
+        output_base = './data/test_out/write_csv_table/'
+        output_path = output_base + 'test_csv_table_sws.csv'
+        regression_dir = './data/hydropower_regression_data/'
+        reg_table_path = regression_dir + 'hand_calc_table_sws.csv'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+            
+        field_list = ['ws_id', 'subws_id', 'wyield', 'wyield_mn', 'cyield']
+        shed_table = {1: {'ws_id':0, 'subws_id':1, 'wyield':32, 
+                          'wyield_mn': 54.05, 'cyield':5},
+                      2: {'ws_id':1, 'subws_id':2, 'wyield':28, 
+                          'wyield_mn': 48.34, 'cyield':8},
+                      3: {'ws_id':2, 'subws_id':3, 'wyield':16, 
+                          'wyield_mn': 78.73, 'cyield':10},
+                      4: {'ws_id':2, 'subws_id':4, 'wyield':116, 
+                          'wyield_mn': 178.173, 'cyield':110}}
+
+        hydropower_core.write_csv_table(shed_table, field_list, 
+                                             output_path)
+        
+        invest_test_core.assertTwoCSVEqualURI(self, reg_table_path, output_path)
+        
 #    def test_hydropower_core_sum_mean_dict_sum(self):
 #        """A by hand test for the sum_mean_dict function
 #        

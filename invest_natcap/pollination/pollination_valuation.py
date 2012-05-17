@@ -13,7 +13,8 @@ LOGGER = logging.getLogger('pollination_valuation')
 
 def execute(args):
     """Open files necessary for the valuation portion of the pollination model
-        and execute the valuation component.
+        and execute the valuation component.  Entries are required unless
+        otherwise noted.
 
         args - a python dictionary with at least the following entries:
         args['workspace_dir'] - a uri to a directory that contains files for
@@ -26,6 +27,11 @@ def execute(args):
         args['wild_pollination_proportion'] - a python int or float
             representing the proportion of total crop yield attributed only
             to wild pollination.
+        args['value_future'] - a python boolean.  Indicates whether future
+            scenario should be valuated in addition to the current scenario.
+        args['results_suffix'] - a python string (optional). If provided, it
+            must match the results suffix used for the desired biophysical
+            run of the pollination model.
 
         returns nothing"""
 
@@ -44,38 +50,54 @@ def execute(args):
     guilds_table = fileio.find_handler(args['guilds_uri'])
     valuation_args['guilds'] = guilds_table
 
-    # Open rasters that we need from the workspace, which should have been
-    # created from the run of the pollination biophysical model.
-    foraging_avg_uri = os.path.join(out_dir, 'frm_avg.tif')
-    LOGGER.debug('Opening raster from biophysical: %s', foraging_avg_uri)
-    valuation_args['foraging_average'] = gdal.Open(foraging_avg_uri)
-    agmap_uri = os.path.join(inter_dir, 'agmap.tif')
-    LOGGER.debug('Opening raster from biophysical: %s', foraging_avg_uri)
-    valuation_args['ag_map'] = gdal.Open(agmap_uri)
+    try:
+        suffix = args['results_suffix']
+    except:
+        suffix = ''
 
-    valuation_args['species'] = {}
-    for species in [row['species'] for row in guilds_table.table]:
-        valuation_args['species'][species] = {}
-        supply_uri = os.path.join(inter_dir, 'sup_' + species + '.tif')
-        foraging_uri = os.path.join(inter_dir, 'frm_' + species + '.tif')
-        LOGGER.debug('Opening raster from biophysical: %s', foraging_uri)
-        LOGGER.debug('Opening raster from biophysical: %s', supply_uri)
-        valuation_args['species'][species]['species_abundance'] = gdal.Open(
-            supply_uri)
-        valuation_args['species'][species]['farm_abundance'] = gdal.Open(
-            foraging_uri)
+    landuse_scenarios = ['cur']
+    if args['value_future'] == True:
+        landuse_scenarios.append('fut')
 
-    # Create the total supply raster using the foraging average raster as a
-    # base
-    service_value_uri = os.path.join(out_dir, 'sup_val.tif')
-    valuation_args['service_value'] = pollination_core.make_raster_from_lulc(
-        valuation_args['foraging_average'], service_value_uri)
+    for scenario in landuse_scenarios:
+        # Open rasters that we need from the workspace, which should have been
+        # created from the run of the pollination biophysical model.
+        foraging_avg_uri = pollination_core.build_uri(out_dir, 'frm_avg.tif',
+            [scenario, suffix])
+        LOGGER.debug('Opening raster from biophysical: %s', foraging_avg_uri)
+        valuation_args['foraging_average'] = gdal.Open(foraging_avg_uri)
+        agmap_uri = pollination_core.build_uri(inter_dir, 'agmap.tif',
+            [scenario, suffix])
+        LOGGER.debug('Opening raster from biophysical: %s', foraging_avg_uri)
+        valuation_args['ag_map'] = gdal.Open(agmap_uri)
 
-    # Create the total farm value raster using the foraging average raster as a
-    # base
-    farm_value_uri = os.path.join(inter_dir, 'frm_val.tif')
-    valuation_args['farm_value'] = pollination_core.make_raster_from_lulc(
-        valuation_args['foraging_average'], farm_value_uri)
+        valuation_args['species'] = {}
+        for species in [row['species'] for row in guilds_table.table]:
+            valuation_args['species'][species] = {}
+            supply_uri = pollination_core.build_uri(inter_dir, 'sup_' + species +
+                '.tif', [scenario, suffix])
+            foraging_uri = pollination_core.build_uri(inter_dir, 'frm_' + species +
+                '.tif', [scenario, suffix])
+            LOGGER.debug('Opening raster from biophysical: %s', foraging_uri)
+            LOGGER.debug('Opening raster from biophysical: %s', supply_uri)
+            valuation_args['species'][species]['species_abundance'] = gdal.Open(
+                supply_uri)
+            valuation_args['species'][species]['farm_abundance'] = gdal.Open(
+                foraging_uri)
 
-    # Execute the model.
-    pollination_core.valuation(valuation_args)
+        # Create the total supply raster using the foraging average raster as a
+        # base
+        service_value_uri = pollination_core.build_uri(out_dir, 'sup_val.tif',
+            [scenario, suffix])
+        valuation_args['service_value'] = pollination_core.make_raster_from_lulc(
+            valuation_args['foraging_average'], service_value_uri)
+
+        # Create the total farm value raster using the foraging average raster as a
+        # base
+        farm_value_uri = pollination_core.build_uri(inter_dir, 'frm_val.tif',
+            [scenario, suffix])
+        valuation_args['farm_value'] = pollination_core.make_raster_from_lulc(
+            valuation_args['foraging_average'], farm_value_uri)
+
+        # Execute the model.
+        pollination_core.valuation(valuation_args)
