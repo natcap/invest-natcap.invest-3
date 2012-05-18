@@ -2,7 +2,7 @@
 
 from osgeo import gdal
 
-import pollination_core
+from invest_natcap.pollination import pollination_core
 from invest_natcap.iui import fileio
 
 import os.path
@@ -56,10 +56,13 @@ def execute(args):
         suffix = ''
 
     landuse_scenarios = ['cur']
-    if args['value_future'] == True:
+    LOGGER.debug('value_future: %s', args['value_future'])
+    if args['value_future'] == True or args['value_future'] == 'True':
         landuse_scenarios.append('fut')
+    LOGGER.debug('Scenarios: %s', landuse_scenarios)
 
     for scenario in landuse_scenarios:
+        LOGGER.info('Starting valuation for %s scenario', scenario)
         # Open rasters that we need from the workspace, which should have been
         # created from the run of the pollination biophysical model.
         foraging_avg_uri = pollination_core.build_uri(out_dir, 'frm_avg.tif',

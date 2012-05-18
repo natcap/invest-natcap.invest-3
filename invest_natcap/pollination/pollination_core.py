@@ -42,6 +42,8 @@ def biophysical(args):
 
         returns nothing."""
 
+    LOGGER.debug('Starting pollination biophysical calculations')
+
     # mask agricultural classes to ag_map.
     make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
 
@@ -62,6 +64,7 @@ def biophysical(args):
 
         for resource, op in [('nesting', max), ('floral', sum)]:
             # Calculate the attribute's resources
+            LOGGER.debug('Calculating %s resource raster', resource)
             map_attribute(args['landuse'], args['landuse_attributes'],
                 guild_dict, args[resource + '_fields'],
                 species_dict[resource], op)
@@ -74,10 +77,13 @@ def biophysical(args):
         # the diameter of the blur.
         pixel_size = abs(args['landuse'].GetGeoTransform()[1])
         sigma = float(guild_dict['alpha'] / (2 * pixel_size))
+        LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
 
         # Fetch the floral resources raster and matrix from the args dictionary
         # apply a gaussian filter and save the floral resources raster to the
         # dataset.
+        LOGGER.debug('Applying neighborhood mappings to %s floral resources',
+            species)
         floral_raster = args['species'][species]['floral'].GetRasterBand(1)
         filtered_matrix = clip_and_op(floral_raster.ReadAsArray(), sigma,
             ndimage.gaussian_filter, floral_raster.GetNoDataValue())
@@ -89,6 +95,7 @@ def biophysical(args):
         # Rickett's reply to see if this is correct.
         # Once the pollination supply has been calculated, we add it to the
         # total abundance matrix.
+        LOGGER.debug('Calculating %s abundance index', species)
         nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
         supply_matrix = clip_and_op(nesting_raster.ReadAsArray(),
             filtered_matrix, np.multiply, nesting_raster.GetNoDataValue())
@@ -100,6 +107,7 @@ def biophysical(args):
         # Calculate the foraging ('farm abundance') index by applying a
         # gaussian filter to the foraging raster and then culling all pixels
         # that are not agricultural before saving it to the output raster.
+        LOGGER.debug('Calculating %s foraging/farm abundance index', species)
         foraging_raster = args['species'][species]['farm_abundance'].\
             GetRasterBand(1)
         foraging_matrix = clip_and_op(supply_matrix, sigma,
@@ -110,6 +118,7 @@ def biophysical(args):
 
         # Add the current foraging raster to the existing 'foraging_total'
         # raster
+        LOGGER.debug('Adding %s foraging abundance raster to total', species)
         foraging_total_matrix = clip_and_op(foraging_matrix,
             foraging_total_matrix, np.add, foraging_raster.GetNoDataValue())
 
@@ -132,10 +141,13 @@ def biophysical(args):
     # Calculate the mean pollinator supply (pollinator abundance) by taking the
     # abundance_total_matrix and dividing it by the number of pollinators.
     # Then, save the resulting matrix to its raster
+    LOGGER.debug('Calculating mean pollinator supply')
     np.putmask(foraging_total_matrix, foraging_total_matrix < 0, 0)
     abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
         divide, abundance_total_raster.GetNoDataValue())
     abundance_total_raster.WriteArray(abundance_total_matrix)
+
+    LOGGER.debug('Finished pollination biophysical calculations')
 
 
 def valuation(args):
@@ -155,6 +167,8 @@ def valuation(args):
         args['ag_map'] - a GDAL dataset
 
         returns nothing"""
+
+    LOGGER.debug('Starting valuation')
 
     # Apply the half-saturation yield function from the documentation.
     calculate_yield(args['foraging_average'], args['farm_value'],
@@ -185,6 +199,7 @@ def valuation(args):
 
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
+        LOGGER.debug('Calculating service value for %s', species)
         # Open necessary matrices
         species_foraging_matrix = species_dict['farm_abundance'].\
             GetRasterBand(1).ReadAsArray()
@@ -215,18 +230,22 @@ def valuation(args):
         guild_dict = args['guilds'].get_table_row('species', species)
         pixel_size = abs(args['farm_value'].GetGeoTransform()[1])
         sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
+        LOGGER.debug('Pixel size: %s, sigma: %s')
 
         # Apply a gaussian blur to the species' supply raster
+        LOGGER.debug('Applying neighborhood calculations for %s supply',
+            species)
         blurred_supply = clip_and_op(ag_masked_matrix, sigma,
             ndimage.gaussian_filter, in_nodata, out_nodata)
 
         # Add the pollinator service value to the total value raster
+        LOGGER.debug('Adding %s service value to total value raster', species)
         farm_tot_matrix = clip_and_op(farm_tot_matrix, blurred_supply,
             np.add, in_nodata, out_nodata)
 
     # Write the pollination service value to its raster
     args['service_value'].GetRasterBand(1).WriteArray(farm_tot_matrix)
-
+    LOGGER.debug('Finished calculating service value')
 
 def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
     """Calculate the yield raster.
@@ -238,6 +257,8 @@ def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
             pollinators.  An int or float from 0 to 1.
 
         returns nothing"""
+
+    LOGGER.debug('Calculating yield')
 
     # Calculate the yield raster
     k = float(half_sat)
@@ -256,6 +277,7 @@ def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
     invest_core.vectorize1ArgOp(in_raster.GetRasterBand(1), calc_yield,
         out_raster.GetRasterBand(1))
 
+    LOGGER.debug('Finished calculating yield')
 
 def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
@@ -349,6 +371,8 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
 
         returns nothing."""
 
+    LOGGER.debug('Making agricultural raster')
+
     # Fetch the landcover raster's nodata value
     lu_nodata = landuse_raster.GetRasterBand(1).GetNoDataValue()
 
@@ -386,6 +410,7 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
     invest_core.vectorize1ArgOp(landuse_raster.GetRasterBand(1), ag_func,
         ag_raster.GetRasterBand(1))
 
+    LOGGER.debug('Finished making agricultural raster')
 
 def make_raster_from_lulc(lulc_dataset, raster_uri):
     LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
