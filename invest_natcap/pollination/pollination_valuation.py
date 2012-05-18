@@ -56,8 +56,11 @@ def execute(args):
         suffix = ''
 
     landuse_scenarios = ['cur']
-    if args['value_future'] == True:
-        landuse_scenarios.append('fut')
+    try:
+        if args['value_future'] == True:
+            landuse_scenarios.append('fut')
+    except KeyError:
+        pass
     LOGGER.debug('Scenarios: %s', landuse_scenarios)
 
     for scenario in landuse_scenarios:
