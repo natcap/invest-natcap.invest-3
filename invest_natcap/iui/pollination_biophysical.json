@@ -47,7 +47,8 @@
                             "args_id": "landuse_attributes_uri",
                             "required": true,
                             "defaultValue": "Pollination/Input/LU.dbf",
-                            "validateAs": {"type": "dbf"}
+                            "validateAs": {"type": "DBF",
+                                           "fieldsExist": ["LULC"]}
                         },
                         {
                             "id" : "fut_lulc_raster",
@@ -73,7 +74,8 @@
                     "defaultValue": "Pollination/Input/Guild.dbf",
                     "args_id": "guilds_uri",
                     "required": true,
-                    "validateAs": {"type": "DBF"}
+                    "validateAs": {"type": "DBF",
+                                   "fieldsExist": ["SPECIES", "ALPHA"]}
                 },
                 {
                     "id" : "ag_classes",
