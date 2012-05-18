@@ -57,4 +57,5 @@ setup(name='invest_natcap',
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
                              sources = cython_source_files)],
+      options=options,
       **py2exe_args)
