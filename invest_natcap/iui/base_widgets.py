@@ -981,6 +981,10 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
             returns an instance of CheckBox"""
 
 #        super(CheckBox, self).__init__(attributes)
+        # Automatically assume that the checkbox value should be cast to a
+        # boolean if the user has not specified differently.
+        if 'dataType' not in attributes:
+            attributes['dataType'] = 'boolean'
         QtGui.QCheckBox.__init__(self)
         DynamicPrimitive.__init__(self, attributes)
 
