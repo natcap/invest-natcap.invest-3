@@ -49,7 +49,7 @@ def biophysical(args):
                                 .                        .                    .
                                 .                        .                    .       }
     args['frac_post_process']- the fraction of edible fish left after processing is done to
-                        remove underirable parts
+                        remove undesirable parts
     args['mort_rate_daily']- mortality rate among fish  in a year, divided by 365
     args['duration']- duration of the simulation, in years
     '''
@@ -68,15 +68,24 @@ def biophysical(args):
     sf_copy = ds_copy = driver.CopyDataSource(args['ff_farm_file'], out_path)
     layer = sf_copy.GetLayer()
     
-    cycle_field = ogr.FieldDefn('NUM_CYCLES', ogr.OFTReal)
+    #This adds the number of cycles completed by each farm to their shapefile feature
+    cycle_field = ogr.FieldDefn('Tot_Cycles', ogr.OFTReal)
     layer.CreateField(cycle_field)
     
     for feature in layer:
         
         feature_ID = feature.items()[args['farm_ID']]
-        feature.SetField('NUM_CYCLES', cycles['feature_ID'])
+        feature.SetField('Tot_Cycles', cycles['feature_ID'])
         
         layer.SetFeature(feature)
+        
+    #Now want to add the total processed weight of each farm as a second feature on the
+    #outgoing shapefile- abstracting the calculation of this to a separate function,
+    #but it will return a dictionary with a int->float mapping for 
+    #farm_ID->processed weight
+    proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
+                                   args['mort_rate_daily'], cycles)
+
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -144,3 +153,22 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     #to the main function
     return (cycles_completed, fish_weights)
 
+def calc_proc_weight(farm_op_dict, frac, mort, cycles):
+    #This will yield one output- a dictionary which will hold a mapping from every farm
+    # (as identified by farm_ID) to the total processed weight of each farm
+    #Since our mortality rate, and fraction are the same across all cycles, this function
+    #will calculate the processed weight for one cycle, then multiply by the number
+    #of cycles that each individual farm completed
+    
+    for f in range (1, len(farm_op_dict)+1):
+        
+        f_hv_wt = farm_op_dict[f['target weight of fish at harvest (kg)']]
+        f_num_fish = farm_op_dict[f['number of fish in farm']]
+        cy_comp = cycles[f]
+        
+        #sn_cy_proc_wt = f_hv_wt * frac * f_num_fish
+        #To properly do this equation, you need to know how many days each cycle took,
+        #therefore, need to create some sort of counter for each cycle that when adding
+        # cycle to the number compled, also creates a dictionary mapping that cycle number
+        #to the number of days that it took to complete that cycle, which can then be used
+        #later to apply against the daily mortaility rate 
