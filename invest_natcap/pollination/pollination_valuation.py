@@ -56,7 +56,6 @@ def execute(args):
         suffix = ''
 
     landuse_scenarios = ['cur']
-    LOGGER.debug('value_future: %s', args['value_future'])
     if args['value_future'] == True:
         landuse_scenarios.append('fut')
     LOGGER.debug('Scenarios: %s', landuse_scenarios)
