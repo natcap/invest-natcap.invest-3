@@ -41,15 +41,6 @@
                             "validateAs": {"type": "GDAL"}
                         },
                         {
-                            "id" : "fut_lulc_raster",
-                            "type": "hideableFileEntry",
-                            "label": "Calculate future scenario",
-                            "args_id": "landuse_fut_uri",
-                            "required": false,
-                            "defaultValue": "Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
-                            "validateAs": {"type": "GDAL"}
-                        },
-                        {
                             "id" : "landcover_attribute_table",
                             "type": "file",
                             "label": "Landcover attribute table",
@@ -57,6 +48,15 @@
                             "required": true,
                             "defaultValue": "Pollination/Input/LU.dbf",
                             "validateAs": {"type": "dbf"}
+                        },
+                        {
+                            "id" : "fut_lulc_raster",
+                            "type": "hideableFileEntry",
+                            "label": "Calculate future scenario",
+                            "args_id": "landuse_fut_uri",
+                            "required": false,
+                            "defaultValue": "Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
+                            "validateAs": {"type": "GDAL"}
                         }
                     ]
                 }
