@@ -14,6 +14,217 @@ import invest_cython_core
 
 logger = logging.getLogger('invest_core')
 
+def new_raster_from_base(base, outputURI, format, nodata, datatype):
+    """Create a new, empty GDAL raster dataset with the spatial references,
+        dimensions and geotranforms of the base GDAL raster dataset.
+        
+        base - a the GDAL raster dataset to base output size, and transforms on
+        outputURI - a string URI to the new output raster dataset.
+        format - a string representing the GDAL file format of the 
+            output raster.  See http://gdal.org/formats_list.html for a list
+            of available formats.  This parameter expects the format code, such
+            as 'GTiff' or 'MEM'
+        nodata - a value that will be set as the nodata value for the 
+            output raster.  Should be the same type as 'datatype'
+        datatype - the pixel datatype of the output raster, for example 
+            gdal.GDT_Float32.  See the following header file for supported 
+            pixel types:
+            http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
+                
+        returns a new GDAL raster dataset."""
+
+    cols = base.RasterXSize
+    rows = base.RasterYSize
+    projection = base.GetProjection()
+    geotransform = base.GetGeoTransform()
+    return new_raster(cols, rows, projection, geotransform, format, nodata,
+                     datatype, base.RasterCount, outputURI)
+
+def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
+              bands, outputURI):
+    """Create a new raster with the given properties.
+    
+        cols - number of pixel columns
+        rows - number of pixel rows
+        projection - the datum
+        geotransform - the coordinate system
+        format - a string representing the GDAL file format of the 
+            output raster.  See http://gdal.org/formats_list.html for a list
+            of available formats.  This parameter expects the format code, such
+            as 'GTiff' or 'MEM'
+        nodata - a value that will be set as the nodata value for the 
+            output raster.  Should be the same type as 'datatype'
+        datatype - the pixel datatype of the output raster, for example 
+            gdal.GDT_Float32.  See the following header file for supported 
+            pixel types:
+            http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
+        bands - the number of bands in the raster
+        outputURI - the file location for the outputed raster.  If format
+            is 'MEM' this can be an empty string
+            
+        returns a new GDAL raster with the parameters as described above"""
+
+    driver = gdal.GetDriverByName(format)
+    newRaster = driver.Create(str(outputURI), cols, rows, bands, datatype)
+    newRaster.SetProjection(projection)
+    newRaster.SetGeoTransform(geotransform)
+    for i in range(bands):
+        newRaster.GetRasterBand(i + 1).SetNoDataValue(nodata)
+        newRaster.GetRasterBand(i + 1).Fill(nodata)
+
+    return newRaster
+
+def pixel_area(dataset):
+    """Calculates the pixel area of the given dataset in Ha.
+    
+        dataset - GDAL dataset
+    
+        returns area in Ha of each pixel in dataset"""
+
+    srs = osr.SpatialReference()
+    srs.SetProjection(dataset.GetProjection())
+    linearUnits = srs.GetLinearUnits()
+    geotransform = dataset.GetGeoTransform()
+    #take absolute value since sometimes negative widths/heights
+    areaMeters = abs(geotransform[1] * geotransform[5] * (linearUnits ** 2))
+    return areaMeters / (10 ** 4) #convert m^2 to Ha
+
+def pixel_size_in_meters(dataset, coord_trans, point):
+    """Calculates the pixel width and height in meters given a coordinate 
+        transform and reference point on the dataset that's close to the 
+        transform's projected coordinate sytem.  This is only necessary
+        if dataset is not already in a meter coordinate system, for example
+        dataset may be in lat/long (WGS84).  
+     
+       dataset - A projected GDAL dataset in the form of lat/long decimal degrees
+       coord_trans - An OSR coordinate transformation from dataset coordinate
+           system to meters
+       point - a reference point close to the coordinate transform coordinate
+           system.  must be in the same coordinate system as dataset.
+       
+       returns a tuple containing (pixel width in meters, pixel height in 
+           meters)"""
+    #Get the first points (x,y) from geoTransform
+    geo_tran = dataset.GetGeoTransform()    
+    pixel_size_x = geo_tran[1]
+    pixel_size_y = geo_tran[5]
+    top_left_x = point[0]
+    top_left_y = point[1]
+    LOGGER.debug('pixel_size_x: %s', pixel_size_x)
+    LOGGER.debug('pixel_size_x: %s', pixel_size_y)
+    LOGGER.debug('top_left_x : %s', top_left_x)
+    LOGGER.debug('top_left_y : %s', top_left_y)
+    #Create the second point by adding the pixel width/height
+    new_x = top_left_x + pixel_size_x
+    new_y = top_left_y + pixel_size_y
+    LOGGER.debug('top_left_x : %s', new_x)
+    LOGGER.debug('top_left_y : %s', new_y)
+    #Transform two points into meters
+    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
+    point_2 = coord_trans.TransformPoint(new_x, new_y)
+    #Calculate the x/y difference between two points
+    #taking the absolue value because the direction doesn't matter for pixel
+    #size in the case of most coordinate systems where y increases up and x
+    #increases to the right (right handed coordinate system).
+    pixel_diff_x = abs(point_2[0] - point_1[0])
+    pixel_diff_y = abs(point_2[1] - point_1[1])
+    LOGGER.debug('point1 : %s', point_1)
+    LOGGER.debug('point2 : %s', point_2)
+    LOGGER.debug('pixel_diff_x : %s', pixel_diff_x)
+    LOGGER.debug('pixel_diff_y : %s', pixel_diff_y)
+    return (pixel_diff_x, pixel_diff_y)
+
+def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile, shp):
+    """Create a blank raster based on a vector file extent.  This code is
+        adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
+    
+        xRes - the x size of a pixel in the output dataset must be a positive 
+            value
+        yRes - the y size of a pixel in the output dataset must be a positive 
+            value
+        format - gdal GDT pixel type
+        nodata - the output nodata value
+        rasterFile - URI to file location for raster
+        shp - vector shapefile to base extent of output raster on
+        
+        returns a blank raster whose bounds fit within `shp`s bounding box
+            and features are equivalent to the passed in data"""
+
+    #Determine the width and height of the tiff in pixels based on desired
+    #x and y resolution
+    shpExtent = shp.GetLayer(0).GetExtent()
+    tiff_width = int(math.ceil(abs(shpExtent[1] - shpExtent[0]) / xRes))
+    tiff_height = int(math.ceil(abs(shpExtent[3] - shpExtent[2]) / yRes))
+
+    driver = gdal.GetDriverByName('GTiff')
+    raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
+    raster.GetRasterBand(1).SetNoDataValue(nodata)
+
+    #Set the transform based on the upper left corner and given pixel
+    #dimensions
+    raster_transform = [shpExtent[0], xRes, 0.0, shpExtent[3], 0.0, -yRes]
+    raster.SetGeoTransform(raster_transform)
+
+    #Use the same projection on the raster as the shapefile
+    srs = osr.SpatialReference()
+    srs.ImportFromWkt(shp.GetLayer(0).GetSpatialRef().__str__())
+    raster.SetProjection(srs.ExportToWkt())
+
+    #Initialize everything to nodata
+    raster.GetRasterBand(1).Fill(nodata)
+    raster.GetRasterBand(1).FlushCache()
+
+def calculate_intersection_rectangle(rasterList):
+    """Return a bounding box of the intersections of all the rasters in the
+        list.
+        
+        rasterList - a list of GDAL rasters in the same projection and 
+            coordinate system
+            
+        returns a 4 element list that bounds the intersection of all the 
+            rasters in rasterList.  [left, top, right, bottom]"""
+
+    #Define the initial bounding box
+    gt = rasterList[0].GetGeoTransform()
+    #order is left, top, right, bottom of rasterbounds
+    boundingBox = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
+                   gt[3] + gt[5] * rasterList[0].RasterYSize]
+
+    for band in rasterList:
+        #intersect the current bounding box with the one just read
+        gt = band.GetGeoTransform()
+        LOGGER.debug('geotransform on raster band %s %s' % (gt, band))
+        LOGGER.debug('pixel x and y %s %s' % (band.RasterXSize,
+                                              band.RasterYSize))
+        rec = [gt[0], gt[3], gt[0] + gt[1] * band.RasterXSize,
+               gt[3] + gt[5] * band.RasterYSize]
+        #This intersects rec with the current bounding box
+        boundingBox = [max(rec[0], boundingBox[0]),
+                       min(rec[1], boundingBox[1]),
+                       min(rec[2], boundingBox[2]),
+                       max(rec[3], boundingBox[3])]
+    return boundingBox
+
+def interpolate_matrix(x, y, z, newx, newy, degree=1):
+    """Takes a matrix of values from a rectangular grid along with new 
+        coordinates and returns a matrix with those values interpolated along
+        the new axis points.
+        
+        x - an array of x points on the grid
+        y - an array of y points on the grid
+        z - the values on the grid
+        newx- the new x points for the interpolated grid
+        newy - the new y points for the interpolated grid
+        
+        returns a matrix of size len(newx)*len(newy) whose values are 
+            interpolated from z"""
+
+    #Create an interpolator for the 2D data.  Here's a reference
+    #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
+    #not using interp2d because this bug: http://projects.scipy.org/scipy/ticket/898
+    spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=degree, ky=degree)
+    return spl(newx, newy).transpose()
+
 def calculateRasterStats(band):
     """Calculates and sets the min, max, stdev, and mean for the given band.
     

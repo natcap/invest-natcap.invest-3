@@ -5,9 +5,13 @@ import sys, os
 from osgeo import gdal, ogr
 import json
 
-import carbon_core
+try:
+    import carbon_core
+except ImportError:
+    from invest_natcap.carbon import carbon_core
+    
 from invest_natcap.dbfpy import dbf
-import invest_cython_core
+from invest_natcap.invest_core import invest_core
 
 import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -118,7 +122,7 @@ def execute(args):
     for rasterName, rasterPath in outputURIs.iteritems():
         logger.debug('creating output raster %s', rasterPath)
         biophysicalArgs[rasterName] = \
-            invest_cython_core.newRasterFromBase(biophysicalArgs['lulc_cur'],
+            invest_core.newRasterFromBase(biophysicalArgs['lulc_cur'],
                               rasterPath, 'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the biophysical part of the carbon model.
