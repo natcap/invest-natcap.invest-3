@@ -9,13 +9,12 @@ import numpy as np
 cython_source_files = ['invest_cython_core/invest_cython_core.pyx',
                        'invest_cython_core/simplequeue.c']
 
-options = {}
 console = []
 data_files = []
 py2exe_args = {}
 if platform.system() == 'Windows':
     import py2exe
-    options = {"py2exe":{"includes":["sip"]}}
+    py2exe_args['options'] = {"py2exe":{"includes":["sip"]}}
     py2exe_args['console'] = \
         ['invest_carbon_biophysical.py',
          'invest_carbon_valuation.py',
@@ -40,7 +39,7 @@ if platform.system() == 'Windows':
         py2exe_args['data_files'].append(local_files)
 
 setup(name='invest_natcap',
-      version='tip',
+      version='2.3.0',
       packages=['invest_natcap',
                 'invest_natcap.carbon',
                 'invest_natcap.dbfpy',
@@ -57,5 +56,4 @@ setup(name='invest_natcap',
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
                              sources = cython_source_files)],
-      options=options,
       **py2exe_args)
