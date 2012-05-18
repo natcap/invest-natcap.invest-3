@@ -41,6 +41,16 @@
                             "validateAs": {"type": "GDAL"}
                         },
                         {
+                            "id" : "landcover_attribute_table",
+                            "type": "file",
+                            "label": "Landcover attribute table",
+                            "args_id": "landuse_attributes_uri",
+                            "required": true,
+                            "defaultValue": "Pollination/Input/LU.dbf",
+                            "validateAs": {"type": "DBF",
+                                           "fieldsExist": ["LULC"]}
+                        },
+                        {
                             "id" : "fut_lulc_raster",
                             "type": "hideableFileEntry",
                             "label": "Calculate future scenario",
@@ -48,15 +58,6 @@
                             "required": false,
                             "defaultValue": "Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
                             "validateAs": {"type": "GDAL"}
-                        },
-                        {
-                            "id" : "landcover_attribute_table",
-                            "type": "file",
-                            "label": "Landcover attribute table",
-                            "args_id": "landuse_attributes_uri",
-                            "required": true,
-                            "defaultValue": "Pollination/Input/LU.dbf",
-                            "validateAs": {"type": "dbf"}
                         }
                     ]
                 }
@@ -73,7 +74,8 @@
                     "defaultValue": "Pollination/Input/Guild.dbf",
                     "args_id": "guilds_uri",
                     "required": true,
-                    "validateAs": {"type": "DBF"}
+                    "validateAs": {"type": "DBF",
+                                   "fieldsExist": ["SPECIES", "ALPHA"]}
                 },
                 {
                     "id" : "ag_classes",

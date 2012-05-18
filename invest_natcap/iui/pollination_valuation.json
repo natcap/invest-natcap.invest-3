@@ -27,7 +27,8 @@
                     "defaultValue": "Pollination/Input/Guild.dbf",
                     "args_id": "guilds_uri",
                     "required": true,
-                    "validateAs": {"type": "DBF"}
+                    "validateAs": {"type": "DBF",
+                                   "fieldsExist": ["SPECIES", "APLHA"]}
                 },
                 {
                     "id" : "half_saturation_const",
