@@ -10,7 +10,7 @@ import numpy as np
 from Cython.Distutils import build_ext
 VERSION = '2.3.0a1'
 
-cython_source_files = ['invest_cython_core/invest_cython_core.pyx',
+CYTHON_SOURCE_FILES = ['invest_cython_core/invest_cython_core.pyx',
                        'invest_cython_core/simplequeue.c']
 
 console = []
@@ -18,18 +18,25 @@ data_files = []
 py2exe_args = {}
 
 
-DIST_DIR = 'InVEST_'+VERSION.replace('.','_') + '_' + \
+#This makes a destination directory with the name invest_version_datetime.
+#Will make it easy to see the difference between different builds of the 
+#same version.
+DIST_DIR = 'invest_'+VERSION.replace('.','_') + '_' + \
     datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
 
-
+#If it's windows assume we're going the py2exe route.
 if platform.system() == 'Windows':
     import py2exe
     py2exe_args['options'] = \
         {'py2exe':{
+            #Sometimes if I don't include 'sip' it doesn't build, found
+            #this on a stackoverflow thread that I've now lost
             'includes':['sip'],
             'dist_dir': DIST_DIR
             }
          }
+
+    #These are the exes that will get built
     py2exe_args['console'] = \
         ['invest_carbon_biophysical.py',
          'invest_carbon_valuation.py',
@@ -38,6 +45,9 @@ if platform.system() == 'Windows':
          'invest_timber.py',
          'invest_hydropower_valuation.py',
          'invest_water_scarcity.py']
+
+    #Need to manually bring along the json configuration files to
+    #the current build directory
     py2exe_args['data_files'] = \
         [('.',['invest_natcap/iui/carbon_biophysical.json',
                'invest_natcap/iui/carbon_valuation.json',
@@ -49,8 +59,13 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/timber.json',
                'invest_natcap/iui/pollination_biophysical.json'])]
 
+
+    #This adds the entire invest_natcap subdirectories and files, excluding
+    #pyc files, to the build so iui can dynamically load the necessary scripts
+    #at runtime.
     for root, subFolders, files in os.walk('invest_natcap'):
-        local_files = (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
+        local_files = \
+            (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
         py2exe_args['data_files'].append(local_files)
 
 setup(name='invest_natcap',
@@ -70,5 +85,5 @@ setup(name='invest_natcap',
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
-                             sources = cython_source_files)],
+                             sources = CYTHON_SOURCE_FILES)],
       **py2exe_args)
