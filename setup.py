@@ -31,8 +31,22 @@ if platform.system() == 'Windows':
         {'py2exe':{
             #Sometimes if I don't include 'sip' it doesn't build, found
             #this on a stackoverflow thread that I've now lost
-            'includes':['sip'],
-            'dist_dir': DIST_DIR
+            'includes': ['sip',
+                         'invest_natcap'],
+            'dist_dir': DIST_DIR,
+            'packages': ['invest_natcap',
+                        'invest_natcap.carbon',
+                        'invest_natcap.dbfpy',
+                        'invest_natcap.hydropower',
+                        'invest_natcap.invest_core',
+                        'invest_natcap.iui',
+                        'invest_natcap.iui.dbfpy',
+                        'invest_natcap.sediment',
+                        'invest_natcap.timber',
+                        'invest_natcap.validator_core',
+                        'invest_natcap.wave_energy',
+                        'invest_natcap.pollination'],
+            'skip_archive': True
             }
          }
 
@@ -63,25 +77,25 @@ if platform.system() == 'Windows':
     #This adds the entire invest_natcap subdirectories and files, excluding
     #pyc files, to the build so iui can dynamically load the necessary scripts
     #at runtime.
-    for root, subFolders, files in os.walk('invest_natcap'):
-        local_files = \
-            (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
-        py2exe_args['data_files'].append(local_files)
+#    for root, subFolders, files in os.walk('invest_natcap'):
+#        local_files = \
+#            (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
+#        py2exe_args['data_files'].append(local_files)
 
 setup(name='invest_natcap',
       version=VERSION,
-      packages=['invest_natcap',
-                'invest_natcap.carbon',
-                'invest_natcap.dbfpy',
-                'invest_natcap.hydropower',
-                'invest_natcap.invest_core',
-                'invest_natcap.iui',
-                'invest_natcap.iui.dbfpy',
-                'invest_natcap.sediment',
-                'invest_natcap.timber',
-                'invest_natcap.validator_core',
-                'invest_natcap.wave_energy',
-                'invest_natcap.pollination'],
+#      packages=['invest_natcap',
+#                'invest_natcap.carbon',
+#                'invest_natcap.dbfpy',
+#                'invest_natcap.hydropower',
+#                'invest_natcap.invest_core',
+#                'invest_natcap.iui',
+#                'invest_natcap.iui.dbfpy',
+#                'invest_natcap.sediment',
+#                'invest_natcap.timber',
+#                'invest_natcap.validator_core',
+#                'invest_natcap.wave_energy',
+#                'invest_natcap.pollination'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
