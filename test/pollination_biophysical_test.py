@@ -99,6 +99,16 @@ class PollinationBiophysicalTest(PollinationTest):
         self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
             'biophysical_output', 'with_ag_classes'))
 
+   # def test_ag_30m(self):
+   #     """Regression test for pollination_biophysical.  Includes ag classes."""
+   #     self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
+   #         + ' 83 84 85 88 90 91 92')
+   #     self.args['landuse_cur_uri'] = 'data/base_data/terrestrial/lulc_samp_cur'
+   #     pollination_biophysical.execute(self.args)
+   #     self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
+   #         'biophysical_output', 'with_ag_classes'))
+
+
 class PollinationValuationTest(PollinationTest):
     def setUp(self):
         PollinationTest.setUp(self)
