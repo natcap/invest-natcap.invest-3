@@ -3,6 +3,7 @@ pollination model."""
 
 import unittest
 import os
+import shutil
 
 import invest_test_core
 import invest_natcap.pollination.pollination_biophysical as\
@@ -16,6 +17,8 @@ REGRESSION_FOLDER_BASE = 'data/pollination/'
 
 class PollinationTest(unittest.TestCase):
     def setUp(self):
+        self.workspace_dir = 'data/pollination/test_workspace'
+        self.guilds_uri = TEST_DATA_DIR + '/Guild.dbf'
         self.intermediate_rasters = {'workspace_subfolder': 'intermediate',
                                      'raster_uri_base': [],
                                      'uri_mid' : []}
@@ -46,15 +49,11 @@ class PollinationTest(unittest.TestCase):
 class PollinationBiophysicalTest(PollinationTest):
     def setUp(self):
         """Set up arguments dictionary and other inputs."""
-        self.args = {'workspace_dir': 'data/pollination/test_workspace',
+        PollinationTest.setUp(self)
+        self.args = {'workspace_dir': self.workspace_dir,
                      'landuse_cur_uri': TEST_DATA_DIR + '/landuse_cur_200m.tif',
                      'landuse_attributes_uri': TEST_DATA_DIR + '/LU.dbf',
-                     'guilds_uri': TEST_DATA_DIR + '/Guild.dbf'}
-
-        self.valuation_args = {'workspace_dir': self.args['workspace_dir'],
-                               'guilds_uri': self.args['guilds_uri'],
-                               'half_saturation': 0.125,
-                               'wild_pollination_proportion': 1}
+                     'guilds_uri': self.guilds_uri}
 
         self.intermediate_rasters = {'workspace_subfolder': 'intermediate',
                                      'raster_uri_base': ['frm', 'hf',
@@ -68,13 +67,42 @@ class PollinationBiophysicalTest(PollinationTest):
     def test_regression(self):
         """Regression test for pollination_biophysical."""
         pollination_biophysical.execute(self.args)
-        self.assert_pollination_rasters(os.path.join('biophysical_output',
-            REGRESSION_FOLDER_BASE, 'no_ag_classes'))
+        self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
+            'biophysical_output','no_ag_classes'))
 
     def test_ag_classes(self):
         """Regression test for pollination_biophysical.  Includes ag classes."""
         self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
             + ' 83 84 85 88 90 91 92')
         pollination_biophysical.execute(self.args)
-        self.assert_pollination_rasters(os.path.join('biophysical_output',
-            REGRESSION_FOLDER_BASE, 'with_ag_classes'))
+        self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
+            'biophysical_output', 'with_ag_classes'))
+
+class PollinationValuationTest(PollinationTest):
+    def setUp(self):
+        PollinationTest.setUp(self)
+        self.args = {'workspace_dir': self.workspace_dir,
+                     'guilds_uri': self.guilds_uri,
+                     'half_saturation': 0.125,
+                     'wild_pollination_proportion': 1}
+
+        self.intermediate_rasters = {'workspace_subfolder': 'intermediate',
+                                     'raster_uri_base': ['frm_val'],
+                                     'uri_mid' : ['']}
+
+        self.output_rasters = {'workspace_subfolder': 'output',
+                               'raster_uri_base': ['sup_val'],
+                               'uri_mid': ['']}
+
+        self.biophysical_sample_dir = os.path.join(REGRESSION_FOLDER_BASE,
+            'biophysical_output', 'with_ag_classes')
+        shutil.rmtree(self.workspace_dir)
+        shutil.copytree(self.biophysical_sample_dir, self.workspace_dir)
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+    def test_regression(self):
+        pollination_valuation.execute(self.args)
+        self.assert_pollination_rasters(self.biophysical_sample_dir)
+
