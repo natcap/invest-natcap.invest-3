@@ -1,11 +1,13 @@
+"""distutils setup.py for InVEST 3.0 framework and models"""
+
 from distutils.core import setup
 from distutils.extension import Extension
-from Cython.Distutils import build_ext
 import platform
 import os
+import datetime
 
 import numpy as np
-
+from Cython.Distutils import build_ext
 VERSION = '2.3.0a1'
 
 cython_source_files = ['invest_cython_core/invest_cython_core.pyx',
@@ -35,7 +37,10 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/water_yield.json',
                'invest_natcap/iui/timber.json',
                'invest_natcap/iui/pollination_biophysical.json'])]
-    py2exe_args['dist_dir'] = 'InVEST_'+VERSION.replace('.','_')
+
+    now = datetime.datetime.now()
+    py2exe_args['dist_dir'] = 'InVEST_'+VERSION.replace('.','_') + \
+        now.strftime("%Y-%m-%d_%H_%M_%S")
 
     for root, subFolders, files in os.walk('invest_natcap'):
         local_files = (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
