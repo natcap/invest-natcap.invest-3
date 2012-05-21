@@ -6,6 +6,8 @@ import os
 
 import numpy as np
 
+VERSION = '2.3.0a1'
+
 cython_source_files = ['invest_cython_core/invest_cython_core.pyx',
                        'invest_cython_core/simplequeue.c']
 
@@ -33,13 +35,14 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/water_yield.json',
                'invest_natcap/iui/timber.json',
                'invest_natcap/iui/pollination_biophysical.json'])]
+    py2exe_args['dist_dir'] = 'jp'
 
     for root, subFolders, files in os.walk('invest_natcap'):
         local_files = (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
         py2exe_args['data_files'].append(local_files)
 
 setup(name='invest_natcap',
-      version='2.3.0',
+      version=VERSION,
       packages=['invest_natcap',
                 'invest_natcap.carbon',
                 'invest_natcap.dbfpy',
