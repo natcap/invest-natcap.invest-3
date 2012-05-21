@@ -16,9 +16,20 @@ cython_source_files = ['invest_cython_core/invest_cython_core.pyx',
 console = []
 data_files = []
 py2exe_args = {}
+
+
+DIST_DIR = 'InVEST_'+VERSION.replace('.','_') + '_' + \
+    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
+
+
 if platform.system() == 'Windows':
     import py2exe
-    py2exe_args['options'] = {"py2exe":{"includes":["sip"]}}
+    py2exe_args['options'] = \
+        {'py2exe':{
+            'includes':['sip'],
+            'dist_dir': DIST_DIR
+            }
+         }
     py2exe_args['console'] = \
         ['invest_carbon_biophysical.py',
          'invest_carbon_valuation.py',
@@ -37,10 +48,6 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/water_yield.json',
                'invest_natcap/iui/timber.json',
                'invest_natcap/iui/pollination_biophysical.json'])]
-
-    now = datetime.datetime.now()
-    py2exe_args['dist_dir'] = 'InVEST_'+VERSION.replace('.','_') + \
-        now.strftime("%Y-%m-%d_%H_%M_%S")
 
     for root, subFolders, files in os.walk('invest_natcap'):
         local_files = (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
