@@ -30,7 +30,8 @@ class DatatypeRegistrar(Registrar):
         Registrar.__init__(self)
 
         updates = {'int': int,
-                   'float': float}
+                   'float': float,
+                   'boolean': bool}
         self.update_map(updates)
 
     def eval(self, mapKey, opValues):
