@@ -75,7 +75,7 @@ def biophysical(args):
     for feature in layer:
         
         feature_ID = feature.items()[args['farm_ID']]
-        feature.SetField('Tot_Cycles', cycles['feature_ID'])
+        feature.SetField('Tot_Cycles', cycles_completed[feature_ID])
         
         layer.SetFeature(feature)
         
@@ -85,7 +85,17 @@ def biophysical(args):
     #farm_ID->processed weight
     proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
                                    args['mort_rate_daily'], cycles_completed, cycle_lengths)
-
+    
+    #Now, add the total processed weight as a shapefile feature
+    hrv_field = ogr.FieldDefn('Hrvwght_kg', ogr.OFTReal)
+    layer.CreateField(hrv_field)
+    
+    for feature in layer:
+        
+        feature_ID = feature.items()[args['farm_ID']]
+        feature.SetField('Hrvwght_kg', proc_weight[feature_ID])
+        
+        layer.SetFeature(feature)
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
