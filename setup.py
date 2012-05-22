@@ -46,7 +46,9 @@ if platform.system() == 'Windows':
                         'invest_natcap.validator_core',
                         'invest_natcap.wave_energy',
                         'invest_natcap.pollination'],
-            'skip_archive': True
+            #don't bundle files 
+            #http://www.py2exe.org/index.cgi/ListOfOptions
+            'bundle_files': 2, 
             }
          }
 
@@ -73,29 +75,9 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/timber.json',
                'invest_natcap/iui/pollination_biophysical.json'])]
 
-
-    #This adds the entire invest_natcap subdirectories and files, excluding
-    #pyc files, to the build so iui can dynamically load the necessary scripts
-    #at runtime.
-#    for root, subFolders, files in os.walk('invest_natcap'):
-#        local_files = \
-#            (root,[os.path.join(root,x) for x in files if not x.endswith('pyc')])
-#        py2exe_args['data_files'].append(local_files)
-
+#The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
-#      packages=['invest_natcap',
-#                'invest_natcap.carbon',
-#                'invest_natcap.dbfpy',
-#                'invest_natcap.hydropower',
-#                'invest_natcap.invest_core',
-#                'invest_natcap.iui',
-#                'invest_natcap.iui.dbfpy',
-#                'invest_natcap.sediment',
-#                'invest_natcap.timber',
-#                'invest_natcap.validator_core',
-#                'invest_natcap.wave_energy',
-#                'invest_natcap.pollination'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
