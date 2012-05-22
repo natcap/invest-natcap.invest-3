@@ -46,9 +46,8 @@ if platform.system() == 'Windows':
                         'invest_natcap.validator_core',
                         'invest_natcap.wave_energy',
                         'invest_natcap.pollination'],
-            #don't bundle files 
             #http://www.py2exe.org/index.cgi/ListOfOptions
-            'bundle_files': 2, 
+            'skip_archive': True
             }
          }
 
