@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Wave Energy Valuation",
-    "targetScript" : "invest_natcap/wave_energy/wave_energy_valuation.py",
+    "targetScript" : "invest_natcap.wave_energy.wave_energy_valuation",
     "modelName" : "wave_energy_valuation",
     "localDocURI": "./documentation/wave_energy.html",
     "height": 600,
