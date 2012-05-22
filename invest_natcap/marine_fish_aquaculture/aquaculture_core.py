@@ -58,7 +58,7 @@ def biophysical(args):
 
     #using a tuple to get data back from function, then update the shape files to reflect
     #these new attributes
-    weights, cycles = calc_farm_cycles(args['g_param_a'], args['g_param_b'], 
+    cycles_completed, cycle_lengths, weights = calc_farm_cycles(args['g_param_a'], args['g_param_b'], 
                                           args['water_temp_dict'], args['farm_op_dict'],
                                           args['duration'])
     
@@ -84,7 +84,7 @@ def biophysical(args):
     #but it will return a dictionary with a int->float mapping for 
     #farm_ID->processed weight
     proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
-                                   args['mort_rate_daily'], cycles)
+                                   args['mort_rate_daily'], cycles_completed, cycle_lengths)
 
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
@@ -100,12 +100,15 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     fish_weights = {}
     tau = 0.8
     cycles_completed = {}
+    cycle_lengths= {}
      
     for f in range (1, len(farm_op_dict)+1):
         #pre-load vars for fallowing period and pre-fish
         start_day = farm_op_dict[f['start day for growing']]
         fallow_per = farm_op_dict[f['Length of Fallowing period']]
         spec_farm_weights = {}
+        cycle_lengths[f] = {}
+        curr_cycle = 0
         
         fall_count = fallow_per
         
@@ -125,6 +128,8 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
                 spec_farm_weights[i] = \
                     farm_opt_dict[f['weight of fish at start (kg)']]
                 fall_count = fallow_per
+                curr_cycle = curr_cycle + 1
+                cycle_lengths[f[curr_cycle]] = 1
             
             #Marks the completion of a growth cycle
             elif spec_farm_weights[i-1] >= 5.4:
@@ -145,30 +150,41 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
                 g_weight = (a * (spec_farm_weights[i-1] ** b) * 
                     water_temp_dict[(i % 365)[f]] * tau) + spec_farm_weights[i-1]
                 
-                spec_farm_weights[i] = g_weight        
+                spec_farm_weights[i] = g_weight
+                cycle_lengths[f[curr_cycle]] = cycle_lengths[f[curr_cycle]] + 1        
         
         fish_weights[f] = spec_farm_weights
         
-    #Now, want to make a tuple from the two dictionaries, and send them back 
+    #Now, want to make a tuple from the three dictionaries, and send them back 
     #to the main function
-    return (cycles_completed, fish_weights)
+    return (cycles_completed, cycle_lengths, fish_weights)
 
-def calc_proc_weight(farm_op_dict, frac, mort, cycles):
+def calc_proc_weight(farm_op_dict, frac, mort, cycles_comp, cycle_lengths):
     #This will yield one output- a dictionary which will hold a mapping from every farm
     # (as identified by farm_ID) to the total processed weight of each farm
-    #Since our mortality rate, and fraction are the same across all cycles, this function
-    #will calculate the processed weight for one cycle, then multiply by the number
-    #of cycles that each individual farm completed
     
+    curr_cycle_totals = {}
+        
     for f in range (1, len(farm_op_dict)+1):
         
+        #pre-load farm specific vars
+        curr_cycle_totals[f] = 0
         f_hv_wt = farm_op_dict[f['target weight of fish at harvest (kg)']]
         f_num_fish = farm_op_dict[f['number of fish in farm']]
-        cy_comp = cycles[f]
         
-        #sn_cy_proc_wt = f_hv_wt * frac * f_num_fish
-        #To properly do this equation, you need to know how many days each cycle took,
-        #therefore, need to create some sort of counter for each cycle that when adding
-        # cycle to the number compled, also creates a dictionary mapping that cycle number
-        #to the number of days that it took to complete that cycle, which can then be used
-        #later to apply against the daily mortaility rate 
+        for c in range (1, cycles_comp[f]):
+        
+            #get cycle-lengths for this specific cycle
+            c_len = cycle_lengths[f[c]]
+            
+            #Now do the computation for each cycle individually, then add it to the total
+            #within the dictionary
+            e_exponent =  -mort * cycle_lengths[f[c]]
+            curr_cy_twp = f_hv_wt * frac * f_num_fish * exp(e_exponent)
+            
+            curr_cycle_totals[f] = curr_cycle_totals[f] + curr_cy_twp
+            
+    return curr_cycle_totals
+        
+        
+        
