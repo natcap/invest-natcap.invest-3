@@ -19,3 +19,11 @@ if __name__ == '__main__':
     aoi_ds = ogr.Open(sys.argv[1])
     point_ds = ogr.Open(sys.argv[2])
     attribute = sys.argv[3]
+
+    CELL_SIZE = 30
+
+    output_dataset = \
+        raster_utils.create_raster_from_vector_extents(CELL_SIZE, CELL_SIZE, 
+        gdal.GDT_Float32, -1e10, 'interpolated.tif', aoi_ds)
+ 
+    
