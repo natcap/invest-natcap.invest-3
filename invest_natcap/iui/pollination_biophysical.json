@@ -1,0 +1,111 @@
+{
+    "id" : "window",
+    "label": "Crop Pollination: Biophysical",
+    "targetScript" : "invest_natcap/pollination/pollination_biophysical.py",
+    "modelName" : "pollination_biophysical",
+    "localDocURI": "./documentation/croppollination.html",
+    "height": 400,
+    "width" : 500,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "Pollination",
+                    "required": true,
+                    "validateAs": {"type": "folder"}
+                }
+            ]
+        },
+        {
+            "id": "landcover_container",
+            "type": "container",
+            "label": "Land Use/Land Cover",
+            "elements": [
+                {
+                    "id": "landcover_list",
+                    "type": "list",
+                    "elements":[
+                        {
+                           "id" : "cur_lulc_raster",
+                            "args_id" : "landuse_cur_uri",
+                            "type": "file",
+                            "label": "Current land cover scenario raster",
+                            "defaultValue": "Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
+                            "required": true,
+                            "validateAs": {"type": "GDAL"}
+                        },
+                        {
+                            "id" : "landcover_attribute_table",
+                            "type": "file",
+                            "label": "Landcover attribute table",
+                            "args_id": "landuse_attributes_uri",
+                            "required": true,
+                            "defaultValue": "Pollination/Input/LU.dbf",
+                            "validateAs": {"type": "DBF",
+                                           "fieldsExist": ["LULC"],
+                                           "restrictions": [{"field": "LULC",
+                                                             "validateAs": {"type": "number",
+                                                                            "allowedValues": {"pattern":"[0-9]*\\.[0-9]*$"}}
+                                                            }]
+                                          }
+                        },
+                        {
+                            "id" : "fut_lulc_raster",
+                            "type": "hideableFileEntry",
+                            "label": "Calculate future scenario",
+                            "args_id": "landuse_fut_uri",
+                            "required": false,
+                            "defaultValue": "Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
+                            "validateAs": {"type": "GDAL"}
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "remaining_items_list",
+            "type": "list",
+            "elements": [
+                {
+                    "id" : "guilds",
+                    "type": "file",
+                    "label": "Guilds table",
+                    "defaultValue": "Pollination/Input/Guild.dbf",
+                    "args_id": "guilds_uri",
+                    "required": true,
+                    "validateAs": {"type": "DBF",
+                                   "fieldsExist": ["SPECIES", "ALPHA"],
+                                   "restrictions": [{"field": "ALPHA",
+                                                     "validateAs": {"type": "number",
+                                                                    "allowedValues": "[0-9]*\\.[0-9]*$"}}]}
+                },
+                {
+                    "id" : "ag_classes",
+                    "type": "text",
+                    "label": "Agricultural classes (space-separated)",
+                    "args_id": "ag_classes",
+                    "required": false,
+                    "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
+                    "validText": "[0-9 ]*",
+                    "dataType": "string"
+                },
+                {
+                    "id" : "results_suffix",
+                    "type": "text",
+                    "label": "Results suffix",
+                    "args_id": "results_suffix",
+                    "required": false,
+                    "width": 120,
+                    "validText": "[0-9a-zA-Z]*",
+                    "dataType": "string"
+                }
+            ]
+        }
+    ]
+}

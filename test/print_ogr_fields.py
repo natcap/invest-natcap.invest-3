@@ -28,7 +28,7 @@ field_defn = ogr.FieldDefn('AREA_SQKM', ogr.OFTReal)
 layer.CreateField(field_defn)
 
 for feature in layer:
-    #print feature.items()
+    print feature.items()
     area_m = feature.items()['AREA_SQM']
     area_km = area_m /1000 ** 2
     

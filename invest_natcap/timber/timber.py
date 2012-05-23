@@ -45,8 +45,8 @@ def execute(args):
         os.remove(shape_source)
 
     #Copy the input shapefile into the designated output folder
-    copy = ogr.GetDriverByName('ESRI Shapefile').\
-        CopyDataSource(timber_shape, shape_source)
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    copy = driver.CopyDataSource(timber_shape, shape_source)
 
     #OGR closes datasources this way to make sure data gets flushed properly
     timber_shape.Destroy()

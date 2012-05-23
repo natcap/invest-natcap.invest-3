@@ -1,0 +1,72 @@
+{
+    "id" : "window",
+    "label": "Crop Pollination: Valuation",
+    "targetScript" : "invest_natcap/pollination/pollination_valuation.py",
+    "modelName" : "pollination_valuation",
+    "localDocURI": "./documentation/croppollination.html",
+    "height": 400,
+    "width" : 500,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "Pollination",
+                    "required": true,
+                    "validateAs": {"type": "folder"}
+                },
+                {
+                    "id" : "guilds",
+                    "type": "file",
+                    "label": "Guilds table",
+                    "defaultValue": "Pollination/Input/Guild.dbf",
+                    "args_id": "guilds_uri",
+                    "required": true,
+                    "validateAs": {"type": "DBF",
+                                   "fieldsExist": ["SPECIES", "APLHA"],
+                                   "restrictions": [{"field": "ALPHA",
+                                                     "validateAs": {"type": "number",
+                                                                    "allowedValues": "0-9]*\\.[0-9]*$"}}]}
+                },
+                {
+                    "id" : "half_saturation_const",
+                    "type": "text",
+                    "label": "Half-saturation constant",
+                    "args_id": "half_saturation",
+                    "required": true,
+                    "width": 60,
+                    "defaultValue": "0.125",
+                    "dataType": "float"
+                },
+                {
+                    "id" : "wild_pollination_proportion",
+                    "type": "text",
+                    "label": "Proportion of total yield due to wild pollinators",
+                    "args_id": "wild_pollination_proportion",
+                    "required": true,
+                    "width": 60,
+                    "defaultValue": "1",
+                    "dataType": "string"
+                },
+                {
+                    "id": "value_future",
+                    "type": "checkbox",
+                    "label": "Perform valuation on future scenario",
+                    "args_id": "value_future"
+                },
+                {
+                    "id": "results_suffix",
+                    "type": "text",
+                    "label": "Results suffix",
+                    "args_id": "results_suffix",
+                    "width": 60
+                }
+            ]
+        }
+    ]
+}

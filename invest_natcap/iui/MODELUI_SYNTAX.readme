@@ -137,7 +137,8 @@ Example file object from carbon_biophysical:
     "label": "Raster location",
     "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
     "validateAs": {"type": "GDAL"},
-    "required": true
+    "required": true,
+    "returns": {"ifEmpty": "pass"}
 },
 
 Validation

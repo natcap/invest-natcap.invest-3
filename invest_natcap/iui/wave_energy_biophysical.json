@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Wave Energy Biophysical",
-    "targetScript" : "invest_natcap/wave_energy/wave_energy_biophysical.py",
+    "targetScript" : "invest_natcap.wave_energy.wave_energy_biophysical",
     "modelName" : "wave_energy_biophysical",
     "localDocURI": "./documentation/wave_energy.html",
     "height": 600,
@@ -87,7 +87,8 @@
                     			               "type": "polygons", 
                     			               "projection" : "Transverse_Mercator",
                     			               "datum" : "WGS_1984"}]
-                    			   }
+                    			   },
+                    "returns": {"ifEmpty": "pass"}
                  }
             ]
         }
