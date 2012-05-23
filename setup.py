@@ -64,17 +64,16 @@ if platform.system() == 'Windows':
 
     #Need to manually bring along the json configuration files to
     #the current build directory
-    py2exe_args['data_files'] = \
+  py2exe_args['data_files'] = \
         [('.',['invest_natcap/iui/carbon_biophysical.json',
                'invest_natcap/iui/carbon_valuation.json',
-               'invest_natcap/iui/wave_energy_valuation.json',
-               'invest_natcap/iui/wave_energy_biophysical.json',
-               'invest_natcap/iui/hydropower_valuation.json',
-               'invest_natcap/iui/water_scarcity.json',
-               'invest_natcap/iui/water_yield.json',
                'invest_natcap/iui/timber.json',
+               'invest_natcap/iui/wave_energy_biophysical.json',
+               'invest_natcap/iui/wave_energy_valuation.json',
+               'invest_natcap/iui/water_yield.json',
+               'invest_natcap/iui/water_scarcity.json',
+               'invest_natcap/iui/hydropower_valuation.json',
                'invest_natcap/iui/pollination_biophysical.json'])]
-
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
