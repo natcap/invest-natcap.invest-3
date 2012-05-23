@@ -3,6 +3,9 @@ pull from data passed in by aquaculture_biophysical and aquaculture_valuation'''
 
 import os
 
+from osgeo import ogr
+from osgeo import gdal
+
 def biophysical(args):
     ''''Runs the biophysical part of the finfish aquaculture model. This will output:
     1. a shape file showing farm locations w/ addition of # of harvest cycles, total
@@ -54,18 +57,18 @@ def biophysical(args):
     args['duration']- duration of the simulation, in years
     '''
     
-    output_dir = workspace_dir + os.sep + 'Output' + os.sep
+    output_dir = args['workspace_dir'] + os.sep + 'Output' + os.sep
 
-    #using a tuple to get data back from function, then update the shape files to reflect
-    #these new attributes
-    cycles_completed, cycle_lengths, weights = calc_farm_cycles(args['g_param_a'], args['g_param_b'], 
-                                          args['water_temp_dict'], args['farm_op_dict'],
-                                          args['duration'])
+    #using a tuple to get data back from function, then update the shape files 
+    #to reflect these new attributes
+    cycles_completed, cycle_lengths, weights = calc_farm_cycles(args['g_param_a'], 
+                                          args['g_param_b'], args['water_temp_dict'], 
+                                          args['farm_op_dict'], args['duration'])
     
     driver = ogr.GetDriverByName('ESRI Shapefile')
     out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
     
-    sf_copy = ds_copy = driver.CopyDataSource(args['ff_farm_file'], out_path)
+    sf_copy = driver.CopyDataSource(args['ff_farm_file'], out_path)
     layer = sf_copy.GetLayer()
     
     #This adds the number of cycles completed by each farm to their shapefile feature
@@ -96,6 +99,14 @@ def biophysical(args):
         feature.SetField('Hrvwght_kg', proc_weight[feature_ID])
         
         layer.SetFeature(feature)
+        
+    #Want to create a raster file of the same size/shape as the shapefile you used
+    #as input, then use the harvest weight as the info to burn into raster pixels
+    r_driver = gdal.GetDriverByName('GTIFF')
+    r_out_path = output_dir + os.sep + "hrvwght_kg"
+    
+    
+    gdal.RasterizeLayer()
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     

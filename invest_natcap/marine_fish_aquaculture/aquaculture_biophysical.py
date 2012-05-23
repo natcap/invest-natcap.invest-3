@@ -40,7 +40,7 @@ def execute(args):
         os.mkdir(output_dir)
         
     biophysical_args['workspace_dir'] = args['workspace_dir']
-    biophysical_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc']);
+    biophysical_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc'])
     biophysical_args['farm_ID'] = args['farm_ID']
     biophysical_args['g_param_a'] = args['g_param_a']
     biophysical_args['g_param_b'] = args['g_param_b']
@@ -86,13 +86,13 @@ def execute(args):
         
         
         #this is explicitly telling it the fields that I want to get data for
-        #want to remove the 'Total Value' field, since there is not data inside there, then
-        #tell the dictreader to set up a reader with dictionaries of only those fields, where
-        #the overarching dictionary uses the Farm ID as the key for each of the sub dictionaries
+        #want to remove the 'Total Value' field, since there is not data inside 
+        #there, then tell the dictreader to set up a reader with dictionaries of 
+        #only those fields, where the overarching dictionary uses the Farm ID as the key for each of the sub dictionaries
         fieldnames =  line.split(',')
         fieldnames.remove('Total value')
         
-        reader = csv.DictReader(csv_file,fieldnames=fieldnames)
+        reader = csv.DictReader(csv_file, fieldnames=fieldnames)
         
         for row in reader:
             
@@ -124,7 +124,7 @@ def execute(args):
         day_marker = 'Day #'
         
         while True:
-            line = csv_file.readline().rstrip('\r\n')
+            line = water_temp_file.readline().rstrip('\r\n')
             if day_marker in line:
                 break
         
@@ -134,7 +134,7 @@ def execute(args):
         fieldnames =  line.split(',')
         fieldnames.remove('Day/Month')
         
-        reader = csv.DictReader(csv_file,fieldnames=fieldnames)
+        reader = csv.DictReader(water_temp_file, fieldnames=fieldnames)
         
         for row in reader:
             
