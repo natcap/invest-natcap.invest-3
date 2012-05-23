@@ -45,7 +45,8 @@ if platform.system() == 'Windows':
                         'invest_natcap.timber',
                         'invest_natcap.validator_core',
                         'invest_natcap.wave_energy',
-                        'invest_natcap.pollination'],
+                        'invest_natcap.pollination',
+                        'invest_natcap.finfish_aquaculture'],
             #http://www.py2exe.org/index.cgi/ListOfOptions
             'skip_archive': True
             }
@@ -77,6 +78,19 @@ if platform.system() == 'Windows':
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
+      packages=['invest_natcap',
+                'invest_natcap.carbon',
+                'invest_natcap.dbfpy',
+                'invest_natcap.hydropower',
+                'invest_natcap.invest_core',
+                'invest_natcap.iui',
+                'invest_natcap.iui.dbfpy',
+                'invest_natcap.sediment',
+                'invest_natcap.timber',
+                'invest_natcap.validator_core',
+                'invest_natcap.wave_energy',
+                'invest_natcap.pollination',
+                'invest_natcap.finfish_aquaculture'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
