@@ -921,6 +921,19 @@ class HideableFileEntry(HideableElement, FileEntry):
             return FileEntry.requirementsMet(self)
         return False
 
+    def isEnabled(self):
+        """IsEnabled is a characteristic of QtGui.QWidget.  We need to override
+            it here because the whether the element is enabled depends not just
+            on whether this element is greyed out but whether its value should
+            be retrieved (and the value should only be retrieved when the
+            checkbox is checked)."""
+        if not self.checkbox.isEnabled():  # If this element is actually disabled, False
+            return False
+
+        # If the user can interact with the element, return this element's check
+        # state.
+        return self.checkbox.isChecked()
+
 class Dropdown(LabeledElement):
     def __init__(self, attributes):
         LabeledElement.__init__(self, attributes)
@@ -968,6 +981,10 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
             returns an instance of CheckBox"""
 
 #        super(CheckBox, self).__init__(attributes)
+        # Automatically assume that the checkbox value should be cast to a
+        # boolean if the user has not specified differently.
+        if 'dataType' not in attributes:
+            attributes['dataType'] = 'boolean'
         QtGui.QCheckBox.__init__(self)
         DynamicPrimitive.__init__(self, attributes)
 

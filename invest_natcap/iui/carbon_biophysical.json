@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Carbon Storage and Sequestration",
-    "targetScript" : "invest_natcap/carbon/carbon_biophysical.py",
+    "targetScript" : "invest_natcap.carbon.carbon_biophysical",
     "modelName" : "carbon_biophysical",
     "localDocURI": "./documentation/carbonstorage.html",
     "height": 400,

@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Water Scarcity",
-    "targetScript" : "invest_natcap/hydropower/water_scarcity.py",
+    "targetScript" : "invest_natcap.hydropower.water_scarcity",
     "modelName" : "water_scarcity",
     "localDocURI": "./documentation/water_scarcity.html",
     "height": 900,

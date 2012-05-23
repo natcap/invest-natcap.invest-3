@@ -5,7 +5,10 @@ import sys, os
 from osgeo import gdal, ogr
 import json
 
-import carbon_core
+try:
+    import carbon_core
+except ImportError:
+    from invest_natcap.carbon import carbon_core
 from invest_natcap.dbfpy import dbf
 import invest_cython_core
 

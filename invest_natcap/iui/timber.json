@@ -1,7 +1,7 @@
 {
     "id": "window",
     "label": "Managed Timber Production and Valuation",
-    "targetScript": "invest_natcap/timber/timber.py",
+    "targetScript": "invest_natcap.timber.timber",
     "modelName": "timber",
     "localDocURI": "./documentation/managed_timber_production_model.html",
     "height": 150,

@@ -41,8 +41,7 @@ def execute(args):
         
     biophysical_args['workspace_dir'] = args['workspace_dir']
     biophysical_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc']);
-    #Unsure if we actually ever need this later, since we have pre-unpacked
-    #biophysical_args['farm_ID'] = args['farms_ID']
+    biophysical_args['farm_ID'] = args['farm_ID']
     biophysical_args['g_param_a'] = args['g_param_a']
     biophysical_args['g_param_b'] = args['g_param_b']
     

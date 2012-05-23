@@ -32,7 +32,12 @@ class JSONHandler(object):
         return self.dict
 
     def write_to_disk(self, dict):
-        file = open(self.uri, mode='w+')
+        try:
+            file = open(self.uri, mode='w+')
+        except IOError:  # Thrown when self.uri doesn't exist
+            os.makedirs(os.path.dirname(self.uri))
+            file = open(self.uri, mode='w+')
+
         file.writelines(json.dumps(dict))
         file.close()
 
