@@ -26,4 +26,13 @@ if __name__ == '__main__':
         raster_utils.create_raster_from_vector_extents(CELL_SIZE, CELL_SIZE, 
         gdal.GDT_Float32, -1e10, 'interpolated.tif', aoi_ds)
  
-    
+    aoi_layer = aoi_ds.GetLayer()
+    aoi_feature = aoi_layer.GetFeature(0)
+    aoi_geometry = aoi_feature.GetGeometryRef()
+
+    for layer in point_ds:
+        for point_feature in layer:
+            point_geometry = point_feature.GetGeometryRef()
+            point = point_geometry.GetPoint()
+            print point, aoi_geometry.Contains(point_geometry)
+
