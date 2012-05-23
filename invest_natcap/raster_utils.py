@@ -343,3 +343,75 @@ def calculate_intersection_rectangle(rasterList):
                        min(rec[2], boundingBox[2]),
                        max(rec[3], boundingBox[3])]
     return boundingBox
+
+def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile, 
+                                      shp):
+    """Create a blank raster based on a vector file extent.  This code is
+        adapted from http://trac.osgeo.org/gdal/wiki/FAQRaster#HowcanIcreateablankrasterbasedonavectorfilesextentsforusewithgdal_rasterizeGDAL1.8.0
+    
+        xRes - the x size of a pixel in the output dataset must be a positive 
+            value
+        yRes - the y size of a pixel in the output dataset must be a positive 
+            value
+        format - gdal GDT pixel type
+        nodata - the output nodata value
+        rasterFile - URI to file location for raster
+        shp - vector shapefile to base extent of output raster on
+        
+        returns a blank raster whose bounds fit within `shp`s bounding box
+            and features are equivalent to the passed in data"""
+
+    #Determine the width and height of the tiff in pixels based on desired
+    #x and y resolution
+    shpExtent = shp.GetLayer(0).GetExtent()
+    tiff_width = int(math.ceil(abs(shpExtent[1] - shpExtent[0]) / xRes))
+    tiff_height = int(math.ceil(abs(shpExtent[3] - shpExtent[2]) / yRes))
+
+    driver = gdal.GetDriverByName('GTiff')
+    raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
+    raster.GetRasterBand(1).SetNoDataValue(nodata)
+
+    #Set the transform based on the upper left corner and given pixel
+    #dimensions
+    raster_transform = [shpExtent[0], xRes, 0.0, shpExtent[3], 0.0, -yRes]
+    raster.SetGeoTransform(raster_transform)
+
+    #Use the same projection on the raster as the shapefile
+    srs = osr.SpatialReference()
+    srs.ImportFromWkt(shp.GetLayer(0).GetSpatialRef().__str__())
+    raster.SetProjection(srs.ExportToWkt())
+
+    #Initialize everything to nodata
+    raster.GetRasterBand(1).Fill(nodata)
+    raster.GetRasterBand(1).FlushCache()
+
+def calculateIntersectionRectangle(rasterList):
+    """Return a bounding box of the intersections of all the rasters in the
+        list.
+        
+        rasterList - a list of GDAL rasters in the same projection and 
+            coordinate system
+            
+        returns a 4 element list that bounds the intersection of all the 
+            rasters in rasterList.  [left, top, right, bottom]"""
+
+    #Define the initial bounding box
+    gt = rasterList[0].GetGeoTransform()
+    #order is left, top, right, bottom of rasterbounds
+    boundingBox = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
+                   gt[3] + gt[5] * rasterList[0].RasterYSize]
+
+    for band in rasterList:
+        #intersect the current bounding box with the one just read
+        gt = band.GetGeoTransform()
+        LOGGER.debug('geotransform on raster band %s %s' % (gt, band))
+        LOGGER.debug('pixel x and y %s %s' % (band.RasterXSize,
+                                              band.RasterYSize))
+        rec = [gt[0], gt[3], gt[0] + gt[1] * band.RasterXSize,
+               gt[3] + gt[5] * band.RasterYSize]
+        #This intersects rec with the current bounding box
+        boundingBox = [max(rec[0], boundingBox[0]),
+                       min(rec[1], boundingBox[1]),
+                       min(rec[2], boundingBox[2]),
+                       max(rec[3], boundingBox[3])]
+    return boundingBox
