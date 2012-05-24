@@ -187,8 +187,17 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
             current_top_index = \
                 int(np.floor((row_y_coord - current_gt[3])/current_gt[5]))
 
+            #The +1 ensures the count of indexes are correct otherwise subtracting
+            #top and bottom index that differ by 1 are always 0 and sometimes -1
             current_bottom_index = \
-                int(np.ceil((row_y_coord - current_gt[3])/current_gt[5]))
+                int(np.ceil((row_y_coord - current_gt[3])/current_gt[5]))+1
+
+            current_array = \
+                current_band.ReadAsArray(current_left_index, current_top_index,
+                                         current_right_index - current_left_index,
+                                         current_bottom_index - current_top_index)
+
+            print current_array.shape
 
             #LOGGER.debug("left and right current index %s %s %s %s" % (current_left_index, current_right_index, current_top_index, current_bottom_index))
 
