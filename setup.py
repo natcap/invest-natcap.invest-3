@@ -59,12 +59,13 @@ if platform.system() == 'Windows':
          'invest_wave_energy_biophysical.py',
          'invest_wave_energy_valuation.py',
          'invest_timber.py',
+         'invest_water_yield.py',
          'invest_hydropower_valuation.py',
          'invest_water_scarcity.py']
 
     #Need to manually bring along the json configuration files to
     #the current build directory
-  py2exe_args['data_files'] = \
+    py2exe_args['data_files'] = \
         [('.',['invest_natcap/iui/carbon_biophysical.json',
                'invest_natcap/iui/carbon_valuation.json',
                'invest_natcap/iui/timber.json',

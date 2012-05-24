@@ -1,36 +1,59 @@
 """A collection of GDAL dataset and raster utilities"""
 
 import logging
-import math
 
 from osgeo import gdal
 from osgeo import osr
 import numpy as np
 import scipy.interpolate
 
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('raster_utils')
 
-def calculate_band_stats(band):
-    """Calculates and sets the min, max, stdev, and mean for the given band.
+def calculate_raster_stats(ds):
+    """Calculates and sets the min, max, stdev, and mean for the bands in
+       the raster.
     
-        band - a GDAL rasterband that will be modified by having its band
+       ds - a GDAL raster dataset that will be modified by having its band
             statistics set
     
-        returns nothing
-    """
+        returns nothing"""
 
-    #calculating raster statistics
-    rasterMin, rasterMax = band.ComputeRasterMinMax(0)
-    #make up stddev and mean
-    mean = (rasterMax + rasterMin) / 2.0
+    LOGGER.info('starting calculate_raster_stats')
 
-    #This is an incorrect standard deviation, but saves us from having to 
-    #calculate by hand
-    stdev = (rasterMax - mean) / 2.0
+    for band_number in range(ds.RasterCount):
+        band = ds.GetRasterBand(band_number+1)
+        LOGGER.info('in band %s' % band)
+        #Use this for initialization
+        first_value = band.ReadAsArray(0,0,1,1)
+        min_val = first_value[0]
+        max_val = min_val
+        running_sum = 0.0
+        running_sum_square = 0.0
 
-    band.SetStatistics(rasterMin, rasterMax, mean, stdev)
+        for row in range(band.YSize):
+            #Read row number 'row'
+            row_array = band.ReadAsArray(0,row,band.XSize,1)
+            min_val = min(min_val,np.min(row_array))
+            max_val = max(max_val,np.max(row_array))
+            running_sum += np.sum(row_array)
+            running_sum_square += np.sum(row_array**2)
 
+        n_pixels = band.YSize * band.XSize
+        mean = running_sum / float(n_pixels)
+        std_dev = np.sqrt(running_sum_square/float(n_pixels)-mean**2)
+        
+        LOGGER.debug("min_val %s, max_val %s, mean %s, std_dev %s" %
+                     (min_val, max_val, mean, std_dev))
+
+        #Write stats back to the band.  The function SetStatistics needs 
+        #all the arguments to be floats and crashes if they are ints thats
+        #what this map float deal is.
+        band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
+
+    LOGGER.info('finish calculate_raster_stats')
 
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
@@ -48,11 +71,12 @@ def pixel_area(dataset):
     return area_meters
 
 def pixel_size(dataset):
-    """Calculates the pixel size of the given dataset in m
+    """Calculates the average pixel size of the given dataset in m.  Saying
+       'average' in case we have non-square pixels.
     
         dataset - GDAL dataset
     
-        returns the pixel size in m"""
+        returns the average pixel size in m"""
 
     srs = osr.SpatialReference()
     srs.SetProjection(dataset.GetProjection())
@@ -70,7 +94,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
         brodcasted pixels from each current_dataset in dataset_list in the order they 
         exist in the list
         
-        dataset_list - list of GDAL input datasets
+        dataset_list - list of GDAL input datasets, requires that they'are all
+            in the same projection.
         op - numpy vectorized operation, takes broadcasted pixels from 
             the first bands in dataset_list in order and returns a new pixel
         raster_out_uri - the desired URI to the output current_dataset.  If None then
@@ -92,22 +117,26 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     LOGGER.debug('calculating the overlapping rectangles')
     aoi_box = calculate_intersection_rectangle(dataset_list)
     LOGGER.debug('the aoi box: %s' % aoi_box)
+
     #determine the minimum pixel size
     gt = dataset_list[0].GetGeoTransform()
     pixel_width, pixel_height = gt[1], gt[5]
     for current_dataset in dataset_list:
         gt = current_dataset.GetGeoTransform()
+        #This takes the minimum of the absolute value of the current dataset's
+        #pixel size versus what we've seen so far.
         pixel_width = min(pixel_width, gt[1], key=abs)
         pixel_height = min(pixel_height, gt[5], key=abs)
-
     LOGGER.debug('min pixel width and height: %s %s' % (pixel_width,
                                                         pixel_height))
 
-    #These define the output current_dataset's columns and out_n_rows
-    out_n_cols = int(math.ceil((aoi_box[2] - aoi_box[0]) / pixel_width))
-    out_n_rows = int(math.ceil((aoi_box[3] - aoi_box[1]) / pixel_height))
+    #Together with the AOI and min pixel size we define the output dataset's 
+    #columns and out_n_rows
+    out_n_cols = int(np.ceil((aoi_box[2] - aoi_box[0]) / pixel_width))
+    out_n_rows = int(np.ceil((aoi_box[3] - aoi_box[1]) / pixel_height))
     LOGGER.debug('number of pixel out_n_cols and out_n_rows %s %s' % \
                  (out_n_cols, out_n_rows))
+
     #out_geotransform order: 
     #1) left coordinate of top left corner
     #2) pixel width in x direction
@@ -117,141 +146,35 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     #6) pixel height in y direction 
     out_geotransform = [aoi_box[0], pixel_width, 0.0,
                         aoi_box[1], 0.0, pixel_height]
-
-    projection = dataset_list[0].GetProjection()
+    #The output projection will be the same as any in dataset_list, so just take
+    #the first one.
+    out_projection = dataset_list[0].GetProjection()
     output_uri = ''
+
+    #If no output uri is specified assume 'MEM' format, otherwise GTiff
     format = 'MEM'
     if raster_out_uri != None:
         output_uri = raster_out_uri
         format = 'GTiff'
+
+    #Build the new output dataset and reference the band for later
     out_dataset = new_raster(out_n_cols, out_n_rows, projection,
         out_geotransform, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(0)
 
-    #Determine the output current_dataset's x and y range
-    out_x_range = (np.arange(out_n_cols, dtype=float) * out_geotransform[1]) + \
-        out_geotransform[0]
-    out_y_range = (np.arange(out_n_rows, dtype=float) * out_geotransform[5]) + \
-        out_geotransform[3]
 
-    LOGGER.debug('out_x_range shape %s ' % (out_x_range.shape))
-    LOGGER.debug('out_y_range shape %s ' % (out_y_range.shape))
-    #create an interpolator for each current_dataset band
-    matrix_list = []
-    nodata_list = []
+    #Loop over each row in out_band
+      #Loop over each input raster
+        #Build an interpolator for the input raster row that matches out_band_row
+        #Interpolate a row that aligns with out_band_row and add to list
+      #Vectorize the stack of rows and write to out_band
 
-    #Check to see if all the input datasets are equal, if so then we
-    #don't need to interpolate them
-    all_equal = True
-    for dim_fun in [lambda ds: ds.RasterXSize, lambda ds: ds.RasterYSize]:
-        sizes = map(dim_fun, dataset_list)
-        all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
-
-    if all_equal:
-        LOGGER.debug("They're all equal, building matrix_list")
-        matrix_list = \
-            map(lambda x: x.GetRasterBand(1).ReadAsArray(), dataset_list)
-    else:
-        #Do some slower interpolation
-        for current_dataset in dataset_list:
-            LOGGER.debug('building interpolator for %s' % current_dataset)
-            gt = current_dataset.GetGeoTransform()
-            LOGGER.debug('gt = %s' % (str(gt)))
-            band = current_dataset.GetRasterBand(1)
-            matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-
-            #Need to set nodata values to something reasonable to avoid weird
-            #interpolation issues if nodata is a large value like -3e38.
-            nodata_mask = matrix == band.GetNoDataValue()
-            matrix[nodata_mask] = nodata
-
-            LOGGER.debug('bandXSize bandYSize %s %s' % (band.XSize, band.YSize))
-            xrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-            LOGGER.debug('gt[0] + band.XSize * gt[1] = %s' % (gt[0] + band.XSize * gt[1]))
-            LOGGER.debug('xrange[-1] = %s' % xrange[-1])
-            yrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-
-            #This is probably true if north is up
-            if gt[5] < 0:
-                yrange = yrange[::-1]
-                matrix = matrix[::-1]
-            LOGGER.debug('xrange shape %s' % xrange.shape)
-            LOGGER.debug('yrange shape %s' % yrange.shape)
-            LOGGER.debug('matrix shape %s %s' % matrix.shape)
-
-            #transposing matrix here since numpy 2d array order is matrix[y][x]
-            LOGGER.debug('creating RectBivariateSpline interpolator')
-            spl = scipy.interpolate.RectBivariateSpline(yrange, xrange,
-                                                        matrix,
-                                                        kx=1, ky=1)
-
-            LOGGER.debug('interpolating')
-
-            #This handles the case where Y is increasing downwards in the output.
-            #We encountered this when writing a testcase for a 50x50 box wih no
-            #geotransform.
-            if out_geotransform[5] < 0:
-                matrix_list.append(spl(out_y_range[::-1], out_x_range)[::-1])
-            else:
-                matrix_list.append(spl(out_y_range, out_x_range))
-
-            nodata_list.append(band.GetNoDataValue())
-
-
-    #invoke op with interpolated values that overlap the output current_dataset
-    LOGGER.debug('applying operation on matrix stack')
-    out_matrix = op(*matrix_list)
-    LOGGER.debug('result of operation on matrix stack shape %s %s' %
-                 (out_matrix.shape))
-    LOGGER.debug('outmatrix size %s current_dataset size %s %s'
-                 % (out_matrix.shape, out_band.XSize, out_band.YSize))
-
-    #Nodata out any values in out_band that have corresponding nodata values
-    #in the matrix_list
-    for band, nodata in zip(matrix_list, nodata_list):
-        nodata_index = band == nodata
-        out_matrix[nodata_index] = out_band.GetNoDataValue()
-
-    out_band.WriteArray(out_matrix, 0, 0)
-
-    #Calculate the min/max/avg/stdev on out_band
-    calculate_band_stats(out_band)
+    #Calculate the min/max/avg/stdev on the out raster
+    calculate_raster_stats(out_dataset)
 
     #return the new current_dataset
     return out_dataset
-
-def vectorize_one_arg_op(rasterBand, op, out_band, bounding_box=None):
-    """Applies the function 'op' over rasterBand and outputs to out_band
-    
-        rasterBand - (input) a GDAL raster
-        op - (input) a function that that takes 2 arguments and returns 1 value
-        out_band - (output) the result of vectorizing op over rasterBand
-        bounding_box - (input, optional) a 4 element list that corresponds
-            to the bounds in GDAL's ReadAsArray to limit the vectorization
-            over that region in rasterBand and writing to the corresponding
-            out_band.  If left None, defaults to the size of the band
-            
-        returns nothing"""
-
-    vOp = np.vectorize(op, otypes=[np.float])
-    if bounding_box == None:
-        bounding_box = [0, 0, rasterBand.XSize, rasterBand.YSize]
-
-    #Read one line at a time. Starting line is bounding_box[1], number of lines
-    #is bounding_box[3]
-    for row_number in range(bounding_box[3]):
-        #Here bounding box start col and n col are same, but start row
-        #advances on each loop and only 1 row is read at a time
-        start_col = bounding_box[0]
-        start_row = row_number + bounding_box[1]
-        data = rasterBand.ReadAsArray(start_col, start_row,
-                                       bounding_box[2], 1)
-        out_array = vOp(data)
-        out_band.WriteArray(out_array, start_col, start_row)
-        #Calculate the min/max/avg/stdev on out_band
-        calculate_band_stats(out_band)
-
 
 def new_raster_from_base(base, outputURI, format, nodata, datatype):
     """Create a new, empty GDAL raster dataset with the spatial references,
@@ -364,8 +287,8 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     #Determine the width and height of the tiff in pixels based on desired
     #x and y resolution
     shpExtent = shp.GetLayer(0).GetExtent()
-    tiff_width = int(math.ceil(abs(shpExtent[1] - shpExtent[0]) / xRes))
-    tiff_height = int(math.ceil(abs(shpExtent[3] - shpExtent[2]) / yRes))
+    tiff_width = int(np.ceil(abs(shpExtent[1] - shpExtent[0]) / xRes))
+    tiff_height = int(np.ceil(abs(shpExtent[3] - shpExtent[2]) / yRes))
 
     driver = gdal.GetDriverByName('GTiff')
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
