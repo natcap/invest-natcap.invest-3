@@ -3,9 +3,11 @@ from osgeo import gdal
 import invest_test_core
 import raster_utils
 
-ds=gdal.Open('/home/rpsharp/local/workspace/invest-natcap.water-funds/data/monterrey_data/UPSLOPESOURCE.TIF_clip.tif')
+ds_1 = gdal.Open('./data/smooth_rasters/random.tif')
+ds_2 = gdal.Open('./data/smooth_rasters/smoothleft.tif')
+ds_3 = gdal.Open('./data/smooth_rasters/smoothtop.tif')
 
-invest_test_core.make_random_raster_from_base(ds,1,30,'./random_lulc.tif')
+adder = lambda(a,b,c): a+b+c
 
-ds_random = gdal.Open('./random_lulc.tif')
-raster_utils.calculate_raster_stats(ds_random)
+raster_utils.vectorize_rasters([ds_1, ds_2, ds_3], adder, 
+                               raster_out_uri = 'out.tif', nodata=-1.0)
