@@ -117,22 +117,26 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     LOGGER.debug('calculating the overlapping rectangles')
     aoi_box = calculate_intersection_rectangle(dataset_list)
     LOGGER.debug('the aoi box: %s' % aoi_box)
+
     #determine the minimum pixel size
     gt = dataset_list[0].GetGeoTransform()
     pixel_width, pixel_height = gt[1], gt[5]
     for current_dataset in dataset_list:
         gt = current_dataset.GetGeoTransform()
+        #This takes the minimum of the absolute value of the current dataset's
+        #pixel size versus what we've seen so far.
         pixel_width = min(pixel_width, gt[1], key=abs)
         pixel_height = min(pixel_height, gt[5], key=abs)
-
     LOGGER.debug('min pixel width and height: %s %s' % (pixel_width,
                                                         pixel_height))
 
-    #These define the output current_dataset's columns and out_n_rows
+    #Together with the AOI and min pixel size we define the output dataset's 
+    #columns and out_n_rows
     out_n_cols = int(np.ceil((aoi_box[2] - aoi_box[0]) / pixel_width))
     out_n_rows = int(np.ceil((aoi_box[3] - aoi_box[1]) / pixel_height))
     LOGGER.debug('number of pixel out_n_cols and out_n_rows %s %s' % \
                  (out_n_cols, out_n_rows))
+
     #out_geotransform order: 
     #1) left coordinate of top left corner
     #2) pixel width in x direction
@@ -142,20 +146,29 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     #6) pixel height in y direction 
     out_geotransform = [aoi_box[0], pixel_width, 0.0,
                         aoi_box[1], 0.0, pixel_height]
-
-    projection = dataset_list[0].GetProjection()
+    #The output projection will be the same as any in dataset_list, so just take
+    #the first one.
+    out_projection = dataset_list[0].GetProjection()
     output_uri = ''
+
+    #If no output uri is specified assume 'MEM' format, otherwise GTiff
     format = 'MEM'
     if raster_out_uri != None:
         output_uri = raster_out_uri
         format = 'GTiff'
+
+    #Build the new output dataset and reference the band for later
     out_dataset = new_raster(out_n_cols, out_n_rows, projection,
         out_geotransform, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(0)
 
 
-
+    #Loop over each row in out_band
+      #Loop over each input raster
+        #Build an interpolator for the input raster row that matches out_band_row
+        #Interpolate a row that aligns with out_band_row and add to list
+      #Vectorize the stack of rows and write to out_band
 
     #Calculate the min/max/avg/stdev on the out raster
     calculate_raster_stats(out_dataset)
