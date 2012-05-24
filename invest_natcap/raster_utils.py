@@ -71,11 +71,12 @@ def pixel_area(dataset):
     return area_meters
 
 def pixel_size(dataset):
-    """Calculates the pixel size of the given dataset in m
+    """Calculates the average pixel size of the given dataset in m.  Saying
+       'average' in case we have non-square pixels.
     
         dataset - GDAL dataset
     
-        returns the pixel size in m"""
+        returns the average pixel size in m"""
 
     srs = osr.SpatialReference()
     srs.SetProjection(dataset.GetProjection())
