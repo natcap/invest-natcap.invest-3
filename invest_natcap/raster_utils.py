@@ -163,7 +163,11 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     out_band.Fill(0)
 
 
+    out_left_coord = out_gt[0]
+    out_right_coord = out_left_coord + out_gt[1] * out_band.XSize
     #Loop over each row in out_band
+    for row_index in range(out_band.YSize):
+        row_y_coord = out_gt[3] + out_gt[5] * row_index
       #Loop over each input raster
         #Build an interpolator for the input raster row that matches out_band_row
         #Interpolate a row that aligns with out_band_row and add to list
