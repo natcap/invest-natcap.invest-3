@@ -1,4 +1,4 @@
-"""URI level tests for the aquaculture biophysical module"""
+"""URI level tests for the aquaculture valuation module"""
 
 import os, sys
 import unittest
@@ -8,8 +8,7 @@ import invest_test_core
 
 class TestFinfishAquacultureValuation(unittest.TestCase):
     def test_finfish_aquaculture_valuation_smoke(self):
-        """Smoke test for finfish_aquaculture_biophysical function.  Shouldn't crash with \
-#zero length inputs"""
+        """Smoke test for finfish_aquaculture_valuation function."""
 
         args = {}
 
