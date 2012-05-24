@@ -1,7 +1,7 @@
 '''Invest finfish aquaculture filehandler for valuation'''
 
 
-def exectute(args):
+def execute(args):
     
     """This function will take care of preparing files passed into 
     the finfish aquaculture model. It will handle all files/inputs associated
@@ -24,8 +24,8 @@ def exectute(args):
     
     valuation_args = {}
     
-    valuation_args['names'] = args['names']
-    valuation_args['f_type'] = args['f_type']
+    #valuation_args['names'] = args['names']
+    #valuation_args['f_type'] = args['f_type']
     valuation_args['p_per_kg'] = args['p_per_kg']
     valuation_args['frac_p'] = args['frac_p']
     valuation_args['discount'] = args['discount']
