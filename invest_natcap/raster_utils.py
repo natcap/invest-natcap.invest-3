@@ -45,16 +45,15 @@ def calculate_raster_stats(ds):
         mean = running_sum / float(n)
         std_dev = np.sqrt(running_sum_square/float(n)-mean**2)
         
-        #Write stats back to the band
         LOGGER.debug("min_val %s, max_val %s, mean %s, std_dev %s" %
                      (min_val, max_val, mean, std_dev))
 
-        #The function SetStatistics needs all the arguments to be floats
-        #and crashes if they are ints.
+        #Write stats back to the band.  The function SetStatistics needs 
+        #all the arguments to be floats and crashes if they are ints thats
+        #what this map float deal is.
         band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
 
     LOGGER.info('finish calculate_raster_stats')
-
 
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
