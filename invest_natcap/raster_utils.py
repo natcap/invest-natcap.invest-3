@@ -31,7 +31,6 @@ def calculate_band_stats(band):
 
     band.SetStatistics(rasterMin, rasterMax, mean, stdev)
 
-
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
     
@@ -128,92 +127,6 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
         out_geotransform, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(0)
-
-    #Determine the output current_dataset's x and y range
-    out_x_range = (np.arange(out_n_cols, dtype=float) * out_geotransform[1]) + \
-        out_geotransform[0]
-    out_y_range = (np.arange(out_n_rows, dtype=float) * out_geotransform[5]) + \
-        out_geotransform[3]
-
-    LOGGER.debug('out_x_range shape %s ' % (out_x_range.shape))
-    LOGGER.debug('out_y_range shape %s ' % (out_y_range.shape))
-    #create an interpolator for each current_dataset band
-    matrix_list = []
-    nodata_list = []
-
-    #Check to see if all the input datasets are equal, if so then we
-    #don't need to interpolate them
-    all_equal = True
-    for dim_fun in [lambda ds: ds.RasterXSize, lambda ds: ds.RasterYSize]:
-        sizes = map(dim_fun, dataset_list)
-        all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
-
-    if all_equal:
-        LOGGER.debug("They're all equal, building matrix_list")
-        matrix_list = \
-            map(lambda x: x.GetRasterBand(1).ReadAsArray(), dataset_list)
-    else:
-        #Do some slower interpolation
-        for current_dataset in dataset_list:
-            LOGGER.debug('building interpolator for %s' % current_dataset)
-            gt = current_dataset.GetGeoTransform()
-            LOGGER.debug('gt = %s' % (str(gt)))
-            band = current_dataset.GetRasterBand(1)
-            matrix = band.ReadAsArray(0, 0, band.XSize, band.YSize)
-
-            #Need to set nodata values to something reasonable to avoid weird
-            #interpolation issues if nodata is a large value like -3e38.
-            nodata_mask = matrix == band.GetNoDataValue()
-            matrix[nodata_mask] = nodata
-
-            LOGGER.debug('bandXSize bandYSize %s %s' % (band.XSize, band.YSize))
-            xrange = (np.arange(band.XSize, dtype=float) * gt[1]) + gt[0]
-            LOGGER.debug('gt[0] + band.XSize * gt[1] = %s' % (gt[0] + band.XSize * gt[1]))
-            LOGGER.debug('xrange[-1] = %s' % xrange[-1])
-            yrange = (np.arange(band.YSize, dtype=float) * gt[5]) + gt[3]
-
-            #This is probably true if north is up
-            if gt[5] < 0:
-                yrange = yrange[::-1]
-                matrix = matrix[::-1]
-            LOGGER.debug('xrange shape %s' % xrange.shape)
-            LOGGER.debug('yrange shape %s' % yrange.shape)
-            LOGGER.debug('matrix shape %s %s' % matrix.shape)
-
-            #transposing matrix here since numpy 2d array order is matrix[y][x]
-            LOGGER.debug('creating RectBivariateSpline interpolator')
-            spl = scipy.interpolate.RectBivariateSpline(yrange, xrange,
-                                                        matrix,
-                                                        kx=1, ky=1)
-
-            LOGGER.debug('interpolating')
-
-            #This handles the case where Y is increasing downwards in the output.
-            #We encountered this when writing a testcase for a 50x50 box wih no
-            #geotransform.
-            if out_geotransform[5] < 0:
-                matrix_list.append(spl(out_y_range[::-1], out_x_range)[::-1])
-            else:
-                matrix_list.append(spl(out_y_range, out_x_range))
-
-            nodata_list.append(band.GetNoDataValue())
-
-
-    #invoke op with interpolated values that overlap the output current_dataset
-    LOGGER.debug('applying operation on matrix stack')
-    out_matrix = op(*matrix_list)
-    LOGGER.debug('result of operation on matrix stack shape %s %s' %
-                 (out_matrix.shape))
-    LOGGER.debug('outmatrix size %s current_dataset size %s %s'
-                 % (out_matrix.shape, out_band.XSize, out_band.YSize))
-
-    #Nodata out any values in out_band that have corresponding nodata values
-    #in the matrix_list
-    for band, nodata in zip(matrix_list, nodata_list):
-        nodata_index = band == nodata
-        out_matrix[nodata_index] = out_band.GetNoDataValue()
-
-    out_band.WriteArray(out_matrix, 0, 0)
 
     #Calculate the min/max/avg/stdev on out_band
     calculate_band_stats(out_band)
