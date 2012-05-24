@@ -205,6 +205,14 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
             current_top_coordinate = \
                 current_gt[3] + current_top_index * current_gt[5]
 
+            current_col_coordinates = \
+                [current_left_coordinate + index * current_gt[1] \
+                     for index in range(current_col_steps)]
+
+            current_row_coordinates = \
+                [current_top_coordinate + index * current_gt[5] \
+                     for index in range(current_row_steps)]
+
             #LOGGER.debug("left and right current index %s %s %s %s" % (current_left_index, current_right_index, current_top_index, current_bottom_index))
 
             #Determine top and bottom indexes
