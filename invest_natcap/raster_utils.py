@@ -221,44 +221,12 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     #return the new current_dataset
     return out_dataset
 
-def vectorize_one_arg_op(rasterBand, op, out_band, bounding_box=None):
-    """Applies the function 'op' over rasterBand and outputs to out_band
-    
-        rasterBand - (input) a GDAL raster
-        op - (input) a function that that takes 2 arguments and returns 1 value
-        out_band - (output) the result of vectorizing op over rasterBand
-        bounding_box - (input, optional) a 4 element list that corresponds
-            to the bounds in GDAL's ReadAsArray to limit the vectorization
-            over that region in rasterBand and writing to the corresponding
-            out_band.  If left None, defaults to the size of the band
-            
-        returns nothing"""
-
-    vOp = np.vectorize(op, otypes=[np.float])
-    if bounding_box == None:
-        bounding_box = [0, 0, rasterBand.XSize, rasterBand.YSize]
-
-    #Read one line at a time. Starting line is bounding_box[1], number of lines
-    #is bounding_box[3]
-    for row_number in range(bounding_box[3]):
-        #Here bounding box start col and n col are same, but start row
-        #advances on each loop and only 1 row is read at a time
-        start_col = bounding_box[0]
-        start_row = row_number + bounding_box[1]
-        data = rasterBand.ReadAsArray(start_col, start_row,
-                                       bounding_box[2], 1)
-        out_array = vOp(data)
-        out_band.WriteArray(out_array, start_col, start_row)
-        #Calculate the min/max/avg/stdev on out_band
-        calculate_band_stats(out_band)
-
-
-def new_raster_from_base(base, outputURI, format, nodata, datatype):
-    """Create a new, empty GDAL raster dataset with the spatial references,
-        dimensions and geotranforms of the base GDAL raster dataset.
+def new_raster_from_base(base, output_uri, format, nodata, datatype):
+    """Create a new, empty one band GDAL raster dataset with the spatial 
+       references, dimensions and geotranforms of the base GDAL raster dataset.
         
         base - a the GDAL raster dataset to base output size, and transforms on
-        outputURI - a string URI to the new output raster dataset.
+        output_uri - a string URI to the new output raster dataset.
         format - a string representing the GDAL file format of the 
             output raster.  See http://gdal.org/formats_list.html for a list
             of available formats.  This parameter expects the format code, such
@@ -276,35 +244,8 @@ def new_raster_from_base(base, outputURI, format, nodata, datatype):
     rows = base.RasterYSize
     projection = base.GetProjection()
     geotransform = base.GetGeoTransform()
-    return new_raster(cols, rows, projection, geotransform, format, nodata,
-                     datatype, base.RasterCount, outputURI)
-
-def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
-              bands, outputURI):
-    """Create a new raster with the given properties.
-    
-        cols - number of pixel columns
-        rows - number of pixel rows
-        projection - the datum
-        geotransform - the coordinate system
-        format - a string representing the GDAL file format of the 
-            output raster.  See http://gdal.org/formats_list.html for a list
-            of available formats.  This parameter expects the format code, such
-            as 'GTiff' or 'MEM'
-        nodata - a value that will be set as the nodata value for the 
-            output raster.  Should be the same type as 'datatype'
-        datatype - the pixel datatype of the output raster, for example 
-            gdal.GDT_Float32.  See the following header file for supported 
-            pixel types:
-            http://www.gdal.org/gdal_8h.html#22e22ce0a55036a96f652765793fb7a4
-        bands - the number of bands in the raster
-        outputURI - the file location for the outputed raster.  If format
-            is 'MEM' this can be an empty string
-            
-        returns a new GDAL raster with the parameters as described above"""
-
     driver = gdal.GetDriverByName(format)
-    new_raster = driver.Create(str(outputURI), cols, rows, bands, datatype)
+    new_raster = driver.Create(str(output_uri), cols, rows, eType=datatype)
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
