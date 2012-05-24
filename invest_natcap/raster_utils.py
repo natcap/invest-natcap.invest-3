@@ -221,38 +221,6 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     #return the new current_dataset
     return out_dataset
 
-def vectorize_one_arg_op(rasterBand, op, out_band, bounding_box=None):
-    """Applies the function 'op' over rasterBand and outputs to out_band
-    
-        rasterBand - (input) a GDAL raster
-        op - (input) a function that that takes 2 arguments and returns 1 value
-        out_band - (output) the result of vectorizing op over rasterBand
-        bounding_box - (input, optional) a 4 element list that corresponds
-            to the bounds in GDAL's ReadAsArray to limit the vectorization
-            over that region in rasterBand and writing to the corresponding
-            out_band.  If left None, defaults to the size of the band
-            
-        returns nothing"""
-
-    vOp = np.vectorize(op, otypes=[np.float])
-    if bounding_box == None:
-        bounding_box = [0, 0, rasterBand.XSize, rasterBand.YSize]
-
-    #Read one line at a time. Starting line is bounding_box[1], number of lines
-    #is bounding_box[3]
-    for row_number in range(bounding_box[3]):
-        #Here bounding box start col and n col are same, but start row
-        #advances on each loop and only 1 row is read at a time
-        start_col = bounding_box[0]
-        start_row = row_number + bounding_box[1]
-        data = rasterBand.ReadAsArray(start_col, start_row,
-                                       bounding_box[2], 1)
-        out_array = vOp(data)
-        out_band.WriteArray(out_array, start_col, start_row)
-        #Calculate the min/max/avg/stdev on out_band
-        calculate_band_stats(out_band)
-
-
 def new_raster_from_base(base, outputURI, format, nodata, datatype):
     """Create a new, empty GDAL raster dataset with the spatial references,
         dimensions and geotranforms of the base GDAL raster dataset.
