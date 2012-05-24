@@ -144,8 +144,7 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     #4) top coordinate of top left corner
     #5) pixel height in x direction (usually zero)
     #6) pixel height in y direction 
-    out_geotransform = [aoi_box[0], pixel_width, 0.0,
-                        aoi_box[1], 0.0, pixel_height]
+    out_gt = [aoi_box[0], pixel_width, 0.0, aoi_box[1], 0.0, pixel_height]
     #The output projection will be the same as any in dataset_list, so just take
     #the first one.
     out_projection = dataset_list[0].GetProjection()
@@ -159,7 +158,7 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
 
     #Build the new output dataset and reference the band for later
     out_dataset = new_raster(out_n_cols, out_n_rows, projection,
-        out_geotransform, format, nodata, datatype, 1, output_uri)
+        out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(0)
 
