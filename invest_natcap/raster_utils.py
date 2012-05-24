@@ -7,6 +7,9 @@ from osgeo import osr
 import numpy as np
 import scipy.interpolate
 
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
 LOGGER = logging.getLogger('raster_utils')
 
 def calculate_raster_stats(ds):
@@ -20,11 +23,12 @@ def calculate_raster_stats(ds):
 
     LOGGER.info('starting calculate_raster_stats')
 
-    for band in ds:
+    for band_number in range(ds.RasterCount):
+        band = ds.GetRasterBand(band_number+1)
         LOGGER.info('in band %s' % band)
         #Use this for initialization
-        first_value = band.ReadAsArray(0,0,0,0)
-        min_val = first_value
+        first_value = band.ReadAsArray(0,0,1,1)
+        min_val = first_value[0]
         max_val = min_val
         running_sum = 0.0
         running_sum_square = 0.0
@@ -42,7 +46,12 @@ def calculate_raster_stats(ds):
         std_dev = np.sqrt(running_sum_square/float(n)-mean**2)
         
         #Write stats back to the band
-        band.SetStatistics(min_val, max_val, mean, std_dev)
+        LOGGER.debug("min_val %s, max_val %s, mean %s, std_dev %s" %
+                     (min_val, max_val, mean, std_dev))
+
+        #The function SetStatistics needs all the arguments to be floats
+        #and crashes if they are ints.
+        band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
 
     LOGGER.info('finish calculate_raster_stats')
 
