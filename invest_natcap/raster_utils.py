@@ -1,35 +1,51 @@
 """A collection of GDAL dataset and raster utilities"""
 
 import logging
-import math
 
 from osgeo import gdal
 from osgeo import osr
 import numpy as np
 import scipy.interpolate
 
-
 LOGGER = logging.getLogger('raster_utils')
 
-def calculate_band_stats(band):
-    """Calculates and sets the min, max, stdev, and mean for the given band.
+def calculate_raster_stats(ds):
+    """Calculates and sets the min, max, stdev, and mean for the bands in
+       the raster.
     
-        band - a GDAL rasterband that will be modified by having its band
+       ds - a GDAL raster dataset that will be modified by having its band
             statistics set
     
-        returns nothing
-    """
+        returns nothing"""
 
-    #calculating raster statistics
-    rasterMin, rasterMax = band.ComputeRasterMinMax(0)
-    #make up stddev and mean
-    mean = (rasterMax + rasterMin) / 2.0
+    LOGGER.info('starting calculate_raster_stats')
 
-    #This is an incorrect standard deviation, but saves us from having to 
-    #calculate by hand
-    stdev = (rasterMax - mean) / 2.0
+    for band in ds:
+        LOGGER.info('in band %s' % band)
+        #Use this for initialization
+        first_value = band.ReadAsArray(0,0,0,0)
+        min_val = first_value
+        max_val = min_val
+        running_sum = 0.0
+        running_sum_square = 0.0
 
-    band.SetStatistics(rasterMin, rasterMax, mean, stdev)
+        for row in range(band.YSize):
+            #Read row number 'row'
+            row_array = band.ReadAsArray(0,row,band.XSize,1)
+            min_val = min(min_val,np.min(row_array))
+            max_val = max(max_val,np.max(row_array))
+            running_sum += np.sum(row_array)
+            running_sum_square += np.sum(row_array**2)
+
+        n = band.YSize * band.XSize
+        mean = running_sum / float(n)
+        std_dev = np.sqrt(running_sum_square/float(n)-mean**2)
+        
+        #Write stats back to the band
+        band.SetStatistics(min_val, max_val, mean, std_dev)
+
+    LOGGER.info('finish calculate_raster_stats')
+
 
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
@@ -103,8 +119,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
                                                         pixel_height))
 
     #These define the output current_dataset's columns and out_n_rows
-    out_n_cols = int(math.ceil((aoi_box[2] - aoi_box[0]) / pixel_width))
-    out_n_rows = int(math.ceil((aoi_box[3] - aoi_box[1]) / pixel_height))
+    out_n_cols = int(np.ceil((aoi_box[2] - aoi_box[0]) / pixel_width))
+    out_n_rows = int(np.ceil((aoi_box[3] - aoi_box[1]) / pixel_height))
     LOGGER.debug('number of pixel out_n_cols and out_n_rows %s %s' % \
                  (out_n_cols, out_n_rows))
     #out_geotransform order: 
@@ -245,8 +261,8 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     #Determine the width and height of the tiff in pixels based on desired
     #x and y resolution
     shpExtent = shp.GetLayer(0).GetExtent()
-    tiff_width = int(math.ceil(abs(shpExtent[1] - shpExtent[0]) / xRes))
-    tiff_height = int(math.ceil(abs(shpExtent[3] - shpExtent[2]) / yRes))
+    tiff_width = int(np.ceil(abs(shpExtent[1] - shpExtent[0]) / xRes))
+    tiff_height = int(np.ceil(abs(shpExtent[3] - shpExtent[2]) / yRes))
 
     driver = gdal.GetDriverByName('GTiff')
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
