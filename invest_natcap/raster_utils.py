@@ -153,8 +153,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(0)
 
-    #Calculate the min/max/avg/stdev on out_band
-    calculate_band_stats(out_band)
+    #Calculate the min/max/avg/stdev on the out raster
+    calculate_raster_stats(out_dataset)
 
     #return the new current_dataset
     return out_dataset
