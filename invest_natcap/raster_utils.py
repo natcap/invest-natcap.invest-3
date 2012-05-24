@@ -41,9 +41,9 @@ def calculate_raster_stats(ds):
             running_sum += np.sum(row_array)
             running_sum_square += np.sum(row_array**2)
 
-        n = band.YSize * band.XSize
-        mean = running_sum / float(n)
-        std_dev = np.sqrt(running_sum_square/float(n)-mean**2)
+        n_pixels = band.YSize * band.XSize
+        mean = running_sum / float(n_pixels)
+        std_dev = np.sqrt(running_sum_square/float(n_pixels)-mean**2)
         
         LOGGER.debug("min_val %s, max_val %s, mean %s, std_dev %s" %
                      (min_val, max_val, mean, std_dev))
