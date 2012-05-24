@@ -184,7 +184,13 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
             current_right_index = \
                 int(np.ceil((out_right_coord - current_gt[0])/current_gt[1]))
 
-            #LOGGER.debug("left and right current index %s %s" % (current_left_index, current_right_index))
+            current_top_index = \
+                int(np.floor((row_y_coord - current_gt[3])/current_gt[5]))
+
+            current_bottom_index = \
+                int(np.ceil((row_y_coord - current_gt[3])/current_gt[5]))
+
+            #LOGGER.debug("left and right current index %s %s %s %s" % (current_left_index, current_right_index, current_top_index, current_bottom_index))
 
             #Determine top and bottom indexes
 
