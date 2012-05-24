@@ -159,7 +159,7 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
 
     #Build the new output dataset and reference the band for later.  the '1'
     #means only 1 output band.
-    out_dataset = new_raster(out_n_cols, out_n_rows, projection,
+    out_dataset = new_raster(out_n_cols, out_n_rows, out_projection,
         out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(0)
@@ -178,6 +178,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
             #Build an interpolator for the input raster row that matches out_band_row
             #Interpolate a row that aligns with out_band_row and add to list
         #Vectorize the stack of rows and write to out_band
+        
+
 
     #Calculate the min/max/avg/stdev on the out raster
     calculate_raster_stats(out_dataset)
