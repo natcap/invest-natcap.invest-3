@@ -145,33 +145,39 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     #5) pixel height in x direction (usually zero)
     #6) pixel height in y direction 
     out_gt = [aoi_box[0], pixel_width, 0.0, aoi_box[1], 0.0, pixel_height]
+
     #The output projection will be the same as any in dataset_list, so just take
     #the first one.
     out_projection = dataset_list[0].GetProjection()
-    output_uri = ''
 
     #If no output uri is specified assume 'MEM' format, otherwise GTiff
     format = 'MEM'
+    output_uri = ''
     if raster_out_uri != None:
         output_uri = raster_out_uri
         format = 'GTiff'
 
-    #Build the new output dataset and reference the band for later
+    #Build the new output dataset and reference the band for later.  the '1'
+    #means only 1 output band.
     out_dataset = new_raster(out_n_cols, out_n_rows, projection,
         out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(0)
 
-
+    #left and right coordinates will always be the same for each row so calc
+    #them first.
     out_left_coord = out_gt[0]
     out_right_coord = out_left_coord + out_gt[1] * out_band.XSize
     #Loop over each row in out_band
     for row_index in range(out_band.YSize):
         row_y_coord = out_gt[3] + out_gt[5] * row_index
-      #Loop over each input raster
-        #Build an interpolator for the input raster row that matches out_band_row
-        #Interpolate a row that aligns with out_band_row and add to list
-      #Vectorize the stack of rows and write to out_band
+        raster_array_stack = []
+        #Loop over each input raster
+        for dataset in dataset_list:
+            current_band = dataset.GetRasterBand(1)
+            #Build an interpolator for the input raster row that matches out_band_row
+            #Interpolate a row that aligns with out_band_row and add to list
+        #Vectorize the stack of rows and write to out_band
 
     #Calculate the min/max/avg/stdev on the out raster
     calculate_raster_stats(out_dataset)
