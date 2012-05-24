@@ -94,7 +94,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
         brodcasted pixels from each current_dataset in dataset_list in the order they 
         exist in the list
         
-        dataset_list - list of GDAL input datasets
+        dataset_list - list of GDAL input datasets, requires that they'are all
+            in the same projection.
         op - numpy vectorized operation, takes broadcasted pixels from 
             the first bands in dataset_list in order and returns a new pixel
         raster_out_uri - the desired URI to the output current_dataset.  If None then
@@ -152,6 +153,9 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
         out_geotransform, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(0)
+
+
+
 
     #Calculate the min/max/avg/stdev on the out raster
     calculate_raster_stats(out_dataset)
