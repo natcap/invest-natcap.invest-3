@@ -192,12 +192,18 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
             current_bottom_index = \
                 int(np.ceil((row_y_coord - current_gt[3])/current_gt[5]))+1
 
+
+            current_col_steps = current_right_index - current_left_index
+            current_row_steps = current_bottom_index - current_top_index
+
             current_array = \
                 current_band.ReadAsArray(current_left_index, current_top_index,
-                                         current_right_index - current_left_index,
-                                         current_bottom_index - current_top_index)
+                                         current_col_steps, current_row_steps)
 
-            print current_array.shape
+            current_left_coordinate = \
+                current_gt[0] + current_left_index * current_gt[1]
+            current_top_coordinate = \
+                current_gt[3] + current_top_index * current_gt[5]
 
             #LOGGER.debug("left and right current index %s %s %s %s" % (current_left_index, current_right_index, current_top_index, current_bottom_index))
 
