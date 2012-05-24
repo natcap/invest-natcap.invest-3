@@ -173,8 +173,21 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
         row_y_coord = out_gt[3] + out_gt[5] * row_index
         raster_array_stack = []
         #Loop over each input raster
-        for dataset in dataset_list:
-            current_band = dataset.GetRasterBand(1)
+        for current_dataset in dataset_list:
+            current_band = current_dataset.GetRasterBand(1)
+            current_gt = current_dataset.GetGeoTransform()
+            #Determine left and right indexes by calculating distance from
+            #out left edget to current left edge and dividing by the width
+            #of current pixel.
+            current_left_index = \
+                int(np.floor((out_left_coord - current_gt[0])/current_gt[1]))
+            current_right_index = \
+                int(np.ceil((out_right_coord - current_gt[0])/current_gt[1]))
+
+            #LOGGER.debug("left and right current index %s %s" % (current_left_index, current_right_index))
+
+            #Determine top and bottom indexes
+
             #Build an interpolator for the input raster row that matches out_band_row
             #Interpolate a row that aligns with out_band_row and add to list
         #Vectorize the stack of rows and write to out_band
