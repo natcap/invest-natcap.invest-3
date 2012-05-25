@@ -59,8 +59,6 @@ def biophysical(args):
     
     output_dir = args['workspace_dir'] + os.sep + 'Output'
     
-    print os.path.exists(output_dir)
-
     #using a tuple to get data back from function, then update the shape files 
     #to reflect these new attributes
     cycles_completed, cycle_lengths, weights = calc_farm_cycles(args['g_param_a'], 
@@ -70,6 +68,10 @@ def biophysical(args):
     driver = ogr.GetDriverByName('ESRI Shapefile')
     out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
     curr_shp_file = args['ff_farm_file']
+    
+    #If already exists, remove so we can re-create
+    if (os.path.isfile(out_path)):
+        os.remove(out_path)
 
     sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
     layer = sf_copy.GetLayer()
