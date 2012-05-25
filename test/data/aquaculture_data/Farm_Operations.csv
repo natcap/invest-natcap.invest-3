@@ -6,7 +6,7 @@ Duration of simulation (years),5 ,,,,,,,
 ,,,,,,,,
 ,,,,,,,,
 Farm-Specific Operations Parameters,,,,,,,,
-Farm #:,weight of fish at start (kg),target weight of fish at harvest (kg),number of fish in farm,start day  for growing ,Length of Fallowing period,Total mass in farm (kg),Total dressed wt.,Total value
+Farm #:,weight of fish at start (kg),target weight of fish at harvest (kg),number of fish in farm,start day for growing,Length of Fallowing period,Total mass in farm (kg),Total dressed wt.,Total value
 1,0.06,5.40 ,"600,000 ",60,0," 3,240,000 "," 2,754,000 ",#VALUE!
 2,0.06,5.40 ,"600,000 ",60,0," 3,240,000 "," 2,754,000 ",#VALUE!
 3,0.06,5.40 ,"590,000 ",50,90," 3,186,000 "," 2,708,100 ",#VALUE!
