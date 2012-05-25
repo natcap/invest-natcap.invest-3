@@ -29,3 +29,10 @@ def execute(args):
     valuation_args['p_per_kg'] = args['p_per_kg']
     valuation_args['frac_p'] = args['frac_p']
     valuation_args['discount'] = args['discount']
+    
+    """
+    #Fire up the valuation function in wave_energy_core with the 
+    #gathered arguments
+    LOGGER.info('Starting Finfish Valuation.')
+    finfish_aquaculture_core.valuation(valuation_args)
+    LOGGER.info('Completed Finfish Valuation.') """
