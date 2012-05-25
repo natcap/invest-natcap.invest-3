@@ -185,13 +185,23 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
                 int(np.ceil((out_right_coord - current_gt[0])/current_gt[1]))
 
             current_top_index = \
-                int(np.floor((row_y_coord - current_gt[3])/current_gt[5]))
+                int(np.floor((row_y_coord - current_gt[3])/current_gt[5]))-1
 
             #The +1 ensures the count of indexes are correct otherwise subtracting
             #top and bottom index that differ by 1 are always 0 and sometimes -1
             current_bottom_index = \
                 int(np.ceil((row_y_coord - current_gt[3])/current_gt[5]))+1
 
+
+            #We might be at the top or bottom edge, so shift the window up or down
+            #We need at least 3 rows because the interpolator requires it.
+            if current_top_index < 0:
+                current_top_index += 1
+                current_bottom_index += 1
+            elif current_bottom_index > out_band.YSize:
+                current_top_index -= 1
+                current_bottom_index -= 1
+                
 
             current_col_steps = current_right_index - current_left_index
             current_row_steps = current_bottom_index - current_top_index
@@ -206,12 +216,30 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
                 current_gt[3] + current_top_index * current_gt[5]
 
             current_col_coordinates = \
-                [current_left_coordinate + index * current_gt[1] \
-                     for index in range(current_col_steps)]
+                np.array([current_left_coordinate + index * current_gt[1] \
+                     for index in range(current_col_steps)])
 
             current_row_coordinates = \
-                [current_top_coordinate + index * current_gt[5] \
-                     for index in range(current_row_steps)]
+                np.array([current_top_coordinate + index * current_gt[5] \
+                     for index in range(current_row_steps)])
+
+            #print current_col_coordinates.shape
+            #print current_row_coordinates.shape
+            #print current_row_coordinates
+            #print current_array.shape
+
+            #If this is true it means the y coordinates aren't in increasing
+            #order which freaks out the interpolator.  Reverse them, but we'll
+            #have to remember later that this is going on.
+            if gt[5] < 0:
+                current_row_coordinates = current_row_coordinates[::-1]
+                current_array = current_array[::-1]
+
+            interpolator = \
+                scipy.interpolate.RectBivariateSpline(current_row_coordinates,
+                                                      current_col_coordinates, 
+                                                      current_array,
+                                                      kx=1, ky=1)
 
             #LOGGER.debug("left and right current index %s %s %s %s" % (current_left_index, current_right_index, current_top_index, current_bottom_index))
 
