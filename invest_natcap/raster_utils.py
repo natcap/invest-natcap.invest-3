@@ -144,31 +144,124 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     #4) top coordinate of top left corner
     #5) pixel height in x direction (usually zero)
     #6) pixel height in y direction 
-    out_geotransform = [aoi_box[0], pixel_width, 0.0,
-                        aoi_box[1], 0.0, pixel_height]
+    out_gt = [aoi_box[0], pixel_width, 0.0, aoi_box[1], 0.0, pixel_height]
+
     #The output projection will be the same as any in dataset_list, so just take
     #the first one.
     out_projection = dataset_list[0].GetProjection()
-    output_uri = ''
 
     #If no output uri is specified assume 'MEM' format, otherwise GTiff
     format = 'MEM'
+    output_uri = ''
     if raster_out_uri != None:
         output_uri = raster_out_uri
         format = 'GTiff'
 
-    #Build the new output dataset and reference the band for later
-    out_dataset = new_raster(out_n_cols, out_n_rows, projection,
-        out_geotransform, format, nodata, datatype, 1, output_uri)
+    #Build the new output dataset and reference the band for later.  the '1'
+    #means only 1 output band.
+    out_dataset = new_raster(out_n_cols, out_n_rows, out_projection,
+        out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
     out_band.Fill(0)
 
+    #left and right coordinates will always be the same for each row so calc
+    #them first.
+    out_left_coord = out_gt[0]
+    out_right_coord = out_left_coord + out_gt[1] * out_band.XSize
+
+    #These are the output coordinates for the interpolator
+    out_col_coordinates = np.arange(out_n_cols)
+    out_col_coordinates *= out_gt[1]
+    out_col_coordinates += out_gt[0]
+
+    vectorized_op = np.vectorize(op)
 
     #Loop over each row in out_band
-      #Loop over each input raster
-        #Build an interpolator for the input raster row that matches out_band_row
-        #Interpolate a row that aligns with out_band_row and add to list
-      #Vectorize the stack of rows and write to out_band
+    for out_row_index in range(out_band.YSize):
+        out_row_coord = out_gt[3] + out_gt[5] * out_row_index
+        raster_array_stack = []
+        #Loop over each input raster
+        for current_dataset in dataset_list:
+            current_band = current_dataset.GetRasterBand(1)
+            current_gt = current_dataset.GetGeoTransform()
+            #Determine left and right indexes by calculating distance from
+            #out left edget to current left edge and dividing by the width
+            #of current pixel.
+            current_left_index = \
+                int(np.floor((out_left_coord - current_gt[0])/current_gt[1]))
+            current_right_index = \
+                int(np.ceil((out_right_coord - current_gt[0])/current_gt[1]))
+
+            current_top_index = \
+                int(np.floor((out_row_coord - current_gt[3])/current_gt[5]))-1
+
+            #The +1 ensures the count of indexes are correct otherwise subtracting
+            #top and bottom index that differ by 1 are always 0 and sometimes -1
+            current_bottom_index = \
+                int(np.ceil((out_row_coord - current_gt[3])/current_gt[5]))+1
+
+            #We might be at the top or bottom edge, so shift the window up or down
+            #We need at least 3 rows because the interpolator requires it.
+            if current_top_index < 0:
+                current_top_index += 1
+                current_bottom_index += 1
+            elif current_bottom_index > out_band.YSize:
+                current_top_index -= 1
+                current_bottom_index -= 1
+                
+            #These steps will tell us the size of the window to read from and
+            #later help us determine the row and column coordinates for the 
+            #interpolator.
+            current_col_steps = current_right_index - current_left_index
+            current_row_steps = current_bottom_index - current_top_index
+
+            current_array = \
+                current_band.ReadAsArray(current_left_index, current_top_index,
+                                         current_col_steps, current_row_steps)
+
+            #These are the basis of the coordinates for the interpolator
+            current_left_coordinate = \
+                current_gt[0] + current_left_index * current_gt[1]
+            current_top_coordinate = \
+                current_gt[3] + current_top_index * current_gt[5]
+
+            #Equivalent of
+            #    np.array([current_left_coordinate + index * current_gt[1] \
+            #         for index in range(current_col_steps)])
+            current_col_coordinates = np.arange(current_col_steps)
+            current_col_coordinates *= current_gt[1]
+            current_col_coordinates += current_left_coordinate
+
+            #Equivalent of
+            #    np.array([current_top_coordinate + index * current_gt[5] \
+            #         for index in range(current_row_steps)])
+            current_row_coordinates = np.arange(current_row_steps)
+            current_row_coordinates *= current_gt[5]
+            current_row_coordinates += current_top_coordinate
+
+            #If this is true it means the y coordinates aren't in increasing
+            #order which freaks out the interpolator.  Reverse them.
+            if gt[5] < 0:
+                current_row_coordinates = current_row_coordinates[::-1]
+                current_array = current_array[::-1]
+
+            interpolator = \
+                scipy.interpolate.RectBivariateSpline(current_row_coordinates,
+                                                      current_col_coordinates, 
+                                                      current_array,
+                                                      kx=1, ky=1)
+
+            
+            #This does the interpolation for the output row stack later to be
+            #vectorized
+            interpolated_row = interpolator(np.array([out_row_coord]), 
+                                            out_col_coordinates)
+
+            raster_array_stack.append(interpolated_row)
+
+        #Vectorize the stack of rows and write to out_band
+        out_row = vectorized_op(*raster_array_stack)
+        out_band.WriteArray(out_row,xoff=0,yoff=out_row_index)
 
     #Calculate the min/max/avg/stdev on the out raster
     calculate_raster_stats(out_dataset)
