@@ -24,4 +24,4 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         args['frac_p'] = .3
         args['discount'] = 0.000192
 
-        finfish_aquaculture_core.execute(args)
+        finfish_aquaculture_core.biophysical(args)
