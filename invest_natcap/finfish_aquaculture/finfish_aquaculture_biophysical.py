@@ -6,6 +6,8 @@ import csv
 from osgeo import gdal
 from osgeo import ogr
 
+from invest_natcap.finfish_aquaculture import finfish_aquaculture_core
+
 def execute(args):
     """This function will take care of preparing files passed into 
     the finfish aquaculture model. It will handle all files/inputs associated
@@ -37,7 +39,7 @@ def execute(args):
     
     workspace = args['workspace_dir']
     output_dir = workspace + os.sep + 'Output'
-    
+        
     if not (os.path.exists(output_dir)):
         os.makedirs(output_dir)
         
@@ -53,7 +55,11 @@ def execute(args):
     format_temp_table(args['water_temp_tbl'])
     format_ops_table(args['farm_op_tbl'], "Farm #:")
 
-    
+    #Fire up the biophysical function in finfish_aquaculture_core with the 
+    #gathered arguments
+    #LOGGER.info('Starting Finfish Biophysical.')
+    finfish_aquaculture_core.biophysical(biophysical_args)
+    #LOGGER.info('Completed Finfish Biophysical.')
 
 def format_ops_table(op_path, farm_ID):
     
@@ -116,7 +122,7 @@ def format_ops_table(op_path, farm_ID):
     
     biophysical_args['farm_op_dict'] = new_dict_op
     
-    print general_ops
+    #print general_ops
     
     #add the gen args in
     for key in general_ops.keys():
