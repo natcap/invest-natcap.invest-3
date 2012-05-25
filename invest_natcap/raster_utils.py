@@ -168,9 +168,15 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     #them first.
     out_left_coord = out_gt[0]
     out_right_coord = out_left_coord + out_gt[1] * out_band.XSize
+
+    #These are the output coordinates for the interpolator
+    out_col_coordinates = np.arange(out_n_cols)
+    out_col_coordinates *= out_gt[1]
+    out_col_coordinates += out_gt[0]
+
     #Loop over each row in out_band
     for row_index in range(out_band.YSize):
-        row_y_coord = out_gt[3] + out_gt[5] * row_index
+        out_row_coord = out_gt[3] + out_gt[5] * row_index
         raster_array_stack = []
         #Loop over each input raster
         for current_dataset in dataset_list:
@@ -185,13 +191,12 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
                 int(np.ceil((out_right_coord - current_gt[0])/current_gt[1]))
 
             current_top_index = \
-                int(np.floor((row_y_coord - current_gt[3])/current_gt[5]))-1
+                int(np.floor((out_row_coord - current_gt[3])/current_gt[5]))-1
 
             #The +1 ensures the count of indexes are correct otherwise subtracting
             #top and bottom index that differ by 1 are always 0 and sometimes -1
             current_bottom_index = \
-                int(np.ceil((row_y_coord - current_gt[3])/current_gt[5]))+1
-
+                int(np.ceil((out_row_coord - current_gt[3])/current_gt[5]))+1
 
             #We might be at the top or bottom edge, so shift the window up or down
             #We need at least 3 rows because the interpolator requires it.
@@ -244,9 +249,15 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
                                                       current_array,
                                                       kx=1, ky=1)
 
-            #LOGGER.debug("left and right current index %s %s %s %s" % (current_left_index, current_right_index, current_top_index, current_bottom_index))
+            
+            #This does the interpolation for the output row stack later to be
+            #vectorized
+            interpolated_row = interpolator(np.array([out_row_coord]), 
+                                            out_col_coordinates)
 
-            #Interpolate a row that aligns with out_band_row and add to list
+            raster_array_stack.append(interpolated_row)
+
+
         #Vectorize the stack of rows and write to out_band
         
 
