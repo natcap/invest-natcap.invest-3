@@ -177,8 +177,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     vectorized_op = np.vectorize(op)
 
     #Loop over each row in out_band
-    for row_index in range(out_band.YSize):
-        out_row_coord = out_gt[3] + out_gt[5] * row_index
+    for out_row_index in range(out_band.YSize):
+        out_row_coord = out_gt[3] + out_gt[5] * out_row_index
         raster_array_stack = []
         #Loop over each input raster
         for current_dataset in dataset_list:
@@ -261,7 +261,7 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
 
         #Vectorize the stack of rows and write to out_band
         out_row = vectorized_op(*raster_array_stack)
-
+        out_band.WriteArray(out_row,xoff=0,yoff=out_row_index)
 
     #Calculate the min/max/avg/stdev on the out raster
     calculate_raster_stats(out_dataset)
