@@ -174,7 +174,11 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     out_col_coordinates *= out_gt[1]
     out_col_coordinates += out_gt[0]
 
-    vectorized_op = np.vectorize(op)
+    try:
+        vectorized_op = np.vectorize(op)
+    except ValueError:
+        #it's possible that the operation is already vectorized, so try that
+        vectorized_op = op
 
     #Loop over each row in out_band
     for out_row_index in range(out_band.YSize):
