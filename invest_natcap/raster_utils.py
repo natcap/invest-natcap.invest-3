@@ -174,6 +174,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     out_col_coordinates *= out_gt[1]
     out_col_coordinates += out_gt[0]
 
+    vectorized_op = np.vectorize(op)
+
     #Loop over each row in out_band
     for row_index in range(out_band.YSize):
         out_row_coord = out_gt[3] + out_gt[5] * row_index
@@ -257,9 +259,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
 
             raster_array_stack.append(interpolated_row)
 
-
         #Vectorize the stack of rows and write to out_band
-        
+        out_row = vectorized_op(*raster_array_stack)
 
 
     #Calculate the min/max/avg/stdev on the out raster
