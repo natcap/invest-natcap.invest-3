@@ -243,9 +243,6 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
 
             #LOGGER.debug("left and right current index %s %s %s %s" % (current_left_index, current_right_index, current_top_index, current_bottom_index))
 
-            #Determine top and bottom indexes
-
-            #Build an interpolator for the input raster row that matches out_band_row
             #Interpolate a row that aligns with out_band_row and add to list
         #Vectorize the stack of rows and write to out_band
         
