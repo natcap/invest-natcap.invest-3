@@ -12,6 +12,8 @@ from osgeo import ogr
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
+from invest_natcap import raster_utils
+
 
 LOGGER = logging.getLogger('hydropower_core')
 
@@ -225,8 +227,8 @@ def water_yield(args):
     #Create the fractp raster
     raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
                    soil_depth_raster, pawc_raster]
-    fractp_raster = invest_core.vectorizeRasters(raster_list, fractp_vec, 
-                                                 rasterName=fractp_path, 
+    fractp_raster = raster_utils.vectorize_rasters(raster_list, fractp_vec, 
+                                                 raster_out_uri=fractp_path, 
                                                  nodata=out_nodata)
     
     LOGGER.debug('Performing wyield operation')
@@ -927,8 +929,8 @@ def water_scarcity(args):
         
     rsupply_vol_vec = np.vectorize(rsupply_vol_op)
 
-    invest_core.vectorizeRasters([wyield_calib, sum_raster], rsupply_vol_vec, 
-                                 rasterName=rsupply_vol_path)
+    raster_utils.vectorize_rasters([wyield_calib, sum_raster], rsupply_vol_vec, 
+                                 raster_out_uri=rsupply_vol_path)
     
     wyield_mn_nodata = wyield_mean.GetRasterBand(1).GetNoDataValue()
     mn_raster_nodata = mean_raster.GetRasterBand(1).GetNoDataValue()
@@ -951,8 +953,8 @@ def water_scarcity(args):
         
     rsupply_mn_vec = np.vectorize(rsupply_mean_op)
     
-    invest_core.vectorizeRasters([wyield_mean, mean_raster], rsupply_mn_vec, 
-                                 rasterName=rsupply_mean_path)
+    raster_utils.vectorize_rasters([wyield_mean, mean_raster], rsupply_mn_vec, 
+                                 raster_out_uri=rsupply_mean_path)
     
     #Make sub watershed and watershed tables by adding values onto the tables
     #provided from sub watershed yield and watershed yield
