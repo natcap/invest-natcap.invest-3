@@ -160,7 +160,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
         
         returns a single band raster"""
 
-    logger.warning("`vectorizeRasters` is deprecated, but its being used right now.  That's bad and you should feel bad. ಠ_ಠ Use invest_natcap.raster_utils.vectorize_rasters instead.")
+    logger.warning("`vectorizeRasters` is deprecated, but its being used right now.  That's bad and you should feel bad. Use invest_natcap.raster_utils.vectorize_rasters instead.")
 
     logger.debug('starting vectorizeRasters')
 
