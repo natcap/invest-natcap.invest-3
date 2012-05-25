@@ -215,13 +215,19 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
             current_top_coordinate = \
                 current_gt[3] + current_top_index * current_gt[5]
 
-            current_col_coordinates = \
-                np.array([current_left_coordinate + index * current_gt[1] \
-                     for index in range(current_col_steps)])
+            #Equivalent of
+            #    np.array([current_left_coordinate + index * current_gt[1] \
+            #         for index in range(current_col_steps)])
+            current_col_coordinates = np.arange(current_col_steps)
+            current_col_coordinates *= current_gt[1]
+            current_col_coordinates += current_left_coordinate
 
-            current_row_coordinates = \
-                np.array([current_top_coordinate + index * current_gt[5] \
-                     for index in range(current_row_steps)])
+            #Equivalent of
+            #    np.array([current_top_coordinate + index * current_gt[5] \
+            #         for index in range(current_row_steps)])
+            current_row_coordinates = np.arange(current_row_steps)
+            current_row_coordinates *= current_gt[5]
+            current_row_coordinates += current_top_coordinate
 
             #print current_col_coordinates.shape
             #print current_row_coordinates.shape
