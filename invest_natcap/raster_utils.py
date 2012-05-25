@@ -202,7 +202,9 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
                 current_top_index -= 1
                 current_bottom_index -= 1
                 
-
+            #These steps will tell us the size of the window to read from and
+            #later help us determine the row and column coordinates for the 
+            #interpolator.
             current_col_steps = current_right_index - current_left_index
             current_row_steps = current_bottom_index - current_top_index
 
@@ -210,6 +212,7 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
                 current_band.ReadAsArray(current_left_index, current_top_index,
                                          current_col_steps, current_row_steps)
 
+            #These are the basis of the coordinates for the interpolator
             current_left_coordinate = \
                 current_gt[0] + current_left_index * current_gt[1]
             current_top_coordinate = \
@@ -229,14 +232,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
             current_row_coordinates *= current_gt[5]
             current_row_coordinates += current_top_coordinate
 
-            #print current_col_coordinates.shape
-            #print current_row_coordinates.shape
-            #print current_row_coordinates
-            #print current_array.shape
-
             #If this is true it means the y coordinates aren't in increasing
-            #order which freaks out the interpolator.  Reverse them, but we'll
-            #have to remember later that this is going on.
+            #order which freaks out the interpolator.  Reverse them.
             if gt[5] < 0:
                 current_row_coordinates = current_row_coordinates[::-1]
                 current_array = current_array[::-1]
