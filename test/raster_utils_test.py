@@ -13,4 +13,6 @@ def adder(a,b):
     return a+b
 
 raster_utils.vectorize_rasters([ds_1, ds_2], adder, 
-                               raster_out_uri = 'out.tif', nodata=-1.0, aoi=aoi_geo)
+                               raster_out_uri = 'out_aoi.tif', nodata=-1.0, aoi=aoi_geo)
+raster_utils.vectorize_rasters([ds_1, ds_2], adder, 
+                               raster_out_uri = 'out.tif', nodata=-1.0)

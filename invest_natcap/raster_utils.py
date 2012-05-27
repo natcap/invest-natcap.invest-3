@@ -101,7 +101,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         aoi - an OGR polygon datasource that will clip the output raster to no larger
             than the extent of the file and restricts the processing of op to those
             output pixels that will lie within the polygons.  the rest will be nodata
-            values.
+            values.  Must be in the same projection as dataset_list rasters.
         raster_out_uri - the desired URI to the output current_dataset.  If None then
             resulting current_dataset is only mapped to MEM
         datatype - the GDAL datatype of the output current_dataset.  By default this
@@ -185,24 +185,28 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         vectorized_op = op
 
     #If there's an AOI, we need to mask out values
-    mask_dataset = new_raster_from_base(out_dataset, '', 'MEM', nodata, gdal.GDT_Byte)
+    mask_dataset = new_raster_from_base(out_dataset, 'mask.tif', 'GTiff', 255, gdal.GDT_Byte)
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     if aoi != None:
-        #Only mask AOI as 1 everything else is 0
-        mask_dataset_band = mask_dataset.GetRasterBand(1)
-        mask_dataset_band.Fill(0)
-        aoi_layer = aoi.GetLayer(0)
-        gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
+        #Only mask AOI as 0 everything else is 1 to correspond to numpy masked arrays
+        #that say '1' is invalid
+        mask_dataset_band.Fill(1)
+        aoi_layer = aoi.GetLayer()
+        gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[0])
     else:
         #No aoi means good to fill everywhere
-        mask_dataset_band.Fill(1)
+        mask_dataset_band.Fill(0)
         
+    mask_dataset_band = None
+    mask_dataset.FlushCache()
+    mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     #Loop over each row in out_band
     for out_row_index in range(out_band.YSize):
         out_row_coord = out_gt[3] + out_gt[5] * out_row_index
         raster_array_stack = []
+        mask_array = mask_dataset_band.ReadAsArray(0,out_row_index,mask_dataset_band.XSize,1)
         #Loop over each input raster
         for current_dataset in dataset_list:
             current_band = current_dataset.GetRasterBand(1)
@@ -284,6 +288,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
         #Vectorize the stack of rows and write to out_band
         out_row = vectorized_op(*raster_array_stack)
+        #Mask out_row based on AOI
+        out_row[mask_array == 1] = nodata
         out_band.WriteArray(out_row,xoff=0,yoff=out_row_index)
 
     #Calculate the min/max/avg/stdev on the out raster
