@@ -166,7 +166,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     out_dataset = new_raster(out_n_cols, out_n_rows, out_projection,
         out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
-    out_band.Fill(0)
+    out_band.Fill(nodata)
 
     #left and right coordinates will always be the same for each row so calc
     #them first.
@@ -183,6 +183,21 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     except ValueError:
         #it's possible that the operation is already vectorized, so try that
         vectorized_op = op
+
+    #If there's an AOI, we need to mask out values
+    mask_dataset = new_raster_from_base(out_dataset, '', 'MEM', nodata, gdal.GDT_Byte)
+    mask_dataset_band = mask_dataset.GetRasterBand(1)
+
+    if aoi != None:
+        #Only mask AOI as 1 everything else is 0
+        mask_dataset_band = mask_dataset.GetRasterBand(1)
+        mask_dataset_band.Fill(0)
+        aoi_layer = aoi.GetLayer(0)
+        gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[1])
+    else:
+        #No aoi means good to fill everywhere
+        mask_dataset_band.Fill(1)
+        
 
     #Loop over each row in out_band
     for out_row_index in range(out_band.YSize):
