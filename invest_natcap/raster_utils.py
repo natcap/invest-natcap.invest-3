@@ -87,7 +87,7 @@ def pixel_size(dataset):
         linear_units
     return size_meters
 
-def vectorize_rasters(dataset_list, op, raster_out_uri=None,
+def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
     """Apply the numpy vectorized operation `op` on the first band of the
         datasets contained in dataset_list where the arguments to `op` are 
@@ -98,6 +98,10 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
             in the same projection.
         op - numpy vectorized operation, takes broadcasted pixels from 
             the first bands in dataset_list in order and returns a new pixel
+        aoi - an OGR polygon datasource that will clip the output raster to no larger
+            than the extent of the file and restricts the processing of op to those
+            output pixels that will lie within the polygons.  the rest will be nodata
+            values.
         raster_out_uri - the desired URI to the output current_dataset.  If None then
             resulting current_dataset is only mapped to MEM
         datatype - the GDAL datatype of the output current_dataset.  By default this
