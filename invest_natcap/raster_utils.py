@@ -119,7 +119,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
     LOGGER.debug('calculating the overlapping rectangles')
-    aoi_box = calculate_intersection_rectangle(dataset_list)
+    aoi_box = calculate_intersection_rectangle(dataset_list, aoi)
     LOGGER.debug('the aoi box: %s' % aoi_box)
 
     #determine the minimum pixel size
@@ -337,12 +337,16 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
 
     return new_raster
 
-def calculate_intersection_rectangle(rasterList):
+def calculate_intersection_rectangle(rasterList, aoi=None):
     """Return a bounding box of the intersections of all the rasters in the
         list.
         
         rasterList - a list of GDAL rasters in the same projection and 
             coordinate system
+        aoi - an OGR polygon datasource which may optionally also restrict
+            the extents of the intersection rectangle based on its own
+            extents.
+
             
         returns a 4 element list that bounds the intersection of all the 
             rasters in rasterList.  [left, top, right, bottom]"""
@@ -366,6 +370,16 @@ def calculate_intersection_rectangle(rasterList):
                        min(rec[1], boundingBox[1]),
                        min(rec[2], boundingBox[2]),
                        max(rec[3], boundingBox[3])]
+
+    if aoi != None:
+        aoi_layer = aoi.GetLayer(0)
+        aoi_extent = aoi_layer.GetExtent()
+        LOGGER.debug("aoi_extent %s" % (str(aoi_extent)))
+        boundingBox = [max(aoi_extent[0], boundingBox[0]),
+                       min(aoi_extent[3], boundingBox[1]),
+                       min(aoi_extent[1], boundingBox[2]),
+                       max(aoi_extent[2], boundingBox[3])]
+
     return boundingBox
 
 def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile, 
