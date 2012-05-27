@@ -408,34 +408,3 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     #Initialize everything to nodata
     raster.GetRasterBand(1).Fill(nodata)
     raster.GetRasterBand(1).FlushCache()
-
-def calculateIntersectionRectangle(rasterList):
-    """Return a bounding box of the intersections of all the rasters in the
-        list.
-        
-        rasterList - a list of GDAL rasters in the same projection and 
-            coordinate system
-            
-        returns a 4 element list that bounds the intersection of all the 
-            rasters in rasterList.  [left, top, right, bottom]"""
-
-    #Define the initial bounding box
-    gt = rasterList[0].GetGeoTransform()
-    #order is left, top, right, bottom of rasterbounds
-    boundingBox = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
-                   gt[3] + gt[5] * rasterList[0].RasterYSize]
-
-    for band in rasterList:
-        #intersect the current bounding box with the one just read
-        gt = band.GetGeoTransform()
-        LOGGER.debug('geotransform on raster band %s %s' % (gt, band))
-        LOGGER.debug('pixel x and y %s %s' % (band.RasterXSize,
-                                              band.RasterYSize))
-        rec = [gt[0], gt[3], gt[0] + gt[1] * band.RasterXSize,
-               gt[3] + gt[5] * band.RasterYSize]
-        #This intersects rec with the current bounding box
-        boundingBox = [max(rec[0], boundingBox[0]),
-                       min(rec[1], boundingBox[1]),
-                       min(rec[2], boundingBox[2]),
-                       max(rec[3], boundingBox[3])]
-    return boundingBox
