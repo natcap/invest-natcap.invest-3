@@ -931,7 +931,8 @@ def water_scarcity(args):
     rsupply_vol_vec = np.vectorize(rsupply_vol_op)
 
     raster_utils.vectorize_rasters([wyield_calib, sum_raster], rsupply_vol_vec, 
-                                 raster_out_uri=rsupply_vol_path, nodata=rsupply_out_nodata)
+                                   raster_out_uri=rsupply_vol_path, 
+                                   nodata=rsupply_out_nodata)
     
     wyield_mn_nodata = wyield_mean.GetRasterBand(1).GetNoDataValue()
     mn_raster_nodata = mean_raster.GetRasterBand(1).GetNoDataValue()
