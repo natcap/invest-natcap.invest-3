@@ -21,7 +21,7 @@ class TestWaterScarcity(unittest.TestCase):
     def test_water_scarcity_re(self):
         
         output_base = './data/test_out/hydropower_water_scarcity_uri/'
-        input_dir = './data/hydropower_data/'
+        input_dir = './data/hydropower_regression_data/'
         
         #Create the output directories
         if not os.path.isdir(output_base):
@@ -34,52 +34,52 @@ class TestWaterScarcity(unittest.TestCase):
         
         args = {}
         args['workspace_dir'] = output_base
-        args['lulc_uri'] = input_dir + 'test_input/landuse_90'
-        args['watersheds_uri'] = input_dir + 'test_input/watersheds.shp'
-        args['sub_watersheds_uri'] = input_dir + 'test_input/subwatersheds.shp'
+        args['lulc_uri'] = input_dir + 'hydro_regression_byhand/lulc.tif'
+        args['watersheds_uri'] = input_dir + 'hydro_regression_byhand/simple_reg_ws.shp'
+        args['sub_watersheds_uri'] = input_dir + 'hydro_regression_byhand/simple_reg_subws.shp'
         args['water_yield_vol_uri'] = \
-            input_dir + 'samp_input/wyield_vol.tif'
+            input_dir + 'wyield_vol.tif'
         args['water_yield_mean_uri'] = \
-            input_dir + 'samp_input/wyield_mn.tif'
+            input_dir + 'wyield_mn.tif'
         args['watershed_yield_table_uri'] = \
-            input_dir + 'test_input/water_yield_watershed_input.csv'
+            input_dir + 'water_yield_watershed.csv'
         args['subwatershed_yield_table_uri'] = \
-            input_dir + 'test_input/water_yield_subwatershed_input.csv'
+            input_dir + 'water_yield_subwatershed.csv'
         args['hydro_calibration_table_uri'] = \
-            input_dir + 'test_input/hydro_calib_table.csv'
-        args['demand_table_uri'] = input_dir + 'test_input/demand_table.csv'
+            input_dir + 'hydropower_calibration.csv'
+        args['demand_table_uri'] = input_dir + 'water_demand.csv'
         args['results_suffix'] = ''
         
         water_scarcity.execute(args)
         
-#        regression_dir = './data/hydropower_regression_data/'
-#        reg_consum_vol_uri = regression_dir + 'consum_vol_regression.tif'
-#        reg_consum_mn_uri = regression_dir + 'consum_mn_regression.tif'
-#        reg_rsup_vol_uri = regression_dir + 'rsup_vol_regression.tif'
-#        reg_rsup_mn_uri = regression_dir + 'rsup_mn_regression.tif'
-#        reg_cyield_vol_uri = regression_dir + 'cyield_vol_regression.tif'
-#        reg_ws_table_uri = regression_dir + 'ws_scarcity_table_regression.csv'
-#        reg_sws_table_uri = regression_dir + 'sws_scarcity_table_regression.csv'
-#        
-#        consum_vol_uri = output_base + 'Output/consum_vol.tif'
-#        consum_mn_uri = output_base + 'Output/consum_mn.tif'
-#        rsup_vol_uri = output_base + 'Output/rsup_vol.tif'
-#        rsup_mn_uri = output_base + 'Output/rsup_mn.tif'
-#        cyield_vol_uri = output_base + 'Output/cyield_vol.tif'
-#        ws_table_uri = output_base + 'Output/water_scarcity_watershed.csv'
-#        sws_table_uri = output_base + 'Output/water_scarcity_subwatershed.csv'
-#        
-#        invest_test_core.assertTwoDatasetEqualURI(self, reg_consum_vol_uri, 
-#                                                  consum_vol_uri)
-#        invest_test_core.assertTwoDatasetEqualURI(self, reg_consum_mn_uri, 
-#                                                  consum_mn_uri)
-#        invest_test_core.assertTwoDatasetEqualURI(self, reg_rsup_vol_uri, 
-#                                                  rsup_vol_uri)
-#        invest_test_core.assertTwoDatasetEqualURI(self, reg_rsup_mn_uri, 
-#                                                  rsup_mn_uri)
-#        invest_test_core.assertTwoDatasetEqualURI(self, reg_cyield_vol_uri, 
-#                                                  cyield_vol_uri)
-#        invest_test_core.assertTwoCSVEqualURI(self, reg_ws_table_uri, 
-#                                              ws_table_uri)
-#        invest_test_core.assertTwoCSVEqualURI(self, reg_sws_table_uri, 
-#                                              sws_table_uri)
+        regression_dir = './data/hydropower_regression_data/'
+        reg_consum_vol_uri = regression_dir + 'consum_vol.tif'
+        reg_consum_mn_uri = regression_dir + 'consum_mn.tif'
+        reg_rsup_vol_uri = regression_dir + 'rsup_vol.tif'
+        reg_rsup_mn_uri = regression_dir + 'rsup_mn.tif'
+        reg_cyield_vol_uri = regression_dir + 'cyield_vol.tif'
+        reg_ws_table_uri = regression_dir + 'water_scarcity_watershed.csv'
+        reg_sws_table_uri = regression_dir + 'water_scarcity_subwatershed.csv'
+        
+        consum_vol_uri = output_base + 'Output/consum_vol.tif'
+        consum_mn_uri = output_base + 'Output/consum_mn.tif'
+        rsup_vol_uri = output_base + 'Output/rsup_vol.tif'
+        rsup_mn_uri = output_base + 'Output/rsup_mn.tif'
+        cyield_vol_uri = output_base + 'Output/cyield_vol.tif'
+        ws_table_uri = output_base + 'Output/water_scarcity_watershed.csv'
+        sws_table_uri = output_base + 'Output/water_scarcity_subwatershed.csv'
+        
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_consum_vol_uri, 
+                                                  consum_vol_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_consum_mn_uri, 
+                                                  consum_mn_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rsup_vol_uri, 
+                                                  rsup_vol_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rsup_mn_uri, 
+                                                  rsup_mn_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_cyield_vol_uri, 
+                                                  cyield_vol_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_ws_table_uri, 
+                                              ws_table_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_sws_table_uri, 
+                                              sws_table_uri)
