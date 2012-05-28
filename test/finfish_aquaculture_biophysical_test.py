@@ -8,8 +8,7 @@ import invest_test_core
 
 class TestFinfishAquacultureBiophysical(unittest.TestCase):
     def test_finfish_aquaculture_biophysical_smoke(self):
-        """Smoke test for finfish_aquaculture_biophysical function.  Shouldn't crash with \
-#zero length inputs"""
+        """Smoke test for finfish_aquaculture_biophysical function. """
 
         args = {}
         args['workspace_dir'] = './data/aquaculture_output'

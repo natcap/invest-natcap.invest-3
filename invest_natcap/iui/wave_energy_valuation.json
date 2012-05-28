@@ -80,7 +80,7 @@
                     "required": true,
                     "validateAs": {"type":"OGR",
                     			   "layers": [{"name": {"inheritFrom": "file"},
-                                               "type": "polygons", "projection" : "Transverse_Mercator"}],
+                                               "type": "polygons"}],
                                    "fieldsExist": ["DEPTH_M", "CAPWE_MWHY"]}
                 },
                 {

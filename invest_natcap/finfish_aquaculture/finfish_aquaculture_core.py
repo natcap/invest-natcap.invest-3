@@ -57,8 +57,8 @@ def biophysical(args):
     args['duration']- duration of the simulation, in years
     '''
     
-    output_dir = args['workspace_dir'] + os.sep + 'Output' + os.sep
-
+    output_dir = args['workspace_dir'] + os.sep + 'Output'
+    
     #using a tuple to get data back from function, then update the shape files 
     #to reflect these new attributes
     cycles_completed, cycle_lengths, weights = calc_farm_cycles(args['g_param_a'], 
@@ -67,8 +67,13 @@ def biophysical(args):
     
     driver = ogr.GetDriverByName('ESRI Shapefile')
     out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
+    curr_shp_file = args['ff_farm_file']
     
-    sf_copy = driver.CopyDataSource(args['ff_farm_file'], out_path)
+    #If already exists, remove so we can re-create
+    if (os.path.isfile(out_path)):
+        os.remove(out_path)
+
+    sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
     layer = sf_copy.GetLayer()
     
     #This adds the number of cycles completed by each farm to their shapefile feature
@@ -77,7 +82,9 @@ def biophysical(args):
     
     for feature in layer:
         
-        feature_ID = feature.items()[args['farm_ID']]
+        accessor = args['farm_ID']
+        feature_ID = feature.items()[accessor]
+        #casting to string because it's coming out of a CSV
         feature.SetField('Tot_Cycles', cycles_completed[feature_ID])
         
         layer.SetFeature(feature)
@@ -87,7 +94,8 @@ def biophysical(args):
     #but it will return a dictionary with a int->float mapping for 
     #farm_ID->processed weight
     proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
-                                   args['mort_rate_daily'], cycles_completed, cycle_lengths)
+                                   args['mort_rate_daily'], cycles_completed, 
+                                   cycle_lengths)
     
     #Now, add the total processed weight as a shapefile feature
     hrv_field = ogr.FieldDefn('Hrvwght_kg', ogr.OFTReal)
@@ -125,59 +133,98 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
      
     for f in range (1, len(farm_op_dict)+1):
         #pre-load vars for fallowing period and pre-fish
-        start_day = farm_op_dict[f['start day for growing']]
-        fallow_per = farm_op_dict[f['Length of Fallowing period']]
+        #print farm_op_dict
+        
+        #casting f to string because farm_op_dict came from biophysical with
+        #keys as strings, and then casting result back to int
+        start_day = int(farm_op_dict[str(f)]['start day for growing'])
+        fallow_per = int(farm_op_dict[str(f)]['Length of Fallowing period'])
         spec_farm_weights = {}
         cycle_lengths[f] = {}
         curr_cycle = 0
-        
-        fall_count = fallow_per
+        dur = int(dur)      
+        fallow_days_left = start_day
+        fish_weight = 0
         
         #this just establishes zero weights for when the fish aren't there during the
         #initial pre-fishception period
+
         for i in range(1, start_day):
             spec_farm_weights[i] = 0
             
         #Now, for the remaining time, need to cycle through fish growth and fallowing
         for i in range (start_day, (365*dur)):
             
-            #this is the day that the fish are placed in the pens, should catch the 
-            #fisheries where there is no fallowing period. One you put down today as 
-            #fishception, then want to reset fallow count so you don't get caught in 
-            #this statement again
-            if fall_count == 0:
+            if fallow_days_left > 0:
+                fallow_days_left -= 1
+                
+            elif fish_weight >= farm_op_dict[str(f)]['target weight of fish at harvest (kg)']:
+                
+                fallow_days_left = fallow_per
+                
+                x = 1
+                if cycles_completed.has_key(f):
+                    x = cycles_completed[f] + 1
+                    
+                cycles_completed[f] = x
+
+                #FIND OUT IF THERE'S A BETTER WAY TO DO THIS
+                if fallow_per == 0:
+                    fish_weight = farm_op_dict[str(f)]['weight of fish at start (kg)']
+                else:
+                    fish_weight = 0
+            
+            
+            #this is the day that the fish are placed in the pens. Once you put down
+            # today as fishception, then want to reset fallow count so you don't
+            #get caught in this statement again. The fallow_per != 0 will block
+            #those farms for which there is no fallowing period, so we can send them
+            #to a specific case
+            if fall_count == 0 and fallow_per != 0:
                 spec_farm_weights[i] = \
-                    farm_opt_dict[f['weight of fish at start (kg)']]
+                    farm_op_dict[str(f)]['weight of fish at start (kg)']
                 fall_count = fallow_per
                 curr_cycle = curr_cycle + 1
-                cycle_lengths[f[curr_cycle]] = 1
-            
+                cycle_lengths[f][curr_cycle] = 1
+                
             #Marks the completion of a growth cycle
-            elif spec_farm_weights[i-1] >= 5.4:
-                spec_farm_weight[i] = 0
+            elif spec_farm_weights[i-1] >= farm_op_dict[str(f)]['target weight of fish at harvest (kg)']:
+                spec_farm_weights[i] = 0
                 fall_count -= 1
                 
                 x = 1
                 if cycles_completed.has_key(f):
                     x = cycles_completed[f] + 1
-                    cycles_completed[f] = x   
+                    cycles_completed[f] = x
+                else:
+                    cycles_completed[f] = x 
+            
+            #Special case for farms without fallow period to restart growth cycle
+            elif fallow_per == 0 and spec_farm_weights[i-1] == 0:
+                spec_farm_weights[i] = \
+                    farm_op_dict[str(f)]['weight of fish at start (kg)']
+                curr_cycle = curr_cycle + 1
+                cycle_lengths[f][curr_cycle] = 1
                     
             elif spec_farm_weights[i-1] == 0:
-                spec_farm_weight[i] = 0
+                spec_farm_weights[i] = 0
                 fall_count -= 1
                 
             #Grow 'dem fishies!
             else:
                 g_weight = (a * (spec_farm_weights[i-1] ** b) * 
-                    water_temp_dict[(i % 365)[f]] * tau) + spec_farm_weights[i-1]
+                    water_temp_dict[(i % 365)][f] * tau) + spec_farm_weights[i-1]
                 
                 spec_farm_weights[i] = g_weight
-                cycle_lengths[f[curr_cycle]] = cycle_lengths[f[curr_cycle]] + 1        
+                cycle_lengths[f][curr_cycle] = cycle_lengths[f][curr_cycle] + 1        
         
         fish_weights[f] = spec_farm_weights
         
     #Now, want to make a tuple from the three dictionaries, and send them back 
     #to the main function
+    
+    print fish_weights[8]
+    
     return (cycles_completed, cycle_lengths, fish_weights)
 
 def calc_proc_weight(farm_op_dict, frac, mort, cycles_comp, cycle_lengths):
@@ -190,8 +237,8 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycles_comp, cycle_lengths):
         
         #pre-load farm specific vars
         curr_cycle_totals[f] = 0
-        f_hv_wt = farm_op_dict[f['target weight of fish at harvest (kg)']]
-        f_num_fish = farm_op_dict[f['number of fish in farm']]
+        f_hv_wt = farm_op_dict[f]['target weight of fish at harvest (kg)']
+        f_num_fish = farm_op_dict[f]['number of fish in farm']
         
         for c in range (1, cycles_comp[f]):
         
@@ -200,7 +247,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycles_comp, cycle_lengths):
             
             #Now do the computation for each cycle individually, then add it to the total
             #within the dictionary
-            e_exponent =  -mort * cycle_lengths[f[c]]
+            e_exponent =  -mort * cycle_lengths[f][c]
             curr_cy_twp = f_hv_wt * frac * f_num_fish * exp(e_exponent)
             
             curr_cycle_totals[f] = curr_cycle_totals[f] + curr_cy_twp
