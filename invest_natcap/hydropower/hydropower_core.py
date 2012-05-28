@@ -912,6 +912,7 @@ def water_scarcity(args):
     nodata_calib = wyield_calib.GetRasterBand(1).GetNoDataValue()
     nodata_consump = sum_raster.GetRasterBand(1).GetNoDataValue()
     LOGGER.info('Creating rsupply_vol raster')
+    rsupply_out_nodata = 0.0
     def rsupply_vol_op(wyield_calib, consump_vol):
         """Function that computes the realized water supply volume
         
@@ -925,12 +926,12 @@ def water_scarcity(args):
         if (wyield_calib != nodata_calib and consump_vol != nodata_consump):
             return wyield_calib - consump_vol
         else:
-            return out_nodata
+            return rsupply_out_nodata
         
     rsupply_vol_vec = np.vectorize(rsupply_vol_op)
 
     raster_utils.vectorize_rasters([wyield_calib, sum_raster], rsupply_vol_vec, 
-                                 raster_out_uri=rsupply_vol_path)
+                                 raster_out_uri=rsupply_vol_path, nodata=rsupply_out_nodata)
     
     wyield_mn_nodata = wyield_mean.GetRasterBand(1).GetNoDataValue()
     mn_raster_nodata = mean_raster.GetRasterBand(1).GetNoDataValue()
