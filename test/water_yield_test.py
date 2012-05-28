@@ -29,7 +29,7 @@ class TestWaterYield(unittest.TestCase):
         args['workspace_dir'] = output_base
         args['lulc_uri'] = input_dir + 'lulc.tif'
         args['soil_depth_uri'] = input_dir + 'soil_depth.tif'
-        args['precipitation_uri'] = input_dir + 'precip.tif'
+        args['precipitation_uri'] = input_dir + 'precipitation.tif'
         args['pawc_uri'] = input_dir + 'pawc.tif'
         args['eto_uri'] = input_dir + 'eto.tif'
         args['watersheds_uri'] = input_dir + 'simple_reg_ws.shp'
