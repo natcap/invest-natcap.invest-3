@@ -307,8 +307,14 @@ class DynamicPrimitive(DynamicElement):
 
         super(DynamicPrimitive, self).__init__(attributes)
 
-        #create the elements array such that it only includes the present object
-        self.elements = [self]
+        # Prepend all elements with a validation button that will contain either
+        # an icon indicating validation status or nothing if no validation is
+        # taking place for this element.  Also, the button should not be
+        # pressable unless the button has an icon, so defaulting to disabled.
+        self.valid_status = QtGui.QPushButton()
+        self.valid_status.setFlat(True)
+        self.valid_status.setEnabled(False)
+        self.elements = [self.valid_status, self]
         if 'validateAs' in self.attributes:
             validator_type = self.attributes['validateAs']['type']
             self.validator = iui_validator.Validator(validator_type)
@@ -380,11 +386,22 @@ class DynamicPrimitive(DynamicElement):
         if error == None or error == '':
             msg = ''
             self.setBGcolorSatisfied(True)
+            self.set_validation_icon(True)
         else:
             msg = str(error)
             self.setBGcolorSatisfied(False)
+            self.set_validation_icon(False)
         self.popup.set_error(msg)
         self.set_popup_text()
+
+    def set_validation_icon(self, valid):
+        if valid:
+            self.valid_status.setIcon(QtGui.QIcon('validate-pass.png'))
+        else:
+            self.valid_status.setIcon(QtGui.QIcon('validate-fail.png'))
+        self.valid_status.setEnabled(True)
+        self.valid_status.setFlat(valid)
+        self.valid_status.setIconSize(QtCore.QSize(22, 22))
 
     def has_error(self):
         if str(self.popup.error) == '':
@@ -489,7 +506,7 @@ class LabeledElement(DynamicPrimitive):
     def __init__(self, attributes):
         DynamicPrimitive.__init__(self, attributes)
         self.label = QtGui.QLabel(attributes['label'])
-        self.elements = [self.label]
+        self.elements = [self.valid_status, self.label]
         self.label.setMinimumHeight(MIN_WIDGET_HEIGHT)
 
     def addElement(self, element):
