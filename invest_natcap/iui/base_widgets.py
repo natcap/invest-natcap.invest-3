@@ -314,6 +314,7 @@ class DynamicPrimitive(DynamicElement):
         self.valid_status = QtGui.QPushButton()
         self.valid_status.setFlat(True)
         self.valid_status.setEnabled(False)
+        self.valid_status.pressed.connect(self.show_info_popup)
         self.elements = [self.valid_status, self]
         if 'validateAs' in self.attributes:
             validator_type = self.attributes['validateAs']['type']
@@ -327,7 +328,22 @@ class DynamicPrimitive(DynamicElement):
         except KeyError:
             help_text = 'See this model\'s documentation for more information.'
 
-        self.popup = InformationPopup(attributes['label'], help_text)
+        try:
+            label = self.attributes['label']
+        except KeyError:
+            label = ''
+
+        self.popup = InformationPopup(label, help_text)
+
+    def show_info_popup(self):
+        """Show the information popup.  This manually (programmatically) enters
+            What's This? mode and spawns the tooltip at the location of trigger,
+            the element that triggered this function.
+            """
+
+        QtGui.QWhatsThis.enterWhatsThisMode()
+        QtGui.QWhatsThis.showText(self.valid_status.pos(),
+            self.valid_status.whatsThis(), self.valid_status)
 
     def set_popup_text(self):
         popup_text = self.popup.build_contents()
