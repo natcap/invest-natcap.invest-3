@@ -473,7 +473,7 @@ class InformationPopup(object):
         title = '<h1>%s</h1><br/><br/>' % (element_ptr.getLabel())
         error = self.error
         if error != '':
-            error = '<b>%s</b><br/><br/>' % (error)
+            error = '<b style="color=red">%s</b><br/><br/>' % (error)
 
         return str(title + error + self.body_text)
 
