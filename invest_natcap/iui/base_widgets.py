@@ -422,6 +422,55 @@ class DynamicPrimitive(DynamicElement):
         """display is a boolean"""
         self._display_error = display
 
+class InformationPopup(object):
+    """This class represents the information that a user will see when pressing
+        the information button.  This specific class simply represents an object
+        that has a couple of string attributes that may be changed at will, and
+        then constructed into a cohesive string by calling self.build_contents.
+
+        Note that this class supports the presentation of an error message.  If
+        the error message is to be shown to the end user, it must be set after
+        the creation of the InformationPopup instance by calling
+        self.set_error().
+        """
+    def __init__(self, title, body_text):
+        """This function initializes the InformationPopup class.
+            title - a python string.  The title of the element.
+            body_text - a python string.  The body of the text
+
+            returns nothing."""
+
+        object.__init__(self, element_ptr)
+        self.title = title
+        self.error_text = ''
+        self.body_text = ''
+
+    def set_title(self, title_text):
+        """Set the title of the InformationPopup text.  title_text is a python
+            string."""
+        self.title = title_text
+
+    def set_error(self, error_string):
+        """Set the error string of this InformationPopup.  error_string is a
+            python string."""
+        self.error_text = error_string
+
+    def set_body(self, body_string):
+        """Set the body of the InformationPopup.  body_string is a python
+            string."""
+        self.body_text = body_string
+
+    def build_contents(self):
+        """Take the python string components of this instance of
+            InformationPopup, wrap them up in HTML as necessary and return a
+            single string containing HTML markup.  Returns a python string."""
+        title = '<h1>%s</h1><br/><br/>' % (element_ptr.getLabel())
+        error = self.error
+        if error != '':
+            error = '<b>%s</b><br/><br/>' % (error)
+
+        return str(title + error + self.body_text)
+
 class ErrorString(QtGui.QLabel):
     def __init__(self, display_settings={'start':0, 'width':1}):
         """display_settings is a python dict:
