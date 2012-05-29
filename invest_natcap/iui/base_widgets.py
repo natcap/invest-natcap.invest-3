@@ -325,10 +325,16 @@ class DynamicPrimitive(DynamicElement):
         else:
             self.validator = None
 
-        self.error = ErrorString()
-        self._display_error = True
-        if 'showError' in attributes:
-            self.set_display_error(attributes['showError'])
+        try:
+            help_text = self.attributes['helpText']
+        except KeyError:
+            help_text = 'See this model\'s documentation for more information.'
+
+        self.popup = InformationPopup(self.getLabel(), help_text)
+        #self.error = ErrorString()
+        #self._display_error = True
+        #if 'showError' in attributes:
+        #    self.set_display_error(attributes['showError'])
 
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
