@@ -87,7 +87,7 @@ def pixel_size(dataset):
         linear_units
     return size_meters
 
-def vectorize_rasters(dataset_list, op, raster_out_uri=None,
+def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
     """Apply the numpy vectorized operation `op` on the first band of the
         datasets contained in dataset_list where the arguments to `op` are 
@@ -98,6 +98,10 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
             in the same projection.
         op - numpy vectorized operation, takes broadcasted pixels from 
             the first bands in dataset_list in order and returns a new pixel
+        aoi - an OGR polygon datasource that will clip the output raster to no larger
+            than the extent of the file and restricts the processing of op to those
+            output pixels that will lie within the polygons.  the rest will be nodata
+            values.  Must be in the same projection as dataset_list rasters.
         raster_out_uri - the desired URI to the output current_dataset.  If None then
             resulting current_dataset is only mapped to MEM
         datatype - the GDAL datatype of the output current_dataset.  By default this
@@ -115,7 +119,7 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
     LOGGER.debug('calculating the overlapping rectangles')
-    aoi_box = calculate_intersection_rectangle(dataset_list)
+    aoi_box = calculate_intersection_rectangle(dataset_list, aoi)
     LOGGER.debug('the aoi box: %s' % aoi_box)
 
     #determine the minimum pixel size
@@ -162,7 +166,7 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
     out_dataset = new_raster(out_n_cols, out_n_rows, out_projection,
         out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
-    out_band.Fill(0)
+    out_band.Fill(nodata)
 
     #left and right coordinates will always be the same for each row so calc
     #them first.
@@ -180,10 +184,29 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
         #it's possible that the operation is already vectorized, so try that
         vectorized_op = op
 
+    #If there's an AOI, we need to mask out values
+    mask_dataset = new_raster_from_base(out_dataset, 'mask.tif', 'GTiff', 255, gdal.GDT_Byte)
+    mask_dataset_band = mask_dataset.GetRasterBand(1)
+
+    if aoi != None:
+        #Only mask AOI as 0 everything else is 1 to correspond to numpy masked arrays
+        #that say '1' is invalid
+        mask_dataset_band.Fill(1)
+        aoi_layer = aoi.GetLayer()
+        gdal.RasterizeLayer(mask_dataset, [1], aoi_layer, burn_values=[0])
+    else:
+        #No aoi means good to fill everywhere
+        mask_dataset_band.Fill(0)
+        
+    mask_dataset_band = None
+    mask_dataset.FlushCache()
+    mask_dataset_band = mask_dataset.GetRasterBand(1)
+
     #Loop over each row in out_band
     for out_row_index in range(out_band.YSize):
         out_row_coord = out_gt[3] + out_gt[5] * out_row_index
         raster_array_stack = []
+        mask_array = mask_dataset_band.ReadAsArray(0,out_row_index,mask_dataset_band.XSize,1)
         #Loop over each input raster
         for current_dataset in dataset_list:
             current_band = current_dataset.GetRasterBand(1)
@@ -265,6 +288,8 @@ def vectorize_rasters(dataset_list, op, raster_out_uri=None,
 
         #Vectorize the stack of rows and write to out_band
         out_row = vectorized_op(*raster_array_stack)
+        #Mask out_row based on AOI
+        out_row[mask_array == 1] = nodata
         out_band.WriteArray(out_row,xoff=0,yoff=out_row_index)
 
     #Calculate the min/max/avg/stdev on the out raster
@@ -333,12 +358,16 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
 
     return new_raster
 
-def calculate_intersection_rectangle(rasterList):
+def calculate_intersection_rectangle(rasterList, aoi=None):
     """Return a bounding box of the intersections of all the rasters in the
         list.
         
         rasterList - a list of GDAL rasters in the same projection and 
             coordinate system
+        aoi - an OGR polygon datasource which may optionally also restrict
+            the extents of the intersection rectangle based on its own
+            extents.
+
             
         returns a 4 element list that bounds the intersection of all the 
             rasters in rasterList.  [left, top, right, bottom]"""
@@ -362,6 +391,16 @@ def calculate_intersection_rectangle(rasterList):
                        min(rec[1], boundingBox[1]),
                        min(rec[2], boundingBox[2]),
                        max(rec[3], boundingBox[3])]
+
+    if aoi != None:
+        aoi_layer = aoi.GetLayer(0)
+        aoi_extent = aoi_layer.GetExtent()
+        LOGGER.debug("aoi_extent %s" % (str(aoi_extent)))
+        boundingBox = [max(aoi_extent[0], boundingBox[0]),
+                       min(aoi_extent[3], boundingBox[1]),
+                       min(aoi_extent[1], boundingBox[2]),
+                       max(aoi_extent[2], boundingBox[3])]
+
     return boundingBox
 
 def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile, 
@@ -404,34 +443,3 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     #Initialize everything to nodata
     raster.GetRasterBand(1).Fill(nodata)
     raster.GetRasterBand(1).FlushCache()
-
-def calculateIntersectionRectangle(rasterList):
-    """Return a bounding box of the intersections of all the rasters in the
-        list.
-        
-        rasterList - a list of GDAL rasters in the same projection and 
-            coordinate system
-            
-        returns a 4 element list that bounds the intersection of all the 
-            rasters in rasterList.  [left, top, right, bottom]"""
-
-    #Define the initial bounding box
-    gt = rasterList[0].GetGeoTransform()
-    #order is left, top, right, bottom of rasterbounds
-    boundingBox = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
-                   gt[3] + gt[5] * rasterList[0].RasterYSize]
-
-    for band in rasterList:
-        #intersect the current bounding box with the one just read
-        gt = band.GetGeoTransform()
-        LOGGER.debug('geotransform on raster band %s %s' % (gt, band))
-        LOGGER.debug('pixel x and y %s %s' % (band.RasterXSize,
-                                              band.RasterYSize))
-        rec = [gt[0], gt[3], gt[0] + gt[1] * band.RasterXSize,
-               gt[3] + gt[5] * band.RasterYSize]
-        #This intersects rec with the current bounding box
-        boundingBox = [max(rec[0], boundingBox[0]),
-                       min(rec[1], boundingBox[1]),
-                       min(rec[2], boundingBox[2]),
-                       max(rec[3], boundingBox[3])]
-    return boundingBox
