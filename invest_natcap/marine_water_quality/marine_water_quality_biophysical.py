@@ -17,7 +17,14 @@ import pylab
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('MAIN')
+LOGGER = logging.getLogger('marine_water_quality_biophysical')
+
+def execute(args):
+    """Main entry point for the InVEST 3.0 marine water quality 
+        biophysical model."""
+    LOGGER.info("Starting MWQ execute")
+    LOGGER.info("Done with MWQ execute")
+
 
 def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
                          direct_solve=False):
