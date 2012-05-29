@@ -323,6 +323,11 @@ class DynamicPrimitive(DynamicElement):
 
         self.popup = InformationPopup(attributes['label'], help_text)
 
+    def set_popup_text(self):
+        popup_text = self.popup.build_contents()
+        for element in self.elements:
+            element.setWhatsThis(popup_text)
+
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
             self.set_error('')
@@ -379,6 +384,7 @@ class DynamicPrimitive(DynamicElement):
             msg = str(error)
             self.setBGcolorSatisfied(False)
         self.popup.set_error(msg)
+        self.set_popup_text()
 
     def has_error(self):
         if str(self.popup.error) == '':
