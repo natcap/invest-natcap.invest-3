@@ -455,10 +455,10 @@ class InformationPopup(object):
         """Take the python string components of this instance of
             InformationPopup, wrap them up in HTML as necessary and return a
             single string containing HTML markup.  Returns a python string."""
-        title = '<h1>%s</h1><br/><br/>' % (self.title)
+        title = '<h3>%s</h3><br/>' % (self.title)
         error = self.error_text
         if error != '':
-            error = '<b style="color=red">%s</b><br/><br/>' % (error)
+            error = '<b style="color:red">ERROR: %s</b><br/><br/>' % (error)
 
         return str(title + error + self.body_text)
 
