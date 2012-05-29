@@ -217,15 +217,6 @@ class DynamicGroup(DynamicElement):
                 for subElement in widget.elements:
                     self.layout().addWidget(subElement, i, j)
                     j += 1
-                    
-                if (issubclass(widget.__class__, DynamicPrimitive) and 
-                    widget.display_error()):
-                    i += 1 #display the error on the row below
-                    self.layout().setRowMinimumHeight(j, MIN_WIDGET_HEIGHT)
-                    self.layout().addWidget(widget.error, i,
-                        widget.error.get_setting('start'),
-                        widget.error.get_setting('width'), 1)
-                    i += 1
             else:
                 self.layout().addWidget(widget)
                 
@@ -330,11 +321,7 @@ class DynamicPrimitive(DynamicElement):
         except KeyError:
             help_text = 'See this model\'s documentation for more information.'
 
-        self.popup = InformationPopup(self.getLabel(), help_text)
-        #self.error = ErrorString()
-        #self._display_error = True
-        #if 'showError' in attributes:
-        #    self.set_display_error(attributes['showError'])
+        self.popup = InformationPopup(attributes['label'], help_text)
 
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
@@ -391,10 +378,10 @@ class DynamicPrimitive(DynamicElement):
         else:
             msg = str(error)
             self.setBGcolorSatisfied(False)
-        self.error.set_error(msg)
+        self.popup.set_error(msg)
 
     def has_error(self):
-        if str(self.error.text()) == '':
+        if str(self.popup.error) == '':
             return False
         return True
         
@@ -419,14 +406,6 @@ class DynamicPrimitive(DynamicElement):
         if self.validator.thread_finished():
             self.timer.stop()
             self.set_error(self.validator.get_error())
-        
-    def display_error(self):
-        """returns a boolean"""
-        return self._display_error
-    
-    def set_display_error(self, display):
-        """display is a boolean"""
-        self._display_error = display
 
 class InformationPopup(object):
     """This class represents the information that a user will see when pressing
@@ -446,7 +425,7 @@ class InformationPopup(object):
 
             returns nothing."""
 
-        object.__init__(self, element_ptr)
+        object.__init__(self)
         self.title = title
         self.error_text = ''
         self.body_text = ''
@@ -470,7 +449,7 @@ class InformationPopup(object):
         """Take the python string components of this instance of
             InformationPopup, wrap them up in HTML as necessary and return a
             single string containing HTML markup.  Returns a python string."""
-        title = '<h1>%s</h1><br/><br/>' % (element_ptr.getLabel())
+        title = '<h1>%s</h1><br/><br/>' % (self.label)
         error = self.error
         if error != '':
             error = '<b style="color=red">%s</b><br/><br/>' % (error)
@@ -505,7 +484,6 @@ class LabeledElement(DynamicPrimitive):
         self.label = QtGui.QLabel(attributes['label'])
         self.elements = [self.label]
         self.label.setMinimumHeight(MIN_WIDGET_HEIGHT)
-        self.error.set_setting('start', 1)
 
     def addElement(self, element):
         self.elements.append(element)
@@ -824,7 +802,6 @@ class FileEntry(DynamicText):
         super(FileEntry, self).__init__(attributes)
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.addElement(self.button)
-        self.error.set_setting('width', 2)
 
     def setValue(self, text):
         """Set the value of the uri field.  If parameter 'text' is an absolute
@@ -948,7 +925,6 @@ class HideableElement(LabeledElement):
         #remove the label, as it is being subsumed by the new checkbox's label.
         self.elements.remove(self.label)
         self.elements.insert(0, self.checkbox)
-        self.error.set_setting('start', 2)
         
         self.toggleHiding(False)
 
@@ -969,7 +945,6 @@ class HideableFileEntry(HideableElement, FileEntry):
         self.elements = [self.checkbox, self.textField, self.button]
         self.hideableElements = [self.textField, self.button]
         self.toggleHiding(False)
-        self.error.set_setting('start', 1)
 
     def requirementsMet(self):
         if self.checkbox.isChecked():
