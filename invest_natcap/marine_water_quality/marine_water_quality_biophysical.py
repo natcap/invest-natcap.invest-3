@@ -21,7 +21,25 @@ LOGGER = logging.getLogger('marine_water_quality_biophysical')
 
 def execute(args):
     """Main entry point for the InVEST 3.0 marine water quality 
-        biophysical model."""
+        biophysical model.
+
+        args - dicitonary of string value pairs for input to this model.
+        args['workspace'] - output directory.
+        args['aoi_poly'] - OGR polygon Datasource indicating region
+            of interest to run the model.  Will define the grid.
+        args['pixel_size'] - float indicating pixel size in meters
+            of output grid.
+        args['land_poly'] - OGR polygon DataSource indicating areas where land
+            is.
+        args['source_points'] - OGR point Datasource indicating point sources
+            of pollution.
+        args['source_point_data_uri'] - csv file indicating the biophysical
+            properties of the point sources.
+        args['tide_e_points'] - OGR point Datasource with spatial information 
+            about the E parameter
+        args['adv_uv_points'] - OGR point Datasource with spatial advection
+            u and v vectors.
+"""
     LOGGER.info("Starting MWQ execute")
     LOGGER.info("Done with MWQ execute")
 
