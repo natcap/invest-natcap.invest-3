@@ -36,7 +36,8 @@
                     "required": true,
                     "dataType": "float",
                     "validText": "[0-9]+(\\.[0-9][0-9])?",
-                    "defaultValue": "43.00"
+                    "defaultValue": "43.00",
+                    "validateAs": {"type": "number"}
                 },
                 {
                     "id": "discount_rate",
@@ -47,7 +48,8 @@
                     "required": true,
                     "dataType": "int",
                     "validText": "-?([0-9]+)?\\.[0-9]+",
-                    "defaultValue": "7"
+                    "defaultValue": "7",
+                    "validateAs": {"type": "number"}
                 },    
                 {
                     "id": "rate_change",
@@ -58,7 +60,8 @@
                     "required": true,
                     "dataType": "float",
                     "validText": "-?([0-9]+)?\\.[0-9]+",
-                    "defaultValue": "0"
+                    "defaultValue": "0",
+                    "validateAs": {"type": "number"}
                 },
                 {
                     "id": "yr_cur",
@@ -69,7 +72,8 @@
                     "required": true,
                     "dataType": "int",
                     "validText": "-?[0-9]+",
-                    "defaultValue": "2000"
+                    "defaultValue": "2000",
+                    "validateAs": {"type": "number"}
                 },            
                 {
                     "id": "yr_fut",
@@ -80,7 +84,8 @@
                     "required": true,
                     "dataType": "int",
                     "validText": "-?[0-9]+",
-                    "defaultValue": "2030"
+                    "defaultValue": "2030",
+                    "validateAs": {"type": "number"}
                 }
             ]
         }    
