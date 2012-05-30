@@ -333,7 +333,8 @@ class DynamicPrimitive(DynamicElement):
         except KeyError:
             label = ''
 
-        self.popup = InformationPopup(label, help_text)
+        self.infopopup = InformationPopup(label, help_text)
+        self.errorpopup = ErrorPopup(label)
 
     def show_info_popup(self):
         """Show the information popup.  This manually (programmatically) enters
@@ -346,7 +347,7 @@ class DynamicPrimitive(DynamicElement):
             self.valid_status.whatsThis(), self.valid_status)
 
     def set_popup_text(self):
-        popup_text = self.popup.build_contents()
+        popup_text = self.errorpopup.build_contents()
         for element in self.elements:
             element.setWhatsThis(popup_text)
 
@@ -407,7 +408,7 @@ class DynamicPrimitive(DynamicElement):
             msg = str(error)
             self.setBGcolorSatisfied(False)
             self.set_validation_icon(False)
-        self.popup.set_error(msg)
+        self.errorpopup.set_error(msg)
         self.set_popup_text()
 
     def set_validation_icon(self, valid):
@@ -457,7 +458,7 @@ class InformationPopup(object):
         the creation of the InformationPopup instance by calling
         self.set_error().
         """
-    def __init__(self, title, body_text):
+    def __init__(self, title, body_text=''):
         """This function initializes the InformationPopup class.
             title - a python string.  The title of the element.
             body_text - a python string.  The body of the text
@@ -466,18 +467,12 @@ class InformationPopup(object):
 
         object.__init__(self)
         self.title = title
-        self.error_text = ''
-        self.body_text = ''
+        self.body_text = body_text
 
     def set_title(self, title_text):
         """Set the title of the InformationPopup text.  title_text is a python
             string."""
         self.title = title_text
-
-    def set_error(self, error_string):
-        """Set the error string of this InformationPopup.  error_string is a
-            python string."""
-        self.error_text = error_string
 
     def set_body(self, body_string):
         """Set the body of the InformationPopup.  body_string is a python
@@ -490,11 +485,35 @@ class InformationPopup(object):
             single string containing HTML markup.  Returns a python string."""
         width_table = '<table style="width:400px"></table>'
         title = '<h3>%s</h3><br/>' % (self.title)
+
+        return str(title + self.body_text + width_table)
+
+class ErrorPopup(InformationPopup):
+    def __init__(self, title, body_text=''):
+        """Initialize the ErrorPopup object.  Adding the self.error_text
+        attribute.  Title and body_text are python strings."""
+        InformationPopup.__init__(self, title, body_text)
+        self.error_text = ''
+
+    def set_error(self, error_string):
+        """Set the error string of this InformationPopup.  error_string is a
+            python string."""
+        self.error_text = error_string
+
+    def build_contents(self):
+        """Take the python string components of this instance of
+            InformationPopup, wrap them up in HTML as necessary and return a
+            single string containing HTML markup.  Returns a python string."""
+        width_table = '<table style="width:400px"></table>'
+        title = '<h3>%s</h3><br/>' % (self.title)
         error = self.error_text
         if error != '':
             error = '<b style="color:red">ERROR: %s</b><br/>' % (error)
+        else:
+            error = '<b style="color:green">Validation successful</b><br/>'
 
         return str(title + error + self.body_text + width_table)
+
 
 class ErrorString(QtGui.QLabel):
     def __init__(self, display_settings={'start':0, 'width':1}):
