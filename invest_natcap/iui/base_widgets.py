@@ -311,18 +311,6 @@ class DynamicPrimitive(DynamicElement):
         # an icon indicating validation status or nothing if no validation is
         # taking place for this element.  Also, the button should not be
         # pressable unless the button has an icon, so defaulting to disabled.
-        self.valid_status = QtGui.QPushButton()
-        self.valid_status.setFlat(True)
-        self.valid_status.setEnabled(False)
-        self.valid_status.pressed.connect(self.show_info_popup)
-        self.elements = [self.valid_status, self]
-        if 'validateAs' in self.attributes:
-            validator_type = self.attributes['validateAs']['type']
-            self.validator = iui_validator.Validator(validator_type)
-            self.timer = QtCore.QTimer()
-        else:
-            self.validator = None
-
         try:
             help_text = self.attributes['helpText']
         except KeyError:
@@ -332,24 +320,16 @@ class DynamicPrimitive(DynamicElement):
             label = self.attributes['label']
         except KeyError:
             label = ''
+        self.info_button = InformationButton(label, help_text)
+        self.error_button = ErrorButton(label)
 
-        self.infopopup = InformationPopup(label, help_text)
-        self.errorpopup = ErrorPopup(label)
-
-    def show_info_popup(self):
-        """Show the information popup.  This manually (programmatically) enters
-            What's This? mode and spawns the tooltip at the location of trigger,
-            the element that triggered this function.
-            """
-
-        QtGui.QWhatsThis.enterWhatsThisMode()
-        QtGui.QWhatsThis.showText(self.valid_status.pos(),
-            self.valid_status.whatsThis(), self.valid_status)
-
-    def set_popup_text(self):
-        popup_text = self.errorpopup.build_contents()
-        for element in self.elements:
-            element.setWhatsThis(popup_text)
+        self.elements = [self.error_button, self.info_button, self]
+        if 'validateAs' in self.attributes:
+            validator_type = self.attributes['validateAs']['type']
+            self.validator = iui_validator.Validator(validator_type)
+            self.timer = QtCore.QTimer()
+        else:
+            self.validator = None
 
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
@@ -403,22 +383,10 @@ class DynamicPrimitive(DynamicElement):
         if error == None or error == '':
             msg = ''
             self.setBGcolorSatisfied(True)
-            self.set_validation_icon(True)
         else:
             msg = str(error)
             self.setBGcolorSatisfied(False)
-            self.set_validation_icon(False)
-        self.errorpopup.set_error(msg)
-        self.set_popup_text()
-
-    def set_validation_icon(self, valid):
-        if valid:
-            self.valid_status.setIcon(QtGui.QIcon('validate-pass.png'))
-        else:
-            self.valid_status.setIcon(QtGui.QIcon('validate-fail.png'))
-        self.valid_status.setEnabled(True)
-        self.valid_status.setFlat(valid)
-        self.valid_status.setIconSize(QtCore.QSize(22, 22))
+        self.error_button.set_error(msg)
 
     def has_error(self):
         if str(self.popup.error) == '':
@@ -447,7 +415,7 @@ class DynamicPrimitive(DynamicElement):
             self.timer.stop()
             self.set_error(self.validator.get_error())
 
-class InformationPopup(object):
+class InformationButton(QtGui.QPushButton):
     """This class represents the information that a user will see when pressing
         the information button.  This specific class simply represents an object
         that has a couple of string attributes that may be changed at will, and
@@ -465,9 +433,21 @@ class InformationPopup(object):
 
             returns nothing."""
 
-        object.__init__(self)
+        QtGui.QPushButton.__init__(self)
         self.title = title
         self.body_text = body_text
+        self.pressed.connect(self.show_info_popup)
+        self.setIcon(QtGui.QIcon('info.png'))
+
+    def show_info_popup(self):
+        """Show the information popup.  This manually (programmatically) enters
+            What's This? mode and spawns the tooltip at the location of trigger,
+            the element that triggered this function.
+            """
+
+        self.setWhatsThis(self.build_contents())  # set popup text
+        QtGui.QWhatsThis.enterWhatsThisMode()
+        QtGui.QWhatsThis.showText(self.pos(), self.whatsThis(), self)
 
     def set_title(self, title_text):
         """Set the title of the InformationPopup text.  title_text is a python
@@ -488,17 +468,33 @@ class InformationPopup(object):
 
         return str(title + self.body_text + width_table)
 
-class ErrorPopup(InformationPopup):
+class ErrorButton(InformationButton):
     def __init__(self, title, body_text=''):
         """Initialize the ErrorPopup object.  Adding the self.error_text
         attribute.  Title and body_text are python strings."""
-        InformationPopup.__init__(self, title, body_text)
+        InformationButton.__init__(self, title, body_text)
+        self.setFlat(True)
+        self.setEnabled(False)
         self.error_text = ''
+        self.setIcon(QtGui.QIcon(''))  # Make icon blank by default
 
     def set_error(self, error_string):
-        """Set the error string of this InformationPopup.  error_string is a
-            python string."""
+        """Set the error string of this InformationPopup and also set this
+            button's icon according to the error contained in error_string.
+            error_string is a python string."""
         self.error_text = error_string
+        button_is_flat = False
+        button_icon = 'validate-fail.png'
+
+        # If no error, change button settings accordingly.
+        if error_string == '':
+            button_icon = 'validate-pass.png'
+            button_is_flat = True
+
+        self.setIcon(QtGui.QIcon(button_icon))
+        self.setFlat(button_is_flat)
+        self.setEnabled(True)  # enable the button; validation has completed
+        self.setIconSize(QtCore.QSize(22,22))
 
     def build_contents(self):
         """Take the python string components of this instance of
@@ -541,11 +537,11 @@ class LabeledElement(DynamicPrimitive):
     def __init__(self, attributes):
         DynamicPrimitive.__init__(self, attributes)
         self.label = QtGui.QLabel(attributes['label'])
-        self.elements = [self.valid_status, self.label]
+        self.elements = [self.error_button, self.label, self.info_button]
         self.label.setMinimumHeight(MIN_WIDGET_HEIGHT)
 
     def addElement(self, element):
-        self.elements.append(element)
+        self.elements.insert(len(self.elements)-1, element)
         element.setMinimumHeight(MIN_WIDGET_HEIGHT)
 
     def initState(self):
