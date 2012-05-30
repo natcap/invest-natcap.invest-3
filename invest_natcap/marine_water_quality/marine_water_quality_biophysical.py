@@ -3,8 +3,10 @@
 import sys
 import logging
 import re
+import os
 
 from osgeo import ogr
+from osgeo import gdal
 import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
@@ -13,6 +15,8 @@ import time
 import scipy.linalg
 import math
 import pylab
+
+from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -47,7 +51,14 @@ def execute(args):
     source_points = ogr.Open(args['source_points_uri'])
     tide_e_points = ogr.Open(args['tide_e_points_uri'])
     adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
-    
+
+    #Create a grid based on the AOI
+    pixel_size = args['pixel_size']
+    #the nodata value will be a min float
+    nodata_out = np.finfo(np.float32).min
+    raster_out_uri = os.path.join(args['workspace'],'concentration.tif')
+    raster_utils.create_raster_from_vector_extents(pixel_size, pixel_size, 
+        gdal.GDT_Float32, nodata_out, raster_out_uri, aoi_poly)
 
     LOGGER.info("Done with MWQ execute")
 
