@@ -25,14 +25,14 @@ def execute(args):
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['cal_water_yield_uri'] - a uri to a Gdal raster of the calibrated
+        args['cyield_uri'] - a uri to a Gdal raster of the calibrated
             water yield volume per sub-watershed, generated as an output
             of the water scarcity model (cubic meters) (required)
             NOTE: This input is currently only being used to get a pixel size
             for output rasters. It is not needed otherwise unless we later
             want to add in per pixel applications.  All calculations are being
             taken from the water_scarcity_tables.
-        args['water_consump_uri'] - a uri to a Gdal raster of the total water
+        args['consump_uri'] - a uri to a Gdal raster of the total water
             consumptive use for each sub-watershed, generated as an output
             of the water scarcity model (cubic meters) (required)
             NOTE: This input is currently only being used to get a pixel size
@@ -73,8 +73,8 @@ def execute(args):
             os.mkdir(folder_path)
     
     #Open gdal raster files and pass to the arguments
-    val_args['cyield_vol'] = gdal.Open(args['cal_water_yield'])
-    val_args['consump_vol'] = gdal.Open(args['water_consump'])
+    val_args['cyield_vol'] = gdal.Open(args['cyield_uri'])
+    val_args['consump_vol'] = gdal.Open(args['consump_uri'])
     
     #Open ogr shapefiles and pass to new dicitonary
     val_args['watersheds'] = ogr.Open(args['watersheds_uri'])

@@ -1095,10 +1095,10 @@ def valuation(args):
     
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
-        args['cal_water_yield'] - a Gdal raster of the calibrated
+        args['cyield_vol'] - a Gdal raster of the calibrated
             water yield volume per sub-watershed, generated as an output
             of the water scarcity model (cubic meters) (required)
-        args['water_consump'] - a Gdal raster of the total water
+        args['consump_vol'] - a Gdal raster of the total water
             consumptive use for each sub-watershed, generated as an output
             of the water scarcity model (cubic meters) (required)
         args['watersheds'] - a OGR shapefile of the watersheds
@@ -1139,8 +1139,8 @@ def valuation(args):
     ws_scarcity_table = args['watershed_scarcity_table']
     sws_scarcity_table = args['subwatershed_scarcity_table']
     valuation_table = args['valuation_table']
-    cyield_vol = args['cal_water_yield']
-    water_consump = args['water_consump']
+    cyield_vol = args['cyield_vol']
+    water_consump = args['consump_vol']
     
     #Suffix handling
     suffix = args['results_suffix']
