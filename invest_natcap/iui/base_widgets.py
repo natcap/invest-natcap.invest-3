@@ -13,7 +13,6 @@ import fileio
 #This is for something
 CMD_FOLDER = '.'
 INVEST_ROOT = './'
-MIN_WIDGET_HEIGHT = 28  # used to ensure elements don't get squished
 IUI_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class DynamicElement(QtGui.QWidget):
@@ -210,11 +209,18 @@ class DynamicGroup(DynamicElement):
         #likewise be entered here to be created.
         for values in elementsArray:
             widget = self.registrar.eval(values['type'], values)
+
+            # Check to see if the widget has a valid size hint in this layout.
+            # If so, be sure that the widget's minimum size is set to the size
+            # hint.  This addresses a longstanding issue with widget sizes in a
+            # QGridLayout.
+            if widget.sizeHint().isValid():
+                widget.setMinimumSize(widget.sizeHint())
+
             #If an unusual layoutManager has been declared, it may be necessary 
             #to add a new clause to this conditional block.
             if isinstance(self.layout(), QtGui.QGridLayout):
                 j = 0
-                self.layout().setRowMinimumHeight(j, MIN_WIDGET_HEIGHT)
                 for subElement in widget.elements:
                     self.layout().addWidget(subElement, i, j)
                     j += 1
@@ -529,11 +535,9 @@ class LabeledElement(DynamicPrimitive):
         DynamicPrimitive.__init__(self, attributes)
         self.label = QtGui.QLabel(attributes['label'])
         self.elements = [self.error_button, self.label, self.info_button]
-        self.label.setMinimumHeight(MIN_WIDGET_HEIGHT)
 
     def addElement(self, element):
         self.elements.insert(len(self.elements)-1, element)
-        element.setMinimumHeight(MIN_WIDGET_HEIGHT)
 
     def initState(self):
         if self.isEnabled():
@@ -834,7 +838,6 @@ class GridList(DynamicGroup):
             returns an instance of the GridList class."""
 
         super(GridList, self).__init__(attributes, QtGui.QGridLayout(), registrar)
-        self.layout().setVerticalSpacing(MIN_WIDGET_HEIGHT)
 
 class FileEntry(DynamicText):
     """This object represents a file.  It has three components, all of which
