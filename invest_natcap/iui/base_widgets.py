@@ -1032,6 +1032,7 @@ class Dropdown(LabeledElement):
             self.dropdown.addItem(option)
 
         self.addElement(self.dropdown)
+        self.addElement(QtGui.QWidget())
        
     def setValue(self, index):
         if isinstance(index, str):
