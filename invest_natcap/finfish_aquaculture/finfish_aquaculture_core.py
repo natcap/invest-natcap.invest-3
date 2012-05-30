@@ -8,20 +8,18 @@ from osgeo import ogr
 from osgeo import gdal
 
 def biophysical(args):
-    ''''Runs the biophysical part of the finfish aquaculture model. This will output:
+    ''''Runs the biophysical and valuation parts of the finfish aquaculture model. 
+    This will output:
     1. a shape file showing farm locations w/ addition of # of harvest cycles, total
-    processed weight at that farm, and possibly the total discounted net revenue at each
-    farm location.
-    2. Raster file of total harvested weight for each farm for the total number of years
-    the model was run (in kg)
-    3. Raster of the total net present value of harvested weight/ farm for the total
-    number of years the model was run (thousands of $)
-    4. Three HTML tables summarizing all model I/O- summary of user-provided data,
-    summary of each harvest cycle, and summary of the outputs/farm
-    5. A .txt file that is named according to the date and time the model is run, which
-    lists the values used during that run
+        processed weight at that farm, and if valuation is true, total discounted net 
+        revenue at each farm location.
+    2. Three HTML tables summarizing all model I/O- summary of user-provided data,
+        summary of each harvest cycle, and summary of the outputs/farm
+    3. A .txt file that is named according to the date and time the model is run, which
+        lists the values used during that run
     
     Data in args should include the following:
+    --Biophysical Arguments--
     args: a python dictionary containing the following data:
     args['workspace_dir']- The directory in which to place all result files.
     args['ff_farm_file']- An open shape file containing the locations of individual
@@ -56,6 +54,12 @@ def biophysical(args):
                         remove undesirable parts
     args['mort_rate_daily']- mortality rate among fish  in a year, divided by 365
     args['duration']- duration of the simulation, in years
+    
+    --Valuation arguments--
+    args['do_valuation']- boolean indicating whether or not to run the valuation process
+    args['p_per_kg']: Market price per kilogram of processed fish
+    args['frac_p']: Fraction of market price that accounts for costs rather than profit
+    args['discount']: Daily market discount rate
     '''
     
     output_dir = args['workspace_dir'] + os.sep + 'Output'
@@ -108,6 +112,13 @@ def biophysical(args):
         feature.SetField('Hrvwght_kg', proc_weight[feature_ID])
         
         layer.SetFeature(feature)
+        
+    print type(args['p_per_kg'])
+       
+    '''This will complete the valuation portion of the finfish aquaculture model, dependent on
+    whether or not valuation is desired.'''
+    if (bool(args['do_valuation']) == True):
+        print "hELLO"
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -204,6 +215,3 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
         curr_cycle_totals[f] += curr_cy_twp
             
     return curr_cycle_totals
-        
-        
-        

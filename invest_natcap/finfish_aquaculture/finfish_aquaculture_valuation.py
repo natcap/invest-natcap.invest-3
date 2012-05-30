@@ -32,7 +32,5 @@ def execute(args):
     
     """
     #Fire up the valuation function in wave_energy_core with the 
-    #gathered arguments
-    LOGGER.info('Starting Finfish Valuation.')
+    #gathered arguments """
     finfish_aquaculture_core.valuation(valuation_args)
-    LOGGER.info('Completed Finfish Valuation.') """
