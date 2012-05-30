@@ -108,14 +108,6 @@ def biophysical(args):
         feature.SetField('Hrvwght_kg', proc_weight[feature_ID])
         
         layer.SetFeature(feature)
-        
-    #Want to create a raster file of the same size/shape as the shapefile you used
-    #as input, then use the harvest weight as the info to burn into raster pixels
-    r_driver = gdal.GetDriverByName('GTIFF')
-    r_out_path = output_dir + os.sep + "hrvwght_kg"
-    
-    
-    gdal.RasterizeLayer()
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
