@@ -24,7 +24,8 @@
                     "label": "Carbon sequestration raster",
                     "required": true,
                     "args_id": "sequest_uri",
-                    "defaultValue": "./carbon/Output/sequest.tif"
+                    "defaultValue": "./carbon/Output/sequest.tif",
+                    "validateAs": {"type": "GDAL"}
                 },
                 {
                     "id": "value",
