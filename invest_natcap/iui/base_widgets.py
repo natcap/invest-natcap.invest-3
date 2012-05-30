@@ -788,13 +788,13 @@ class Container(QtGui.QGroupBox, DynamicGroup):
             if 'style' in self.attributes:
                 if self.attributes['style'] == 'arrows':
                     self.setStyleSheet('QGroupBox::indicator:unchecked {' +
-                        'image: url(warp/dialog-yes-small.png);}' + 
+                        'image: url(%s/dialog-yes-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator:checked {' +
-                        'image: url(warp/dialog-no-small.png);}' +
+                        'image: url(%s/dialog-no-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator:checked:pressed {' +
-                        'image: url(warp/dialog-no-small.png);}' +
+                        'image: url(%s/dialog-no-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator:unchecked:pressed {' +
-                        'image: url(warp/dialog-yes-small.png);}' + 
+                        'image: url(%s/dialog-yes-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator {width: 12px; height: 12px;}')
 
     def toggleHiding(self, state):
