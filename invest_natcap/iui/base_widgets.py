@@ -13,7 +13,7 @@ import fileio
 #This is for something
 CMD_FOLDER = '.'
 INVEST_ROOT = './'
-MIN_WIDGET_HEIGHT = 28  # used to ensure elements don't get squished
+IUI_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -209,11 +209,18 @@ class DynamicGroup(DynamicElement):
         #likewise be entered here to be created.
         for values in elementsArray:
             widget = self.registrar.eval(values['type'], values)
+
+            # Check to see if the widget has a valid size hint in this layout.
+            # If so, be sure that the widget's minimum size is set to the size
+            # hint.  This addresses a longstanding issue with widget sizes in a
+            # QGridLayout.
+            if widget.sizeHint().isValid():
+                widget.setMinimumSize(widget.sizeHint())
+
             #If an unusual layoutManager has been declared, it may be necessary 
             #to add a new clause to this conditional block.
             if isinstance(self.layout(), QtGui.QGridLayout):
                 j = 0
-                self.layout().setRowMinimumHeight(j, MIN_WIDGET_HEIGHT)
                 for subElement in widget.elements:
                     self.layout().addWidget(subElement, i, j)
                     j += 1
@@ -311,18 +318,6 @@ class DynamicPrimitive(DynamicElement):
         # an icon indicating validation status or nothing if no validation is
         # taking place for this element.  Also, the button should not be
         # pressable unless the button has an icon, so defaulting to disabled.
-        self.valid_status = QtGui.QPushButton()
-        self.valid_status.setFlat(True)
-        self.valid_status.setEnabled(False)
-        self.valid_status.pressed.connect(self.show_info_popup)
-        self.elements = [self.valid_status, self]
-        if 'validateAs' in self.attributes:
-            validator_type = self.attributes['validateAs']['type']
-            self.validator = iui_validator.Validator(validator_type)
-            self.timer = QtCore.QTimer()
-        else:
-            self.validator = None
-
         try:
             help_text = self.attributes['helpText']
         except KeyError:
@@ -332,23 +327,16 @@ class DynamicPrimitive(DynamicElement):
             label = self.attributes['label']
         except KeyError:
             label = ''
+        self.info_button = InformationButton(label, help_text)
+        self.error_button = ErrorButton(label)
 
-        self.popup = InformationPopup(label, help_text)
-
-    def show_info_popup(self):
-        """Show the information popup.  This manually (programmatically) enters
-            What's This? mode and spawns the tooltip at the location of trigger,
-            the element that triggered this function.
-            """
-
-        QtGui.QWhatsThis.enterWhatsThisMode()
-        QtGui.QWhatsThis.showText(self.valid_status.pos(),
-            self.valid_status.whatsThis(), self.valid_status)
-
-    def set_popup_text(self):
-        popup_text = self.popup.build_contents()
-        for element in self.elements:
-            element.setWhatsThis(popup_text)
+        self.elements = [self.error_button, self.info_button, self]
+        if 'validateAs' in self.attributes:
+            validator_type = self.attributes['validateAs']['type']
+            self.validator = iui_validator.Validator(validator_type)
+            self.timer = QtCore.QTimer()
+        else:
+            self.validator = None
 
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
@@ -402,22 +390,10 @@ class DynamicPrimitive(DynamicElement):
         if error == None or error == '':
             msg = ''
             self.setBGcolorSatisfied(True)
-            self.set_validation_icon(True)
         else:
             msg = str(error)
             self.setBGcolorSatisfied(False)
-            self.set_validation_icon(False)
-        self.popup.set_error(msg)
-        self.set_popup_text()
-
-    def set_validation_icon(self, valid):
-        if valid:
-            self.valid_status.setIcon(QtGui.QIcon('validate-pass.png'))
-        else:
-            self.valid_status.setIcon(QtGui.QIcon('validate-fail.png'))
-        self.valid_status.setEnabled(True)
-        self.valid_status.setFlat(valid)
-        self.valid_status.setIconSize(QtCore.QSize(22, 22))
+        self.error_button.set_error(msg)
 
     def has_error(self):
         if str(self.popup.error) == '':
@@ -446,7 +422,7 @@ class DynamicPrimitive(DynamicElement):
             self.timer.stop()
             self.set_error(self.validator.get_error())
 
-class InformationPopup(object):
+class InformationButton(QtGui.QPushButton):
     """This class represents the information that a user will see when pressing
         the information button.  This specific class simply represents an object
         that has a couple of string attributes that may be changed at will, and
@@ -457,27 +433,35 @@ class InformationPopup(object):
         the creation of the InformationPopup instance by calling
         self.set_error().
         """
-    def __init__(self, title, body_text):
+    def __init__(self, title, body_text=''):
         """This function initializes the InformationPopup class.
             title - a python string.  The title of the element.
             body_text - a python string.  The body of the text
 
             returns nothing."""
 
-        object.__init__(self)
+        QtGui.QPushButton.__init__(self)
         self.title = title
-        self.error_text = ''
-        self.body_text = ''
+        self.body_text = body_text
+        self.pressed.connect(self.show_info_popup)
+        self.setFlat(True)
+        self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
+        self.setIconSize(QtCore.QSize(22,22))
+
+    def show_info_popup(self):
+        """Show the information popup.  This manually (programmatically) enters
+            What's This? mode and spawns the tooltip at the location of trigger,
+            the element that triggered this function.
+            """
+
+        self.setWhatsThis(self.build_contents())  # set popup text
+        QtGui.QWhatsThis.enterWhatsThisMode()
+        QtGui.QWhatsThis.showText(self.pos(), self.whatsThis(), self)
 
     def set_title(self, title_text):
         """Set the title of the InformationPopup text.  title_text is a python
             string."""
         self.title = title_text
-
-    def set_error(self, error_string):
-        """Set the error string of this InformationPopup.  error_string is a
-            python string."""
-        self.error_text = error_string
 
     def set_body(self, body_string):
         """Set the body of the InformationPopup.  body_string is a python
@@ -489,45 +473,71 @@ class InformationPopup(object):
             InformationPopup, wrap them up in HTML as necessary and return a
             single string containing HTML markup.  Returns a python string."""
         width_table = '<table style="width:400px"></table>'
-        title = '<h3>%s</h3><br/>' % (self.title)
+        title = '<h3 style="color:black">%s</h3><br/>' % (self.title)
+        body = '<div style="color:black">%s</div>' % (self.body_text)
+
+        return str(title + body + width_table)
+
+class ErrorButton(InformationButton):
+    def __init__(self, title, body_text=''):
+        """Initialize the ErrorPopup object.  Adding the self.error_text
+        attribute.  Title and body_text are python strings."""
+        InformationButton.__init__(self, title, body_text)
+        self.setFlat(True)
+        self.setEnabled(False)
+        self.error_text = ''
+        self.setIcon(QtGui.QIcon(''))  # Make icon blank by default
+
+    def setEnabled(self, state):
+        if state == False:
+            self.setIcon(QtGui.QIcon(''))
+        else:
+            self.set_error(self.error_text)
+
+        QtGui.QWidget.setEnabled(self, state)
+
+    def set_error(self, error_string):
+        """Set the error string of this InformationPopup and also set this
+            button's icon according to the error contained in error_string.
+            error_string is a python string."""
+        self.error_text = error_string
+        button_is_flat = False
+        button_icon = 'validate-fail.png'
+
+        # If no error, change button settings accordingly.
+        if error_string == '':
+            button_icon = 'validate-pass.png'
+            button_is_flat = True
+
+        self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, button_icon)))
+        self.setFlat(button_is_flat)
+        QtGui.QWidget.setEnabled(self, True)  # enable the button; validation has completed
+        self.setIconSize(QtCore.QSize(22,22))
+
+    def build_contents(self):
+        """Take the python string components of this instance of
+            InformationPopup, wrap them up in HTML as necessary and return a
+            single string containing HTML markup.  Returns a python string."""
+        width_table = '<table style="width:400px"></table>'
+        title = '<h3 style="color:black">%s</h3><br/>' % (self.title)
         error = self.error_text
         if error != '':
             error = '<b style="color:red">ERROR: %s</b><br/>' % (error)
+        else:
+            error = '<b style="color:green">Validation successful</b><br/>'
 
-        return str(title + error + self.body_text + width_table)
+        body = '<div style="color:black">%s</div>' % (self.body_text)
 
-class ErrorString(QtGui.QLabel):
-    def __init__(self, display_settings={'start':0, 'width':1}):
-        """display_settings is a python dict:
-            {'start': int,
-             'width': int}"""
-             
-        QtGui.QLabel.__init__(self)
-        self.setMinimumHeight(MIN_WIDGET_HEIGHT)
-        self._settings = display_settings
-        self.setStyleSheet('QLabel { color: red; font-weight: normal; ' + 
-            '}')
-        #set a stylesheet here
-
-    def get_setting(self, key):
-        return self._settings[key]
-    
-    def set_setting(self, key, value):
-        self._settings[key] = value
-
-    def set_error(self, error_string=''):
-        self.setText(error_string)
+        return str(title + error + body + width_table)
 
 class LabeledElement(DynamicPrimitive):
     def __init__(self, attributes):
         DynamicPrimitive.__init__(self, attributes)
         self.label = QtGui.QLabel(attributes['label'])
-        self.elements = [self.valid_status, self.label]
-        self.label.setMinimumHeight(MIN_WIDGET_HEIGHT)
+        self.elements = [self.error_button, self.label, self.info_button]
 
     def addElement(self, element):
-        self.elements.append(element)
-        element.setMinimumHeight(MIN_WIDGET_HEIGHT)
+        self.elements.insert(len(self.elements)-1, element)
 
     def initState(self):
         if self.isEnabled():
@@ -785,13 +795,13 @@ class Container(QtGui.QGroupBox, DynamicGroup):
             if 'style' in self.attributes:
                 if self.attributes['style'] == 'arrows':
                     self.setStyleSheet('QGroupBox::indicator:unchecked {' +
-                        'image: url(warp/dialog-yes-small.png);}' + 
+                        'image: url(%s/dialog-yes-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator:checked {' +
-                        'image: url(warp/dialog-no-small.png);}' +
+                        'image: url(%s/dialog-no-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator:checked:pressed {' +
-                        'image: url(warp/dialog-no-small.png);}' +
+                        'image: url(%s/dialog-no-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator:unchecked:pressed {' +
-                        'image: url(warp/dialog-yes-small.png);}' + 
+                        'image: url(%s/dialog-yes-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator {width: 12px; height: 12px;}')
 
     def toggleHiding(self, state):
@@ -828,7 +838,6 @@ class GridList(DynamicGroup):
             returns an instance of the GridList class."""
 
         super(GridList, self).__init__(attributes, QtGui.QGridLayout(), registrar)
-        self.layout().setVerticalSpacing(MIN_WIDGET_HEIGHT)
 
 class FileEntry(DynamicText):
     """This object represents a file.  It has three components, all of which
@@ -863,6 +872,7 @@ class YearEntry(DynamicText):
 
     def __init__(self, attributes):
         super(YearEntry, self).__init__(attributes)
+        self.addElement(QtGui.QWidget())  # adjust spacing to align info button
 
         #set the width attribute, if it's provided.
         if 'width' in self.attributes:
@@ -882,7 +892,7 @@ class FileButton(QtGui.QPushButton):
     def __init__(self, text, URIfield, filetype='file'):
         super(FileButton, self).__init__()
         self.text = text
-        self.setIcon(QtGui.QIcon(CMD_FOLDER + '/iui/document-open.png'))
+        self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'document-open.png')))
         self.URIfield = URIfield
         self.filetype = filetype
 
@@ -1017,6 +1027,7 @@ class Dropdown(LabeledElement):
             self.dropdown.addItem(option)
 
         self.addElement(self.dropdown)
+        self.addElement(QtGui.QWidget())
        
     def setValue(self, index):
         if isinstance(index, str):
@@ -1139,7 +1150,8 @@ class OperationDialog(QtGui.QDialog):
         self.setLayout(QtGui.QVBoxLayout())
         self.setWindowTitle("Running the model")
         self.setGeometry(400, 400, 700, 400)
-        self.setWindowIcon(QtGui.QIcon('warp/natcap_logo.png'))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'natcap_logo.png')))
 
         self.cancel = False
 
@@ -1171,8 +1183,10 @@ class OperationDialog(QtGui.QDialog):
 #        self.cancelButton = QtGui.QPushButton(' Cancel')
 
         #add button icons
-        self.quitButton.setIcon(QtGui.QIcon('warp/dialog-close.png'))
-        self.backButton.setIcon(QtGui.QIcon('warp/dialog-ok.png'))
+        self.quitButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'dialog-close.png')))
+        self.backButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'dialog-ok.png')))
 #        self.cancelButton.setIcon(QtGui.QIcon('dialog-cancel.png'))
 
         #disable the 'Back' button by default
@@ -1624,7 +1638,8 @@ class ExecRoot(Root):
             self.setWindowTitle(self.attributes['label'])
 
         self.setGeometry(400, 400, width, height)
-        self.setWindowIcon(QtGui.QIcon('warp/natcap_logo.png'))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'natcap_logo.png')))
 
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
@@ -1668,13 +1683,16 @@ class ExecRoot(Root):
             returns nothing."""
 
         self.runButton = QtGui.QPushButton(' Run')
-        self.runButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/warp/dialog-ok.png'))
+        self.runButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'dialog-ok.png')))
 
         self.cancelButton = QtGui.QPushButton(' Quit')
-        self.cancelButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/warp/dialog-close.png'))
+        self.cancelButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'dialog-close.png')))
 
         self.resetButton = QtGui.QPushButton(' Reset')
-        self.resetButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/iui/edit-undo.png'))
+        self.resetButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'edit-undo.png')))
 
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()

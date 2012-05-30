@@ -317,13 +317,22 @@ class URIChecker(Checker):
         self.uri = valid_dict['value']
 
         if os.path.exists(self.uri) == False:
-            return str('Not found')
+            return str('File not found')
 
 class FolderChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a folder."""
     def __init__(self):
         URIChecker.__init__(self)
         self.add_check_function(self.open)
+
+    def check_exists(self, valid_dict):
+        """Verify that the file at valid_dict['value'] exists.  Reimplemented
+        from URIChecker class to provide more helpful, folder-oriented error
+        message."""
+        self.uri = valid_dict['value']
+
+        if os.path.exists(self.uri) == False:
+            return str('Folder not found')
 
     def open(self, valid_dict):
         """Check to see if the folder URI at self.uri is a folder on the
