@@ -4,6 +4,7 @@ import sys
 import logging
 import re
 
+from osgeo import ogr
 import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
@@ -12,7 +13,6 @@ import time
 import scipy.linalg
 import math
 import pylab
-
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -41,6 +41,14 @@ def execute(args):
             u and v vectors."""
 
     LOGGER.info("Starting MWQ execute")
+    LOGGER.debug("args %s" % args)
+    aoi_poly = ogr.Open(args['aoi_poly_uri'])
+    land_poly = ogr.Open(args['land_poly_uri'])
+    source_points = ogr.Open(args['source_points_uri'])
+    tide_e_points = ogr.Open(args['tide_e_points_uri'])
+    adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
+    
+
     LOGGER.info("Done with MWQ execute")
 
 
