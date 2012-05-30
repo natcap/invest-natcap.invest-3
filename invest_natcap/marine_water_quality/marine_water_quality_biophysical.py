@@ -3,7 +3,10 @@
 import sys
 import logging
 import re
+import os
 
+from osgeo import ogr
+from osgeo import gdal
 import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
@@ -13,6 +16,7 @@ import scipy.linalg
 import math
 import pylab
 
+from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -25,22 +29,37 @@ def execute(args):
 
         args - dictionary of string value pairs for input to this model.
         args['workspace'] - output directory.
-        args['aoi_poly'] - OGR polygon Datasource indicating region
+        args['aoi_poly_uri'] - OGR polygon Datasource indicating region
             of interest to run the model.  Will define the grid.
         args['pixel_size'] - float indicating pixel size in meters
             of output grid.
-        args['land_poly'] - OGR polygon DataSource indicating areas where land
+        args['land_poly_uri'] - OGR polygon DataSource indicating areas where land
             is.
-        args['source_points'] - OGR point Datasource indicating point sources
+        args['source_points_uri'] - OGR point Datasource indicating point sources
             of pollution.
         args['source_point_data_uri'] - csv file indicating the biophysical
             properties of the point sources.
-        args['tide_e_points'] - OGR point Datasource with spatial information 
+        args['tide_e_points_uri'] - OGR point Datasource with spatial information 
             about the E parameter
-        args['adv_uv_points'] - OGR point Datasource with spatial advection
-            u and v vectors.
-"""
+        args['adv_uv_points_uri'] - OGR point Datasource with spatial advection
+            u and v vectors."""
+
     LOGGER.info("Starting MWQ execute")
+    LOGGER.debug("args %s" % args)
+    aoi_poly = ogr.Open(args['aoi_poly_uri'])
+    land_poly = ogr.Open(args['land_poly_uri'])
+    source_points = ogr.Open(args['source_points_uri'])
+    tide_e_points = ogr.Open(args['tide_e_points_uri'])
+    adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
+
+    #Create a grid based on the AOI
+    pixel_size = args['pixel_size']
+    #the nodata value will be a min float
+    nodata_out = np.finfo(np.float32).min
+    raster_out_uri = os.path.join(args['workspace'],'concentration.tif')
+    raster_utils.create_raster_from_vector_extents(pixel_size, pixel_size, 
+        gdal.GDT_Float32, nodata_out, raster_out_uri, aoi_poly)
+
     LOGGER.info("Done with MWQ execute")
 
 
