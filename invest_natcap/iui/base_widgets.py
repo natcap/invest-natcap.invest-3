@@ -848,6 +848,8 @@ class FileEntry(DynamicText):
 
     def __init__(self, attributes):
         """initialize the object"""
+        if 'validateAs' not in attributes:
+            attributes['validateAs'] = {"type": 'exists'}
         super(FileEntry, self).__init__(attributes)
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.addElement(self.button)

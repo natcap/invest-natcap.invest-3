@@ -54,6 +54,7 @@ class Validator(registrar.Registrar):
                    'OGR': OGRChecker,
                    'number': NumberChecker,
                    'file': FileChecker,
+                   'exists': URIChecker,
                    'folder': FolderChecker,
                    'DBF': DBFChecker,
                    'CSV': CSVChecker,
