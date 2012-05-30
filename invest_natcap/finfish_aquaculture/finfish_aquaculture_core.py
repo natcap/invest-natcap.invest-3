@@ -61,7 +61,7 @@ def biophysical(args):
     
     #using a tuple to get data back from function, then update the shape files 
     #to reflect these new attributes
-    cycles_completed, cycle_lengths, weights = calc_farm_cycles(args['g_param_a'], 
+    cycle_history = calc_farm_cycles(args['g_param_a'], 
                                           args['g_param_b'], args['water_temp_dict'], 
                                           args['farm_op_dict'], args['duration'])
     
@@ -85,7 +85,8 @@ def biophysical(args):
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
         #casting to string because it's coming out of a CSV
-        feature.SetField('Tot_Cycles', cycles_completed[feature_ID])
+        num_cycles = len(cycle_history[feature_ID])
+        feature.SetField('Tot_Cycles', num_cycles)
         
         layer.SetFeature(feature)
         
@@ -94,8 +95,7 @@ def biophysical(args):
     #but it will return a dictionary with a int->float mapping for 
     #farm_ID->processed weight
     proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
-                                   args['mort_rate_daily'], cycles_completed, 
-                                   cycle_lengths, weights)
+                                   args['mort_rate_daily'], cycle_history)
     
     #Now, add the total processed weight as a shapefile feature
     hrv_field = ogr.FieldDefn('Hrvwght_kg', ogr.OFTReal)
@@ -125,6 +125,7 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
     cycle_history ={}
     tau = 0.8
+    dur = int(dur)
      
     for f in range (1, len(farm_op_dict)+1):
         
@@ -132,47 +133,51 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
         #keys as strings, and then casting result back to int
         start_day = int(farm_op_dict[str(f)]['start day for growing'])
         fallow_per = int(farm_op_dict[str(f)]['Length of Fallowing period'])
-        start_weight = int(farm_op_dict[str(f)]['weight of fish at start (kg)'])
+        start_weight = float(farm_op_dict[str(f)]['weight of fish at start (kg)'])
+        tar_weight = float(farm_op_dict[str(f)]['target weight of fish at harvest (kg)'])
         
         fallow_days_left = start_day
         farm_history = []
-        fish_weight = None
+        fish_weight = 0
         outplant_date = None
     
-        #Need to cycle through fish growth and fallowing
-        for day in range (1, (365*dur)):
+        #Need to cycle through fish growth and fallowing. In order to avoid ever having
+        # a day = 0 when accessing a table, I start at zero, add 1 to anything where days
+        #are recorded, then do accesses as zero % 365, and add 1.
+        for day in range (0, (365*dur)):
+            
+            #print type(water_temp_dict[str(day % 365)][str(f)])
             
             if fallow_days_left > 0:
                 fallow_days_left -= 1
             
-            elif fish_weight >= farm_op_dict[str(f)]['target weight of fish at harvest (kg)']:
-                farm_history.append(outplant_date, day, fish_weight)
+            elif fish_weight >= tar_weight:
+                record = (outplant_date, day + 1, fish_weight)
+                farm_history.append(record)
                 fallow_days_left = fallow_per
                 fish_weight = 0
             
             else:
                 if fish_weight == 0:
                     fish_weight = start_weight
-                    outplant_date = day
+                    outplant_date = day + 1
                 else:
+             
                     #Grow 'dem fishies!
-                    fish_weight = (a * (fish_weight ** b) * 
-                                   water_temp_dict[day % 365][f] * tau) + fish_weight
+                    fish_weight = (a * (fish_weight ** b) * \
+                                   float(water_temp_dict[str(day % 365 + 1)][str(f)]) \
+                                   * tau) + fish_weight
             
         cycle_history[f] = farm_history
         
     #Now, want to make a tuple from the three dictionaries, and send them back 
     #to the main function
     
-    print fish_weights[8]
-    
-    return (cycles_completed, cycle_lengths, fish_weights)
+    return cycle_history
 
-def calc_proc_weight(farm_op_dict, frac, mort, cycles_comp, cycle_lengths, weights):
+def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
     #This will yield one output- a dictionary which will hold a mapping from every farm
     # (as identified by farm_ID) to the total processed weight of each farm
-    
-    print "I get to proc weight!"
     
     curr_cycle_totals = {}
         
