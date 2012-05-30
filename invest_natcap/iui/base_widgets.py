@@ -14,6 +14,7 @@ import fileio
 CMD_FOLDER = '.'
 INVEST_ROOT = './'
 MIN_WIDGET_HEIGHT = 28  # used to ensure elements don't get squished
+IUI_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -438,7 +439,7 @@ class InformationButton(QtGui.QPushButton):
         self.body_text = body_text
         self.pressed.connect(self.show_info_popup)
         self.setFlat(True)
-        self.setIcon(QtGui.QIcon('info.png'))
+        self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
         self.setIconSize(QtCore.QSize(22,22))
 
     def show_info_popup(self):
@@ -501,7 +502,7 @@ class ErrorButton(InformationButton):
             button_icon = 'validate-pass.png'
             button_is_flat = True
 
-        self.setIcon(QtGui.QIcon(button_icon))
+        self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, button_icon)))
         self.setFlat(button_is_flat)
         QtGui.QWidget.setEnabled(self, True)  # enable the button; validation has completed
         self.setIconSize(QtCore.QSize(22,22))
@@ -885,7 +886,7 @@ class FileButton(QtGui.QPushButton):
     def __init__(self, text, URIfield, filetype='file'):
         super(FileButton, self).__init__()
         self.text = text
-        self.setIcon(QtGui.QIcon(CMD_FOLDER + '/iui/document-open.png'))
+        self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'document-open.png')))
         self.URIfield = URIfield
         self.filetype = filetype
 
@@ -1143,7 +1144,8 @@ class OperationDialog(QtGui.QDialog):
         self.setLayout(QtGui.QVBoxLayout())
         self.setWindowTitle("Running the model")
         self.setGeometry(400, 400, 700, 400)
-        self.setWindowIcon(QtGui.QIcon('warp/natcap_logo.png'))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'natcap_logo.png')))
 
         self.cancel = False
 
@@ -1175,8 +1177,10 @@ class OperationDialog(QtGui.QDialog):
 #        self.cancelButton = QtGui.QPushButton(' Cancel')
 
         #add button icons
-        self.quitButton.setIcon(QtGui.QIcon('warp/dialog-close.png'))
-        self.backButton.setIcon(QtGui.QIcon('warp/dialog-ok.png'))
+        self.quitButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'dialog-close.png')))
+        self.backButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'dialog-ok.png')))
 #        self.cancelButton.setIcon(QtGui.QIcon('dialog-cancel.png'))
 
         #disable the 'Back' button by default
@@ -1628,7 +1632,8 @@ class ExecRoot(Root):
             self.setWindowTitle(self.attributes['label'])
 
         self.setGeometry(400, 400, width, height)
-        self.setWindowIcon(QtGui.QIcon('warp/natcap_logo.png'))
+        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'natcap_logo.png')))
 
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
@@ -1672,13 +1677,16 @@ class ExecRoot(Root):
             returns nothing."""
 
         self.runButton = QtGui.QPushButton(' Run')
-        self.runButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/warp/dialog-ok.png'))
+        self.runButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'dialog-ok.png')))
 
         self.cancelButton = QtGui.QPushButton(' Quit')
-        self.cancelButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/warp/dialog-close.png'))
+        self.cancelButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'dialog-close.png')))
 
         self.resetButton = QtGui.QPushButton(' Reset')
-        self.resetButton.setIcon(QtGui.QIcon(CMD_FOLDER + '/iui/edit-undo.png'))
+        self.resetButton.setIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+            'edit-undo.png')))
 
         #create the buttonBox (a container for buttons)
         self.buttonBox = QtGui.QDialogButtonBox()
