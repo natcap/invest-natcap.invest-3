@@ -396,7 +396,7 @@ class DynamicPrimitive(DynamicElement):
         self.error_button.set_error(msg)
 
     def has_error(self):
-        if str(self.popup.error) == '':
+        if str(self.error_button.error_text) == '':
             return False
         return True
         
