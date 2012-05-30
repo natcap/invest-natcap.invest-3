@@ -510,29 +510,6 @@ class ErrorButton(InformationButton):
 
         return str(title + error + self.body_text + width_table)
 
-
-class ErrorString(QtGui.QLabel):
-    def __init__(self, display_settings={'start':0, 'width':1}):
-        """display_settings is a python dict:
-            {'start': int,
-             'width': int}"""
-             
-        QtGui.QLabel.__init__(self)
-        self.setMinimumHeight(MIN_WIDGET_HEIGHT)
-        self._settings = display_settings
-        self.setStyleSheet('QLabel { color: red; font-weight: normal; ' + 
-            '}')
-        #set a stylesheet here
-
-    def get_setting(self, key):
-        return self._settings[key]
-    
-    def set_setting(self, key, value):
-        self._settings[key] = value
-
-    def set_error(self, error_string=''):
-        self.setText(error_string)
-
 class LabeledElement(DynamicPrimitive):
     def __init__(self, attributes):
         DynamicPrimitive.__init__(self, attributes)
