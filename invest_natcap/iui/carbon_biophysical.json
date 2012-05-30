@@ -124,7 +124,9 @@
                     "required": false,
                     "defaultValue": "./carbon/input/harv_samp_cur.shp",
                     "enabledBy": "calc_sequestration",
-                    "validateAs": {"type": "OGR"}
+                    "validateAs": {"type": "OGR",
+                                   "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
+                                   "fieldsExist": ["Cut_cur", "Start_date", "Freq_cur", "Decay_cur", "C_den_cur", "BCEF_cur"]}
                 },
                 {
                     "id" : "fut_harvest_map",
@@ -134,7 +136,9 @@
                     "required": false,
                     "defaultValue": "./carbon/input/harv_samp_fut.shp",
                     "enabledBy": "calc_sequestration",
-                    "validateAs": {"type": "OGR"}
+                    "validateAs": {"type": "OGR",
+                                   "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
+                                   "fieldsExist": ["Cut_fut", "Freq_fut", "Decay_fut", "C_den_fut", "BCEF_fut"]}
                 }
             ]
         }
