@@ -326,6 +326,9 @@ class FolderChecker(URIChecker):
         self.add_check_function(self.open)
 
     def check_exists(self, valid_dict):
+        """Verify that the file at valid_dict['value'] exists.  Reimplemented
+        from URIChecker class to provide more helpful, folder-oriented error
+        message."""
         self.uri = valid_dict['value']
 
         if os.path.exists(self.uri) == False:
