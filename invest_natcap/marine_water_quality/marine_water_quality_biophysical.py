@@ -25,21 +25,21 @@ def execute(args):
 
         args - dictionary of string value pairs for input to this model.
         args['workspace'] - output directory.
-        args['aoi_poly'] - OGR polygon Datasource indicating region
+        args['aoi_poly_uri'] - OGR polygon Datasource indicating region
             of interest to run the model.  Will define the grid.
         args['pixel_size'] - float indicating pixel size in meters
             of output grid.
-        args['land_poly'] - OGR polygon DataSource indicating areas where land
+        args['land_poly_uri'] - OGR polygon DataSource indicating areas where land
             is.
-        args['source_points'] - OGR point Datasource indicating point sources
+        args['source_points_uri'] - OGR point Datasource indicating point sources
             of pollution.
         args['source_point_data_uri'] - csv file indicating the biophysical
             properties of the point sources.
-        args['tide_e_points'] - OGR point Datasource with spatial information 
+        args['tide_e_points_uri'] - OGR point Datasource with spatial information 
             about the E parameter
-        args['adv_uv_points'] - OGR point Datasource with spatial advection
-            u and v vectors.
-"""
+        args['adv_uv_points_uri'] - OGR point Datasource with spatial advection
+            u and v vectors."""
+
     LOGGER.info("Starting MWQ execute")
     LOGGER.info("Done with MWQ execute")
 
