@@ -439,6 +439,7 @@ class InformationButton(QtGui.QPushButton):
         self.pressed.connect(self.show_info_popup)
         self.setFlat(True)
         self.setIcon(QtGui.QIcon('info.png'))
+        self.setIconSize(QtCore.QSize(22,22))
 
     def show_info_popup(self):
         """Show the information popup.  This manually (programmatically) enters
@@ -479,6 +480,14 @@ class ErrorButton(InformationButton):
         self.error_text = ''
         self.setIcon(QtGui.QIcon(''))  # Make icon blank by default
 
+    def setEnabled(self, state):
+        if state == False:
+            self.setIcon(QtGui.QIcon(''))
+        else:
+            self.set_error(self.error_text)
+
+        QtGui.QWidget.setEnabled(self, state)
+
     def set_error(self, error_string):
         """Set the error string of this InformationPopup and also set this
             button's icon according to the error contained in error_string.
@@ -494,7 +503,7 @@ class ErrorButton(InformationButton):
 
         self.setIcon(QtGui.QIcon(button_icon))
         self.setFlat(button_is_flat)
-        self.setEnabled(True)  # enable the button; validation has completed
+        QtGui.QWidget.setEnabled(self, True)  # enable the button; validation has completed
         self.setIconSize(QtCore.QSize(22,22))
 
     def build_contents(self):
@@ -856,6 +865,7 @@ class YearEntry(DynamicText):
 
     def __init__(self, attributes):
         super(YearEntry, self).__init__(attributes)
+        self.addElement(QtGui.QWidget())  # adjust spacing to align info button
 
         #set the width attribute, if it's provided.
         if 'width' in self.attributes:
