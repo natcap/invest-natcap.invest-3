@@ -113,7 +113,8 @@
                     "defaultValue": "./carbon/input/carbon_pools_samp.dbf",
                     "args_id": "carbon_pools_uri",
                     "required": true,
-                    "validateAs": {"type": "DBF"}
+                    "validateAs": {"type": "DBF",
+                                   "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]}
                 },
                 {
                     "id" : "cur_harvest_map",
