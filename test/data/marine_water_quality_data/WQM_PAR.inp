@@ -1,0 +1,62 @@
+C*******************************************
+C** Input Parameters for Water Quality Model
+C*******************************************
+C1 HYDRODYNAMIC CHARACTERISTICS 
+C  
+   U0 = [M/SEC] EAST-WEST COMPONENT OF ADVECTIVE VELOCITY
+   V0 = [M/SEC] SOUTH-NORTH COMPONENT OF ADVECTIVE VELOCITY
+   E  = [KM*KM/DAY] TIDAL DISPERSION COEFFICIENT
+   H  = [M] GRID CELL SIZE
+C1    U0    V0      E     H
+      10.00  0.00   0.1   200
+-------------------------------------------------------------------------------
+C2 POINT SOURCE LOADING                          
+C                                                            
+   NPS = [NUMBER] NUMBER OF POINT SOURCES                       
+   XPS = [COORDINATE] X COORDINATE OF THE POINT SOURCE        
+   YPS = [COORDINATE] Y COORDINATE OF THE POINT SOURCE
+   WPS = [KG/DAY] DAILY LOADING FROM THE POINT SOURCE 
+   KPS = [1/day] DECAY RATE OF THE POINT SOURCE
+   CPS = NAME OF THE POINT SOURCE
+
+C2-1 NPS                                                     
+      27                                                    
+C2-2  XPS   YPS WPS  KPS    CPS                 
+		35518	19900	100	10.0  'PS92'
+		33078	21248	100	10.0	'PS95'
+		19516	28517	100	10.0	'PS96'
+		25620	26116	  5	10.0	'PS97'
+		27058	24137	100	10.0	'PS98'
+		26438	14636	100	10.0	'PS99'
+		27297	15448	100	10.0	'PS100'
+		20342	24813	100	10.0	'PS114'
+		19761	21846	100	10.0	'PS115'
+		19493	21667	100	10.0	'PS116'
+		19053	20832	100	10.0	'PS117'
+		16760	16908	100	10.0	'PS118'
+		16262	18109	100	10.0	'PS119'
+		16921	20516	100	10.0	'PS120'
+		17511	23369	100	10.0	'PS121'
+		17328	23324	100	10.0	'PS122'
+		17377	22951	100	10.0	'PS123'
+		19118	23951	100	10.0	'PS124'
+		19422	23847	100	10.0	'PS125'
+		17353	21725	100	10.0	'PS126'
+		17297	21705	100	10.0	'PS127'
+		18320	20978	100	10.0	'PS128'
+		18659	19925	  5	10.0	'PS129'
+		16291	18649	  5	10.0	'PS130'
+		19118	23951	100	10.0	'PS131'
+		19219	23740	100	10.0	'PS132'
+		19235	23696	100	10.0	'PS133'
+-------------------------------------------------------------------------------
+C3 DISPLAY PROPERTIES (OPTIONAL)
+C
+   VMIN = [SCALAR] MINIMUM VALUE TO MAP ON THE COLORBAR
+   VMAX = [SCALAR] MAXIMUM VALUE TO MAP ON THE COLORBAR
+C
+C3   VMIN    VMAX
+     0       300
+-------------------------------------------------------------------------------
+C4 OUTPUT FILE NAME
+   "conout.txt"
