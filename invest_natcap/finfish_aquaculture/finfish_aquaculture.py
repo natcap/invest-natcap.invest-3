@@ -1,4 +1,4 @@
-"""inVEST finfish aquaculture filehandler for biophysical data"""
+"""inVEST finfish aquaculture filehandler for biophysical and valuation data"""
 
 import os
 import csv
@@ -42,7 +42,7 @@ def execute(args):
     #passed to the aquaculture core module. Then get desirable arguments that 
     #are being passed in, and load them into the biophysical dictionary.
     
-    global biophysical_args
+    global ff_aqua_args
     
     ff_aqua_args = {}
     
@@ -73,9 +73,7 @@ def execute(args):
 
     #Fire up the biophysical function in finfish_aquaculture_core with the 
     #gathered arguments
-    #LOGGER.info('Starting Finfish Biophysical.')
-    finfish_aquaculture_core.biophysical(biophysical_args)
-    #LOGGER.info('Completed Finfish Biophysical.')
+    finfish_aquaculture_core.execute(ff_aqua_args)
 
 def format_ops_table(op_path, farm_ID):
     
@@ -135,13 +133,13 @@ def format_ops_table(op_path, farm_ID):
         del sub_dict['Total value']
         new_dict_op[row[farm_ID]] = sub_dict
     
-    biophysical_args['farm_op_dict'] = new_dict_op
+    ff_aqua_args['farm_op_dict'] = new_dict_op
     
     #print general_ops
     
     #add the gen args in
     for key in general_ops.keys():
-        biophysical_args[key] = general_ops[key]    
+        ff_aqua_args[key] = general_ops[key]    
     
 def format_temp_table(temp_path):
     
@@ -180,4 +178,4 @@ def format_temp_table(temp_path):
         del sub_dict['Day/Month']
         new_dict_temp[row[day_marker]] = sub_dict
     
-    biophysical_args['water_temp_dict'] = new_dict_temp 
+    ff_aqua_args['water_temp_dict'] = new_dict_temp 

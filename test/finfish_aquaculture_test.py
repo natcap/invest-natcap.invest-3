@@ -1,14 +1,14 @@
-"""URI level tests for the aquaculture biophysical module"""
+"""URI level tests for the aquaculture biophysical and valuation module"""
 
 import os, sys
 import unittest
 
-from invest_natcap.finfish_aquaculture import finfish_aquaculture_biophysical
+from invest_natcap.finfish_aquaculture import finfish_aquaculture
 import invest_test_core
 
-class TestFinfishAquacultureBiophysical(unittest.TestCase):
-    def test_finfish_aquaculture_biophysical_smoke(self):
-        """Smoke test for finfish_aquaculture_biophysical function. """
+class TestFinfishAquaculture(unittest.TestCase):
+    def test_finfish_aquaculture_smoke(self):
+        """Smoke test for finfish_aquaculture function. """
 
         args = {}
         #Biophysical
@@ -25,4 +25,4 @@ class TestFinfishAquacultureBiophysical(unittest.TestCase):
         args['frac_p'] = .3
         args['discount'] = 0.000192
 
-        finfish_aquaculture_biophysical.execute(args)
+        finfish_aquaculture.execute(args)

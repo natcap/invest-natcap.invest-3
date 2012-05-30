@@ -7,7 +7,7 @@ import math
 from osgeo import ogr
 from osgeo import gdal
 
-def biophysical(args):
+def execute(args):
     ''''Runs the biophysical and valuation parts of the finfish aquaculture model. 
     This will output:
     1. a shape file showing farm locations w/ addition of # of harvest cycles, total
