@@ -467,9 +467,10 @@ class InformationButton(QtGui.QPushButton):
             InformationPopup, wrap them up in HTML as necessary and return a
             single string containing HTML markup.  Returns a python string."""
         width_table = '<table style="width:400px"></table>'
-        title = '<h3>%s</h3><br/>' % (self.title)
+        title = '<h3 style="color:black">%s</h3><br/>' % (self.title)
+        body = '<div style="color:black">%s</div>' % (self.body_text)
 
-        return str(title + self.body_text + width_table)
+        return str(title + body + width_table)
 
 class ErrorButton(InformationButton):
     def __init__(self, title, body_text=''):
@@ -512,14 +513,16 @@ class ErrorButton(InformationButton):
             InformationPopup, wrap them up in HTML as necessary and return a
             single string containing HTML markup.  Returns a python string."""
         width_table = '<table style="width:400px"></table>'
-        title = '<h3>%s</h3><br/>' % (self.title)
+        title = '<h3 style="color:black">%s</h3><br/>' % (self.title)
         error = self.error_text
         if error != '':
             error = '<b style="color:red">ERROR: %s</b><br/>' % (error)
         else:
             error = '<b style="color:green">Validation successful</b><br/>'
 
-        return str(title + error + self.body_text + width_table)
+        body = '<div style="color:black">%s</div>' % (self.body_text)
+
+        return str(title + error + body + width_table)
 
 class LabeledElement(DynamicPrimitive):
     def __init__(self, attributes):
