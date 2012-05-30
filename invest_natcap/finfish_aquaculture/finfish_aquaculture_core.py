@@ -2,6 +2,7 @@
 pull from data passed in by aquaculture_biophysical and aquaculture_valuation'''
 
 import os
+import math
 
 from osgeo import ogr
 from osgeo import gdal
@@ -183,24 +184,32 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
         
     for f in range (1, len(farm_op_dict)+1):
         
-        #pre-load farm specific vars
+        #pre-load farm specific vars, have to cast some because they come out of
+        # a CSV all as strings
         curr_cycle_totals[f] = 0
-        f_hv_wt = farm_op_dict[f]['target weight of fish at harvest (kg)']
-        f_num_fish = farm_op_dict[f]['number of fish in farm']
-        curr_hrv_day = farm_op_dict[f]['start day for growing']
+        f_num_fish = int(farm_op_dict[str(f)]['number of fish in farm'])
+        curr_hrv_day = int(farm_op_dict[str(f)]['start day for growing'])
+        cycles_comp = len(cycle_history[f])
+        farm_history = cycle_history[f]
+        mort = float(mort)
         
-        for c in range (1, cycles_comp[f]):
-        
-            #get cycle-lengths for this specific cycle
-            curr_cy_len = cycle_lengths[f][c]
-            curr_hrv_day += curr_cy_len
+        #We are starting this range at 0, and going to one less than the number of
+        #cycles, since the list of cycles from the cycle calcs will start at index 0
+        for c in range (0, cycles_comp):
             
+            #this will get the tuple referring to the current cycle
+            #the information will be inside the tuple as:
+            # (day of outplanting, day of harvest, harvest weight)
+            current_cycle_info = farm_history[c]
+            outplant_date, harvest_date, harvest_weight = current_cycle_info
+         
             #Now do the computation for each cycle individually, then add it to the total
             #within the dictionary
-            e_exponent =  -mort * cycle_lengths[f][c]
-            curr_cy_twp = weights[f][curr_hrv_day] * frac * f_num_fish * exp(e_exponent)
+            cycle_length = harvest_date - outplant_date
+            e_exponent =  -mort * cycle_length
+            curr_cy_twp = harvest_weight * frac * f_num_fish * math.exp(e_exponent)
             
-            curr_cycle_totals[f] = curr_cycle_totals[f] + curr_cy_twp
+        curr_cycle_totals[f] += curr_cy_twp
             
     return curr_cycle_totals
         
