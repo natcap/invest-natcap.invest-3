@@ -437,6 +437,7 @@ class InformationButton(QtGui.QPushButton):
         self.title = title
         self.body_text = body_text
         self.pressed.connect(self.show_info_popup)
+        self.setFlat(True)
         self.setIcon(QtGui.QIcon('info.png'))
 
     def show_info_popup(self):
