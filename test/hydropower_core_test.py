@@ -929,8 +929,8 @@ class TestHydropowerCore(unittest.TestCase):
         
         args = {}
         args['workspace_dir'] = output_base
-        args['cal_water_yield'] = gdal.Open(base + 'cyield_vol.tif')
-        args['water_consump'] = gdal.Open(base + 'consum_vol.tif')
+        args['cyield_vol'] = gdal.Open(base + 'cyield_vol.tif')
+        args['consump_vol'] = gdal.Open(base + 'consum_vol.tif')
         args['watersheds'] = ogr.Open(base + 'hydro_regression_byhand/simple_reg_ws.shp')
         args['sub_watersheds'] = ogr.Open(base + 'hydro_regression_byhand/simple_reg_subws.shp')
         args['results_suffix'] = ''

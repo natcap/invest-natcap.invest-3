@@ -23,7 +23,7 @@ def execute(args):
     """Main entry point for the InVEST 3.0 marine water quality 
         biophysical model.
 
-        args - dicitonary of string value pairs for input to this model.
+        args - dictionary of string value pairs for input to this model.
         args['workspace'] - output directory.
         args['aoi_poly'] - OGR polygon Datasource indicating region
             of interest to run the model.  Will define the grid.
