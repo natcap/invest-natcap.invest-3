@@ -217,15 +217,6 @@ class DynamicGroup(DynamicElement):
                 for subElement in widget.elements:
                     self.layout().addWidget(subElement, i, j)
                     j += 1
-                    
-                if (issubclass(widget.__class__, DynamicPrimitive) and 
-                    widget.display_error()):
-                    i += 1 #display the error on the row below
-                    self.layout().setRowMinimumHeight(j, MIN_WIDGET_HEIGHT)
-                    self.layout().addWidget(widget.error, i,
-                        widget.error.get_setting('start'),
-                        widget.error.get_setting('width'), 1)
-                    i += 1
             else:
                 self.layout().addWidget(widget)
                 
@@ -316,8 +307,15 @@ class DynamicPrimitive(DynamicElement):
 
         super(DynamicPrimitive, self).__init__(attributes)
 
-        #create the elements array such that it only includes the present object
-        self.elements = [self]
+        # Prepend all elements with a validation button that will contain either
+        # an icon indicating validation status or nothing if no validation is
+        # taking place for this element.  Also, the button should not be
+        # pressable unless the button has an icon, so defaulting to disabled.
+        self.valid_status = QtGui.QPushButton()
+        self.valid_status.setFlat(True)
+        self.valid_status.setEnabled(False)
+        self.valid_status.pressed.connect(self.show_info_popup)
+        self.elements = [self.valid_status, self]
         if 'validateAs' in self.attributes:
             validator_type = self.attributes['validateAs']['type']
             self.validator = iui_validator.Validator(validator_type)
@@ -325,10 +323,32 @@ class DynamicPrimitive(DynamicElement):
         else:
             self.validator = None
 
-        self.error = ErrorString()
-        self._display_error = True
-        if 'showError' in attributes:
-            self.set_display_error(attributes['showError'])
+        try:
+            help_text = self.attributes['helpText']
+        except KeyError:
+            help_text = 'See this model\'s documentation for more information.'
+
+        try:
+            label = self.attributes['label']
+        except KeyError:
+            label = ''
+
+        self.popup = InformationPopup(label, help_text)
+
+    def show_info_popup(self):
+        """Show the information popup.  This manually (programmatically) enters
+            What's This? mode and spawns the tooltip at the location of trigger,
+            the element that triggered this function.
+            """
+
+        QtGui.QWhatsThis.enterWhatsThisMode()
+        QtGui.QWhatsThis.showText(self.valid_status.pos(),
+            self.valid_status.whatsThis(), self.valid_status)
+
+    def set_popup_text(self):
+        popup_text = self.popup.build_contents()
+        for element in self.elements:
+            element.setWhatsThis(popup_text)
 
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
@@ -382,13 +402,25 @@ class DynamicPrimitive(DynamicElement):
         if error == None or error == '':
             msg = ''
             self.setBGcolorSatisfied(True)
+            self.set_validation_icon(True)
         else:
             msg = str(error)
             self.setBGcolorSatisfied(False)
-        self.error.set_error(msg)
+            self.set_validation_icon(False)
+        self.popup.set_error(msg)
+        self.set_popup_text()
+
+    def set_validation_icon(self, valid):
+        if valid:
+            self.valid_status.setIcon(QtGui.QIcon('validate-pass.png'))
+        else:
+            self.valid_status.setIcon(QtGui.QIcon('validate-fail.png'))
+        self.valid_status.setEnabled(True)
+        self.valid_status.setFlat(valid)
+        self.valid_status.setIconSize(QtCore.QSize(22, 22))
 
     def has_error(self):
-        if str(self.error.text()) == '':
+        if str(self.popup.error) == '':
             return False
         return True
         
@@ -413,14 +445,56 @@ class DynamicPrimitive(DynamicElement):
         if self.validator.thread_finished():
             self.timer.stop()
             self.set_error(self.validator.get_error())
-        
-    def display_error(self):
-        """returns a boolean"""
-        return self._display_error
-    
-    def set_display_error(self, display):
-        """display is a boolean"""
-        self._display_error = display
+
+class InformationPopup(object):
+    """This class represents the information that a user will see when pressing
+        the information button.  This specific class simply represents an object
+        that has a couple of string attributes that may be changed at will, and
+        then constructed into a cohesive string by calling self.build_contents.
+
+        Note that this class supports the presentation of an error message.  If
+        the error message is to be shown to the end user, it must be set after
+        the creation of the InformationPopup instance by calling
+        self.set_error().
+        """
+    def __init__(self, title, body_text):
+        """This function initializes the InformationPopup class.
+            title - a python string.  The title of the element.
+            body_text - a python string.  The body of the text
+
+            returns nothing."""
+
+        object.__init__(self)
+        self.title = title
+        self.error_text = ''
+        self.body_text = ''
+
+    def set_title(self, title_text):
+        """Set the title of the InformationPopup text.  title_text is a python
+            string."""
+        self.title = title_text
+
+    def set_error(self, error_string):
+        """Set the error string of this InformationPopup.  error_string is a
+            python string."""
+        self.error_text = error_string
+
+    def set_body(self, body_string):
+        """Set the body of the InformationPopup.  body_string is a python
+            string."""
+        self.body_text = body_string
+
+    def build_contents(self):
+        """Take the python string components of this instance of
+            InformationPopup, wrap them up in HTML as necessary and return a
+            single string containing HTML markup.  Returns a python string."""
+        width_table = '<table style="width:400px"></table>'
+        title = '<h3>%s</h3><br/>' % (self.title)
+        error = self.error_text
+        if error != '':
+            error = '<b style="color:red">ERROR: %s</b><br/>' % (error)
+
+        return str(title + error + self.body_text + width_table)
 
 class ErrorString(QtGui.QLabel):
     def __init__(self, display_settings={'start':0, 'width':1}):
@@ -448,9 +522,8 @@ class LabeledElement(DynamicPrimitive):
     def __init__(self, attributes):
         DynamicPrimitive.__init__(self, attributes)
         self.label = QtGui.QLabel(attributes['label'])
-        self.elements = [self.label]
+        self.elements = [self.valid_status, self.label]
         self.label.setMinimumHeight(MIN_WIDGET_HEIGHT)
-        self.error.set_setting('start', 1)
 
     def addElement(self, element):
         self.elements.append(element)
@@ -769,7 +842,6 @@ class FileEntry(DynamicText):
         super(FileEntry, self).__init__(attributes)
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.addElement(self.button)
-        self.error.set_setting('width', 2)
 
     def setValue(self, text):
         """Set the value of the uri field.  If parameter 'text' is an absolute
@@ -893,7 +965,6 @@ class HideableElement(LabeledElement):
         #remove the label, as it is being subsumed by the new checkbox's label.
         self.elements.remove(self.label)
         self.elements.insert(0, self.checkbox)
-        self.error.set_setting('start', 2)
         
         self.toggleHiding(False)
 
@@ -914,7 +985,6 @@ class HideableFileEntry(HideableElement, FileEntry):
         self.elements = [self.checkbox, self.textField, self.button]
         self.hideableElements = [self.textField, self.button]
         self.toggleHiding(False)
-        self.error.set_setting('start', 1)
 
     def requirementsMet(self):
         if self.checkbox.isChecked():
