@@ -102,6 +102,11 @@ Attributes common to all primitive elements:
                   element ID is satisfied (the satisfaction of an element's
                   requirements depends on the element), the current element is
                   enabled.
+    "helpText"  : A string of text.  May contain unicode.  If provided, this
+                  will be provided to the user when the user clicks the info
+                  button next to this element.  If a "helpText" attribute is not
+                  defined in your json file, help text will instead request that
+                  the user check out the model's documentation.
 
 Attributes common to text-based primitive elements (file, folder, text elements):
    "defaultValue" : A string.  The text of the textfield will be set to this
