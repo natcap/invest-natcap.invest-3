@@ -94,7 +94,6 @@ def format_ops_table(op_path, farm_ID):
         if 'Duration of simulation (years)' in split_line[0]:
             general_ops['duration'] = split_line[1]
     
-    
     #this is explicitly telling it the fields that I want to get data for
     #want to remove the 'Total Value' field, since there is not data inside 
     #there, then tell the dictreader to set up a reader with dictionaries of 
