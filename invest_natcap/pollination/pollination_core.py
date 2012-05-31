@@ -170,12 +170,7 @@ def valuation(args):
 
     LOGGER.debug('Starting valuation')
 
-    # Apply the half-saturation yield function from the documentation.
-    calculate_yield(args['foraging_average'], args['farm_value'],
-        args['half_saturation'], args['wild_pollination_proportion'])
-
     # Open matrices for use later.
-    farm_value_matrix = args['farm_value'].GetRasterBand(1).ReadAsArray()
     farm_avg_matrix = args['foraging_average'].GetRasterBand(1).ReadAsArray()
     agmap_raster = args['ag_map'].GetRasterBand(1)
     agmap_matrix = agmap_raster.ReadAsArray()
@@ -199,6 +194,11 @@ def valuation(args):
 
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
+        # Apply the half-saturation yield function from the documentation.
+        calculate_yield(args[species]['farm_abundance'], args['farm_value'],
+            args['half_saturation'], args['wild_pollination_proportion'])
+        farm_value_matrix = args['farm_value'].GetRasterBand(1).ReadAsArray()
+
         LOGGER.debug('Calculating service value for %s', species)
         # Open necessary matrices
         species_foraging_matrix = species_dict['farm_abundance'].\
