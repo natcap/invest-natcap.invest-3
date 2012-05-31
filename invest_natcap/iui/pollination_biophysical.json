@@ -93,6 +93,8 @@
                     "required": false,
                     "defaultValue": "67 68 71 72 73 74 75 76 78 79 80 81 82 83 84 85 88 90 91 92",
                     "validText": "[0-9 ]*",
+                    "validateAs": {"type": "string",
+                                   "allowedValues": {"pattern": "[0-9 ]*"}},
                     "dataType": "string"
                 },
                 {
