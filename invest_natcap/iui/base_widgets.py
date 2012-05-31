@@ -994,7 +994,8 @@ class HideableFileEntry(HideableElement, FileEntry):
     def __init__(self, attributes):
         FileEntry.__init__(self, attributes)
         HideableElement.__init__(self, attributes)
-        self.elements = [self.checkbox, self.textField, self.button]
+        self.elements = [self.error_button, self.checkbox, self.textField,
+                         self.button, self.info_button]
         self.hideableElements = [self.textField, self.button]
         self.toggleHiding(False)
 
