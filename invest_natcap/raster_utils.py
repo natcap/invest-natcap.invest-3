@@ -465,15 +465,25 @@ def vectorize_points(shapefile, datasource_field, raster):
         return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
             and point[1] <= bounding_box[1] and point[1] >= bounding_box[3]
 
-    layer = shapefile.GetLayer()
+    layer = shapefile.GetLayer(0)
     count = 0
     point_list = []
     value_list = []
-    for feature in layer:
+    for feature_id in range(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_id)
         geometry = feature.GetGeometryRef()
         point = geometry.GetPoint()[0:2]
-        
         if in_bounds(point):
             value = feature.GetField(datasource_field)
             point_list.append(point)
             value_list.append(value)
+
+    #Create grid points for interpolation outputs later
+    grid_x, grid_y = np.mgrid[bounding_box[0]:gt[1]:bounding_box[2],
+                              bounding_box[3]:np.abs(gt[5]):bounding_box[1]]
+
+    point_array = np.array(point_list)
+    LOGGER.debug("Point array shape %s %s" % (point_array.shape))
+
+    scipy.interpolate.griddata(np.array(point_list), np.array(value_list),
+                               (grid_x, grid_y), 'linear')
