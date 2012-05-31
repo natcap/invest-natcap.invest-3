@@ -89,12 +89,16 @@ def execute(args):
     aoi_layer = aoi_poly.GetLayer()
     aoi_polygon = aoi_layer.GetFeature(0)
     aoi_geometry = aoi_polygon.GetGeometryRef()
+    source_point_list = []
     for point_feature in source_layer:
         point_geometry = point_feature.GetGeometryRef()
         if aoi_geometry.Contains(point_geometry):
             point = point_geometry.GetPoint()
             point_id = point_feature.GetField('id')
             LOGGER.debug("point and id %s %s" % (point,point_id))
+            #Appending point geometry with y first so it can be converted
+            #to the numpy (row,col) 2D notation easily.
+            source_point_list.append([point[1],point[0]])
 
 
     LOGGER.info("Solving advection/diffusion equation")
