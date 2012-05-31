@@ -455,6 +455,25 @@ def vectorize_points(shapefile, datasource_field, raster):
        raster - a gdal raster must be in the same projection as shapefile
        """
 
+    #Define the initial bounding box
+    gt = raster.GetGeoTransform()
+    #order is left, top, right, bottom of rasterbounds
+    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
+                    gt[3] + gt[5] * raster.RasterYSize]
+
+    def in_bounds(point):
+        return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
+            and point[1] <= bounding_box[1] and point[1] >= bounding_box[3]
+
     layer = shapefile.GetLayer()
-
-
+    count = 0
+    point_list = []
+    value_list = []
+    for feature in layer:
+        geometry = feature.GetGeometryRef()
+        point = geometry.GetPoint()[0:2]
+        
+        if in_bounds(point):
+            value = feature.GetField(datasource_field)
+            point_list.append(point)
+            value_list.append(value)
