@@ -45,7 +45,6 @@ def execute(args):
             u and v vectors."""
 
     LOGGER.info("Starting MWQ execute")
-    LOGGER.debug("args %s" % args)
     aoi_poly = ogr.Open(args['aoi_poly_uri'])
     land_poly = ogr.Open(args['land_poly_uri'])
     land_layer = land_poly.GetLayer()
@@ -54,6 +53,7 @@ def execute(args):
     adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
 
     #Create a grid based on the AOI
+    LOGGER.info("Creating grid based on the AOI polygon")
     pixel_size = args['pixel_size']
     #the nodata value will be a min float
     nodata_out = float(np.finfo(np.float32).min)
@@ -61,7 +61,9 @@ def execute(args):
     raster_out = raster_utils.create_raster_from_vector_extents(pixel_size, 
         pixel_size, gdal.GDT_Float32, nodata_out, raster_out_uri, aoi_poly)
 
+    
     #create a temporary grid of interpolated points for tide_e and adv_uv
+    LOGGER.info("Creating grids for the interpolated tide E and ADV uv points")
     tide_e_raster = raster_utils.new_raster_from_base(raster_out, 'tide_e.tif', 'GTiff', nodata_out, 
                                          gdal.GDT_Float32)
     adv_u_raster = raster_utils.new_raster_from_base(raster_out, 'adv_u.tif', 'GTiff', nodata_out, 
@@ -75,10 +77,16 @@ def execute(args):
     raster_utils.vectorize_points(adv_uv_points, 'V_m_sec_', adv_v_raster)
 
     #Mask the interpolated points to the land polygon
+    LOGGER.info("Masking Tide E and ADV UV to the land polygon")
     for dataset in [tide_e_raster, adv_u_raster, adv_v_raster]:
         band = dataset.GetRasterBand(1)
         nodata = band.GetNoDataValue()
         gdal.RasterizeLayer(dataset,[1], land_layer, burn_values=[nodata])
+
+    #Now we have 3 input rasters for tidal dispersion and uv advection
+    LOGGER.info("Load the point sources")
+    
+    LOGGER.info("Solving advection/diffusion equation")
 
     LOGGER.info("Done with MWQ execute")
 
