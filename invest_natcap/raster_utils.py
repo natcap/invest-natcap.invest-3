@@ -479,11 +479,17 @@ def vectorize_points(shapefile, datasource_field, raster):
             value_list.append(value)
 
     #Create grid points for interpolation outputs later
-    grid_x, grid_y = np.mgrid[bounding_box[0]:gt[1]:bounding_box[2],
-                              bounding_box[3]:np.abs(gt[5]):bounding_box[1]]
+    grid_y, grid_x = np.mgrid[bounding_box[1]:bounding_box[3]:gt[5],
+                              bounding_box[0]:bounding_box[2]:gt[1]]
 
     point_array = np.array(point_list)
     LOGGER.debug("Point array shape %s %s" % (point_array.shape))
-
-    scipy.interpolate.griddata(np.array(point_list), np.array(value_list),
-                               (grid_x, grid_y), 'linear')
+    LOGGER.debug("gridx %s" % grid_x)
+    LOGGER.debug("gridy %s" % grid_y)
+    raster_out_array = scipy.interpolate.griddata(np.array(point_list), 
+        np.array(value_list), (grid_y, grid_x), 'linear')
+    LOGGER.debug("raster_out_array.shape %s %s" % (raster_out_array.shape))
+    LOGGER.debug("raster_ x y %s %s" % (raster.RasterXSize, raster.RasterYSize))
+    LOGGER.debug(raster_out_array.shape)
+    band = raster.GetRasterBand(1)
+    band.WriteArray(raster_out_array,0,0)
