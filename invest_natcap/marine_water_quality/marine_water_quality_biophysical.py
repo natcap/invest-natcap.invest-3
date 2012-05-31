@@ -6,6 +6,7 @@ import re
 import os
 import time
 import math
+import csv
 
 from osgeo import ogr
 from osgeo import gdal
@@ -102,9 +103,15 @@ def execute(args):
     #Project source point y,x to row, col notation for the output array.
 
     #Load the point source data CSV file.
-    
+    point_source_values = {}
+    csv_file = open(args['source_point_data_uri'])
+    reader = csv.DictReader(csv_file)
+    for row in reader:
+        point_source_values[int(row['ID'])] = {
+            'KPS': float(row['KPS']),
+            'WPS': float(row['WPS'])}
 
-
+    LOGGER.debug(point_source_values)
     LOGGER.info("Solving advection/diffusion equation")
 
     LOGGER.info("Done with MWQ execute")
