@@ -195,8 +195,9 @@ def valuation(args):
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
         # Apply the half-saturation yield function from the documentation.
-        calculate_yield(args[species]['farm_abundance'], args['farm_value'],
-            args['half_saturation'], args['wild_pollination_proportion'])
+        calculate_yield(args['species'][species]['farm_abundance'],
+            args['farm_value'],args['half_saturation'],
+            args['wild_pollination_proportion'])
         farm_value_matrix = args['farm_value'].GetRasterBand(1).ReadAsArray()
 
         LOGGER.debug('Calculating service value for %s', species)
