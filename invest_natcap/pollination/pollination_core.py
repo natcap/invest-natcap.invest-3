@@ -159,8 +159,10 @@ def valuation(args):
             and 1.
         args['species'][<species_name>]['species_abundance'] - a GDAL dataset
         args['species'][<species_name>]['farm_abundance'] - a GDAL dataset
-        args['service_value'] - a GDAL dataset
-        args['farm_value'] - a GDAL dataset
+        args['species'][<species_name>]['farm_value'] - a GDAL dataset
+        args['species'][<species_name>]['service_value'] - a GDAL dataset
+        args['service_value_sum'] - a GDAL dataset
+        args['farm_value_sum'] - a GDAL dataset
         args['foraging_average'] - a GDAL dataset
         args['guilds'] - a fileio tablehandler class
         args['ag_map'] - a GDAL dataset
