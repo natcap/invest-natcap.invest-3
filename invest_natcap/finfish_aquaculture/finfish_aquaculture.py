@@ -1,4 +1,4 @@
-"""inVEST finfish aquaculture filehandler for biophysical data"""
+"""inVEST finfish aquaculture filehandler for biophysical and valuation data"""
 
 import os
 import csv
@@ -11,10 +11,11 @@ from invest_natcap.finfish_aquaculture import finfish_aquaculture_core
 def execute(args):
     """This function will take care of preparing files passed into 
     the finfish aquaculture model. It will handle all files/inputs associated
-    with biophysical calculations and manipulations. It will create objects
+    with biophysical and valuation calculations and manipulations. It will create objects
     to be passed to the aquaculture_core.py module. It may write log, 
     warning, or error messages to stdout.
     
+    --Biophysical Args--
     args: a python dictionary containing the following data:
     args['workspace_dir']- The directory in which to place all result files.
     args['ff_farm_loc']- URI that points to a shape file of fishery locations
@@ -27,15 +28,23 @@ def execute(args):
     args['water_temp_tbl']- URI to a CSV table where daily water temperature
                             values are stored from one year
     args['farm_op_tbl']- URI to CSV table of static variables for calculations
+    
+    --Valuation Args--
+    args['do_valuation']- Boolean that indicates whether or not valuation should be
+                    performed on the aquaculture model
+    args['p_per_kg']: Market price per kilogram of processed fish
+    args['frac_p']: Fraction of market price that accounts for costs rather than
+                    profit
+    args['discount']: Daily market discount rate
     """ 
     
     #initialize new dictionary of purely biophysical/general arguments which will be
     #passed to the aquaculture core module. Then get desirable arguments that 
     #are being passed in, and load them into the biophysical dictionary.
     
-    global biophysical_args
+    global ff_aqua_args
     
-    biophysical_args = {}
+    ff_aqua_args = {}
     
     workspace = args['workspace_dir']
     output_dir = workspace + os.sep + 'Output'
@@ -43,23 +52,28 @@ def execute(args):
     if not (os.path.exists(output_dir)):
         os.makedirs(output_dir)
         
-    biophysical_args['workspace_dir'] = args['workspace_dir']
-    biophysical_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc'])
-    biophysical_args['farm_ID'] = args['farm_ID']
-    biophysical_args['g_param_a'] = args['g_param_a']
-    biophysical_args['g_param_b'] = args['g_param_b']
+    ff_aqua_args['workspace_dir'] = args['workspace_dir']
+    ff_aqua_args['ff_farm_file'] = ogr.Open(args['ff_farm_loc'])
+    ff_aqua_args['farm_ID'] = args['farm_ID']
+    ff_aqua_args['g_param_a'] = args['g_param_a']
+    ff_aqua_args['g_param_b'] = args['g_param_b']
     
     #Both CSVs are being pulled in, but need to do some maintenance to remove undesirable
     #information before they can be passed into core
 
     format_temp_table(args['water_temp_tbl'])
     format_ops_table(args['farm_op_tbl'], "Farm #:")
+    
+    
+    #Valuation arguments
+    ff_aqua_args['do_valuation'] = args['do_valuation']
+    ff_aqua_args['p_per_kg'] = args['p_per_kg']
+    ff_aqua_args['frac_p'] = args['frac_p']
+    ff_aqua_args['discount'] = args['discount']
 
     #Fire up the biophysical function in finfish_aquaculture_core with the 
     #gathered arguments
-    #LOGGER.info('Starting Finfish Biophysical.')
-    finfish_aquaculture_core.biophysical(biophysical_args)
-    #LOGGER.info('Completed Finfish Biophysical.')
+    finfish_aquaculture_core.execute(ff_aqua_args)
 
 def format_ops_table(op_path, farm_ID):
     
@@ -119,13 +133,13 @@ def format_ops_table(op_path, farm_ID):
         del sub_dict['Total value']
         new_dict_op[row[farm_ID]] = sub_dict
     
-    biophysical_args['farm_op_dict'] = new_dict_op
+    ff_aqua_args['farm_op_dict'] = new_dict_op
     
     #print general_ops
     
     #add the gen args in
     for key in general_ops.keys():
-        biophysical_args[key] = general_ops[key]    
+        ff_aqua_args[key] = general_ops[key]    
     
 def format_temp_table(temp_path):
     
@@ -164,4 +178,5 @@ def format_temp_table(temp_path):
         del sub_dict['Day/Month']
         new_dict_temp[row[day_marker]] = sub_dict
     
-    biophysical_args['water_temp_dict'] = new_dict_temp 
+    ff_aqua_args['water_temp_dict'] = new_dict_temp
+    
