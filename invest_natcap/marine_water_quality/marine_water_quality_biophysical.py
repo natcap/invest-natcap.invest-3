@@ -68,6 +68,10 @@ def execute(args):
     adv_v_raster = raster_utils.new_raster_from_base(raster_out, 'adv_v.tif', 'GTiff', nodata_out, 
                                          gdal.GDT_Float32)
 
+    #Interpolate the ogr datasource points onto a raster the same size as raster_out
+    raster_utils.vectorize_points(tide_e_points, 'kh_km2_day', tide_e_raster)
+    raster_utils.vectorize_points(adv_uv_points, 'U_m_sec_', adv_u_raster)
+    raster_utils.vectorize_points(adv_uv_points, 'V_m_sec_', adv_v_raster)
 
     LOGGER.info("Done with MWQ execute")
 

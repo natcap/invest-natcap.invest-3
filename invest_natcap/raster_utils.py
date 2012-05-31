@@ -446,3 +446,15 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
 
     return raster
 
+def vectorize_points(shapefile, datasource_field, raster):
+    """Takes a shapefile of points and a field defined in that shapefile
+       and interpolates the values in the points onto the given raster
+
+       shapefile - ogr datasource of points
+       datasource_field - a field in shapefile
+       raster - a gdal raster must be in the same projection as shapefile
+       """
+
+    layer = shapefile.GetLayer()
+
+
