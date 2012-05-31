@@ -4,6 +4,8 @@ import sys
 import logging
 import re
 import os
+import time
+import math
 
 from osgeo import ogr
 from osgeo import gdal
@@ -11,9 +13,7 @@ import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
 from numpy.ma import masked_array
-import time
 import scipy.linalg
-import math
 import pylab
 
 from invest_natcap import raster_utils
@@ -60,16 +60,15 @@ def execute(args):
     raster_out_uri = os.path.join(args['workspace'],'concentration.tif')
     raster_out = raster_utils.create_raster_from_vector_extents(pixel_size, 
         pixel_size, gdal.GDT_Float32, nodata_out, raster_out_uri, aoi_poly)
-
     
     #create a temporary grid of interpolated points for tide_e and adv_uv
     LOGGER.info("Creating grids for the interpolated tide E and ADV uv points")
-    tide_e_raster = raster_utils.new_raster_from_base(raster_out, 'tide_e.tif', 'GTiff', nodata_out, 
-                                         gdal.GDT_Float32)
-    adv_u_raster = raster_utils.new_raster_from_base(raster_out, 'adv_u.tif', 'GTiff', nodata_out, 
-                                         gdal.GDT_Float32)
-    adv_v_raster = raster_utils.new_raster_from_base(raster_out, 'adv_v.tif', 'GTiff', nodata_out, 
-                                         gdal.GDT_Float32)
+    tide_e_raster = raster_utils.new_raster_from_base(raster_out, 'tide_e.tif', 
+        'GTiff', nodata_out, gdal.GDT_Float32)
+    adv_u_raster = raster_utils.new_raster_from_base(raster_out, 'adv_u.tif',
+        'GTiff', nodata_out, gdal.GDT_Float32)
+    adv_v_raster = raster_utils.new_raster_from_base(raster_out, 'adv_v.tif',
+        'GTiff', nodata_out, gdal.GDT_Float32)
 
     #Interpolate the ogr datasource points onto a raster the same size as raster_out
     raster_utils.vectorize_points(tide_e_points, 'kh_km2_day', tide_e_raster)
