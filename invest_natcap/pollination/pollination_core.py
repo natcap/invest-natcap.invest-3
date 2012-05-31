@@ -194,11 +194,21 @@ def valuation(args):
 
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
+
+        LOGGER.info('Calculating crop yield due to %s', species)
         # Apply the half-saturation yield function from the documentation.
         calculate_yield(args['species'][species]['farm_abundance'],
             args['farm_value'],args['half_saturation'],
             args['wild_pollination_proportion'])
         farm_value_matrix = args['farm_value'].GetRasterBand(1).ReadAsArray()
+
+        # Open the species foraging matrix and then divide
+        # the yield matrix by the foraging matrix for this pollinator.
+        LOGGER.debug('
+        species_farm_matrix = species_dict['farm_abundance'].GetRasterBand(1).\
+            ReadAsArray()
+        clip_and_op(farm_value_matrix, species_farm_matrix, np.divide,
+            in_nodata, out_nodata)
 
         LOGGER.debug('Calculating service value for %s', species)
         # Open necessary matrices
