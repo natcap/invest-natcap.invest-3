@@ -90,19 +90,33 @@ def execute(args):
             valuation_args['species'][species]['farm_abundance'] = gdal.Open(
                 foraging_uri)
 
-        # Create the total supply raster using the foraging average raster as a
-        # base
-        service_value_uri = pollination_core.build_uri(out_dir, 'sup_val.tif',
-            [scenario, suffix])
-        valuation_args['service_value'] = pollination_core.make_raster_from_lulc(
-            valuation_args['foraging_average'], service_value_uri)
+            # Create the total supply raster using the foraging average raster as a
+            # base
+            service_value_uri = pollination_core.build_uri(out_dir, 'sup_val.tif',
+                [species, scenario, suffix])
+            valuation_args['species'][species]['service_value'] = \
+                pollination_core.make_raster_from_lulc(
+                valuation_args['foraging_average'], service_value_uri)
 
-        # Create the total farm value raster using the foraging average raster as a
-        # base
-        farm_value_uri = pollination_core.build_uri(inter_dir, 'frm_val.tif',
-            [scenario, suffix])
-        valuation_args['farm_value'] = pollination_core.make_raster_from_lulc(
-            valuation_args['foraging_average'], farm_value_uri)
+            # Create the total farm value raster using the foraging average raster as a
+            # base
+            farm_value_uri = pollination_core.build_uri(inter_dir, 'frm_val.tif',
+                [species, scenario, suffix])
+            valuation_args['species'][species]['farm_value'] =\
+                pollination_core.make_raster_from_lulc(
+                valuation_args['foraging_average'], farm_value_uri)
+
+        farm_value_sum_uri = pollination_core.build_uri(inter_dir, 'frm_val.tif',
+            ['sum', scenario, suffix])
+        valuation_args['farm_value_sum'] =\
+            pollination_core.make_raster_from_lulc(
+            valuation_args['foraging_average'], farm_value_sum_uri)
+
+        farm_value_sum_uri = pollination_core.build_uri(inter_dir, 'sup_val.tif',
+            ['sum', scenario, suffix])
+        valuation_args['service_value_sum'] =\
+            pollination_core.make_raster_from_lulc(
+            valuation_args['foraging_average'], farm_value_sum_uri)
 
         # Execute the model.
         pollination_core.valuation(valuation_args)

@@ -172,13 +172,19 @@ def valuation(args):
 
     # Open matrices for use later.
     farm_avg_matrix = args['foraging_average'].GetRasterBand(1).ReadAsArray()
+    farm_value_sum_matrix = args['farm_value_sum'].GetRasterBand(1).\
+        ReadAsArray()
+    farm_value_sum_matrix.fill(0)
+    service_value_sum_matrix = args['service_value_sum'].GetRasterBand(1).\
+        ReadAsArray()
+    service_value_sum_matrix.fill(0)
     agmap_raster = args['ag_map'].GetRasterBand(1)
     agmap_matrix = agmap_raster.ReadAsArray()
 
     # Define necessary scalars based on inputs.
     agmap_nodata = agmap_raster.GetNoDataValue()
     in_nodata = args['foraging_average'].GetRasterBand(1).GetNoDataValue()
-    out_nodata = args['farm_value'].GetRasterBand(1).GetNoDataValue()
+    out_nodata = in_nodata
     num_species = len(args['species'].values())
 
     # Calculate the total foraging matrix by multiplying the foraging average
@@ -196,11 +202,17 @@ def valuation(args):
     for species, species_dict in args['species'].iteritems():
 
         LOGGER.info('Calculating crop yield due to %s', species)
-        # Apply the half-saturation yield function from the documentation.
-        calculate_yield(args['species'][species]['farm_abundance'],
-            args['farm_value'],args['half_saturation'],
+        # Apply the half-saturation yield function from the documentation and
+        # write it to its raster
+        calculate_yield(species_dict['farm_abundance'],
+            species_dict['farm_value'],args['half_saturation'],
             args['wild_pollination_proportion'])
-        farm_value_matrix = args['farm_value'].GetRasterBand(1).ReadAsArray()
+        farm_value_matrix = species_dict['farm_value'].GetRasterBand(1).ReadAsArray()
+        species_dict['farm_value'].GetRasterBand(1).WriteArray(farm_value_matrix)
+
+        # Add the new farm_value_matrix to the farm value sum matrix.
+        farm_value_sum_matrix = clip_and_op(farm_value_sum_matrix,
+            farm_value_matrix, np.add, in_nodata, out_nodata)
 
         LOGGER.debug('Calculating service value for %s', species)
         # Open the species foraging matrix and then divide
@@ -213,7 +225,7 @@ def valuation(args):
         # Calculate sigma for the gaussian blur.  Sigma is based on the species
         # alpha (from the guilds table) and twice the pixel size.
         guild_dict = args['guilds'].get_table_row('species', species)
-        pixel_size = abs(args['farm_value'].GetGeoTransform()[1])
+        pixel_size = abs(species_dict['farm_value'].GetGeoTransform()[1])
         sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
         LOGGER.debug('Pixel size: %s, sigma: %s')
 
@@ -239,9 +251,16 @@ def valuation(args):
         # Vectorize the ps_vectorized function
         vOp = np.vectorize(ps_vectorized)
         service_value_matrix = vOp(species_supply_matrix, blurred_ratio_matrix)
+        species_dict['service_value'].GetRasterBand(1).WriteArray(
+            service_value_matrix)
+
+        # Add the new service value to the service value sum matrix
+        service_value_sum_matrix = clip_and_op(service_value_sum_matrix,
+            service_value_matrix, np.add, in_nodata, out_nodata)
 
     # Write the pollination service value to its raster
-    args['service_value'].GetRasterBand(1).WriteArray(service_value_matrix)
+    args['service_value_sum'].GetRasterBand(1).WriteArray(service_value_sum_matrix)
+    args['farm_value_sum'].GetRasterBand(1).WriteArray(farm_value_sum_matrix)
     LOGGER.debug('Finished calculating service value')
 
 def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
