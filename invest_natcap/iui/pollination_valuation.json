@@ -41,6 +41,9 @@
                     "required": true,
                     "width": 60,
                     "defaultValue": "0.125",
+                    "validateAs": {"type": "number",
+                                   "lteq": 1,
+                                   "gteq": 0},
                     "dataType": "float"
                 },
                 {
@@ -51,7 +54,10 @@
                     "required": true,
                     "width": 60,
                     "defaultValue": "1",
-                    "dataType": "string"
+                    "validateAs": {"type": "number",
+                                   "lteq": 1,
+                                   "gteq": 0},
+                    "dataType": "float"
                 },
                 {
                     "id": "value_future",
