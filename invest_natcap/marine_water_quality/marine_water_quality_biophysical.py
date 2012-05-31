@@ -100,6 +100,11 @@ def execute(args):
             #to the numpy (row,col) 2D notation easily.
             source_point_list.append([point[1],point[0]])
 
+    #Project source point y,x to row, col notation for the output array.
+
+    #Load the point source data CSV file.
+    
+
 
     LOGGER.info("Solving advection/diffusion equation")
 
