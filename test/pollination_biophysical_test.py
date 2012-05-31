@@ -144,7 +144,7 @@ class PollinationValuationTest(PollinationTest):
 
 class Pollination30mSmokeTest(PollinationBiophysicalTest):
     """To only run this test class at the command line, do this:
-       $ nosetests -vs pollination_biophysical_test.py:Pollination30mSmokeTest
+       $ nosetests -vs pollination_biophysical_test.py:Pollination30mSmokeTest.test_ag_30m_smoke
 
        To run other tests, run:
        $ nosetests -vs pollination_biophysical_test.py:Pollination{Biophysical,Valuation}Test
@@ -163,6 +163,6 @@ class Pollination30mSmokeTest(PollinationBiophysicalTest):
             + ' 83 84 85 88 90 91 92')
         self.args['landuse_cur_uri'] = 'data/base_data/terrestrial/lulc_samp_cur'
         pollination_biophysical.execute(self.args)
-        pollination_valutation.execute(self, self.value_args)
+        pollination_valuation.execute(self.value_args)
 
 
