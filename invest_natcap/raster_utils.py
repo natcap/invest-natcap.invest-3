@@ -453,6 +453,8 @@ def vectorize_points(shapefile, datasource_field, raster):
        shapefile - ogr datasource of points
        datasource_field - a field in shapefile
        raster - a gdal raster must be in the same projection as shapefile
+
+       returns nothing
        """
 
     #Define the initial bounding box
@@ -472,24 +474,24 @@ def vectorize_points(shapefile, datasource_field, raster):
     for feature_id in range(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
         geometry = feature.GetGeometryRef()
-        point = geometry.GetPoint()[0:2]
+        #Here the point geometry is in the form x,y (col, row)
+        point = geometry.GetPoint()
         if in_bounds(point):
             value = feature.GetField(datasource_field)
-            point_list.append(point)
+            #Add in the numpy notation which is row, col
+            point_list.append([point[1],point[0]])
             value_list.append(value)
+    point_array = np.array(point_list)
+    value_array = np.array(value_list)
 
     #Create grid points for interpolation outputs later
+    #top-bottom:y_stepsize, left-right:x_stepsize
     grid_y, grid_x = np.mgrid[bounding_box[1]:bounding_box[3]:gt[5],
                               bounding_box[0]:bounding_box[2]:gt[1]]
 
-    point_array = np.array(point_list)
-    LOGGER.debug("Point array shape %s %s" % (point_array.shape))
-    LOGGER.debug("gridx %s" % grid_x)
-    LOGGER.debug("gridy %s" % grid_y)
-    raster_out_array = scipy.interpolate.griddata(np.array(point_list), 
-        np.array(value_list), (grid_y, grid_x), 'linear')
-    LOGGER.debug("raster_out_array.shape %s %s" % (raster_out_array.shape))
-    LOGGER.debug("raster_ x y %s %s" % (raster.RasterXSize, raster.RasterYSize))
-    LOGGER.debug(raster_out_array.shape)
     band = raster.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    raster_out_array = scipy.interpolate.griddata(point_array, 
+        value_array, (grid_y, grid_x), 'linear', nodata)
     band.WriteArray(raster_out_array,0,0)
