@@ -28,7 +28,7 @@
                     "args_id": "guilds_uri",
                     "required": true,
                     "validateAs": {"type": "DBF",
-                                   "fieldsExist": ["SPECIES", "APLHA"],
+                                   "fieldsExist": ["SPECIES", "ALPHA"],
                                    "restrictions": [{"field": "ALPHA",
                                                      "validateAs": {"type": "number",
                                                                     "allowedValues": "0-9]*\\.[0-9]*$"}}]}
