@@ -178,4 +178,5 @@ def format_temp_table(temp_path):
         del sub_dict['Day/Month']
         new_dict_temp[row[day_marker]] = sub_dict
     
-    ff_aqua_args['water_temp_dict'] = new_dict_temp 
+    ff_aqua_args['water_temp_dict'] = new_dict_temp
+    

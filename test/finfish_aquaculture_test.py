@@ -21,6 +21,7 @@ class TestFinfishAquaculture(unittest.TestCase):
         args['farm_op_tbl'] = './test/data/aquaculture_data/Farm_Operations.csv'
         
         #Valuation
+        args['do_valuation'] = True
         args['p_per_kg']= 2.25
         args['frac_p'] = .3
         args['discount'] = 0.000192

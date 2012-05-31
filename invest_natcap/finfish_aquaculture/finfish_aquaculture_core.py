@@ -99,26 +99,40 @@ def execute(args):
     #outgoing shapefile- abstracting the calculation of this to a separate function,
     #but it will return a dictionary with a int->float mapping for 
     #farm_ID->processed weight
-    proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
+    sum_proc_weight, proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
                                    args['mort_rate_daily'], cycle_history)
+    
+    print sum_proc_weight
+    
+    #have to start at the beginning of the layer to access the attributes
+    layer.ResetReading()
     
     #Now, add the total processed weight as a shapefile feature
     hrv_field = ogr.FieldDefn('Hrvwght_kg', ogr.OFTReal)
     layer.CreateField(hrv_field)
-    
-    for feature in layer:
         
-        feature_ID = feature.items()[args['farm_ID']]
-        feature.SetField('Hrvwght_kg', proc_weight[feature_ID])
+    for feature in layer:
+
+        accessor = args['farm_ID']
+        feature_ID = feature.items()[accessor]
+        feature.SetField('Hrvwght_kg', sum_proc_weight[feature_ID])
         
         layer.SetFeature(feature)
         
     print type(args['p_per_kg'])
        
-    '''This will complete the valuation portion of the finfish aquaculture model, dependent on
-    whether or not valuation is desired.'''
+    '''This will complete the valuation portion of the finfish aquaculture 
+    model, dependent on whether or not valuation is desired.'''
+    
     if (bool(args['do_valuation']) == True):
-        print "hELLO"
+        farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
+                proc_weight, cycle_history)
+    else:
+        args['p_per_kg'] = None
+        args['frac_p'] = None
+        args['discount'] = None
+        farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'], 
+                              proc_weight, cycle_history)
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -168,7 +182,7 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
                 else:
              
                     #Grow 'dem fishies!
-                    fish_weight = (a * (fish_weight ** b) * \
+                    fish_weight = (1000*a * (fish_weight ** b) * \
                                    float(water_temp_dict[str(day % 365 + 1)][str(f)]) \
                                    * tau) + fish_weight
             
@@ -180,10 +194,14 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     return cycle_history
 
 def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
-    #This will yield one output- a dictionary which will hold a mapping from every farm
-    # (as identified by farm_ID) to the total processed weight of each farm
+
+    '''This will yield two outputs- a dictionary which will hold a mapping from every farm
+    (as identified by farm_ID) to the total processed weight of each farm, and a 
+    dictionary which will hold a farm->list mapping, where the list holds the
+    individual twp for all cycles that the farm completed'''
     
     curr_cycle_totals = {}
+    indiv_totals= {}
         
     for f in range (1, len(farm_op_dict)+1):
         
@@ -195,6 +213,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
         cycles_comp = len(cycle_history[f])
         farm_history = cycle_history[f]
         mort = float(mort)
+        indiv_totals[f] = []
         
         #We are starting this range at 0, and going to one less than the number of
         #cycles, since the list of cycles from the cycle calcs will start at index 0
@@ -210,8 +229,35 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
             #within the dictionary
             cycle_length = harvest_date - outplant_date
             e_exponent =  -mort * cycle_length
-            curr_cy_twp = harvest_weight * frac * f_num_fish * math.exp(e_exponent)
+            curr_cy_tpw = harvest_weight * frac * f_num_fish * math.exp(e_exponent)
             
-        curr_cycle_totals[f] += curr_cy_twp
+            indiv_totals[f].append(curr_cy_tpw)
+            curr_cycle_totals[f] += curr_cy_tpw
             
-    return curr_cycle_totals
+    return (curr_cycle_totals, indiv_totals)
+
+def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
+    
+    '''This performs the valuation calculations, and returns a dictionary with a
+    farm-> list mapping, where each list contains the total processed weight for
+    each of the cycles completed on that farm '''
+    
+    valuations = {}
+    
+    for f in range (1, len(cycle_history)):
+        
+        valuations[f] = []
+        
+        #running from 0 to 1 less than the number of cycles that farm completed,
+        #since the list that each farm ID is mapped to starts at index 0
+        for c in range (0, len(cycle_history[f])):
+            
+            tpw = proc_weight[f][c]
+            #the 2 refers to the placement of day of harvest in the tuple for each cycle
+            t = cycle_history[f][c][2]
+            
+            npv = tpw * (price_per_kg *(1 - frac_mrkt_price)) * (1 / (1 + discount) ** t)
+   
+            valuations[f].append(npv)
+    
+    return valuations
