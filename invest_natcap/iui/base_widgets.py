@@ -1071,6 +1071,11 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         QtGui.QCheckBox.__init__(self)
         DynamicPrimitive.__init__(self, attributes)
 
+        self.elements.remove(self.info_button)
+        self.elements.append(QtGui.QWidget())
+        self.elements.append(QtGui.QWidget())
+        self.elements.append(self.info_button)
+
         #set the text of the checkbox
         self.setText(attributes['label'])
 
