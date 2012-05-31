@@ -76,7 +76,7 @@
                     "label": "Results suffix",
                     "args_id": "results_suffix",
                     "width": 60,
-                    "helpText": "You may provide a results suffix.  Any values are allowed and there is no length limit."
+                    "helpText": "<b>IMPORTANT: If you used a results suffix for your corresponding run of the pollination biophysical model, you must enter the same suffix here.</b>  Failure to do so will result in errors."
                 }
             ]
         }
