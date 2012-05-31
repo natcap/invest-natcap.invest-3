@@ -487,8 +487,9 @@ def vectorize_points(shapefile, datasource_field, raster):
     grid_y, grid_x = np.mgrid[bounding_box[1]:bounding_box[3]:gt[5],
                               bounding_box[0]:bounding_box[2]:gt[1]]
 
-    point_array = np.array(point_list)
-    raster_out_array = scipy.interpolate.griddata(point_array, 
-        value_array, (grid_y, grid_x), 'linear')
     band = raster.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    raster_out_array = scipy.interpolate.griddata(point_array, 
+        value_array, (grid_y, grid_x), 'linear', nodata)
     band.WriteArray(raster_out_array,0,0)
