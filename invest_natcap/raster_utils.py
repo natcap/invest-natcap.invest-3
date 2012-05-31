@@ -443,3 +443,6 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     #Initialize everything to nodata
     raster.GetRasterBand(1).Fill(nodata)
     raster.GetRasterBand(1).FlushCache()
+
+    return raster
+
