@@ -7,21 +7,19 @@ import math
 from osgeo import ogr
 from osgeo import gdal
 
-def biophysical(args):
-    ''''Runs the biophysical part of the finfish aquaculture model. This will output:
+def execute(args):
+    ''''Runs the biophysical and valuation parts of the finfish aquaculture model. 
+    This will output:
     1. a shape file showing farm locations w/ addition of # of harvest cycles, total
-    processed weight at that farm, and possibly the total discounted net revenue at each
-    farm location.
-    2. Raster file of total harvested weight for each farm for the total number of years
-    the model was run (in kg)
-    3. Raster of the total net present value of harvested weight/ farm for the total
-    number of years the model was run (thousands of $)
-    4. Three HTML tables summarizing all model I/O- summary of user-provided data,
-    summary of each harvest cycle, and summary of the outputs/farm
-    5. A .txt file that is named according to the date and time the model is run, which
-    lists the values used during that run
+        processed weight at that farm, and if valuation is true, total discounted net 
+        revenue at each farm location.
+    2. Three HTML tables summarizing all model I/O- summary of user-provided data,
+        summary of each harvest cycle, and summary of the outputs/farm
+    3. A .txt file that is named according to the date and time the model is run, which
+        lists the values used during that run
     
     Data in args should include the following:
+    --Biophysical Arguments--
     args: a python dictionary containing the following data:
     args['workspace_dir']- The directory in which to place all result files.
     args['ff_farm_file']- An open shape file containing the locations of individual
@@ -56,6 +54,12 @@ def biophysical(args):
                         remove undesirable parts
     args['mort_rate_daily']- mortality rate among fish  in a year, divided by 365
     args['duration']- duration of the simulation, in years
+    
+    --Valuation arguments--
+    args['do_valuation']- boolean indicating whether or not to run the valuation process
+    args['p_per_kg']: Market price per kilogram of processed fish
+    args['frac_p']: Fraction of market price that accounts for costs rather than profit
+    args['discount']: Daily market discount rate
     '''
     
     output_dir = args['workspace_dir'] + os.sep + 'Output'
@@ -95,27 +99,48 @@ def biophysical(args):
     #outgoing shapefile- abstracting the calculation of this to a separate function,
     #but it will return a dictionary with a int->float mapping for 
     #farm_ID->processed weight
-    proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
+    sum_proc_weight, proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
                                    args['mort_rate_daily'], cycle_history)
+    
+    #have to start at the beginning of the layer to access the attributes
+    layer.ResetReading()
     
     #Now, add the total processed weight as a shapefile feature
     hrv_field = ogr.FieldDefn('Hrvwght_kg', ogr.OFTReal)
     layer.CreateField(hrv_field)
+        
+    for feature in layer:
+
+        accessor = args['farm_ID']
+        feature_ID = feature.items()[accessor]
+        feature.SetField('Hrvwght_kg', sum_proc_weight[feature_ID])
+        
+        layer.SetFeature(feature)
+
+    '''This will complete the valuation portion of the finfish aquaculture 
+    model, dependent on whether or not valuation is desired.'''
+    
+    if (bool(args['do_valuation']) == True):
+        farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
+                proc_weight, cycle_history)
+    
+    #And add it into the shape file
+    layer.ResetReading()
+    
+    hrv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
+    layer.CreateField(hrv_field)
     
     for feature in layer:
-        
-        feature_ID = feature.items()[args['farm_ID']]
-        feature.SetField('Hrvwght_kg', proc_weight[feature_ID])
+
+        accessor = args['farm_ID']
+        feature_ID = feature.items()[accessor]
+        feature.SetField('NVP_USD_1k', farms_npv[feature_ID])
         
         layer.SetFeature(feature)
         
-    #Want to create a raster file of the same size/shape as the shapefile you used
-    #as input, then use the harvest weight as the info to burn into raster pixels
-    r_driver = gdal.GetDriverByName('GTIFF')
-    r_out_path = output_dir + os.sep + "hrvwght_kg"
     
+    #Now, want to build the HTML table
     
-    gdal.RasterizeLayer()
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -132,10 +157,12 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
         
         #casting f to string because farm_op_dict came from biophysical with
         #keys as strings, and then casting result back to int
+        #Are multiplying by 1000, because a and b are in grams, so need to do the whole
+        #equation in grams
         start_day = int(farm_op_dict[str(f)]['start day for growing'])
         fallow_per = int(farm_op_dict[str(f)]['Length of Fallowing period'])
-        start_weight = float(farm_op_dict[str(f)]['weight of fish at start (kg)'])
-        tar_weight = float(farm_op_dict[str(f)]['target weight of fish at harvest (kg)'])
+        start_weight = 1000 * float(farm_op_dict[str(f)]['weight of fish at start (kg)'])
+        tar_weight = 1000 * float(farm_op_dict[str(f)]['target weight of fish at harvest (kg)'])
         
         fallow_days_left = start_day
         farm_history = []
@@ -165,9 +192,10 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
                 else:
              
                     #Grow 'dem fishies!
-                    fish_weight = (a * (fish_weight ** b) * \
-                                   float(water_temp_dict[str(day % 365 + 1)][str(f)]) \
-                                   * tau) + fish_weight
+                    exponent = float(water_temp_dict[str(day % 365 + 1)][str(f)]) * tau
+                    exponent = -exponent
+                    fish_weight = (a * (fish_weight ** b) * math.exp(exponent)) + \
+                                    fish_weight
             
         cycle_history[f] = farm_history
         
@@ -177,10 +205,17 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     return cycle_history
 
 def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
-    #This will yield one output- a dictionary which will hold a mapping from every farm
-    # (as identified by farm_ID) to the total processed weight of each farm
+
+    '''This will yield two outputs- a dictionary which will hold a mapping from every farm
+    (as identified by farm_ID) to the total processed weight of each farm, and a 
+    dictionary which will hold a farm->list mapping, where the list holds the
+    individual tpw for all cycles that the farm completed
+    
+    cycle_hisory: Farm->List of Type (day of outplanting, 
+                                      day of harvest, harvest weight (grams))'''
     
     curr_cycle_totals = {}
+    indiv_totals= {}
         
     for f in range (1, len(farm_op_dict)+1):
         
@@ -192,6 +227,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
         cycles_comp = len(cycle_history[f])
         farm_history = cycle_history[f]
         mort = float(mort)
+        indiv_totals[f] = []
         
         #We are starting this range at 0, and going to one less than the number of
         #cycles, since the list of cycles from the cycle calcs will start at index 0
@@ -205,13 +241,45 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
          
             #Now do the computation for each cycle individually, then add it to the total
             #within the dictionary
+            #Note that we divide by 1000 to make sure the output in in kg
             cycle_length = harvest_date - outplant_date
             e_exponent =  -mort * cycle_length
-            curr_cy_twp = harvest_weight * frac * f_num_fish * math.exp(e_exponent)
+            curr_cy_tpw = (harvest_weight / 1000) * frac * f_num_fish * \
+                            math.exp(e_exponent)
             
-        curr_cycle_totals[f] += curr_cy_twp
+            indiv_totals[f].append(curr_cy_tpw)
+            curr_cycle_totals[f] += curr_cy_tpw
             
-    return curr_cycle_totals
+    return (curr_cycle_totals, indiv_totals)
+
+def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
+    
+    '''This performs the valuation calculations, and returns a dictionary with a
+    farm-> floa mapping, where each float is the total processed weight for
+    each of the cycles completed on that farm 
+    
+    cycle_hisory: Farm->List of Type (day of outplanting, 
+                                      day of harvest, harvest weight (grams))
+    proc_weight: Farm->List of TPW for each cycle (kilograms)               '''
+    
+    valuations = {}
+    
+    print cycle_history
+    
+    for f in range (1, len(cycle_history) + 1):
         
+        valuations[f] = 0
         
-        
+        #running from 0 to 1 less than the number of cycles that farm completed,
+        #since the list that each farm ID is mapped to starts at index 0
+        for c in range (0, len(cycle_history[f])):
+            
+            tpw = proc_weight[f][c]
+            #the 2 refers to the placement of day of harvest in the tuple for each cycle
+            t = cycle_history[f][c][2]
+            
+            npv = tpw * (price_per_kg *(1 - frac_mrkt_price)) * (1 / (1 + discount) ** t)
+   
+            valuations[f] += npv
+    
+    return valuations
