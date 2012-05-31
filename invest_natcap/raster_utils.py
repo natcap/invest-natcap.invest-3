@@ -453,6 +453,8 @@ def vectorize_points(shapefile, datasource_field, raster):
        shapefile - ogr datasource of points
        datasource_field - a field in shapefile
        raster - a gdal raster must be in the same projection as shapefile
+
+       returns nothing
        """
 
     #Define the initial bounding box
