@@ -131,8 +131,7 @@ def execute(args):
     for row in reader:
         point_id = int(row['ID'])
         if point_id not in source_point_values:
-            LOGGER.warn("%s is an id defined in the data table which is not found in the shapefile. Ignoring that point." \
-                            % (point_id))
+            LOGGER.warn("%s is an id defined in the data table which is not found in the shapefile. Ignoring that point." % (point_id))
             continue
 
         #This merges the current dictionary with a new one that includes KPS and WPS
