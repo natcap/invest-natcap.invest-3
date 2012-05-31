@@ -103,15 +103,34 @@ def execute(args):
     #Project source point y,x to row, col notation for the output array.
 
     #Load the point source data CSV file.
-    point_source_values = {}
+    source_point_values = {}
     csv_file = open(args['source_point_data_uri'])
     reader = csv.DictReader(csv_file)
     for row in reader:
-        point_source_values[int(row['ID'])] = {
+        source_point_values[int(row['ID'])] = {
             'KPS': float(row['KPS']),
             'WPS': float(row['WPS'])}
 
-    LOGGER.debug(point_source_values)
+    #Used for the closure of convert_to_grid_coords below
+    LOGGER.info("Converting georeferenced source coordinates to grid coordinates")
+    raster_out_gt = raster_out.GetGeoTransform()
+
+    def convert_to_grid_coords(point):
+        """Helper to convert source points to numpy grid coordinates
+
+           point - a list of the form [y0,x0]
+           
+           returns a projected point in the gridspace coordinates of 
+               raster_out"""
+        
+        x_grid = int((point[1]-raster_out_gt[0])/raster_out_gt[1])
+        y_grid = int((point[0]-raster_out_gt[3])/raster_out_gt[5])
+
+        return [y_grid, x_grid]
+
+    #Convert the georeferenced source coordinates to grid coordinates
+    source_point_grid_coords = map(convert_to_grid_coords,source_point_list)
+    LOGGER.debug(source_point_grid_coords)
     LOGGER.info("Solving advection/diffusion equation")
 
     LOGGER.info("Done with MWQ execute")
