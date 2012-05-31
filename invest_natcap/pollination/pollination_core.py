@@ -8,7 +8,6 @@ import numpy as np
 import scipy.ndimage as ndimage
 
 import os.path
-import math
 import logging
 
 LOGGER = logging.getLogger('pollination_core')
@@ -171,32 +170,16 @@ def valuation(args):
     LOGGER.debug('Starting valuation')
 
     # Open matrices for use later.
-    farm_avg_matrix = args['foraging_average'].GetRasterBand(1).ReadAsArray()
     farm_value_sum_matrix = args['farm_value_sum'].GetRasterBand(1).\
         ReadAsArray()
     farm_value_sum_matrix.fill(0)
     service_value_sum_matrix = args['service_value_sum'].GetRasterBand(1).\
         ReadAsArray()
     service_value_sum_matrix.fill(0)
-    agmap_raster = args['ag_map'].GetRasterBand(1)
-    agmap_matrix = agmap_raster.ReadAsArray()
 
     # Define necessary scalars based on inputs.
-    agmap_nodata = agmap_raster.GetNoDataValue()
     in_nodata = args['foraging_average'].GetRasterBand(1).GetNoDataValue()
     out_nodata = in_nodata
-    num_species = len(args['species'].values())
-
-    # Calculate the total foraging matrix by multiplying the foraging average
-    # raster by the number of species.
-    def multiply(matrix, multiplicand):
-        return matrix * multiplicand
-    farm_tot_matrix = clip_and_op(farm_avg_matrix, num_species, multiply,
-        in_nodata, out_nodata)
-
-    # Fill the farm total matrix with 0's ... this is not done automatically
-    # when creating a new raster, so we need to do it here.
-    farm_tot_matrix.fill(0)
 
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
