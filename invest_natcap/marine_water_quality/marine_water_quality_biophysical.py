@@ -84,32 +84,6 @@ def execute(args):
         gdal.RasterizeLayer(dataset,[1], land_layer, burn_values=[nodata])
 
     #Now we have 3 input rasters for tidal dispersion and uv advection
-    LOGGER.info("Load the point sources")
-    source_layer = source_points.GetLayer()
-    aoi_layer = aoi_poly.GetLayer()
-    aoi_polygon = aoi_layer.GetFeature(0)
-    aoi_geometry = aoi_polygon.GetGeometryRef()
-    source_point_list = []
-    for point_feature in source_layer:
-        point_geometry = point_feature.GetGeometryRef()
-        if aoi_geometry.Contains(point_geometry):
-            point = point_geometry.GetPoint()
-            point_id = point_feature.GetField('id')
-            LOGGER.debug("point and id %s %s" % (point,point_id))
-            #Appending point geometry with y first so it can be converted
-            #to the numpy (row,col) 2D notation easily.
-            source_point_list.append([point[1],point[0]])
-
-    #Project source point y,x to row, col notation for the output array.
-
-    #Load the point source data CSV file.
-    source_point_values = {}
-    csv_file = open(args['source_point_data_uri'])
-    reader = csv.DictReader(csv_file)
-    for row in reader:
-        source_point_values[int(row['ID'])] = {
-            'KPS': float(row['KPS']),
-            'WPS': float(row['WPS'])}
 
     #Used for the closure of convert_to_grid_coords below
     LOGGER.info("Converting georeferenced source coordinates to grid coordinates")
@@ -128,9 +102,59 @@ def execute(args):
 
         return [y_grid, x_grid]
 
+
+    #Set up the source point data structure
+
+    #Load the point source data CSV file.
+    source_point_values = {}
+
+    LOGGER.info("Load the point sources")
+    source_layer = source_points.GetLayer()
+    aoi_layer = aoi_poly.GetLayer()
+    aoi_polygon = aoi_layer.GetFeature(0)
+    aoi_geometry = aoi_polygon.GetGeometryRef()
+    source_point_list = []
+    for point_feature in source_layer:
+        point_geometry = point_feature.GetGeometryRef()
+        if aoi_geometry.Contains(point_geometry):
+            point = point_geometry.GetPoint()
+            point_id = point_feature.GetField('id')
+            LOGGER.debug("point and id %s %s" % (point,point_id))
+            #Appending point geometry with y first so it can be converted
+            #to the numpy (row,col) 2D notation easily.
+            source_point_values[point_id] = {
+                'point': convert_to_grid_coords([point[1],point[0]])
+                }
+
+    csv_file = open(args['source_point_data_uri'])
+    reader = csv.DictReader(csv_file)
+    for row in reader:
+        point_id = int(row['ID'])
+        if point_id not in source_point_values:
+            LOGGER.warn("%s is an id defined in the data table which is not found in the shapefile. Ignoring that point." \
+                            % (point_id))
+            continue
+
+        #This merges the current dictionary with a new one that includes KPS and WPS
+        source_point_values[point_id] = \
+            dict(source_point_values[point_id].items() + {
+                'KPS': float(row['KPS']),
+                'WPS': float(row['WPS'])}.items())
+
+    LOGGER.info("Checking to see if all the points have KPS and WPS values")
+    points_to_ignore = []
+    for point_id in source_point_values:
+        if 'KPS' not in source_point_values[point_id]:
+            LOGGER.warn("point %s has no source parameters from the CSV.  Ignoring that point." %
+                        point_id)
+            #Can't delete out of the dictionary that we're iterating over
+            points_to_ignore.append(point_id)
+    #Deleting the points we don't have data for
+    for point in points_to_ignore:
+        del source_point_values[point]
+
     #Convert the georeferenced source coordinates to grid coordinates
-    source_point_grid_coords = map(convert_to_grid_coords,source_point_list)
-    LOGGER.debug(source_point_grid_coords)
+    LOGGER.debug(source_point_values)
     LOGGER.info("Solving advection/diffusion equation")
 
     LOGGER.info("Done with MWQ execute")
