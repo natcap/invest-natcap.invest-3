@@ -102,8 +102,6 @@ def execute(args):
     sum_proc_weight, proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
                                    args['mort_rate_daily'], cycle_history)
     
-    print sum_proc_weight
-    
     #have to start at the beginning of the layer to access the attributes
     layer.ResetReading()
     
@@ -118,21 +116,31 @@ def execute(args):
         feature.SetField('Hrvwght_kg', sum_proc_weight[feature_ID])
         
         layer.SetFeature(feature)
-        
-    print type(args['p_per_kg'])
-       
+
     '''This will complete the valuation portion of the finfish aquaculture 
     model, dependent on whether or not valuation is desired.'''
     
     if (bool(args['do_valuation']) == True):
         farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
                 proc_weight, cycle_history)
-    else:
-        args['p_per_kg'] = None
-        args['frac_p'] = None
-        args['discount'] = None
-        farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'], 
-                              proc_weight, cycle_history)
+    
+    #And add it into the shape file
+    layer.ResetReading()
+    
+    hrv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
+    layer.CreateField(hrv_field)
+    
+    for feature in layer:
+
+        accessor = args['farm_ID']
+        feature_ID = feature.items()[accessor]
+        feature.SetField('NVP_USD_1k', farms_npv[feature_ID])
+        
+        layer.SetFeature(feature)
+        
+    
+    #Now, want to build the HTML table
+    
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -149,10 +157,12 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
         
         #casting f to string because farm_op_dict came from biophysical with
         #keys as strings, and then casting result back to int
+        #Are multiplying by 1000, because a and b are in grams, so need to do the whole
+        #equation in grams
         start_day = int(farm_op_dict[str(f)]['start day for growing'])
         fallow_per = int(farm_op_dict[str(f)]['Length of Fallowing period'])
-        start_weight = float(farm_op_dict[str(f)]['weight of fish at start (kg)'])
-        tar_weight = float(farm_op_dict[str(f)]['target weight of fish at harvest (kg)'])
+        start_weight = 1000 * float(farm_op_dict[str(f)]['weight of fish at start (kg)'])
+        tar_weight = 1000 * float(farm_op_dict[str(f)]['target weight of fish at harvest (kg)'])
         
         fallow_days_left = start_day
         farm_history = []
@@ -182,9 +192,10 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
                 else:
              
                     #Grow 'dem fishies!
-                    fish_weight = (1000*a * (fish_weight ** b) * \
-                                   float(water_temp_dict[str(day % 365 + 1)][str(f)]) \
-                                   * tau) + fish_weight
+                    exponent = float(water_temp_dict[str(day % 365 + 1)][str(f)]) * tau
+                    exponent = -exponent
+                    fish_weight = (a * (fish_weight ** b) * math.exp(exponent)) + \
+                                    fish_weight
             
         cycle_history[f] = farm_history
         
@@ -198,7 +209,10 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
     '''This will yield two outputs- a dictionary which will hold a mapping from every farm
     (as identified by farm_ID) to the total processed weight of each farm, and a 
     dictionary which will hold a farm->list mapping, where the list holds the
-    individual twp for all cycles that the farm completed'''
+    individual tpw for all cycles that the farm completed
+    
+    cycle_hisory: Farm->List of Type (day of outplanting, 
+                                      day of harvest, harvest weight (grams))'''
     
     curr_cycle_totals = {}
     indiv_totals= {}
@@ -227,9 +241,11 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
          
             #Now do the computation for each cycle individually, then add it to the total
             #within the dictionary
+            #Note that we divide by 1000 to make sure the output in in kg
             cycle_length = harvest_date - outplant_date
             e_exponent =  -mort * cycle_length
-            curr_cy_tpw = harvest_weight * frac * f_num_fish * math.exp(e_exponent)
+            curr_cy_tpw = (harvest_weight / 1000) * frac * f_num_fish * \
+                            math.exp(e_exponent)
             
             indiv_totals[f].append(curr_cy_tpw)
             curr_cycle_totals[f] += curr_cy_tpw
@@ -239,14 +255,20 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
 def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
     
     '''This performs the valuation calculations, and returns a dictionary with a
-    farm-> list mapping, where each list contains the total processed weight for
-    each of the cycles completed on that farm '''
+    farm-> floa mapping, where each float is the total processed weight for
+    each of the cycles completed on that farm 
+    
+    cycle_hisory: Farm->List of Type (day of outplanting, 
+                                      day of harvest, harvest weight (grams))
+    proc_weight: Farm->List of TPW for each cycle (kilograms)               '''
     
     valuations = {}
     
-    for f in range (1, len(cycle_history)):
+    print cycle_history
+    
+    for f in range (1, len(cycle_history) + 1):
         
-        valuations[f] = []
+        valuations[f] = 0
         
         #running from 0 to 1 less than the number of cycles that farm completed,
         #since the list that each farm ID is mapped to starts at index 0
@@ -258,6 +280,6 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
             
             npv = tpw * (price_per_kg *(1 - frac_mrkt_price)) * (1 / (1 + discount) ** t)
    
-            valuations[f].append(npv)
+            valuations[f] += npv
     
     return valuations
