@@ -48,6 +48,7 @@ def execute(args):
     LOGGER.debug("args %s" % args)
     aoi_poly = ogr.Open(args['aoi_poly_uri'])
     land_poly = ogr.Open(args['land_poly_uri'])
+    land_layer = land_poly.GetLayer()
     source_points = ogr.Open(args['source_points_uri'])
     tide_e_points = ogr.Open(args['tide_e_points_uri'])
     adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
@@ -72,6 +73,12 @@ def execute(args):
     raster_utils.vectorize_points(tide_e_points, 'kh_km2_day', tide_e_raster)
     raster_utils.vectorize_points(adv_uv_points, 'U_m_sec_', adv_u_raster)
     raster_utils.vectorize_points(adv_uv_points, 'V_m_sec_', adv_v_raster)
+
+    #Mask the interpolated points to the land polygon
+    for dataset in [tide_e_raster, adv_u_raster, adv_v_raster]:
+        band = dataset.GetRasterBand(1)
+        nodata = band.GetNoDataValue()
+        gdal.RasterizeLayer(dataset,[1], land_layer, burn_values=[nodata])
 
     LOGGER.info("Done with MWQ execute")
 
