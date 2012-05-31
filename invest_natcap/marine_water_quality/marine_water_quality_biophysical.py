@@ -85,7 +85,18 @@ def execute(args):
 
     #Now we have 3 input rasters for tidal dispersion and uv advection
     LOGGER.info("Load the point sources")
-    
+    source_layer = source_points.GetLayer()
+    aoi_layer = aoi_poly.GetLayer()
+    aoi_polygon = aoi_layer.GetFeature(0)
+    aoi_geometry = aoi_polygon.GetGeometryRef()
+    for point_feature in source_layer:
+        point_geometry = point_feature.GetGeometryRef()
+        if aoi_geometry.Contains(point_geometry):
+            point = point_geometry.GetPoint()
+            point_id = point_feature.GetField('id')
+            LOGGER.debug("point and id %s %s" % (point,point_id))
+
+
     LOGGER.info("Solving advection/diffusion equation")
 
     LOGGER.info("Done with MWQ execute")
