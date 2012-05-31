@@ -750,6 +750,7 @@ class DynamicText(LabeledElement):
             returns nothing."""
 
         self.textField.setText(text)
+        self.toggle()  # Should cause validation to occur
 
     def resetValue(self):
         DynamicPrimitive.resetValue(self)
