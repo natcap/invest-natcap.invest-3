@@ -443,3 +443,55 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     #Initialize everything to nodata
     raster.GetRasterBand(1).Fill(nodata)
     raster.GetRasterBand(1).FlushCache()
+
+    return raster
+
+def vectorize_points(shapefile, datasource_field, raster):
+    """Takes a shapefile of points and a field defined in that shapefile
+       and interpolates the values in the points onto the given raster
+
+       shapefile - ogr datasource of points
+       datasource_field - a field in shapefile
+       raster - a gdal raster must be in the same projection as shapefile
+
+       returns nothing
+       """
+
+    #Define the initial bounding box
+    gt = raster.GetGeoTransform()
+    #order is left, top, right, bottom of rasterbounds
+    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
+                    gt[3] + gt[5] * raster.RasterYSize]
+
+    def in_bounds(point):
+        return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
+            and point[1] <= bounding_box[1] and point[1] >= bounding_box[3]
+
+    layer = shapefile.GetLayer(0)
+    count = 0
+    point_list = []
+    value_list = []
+    for feature_id in range(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_id)
+        geometry = feature.GetGeometryRef()
+        #Here the point geometry is in the form x,y (col, row)
+        point = geometry.GetPoint()
+        if in_bounds(point):
+            value = feature.GetField(datasource_field)
+            #Add in the numpy notation which is row, col
+            point_list.append([point[1],point[0]])
+            value_list.append(value)
+    point_array = np.array(point_list)
+    value_array = np.array(value_list)
+
+    #Create grid points for interpolation outputs later
+    #top-bottom:y_stepsize, left-right:x_stepsize
+    grid_y, grid_x = np.mgrid[bounding_box[1]:bounding_box[3]:gt[5],
+                              bounding_box[0]:bounding_box[2]:gt[1]]
+
+    band = raster.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    raster_out_array = scipy.interpolate.griddata(point_array, 
+        value_array, (grid_y, grid_x), 'linear', nodata)
+    band.WriteArray(raster_out_array,0,0)

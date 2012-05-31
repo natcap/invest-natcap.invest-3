@@ -3,16 +3,21 @@
 import sys
 import logging
 import re
+import os
+import time
+import math
+import csv
 
+from osgeo import ogr
+from osgeo import gdal
 import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
 from numpy.ma import masked_array
-import time
 import scipy.linalg
-import math
 import pylab
 
+from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -23,24 +28,92 @@ def execute(args):
     """Main entry point for the InVEST 3.0 marine water quality 
         biophysical model.
 
-        args - dicitonary of string value pairs for input to this model.
+        args - dictionary of string value pairs for input to this model.
         args['workspace'] - output directory.
-        args['aoi_poly'] - OGR polygon Datasource indicating region
+        args['aoi_poly_uri'] - OGR polygon Datasource indicating region
             of interest to run the model.  Will define the grid.
         args['pixel_size'] - float indicating pixel size in meters
             of output grid.
-        args['land_poly'] - OGR polygon DataSource indicating areas where land
+        args['land_poly_uri'] - OGR polygon DataSource indicating areas where land
             is.
-        args['source_points'] - OGR point Datasource indicating point sources
+        args['source_points_uri'] - OGR point Datasource indicating point sources
             of pollution.
         args['source_point_data_uri'] - csv file indicating the biophysical
             properties of the point sources.
-        args['tide_e_points'] - OGR point Datasource with spatial information 
+        args['tide_e_points_uri'] - OGR point Datasource with spatial information 
             about the E parameter
-        args['adv_uv_points'] - OGR point Datasource with spatial advection
-            u and v vectors.
-"""
+        args['adv_uv_points_uri'] - OGR point Datasource with spatial advection
+            u and v vectors."""
+
     LOGGER.info("Starting MWQ execute")
+    aoi_poly = ogr.Open(args['aoi_poly_uri'])
+    land_poly = ogr.Open(args['land_poly_uri'])
+    land_layer = land_poly.GetLayer()
+    source_points = ogr.Open(args['source_points_uri'])
+    tide_e_points = ogr.Open(args['tide_e_points_uri'])
+    adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
+
+    #Create a grid based on the AOI
+    LOGGER.info("Creating grid based on the AOI polygon")
+    pixel_size = args['pixel_size']
+    #the nodata value will be a min float
+    nodata_out = float(np.finfo(np.float32).min)
+    raster_out_uri = os.path.join(args['workspace'],'concentration.tif')
+    raster_out = raster_utils.create_raster_from_vector_extents(pixel_size, 
+        pixel_size, gdal.GDT_Float32, nodata_out, raster_out_uri, aoi_poly)
+    
+    #create a temporary grid of interpolated points for tide_e and adv_uv
+    LOGGER.info("Creating grids for the interpolated tide E and ADV uv points")
+    tide_e_raster = raster_utils.new_raster_from_base(raster_out, 'tide_e.tif', 
+        'GTiff', nodata_out, gdal.GDT_Float32)
+    adv_u_raster = raster_utils.new_raster_from_base(raster_out, 'adv_u.tif',
+        'GTiff', nodata_out, gdal.GDT_Float32)
+    adv_v_raster = raster_utils.new_raster_from_base(raster_out, 'adv_v.tif',
+        'GTiff', nodata_out, gdal.GDT_Float32)
+
+    #Interpolate the ogr datasource points onto a raster the same size as raster_out
+    raster_utils.vectorize_points(tide_e_points, 'kh_km2_day', tide_e_raster)
+    raster_utils.vectorize_points(adv_uv_points, 'U_m_sec_', adv_u_raster)
+    raster_utils.vectorize_points(adv_uv_points, 'V_m_sec_', adv_v_raster)
+
+    #Mask the interpolated points to the land polygon
+    LOGGER.info("Masking Tide E and ADV UV to the land polygon")
+    for dataset in [tide_e_raster, adv_u_raster, adv_v_raster]:
+        band = dataset.GetRasterBand(1)
+        nodata = band.GetNoDataValue()
+        gdal.RasterizeLayer(dataset,[1], land_layer, burn_values=[nodata])
+
+    #Now we have 3 input rasters for tidal dispersion and uv advection
+    LOGGER.info("Load the point sources")
+    source_layer = source_points.GetLayer()
+    aoi_layer = aoi_poly.GetLayer()
+    aoi_polygon = aoi_layer.GetFeature(0)
+    aoi_geometry = aoi_polygon.GetGeometryRef()
+    source_point_list = []
+    for point_feature in source_layer:
+        point_geometry = point_feature.GetGeometryRef()
+        if aoi_geometry.Contains(point_geometry):
+            point = point_geometry.GetPoint()
+            point_id = point_feature.GetField('id')
+            LOGGER.debug("point and id %s %s" % (point,point_id))
+            #Appending point geometry with y first so it can be converted
+            #to the numpy (row,col) 2D notation easily.
+            source_point_list.append([point[1],point[0]])
+
+    #Project source point y,x to row, col notation for the output array.
+
+    #Load the point source data CSV file.
+    point_source_values = {}
+    csv_file = open(args['source_point_data_uri'])
+    reader = csv.DictReader(csv_file)
+    for row in reader:
+        point_source_values[int(row['ID'])] = {
+            'KPS': float(row['KPS']),
+            'WPS': float(row['WPS'])}
+
+    LOGGER.debug(point_source_values)
+    LOGGER.info("Solving advection/diffusion equation")
+
     LOGGER.info("Done with MWQ execute")
 
 

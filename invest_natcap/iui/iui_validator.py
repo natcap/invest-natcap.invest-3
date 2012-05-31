@@ -54,6 +54,7 @@ class Validator(registrar.Registrar):
                    'OGR': OGRChecker,
                    'number': NumberChecker,
                    'file': FileChecker,
+                   'exists': URIChecker,
                    'folder': FolderChecker,
                    'DBF': DBFChecker,
                    'CSV': CSVChecker,
@@ -317,13 +318,22 @@ class URIChecker(Checker):
         self.uri = valid_dict['value']
 
         if os.path.exists(self.uri) == False:
-            return str('Not found')
+            return str('File not found')
 
 class FolderChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a folder."""
     def __init__(self):
         URIChecker.__init__(self)
         self.add_check_function(self.open)
+
+    def check_exists(self, valid_dict):
+        """Verify that the file at valid_dict['value'] exists.  Reimplemented
+        from URIChecker class to provide more helpful, folder-oriented error
+        message."""
+        self.uri = valid_dict['value']
+
+        if os.path.exists(self.uri) == False:
+            return str('Folder not found')
 
     def open(self, valid_dict):
         """Check to see if the folder URI at self.uri is a folder on the
@@ -589,12 +599,19 @@ class CSVChecker(TableChecker):
     def open(self, valid_dict):
         """Attempt to open the CSV file"""
 
-        self.file = csv.DictReader(open(self.uri))
-        test_file = csv.DictReader('')
-
-        #isinstance won't work, testing classname against empty csv classname
-        if self.file.__class__ != test_file.__class__:
+        try:
+            # Using CSV's sniffer class allows us to check to see if it's a CSV
+            # that python's CSV module can detect.  If not, a csv.Error
+            # exception is raised.  This method catches many more erroneous
+            # files than the previous method of testing the classname of a
+            # CSV.DictReader.
+            dialect = csv.Sniffer().sniff(open(self.uri).read(1024))
+        except csv.Error:
             return str("Must be a CSV file")
+
+        # Now that we know the csv file is probably good, we can actually open
+        # the file and save the DictReader object.
+        self.file = csv.DictReader(open(self.uri))
 
     def _build_table(self):
         table_rows = []

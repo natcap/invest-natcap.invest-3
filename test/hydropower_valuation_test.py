@@ -19,19 +19,44 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestHydropowerValuation(unittest.TestCase):
     """Main testing class for the hydropower valuation tests"""
     def test_water_scarcity_re(self):
-        base = './data/hydropower_data/'
-        args = {}
+        base = './data/hydropower_regression_data/'
+        output_base = './data/test_out/hydro_regression_byhand/'
+	args = {}
         args['workspace_dir'] = base
-        args['cal_water_yield'] = base + 'samp_input/cyield_vol.tif'
-        args['watersheds_uri'] = base + 'test_input/watersheds.shp'
-        args['sub_watersheds_uri'] = base + 'test_input/subwatersheds.shp'
-        args['water_consump'] = base + 'samp_input/consum_vol.tif'
+        args['cyield_uri'] = base + 'cyield_vol.tif'
+        args['watersheds_uri'] = base + 'hydro_regression_byhand/simple_reg_ws.shp'
+        args['sub_watersheds_uri'] = base + 'hydro_regression_byhand/simple_reg_subws.shp'
+        args['consump_uri'] = base + 'consum_vol.tif'
         args['watershed_scarcity_table_uri'] = \
-            base + 'test_input/water_scarcity_watershed.csv'
+            base + 'water_scarcity_watershed.csv'
         args['subwatershed_scarcity_table_uri'] = \
-            base + 'test_input/water_scarcity_subwatershed.csv'
+            base + 'water_scarcity_subwatershed.csv'
         args['valuation_table_uri'] = \
-            base + 'test_input/hydro_valuation_table.csv'
+            base + 'hydropower_valuation.csv'
         args['results_suffix'] = ''
         
         hydropower_valuation.execute(args)
+        
+        regression_dir = './data/hydropower_regression_data/'
+        reg_hp_energy_uri = regression_dir + 'hp_energy.tif'
+        reg_hp_val_uri = regression_dir + 'hp_val.tif'
+        reg_hp_val_ws_uri = \
+            regression_dir + 'hydropower_value_watershed.csv'
+        reg_hp_val_sws_uri = \
+            regression_dir + 'hydropower_value_subwatershed.csv'
+        
+        hp_energy_uri = output_base + 'Output/hp_energy.tif'
+        hp_val_uri = output_base + 'Output/hp_val.tif'
+        hp_val_ws_uri = output_base + 'Output/hydropower_value_watershed.csv'
+        hp_val_sws_uri = \
+            output_base + 'Output/hydropower_value_subwatershed.csv'
+        
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_hp_energy_uri, 
+                                                  hp_energy_uri)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_hp_val_uri, 
+                                                  hp_val_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_hp_val_ws_uri, 
+                                              hp_val_ws_uri)
+        invest_test_core.assertTwoCSVEqualURI(self, reg_hp_val_sws_uri, 
+                                              hp_val_sws_uri)
+

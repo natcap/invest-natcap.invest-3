@@ -99,15 +99,6 @@ class PollinationBiophysicalTest(PollinationTest):
         self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
             'biophysical_output', 'with_ag_classes'))
 
-   # def test_ag_30m(self):
-   #     """Regression test for pollination_biophysical.  Includes ag classes."""
-   #     self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
-   #         + ' 83 84 85 88 90 91 92')
-   #     self.args['landuse_cur_uri'] = 'data/base_data/terrestrial/lulc_samp_cur'
-   #     pollination_biophysical.execute(self.args)
-   #     self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
-   #         'biophysical_output', 'with_ag_classes'))
-
 
 class PollinationValuationTest(PollinationTest):
     def setUp(self):
@@ -150,4 +141,28 @@ class PollinationValuationTest(PollinationTest):
         """Regression test for pollination_valuation."""
         pollination_valuation.execute(self.args)
         self.assert_pollination_rasters(self.biophysical_sample_dir)
+
+class Pollination30mSmokeTest(PollinationBiophysicalTest):
+    """To only run this test class at the command line, do this:
+       $ nosetests -vs pollination_biophysical_test.py:Pollination30mSmokeTest.test_ag_30m_smoke
+
+       To run other tests, run:
+       $ nosetests -vs pollination_biophysical_test.py:Pollination{Biophysical,Valuation}Test
+       """
+    def setUp(self):
+        PollinationBiophysicalTest.setUp(self)
+        self.value_args = {'workspace_dir': self.workspace_dir,
+                           'guilds_uri': self.guilds_uri,
+                           'half_saturation': 0.125,
+                           'wild_pollination_proportion': 1}
+
+    def test_ag_30m_smoke(self):
+        """Smoke test for pollination_biophysical at 30m.  Includes ag classes.
+        """
+        self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
+            + ' 83 84 85 88 90 91 92')
+        self.args['landuse_cur_uri'] = 'data/base_data/terrestrial/lulc_samp_cur'
+        pollination_biophysical.execute(self.args)
+        pollination_valuation.execute(self.value_args)
+
 

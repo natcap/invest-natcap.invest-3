@@ -8,7 +8,6 @@ import numpy as np
 import scipy.ndimage as ndimage
 
 import os.path
-import math
 import logging
 
 LOGGER = logging.getLogger('pollination_core')
@@ -160,8 +159,10 @@ def valuation(args):
             and 1.
         args['species'][<species_name>]['species_abundance'] - a GDAL dataset
         args['species'][<species_name>]['farm_abundance'] - a GDAL dataset
-        args['service_value'] - a GDAL dataset
-        args['farm_value'] - a GDAL dataset
+        args['species'][<species_name>]['farm_value'] - a GDAL dataset
+        args['species'][<species_name>]['service_value'] - a GDAL dataset
+        args['service_value_sum'] - a GDAL dataset
+        args['farm_value_sum'] - a GDAL dataset
         args['foraging_average'] - a GDAL dataset
         args['guilds'] - a fileio tablehandler class
         args['ag_map'] - a GDAL dataset
@@ -170,81 +171,81 @@ def valuation(args):
 
     LOGGER.debug('Starting valuation')
 
-    # Apply the half-saturation yield function from the documentation.
-    calculate_yield(args['foraging_average'], args['farm_value'],
-        args['half_saturation'], args['wild_pollination_proportion'])
-
     # Open matrices for use later.
-    farm_value_matrix = args['farm_value'].GetRasterBand(1).ReadAsArray()
-    farm_avg_matrix = args['foraging_average'].GetRasterBand(1).ReadAsArray()
-    agmap_raster = args['ag_map'].GetRasterBand(1)
-    agmap_matrix = agmap_raster.ReadAsArray()
+    farm_value_sum_matrix = args['farm_value_sum'].GetRasterBand(1).\
+        ReadAsArray()
+    farm_value_sum_matrix.fill(0)
+    service_value_sum_matrix = args['service_value_sum'].GetRasterBand(1).\
+        ReadAsArray()
+    service_value_sum_matrix.fill(0)
 
     # Define necessary scalars based on inputs.
-    agmap_nodata = agmap_raster.GetNoDataValue()
     in_nodata = args['foraging_average'].GetRasterBand(1).GetNoDataValue()
-    out_nodata = args['farm_value'].GetRasterBand(1).GetNoDataValue()
-    num_species = len(args['species'].values())
-
-    # Calculate the total foraging matrix by multiplying the foraging average
-    # raster by the number of species.
-    def multiply(matrix, multiplicand):
-        return matrix * multiplicand
-    farm_tot_matrix = clip_and_op(farm_avg_matrix, num_species, multiply,
-        in_nodata, out_nodata)
-
-    # Fill the farm total matrix with 0's ... this is not done automatically
-    # when creating a new raster, so we need to do it here.
-    farm_tot_matrix.fill(0)
+    out_nodata = in_nodata
 
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
+
+        LOGGER.info('Calculating crop yield due to %s', species)
+        # Apply the half-saturation yield function from the documentation and
+        # write it to its raster
+        calculate_yield(species_dict['farm_abundance'],
+            species_dict['farm_value'],args['half_saturation'],
+            args['wild_pollination_proportion'])
+        farm_value_matrix = species_dict['farm_value'].GetRasterBand(1).ReadAsArray()
+        species_dict['farm_value'].GetRasterBand(1).WriteArray(farm_value_matrix)
+
+        # Add the new farm_value_matrix to the farm value sum matrix.
+        farm_value_sum_matrix = clip_and_op(farm_value_sum_matrix,
+            farm_value_matrix, np.add, in_nodata, out_nodata)
+
         LOGGER.debug('Calculating service value for %s', species)
-        # Open necessary matrices
-        species_foraging_matrix = species_dict['farm_abundance'].\
-            GetRasterBand(1).ReadAsArray()
-        species_supply_matrix = species_dict['species_abundance'].\
-            GetRasterBand(1).ReadAsArray()
-
-        def ps_vectorized(agmap, frm_val, frm_s, frm_avg, sup_s):
-            """Apply the pollinator service value function from the
-                documentation.
-                    agmap - the boolean matrix of ag pixels
-                    frm_val - the farm value matrix (from the yield function)
-                    frm_s - the species foraging abundance matrix
-                    frm_avg - the average foraging abundance matrix
-                    sup_s - the species abundance matrix."""
-
-            if agmap == agmap_nodata:
-                return out_nodata
-            contrib = (frm_val * frm_s) / (frm_avg * num_species)
-            return (agmap * ((contrib * sup_s) / frm_s))
-
-        # Vectorize the ps_vectorized function
-        vOp = np.vectorize(ps_vectorized)
-        ag_masked_matrix = vOp(agmap_matrix, farm_value_matrix,
-            species_foraging_matrix, farm_avg_matrix, species_supply_matrix)
+        # Open the species foraging matrix and then divide
+        # the yield matrix by the foraging matrix for this pollinator.
+        species_farm_matrix = species_dict['farm_abundance'].GetRasterBand(1).\
+            ReadAsArray()
+        ratio_matrix = clip_and_op(farm_value_matrix, species_farm_matrix,
+            np.divide, in_nodata, out_nodata)
 
         # Calculate sigma for the gaussian blur.  Sigma is based on the species
         # alpha (from the guilds table) and twice the pixel size.
         guild_dict = args['guilds'].get_table_row('species', species)
-        pixel_size = abs(args['farm_value'].GetGeoTransform()[1])
+        pixel_size = abs(species_dict['farm_value'].GetGeoTransform()[1])
         sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
         LOGGER.debug('Pixel size: %s, sigma: %s')
 
-        # Apply a gaussian blur to the species' supply raster
-        LOGGER.debug('Applying neighborhood calculations for %s supply',
-            species)
-        blurred_supply = clip_and_op(ag_masked_matrix, sigma,
+        LOGGER.debug('Applying the blur to the ratio matrix.')
+        blurred_ratio_matrix = clip_and_op(ratio_matrix, sigma,
             ndimage.gaussian_filter, in_nodata, out_nodata)
 
-        # Add the pollinator service value to the total value raster
-        LOGGER.debug('Adding %s service value to total value raster', species)
-        farm_tot_matrix = clip_and_op(farm_tot_matrix, blurred_supply,
-            np.add, in_nodata, out_nodata)
+        # Open necessary matrices
+        species_supply_matrix = species_dict['species_abundance'].\
+            GetRasterBand(1).ReadAsArray()
+
+        v_c = args['wild_pollination_proportion']
+
+        def ps_vectorized(sup_s, blurred_ratio):
+            """Apply the pollinator service value function.
+                sup_s - the species abundance matrix
+                blurred_ratio - the ratio of (yield/farm abundance) with a
+                    gaussian filter applied to it."""
+            if sup_s == in_nodata:
+                return out_nodata
+            return v_c * sup_s * blurred_ratio
+
+        # Vectorize the ps_vectorized function
+        vOp = np.vectorize(ps_vectorized)
+        service_value_matrix = vOp(species_supply_matrix, blurred_ratio_matrix)
+        species_dict['service_value'].GetRasterBand(1).WriteArray(
+            service_value_matrix)
+
+        # Add the new service value to the service value sum matrix
+        service_value_sum_matrix = clip_and_op(service_value_sum_matrix,
+            service_value_matrix, np.add, in_nodata, out_nodata)
 
     # Write the pollination service value to its raster
-    args['service_value'].GetRasterBand(1).WriteArray(farm_tot_matrix)
+    args['service_value_sum'].GetRasterBand(1).WriteArray(service_value_sum_matrix)
+    args['farm_value_sum'].GetRasterBand(1).WriteArray(farm_value_sum_matrix)
     LOGGER.debug('Finished calculating service value')
 
 def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
