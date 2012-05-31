@@ -599,12 +599,19 @@ class CSVChecker(TableChecker):
     def open(self, valid_dict):
         """Attempt to open the CSV file"""
 
-        self.file = csv.DictReader(open(self.uri))
-        test_file = csv.DictReader('')
-
-        #isinstance won't work, testing classname against empty csv classname
-        if self.file.__class__ != test_file.__class__:
+        try:
+            # Using CSV's sniffer class allows us to check to see if it's a CSV
+            # that python's CSV module can detect.  If not, a csv.Error
+            # exception is raised.  This method catches many more erroneous
+            # files than the previous method of testing the classname of a
+            # CSV.DictReader.
+            dialect = csv.Sniffer().sniff(open(self.uri).read(1024))
+        except csv.Error:
             return str("Must be a CSV file")
+
+        # Now that we know the csv file is probably good, we can actually open
+        # the file and save the DictReader object.
+        self.file = csv.DictReader(open(self.uri))
 
     def _build_table(self):
         table_rows = []
