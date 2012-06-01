@@ -4,28 +4,24 @@ from scipy.sparse.linalg import spsolve
 import numpy as np
 
 
-def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
-                         direct_solve=False):
-    """2D Water quality model to track a pollutant in the ocean
+def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array, 
+                         adv_v_array, nodata):
+    """2D Water quality model to track a pollutant in the ocean.  Three input
+       arrays must be of the same shape.  Returns the solution in an array of
+       the same shape.
     
-    Keyword arguments:
-    n, m - the number of rows, columns in the 2D grid.  Used to determine
-        indices into list parameters 'water', 'E', 'ux', 'uy', and i * m + j in
-        a list
-    water - 1D list n * m elements long of booleans indicating land / water.
-        True is water, False is land.
-    E - constant indicating tidal dispersion coefficient: km ^ 2 / day
-    ux - constant indicating x component of advective velocity: m / s
-    uy - constant indicating y component of advective velocity: m / s
-    point_source - dictionary of (xps, yps, wps, kps, id) for the point source,
-        xps, yps: cartesian coordinates of point wps: kg / day, k: 1 / day.
-    h - scalar describing grid cell size: m
-    direct_solve - if True uses a direct solver that may be faster, but use
-        more memory.  May crash in cases where memory is fragmented or low
-        Default False.
-    
-    returns a 2D grid of pollutant densities in the same dimension as  'grid'
+    source_point_values - dictionary of the form:
+        { source_point_id_0: {'point_0': [row_point, col_point] (in gridspace),
+                            'KPS': float (decay?),
+                            'WPS': float (loading?),
+                            'point_1': ...},
+          source_point_id_1: ...}
+    tide_e_array - 2D numpy array with tidal E values or nodata values (units?)
+    adv_u_array, adv_v_array - the u and v components of advection, must be
+       same shape as tide_e_array (units?)
+    nodata - the value in the input arrays that indicate a nodata value.
     """
+
     LOGGER = logging.getLogger('marine_water_quality')
     LOGGER.info('Calculating advection diffusion for %s' % \
                 (point_source['id']))

@@ -18,6 +18,7 @@ import scipy.linalg
 import pylab
 
 from invest_natcap import raster_utils
+import marine_water_quality_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -166,6 +167,6 @@ def execute(args):
     adv_v_array = adv_v_band.ReadAsArray()
 
     marine_water_quality_core.diffusion_advection_solver(tide_e_array, 
-        adv_u_array, adv_v_array, source_point_values)
+        adv_u_array, adv_v_array, source_point_values, nodata_out)
 
     LOGGER.info("Done with MWQ execute")
