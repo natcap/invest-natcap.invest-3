@@ -215,9 +215,6 @@ def extrapolate_wave_data(wave_file_uri):
 
             key = (int(line.split(',')[1]), int(line.split(',')[3]))
 
-            #Skip the next two lines that are period and height
-            wave_file.readline()
-            wave_file.readline()
         else:
             wave_array.append(line.split(','))
 
