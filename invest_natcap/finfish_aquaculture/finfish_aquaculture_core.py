@@ -124,9 +124,7 @@ def execute(args):
     #This will complete the valuation portion of the finfish aquaculture 
     #model, dependent on whether or not valuation is desired.
     
-    if (bool(args['do_valuation']) == True):
-        farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
-                proc_weight, cycle_history)
+  
     
     #And add it into the shape file
     layer.ResetReading()
@@ -144,7 +142,9 @@ def execute(args):
         '''
     
     #Now, want to build the HTML table
-    
+    if (bool(args['do_valuation']) == True):
+        farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
+                proc_weight, cycle_history)
 
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -256,6 +256,8 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
             indiv_totals[f].append(curr_cy_tpw)
             curr_cycle_totals[f] += curr_cy_tpw
             
+            print curr_cycle_totals
+            
     return (curr_cycle_totals, indiv_totals)
 
 def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
@@ -266,7 +268,9 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     
     cycle_hisory: Farm->List of Type (day of outplanting, 
                                       day of harvest, harvest weight (grams))
-    proc_weight: Farm->List of TPW for each cycle (kilograms)               '''
+    proc_weight: Farm->List of TPW for each cycle (kilograms) 
+                  '''
+    print "Gets here?"
     
     valuations = {}
     
@@ -280,10 +284,14 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
             
             tpw = proc_weight[f][c]
             #the 2 refers to the placement of day of harvest in the tuple for each cycle
-            t = cycle_history[f][c][2]
+            t = cycle_history[f][c][1]
             
             npv = tpw * (price_per_kg *(1 - frac_mrkt_price)) * (1 / (1 + discount) ** t)
+            print "NPV"
+            print npv
    
             valuations[f] += npv
+    
+    print valuations
     
     return valuations
