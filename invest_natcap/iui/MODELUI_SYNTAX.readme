@@ -215,7 +215,7 @@ others are optional.
     This option verifies that the provided file can be opened by
     OGR and that it is an OGR-recognizeable file.
 
-    "layer": {...}
+    "layer": [{...}]
     This option allows the user to define specific characteristics about the
     input layer:
         "name" : Required.  A String.  The name of the layer.  If a layer with
@@ -228,6 +228,19 @@ others are optional.
                  This option allows the user to specify the type of the given
                  layer.  Returns an error if this layer is not of the correct
                  type.
+        "projection":
+                 Optional.  A python dictionary with the following possible
+                 validation options:
+                 "units" : possible options: "meters", "latLong".  Providing
+                    option will return an error if the shapefile provided is not
+                    projected in the defined unit of measurement.
+                 "exists" : A boolean.  Validates whether the layer is projected
+                    at all.
+                 "name" : A string.  If the specified layer is not projected in
+                    this projection, an error is returned.  For example, if
+                    "name": "Transverse_Mercator" and the layer's projection
+                    does not match "Transverse_Mercator", an error will be
+                    returned.
 
     "fieldsExist" : ["field1", "field2", "field3", ...]
     This option verifies that the fields in this array all exist in the OGR
@@ -240,7 +253,7 @@ others are optional.
                    "layers": [{"name": "layer_name",
                                "type": "polygons"},
                               {"name": "layer_name_2",
-                               "projection" : "Transverse_Mercator"},
+                               "projection" : {"name": "Transverse_Mercator"}},
                               {"name": {"inheritFrom": "file"},
                                "type": "polygons"}],
                    "fieldsExist": ["field1", "field2", "field3", ...]}
