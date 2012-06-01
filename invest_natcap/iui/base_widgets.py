@@ -409,7 +409,8 @@ class DynamicPrimitive(DynamicElement):
         self.error_button.set_error(msg)
 
     def has_error(self):
-        if str(self.error_button.error_text) == '':
+        if str(self.error_button.error_text) == '' or\
+           not self.error_button.isEnabled():
             return False
         return True
         
@@ -651,6 +652,7 @@ class DynamicText(LabeledElement):
 
         # Enable/disable necessary elements before validating.
         self.setState(self.requirementsMet(), includeSelf=False)
+        self.setBGcolorSatisfied(True)  # assume valid until validation fails
         self.validate()
 
 
