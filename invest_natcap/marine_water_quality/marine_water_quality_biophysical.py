@@ -190,9 +190,12 @@ def execute(args):
     if abs(raster_out_gt[1]) != abs(raster_out_gt[5]):
         LOGGER.warn("Warning, cells aren't square, so the results of the solver will be incorrect")
 
+    #Converting from 1/day to 1/sec
+    kps_sec = kps/86400.0
+
     concentration_array = \
         marine_water_quality_core.diffusion_advection_solver(source_point_values,
-        args['kps'], in_water_array, tide_e_array, adv_u_array, adv_v_array, 
+        kps_sec, in_water_array, tide_e_array, adv_u_array, adv_v_array, 
         nodata_out, cell_size)
 
     raster_out_band = raster_out.GetRasterBand(1)
