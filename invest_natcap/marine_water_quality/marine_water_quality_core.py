@@ -32,8 +32,8 @@ def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array,
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
-        if i >= 0 and i < n and j >= 0 and j < m:
-            return i * m + j
+        if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
+            return i * n_cols + j
         else:
             return -1
 
@@ -43,7 +43,7 @@ def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array,
 
     #holds the rows for diagonal sparse matrix creation later, row 4 is 
     #the diagonal
-    a_matrix = np.zeros((9, n_rows * m))
+    a_matrix = np.zeros((9, n_rows * n_cols))
     diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
 
     #iterate over the non-zero elments in grid to build the linear system
@@ -56,7 +56,6 @@ def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array,
             a_down_index = calc_index(i + 1, j)
             a_left_index = calc_index(i, j - 1)
             a_right_index = calc_index(i, j + 1)
-
 
             #if land then s = 0 and quit
             if not in_water[a_diagonal_index]:
