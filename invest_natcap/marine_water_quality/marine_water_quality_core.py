@@ -83,9 +83,10 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 a_matrix[4, a_diagonal_index] = 1
                 continue
 
-            if  a_diagonal_index == source_point_index:
+            if  a_diagonal_index in source_points:
                 a_matrix[4, a_diagonal_index] = 1
-                b_vector[a_diagonal_index] = source_point_data['WPS']
+                wps = source_points[a_diagonal_index]['WPS']
+                b_vector[a_diagonal_index] = wps
                 continue
 
             E = e_array_flat[a_diagonal_index]

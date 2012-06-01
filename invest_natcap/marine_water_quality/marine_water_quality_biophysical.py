@@ -147,10 +147,13 @@ def execute(args):
             LOGGER.warn("%s is an id defined in the data table which is not found in the shapefile. Ignoring that point." % (point_id))
             continue
 
+        #Convert WPS in km/day to m/s
+        wps_in_meters_sec = float(row['WPS'])*1000.0/86400.0
+
         #This merges the current dictionary with a new one that includes WPS
         source_point_values[point_id] = \
             dict(source_point_values[point_id].items() + \
-                 {'WPS': float(row['WPS'])}.items())
+                 {'WPS': wps_in_meters_sec}.items())
 
     LOGGER.info("Checking to see if all the points have KPS and WPS values")
     points_to_ignore = []
