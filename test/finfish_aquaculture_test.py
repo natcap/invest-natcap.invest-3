@@ -18,7 +18,7 @@ class TestFinfishAquaculture(unittest.TestCase):
         args['g_param_a'] = 0.038
         args['g_param_b'] = 0.6667
         args['water_temp_tbl'] = './test/data/aquaculture_data/Temp_Daily.csv'
-        args['farm_op_tbl'] = './test/data/aquaculture_data/Farm_Operations.csv'
+        args['farm_op_tbl'] = './test/data/aquaculture_data/Farm_Operations_Test.csv'
         
         #Valuation
         args['do_valuation'] = True

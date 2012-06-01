@@ -69,7 +69,8 @@ def execute(args):
     cycle_history = calc_farm_cycles(args['g_param_a'], 
                                           args['g_param_b'], args['water_temp_dict'], 
                                           args['farm_op_dict'], args['duration'])
-    
+    print cycle_history
+    '''
     driver = ogr.GetDriverByName('ESRI Shapefile')
     out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
     curr_shp_file = args['ff_farm_file']
@@ -93,7 +94,7 @@ def execute(args):
         num_cycles = len(cycle_history[feature_ID])
         feature.SetField('Tot_Cycles', num_cycles)
         
-        layer.SetFeature(feature)
+        layer.SetFeature(feature)'''
         
     #Now want to add the total processed weight of each farm as a second feature on the
     #outgoing shapefile- abstracting the calculation of this to a separate function,
@@ -102,6 +103,9 @@ def execute(args):
     sum_proc_weight, proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
                                    args['mort_rate_daily'], cycle_history)
     
+    print sum_proc_weight
+    
+    '''
     #have to start at the beginning of the layer to access the attributes
     layer.ResetReading()
     
@@ -113,12 +117,12 @@ def execute(args):
 
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
-        feature.SetField('Hrvwght_kg', sum_proc_weight[feature_ID])
+        feature.SetField('Hrvwght_kg', int(sum_proc_weight[feature_ID]))
         
         layer.SetFeature(feature)
 
-    '''This will complete the valuation portion of the finfish aquaculture 
-    model, dependent on whether or not valuation is desired.'''
+    #This will complete the valuation portion of the finfish aquaculture 
+    #model, dependent on whether or not valuation is desired.
     
     if (bool(args['do_valuation']) == True):
         farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
@@ -134,10 +138,10 @@ def execute(args):
 
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
-        feature.SetField('NVP_USD_1k', farms_npv[feature_ID])
+        feature.SetField('NVP_USD_1k', int(farms_npv[feature_ID]))
         
         layer.SetFeature(feature)
-        
+        '''
     
     #Now, want to build the HTML table
     
@@ -151,7 +155,7 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
     cycle_history ={}
     tau = 0.8
-    dur = int(dur)
+    dur = float(dur)
      
     for f in range (1, len(farm_op_dict)+1):
         
@@ -172,8 +176,8 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
         #Need to cycle through fish growth and fallowing. In order to avoid ever having
         # a day = 0 when accessing a table, I start at zero, add 1 to anything where days
         #are recorded, then do accesses as zero % 365, and add 1.
-        for day in range (0, (365*dur)):
-            
+        for day in range (0, int((365*dur))):
+            day = day - 1
             #print type(water_temp_dict[str(day % 365)][str(f)])
             
             if fallow_days_left > 0:
@@ -193,10 +197,10 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
              
                     #Grow 'dem fishies!
                     exponent = float(water_temp_dict[str(day % 365 + 1)][str(f)]) * tau
-                    exponent = -exponent
                     fish_weight = (a * (fish_weight ** b) * math.exp(exponent)) + \
                                     fish_weight
-            
+
+        
         cycle_history[f] = farm_history
         
     #Now, want to make a tuple from the three dictionaries, and send them back 
@@ -255,16 +259,14 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
 def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
     
     '''This performs the valuation calculations, and returns a dictionary with a
-    farm-> floa mapping, where each float is the total processed weight for
-    each of the cycles completed on that farm 
+    farm-> float mapping, where each float is the net processed value of the fish
+    processed on that farm, in $1000s of dollars.
     
     cycle_hisory: Farm->List of Type (day of outplanting, 
                                       day of harvest, harvest weight (grams))
     proc_weight: Farm->List of TPW for each cycle (kilograms)               '''
     
     valuations = {}
-    
-    print cycle_history
     
     for f in range (1, len(cycle_history) + 1):
         
