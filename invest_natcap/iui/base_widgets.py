@@ -441,7 +441,6 @@ class InformationButton(QtGui.QPushButton):
         self.pressed.connect(self.show_info_popup)
         self.setFlat(True)
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
-        self.setIconSize(QtCore.QSize(22,22))
 
     def show_info_popup(self):
         """Show the information popup.  This manually (programmatically) enters
@@ -512,7 +511,6 @@ class ErrorButton(InformationButton):
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, button_icon)))
         self.setFlat(button_is_flat)
         QtGui.QWidget.setEnabled(self, True)  # enable the button; validation has completed
-        self.setIconSize(QtCore.QSize(22,22))
 
     def build_contents(self):
         """Take the python string components of this instance of
