@@ -622,30 +622,24 @@ class DynamicText(LabeledElement):
         #Connect the textfield's textChanged signal to the toggle() function.
         self.textField.textChanged.connect(self.toggle)
 
+
     def toggle(self):
         """Toggle all elements associated with this element's ID.
-            
+
             This function has several purposes:
-              - It instructs the root element to update its requirement 
+              - It instructs the root element to update its requirement
                 notification based on the current status of all elements
               - It sets the backgroundColor of this object's label if its
                 completion requirements have not been met
-              - It instructs the root element to toggle all other elements 
+              - It instructs the root element to toggle all other elements
                 appropriately.
-                
+
             returns nothing."""
 
-        #If the user has already pressed the OK button and some text is updated,
-        #we need to check all other elements and update the main window 
-        #notifications accordingly.
-        if self.isEnabled():
-            if self.isRequired() and not self.requirementsMet():
-                self.setBGcolorSatisfied(False)
-            else:
-                self.setBGcolorSatisfied(True)
-
-        #This function attempts to enable or disable elements as appropriate.
+        # Enable/disable necessary elements before validating.
         self.setState(self.requirementsMet(), includeSelf=False)
+        self.validate()
+
 
     def setValidateField(self, regexp):
         """Set input validation on the text field to conform with the input
@@ -757,8 +751,6 @@ class DynamicText(LabeledElement):
 
     def updateLinks(self, rootPointer):
         LabeledElement.updateLinks(self, rootPointer)
-
-        self.textField.editingFinished.connect(self.validate)
         
 class Container(QtGui.QGroupBox, DynamicGroup):
     """Class Container represents a QGroupBox (which is akin to the HTML widget
