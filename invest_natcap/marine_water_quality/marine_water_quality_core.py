@@ -62,6 +62,9 @@ def diffusion_advection_solver(source_point_data, in_water_array,
 
     #iterate over the non-zero elments in grid to build the linear system
     LOGGER.info('Building diagonals for linear advection diffusion system.')
+    #Right now, just run for one source so we extract out the "first" source 
+    #point
+    source_point_index, source_point_data = source_points.items()[0]
     for i in range(n_rows):
         for j in range(n_cols):
             #diagonal element i,j always in bounds, calculate directly
@@ -76,9 +79,9 @@ def diffusion_advection_solver(source_point_data, in_water_array,
                 a_matrix[4, a_diagonal_index] = 1
                 continue
 
-            if point_index == a_diagonal_index:
-                a_matrix[4, point_index] = 1
-                b_vector[point_index] = point_source['wps']
+            if  a_diagonal_index == source_point_index:
+                a_matrix[4, a_diagonal_index] = 1
+                b_vector[a_diagonal_index] = source_point_data['WPS']
                 continue
 
             #Build up terms
