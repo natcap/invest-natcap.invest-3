@@ -74,7 +74,16 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/water_yield.json',
                'invest_natcap/iui/water_scarcity.json',
                'invest_natcap/iui/hydropower_valuation.json',
-               'invest_natcap/iui/pollination_biophysical.json'])]
+               'invest_natcap/iui/pollination_biophysical.json']),
+        ('invest_natcap/iui',
+              ['invest_natcap/iui/dialog-close.png',
+               'invest_natcap/iui/dialog-ok.png',
+               'invest_natcap/iui/document-open.png',
+               'invest_natcap/iui/edit-undo.png',
+               'invest_natcap/iui/info.png',
+               'invest_natcap/iui/natcap_logo.png',
+               'invest_natcap/iui/validate-pass.png',
+               'invest_natcap/iui/validate-fail.png'])]
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
