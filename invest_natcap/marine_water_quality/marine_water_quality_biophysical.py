@@ -164,8 +164,6 @@ def execute(args):
     for point in points_to_ignore:
         del source_point_values[point]
 
-    
-
     #Convert the georeferenced source coordinates to grid coordinates
     LOGGER.info("Solving advection/diffusion equation")
 

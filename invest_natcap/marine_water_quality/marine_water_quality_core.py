@@ -19,15 +19,19 @@ def diffusion_advection_solver(source_point_values, in_water_array,
           source_point_id_1: ...}
     in_water_array - 2D numpy array of booleans where False is a land pixel and
         True is a water pixel.
-    tide_e_array - 2D numpy array with tidal E values or nodata values (m^2/sec)
+    tide_e_array - 2D numpy array with tidal E values or nodata values, must
+        be same shape as in_water_array (m^2/sec)
     adv_u_array, adv_v_array - the u and v components of advection, must be
-       same shape as tide_e_array (units?)
+       same shape as in_water_array (units?)
     nodata - the value in the input arrays that indicate a nodata value.
     cell_size - the length of the side of a cell in meters
     """
 
-    n_rows = source_point_values.shape[0]
-    n_cols = source_point_values.shape[1]
+    n_rows = in_water_array.shape[0]
+    n_cols = in_water_array.shape[1]
+
+    #Flatten to a 1D array for use in the matrix building step
+    in_water = in_water_array.flatten()
 
     LOGGER = logging.getLogger('marine_water_quality')
     LOGGER.info('Calculating advection diffusion')
