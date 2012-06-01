@@ -340,7 +340,7 @@ class DynamicPrimitive(DynamicElement):
 
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
-            self.set_error('')
+            self.error_button.deactivate()
         else:
             self.validate()
 
@@ -404,18 +404,13 @@ class DynamicPrimitive(DynamicElement):
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required')
         else:
-            if self.isEnabled() and self.validator != None:
-                if self.requirementsMet():
-                    validate = True
-                else:
-                    validate = False
-
-                if validate and self.validator.thread_finished():
-                    rendered_dict = self.root.assembler.assemble(self.value(),
-                        self.attributes['validateAs'])
-                    self.validator.validate(rendered_dict)
-                    self.timer.timeout.connect(self.check_validation_error)
-                    self.timer.start(50)
+            if self.isEnabled() and self.validator != None and\
+            self.requirementsMet() and self.validator.thread_finished():
+                rendered_dict = self.root.assembler.assemble(self.value(),
+                    self.attributes['validateAs'])
+                self.validator.validate(rendered_dict)
+                self.timer.timeout.connect(self.check_validation_error)
+                self.timer.start(50)
 
     def check_validation_error(self):
         if self.validator.thread_finished():
@@ -458,6 +453,13 @@ class InformationButton(QtGui.QPushButton):
         QtGui.QWhatsThis.enterWhatsThisMode()
         QtGui.QWhatsThis.showText(self.pos(), self.whatsThis(), self)
 
+    def deactivate(self):
+        """Visually disable the button: set it to be flat, disable it, and clear
+            its icon."""
+        self.setFlat(True)
+        self.setEnabled(False)
+        self.setIcon(QtGui.QIcon(''))
+
     def set_title(self, title_text):
         """Set the title of the InformationPopup text.  title_text is a python
             string."""
@@ -483,10 +485,8 @@ class ErrorButton(InformationButton):
         """Initialize the ErrorPopup object.  Adding the self.error_text
         attribute.  Title and body_text are python strings."""
         InformationButton.__init__(self, title, body_text)
-        self.setFlat(True)
-        self.setEnabled(False)
         self.error_text = ''
-        self.setIcon(QtGui.QIcon(''))  # Make icon blank by default
+        self.deactivate()
 
     def setEnabled(self, state):
         if state == False:
@@ -644,7 +644,6 @@ class DynamicText(LabeledElement):
             if self.isRequired() and not self.requirementsMet():
                 self.setBGcolorSatisfied(False)
             else:
-                self.set_error('')
                 self.setBGcolorSatisfied(True)
 
         #This function attempts to enable or disable elements as appropriate.
@@ -751,6 +750,7 @@ class DynamicText(LabeledElement):
             returns nothing."""
 
         self.textField.setText(text)
+        self.toggle()  # Should cause validation to occur
 
     def resetValue(self):
         DynamicPrimitive.resetValue(self)
@@ -994,7 +994,8 @@ class HideableFileEntry(HideableElement, FileEntry):
     def __init__(self, attributes):
         FileEntry.__init__(self, attributes)
         HideableElement.__init__(self, attributes)
-        self.elements = [self.checkbox, self.textField, self.button]
+        self.elements = [self.error_button, self.checkbox, self.textField,
+                         self.button, self.info_button]
         self.hideableElements = [self.textField, self.button]
         self.toggleHiding(False)
 
@@ -1070,6 +1071,11 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
             attributes['dataType'] = 'boolean'
         QtGui.QCheckBox.__init__(self)
         DynamicPrimitive.__init__(self, attributes)
+
+        self.elements.remove(self.info_button)
+        self.elements.append(QtGui.QWidget())
+        self.elements.append(QtGui.QWidget())
+        self.elements.append(self.info_button)
 
         #set the text of the checkbox
         self.setText(attributes['label'])

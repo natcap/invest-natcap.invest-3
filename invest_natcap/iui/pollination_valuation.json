@@ -18,7 +18,8 @@
                     "label": "Workspace",
                     "defaultValue": "Pollination",
                     "required": true,
-                    "validateAs": {"type": "folder"}
+                    "validateAs": {"type": "folder"},
+                    "helpText": "Your workspace should be the same as it was for the pollination biophysical component.  It contains datasets used by this model."
                 },
                 {
                     "id" : "guilds",
@@ -28,10 +29,11 @@
                     "args_id": "guilds_uri",
                     "required": true,
                     "validateAs": {"type": "DBF",
-                                   "fieldsExist": ["SPECIES", "APLHA"],
+                                   "fieldsExist": ["SPECIES", "ALPHA"],
                                    "restrictions": [{"field": "ALPHA",
                                                      "validateAs": {"type": "number",
-                                                                    "allowedValues": "0-9]*\\.[0-9]*$"}}]}
+                                                                    "allowedValues": "0-9]*\\.[0-9]*$"}}]},
+                    "helpText": "The <em>guilds table</em> should be either a CSV or DBF and should contain information about the pollinators being considered by this model.  <b>You must use the same guilds table as was used in the biophysical pollination model</b>."
                 },
                 {
                     "id" : "half_saturation_const",
@@ -41,7 +43,11 @@
                     "required": true,
                     "width": 60,
                     "defaultValue": "0.125",
-                    "dataType": "float"
+                    "validateAs": {"type": "number",
+                                   "lteq": 1,
+                                   "gteq": 0},
+                    "dataType": "float",
+                    "helpText": "This should be a number between 0 and 1.  It represents the abundance of pollinators required to reack 50% of pollinator-dependent yield."
                 },
                 {
                     "id" : "wild_pollination_proportion",
@@ -51,20 +57,26 @@
                     "required": true,
                     "width": 60,
                     "defaultValue": "1",
-                    "dataType": "string"
+                    "validateAs": {"type": "number",
+                                   "lteq": 1,
+                                   "gteq": 0},
+                    "dataType": "float",
+                    "helpText": "This should be a number between 0 and 1.  It represents the proportion of all crop yield attributed to wild pollinators on this landscape."
                 },
                 {
                     "id": "value_future",
                     "type": "checkbox",
                     "label": "Perform valuation on future scenario",
-                    "args_id": "value_future"
+                    "args_id": "value_future",
+                    "helpText": "Check this box if you would like valuation to be performed on the future scenario. <b>NOTE: checking this box requires that you have already run the biophysical pollination model on both a current and future scenario using this workspace</b>."
                 },
                 {
                     "id": "results_suffix",
                     "type": "text",
                     "label": "Results suffix",
                     "args_id": "results_suffix",
-                    "width": 60
+                    "width": 60,
+                    "helpText": "<b>IMPORTANT: If you used a results suffix for your corresponding run of the pollination biophysical model, you must enter the same suffix here.</b>  Failure to do so will result in errors."
                 }
             ]
         }
