@@ -163,6 +163,8 @@ def execute(args):
     adv_v_band = adv_v_raster.GetRasterBand(1)
 
     tide_e_array = tide_e_band.ReadAsArray()
+    #convert E from km^2/day to m^2/sec???
+
     adv_u_array = adv_u_band.ReadAsArray()
     adv_v_array = adv_v_band.ReadAsArray()
 

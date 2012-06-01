@@ -16,19 +16,18 @@ def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array,
                             'WPS': float (loading?),
                             'point_1': ...},
           source_point_id_1: ...}
-    tide_e_array - 2D numpy array with tidal E values or nodata values (units?)
+    tide_e_array - 2D numpy array with tidal E values or nodata values (m^2/sec)
     adv_u_array, adv_v_array - the u and v components of advection, must be
        same shape as tide_e_array (units?)
     nodata - the value in the input arrays that indicate a nodata value.
     """
 
-    LOGGER = logging.getLogger('marine_water_quality')
-    LOGGER.info('Calculating advection diffusion for %s' % \
-                (point_source['id']))
-    t0 = time.clock()
+    n_rows = source_point_values.shape[0]
+    n_cols = source_point_values.shape[1]
 
-    #convert E from km^2/day to m^2/sec
-    E *= 10 ** 6 / 86400.0
+    LOGGER = logging.getLogger('marine_water_quality')
+    LOGGER.info('Calculating advection diffusion')
+    t0 = time.clock()
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
@@ -49,12 +48,12 @@ def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array,
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
-    b_vector = np.zeros(n * m)
+    b_vector = np.zeros(n_rows * n_cols)
 
     #holds the rows for diagonal sparse matrix creation later, row 4 is 
     #the diagonal
-    a_matrix = np.zeros((9, n * m))
-    diags = np.array([-2 * m, -m, -2, -1, 0, 1, 2, m, 2 * m])
+    a_matrix = np.zeros((9, n_rows * m))
+    diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
 
 
     #iterate over the non-zero elments in grid to build the linear system
