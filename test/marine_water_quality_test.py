@@ -26,6 +26,7 @@ class TestMWQBiophysical(unittest.TestCase):
         args['workspace'] = output_base
         args['aoi_poly_uri'] = os.path.join(input_dir, 'AOI_clay_soundwideWQ.shp')
         args['pixel_size'] = 100.0
+        args['kps'] = 10.0
         args['land_poly_uri'] = os.path.join(input_dir, '3005_VI_landPolygon.shp')
         args['source_points_uri'] = os.path.join(input_dir, 'floathomes_centroids.shx')
         args['source_point_data_uri'] = os.path.join(input_dir, 'WQM_PAR.csv')

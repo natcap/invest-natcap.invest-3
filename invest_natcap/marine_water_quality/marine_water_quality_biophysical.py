@@ -35,6 +35,7 @@ def execute(args):
             of interest to run the model.  Will define the grid.
         args['pixel_size'] - float indicating pixel size in meters
             of output grid.
+        args['kps'] - float indicating decay rate of pollutant (units?)
         args['land_poly_uri'] - OGR polygon DataSource indicating areas where land
             is.
         args['source_points_uri'] - OGR point Datasource indicating point sources
@@ -146,16 +147,15 @@ def execute(args):
             LOGGER.warn("%s is an id defined in the data table which is not found in the shapefile. Ignoring that point." % (point_id))
             continue
 
-        #This merges the current dictionary with a new one that includes KPS and WPS
+        #This merges the current dictionary with a new one that includes WPS
         source_point_values[point_id] = \
-            dict(source_point_values[point_id].items() + {
-                'KPS': float(row['KPS']),
-                'WPS': float(row['WPS'])}.items())
+            dict(source_point_values[point_id].items() + \
+                 {'WPS': float(row['WPS'])}.items())
 
     LOGGER.info("Checking to see if all the points have KPS and WPS values")
     points_to_ignore = []
     for point_id in source_point_values:
-        if 'KPS' not in source_point_values[point_id]:
+        if 'WPS' not in source_point_values[point_id]:
             LOGGER.warn("point %s has no source parameters from the CSV.  Ignoring that point." %
                         point_id)
             #Can't delete out of the dictionary that we're iterating over
@@ -189,8 +189,8 @@ def execute(args):
 
     concentration_array = \
         marine_water_quality_core.diffusion_advection_solver(source_point_values,
-        in_water_array, tide_e_array, adv_u_array, adv_v_array, nodata_out, 
-        cell_size)
+        args['kps'], in_water_array, tide_e_array, adv_u_array, adv_v_array, 
+        nodata_out, cell_size)
 
     raster_out_band = raster_out.GetRasterBand(1)
     raster_out_band.WriteArray(concentration_array, 0, 0)
