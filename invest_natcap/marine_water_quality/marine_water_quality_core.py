@@ -30,8 +30,9 @@ def diffusion_advection_solver(source_point_data, in_water_array,
     n_rows = in_water_array.shape[0]
     n_cols = in_water_array.shape[1]
 
-    #Flatten to a 1D array for use in the matrix building step
+    #Flatten arrays for use in the matrix building step
     in_water = in_water_array.flatten()
+    e_array_flat = tide_e_array.flatten()
 
     LOGGER = logging.getLogger('marine_water_quality')
     LOGGER.info('Calculating advection diffusion')
@@ -89,92 +90,92 @@ def diffusion_advection_solver(source_point_data, in_water_array,
             if a_up_index > 0 and a_down_index > 0 and \
                 in_water[a_up_index] and in_water[a_down_index]:
                 #Ey
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[7, a_down_index] += E / h ** 2
-                a_matrix[1, a_up_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[7, a_down_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[1, a_up_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
                 #Uy
-                a_matrix[7, a_down_index] += uy / (2.0 * h)
-                a_matrix[1, a_up_index] += -uy / (2.0 * h)
+                a_matrix[7, a_down_index] += uy / (2.0 * cell_size)
+                a_matrix[1, a_up_index] += -uy / (2.0 * cell_size)
             if a_up_index < 0 and in_water[a_down_index]:
                 #we're at the top boundary, forward expansion down
                 #Ey
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[7, a_down_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[7, a_down_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
                 #Uy
-                a_matrix[7, a_down_index] += uy / (2.0 * h)
-                a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
+                a_matrix[7, a_down_index] += uy / (2.0 * cell_size)
+                a_matrix[4, a_diagonal_index] += -uy / (2.0 * cell_size)
             if a_down_index < 0 and in_water[a_up_index]:
                 #we're at the bottom boundary, forward expansion up
                 #Ey
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[1, a_up_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[1, a_up_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
                 #Uy
-                a_matrix[1, a_up_index] += uy / (2.0 * h)
-                a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
+                a_matrix[1, a_up_index] += uy / (2.0 * cell_size)
+                a_matrix[4, a_diagonal_index] += -uy / (2.0 * cell_size)
             if not in_water[a_up_index]:
                 #Ey
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[7, a_down_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[7, a_down_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
                 #Uy
-                a_matrix[7, a_down_index] += uy / (2.0 * h)
+                a_matrix[7, a_down_index] += uy / (2.0 * cell_size)
             if not in_water[a_down_index]:
                 #Ey
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[1, a_up_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[1, a_up_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
                 #Uy
-                a_matrix[1, a_up_index] += -uy / (2.0 * h)
+                a_matrix[1, a_up_index] += -uy / (2.0 * cell_size)
 
 
 
             if a_left_index > 0 and a_right_index > 0 and \
                 in_water[a_left_index] and in_water[a_right_index]:
                 #Ex
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[5, a_right_index] += E / h ** 2
-                a_matrix[3, a_left_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[5, a_right_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[3, a_left_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
                 #Ux
-                a_matrix[5, a_right_index] += ux / (2.0 * h)
-                a_matrix[3, a_left_index] += -ux / (2.0 * h)
+                a_matrix[5, a_right_index] += ux / (2.0 * cell_size)
+                a_matrix[3, a_left_index] += -ux / (2.0 * cell_size)
             if a_left_index < 0 and in_water[a_right_index]:
                 #we're on left boundary, expand right
                 #Ex
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[5, a_right_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[5, a_right_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
-                a_matrix[5, a_right_index] += ux / (2.0 * h)
-                a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
+                a_matrix[5, a_right_index] += ux / (2.0 * cell_size)
+                a_matrix[4, a_diagonal_index] += -ux / (2.0 * cell_size)
                 #Ux
             if a_right_index < 0 and in_water[a_left_index]:
                 #we're on right boundary, expand left
                 #Ex
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[3, a_left_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[3, a_left_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
                 #Ux
-                a_matrix[3, a_left_index] += ux / (2.0 * h)
-                a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
+                a_matrix[3, a_left_index] += ux / (2.0 * cell_size)
+                a_matrix[4, a_diagonal_index] += -ux / (2.0 * cell_size)
 
             if not in_water[a_right_index]:
                 #Ex
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[3, a_left_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[3, a_left_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
                 #Ux
-                a_matrix[3, a_left_index] += -ux / (2.0 * h)
+                a_matrix[3, a_left_index] += -ux / (2.0 * cell_size)
 
             if not in_water[a_left_index]:
                 #Ex
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[5, a_right_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * e_array_flat[a_diagonal_index]/ cell_size ** 2
+                a_matrix[5, a_right_index] += e_array_flat[a_diagonal_index]/ cell_size ** 2
 
                 #Ux
-                a_matrix[5, a_right_index] += ux / (2.0 * h)
+                a_matrix[5, a_right_index] += ux / (2.0 * cell_size)
 
             #K
             a_matrix[4, a_diagonal_index] += -k
