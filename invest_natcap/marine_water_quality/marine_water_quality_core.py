@@ -5,7 +5,7 @@ from scipy.sparse.linalg import spsolve
 import numpy as np
 
 def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array, 
-                         adv_v_array, nodata):
+                         adv_v_array, nodata, cell_size):
     """2D Water quality model to track a pollutant in the ocean.  Three input
        arrays must be of the same shape.  Returns the solution in an array of
        the same shape.
@@ -20,6 +20,7 @@ def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array,
     adv_u_array, adv_v_array - the u and v components of advection, must be
        same shape as tide_e_array (units?)
     nodata - the value in the input arrays that indicate a nodata value.
+    cell_size - the length of the side of a cell in meters
     """
 
     n_rows = source_point_values.shape[0]
@@ -36,16 +37,6 @@ def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array,
         else:
             return -1
 
-    #convert point x,y to an index that coodinates with input arrays
-    point_index = calc_index(int(point_source['yps'] / h),
-                             int(point_source['xps'] / h))
-
-    #Absorption parameter
-    k = point_source['kps']
-
-    #Convert h to km for calculation since other parameters are in KM
-    h /= 1000.0
-
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
     b_vector = np.zeros(n_rows * n_cols)
@@ -55,11 +46,10 @@ def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array,
     a_matrix = np.zeros((9, n_rows * m))
     diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
 
-
     #iterate over the non-zero elments in grid to build the linear system
     LOGGER.info('Building diagonals for linear advection diffusion system.')
-    for i in range(n):
-        for j in range(m):
+    for i in range(n_rows):
+        for j in range(n_cols):
             #diagonal element i,j always in bounds, calculate directly
             a_diagonal_index = calc_index(i, j)
             a_up_index = calc_index(i - 1, j)

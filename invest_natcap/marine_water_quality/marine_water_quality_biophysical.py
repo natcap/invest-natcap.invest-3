@@ -168,7 +168,14 @@ def execute(args):
     adv_u_array = adv_u_band.ReadAsArray()
     adv_v_array = adv_v_band.ReadAsArray()
 
+    #If the cells are square then it doesn't matter if we look at x or y
+    #but if different, we need just one value, so take the average.  Not the
+    #best, but better than nothing.
+    cell_size = raster_out_gt[1]
+    if abs(raster_out_gt[1]) != abs(raster_out_gt[5]):
+        LOGGER.warn("Warning, cells aren't square, so the results of the solver will be incorrect")
+
     marine_water_quality_core.diffusion_advection_solver(tide_e_array, 
-        adv_u_array, adv_v_array, source_point_values, nodata_out)
+        adv_u_array, adv_v_array, source_point_values, nodata_out, cell_size)
 
     LOGGER.info("Done with MWQ execute")
