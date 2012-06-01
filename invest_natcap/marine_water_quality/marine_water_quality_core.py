@@ -193,11 +193,12 @@ def diffusion_advection_solver(source_point_data, in_water_array,
     LOGGER.info('Building sparse matrix from diagonals.')
 
     matrix = scipy.sparse.spdiags(a_matrix,
-        [-2 * m, -m, -2, -1, 0, 1, 2, m, 2 * m], n * m, n * m, "csc")
+        [-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols], 
+         n_rows * n_cols, n_rows * n_cols, "csc")
     LOGGER.info('generating preconditioner via sparse incomplete lu decomposition')
     #normally factor will use m*(n*m) extra space, we restrict to 
     #\sqrt{m}*(n*m) extra space
-    P = scipy.sparse.linalg.spilu(matrix, fill_factor=int(math.sqrt(m)))
+    P = scipy.sparse.linalg.spilu(matrix, fill_factor=int(np.sqrt(n_cols)))
     LOGGER.info('Solving via gmres iteration')
     #create linear operator for precondioner
     M_x = lambda x: P.solve(x)
