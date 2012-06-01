@@ -156,7 +156,9 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     cycle_history ={}
     tau = 0.8
     dur = float(dur)
-     
+    
+    print farm_op_dict.keys()
+    
     for f in range (1, len(farm_op_dict)+1):
         
         #casting f to string because farm_op_dict came from biophysical with
