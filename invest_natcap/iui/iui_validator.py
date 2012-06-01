@@ -481,10 +481,25 @@ class OGRChecker(TableChecker):
 
             if 'projection' in layer_dict:
                 reference = self.layer.GetSpatialRef()
-                projection = reference.GetAttrValue('PROJECTION')
-                if projection != layer_dict['projection']:
-                    return str('Shapefile layer ' + layer_name + ' must be ' +
-                        'projected as ' + layer_dict['projection'])
+
+                # Validate projection units if the user specifies it.
+                if 'units' in layer_dict['projection']:
+                    linear_units = reference.GetLinearUnits()
+                    if layer_dict['projection']['units'] == 'meters':
+                        if linear_units != 1.0:
+                            return str('Shapefile layer %s must be projected' +
+                                ' in meters') % layer_name
+                    elif layer_dict['projection']['units'] == 'latLong':
+                        if linear_units == 1.0:
+                            return str('Shapefile layer %s must be projected' +
+                                ' in lat/long') % layer_name
+
+                # Validate the actual projection if the user specifies it
+                if 'name' in layer_dict:
+                    projection = reference.GetAttrValue('PROJECTION')
+                    if projection != layer_dict['projection']:
+                        return str('Shapefile layer ' + layer_name + ' must be ' +
+                            'projected as ' + layer_dict['projection']['name'])
 
             if 'datum' in layer_dict:
                 reference = self.layer.GetSpatialRef()
