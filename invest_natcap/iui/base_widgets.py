@@ -387,12 +387,13 @@ class DynamicPrimitive(DynamicElement):
         if 'args_id' in self.attributes and self.isEnabled():
             value = self.value()
 
-            # Check to see if the element should be passed.
-            try:
-                if self.attributes['returns']['ifEmpty'] == 'pass':
-                    return None
-            except KeyError:
-                pass
+            # Check to see if the element should be passed if it's empty.
+            if len(value) == 0:
+                try:
+                    if self.attributes['returns']['ifEmpty'] == 'pass':
+                        return None
+                except KeyError:
+                    pass
 
             if value != '' and value != None and not isinstance(value, dict):
                 return self.cast_value()
