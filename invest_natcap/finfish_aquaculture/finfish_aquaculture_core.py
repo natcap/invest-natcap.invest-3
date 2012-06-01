@@ -69,8 +69,7 @@ def execute(args):
     cycle_history = calc_farm_cycles(args['g_param_a'], 
                                           args['g_param_b'], args['water_temp_dict'], 
                                           args['farm_op_dict'], args['duration'])
-    print cycle_history
-    '''
+
     driver = ogr.GetDriverByName('ESRI Shapefile')
     out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
     curr_shp_file = args['ff_farm_file']
@@ -94,7 +93,7 @@ def execute(args):
         num_cycles = len(cycle_history[feature_ID])
         feature.SetField('Tot_Cycles', num_cycles)
         
-        layer.SetFeature(feature)'''
+        layer.SetFeature(feature)
         
     #Now want to add the total processed weight of each farm as a second feature on the
     #outgoing shapefile- abstracting the calculation of this to a separate function,
@@ -103,9 +102,6 @@ def execute(args):
     sum_proc_weight, proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
                                    args['mort_rate_daily'], cycle_history)
     
-    print sum_proc_weight
-    
-    '''
     #have to start at the beginning of the layer to access the attributes
     layer.ResetReading()
     
@@ -123,9 +119,10 @@ def execute(args):
 
     #This will complete the valuation portion of the finfish aquaculture 
     #model, dependent on whether or not valuation is desired.
-    
-  
-    
+    if (bool(args['do_valuation']) == True):
+        farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
+                proc_weight, cycle_history)
+   
     #And add it into the shape file
     layer.ResetReading()
     
@@ -139,13 +136,9 @@ def execute(args):
         feature.SetField('NVP_USD_1k', int(farms_npv[feature_ID]))
         
         layer.SetFeature(feature)
-        '''
     
     #Now, want to build the HTML table
-    if (bool(args['do_valuation']) == True):
-        farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
-                proc_weight, cycle_history)
-
+   
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
     #One output, which will be a dictionary pointing to a list of tuples,
@@ -154,7 +147,7 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     #The dictionary will have a key of farm number, and a value of the tuple list
     
     cycle_history ={}
-    tau = 0.8
+    tau = 0.08
     dur = float(dur)
     
     print farm_op_dict.keys()
@@ -268,9 +261,7 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     
     cycle_hisory: Farm->List of Type (day of outplanting, 
                                       day of harvest, harvest weight (grams))
-    proc_weight: Farm->List of TPW for each cycle (kilograms) 
-                  '''
-    print "Gets here?"
+    proc_weight: Farm->List of TPW for each cycle (kilograms) '''
     
     valuations = {}
     
@@ -287,11 +278,8 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
             t = cycle_history[f][c][1]
             
             npv = tpw * (price_per_kg *(1 - frac_mrkt_price)) * (1 / (1 + discount) ** t)
-            print "NPV"
-            print npv
    
-            valuations[f] += npv
-    
-    print valuations
+            #divide by 1000, because the number we want to return is in thousands of dollars
+            valuations[f] += npv /1000
     
     return valuations
