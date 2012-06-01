@@ -1,6 +1,7 @@
 import logging
 import time
 
+import scipy.sparse
 from scipy.sparse.linalg import spsolve
 import numpy as np
 
@@ -178,7 +179,7 @@ def diffusion_advection_solver(source_point_data, in_water_array,
                 a_matrix[5, a_right_index] += adv_u_flat[a_diagonal_index] / (2.0 * cell_size)
 
             #K
-            a_matrix[4, a_diagonal_index] += -k
+            a_matrix[4, a_diagonal_index] += -source_point_data['KPS']
 
             if not in_water[a_up_index]:
                 a_matrix[1, a_up_index] = 0
