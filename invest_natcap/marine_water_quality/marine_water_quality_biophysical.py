@@ -71,7 +71,18 @@ def execute(args):
         'GTiff', nodata_out, gdal.GDT_Float32)
     adv_v_raster = raster_utils.new_raster_from_base(raster_out, 'adv_v.tif',
         'GTiff', nodata_out, gdal.GDT_Float32)
+    in_water_raster = raster_utils.new_raster_from_base(raster_out, 'in_water.tif',
+        'GTiff', nodata_out, gdal.GDT_Byte)
 
+    #Set up the in_water_array
+    LOGGER.info("Calcluating the in_water array")
+    in_water_raster_band = in_water_raster.GetRasterBand(1)
+    in_water_raster_band.Fill(1)
+    gdal.RasterizeLayer(in_water_raster, [1], land_layer, burn_values=[0])
+    in_water_array = in_water_raster_band.ReadAsArray()
+    in_water_function = np.vectorize(lambda x: x == 1)
+    in_water_array = in_water_function(in_water_array)
+    
     #Interpolate the ogr datasource points onto a raster the same size as raster_out
     raster_utils.vectorize_points(tide_e_points, 'kh_km2_day', tide_e_raster)
     raster_utils.vectorize_points(adv_uv_points, 'U_m_sec_', adv_u_raster)
@@ -82,7 +93,7 @@ def execute(args):
     for dataset in [tide_e_raster, adv_u_raster, adv_v_raster]:
         band = dataset.GetRasterBand(1)
         nodata = band.GetNoDataValue()
-        gdal.RasterizeLayer(dataset,[1], land_layer, burn_values=[nodata])
+        gdal.RasterizeLayer(dataset, [1], land_layer, burn_values=[nodata])
 
     #Now we have 3 input rasters for tidal dispersion and uv advection
 
@@ -175,7 +186,8 @@ def execute(args):
     if abs(raster_out_gt[1]) != abs(raster_out_gt[5]):
         LOGGER.warn("Warning, cells aren't square, so the results of the solver will be incorrect")
 
-    marine_water_quality_core.diffusion_advection_solver(tide_e_array, 
-        adv_u_array, adv_v_array, source_point_values, nodata_out, cell_size)
+    marine_water_quality_core.diffusion_advection_solver(source_point_values, 
+        in_water_array, tide_e_array, adv_u_array, adv_v_array, nodata_out, 
+        cell_size)
 
     LOGGER.info("Done with MWQ execute")
