@@ -4,8 +4,9 @@ import time
 from scipy.sparse.linalg import spsolve
 import numpy as np
 
-def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array, 
-                         adv_v_array, nodata, cell_size):
+def diffusion_advection_solver(source_point_values, in_water_array, 
+                               tide_e_array, adv_u_array, 
+                               adv_v_array, nodata, cell_size):
     """2D Water quality model to track a pollutant in the ocean.  Three input
        arrays must be of the same shape.  Returns the solution in an array of
        the same shape.
@@ -16,6 +17,8 @@ def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array,
                             'WPS': float (loading?),
                             'point_1': ...},
           source_point_id_1: ...}
+    in_water_array - 2D numpy array of booleans where False is a land pixel and
+        True is a water pixel.
     tide_e_array - 2D numpy array with tidal E values or nodata values (m^2/sec)
     adv_u_array, adv_v_array - the u and v components of advection, must be
        same shape as tide_e_array (units?)
