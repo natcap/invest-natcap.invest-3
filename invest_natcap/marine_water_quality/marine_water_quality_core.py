@@ -213,6 +213,9 @@ def diffusion_advection_solver(source_point_data, in_water_array,
     M = scipy.sparse.linalg.LinearOperator((n_rows * n_cols, n_rows * n_cols), M_x)
     result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
     LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
+
+    #Result is a 1D array of all values, put it back to 2D
+    result.resize(n_rows,n_cols)
     return result
 
 #This part is for command line invocation and allows json objects to be passed

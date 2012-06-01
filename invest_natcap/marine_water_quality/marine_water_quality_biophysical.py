@@ -184,8 +184,12 @@ def execute(args):
     if abs(raster_out_gt[1]) != abs(raster_out_gt[5]):
         LOGGER.warn("Warning, cells aren't square, so the results of the solver will be incorrect")
 
-    marine_water_quality_core.diffusion_advection_solver(source_point_values, 
+    concentration_array = \
+        marine_water_quality_core.diffusion_advection_solver(source_point_values,
         in_water_array, tide_e_array, adv_u_array, adv_v_array, nodata_out, 
         cell_size)
+
+    raster_out_band = raster_out.GetRasterBand(1)
+    raster_out_band.WriteArray(concentration_array, 0, 0)
 
     LOGGER.info("Done with MWQ execute")
