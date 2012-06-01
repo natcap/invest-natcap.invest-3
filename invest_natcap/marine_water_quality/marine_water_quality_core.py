@@ -4,18 +4,18 @@ import time
 from scipy.sparse.linalg import spsolve
 import numpy as np
 
-def diffusion_advection_solver(source_point_values, in_water_array, 
+def diffusion_advection_solver(source_point_data, in_water_array, 
                                tide_e_array, adv_u_array, 
                                adv_v_array, nodata, cell_size):
     """2D Water quality model to track a pollutant in the ocean.  Three input
        arrays must be of the same shape.  Returns the solution in an array of
        the same shape.
     
-    source_point_values - dictionary of the form:
-        { source_point_id_0: {'point_0': [row_point, col_point] (in gridspace),
+    source_point_data - dictionary of the form:
+        { source_point_id_0: {'point': [row_point, col_point] (in gridspace),
                             'KPS': float (decay?),
                             'WPS': float (loading?),
-                            'point_1': ...},
+                            'point': ...},
           source_point_id_1: ...}
     in_water_array - 2D numpy array of booleans where False is a land pixel and
         True is a water pixel.
@@ -52,6 +52,13 @@ def diffusion_advection_solver(source_point_values, in_water_array,
     #the diagonal
     a_matrix = np.zeros((9, n_rows * n_cols))
     diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
+
+    #Set up a data structure so we can index point source data based on 1D 
+    #indexes
+    source_points = {}
+    for source_id, source_data in source_point_data.iteritems():
+        source_index = calc_index(*source_data['point'])
+        source_points[source_index] = source_data
 
     #iterate over the non-zero elments in grid to build the linear system
     LOGGER.info('Building diagonals for linear advection diffusion system.')
