@@ -210,10 +210,9 @@ def diffusion_advection_solver(source_point_data, in_water_array,
     LOGGER.info('Solving via gmres iteration')
     #create linear operator for precondioner
     M_x = lambda x: P.solve(x)
-    M = scipy.sparse.linalg.LinearOperator((n * m, n * m), M_x)
+    M = scipy.sparse.linalg.LinearOperator((n_rows * n_cols, n_rows * n_cols), M_x)
     result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
-    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed and done for %s)' % \
-                (point_source['id']))
+    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
     return result
 
 #This part is for command line invocation and allows json objects to be passed
