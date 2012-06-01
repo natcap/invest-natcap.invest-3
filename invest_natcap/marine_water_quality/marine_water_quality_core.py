@@ -1,8 +1,8 @@
 import logging
+import time
 
 from scipy.sparse.linalg import spsolve
 import numpy as np
-
 
 def diffusion_advection_solver(source_point_values, tide_e_array, adv_u_array, 
                          adv_v_array, nodata):
