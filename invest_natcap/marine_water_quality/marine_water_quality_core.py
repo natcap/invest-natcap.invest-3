@@ -1,70 +1,76 @@
 import logging
+import time
 
+import scipy.sparse
 from scipy.sparse.linalg import spsolve
 import numpy as np
 
-
-def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
-                         direct_solve=False):
-    """2D Water quality model to track a pollutant in the ocean
+def diffusion_advection_solver(source_point_data, in_water_array, 
+                               tide_e_array, adv_u_array, 
+                               adv_v_array, nodata, cell_size):
+    """2D Water quality model to track a pollutant in the ocean.  Three input
+       arrays must be of the same shape.  Returns the solution in an array of
+       the same shape.
     
-    Keyword arguments:
-    n, m - the number of rows, columns in the 2D grid.  Used to determine
-        indices into list parameters 'water', 'E', 'ux', 'uy', and i * m + j in
-        a list
-    water - 1D list n * m elements long of booleans indicating land / water.
-        True is water, False is land.
-    E - constant indicating tidal dispersion coefficient: km ^ 2 / day
-    ux - constant indicating x component of advective velocity: m / s
-    uy - constant indicating y component of advective velocity: m / s
-    point_source - dictionary of (xps, yps, wps, kps, id) for the point source,
-        xps, yps: cartesian coordinates of point wps: kg / day, k: 1 / day.
-    h - scalar describing grid cell size: m
-    direct_solve - if True uses a direct solver that may be faster, but use
-        more memory.  May crash in cases where memory is fragmented or low
-        Default False.
-    
-    returns a 2D grid of pollutant densities in the same dimension as  'grid'
+    source_point_data - dictionary of the form:
+        { source_point_id_0: {'point': [row_point, col_point] (in gridspace),
+                            'KPS': float (decay?),
+                            'WPS': float (loading?),
+                            'point': ...},
+          source_point_id_1: ...}
+    in_water_array - 2D numpy array of booleans where False is a land pixel and
+        True is a water pixel.
+    tide_e_array - 2D numpy array with tidal E values or nodata values, must
+        be same shape as in_water_array (m^2/sec)
+    adv_u_array, adv_v_array - the u and v components of advection, must be
+       same shape as in_water_array (units?)
+    nodata - the value in the input arrays that indicate a nodata value.
+    cell_size - the length of the side of a cell in meters
     """
-    LOGGER = logging.getLogger('marine_water_quality')
-    LOGGER.info('Calculating advection diffusion for %s' % \
-                (point_source['id']))
-    t0 = time.clock()
 
-    #convert E from km^2/day to m^2/sec
-    E *= 10 ** 6 / 86400.0
+    n_rows = in_water_array.shape[0]
+    n_cols = in_water_array.shape[1]
+
+    #Flatten arrays for use in the matrix building step
+    in_water = in_water_array.flatten()
+    e_array_flat = tide_e_array.flatten()
+    adv_u_flat = adv_u_array.flatten()
+    adv_v_flat = adv_v_array.flatten()
+
+    LOGGER = logging.getLogger('marine_water_quality')
+    LOGGER.info('Calculating advection diffusion')
+    t0 = time.clock()
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
-        if i >= 0 and i < n and j >= 0 and j < m:
-            return i * m + j
+        if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
+            return i * n_cols + j
         else:
             return -1
 
-    #convert point x,y to an index that coodinates with input arrays
-    point_index = calc_index(int(point_source['yps'] / h),
-                             int(point_source['xps'] / h))
-
-    #Absorption parameter
-    k = point_source['kps']
-
-    #Convert h to km for calculation since other parameters are in KM
-    h /= 1000.0
-
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
-    b_vector = np.zeros(n * m)
+    b_vector = np.zeros(n_rows * n_cols)
 
     #holds the rows for diagonal sparse matrix creation later, row 4 is 
     #the diagonal
-    a_matrix = np.zeros((9, n * m))
-    diags = np.array([-2 * m, -m, -2, -1, 0, 1, 2, m, 2 * m])
+    a_matrix = np.zeros((9, n_rows * n_cols))
+    diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
 
+    #Set up a data structure so we can index point source data based on 1D 
+    #indexes
+    source_points = {}
+    for source_id, source_data in source_point_data.iteritems():
+        source_index = calc_index(*source_data['point'])
+        source_points[source_index] = source_data
 
     #iterate over the non-zero elments in grid to build the linear system
     LOGGER.info('Building diagonals for linear advection diffusion system.')
-    for i in range(n):
-        for j in range(m):
+    #Right now, just run for one source so we extract out the "first" source 
+    #point
+    source_point_index, source_point_data = source_points.items()[0]
+    for i in range(n_rows):
+        for j in range(n_cols):
             #diagonal element i,j always in bounds, calculate directly
             a_diagonal_index = calc_index(i, j)
             a_up_index = calc_index(i - 1, j)
@@ -72,15 +78,22 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
             a_left_index = calc_index(i, j - 1)
             a_right_index = calc_index(i, j + 1)
 
-
             #if land then s = 0 and quit
             if not in_water[a_diagonal_index]:
                 a_matrix[4, a_diagonal_index] = 1
                 continue
 
-            if point_index == a_diagonal_index:
-                a_matrix[4, point_index] = 1
-                b_vector[point_index] = point_source['wps']
+            if  a_diagonal_index == source_point_index:
+                a_matrix[4, a_diagonal_index] = 1
+                b_vector[a_diagonal_index] = source_point_data['WPS']
+                continue
+
+            E = e_array_flat[a_diagonal_index]
+            adv_u = adv_u_flat[a_diagonal_index]
+            adv_v = adv_v_flat[a_diagonal_index]
+            #check for nodata values
+            if nodata in [E, adv_u, adv_v]:
+                a_matrix[4, a_diagonal_index] = 1
                 continue
 
             #Build up terms
@@ -88,95 +101,93 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
             if a_up_index > 0 and a_down_index > 0 and \
                 in_water[a_up_index] and in_water[a_down_index]:
                 #Ey
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[7, a_down_index] += E / h ** 2
-                a_matrix[1, a_up_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
+                a_matrix[7, a_down_index] += E / cell_size ** 2
+                a_matrix[1, a_up_index] += E / cell_size ** 2
 
                 #Uy
-                a_matrix[7, a_down_index] += uy / (2.0 * h)
-                a_matrix[1, a_up_index] += -uy / (2.0 * h)
+                a_matrix[7, a_down_index] += adv_v / (2.0 * cell_size)
+                a_matrix[1, a_up_index] += -adv_v / (2.0 * cell_size)
             if a_up_index < 0 and in_water[a_down_index]:
                 #we're at the top boundary, forward expansion down
                 #Ey
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[7, a_down_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -E / cell_size ** 2
+                a_matrix[7, a_down_index] += E / cell_size ** 2
 
                 #Uy
-                a_matrix[7, a_down_index] += uy / (2.0 * h)
-                a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
+                a_matrix[7, a_down_index] += adv_v / (2.0 * cell_size)
+                a_matrix[4, a_diagonal_index] += -adv_v / (2.0 * cell_size)
             if a_down_index < 0 and in_water[a_up_index]:
                 #we're at the bottom boundary, forward expansion up
                 #Ey
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[1, a_up_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -E / cell_size ** 2
+                a_matrix[1, a_up_index] += E / cell_size ** 2
 
                 #Uy
-                a_matrix[1, a_up_index] += uy / (2.0 * h)
-                a_matrix[4, a_diagonal_index] += -uy / (2.0 * h)
+                a_matrix[1, a_up_index] += adv_v / (2.0 * cell_size)
+                a_matrix[4, a_diagonal_index] += -adv_v / (2.0 * cell_size)
             if not in_water[a_up_index]:
                 #Ey
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[7, a_down_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
+                a_matrix[7, a_down_index] += E / cell_size ** 2
 
                 #Uy
-                a_matrix[7, a_down_index] += uy / (2.0 * h)
+                a_matrix[7, a_down_index] += adv_v / (2.0 * cell_size)
             if not in_water[a_down_index]:
                 #Ey
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[1, a_up_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
+                a_matrix[1, a_up_index] += E / cell_size ** 2
 
                 #Uy
-                a_matrix[1, a_up_index] += -uy / (2.0 * h)
-
-
+                a_matrix[1, a_up_index] += -adv_v / (2.0 * cell_size)
 
             if a_left_index > 0 and a_right_index > 0 and \
                 in_water[a_left_index] and in_water[a_right_index]:
                 #Ex
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[5, a_right_index] += E / h ** 2
-                a_matrix[3, a_left_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
+                a_matrix[5, a_right_index] += E / cell_size ** 2
+                a_matrix[3, a_left_index] += E / cell_size ** 2
 
                 #Ux
-                a_matrix[5, a_right_index] += ux / (2.0 * h)
-                a_matrix[3, a_left_index] += -ux / (2.0 * h)
+                a_matrix[5, a_right_index] += adv_u / (2.0 * cell_size)
+                a_matrix[3, a_left_index] += -adv_u / (2.0 * cell_size)
             if a_left_index < 0 and in_water[a_right_index]:
                 #we're on left boundary, expand right
                 #Ex
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[5, a_right_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -E / cell_size ** 2
+                a_matrix[5, a_right_index] += E / cell_size ** 2
 
-                a_matrix[5, a_right_index] += ux / (2.0 * h)
-                a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
+                a_matrix[5, a_right_index] += adv_u / (2.0 * cell_size)
+                a_matrix[4, a_diagonal_index] += -adv_u / (2.0 * cell_size)
                 #Ux
             if a_right_index < 0 and in_water[a_left_index]:
                 #we're on right boundary, expand left
                 #Ex
-                a_matrix[4, a_diagonal_index] += -E / h ** 2
-                a_matrix[3, a_left_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -E / cell_size ** 2
+                a_matrix[3, a_left_index] += E / cell_size ** 2
 
                 #Ux
-                a_matrix[3, a_left_index] += ux / (2.0 * h)
-                a_matrix[4, a_diagonal_index] += -ux / (2.0 * h)
+                a_matrix[3, a_left_index] += adv_u / (2.0 * cell_size)
+                a_matrix[4, a_diagonal_index] += -adv_u / (2.0 * cell_size)
 
             if not in_water[a_right_index]:
                 #Ex
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[3, a_left_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
+                a_matrix[3, a_left_index] += E / cell_size ** 2
 
                 #Ux
-                a_matrix[3, a_left_index] += -ux / (2.0 * h)
+                a_matrix[3, a_left_index] += -adv_u / (2.0 * cell_size)
 
             if not in_water[a_left_index]:
                 #Ex
-                a_matrix[4, a_diagonal_index] += -2.0 * E / h ** 2
-                a_matrix[5, a_right_index] += E / h ** 2
+                a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
+                a_matrix[5, a_right_index] += E / cell_size ** 2
 
                 #Ux
-                a_matrix[5, a_right_index] += ux / (2.0 * h)
+                a_matrix[5, a_right_index] += adv_u / (2.0 * cell_size)
 
             #K
-            a_matrix[4, a_diagonal_index] += -k
+            a_matrix[4, a_diagonal_index] += -source_point_data['KPS']
 
             if not in_water[a_up_index]:
                 a_matrix[1, a_up_index] = 0
@@ -190,18 +201,21 @@ def marine_water_quality(n, m, in_water, E, ux, uy, point_source, h,
     LOGGER.info('Building sparse matrix from diagonals.')
 
     matrix = scipy.sparse.spdiags(a_matrix,
-        [-2 * m, -m, -2, -1, 0, 1, 2, m, 2 * m], n * m, n * m, "csc")
+        [-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols], 
+         n_rows * n_cols, n_rows * n_cols, "csc")
     LOGGER.info('generating preconditioner via sparse incomplete lu decomposition')
     #normally factor will use m*(n*m) extra space, we restrict to 
     #\sqrt{m}*(n*m) extra space
-    P = scipy.sparse.linalg.spilu(matrix, fill_factor=int(math.sqrt(m)))
+    P = scipy.sparse.linalg.spilu(matrix, fill_factor=int(np.sqrt(n_cols)))
     LOGGER.info('Solving via gmres iteration')
     #create linear operator for precondioner
     M_x = lambda x: P.solve(x)
-    M = scipy.sparse.linalg.LinearOperator((n * m, n * m), M_x)
+    M = scipy.sparse.linalg.LinearOperator((n_rows * n_cols, n_rows * n_cols), M_x)
     result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
-    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed and done for %s)' % \
-                (point_source['id']))
+    LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
+
+    #Result is a 1D array of all values, put it back to 2D
+    result.resize(n_rows,n_cols)
     return result
 
 #This part is for command line invocation and allows json objects to be passed
