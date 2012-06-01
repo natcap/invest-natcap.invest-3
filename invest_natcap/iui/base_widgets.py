@@ -842,12 +842,25 @@ class FileEntry(DynamicText):
         are subclasses of QtGui.QWidget: a label (QtGui.QLabel), a textfield
         for the URI (QtGui.QLineEdit), and a button to engage the file dialog
         (a custom FileButton object ... Qt doesn't have a 'FileWidget' to 
-        do this for us, hence the custom implementation)."""
+        do this for us, hence the custom implementation).
+
+        Note that the FileEntry object is also used for folder elements.  The
+        only differentiation between the two is that actual file elements have
+        attributes['type'] == 'file', whereas folder elements have
+        attributes['type'] == 'folder'.  This type influences the type of dialog
+        presented to the user when the 'open' button is clicked in the UI and it
+        affects default validation for the element."""
 
     def __init__(self, attributes):
         """initialize the object"""
+        # Set default validation based on whether this element is for a file or
+        # a folder.
         if 'validateAs' not in attributes:
-            attributes['validateAs'] = {"type": 'exists'}
+            if attributes['type'] == 'folder':
+                validate_type = 'folder'
+            else:  # type is assumed to be file
+                validate_type = 'exists'
+            attributes['validateAs'] = {"type": validate_type}
         super(FileEntry, self).__init__(attributes)
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.addElement(self.button)
