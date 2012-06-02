@@ -191,7 +191,7 @@ def execute(args):
         LOGGER.warn("Warning, cells aren't square, so the results of the solver will be incorrect")
 
     #Converting from 1/day to 1/sec
-    kps_sec = kps/86400.0
+    kps_sec = args['kps']/86400.0
 
     concentration_array = \
         marine_water_quality_core.diffusion_advection_solver(source_point_values,
