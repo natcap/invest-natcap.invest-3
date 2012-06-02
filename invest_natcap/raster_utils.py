@@ -25,6 +25,7 @@ def calculate_raster_stats(ds):
 
     for band_number in range(ds.RasterCount):
         band = ds.GetRasterBand(band_number+1)
+        nodata = band.GetNoDataValue()
         LOGGER.info('in band %s' % band)
         #Use this for initialization
         first_value = band.ReadAsArray(0,0,1,1)
