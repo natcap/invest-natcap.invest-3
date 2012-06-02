@@ -102,7 +102,7 @@ def execute(args):
             args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
         biophysical_args['wave_base_data'] = \
             extrapolate_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'new_NAmerica_WestCoast_4m.txt')
+                                  + os.sep + 'NAmerica_WestCoast_4m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
@@ -137,6 +137,17 @@ def execute(args):
         biophysical_args['wave_base_data'] = \
             extrapolate_wave_data(args['wave_base_data_uri']
                                   + os.sep + 'Global_WestHemi_30m.txt')
+        biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
+        biophysical_args['analysis_area_extract'] = \
+            ogr.Open(analysis_area_extract_path)
+    elif args['analysis_area_uri'] == 'Global':
+        analysis_area_path = \
+            args['wave_base_data_uri'] + os.sep + 'Global.shp'
+        analysis_area_extract_path = \
+            args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
+        biophysical_args['wave_base_data'] = \
+            extrapolate_wave_data(args['wave_base_data_uri']
+                                  + os.sep + 'Global_WW3.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
