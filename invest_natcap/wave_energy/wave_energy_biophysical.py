@@ -140,6 +140,17 @@ def execute(args):
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
+    elif args['analysis_area_uri'] == 'Global':
+        analysis_area_path = \
+            args['wave_base_data_uri'] + os.sep + 'Global.shp'
+        analysis_area_extract_path = \
+            args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
+        biophysical_args['wave_base_data'] = \
+            extrapolate_wave_data(args['wave_base_data_uri']
+                                  + os.sep + 'Global_WW3.txt')
+        biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
+        biophysical_args['analysis_area_extract'] = \
+            ogr.Open(analysis_area_extract_path)
     else:
         LOGGER.debug('Analysis Area : %s', args['analysis_area_uri'])
         LOGGER.error('Analysis Area ERROR.')
@@ -190,11 +201,8 @@ def extrapolate_wave_data(wave_file_uri):
     key = None
 
     #get the periods and heights 
-    wave_file.readline() #skipping first I,J line
     wave_periods = wave_file.readline().split(',')
     wave_heights = wave_file.readline().split(',')
-
-    wave_file.seek(0) #reset to the first line in the file
 
     while True:
         line = wave_file.readline()
@@ -215,9 +223,6 @@ def extrapolate_wave_data(wave_file_uri):
 
             key = (int(line.split(',')[1]), int(line.split(',')[3]))
 
-            #Skip the next two lines that are period and height
-            wave_file.readline()
-            wave_file.readline()
         else:
             wave_array.append(line.split(','))
 

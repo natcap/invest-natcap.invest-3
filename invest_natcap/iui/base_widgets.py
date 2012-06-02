@@ -380,8 +380,21 @@ class DynamicPrimitive(DynamicElement):
             return str(self.value())
 
     def getOutputValue(self):
+        """Return the output value of this element, applying any necessary
+            filters.  This function is intended to be called when assembling the
+            output dictionary.  Returns the appropriate output value of this
+            element."""
         if 'args_id' in self.attributes and self.isEnabled():
             value = self.value()
+
+            # Check to see if the element should be passed if it's empty.
+            if len(value) == 0:
+                try:
+                    if self.attributes['returns']['ifEmpty'] == 'pass':
+                        return None
+                except KeyError:
+                    pass
+
             if value != '' and value != None and not isinstance(value, dict):
                 return self.cast_value()
             return value
@@ -396,7 +409,8 @@ class DynamicPrimitive(DynamicElement):
         self.error_button.set_error(msg)
 
     def has_error(self):
-        if str(self.error_button.error_text) == '':
+        if str(self.error_button.error_text) == '' or\
+           not self.error_button.isEnabled():
             return False
         return True
         
@@ -441,7 +455,6 @@ class InformationButton(QtGui.QPushButton):
         self.pressed.connect(self.show_info_popup)
         self.setFlat(True)
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
-        self.setIconSize(QtCore.QSize(22,22))
 
     def show_info_popup(self):
         """Show the information popup.  This manually (programmatically) enters
@@ -512,7 +525,6 @@ class ErrorButton(InformationButton):
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, button_icon)))
         self.setFlat(button_is_flat)
         QtGui.QWidget.setEnabled(self, True)  # enable the button; validation has completed
-        self.setIconSize(QtCore.QSize(22,22))
 
     def build_contents(self):
         """Take the python string components of this instance of
@@ -624,30 +636,25 @@ class DynamicText(LabeledElement):
         #Connect the textfield's textChanged signal to the toggle() function.
         self.textField.textChanged.connect(self.toggle)
 
+
     def toggle(self):
         """Toggle all elements associated with this element's ID.
-            
+
             This function has several purposes:
-              - It instructs the root element to update its requirement 
+              - It instructs the root element to update its requirement
                 notification based on the current status of all elements
               - It sets the backgroundColor of this object's label if its
                 completion requirements have not been met
-              - It instructs the root element to toggle all other elements 
+              - It instructs the root element to toggle all other elements
                 appropriately.
-                
+
             returns nothing."""
 
-        #If the user has already pressed the OK button and some text is updated,
-        #we need to check all other elements and update the main window 
-        #notifications accordingly.
-        if self.isEnabled():
-            if self.isRequired() and not self.requirementsMet():
-                self.setBGcolorSatisfied(False)
-            else:
-                self.setBGcolorSatisfied(True)
-
-        #This function attempts to enable or disable elements as appropriate.
+        # Enable/disable necessary elements before validating.
         self.setState(self.requirementsMet(), includeSelf=False)
+        self.setBGcolorSatisfied(True)  # assume valid until validation fails
+        self.validate()
+
 
     def setValidateField(self, regexp):
         """Set input validation on the text field to conform with the input
@@ -735,11 +742,6 @@ class DynamicText(LabeledElement):
         
             returns a string."""
         value = self.textField.text()
-        if 'returns' in self.attributes:
-            if 'ifEmpty' in self.attributes['returns']:
-                if self.attributes['returns']['ifEmpty'] == 'pass':
-                    return None
-
         return value
 
     def setValue(self, text):
@@ -759,8 +761,6 @@ class DynamicText(LabeledElement):
 
     def updateLinks(self, rootPointer):
         LabeledElement.updateLinks(self, rootPointer)
-
-        self.textField.editingFinished.connect(self.validate)
         
 class Container(QtGui.QGroupBox, DynamicGroup):
     """Class Container represents a QGroupBox (which is akin to the HTML widget
@@ -844,12 +844,25 @@ class FileEntry(DynamicText):
         are subclasses of QtGui.QWidget: a label (QtGui.QLabel), a textfield
         for the URI (QtGui.QLineEdit), and a button to engage the file dialog
         (a custom FileButton object ... Qt doesn't have a 'FileWidget' to 
-        do this for us, hence the custom implementation)."""
+        do this for us, hence the custom implementation).
+
+        Note that the FileEntry object is also used for folder elements.  The
+        only differentiation between the two is that actual file elements have
+        attributes['type'] == 'file', whereas folder elements have
+        attributes['type'] == 'folder'.  This type influences the type of dialog
+        presented to the user when the 'open' button is clicked in the UI and it
+        affects default validation for the element."""
 
     def __init__(self, attributes):
         """initialize the object"""
+        # Set default validation based on whether this element is for a file or
+        # a folder.
         if 'validateAs' not in attributes:
-            attributes['validateAs'] = {"type": 'exists'}
+            if attributes['type'] == 'folder':
+                validate_type = 'folder'
+            else:  # type is assumed to be file
+                validate_type = 'exists'
+            attributes['validateAs'] = {"type": validate_type}
         super(FileEntry, self).__init__(attributes)
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.addElement(self.button)
@@ -865,7 +878,13 @@ class FileEntry(DynamicText):
         if os.path.isabs(text):
             self.textField.setText(text)
         else:
-            self.textField.setText(os.path.abspath(INVEST_ROOT + text))
+            # If the path was saved as blank, we should set the current text
+            # field to be blank.  Otherwise, the path should be considered to be
+            # relative to the InVEST root.
+            if text == '':
+                self.textField.setText('')
+            else:
+                self.textField.setText(os.path.abspath(INVEST_ROOT + text))
 
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.

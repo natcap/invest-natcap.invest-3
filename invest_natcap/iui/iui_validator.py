@@ -481,10 +481,37 @@ class OGRChecker(TableChecker):
 
             if 'projection' in layer_dict:
                 reference = self.layer.GetSpatialRef()
+
+                # Validate projection units if the user specifies it.
+                if 'units' in layer_dict['projection']:
+                    linear_units = reference.GetLinearUnits()
+                    if layer_dict['projection']['units'] == 'meters':
+                        if linear_units != 1.0:
+                            return str('Shapefile layer %s must be projected' +
+                                ' in meters') % layer_name
+                    elif layer_dict['projection']['units'] == 'latLong':
+                        if linear_units == 1.0:
+                            return str('Shapefile layer %s must be projected' +
+                                ' in lat/long') % layer_name
+
+                # Validate whether the layer should be projected
                 projection = reference.GetAttrValue('PROJECTION')
-                if projection != layer_dict['projection']:
-                    return str('Shapefile layer ' + layer_name + ' must be ' +
-                        'projected as ' + layer_dict['projection'])
+                if 'exists' in layer_dict['projection']:
+                    should_be_projected = layer_dict['projection']['exists']
+                    if bool(projection) != should_be_projected:
+                        if not should_be_projected:
+                            negate_string = 'not'
+                        else:
+                            negate_string = ''
+                        return str('Shapefile layer %s should %s be' +
+                                   'projected') % (layer_name, negate_string)
+
+                # Validate whether the layer's projection matches the
+                # specified projection
+                if 'name' in layer_dict['projection']:
+                    if projection != layer_dict['projection']['name']:
+                        return str('Shapefile layer ' + layer_name + ' must be ' +
+                            'projected as ' + layer_dict['projection']['name'])
 
             if 'datum' in layer_dict:
                 reference = self.layer.GetSpatialRef()
