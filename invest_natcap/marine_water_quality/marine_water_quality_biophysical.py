@@ -59,7 +59,7 @@ def execute(args):
     LOGGER.info("Creating grid based on the AOI polygon")
     pixel_size = args['pixel_size']
     #the nodata value will be a min float
-    nodata_out = float(np.finfo(np.float32).min)
+    nodata_out = -1.0
     raster_out_uri = os.path.join(args['workspace'],'concentration.tif')
     raster_out = raster_utils.create_raster_from_vector_extents(pixel_size, 
         pixel_size, gdal.GDT_Float32, nodata_out, raster_out_uri, aoi_poly)
@@ -200,5 +200,10 @@ def execute(args):
 
     raster_out_band = raster_out.GetRasterBand(1)
     raster_out_band.WriteArray(concentration_array, 0, 0)
+
+    raster_utils.calculate_raster_stats(raster_out)
+
+    #Set all the land areas and undefined tidal and adv areas to nodata
+    gdal.RasterizeLayer(raster_out, [1], land_layer, burn_values=[nodata])
 
     LOGGER.info("Done with MWQ execute")
