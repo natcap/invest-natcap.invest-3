@@ -878,7 +878,13 @@ class FileEntry(DynamicText):
         if os.path.isabs(text):
             self.textField.setText(text)
         else:
-            self.textField.setText(os.path.abspath(INVEST_ROOT + text))
+            # If the path was saved as blank, we should set the current text
+            # field to be blank.  Otherwise, the path should be considered to be
+            # relative to the InVEST root.
+            if text == '':
+                self.textField.setText('')
+            else:
+                self.textField.setText(os.path.abspath(INVEST_ROOT + text))
 
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
