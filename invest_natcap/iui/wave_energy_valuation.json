@@ -75,7 +75,7 @@
                     "id" : "wave_data",
                     "args_id": "wave_data_shape_path",
                     "type": "file",
-                    "label": "Wave Data Shapefile",
+                    "label": "Wave Data Shapefile (NOTE:This shapefile should be projected in Meters so that distances can be calculated correctly. To ensure this an AOI projected in Meters should be provided during the Biophysical run.)",
                     "defaultValue": "./WaveEnergy/Intermediate/WEM_InputOutput_Pts.shp",
                     "required": true,
                     "validateAs": {"type":"OGR",
