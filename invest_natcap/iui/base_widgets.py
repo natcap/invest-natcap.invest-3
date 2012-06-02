@@ -380,8 +380,21 @@ class DynamicPrimitive(DynamicElement):
             return str(self.value())
 
     def getOutputValue(self):
+        """Return the output value of this element, applying any necessary
+            filters.  This function is intended to be called when assembling the
+            output dictionary.  Returns the appropriate output value of this
+            element."""
         if 'args_id' in self.attributes and self.isEnabled():
             value = self.value()
+
+            # Check to see if the element should be passed if it's empty.
+            if len(value) == 0:
+                try:
+                    if self.attributes['returns']['ifEmpty'] == 'pass':
+                        return None
+                except KeyError:
+                    pass
+
             if value != '' and value != None and not isinstance(value, dict):
                 return self.cast_value()
             return value
@@ -396,7 +409,8 @@ class DynamicPrimitive(DynamicElement):
         self.error_button.set_error(msg)
 
     def has_error(self):
-        if str(self.error_button.error_text) == '':
+        if str(self.error_button.error_text) == '' or\
+           not self.error_button.isEnabled():
             return False
         return True
         
@@ -638,6 +652,7 @@ class DynamicText(LabeledElement):
 
         # Enable/disable necessary elements before validating.
         self.setState(self.requirementsMet(), includeSelf=False)
+        self.setBGcolorSatisfied(True)  # assume valid until validation fails
         self.validate()
 
 
@@ -727,11 +742,6 @@ class DynamicText(LabeledElement):
         
             returns a string."""
         value = self.textField.text()
-        if 'returns' in self.attributes:
-            if 'ifEmpty' in self.attributes['returns']:
-                if self.attributes['returns']['ifEmpty'] == 'pass':
-                    return None
-
         return value
 
     def setValue(self, text):

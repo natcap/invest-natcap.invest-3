@@ -109,11 +109,13 @@ class PollinationValuationTest(PollinationTest):
                      'wild_pollination_proportion': 1}
 
         self.intermediate_rasters = {'workspace_subfolder': 'intermediate',
-                                     'raster_uri_base': ['frm_val'],
+                                     'raster_uri_base': ['frm_val_sum',
+                                        'frm_val_Apis', 'frm_val_Bombus'],
                                      'uri_mid' : ['']}
 
         self.output_rasters = {'workspace_subfolder': 'output',
-                               'raster_uri_base': ['sup_val'],
+                               'raster_uri_base': ['sup_val_sum',
+                                    'sup_val_Apis', 'sup_val_Bombus'],
                                'uri_mid': ['']}
 
         # The valuation component needs to be started with the appropriate
@@ -142,9 +144,9 @@ class PollinationValuationTest(PollinationTest):
         pollination_valuation.execute(self.args)
         self.assert_pollination_rasters(self.biophysical_sample_dir)
 
-class Pollination30mSmokeTest(PollinationBiophysicalTest):
+class PollinationSmokeTest(PollinationBiophysicalTest):
     """To only run this test class at the command line, do this:
-       $ nosetests -vs pollination_biophysical_test.py:Pollination30mSmokeTest.test_ag_30m_smoke
+       $ nosetests -vs pollination_biophysical_test.py:PollinationSmokeTest.test_ag_30m_smoke
 
        To run other tests, run:
        $ nosetests -vs pollination_biophysical_test.py:Pollination{Biophysical,Valuation}Test
@@ -165,4 +167,18 @@ class Pollination30mSmokeTest(PollinationBiophysicalTest):
         pollination_biophysical.execute(self.args)
         pollination_valuation.execute(self.value_args)
 
+    def test_ag_200m_smoke(self):
+        self.args['ag_classes'] = str('67 68 71 72 73 74 75 76 78 79 80 81 82'
+            + ' 83 84 85 88 90 91 92')
+        self.args['landuse_cur_uri'] =\
+            'data/pollination/samp_input/landuse_cur_200m.tif'
+        pollination_biophysical.execute(self.args)
+        pollination_valuation.execute(self.value_args)
+
+
+    def test_noag_200m_smoke(self):
+        self.args['landuse_cur_uri'] =\
+            'data/pollination/samp_input/landuse_cur_200m.tif'
+        pollination_biophysical.execute(self.args)
+        pollination_valuation.execute(self.value_args)
 
