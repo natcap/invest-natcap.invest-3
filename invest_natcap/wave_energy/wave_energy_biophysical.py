@@ -102,7 +102,7 @@ def execute(args):
             args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
         biophysical_args['wave_base_data'] = \
             extrapolate_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'NAmerica_WestCoast_4m.txt')
+                                  + os.sep + 'new_NAmerica_WestCoast_4m.txt')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
@@ -190,11 +190,8 @@ def extrapolate_wave_data(wave_file_uri):
     key = None
 
     #get the periods and heights 
-    wave_file.readline() #skipping first I,J line
     wave_periods = wave_file.readline().split(',')
     wave_heights = wave_file.readline().split(',')
-
-    wave_file.seek(0) #reset to the first line in the file
 
     while True:
         line = wave_file.readline()
