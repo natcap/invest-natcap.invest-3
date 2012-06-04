@@ -3,6 +3,7 @@ pull from data passed in by aquaculture_biophysical and aquaculture_valuation'''
 
 import os
 import math
+import datetime
 
 from osgeo import ogr
 from osgeo import gdal
@@ -138,7 +139,7 @@ def execute(args):
         layer.SetFeature(feature)
     
     #Now, want to build the HTML table of everything we have calculated to this point
-    create_HTML_table(cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
+    create_HTML_table(args['farm_op_dict'], cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
                       farms_npv)
    
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
@@ -286,8 +287,8 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     
     return valuations
 
-def create_HTML_table (cycle_history, sum_proc_weight, proc_weight, do_valuation, 
-                       farms_npv):
+def create_HTML_table (farm_op_dict, cycle_history, sum_proc_weight, proc_weight, 
+                       do_valuation, farms_npv):
     '''Inputs:
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
                 contains 3 things- (day of outplanting, day of harvest, harvest weight)
