@@ -911,12 +911,12 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
             mult_matrix[height_max_index:, :] = 0
 
         #Divide the matrix by 5 to get the yearly values
-        valid_array = np.divide(mult_matrix, 5.0)
+        #valid_array = np.divide(mult_matrix, 5.0)
 
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero. So here
         #we drive any negative values to zero.
-        valid_array = np.where(valid_array < 0, 0, valid_array)
+        valid_array = np.where(mult_matrix < 0, 0, mult_matrix)
 
         #Sum all of the values from the matrix to get the total 
         #captured wave energy and convert into mega watts

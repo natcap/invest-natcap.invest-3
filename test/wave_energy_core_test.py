@@ -410,14 +410,14 @@ class TestWaveEnergy(unittest.TestCase):
         #A dictionary representing a mini version of what would be produced
         #from the wave watch text file
         wave_data = {'periods':[1, 2, 3, 4, 5], 'heights':[1, 2, 3, 4],
-                     'bin_matrix':{(520, 490):[[0, 10, 13, 9, 7],
-                                               [8, 15, 17, 13, 3],
-                                               [0, 3, 11, 9, 7],
-                                               [11, 17, 23, 19, 12]],
-                                   (521, 491):[[-1, 6.5, 13.3, 9, 7],
-                                               [-8, -5, 170, 13, 0],
-                                               [2, 3, 11.5, 9, 7.25],
-                                               [11, 17, 23, 19, 12]]
+                     'bin_matrix':{(520, 490):[[0, 2, 2.6, 1.8, 1.4],
+                                               [1.6, 3, 3.4, 2.6, .6],
+                                               [0, .6, 2.2, 1.8, 1.4],
+                                               [2.2, 3.4, 4.6, 3.8, 2.4]],
+                                   (521, 491):[[-.2, 1.3, 2.66, 1.8, 1.4],
+                                               [-1.6, -1, 34, 2.6, 0],
+                                               [.4, .6, 2.3, 1.8, 1.45],
+                                               [2.2, 3.4, 4.6, 3.8, 2.4]]
                                    }
                     }
         #An interpolated object from machine performace and wave_data ranges

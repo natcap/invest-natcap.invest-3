@@ -113,13 +113,9 @@ def format_ops_table(op_path, farm_ID):
     #there, then tell the dictreader to set up a reader with dictionaries of 
     #only those fields, where the overarching dictionary uses the Farm ID as the key for each of the sub dictionaries
     fieldnames =  line.split(',')
-    #fieldnames.remove('Total mass in farm (kg)')
-    #fieldnames.remove('Total dressed wt.')
-    #fieldnames.remove('Total value')
-
     
     reader = csv.DictReader(csv_file, fieldnames=fieldnames)
-    
+
     for row in reader:
         
         sub_dict = {}
@@ -131,12 +127,14 @@ def format_ops_table(op_path, farm_ID):
         del sub_dict['Total mass in farm (kg)']
         del sub_dict['Total dressed wt.']
         del sub_dict['Total value']
-        new_dict_op[row[farm_ID]] = sub_dict
+        
+        if row[farm_ID]!= '':
+            new_dict_op[row[farm_ID]] = sub_dict
     
     ff_aqua_args['farm_op_dict'] = new_dict_op
-    
-    #print general_ops
-    
+
+    print new_dict_op
+
     #add the gen args in
     for key in general_ops.keys():
         ff_aqua_args[key] = general_ops[key]    
