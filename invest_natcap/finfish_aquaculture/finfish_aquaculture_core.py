@@ -137,7 +137,9 @@ def execute(args):
         
         layer.SetFeature(feature)
     
-    #Now, want to build the HTML table
+    #Now, want to build the HTML table of everything we have calculated to this point
+    create_HTML_table(cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
+                      farms_npv)
    
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -283,3 +285,52 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
             valuations[f] += npv /1000
     
     return valuations
+
+def create_HTML_table (cycle_history, sum_proc_weight, proc_weight, do_valuation, 
+                       farms_npv):
+    '''Inputs:
+        cycle_history: dictionary mapping farm ID->list of tuples, each of which 
+                contains 3 things- (day of outplanting, day of harvest, harvest weight)
+        sum_proc_weight: dictionary which holds a mapping from farm ID->total processed 
+                weight of each farm 
+        proc_weight: dictionary which holds a farm->list mapping, where the list holds 
+                the individual tpw for all cycles that the farm completed
+        do_valuation: boolean variable that says whether or not valuation is desired
+        farms_npv: dictionary with a farm-> float mapping, where each float is the 
+                net processed value of the fish processed on that farm, in $1000s 
+                of dollars.
+    
+       Output:
+        HTML file: contains 3 tables that summarize inputs and outputs for the duration
+            of the model. If valuation is not desired, then those cells designated for
+            valuation will be highlighted in red.
+            - Input Table: Farm Operations provided data, including Farm ID #, Cycle
+                    Number, weight of fish at start, weight of fish at harvest, number 
+                    of fish in farm, start day for growing, and length of fallowing period
+            - Output Table 1: Farm Harvesting data, including a summary table for each 
+                    harvest cycle of each farm. Will show Farm ID, cycle number, days
+                    since outplanting date, harvested weight, net revenue, outplant day,
+                    and year.
+            - Output Table 2: Model outputs for each farm, including Farm ID, net present
+                    value, number of completed harvest cycles, and total volume harvested.
+    '''
+    
+    filename = "HarvestResults_[" + datetime.today() + "].html"
+    file = open(filename, "w")
+    
+    file.write("<html>")
+    file.write("<title>" + "Marine InVEST" + "</title>")
+    file.write("<CENTER><H1>" + "Aquaculture Model (Finfish Harvest)" + "</H1></CENTER>")
+    file.write("<br>")
+    file.write("This page contains results from running the Marine InVEST Finfish \
+    Aquaculture model." + "<p>" + "Cells highlighted in yellow are values that were \
+    also populated in the attribute table of the netpens feature class.  Cells \
+    highlighted in red should be interpreted as null values since valuation was not \
+    selected.")
+    file.write("<br><br>")
+    file.write("<HR>")
+    
+    
+    
+    file.write("</html>")
+    
