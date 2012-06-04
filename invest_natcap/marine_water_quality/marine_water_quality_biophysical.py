@@ -18,7 +18,11 @@ import scipy.linalg
 import pylab
 
 from invest_natcap import raster_utils
-import marine_water_quality_core
+try:
+    import marine_water_quality_core
+except ImportError:
+    from invest_natcap.marine_water_quality import marine_water_quality_core
+
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
