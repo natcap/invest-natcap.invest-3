@@ -1,6 +1,7 @@
 """A collection of GDAL dataset and raster utilities"""
 
 import logging
+import itertools
 
 from osgeo import gdal
 from osgeo import osr
@@ -486,10 +487,14 @@ def vectorize_points(shapefile, datasource_field, raster):
        """
 
     #Define the initial bounding box
+    LOGGER.info("vectorizing points")
     gt = raster.GetGeoTransform()
     #order is left, top, right, bottom of rasterbounds
     bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
                     gt[3] + gt[5] * raster.RasterYSize]
+
+    LOGGER.debug("bounding_box %s" % bounding_box)
+    LOGGER.debug("gt %s" % str(gt))
 
     def in_bounds(point):
         return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
@@ -512,14 +517,25 @@ def vectorize_points(shapefile, datasource_field, raster):
     point_array = np.array(point_list)
     value_array = np.array(value_list)
 
-    #Create grid points for interpolation outputs later
-    #top-bottom:y_stepsize, left-right:x_stepsize
-    grid_y, grid_x = np.mgrid[bounding_box[1]:bounding_box[3]:gt[5],
-                              bounding_box[0]:bounding_box[2]:gt[1]]
-
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
 
-    raster_out_array = scipy.interpolate.griddata(point_array, 
-        value_array, (grid_y, grid_x), 'linear', nodata)
-    band.WriteArray(raster_out_array,0,0)
+    LOGGER.info("Interpolating grid data")
+    interpolator = \
+        scipy.interpolate.LinearNDInterpolator(point_array, value_array, nodata)
+
+    #Create grid points for interpolation outputs later
+    #top-bottom:y_stepsize, left-right:x_stepsize
+    grid_x = np.arange(bounding_box[0],bounding_box[2], gt[1])
+
+    for row in range(raster.RasterYSize):
+        LOGGER.debug(row)
+        grid_y = [bounding_box[1]+gt[5]*row]
+        #LOGGER.debug(grid_x)
+        #LOGGER.debug(grid_y)
+        #Create a list of y,x pairs 
+        interpolating_points = list(itertools.product(grid_y,grid_x))
+        #LOGGER.debug("interpolating_points %s" % interpolating_points)
+        raster_out_row = interpolator(interpolating_points)
+        band.WriteArray(np.array([raster_out_row]),0,row)
+    LOGGER.info("Writing result to output array")
