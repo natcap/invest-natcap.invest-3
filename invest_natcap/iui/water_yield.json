@@ -50,8 +50,8 @@
                     "id" : "plant_available_water_fraction",
                     "args_id" : "pawc_uri",
                     "type": "folder",
-                    "label": "Precipitation",
-                    "defaultValue": "./Base_Data/Freshwater/precip",
+                    "label": "Plant Available Water Fraction",
+                    "defaultValue": "./Base_Data/Freshwater/pawc",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
