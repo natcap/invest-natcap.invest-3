@@ -2,20 +2,14 @@
 
 import sys
 import logging
-import re
 import os
 import time
-import math
 import csv
 
 from osgeo import ogr
 from osgeo import gdal
-import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
-from numpy.ma import masked_array
-import scipy.linalg
-import pylab
 
 from invest_natcap import raster_utils
 try:
