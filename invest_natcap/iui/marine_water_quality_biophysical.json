@@ -12,8 +12,8 @@
             "type": "list",
             "elements":[
                 {
-                    "id" : "workspace",
-                    "args_id" : "workspace_dir",
+                    "id" : "workspace_dir",
+                    "args_id" : "workspace",
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "./MarineWaterQuality",
