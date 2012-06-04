@@ -46,7 +46,8 @@ if platform.system() == 'Windows':
                         'invest_natcap.validator_core',
                         'invest_natcap.wave_energy',
                         'invest_natcap.pollination',
-                        'invest_natcap.finfish_aquaculture'],
+                        'invest_natcap.finfish_aquaculture',
+                        'invest_natcap.marine_water_quality'],
             #http://www.py2exe.org/index.cgi/ListOfOptions
             'skip_archive': True
             }
@@ -61,7 +62,8 @@ if platform.system() == 'Windows':
          'invest_timber.py',
          'invest_water_yield.py',
          'invest_hydropower_valuation.py',
-         'invest_water_scarcity.py']
+         'invest_water_scarcity.py',
+         'invest_marine_water_quality_biophysical.py']
 
     #Need to manually bring along the json configuration files to
     #the current build directory
@@ -74,7 +76,17 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/water_yield.json',
                'invest_natcap/iui/water_scarcity.json',
                'invest_natcap/iui/hydropower_valuation.json',
-               'invest_natcap/iui/pollination_biophysical.json'])]
+               'invest_natcap/iui/pollination_biophysical.json',
+               'invest_natcap/iui/marine_water_quality_biophysical.json']),
+        ('invest_natcap/iui',
+              ['invest_natcap/iui/dialog-close.png',
+               'invest_natcap/iui/dialog-ok.png',
+               'invest_natcap/iui/document-open.png',
+               'invest_natcap/iui/edit-undo.png',
+               'invest_natcap/iui/info.png',
+               'invest_natcap/iui/natcap_logo.png',
+               'invest_natcap/iui/validate-pass.png',
+               'invest_natcap/iui/validate-fail.png'])]
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
@@ -90,7 +102,8 @@ setup(name='invest_natcap',
                 'invest_natcap.validator_core',
                 'invest_natcap.wave_energy',
                 'invest_natcap.pollination',
-                'invest_natcap.finfish_aquaculture'],
+                'invest_natcap.finfish_aquaculture',
+                'invest_natcap.marine_water_quality'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",

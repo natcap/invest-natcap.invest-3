@@ -5,7 +5,7 @@ import scipy.sparse
 from scipy.sparse.linalg import spsolve
 import numpy as np
 
-def diffusion_advection_solver(source_point_data, in_water_array, 
+def diffusion_advection_solver(source_point_data, kps, in_water_array, 
                                tide_e_array, adv_u_array, 
                                adv_v_array, nodata, cell_size):
     """2D Water quality model to track a pollutant in the ocean.  Three input
@@ -14,10 +14,10 @@ def diffusion_advection_solver(source_point_data, in_water_array,
     
     source_point_data - dictionary of the form:
         { source_point_id_0: {'point': [row_point, col_point] (in gridspace),
-                            'KPS': float (decay?),
                             'WPS': float (loading?),
                             'point': ...},
           source_point_id_1: ...}
+    kps - absorption rate for the source point pollutants
     in_water_array - 2D numpy array of booleans where False is a land pixel and
         True is a water pixel.
     tide_e_array - 2D numpy array with tidal E values or nodata values, must
@@ -83,9 +83,10 @@ def diffusion_advection_solver(source_point_data, in_water_array,
                 a_matrix[4, a_diagonal_index] = 1
                 continue
 
-            if  a_diagonal_index == source_point_index:
+            if  a_diagonal_index in source_points:
                 a_matrix[4, a_diagonal_index] = 1
-                b_vector[a_diagonal_index] = source_point_data['WPS']
+                wps = source_points[a_diagonal_index]['WPS']
+                b_vector[a_diagonal_index] = wps
                 continue
 
             E = e_array_flat[a_diagonal_index]
@@ -187,7 +188,7 @@ def diffusion_advection_solver(source_point_data, in_water_array,
                 a_matrix[5, a_right_index] += adv_u / (2.0 * cell_size)
 
             #K
-            a_matrix[4, a_diagonal_index] += -source_point_data['KPS']
+            a_matrix[4, a_diagonal_index] += -kps
 
             if not in_water[a_up_index]:
                 a_matrix[1, a_up_index] = 0

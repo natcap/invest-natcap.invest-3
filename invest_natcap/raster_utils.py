@@ -25,21 +25,49 @@ def calculate_raster_stats(ds):
 
     for band_number in range(ds.RasterCount):
         band = ds.GetRasterBand(band_number+1)
+        nodata = band.GetNoDataValue()
         LOGGER.info('in band %s' % band)
         #Use this for initialization
-        first_value = band.ReadAsArray(0,0,1,1)
-        min_val = first_value[0]
-        max_val = min_val
+        min_val = None
+        max_val = None
         running_sum = 0.0
         running_sum_square = 0.0
+        valid_elements = 0
 
         for row in range(band.YSize):
             #Read row number 'row'
             row_array = band.ReadAsArray(0,row,band.XSize,1)
-            min_val = min(min_val,np.min(row_array))
-            max_val = max(max_val,np.max(row_array))
-            running_sum += np.sum(row_array)
-            running_sum_square += np.sum(row_array**2)
+            masked_row = np.ma.array(row_array, mask = row_array == nodata)
+            
+            try:
+                #Here we're using the x[~x.mask] notation to cause
+                #an exception to be thrown if the entire array is masked
+                min_row = np.min(masked_row[~masked_row.mask])
+                max_row = np.max(masked_row[~masked_row.mask])
+
+                #This handles the initial case where min and max aren't
+                #yet set.  And it's hard to initialize because the first
+                #value in the dataset might be nodata.
+                if min_val == None and max_val == None:
+                    min_val = min_row
+                    max_val = max_row
+
+                #By this point min and max_val are valid
+                min_val = min(min_val, np.min(min_row))
+                max_val = max(max_val, np.max(max_row))
+
+                #Sum and square only valid elements
+                running_sum += np.sum(masked_row[~masked_row.mask])
+                running_sum_square += np.sum(masked_row[~masked_row.mask]**2)
+
+                #Need to use the masked_row count to count the valid
+                #elements for an accurate measure of stdev and mean
+                valid_elements += masked_row.count()
+
+            except ValueError:
+                #If we get here it means we encountered a fully masked array
+                #okay since it just means it's all nodata values.
+                pass
 
         n_pixels = band.YSize * band.XSize
         mean = running_sum / float(n_pixels)

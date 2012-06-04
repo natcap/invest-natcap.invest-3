@@ -18,7 +18,11 @@ import scipy.linalg
 import pylab
 
 from invest_natcap import raster_utils
-import marine_water_quality_core
+try:
+    import marine_water_quality_core
+except ImportError:
+    from invest_natcap.marine_water_quality import marine_water_quality_core
+
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -35,6 +39,7 @@ def execute(args):
             of interest to run the model.  Will define the grid.
         args['pixel_size'] - float indicating pixel size in meters
             of output grid.
+        args['kps'] - float indicating decay rate of pollutant (units?)
         args['land_poly_uri'] - OGR polygon DataSource indicating areas where land
             is.
         args['source_points_uri'] - OGR point Datasource indicating point sources
@@ -58,7 +63,7 @@ def execute(args):
     LOGGER.info("Creating grid based on the AOI polygon")
     pixel_size = args['pixel_size']
     #the nodata value will be a min float
-    nodata_out = float(np.finfo(np.float32).min)
+    nodata_out = -1.0
     raster_out_uri = os.path.join(args['workspace'],'concentration.tif')
     raster_out = raster_utils.create_raster_from_vector_extents(pixel_size, 
         pixel_size, gdal.GDT_Float32, nodata_out, raster_out_uri, aoi_poly)
@@ -146,16 +151,18 @@ def execute(args):
             LOGGER.warn("%s is an id defined in the data table which is not found in the shapefile. Ignoring that point." % (point_id))
             continue
 
-        #This merges the current dictionary with a new one that includes KPS and WPS
+        #Convert WPS in kg/day to kg/s
+        wps_in_kilograms_sec = float(row['WPS'])/86400.0
+
+        #This merges the current dictionary with a new one that includes WPS
         source_point_values[point_id] = \
-            dict(source_point_values[point_id].items() + {
-                'KPS': float(row['KPS']),
-                'WPS': float(row['WPS'])}.items())
+            dict(source_point_values[point_id].items() + \
+                 {'WPS': wps_in_kilograms_sec}.items())
 
     LOGGER.info("Checking to see if all the points have KPS and WPS values")
     points_to_ignore = []
     for point_id in source_point_values:
-        if 'KPS' not in source_point_values[point_id]:
+        if 'WPS' not in source_point_values[point_id]:
             LOGGER.warn("point %s has no source parameters from the CSV.  Ignoring that point." %
                         point_id)
             #Can't delete out of the dictionary that we're iterating over
@@ -187,12 +194,20 @@ def execute(args):
     if abs(raster_out_gt[1]) != abs(raster_out_gt[5]):
         LOGGER.warn("Warning, cells aren't square, so the results of the solver will be incorrect")
 
+    #Converting from 1/day to 1/sec
+    kps_sec = args['kps']/86400.0
+
     concentration_array = \
         marine_water_quality_core.diffusion_advection_solver(source_point_values,
-        in_water_array, tide_e_array, adv_u_array, adv_v_array, nodata_out, 
-        cell_size)
+        kps_sec, in_water_array, tide_e_array, adv_u_array, adv_v_array, 
+        nodata_out, cell_size)
 
     raster_out_band = raster_out.GetRasterBand(1)
     raster_out_band.WriteArray(concentration_array, 0, 0)
+
+    raster_utils.calculate_raster_stats(raster_out)
+
+    #Set all the land areas and undefined tidal and adv areas to nodata
+    gdal.RasterizeLayer(raster_out, [1], land_layer, burn_values=[nodata])
 
     LOGGER.info("Done with MWQ execute")
