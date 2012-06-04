@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Marine Water Quality Biophysical",
-    "targetScript" : "invest_natcap.marine_water_quality.marine_water_quality_biophysical.py",
+    "targetScript" : "invest_natcap.marine_water_quality.marine_water_quality_biophysical",
     "modelName" : "marine_water_quality_biophysical",
     "localDocURI": "./documentation/marine_water_quality_biophysical.html",
     "height": 600,
