@@ -64,11 +64,15 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
         source_index = calc_index(*source_data['point'])
         source_points[source_index] = source_data
 
-    #iterate over the non-zero elments in grid to build the linear system
+    #Build up an array of valid indexes.  These are locations where there is
+    #water and well defined E and ADV points.
+    LOGGER.info('Building valid index lookup table.')
+    valid_indexes = in_water
+    valid_indexes *= e_array_flat != nodata
+    valid_indexes *= adv_u_flat != nodata
+    valid_indexes *= adv_v_flat != nodata
+
     LOGGER.info('Building diagonals for linear advection diffusion system.')
-    #Right now, just run for one source so we extract out the "first" source 
-    #point
-    source_point_index, source_point_data = source_points.items()[0]
     for i in range(n_rows):
         for j in range(n_cols):
             #diagonal element i,j always in bounds, calculate directly
@@ -79,8 +83,9 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
             a_right_index = calc_index(i, j + 1)
 
             #if land then s = 0 and quit
-            if not in_water[a_diagonal_index]:
+            if not valid_indexes[a_diagonal_index]:
                 a_matrix[4, a_diagonal_index] = 1
+                b_vector[a_diagonal_index] = nodata
                 continue
 
             if  a_diagonal_index in source_points:
@@ -92,15 +97,11 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
             E = e_array_flat[a_diagonal_index]
             adv_u = adv_u_flat[a_diagonal_index]
             adv_v = adv_v_flat[a_diagonal_index]
-            #check for nodata values
-            if nodata in [E, adv_u, adv_v]:
-                a_matrix[4, a_diagonal_index] = 1
-                continue
 
             #Build up terms
             #Ey
             if a_up_index > 0 and a_down_index > 0 and \
-                in_water[a_up_index] and in_water[a_down_index]:
+                valid_indexes[a_up_index] and valid_indexes[a_down_index]:
                 #Ey
                 a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
                 a_matrix[7, a_down_index] += E / cell_size ** 2
@@ -109,7 +110,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 #Uy
                 a_matrix[7, a_down_index] += adv_v / (2.0 * cell_size)
                 a_matrix[1, a_up_index] += -adv_v / (2.0 * cell_size)
-            if a_up_index < 0 and in_water[a_down_index]:
+            if a_up_index < 0 and valid_indexes[a_down_index]:
                 #we're at the top boundary, forward expansion down
                 #Ey
                 a_matrix[4, a_diagonal_index] += -E / cell_size ** 2
@@ -118,7 +119,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 #Uy
                 a_matrix[7, a_down_index] += adv_v / (2.0 * cell_size)
                 a_matrix[4, a_diagonal_index] += -adv_v / (2.0 * cell_size)
-            if a_down_index < 0 and in_water[a_up_index]:
+            if a_down_index < 0 and valid_indexes[a_up_index]:
                 #we're at the bottom boundary, forward expansion up
                 #Ey
                 a_matrix[4, a_diagonal_index] += -E / cell_size ** 2
@@ -127,14 +128,14 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 #Uy
                 a_matrix[1, a_up_index] += adv_v / (2.0 * cell_size)
                 a_matrix[4, a_diagonal_index] += -adv_v / (2.0 * cell_size)
-            if not in_water[a_up_index]:
+            if not valid_indexes[a_up_index]:
                 #Ey
                 a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
                 a_matrix[7, a_down_index] += E / cell_size ** 2
 
                 #Uy
                 a_matrix[7, a_down_index] += adv_v / (2.0 * cell_size)
-            if not in_water[a_down_index]:
+            if not valid_indexes[a_down_index]:
                 #Ey
                 a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
                 a_matrix[1, a_up_index] += E / cell_size ** 2
@@ -143,7 +144,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 a_matrix[1, a_up_index] += -adv_v / (2.0 * cell_size)
 
             if a_left_index > 0 and a_right_index > 0 and \
-                in_water[a_left_index] and in_water[a_right_index]:
+                valid_indexes[a_left_index] and valid_indexes[a_right_index]:
                 #Ex
                 a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
                 a_matrix[5, a_right_index] += E / cell_size ** 2
@@ -152,7 +153,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 #Ux
                 a_matrix[5, a_right_index] += adv_u / (2.0 * cell_size)
                 a_matrix[3, a_left_index] += -adv_u / (2.0 * cell_size)
-            if a_left_index < 0 and in_water[a_right_index]:
+            if a_left_index < 0 and valid_indexes[a_right_index]:
                 #we're on left boundary, expand right
                 #Ex
                 a_matrix[4, a_diagonal_index] += -E / cell_size ** 2
@@ -161,7 +162,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 a_matrix[5, a_right_index] += adv_u / (2.0 * cell_size)
                 a_matrix[4, a_diagonal_index] += -adv_u / (2.0 * cell_size)
                 #Ux
-            if a_right_index < 0 and in_water[a_left_index]:
+            if a_right_index < 0 and valid_indexes[a_left_index]:
                 #we're on right boundary, expand left
                 #Ex
                 a_matrix[4, a_diagonal_index] += -E / cell_size ** 2
@@ -171,7 +172,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 a_matrix[3, a_left_index] += adv_u / (2.0 * cell_size)
                 a_matrix[4, a_diagonal_index] += -adv_u / (2.0 * cell_size)
 
-            if not in_water[a_right_index]:
+            if not valid_indexes[a_right_index]:
                 #Ex
                 a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
                 a_matrix[3, a_left_index] += E / cell_size ** 2
@@ -179,7 +180,7 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 #Ux
                 a_matrix[3, a_left_index] += -adv_u / (2.0 * cell_size)
 
-            if not in_water[a_left_index]:
+            if not valid_indexes[a_left_index]:
                 #Ex
                 a_matrix[4, a_diagonal_index] += -2.0 * E / cell_size ** 2
                 a_matrix[5, a_right_index] += E / cell_size ** 2
@@ -190,13 +191,13 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
             #K
             a_matrix[4, a_diagonal_index] += -kps
 
-            if not in_water[a_up_index]:
+            if not valid_indexes[a_up_index]:
                 a_matrix[1, a_up_index] = 0
-            if not in_water[a_down_index]:
+            if not valid_indexes[a_down_index]:
                 a_matrix[7, a_down_index] = 0
-            if not in_water[a_left_index]:
+            if not valid_indexes[a_left_index]:
                 a_matrix[3, a_left_index] = 0
-            if not in_water[a_right_index]:
+            if not valid_indexes[a_right_index]:
                 a_matrix[5, a_right_index] = 0
 
     LOGGER.info('Building sparse matrix from diagonals.')
