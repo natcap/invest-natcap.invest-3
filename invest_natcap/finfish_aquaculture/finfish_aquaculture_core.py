@@ -121,8 +121,11 @@ def execute(args):
     #This will complete the valuation portion of the finfish aquaculture 
     #model, dependent on whether or not valuation is desired.
     if (bool(args['do_valuation']) == True):
-        farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
+        value_history, farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
                 proc_weight, cycle_history)
+    else:
+        value_history = None
+        farms_npv = None
    
     #And add it into the shape file
     layer.ResetReading()
@@ -139,8 +142,8 @@ def execute(args):
         layer.SetFeature(feature)
     
     #Now, want to build the HTML table of everything we have calculated to this point
-    create_HTML_table(args['farm_op_dict'], cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
-                      farms_npv)
+    create_HTML_table(args['farm_ID'], args['farm_op_dict'], cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
+                      farms_npv, farms_rev)
    
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -152,8 +155,6 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     cycle_history ={}
     tau = 0.08
     dur = float(dur)
-    
-    print farm_op_dict.keys()
     
     for f in range (1, len(farm_op_dict)+1):
         
@@ -208,16 +209,19 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
 
 def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
 
-    '''This will yield two outputs- a dictionary which will hold a mapping from every farm
-    (as identified by farm_ID) to the total processed weight of each farm, and a 
-    dictionary which will hold a farm->list mapping, where the list holds the
-    individual tpw for all cycles that the farm completed
-    
-    cycle_hisory: Farm->List of Type (day of outplanting, 
-                                      day of harvest, harvest weight (grams))'''
-    
+    '''   
+    Input: 
+        cycle_hisory: Farm->List of Type (day of outplanting, 
+                                      day of harvest, harvest weight (grams))                            
+    Output:
+        curr_cycle_totals_: dictionary which will hold a mapping from every farm
+                (as identified by farm_ID) to the total processed weight of each farm
+        indiv_tpw_totals: dictionary which will hold a farm->list mapping, where the list 
+                holds the individual tpw for all cycles that the farm completed
+    '''
+        
     curr_cycle_totals = {}
-    indiv_totals= {}
+    indiv_tpw_totals= {}
         
     for f in range (1, len(farm_op_dict)+1):
         
@@ -229,7 +233,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
         cycles_comp = len(cycle_history[f])
         farm_history = cycle_history[f]
         mort = float(mort)
-        indiv_totals[f] = []
+        indiv_tpw_totals[f] = []
         
         #We are starting this range at 0, and going to one less than the number of
         #cycles, since the list of cycles from the cycle calcs will start at index 0
@@ -249,12 +253,12 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
             curr_cy_tpw = (harvest_weight / 1000) * frac * f_num_fish * \
                             math.exp(e_exponent)
             
-            indiv_totals[f].append(curr_cy_tpw)
+            indiv_tpw_totals[f].append(curr_cy_tpw)
             curr_cycle_totals[f] += curr_cy_tpw
             
             print curr_cycle_totals
             
-    return (curr_cycle_totals, indiv_totals)
+    return (curr_cycle_totals, indiv_tpw_totals)
 
 def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
     
@@ -262,14 +266,24 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     farm-> float mapping, where each float is the net processed value of the fish
     processed on that farm, in $1000s of dollars.
     
-    cycle_hisory: Farm->List of Type (day of outplanting, 
-                                      day of harvest, harvest weight (grams))
-    proc_weight: Farm->List of TPW for each cycle (kilograms) '''
-    
+    Inputs:
+        cycle_hisory: Farm->List of Type (day of outplanting, 
+                                          day of harvest, harvest weight (grams))
+        proc_weight: Farm->List of TPW for each cycle (kilograms)
+        
+    Outputs:
+        val_history: dictionary which will hold a farm->list mapping, where the 
+                list holds tuples containing (Net Revenue, Net Present Value) for
+                each cycle completed by that farm
+        valuations: dictionary with a farm-> float mapping, where each float is the 
+                net processed value of the fish processed on that farm
+        '''
+    val_history = {}
     valuations = {}
     
     for f in range (1, len(cycle_history) + 1):
         
+        val_history[f] = []
         valuations[f] = 0
         
         #running from 0 to 1 less than the number of cycles that farm completed,
@@ -280,15 +294,18 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
             #the 2 refers to the placement of day of harvest in the tuple for each cycle
             t = cycle_history[f][c][1]
             
-            npv = tpw * (price_per_kg *(1 - frac_mrkt_price)) * (1 / (1 + discount) ** t)
-   
+            net_rev = tpw * (price_per_kg *(1 - frac_mrkt_price))
+            npv = net_rev * (1 / (1 + discount) ** t)
+            
+            val_history[f].append((net_rev, npv))
+            
             #divide by 1000, because the number we want to return is in thousands of dollars
             valuations[f] += npv /1000
     
-    return valuations
+    return val_history, valuations
 
-def create_HTML_table (farm_op_dict, cycle_history, sum_proc_weight, proc_weight, 
-                       do_valuation, farms_npv):
+def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_weight, 
+                       do_valuation, farms_npv, value_history):
     '''Inputs:
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
                 contains 3 things- (day of outplanting, day of harvest, harvest weight)
@@ -300,6 +317,8 @@ def create_HTML_table (farm_op_dict, cycle_history, sum_proc_weight, proc_weight
         farms_npv: dictionary with a farm-> float mapping, where each float is the 
                 net processed value of the fish processed on that farm, in $1000s 
                 of dollars.
+        farms_rev: dictionary which will hold a farm->list mapping, where the 
+                list holds the individual net revenue for all cycles that farm completed
     
        Output:
         HTML file: contains 3 tables that summarize inputs and outputs for the duration
@@ -331,7 +350,44 @@ def create_HTML_table (farm_op_dict, cycle_history, sum_proc_weight, proc_weight
     file.write("<br><br>")
     file.write("<HR>")
     
+    #Here starts the information being put into the first table
+    file.write("<H2>" + "Farm Operations (input)" + "</H2>")
+    file.write("<table border=\"1\", cellpadding=\"5\">")
     
+    str_headers = "<td>" + FID + "</td>"
+    inner_strings = []
     
+    for id in cycle_history.keys:
+        single_str = "<td>" + str(id) + "</td>"
+        
+        for info in farm_op_dict[id].keys:
+            
+            str_headers += "<td>" + str(info) + "</td>"
+            single_str += "<td>" + farm_op_dict[str(id)][str(info)] + "</td>"
+            
+        inner_strings.append(single_str)
+        str_headers += "</tr>"
+    
+    file.write(str_headers)
+    
+    for element in inner_strings:
+        file.write("<tr>")
+        file.write(element)
+        file.write("</tr>")
+            
+    file.write("</table>")
+    
+    #Here starts the second table
+    #For ease, am preloading a list with the headers for this table, since they aren't
+    #necessarily already input
+    
+    str_headers = ['Farm ID Number', 'Cycle Number', 'Days Since Outplanting Date', 
+                   'Harvested Weight', 'Net Revenue', 'Net Present Value', 'Outplant Day',
+                   'Outplant Year']
+    
+    for id in cycle_history.keys:
+        
+    
+    #end page
     file.write("</html>")
     
