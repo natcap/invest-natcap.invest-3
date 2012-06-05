@@ -156,6 +156,8 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     tau = 0.08
     dur = float(dur)
     
+    print farm_op_dict.keys()
+    
     for f in range (1, len(farm_op_dict)+1):
         
         #casting f to string because farm_op_dict came from biophysical with
@@ -357,13 +359,13 @@ def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_w
     str_headers = "<td>" + FID + "</td>"
     inner_strings = []
     
-    for id in cycle_history.keys:
-        single_str = "<td>" + str(id) + "</td>"
+    for id in farm_op_dict.keys():
+        single_str = "<td>" + id + "</td>"
         
-        for info in farm_op_dict[id].keys:
+        for info in farm_op_dict[id].keys():
             
             str_headers += "<td>" + str(info) + "</td>"
-            single_str += "<td>" + farm_op_dict[str(id)][str(info)] + "</td>"
+            single_str += "<td>" + farm_op_dict[id][str(info)] + "</td>"
             
         inner_strings.append(single_str)
         str_headers += "</tr>"
@@ -385,8 +387,49 @@ def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_w
                    'Harvested Weight', 'Net Revenue', 'Net Present Value', 'Outplant Day',
                    'Outplant Year']
     
-    for id in cycle_history.keys:
+    inner_strings = []
+    
+    for id in cycle_history.keys():
         
+        vars = []
+        for cycle in range(0, len(cycle_history[id])):
+        
+            #pre-load all values
+            cycle_num = cycle + 1
+            
+            curr_cycle = cycle_history[id][cycle]
+            outplant_date, harvest_date, harvest_weight = curr_cycle
+            
+            indiv_rev, indiv_npv = value_history[id][cycle]
+            
+            out_day = outplant_date % 365
+            out_year = outplant_date // 365 + 1
+            
+            vars = [cycle_num, curr_cycle, outplant_date, harvest_date, harvest_weight,
+                    indiv_rev, indiv_npv, out_day, out_year]
+        
+        str_line = ""
+        for element in vars:
+            str_line += "<td>"
+            str_line += str(element)
+            str_line += "</td>"
+        
+        inner_strings.append(str_line)
+    
+    #Write the second table itself
+    file.write("<table>")
+    file.write("<tr>")
+    for element in str_headers:
+        file.write("<td>")
+        file.write(element)
+        file.write("</td>")
+    file.write("</tr>")
+    
+    for element in inner_strings:
+        file.write("<tr>")
+        file.write(element)
+        file.write("</tr>")
+    file.write("</table>")
     
     #end page
     file.write("</html>")
