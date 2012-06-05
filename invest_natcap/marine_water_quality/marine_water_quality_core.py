@@ -90,7 +90,9 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
 
             if  a_diagonal_index in source_points:
                 a_matrix[4, a_diagonal_index] = 1
-                wps = source_points[a_diagonal_index]['WPS']
+                #Set wps to be the concentration per unit area.  This makes the solution
+                #invariate over different cell sizes
+                wps = source_points[a_diagonal_index]['WPS'] / cell_size ** 2
                 b_vector[a_diagonal_index] = wps
                 continue
 
