@@ -499,6 +499,14 @@ def vectorize_points(shapefile, datasource_field, raster):
     count = 0
     point_list = []
     value_list = []
+
+    #Calculate a small amount to perturb points by so that we don't
+    #get a linear Delauney triangle, the 1e-6 is larger than eps for
+    #floating point, but large enough not to cause errors in interpolation.
+    delta_difference = 1e-6 * min(abs(gt[1]),abs(gt[5]))
+    random_array = np.random.randn(layer.GetFeatureCount(),2)
+    random_offsets = random_array*delta_difference
+
     for feature_id in range(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
         geometry = feature.GetGeometryRef()
@@ -507,7 +515,8 @@ def vectorize_points(shapefile, datasource_field, raster):
         if in_bounds(point):
             value = feature.GetField(datasource_field)
             #Add in the numpy notation which is row, col
-            point_list.append([point[1],point[0]])
+            point_list.append([point[1]+random_offsets[feature_id,1],
+                               point[0]+random_offsets[feature_id,0]])
             value_list.append(value)
     point_array = np.array(point_list)
     value_array = np.array(value_list)
