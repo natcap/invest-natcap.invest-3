@@ -529,22 +529,16 @@ def vectorize_points(shapefile, datasource_field, raster):
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
 
-    LOGGER.info("Interpolating grid data")
-    interpolator = \
-        scipy.interpolate.LinearNDInterpolator(point_array, value_array, nodata)
-
     #Create grid points for interpolation outputs later
     #top-bottom:y_stepsize, left-right:x_stepsize
-    grid_x = np.arange(bounding_box[0],bounding_box[2], gt[1])
+    grid_y, grid_x = np.mgrid[bounding_box[1]:bounding_box[3]:gt[5],
+                              bounding_box[0]:bounding_box[2]:gt[1]]
 
-    for row in range(raster.RasterYSize):
-        LOGGER.debug(row)
-        grid_y = [bounding_box[1]+gt[5]*row]
-        #LOGGER.debug(grid_x)
-        #LOGGER.debug(grid_y)
-        #Create a list of y,x pairs 
-        interpolating_points = list(itertools.product(grid_y,grid_x))
-        #LOGGER.debug("interpolating_points %s" % interpolating_points)
-        raster_out_row = interpolator(interpolating_points)
-        band.WriteArray(np.array([raster_out_row]),0,row)
+    band = raster.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    LOGGER.info("Writing interpolating with griddata")
+    raster_out_array = scipy.interpolate.griddata(point_array, 
+        value_array, (grid_y, grid_x), 'linear', nodata)
     LOGGER.info("Writing result to output array")
+    band.WriteArray(raster_out_array,0,0)
