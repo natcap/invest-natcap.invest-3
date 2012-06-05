@@ -27,6 +27,16 @@
                     "defaultValue": "./carbon/Output/sequest.tif",
                     "validateAs": {"type": "GDAL"}
                 },
+		{
+		    "id": "carbon_price_units",
+		    "args_id": "carbon_price_units",
+		    "type": "dropdown",
+		    "label": "Price in terms of metric tons of",
+		    "options": ["Carbon (C)",
+				"Carbon Dioxide (CO2)"],
+		    "defaultValue": 0,
+		    "required": true
+		},
                 {
                     "id": "value",
                     "args_id": "V",
