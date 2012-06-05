@@ -1,6 +1,7 @@
 """A collection of GDAL dataset and raster utilities"""
 
 import logging
+import itertools
 
 from osgeo import gdal
 from osgeo import osr
@@ -486,10 +487,14 @@ def vectorize_points(shapefile, datasource_field, raster):
        """
 
     #Define the initial bounding box
+    LOGGER.info("vectorizing points")
     gt = raster.GetGeoTransform()
     #order is left, top, right, bottom of rasterbounds
     bounding_box = [gt[0], gt[3], gt[0] + gt[1] * raster.RasterXSize,
                     gt[3] + gt[5] * raster.RasterYSize]
+
+    LOGGER.debug("bounding_box %s" % bounding_box)
+    LOGGER.debug("gt %s" % str(gt))
 
     def in_bounds(point):
         return point[0] <= bounding_box[2] and point[0] >= bounding_box[0] \
@@ -499,6 +504,14 @@ def vectorize_points(shapefile, datasource_field, raster):
     count = 0
     point_list = []
     value_list = []
+
+    #Calculate a small amount to perturb points by so that we don't
+    #get a linear Delauney triangle, the 1e-6 is larger than eps for
+    #floating point, but large enough not to cause errors in interpolation.
+    delta_difference = 1e-6 * min(abs(gt[1]),abs(gt[5]))
+    random_array = np.random.randn(layer.GetFeatureCount(),2)
+    random_offsets = random_array*delta_difference
+
     for feature_id in range(layer.GetFeatureCount()):
         feature = layer.GetFeature(feature_id)
         geometry = feature.GetGeometryRef()
@@ -507,10 +520,14 @@ def vectorize_points(shapefile, datasource_field, raster):
         if in_bounds(point):
             value = feature.GetField(datasource_field)
             #Add in the numpy notation which is row, col
-            point_list.append([point[1],point[0]])
+            point_list.append([point[1]+random_offsets[feature_id,1],
+                               point[0]+random_offsets[feature_id,0]])
             value_list.append(value)
     point_array = np.array(point_list)
     value_array = np.array(value_list)
+
+    band = raster.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
 
     #Create grid points for interpolation outputs later
     #top-bottom:y_stepsize, left-right:x_stepsize
@@ -520,6 +537,8 @@ def vectorize_points(shapefile, datasource_field, raster):
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
 
+    LOGGER.info("Writing interpolating with griddata")
     raster_out_array = scipy.interpolate.griddata(point_array, 
         value_array, (grid_y, grid_x), 'linear', nodata)
+    LOGGER.info("Writing result to output array")
     band.WriteArray(raster_out_array,0,0)
