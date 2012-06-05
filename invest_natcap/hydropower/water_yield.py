@@ -105,3 +105,4 @@ def execute(args):
     
     #Call water_yield in hydropower_core.py
     hydropower_core.water_yield(water_yield_args)
+    LOGGER.info('Water Yield Completed')

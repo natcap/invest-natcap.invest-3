@@ -125,3 +125,4 @@ def execute(args):
     
     #Call water_scarcity_core.py
     hydropower_core.water_scarcity(water_scarcity_args)
+    LOGGER.info('Water Scarcity Completed')
