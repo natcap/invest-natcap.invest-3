@@ -23,7 +23,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "./carbon",
+                    "defaultValue": "./Carbon",
                     "required": true
                 }
             ]
@@ -43,7 +43,7 @@
                             "args_id" : "lulc_cur_uri",
                             "type": "file",
                             "label": "Raster location",
-                            "defaultValue": "./base_data/terrestrial/lulc_samp_cur/hdr.adf",
+                            "defaultValue": "./Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
                             "required": true,
                             "validateAs": {"type": "GDAL"}
                         },
@@ -81,7 +81,7 @@
                             "args_id": "lulc_fut_uri",
                             "required": false,
                             "enabledBy": "calc_sequestration",
-                            "defaultValue": "./base_data/terrestrial/lulc_samp_fut/hdr.adf",
+                            "defaultValue": "./Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
                             "requiredIf": ["calc_sequestration"],
                             "validateAs": {"type": "GDAL"}
                         },
@@ -110,7 +110,7 @@
                     "id" : "carbon_pools",
                     "type": "file",
                     "label": "Carbon pools",
-                    "defaultValue": "./carbon/input/carbon_pools_samp.dbf",
+                    "defaultValue": "./Carbon/Input/carbon_pools_samp.dbf",
                     "args_id": "carbon_pools_uri",
                     "required": true,
                     "validateAs": {"type": "DBF",
@@ -122,7 +122,7 @@
                     "label": "Current harvest rate map",
                     "args_id": "hwp_cur_shape_uri",
                     "required": false,
-                    "defaultValue": "./carbon/input/harv_samp_cur.shp",
+                    "defaultValue": "./Carbon/Input/harv_samp_cur.shp",
                     "enabledBy": "calc_sequestration",
                     "validateAs": {"type": "OGR",
                                    "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
@@ -134,7 +134,7 @@
                     "label": "Future harvest rate map",
                     "args_id": "hwp_fut_shape_uri",
                     "required": false,
-                    "defaultValue": "./carbon/input/harv_samp_fut.shp",
+                    "defaultValue": "./Carbon/Input/harv_samp_fut.shp",
                     "enabledBy": "calc_sequestration",
                     "validateAs": {"type": "OGR",
                                    "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
