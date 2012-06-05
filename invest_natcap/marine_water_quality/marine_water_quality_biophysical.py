@@ -180,7 +180,6 @@ def execute(args):
     LOGGER.info("Convert tide E form km^2/day to m^2/sec")
     tide_e_array[tide_e_array != nodata_out] *= 1000.0 ** 2 / 86400.0
 
-
     adv_u_array = adv_u_band.ReadAsArray()
     adv_v_array = adv_v_band.ReadAsArray()
 
@@ -205,6 +204,6 @@ def execute(args):
     raster_utils.calculate_raster_stats(raster_out)
 
     #Set all the land areas and undefined tidal and adv areas to nodata
-    gdal.RasterizeLayer(raster_out, [1], land_layer, burn_values=[nodata])
+    #gdal.RasterizeLayer(raster_out, [1], land_layer, burn_values=[nodata])
 
     LOGGER.info("Done with MWQ execute")
