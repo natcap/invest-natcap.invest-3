@@ -71,7 +71,6 @@ def execute(args):
     cycle_history = calc_farm_cycles(args['g_param_a'], 
                                           args['g_param_b'], args['water_temp_dict'], 
                                           args['farm_op_dict'], args['duration'])
-    print cycle_history
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
     out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
@@ -435,6 +434,7 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
             inner_strings.append(str_line)
     
     #Write the second table itself
+    file.write("<br><HR><H2>Farm Harvesting (output)</H2>")
     file.write("<table border=\"1\", cellpadding=\"5\">")
     file.write("<tr>")
     for element in str_headers:
@@ -454,7 +454,40 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     str_headers = ['Farm ID Number', 'Net Present Value', 
                    'Number of Completed Harvest Cycles', 'Total Volume Harvested']
     
+    inner_strings = []
     
+    for id in farms_npv.keys():
+        
+        #pre-load variables
+        npv = round(farms_npv[id])
+        num_cy_complete = len(value_history[id])
+        total_harvested = round(sum_proc_weight[id])
+        
+        vars = [id, npv, num_cy_complete, total_harvested]
+        
+        str_line = ""
+        for element in vars:
+            str_line += "<td>"
+            str_line += str(element)
+            str_line += "</td>"
+    
+        inner_strings.append(str_line)
+        
+    #Write the third table itself
+    file.write("<br><HR><H2>Farm Result Totals (output)</H2>")
+    file.write("<table border=\"1\", cellpadding=\"5\">")
+    file.write("<tr>")
+    for element in str_headers:
+        file.write("<td>")
+        file.write(element)
+        file.write("</td>")
+    file.write("</tr>")
+    
+    for element in inner_strings:
+        file.write("<tr>")
+        file.write(element)
+        file.write("</tr>")
+    file.write("</table>")
     
     #end page
     file.write("</html>")
