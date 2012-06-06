@@ -218,4 +218,6 @@ def execute(args):
     #Set all the land areas and undefined tidal and adv areas to nodata
     #gdal.RasterizeLayer(raster_out, [1], land_layer, burn_values=[nodata])
 
-    LOGGER.info("Done with MWQ execute")
+    LOGGER.info("Done with marine water quality.")
+    LOGGER.info("Intermediate rasters are located in %s" % intermediate_directory)
+    LOGGER.info("Output rasters are located in %s" % output_directory)
