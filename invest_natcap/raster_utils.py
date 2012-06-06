@@ -116,6 +116,72 @@ def pixel_size(dataset):
         linear_units
     return size_meters
 
+def pixel_size_based_on_coordinate_transform(dataset, coord_trans, point):
+    """Calculates the pixel width and height in meters given a coordinate 
+        transform and reference point on the dataset that's close to the 
+        transform's projected coordinate sytem.  This is only necessary
+        if dataset is not already in a meter coordinate system, for example
+        dataset may be in lat/long (WGS84).  
+     
+       dataset - A projected GDAL dataset in the form of lat/long decimal degrees
+       coord_trans - An OSR coordinate transformation from dataset coordinate
+           system to meters
+       point - a reference point close to the coordinate transform coordinate
+           system.  must be in the same coordinate system as dataset.
+       
+       returns a tuple containing (pixel width in meters, pixel height in 
+           meters)"""
+    #Get the first points (x,y) from geoTransform
+    geo_tran = dataset.GetGeoTransform()
+    pixel_size_x = geo_tran[1]
+    pixel_size_y = geo_tran[5]
+    top_left_x = point[0]
+    top_left_y = point[1]
+    LOGGER.debug('pixel_size_x: %s', pixel_size_x)
+    LOGGER.debug('pixel_size_x: %s', pixel_size_y)
+    LOGGER.debug('top_left_x : %s', top_left_x)
+    LOGGER.debug('top_left_y : %s', top_left_y)
+    #Create the second point by adding the pixel width/height
+    new_x = top_left_x + pixel_size_x
+    new_y = top_left_y + pixel_size_y
+    LOGGER.debug('top_left_x : %s', new_x)
+    LOGGER.debug('top_left_y : %s', new_y)
+    #Transform two points into meters
+    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
+    point_2 = coord_trans.TransformPoint(new_x, new_y)
+    #Calculate the x/y difference between two points
+    #taking the absolue value because the direction doesn't matter for pixel
+    #size in the case of most coordinate systems where y increases up and x
+    #increases to the right (right handed coordinate system).
+    pixel_diff_x = abs(point_2[0] - point_1[0])
+    pixel_diff_y = abs(point_2[1] - point_1[1])
+    LOGGER.debug('point1 : %s', point_1)
+    LOGGER.debug('point2 : %s', point_2)
+    LOGGER.debug('pixel_diff_x : %s', pixel_diff_x)
+    LOGGER.debug('pixel_diff_y : %s', pixel_diff_y)
+    return (pixel_diff_x, pixel_diff_y)
+
+def interpolate_matrix(x, y, z, newx, newy, degree=1):
+    """Takes a matrix of values from a rectangular grid along with new 
+        coordinates and returns a matrix with those values interpolated along
+        the new axis points.
+        
+        x - an array of x points on the grid
+        y - an array of y points on the grid
+        z - the values on the grid
+        newx- the new x points for the interpolated grid
+        newy - the new y points for the interpolated grid
+        
+        returns a matrix of size len(newx)*len(newy) whose values are 
+            interpolated from z"""
+
+    #Create an interpolator for the 2D data.  Here's a reference
+    #http://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RectBivariateSpline.html
+    #not using interp2d because this bug: http://projects.scipy.org/scipy/ticket/898
+    spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=degree, ky=degree)
+    return spl(newx, newy).transpose()
+
+
 def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
     """Apply the numpy vectorized operation `op` on the first band of the
