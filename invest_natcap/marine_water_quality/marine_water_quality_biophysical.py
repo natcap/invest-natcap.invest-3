@@ -43,8 +43,8 @@ def execute(args):
             properties of the point sources.
         args['tide_e_points_uri'] - OGR point Datasource with spatial information 
             about the E parameter
-        args['adv_uv_points_uri'] - OGR point Datasource with spatial advection
-            u and v vectors."""
+        args['adv_uv_points_uri'] - optional OGR point Datasource with spatial 
+            advection u and v vectors."""
 
     LOGGER.info("Starting MWQ execute")
     aoi_poly = ogr.Open(args['aoi_poly_uri'])
@@ -52,8 +52,14 @@ def execute(args):
     land_layer = land_poly.GetLayer()
     source_points = ogr.Open(args['source_points_uri'])
     tide_e_points = ogr.Open(args['tide_e_points_uri'])
-    adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
-    
+    try:
+        adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
+    except TypeError:
+        #adv uv points not provided, use a 0 raster.
+        if args['adv_uv_points_uri'] != '':
+            raise TypeError
+        LOGGER.info("adv_uv_points not provided, using zero values")
+        adv_uv_points = None
     
     output_directory = os.path.join(args['workspace'],'output')
     intermediate_directory = os.path.join(args['workspace'],'intermediate')
@@ -98,10 +104,16 @@ def execute(args):
     #Interpolate the ogr datasource points onto a raster the same size as raster_out
     LOGGER.info("Interpolating kh_km2_day onto raster")
     raster_utils.vectorize_points(tide_e_points, 'kh_km2_day', tide_e_raster)
-    LOGGER.info("Interpolating U_m_sec_ onto raster")
-    raster_utils.vectorize_points(adv_uv_points, 'U_m_sec_', adv_u_raster)
-    LOGGER.info("Interpolating V_m_sec_ onto raster")
-    raster_utils.vectorize_points(adv_uv_points, 'V_m_sec_', adv_v_raster)
+    if adv_uv_points != None:
+        LOGGER.info("Interpolating U_m_sec_ onto raster")
+        raster_utils.vectorize_points(adv_uv_points, 'U_m_sec_', adv_u_raster)
+        LOGGER.info("Interpolating V_m_sec_ onto raster")
+        raster_utils.vectorize_points(adv_uv_points, 'V_m_sec_', adv_v_raster)
+    else:
+        #write zeros into the adv_u_raster and adv_v_raster
+        for raster in [adv_u_raster, adv_v_raster]:
+            band = raster.GetRasterBand(1)
+            band.Fill(0.0)
 
     #Mask the interpolated points to the land polygon
     LOGGER.info("Masking Tide E and ADV UV to the land polygon")
