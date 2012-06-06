@@ -133,8 +133,6 @@ def format_ops_table(op_path, farm_ID):
     
     ff_aqua_args['farm_op_dict'] = new_dict_op
 
-    print new_dict_op
-
     #add the gen args in
     for key in general_ops.keys():
         ff_aqua_args[key] = general_ops[key]    

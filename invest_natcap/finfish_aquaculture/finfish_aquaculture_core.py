@@ -3,6 +3,7 @@ pull from data passed in by aquaculture_biophysical and aquaculture_valuation'''
 
 import os
 import math
+import time
 import datetime
 
 from osgeo import ogr
@@ -70,6 +71,7 @@ def execute(args):
     cycle_history = calc_farm_cycles(args['g_param_a'], 
                                           args['g_param_b'], args['water_temp_dict'], 
                                           args['farm_op_dict'], args['duration'])
+    print cycle_history
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
     out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
@@ -142,8 +144,8 @@ def execute(args):
         layer.SetFeature(feature)
     
     #Now, want to build the HTML table of everything we have calculated to this point
-    create_HTML_table(args['farm_ID'], args['farm_op_dict'], cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
-                      farms_npv, farms_rev)
+    create_HTML_table(output_dir, args['farm_ID'], args['farm_op_dict'], cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
+                      farms_npv, value_history)
    
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -155,9 +157,7 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     cycle_history ={}
     tau = 0.08
     dur = float(dur)
-    
-    print farm_op_dict.keys()
-    
+
     for f in range (1, len(farm_op_dict)+1):
         
         #casting f to string because farm_op_dict came from biophysical with
@@ -179,7 +179,6 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
         #are recorded, then do accesses as zero % 365, and add 1.
         for day in range (0, int((365*dur))):
             day = day - 1
-            #print type(water_temp_dict[str(day % 365)][str(f)])
             
             if fallow_days_left > 0:
                 fallow_days_left -= 1
@@ -258,8 +257,6 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
             indiv_tpw_totals[f].append(curr_cy_tpw)
             curr_cycle_totals[f] += curr_cy_tpw
             
-            print curr_cycle_totals
-            
     return (curr_cycle_totals, indiv_tpw_totals)
 
 def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
@@ -306,11 +303,12 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     
     return val_history, valuations
 
-def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_weight, 
-                       do_valuation, farms_npv, value_history):
+def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_weight, 
+                       proc_weight, do_valuation, farms_npv, value_history):
     '''Inputs:
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
-                contains 3 things- (day of outplanting, day of harvest, harvest weight)
+                contains 3 things- (day of outplanting, day of harvest, harvest weight of 
+                a single fish in grams)
         sum_proc_weight: dictionary which holds a mapping from farm ID->total processed 
                 weight of each farm 
         proc_weight: dictionary which holds a farm->list mapping, where the list holds 
@@ -319,8 +317,9 @@ def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_w
         farms_npv: dictionary with a farm-> float mapping, where each float is the 
                 net processed value of the fish processed on that farm, in $1000s 
                 of dollars.
-        farms_rev: dictionary which will hold a farm->list mapping, where the 
-                list holds the individual net revenue for all cycles that farm completed
+        value_history: dictionary which holds a farm->list mapping, where the 
+                list holds tuples containing (Net Revenue, Net Present Value) for
+                each cycle completed by that farm
     
        Output:
         HTML file: contains 3 tables that summarize inputs and outputs for the duration
@@ -336,8 +335,8 @@ def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_w
             - Output Table 2: Model outputs for each farm, including Farm ID, net present
                     value, number of completed harvest cycles, and total volume harvested.
     '''
-    
-    filename = "HarvestResults_[" + datetime.today() + "].html"
+    filename = output_dir + os.sep + "HarvestResults_[" + \
+        datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + "].html"
     file = open(filename, "w")
     
     file.write("<html>")
@@ -356,21 +355,30 @@ def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_w
     file.write("<H2>" + "Farm Operations (input)" + "</H2>")
     file.write("<table border=\"1\", cellpadding=\"5\">")
     
-    str_headers = "<td>" + FID + "</td>"
+    #We are getting the keywords for the farm options off of an arbitrary element in
+    #in farm_op_dict. However, we had to create a copy in order to simulate a peek method
+    #and not remove that item from the original dictionary
+    cp_dict = farm_op_dict.copy()
+    str_headers = cp_dict.popitem()[1].keys()
+
     inner_strings = []
     
     for id in farm_op_dict.keys():
         single_str = "<td>" + id + "</td>"
         
-        for info in farm_op_dict[id].keys():
+        for info in str_headers:
             
-            str_headers += "<td>" + str(info) + "</td>"
             single_str += "<td>" + farm_op_dict[id][str(info)] + "</td>"
             
         inner_strings.append(single_str)
-        str_headers += "</tr>"
     
-    file.write(str_headers)
+    str_headers.insert(0, "Farm #:")
+    
+    for element in str_headers:
+        file.write("<td>")
+        file.write(element)
+        file.write("</td>")
+    file.write("</tr>")
     
     for element in inner_strings:
         file.write("<tr>")
@@ -382,7 +390,6 @@ def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_w
     #Here starts the second table
     #For ease, am preloading a list with the headers for this table, since they aren't
     #necessarily already input
-    
     str_headers = ['Farm ID Number', 'Cycle Number', 'Days Since Outplanting Date', 
                    'Harvested Weight', 'Net Revenue', 'Net Present Value', 'Outplant Day',
                    'Outplant Year']
@@ -390,6 +397,10 @@ def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_w
     inner_strings = []
     
     for id in cycle_history.keys():
+        
+        #Explicitly getting the number of fish that the farm has, because we will need
+        #it later when we write to the table
+        num_fishies = int(farm_op_dict[str(id)]['number of fish in farm'])
         
         vars = []
         for cycle in range(0, len(cycle_history[id])):
@@ -400,24 +411,31 @@ def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_w
             curr_cycle = cycle_history[id][cycle]
             outplant_date, harvest_date, harvest_weight = curr_cycle
             
+            #harvest weight is the weight in grams on an individual fish at harvest. 
+            #Need to multiply by the number of fish, then divide by 1000 to get kg
+            #of fish total
+            total_harvest_weight = round(num_fishies*harvest_weight/1000)
+            
             indiv_rev, indiv_npv = value_history[id][cycle]
             
             out_day = outplant_date % 365
             out_year = outplant_date // 365 + 1
-            
-            vars = [cycle_num, curr_cycle, outplant_date, harvest_date, harvest_weight,
-                    indiv_rev, indiv_npv, out_day, out_year]
+
+            #revenue and net present value should be in thousands of dollars
+            #
+            vars = [id, cycle_num, harvest_date, total_harvest_weight, round(indiv_rev / 1000), 
+                    round(indiv_npv/1000), out_day, out_year]
+
+            str_line = ""
+            for element in vars:
+                str_line += "<td>"
+                str_line += str(element)
+                str_line += "</td>"
         
-        str_line = ""
-        for element in vars:
-            str_line += "<td>"
-            str_line += str(element)
-            str_line += "</td>"
-        
-        inner_strings.append(str_line)
+            inner_strings.append(str_line)
     
     #Write the second table itself
-    file.write("<table>")
+    file.write("<table border=\"1\", cellpadding=\"5\">")
     file.write("<tr>")
     for element in str_headers:
         file.write("<td>")
@@ -430,6 +448,13 @@ def create_HTML_table (FID, farm_op_dict, cycle_history, sum_proc_weight, proc_w
         file.write(element)
         file.write("</tr>")
     file.write("</table>")
+    
+    #Here starts the creation of the third table. Like the last one, I am pre-loading
+    #the headers, since they aren't actually input anywhere
+    str_headers = ['Farm ID Number', 'Net Present Value', 
+                   'Number of Completed Harvest Cycles', 'Total Volume Harvested']
+    
+    
     
     #end page
     file.write("</html>")
