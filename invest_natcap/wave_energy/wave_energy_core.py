@@ -14,6 +14,7 @@ from scipy import stats
 from bisect import bisect
 
 from invest_natcap.dbfpy import dbf
+from invest_natcap import raster_utils
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
@@ -208,11 +209,11 @@ def biophysical(args):
     clipped_wave_shape = wave_power(clipped_wave_shape)
 
     #Create blank rasters bounded by the shape file of analyis area
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize, 
+    raster_utils.create_raster_from_vector_extents(pixel_xsize, pixel_ysize, 
                                                      datatype, nodata, \
                                                      wave_energy_path, \
                                                      aoi_shape)
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize, 
+    raster_utils.create_raster_from_vector_extents(pixel_xsize, pixel_ysize, 
                                                      datatype, nodata, \
                                                      wave_power_path, aoi_shape)
 
@@ -323,7 +324,7 @@ def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
         
     #Get the size of the pixels in meters, to be used for creating rasters
     pixel_size_tuple = \
-        invest_cython_core.pixel_size_in_meters(global_dem, coord_trans,
+        raster_utils.pixel_size_based_on_coordinate_transform(global_dem, coord_trans,
                                                 reference_point_latlng)
     return pixel_size_tuple
 
@@ -366,7 +367,7 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, \
         os.remove(output_path)
     #Create a blank raster from raster_dataset
     percentile_raster = \
-        invest_cython_core.newRasterFromBase(raster_dataset, output_path, \
+        raster_utils.new_raster_from_base(raster_dataset, output_path, \
                                              'GTiff', 0, gdal.GDT_Int32)
     #Get raster bands
     percentile_band = percentile_raster.GetRasterBand(1)
@@ -831,7 +832,7 @@ def wave_energy_interp(wave_data, machine_perf):
     new_x = wave_data['periods']
     new_y = wave_data['heights']
     #Interpolate machine performance table and return the interpolated matrix
-    interp_z = invest_cython_core.interpolateMatrix(x_range, y_range, 
+    interp_z = raster_utils.interpolate_matrix(x_range, y_range, 
                                                     z_matrix, new_x, new_y)
     return interp_z
 
@@ -1159,7 +1160,7 @@ def valuation(args):
     nodata = -100000
     #Create a blank raster from the extents of the wave farm shapefile
     LOGGER.debug('Creating Raster From Vector Extents')
-    invest_cython_core.createRasterFromVectorExtents(pixel_xsize, pixel_ysize,
+    raster_utils.create_raster_from_vector_extents(pixel_xsize, pixel_ysize,
                                                      datatype, nodata, 
                                                      raster_projected_path, 
                                                      wave_data_shape)
