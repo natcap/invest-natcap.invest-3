@@ -22,7 +22,7 @@
 				{        
                     "id" : "precipitation",
                     "args_id" : "precipitation_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Precipitation",
                     "defaultValue": "./Base_Data/Freshwater/precip",
                     "required": true,
@@ -31,7 +31,7 @@
                 {        
                     "id" : "potential_evapotranspiration",
                     "args_id" : "eto_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Potential Evapotranspiration",
                     "defaultValue": "./Base_Data/Freshwater/eto",
                     "required": true,
@@ -40,7 +40,7 @@
                 {        
                     "id" : "soil_depth",
                     "args_id" : "soil_depth_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Soil Depth",
                     "defaultValue": "./Base_Data/Freshwater/soil_depth",
                     "required": true,
@@ -49,16 +49,16 @@
                 {        
                     "id" : "plant_available_water_fraction",
                     "args_id" : "pawc_uri",
-                    "type": "folder",
-                    "label": "Precipitation",
-                    "defaultValue": "./Base_Data/Freshwater/precip",
+                    "type": "file",
+                    "label": "Plant Available Water Fraction",
+                    "defaultValue": "./Base_Data/Freshwater/pawc",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
                 {        
                     "id" : "land_use",
                     "args_id" : "lulc_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Land Use",
                     "defaultValue": "./Base_Data/Freshwater/landuse_90",
                     "required": true,

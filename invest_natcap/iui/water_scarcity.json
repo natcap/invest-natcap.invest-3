@@ -22,7 +22,7 @@
                 {        
                     "id" : "water_yield_vol",
                     "args_id" : "water_yield_vol_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Water Yield (volume)",
                     "defaultValue": "./Hydropower/Service/wyield_vol.tif",
                     "required": true,
@@ -31,7 +31,7 @@
                 {        
                     "id" : "water_yield_mn",
                     "args_id" : "water_yield_mean_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Water Yield (mean)",
                     "defaultValue": "./Hydropower/Service/wyield_mn.tif",
                     "required": true,
@@ -40,7 +40,7 @@
                 {        
                     "id" : "land_use",
                     "args_id" : "lulc_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Land Use",
                     "defaultValue": "./Base_Data/Freshwater/landuse_90",
                     "required": true,
@@ -62,7 +62,7 @@
                  },
                  {
                     "id" : "sub_watersheds",
-                    "args_id": "subwatersheds_uri",
+                    "args_id": "sub_watersheds_uri",
                     "type": "file",
                     "label": "Sub-Watersheds",
                     "defaultValue": "./Base_Data/Freshwater/subwatersheds.shp",

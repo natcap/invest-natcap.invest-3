@@ -11,6 +11,7 @@ from osgeo import gdal
 from osgeo import ogr
 
 import invest_cython_core
+from invest_natcap import raster_utils
 from invest_natcap.invest_core import invest_core
 from invest_natcap import raster_utils
 
@@ -248,7 +249,7 @@ def water_yield(args):
     
     #Create the water yield raster 
     wyield_raster = \
-        invest_cython_core.newRasterFromBase(fractp_raster, wyield_path, 
+        raster_utils.new_raster_from_base(fractp_raster, wyield_path, 
                                             'GTiff', out_nodata, gdal.GDT_Float32)
         
     #Get relevant raster bands for creating water yield raster
@@ -314,7 +315,7 @@ def water_yield(args):
         
     #Make blank raster for water yield volume
     wyield_vol_raster = \
-        invest_cython_core.newRasterFromBase(wyield_raster, wyield_volume_path, 
+        raster_utils.new_raster_from_base(wyield_raster, wyield_volume_path, 
                                             'GTiff', out_nodata, gdal.GDT_Float32)
         
     #Get the relevant bands and create water yield volume raster
@@ -326,7 +327,7 @@ def water_yield(args):
     
     #Make blank raster for hectare volume
     wyield_ha_raster = \
-        invest_cython_core.newRasterFromBase(wyield_raster, wyield_ha_path, 
+        raster_utils.new_raster_from_base(wyield_raster, wyield_ha_path, 
                                             'GTiff', out_nodata, gdal.GDT_Float32)
         
     wyield_ha_band = wyield_ha_raster.GetRasterBand(1)
@@ -353,7 +354,7 @@ def water_yield(args):
                                 wyield_ha_band)
     
     aet_raster = \
-        invest_cython_core.newRasterFromBase(wyield_area, aet_path, 'GTiff', 
+        raster_utils.new_raster_from_base(wyield_area, aet_path, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
         
     aet_band = aet_raster.GetRasterBand(1)
@@ -698,7 +699,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
     base_nodata = base_band.GetNoDataValue()
     LOGGER.debug('raster_from_table_values.base_nodata : %s', base_nodata)
     tmp_raster = \
-        invest_cython_core.newRasterFromBase(base_raster, new_path, 'GTiff', 
+        raster_utils.new_raster_from_base(base_raster, new_path, 'GTiff', 
                                              base_nodata, gdal.GDT_Float32)
         
     #Add the nodata value as a field to the dictionary so that the vectorized
@@ -816,7 +817,7 @@ def water_scarcity(args):
     
     #Create watershed mask raster
     ws_mask = \
-        invest_cython_core.newRasterFromBase(wyield_vol_raster, '', 'MEM', \
+        raster_utils.new_raster_from_base(wyield_vol_raster, '', 'MEM', \
                                              out_nodata, gdal.GDT_Float32)
 
     gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
@@ -843,7 +844,7 @@ def water_scarcity(args):
             return out_nodata
         
     wyield_calib = \
-        invest_cython_core.newRasterFromBase(ws_mask, wyield_calib_path,
+        raster_utils.new_raster_from_base(ws_mask, wyield_calib_path,
                                              'GTiff', out_nodata, 
                                              gdal.GDT_Float32)
         
@@ -857,7 +858,7 @@ def water_scarcity(args):
     #Create raster from land use raster, subsituting in demand value
     lulc_band = lulc_raster.GetRasterBand(1)
     lulc_nodata = lulc_band.GetNoDataValue()
-    tmp_consump = invest_cython_core.newRasterFromBase(lulc_raster, '', 'MEM', 
+    tmp_consump = raster_utils.new_raster_from_base(lulc_raster, '', 'MEM', 
                                                        out_nodata, 
                                                        gdal.GDT_Float32)
     tmp_consump_band = tmp_consump.GetRasterBand(1)
@@ -1237,10 +1238,10 @@ def valuation(args):
     out_nodata = -1
 
     hp_val_tmp = \
-        invest_cython_core.newRasterFromBase(water_consump, hp_val_tmppath, 'GTiff', 
+        raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
     hp_val = \
-        invest_cython_core.newRasterFromBase(water_consump, hp_val_path, 'GTiff', 
+        raster_utils.new_raster_from_base(water_consump, hp_val_path, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
     
     gdal.RasterizeLayer(hp_val_tmp, [1], sub_sheds.GetLayer(0),
@@ -1266,10 +1267,10 @@ def valuation(args):
     invest_core.vectorize1ArgOp(hp_val_band_tmp, npv_op, hp_val_band)
     
     hp_energy_tmp = \
-        invest_cython_core.newRasterFromBase(water_consump, hp_energy_tmppath, 'GTiff', 
+        raster_utils.new_raster_from_base(water_consump, hp_energy_tmppath, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
     hp_energy = \
-        invest_cython_core.newRasterFromBase(water_consump, hp_energy_path, 'GTiff', 
+        raster_utils.new_raster_from_base(water_consump, hp_energy_path, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
 
     gdal.RasterizeLayer(hp_energy_tmp, [1], sub_sheds.GetLayer(0),

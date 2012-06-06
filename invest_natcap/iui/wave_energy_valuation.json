@@ -5,7 +5,7 @@
     "modelName" : "wave_energy_valuation",
     "localDocURI": "./documentation/wave_energy.html",
     "height": 600,
-    "width" : 700,
+    "width" : 800,
     "elements": [
         {
             "id" : "workspace_list",
@@ -65,7 +65,7 @@
                 {
                     "id" : "dem",
                     "args_id": "global_dem",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Global Digital Elevation Model (DEM)",
                     "defaultValue": "./Base_Data/Marine/DEMs/global_dem",
                     "required": true,
@@ -75,7 +75,8 @@
                     "id" : "wave_data",
                     "args_id": "wave_data_shape_path",
                     "type": "file",
-                    "label": "Wave Data Shapefile (NOTE:This shapefile should be projected in Meters so that distances can be calculated correctly. To ensure this an AOI projected in Meters should be provided during the Biophysical run.)",
+                    "label": "Wave Data Shapefile ",
+                    "helpText": "This shapefile should be projected in Meters so that distances can be calculated correctly.\n To ensure this an AOI projected in Meters should be provided during the Biophysical run.",
                     "defaultValue": "./WaveEnergy/Intermediate/WEM_InputOutput_Pts.shp",
                     "required": true,
                     "validateAs": {"type":"OGR",

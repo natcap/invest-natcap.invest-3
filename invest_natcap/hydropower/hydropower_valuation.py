@@ -113,3 +113,4 @@ def execute(args):
     
     #Call hydropower_core.valuation
     hydropower_core.valuation(val_args)
+    LOGGER.info('Hydropower Valuation Completed')

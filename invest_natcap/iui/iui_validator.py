@@ -632,7 +632,7 @@ class CSVChecker(TableChecker):
             # exception is raised.  This method catches many more erroneous
             # files than the previous method of testing the classname of a
             # CSV.DictReader.
-            dialect = csv.Sniffer().sniff(open(self.uri).read(1024))
+            dialect = csv.Sniffer().sniff(open(self.uri).read())
         except csv.Error:
             return str("Must be a CSV file")
 

@@ -2,20 +2,14 @@
 
 import sys
 import logging
-import re
 import os
 import time
-import math
 import csv
 
 from osgeo import ogr
 from osgeo import gdal
-import scipy.sparse.linalg
 from scipy.sparse.linalg import spsolve
 import numpy as np
-from numpy.ma import masked_array
-import scipy.linalg
-import pylab
 
 from invest_natcap import raster_utils
 try:
@@ -58,25 +52,37 @@ def execute(args):
     source_points = ogr.Open(args['source_points_uri'])
     tide_e_points = ogr.Open(args['tide_e_points_uri'])
     adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
+    
+    
+    output_directory = os.path.join(args['workspace'],'output')
+    intermediate_directory = os.path.join(args['workspace'],'intermediate')
+    for d in [output_directory, intermediate_directory]:
+        if not os.path.exists(d):
+            LOGGER.info('creating directory %s', d)
+            os.makedirs(d)
 
     #Create a grid based on the AOI
     LOGGER.info("Creating grid based on the AOI polygon")
     pixel_size = args['pixel_size']
     #the nodata value will be a min float
     nodata_out = -1.0
-    raster_out_uri = os.path.join(args['workspace'],'concentration.tif')
+    raster_out_uri = os.path.join(output_directory,'concentration.tif')
     raster_out = raster_utils.create_raster_from_vector_extents(pixel_size, 
         pixel_size, gdal.GDT_Float32, nodata_out, raster_out_uri, aoi_poly)
     
     #create a temporary grid of interpolated points for tide_e and adv_uv
     LOGGER.info("Creating grids for the interpolated tide E and ADV uv points")
-    tide_e_raster = raster_utils.new_raster_from_base(raster_out, 'tide_e.tif', 
+    tide_e_raster = raster_utils.new_raster_from_base(raster_out, 
+        os.path.join(intermediate_directory, 'tide_e.tif'),
         'GTiff', nodata_out, gdal.GDT_Float32)
-    adv_u_raster = raster_utils.new_raster_from_base(raster_out, 'adv_u.tif',
+    adv_u_raster = raster_utils.new_raster_from_base(raster_out,
+        os.path.join(intermediate_directory, 'adv_u.tif'),
         'GTiff', nodata_out, gdal.GDT_Float32)
-    adv_v_raster = raster_utils.new_raster_from_base(raster_out, 'adv_v.tif',
+    adv_v_raster = raster_utils.new_raster_from_base(raster_out,
+        os.path.join(intermediate_directory, 'adv_v.tif'),
         'GTiff', nodata_out, gdal.GDT_Float32)
-    in_water_raster = raster_utils.new_raster_from_base(raster_out, 'in_water.tif',
+    in_water_raster = raster_utils.new_raster_from_base(raster_out,
+        os.path.join(intermediate_directory, 'in_water.tif'),
         'GTiff', nodata_out, gdal.GDT_Byte)
 
     #Set up the in_water_array
@@ -89,8 +95,11 @@ def execute(args):
     in_water_array = in_water_function(in_water_array)
     
     #Interpolate the ogr datasource points onto a raster the same size as raster_out
+    LOGGER.info("Interpolating kh_km2_day onto raster")
     raster_utils.vectorize_points(tide_e_points, 'kh_km2_day', tide_e_raster)
+    LOGGER.info("Interpolating U_m_sec_ onto raster")
     raster_utils.vectorize_points(adv_uv_points, 'U_m_sec_', adv_u_raster)
+    LOGGER.info("Interpolating V_m_sec_ onto raster")
     raster_utils.vectorize_points(adv_uv_points, 'V_m_sec_', adv_v_raster)
 
     #Mask the interpolated points to the land polygon
@@ -183,7 +192,6 @@ def execute(args):
     LOGGER.info("Convert tide E form km^2/day to m^2/sec")
     tide_e_array[tide_e_array != nodata_out] *= 1000.0 ** 2 / 86400.0
 
-
     adv_u_array = adv_u_band.ReadAsArray()
     adv_v_array = adv_v_band.ReadAsArray()
 
@@ -208,6 +216,6 @@ def execute(args):
     raster_utils.calculate_raster_stats(raster_out)
 
     #Set all the land areas and undefined tidal and adv areas to nodata
-    gdal.RasterizeLayer(raster_out, [1], land_layer, burn_values=[nodata])
+    #gdal.RasterizeLayer(raster_out, [1], land_layer, burn_values=[nodata])
 
     LOGGER.info("Done with MWQ execute")
