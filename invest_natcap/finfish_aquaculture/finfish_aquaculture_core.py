@@ -145,6 +145,9 @@ def execute(args):
     #Now, want to build the HTML table of everything we have calculated to this point
     create_HTML_table(output_dir, args['farm_ID'], args['farm_op_dict'], cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
                       farms_npv, value_history)
+    
+    #Last output is a text file of the parameters that the model was run with
+    create_param_log(args)
    
 def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
     
@@ -491,4 +494,43 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     
     #end page
     file.write("</html>")
+    file.close()   
+
+def create_param_log(args):
     
+    '''Input: A dictionary of all input parameters for this run of the finfish
+            aquaculture model.
+            
+        Output: A .txt file that contains the run parameters for this run of the
+            model. Named by date and time.
+    '''
+    output_dir = args['workspace_dir'] + os.sep + 'Output'
+    
+    filename = output_dir + os.sep + "Parameter_Log_[" + \
+        datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + "].txt"
+    file = open(filename, "w")
+    
+    str_list = []
+    
+    str_list.append("BIOPHYSICAL ARGUMENTS \n")
+    str_list.append("Workspace: " + args['workspace_dir'])
+    str_list.append("Output Directory: " +  output_dir)
+    str_list.append("Farm Identifier: " + args['farm_ID'])
+    str_list.append("Growth Parameter A: " + str(args['g_param_a']))
+    str_list.append("Growth Parameter B: " + str(args['g_param_b']))
+    str_list.append("Mortality Rate (Daily): " + str(args['mort_rate_daily']))
+    str_list.append("Duration of Model: " + str(args['duration']))
+    
+    str_list.append("\nVALUATION ARGUMENTS \n")
+    str_list.append("Valuation: " + str(args['do_valuation']))
+    if (bool(args['do_valuation']) == True):
+        str_list.append("Price Per Kilogram of Fish: " + str(args['p_per_kg']))
+        str_list.append("Fraction of Price Attributable to Costs: " + 
+                        str(args['frac_p']))
+        str_list.append("Daily Market Discount Rate: " + str(args['discount']))
+    
+    for element in str_list:
+        file.write(element)
+        file.write("\n")
+    
+    file.close()
