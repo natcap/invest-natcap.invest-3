@@ -418,19 +418,30 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
             #of fish total
             total_harvest_weight = round(num_fishies*harvest_weight/1000)
             
-            indiv_rev, indiv_npv = value_history[id][cycle]
-            
             out_day = outplant_date % 365
             out_year = outplant_date // 365 + 1
-
-            #revenue and net present value should be in thousands of dollars
-            #
-            vars = [id, cycle_num, harvest_date, total_harvest_weight, round(indiv_rev / 1000), 
-                    round(indiv_npv/1000), out_day, out_year]
-
+            
             str_line = ""
+            #Need to make it so if we don't have valuation, those cells just show up red
+            if (do_valuation == True):
+                indiv_rev, indiv_npv = value_history[id][cycle]
+    
+                #revenue and net present value should be in thousands of dollars
+                vars = [id, cycle_num, harvest_date, total_harvest_weight, 
+                        round(indiv_rev / 1000), round(indiv_npv/1000), out_day, out_year]
+            else:
+                
+                indiv_rev = ""
+                indiv_npv = ""
+                
+                vars = [id, cycle_num, harvest_date, total_harvest_weight, 
+                        indiv_rev, indiv_npv, out_day, out_year]
+            
             for element in vars:
-                str_line += "<td>"
+                if element == indiv_rev or element == indiv_npv:
+                    str_line += "<td bgcolor= \"#FFFF00\">"
+                else :
+                    str_line += "<td>"
                 str_line += str(element)
                 str_line += "</td>"
         
@@ -459,11 +470,16 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     
     inner_strings = []
     
-    for id in farms_npv.keys():
+    
+    for id in cycle_history.keys():
         
         #pre-load variables
-        npv = round(farms_npv[id])
-        num_cy_complete = len(value_history[id])
+        if (do_valuation == True): 
+            npv = round(farms_npv[id])
+        else:
+            npv = ""
+            
+        num_cy_complete = len(cycle_history[id])
         total_harvested = round(sum_proc_weight[id])
         
         vars = [npv, num_cy_complete, total_harvested]
@@ -472,9 +488,15 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
         str_line += "<td>" + str(id) + "</td>"
         
         for element in vars:
-            str_line += "<td BGCOLOR=\"#ffff00\">"
+            if element == npv:
+                str_line += "<td BGCOLOR=\"#ff0000\">"
+            else:
+                str_line += "<td BGCOLOR=\"#ffff00\">"
             str_line += str(element)
             str_line += "</td>"
+                
+    else:
+        npv
     
         inner_strings.append(str_line)
         
