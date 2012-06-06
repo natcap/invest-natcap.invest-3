@@ -5,6 +5,7 @@ import logging
 import os
 import time
 import csv
+import subprocess
 
 from osgeo import ogr
 from osgeo import gdal
@@ -221,3 +222,11 @@ def execute(args):
     LOGGER.info("Done with marine water quality.")
     LOGGER.info("Intermediate rasters are located in %s" % intermediate_directory)
     LOGGER.info("Output rasters are located in %s" % output_directory)
+
+    try:
+        #Try to launch a file explorer to visit the output directory when
+        #the run is complete
+        subprocess.Popen(r'explorer "%s"' % output_directory)
+    except OSError:
+        #This is okay, probably means we're not on windows, so no biggie.
+        pass
