@@ -22,7 +22,7 @@
                 {        
                     "id" : "calibrated_water_yield_vol",
                     "args_id" : "cyield_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Calibrated Water Yield (volume)",
                     "defaultValue": "./Hydropower/Service/cyield_vol.tif",
                     "required": true,
@@ -31,7 +31,7 @@
                 {        
                     "id" : "water_consumption",
                     "args_id" : "consump_uri",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Water Consumption (volume)",
                     "defaultValue": "./Hydropower/Service/consump_vl.tif",
                     "required": true,

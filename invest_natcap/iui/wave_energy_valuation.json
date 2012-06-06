@@ -65,7 +65,7 @@
                 {
                     "id" : "dem",
                     "args_id": "global_dem",
-                    "type": "folder",
+                    "type": "file",
                     "label": "Global Digital Elevation Model (DEM)",
                     "defaultValue": "./Base_Data/Marine/DEMs/global_dem",
                     "required": true,
