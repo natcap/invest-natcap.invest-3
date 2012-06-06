@@ -23,8 +23,11 @@ def execute(args):
             and other temporary files during calculation. (required)
         args['sequest_uri'] - is a uri to a GDAL raster dataset describing the
             amount of carbon sequestered
-        args['V'] - value of a sequestered ton of carbon in dollars per metric
-            ton
+        args['carbon_price_units'] - a string indicating whether the price is 
+            in terms of carbon or carbon dioxide. Can value either as 
+            'Carbon (C)' or 'Carbon Dioxide (CO2)'.
+        args['V'] - value of a sequestered ton of carbon or carbon dioxide in 
+            dollars per metric ton
         args['r'] - the market discount rate in terms of a percentage
         args['c'] - the annual rate of change in the price of carbon
         args['yr_cur'] - the year at which the sequestration measurement 
@@ -46,6 +49,13 @@ def execute(args):
     for key in args:
         if key != 'sequest_uri':
             valuationArgs[key] = args[key]
+
+    if args['carbon_price_units'] == 'Carbon Dioxide (CO2)':
+        #Cover to price per unit of Carbon do this by dividing
+        #the atomic mass of CO2 (15.9994*2+12.0107) by the atomic
+        #mass of 12.0107.  Values gotten from the periodic table of
+        #elements.
+        args['V'] *= (15.9994*2+12.0107)/12.0107
 
     #These lines sets up the output directory structure for the workspace
     outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output' + os.sep
