@@ -552,11 +552,20 @@ def wave_power(shape):
         #wave frequency and water depth)
         k = np.square(tem) / (grav * np.sqrt(np.tanh((np.square(tem)) * \
                                                      (depth / grav))))
+        #Setting numpy overlow error to ignore because when np.sinh
+        #gets a really large number it pushes a warning, but Rich
+        #and Doug have agreed it's nothing we need to worry about.
+        np.seterr(over='ignore')
+        
         #wave group velocity calculation (expressed as a 
         #function of wave energy period and water depth)
         wave_group_velocity = \
             ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) * \
              np.sqrt((grav / k) * np.tanh(k * depth))) / 2
+       
+        #Reset the overflow error to print future warnings
+        np.seterr(over='print')
+       
         #wave power calculation
         wave_pow = (((swd * grav) / 16) * (np.square(height)) * \
                     wave_group_velocity) / 1000
