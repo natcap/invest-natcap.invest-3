@@ -377,9 +377,9 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     str_headers.insert(0, "Farm #:")
     
     for element in str_headers:
-        file.write("<td>")
+        file.write("<td><b>")
         file.write(element)
-        file.write("</td>")
+        file.write("</b></td>")
     file.write("</tr>")
     
     for element in inner_strings:
@@ -441,9 +441,9 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     file.write("<table border=\"1\", cellpadding=\"5\">")
     file.write("<tr>")
     for element in str_headers:
-        file.write("<td>")
+        file.write("<td><b>")
         file.write(element)
-        file.write("</td>")
+        file.write("</b></td>")
     file.write("</tr>")
     
     for element in inner_strings:
@@ -466,11 +466,13 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
         num_cy_complete = len(value_history[id])
         total_harvested = round(sum_proc_weight[id])
         
-        vars = [id, npv, num_cy_complete, total_harvested]
+        vars = [npv, num_cy_complete, total_harvested]
         
         str_line = ""
+        str_line += "<td>" + str(id) + "</td>"
+        
         for element in vars:
-            str_line += "<td>"
+            str_line += "<td BGCOLOR=\"#ffff00\">"
             str_line += str(element)
             str_line += "</td>"
     
@@ -481,9 +483,9 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     file.write("<table border=\"1\", cellpadding=\"5\">")
     file.write("<tr>")
     for element in str_headers:
-        file.write("<td>")
+        file.write("<td><b>")
         file.write(element)
-        file.write("</td>")
+        file.write("</b></td>")
     file.write("</tr>")
     
     for element in inner_strings:
@@ -523,7 +525,7 @@ def create_param_log(args):
     
     str_list.append("\nVALUATION ARGUMENTS \n")
     str_list.append("Valuation: " + str(args['do_valuation']))
-    if (bool(args['do_valuation']) == True):
+    if (args['do_valuation'] == True):
         str_list.append("Price Per Kilogram of Fish: " + str(args['p_per_kg']))
         str_list.append("Fraction of Price Attributable to Costs: " + 
                         str(args['frac_p']))
