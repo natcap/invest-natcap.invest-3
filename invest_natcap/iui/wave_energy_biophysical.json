@@ -34,7 +34,6 @@
 		            "label": "Analysis Area",
 		            "options": ["West Coast of North America and Hawaii",
 		            		"East Coast of North America and Puerto Rico", 
-		            		"Global(Eastern Hemisphere)", "Global(Western Hemisphere)",
 					"Global"],
 		            "defaultValue": 0,
 		            "required": true
