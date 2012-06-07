@@ -38,7 +38,7 @@ class TestWaveEnergy(unittest.TestCase):
         aoi_path = test_dir + os.sep + 'test_input/AOI_WCVI.shp'
         dem_path = test_dir + os.sep + 'samp_input/global_dem'
         wave_file_path = \
-            test_dir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.txt'
+            test_dir + os.sep + 'samp_input/WaveData/NAmerica_WestCoast_4m.txt.bin'
         machine_perf_path = \
             test_dir + os.sep + 'samp_input/Machine_PelamisPerfCSV.csv'
         machine_param_path = \
@@ -46,7 +46,7 @@ class TestWaveEnergy(unittest.TestCase):
         #Set all arguments to be passed
         args = {}
         args['wave_base_data'] = \
-            wave_energy_biophysical.extrapolate_wave_data(wave_file_path)
+            wave_energy_biophysical.load_binary_wave_data(wave_file_path)
         args['analysis_area'] = ogr.Open(analysis_path, 1)
         args['analysis_area_extract'] = ogr.Open(analysis_extract_path)
         args['aoi'] = ogr.Open(aoi_path)
