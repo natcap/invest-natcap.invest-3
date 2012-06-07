@@ -181,13 +181,13 @@ def load_binary_wave_data(wave_file_uri):
 
     #get rows,cols
     row_col_bin = wave_file.read(8)
-    row,col = struct.unpack('ii',row_col_bin)
+    col,row = struct.unpack('ii',row_col_bin)
 
     #get the periods and heights
     line = wave_file.read(row*4)
-    wave_periods = list(struct.unpack('f'*row,line))
+    wave_periods = list(struct.unpack('f'*col,line))
     line = wave_file.read(col*4)
-    wave_heights = list(struct.unpack('f'*col,line))
+    wave_heights = list(struct.unpack('f'*row,line))
 
     key = None
     while True:
@@ -212,9 +212,9 @@ def load_binary_wave_data(wave_file_uri):
 
     wave_file.close()
     #Add row/col header to dictionary
-    LOGGER.debug('WaveData row %s', wave_periods)
+    LOGGER.debug('WaveData col %s', wave_periods)
     wave_dict['periods'] = np.array(wave_periods, dtype='f')
-    LOGGER.debug('WaveData col %s', wave_heights)
+    LOGGER.debug('WaveData row %s', wave_heights)
     wave_dict['heights'] = np.array(wave_heights, dtype='f')
     LOGGER.debug('Finished extrapolating wave data to dictionary')
     return wave_dict
