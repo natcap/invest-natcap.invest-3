@@ -31,7 +31,7 @@ class TestMWQBiophysical(unittest.TestCase):
         args['source_points_uri'] = os.path.join(input_dir, 'floathomes_centroids.shx')
         args['source_point_data_uri'] = os.path.join(input_dir, 'WQM_PAR.csv')
         args['tide_e_points_uri'] = os.path.join(input_dir,'TideE_WGS1984_BCAlbers.shp')
-        args['adv_uv_points_uri'] = os.path.join(input_dir,'ADVuv_WGS1984_BCAlbers.shp')
+#        args['adv_uv_points_uri'] = os.path.join(input_dir,'ADVuv_WGS1984_BCAlbers.shp')
 
         if not os.path.isdir(output_base):
             os.mkdir(output_base)

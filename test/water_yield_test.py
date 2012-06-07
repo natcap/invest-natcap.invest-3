@@ -18,7 +18,37 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestWaterYield(unittest.TestCase):
     """Main testing class for the water yield tests"""
+    def test_water_yield_default_inputs(self):
+        """This is a test that runs the water yield model with the default
+           data given as input."""
+
+        output_base = './data/test_out/hydropower_water_yield_default_inputs/'
+        input_dir = './data/hydropower_data/test_input/'
+        
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+        
+        args = {}
+        args['workspace_dir'] = output_base
+        args['lulc_uri'] = input_dir + 'landuse_90/w001001.adf'
+        args['soil_depth_uri'] = input_dir + 'soil_depth/w001001.adf'
+        args['precipitation_uri'] = input_dir + 'precip/w001001.adf'
+        args['pawc_uri'] = input_dir + 'pawc/w001001.adf'
+        args['eto_uri'] = input_dir + 'eto/w001001.adf'
+        args['watersheds_uri'] = input_dir + 'watersheds.shp'
+        args['sub_watersheds_uri'] = input_dir + 'subwatersheds.shp'
+        args['biophysical_table_uri'] = \
+            input_dir + 'Biophysical_Models.csv'
+        args['seasonality_constant'] = 5.0
+        args['results_suffix'] = ''
+        
+        water_yield.execute(args)
+
     def test_water_yield_re(self):
+        """This is a regression test for the water yield model that takes
+           hand calculated input rasters and checks them against hand verified
+           regression files."""
+
         output_base = './data/test_out/hydropower_water_yield_uri/'
         input_dir = './data/hydropower_regression_data/hydro_regression_byhand/'
         
