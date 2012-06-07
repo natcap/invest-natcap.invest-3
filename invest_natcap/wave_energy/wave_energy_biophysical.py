@@ -102,7 +102,7 @@ def execute(args):
             args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
         biophysical_args['wave_base_data'] = \
             extrapolate_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'NAmerica_WestCoast_4m.txt')
+                                  + os.sep + 'NAmerica_WestCoast_4m.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
@@ -114,7 +114,7 @@ def execute(args):
             args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
         biophysical_args['wave_base_data'] = \
             extrapolate_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'NAmerica_EastCoast_4m.txt')
+                                  + os.sep + 'NAmerica_EastCoast_4m.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
@@ -125,7 +125,7 @@ def execute(args):
             args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
         biophysical_args['wave_base_data'] = \
             extrapolate_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'Global_EastHemi_30m.txt')
+                                  + os.sep + 'Global_EastHemi_30m.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
@@ -136,7 +136,7 @@ def execute(args):
             args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
         biophysical_args['wave_base_data'] = \
             extrapolate_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'Global_WestHemi_30m.txt')
+                                  + os.sep + 'Global_WestHemi_30m.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
@@ -147,7 +147,7 @@ def execute(args):
             args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
         biophysical_args['wave_base_data'] = \
             extrapolate_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'Global_WW3.txt')
+                                  + os.sep + 'Global_WW3.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
@@ -168,7 +168,7 @@ def execute(args):
     wave_energy_core.biophysical(biophysical_args)
     LOGGER.info('Completed Wave Energy Biophysical.')
 
-def extrapolate_wave_data(wave_file_uri):
+def load_binary_wave_data(wave_file_uri):
     """The extrapolate_wave_data function converts WW3 text data into a 
     dictionary who's keys are the corresponding (I,J) values and whose value 
     is a two-dimensional array representing a matrix of the number of hours 
@@ -190,7 +190,7 @@ def extrapolate_wave_data(wave_file_uri):
                }  
     """
     LOGGER.debug('Extrapolating wave data from text to a dictionary')
-    wave_file = open(wave_file_uri)
+    wave_file = open(wave_file_uri,'rb')
     wave_dict = {}
     #Create a key that hosts another dictionary where the matrix representation
     #of the seastate bins will be saved
@@ -200,31 +200,36 @@ def extrapolate_wave_data(wave_file_uri):
     wave_heights = []
     key = None
 
-    #get the periods and heights 
-    wave_periods = wave_file.readline().split(',')
-    wave_heights = wave_file.readline().split(',')
+    #get rows,cols
+    row_col_bin = wave_file.read(8)
+    row,col = struct.unpack('ii',row_col_bin)
 
+    #get the periods and heights
+    line = wave_file.read(row*4)
+    wave_periods = list(struct.unpack('f'*row,line))
+    line = wave_file.read(col*4)
+    wave_heights = list(struct.unpack('f'*col,line))
+
+    key = None
     while True:
-        line = wave_file.readline()
+        line = wave_file.read(8)
         if len(line) == 0:
             #end of file
             wave_dict['bin_matrix'][key] = wave_array
             break
 
-        #If it is the start of a new location, get (I,J) values
-        if line[0] == 'I':
-            #If key is not None that means there is a full array waiting
-            #to be written to the dictionary, so write it
-            if key != None:
-                wave_dict['bin_matrix'][key] = wave_array
+        if key != None:
+            wave_dict['bin_matrix'][key] = wave_array
 
-            #Clear out array
-            wave_array = []
+        #Clear out array
+        wave_array = []
 
-            key = (int(line.split(',')[1]), int(line.split(',')[3]))
+        key = struct.unpack('ii',line)
 
-        else:
-            wave_array.append(line.split(','))
+        for row_id in range(row):
+            line = wave_file.read(col*4)
+            array = list(struct.unpack('f'*col,line))
+            wave_array.append(array)
 
     wave_file.close()
     #Add row/col header to dictionary
