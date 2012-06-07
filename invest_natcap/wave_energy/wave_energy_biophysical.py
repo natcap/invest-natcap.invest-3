@@ -101,7 +101,7 @@ def execute(args):
         analysis_area_extract_path = \
             args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
         biophysical_args['wave_base_data'] = \
-            extrapolate_wave_data(args['wave_base_data_uri']
+            load_binary_wave_data(args['wave_base_data_uri']
                                   + os.sep + 'NAmerica_WestCoast_4m.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
@@ -113,7 +113,7 @@ def execute(args):
         analysis_area_extract_path = \
             args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
         biophysical_args['wave_base_data'] = \
-            extrapolate_wave_data(args['wave_base_data_uri']
+            load_binary_wave_data(args['wave_base_data_uri']
                                   + os.sep + 'NAmerica_EastCoast_4m.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
@@ -124,7 +124,7 @@ def execute(args):
         analysis_area_extract_path = \
             args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
         biophysical_args['wave_base_data'] = \
-            extrapolate_wave_data(args['wave_base_data_uri']
+            load_binary_wave_data(args['wave_base_data_uri']
                                   + os.sep + 'Global_EastHemi_30m.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
@@ -135,7 +135,7 @@ def execute(args):
         analysis_area_extract_path = \
             args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
         biophysical_args['wave_base_data'] = \
-            extrapolate_wave_data(args['wave_base_data_uri']
+            load_binary_wave_data(args['wave_base_data_uri']
                                   + os.sep + 'Global_WestHemi_30m.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
@@ -146,7 +146,7 @@ def execute(args):
         analysis_area_extract_path = \
             args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
         biophysical_args['wave_base_data'] = \
-            extrapolate_wave_data(args['wave_base_data_uri']
+            load_binary_wave_data(args['wave_base_data_uri']
                                   + os.sep + 'Global_WW3.txt.bin')
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
@@ -169,13 +169,13 @@ def execute(args):
     LOGGER.info('Completed Wave Energy Biophysical.')
 
 def load_binary_wave_data(wave_file_uri):
-    """The extrapolate_wave_data function converts WW3 text data into a 
+    """The load_binary_wave_data function converts a pickled WW3 text file into a 
     dictionary who's keys are the corresponding (I,J) values and whose value 
     is a two-dimensional array representing a matrix of the number of hours 
     a seastate occurs over a 5 year period. The row and column headers are 
     extracted once and stored in the dictionary as well.
     
-    wave_file_uri - The path to a text document that holds the WW3 data.
+    wave_file_uri - The path to a pickled binary WW3 file.
     
     returns - A dictionary of matrices representing hours of specific seastates,
               as well as the period and height ranges.  It has the following
