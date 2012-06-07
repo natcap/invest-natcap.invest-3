@@ -119,28 +119,6 @@ def execute(args):
         biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
         biophysical_args['analysis_area_extract'] = \
             ogr.Open(analysis_area_extract_path)
-    elif args['analysis_area_uri'] == 'Global(Eastern Hemisphere)':
-        analysis_area_path = \
-            args['wave_base_data_uri'] + os.sep + 'Global_EastHemi_30m.shp'
-        analysis_area_extract_path = \
-            args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysical_args['wave_base_data'] = \
-            load_binary_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'Global_EastHemi_30m.txt.bin')
-        biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
-        biophysical_args['analysis_area_extract'] = \
-            ogr.Open(analysis_area_extract_path)
-    elif args['analysis_area_uri'] == 'Global(Western Hemisphere)':
-        analysis_area_path = \
-            args['wave_base_data_uri'] + os.sep + 'Global_WestHemi_30m.shp'
-        analysis_area_extract_path = \
-            args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysical_args['wave_base_data'] = \
-            load_binary_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'Global_WestHemi_30m.txt.bin')
-        biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
-        biophysical_args['analysis_area_extract'] = \
-            ogr.Open(analysis_area_extract_path)
     elif args['analysis_area_uri'] == 'Global':
         analysis_area_path = \
             args['wave_base_data_uri'] + os.sep + 'Global.shp'
