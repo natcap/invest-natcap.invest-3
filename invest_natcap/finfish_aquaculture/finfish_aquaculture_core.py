@@ -124,24 +124,24 @@ def execute(args):
     if (bool(args['do_valuation']) == True):
         value_history, farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
                 proc_weight, cycle_history)
+   
+        #And add it into the shape file
+        layer.ResetReading()
+        
+        hrv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
+        layer.CreateField(hrv_field)
+        
+        for feature in layer:
+    
+            accessor = args['farm_ID']
+            feature_ID = feature.items()[accessor]
+            feature.SetField('NVP_USD_1k', int(farms_npv[feature_ID]))
+            
+            layer.SetFeature(feature)
     else:
         value_history = None
         farms_npv = None
-   
-    #And add it into the shape file
-    layer.ResetReading()
-    
-    hrv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
-    layer.CreateField(hrv_field)
-    
-    for feature in layer:
-
-        accessor = args['farm_ID']
-        feature_ID = feature.items()[accessor]
-        feature.SetField('NVP_USD_1k', int(farms_npv[feature_ID]))
         
-        layer.SetFeature(feature)
-    
     #Now, want to build the HTML table of everything we have calculated to this point
     create_HTML_table(output_dir, args['farm_ID'], args['farm_op_dict'], cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
                       farms_npv, value_history)
@@ -439,7 +439,7 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
             
             for element in vars:
                 if element == indiv_rev or element == indiv_npv:
-                    str_line += "<td bgcolor= \"#FFFF00\">"
+                    str_line += "<td bgcolor= \"#FF0000\">"
                 else :
                     str_line += "<td>"
                 str_line += str(element)
@@ -469,8 +469,7 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
                    'Number of Completed Harvest Cycles', 'Total Volume Harvested']
     
     inner_strings = []
-    
-    
+
     for id in cycle_history.keys():
         
         #pre-load variables
@@ -495,10 +494,9 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
             str_line += str(element)
             str_line += "</td>"
                 
-    else:
-        npv
-    
+   
         inner_strings.append(str_line)
+
         
     #Write the third table itself
     file.write("<br><HR><H2>Farm Result Totals (output)</H2>")
@@ -511,6 +509,7 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     file.write("</tr>")
     
     for element in inner_strings:
+
         file.write("<tr>")
         file.write(element)
         file.write("</tr>")
