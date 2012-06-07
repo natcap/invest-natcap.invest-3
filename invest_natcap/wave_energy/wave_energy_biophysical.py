@@ -184,9 +184,9 @@ def load_binary_wave_data(wave_file_uri):
     col,row = struct.unpack('ii',row_col_bin)
 
     #get the periods and heights
-    line = wave_file.read(row*4)
-    wave_periods = list(struct.unpack('f'*col,line))
     line = wave_file.read(col*4)
+    wave_periods = list(struct.unpack('f'*col,line))
+    line = wave_file.read(row*4)
     wave_heights = list(struct.unpack('f'*row,line))
 
     key = None
