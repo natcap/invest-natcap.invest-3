@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Crop Pollination: Biophysical",
-    "targetScript" : "invest_natcap/pollination/pollination_biophysical.py",
+    "targetScript" : "invest_natcap.pollination.pollination_biophysical",
     "modelName" : "pollination_biophysical",
     "localDocURI": "./documentation/croppollination.html",
     "height": 400,

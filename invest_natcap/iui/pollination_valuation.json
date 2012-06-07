@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Crop Pollination: Valuation",
-    "targetScript" : "invest_natcap/pollination/pollination_valuation.py",
+    "targetScript" : "invest_natcap.pollination.pollination_valuation",
     "modelName" : "pollination_valuation",
     "localDocURI": "./documentation/croppollination.html",
     "height": 400,
