@@ -3,7 +3,7 @@
     "label": "Water Yield",
     "targetScript" : "invest_natcap.hydropower.water_yield",
     "modelName" : "water_yield",
-    "localDocURI": "./documentation/water_yield.html",
+    "localDocURI": "../documentation/water_yield.html",
     "height": 900,
     "width" : 700,
     "elements": [
@@ -16,7 +16,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "./Hydropower",
+                    "defaultValue": "../Hydropower",
                     "required": true
                 },          
 				{        
@@ -24,7 +24,7 @@
                     "args_id" : "precipitation_uri",
                     "type": "file",
                     "label": "Precipitation",
-                    "defaultValue": "./Base_Data/Freshwater/precip",
+                    "defaultValue": "../Base_Data/Freshwater/precip",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
@@ -33,7 +33,7 @@
                     "args_id" : "eto_uri",
                     "type": "file",
                     "label": "Potential Evapotranspiration",
-                    "defaultValue": "./Base_Data/Freshwater/eto",
+                    "defaultValue": "../Base_Data/Freshwater/eto",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
@@ -42,7 +42,7 @@
                     "args_id" : "soil_depth_uri",
                     "type": "file",
                     "label": "Soil Depth",
-                    "defaultValue": "./Base_Data/Freshwater/soil_depth",
+                    "defaultValue": "../Base_Data/Freshwater/soil_depth",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
@@ -51,7 +51,7 @@
                     "args_id" : "pawc_uri",
                     "type": "file",
                     "label": "Plant Available Water Fraction",
-                    "defaultValue": "./Base_Data/Freshwater/pawc",
+                    "defaultValue": "../Base_Data/Freshwater/pawc",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
@@ -60,7 +60,7 @@
                     "args_id" : "lulc_uri",
                     "type": "file",
                     "label": "Land Use",
-                    "defaultValue": "./Base_Data/Freshwater/landuse_90",
+                    "defaultValue": "../Base_Data/Freshwater/landuse_90",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },    
@@ -69,7 +69,7 @@
                     "args_id": "watersheds_uri",
                     "type": "file",
                     "label": "Watersheds",
-                    "defaultValue": "./Base_Data/Freshwater/watersheds.shp",
+                    "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
                     "required": true,
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
@@ -83,7 +83,7 @@
                     "args_id": "sub_watersheds_uri",
                     "type": "file",
                     "label": "Sub-Watersheds",
-                    "defaultValue": "./Base_Data/Freshwater/subwatersheds.shp",
+                    "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
                     "required": true,
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
@@ -97,7 +97,7 @@
                     "args_id": "biophysical_table_uri",
                     "type": "file",
                     "label": "Biophysical Table",
-                    "defaultValue": "./Hydropower/input/biophysical_table.csv",
+                    "defaultValue": "../Hydropower/input/biophysical_table.csv",
                     "required": true,
                     "validateAs": { "type": "CSV",
                                     "fieldsExist": ["lucode", "etk", "root_depth"],
