@@ -63,7 +63,9 @@ if platform.system() == 'Windows':
          'invest_water_yield.py',
          'invest_hydropower_valuation.py',
          'invest_water_scarcity.py',
-         'invest_marine_water_quality_biophysical.py']
+         'invest_marine_water_quality_biophysical.py',
+         'invest_pollination_biophysical.py',
+         'invest_pollination_valuation.py']
 
     #Need to manually bring along the json configuration files to
     #the current build directory
@@ -77,6 +79,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/water_scarcity.json',
                'invest_natcap/iui/hydropower_valuation.json',
                'invest_natcap/iui/pollination_biophysical.json',
+               'invest_natcap/iui/pollination_valuation.json',
                'invest_natcap/iui/marine_water_quality_biophysical.json']),
         ('invest_natcap/iui',
               ['invest_natcap/iui/dialog-close.png',
