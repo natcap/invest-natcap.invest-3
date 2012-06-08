@@ -125,7 +125,9 @@ def biophysical(args):
         pixel_xsize, pixel_ysize = \
             pixel_size_helper(clipped_wave_shape, coord_trans, \
                               coord_trans_opposite, global_dem)
-
+        
+        #Close file as it is no longer used
+        projected_wave_shape.Destroy()
         LOGGER.debug('X pixel size in meters : %f', pixel_xsize)
         LOGGER.debug('Y pixel size in meters : %f', pixel_ysize)
 
