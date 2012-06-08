@@ -88,51 +88,37 @@ def execute(args):
         machine_params[row['NAME'].strip().lower()] = row['VALUE']
     machine_param_file.close()
     biophysical_args['machine_param'] = machine_params
+   
+    #Build up a dictionary of possible analysis areas where the key
+    #is the analysis area selected and the value is a dictionary
+    #that stores the related uri paths to the needed inputs 
+    analysis_dict = \
+        {'West Coast of North America and Hawaii': \
+            {'point_shape': args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp',
+             'extract_shape': args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp',
+             'ww3_uri': args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.txt.bin'
+            },
+         'East Coast of North America and Puerto Rico': \
+            {'point_shape': args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp',
+             'extract_shape': args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp',
+             'ww3_uri': args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.txt.bin'
+            },
+         'Global': \
+            {'point_shape': args['wave_base_data_uri'] + os.sep + 'Global.shp',
+             'extract_shape': args['wave_base_data_uri'] + os.sep + 'Global_extract.shp',
+             'ww3_uri': args['wave_base_data_uri'] + os.sep + 'Global_WW3.txt.bin'
+            }
+       }
+    #Add the ww3 dictionary, point shapefile, and polygon extract shapefile
+    #to the biophysical_args based on the analysis area selected
+    biophysical_args['wave_base_data'] = \
+        load_binary_wave_data(analysis_dict[args['analysis_area_uri']]['ww3_uri'])
     
-    #Depending on which analysis area is selected:
-    #Extrapolate the corresponding WW3 Data and place in the 
-    #biophysical_args dictionary.
-    #Open the point geometry analysis area shapefile containing the 
-    #corresponding wave farm sites.
-    #Open the polygon geometry analysis area extract shapefile contaning the 
-    #outline of the area of interest.
-    if args['analysis_area_uri'] == 'West Coast of North America and Hawaii':
-        analysis_area_path = \
-            args['wave_base_data_uri'] + os.sep + 'NAmerica_WestCoast_4m.shp'
-        analysis_area_extract_path = \
-            args['wave_base_data_uri'] + os.sep + 'WCNA_extract.shp'
-        biophysical_args['wave_base_data'] = \
-            load_binary_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'NAmerica_WestCoast_4m.txt.bin')
-        biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
-        biophysical_args['analysis_area_extract'] = \
-            ogr.Open(analysis_area_extract_path)
-    elif args['analysis_area_uri'] == \
-             'East Coast of North America and Puerto Rico':
-        analysis_area_path = \
-            args['wave_base_data_uri'] + os.sep + 'NAmerica_EastCoast_4m.shp'
-        analysis_area_extract_path = \
-            args['wave_base_data_uri'] + os.sep + 'ECNA_extract.shp'
-        biophysical_args['wave_base_data'] = \
-            load_binary_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'NAmerica_EastCoast_4m.txt.bin')
-        biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
-        biophysical_args['analysis_area_extract'] = \
-            ogr.Open(analysis_area_extract_path)
-    elif args['analysis_area_uri'] == 'Global':
-        analysis_area_path = \
-            args['wave_base_data_uri'] + os.sep + 'Global.shp'
-        analysis_area_extract_path = \
-            args['wave_base_data_uri'] + os.sep + 'Global_extract.shp'
-        biophysical_args['wave_base_data'] = \
-            load_binary_wave_data(args['wave_base_data_uri']
-                                  + os.sep + 'Global_WW3.txt.bin')
-        biophysical_args['analysis_area'] = ogr.Open(analysis_area_path)
-        biophysical_args['analysis_area_extract'] = \
-            ogr.Open(analysis_area_extract_path)
-    else:
-        LOGGER.debug('Analysis Area : %s', args['analysis_area_uri'])
-        LOGGER.error('Analysis Area ERROR.')
+    biophysical_args['analysis_area'] = \
+        ogr.Open(analysis_dict[args['analysis_area_uri']]['point_shape'])
+    
+    biophysical_args['analysis_area_extract'] = \
+        ogr.Open(analysis_dict[args['analysis_area_uri']]['extract_shape'])
         
     #If the area of interest is present add it to the dictionary arguments
     if 'aoi_uri' in args and len(args['aoi_uri']) > 0:
