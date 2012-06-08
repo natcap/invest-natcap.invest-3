@@ -388,12 +388,16 @@ class DynamicPrimitive(DynamicElement):
             value = self.value()
 
             # Check to see if the element should be passed if it's empty.
-            if len(value) == 0:
-                try:
-                    if self.attributes['returns']['ifEmpty'] == 'pass':
-                        return None
-                except KeyError:
-                    pass
+            try:
+                if len(value) == 0:
+                    try:
+                        if self.attributes['returns']['ifEmpty'] == 'pass':
+                            return None
+                    except KeyError:
+                        pass
+            except TypeError:
+                #if value is a boolean can't do length, just ignore
+                pass
 
             if value != '' and value != None and not isinstance(value, dict):
                 return self.cast_value()
