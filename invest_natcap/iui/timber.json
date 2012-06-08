@@ -3,7 +3,7 @@
     "label": "Managed Timber Production and Valuation",
     "targetScript": "invest_natcap.timber.timber",
     "modelName": "timber",
-    "localDocURI": "./documentation/managed_timber_production_model.html",
+    "localDocURI": "../documentation/managed_timber_production_model.html",
     "height": 150,
     "width": 500,
     "elements": [
@@ -17,7 +17,7 @@
                     "label": "Workspace",
                     "required": true,
                     "args_id": "output_dir",
-                    "defaultValue": "./timber"
+                    "defaultValue": "../timber"
                 },
                 {
                     "id": "shapefile",
@@ -25,7 +25,7 @@
                     "type": "file",
                     "label": "Managed area map",
                     "required": true,
-                    "defaultValue": "./timber/input/plantation.shp"
+                    "defaultValue": "../timber/input/plantation.shp"
                 },
                 {
                     "id": "attr_table",
@@ -33,7 +33,7 @@
                     "type": "file",
                     "label": "Plantation production table",
                     "required": true,
-                    "defaultValue": "./timber/input/plant_table.dbf"
+                    "defaultValue": "../timber/input/plant_table.dbf"
                 },    
                 {
                     "id": "discount",

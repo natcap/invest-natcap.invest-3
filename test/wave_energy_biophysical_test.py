@@ -102,16 +102,16 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
         except IOError, error:
             self.assertTrue(False, 'The dbf file could not be opened')
 
-    def test_wave_energy_extrapolate_wave_data(self):
-        """A test for the extrapolate_wate_data function that
+    def test_wave_energy_load_binary_wave_data(self):
+        """A test for the load_binary_wave_data function that
            compares hand calculated results against the returned
            function generated results
         """
         wave_base_data_uri = \
-            './data/wave_energy_data/test_input/sampWaveDataTest.txt'
+            './data/wave_energy_data/test_input/sampWaveDataTest.txt.bin'
         if os.path.isfile(wave_base_data_uri):
             wave_data = \
-               wave_energy_biophysical.extrapolate_wave_data(wave_base_data_uri)
+               wave_energy_biophysical.load_binary_wave_data(wave_base_data_uri)
             LOGGER.debug('Extrapolated Wave Data : %s', wave_data)
             #Hand generated results
             row = np.array([.25, 1.0, 2.0, 3.0, 4.0, 5.0])

@@ -3,7 +3,7 @@
     "label": "Marine Water Quality Biophysical",
     "targetScript" : "invest_natcap.marine_water_quality.marine_water_quality_biophysical",
     "modelName" : "marine_water_quality_biophysical",
-    "localDocURI": "./documentation/marine_water_quality_biophysical.html",
+    "localDocURI": "../documentation/marine_water_quality_biophysical.html",
     "height": 600,
     "width" : 700,
     "elements": [
@@ -16,7 +16,7 @@
                     "args_id" : "workspace",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "./MarineWaterQuality",
+                    "defaultValue": "../MarineWaterQuality",
                     "required": true
                 },
                 {
@@ -48,7 +48,7 @@
                     "args_id": "aoi_poly_uri",
                     "type": "file",
                     "label": "Area of Interest (AOI)",
-                    "defaultValue": "./MarineWaterQuality/input/AOI_clay_soundwideWQ.shp",
+                    "defaultValue": "../MarineWaterQuality/input/AOI_clay_soundwideWQ.shp",
                     "required": true,
                     "validateAs": {"type": "OGR"}
                 },
@@ -57,7 +57,7 @@
                     "args_id": "land_poly_uri",
                     "type": "file",
                     "label": "Land Polygon",
-                    "defaultValue": "./MarineWaterQuality/input/3005_VI_landPolygon.shp",
+                    "defaultValue": "../MarineWaterQuality/input/3005_VI_landPolygon.shp",
                     "required": true,
                     "validateAs": {"type": "OGR"}
                 },
@@ -66,7 +66,7 @@
                     "args_id": "source_points_uri",
                     "type": "file",
                     "label": "Source Point Centroids",
-                    "defaultValue": "./MarineWaterQuality/input/floathomes_centroids.shx",
+                    "defaultValue": "../MarineWaterQuality/input/floathomes_centroids.shx",
                     "required": true,
                     "validateAs": {"type": "OGR"}
                 },
@@ -75,7 +75,7 @@
                     "args_id": "source_point_data_uri",
                     "type": "file",
                     "label": "Source Point Data Table",
-                    "defaultValue": "./MarineWaterQuality/input/WQM_PAR.csv",
+                    "defaultValue": "../MarineWaterQuality/input/WQM_PAR.csv",
                     "required": true,
                     "validateAs": {"type":"CSV"}
                 },
@@ -84,7 +84,7 @@
                     "args_id": "tide_e_points_uri",
                     "type": "file",
                     "label": "Tidal Diffusion Constants (E)",
-                    "defaultValue": "./MarineWaterQuality/input/TideE_WGS1984_BCAlbers.shp",
+                    "defaultValue": "../MarineWaterQuality/input/TideE_WGS1984_BCAlbers.shp",
                     "required": true,
                     "validateAs": {"type": "OGR"}
                 },
@@ -93,7 +93,7 @@
                     "args_id": "adv_uv_points_uri",
                     "type": "file",
                     "label": "(Optional) Advection Vectors (UV as point data)",
-                    "defaultValue": "./MarineWaterQuality/input/ADVuv_WGS1984_BCAlbers.shp",
+                    "defaultValue": "../MarineWaterQuality/input/ADVuv_WGS1984_BCAlbers.shp",
                     "required": false,
                     "validateAs": {"type": "OGR"}
                 }

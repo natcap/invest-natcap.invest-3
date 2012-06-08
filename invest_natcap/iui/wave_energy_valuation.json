@@ -3,7 +3,7 @@
     "label": "Wave Energy Valuation",
     "targetScript" : "invest_natcap.wave_energy.wave_energy_valuation",
     "modelName" : "wave_energy_valuation",
-    "localDocURI": "./documentation/wave_energy.html",
+    "localDocURI": "../documentation/wave_energy.html",
     "height": 600,
     "width" : 800,
     "elements": [
@@ -16,7 +16,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "./WaveEnergy",
+                    "defaultValue": "../WaveEnergy",
                     "required": true
                 },          
 				{        
@@ -24,7 +24,7 @@
                     "args_id" : "land_gridPts_uri",
                     "type": "file",
                     "label": "Land and Grid Points Table",
-                    "defaultValue": "./WaveEnergy/input/LandGridPts_WCVI.csv",
+                    "defaultValue": "../WaveEnergy/input/LandGridPts_WCVI.csv",
                     "required": true,
                     "validateAs": { "type": "CSV",
                     				"fieldsExist": ["ID", "TYPE", "LAT", "LONG", "LOCATION"],
@@ -48,7 +48,7 @@
 		            "args_id": "machine_econ_uri",
 		            "type": "file",
 		            "label": "Machine Economic Table",
-		            "defaultValue": "./WaveEnergy/input/Machine_Pelamis_Economic.csv",
+		            "defaultValue": "../WaveEnergy/input/Machine_Pelamis_Economic.csv",
 		            "required": true,
 		            "validateAs": { "type": "CSV",
                     				"fieldsExist": ["NAME", "VALUE", "NOTE"],
@@ -67,7 +67,7 @@
                     "args_id": "global_dem",
                     "type": "file",
                     "label": "Global Digital Elevation Model (DEM)",
-                    "defaultValue": "./Base_Data/Marine/DEMs/global_dem",
+                    "defaultValue": "../Base_Data/Marine/DEMs/global_dem",
                     "required": true,
                     "validateAs": {"type": "GDAL"}
                 },
@@ -77,7 +77,7 @@
                     "type": "file",
                     "label": "Wave Data Shapefile ",
                     "helpText": "This shapefile should be projected in Meters so that distances can be calculated correctly.\n To ensure this an AOI projected in Meters should be provided during the Biophysical run.",
-                    "defaultValue": "./WaveEnergy/Intermediate/WEM_InputOutput_Pts.shp",
+                    "defaultValue": "../WaveEnergy/Intermediate/WEM_InputOutput_Pts.shp",
                     "required": true,
                     "validateAs": {"type":"OGR",
                     			   "layers": [{"name": {"inheritFrom": "file"},
