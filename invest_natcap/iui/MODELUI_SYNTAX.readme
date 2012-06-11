@@ -573,6 +573,26 @@ Example dropdown object:
     "defaultValue": 0
 }
 
+specialized dropdown menus:
+---------------------------
+
+There is a specialized dropdown menu that exists for selecting an OGR field from
+a specific shapefile: OGRFieldDropdown.  This element appears as a dropdown menu
+that is disabled in the UI, but is connected to an OGR file field behind the
+scenes.  When a file is provided to the OGR file field, the dropdown is
+populated with the file field's fieldnames.
+
+Example OGRFieldDropdown object:
+{
+    "id": "OGRDropdown_example",
+    "type": "OGRFieldDropdown",
+    "label": "What is your cell phone carrier?",
+    "enabledBy": "id_of_an_OGR_file_element",
+    "returns": "strings"
+}
+
+
+
 
 checkbox
 =================================
