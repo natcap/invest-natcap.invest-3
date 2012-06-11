@@ -478,6 +478,12 @@ this is:
 Where the regexp_string is a string regular expression compatible with python's
 re module.
 
+***NOTE***
+Both the string and number validation types have defaule regular expressions
+that are checked even if the user does not specify a different regular
+expression.  The default string regex is ".*".  The default number regex is
+"[0-9]*(\\.[0-9]*)?".
+
 
 Example text object from carbon_biophysical:
 {
