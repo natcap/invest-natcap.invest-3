@@ -102,8 +102,7 @@
                     "defaultValue": "2.25",
                     "requiredIf": ["valuation"],
                     "dataType": "float",
-                    "validateAs": {"type": "number",
-                    				"allowedValues" : {"pattern": "[0-9]*\\.[0-9]*"}},
+                    "validateAs": {"type": "number"},
                     "helpText": "Default value comes from Urner-Berry monthly fresh sheet reports on price of farmed Atlantic salmon."
 				},
 				{
