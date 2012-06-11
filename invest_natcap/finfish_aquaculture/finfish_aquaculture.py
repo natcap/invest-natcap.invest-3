@@ -69,15 +69,13 @@ def execute(args):
     format_temp_table(args['water_temp_tbl'])
     format_ops_table(args['farm_op_tbl'], "Farm #:")
     
-    #ff_aqua_args['do_valuation'] = args['do_valuation']
-    LOGGER.debug("Outside do_valuation set. %s", ff_aqua_args['do_valuation'])
+    ff_aqua_args['do_valuation'] = args['do_valuation']
+
     #Valuation arguments
     key = 'do_valuation'
     
-    if key in ff_aqua_args.keys():
-        
-        LOGGER.debug("Inside do valuation set.")
-        ff_aqua_args['do_valuation'] = args['do_valuation']
+    if ff_aqua_args['do_valuation'] == True:
+
         ff_aqua_args['p_per_kg'] = args['p_per_kg']
         ff_aqua_args['frac_p'] = args['frac_p']
         ff_aqua_args['discount'] = args['discount']
