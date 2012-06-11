@@ -34,11 +34,11 @@
                 {
                     "id" : "farm_identifier",
                     "args_id" : "farm_ID",
-                    "type": "text",
+                    "type": "OGRFieldDropdown",
+                    "enabledBy": "farm_location",
                     "label": "Farm Identifier Name",
                     "defaultValue": "FarmID",
                     "required": true,
-                    "validateAs": {"type": "text"},
                     "helpText": "The name of a column heading used to identify each farm and link the spatial information from the shapefile to subsequent table input data (farm operation and daily water temperature at farm tables). Additionally, the numbers underneath this farm identifier name must be unique integers for all the inputs."
                 },
                 {

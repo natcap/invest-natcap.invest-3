@@ -1157,6 +1157,53 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
     def setBGcolorSatisfied(self, state):
         pass
 
+class TableHandler(Dropdown):
+    """This class defines a general-purpose class for handling dropdown-based
+        column selection.  This class uses IUI's 'enabledBy' attribute to
+        control the contents of the dropdown menu. This element's 'enabledBy'
+        attribute must be set to the id of 0a file element that is validated
+        appropriately."""
+    def __init__(self, attributes):
+        # initialize the options key if it doesn't already exist.
+        if 'options' not in attributes:
+            attributes['options'] = []
+
+        Dropdown.__init__(self, attributes)
+        self.handler = None  # this should be set in an appropriate subclass.
+        self.uri = ''
+
+    def populate_fields(self):
+        """Extract the fieldnames from the fileio table handler class for this
+        instance of TableHandler.  Returns nothing, but populates the dropdown
+        with the appropriate fieldnames.  If any options are present in the
+        dropdown, they are cleared before the new column names are entered."""
+        self.dropdown.clear()
+        self.handler.update(self.enabledBy.value())
+        field_names = self.handler.get_fieldnames(case='orig')
+        for name in field_names:
+            self.dropdown.addItem(name)
+
+    def setState(self, state, includeSelf=True, recursive=True):
+        """Reimplemented from Dropdown.setState.  When state=False, the dropdown
+        menu is cleared.  If state=True, the dropdown menu is populated with
+        values from the corresponding table object."""
+        Dropdown.setState(self, state, includeSelf, recursive)
+
+        if state == False:
+            self.dropdown.clear()
+        else:
+            self.populate_fields()
+
+class CSVFieldDropdown(TableHandler):
+    def __init__(self, attributes):
+        TableHandler.__init__(self, attributes)
+        self.handler = fileio.CSVHandler(self.uri)
+
+class OGRFieldDropdown(TableHandler):
+    def __init__(self, attributes):
+        TableHandler.__init__(self, attributes)
+        self.handler = fileio.OGRHandler(self.uri)
+
 class OperationDialog(QtGui.QDialog):
     """ModelDialog is a class defining a modal window presented to the user
         while the model is running.  This modal window prevents the user from
@@ -1754,6 +1801,7 @@ class ElementRegistrar(registrar.Registrar):
                    'embeddedUI': EmbeddedUI,
                    'checkbox': CheckBox,
                    'scrollGroup': ScrollArea,
+                   'OGRFieldDropdown': OGRFieldDropdown,
                    'label': Label
                    }
         self.update_map(updates)
