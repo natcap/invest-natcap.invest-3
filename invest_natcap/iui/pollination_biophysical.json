@@ -4,8 +4,8 @@
     "targetScript" : "invest_natcap.pollination.pollination_biophysical",
     "modelName" : "pollination_biophysical",
     "localDocURI": "../documentation/croppollination.html",
-    "height": 400,
-    "width" : 500,
+    "height": 500,
+    "width" : 700,
     "elements": [
         {
             "id" : "workspace_list",
