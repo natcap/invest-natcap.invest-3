@@ -1056,7 +1056,7 @@ class Dropdown(LabeledElement):
         self.addElement(QtGui.QWidget())
        
     def setValue(self, index):
-        if isinstance(index, str):
+        if isinstance(index, str) or isinstance(index, unicode):
             index = self.dropdown.findText(index)
             if index == -1: #returned if the index cannot be found
                 index = 0
