@@ -2,11 +2,16 @@
 
 import os
 import csv
+import logging
 
 from osgeo import gdal
 from osgeo import ogr
 
 from invest_natcap.finfish_aquaculture import finfish_aquaculture_core
+
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+LOGGER = logging.getLogger('wave_energy_biophysical')
 
 def execute(args):
     """This function will take care of preparing files passed into 
@@ -64,12 +69,18 @@ def execute(args):
     format_temp_table(args['water_temp_tbl'])
     format_ops_table(args['farm_op_tbl'], "Farm #:")
     
-    
+    #ff_aqua_args['do_valuation'] = args['do_valuation']
+    LOGGER.debug("Outside do_valuation set. %s", ff_aqua_args['do_valuation'])
     #Valuation arguments
-    ff_aqua_args['do_valuation'] = args['do_valuation']
-    ff_aqua_args['p_per_kg'] = args['p_per_kg']
-    ff_aqua_args['frac_p'] = args['frac_p']
-    ff_aqua_args['discount'] = args['discount']
+    key = 'do_valuation'
+    
+    if key in ff_aqua_args.keys():
+        
+        LOGGER.debug("Inside do valuation set.")
+        ff_aqua_args['do_valuation'] = args['do_valuation']
+        ff_aqua_args['p_per_kg'] = args['p_per_kg']
+        ff_aqua_args['frac_p'] = args['frac_p']
+        ff_aqua_args['discount'] = args['discount']
 
     #Fire up the biophysical function in finfish_aquaculture_core with the 
     #gathered arguments

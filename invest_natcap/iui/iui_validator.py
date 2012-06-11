@@ -290,12 +290,12 @@ class Checker(registrar.Registrar):
                     are evaluated in arbitrary order unless the key of a
                     key-value pair is present in the list self.ignore."""
         try:
+            self.value = valid_dict['value']
             for check_func in self.checks:
                 error = check_func(valid_dict)
                 if error != None:
                     return error
 
-            self.value = valid_dict['value']
             for key, value in valid_dict.iteritems():
                 if key not in self.ignore and self.map[key] not in self.checks:
                     error = self.eval(key, value)
@@ -573,31 +573,52 @@ class DBFChecker(TableChecker):
 class PrimitiveChecker(Checker):
     def __init__(self):
         Checker.__init__(self)
+        self.default_regexp = '.*'
+        self.add_check_function(self.check_regexp)
+
+        # We still need to record the allowedValues key in the values map.  It
+        # won't be executed twice in self.run_checks()
         updates = {'allowedValues': self.check_regexp}
         self.update_map(updates)
 
-    def check_regexp(self, regexp_dict):
-        flag = 0
-        if 'flag' in regexp_dict:
-            if regexp_dict['flag'] == 'ignoreCase':
-                flag = re.IGNORECASE
-            elif regexp_dict['flag'] == 'verbose':
-                flag = re.VERBOSE
-            elif regexp_dict['flag'] == 'debug':
-                flag = re.DEBUG
-            elif regexp_dict['flag'] == 'locale':
-                flag = re.LOCALE
-            elif regexp_dict['flag'] == 'multiline':
-                flag = re.MULTILINE
-            elif regexp_dict['flag'] == 'dotAll':
-                flag = re.DOTALL
+        self.regexp_flags = {'ignoreCase': re.IGNORECASE,
+                             'verbose': re.VERBOSE,
+                             'debug': re.DEBUG,
+                             'locale': re.LOCALE,
+                             'multiline': re.MULTILINE,
+                             'dotAll': re.DOTALL}
 
-        pattern = re.compile(regexp_dict['pattern'], flag)
+    def check_regexp(self, valid_dict):
+        try:
+            # Attempt to get the user's selected flag from the validation
+            # dictionary.  Raises a KeyError if it isn't found.
+            flag = self.regexp_flags[valid_dict['allowedValues']['flag']]
+        except KeyError:
+            # 0 is the python re module's way of specifying no flag.  This is
+            # used if the user has not provided a regexp flag in the validation
+            # dictionary.
+            flag = 0
+
+        try:
+            # Attempt to build a regexp object based on the user's provided
+            # regex.  Raises a KeyError if the user has not provided a regular
+            # expression to use.
+            user_pattern = valid_dict['allowedValues']['pattern']
+        except KeyError:
+            # If the user has not provided a regular expression, we should use
+            # the default regular expression instead.
+            user_pattern = self.default_regexp
+
+        pattern = re.compile(user_pattern, flag)
+        value = valid_dict['value']
         if pattern.match(self.value) == None:
             return str(self.value + " value not allowed")
 
 class NumberChecker(PrimitiveChecker):
     def __init__(self):
+        # Set numeric default regexp.  Used if user does not provide a regex
+        self.default_regexp = '[0-9]*(\\.[0-9]*)?'
+
         PrimitiveChecker.__init__(self)
         updates = {'gteq': self.greater_than_equal_to,
                    'greaterThan': self.greater_than,
