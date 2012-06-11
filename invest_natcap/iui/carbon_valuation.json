@@ -4,8 +4,8 @@
     "targetScript": "invest_natcap.carbon.carbon_valuation",
     "modelName": "carbon_valuation",
     "localDocURI": "../documentation/carbonstorage.html",
-    "height": 200,
-    "width": 500,
+    "height": 400,
+    "width": 700,
     "elements": [
         {
             "id": "valuation_list",
