@@ -242,6 +242,17 @@ def getFlatDefaultArgumentsDictionary(args):
 def main(uri, use_gui=True):
     app = QtGui.QApplication(sys.argv)
 #    validate(json_args)
+
+    # Check to see if the URI exists in the current directory.  If not, assume
+    # it exists in the directory where this module exists.
+    if not os.path.exists(uri):
+        file_path = os.path.dirname(os.path.abspath(__file__))
+        uri = os.path.join(file_path, os.path.basename(uri))
+
+        # If the URI still doesn't exist, raise a helpful exception.
+        if not os.path.exists(uri):
+            raise Exception('Can\'t find the file %s.'%uri)
+
     ui = ModelUI(uri, use_gui)
     if use_gui == True:
         result = app.exec_()
