@@ -4,8 +4,8 @@
     "targetScript" : "invest_natcap/finfish_aquaculture/finfish_aquaculture.py",
     "modelName" : "finfish_aquaculture",
     "localDocURI": "./documentation/marine_fish.html",
-    "height": 400,
-    "width" : 500,
+    "height": 1000,
+    "width" : 600,
     "elements": [
         {
             "id" : "workspace_list",
@@ -36,7 +36,7 @@
                     "args_id" : "farm_ID",
                     "type": "text",
                     "label": "Farm Identifier Name",
-                    "defaultValue": "Farm #:",
+                    "defaultValue": "FarmID",
                     "required": true,
                     "validateAs": {"type": "text"},
                     "helpText": "The name of a column heading used to identify each farm and link the spatial information from the shapefile to subsequent table input data (farm operation and daily water temperature at farm tables). Additionally, the numbers underneath this farm identifier name must be unique integers for all the inputs."
@@ -71,7 +71,7 @@
                     "defaultValue": "Aquaculture/Input/Temp_Daily.csv",
                     "required": true,
                     "validateAs": { "type": "CSV"},
-                    "helpText": "Users must provide a time series of daily water temperature (C) for each farm in data input #1. When daily temperatures are not available, users can interpolate seasonal or monthly temperatures to a daily resolution. Water temperatures collected at existing aquaculture facilities are preferable, but if unavailable, users can consult online sources such as NOAA’s 4 km AVHRR Pathfinder Data and Canada’s Department of Fisheries and Oceans Oceanographic Database. The most appropriate temperatures to use are those from the upper portion of the water column, which are the temperatures experienced by the fish in the netpens."
+                    "helpText": "Users must provide a time series of daily water temperature (C) for each farm in the shapefile. When daily temperatures are not available, users can interpolate seasonal or monthly temperatures to a daily resolution. Water temperatures collected at existing aquaculture facilities are preferable, but if unavailable, users can consult online sources such as NOAAs 4 km AVHRR Pathfinder Data and Canadas Department of Fisheries and Oceans Oceanographic Database. The most appropriate temperatures to use are those from the upper portion of the water column, which are the temperatures experienced by the fish in the netpens."
                 },
                 {
                     "id" : "farm_operations",
@@ -88,10 +88,50 @@
                     "args_id" : "do_valuation",
                     "type": "checkbox",
                     "label": "Run Valuation? (optional)",
-                    "required": false,
+                    "required": true,
                     "defaultValue": false,
                     "helpText": "By checking this box, you are requesting valuation analysis."
-                }
+                },
+                {
+                    "id" : "market_price",
+                    "type": "text",
+                    "label": "Market Price per Kilogram of Processed Fish",
+                    "args_id": "p_per_kg",
+                    "required": false,
+                    "enabledBy": "valuation",
+                    "defaultValue": "2.25",
+                    "requiredIf": ["valuation"],
+                    "dataType": "float",
+                    "validateAs": {"type": "number",
+                    				"allowedValues" : {"pattern": "[0-9]*\\.[0-9]*"}},
+                    "helpText": "Default value comes from Urner-Berry monthly fresh sheet reports on price of farmed Atlantic salmon."
+				},
+				{
+                    "id" : "fraction_price",
+                    "type": "text",
+                    "label": "Fraction of Price that Accounts to Costs",
+                    "args_id": "frac_p",
+                    "required": false,
+                    "enabledBy": "valuation",
+                    "defaultValue": "0.3",
+                    "requiredIf": ["valuation"],
+                    "dataType": "float",
+                    "validateAs": {"type": "number"},
+                    "helpText": "Fraction of market price that accounts for costs rather than profit. Default value is 0.3 (30%)."
+				},
+				{
+                    "id" : "discount_rate",
+                    "type": "text",
+                    "label": "Daily Market Discount Rate",
+                    "args_id": "discount",
+                    "required": false,
+                    "enabledBy": "valuation",
+                    "defaultValue": "0.000192",
+                    "requiredIf": ["valuation"],
+                    "dataType": "float",
+                    "validateAs": {"type": "number"},
+                    "helpText": "We use a 7% annual discount rate, adjusted to a daily rate of 0.000192 for 0.0192% (7%/365 days)."
+				}
             ]
         }
     ]
