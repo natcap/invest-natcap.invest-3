@@ -50,7 +50,8 @@ class Validator(registrar.Registrar):
         #allElements is a pointer to a python dict: str id -> obj pointer.
         registrar.Registrar.__init__(self)
 
-        updates = {'GDAL': GDALChecker,
+        updates = {'disabled': Checker,
+                   'GDAL': GDALChecker,
                    'OGR': OGRChecker,
                    'number': NumberChecker,
                    'file': FileChecker,
@@ -324,7 +325,6 @@ class FolderChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a folder."""
     def __init__(self):
         URIChecker.__init__(self)
-        self.add_check_function(self.open)
 
     def check_exists(self, valid_dict):
         """Verify that the file at valid_dict['value'] exists.  Reimplemented
@@ -332,17 +332,17 @@ class FolderChecker(URIChecker):
         message."""
         self.uri = valid_dict['value']
 
-        if os.path.exists(self.uri) == False:
-            return str('Folder not found')
+        try:
+            folder_must_exist = valid_dict['mustExist']
+        except KeyError:
+            # Thrown when 'mustExist' is not a key in valid_dict.
+            folder_must_exist = False
 
-    def open(self, valid_dict):
-        """Check to see if the folder URI at self.uri is a folder on the
-        filesystem.
-
-        Return None if no error found, return a string if otherwise."""
-
-        if not os.path.isdir(self.uri):
-            return 'Must be a folder'
+        if folder_must_exist and not os.path.isdir(self.uri):
+            return str('Folder must exist on disk')
+        else:
+            if os.path.isfile(self.uri):
+                return str(self.uri + ' already exists on disk')
 
 class FileChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a file on disk.

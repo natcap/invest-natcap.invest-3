@@ -4,7 +4,7 @@
     "targetScript" : "invest_natcap.wave_energy.wave_energy_valuation",
     "modelName" : "wave_energy_valuation",
     "localDocURI": "../documentation/wave_energy.html",
-    "height": 600,
+    "height": 400,
     "width" : 800,
     "elements": [
         {

@@ -460,6 +460,10 @@ class InformationButton(QtGui.QPushButton):
         self.setFlat(True)
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
 
+        # If the user has set "helpText": null in JSON, deactivate.
+        if body_text == None:
+            self.deactivate()
+
     def show_info_popup(self):
         """Show the information popup.  This manually (programmatically) enters
             What's This? mode and spawns the tooltip at the location of trigger,
@@ -1056,7 +1060,7 @@ class Dropdown(LabeledElement):
         self.addElement(QtGui.QWidget())
        
     def setValue(self, index):
-        if isinstance(index, str):
+        if isinstance(index, str) or isinstance(index, unicode):
             index = self.dropdown.findText(index)
             if index == -1: #returned if the index cannot be found
                 index = 0

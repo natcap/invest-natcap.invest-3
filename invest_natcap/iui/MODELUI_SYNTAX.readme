@@ -88,7 +88,10 @@ Attributes common to all primitive elements:
                   what restrictions are to be placed on the user's input.  See
                   the section on Validation in this document for details.  If
                   this attribute is not provided, no validation will be
-                  performed on this element.
+                  performed on this element unless it's a folder or file
+                  elements (each of which have default validation).
+                  To make all validation pass, use "validateAs": {"type":
+                  "disabled"} for a specific element.
     "label"     : A string value that will be set as the element's label.  The
                   particular display of the label depends on the element.
                   This is a required attribute.
@@ -404,10 +407,18 @@ Validation
 Folder validation is limited to checking that the provided URI is a directory on
 the filesystem.  It is configured with the following syntax:
 
-    "validateAs": {"type": "folder"}
+    "validateAs": {"type": "folder",
+                   "mustExist": false}
+
+The mustExist attribute is assumed to be false unless you specify otherwise.  It
+must be a boolean.  NOTE: if you do not specify validation for a folder element,
+validation defaults to "validateAs": {"type": "folder", "mustExist": false}.  To
+disable validation, use "validateAs": {"type": "disabled"}.
 
 
-Example file object from carbon_biophysical:
+
+
+Example folder object from carbon_biophysical:
 {
     "id" : "workspace",
     "args_id" : "workspace_dir",
