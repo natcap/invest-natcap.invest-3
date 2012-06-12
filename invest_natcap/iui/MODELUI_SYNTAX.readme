@@ -404,10 +404,18 @@ Validation
 Folder validation is limited to checking that the provided URI is a directory on
 the filesystem.  It is configured with the following syntax:
 
-    "validateAs": {"type": "folder"}
+    "validateAs": {"type": "folder",
+                   "mustExist": false}
+
+The mustExist attribute is assumed to be false unless you specify otherwise.  It
+must be a boolean.  NOTE: if you do not specify validation for a folder element,
+validation defaults to "validateAs": {"type": "folder", "mustExist": false}.  To
+disable validation, use "validateAs": {"type": "disabled"}.
 
 
-Example file object from carbon_biophysical:
+
+
+Example folder object from carbon_biophysical:
 {
     "id" : "workspace",
     "args_id" : "workspace_dir",
