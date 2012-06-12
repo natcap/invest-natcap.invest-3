@@ -50,7 +50,8 @@ class Validator(registrar.Registrar):
         #allElements is a pointer to a python dict: str id -> obj pointer.
         registrar.Registrar.__init__(self)
 
-        updates = {'GDAL': GDALChecker,
+        updates = {'disabled': Checker,
+                   'GDAL': GDALChecker,
                    'OGR': OGRChecker,
                    'number': NumberChecker,
                    'file': FileChecker,
