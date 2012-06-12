@@ -460,6 +460,10 @@ class InformationButton(QtGui.QPushButton):
         self.setFlat(True)
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
 
+        # If the user has set "helpText": null in JSON, deactivate.
+        if body_text == None:
+            self.deactivate()
+
     def show_info_popup(self):
         """Show the information popup.  This manually (programmatically) enters
             What's This? mode and spawns the tooltip at the location of trigger,
