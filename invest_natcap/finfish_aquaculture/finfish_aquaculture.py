@@ -177,11 +177,14 @@ def format_temp_table(temp_path):
         sub_dict = {}
         
         for key in row:
-            if (key != day_marker):
-                sub_dict[int(key) - 1] = row[key]
+            if (key != day_marker and key != ''):
+                sub_dict[key] = row[key]
         
         del sub_dict['Day/Month']
-        new_dict_temp[row[day_marker]] = sub_dict
-    
+        
+        #Subtract 1 here so that the day in the temp table allows for % 365
+        new_dict_temp[int(row[day_marker]) - 1] = sub_dict
+        
+        
     ff_aqua_args['water_temp_dict'] = new_dict_temp
     

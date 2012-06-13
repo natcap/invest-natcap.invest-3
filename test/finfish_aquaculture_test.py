@@ -13,12 +13,12 @@ class TestFinfishAquaculture(unittest.TestCase):
         args = {}
         #Biophysical
         args['workspace_dir'] = './test/data/aquaculture_output'
-        args['ff_farm_loc'] = './test/data/aquaculture_data/Finfish_Netpens.shp'
+        args['ff_farm_loc'] = './test/data/aquaculture_data/Finfish_Netpens_Jodie_Data.shp'
         args['farm_ID'] = 'FarmID'
         args['g_param_a'] = 0.038
         args['g_param_b'] = 0.6667
-        args['water_temp_tbl'] = './test/data/aquaculture_data/Temp_Daily.csv'
-        args['farm_op_tbl'] = './test/data/aquaculture_data/Farm_Operations.csv'
+        args['water_temp_tbl'] = './test/data/aquaculture_data/Temp_Daily_Jodie_Test.csv'
+        args['farm_op_tbl'] = './test/data/aquaculture_data/Farm_Operations_Jodie_Test.csv'
         
         #Valuation
         args['do_valuation'] = False

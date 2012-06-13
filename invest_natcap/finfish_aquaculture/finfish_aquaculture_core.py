@@ -68,7 +68,7 @@ def execute(args):
     
     #using a tuple to get data back from function, then update the shape files 
     #to reflect these new attributes
-    cycle_history = calc_farm_cycles(args['g_param_a'], 
+    cycle_history = calc_farm_cycles(args, args['g_param_a'], 
                                           args['g_param_b'], args['water_temp_dict'], 
                                           args['farm_op_dict'], args['duration'])
 
@@ -149,7 +149,13 @@ def execute(args):
     #Last output is a text file of the parameters that the model was run with
     create_param_log(args)
    
-def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
+def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
+    
+    output_dir = args['workspace_dir'] + os.sep + 'Output'
+    
+    filename = output_dir + os.sep + "Temporary Calcs.txt"
+    file = open(filename, "w")
+    
     
     #One output, which will be a dictionary pointing to a list of tuples,
     #each of which contains 3 things- 
@@ -166,7 +172,7 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
         #keys as strings, and then casting result back to int
         #Are multiplying by 1000, because a and b are in grams, so need to do the whole
         #equation in grams
-        start_day = int(farm_op_dict[str(f)]['start day for growing'])
+        start_day = int(farm_op_dict[str(f)]['start day for growing']) - 1
         fallow_per = int(farm_op_dict[str(f)]['Length of Fallowing period'])
         start_weight = 1000 * float(farm_op_dict[str(f)]['weight of fish at start (kg)'])
         tar_weight = 1000 * float(farm_op_dict[str(f)]['target weight of fish at harvest (kg)'])
@@ -176,11 +182,12 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
         fish_weight = 0
         outplant_date = None
     
-        #Need to cycle through fish growth and fallowing. In order to avoid ever having
-        # a day = 0 when accessing a table, I start at zero, add 1 to anything where days
-        #are recorded, then do accesses as zero % 365, and add 1.
+        #Have changed the water temp table to be accessed by keys 0 to 364, so now can just
+        #grab straight from the table without having to deal with change in day
+        
+        #However, it should be kept in mind that when doing calculations for a given day,
+        #you are using YESTRDAY'S temperatures and weights to get the value for today.
         for day in range (0, int((365*dur))):
-            day = day - 1
             
             if fallow_days_left > 0:
                 fallow_days_left -= 1
@@ -195,18 +202,22 @@ def calc_farm_cycles(a, b, water_temp_dict, farm_op_dict, dur):
                 if fish_weight == 0:
                     fish_weight = start_weight
                     outplant_date = day + 1
+                    file.write("Fish Weight for day " + str(day) + 
+                               ": " + str(fish_weight) + "\n")
                 else:
              
                     #Grow 'dem fishies!
-                    exponent = float(water_temp_dict[str(day % 365 + 1)][str(f)]) * tau
-                    fish_weight = (a * (fish_weight ** b) * math.exp(exponent)) + \
+                    exponent = math.exp(float(water_temp_dict[(day-1) % 365][str(f)]) * tau)
+                    file.write("temp effect is: " + str(exponent) + "\n")
+                    fish_weight = (a * (fish_weight ** b) * exponent) + \
                                     fish_weight
+                    
+                    
+                    file.write("Fish Weight for day " + str(day) + 
+                               ": " + str(fish_weight) + "\n") 
 
         
         cycle_history[f] = farm_history
-        
-    #Now, want to make a tuple from the three dictionaries, and send them back 
-    #to the main function
     
     return cycle_history
 
