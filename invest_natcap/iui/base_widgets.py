@@ -459,6 +459,7 @@ class InformationButton(QtGui.QPushButton):
         self.pressed.connect(self.show_info_popup)
         self.setFlat(True)
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
+        self.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
 
         # If the user has set "helpText": null in JSON, deactivate.
         if body_text == None:
@@ -582,6 +583,7 @@ class Label(QtGui.QLabel, DynamicPrimitive):
         DynamicPrimitive.__init__(self, attributes)
         self.setText(attributes['label'])
         self.setWordWrap(True)
+        self.elements = [self.error_button, self, self.info_button]
 
     def value(self):
         if 'returns' in self.attributes:
@@ -1446,13 +1448,16 @@ class Root(DynamicElement):
         else:
             self.layout().addWidget(self.body)
 
-        self.lastRun = {}
+        # Check to see if we should load the last run.  Defaults to false if the
+        # user has not specified.
         try:
-            if attributes['loadLastRun'] == True:
-                self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
-                self.lastRun = self.last_run_handler.get_attributes()
+            use_lastrun = attributes['loadLastRun']
         except KeyError:
-            pass
+            use_lastrun = True
+        self.lastRun = {}
+        if use_lastrun:
+            self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+            self.lastRun = self.last_run_handler.get_attributes()
 
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
@@ -1735,14 +1740,19 @@ class ExecRoot(Root):
             returns nothing."""
 
         if not self.errors_exist():
+            # Check to see if the user has specified whether we should save the
+            # last run.  If the user has not specified, assume that the last run
+            # should be saved.
             try:
-                if self.attributes['saveLastRun'] == True:
-                    # Save the last run to the json dictionary
-                    self.saveLastRun()
-                    self.queueOperations()
-                    self.runProgram()
+                save_lastrun = self.attributes['saveLastRun']
             except KeyError:
-                pass
+                save_lastrun = True
+
+            if save_lastrun:
+                self.saveLastRun()
+                self.queueOperations()
+                self.runProgram()
+
 
     def runProgram(self):
         self.operationDialog.exec_()
