@@ -178,7 +178,7 @@ def format_temp_table(temp_path):
         
         for key in row:
             if (key != day_marker):
-                sub_dict[key] = row[key]
+                sub_dict[int(key) - 1] = row[key]
         
         del sub_dict['Day/Month']
         new_dict_temp[row[day_marker]] = sub_dict
