@@ -459,6 +459,7 @@ class InformationButton(QtGui.QPushButton):
         self.pressed.connect(self.show_info_popup)
         self.setFlat(True)
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
+        self.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
 
         # If the user has set "helpText": null in JSON, deactivate.
         if body_text == None:
