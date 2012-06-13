@@ -1452,7 +1452,7 @@ class Root(DynamicElement):
             use_lastrun = attributes['loadLastRun']
         except KeyError:
             use_lastrun = True
-        self.lastrun = {}
+        self.lastRun = {}
         if use_lastrun:
             self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
             self.lastRun = self.last_run_handler.get_attributes()
