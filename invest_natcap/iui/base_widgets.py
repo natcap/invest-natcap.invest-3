@@ -830,7 +830,8 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         if 'defaultValue' in self.attributes:
             self.setChecked(self.attributes['defaultValue'])
 
-        self.setState(False, includeSelf=False, recursive=True)
+        self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
+            recursive=True)
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
@@ -1444,9 +1445,14 @@ class Root(DynamicElement):
                                     self.scrollArea.verticalScrollBar().maximum())
         else:
             self.layout().addWidget(self.body)
-            
-        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
-        self.lastRun = self.last_run_handler.get_attributes()
+
+        self.lastRun = {}
+        try:
+            if attributes['loadLastRun'] == True:
+                self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+                self.lastRun = self.last_run_handler.get_attributes()
+        except KeyError:
+            pass
 
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
@@ -1729,10 +1735,14 @@ class ExecRoot(Root):
             returns nothing."""
 
         if not self.errors_exist():
-            # Save the last run to the json dictionary
-            self.saveLastRun()
-            self.queueOperations()
-            self.runProgram()
+            try:
+                if self.attributes['saveLastRun'] == True:
+                    # Save the last run to the json dictionary
+                    self.saveLastRun()
+                    self.queueOperations()
+                    self.runProgram()
+            except KeyError:
+                pass
 
     def runProgram(self):
         self.operationDialog.exec_()
