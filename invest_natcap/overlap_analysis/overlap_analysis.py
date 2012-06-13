@@ -2,6 +2,9 @@
 
 import os
 import csv
+import glob
+
+from osgeo import ogr
 
 def execute(args):
     
@@ -36,5 +39,37 @@ def execute(args):
             activity zones as they get farther away from these locations.
         args['decay']- float between 0 and 1, representing the decay of interest
             in areas as you get farther away from human hubs.
-    
     '''
+    
+    global oa_args
+    
+    oa_args = {}
+    
+    workspace = args['workspace_dir']
+    output_dir = workspace + os.sep + 'Output'
+    inter_dir = workspace + os.sep + 'Intermediate'
+        
+    if not (os.path.exists(output_dir)):
+        os.makedirs(output_dir)
+        
+    if not (os.path.exists(inter_dir)):
+        os.makedirs(inter_dir)
+        
+    oa_args['workspace_dir'] = args['workspace_dir']
+    oa_args['zone_type'] = args['analysis_zone_type']
+    oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
+    
+    #Glob.glob gets all of the files that fall into the form .shp, and makes them
+    #into a list. Then, each item in the list is added to a dictionary as an open
+    #file with the key of it's filename without the extension, and that whole
+    #dictionary is made an argument of the oa_args dictionary
+    file_names = glob.glob(args['overlap_data_dir_loc'] + os.sep + '/*.shp')
+    
+    file_dict = {}
+    
+    for file in file_names:
+        
+        name = os.path.splitext(file)[0]
+        file_dict[name] = ogr.Open(file)
+        
+    oa_args['overlap_files'] = file_dict
