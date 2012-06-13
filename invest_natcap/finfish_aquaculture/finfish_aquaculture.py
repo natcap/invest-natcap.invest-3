@@ -151,7 +151,6 @@ def format_temp_table(temp_path):
     #EXPLICIT STRINGS FROM "Temp_Daily"
     
     water_temp_file = open(temp_path)
-    reader = csv.DictReader(water_temp_file)
    
     new_dict_temp = {}
     line = None
