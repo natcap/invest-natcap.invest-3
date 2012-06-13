@@ -830,7 +830,8 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         if 'defaultValue' in self.attributes:
             self.setChecked(self.attributes['defaultValue'])
 
-        self.setState(False, includeSelf=False, recursive=True)
+        self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
+            recursive=True)
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
