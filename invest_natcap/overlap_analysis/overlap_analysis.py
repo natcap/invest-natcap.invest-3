@@ -73,3 +73,16 @@ def execute(args):
         file_dict[name] = ogr.Open(file)
         
     oa_args['overlap_files'] = file_dict
+    
+    oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
+    
+def format_over_table(over_tbl):
+    
+    over_layer_file = open(over_tbl)
+    reader = csv.DictReader(over_layer_file)
+    
+    over_dict = {}
+    
+    
+    
+    return over_dict
