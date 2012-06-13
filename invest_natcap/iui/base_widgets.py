@@ -583,6 +583,7 @@ class Label(QtGui.QLabel, DynamicPrimitive):
         DynamicPrimitive.__init__(self, attributes)
         self.setText(attributes['label'])
         self.setWordWrap(True)
+        self.elements = [self.error_button, self, self.info_button]
 
     def value(self):
         if 'returns' in self.attributes:
