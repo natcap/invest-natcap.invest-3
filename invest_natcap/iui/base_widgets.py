@@ -459,6 +459,7 @@ class InformationButton(QtGui.QPushButton):
         self.pressed.connect(self.show_info_popup)
         self.setFlat(True)
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
+        self.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
 
         # If the user has set "helpText": null in JSON, deactivate.
         if body_text == None:
@@ -582,6 +583,7 @@ class Label(QtGui.QLabel, DynamicPrimitive):
         DynamicPrimitive.__init__(self, attributes)
         self.setText(attributes['label'])
         self.setWordWrap(True)
+        self.elements = [self.error_button, self, self.info_button]
 
     def value(self):
         if 'returns' in self.attributes:
@@ -830,7 +832,8 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         if 'defaultValue' in self.attributes:
             self.setChecked(self.attributes['defaultValue'])
 
-        self.setState(False, includeSelf=False, recursive=True)
+        self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
+            recursive=True)
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
@@ -1444,9 +1447,17 @@ class Root(DynamicElement):
                                     self.scrollArea.verticalScrollBar().maximum())
         else:
             self.layout().addWidget(self.body)
-            
-        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
-        self.lastRun = self.last_run_handler.get_attributes()
+
+        # Check to see if we should load the last run.  Defaults to false if the
+        # user has not specified.
+        try:
+            use_lastrun = attributes['loadLastRun']
+        except KeyError:
+            use_lastrun = True
+        self.lastRun = {}
+        if use_lastrun:
+            self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+            self.lastRun = self.last_run_handler.get_attributes()
 
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
@@ -1729,10 +1740,19 @@ class ExecRoot(Root):
             returns nothing."""
 
         if not self.errors_exist():
-            # Save the last run to the json dictionary
-            self.saveLastRun()
-            self.queueOperations()
-            self.runProgram()
+            # Check to see if the user has specified whether we should save the
+            # last run.  If the user has not specified, assume that the last run
+            # should be saved.
+            try:
+                save_lastrun = self.attributes['saveLastRun']
+            except KeyError:
+                save_lastrun = True
+
+            if save_lastrun:
+                self.saveLastRun()
+                self.queueOperations()
+                self.runProgram()
+
 
     def runProgram(self):
         self.operationDialog.exec_()
