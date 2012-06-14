@@ -1,5 +1,5 @@
 '''Implementation of the aquaculture calculations, and subsequent outputs. This will
-pull from data passed in by aquaculture_biophysical and aquaculture_valuation'''
+pull from data passed in by finfish_aquaculture'''
 
 import os
 import math
