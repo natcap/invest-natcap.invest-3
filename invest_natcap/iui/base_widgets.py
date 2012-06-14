@@ -1750,8 +1750,9 @@ class ExecRoot(Root):
 
             if save_lastrun:
                 self.saveLastRun()
-                self.queueOperations()
-                self.runProgram()
+
+            self.queueOperations()
+            self.runProgram()
 
 
     def runProgram(self):
