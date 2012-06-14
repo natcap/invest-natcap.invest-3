@@ -3,11 +3,9 @@ pull from data passed in by aquaculture_biophysical and aquaculture_valuation'''
 
 import os
 import math
-import time
 import datetime
 
 from osgeo import ogr
-from osgeo import gdal
 
 def execute(args):
     ''''Runs the biophysical and valuation parts of the finfish aquaculture model. 
@@ -101,8 +99,9 @@ def execute(args):
     #outgoing shapefile- abstracting the calculation of this to a separate function,
     #but it will return a dictionary with a int->float mapping for 
     #farm_ID->processed weight
-    sum_proc_weight, proc_weight = calc_proc_weight(args['farm_op_dict'], args['frac_post_process'], 
-                                   args['mort_rate_daily'], cycle_history)
+    sum_proc_weight, proc_weight = calc_proc_weight(args['farm_op_dict'], 
+                            args['frac_post_process'], args['mort_rate_daily'], 
+                            cycle_history)
     
     #have to start at the beginning of the layer to access the attributes
     layer.ResetReading()
@@ -143,8 +142,9 @@ def execute(args):
         farms_npv = None
         
     #Now, want to build the HTML table of everything we have calculated to this point
-    create_HTML_table(output_dir, args['farm_ID'], args['farm_op_dict'], cycle_history, sum_proc_weight, proc_weight, args['do_valuation'],
-                      farms_npv, value_history)
+    create_HTML_table(output_dir, args['farm_ID'], args['farm_op_dict'], 
+                      cycle_history, sum_proc_weight, proc_weight, 
+                      args['do_valuation'], farms_npv, value_history)
     
     #Last output is a text file of the parameters that the model was run with
     create_param_log(args)
@@ -162,7 +162,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
     #                (day of outplanting, day of harvest, harvest weight)
     #The dictionary will have a key of farm number, and a value of the tuple list
     
-    cycle_history ={}
+    cycle_history = {}
     tau = 0.08
     dur = float(dur)
 
@@ -235,7 +235,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
     '''
         
     curr_cycle_totals = {}
-    indiv_tpw_totals= {}
+    indiv_tpw_totals = {}
         
     for f in range (1, len(farm_op_dict)+1):
         
@@ -243,7 +243,6 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
         # a CSV all as strings
         curr_cycle_totals[f] = 0
         f_num_fish = int(farm_op_dict[str(f)]['number of fish in farm'])
-        curr_hrv_day = int(farm_op_dict[str(f)]['start day for growing'])
         cycles_comp = len(cycle_history[f])
         farm_history = cycle_history[f]
         mort = float(mort)
