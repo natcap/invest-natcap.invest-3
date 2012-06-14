@@ -150,7 +150,27 @@ def execute(args):
     create_param_log(args)
    
 def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
+    '''
+    Input:
+        a: Growth parameter alpha. Float used as a scaler in the fish growth equation.
+        b: Growth paramater beta. Float used as an exponential multiplier in the
+            fish growth equation.
+        water_temp_dict: 2D dictionary which contains temperature values for farms. The
+            outer keys are calendar days, and the inner are farm numbers.
+        farm_op_dict: 2D dictionary which contains individual operating parameters for
+            each farm. The outer key is farm number, and the inner is string descriptors
+            of each parameter.
+        dur: Float which describes the length for the growth simulation to run in years.
+        
+     Output:
+         cycle_history: Dictionary which contains mappings from farms to a history of
+             growth for each cycle completed on that farm. These entries are formatted
+             as follows...
+             
+            Farm->List of Type (day of outplanting,day of harvest, harvest weight (grams))
+    '''
     
+    #temporary for viewing fish growth
     output_dir = args['workspace_dir'] + os.sep + 'Output'
     
     filename = output_dir + os.sep + "Temporary Calcs.txt"
@@ -216,7 +236,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
                     file.write("Fish Weight for day " + str(day) + 
                                ": " + str(fish_weight) + "\n") 
 
-        
+    
         cycle_history[f] = farm_history
     
     return cycle_history
