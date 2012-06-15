@@ -1713,6 +1713,7 @@ class ExecRoot(Root):
         Root.__init__(self, uri, layout, object_registrar)
         self.addBottomButtons()
         self.setWindowSize()
+        self.error_dialog = ErrorDialog()
 
     def setWindowSize(self):
         #this groups all elements together at the top, leaving the
@@ -1756,6 +1757,8 @@ class ExecRoot(Root):
 
             self.queueOperations()
             self.runProgram()
+        else:
+            self.error_dialog.exec_()
 
 
     def runProgram(self):
@@ -1814,6 +1817,34 @@ class ExecRoot(Root):
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
 
+
+class ErrorDialog(QtGui.QDialog):
+    def __init__(self):
+        QtGui.QDialog.__init__(self)
+        self.resize(300, 200)
+        self.setLayout(QtGui.QVBoxLayout())
+        self.error_icon = QtGui.QLabel()
+        self.error_icon.setPixmap(QtGui.QPixmap(os.path.join(IUI_DIR,
+            'validate-fail.png')))
+        self.title = QtGui.QLabel("OMG Errors!")
+        self.body = QtGui.QLabel("body body body text")
+        self.ok_button = QtGui.QPushButton('OK')
+        self.ok_button.clicked.connect(self.accept)
+
+        error_widget = QtGui.QWidget()
+        error_widget.setLayout(QtGui.QHBoxLayout())
+        error_widget.layout().addWidget(self.error_icon)
+        self.layout().addWidget(error_widget)
+
+        body_widget = QtGui.QWidget()
+        error_widget.layout().addWidget(body_widget)
+        body_widget.setLayout(QtGui.QVBoxLayout())
+        body_widget.layout().addWidget(self.title)
+        body_widget.layout().addWidget(self.body)
+
+        self.button_box = QtGui.QDialogButtonBox()
+        self.button_box.addButton(self.ok_button, QtGui.QDialogButtonBox.AcceptRole)
+        self.layout().addWidget(self.button_box)
 
 class ElementRegistrar(registrar.Registrar):
     def __init__(self, root_ptr):
