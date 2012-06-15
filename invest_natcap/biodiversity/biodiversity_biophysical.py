@@ -64,11 +64,61 @@ def execute(args):
         if not os.path.isdir(folder):
             os.makedirs(folder)
 
+    biophysical_args['threat_dict'] = \
+        make_dictionary_from_csv(args['threat_uri','Threat'])
+
+    biophysical_args['sensitivity_dict'] = \
+        make_dictionary_from_csv(args['sensitivity_uri','LULC'])
+
+    biophysical_args['half_saturation'] = int(args['half_saturation_constant'])    
+
+    try:
+        biophysical_args['access_shape'] = org.Open(args['access_uri'])
+    except:
+        pass
+
     # Determine which land cover scenarios we should run, and append the
     # appropriate suffix to the landuser_scenarios list as necessary for the
     # scenario.
-    landuse_scenarios = ['cur']
-    for lu_uri, lu_time in ('landuse_fut_uri','fut'),('landuse_bas_uri','bas'):
+    landuse_scenarios = {'cur':'_c'}
+    for lu_uri, lu_time, lu_ext in ('landuse_fut_uri','fut','_f'),('landuse_bas_uri','bas','_b'):
         if lu_uri in args:
-            landuse_scenarios.append(lu_time)
+            landuse_scenarios[lu_time] = lu_ext
+
+    for scenario, ext in landuse_scenarios.iteritems():
+        biophysical_args['landuse'] = \
+            gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
+        density_dict = {}
+        for threat in biophysical_args['threat_dict']:
+            try:
+                density_dict[str(threat+ext)] = gdal.Open(workspace+'input/'+str(threat+ext),GA_ReadOnly)
+            except:
+                LOGGER.debug('Could not find the threat raster : %s', workspace+'input/'+str(threat+ext))
+        
+        biophysical_args['density_dict'] = density_dict
+        biodiversity_core.biophysical(biophysical_args)
+        
+def make_dictionary_from_csv(csv_uri, key_field):
+    """Make a basic dictionary representing a CSV file, where the
+       keys are a unique field from the CSV file and the values are
+       a dictionary representing each row
+
+       csv_uri - a string for the path to the csv file
+       key_field - a string representing which field is to be used
+                   from the csv file as the key in the dictionary
+
+       returns - a python dictionary
+    """
+    out_dict = {}
+    csv_file = open(csv_uri)
+    reader = csv.DictReader(csv_file)
+    for row in reader:
+        out_dict[row[key_field]] = row
+    csv_file.close()
+    return out_dict
+    
+
+
+
+
 
