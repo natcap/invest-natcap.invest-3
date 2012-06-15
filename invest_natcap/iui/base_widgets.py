@@ -1821,13 +1821,20 @@ class ExecRoot(Root):
 class ErrorDialog(QtGui.QDialog):
     def __init__(self):
         QtGui.QDialog.__init__(self)
-        self.resize(300, 200)
+        self.resize(400, 200)
         self.setLayout(QtGui.QVBoxLayout())
         self.error_icon = QtGui.QLabel()
+        self.error_icon.setStyleSheet('QLabel { padding: 10px }')
         self.error_icon.setPixmap(QtGui.QPixmap(os.path.join(IUI_DIR,
-            'validate-fail.png')))
+            'dialog-error.png')))
+        self.error_icon.setSizePolicy(QtGui.QSizePolicy.Fixed,
+            QtGui.QSizePolicy.Fixed)
         self.title = QtGui.QLabel("OMG Errors!")
-        self.body = QtGui.QLabel("body body body text")
+        self.title.setStyleSheet('QLabel { font: bold 18px }')
+        self.body = QtGui.QLabel("You have missing required inputs or " +
+            "validation has failed for at least one element.<br/><br/>" +
+            "This tool cannot run with errors present.")
+        self.body.setWordWrap(True)
         self.ok_button = QtGui.QPushButton('OK')
         self.ok_button.clicked.connect(self.accept)
 
