@@ -1829,6 +1829,7 @@ class ErrorDialog(QtGui.QDialog):
         self.errors = []
         self.resize(400, 200)
         self.setWindowTitle('Errors exist!')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'natcap_logo.png')))
         self.setLayout(QtGui.QVBoxLayout())
         self.error_icon = QtGui.QLabel()
         self.error_icon.setStyleSheet('QLabel { padding: 10px }')
