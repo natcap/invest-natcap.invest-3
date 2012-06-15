@@ -1579,14 +1579,14 @@ class Root(DynamicElement):
     def errors_exist(self):
         """Check to see if any elements in this UI have errors.
         
-           returns an int of how many errors are found."""
+           returns a list of string, where each string is the label ."""
 
-        num_errors = 0
+        errors = []
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
                 if element.has_error():
-                    num_errors += 1
-        return num_errors
+                    errors.append(element.attributes['label'])
+        return errors
 
     def queueOperations(self):
         #placeholder for custom implementations.
@@ -1744,8 +1744,8 @@ class ExecRoot(Root):
         
             returns nothing."""
 
-        num_errors = self.errors_exist()
-        if num_errors == 0:
+        errors = self.errors_exist()
+        if len(errors) == 0:
             # Check to see if the user has specified whether we should save the
             # last run.  If the user has not specified, assume that the last run
             # should be saved.
@@ -1760,7 +1760,7 @@ class ExecRoot(Root):
             self.queueOperations()
             self.runProgram()
         else:
-            self.error_dialog.set_errors(num_errors)
+            self.error_dialog.set_errors(errors)
             self.error_dialog.exec_()
 
 
@@ -1824,7 +1824,7 @@ class ExecRoot(Root):
 class ErrorDialog(QtGui.QDialog):
     def __init__(self):
         QtGui.QDialog.__init__(self)
-        self.num_errors = 0
+        self.errors = []
         self.resize(400, 200)
         self.setWindowTitle('Errors exist!')
         self.setLayout(QtGui.QVBoxLayout())
@@ -1836,8 +1836,7 @@ class ErrorDialog(QtGui.QDialog):
             QtGui.QSizePolicy.Fixed)
         self.title = QtGui.QLabel("OMG Errors!")
         self.title.setStyleSheet('QLabel { font: bold 18px }')
-        self.body = QtGui.QLabel(str("There are %s error(s) that must be resolved" +
-            " before this tool can be run.") % self.num_errors)
+        self.body = QtGui.QLabel()
         self.body.setWordWrap(True)
         self.ok_button = QtGui.QPushButton('OK')
         self.ok_button.clicked.connect(self.accept)
@@ -1857,12 +1856,16 @@ class ErrorDialog(QtGui.QDialog):
         self.button_box.addButton(self.ok_button, QtGui.QDialogButtonBox.AcceptRole)
         self.layout().addWidget(self.button_box)
 
-    def set_errors(self, num_errors):
-        self.num_errors = num_errors
+    def set_errors(self, errors):
+        self.errors = errors
 
     def showEvent(self, event=None):
+        label_string = ''
+        for element_label in self.errors:
+            label_string += str(element_label) + '<br/>'
+
         self.body.setText(str("There are %s error(s) that must be resolved" +
-            " before this tool can be run.") % self.num_errors)
+            " before this tool can be run:<br/><br/>%s") % (len(self.errors), label_string))
 
 
 class ElementRegistrar(registrar.Registrar):
