@@ -1234,7 +1234,8 @@ class OperationDialog(QtGui.QDialog):
         #set window attributes
         self.setLayout(QtGui.QVBoxLayout())
         self.setWindowTitle("Running the model")
-        self.setGeometry(400, 400, 700, 400)
+        self.resize(700, 400)
+        center_window(self)
         self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
 
@@ -1811,6 +1812,7 @@ class ExecRoot(Root):
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
 
+
 class ElementRegistrar(registrar.Registrar):
     def __init__(self, root_ptr):
         registrar.Registrar.__init__(self)
@@ -1838,6 +1840,21 @@ class ElementRegistrar(registrar.Registrar):
             return widget(op_values, registrar=self)
         else:
             return widget(op_values)
+
+
+def center_window(window_ptr):
+    """Center a window on whatever screen it appears.
+
+            window_ptr - a pointer to a Qt window, whether an application or a
+                QDialog.
+
+        returns nothing."""
+
+    geometry = window_ptr.frameGeometry()
+    center = QtGui.QDesktopWidget().availableGeometry().center()
+    geometry.moveCenter(center)
+    window_ptr.move(geometry.topLeft())
+
 
 if __name__ == "__main__":
     reg = Registrar()
