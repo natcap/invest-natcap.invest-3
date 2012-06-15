@@ -64,6 +64,9 @@ def execute(args):
         if not os.path.isdir(folder):
             os.makedirs(folder)
 
+    biophysical_args['threat_dict'] = \
+        make_dictionary_from_csv(args['threat_uri','Threat'])
+
     # Determine which land cover scenarios we should run, and append the
     # appropriate suffix to the landuser_scenarios list as necessary for the
     # scenario.
@@ -71,4 +74,34 @@ def execute(args):
     for lu_uri, lu_time in ('landuse_fut_uri','fut'),('landuse_bas_uri','bas'):
         if lu_uri in args:
             landuse_scenarios.append(lu_time)
+
+    for scenario in landuse_scenarios:
+        biophysical_args = {}
+        biophysical_args['landuse'] = \
+            gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly())
+
+        
+def make_dictionary_from_csv(csv_uri, key_field):
+    """Make a basic dictionary representing a CSV file, where the
+       keys are a unique field from the CSV file and the values are
+       a dictionary representing each row
+
+       csv_uri - a string for the path to the csv file
+       key_field - a string representing which field is to be used
+                   from the csv file as the key in the dictionary
+
+       returns - a python dictionary
+    """
+    out_dict = {}
+    csv_file = open(csv_uri)
+    reader = csv.DictReader(csv_file)
+    for row in reader:
+        out_dict[row[key_field]] = row
+    csv_file.close()
+    return out_dict
+    
+
+
+
+
 
