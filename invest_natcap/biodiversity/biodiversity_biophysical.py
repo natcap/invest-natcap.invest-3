@@ -67,19 +67,35 @@ def execute(args):
     biophysical_args['threat_dict'] = \
         make_dictionary_from_csv(args['threat_uri','Threat'])
 
+    biophysical_args['sensitivity_dict'] = \
+        make_dictionary_from_csv(args['sensitivity_uri','LULC'])
+
+    biophysical_args['half_saturation'] = int(args['half_saturation_constant'])    
+
+    try:
+        biophysical_args['access_shape'] = org.Open(args['access_uri'])
+    except:
+        pass
+
     # Determine which land cover scenarios we should run, and append the
     # appropriate suffix to the landuser_scenarios list as necessary for the
     # scenario.
-    landuse_scenarios = ['cur']
-    for lu_uri, lu_time in ('landuse_fut_uri','fut'),('landuse_bas_uri','bas'):
+    landuse_scenarios = {'cur':'_c'}
+    for lu_uri, lu_time, lu_ext in ('landuse_fut_uri','fut','_f'),('landuse_bas_uri','bas','_b'):
         if lu_uri in args:
-            landuse_scenarios.append(lu_time)
+            landuse_scenarios[lu_time] = lu_ext
 
-    for scenario in landuse_scenarios:
-        biophysical_args = {}
+    for scenario, ext in landuse_scenarios.iteritems():
         biophysical_args['landuse'] = \
-            gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly())
-
+            gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
+         
+        for threat in biophysical_args['threat_dict']:
+            try:
+                biophysical_args[str(threat+ext)] = gdal.Open(workspace+'input/'+str(threat+ext),GA_ReadOnly)
+            except:
+                LOGGER.debug('Could not find the threat raster : %s', workspace+'input/'+str(threat+ext))
+        
+        biodiversity_core.biophysical(biophysical_args)
         
 def make_dictionary_from_csv(csv_uri, key_field):
     """Make a basic dictionary representing a CSV file, where the
