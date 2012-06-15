@@ -88,13 +88,14 @@ def execute(args):
     for scenario, ext in landuse_scenarios.iteritems():
         biophysical_args['landuse'] = \
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
-         
+        density_dict = {}
         for threat in biophysical_args['threat_dict']:
             try:
-                biophysical_args[str(threat+ext)] = gdal.Open(workspace+'input/'+str(threat+ext),GA_ReadOnly)
+                density_dict[str(threat+ext)] = gdal.Open(workspace+'input/'+str(threat+ext),GA_ReadOnly)
             except:
                 LOGGER.debug('Could not find the threat raster : %s', workspace+'input/'+str(threat+ext))
         
+        biophysical_args['density_dict'] = density_dict
         biodiversity_core.biophysical(biophysical_args)
         
 def make_dictionary_from_csv(csv_uri, key_field):
