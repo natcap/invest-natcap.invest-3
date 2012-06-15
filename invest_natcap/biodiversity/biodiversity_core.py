@@ -23,7 +23,7 @@ def biophysical(args):
     #Get raster properties: cellsize, width, height, cells = width * height, extent    
     lulc_prop = get_raster_properties(lulc_cover)
     #Create raster of habitat based on habitat field
-    
+
     #Sum weight of threats
 
     #Check that threat count matches with sensitivity
@@ -73,5 +73,44 @@ def get_raster_properties(dataset):
     dataset_dict['mask'] = dataset.GetRasterBand(1).GetMaskBand()
     return dataset_dict
 
-def raster_from_table_values(table, raster):
-    return raster
+def raster_from_table_values(key_raster, out_raster, attr_dict, field):
+    """Creates a new raster from 'key_raster' whose values are data from a 
+       dictionary that directly relates to the pixel value from 'key_raster'
+    
+       key_raster - a GDAL raster dataset whose pixel values relate to the 
+                     keys in 'attr_dict'
+       out_raster - a Gdal raster dataset to write out to
+       attr_dict - a dictionary representing a table of values we are interested
+                   in making into a raster                  
+       field - a string of which field in the table or key in the dictionary 
+               to use as the new raster pixel values
+       
+       returns - a GDAL raster
+    """
+
+    LOGGER.debug('Starting raster_from_table_values')
+    key_band = base_raster.GetRasterBand(1)
+    key_nodata = base_band.GetNoDataValue()
+    LOGGER.debug('raster_from_table_values.base_nodata : %s', base_nodata)
+    #Add the nodata value as a field to the dictionary so that the vectorized
+    #operation can just look it up instead of having an if,else statement
+    attr_dict[key_nodata] = {field:float(key_nodata)}
+
+    def vop(lulc):
+        """Operation returns the 'field' value that directly corresponds to
+           it's lulc type
+           
+           lulc - a numpy array with the lulc type values as integers
+        
+           returns - the 'field' value corresponding to the lulc type
+        """
+        if lulc in bio_dict:
+            return bio_dict[lulc][field]
+        else:
+            return base_nodata
+
+    out_band = out_raster.GetRasterBand(1)
+    invest_core.vectorize1ArgOp(key_band, vop, out_band)
+
+    return out_raster
+
