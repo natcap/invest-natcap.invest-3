@@ -17,13 +17,27 @@ LOGGER = logging.getLogger('biodiversity_core')
 def biophysical(args):
     """Execute the biophysical component of the pollination model.
 
+       args - a python dictionary with at least the following components:
+       args['workspace_dir'] - a uri to the directory that will write output
+       args['landuse'] - a Gdal dataset
+       args['threat_dict'] - a python dictionary representing the threats table
+       args['sensitivity_dict'] - a python dictionary representing the sensitivity table
+       args['density_dict'] - a python dictionary that stores one or more gdal datasets
+                              based on the number of threats given in the threat table
+       args['half_saturation'] - an integer
+       args['result_suffix'] - a string
+
+
         returns nothing."""
 
     LOGGER.debug('Starting biodiversity biophysical calculations')
+    output_dir = args['workspace_dir'] + os.sep + 'output/'
+    intermediate_dir = args['workspace_dir'] + os.sep + 'intermediate/'
     #Get raster properties: cellsize, width, height, cells = width * height, extent    
-    lulc_prop = get_raster_properties(lulc_cover)
+    lulc_prop = get_raster_properties(args['landuse'])
     #Create raster of habitat based on habitat field
-
+    habitat_uri = intermediate_dir + 'habitat.tif'
+    habitat_raster = make_raster_from_lulc(args['landuse'], habitat_uri)
     #Sum weight of threats
 
     #Check that threat count matches with sensitivity
