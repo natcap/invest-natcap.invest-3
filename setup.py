@@ -89,7 +89,8 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/info.png',
                'invest_natcap/iui/natcap_logo.png',
                'invest_natcap/iui/validate-pass.png',
-               'invest_natcap/iui/validate-fail.png'])]
+               'invest_natcap/iui/validate-fail.png',
+               'invest_natcap/iui/dialog-error.png'])]
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
