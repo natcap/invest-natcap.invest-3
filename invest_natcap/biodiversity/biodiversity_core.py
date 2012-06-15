@@ -21,8 +21,9 @@ def biophysical(args):
 
     LOGGER.debug('Starting biodiversity biophysical calculations')
     #Get raster properties: cellsize, width, height, cells = width * height, extent    
+    lulc_prop = get_raster_properties(lulc_cover)
     #Create raster of habitat based on habitat field
-
+    
     #Sum weight of threats
 
     #Check that threat count matches with sensitivity
@@ -55,6 +56,22 @@ def biophysical(args):
 
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
+
+def get_raster_properties(dataset):
+    """Get the width, height, cover, extent of the raster
+
+       dataset - a raster dataset
+        
+      returns - a dictionary with the properties stored under relevant keys
+    """
+    dataset_dict = {}
+    gt = dataset.GetGeoTransform()
+    dataset_dict['width'] = gt[1]
+    dataset_dict['height'] = gt[5]
+    dataset_dict['x_size'] = dataset.GetRasterBand(1).GetXSize()    
+    dataset_dict['y_size'] = dataset.GetRasterBand(1).GetYSize()    
+    dataset_dict['mask'] = dataset.GetRasterBand(1).GetMaskBand()
+    return dataset_dict
 
 def raster_from_table_values(table, raster):
     return raster
