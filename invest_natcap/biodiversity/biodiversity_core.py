@@ -114,3 +114,10 @@ def raster_from_table_values(key_raster, out_raster, attr_dict, field):
 
     return out_raster
 
+def make_raster_from_lulc(lulc_dataset, raster_uri):
+    LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
+    dataset = invest_cython_core.newRasterFromBase(\
+        lulc_dataset, raster_uri, 'GTiff', -1, gdal.GDT_Float32)
+    return dataset
+
+
