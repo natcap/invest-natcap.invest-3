@@ -1579,13 +1579,15 @@ class Root(DynamicElement):
     def errors_exist(self):
         """Check to see if any elements in this UI have errors.
         
-           returns a list of string, where each string is the label ."""
+           returns a list of tuples, where the first tuple entry is the element
+           label and the second tuple entry is the element's error message.."""
 
         errors = []
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
                 if element.has_error():
-                    errors.append(element.attributes['label'])
+                    error_msg = element.error_button.error_text
+                    errors.append((element.attributes['label'], error_msg))
         return errors
 
     def queueOperations(self):
@@ -1834,7 +1836,7 @@ class ErrorDialog(QtGui.QDialog):
             'dialog-error.png')))
         self.error_icon.setSizePolicy(QtGui.QSizePolicy.Fixed,
             QtGui.QSizePolicy.Fixed)
-        self.title = QtGui.QLabel("OMG Errors!")
+        self.title = QtGui.QLabel("Whoops!")
         self.title.setStyleSheet('QLabel { font: bold 18px }')
         self.body = QtGui.QLabel()
         self.body.setWordWrap(True)
@@ -1860,13 +1862,14 @@ class ErrorDialog(QtGui.QDialog):
         self.errors = errors
 
     def showEvent(self, event=None):
-        label_string = ''
-        for element_label in self.errors:
-            label_string += str(element_label) + '<br/>'
+        label_string = '<ul>'
+        for element_tuple in self.errors:
+            label_string += '<li>%s: %s</li>' % element_tuple
+        label_string += '</ul>'
 
         self.body.setText(str("There are %s error(s) that must be resolved" +
-            " before this tool can be run:<br/><br/>%s") % (len(self.errors), label_string))
-
+            " before this tool can be run:%s") % (len(self.errors), label_string))
+        self.body.setMinimumSize(self.body.sizeHint())
 
 class ElementRegistrar(registrar.Registrar):
     def __init__(self, root_ptr):
