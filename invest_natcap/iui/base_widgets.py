@@ -1469,6 +1469,7 @@ class Root(DynamicElement):
         self.operationDialog = OperationDialog(self)
         self.assembler = ElementAssembler(self.allElements)        
         self.messageArea = QtGui.QLabel()
+        self.messageArea.setWordWrap(True)
         self.messageArea.setStyleSheet('QLabel { padding: 20px;' +
             'background-color: #d4efcc; border: 2px solid #3e895b;}')
         self.layout().addWidget(self.messageArea)
@@ -1570,7 +1571,12 @@ class Root(DynamicElement):
         
             returns nothing"""
 
-        self.messageArea.setText('Parameters reset to defaults')
+        reset_text = 'Parameters reset to defaults.  '
+        if self.lastRun != {}:
+            reset_text += str('<a href=\'reset\'>Restore parameters from' +
+                ' your last run</a>')
+        self.messageArea.setText(reset_text)
+        self.messageArea.linkActivated.connect(self.initElements)
 
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
