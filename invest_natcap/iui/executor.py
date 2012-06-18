@@ -301,3 +301,16 @@ class Executor(threading.Thread):
             LOGGER.error('Error: a problem occurred while running the model')
             self.printTraceback()
             self.setThreadFailed(True)
+
+        try:
+            # Try to launch a windows file explorer to visit the workspace
+            # directory now that the operation has finished executing.
+            subprocess.Popen(r'explorer "%s"' % args['workspace_dir'])
+        except OSError:
+            # OSError thrown when we're not on windows.  No biggie, just print
+            # an error and call it good.
+            LOGGER.info('Not on windows, not opening output folder')
+        except KeyError:
+            # KeyError thrown when the key 'workspace_dir' is not used in the
+            # args dictionary, print an inconsequential error.
+            LOGGER.error('Cannot find args id \'workspace_dir\'.')
