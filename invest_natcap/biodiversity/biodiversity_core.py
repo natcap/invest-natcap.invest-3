@@ -4,7 +4,7 @@ import invest_cython_core
 from invest_natcap.invest_core import invest_core
 
 from osgeo import gdal
-from osgeo import org
+from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
 
@@ -38,6 +38,8 @@ def biophysical(args):
     #Create raster of habitat based on habitat field
     habitat_uri = intermediate_dir + 'habitat.tif'
     habitat_raster = make_raster_from_lulc(args['landuse'], habitat_uri)
+    habitat_raster = raster_from_table_values(args['landuse'], habitat_raster, args['sensitivity_dict'], 'HABITAT')
+
     #Sum weight of threats
 
     #Check that threat count matches with sensitivity
@@ -82,9 +84,10 @@ def get_raster_properties(dataset):
     gt = dataset.GetGeoTransform()
     dataset_dict['width'] = gt[1]
     dataset_dict['height'] = gt[5]
-    dataset_dict['x_size'] = dataset.GetRasterBand(1).GetXSize()    
-    dataset_dict['y_size'] = dataset.GetRasterBand(1).GetYSize()    
+    dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize    
+    dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
     dataset_dict['mask'] = dataset.GetRasterBand(1).GetMaskBand()
+    LOGGER.debug('Raster_Properties : %s', dataset_dict)
     return dataset_dict
 
 def raster_from_table_values(key_raster, out_raster, attr_dict, field):
@@ -103,12 +106,12 @@ def raster_from_table_values(key_raster, out_raster, attr_dict, field):
     """
 
     LOGGER.debug('Starting raster_from_table_values')
-    key_band = base_raster.GetRasterBand(1)
-    key_nodata = base_band.GetNoDataValue()
-    LOGGER.debug('raster_from_table_values.base_nodata : %s', base_nodata)
+    key_band = key_raster.GetRasterBand(1)
+    out_nodata = out_raster.GetRasterBand(1).GetNoDataValue()
+    LOGGER.debug('raster_from_table_values.out_nodata : %s', out_nodata)
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
-    attr_dict[key_nodata] = {field:float(key_nodata)}
+    attr_dict[out_nodata] = {field:float(out_nodata)}
 
     def vop(lulc):
         """Operation returns the 'field' value that directly corresponds to
@@ -118,10 +121,10 @@ def raster_from_table_values(key_raster, out_raster, attr_dict, field):
         
            returns - the 'field' value corresponding to the lulc type
         """
-        if lulc in bio_dict:
-            return bio_dict[lulc][field]
+        if str(lulc) in attr_dict:
+            return attr_dict[str(lulc)][field]
         else:
-            return base_nodata
+            return out_nodata
 
     out_band = out_raster.GetRasterBand(1)
     invest_core.vectorize1ArgOp(key_band, vop, out_band)
