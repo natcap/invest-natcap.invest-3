@@ -249,7 +249,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
                 #assume if you've gotten here that you are at the end of one cycle,
                 #and are not yet close enough to start the next
                 fallow_days_left = (start_day - day) % 365                 
-                  
+                
     
         cycle_history[f] = farm_history
     
