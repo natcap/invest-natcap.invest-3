@@ -24,6 +24,8 @@ def biophysical(args):
        args['sensitivity_dict'] - a python dictionary representing the sensitivity table
        args['density_dict'] - a python dictionary that stores one or more gdal datasets
                               based on the number of threats given in the threat table
+       args['access_shape'] - a ogr polygon shapefile depicting any protected/reserved
+                              land boundaries
        args['half_saturation'] - an integer
        args['result_suffix'] - a string
 
@@ -48,8 +50,18 @@ def biophysical(args):
 
     
     #Check that threat count matches with sensitivity
+        #Will be doing this in validation (hopefully...) or at the uri level
 
     #If access_lyr: convert to raster, if value is null set to 1, else set to value
+    try:
+        access_shape = args['access_shape']
+        LOGGER.debug('Handling Access Shape')
+        access_uri = intermediate_dir + 'access_layer.tif'
+        access_base = make_raster_from_lulc(args['landuse'], access_uri)
+        access_raster = make_raster_from_shape(access_base, access_shape, 'ACCESS')
+    except:
+        LOGGER.debug('No Access Shape Provided')
+        access_shape = None
 
     #Process density layers / each threat
 
@@ -78,6 +90,24 @@ def biophysical(args):
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
 
+def make_raster_from_shape(base_raster, shape, attr):
+    """Burn an attribute value from a polygone shapefile onto an
+       existing blank raster
+
+       base_raster - a gdal raster dataset to burn the shapefile
+                     values onto
+       shape - a ogr polygon shapefile
+       attr - a python string of the attribute field to burn values
+              from
+
+       returns - a gdal raster"""
+    
+    attribute_string = 'ATTRIBUTE=' + attr
+    gdal.RasterizeLayer(base_raster, [1], shape.GetLayer(0),
+                        options = [attribute_string])
+
+    return base_raster 
+       
 def get_raster_properties(dataset):
     """Get the width, height, cover, extent of the raster
 
