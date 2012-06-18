@@ -4,8 +4,14 @@ pull from data passed in by finfish_aquaculture'''
 import os
 import math
 import datetime
+import logging
 
 from osgeo import ogr
+from decimal import *
+
+LOGGER = logging.getLogger('wave_energy_biophysical_test')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
     ''''Runs the biophysical and valuation parts of the finfish aquaculture model. 
@@ -173,7 +179,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
     #temporary for viewing fish growth
     output_dir = args['workspace_dir'] + os.sep + 'Output'
     
-    filename = output_dir + os.sep + "Temporary Calcs.txt"
+    filename = output_dir + os.sep + "Temporary Calcs3.txt"
     file = open(filename, "w")
     
     
@@ -197,6 +203,9 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
         start_weight = 1000 * float(farm_op_dict[str(f)]['weight of fish at start (kg)'])
         tar_weight = 1000 * float(farm_op_dict[str(f)]['target weight of fish at harvest (kg)'])
         
+        #Will eventually have this passed in somehow
+        start_buffer = 3
+        
         fallow_days_left = start_day
         farm_history = []
         fish_weight = 0
@@ -218,24 +227,29 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
                 fallow_days_left = fallow_per
                 fish_weight = 0
             
-            else:
-                if fish_weight == 0:
+            elif fish_weight != 0:
+                #Grow 'dem fishies!                   
+                exponent = round(math.exp(float(water_temp_dict[(day-1) % 365][str(f)]) * tau), 2)
+                file.write("temp effect is: " + str(exponent) + "\n")
+                file.write("(" + str(a) +","  + str(b) +"," + str(exponent) + "," + str(fish_weight) + ")")                
+                fish_weight = (a * (fish_weight ** b) * exponent) + \
+                                fish_weight
+                                    
+                fish_weight = round(fish_weight, 2)
+                              
+                file.write("Fish Weight for day " + str(day) + 
+                           ": " + str(fish_weight) + "\n")
+            
+            elif (day % 365) >= start_day and (day % 365) <= start_day + start_buffer:
                     fish_weight = start_weight
                     outplant_date = day + 1
                     file.write("Fish Weight for day " + str(day) + 
                                ": " + str(fish_weight) + "\n")
-                else:
-             
-                    #Grow 'dem fishies!
-                    exponent = math.exp(float(water_temp_dict[(day-1) % 365][str(f)]) * tau)
-                    file.write("temp effect is: " + str(exponent) + "\n")
-                    fish_weight = (a * (fish_weight ** b) * exponent) + \
-                                    fish_weight
-                    
-                    
-                    file.write("Fish Weight for day " + str(day) + 
-                               ": " + str(fish_weight) + "\n") 
-
+            else:
+                #assume if you've gotten here that you are at the end of one cycle,
+                #and are not yet close enough to start the next
+                fallow_days_left = (start_day - day) % 365                 
+                  
     
         cycle_history[f] = farm_history
     
@@ -283,6 +297,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
             #Note that we divide by 1000 to make sure the output in in kg
             cycle_length = harvest_date - outplant_date
             e_exponent =  -mort * cycle_length
+            
             curr_cy_tpw = (harvest_weight / 1000) * frac * f_num_fish * \
                             math.exp(e_exponent)
             
