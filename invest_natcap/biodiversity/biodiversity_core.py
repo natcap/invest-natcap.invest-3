@@ -2,6 +2,7 @@
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
+import invest_natcap.raster_utils
 
 from osgeo import gdal
 from osgeo import ogr
@@ -69,6 +70,7 @@ def biophysical(args):
     #Process density layers / each threat
 
     #For all threats:
+    for threat, threat_data in args['threat_dict'].iteritems():
         #get weight, name, max_idst, decay
         #mulitply max_dist by 1000 (must be a conversion to meters
         #get proper density raster, depending on land cover
@@ -77,11 +79,19 @@ def biophysical(args):
             #Calculate neighborhood
 
         #Adjust threat by weight:
-        
+#        weight_multiplier = float(threat_data['WEIGHT']) / weight_sum
+#        def adjust_weight(dist):
+#            return dist * weight_multiplier 
+#        raster_utils.vectorize1ArgOp(dist.GetRasterBand(1), adjust_weight, weight_out)
+
         #Adjust threat by protection / access
+#        if access_shape != None:
+#            def adjust_access(weight, access):
+#                return weight * access
+#            raster_utils.vectorize2ArgOp(weight_band, access_band, adjust_access, access_out)
 
         #Adjust threat by sensitivity
-
+        
     #Compute Degradation of all threats
 
     #Compute quality for all threats
