@@ -58,6 +58,9 @@ def biophysical(args):
         LOGGER.debug('Handling Access Shape')
         access_uri = intermediate_dir + 'access_layer.tif'
         access_base = make_raster_from_lulc(args['landuse'], access_uri)
+        #Fill raster to all 1's (fully accessible) incase polygons do not cover
+        #land area
+        access_base.GetRasterBand(1).Fill(1)
         access_raster = make_raster_from_shape(access_base, access_shape, 'ACCESS')
     except:
         LOGGER.debug('No Access Shape Provided')
