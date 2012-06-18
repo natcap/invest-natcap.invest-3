@@ -47,7 +47,8 @@ if platform.system() == 'Windows':
                         'invest_natcap.wave_energy',
                         'invest_natcap.pollination',
                         'invest_natcap.finfish_aquaculture',
-                        'invest_natcap.marine_water_quality'],
+                        'invest_natcap.marine_water_quality',
+                        'invest_natcap.biodiversity'],
             #http://www.py2exe.org/index.cgi/ListOfOptions
             'skip_archive': True
             }
@@ -89,7 +90,8 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/info.png',
                'invest_natcap/iui/natcap_logo.png',
                'invest_natcap/iui/validate-pass.png',
-               'invest_natcap/iui/validate-fail.png'])]
+               'invest_natcap/iui/validate-fail.png',
+               'invest_natcap/iui/dialog-error.png'])]
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
@@ -106,7 +108,8 @@ setup(name='invest_natcap',
                 'invest_natcap.wave_energy',
                 'invest_natcap.pollination',
                 'invest_natcap.finfish_aquaculture',
-                'invest_natcap.marine_water_quality'],
+                'invest_natcap.marine_water_quality',
+                'invest_natcap.biodiversity'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",

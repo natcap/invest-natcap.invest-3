@@ -1234,7 +1234,8 @@ class OperationDialog(QtGui.QDialog):
         #set window attributes
         self.setLayout(QtGui.QVBoxLayout())
         self.setWindowTitle("Running the model")
-        self.setGeometry(400, 400, 700, 400)
+        self.resize(700, 400)
+        center_window(self)
         self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
 
@@ -1578,13 +1579,16 @@ class Root(DynamicElement):
     def errors_exist(self):
         """Check to see if any elements in this UI have errors.
         
-            Returns True if an error is found.  False if not."""
-            
+           returns a list of tuples, where the first tuple entry is the element
+           label and the second tuple entry is the element's error message.."""
+
+        errors = []
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
                 if element.has_error():
-                    return True
-        return False
+                    error_msg = element.error_button.error_text
+                    errors.append((element.attributes['label'], error_msg))
+        return errors
 
     def queueOperations(self):
         #placeholder for custom implementations.
@@ -1712,6 +1716,7 @@ class ExecRoot(Root):
         Root.__init__(self, uri, layout, object_registrar)
         self.addBottomButtons()
         self.setWindowSize()
+        self.error_dialog = ErrorDialog()
 
     def setWindowSize(self):
         #this groups all elements together at the top, leaving the
@@ -1730,7 +1735,9 @@ class ExecRoot(Root):
         if 'label' in self.attributes:
             self.setWindowTitle(self.attributes['label'])
 
-        self.setGeometry(400, 400, width, height)
+        self.resize(width, height)
+        center_window(self)
+
         self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
 
@@ -1739,7 +1746,8 @@ class ExecRoot(Root):
         
             returns nothing."""
 
-        if not self.errors_exist():
+        errors = self.errors_exist()
+        if len(errors) == 0:
             # Check to see if the user has specified whether we should save the
             # last run.  If the user has not specified, assume that the last run
             # should be saved.
@@ -1750,8 +1758,12 @@ class ExecRoot(Root):
 
             if save_lastrun:
                 self.saveLastRun()
-                self.queueOperations()
-                self.runProgram()
+
+            self.queueOperations()
+            self.runProgram()
+        else:
+            self.error_dialog.set_errors(errors)
+            self.error_dialog.exec_()
 
 
     def runProgram(self):
@@ -1810,6 +1822,56 @@ class ExecRoot(Root):
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
 
+
+class ErrorDialog(QtGui.QDialog):
+    def __init__(self):
+        QtGui.QDialog.__init__(self)
+        self.errors = []
+        self.resize(400, 200)
+        self.setWindowTitle('Errors exist!')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'natcap_logo.png')))
+        self.setLayout(QtGui.QVBoxLayout())
+        self.error_icon = QtGui.QLabel()
+        self.error_icon.setStyleSheet('QLabel { padding: 10px }')
+        self.error_icon.setPixmap(QtGui.QPixmap(os.path.join(IUI_DIR,
+            'dialog-error.png')))
+        self.error_icon.setSizePolicy(QtGui.QSizePolicy.Fixed,
+            QtGui.QSizePolicy.Fixed)
+        self.title = QtGui.QLabel("Whoops!")
+        self.title.setStyleSheet('QLabel { font: bold 18px }')
+        self.body = QtGui.QLabel()
+        self.body.setWordWrap(True)
+        self.ok_button = QtGui.QPushButton('OK')
+        self.ok_button.clicked.connect(self.accept)
+
+        error_widget = QtGui.QWidget()
+        error_widget.setLayout(QtGui.QHBoxLayout())
+        error_widget.layout().addWidget(self.error_icon)
+        self.layout().addWidget(error_widget)
+
+        body_widget = QtGui.QWidget()
+        error_widget.layout().addWidget(body_widget)
+        body_widget.setLayout(QtGui.QVBoxLayout())
+        body_widget.layout().addWidget(self.title)
+        body_widget.layout().addWidget(self.body)
+
+        self.button_box = QtGui.QDialogButtonBox()
+        self.button_box.addButton(self.ok_button, QtGui.QDialogButtonBox.AcceptRole)
+        self.layout().addWidget(self.button_box)
+
+    def set_errors(self, errors):
+        self.errors = errors
+
+    def showEvent(self, event=None):
+        label_string = '<ul>'
+        for element_tuple in self.errors:
+            label_string += '<li>%s: %s</li>' % element_tuple
+        label_string += '</ul>'
+
+        self.body.setText(str("There are %s error(s) that must be resolved" +
+            " before this tool can be run:%s") % (len(self.errors), label_string))
+        self.body.setMinimumSize(self.body.sizeHint())
+
 class ElementRegistrar(registrar.Registrar):
     def __init__(self, root_ptr):
         registrar.Registrar.__init__(self)
@@ -1837,6 +1899,21 @@ class ElementRegistrar(registrar.Registrar):
             return widget(op_values, registrar=self)
         else:
             return widget(op_values)
+
+
+def center_window(window_ptr):
+    """Center a window on whatever screen it appears.
+
+            window_ptr - a pointer to a Qt window, whether an application or a
+                QDialog.
+
+        returns nothing."""
+
+    geometry = window_ptr.frameGeometry()
+    center = QtGui.QDesktopWidget().availableGeometry().center()
+    geometry.moveCenter(center)
+    window_ptr.move(geometry.topLeft())
+
 
 if __name__ == "__main__":
     reg = Registrar()
