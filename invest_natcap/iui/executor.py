@@ -6,6 +6,8 @@ from collections import deque
 import traceback
 import logging
 import time
+import subprocess
+import platform
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
@@ -301,3 +303,25 @@ class Executor(threading.Thread):
             LOGGER.error('Error: a problem occurred while running the model')
             self.printTraceback()
             self.setThreadFailed(True)
+
+        try:
+            LOGGER.info('Opening file explorer to workspace directory')
+            if platform.system() == 'Windows':
+                # Try to launch a windows file explorer to visit the workspace
+                # directory now that the operation has finished executing.
+                LOGGER.info('Using windows explorer to view files')
+                subprocess.Popen(r'explorer "%s"' % args['workspace_dir'])
+            else:
+                # Assume we're on linux.  No biggie, just use xdg-open to use the
+                # default file opening scheme.
+                LOGGER.info('Not on windows, using default file browser')
+                subprocess.Popen(['xdg-open', args['workspace_dir']])
+        except KeyError:
+            # KeyError thrown when the key 'workspace_dir' is not used in the
+            # args dictionary, print an inconsequential error.
+            LOGGER.error('Cannot find args id \'workspace_dir\'.')
+        except OSError:
+            # OSError is thrown if the given file browser program (whether
+            # explorer or xdg-open) cannot be found.  No biggie, just pass.
+            LOGGER.error('Cannot find default file browser. Platform: %s |' +
+                ' folder: %s', platform.system(), args['workspace_dir'])
