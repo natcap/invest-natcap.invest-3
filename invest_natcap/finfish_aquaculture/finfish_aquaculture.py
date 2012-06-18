@@ -85,13 +85,15 @@ def execute(args):
     finfish_aquaculture_core.execute(ff_aqua_args)
 
 def format_ops_table(op_path, farm_ID):
+    '''Takes in the path to the operating parameters table as well as the
+    keyword to look for to identify the farm number to go with the parameters,
+    and outputs a 2D dictionary that contains all parameters by farm and
+    description. The outer key is farm number, and the inner key is a string
+    description of the parameter.'''
     
-    #Now create a dictionary for the operations table, then set up the values so 
-    #that they are iterable in a way that makes sense
     #NOTE: Have to do some explicit calls to strings here. This is BAD. Don't do it if
-    #you don't have to.
-    
-    #THESE EXPLICIT STRINGS COME FROM THE "Farm Operations" table
+    #you don't have to. THESE EXPLICIT STRINGS COME FROM THE "Farm Operations" 
+    #table.
 
     new_dict_op = {}
     csv_file = open(op_path)

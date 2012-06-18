@@ -54,6 +54,7 @@ class Controller(object):
         self.executor = Executor()
         self.msg_checker = PrintQueueChecker(self.executor)
         self.thread_finished = False
+        self.thread_failed = False
 
     def get_message(self):
         """Check to see if the message checker thread is alive and returns the
@@ -88,6 +89,7 @@ class Controller(object):
 
             Returns nothing."""
 
+        self.thread_failed = self.executor.isThreadFailed()
         del self.executor
         self.executor = None
         del self.msg_checker
@@ -325,3 +327,5 @@ class Executor(threading.Thread):
             # explorer or xdg-open) cannot be found.  No biggie, just pass.
             LOGGER.error('Cannot find default file browser. Platform: %s |' +
                 ' folder: %s', platform.system(), args['workspace_dir'])
+
+        LOGGER.info('Finished.')

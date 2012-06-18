@@ -17,7 +17,7 @@ class TestWaveEnergyBiophysical(unittest.TestCase):
     def test_wave_energy_biophysical_regression(self):
         """A regression test for wave_energy_biophysical that passes
            in sample inputs with the area of interest.  It runs the outputs
-           againts regression files that are known to be accurate"""
+           against regression files that are known to be accurate"""
         args = {}
         test_dir = './data/wave_energy_data/'
         output_dir = './data/test_out/wave_energy_biophysical_output'

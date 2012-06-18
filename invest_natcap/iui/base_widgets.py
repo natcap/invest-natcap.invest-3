@@ -1256,16 +1256,23 @@ class OperationDialog(QtGui.QDialog):
         self.progressBar = QtGui.QProgressBar()
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(0)
+        self.progressBar.setTextVisible(False)
+
+        self.messageArea = MessageArea()
+        self.messageArea.clear()
 
         #Add the new widgets to the window
         self.layout().addWidget(self.statusAreaLabel)
         self.layout().addWidget(self.statusArea)
+        self.layout().addWidget(self.messageArea)
         self.layout().addWidget(self.progressBar)
 
 
         #create Quit and Cancel buttons for the window        
         self.quitButton = QtGui.QPushButton(' Quit')
+        self.quitButton.setToolTip('Quit the application')
         self.backButton = QtGui.QPushButton(' Back')
+        self.backButton.setToolTip('Return to parameter list')
 #        self.cancelButton = QtGui.QPushButton(' Cancel')
 
         #add button icons
@@ -1349,6 +1356,13 @@ class OperationDialog(QtGui.QDialog):
 
         self.timer.stop()
         self.stop_buttons()
+        errors_found = self.exec_controller.thread_failed
+        if errors_found:
+            self.messageArea.setText('An error was encountered running this' +
+                ' model.')
+        else:
+            self.messageArea.setText('Model completed successfully.')
+        self.messageArea.setError(errors_found)
 
     def closeEvent(self, data=None):
         """When a closeEvent is detected, run self.closeWindow().
@@ -1417,6 +1431,33 @@ class ScrollArea(QtGui.QScrollArea):
             print(id, element)
         return self.body.getElementsDictionary()
 
+class MessageArea(QtGui.QLabel):
+    def __init__(self):
+        QtGui.QLabel.__init__(self)
+        self.setWordWrap(True)
+
+    def clear(self):
+        """Clear all text and set the stylesheet to none."""
+
+        self.hide()
+        self.setText('')
+        self.setStyleSheet('')
+
+    def setError(self, state):
+        """Set the background color according to the error status passed in.
+
+            state - a python boolean.  False if no error.  True if error.
+
+            returns nothing."""
+
+        self.show()
+        if not state:
+            self.setStyleSheet('QLabel { padding: 15px;' +
+                'background-color: #d4efcc; border: 2px solid #3e895b;}')
+        else:
+            self.setStyleSheet('QLabel { padding: 15px;' +
+                'background-color: #ebabb6; border: 2px solid #a23332;}')
+
 class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
@@ -1468,7 +1509,8 @@ class Root(DynamicElement):
 
         self.operationDialog = OperationDialog(self)
         self.assembler = ElementAssembler(self.allElements)        
-        self.messageArea = QtGui.QLabel()
+        self.messageArea = MessageArea()
+        self.messageArea.setError(False)
         self.layout().addWidget(self.messageArea)
 
         self.initElements()
@@ -1568,7 +1610,12 @@ class Root(DynamicElement):
         
             returns nothing"""
 
-        self.messageArea.setText('Parameters reset to defaults')
+        reset_text = 'Parameters reset to defaults.  '
+        if self.lastRun != {}:
+            reset_text += str('<a href=\'reset\'>Restore parameters from' +
+                ' your last run</a>')
+        self.messageArea.setText(reset_text)
+        self.messageArea.linkActivated.connect(self.initElements)
 
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
@@ -1627,6 +1674,10 @@ class Root(DynamicElement):
                     element.setValue(value)
                 except:
                     pass
+            self.messageArea.setText('Parameters have been loaded from the' +
+                ' most recent run of this model.  <a href=\'default\'>' +
+                ' Reset to defaults</a>')
+            self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
 
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
