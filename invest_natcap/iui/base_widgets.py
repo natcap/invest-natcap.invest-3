@@ -1256,6 +1256,7 @@ class OperationDialog(QtGui.QDialog):
         self.progressBar = QtGui.QProgressBar()
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(0)
+        self.progressBar.setTextVisible(False)
 
         self.messageArea = MessageArea()
         self.messageArea.clear()
