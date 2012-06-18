@@ -6,6 +6,7 @@ from collections import deque
 import traceback
 import logging
 import time
+import subprocess
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
@@ -305,6 +306,7 @@ class Executor(threading.Thread):
         try:
             # Try to launch a windows file explorer to visit the workspace
             # directory now that the operation has finished executing.
+            LOGGER.info('Opening file explorer to workspace directory')
             subprocess.Popen(r'explorer "%s"' % args['workspace_dir'])
         except OSError:
             # OSError thrown when we're not on windows.  No biggie, just print
