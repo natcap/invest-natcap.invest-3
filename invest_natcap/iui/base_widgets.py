@@ -1353,6 +1353,13 @@ class OperationDialog(QtGui.QDialog):
 
         self.timer.stop()
         self.stop_buttons()
+        errors_found = self.exec_controller.thread_failed
+        if errors_found:
+            self.messageArea.setText('An error was encountered running this' +
+                ' model.')
+        else:
+            self.messageArea.setText('Model completed successfully.')
+        self.messageArea.setError(errors_found)
 
     def closeEvent(self, data=None):
         """When a closeEvent is detected, run self.closeWindow().
