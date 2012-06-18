@@ -1469,6 +1469,8 @@ class Root(DynamicElement):
         self.operationDialog = OperationDialog(self)
         self.assembler = ElementAssembler(self.allElements)        
         self.messageArea = QtGui.QLabel()
+        self.messageArea.setStyleSheet('QLabel { padding: 20px;' +
+            'background-color: #d4efcc; border: 2px solid #3e895b;}')
         self.layout().addWidget(self.messageArea)
 
         self.initElements()
@@ -1627,6 +1629,9 @@ class Root(DynamicElement):
                     element.setValue(value)
                 except:
                     pass
+            self.messageArea.setText('Parameters have been loaded from the' +
+                ' most recent run of this model.  Click here to reset' +
+                ' to defaults')
 
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
