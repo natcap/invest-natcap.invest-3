@@ -2,6 +2,7 @@
 
 from osgeo import gdal
 from osgeo import ogr
+import csv
 
 from invest_natcap.biodiversity import biodiversity_core
 from invest_natcap.iui import fileio
@@ -47,7 +48,9 @@ def execute(args):
         returns nothing."""
 
     workspace = args['workspace_dir']
-
+    
+    biophysical_args = {}
+    biophysical_args['workspace_dir'] = workspace
     # If the user has not provided a results suffix, assume it to be an empty
     # string.
     try:
@@ -65,10 +68,10 @@ def execute(args):
             os.makedirs(folder)
 
     biophysical_args['threat_dict'] = \
-        make_dictionary_from_csv(args['threat_uri','Threat'])
+        make_dictionary_from_csv(args['threat_uri'],'Threat')
 
     biophysical_args['sensitivity_dict'] = \
-        make_dictionary_from_csv(args['sensitivity_uri','LULC'])
+        make_dictionary_from_csv(args['sensitivity_uri'],'LULC')
 
     biophysical_args['half_saturation'] = int(args['half_saturation_constant'])    
 
@@ -91,7 +94,7 @@ def execute(args):
         density_dict = {}
         for threat in biophysical_args['threat_dict']:
             try:
-                density_dict[str(threat+ext)] = gdal.Open(workspace+'input/'+str(threat+ext),GA_ReadOnly)
+                density_dict[str(threat+ext)] = gdal.Open(workspace+'input/'+str(threat+ext),gdal.GA_ReadOnly)
             except:
                 LOGGER.debug('Could not find the threat raster : %s', workspace+'input/'+str(threat+ext))
         
