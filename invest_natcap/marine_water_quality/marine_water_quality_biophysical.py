@@ -54,7 +54,12 @@ def execute(args):
     tide_e_points = ogr.Open(args['tide_e_points_uri'])
     try:
         adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
+    except KeyError:
+        #Must be running at command line and no argument passed
+        adv_uv_points = None
+        LOGGER.info("adv_uv_points not provided, using zero values")
     except TypeError:
+        #probably running in a UI mode and a blank input, check first
         #adv uv points not provided, use a 0 raster.
         if args['adv_uv_points_uri'] != '':
             raise TypeError
