@@ -1269,7 +1269,9 @@ class OperationDialog(QtGui.QDialog):
 
         #create Quit and Cancel buttons for the window        
         self.quitButton = QtGui.QPushButton(' Quit')
+        self.quitButton.setToolTip('Quit the application')
         self.backButton = QtGui.QPushButton(' Back')
+        self.backButton.setToolTip('Return to parameter list')
 #        self.cancelButton = QtGui.QPushButton(' Cancel')
 
         #add button icons
