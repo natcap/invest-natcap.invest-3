@@ -33,6 +33,7 @@ def biophysical(args):
     LOGGER.debug('Starting biodiversity biophysical calculations')
     output_dir = args['workspace_dir'] + os.sep + 'output/'
     intermediate_dir = args['workspace_dir'] + os.sep + 'intermediate/'
+    threat_dict = args['threat_dict']
     #Get raster properties: cellsize, width, height, cells = width * height, extent    
     lulc_prop = get_raster_properties(args['landuse'])
     #Create raster of habitat based on habitat field
@@ -41,7 +42,11 @@ def biophysical(args):
     habitat_raster = raster_from_table_values(args['landuse'], habitat_raster, args['sensitivity_dict'], 'HABITAT')
 
     #Sum weight of threats
+    weight_sum = 0.0
+    for threat_info in threat_dict.itervalues():
+        weight_sum = weight_sum + float(threat_info['WEIGHT'])
 
+    
     #Check that threat count matches with sensitivity
 
     #If access_lyr: convert to raster, if value is null set to 1, else set to value
