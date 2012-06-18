@@ -1630,8 +1630,9 @@ class Root(DynamicElement):
                 except:
                     pass
             self.messageArea.setText('Parameters have been loaded from the' +
-                ' most recent run of this model.  Click here to reset' +
-                ' to defaults')
+                ' most recent run of this model.  <a href=\'default\'>' +
+                ' Reset to defaults</a>')
+            self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
 
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
