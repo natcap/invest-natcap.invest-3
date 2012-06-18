@@ -1257,9 +1257,13 @@ class OperationDialog(QtGui.QDialog):
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(0)
 
+        self.messageArea = MessageArea()
+        self.messageArea.clear()
+
         #Add the new widgets to the window
         self.layout().addWidget(self.statusAreaLabel)
         self.layout().addWidget(self.statusArea)
+        self.layout().addWidget(self.messageArea)
         self.layout().addWidget(self.progressBar)
 
 
@@ -1417,6 +1421,33 @@ class ScrollArea(QtGui.QScrollArea):
             print(id, element)
         return self.body.getElementsDictionary()
 
+class MessageArea(QtGui.QLabel):
+    def __init__(self):
+        QtGui.QLabel.__init__(self)
+        self.setWordWrap(True)
+
+    def clear(self):
+        """Clear all text and set the stylesheet to none."""
+
+        self.hide()
+        self.setText('')
+        self.setStyleSheet('')
+
+    def setError(self, state):
+        """Set the background color according to the error status passed in.
+
+            state - a python boolean.  False if no error.  True if error.
+
+            returns nothing."""
+
+        self.show()
+        if not state:
+            self.setStyleSheet('QLabel { padding: 15px;' +
+                'background-color: #d4efcc; border: 2px solid #3e895b;}')
+        else:
+            self.setStyleSheet('QLabel { padding: 15px;' +
+                'background-color: #ebabb6; border: 2px solid #a23332;}')
+
 class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
@@ -1468,10 +1499,8 @@ class Root(DynamicElement):
 
         self.operationDialog = OperationDialog(self)
         self.assembler = ElementAssembler(self.allElements)        
-        self.messageArea = QtGui.QLabel()
-        self.messageArea.setWordWrap(True)
-        self.messageArea.setStyleSheet('QLabel { padding: 20px;' +
-            'background-color: #d4efcc; border: 2px solid #3e895b;}')
+        self.messageArea = MessageArea()
+        self.messageArea.setError(False)
         self.layout().addWidget(self.messageArea)
 
         self.initElements()
