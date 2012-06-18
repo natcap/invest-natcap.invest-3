@@ -4,7 +4,7 @@
     "targetScript" : "invest_natcap.hydropower.water_yield",
     "modelName" : "water_yield",
     "localDocURI": "../documentation/water_yield.html",
-    "height": 900,
+    "height": 500,
     "width" : 700,
     "elements": [
         {

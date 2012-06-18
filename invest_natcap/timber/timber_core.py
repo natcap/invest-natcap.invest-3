@@ -72,6 +72,10 @@ def execute(args):
 
         #Calculate the harvest value for parcel x
         harvest_value = (perc_Harv / 100.00) * ((price * harv_Mass) - harv_Cost)
+        
+        #Initiate the biomass variable. Depending on 'immed_Harv' biomass
+        #calculation will differ
+        biomass = None
 
         #Check to see if immediate harvest will occur and act accordingly
         if immed_Harv.upper() == 'N' or immed_Harv.upper() == 'NO':
@@ -80,14 +84,16 @@ def execute(args):
             subtractor = 1.0
             summation_one = npvSummationOne(sumOne_lowerLimit, sumOne_upperLimit, harvest_value, mdr_perc, freq_Harv, subtractor)
             summation_two = npvSummationTwo(sumTwo_lowerLimit, sumTwo_upperLimit, maint_Cost, mdr_perc)
+            #Calculate Biomass
+            biomass = parcl_Area * (perc_Harv / 100.00) * harv_Mass * math.floor(yr_per_freq)
         elif immed_Harv.upper() == 'Y' or immed_Harv.upper() == 'YES':
             sumOne_upperLimit = int((math.ceil(yr_per_freq) - 1.0))
             sumOne_lowerLimit = 0
             summation_one = npvSummationOne(sumOne_lowerLimit, sumOne_upperLimit, harvest_value, mdr_perc, freq_Harv, subtractor)
             summation_two = npvSummationTwo(sumTwo_lowerLimit, sumTwo_upperLimit, maint_Cost, mdr_perc)
-
-        #Calculate Biomass
-        biomass = parcl_Area * (perc_Harv / 100.00) * harv_Mass * math.ceil(num_Years / freq_Harv)
+            #Calculate Biomass
+            biomass = parcl_Area * (perc_Harv / 100.00) * harv_Mass * math.ceil(yr_per_freq)
+        
         #Calculate Volume
         volume = biomass * (1.0 / BCEF)
 

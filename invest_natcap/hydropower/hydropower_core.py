@@ -135,7 +135,7 @@ def water_yield(args):
         output_dir + os.sep + 'water_yield_subwatershed' + suffix_csv
     
     #The nodata value that will be used for created output rasters
-    out_nodata = -1
+    out_nodata = -1.0
     
     #Create etk raster from table values to use in future calculations
     tmp_etk_raster = \

@@ -110,120 +110,6 @@ this model, send an email to richsharp@stanford.edu." + self.feedbackBody)
                                                    modelArgs,
                                                    self.attributes['targetScript'])
 
-def validate(jsonObject):
-    """Validates a string containing a JSON object against our schema.  Uses the
-        JSONschema project to accomplish this. 
-        
-        jsonschema draft specification: 
-            http://tools.ietf.org/html/draft-zyp-json-schema-03
-            
-        jsonschema project sites:
-            http://json-schema.org/implementations.html
-            http://code.google.com/p/jsonschema/
-            
-        arguments:
-        jsonObject - a string containing a JSON object.
-        
-        returns nothing."""
-
-    data = json.loads(jsonObject)
-
-    primitives = {"type" : "object",
-                 "properties": {
-                    "id":{"type" : "string",
-                          "optional": False},
-                    "args_id": {"type" : "string",
-                                "optional": True},
-                    "type": {"type": "string",
-                             "pattern": "^((file)|(folder)|(text)|(checkbox))$"},
-                    "label": {"type": "string",
-                              "optional": True},
-                    "defaultValue": {"type": ["string", "number", "boolean"],
-                                    "optional": True},
-                    "required":{"type": "boolean",
-                                "optional" : True},
-                    "validText": {"type": "string",
-                                  "optional": True},
-                    "dataType": {"type" : "string",
-                                 "optional": True},
-                    "width":{"type": "integer",
-                             "optional": True},
-                    "requiredIf":{"type": "array",
-                                  "optional": True,
-                                  "items": {"type": "string"}
-                                  }
-                    }
-                }
-
-    lists = {"type": "object",
-             "properties":{
-               "id": {"type": "string",
-                      "optional": False},
-                "type": {"type": "string",
-                         "optional": False,
-                         "pattern": "^list$"},
-                "elements": {"type": "array",
-                             "optional": True,
-                             "items": {
-                               "type": primitives
-                               }
-                             }
-               }
-             }
-
-    containers = {"type": "object",
-                  "properties": {
-                     "id": {"type": "string",
-                            "optional" : False},
-                     "type":{"type": "string",
-                             "optional": False,
-                             "pattern": "^container$"},
-                     "collapsible": {"type": "boolean",
-                                     "optional": False},
-                     "label": {"type": "string",
-                               "optional": False},
-                     "elements":{"type": "array",
-                                 "optional": True,
-                                 "items": {
-                                   "type": [lists, primitives]
-                                   }
-                                 }
-                     }
-                  }
-
-    elements = {"type": "array",
-                "optional": True,
-                "items": {
-                   "type":[primitives, lists, containers]
-                   }
-                }
-
-#, lists, containers
-
-    schema = {"type":"object",
-              "properties":{
-                "id": {"type": "string",
-                       "optional": False},
-                "label": {"type" : "string",
-                          "optional" : False},
-                "targetScript": {"type" : "string",
-                                 "optional": False},
-                "height": {"type": "integer",
-                           "optional": False},
-                "width": {"type": "integer",
-                          "optional": False},
-                "localDocURI": {"type": "string",
-                                "optional": False},
-                "elements": elements
-                }
-              }
-    try:
-        warnings.simplefilter('ignore')
-        jsonschema.validate(data, schema)
-    except ValueError:
-        print 'Error detected in your JSON syntax: ' + str(ValueError)
-        print 'Exiting.'
-        sys.exit()
 
 def getFlatDefaultArgumentsDictionary(args):
     flatDict = {}
@@ -242,6 +128,17 @@ def getFlatDefaultArgumentsDictionary(args):
 def main(uri, use_gui=True):
     app = QtGui.QApplication(sys.argv)
 #    validate(json_args)
+
+    # Check to see if the URI exists in the current directory.  If not, assume
+    # it exists in the directory where this module exists.
+    if not os.path.exists(uri):
+        file_path = os.path.dirname(os.path.abspath(__file__))
+        uri = os.path.join(file_path, os.path.basename(uri))
+
+        # If the URI still doesn't exist, raise a helpful exception.
+        if not os.path.exists(uri):
+            raise Exception('Can\'t find the file %s.'%uri)
+
     ui = ModelUI(uri, use_gui)
     if use_gui == True:
         result = app.exec_()

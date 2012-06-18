@@ -88,7 +88,10 @@ Attributes common to all primitive elements:
                   what restrictions are to be placed on the user's input.  See
                   the section on Validation in this document for details.  If
                   this attribute is not provided, no validation will be
-                  performed on this element.
+                  performed on this element unless it's a folder or file
+                  elements (each of which have default validation).
+                  To make all validation pass, use "validateAs": {"type":
+                  "disabled"} for a specific element.
     "label"     : A string value that will be set as the element's label.  The
                   particular display of the label depends on the element.
                   This is a required attribute.
@@ -106,7 +109,9 @@ Attributes common to all primitive elements:
                   will be provided to the user when the user clicks the info
                   button next to this element.  If a "helpText" attribute is not
                   defined in your json file, help text will instead request that
-                  the user check out the model's documentation.
+                  the user check out the model's documentation. if you set
+                  "helpText": null in your json configuration, the helpText
+                  button will not be displayed.
 
 Attributes common to text-based primitive elements (file, folder, text elements):
    "defaultValue" : A string.  The text of the textfield will be set to this
@@ -404,10 +409,18 @@ Validation
 Folder validation is limited to checking that the provided URI is a directory on
 the filesystem.  It is configured with the following syntax:
 
-    "validateAs": {"type": "folder"}
+    "validateAs": {"type": "folder",
+                   "mustExist": false}
+
+The mustExist attribute is assumed to be false unless you specify otherwise.  It
+must be a boolean.  NOTE: if you do not specify validation for a folder element,
+validation defaults to "validateAs": {"type": "folder", "mustExist": false}.  To
+disable validation, use "validateAs": {"type": "disabled"}.
 
 
-Example file object from carbon_biophysical:
+
+
+Example folder object from carbon_biophysical:
 {
     "id" : "workspace",
     "args_id" : "workspace_dir",
@@ -477,6 +490,12 @@ this is:
 
 Where the regexp_string is a string regular expression compatible with python's
 re module.
+
+***NOTE***
+Both the string and number validation types have defaule regular expressions
+that are checked even if the user does not specify a different regular
+expression.  The default string regex is ".*".  The default number regex is
+"[0-9]*(\\.[0-9]*)?".
 
 
 Example text object from carbon_biophysical:
@@ -566,6 +585,26 @@ Example dropdown object:
     "returns": "strings",
     "defaultValue": 0
 }
+
+specialized dropdown menus:
+---------------------------
+
+There is a specialized dropdown menu that exists for selecting an OGR field from
+a specific shapefile: OGRFieldDropdown.  This element appears as a dropdown menu
+that is disabled in the UI, but is connected to an OGR file field behind the
+scenes.  When a file is provided to the OGR file field, the dropdown is
+populated with the file field's fieldnames.
+
+Example OGRFieldDropdown object:
+{
+    "id": "OGRDropdown_example",
+    "type": "OGRFieldDropdown",
+    "label": "What is your cell phone carrier?",
+    "enabledBy": "id_of_an_OGR_file_element",
+    "returns": "strings"
+}
+
+
 
 
 checkbox

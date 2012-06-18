@@ -4,8 +4,8 @@
     "targetScript": "invest_natcap.timber.timber",
     "modelName": "timber",
     "localDocURI": "../documentation/managed_timber_production_model.html",
-    "height": 150,
-    "width": 500,
+    "height": 300,
+    "width": 700,
     "elements": [
         {
             "id": "timber_list",

@@ -2,11 +2,16 @@
 
 import os
 import csv
+import logging
 
 from osgeo import gdal
 from osgeo import ogr
 
 from invest_natcap.finfish_aquaculture import finfish_aquaculture_core
+
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+LOGGER = logging.getLogger('wave_energy_biophysical')
 
 def execute(args):
     """This function will take care of preparing files passed into 
@@ -64,12 +69,16 @@ def execute(args):
     format_temp_table(args['water_temp_tbl'])
     format_ops_table(args['farm_op_tbl'], "Farm #:")
     
-    
-    #Valuation arguments
     ff_aqua_args['do_valuation'] = args['do_valuation']
-    ff_aqua_args['p_per_kg'] = args['p_per_kg']
-    ff_aqua_args['frac_p'] = args['frac_p']
-    ff_aqua_args['discount'] = args['discount']
+
+    #Valuation arguments
+    key = 'do_valuation'
+    
+    if ff_aqua_args['do_valuation'] == True:
+
+        ff_aqua_args['p_per_kg'] = args['p_per_kg']
+        ff_aqua_args['frac_p'] = args['frac_p']
+        ff_aqua_args['discount'] = args['discount']
 
     #Fire up the biophysical function in finfish_aquaculture_core with the 
     #gathered arguments
@@ -142,7 +151,6 @@ def format_temp_table(temp_path):
     #EXPLICIT STRINGS FROM "Temp_Daily"
     
     water_temp_file = open(temp_path)
-    reader = csv.DictReader(water_temp_file)
    
     new_dict_temp = {}
     line = None
@@ -168,11 +176,14 @@ def format_temp_table(temp_path):
         sub_dict = {}
         
         for key in row:
-            if (key != day_marker):
+            if (key != day_marker and key != ''):
                 sub_dict[key] = row[key]
         
         del sub_dict['Day/Month']
-        new_dict_temp[row[day_marker]] = sub_dict
-    
+        
+        #Subtract 1 here so that the day in the temp table allows for % 365
+        new_dict_temp[int(row[day_marker]) - 1] = sub_dict
+        
+        
     ff_aqua_args['water_temp_dict'] = new_dict_temp
     

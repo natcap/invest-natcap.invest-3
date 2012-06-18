@@ -459,6 +459,11 @@ class InformationButton(QtGui.QPushButton):
         self.pressed.connect(self.show_info_popup)
         self.setFlat(True)
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'info.png')))
+        self.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+
+        # If the user has set "helpText": null in JSON, deactivate.
+        if body_text == None:
+            self.deactivate()
 
     def show_info_popup(self):
         """Show the information popup.  This manually (programmatically) enters
@@ -578,6 +583,7 @@ class Label(QtGui.QLabel, DynamicPrimitive):
         DynamicPrimitive.__init__(self, attributes)
         self.setText(attributes['label'])
         self.setWordWrap(True)
+        self.elements = [self.error_button, self, self.info_button]
 
     def value(self):
         if 'returns' in self.attributes:
@@ -826,7 +832,8 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         if 'defaultValue' in self.attributes:
             self.setChecked(self.attributes['defaultValue'])
 
-        self.setState(False, includeSelf=False, recursive=True)
+        self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
+            recursive=True)
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
@@ -1056,7 +1063,7 @@ class Dropdown(LabeledElement):
         self.addElement(QtGui.QWidget())
        
     def setValue(self, index):
-        if isinstance(index, str):
+        if isinstance(index, str) or isinstance(index, unicode):
             index = self.dropdown.findText(index)
             if index == -1: #returned if the index cannot be found
                 index = 0
@@ -1157,6 +1164,53 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
     def setBGcolorSatisfied(self, state):
         pass
 
+class TableHandler(Dropdown):
+    """This class defines a general-purpose class for handling dropdown-based
+        column selection.  This class uses IUI's 'enabledBy' attribute to
+        control the contents of the dropdown menu. This element's 'enabledBy'
+        attribute must be set to the id of 0a file element that is validated
+        appropriately."""
+    def __init__(self, attributes):
+        # initialize the options key if it doesn't already exist.
+        if 'options' not in attributes:
+            attributes['options'] = []
+
+        Dropdown.__init__(self, attributes)
+        self.handler = None  # this should be set in an appropriate subclass.
+        self.uri = ''
+
+    def populate_fields(self):
+        """Extract the fieldnames from the fileio table handler class for this
+        instance of TableHandler.  Returns nothing, but populates the dropdown
+        with the appropriate fieldnames.  If any options are present in the
+        dropdown, they are cleared before the new column names are entered."""
+        self.dropdown.clear()
+        self.handler.update(self.enabledBy.value())
+        field_names = self.handler.get_fieldnames(case='orig')
+        for name in field_names:
+            self.dropdown.addItem(name)
+
+    def setState(self, state, includeSelf=True, recursive=True):
+        """Reimplemented from Dropdown.setState.  When state=False, the dropdown
+        menu is cleared.  If state=True, the dropdown menu is populated with
+        values from the corresponding table object."""
+        Dropdown.setState(self, state, includeSelf, recursive)
+
+        if state == False:
+            self.dropdown.clear()
+        else:
+            self.populate_fields()
+
+class CSVFieldDropdown(TableHandler):
+    def __init__(self, attributes):
+        TableHandler.__init__(self, attributes)
+        self.handler = fileio.CSVHandler(self.uri)
+
+class OGRFieldDropdown(TableHandler):
+    def __init__(self, attributes):
+        TableHandler.__init__(self, attributes)
+        self.handler = fileio.OGRHandler(self.uri)
+
 class OperationDialog(QtGui.QDialog):
     """ModelDialog is a class defining a modal window presented to the user
         while the model is running.  This modal window prevents the user from
@@ -1180,7 +1234,8 @@ class OperationDialog(QtGui.QDialog):
         #set window attributes
         self.setLayout(QtGui.QVBoxLayout())
         self.setWindowTitle("Running the model")
-        self.setGeometry(400, 400, 700, 400)
+        self.resize(700, 400)
+        center_window(self)
         self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
 
@@ -1393,9 +1448,17 @@ class Root(DynamicElement):
                                     self.scrollArea.verticalScrollBar().maximum())
         else:
             self.layout().addWidget(self.body)
-            
-        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
-        self.lastRun = self.last_run_handler.get_attributes()
+
+        # Check to see if we should load the last run.  Defaults to false if the
+        # user has not specified.
+        try:
+            use_lastrun = attributes['loadLastRun']
+        except KeyError:
+            use_lastrun = True
+        self.lastRun = {}
+        if use_lastrun:
+            self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+            self.lastRun = self.last_run_handler.get_attributes()
 
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
@@ -1516,13 +1579,16 @@ class Root(DynamicElement):
     def errors_exist(self):
         """Check to see if any elements in this UI have errors.
         
-            Returns True if an error is found.  False if not."""
-            
+           returns a list of tuples, where the first tuple entry is the element
+           label and the second tuple entry is the element's error message.."""
+
+        errors = []
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
                 if element.has_error():
-                    return True
-        return False
+                    error_msg = element.error_button.error_text
+                    errors.append((element.attributes['label'], error_msg))
+        return errors
 
     def queueOperations(self):
         #placeholder for custom implementations.
@@ -1650,6 +1716,7 @@ class ExecRoot(Root):
         Root.__init__(self, uri, layout, object_registrar)
         self.addBottomButtons()
         self.setWindowSize()
+        self.error_dialog = ErrorDialog()
 
     def setWindowSize(self):
         #this groups all elements together at the top, leaving the
@@ -1668,7 +1735,9 @@ class ExecRoot(Root):
         if 'label' in self.attributes:
             self.setWindowTitle(self.attributes['label'])
 
-        self.setGeometry(400, 400, width, height)
+        self.resize(width, height)
+        center_window(self)
+
         self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
 
@@ -1677,11 +1746,25 @@ class ExecRoot(Root):
         
             returns nothing."""
 
-        if not self.errors_exist():
-            # Save the last run to the json dictionary
-            self.saveLastRun()
+        errors = self.errors_exist()
+        if len(errors) == 0:
+            # Check to see if the user has specified whether we should save the
+            # last run.  If the user has not specified, assume that the last run
+            # should be saved.
+            try:
+                save_lastrun = self.attributes['saveLastRun']
+            except KeyError:
+                save_lastrun = True
+
+            if save_lastrun:
+                self.saveLastRun()
+
             self.queueOperations()
             self.runProgram()
+        else:
+            self.error_dialog.set_errors(errors)
+            self.error_dialog.exec_()
+
 
     def runProgram(self):
         self.operationDialog.exec_()
@@ -1739,6 +1822,56 @@ class ExecRoot(Root):
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
 
+
+class ErrorDialog(QtGui.QDialog):
+    def __init__(self):
+        QtGui.QDialog.__init__(self)
+        self.errors = []
+        self.resize(400, 200)
+        self.setWindowTitle('Errors exist!')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'natcap_logo.png')))
+        self.setLayout(QtGui.QVBoxLayout())
+        self.error_icon = QtGui.QLabel()
+        self.error_icon.setStyleSheet('QLabel { padding: 10px }')
+        self.error_icon.setPixmap(QtGui.QPixmap(os.path.join(IUI_DIR,
+            'dialog-error.png')))
+        self.error_icon.setSizePolicy(QtGui.QSizePolicy.Fixed,
+            QtGui.QSizePolicy.Fixed)
+        self.title = QtGui.QLabel("Whoops!")
+        self.title.setStyleSheet('QLabel { font: bold 18px }')
+        self.body = QtGui.QLabel()
+        self.body.setWordWrap(True)
+        self.ok_button = QtGui.QPushButton('OK')
+        self.ok_button.clicked.connect(self.accept)
+
+        error_widget = QtGui.QWidget()
+        error_widget.setLayout(QtGui.QHBoxLayout())
+        error_widget.layout().addWidget(self.error_icon)
+        self.layout().addWidget(error_widget)
+
+        body_widget = QtGui.QWidget()
+        error_widget.layout().addWidget(body_widget)
+        body_widget.setLayout(QtGui.QVBoxLayout())
+        body_widget.layout().addWidget(self.title)
+        body_widget.layout().addWidget(self.body)
+
+        self.button_box = QtGui.QDialogButtonBox()
+        self.button_box.addButton(self.ok_button, QtGui.QDialogButtonBox.AcceptRole)
+        self.layout().addWidget(self.button_box)
+
+    def set_errors(self, errors):
+        self.errors = errors
+
+    def showEvent(self, event=None):
+        label_string = '<ul>'
+        for element_tuple in self.errors:
+            label_string += '<li>%s: %s</li>' % element_tuple
+        label_string += '</ul>'
+
+        self.body.setText(str("There are %s error(s) that must be resolved" +
+            " before this tool can be run:%s") % (len(self.errors), label_string))
+        self.body.setMinimumSize(self.body.sizeHint())
+
 class ElementRegistrar(registrar.Registrar):
     def __init__(self, root_ptr):
         registrar.Registrar.__init__(self)
@@ -1754,6 +1887,7 @@ class ElementRegistrar(registrar.Registrar):
                    'embeddedUI': EmbeddedUI,
                    'checkbox': CheckBox,
                    'scrollGroup': ScrollArea,
+                   'OGRFieldDropdown': OGRFieldDropdown,
                    'label': Label
                    }
         self.update_map(updates)
@@ -1765,6 +1899,21 @@ class ElementRegistrar(registrar.Registrar):
             return widget(op_values, registrar=self)
         else:
             return widget(op_values)
+
+
+def center_window(window_ptr):
+    """Center a window on whatever screen it appears.
+
+            window_ptr - a pointer to a Qt window, whether an application or a
+                QDialog.
+
+        returns nothing."""
+
+    geometry = window_ptr.frameGeometry()
+    center = QtGui.QDesktopWidget().availableGeometry().center()
+    geometry.moveCenter(center)
+    window_ptr.move(geometry.topLeft())
+
 
 if __name__ == "__main__":
     reg = Registrar()
