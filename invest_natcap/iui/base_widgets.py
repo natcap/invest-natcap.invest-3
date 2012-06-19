@@ -893,6 +893,8 @@ class FileEntry(DynamicText):
 
         if len(self.textField.text()) == 0:
             self.button.getFileName()
+        else:
+            QtGui.QLineEdit.mousePressEvent(self.textField, event)
 
     def setValue(self, text):
         """Set the value of the uri field.  If parameter 'text' is an absolute
