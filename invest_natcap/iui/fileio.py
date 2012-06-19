@@ -255,7 +255,7 @@ class CSVHandler(AbstractTableHandler):
             for fieldname in self.fieldnames:
                 fieldname = fieldname.lower()
                 orig_fieldname = self.orig_fieldnames[fieldname]
-                record_dict[fieldname] = record[orig_fieldname]
+                record_dict[fieldname] = row[orig_fieldname]
             output_list.append(record_dict)
 
         self.table = output_list
