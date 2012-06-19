@@ -207,6 +207,22 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
     LOGGER.debug('starting vectorize_rasters')
 
+    #We need to ensure that the type of nodata is the same as the raster type so
+    #we don't encounter bugs where we return an int nodata for a float raster or
+    #vice versa
+    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
+                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32]
+    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32, 
+                        gdal.GDT_Float64, gdal.GDT_Float32]
+    gdal_bool_types = [gdal.GDT_Byte]
+
+    if datatype in gdal_int_types:
+        nodata = int(nodata)
+    if datatype in gdal_float_types:
+        nodata = float(nodata)
+    if datatype in gdal_bool_types:
+        nodata = bool(nodata)
+
     #create a new current_dataset with the minimum resolution of dataset_list and
     #bounding box that contains aoi_box
     #gt: left, pixelxwidth, pixelywidthforx, top, pixelxwidthfory, pixelywidth
