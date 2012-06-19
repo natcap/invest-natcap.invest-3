@@ -10,6 +10,7 @@ import numpy as np
 from osgeo import gdal
 from osgeo import ogr
 
+import invest_cython_core
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import invest_core
 from invest_natcap import raster_utils
@@ -804,7 +805,7 @@ def water_scarcity(args):
     sub_mask_raster_path2 = intermediate_dir + os.sep + 'sub_shed_mask3.tif'
     
     #The nodata value to use for the output rasters
-    out_nodata = -1
+    out_nodata = -1.0
     
     #Create watershed mask raster
     ws_mask = \
@@ -848,14 +849,8 @@ def water_scarcity(args):
     
     #Create raster from land use raster, subsituting in demand value
     lulc_band = lulc_raster.GetRasterBand(1)
-    lulc_nodata = lulc_band.GetNoDataValue()
-    tmp_consump = raster_utils.new_raster_from_base(lulc_raster, '', 'MEM', 
-                                                       out_nodata, 
-                                                       gdal.GDT_Float32)
-    tmp_consump_band = tmp_consump.GetRasterBand(1)
-    
-    demand_dict[lulc_nodata] = lulc_nodata
     LOGGER.info('Creating demand raster')
+
     def lulc_demand(lulc):
         """Function that maps demand values to the corresponding lulc_id
         
@@ -870,7 +865,10 @@ def water_scarcity(args):
         else:
             return out_nodata
     
-    invest_core.vectorize1ArgOp(lulc_band, lulc_demand, tmp_consump_band)
+    #invest_core.vectorize1ArgOp(lulc_band, lulc_demand, tmp_consump_band)
+    tmp_consump = raster_utils.vectorize_rasters([lulc_band], lulc_demand,
+        nodata = out_nodata)
+
     LOGGER.info('Clip raster from polygons')
     clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, 
                                                clipped_consump_path)
