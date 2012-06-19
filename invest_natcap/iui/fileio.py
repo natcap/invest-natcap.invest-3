@@ -170,7 +170,7 @@ class AbstractTableHandler(object):
 
     def get_table_row(self, key_field, key_value):
         """Return the first full row where the value of key_field is equivalent
-            to key_value.
+            to key_value.  Raises a KeyError if key_field does not exist.
 
             returns a python dictionary of the row, or None if the row does not
             exist."""
@@ -255,7 +255,7 @@ class CSVHandler(AbstractTableHandler):
             for fieldname in self.fieldnames:
                 fieldname = fieldname.lower()
                 orig_fieldname = self.orig_fieldnames[fieldname]
-                record_dict[fieldname] = record[orig_fieldname]
+                record_dict[fieldname] = row[orig_fieldname]
             output_list.append(record_dict)
 
         self.table = output_list

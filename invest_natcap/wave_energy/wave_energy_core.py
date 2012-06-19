@@ -297,7 +297,11 @@ def file_cleanup_handler(file_list):
         logging.debug('Regex file_name pattern : %s', pattern)
         for item in os.listdir(directory):
             if re.search(pattern, item):
-                os.remove(os.path.join(directory, item))
+                try:
+                    os.remove(os.path.join(directory, item))
+                except WindowsError:
+                    LOGGER.warn("Warning, could not delete the file %s" % \
+                                    os.path.join(directory, item))
 
 def pixel_size_helper(shape, coord_trans, coord_trans_opposite, global_dem):
     """This function helps retrieve the pixel sizes of the global DEM 

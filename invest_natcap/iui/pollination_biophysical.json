@@ -37,7 +37,7 @@
                             "args_id" : "landuse_cur_uri",
                             "type": "file",
                             "label": "Current land cover scenario raster",
-                            "defaultValue": "Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
+                            "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
                             "required": true,
                             "validateAs": {"type": "GDAL"},
                             "helpText": "This must be a raster dataset that GDAL can open."
@@ -48,7 +48,7 @@
                             "label": "Landcover attribute table",
                             "args_id": "landuse_attributes_uri",
                             "required": true,
-                            "defaultValue": "Pollination/Input/LU.dbf",
+                            "defaultValue": "../Pollination/Input/LU.dbf",
                             "validateAs": {"type": "DBF",
                                            "fieldsExist": ["LULC"],
                                            "restrictions": [{"field": "LULC",
@@ -64,7 +64,7 @@
                             "label": "Calculate future scenario",
                             "args_id": "landuse_fut_uri",
                             "required": false,
-                            "defaultValue": "Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
+                            "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
                             "validateAs": {"type": "GDAL"},
                             "helpText": "Optional.<br/><br/>Providing a future land cover scenario will cause pollinator supply and abundance to be calculated for both the current and future scenarios.  Your future land cover raster should use the same land cover attribute table as your current scenario.  If provided, this must be a raster that GDAL can open."
                         }
@@ -80,7 +80,7 @@
                     "id" : "guilds",
                     "type": "file",
                     "label": "Guilds table",
-                    "defaultValue": "Pollination/Input/Guild.dbf",
+                    "defaultValue": "../Pollination/Input/Guild.dbf",
                     "args_id": "guilds_uri",
                     "required": true,
                     "validateAs": {"type": "DBF",
