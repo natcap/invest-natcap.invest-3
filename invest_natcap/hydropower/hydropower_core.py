@@ -588,6 +588,23 @@ def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     band_area.WriteArray(new_data_array, 0, 0)  
     return raster_area
 
+def aggregate_raster_values(raster, shapefile, operation):
+    """Collect all the raster values that lie in shapefile depending on the value
+        of operation
+
+        raster - a GDAL dataset of some sort of value
+        shapefile - an OGR datasource that probably overlaps raster
+        shapefile_field - a string indicating which key in shapefile to associate
+           the output dictionary values with
+        operation - a string of one of ['mean', 'sum']
+
+        returns a dictionary whose keys are the values in shapefile_field and values
+            are the aggregated values over raster.  If no values are aggregated
+            contains 0."""
+
+    pass
+
+
 def create_operation_raster(raster, path, id_list, operation, shed_mask, op_dict):
     """Creates a new raster representing the mean or sum per watershed or per
        sub watershed 
