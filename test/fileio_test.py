@@ -43,6 +43,7 @@ class CSVHandlerTest(unittest.TestCase):
         expected_map = {'Apis': 1.0,
                         'Bombus': 0.0}
         for species, ns_ground in table_map.iteritems():
+            ns_ground = float(ns_ground)
             self.assertEqual(species in expected_map, True,
                 'Species %s not expected' % species)
             self.assertEqual(expected_map[species], ns_ground)
