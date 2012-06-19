@@ -2,6 +2,7 @@
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
+import invest_natcap.raster_utils
 
 from osgeo import gdal
 from osgeo import ogr
@@ -24,6 +25,8 @@ def biophysical(args):
        args['sensitivity_dict'] - a python dictionary representing the sensitivity table
        args['density_dict'] - a python dictionary that stores one or more gdal datasets
                               based on the number of threats given in the threat table
+       args['access_shape'] - a ogr polygon shapefile depicting any protected/reserved
+                              land boundaries
        args['half_saturation'] - an integer
        args['result_suffix'] - a string
 
@@ -48,12 +51,26 @@ def biophysical(args):
 
     
     #Check that threat count matches with sensitivity
+        #Will be doing this in validation (hopefully...) or at the uri level
 
     #If access_lyr: convert to raster, if value is null set to 1, else set to value
+    try:
+        access_shape = args['access_shape']
+        LOGGER.debug('Handling Access Shape')
+        access_uri = intermediate_dir + 'access_layer.tif'
+        access_base = make_raster_from_lulc(args['landuse'], access_uri)
+        #Fill raster to all 1's (fully accessible) incase polygons do not cover
+        #land area
+        access_base.GetRasterBand(1).Fill(1)
+        access_raster = make_raster_from_shape(access_base, access_shape, 'ACCESS')
+    except:
+        LOGGER.debug('No Access Shape Provided')
+        access_shape = None
 
     #Process density layers / each threat
 
     #For all threats:
+    for threat, threat_data in args['threat_dict'].iteritems():
         #get weight, name, max_idst, decay
         #mulitply max_dist by 1000 (must be a conversion to meters
         #get proper density raster, depending on land cover
@@ -62,11 +79,19 @@ def biophysical(args):
             #Calculate neighborhood
 
         #Adjust threat by weight:
-        
+#        weight_multiplier = float(threat_data['WEIGHT']) / weight_sum
+#        def adjust_weight(dist):
+#            return dist * weight_multiplier 
+#        raster_utils.vectorize1ArgOp(dist.GetRasterBand(1), adjust_weight, weight_out)
+
         #Adjust threat by protection / access
+#        if access_shape != None:
+#            def adjust_access(weight, access):
+#                return weight * access
+#            raster_utils.vectorize2ArgOp(weight_band, access_band, adjust_access, access_out)
 
         #Adjust threat by sensitivity
-
+        
     #Compute Degradation of all threats
 
     #Compute quality for all threats
@@ -78,6 +103,24 @@ def biophysical(args):
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
 
+def make_raster_from_shape(base_raster, shape, attr):
+    """Burn an attribute value from a polygone shapefile onto an
+       existing blank raster
+
+       base_raster - a gdal raster dataset to burn the shapefile
+                     values onto
+       shape - a ogr polygon shapefile
+       attr - a python string of the attribute field to burn values
+              from
+
+       returns - a gdal raster"""
+    
+    attribute_string = 'ATTRIBUTE=' + attr
+    gdal.RasterizeLayer(base_raster, [1], shape.GetLayer(0),
+                        options = [attribute_string])
+
+    return base_raster 
+       
 def get_raster_properties(dataset):
     """Get the width, height, cover, extent of the raster
 

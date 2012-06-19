@@ -251,7 +251,12 @@ class CSVHandler(AbstractTableHandler):
     def _get_table_list(self):
         output_list = []
         for row in self.file_obj:
-            output_list.append(row)
+            record_dict = {}
+            for fieldname in self.fieldnames:
+                fieldname = fieldname.lower()
+                orig_fieldname = self.orig_fieldnames[fieldname]
+                record_dict[fieldname] = record[orig_fieldname]
+            output_list.append(record_dict)
 
         self.table = output_list
 
