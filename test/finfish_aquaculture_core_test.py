@@ -8,10 +8,10 @@ import invest_test_core
 
 class TestFinfishAquacultureCore(unittest.TestCase):
    
-   ff_farm_loc = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Jodie_Data.shp'
-   
-   def setUp(self):
-       
+    ff_farm_loc = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Jodie_Data.shp'
+    
+    def setUp(self):
+    
         ff_aqua_args = {}
         
         #Biophysical
@@ -52,5 +52,10 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         ff_aqua_args['discount'] = 0.000192
         
         self.ff_aqua_args = ff_aqua_args
-        
     
+    #Going to have to do these tests, then check it all against a pre-done file at
+    #the end, since you can't really check step by step
+    #Or do we want to re-do in order to encapusulate the change w/in the method itself?
+    def test_calc_cycle_history(self):
+    
+        
