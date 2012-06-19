@@ -75,6 +75,7 @@ class FolderCheckerTester(CheckerTester):
 
     def test_not_folder(self):
         """Assert that the FolderChecker fails if given a false URI."""
+        self.validate_as['mustExist'] = True
         self.validate_as['value'] += 'a'
         self.assertError()
 
