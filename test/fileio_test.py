@@ -58,6 +58,25 @@ class CSVHandlerTest(unittest.TestCase):
             self.assertEqual(issubclass(value.__class__, dict), True,
                 'The value of the table dictionary must be the row dictionary.')
 
+    def test_get_table_row(self):
+        # get_table_row should return a dictionary if it can find the requested
+        # value.
+        row_dict = self.handler.get_table_row('species', 'Bombus')
+        self.assertEqual(issubclass(row_dict.__class__, dict), True,
+            'get_table_row should return a dictionary; row with species' +
+            ' \'Bombus\' should exist in the sample table.')
+
+        # get_table_row should return None if it can't find the requested value
+        empty_row_dict = self.handler.get_table_row('species', 'empty')
+        self.assertEqual(empty_row_dict, None, 'get_table_row should return' +
+            ' None when requesting a field or value that does not exist')
+
+        # get_table_row should raise a KeyError when a bad fieldname is
+        # provided.
+        self.assertRaises(KeyError, self.handler.get_table_row,
+            'does_not_exist', '')
+
+
 class DBFHandlerTest(CSVHandlerTest):
     """This is a unittest to test the table handling functionality of the
     DBFHandler class."""
