@@ -128,6 +128,65 @@ class OGRCheckerTester(CheckerTester):
         self.validate_as['fieldsExist'].append('nonexistent_field')
         self.assertError()
 
+    def test_projection(self):
+        """Assert that OGRChecker can validate projection units."""
+        updates = {'layers': [{'name': 'harv_samp_cur',
+                               'projection': {'units': 'meters'}}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
+        self.validate_as.update(updates)
+        self.assertNoError()
+
+        # This should return an error.
+        updates = {'layers': [{'name': 'harv_samp_cur',
+                               'projection': {'units': 'latLong'}}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
+        self.validate_as.update(updates)
+        self.assertError()
+
+        # Check that the layer is projected.
+        updates = {'layers': [{'name': 'harv_samp_cur',
+                               'projection': {'exists': True}}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
+        self.validate_as.update(updates)
+        self.assertNoError()
+
+        # Check that the layer is projected (should fail)
+        updates = {'layers': [{'name': 'harv_samp_cur',
+                               'projection': {'exists': False}}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
+        self.validate_as.update(updates)
+        self.assertError()
+
+        # Check that the layer is projected
+        updates = {'layers': [{'name': 'harv_samp_cur',
+                               'projection': {'name': 'Transverse_Mercator'}}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
+        self.validate_as.update(updates)
+        self.assertNoError()
+
+        # Check that the layer is projected (should fail)
+        updates = {'layers': [{'name': 'harv_samp_cur',
+                               'projection': {'name': 'nonexistent_prj'}}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
+        self.validate_as.update(updates)
+        self.assertError()
+
+        # Check that the layer is projected
+        updates = {'layers': [{'name': 'harv_samp_cur',
+                               'projection': {'name': 'Transverse_Mercator'},
+                               'datum': 'North_American_Datum_1983'}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
+        self.validate_as.update(updates)
+        self.assertNoError()
+
+        # Check that the layer is projected (should fail)
+        updates = {'layers': [{'name': 'harv_samp_cur',
+                               'projection': {'name': 'Transverse_Mercator'},
+                               'datum': 'some_other_datum'}],
+                   'value': TEST_DATA + '/carbon/input/harv_samp_cur.shp'}
+        self.validate_as.update(updates)
+        self.assertError()
+
 class DBFCheckerTester(CheckerTester):
         """Test the class iui_validator.DBFChecker"""
         def setUp(self):
