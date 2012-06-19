@@ -47,6 +47,17 @@ class CSVHandlerTest(unittest.TestCase):
                 'Species %s not expected' % species)
             self.assertEqual(expected_map[species], ns_ground)
 
+    def test_get_table_dictionary(self):
+        # verify the number of rows in the dictionary.
+        # Fieldnames are expected to be present, tested by test_get_fieldnames
+
+        table_dictionary = self.handler.get_table_dictionary('species')
+        self.assertEqual(len(table_dictionary), 2)
+
+        for key, value in table_dictionary.iteritems():
+            self.assertEqual(issubclass(value.__class__, dict), True,
+                'The value of the table dictionary must be the row dictionary.')
+
 class DBFHandlerTest(CSVHandlerTest):
     """This is a unittest to test the table handling functionality of the
     DBFHandler class."""
