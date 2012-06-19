@@ -192,7 +192,9 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         dataset_list - list of GDAL input datasets, requires that they'are all
             in the same projection.
         op - numpy vectorized operation, takes broadcasted pixels from 
-            the first bands in dataset_list in order and returns a new pixel
+            the first bands in dataset_list in order and returns a new pixel.  It is
+            critical that the value returned by `op` match datatype in all cases, 
+            otherwise the behavior of this function is undefined.
         aoi - an OGR polygon datasource that will clip the output raster to no larger
             than the extent of the file and restricts the processing of op to those
             output pixels that will lie within the polygons.  the rest will be nodata
