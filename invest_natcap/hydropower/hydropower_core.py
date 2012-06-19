@@ -10,7 +10,6 @@ import numpy as np
 from osgeo import gdal
 from osgeo import ogr
 
-import invest_cython_core
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import invest_core
 from invest_natcap import raster_utils
@@ -698,9 +697,6 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
     base_band = base_raster.GetRasterBand(1)
     base_nodata = float(base_band.GetNoDataValue())
     LOGGER.debug('raster_from_table_values.base_nodata : %s', base_nodata)
-    tmp_raster = \
-        raster_utils.new_raster_from_base(base_raster, new_path, 'GTiff', 
-                                             base_nodata, gdal.GDT_Float32)
         
     def vop(lulc):
         """Operation returns the 'field' value that directly corresponds to
@@ -715,9 +711,8 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
         else:
             return base_nodata
         
-    out_band = tmp_raster.GetRasterBand(1)
-    invest_core.vectorize1ArgOp(base_band, vop, out_band)
-
+    tmp_raster = raster_utils.vectorize_rasters([base_band], vop,
+        raster_out_uri = new_path, nodata = base_nodata)
     return tmp_raster
 
 def water_scarcity(args):
