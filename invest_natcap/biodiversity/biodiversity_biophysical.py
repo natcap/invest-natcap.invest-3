@@ -76,7 +76,7 @@ def execute(args):
     biophysical_args['half_saturation'] = int(args['half_saturation_constant'])    
 
     try:
-        biophysical_args['access_shape'] = org.Open(args['access_uri'])
+        biophysical_args['access_shape'] = ogr.Open(args['access_uri'])
     except:
         pass
 

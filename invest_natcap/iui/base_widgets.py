@@ -1256,6 +1256,7 @@ class OperationDialog(QtGui.QDialog):
         self.progressBar = QtGui.QProgressBar()
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(0)
+        self.progressBar.setTextVisible(False)
 
         self.messageArea = MessageArea()
         self.messageArea.clear()
@@ -1269,7 +1270,9 @@ class OperationDialog(QtGui.QDialog):
 
         #create Quit and Cancel buttons for the window        
         self.quitButton = QtGui.QPushButton(' Quit')
+        self.quitButton.setToolTip('Quit the application')
         self.backButton = QtGui.QPushButton(' Back')
+        self.backButton.setToolTip('Return to parameter list')
 #        self.cancelButton = QtGui.QPushButton(' Cancel')
 
         #add button icons

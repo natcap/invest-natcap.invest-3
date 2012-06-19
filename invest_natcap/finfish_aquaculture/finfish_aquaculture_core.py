@@ -216,40 +216,39 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
         
         #However, it should be kept in mind that when doing calculations for a given day,
         #you are using YESTRDAY'S temperatures and weights to get the value for today.
+        
+        
         for day in range (0, int((365*dur))):
-            
             if fallow_days_left > 0:
                 fallow_days_left -= 1
-            
+
             elif fish_weight >= tar_weight:
                 record = (outplant_date, day + 1, fish_weight)
                 farm_history.append(record)
                 fallow_days_left = fallow_per
                 fish_weight = 0
-            
+
             elif fish_weight != 0:
                 #Grow 'dem fishies!                   
-                exponent = round(math.exp(float(water_temp_dict[(day-1) % 365][str(f)]) * tau), 2)
+                exponent = math.exp(float(water_temp_dict[(day-1) % 365][str(f)]) * tau)
                 file.write("temp effect is: " + str(exponent) + "\n")
                 file.write("(" + str(a) +","  + str(b) +"," + str(exponent) + "," + str(fish_weight) + ")")                
                 fish_weight = (a * (fish_weight ** b) * exponent) + \
                                 fish_weight
                                     
-                fish_weight = round(fish_weight, 2)
+                fish_weight = fish_weight
                               
                 file.write("Fish Weight for day " + str(day) + 
                            ": " + str(fish_weight) + "\n")
             
-            elif (day % 365) >= start_day and (day % 365) <= start_day + start_buffer:
+            #function that maps an incoming day to the same day % 365, then creates a
+            #list to check against +/- buffer days from the start day
+            elif (day % 365) in map (lambda x: x%365, range(start_day - start_buffer, 
+                                                    start_day + start_buffer+1)):
                     fish_weight = start_weight
                     outplant_date = day + 1
                     file.write("Fish Weight for day " + str(day) + 
-                               ": " + str(fish_weight) + "\n")
-            else:
-                #assume if you've gotten here that you are at the end of one cycle,
-                #and are not yet close enough to start the next
-                fallow_days_left = (start_day - day) % 365                 
-                
+                               ": " + str(fish_weight) + "\n")      
     
         cycle_history[f] = farm_history
     
