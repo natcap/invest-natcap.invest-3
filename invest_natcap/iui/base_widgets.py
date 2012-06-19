@@ -1385,6 +1385,7 @@ class OperationDialog(QtGui.QDialog):
 
             returns nothing."""
 
+        self.messageArea.clear()
         self.cancel = False
         self.done(0)
 
