@@ -13,7 +13,7 @@ source $ENVDIR/bin/activate
 python setup.py install
 
 #Run pure python commands with the invest-3 platform installed here. Example:
-#python invest_marine_water_quality_biophysical.py
+python invest_marine_water_quality_biophysical.py
 
 #Uncomment any of the lines below to run the unit tests
 pushd test
