@@ -1,4 +1,9 @@
 #!/bin/bash
+
+#This is an example script about how to run the InVEST 3.0 development files
+#in Linux.  If you want to taylor it to your personal use, please make a copy
+#and save it in an untracked file.
+
 ENVDIR=invest_python_environment
 deactivate
 rm -rf build
