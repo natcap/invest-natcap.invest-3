@@ -1688,6 +1688,11 @@ class Root(DynamicElement):
                 self.messageArea.setText('Parameters have been loaded from the' +
                     ' most recent run of this model.  <a href=\'default\'>' +
                     ' Reset to defaults</a>')
+                try:
+                    self.messageArea.linkActivated.disconnect()
+                except TypeError:
+                    # Raised if we can't disconnect any signals
+                    pass
                 self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
 
     def assembleOutputDict(self):
@@ -1813,6 +1818,11 @@ class ExecRoot(Root):
             reset_text += str('<a href=\'reset\'>Restore parameters from' +
                 ' your last run</a>')
         self.messageArea.setText(reset_text)
+        try:
+            self.messageArea.linkActivated.disconnect()
+        except TypeError:
+            # Thrown when we can't disconnect any slots from this signal
+            pass
         self.messageArea.linkActivated.connect(self.initElements)
 
     def okPressed(self):
