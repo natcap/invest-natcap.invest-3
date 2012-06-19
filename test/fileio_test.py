@@ -76,6 +76,19 @@ class CSVHandlerTest(unittest.TestCase):
         self.assertRaises(KeyError, self.handler.get_table_row,
             'does_not_exist', '')
 
+    def test_set_field_mask(self):
+        # Set a field mask to test out.
+        self.handler.set_field_mask('(^ns_)|(^fs_)', trim=3)
+        fieldnames = self.handler.get_fieldnames()
+        expected_fieldnames = ['species', 'cavity', 'ground', 'spring',
+            'summer', 'alpha']
+
+        # Check that the field mask is applied correctly.
+        for name, exp_name in zip(fieldnames, expected_fieldnames):
+            self.assertEqual(name, exp_name, 'Setting a mask of (^ns_)|(^fs_)' +
+                ' and a trim of 3 should have given %s, instead found %s' %
+                (exp_name, name))
+
 
 class DBFHandlerTest(CSVHandlerTest):
     """This is a unittest to test the table handling functionality of the
