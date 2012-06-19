@@ -29,7 +29,7 @@ def execute(args):
         biophysical model.
 
         args - dictionary of string value pairs for input to this model.
-        args['workspace'] - output directory.
+        args['workspace_dir'] - output directory.
         args['aoi_poly_uri'] - OGR polygon Datasource indicating region
             of interest to run the model.  Will define the grid.
         args['pixel_size'] - float indicating pixel size in meters
@@ -66,8 +66,8 @@ def execute(args):
         LOGGER.info("adv_uv_points not provided, using zero values")
         adv_uv_points = None
     
-    output_directory = os.path.join(args['workspace'],'output')
-    intermediate_directory = os.path.join(args['workspace'],'intermediate')
+    output_directory = os.path.join(args['workspace_dir'],'output')
+    intermediate_directory = os.path.join(args['workspace_dir'],'intermediate')
     for d in [output_directory, intermediate_directory]:
         if not os.path.exists(d):
             LOGGER.info('creating directory %s', d)
