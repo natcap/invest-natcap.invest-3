@@ -66,7 +66,7 @@ class FolderCheckerTester(CheckerTester):
     """Test the class iui_validator.FileChecker"""
     def setUp(self):
         self.validate_as = {'type': 'folder',
-                       'value': TEST_DATA}
+                            'value': TEST_DATA}
         self.checker = iui_validator.FolderChecker()
 
     def test_folder_exists(self):
