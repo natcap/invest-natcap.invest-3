@@ -10,25 +10,22 @@ import invest_test_core
 class TestFinfishAquaculture(unittest.TestCase):
     def setUp(self):
     
-        args = {}
+        ff_aqua_args = {}
         #Biophysical
-        args['workspace_dir'] = './test/data/aquaculture_output/Test'
-        args['ff_farm_loc'] = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Jodie_Data.shp'
-        args['farm_ID'] = 'FarmID'
-        args['g_param_a'] = 0.038
-        args['g_param_b'] = 0.6667
-        args['water_temp_tbl'] = './test/data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
-        args['farm_op_tbl'] = './test/data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
+        ff_aqua_args['workspace_dir'] = './test/data/aquaculture_output/Test'
+        ff_aqua_args['ff_farm_loc'] = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Jodie_Data.shp'
+        ff_aqua_args['farm_ID'] = 'FarmID'
+        ff_aqua_args['g_param_a'] = 0.038
+        ff_aqua_args['g_param_b'] = 0.6667
+        ff_aqua_args['water_temp_tbl'] = './test/data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
+        ff_aqua_args['farm_op_tbl'] = './test/data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         
         #Valuation
-        args['do_valuation'] = False
-        args['p_per_kg']= 2.25
-        args['frac_p'] = .3
-        args['discount'] = 0.000192
-        
-        self.args = args
-        
-        ff_aqua_args = {}
+        ff_aqua_args['do_valuation'] = False
+        ff_aqua_args['p_per_kg']= 2.25
+        ff_aqua_args['frac_p'] = .3
+        ff_aqua_args['discount'] = 0.000192
+
         self.ff_aqua_args = ff_aqua_args
         
     def test_format_ops_table(self):
@@ -44,7 +41,7 @@ class TestFinfishAquaculture(unittest.TestCase):
                                'start day for growing' : '20',
                                'Length of Fallowing period' : '0'}}
         
-        finfish_aquaculture.format_ops_table(self.args['farm_op_tbl'], "Farm #:", self.ff_aqua_args)
+        finfish_aquaculture.format_ops_table(self.ff_aqua_args['farm_op_tbl'], "Farm #:", self.ff_aqua_args)
     
         norm_ops_table = self.ff_aqua_args['farm_op_dict']
     
@@ -68,7 +65,7 @@ class TestFinfishAquaculture(unittest.TestCase):
                            '37':{'1':'7', '4':'8'}, '38':{'1':'7', '4':'8'}, '39':{'1':'7', '4':'8'},
                            '1':{'1':'7', '4':'8'}}
         
-        finfish_aquaculture.format_temp_table(self.args['water_temp_tbl'], self.ff_aqua_args)
+        finfish_aquaculture.format_temp_table(self.ff_aqua_args['water_temp_tbl'], self.ff_aqua_args)
         norm_temp_table = self.ff_aqua_args['water_temp_dict']
         
         self.maxDiff = None
@@ -76,8 +73,6 @@ class TestFinfishAquaculture(unittest.TestCase):
         
     def tearDown(self):
         
-        if os.path.exists(self.args['workspace_dir']):
-            shutil.rmtree(self.args['workspace_dir'])
-            
+        if os.path.exists(self.ff_aqua_args['workspace_dir']):
+            shutil.rmtree(self.ff_aqua_args['workspace_dir'])
         
-            
