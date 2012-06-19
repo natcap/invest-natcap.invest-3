@@ -13,12 +13,12 @@ class TestFinfishAquaculture(unittest.TestCase):
         args = {}
         #Biophysical
         args['workspace_dir'] = './test/data/aquaculture_output/Test'
-        args['ff_farm_loc'] = './test/data/aquaculture_data/Finfish_Netpens_Jodie_Data.shp'
+        args['ff_farm_loc'] = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Jodie_Data.shp'
         args['farm_ID'] = 'FarmID'
         args['g_param_a'] = 0.038
         args['g_param_b'] = 0.6667
-        args['water_temp_tbl'] = './test/data/aquaculture_data/Temp_Daily_Jodie_Test.csv'
-        args['farm_op_tbl'] = './test/data/aquaculture_data/Farm_Operations_Jodie_Test.csv'
+        args['water_temp_tbl'] = './test/data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
+        args['farm_op_tbl'] = './test/data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         
         #Valuation
         args['do_valuation'] = False
@@ -26,13 +26,11 @@ class TestFinfishAquaculture(unittest.TestCase):
         args['frac_p'] = .3
         args['discount'] = 0.000192
         
-        self.args = args        
-    
-    def test_finfish_aquaculture_smoke(self):
-        """Smoke test for finfish_aquaculture function. """
-
-        finfish_aquaculture.execute(self.args)
-    
+        self.args = args
+        
+        ff_aqua_args = {}
+        self.ff_aqua_args = ff_aqua_args
+        
     def test_format_ops_table(self):
         
         reg_ops_table = {'1': {'Fraction of fish remaining after processing' : '.85', 
@@ -51,9 +49,15 @@ class TestFinfishAquaculture(unittest.TestCase):
                                'number of fish in farm' : '500000', 
                                'start day for growing' : '20',
                                'Length of Fallowing period' : '0'}}
-        
-        norm_ops_table = finfish_aquaculture.format_ops_table(self.args['farm_op_tbl'], "Farm# :")
     
+        print reg_ops_table
+        print "\n"
+        
+        finfish_aquaculture.format_ops_table(self.args['farm_op_tbl'], "Farm #:", self.ff_aqua_args)
+    
+        norm_ops_table = self.ff_aqua_args['farm_op_dict']
+    
+            
         self.assertEqual(reg_ops_table, norm_ops_table)
     
     def test_format_temp_table(self):

@@ -11,7 +11,7 @@ from invest_natcap.finfish_aquaculture import finfish_aquaculture_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-LOGGER = logging.getLogger('wave_energy_biophysical')
+LOGGER = logging.getLogger('finfish_aquaculture_test')
 
 def execute(args):
     """This function will take care of preparing files passed into 
@@ -47,8 +47,6 @@ def execute(args):
     #passed to the aquaculture core module. Then get desirable arguments that 
     #are being passed in, and load them into the biophysical dictionary.
     
-    global ff_aqua_args
-    
     ff_aqua_args = {}
     
     workspace = args['workspace_dir']
@@ -66,8 +64,8 @@ def execute(args):
     #Both CSVs are being pulled in, but need to do some maintenance to remove undesirable
     #information before they can be passed into core
 
+    format_ops_table(args['farm_op_tbl'], "Farm #:", ff_aqua_args)
     format_temp_table(args['water_temp_tbl'])
-    format_ops_table(args['farm_op_tbl'], "Farm #:")
     
     ff_aqua_args['do_valuation'] = args['do_valuation']
 
@@ -84,7 +82,7 @@ def execute(args):
     #gathered arguments
     finfish_aquaculture_core.execute(ff_aqua_args)
 
-def format_ops_table(op_path, farm_ID):
+def format_ops_table(op_path, farm_ID, ff_aqua_args):
     '''Takes in the path to the operating parameters table as well as the
     keyword to look for to identify the farm number to go with the parameters,
     and outputs a 2D dictionary that contains all parameters by farm and
@@ -97,19 +95,26 @@ def format_ops_table(op_path, farm_ID):
 
     new_dict_op = {}
     csv_file = open(op_path)
-
+    
+    dialect = csv.Sniffer().sniff(csv_file.read())
+    csv_file.seek(0)
+    delim = dialect.delimiter
+    LOGGER.debug("delim: " + delim)
+    
+    end_line = dialect.lineterminator
+    LOGGER.debug("end: " + end_line)
     line = None
     
     #this will be separate arguments that are passed along straight into 
     #biophysical_args
     general_ops = {}
     while True:
-        line = csv_file.readline().rstrip('\r\n')
-    
+        line = csv_file.readline().rstrip(end_line)
+
         if farm_ID in line:
             break
     
-        split_line = line.split(',')
+        split_line = line.split(delim)
         if 'Fraction of fish remaining after processing' in split_line[0]:
             general_ops['frac_post_process'] = float(split_line[1][:-1])/100
     
@@ -143,6 +148,7 @@ def format_ops_table(op_path, farm_ID):
             new_dict_op[row[farm_ID]] = sub_dict
     
     ff_aqua_args['farm_op_dict'] = new_dict_op
+    LOGGER.debug(ff_aqua_args['farm_op_dict'])
 
     #add the gen args in
     for key in general_ops.keys():
