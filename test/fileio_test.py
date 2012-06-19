@@ -6,18 +6,9 @@ from invest_natcap.iui import fileio
 
 TEST_DATA = 'data/'
 
-class CSVHandlerTest(unittest.TestCase):
+class TableTestTemplate():
     # This is a unittest to test the table handling functionality of the
     # CSVHandler class.
-    def setUp(self):
-        # If we haven't already declared what self.input_file should be (as
-        # happens in subclasses of CSVHandlerTest), define it here.
-        if not hasattr(self, 'input_file'):
-            self.input_file = './data/iui/Guild.csv'
-
-        # Open the table handler.
-        self.handler = fileio.find_handler(self.input_file)
-
     def test_get_fieldnames(self):
         #Assert fieldnames found in self.file match expected fieldnames
         expected_fieldnames = ['species', 'ns_cavity', 'ns_ground', 'fs_spring',
@@ -90,11 +81,17 @@ class CSVHandlerTest(unittest.TestCase):
                 ' and a trim of 3 should have given %s, instead found %s' %
                 (exp_name, name))
 
-
-class DBFHandlerTest(CSVHandlerTest):
+class CSVHandlerTest(TableTestTemplate, unittest.TestCase):
     """This is a unittest to test the table handling functionality of the
     DBFHandler class."""
     def setUp(self):
         self.input_file = './data/iui/Guild.dbf'
-        CSVHandlerTest.setUp(self)
+        self.handler = fileio.find_handler(self.input_file)
+
+class DBFHandlerTest(TableTestTemplate, unittest.TestCase):
+    """This is a unittest to test the table handling functionality of the
+    DBFHandler class."""
+    def setUp(self):
+        self.input_file = './data/iui/Guild.dbf'
+        self.handler = fileio.find_handler(self.input_file)
 
