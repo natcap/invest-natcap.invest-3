@@ -1227,7 +1227,7 @@ def valuation(args):
         raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
 
-    gdal.RasterizeLayer(hp_val_tmp, [1], sub_sheds.GetLayer(0),
+    gdal.RasterizeLayer(hp_val_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
     def npv_op(hp_val):
@@ -1244,19 +1244,14 @@ def valuation(args):
         else:
             return out_nodata
         
-    #invest_core.vectorize1ArgOp(hp_val_band_tmp, npv_op, hp_val_band)
     raster_utils.vectorize_rasters([hp_val_watershed_mask], nvp_op,
         nodata = out_nodata, raster_out_uri = hp_val_path)
 
     
-    hp_energy_tmp = \
+    hp_energy_watershed_mask = \
         raster_utils.new_raster_from_base(water_consump, hp_energy_tmppath, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
-    hp_energy = \
-        raster_utils.new_raster_from_base(water_consump, hp_energy_path, 'GTiff', 
-                                             out_nodata, gdal.GDT_Float32)
-
-    gdal.RasterizeLayer(hp_energy_tmp, [1], sub_sheds.GetLayer(0),
+    gdal.RasterizeLayer(hp_energy_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
     def energy_op(energy_val):
@@ -1273,7 +1268,6 @@ def valuation(args):
         else:
             return out_nodata
         
-    hp_energy_band = hp_energy.GetRasterBand(1)
-    hp_energy_band_tmp = hp_energy_tmp.GetRasterBand(1)    
-    
-    invest_core.vectorize1ArgOp(hp_energy_band_tmp, energy_op, hp_energy_band)
+    #invest_core.vectorize1ArgOp(hp_energy_band_tmp, energy_op, hp_energy_band)
+    raster_utils.vectorize_rasters([hp_energy_watershed_mask], energy_op,
+        nodata = out_nodata, raster_out_uri = hp_energy_path)
