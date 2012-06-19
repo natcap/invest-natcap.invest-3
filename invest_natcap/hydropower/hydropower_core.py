@@ -847,10 +847,6 @@ def water_scarcity(args):
     invest_core.vectorize2ArgOp(wyield_vol_band, ws_band, cyield_vol_op, 
                                 wyield_calib_band)
     
-    #Create raster from land use raster, subsituting in demand value
-    lulc_band = lulc_raster.GetRasterBand(1)
-    LOGGER.info('Creating demand raster')
-
     def lulc_demand(lulc):
         """Function that maps demand values to the corresponding lulc_id
         
@@ -865,8 +861,9 @@ def water_scarcity(args):
         else:
             return out_nodata
     
-    #invest_core.vectorize1ArgOp(lulc_band, lulc_demand, tmp_consump_band)
-    tmp_consump = raster_utils.vectorize_rasters([lulc_band], lulc_demand,
+    #Create raster from land use raster, subsituting in demand value
+    LOGGER.info('Creating demand raster')
+    tmp_consump = raster_utils.vectorize_rasters([lulc_raster], lulc_demand,
         nodata = out_nodata)
 
     LOGGER.info('Clip raster from polygons')
@@ -1226,13 +1223,10 @@ def valuation(args):
                          subwatershed_value_table)
     out_nodata = -1
 
-    hp_val_tmp = \
+    hp_val_watershed_mask = \
         raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
-    hp_val = \
-        raster_utils.new_raster_from_base(water_consump, hp_val_path, 'GTiff', 
-                                             out_nodata, gdal.GDT_Float32)
-    
+
     gdal.RasterizeLayer(hp_val_tmp, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
@@ -1250,10 +1244,10 @@ def valuation(args):
         else:
             return out_nodata
         
-    hp_val_band = hp_val.GetRasterBand(1)
-    hp_val_band_tmp = hp_val_tmp.GetRasterBand(1)    
-    
-    invest_core.vectorize1ArgOp(hp_val_band_tmp, npv_op, hp_val_band)
+    #invest_core.vectorize1ArgOp(hp_val_band_tmp, npv_op, hp_val_band)
+    raster_utils.vectorize_rasters([hp_val_watershed_mask], nvp_op,
+        nodata = out_nodata, raster_out_uri = hp_val_path)
+
     
     hp_energy_tmp = \
         raster_utils.new_raster_from_base(water_consump, hp_energy_tmppath, 'GTiff', 
