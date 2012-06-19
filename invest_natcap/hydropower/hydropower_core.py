@@ -696,16 +696,12 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
     
     LOGGER.debug('Starting raster_from_table_values')
     base_band = base_raster.GetRasterBand(1)
-    base_nodata = base_band.GetNoDataValue()
+    base_nodata = float(base_band.GetNoDataValue())
     LOGGER.debug('raster_from_table_values.base_nodata : %s', base_nodata)
     tmp_raster = \
         raster_utils.new_raster_from_base(base_raster, new_path, 'GTiff', 
                                              base_nodata, gdal.GDT_Float32)
         
-    #Add the nodata value as a field to the dictionary so that the vectorized
-    #operation can just look it up instead of having an if,else statement
-    bio_dict[base_nodata] = {field:float(base_nodata)}
-    
     def vop(lulc):
         """Operation returns the 'field' value that directly corresponds to
            it's lulc type
@@ -721,7 +717,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
         
     out_band = tmp_raster.GetRasterBand(1)
     invest_core.vectorize1ArgOp(base_band, vop, out_band)
-    
+
     return tmp_raster
 
 def water_scarcity(args):
