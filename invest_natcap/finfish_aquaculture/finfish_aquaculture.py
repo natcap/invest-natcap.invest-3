@@ -65,7 +65,7 @@ def execute(args):
     #information before they can be passed into core
 
     format_ops_table(args['farm_op_tbl'], "Farm #:", ff_aqua_args)
-    format_temp_table(args['water_temp_tbl'])
+    format_temp_table(args['water_temp_tbl'], ff_aqua_args)
     
     ff_aqua_args['do_valuation'] = args['do_valuation']
 
@@ -148,13 +148,13 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
             new_dict_op[row[farm_ID]] = sub_dict
     
     ff_aqua_args['farm_op_dict'] = new_dict_op
-    LOGGER.debug(ff_aqua_args['farm_op_dict'])
+    #LOGGER.debug(ff_aqua_args['farm_op_dict'])
 
     #add the gen args in
     for key in general_ops.keys():
         ff_aqua_args[key] = general_ops[key]    
     
-def format_temp_table(temp_path):
+def format_temp_table(temp_path, ff_aqua_args):
     
     #EXPLICIT STRINGS FROM "Temp_Daily"
     
@@ -190,7 +190,7 @@ def format_temp_table(temp_path):
         del sub_dict['Day/Month']
         
         #Subtract 1 here so that the day in the temp table allows for % 365
-        new_dict_temp[int(row[day_marker]) - 1] = sub_dict
+        new_dict_temp[str(int(row[day_marker]) - 1)] = sub_dict
         
         
     ff_aqua_args['water_temp_dict'] = new_dict_temp
