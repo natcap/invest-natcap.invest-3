@@ -13,7 +13,7 @@
             "elements":[
                 {
                     "id" : "workspace_dir",
-                    "args_id" : "workspace",
+                    "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "../MarineWaterQuality",

@@ -878,6 +878,24 @@ class FileEntry(DynamicText):
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.addElement(self.button)
 
+        # Holy cow, this is hacky.  I'm trying to override the mousePressEvent
+        # event callback, so instead of creating a new subclass of QLineEdit
+        # (which takes some work back in DynamicText class), I'm just going to
+        # tell Qt that the mousePressEvent function should call
+        # self.click_in_field.  Is this kosher?
+        self.textField.mousePressEvent = self.click_in_field
+
+    def click_in_field(self, event=None):
+        """Reimplemented event handler taking the place of
+            QLineEdit.mousePressEvent.  Checks to see if there's a file in the
+            textfield.  If so, we do nothing.  Otherwise (if the uri is blank),
+            we should open up the file dialog for the user."""
+
+        if len(self.textField.text()) == 0:
+            self.button.getFileName()
+        else:
+            QtGui.QLineEdit.mousePressEvent(self.textField, event)
+
     def setValue(self, text):
         """Set the value of the uri field.  If parameter 'text' is an absolute
             path, set the textfield to its value.  If parameter 'text' is a 
@@ -1385,6 +1403,7 @@ class OperationDialog(QtGui.QDialog):
 
             returns nothing."""
 
+        self.messageArea.clear()
         self.cancel = False
         self.done(0)
 
