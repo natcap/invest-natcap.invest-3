@@ -25,7 +25,7 @@
                     "id" : "guilds",
                     "type": "file",
                     "label": "Guilds table",
-                    "defaultValue": "Pollination/Input/Guild.dbf",
+                    "defaultValue": "../Pollination/Input/Guild.dbf",
                     "args_id": "guilds_uri",
                     "required": true,
                     "validateAs": {"type": "DBF",

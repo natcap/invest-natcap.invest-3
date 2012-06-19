@@ -29,7 +29,7 @@ def execute(args):
         biophysical model.
 
         args - dictionary of string value pairs for input to this model.
-        args['workspace'] - output directory.
+        args['workspace_dir'] - output directory.
         args['aoi_poly_uri'] - OGR polygon Datasource indicating region
             of interest to run the model.  Will define the grid.
         args['pixel_size'] - float indicating pixel size in meters
@@ -54,15 +54,20 @@ def execute(args):
     tide_e_points = ogr.Open(args['tide_e_points_uri'])
     try:
         adv_uv_points = ogr.Open(args['adv_uv_points_uri'])
+    except KeyError:
+        #Must be running at command line and no argument passed
+        adv_uv_points = None
+        LOGGER.info("adv_uv_points not provided, using zero values")
     except TypeError:
+        #probably running in a UI mode and a blank input, check first
         #adv uv points not provided, use a 0 raster.
         if args['adv_uv_points_uri'] != '':
             raise TypeError
         LOGGER.info("adv_uv_points not provided, using zero values")
         adv_uv_points = None
     
-    output_directory = os.path.join(args['workspace'],'output')
-    intermediate_directory = os.path.join(args['workspace'],'intermediate')
+    output_directory = os.path.join(args['workspace_dir'],'output')
+    intermediate_directory = os.path.join(args['workspace_dir'],'intermediate')
     for d in [output_directory, intermediate_directory]:
         if not os.path.exists(d):
             LOGGER.info('creating directory %s', d)
