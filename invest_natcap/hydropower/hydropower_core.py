@@ -813,10 +813,6 @@ def water_scarcity(args):
     gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
                         options = ['ATTRIBUTE=ws_id'])
     
-    #Multiply calibration with wyield_vol raster to get cyield_vol
-    
-    wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
-    LOGGER.info('Creating cyield raster')
     def cyield_vol_op(wyield_vol, shed_id):
         """Function that computes the calibrated water yield volume
            per sub-watershed
@@ -833,17 +829,13 @@ def water_scarcity(args):
         else:
             return out_nodata
         
+    LOGGER.info('Creating cyield raster')
+    wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
+    #Multiply calibration with wyield_vol raster to get cyield_vol
     wyield_calib = \
-        raster_utils.new_raster_from_base(ws_mask, wyield_calib_path,
-                                             'GTiff', out_nodata, 
-                                             gdal.GDT_Float32)
-        
-    ws_band = ws_mask.GetRasterBand(1)
-    wyield_calib_band = wyield_calib.GetRasterBand(1)
-    wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
-    
-    invest_core.vectorize2ArgOp(wyield_vol_band, ws_band, cyield_vol_op, 
-                                wyield_calib_band)
+        raster_utils.vectorize_rasters([wyield_vol_raster, ws_mask], cyield_vol_op, 
+                                       raster_out_uri = wyield_calib_path, 
+                                       nodata=out_nodata)
     
     def lulc_demand(lulc):
         """Function that maps demand values to the corresponding lulc_id
@@ -861,12 +853,13 @@ def water_scarcity(args):
     
     #Create raster from land use raster, subsituting in demand value
     LOGGER.info('Creating demand raster')
-    tmp_consump = raster_utils.vectorize_rasters([lulc_raster], lulc_demand,
+    clipped_consump = raster_utils.vectorize_rasters([lulc_raster], lulc_demand,
+        aoi = sheds, raster_out_uri = clipped_consump_path, 
         nodata = out_nodata)
 
     LOGGER.info('Clip raster from polygons')
-    clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, 
-                                               clipped_consump_path)
+#    clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, 
+#                                               clipped_consump_path)
     
     #Get a numpy array from rasterizing the sub watershed id values into
     #a raster. The numpy array will be the sub watershed mask used for
