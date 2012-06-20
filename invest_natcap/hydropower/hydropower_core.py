@@ -258,11 +258,11 @@ def water_yield(args):
     
     #Clip fractp/wyield rasters to watershed polygons
 #    wyield_clipped_raster = clip_raster_from_polygon(sheds, wyield_raster, \
-                                                     wyield_clipped_path)
+#                                                     wyield_clipped_path)
     
     LOGGER.debug('Clip fractp raster')
 #    fractp_clipped_raster = clip_raster_from_polygon(sheds, fractp_raster, \
-                                                     fractp_clipped_path)
+#                                                     fractp_clipped_path)
     
     #Get a numpy array from rasterizing the sub watershed id values into
     #a raster. The numpy array will be the sub watershed mask used for
@@ -368,9 +368,10 @@ def water_yield(args):
                                        nodata=out_nodata)
     
     #Create the mean actual evapotranspiration raster
-    aet_mn_dict = {}
-    aet_mean = create_operation_raster(aet_raster, aet_mean_path, sws_id_list, 
-                                       'mean', sub_mask, aet_mn_dict)
+    aet_mn_dict = \
+        raster_utils.aggregate_raster_values(aet_raster, sub_sheds, 'subws_id', 'mean', 
+                            aggregate_uri = aet_mean_path, 
+                            intermediate_directory = intermediate_dir):
     
     
     #Create the water yield subwatershed table
@@ -387,7 +388,8 @@ def water_yield(args):
     LOGGER.debug('sws_dict : %s', sws_dict)
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
-        get_operation_value(precip_raster, sws_id_list, sub_mask, 'mean')
+        raster_utils.aggregate_raster_values(precip_raster, sub_sheds,
+                                             'subws_id', 'mean')
     sub_value_dict['PET_mn'] = \
         get_operation_value(eto_raster, sws_id_list, sub_mask, 'mean')
     sub_value_dict['AET_mn'] = aet_mn_dict
