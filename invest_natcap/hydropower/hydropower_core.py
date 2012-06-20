@@ -143,11 +143,13 @@ def water_yield(args):
         root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
 
     #Create etk raster from table values to use in future calculations
+    LOGGER.info("Reclassifying temp_etk raster")
     tmp_etk_raster = \
         raster_utils.reclassify_by_dictionary(lulc_raster, etk_dict,
                 tmp_etk_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
 #        raster_from_table_values(lulc_raster, tmp_etk_path, bio_dict, 'etk')
     #Create root raster from table values to use in future calculations
+    LOGGER.info("Reclassifying tmp_root raster")
     tmp_root_raster = \
             raster_utils.reclassify_by_dictionary(lulc_raster, root_dict,
                 tmp_root_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
@@ -282,9 +284,9 @@ def water_yield(args):
     #Get a numpy array from rasterizing the watershed id values into
     #a raster. The numpy array will be the watershed mask used for
     #calculating mean and sum values at a per watershed basis
-    shed_mask = get_mask(fractp_raster, shed_mask_raster_path,
-                         sheds, 'ws_id')
-    ws_id_list = get_shed_ids(shed_mask, out_nodata)
+    #shed_mask = get_mask(fractp_raster, shed_mask_raster_path,
+    #                     sheds, 'ws_id')
+    #ws_id_list = get_shed_ids(shed_mask, out_nodata)
     
     #Create mean rasters for fractp and water yield
     fract_mn_dict = {}
