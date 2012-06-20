@@ -34,6 +34,8 @@ def execute(args):
             of interest to run the model.  Will define the grid.
         args['pixel_size'] - float indicating pixel size in meters
             of output grid.
+        args['layer_depth'] - float indicating the depth of the grid cells in 
+            meters.
         args['kps'] - float indicating decay rate of pollutant (units?)
         args['land_poly_uri'] - OGR polygon DataSource indicating areas where land
             is.
@@ -186,7 +188,7 @@ def execute(args):
             dict(source_point_values[point_id].items() + \
                  {'WPS': wps_in_kilograms_sec}.items())
 
-    LOGGER.info("Checking to see if all the points have KPS and WPS values")
+    LOGGER.info("Checking to see if all the points have WPS values")
     points_to_ignore = []
     for point_id in source_point_values:
         if 'WPS' not in source_point_values[point_id]:
@@ -226,7 +228,7 @@ def execute(args):
     concentration_array = \
         marine_water_quality_core.diffusion_advection_solver(source_point_values,
         kps_sec, in_water_array, tide_e_array, adv_u_array, adv_v_array, 
-        nodata_out, cell_size)
+        nodata_out, cell_size, args['layer_depth'])
 
     raster_out_band = raster_out.GetRasterBand(1)
     raster_out_band.WriteArray(concentration_array, 0, 0)
