@@ -588,7 +588,8 @@ def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     band_area.WriteArray(new_data_array, 0, 0)  
     return raster_area
 
-def aggregate_raster_values(raster, shapefile, shapefile_field, operation):
+def aggregate_raster_values(raster, shapefile, shapefile_field, operation, 
+                            aggregate_uri = None):
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
 
@@ -597,6 +598,8 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation):
         shapefile_field - a string indicating which key in shapefile to associate
            the output dictionary values with whose values are associated with ints
         operation - a string of one of ['mean', 'sum']
+        aggregate_uri - (optional) a uri to an output raster that has the aggreate
+            values burned onto the masked raster
 
         returns a dictionary whose keys are the values in shapefile_field and values
             are the aggregated values over raster.  If no values are aggregated
@@ -604,17 +607,18 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation):
     
 
     raster_band = raster.GetRasterBand(1)
+    raster_nodata = float(raster_band.GetNoDataValue())
 
     clipped_raster = raster_utils.vectorize_rasters([raster], lambda x: float(x), 
         aoi=shapefile, raster_out_uri='clipped_raster.tif', 
         datatype=gdal.GDT_Float32, 
-        nodata=float(raster_band.GetNoDataValue()))
+        nodata=raster_nodata)
     clipped_band = clipped_raster.GetRasterBand(1)
 
     #This should be a value that's not in shapefile[shapefile_field]
-    mask_nodata = -1
+    mask_nodata = -1.0
     mask_dataset = raster_utils.new_raster_from_base(clipped_raster, 'mask.tif',
-        'GTiff', mask_nodata, gdal.GDT_Int32)
+        'GTiff', mask_nodata, gdal.GDT_Float32)
 
     mask_band = mask_dataset.GetRasterBand(1)
     mask_band.Fill(mask_nodata)
@@ -622,6 +626,9 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation):
     shapefile_layer = shapefile.GetLayer()
     gdal.RasterizeLayer(mask_dataset, [1], shapefile_layer,
                         options = ['ATTRIBUTE=%s' % shapefile_field])
+
+    mask_dataset.FlushCache()
+    mask_band = mask_dataset.GetRasterBand(1)
 
     #This will store the sum/count with index of shapefile attribute
     aggregate_dict_values = {}
@@ -657,6 +664,27 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation):
                 aggregate_dict_counts[attribute_id]
         else:
             LOGGER.warn("%s operation not defined" % operation)
+    
+    if aggregate_uri != None:
+        def aggregate_map_function(x):
+            try:
+                return result_dict[x]
+            except:
+                return raster_nodata
+
+        vop = np.vectorize(aggregate_map_function)
+
+        aggregate_dataset = raster_utils.new_raster_from_base(clipped_raster, aggregate_uri,
+            'GTiff', raster_nodata, gdal.GDT_Float32)
+        aggregate_band = aggregate_dataset.GetRasterBand(1)
+        
+        for row_index in range(aggregate_band.YSize):
+            mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
+
+            aggregate_array = vop(mask_array)
+            aggregate_band.WriteArray(aggregate_array, 0,row_index)
+
+        raster_utils.calculate_raster_stats(aggregate_dataset)
 
     return result_dict
 
