@@ -91,7 +91,15 @@ def biophysical(args):
 #            raster_utils.vectorize2ArgOp(weight_band, access_band, adjust_access, access_out)
 
         #Adjust threat by sensitivity
-        
+#       sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
+#       sensitivity_raster = make_raster_from_lulc(args['landuse'], sens_uri)
+#       sensitivity_raster = raster_from_table_values(args['landuse'], sensitivity_raster, 
+#                                                     args['sensitivity_dict'], 'L_'+threat)        
+#       def adjust_sens(sens, acc):
+#           return sens * acc
+
+# I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
+
     #Compute Degradation of all threats
 
     #Compute quality for all threats

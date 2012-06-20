@@ -696,16 +696,9 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
     
     LOGGER.debug('Starting raster_from_table_values')
     base_band = base_raster.GetRasterBand(1)
-    base_nodata = base_band.GetNoDataValue()
+    base_nodata = float(base_band.GetNoDataValue())
     LOGGER.debug('raster_from_table_values.base_nodata : %s', base_nodata)
-    tmp_raster = \
-        raster_utils.new_raster_from_base(base_raster, new_path, 'GTiff', 
-                                             base_nodata, gdal.GDT_Float32)
         
-    #Add the nodata value as a field to the dictionary so that the vectorized
-    #operation can just look it up instead of having an if,else statement
-    bio_dict[base_nodata] = {field:float(base_nodata)}
-    
     def vop(lulc):
         """Operation returns the 'field' value that directly corresponds to
            it's lulc type
@@ -719,9 +712,8 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
         else:
             return base_nodata
         
-    out_band = tmp_raster.GetRasterBand(1)
-    invest_core.vectorize1ArgOp(base_band, vop, out_band)
-    
+    tmp_raster = raster_utils.vectorize_rasters([base_band], vop,
+        raster_out_uri = new_path, nodata = base_nodata)
     return tmp_raster
 
 def water_scarcity(args):
@@ -813,7 +805,7 @@ def water_scarcity(args):
     sub_mask_raster_path2 = intermediate_dir + os.sep + 'sub_shed_mask3.tif'
     
     #The nodata value to use for the output rasters
-    out_nodata = -1
+    out_nodata = -1.0
     
     #Create watershed mask raster
     ws_mask = \
@@ -855,16 +847,6 @@ def water_scarcity(args):
     invest_core.vectorize2ArgOp(wyield_vol_band, ws_band, cyield_vol_op, 
                                 wyield_calib_band)
     
-    #Create raster from land use raster, subsituting in demand value
-    lulc_band = lulc_raster.GetRasterBand(1)
-    lulc_nodata = lulc_band.GetNoDataValue()
-    tmp_consump = raster_utils.new_raster_from_base(lulc_raster, '', 'MEM', 
-                                                       out_nodata, 
-                                                       gdal.GDT_Float32)
-    tmp_consump_band = tmp_consump.GetRasterBand(1)
-    
-    demand_dict[lulc_nodata] = lulc_nodata
-    LOGGER.info('Creating demand raster')
     def lulc_demand(lulc):
         """Function that maps demand values to the corresponding lulc_id
         
@@ -879,7 +861,11 @@ def water_scarcity(args):
         else:
             return out_nodata
     
-    invest_core.vectorize1ArgOp(lulc_band, lulc_demand, tmp_consump_band)
+    #Create raster from land use raster, subsituting in demand value
+    LOGGER.info('Creating demand raster')
+    tmp_consump = raster_utils.vectorize_rasters([lulc_raster], lulc_demand,
+        nodata = out_nodata)
+
     LOGGER.info('Clip raster from polygons')
     clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, 
                                                clipped_consump_path)
@@ -1237,14 +1223,11 @@ def valuation(args):
                          subwatershed_value_table)
     out_nodata = -1
 
-    hp_val_tmp = \
+    hp_val_watershed_mask = \
         raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
-    hp_val = \
-        raster_utils.new_raster_from_base(water_consump, hp_val_path, 'GTiff', 
-                                             out_nodata, gdal.GDT_Float32)
-    
-    gdal.RasterizeLayer(hp_val_tmp, [1], sub_sheds.GetLayer(0),
+
+    gdal.RasterizeLayer(hp_val_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
     def npv_op(hp_val):
@@ -1261,19 +1244,14 @@ def valuation(args):
         else:
             return out_nodata
         
-    hp_val_band = hp_val.GetRasterBand(1)
-    hp_val_band_tmp = hp_val_tmp.GetRasterBand(1)    
+    raster_utils.vectorize_rasters([hp_val_watershed_mask], nvp_op,
+        nodata = out_nodata, raster_out_uri = hp_val_path)
+
     
-    invest_core.vectorize1ArgOp(hp_val_band_tmp, npv_op, hp_val_band)
-    
-    hp_energy_tmp = \
+    hp_energy_watershed_mask = \
         raster_utils.new_raster_from_base(water_consump, hp_energy_tmppath, 'GTiff', 
                                              out_nodata, gdal.GDT_Float32)
-    hp_energy = \
-        raster_utils.new_raster_from_base(water_consump, hp_energy_path, 'GTiff', 
-                                             out_nodata, gdal.GDT_Float32)
-
-    gdal.RasterizeLayer(hp_energy_tmp, [1], sub_sheds.GetLayer(0),
+    gdal.RasterizeLayer(hp_energy_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
     def energy_op(energy_val):
@@ -1290,7 +1268,6 @@ def valuation(args):
         else:
             return out_nodata
         
-    hp_energy_band = hp_energy.GetRasterBand(1)
-    hp_energy_band_tmp = hp_energy_tmp.GetRasterBand(1)    
-    
-    invest_core.vectorize1ArgOp(hp_energy_band_tmp, energy_op, hp_energy_band)
+    #invest_core.vectorize1ArgOp(hp_energy_band_tmp, energy_op, hp_energy_band)
+    raster_utils.vectorize_rasters([hp_energy_watershed_mask], energy_op,
+        nodata = out_nodata, raster_out_uri = hp_energy_path)

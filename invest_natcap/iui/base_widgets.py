@@ -878,6 +878,24 @@ class FileEntry(DynamicText):
         self.button = FileButton(attributes['label'], self.textField, attributes['type'])
         self.addElement(self.button)
 
+        # Holy cow, this is hacky.  I'm trying to override the mousePressEvent
+        # event callback, so instead of creating a new subclass of QLineEdit
+        # (which takes some work back in DynamicText class), I'm just going to
+        # tell Qt that the mousePressEvent function should call
+        # self.click_in_field.  Is this kosher?
+        self.textField.mousePressEvent = self.click_in_field
+
+    def click_in_field(self, event=None):
+        """Reimplemented event handler taking the place of
+            QLineEdit.mousePressEvent.  Checks to see if there's a file in the
+            textfield.  If so, we do nothing.  Otherwise (if the uri is blank),
+            we should open up the file dialog for the user."""
+
+        if len(self.textField.text()) == 0:
+            self.button.getFileName()
+        else:
+            QtGui.QLineEdit.mousePressEvent(self.textField, event)
+
     def setValue(self, text):
         """Set the value of the uri field.  If parameter 'text' is an absolute
             path, set the textfield to its value.  If parameter 'text' is a 
@@ -1385,6 +1403,7 @@ class OperationDialog(QtGui.QDialog):
 
             returns nothing."""
 
+        self.messageArea.clear()
         self.cancel = False
         self.done(0)
 
@@ -1509,9 +1528,6 @@ class Root(DynamicElement):
 
         self.operationDialog = OperationDialog(self)
         self.assembler = ElementAssembler(self.allElements)        
-        self.messageArea = MessageArea()
-        self.messageArea.setError(False)
-        self.layout().addWidget(self.messageArea)
 
         self.initElements()
         
@@ -1610,13 +1626,6 @@ class Root(DynamicElement):
         
             returns nothing"""
 
-        reset_text = 'Parameters reset to defaults.  '
-        if self.lastRun != {}:
-            reset_text += str('<a href=\'reset\'>Restore parameters from' +
-                ' your last run</a>')
-        self.messageArea.setText(reset_text)
-        self.messageArea.linkActivated.connect(self.initElements)
-
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
                 element.resetValue()
@@ -1674,10 +1683,17 @@ class Root(DynamicElement):
                     element.setValue(value)
                 except:
                     pass
-            self.messageArea.setText('Parameters have been loaded from the' +
-                ' most recent run of this model.  <a href=\'default\'>' +
-                ' Reset to defaults</a>')
-            self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
+
+            if hasattr(self, 'messageArea'):
+                self.messageArea.setText('Parameters have been loaded from the' +
+                    ' most recent run of this model.  <a href=\'default\'>' +
+                    ' Reset to defaults</a>')
+                try:
+                    self.messageArea.linkActivated.disconnect()
+                except TypeError:
+                    # Raised if we can't disconnect any signals
+                    pass
+                self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
 
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
@@ -1764,7 +1780,10 @@ class EmbeddedUI(Root):
 
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
+        self.messageArea = MessageArea()
+        self.messageArea.setError(False)
         Root.__init__(self, uri, layout, object_registrar)
+        self.layout().addWidget(self.messageArea)
         self.addBottomButtons()
         self.setWindowSize()
         self.error_dialog = ErrorDialog()
@@ -1791,6 +1810,20 @@ class ExecRoot(Root):
 
         self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
+
+    def resetParametersToDefaults(self):
+        Root.resetParametersToDefaults(self)
+        reset_text = 'Parameters reset to defaults.  '
+        if self.lastRun != {}:
+            reset_text += str('<a href=\'reset\'>Restore parameters from' +
+                ' your last run</a>')
+        self.messageArea.setText(reset_text)
+        try:
+            self.messageArea.linkActivated.disconnect()
+        except TypeError:
+            # Thrown when we can't disconnect any slots from this signal
+            pass
+        self.messageArea.linkActivated.connect(self.initElements)
 
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
