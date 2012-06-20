@@ -13,7 +13,7 @@ class TestFinfishAquaculture(unittest.TestCase):
         ff_aqua_args = {}
         #Biophysical
         ff_aqua_args['workspace_dir'] = './test/data/aquaculture_output/Test'
-        ff_aqua_args['ff_farm_loc'] = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Jodie_Data.shp'
+        ff_aqua_args['ff_farm_loc'] = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         ff_aqua_args['farm_ID'] = 'FarmID'
         ff_aqua_args['g_param_a'] = 0.038
         ff_aqua_args['g_param_b'] = 0.6667
