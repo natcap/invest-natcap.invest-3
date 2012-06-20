@@ -1234,7 +1234,7 @@ def valuation(args):
                          watershed_value_table)
     write_csv_table(sws_scarcity_table, field_list_sws, \
                          subwatershed_value_table)
-    out_nodata = -1
+    out_nodata = -1.0
 
     hp_val_watershed_mask = \
         raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, 'GTiff', 
@@ -1257,7 +1257,7 @@ def valuation(args):
         else:
             return out_nodata
         
-    raster_utils.vectorize_rasters([hp_val_watershed_mask], nvp_op,
+    raster_utils.vectorize_rasters([hp_val_watershed_mask], npv_op,
         nodata = out_nodata, raster_out_uri = hp_val_path)
 
     
