@@ -1528,9 +1528,6 @@ class Root(DynamicElement):
 
         self.operationDialog = OperationDialog(self)
         self.assembler = ElementAssembler(self.allElements)        
-        self.messageArea = MessageArea()
-        self.messageArea.setError(False)
-        self.layout().addWidget(self.messageArea)
 
         self.initElements()
         
@@ -1629,13 +1626,6 @@ class Root(DynamicElement):
         
             returns nothing"""
 
-        reset_text = 'Parameters reset to defaults.  '
-        if self.lastRun != {}:
-            reset_text += str('<a href=\'reset\'>Restore parameters from' +
-                ' your last run</a>')
-        self.messageArea.setText(reset_text)
-        self.messageArea.linkActivated.connect(self.initElements)
-
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
                 element.resetValue()
@@ -1693,10 +1683,17 @@ class Root(DynamicElement):
                     element.setValue(value)
                 except:
                     pass
-            self.messageArea.setText('Parameters have been loaded from the' +
-                ' most recent run of this model.  <a href=\'default\'>' +
-                ' Reset to defaults</a>')
-            self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
+
+            if hasattr(self, 'messageArea'):
+                self.messageArea.setText('Parameters have been loaded from the' +
+                    ' most recent run of this model.  <a href=\'default\'>' +
+                    ' Reset to defaults</a>')
+                try:
+                    self.messageArea.linkActivated.disconnect()
+                except TypeError:
+                    # Raised if we can't disconnect any signals
+                    pass
+                self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
 
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
@@ -1783,7 +1780,10 @@ class EmbeddedUI(Root):
 
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
+        self.messageArea = MessageArea()
+        self.messageArea.setError(False)
         Root.__init__(self, uri, layout, object_registrar)
+        self.layout().addWidget(self.messageArea)
         self.addBottomButtons()
         self.setWindowSize()
         self.error_dialog = ErrorDialog()
@@ -1810,6 +1810,20 @@ class ExecRoot(Root):
 
         self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
+
+    def resetParametersToDefaults(self):
+        Root.resetParametersToDefaults(self)
+        reset_text = 'Parameters reset to defaults.  '
+        if self.lastRun != {}:
+            reset_text += str('<a href=\'reset\'>Restore parameters from' +
+                ' your last run</a>')
+        self.messageArea.setText(reset_text)
+        try:
+            self.messageArea.linkActivated.disconnect()
+        except TypeError:
+            # Thrown when we can't disconnect any slots from this signal
+            pass
+        self.messageArea.linkActivated.connect(self.initElements)
 
     def okPressed(self):
         """A callback, run when the user presses the 'OK' button.
