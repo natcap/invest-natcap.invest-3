@@ -267,29 +267,40 @@ def water_yield(args):
     #Get a numpy array from rasterizing the sub watershed id values into
     #a raster. The numpy array will be the sub watershed mask used for
     #calculating mean and sum values at a sub watershed basis
-    sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path, sub_sheds, 
+    sub_mask = get_mask(fractp_raster, sub_mask_raster_path, sub_sheds, 
                         'subws_id')
     sws_id_list = get_shed_ids(sub_mask, out_nodata)
     
     #Get a numpy array from rasterizing the watershed id values into
     #a raster. The numpy array will be the watershed mask used for
     #calculating mean and sum values at a per watershed basis
-    shed_mask = get_mask(fractp_clipped_raster, shed_mask_raster_path,
+    shed_mask = get_mask(fractp_raster, shed_mask_raster_path,
                          sheds, 'ws_id')
     ws_id_list = get_shed_ids(shed_mask, out_nodata)
     
     #Create mean rasters for fractp and water yield
     fract_mn_dict = {}
     wyield_mn_dict = {}
-    fractp_mean = \
-        create_operation_raster(fractp_clipped_raster, fractp_mean_path,
-                                sws_id_list, 'mean', sub_mask, fract_mn_dict)
-    wyield_mean = \
-        create_operation_raster(wyield_clipped_raster, wyield_mean_path,
-                                sws_id_list, 'mean', sub_mask, wyield_mn_dict)
+    fract_mn_dict = \
+        raster_utils.aggregate_raster_values(fractp_raster, sub_sheds, 'subws_id', 'mean', 
+                            aggregate_uri = fractp_mean_path, 
+                            intermediate_directory = intermediate_dir):
+    wyield_mn_dict = \
+        raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 'subws_id', 'mean', 
+                            aggregate_uri = wyield_mean_path, 
+                            intermediate_directory = intermediate_dir):
+
+    wyield_mean = gdal.Open(wyield_mean_path)
+
+#    fractp_mean = \
+#        create_operation_raster(fractp_raster, fractp_mean_path,
+#                                sws_id_list, 'mean', sub_mask, fract_mn_dict)
+#    wyield_mean = \
+#        create_operation_raster(wyield_raster, wyield_mean_path,
+#                                sws_id_list, 'mean', sub_mask, wyield_mn_dict)
     
     #Create area raster so that the volume can be computed.
-    wyield_area = create_area_raster(wyield_clipped_raster, wyield_area_path,
+    wyield_area = create_area_raster(wyield_raster, wyield_area_path,
                                      sub_sheds, 'subws_id', sub_mask)
     
     LOGGER.debug('Performing volume operation')
