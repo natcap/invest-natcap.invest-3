@@ -320,25 +320,11 @@ def water_yield(args):
     gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
 
-    def area_op(shed_val):
-        try:
-            return area_dict[shed_val]
-        except:
-            return out_nodata
+    wyield_area = \
+        raster_utils.reclassify_by_dictionary(subwatershed_mask, area_dict,
+                wyield_area_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
 
-    vop_area = np.vectorize(area_op)
-    wyield_area = raster_utils.new_raster_from_base(wyield_mean,
-            wyield_area_path, 'GTiff', out_nodata, gdal.GDT_Float32)
-    wyield_area_band = wyield_area.GetRasterBand(1)
-    mask_band = subwatershed_mask.GetRasterBand(1)
-    for row_index in range(wyield_area_band.YSize):
-        mask_array = mask_band.ReadAsArray(0,row_index, mask_band.XSize, 1)
-
-        wyield_area_array = vop_area(mask_array)
-        wyield_area_band.WriteArray(wyield_area_array, 0, row_index)
-    mask_band = None
     subwatershed_mask = None
-
     LOGGER.debug('Performing volume operation')
     
     def volume_op(wyield_mn, wyield_area):
