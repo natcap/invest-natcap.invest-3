@@ -19,8 +19,8 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         ff_aqua_args['workspace_dir'] = './test/data/aquaculture_output/Test'
         ff_aqua_args['farm_ID'] = 'FarmID'
         ff_aqua_args['ff_farm_file'] = ogr.Open(ff_farm_loc)
-        ff_aqua_args['g_param_a'] = 0.1
-        ff_aqua_args['g_param_b'] = 0.9
+        ff_aqua_args['g_param_a'] = 0.038
+        ff_aqua_args['g_param_b'] = 2
         ff_aqua_args['water_temp_tbl'] = {'0':{'1':'7', '4':'8'}, '2':{'1':'7', '4':'8'}, '3':{'1':'7', '4':'8'},
                            '4':{'1':'7', '4':'8'}, '5':{'1':'7', '4':'8'}, '6':{'1':'7', '4':'8'},
                            '7':{'1':'7', '4':'8'}, '8':{'1':'7', '4':'8'}, '9':{'1':'7', '4':'8'},
@@ -45,7 +45,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                                'number of fish in farm' : '500000', 
                                'start day for growing' : '20',
                                'Length of Fallowing period' : '0'}}
-        ff_aqua_args['duration'] = .1
+        ff_aqua_args['duration'] = 5
         
         #Valuation
         ff_aqua_args['do_valuation'] = False

@@ -96,18 +96,19 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
     new_dict_op = {}
     csv_file = open(op_path)
     
-    dialect = csv.Sniffer().sniff(csv_file.read())
-    csv_file.seek(0)
-    delim = dialect.delimiter
-    LOGGER.debug("delim: " + delim)
-    
-    end_line = dialect.lineterminator
-    LOGGER.debug("end: " + end_line)
-    line = None
-    
     #this will be separate arguments that are passed along straight into 
     #biophysical_args
     general_ops = {}
+    line = None
+    
+    dialect = csv.Sniffer().sniff(csv_file.read())
+    csv_file.seek(0)
+    delim = dialect.delimiter
+    #LOGGER.debug("delim: " + delim)
+    
+    end_line = dialect.lineterminator
+    #LOGGER.debug("end: " + end_line)
+    
     while True:
         line = csv_file.readline().rstrip(end_line)
 
@@ -128,9 +129,9 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
     #want to remove the 'Total Value' field, since there is not data inside 
     #there, then tell the dictreader to set up a reader with dictionaries of 
     #only those fields, where the overarching dictionary uses the Farm ID as the key for each of the sub dictionaries
-    fieldnames =  line.split(',')
+    fieldnames =  line.split(delim)
     
-    reader = csv.DictReader(csv_file, fieldnames=fieldnames)
+    reader = csv.DictReader(csv_file, fieldnames=fieldnames, dialect = dialect)
 
     for row in reader:
         
@@ -162,25 +163,36 @@ def format_temp_table(temp_path, ff_aqua_args):
    
     new_dict_temp = {}
     line = None
+    
+    dialect = csv.Sniffer().sniff(water_temp_file.read())
+    water_temp_file.seek(0)
+    delim = dialect.delimiter
+    LOGGER.debug("delim: " + delim)
+    
+    end_line = dialect.lineterminator
+    #LOGGER.debug("end: " + end_line)
+    
     #This is what I will use at the key for the key->dictionary pairing w/in the
     #outer dictionary
     day_marker = 'Day #'
     
     while True:
-        line = water_temp_file.readline().rstrip('\r\n')
+        line = water_temp_file.readline().rstrip(end_line)
         if day_marker in line:
             break
     
     #this is explicitly telling it the fields that I want to get data for, and am removing
     #the Day/Month Field Since it's unnecessary
 
-    fieldnames =  line.split(',')
+    fieldnames =  line.split(delim)
     #fieldnames.remove('Day/Month')
     
-    reader = csv.DictReader(water_temp_file, fieldnames)
+    reader = csv.DictReader(water_temp_file, fieldnames, dialect = dialect)
+    
+    #LOGGER.debug(fieldnames)
     
     for row in reader:
-        
+       
         sub_dict = {}
         
         for key in row:
@@ -191,7 +203,7 @@ def format_temp_table(temp_path, ff_aqua_args):
         
         #Subtract 1 here so that the day in the temp table allows for % 365
         new_dict_temp[str(int(row[day_marker]) - 1)] = sub_dict
-        
+    LOGGER.debug(new_dict_temp)
         
     ff_aqua_args['water_temp_dict'] = new_dict_temp
     
