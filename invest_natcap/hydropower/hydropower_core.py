@@ -871,20 +871,26 @@ def water_scarcity(args):
     sws_id_list = get_shed_ids(sub_mask, out_nodata)
     LOGGER.debug('shed_id_list : %s', sws_id_list)
     LOGGER.info('Creating consump_vol raster')
-    sum_dict = {}
-    sum_raster = \
-        create_operation_raster(clipped_consump, consump_vol_path, sws_id_list, 
-                                'sum', sub_mask, sum_dict)
+    
+    sum_dict = \
+        raster_utils.aggregate_raster_values(clipped_consump, sub_sheds,
+                'subws_id', 'sum', aggregate_uri = consump_vol_path, 
+                 intermediate_directory = intermediate_dir)
+    
+    sum_raster = gdal.Open(consump_vol_path) 
         
     LOGGER.debug('sum_dict : %s', sum_dict)
     
     #Take mean of consump over sub watersheds making conusmp_mean
     LOGGER.info('Creating consump_mn raster')
-    mean_dict = {}
-    mean_raster = \
-        create_operation_raster(clipped_consump, consump_mean_path, 
-                                sws_id_list, 'mean', sub_mask, mean_dict)
+    mean_dict = \
+        raster_utils.aggregate_raster_values(clipped_consump, sub_sheds,
+                'subws_id', 'mean', aggregate_uri = consump_mean_path, 
+                 intermediate_directory = intermediate_dir)
+    
+    mean_raster = gdal.Open(comsump_mean_path)
     LOGGER.debug('mean_dict : %s', mean_dict)
+    
     #Make rsupply_vol by wyield_calib minus consump_vol
 
     nodata_calib = wyield_calib.GetRasterBand(1).GetNoDataValue()
@@ -959,7 +965,9 @@ def water_scarcity(args):
     
     field_name = 'ws_id'
     cyield_d = \
-        get_operation_value(wyield_calib, sws_id_list2, sub_mask2, 'mean')
+        raster_utils.aggregate_raster_values(wyield_calib, sub_sheds,
+                'subws_id', 'mean')
+#       get_operation_value(wyield_calib, sws_id_list2, sub_mask2, 'mean')
     cyield_vol_d = sum_mean_dict(shed_subshed_map, cyield_d, 'sum')
     new_keys_ws['cyield_vl'] = cyield_vol_d
     new_keys_sws['cyield_vl'] = cyield_d
@@ -978,7 +986,9 @@ def water_scarcity(args):
     rsupply_vl_raster = gdal.Open(rsupply_vol_path)
     field_name = 'ws_id'
     rsupply_vl_d = \
-        get_operation_value(rsupply_vl_raster, sws_id_list2, sub_mask2, 'mean')
+        raster_utils.aggregate_raster_values(rsupply_vl_raster, sub_sheds,
+        'subws_id', 'sum')
+#get_operation_value(rsupply_vl_raster, sws_id_list2, sub_mask2, 'mean')
     rsupply_vl_dt = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'sum')
     new_keys_ws['rsupply_vl'] = rsupply_vl_dt
     new_keys_sws['rsupply_vl'] = rsupply_vl_d
@@ -987,7 +997,9 @@ def water_scarcity(args):
     rsupply_mn_raster = gdal.Open(rsupply_mean_path)
     field_name = 'ws_id'
     rsupply_mn_d = \
-        get_operation_value(rsupply_mn_raster, sws_id_list2, sub_mask2, 'mean')
+        raster_utils.aggregate_raster_values(rsupply_mn_raster, sub_sheds,
+        'subws_id', 'mean')
+#        get_operation_value(rsupply_mn_raster, sws_id_list2, sub_mask2, 'mean')
     rsupply_mn_dt = sum_mean_dict(shed_subshed_map, rsupply_mn_d, 'mean')
     new_keys_ws['rsupply_mn'] = rsupply_mn_dt
     new_keys_sws['rsupply_mn'] = rsupply_mn_d
