@@ -750,7 +750,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
         else:
             return base_nodata
         
-    tmp_raster = raster_utils.vectorize_rasters([base_band], vop,
+    tmp_raster = raster_utils.vectorize_rasters([base_raster], vop,
         raster_out_uri = new_path, nodata = base_nodata)
     return tmp_raster
 
