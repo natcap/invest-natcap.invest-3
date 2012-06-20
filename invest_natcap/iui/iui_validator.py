@@ -611,7 +611,7 @@ class PrimitiveChecker(Checker):
 
         pattern = re.compile(user_pattern, flag)
         value = valid_dict['value']
-        if pattern.match(self.value) == None:
+        if pattern.match(str(self.value)) == None:
             return str(self.value + " value not allowed")
 
 class NumberChecker(PrimitiveChecker):

@@ -217,7 +217,6 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
         #However, it should be kept in mind that when doing calculations for a given day,
         #you are using YESTRDAY'S temperatures and weights to get the value for today.
         
-        
         for day in range (0, int((365*dur))):
             if fallow_days_left > 0:
                 fallow_days_left -= 1
