@@ -284,11 +284,11 @@ def water_yield(args):
     fract_mn_dict = \
         raster_utils.aggregate_raster_values(fractp_raster, sub_sheds, 'subws_id', 'mean', 
                             aggregate_uri = fractp_mean_path, 
-                            intermediate_directory = intermediate_dir):
+                            intermediate_directory = intermediate_dir)
     wyield_mn_dict = \
         raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 'subws_id', 'mean', 
                             aggregate_uri = wyield_mean_path, 
-                            intermediate_directory = intermediate_dir):
+                            intermediate_directory = intermediate_dir)
 
     wyield_mean = gdal.Open(wyield_mean_path)
 
@@ -371,7 +371,7 @@ def water_yield(args):
     aet_mn_dict = \
         raster_utils.aggregate_raster_values(aet_raster, sub_sheds, 'subws_id', 'mean', 
                             aggregate_uri = aet_mean_path, 
-                            intermediate_directory = intermediate_dir):
+                            intermediate_directory = intermediate_dir)
     
     
     #Create the water yield subwatershed table
@@ -553,6 +553,30 @@ def get_shed_ids(value_array, nodata):
     result_array = np.delete(unique_array, np.where(unique_array == nodata))
     return result_array
     
+def get_area_of_polygons(shapefile, field_name):
+    """Creates and returns a dictionary of the relationship between each
+       polygons area and its field_name (commonly some ID value)
+    
+       shapefile - an OGR polygon shapefile
+       field_name - a string of an unique field in shapefile 
+                    (commonly an id field)
+       
+       returns - a python dictionary whose keys are unique values of the polygon
+                 features given by field_name and whose values are the area of 
+                 the polygon
+    """
+    LOGGER.debug('Starting create_area_raster')
+    area_dict = {}
+    layer = shapefile.GetLayer(0)
+    layer.ResetReading()
+    for feat in layer:
+        geom = feat.GetGeometryRef()
+        index = feat.GetFieldIndex(field_name)
+        value = feat.GetFieldAsInteger(index)
+        area_dict[value] = geom.GetArea()
+        
+    return area_dict
+
 def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     """Creates a new raster representing the area per watershed or per
        sub watershed 
