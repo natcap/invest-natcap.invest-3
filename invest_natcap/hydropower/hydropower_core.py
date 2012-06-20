@@ -228,7 +228,8 @@ def water_yield(args):
     #Create the fractp raster
     raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
                    soil_depth_raster, pawc_raster]
-    fractp_raster = raster_utils.vectorize_rasters(raster_list, fractp_vec, 
+    fractp_raster = raster_utils.vectorize_rasters(raster_list, fractp_vec,
+                                                 aoi=sheds, 
                                                  raster_out_uri=fractp_path, 
                                                  nodata=out_nodata)
     
@@ -250,16 +251,17 @@ def water_yield(args):
     #Create the water yield raster 
     wyield_raster = \
         raster_utils.vectorize_rasters([fractp_raster, precip_raster], wyield_op, 
+                                       aoi=sheds,  
                                        raster_out_uri = wyield_path, 
                                        nodata=out_nodata)
     LOGGER.debug('Clip wyield raster')
     
     #Clip fractp/wyield rasters to watershed polygons
-    wyield_clipped_raster = clip_raster_from_polygon(sheds, wyield_raster, \
+#    wyield_clipped_raster = clip_raster_from_polygon(sheds, wyield_raster, \
                                                      wyield_clipped_path)
     
     LOGGER.debug('Clip fractp raster')
-    fractp_clipped_raster = clip_raster_from_polygon(sheds, fractp_raster, \
+#    fractp_clipped_raster = clip_raster_from_polygon(sheds, fractp_raster, \
                                                      fractp_clipped_path)
     
     #Get a numpy array from rasterizing the sub watershed id values into
