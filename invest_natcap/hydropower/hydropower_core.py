@@ -230,7 +230,7 @@ def water_yield(args):
                    soil_depth_raster, pawc_raster]
     fractp_raster = raster_utils.vectorize_rasters(raster_list, fractp_vec,
                                                  aoi=sheds, 
-                                                 raster_out_uri=fractp_path, 
+                                                 raster_out_uri=fractp_clipped_path, 
                                                  nodata=out_nodata)
     
     LOGGER.debug('Performing wyield operation')
@@ -252,7 +252,7 @@ def water_yield(args):
     wyield_raster = \
         raster_utils.vectorize_rasters([fractp_raster, precip_raster], wyield_op, 
                                        aoi=sheds,  
-                                       raster_out_uri = wyield_path, 
+                                       raster_out_uri = wyield_clipped_path, 
                                        nodata=out_nodata)
     LOGGER.debug('Clip wyield raster')
     
