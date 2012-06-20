@@ -300,9 +300,25 @@ def water_yield(args):
 #                                sws_id_list, 'mean', sub_mask, wyield_mn_dict)
     
     #Create area raster so that the volume can be computed.
-    wyield_area = create_area_raster(wyield_raster, wyield_area_path,
-                                     sub_sheds, 'subws_id', sub_mask)
-    
+#    wyield_area = create_area_raster(wyield_raster, wyield_area_path,
+#                                     sub_sheds, 'subws_id', sub_mask)
+    area_dict = get_area_of_polygons(sub_sheds, 'subws_id')
+
+    subwatershed_mask = \
+        raster_utils.new_raster_from_base(wyield_mean, '', 'MEM', 
+                                             out_nodata, gdal.GDT_Float32)
+
+    gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
+                        options = ['ATTRIBUTE=subws_id'])
+
+    def area_op(shed_val):
+        if shed_val != out_nodata:
+            return area_dict[shed_val]
+
+    wyield_area = \
+            raster_utils.vectorize_rasters([subwatershed_mask], area_op,
+                    nodata=out_nodata)
+
     LOGGER.debug('Performing volume operation')
     
     def volume_op(wyield_mn, wyield_area):
