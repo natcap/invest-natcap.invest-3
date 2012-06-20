@@ -31,7 +31,7 @@ def execute(args):
                                          "cellSize": cellSize})
     
     # Create the Request object
-    request = urllib2.Request("http://ncp-dev.stanford.edu/~mlacayo/new.php", datagen, headers)
+    request = urllib2.Request("http://ncp-skookum.stanford.edu/~mlacayo/recreation.php", datagen, headers)
     
     # Actually do the request, and get the response
     # This will display the output from the model including the path for the results
