@@ -741,3 +741,19 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
     os.remove(temporary_mask_filename)
 
     return result_dict
+
+def reclassifyByDictionary(dataset, rules, output_uri, format = None): 
+    """Convert all the non-nodata values in dataset to the values mapped to by rules
+
+        dataset - GDAL raster dataset
+        rules - a dictionary of the form: 
+            {'dataset_value1' : 'output_value1', ... 
+             'dataset_valuen' : 'output_valuen'}
+        output_uri - The location to hold the output raster on disk
+        format - optional a GDAL output type, if left off uses the same as
+            dataset"""
+
+
+    
+
+    pass
