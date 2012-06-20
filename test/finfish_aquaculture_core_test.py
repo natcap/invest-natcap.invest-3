@@ -2,24 +2,25 @@
 
 import os, sys
 import unittest
+import ogr
 
 from invest_natcap.finfish_aquaculture import finfish_aquaculture_core
 import invest_test_core
 
 class TestFinfishAquacultureCore(unittest.TestCase):
    
-    ff_farm_loc = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Jodie_Data.shp'
     
     def setUp(self):
     
+        ff_farm_loc = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Jodie_Data.shp'
         ff_aqua_args = {}
         
         #Biophysical
         ff_aqua_args['workspace_dir'] = './test/data/aquaculture_output/Test'
         ff_aqua_args['farm_ID'] = 'FarmID'
-        ff_aqua_args['ff_farm_file'] = ogr.Open(args[ff_farm_loc])
-        ff_aqua_args['g_param_a'] = 0.038
-        ff_aqua_args['g_param_b'] = 0.6667
+        ff_aqua_args['ff_farm_file'] = ogr.Open(ff_farm_loc)
+        ff_aqua_args['g_param_a'] = 0.1
+        ff_aqua_args['g_param_b'] = 0.9
         ff_aqua_args['water_temp_tbl'] = {'0':{'1':'7', '4':'8'}, '2':{'1':'7', '4':'8'}, '3':{'1':'7', '4':'8'},
                            '4':{'1':'7', '4':'8'}, '5':{'1':'7', '4':'8'}, '6':{'1':'7', '4':'8'},
                            '7':{'1':'7', '4':'8'}, '8':{'1':'7', '4':'8'}, '9':{'1':'7', '4':'8'},
@@ -44,6 +45,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                                'number of fish in farm' : '500000', 
                                'start day for growing' : '20',
                                'Length of Fallowing period' : '0'}}
+        ff_aqua_args['duration'] = .1
         
         #Valuation
         ff_aqua_args['do_valuation'] = False
@@ -53,9 +55,15 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         
         self.ff_aqua_args = ff_aqua_args
     
-    #Going to have to do these tests, then check it all against a pre-done file at
-    #the end, since you can't really check step by step
-    #Or do we want to re-do in order to encapusulate the change w/in the method itself?
-    def test_calc_cycle_history(self):
-    
+    '''For these, we will basically have to run each test, get the values and compare
+    against expected values. THEN, add everything to their corresponding shapefiles
+    and compare the two shapefiles(?)'''
         
+    def test_calc_cycle_history(self):
+        
+        #reg_cy_hist = 
+    
+        cycle_history = finfish_aquaculture_core.calc_farm_cycles(
+                                self.ff_aqua_args, self.ff_aqua_args['g_param_a'],
+                                self.ff_aqua_args['g_param_b'], self.ff_aqua_args['water_temp_tbl'],
+                                self.ff_aqua_args['farm_op_tbl'], self.ff_aqua_args['duration'])
