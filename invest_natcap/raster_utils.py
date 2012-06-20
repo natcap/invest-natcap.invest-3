@@ -345,18 +345,30 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
             #We might be at the top or bottom edge, so shift the window up or down
             #We need at least 3 rows because the interpolator requires it.
+            LOGGER.debug("current_top_index %s " % current_top_index)
+            LOGGER.debug("current_bottom_index %s " % current_bottom_index)
+            LOGGER.debug("current_left_index %s " % current_left_index)
+            LOGGER.debug("current_right_index %s " % current_right_index)
             if current_top_index < 0:
                 current_top_index += 1
                 current_bottom_index += 1
             elif current_bottom_index > out_band.YSize:
                 current_top_index -= 1
                 current_bottom_index -= 1
+
+            #Trying to fix an error where a very narrow 3 column raster is getting
+            #over-read
+            if current_right_index >= current_band.XSize:
+                current_right_index = current_band.XSize - 1
                 
             #These steps will tell us the size of the window to read from and
             #later help us determine the row and column coordinates for the 
             #interpolator.
             current_col_steps = current_right_index - current_left_index
             current_row_steps = current_bottom_index - current_top_index
+
+            LOGGER.debug("col steps row steps %s %s" % (current_col_steps, current_row_steps))
+
 
             current_array = \
                 current_band.ReadAsArray(current_left_index, current_top_index,
