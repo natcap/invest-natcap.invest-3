@@ -61,7 +61,11 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         
     def test_calc_cycle_history(self):
         
-        #reg_cy_hist = 
+        reg_cy_hist = {'1': [(1, 3, 6260.48), (363, 365, 6260.48), (728, 730, 6260.48),
+                                    (1093, 1095, 6260.48), (1458, 1460, 6260.48),
+                                    (1823, 1825, 6260.48)],
+                        '4': [(20, 22, 21758.10), (382, 384, 21758.10), (747, 749, 21758.10),
+                                    (1112, 1114, 21758.10), (1477, 1479, 21758.10)]}
     
         cycle_history = finfish_aquaculture_core.calc_farm_cycles(
                                 self.ff_aqua_args, self.ff_aqua_args['g_param_a'],

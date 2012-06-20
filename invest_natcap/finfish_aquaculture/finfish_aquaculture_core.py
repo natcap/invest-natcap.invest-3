@@ -232,13 +232,13 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
 
             elif fish_weight != 0:
                 #Grow 'dem fishies!                   
-                exponent = math.exp(float(water_temp_dict[str((day-1) % 365)][str(f)]) * tau)
+                exponent = round(math.exp(float(water_temp_dict[str((day-1) % 365)][str(f)]) * tau), 2)
                 file.write("temp effect is: " + str(exponent) + "\n")
                 file.write("(" + str(a) +","  + str(b) +"," + str(exponent) + "," + str(fish_weight) + ")")                
                 fish_weight = (a * (fish_weight ** b) * exponent) + \
                                 fish_weight
                                     
-                fish_weight = fish_weight
+                fish_weight = round(fish_weight, 2)
                               
                 file.write("Fish Weight for day " + str(day) + 
                            ": " + str(fish_weight) + "\n")

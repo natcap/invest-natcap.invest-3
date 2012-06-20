@@ -203,7 +203,7 @@ def format_temp_table(temp_path, ff_aqua_args):
         
         #Subtract 1 here so that the day in the temp table allows for % 365
         new_dict_temp[str(int(row[day_marker]) - 1)] = sub_dict
-    LOGGER.debug(new_dict_temp)
+    #LOGGER.debug(new_dict_temp)
         
     ff_aqua_args['water_temp_dict'] = new_dict_temp
     
