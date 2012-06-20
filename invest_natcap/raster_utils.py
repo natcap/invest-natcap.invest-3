@@ -4,6 +4,7 @@ import logging
 import itertools
 import random
 import string
+import os
 
 from osgeo import gdal
 from osgeo import osr
