@@ -305,7 +305,7 @@ def water_yield(args):
     
     LOGGER.debug('Performing volume operation')
     
-    def volume(wyield_mn, wyield_area):
+    def volume_op(wyield_mn, wyield_area):
         """Function to compute the water yield volume raster
         
             wyield_mn - numpy array with the water yield mean raster values (mm)
@@ -315,30 +315,14 @@ def water_yield(args):
             returns - water yield volume value (cubic meters)"""
         #Divide by 1000 because wyield is in mm, so convert to meters
         if wyield_mn != out_nodata and wyield_area != out_nodata:
-            return (wyield_mn * wyield_area / 1000)
+            return (wyield_mn * wyield_area / 1000.0)
         else:
             return out_nodata
         
-    #Make blank raster for water yield volume
     wyield_vol_raster = \
-        raster_utils.new_raster_from_base(wyield_raster, wyield_volume_path, 
-                                            'GTiff', out_nodata, gdal.GDT_Float32)
-        
-    #Get the relevant bands and create water yield volume raster
-    wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
-    wyield_mean_band = wyield_mean.GetRasterBand(1)
-    wyield_area_band = wyield_area.GetRasterBand(1)
-    invest_core.vectorize2ArgOp(wyield_mean_band, wyield_area_band, 
-                                volume, wyield_vol_band)
-    
-    #Make blank raster for hectare volume
-    wyield_ha_raster = \
-        raster_utils.new_raster_from_base(wyield_raster, wyield_ha_path, 
-                                            'GTiff', out_nodata, gdal.GDT_Float32)
-        
-    wyield_ha_band = wyield_ha_raster.GetRasterBand(1)
-
-    LOGGER.debug('Performing volume (ha) operation')
+        raster_utils.vectorize_rasters([wyield_mean, wyield_area], volume_op, 
+                                       raster_out_uri = wyield_volume_path, 
+                                       nodata=out_nodata)
 
     def ha_vol(wyield_vol, wyield_area):
         """Function to compute water yield volume in units of ha
@@ -354,21 +338,16 @@ def water_yield(args):
             return wyield_vol / (0.0001 * wyield_area)
         else:
             return out_nodata
+    
+    LOGGER.debug('Performing volume (ha) operation')
         
     #Make ha volume raster
-    invest_core.vectorize2ArgOp(wyield_vol_band, wyield_area_band, ha_vol, 
-                                wyield_ha_band)
+    wyield_ha_raster = \
+        raster_utils.vectorize_rasters([wyield_vol_raster, wyield_area], ha_vol, 
+                                       raster_out_uri = wyield_ha_path, 
+                                       nodata=out_nodata)
     
-    aet_raster = \
-        raster_utils.new_raster_from_base(wyield_area, aet_path, 'GTiff', 
-                                             out_nodata, gdal.GDT_Float32)
-        
-    aet_band = aet_raster.GetRasterBand(1)
-    fractp_clipped_band = fractp_clipped_raster.GetRasterBand(1)
-    
-    LOGGER.debug('Performing aet operation')
-    
-    def aet(fractp, precip):
+    def aet_op(fractp, precip):
         """Function to compute the actual evapotranspiration values
         
             fractp - numpy array with the fractp raster values
@@ -381,7 +360,12 @@ def water_yield(args):
         else:
             return out_nodata
     
-    invest_core.vectorize2ArgOp(fractp_clipped_band, precip_band, aet, aet_band)
+    LOGGER.debug('Performing aet operation')
+    
+    aet_raster = \
+        raster_utils.vectorize_rasters([fractp_raster, precip_raster], aet_op, 
+                                       raster_out_uri = aet_path, 
+                                       nodata=out_nodata)
     
     #Create the mean actual evapotranspiration raster
     aet_mn_dict = {}
