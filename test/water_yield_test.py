@@ -9,7 +9,6 @@ from nose.plugins.skip import SkipTest
 import numpy as np
 
 from invest_natcap.hydropower import water_yield
-import invest_cython_core
 import invest_test_core
 
 LOGGER = logging.getLogger('water_yield_test')

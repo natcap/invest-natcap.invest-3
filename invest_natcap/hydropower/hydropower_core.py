@@ -10,9 +10,8 @@ import numpy as np
 from osgeo import gdal
 from osgeo import ogr
 
-import invest_cython_core
 from invest_natcap import raster_utils
-from invest_natcap.invest_core import invest_core
+#from invest_natcap.invest_core import invest_core
 from invest_natcap import raster_utils
 
 
@@ -677,47 +676,6 @@ def create_operation_raster(raster, path, id_list, operation, shed_mask, op_dict
         
     band_op.WriteArray(new_data_array, 0, 0)
     return raster_op
-
-def clip_raster_from_polygon(shape, raster, path):
-    """Returns a raster where any value outside the bounds of the
-    polygon shape are set to nodata values. This represents clipping 
-    the raster to the dimensions of the polygon.
-    
-    shape - A polygon shapefile representing the bounds for the raster
-    raster - A raster to be bounded by shape
-    path - The path for the clipped output raster
-    
-    returns - The clipped raster    
-    """
-    shape.GetLayer(0).ResetReading()
-    #Create a new raster as a copy from 'raster'
-    copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-    copy_band = copy_raster.GetRasterBand(1)
-    #Set the copied rasters values to nodata to create a blank raster.
-    nodata = copy_band.GetNoDataValue()
-    copy_band.Fill(nodata)
-    #Rasterize the polygon layer onto the copied raster
-    gdal.RasterizeLayer(copy_raster, [1], shape.GetLayer(0))
-    def fill_bound_data(value, copy_value):
-        """If the copied raster's value is nodata then the pixel is not within
-        the polygon and should write nodata back. If copied raster's value
-        is not nodata, then pixel lies within polygon and the value 
-        from 'raster' should be written out.
-        
-        value - The pixel value of the raster to be bounded by the shape
-        copy_value - The pixel value of a copied raster where every pixel
-                     is nodata except for where the polygon was rasterized
-        
-        returns - Either a nodata value or relevant pixel value
-        """
-        if copy_value == nodata:
-            return copy_value
-        else:
-            return value
-    #Vectorize the two rasters using the operation fill_bound_data
-    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copy_band, \
-                                fill_bound_data, copy_band)
-    return copy_raster
     
 def raster_from_table_values(base_raster, new_path, bio_dict, field):
     """Creates a new raster from 'base_raster' whose values are data from a 
