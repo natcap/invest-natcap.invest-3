@@ -137,14 +137,23 @@ def water_yield(args):
     #The nodata value that will be used for created output rasters
     out_nodata = -1.0
     
+    etk_dict = {}
+    root_dict = {}
+    for lulc_code in bio_dict:
+        etk_dict[lulc_code] = bio_dict[lulc_code]['etk']
+        root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
+
     #Create etk raster from table values to use in future calculations
     tmp_etk_raster = \
-        raster_from_table_values(lulc_raster, tmp_etk_path, bio_dict, 'etk')
-    
+        raster_utils.reclassify_by_dictionary(lulc_raster, etk_dict,
+                tmp_etk_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+#        raster_from_table_values(lulc_raster, tmp_etk_path, bio_dict, 'etk')
     #Create root raster from table values to use in future calculations
-    tmp_root_raster = raster_from_table_values(lulc_raster, tmp_root_path, 
-                                               bio_dict, 'root_depth')
-   
+    tmp_root_raster = \
+            raster_utils.reclassify_by_dictionary(lulc_raster, root_dict,
+                tmp_root_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+#   raster_from_table_values(lulc_raster, tmp_root_path, bio_dict, 'root_depth')
+
     #Get out_nodata values so that we can avoid any issues when running operations
     etk_nodata = tmp_etk_raster.GetRasterBand(1).GetNoDataValue()
     root_nodata = tmp_root_raster.GetRasterBand(1).GetNoDataValue()
