@@ -378,7 +378,11 @@ def water_yield(args):
             
             returns - actual evapotranspiration values (mm)"""
         
-        if fractp != out_nodata and precip != precip_nodata:
+        #checking if fractp >= 0 because it's a value that's between 0 and 1
+        #and the nodata value is -1.  It's possible that vectorize rasters will
+        #attempt to interpoalte the nodata value thus yielding intermiedate
+        #values <0 but not == -1, thus we only accept values >= 0
+        if fractp >= 0 and precip != precip_nodata:
             return fractp * precip
         else:
             return out_nodata
