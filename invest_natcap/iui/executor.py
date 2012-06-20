@@ -305,7 +305,10 @@ class Executor(threading.Thread):
             LOGGER.error('Error: a problem occurred while running the model')
             self.printTraceback()
             self.setThreadFailed(True)
+            #Quit the rest of the function
+            return
 
+        #Try opening up a file explorer to see the results.
         try:
             LOGGER.info('Opening file explorer to workspace directory')
             if platform.system() == 'Windows':
