@@ -234,7 +234,7 @@ def water_yield(args):
     
     LOGGER.debug('Performing wyield operation')
     
-    def wyield(fractp, precip):
+    def wyield_op(fractp, precip):
         """Function that calculates the water yeild raster
         
            fractp - numpy array with the fractp raster values
@@ -245,20 +245,13 @@ def water_yield(args):
         if fractp == out_nodata or precip == precip_nodata:
             return out_nodata
         else:
-            return (1 - fractp) * precip
+            return (1.0 - fractp) * precip
     
     #Create the water yield raster 
     wyield_raster = \
-        raster_utils.new_raster_from_base(fractp_raster, wyield_path, 
-                                            'GTiff', out_nodata, gdal.GDT_Float32)
-        
-    #Get relevant raster bands for creating water yield raster
-    fractp_band = fractp_raster.GetRasterBand(1)
-    precip_band = precip_raster.GetRasterBand(1)
-    wyield_band = wyield_raster.GetRasterBand(1)
-    
-    invest_core.vectorize2ArgOp(fractp_band, precip_band, wyield, wyield_band)
-    
+        raster_utils.vectorize_rasters([fractp_raster, precip_raster], wyield_op, 
+                                       raster_out_uri = wyield_path, 
+                                       nodata=out_nodata)
     LOGGER.debug('Clip wyield raster')
     
     #Clip fractp/wyield rasters to watershed polygons
