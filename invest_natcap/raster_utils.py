@@ -742,7 +742,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
     return result_dict
 
-def reclassify_by_dictionary(dataset, rules, output_uri, nodata, datatype): 
+def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatype): 
     """Convert all the non-nodata values in dataset to the values mapped to 
         by rules.  If there is no rule for an input value it is replaced by
         the nodata output value.
@@ -753,12 +753,15 @@ def reclassify_by_dictionary(dataset, rules, output_uri, nodata, datatype):
              'dataset_valuen' : 'output_valuen'}
              used to map dataset input types to output
         output_uri - The location to hold the output raster on disk
+        format - either 'MEM' or 'GTiff'
         nodata - output raster dataset nodata value
-        datatype - a GDAL output type"""
+        datatype - a GDAL output type
+
+        return the mapped raster as a GDAL dataset"""
 
 
     dataset_band = dataset.GetRasterBand(1)
-    output_dataset = new_raster_from_base(dataset, output_uri, 'GTiff', nodata, 
+    output_dataset = new_raster_from_base(dataset, output_uri, format, nodata, 
                                           datatype)
 
     def op(x):
@@ -775,3 +778,7 @@ def reclassify_by_dictionary(dataset, rules, output_uri, nodata, datatype):
         dataset_array = dataset_band.ReadAsArray(0,row,output_band.XSize,1)
         output_array = vop(dataset_array)
         output_band.WriteArray(output_array, 0, row)
+        
+    output_band = None
+    output_dataset.FlushCache()
+    return output_dataset
