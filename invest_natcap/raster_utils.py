@@ -659,7 +659,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
     raster_band = raster.GetRasterBand(1)
     raster_nodata = float(raster_band.GetNoDataValue())
 
-    clipped_raster = raster_utils.vectorize_rasters([raster], lambda x: float(x), 
+    clipped_raster = vectorize_rasters([raster], lambda x: float(x), 
         aoi=shapefile, raster_out_uri='clipped_raster.tif', 
         datatype=gdal.GDT_Float32, 
         nodata=raster_nodata)
@@ -667,7 +667,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1.0
-    mask_dataset = raster_utils.new_raster_from_base(clipped_raster, 
+    mask_dataset = new_raster_from_base(clipped_raster, 
         temporary_mask_filename, 'GTiff', mask_nodata, gdal.GDT_Float32)
 
     mask_band = mask_dataset.GetRasterBand(1)
@@ -724,7 +724,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
         vop = np.vectorize(aggregate_map_function)
 
-        aggregate_dataset = raster_utils.new_raster_from_base(clipped_raster, aggregate_uri,
+        aggregate_dataset = new_raster_from_base(clipped_raster, aggregate_uri,
             'GTiff', raster_nodata, gdal.GDT_Float32)
         aggregate_band = aggregate_dataset.GetRasterBand(1)
         
@@ -734,7 +734,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             aggregate_array = vop(mask_array)
             aggregate_band.WriteArray(aggregate_array, 0,row_index)
 
-        raster_utils.calculate_raster_stats(aggregate_dataset)
+        calculate_raster_stats(aggregate_dataset)
 
     mask_band = None
     mask_dataset = None
