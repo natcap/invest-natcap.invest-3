@@ -391,27 +391,33 @@ def water_yield(args):
         raster_utils.aggregate_raster_values(precip_raster, sub_sheds,
                                              'subws_id', 'mean')
     sub_value_dict['PET_mn'] = \
-        get_operation_value(eto_raster, sws_id_list, sub_mask, 'mean')
+        raster_utils.aggregate_raster_values(eto_raster, sub_sheds, 'subws_id',
+                                             'mean')
     sub_value_dict['AET_mn'] = aet_mn_dict
     sub_value_dict['wyield_mn'] = wyield_mn_dict
     sub_value_dict['wyield_sum'] = \
-        get_operation_value(wyield_raster, sws_id_list, sub_mask, 'sum')
-    
+        raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 'subws_id',
+                                             'sum')
     sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum']
     LOGGER.debug('sub_value_dict : %s', sub_value_dict)
     #Create the water yield watershed table
     value_dict = {}
     value_dict['precip_mn'] = \
-        get_operation_value(precip_raster, ws_id_list, shed_mask, 'mean')
+        raster_utils.aggregate_raster_values(precip_raster, sheds, 'ws_id',
+                                             'mean')
     value_dict['PET_mn'] = \
-        get_operation_value(eto_raster, ws_id_list, shed_mask, 'mean')
+        raster_utils.aggregate_raster_values(eto_raster, sheds, 'ws_id',
+                                             'mean')
     value_dict['AET_mn'] = \
-        get_operation_value(aet_raster, ws_id_list, shed_mask, 'mean')
+        raster_utils.aggregate_raster_values(aet_raster, sheds, 'ws_id',
+                                             'mean')
     value_dict['wyield_mn'] = \
-        get_operation_value(wyield_raster, ws_id_list, shed_mask, 'mean')
+        raster_utils.aggregate_raster_values(wyield_raster, sheds, 'ws_id',
+                                             'mean')
     value_dict['wyield_sum'] = \
-        get_operation_value(wyield_raster, ws_id_list, shed_mask, 'sum')
+        raster_utils.aggregate_raster_values(wyield_raster, sheds, 'ws_id',
+                                             'sum')
     
     field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
                   'wyield_sum']
