@@ -2,6 +2,8 @@
 
 import logging
 import itertools
+import random
+import string
 
 from osgeo import gdal
 from osgeo import osr
@@ -628,7 +630,7 @@ def vectorize_points(shapefile, datasource_field, raster):
     band.WriteArray(raster_out_array,0,0)
 
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation, 
-                            aggregate_uri = None):
+                            aggregate_uri = None, intermediate_directory = ''):
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
 
@@ -639,11 +641,19 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
         operation - a string of one of ['mean', 'sum']
         aggregate_uri - (optional) a uri to an output raster that has the aggreate
             values burned onto the masked raster
+        intermediate_directory - (optional) a path to a directory to hold 
+            intermediate files
 
         returns a dictionary whose keys are the values in shapefile_field and values
             are the aggregated values over raster.  If no values are aggregated
             contains 0."""
     
+    #Generate a temporary mask filename
+    temporary_mask_filename = 'aggr_mask_%s.tif' % \
+        ''.join([random.choice(string.letters) for i in range(6)])
+
+    temporary_mask_filename = os.path.join(intermediate_directory, 
+                                           temporary_mask_filename)
 
     raster_band = raster.GetRasterBand(1)
     raster_nodata = float(raster_band.GetNoDataValue())
@@ -656,8 +666,8 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1.0
-    mask_dataset = raster_utils.new_raster_from_base(clipped_raster, 'mask.tif',
-        'GTiff', mask_nodata, gdal.GDT_Float32)
+    mask_dataset = raster_utils.new_raster_from_base(clipped_raster, 
+        temporary_mask_filename, 'GTiff', mask_nodata, gdal.GDT_Float32)
 
     mask_band = mask_dataset.GetRasterBand(1)
     mask_band.Fill(mask_nodata)
@@ -725,5 +735,8 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
         raster_utils.calculate_raster_stats(aggregate_dataset)
 
-    return result_dict
+    mask_band = None
+    mask_dataset = None
+    os.remove(temporary_mask_filename)
 
+    return result_dict
