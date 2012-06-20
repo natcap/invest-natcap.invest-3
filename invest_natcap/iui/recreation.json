@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Recreation Model",
-    "targetScript" : "invest_natcap.recreation.php",
+    "targetScript" : "invest_natcap.recreation.recreation_client",
     "modelName" : "recreation",
     "localDocURI": "",
     "height": 600,
@@ -13,6 +13,7 @@
 		    "elements": [
 		            {
 		            "id" : "aoiFileName",
+		            "args_id" : "aoiFileName",
 		            "type": "file",
 		            "label": "Area of Interest",
 		            "defaultValue": "",
@@ -21,13 +22,21 @@
 		        },
 		        {
 		            "id" : "cellSize",
+		            "args_id" : "cellSize",
 		            "type": "text",
 		            "label": "Cell size",
 		            "defaultValue": "",
 		            "validText": "[0-9]+(\\.[0-9][0-9])?",
 		            "dataType": "float",
 		            "required": true
-		        }
+		        },
+		        {
+		        	"id" : "workspace_dir",
+		        	"args_id" : "workspace_dir",
+					"type": "folder",
+                	"label": "Workspace",
+                	"required": true
+		        }		        
 		   ]
 		   }
     ]
