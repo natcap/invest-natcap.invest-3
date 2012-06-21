@@ -9,6 +9,8 @@ import time
 import subprocess
 import platform
 
+import invest_natcap.__version__ as invest_version
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
     stream=open(os.devnull, 'w'))
