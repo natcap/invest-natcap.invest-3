@@ -338,23 +338,27 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     for f in cycle_history.keys():
         
         val_history[f] = []
-        valuations[f] = 0
+        valuations[f] = 0.0
         
         #running from 0 to 1 less than the number of cycles that farm completed,
         #since the list that each farm ID is mapped to starts at index 0
         for c in range (0, len(cycle_history[f])):
             
             tpw = proc_weight[f][c]
+            #LOGGER.debug(tpw)
             #the 2 refers to the placement of day of harvest in the tuple for each cycle
             t = cycle_history[f][c][1]
             
             net_rev = round(tpw * (price_per_kg *(1 - frac_mrkt_price)), 2)
             npv = round(net_rev * (1 / (1 + discount) ** t), 2)
             
+            #LOGGER.debug("Net Rev: " + str(net_rev) + ", " + "NPV: " + str(npv))
+            #LOGGER.debug("t: " + str(t))
+            
             val_history[f].append((net_rev, npv))
             
             #divide by 1000, because the number we want to return is in thousands of dollars
-            valuations[f] += npv /1000
+            valuations[f] += npv / 1000
     
     return val_history, valuations
 

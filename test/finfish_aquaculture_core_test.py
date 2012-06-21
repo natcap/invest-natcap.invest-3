@@ -17,7 +17,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
     
     def setUp(self):
     
-        ff_farm_loc = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Jodie_Data.shp'
+        ff_farm_loc = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         ff_aqua_args = {}
         
         #Biophysical
@@ -67,12 +67,12 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         ff_aqua_args['reg_value_hist'] = {1 : [(5027352.88, 5024458.24), (5027352.88, 4687129.30),
                                                (5027352.88, 4369930.18), (5027352.88, 4074197.36),
                                                (5027352.88, 3798478.1), (5027352.88, 3541418.0)],
-                                          4 : [(1460338.11, 14504538.97), (1460338.11, 13525548.0),
-                                               (1460338.11, 13515165.36), (1460338.11, 12610213.34),
-                                               (1460338.11, 12600533.34), (1460338.11, 11756823.49),
-                                               (1460338.11, 11747798.59), (1460338.11, 10961186.38),
-                                               (1460338.11, 10952772.23)]}
-        ff_aqua_args['reg_npv'] = {1 : 25495611.18, 4 : 112174579.7}
+                                          4 : [(14560338.11, 14498970.83), (14560338.11, 13525548.0), 
+                                               (14560338.11, 13515165.36), (14560338.11, 12610213.34),
+                                               (14560338.11, 12600533.34), (14560338.11, 11756823.49),
+                                               (14560338.11, 11747798.59), (14560338.11, 10961186.38),
+                                               (14560338.11, 10952772.23)]}
+        ff_aqua_args['reg_npv'] = {1 : 25495.61, 4 : 112169.01}
         
         self.ff_aqua_args = ff_aqua_args
     
@@ -102,7 +102,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         
         
         #LOGGER.debug(total_proc_weight)
-        LOGGER.debug(indiv_cy_proc)
+        #LOGGER.debug(indiv_cy_proc)
         
         self.maxDiff = None
         self.assertEqual(total_proc_weight, self.ff_aqua_args['tpw_totals'], 
@@ -120,11 +120,20 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                                             self.ff_aqua_args['indiv_cy_tpw'],
                                             self.ff_aqua_args['reg_cy_hist'])
             
+            #LOGGER.debug(value_history)
+            
+            
+            self.maxDiff = None
             self.assertEqual(value_history, self.ff_aqua_args['reg_value_hist'],
-                            "One or more of the valuation histories in this \
-                            dictionary do not match.")
-            self.assertEqual(farms_npv, self.ff_aqua_args['reg_npv'],
-                            "One or more of the total net present values in this \
-                            dictionary do not match.")
+                             " One or more of the valuation histories in this \
+                                    dictionary do not match.")
+            
+            #self.assertEqual(farms_npv, self.ff_aqua_args['reg_npv'])
+            #Have to re-write the check almost equal, since the assert doesn't
+            #support dictionaries
+            for item in farms_npv:
+                
+                self.assertAlmostEqual(farms_npv[item], 
+                                       self.ff_aqua_args['reg_npv'][item], 2)
         else:
             pass
