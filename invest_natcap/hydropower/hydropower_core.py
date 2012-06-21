@@ -1240,56 +1240,26 @@ def valuation(args):
     out_nodata = -1.0
 
     hp_val_watershed_mask = \
-        raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, 'GTiff', 
-                                             out_nodata, gdal.GDT_Float32)
+        raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, \
+            'GTiff', out_nodata, gdal.GDT_Float32)
 
     gdal.RasterizeLayer(hp_val_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
+    #create hydropower value raster
+    LOGGER.debug('Create Hydropower Value Raster')
     raster_utils.reclassify_by_dictionary(hp_val_watershed_mask, sws_npv_dict,
                 hp_val_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
     
-#   def npv_op(hp_val):
-#       """Maps the net present value to the correct sub watershed
-#       
-#          hp_val - a numpy array with values of the sub watershed id's, which
-#                   correspond to their location
-#       
-#          returns - the correct net present value at the correct location
-#       """
-
-#       if hp_val != out_nodata:
-#           return sws_npv_dict[str(int(hp_val))]
-#       else:
-#           return out_nodata
-#       
-#   raster_utils.vectorize_rasters([hp_val_watershed_mask], npv_op,
-#       nodata = out_nodata, raster_out_uri = hp_val_path)
-
-    
     hp_energy_watershed_mask = \
-        raster_utils.new_raster_from_base(water_consump, hp_energy_tmppath, 'GTiff', 
-                                             out_nodata, gdal.GDT_Float32)
+        raster_utils.new_raster_from_base(water_consump, hp_energy_tmppath, \
+            'GTiff', out_nodata, gdal.GDT_Float32)
+   
     gdal.RasterizeLayer(hp_energy_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
-    raster_utils.reclassify_by_dictionary(hp_energy_watershed_mask, sws_energy_dict,
-                hp_energy_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
-    
-#   def energy_op(energy_val):
-#       """Maps the energy value to the correct sub watershed
-#       
-#          energy_val - a numpy array with values of the sub watershed id's, which
-#                       correspond to their location
-#       
-#          returns - the correct energy value at the correct location
-#       """
-
-#       if energy_val != out_nodata:
-#           return sws_energy_dict[str(int(energy_val))]
-#       else:
-#           return out_nodata
-#       
-#   #invest_core.vectorize1ArgOp(hp_energy_band_tmp, energy_op, hp_energy_band)
-#   raster_utils.vectorize_rasters([hp_energy_watershed_mask], energy_op,
-#       nodata = out_nodata, raster_out_uri = hp_energy_path)
+    #create hydropower energy raster
+    LOGGER.debug('Create Hydropower Energy Raster')
+    raster_utils.reclassify_by_dictionary(hp_energy_watershed_mask, \
+        sws_energy_dict, hp_energy_path, 'GTiff', out_nodata, \
+        gdal.GDT_Float32) 
