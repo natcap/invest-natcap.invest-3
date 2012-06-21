@@ -70,7 +70,7 @@ def biophysical(args):
     #Process density layers / each threat
 
     #For all threats:
-#    for threat, threat_data in args['threat_dict'].iteritems():
+    for threat, threat_data in args['threat_dict'].iteritems():
         #get weight, name, max_idst, decay
         #mulitply max_dist by 1000 (must be a conversion to meters
         #get proper density raster, depending on land cover
@@ -101,8 +101,17 @@ def biophysical(args):
 # I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
 
     #Compute Degradation of all threats
-
+        #Some all the final threat rasters from above. Prob store them in a list.
+#    def degredation_op(*raster):
+#        return sum(raster)
+#    degredation_raster = raster_utils.vectorize_rasters(threat_raster_list, degredation_op, nodata=-1.0)
     #Compute quality for all threats
+    z = 2.5
+    ksq = k**z
+    def quality_op(degradation,habitat):
+        returnhabitat * (1 - ((degredation**z) / (degredation**z + ksq))
+    quality_raster = raster_utils.vectorize_rasters([degredation_raster, habitat], quality_op)
+
 
     #Adjust quality by habitat status
 

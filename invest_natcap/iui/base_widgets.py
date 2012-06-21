@@ -422,6 +422,11 @@ class DynamicPrimitive(DynamicElement):
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required')
         else:
+            # If there's no validation for this element but its requirements are
+            # met and it's enabled, we should mark it as not having an error.
+            if self.isEnabled() and self.validator == None:
+                self.set_error(None)
+
             if self.isEnabled() and self.validator != None and\
             self.requirementsMet() and self.validator.thread_finished():
                 rendered_dict = self.root.assembler.assemble(self.value(),

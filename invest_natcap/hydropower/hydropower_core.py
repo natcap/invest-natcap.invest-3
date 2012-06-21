@@ -10,9 +10,8 @@ import numpy as np
 from osgeo import gdal
 from osgeo import ogr
 
-import invest_cython_core
 from invest_natcap import raster_utils
-from invest_natcap.invest_core import invest_core
+#from invest_natcap.invest_core import invest_core
 from invest_natcap import raster_utils
 
 
@@ -137,14 +136,25 @@ def water_yield(args):
     #The nodata value that will be used for created output rasters
     out_nodata = -1.0
     
+    etk_dict = {}
+    root_dict = {}
+    for lulc_code in bio_dict:
+        etk_dict[lulc_code] = bio_dict[lulc_code]['etk']
+        root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
+
     #Create etk raster from table values to use in future calculations
+    LOGGER.info("Reclassifying temp_etk raster")
     tmp_etk_raster = \
-        raster_from_table_values(lulc_raster, tmp_etk_path, bio_dict, 'etk')
-    
+        raster_utils.reclassify_by_dictionary(lulc_raster, etk_dict,
+                tmp_etk_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+#        raster_from_table_values(lulc_raster, tmp_etk_path, bio_dict, 'etk')
     #Create root raster from table values to use in future calculations
-    tmp_root_raster = raster_from_table_values(lulc_raster, tmp_root_path, 
-                                               bio_dict, 'root_depth')
-   
+    LOGGER.info("Reclassifying tmp_root raster")
+    tmp_root_raster = \
+            raster_utils.reclassify_by_dictionary(lulc_raster, root_dict,
+                tmp_root_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+#   raster_from_table_values(lulc_raster, tmp_root_path, bio_dict, 'root_depth')
+
     #Get out_nodata values so that we can avoid any issues when running operations
     etk_nodata = tmp_etk_raster.GetRasterBand(1).GetNoDataValue()
     root_nodata = tmp_root_raster.GetRasterBand(1).GetNoDataValue()
@@ -228,13 +238,14 @@ def water_yield(args):
     #Create the fractp raster
     raster_list = [tmp_etk_raster, eto_raster, precip_raster, tmp_root_raster,
                    soil_depth_raster, pawc_raster]
-    fractp_raster = raster_utils.vectorize_rasters(raster_list, fractp_vec, 
-                                                 raster_out_uri=fractp_path, 
+    fractp_raster = raster_utils.vectorize_rasters(raster_list, fractp_vec,
+                                                 aoi=sheds, 
+                                                 raster_out_uri=fractp_clipped_path, 
                                                  nodata=out_nodata)
     
     LOGGER.debug('Performing wyield operation')
     
-    def wyield(fractp, precip):
+    def wyield_op(fractp, precip):
         """Function that calculates the water yeild raster
         
            fractp - numpy array with the fractp raster values
@@ -245,61 +256,79 @@ def water_yield(args):
         if fractp == out_nodata or precip == precip_nodata:
             return out_nodata
         else:
-            return (1 - fractp) * precip
+            return (1.0 - fractp) * precip
     
     #Create the water yield raster 
     wyield_raster = \
-        raster_utils.new_raster_from_base(fractp_raster, wyield_path, 
-                                            'GTiff', out_nodata, gdal.GDT_Float32)
-        
-    #Get relevant raster bands for creating water yield raster
-    fractp_band = fractp_raster.GetRasterBand(1)
-    precip_band = precip_raster.GetRasterBand(1)
-    wyield_band = wyield_raster.GetRasterBand(1)
-    
-    invest_core.vectorize2ArgOp(fractp_band, precip_band, wyield, wyield_band)
-    
+        raster_utils.vectorize_rasters([fractp_raster, precip_raster], wyield_op, 
+                                       aoi=sheds,  
+                                       raster_out_uri = wyield_clipped_path, 
+                                       nodata=out_nodata)
     LOGGER.debug('Clip wyield raster')
     
     #Clip fractp/wyield rasters to watershed polygons
-    wyield_clipped_raster = clip_raster_from_polygon(sheds, wyield_raster, \
-                                                     wyield_clipped_path)
+#    wyield_clipped_raster = clip_raster_from_polygon(sheds, wyield_raster, \
+#                                                     wyield_clipped_path)
     
     LOGGER.debug('Clip fractp raster')
-    fractp_clipped_raster = clip_raster_from_polygon(sheds, fractp_raster, \
-                                                     fractp_clipped_path)
+#    fractp_clipped_raster = clip_raster_from_polygon(sheds, fractp_raster, \
+#                                                     fractp_clipped_path)
     
     #Get a numpy array from rasterizing the sub watershed id values into
     #a raster. The numpy array will be the sub watershed mask used for
     #calculating mean and sum values at a sub watershed basis
-    sub_mask = get_mask(fractp_clipped_raster, sub_mask_raster_path, sub_sheds, 
+    sub_mask = get_mask(fractp_raster, sub_mask_raster_path, sub_sheds, 
                         'subws_id')
     sws_id_list = get_shed_ids(sub_mask, out_nodata)
     
     #Get a numpy array from rasterizing the watershed id values into
     #a raster. The numpy array will be the watershed mask used for
     #calculating mean and sum values at a per watershed basis
-    shed_mask = get_mask(fractp_clipped_raster, shed_mask_raster_path,
-                         sheds, 'ws_id')
-    ws_id_list = get_shed_ids(shed_mask, out_nodata)
+    #shed_mask = get_mask(fractp_raster, shed_mask_raster_path,
+    #                     sheds, 'ws_id')
+    #ws_id_list = get_shed_ids(shed_mask, out_nodata)
     
     #Create mean rasters for fractp and water yield
     fract_mn_dict = {}
     wyield_mn_dict = {}
-    fractp_mean = \
-        create_operation_raster(fractp_clipped_raster, fractp_mean_path,
-                                sws_id_list, 'mean', sub_mask, fract_mn_dict)
-    wyield_mean = \
-        create_operation_raster(wyield_clipped_raster, wyield_mean_path,
-                                sws_id_list, 'mean', sub_mask, wyield_mn_dict)
+    fract_mn_dict = \
+        raster_utils.aggregate_raster_values(fractp_raster, sub_sheds, 'subws_id', 'mean', 
+                            aggregate_uri = fractp_mean_path, 
+                            intermediate_directory = intermediate_dir)
+    wyield_mn_dict = \
+        raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 'subws_id', 'mean', 
+                            aggregate_uri = wyield_mean_path, 
+                            intermediate_directory = intermediate_dir)
+
+    wyield_mean = gdal.Open(wyield_mean_path)
+
+#    fractp_mean = \
+#        create_operation_raster(fractp_raster, fractp_mean_path,
+#                                sws_id_list, 'mean', sub_mask, fract_mn_dict)
+#    wyield_mean = \
+#        create_operation_raster(wyield_raster, wyield_mean_path,
+#                                sws_id_list, 'mean', sub_mask, wyield_mn_dict)
     
     #Create area raster so that the volume can be computed.
-    wyield_area = create_area_raster(wyield_clipped_raster, wyield_area_path,
-                                     sub_sheds, 'subws_id', sub_mask)
-    
+#    wyield_area = create_area_raster(wyield_raster, wyield_area_path,
+#                                     sub_sheds, 'subws_id', sub_mask)
+    area_dict = get_area_of_polygons(sub_sheds, 'subws_id')
+
+    subwatershed_mask = \
+        raster_utils.new_raster_from_base(wyield_mean, '', 'MEM', 
+                                             out_nodata, gdal.GDT_Float32)
+
+    gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
+                        options = ['ATTRIBUTE=subws_id'])
+
+    wyield_area = \
+        raster_utils.reclassify_by_dictionary(subwatershed_mask, area_dict,
+                wyield_area_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+
+    subwatershed_mask = None
     LOGGER.debug('Performing volume operation')
     
-    def volume(wyield_mn, wyield_area):
+    def volume_op(wyield_mn, wyield_area):
         """Function to compute the water yield volume raster
         
             wyield_mn - numpy array with the water yield mean raster values (mm)
@@ -309,30 +338,14 @@ def water_yield(args):
             returns - water yield volume value (cubic meters)"""
         #Divide by 1000 because wyield is in mm, so convert to meters
         if wyield_mn != out_nodata and wyield_area != out_nodata:
-            return (wyield_mn * wyield_area / 1000)
+            return (wyield_mn * wyield_area / 1000.0)
         else:
             return out_nodata
         
-    #Make blank raster for water yield volume
     wyield_vol_raster = \
-        raster_utils.new_raster_from_base(wyield_raster, wyield_volume_path, 
-                                            'GTiff', out_nodata, gdal.GDT_Float32)
-        
-    #Get the relevant bands and create water yield volume raster
-    wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
-    wyield_mean_band = wyield_mean.GetRasterBand(1)
-    wyield_area_band = wyield_area.GetRasterBand(1)
-    invest_core.vectorize2ArgOp(wyield_mean_band, wyield_area_band, 
-                                volume, wyield_vol_band)
-    
-    #Make blank raster for hectare volume
-    wyield_ha_raster = \
-        raster_utils.new_raster_from_base(wyield_raster, wyield_ha_path, 
-                                            'GTiff', out_nodata, gdal.GDT_Float32)
-        
-    wyield_ha_band = wyield_ha_raster.GetRasterBand(1)
-
-    LOGGER.debug('Performing volume (ha) operation')
+        raster_utils.vectorize_rasters([wyield_mean, wyield_area], volume_op, 
+                                       raster_out_uri = wyield_volume_path, 
+                                       nodata=out_nodata)
 
     def ha_vol(wyield_vol, wyield_area):
         """Function to compute water yield volume in units of ha
@@ -348,21 +361,16 @@ def water_yield(args):
             return wyield_vol / (0.0001 * wyield_area)
         else:
             return out_nodata
+    
+    LOGGER.debug('Performing volume (ha) operation')
         
     #Make ha volume raster
-    invest_core.vectorize2ArgOp(wyield_vol_band, wyield_area_band, ha_vol, 
-                                wyield_ha_band)
+    wyield_ha_raster = \
+        raster_utils.vectorize_rasters([wyield_vol_raster, wyield_area], ha_vol, 
+                                       raster_out_uri = wyield_ha_path, 
+                                       nodata=out_nodata)
     
-    aet_raster = \
-        raster_utils.new_raster_from_base(wyield_area, aet_path, 'GTiff', 
-                                             out_nodata, gdal.GDT_Float32)
-        
-    aet_band = aet_raster.GetRasterBand(1)
-    fractp_clipped_band = fractp_clipped_raster.GetRasterBand(1)
-    
-    LOGGER.debug('Performing aet operation')
-    
-    def aet(fractp, precip):
+    def aet_op(fractp, precip):
         """Function to compute the actual evapotranspiration values
         
             fractp - numpy array with the fractp raster values
@@ -370,17 +378,27 @@ def water_yield(args):
             
             returns - actual evapotranspiration values (mm)"""
         
-        if fractp != out_nodata and precip != precip_nodata:
+        #checking if fractp >= 0 because it's a value that's between 0 and 1
+        #and the nodata value is -1.  It's possible that vectorize rasters will
+        #attempt to interpoalte the nodata value thus yielding intermiedate
+        #values <0 but not == -1, thus we only accept values >= 0
+        if fractp >= 0 and precip != precip_nodata:
             return fractp * precip
         else:
             return out_nodata
     
-    invest_core.vectorize2ArgOp(fractp_clipped_band, precip_band, aet, aet_band)
+    LOGGER.debug('Performing aet operation')
+    
+    aet_raster = \
+        raster_utils.vectorize_rasters([fractp_raster, precip_raster], aet_op, 
+                                       raster_out_uri = aet_path, 
+                                       nodata=out_nodata)
     
     #Create the mean actual evapotranspiration raster
-    aet_mn_dict = {}
-    aet_mean = create_operation_raster(aet_raster, aet_mean_path, sws_id_list, 
-                                       'mean', sub_mask, aet_mn_dict)
+    aet_mn_dict = \
+        raster_utils.aggregate_raster_values(aet_raster, sub_sheds, 'subws_id', 'mean', 
+                            aggregate_uri = aet_mean_path, 
+                            intermediate_directory = intermediate_dir)
     
     
     #Create the water yield subwatershed table
@@ -397,29 +415,36 @@ def water_yield(args):
     LOGGER.debug('sws_dict : %s', sws_dict)
     sub_value_dict = {}
     sub_value_dict['precip_mn'] = \
-        get_operation_value(precip_raster, sws_id_list, sub_mask, 'mean')
+        raster_utils.aggregate_raster_values(precip_raster, sub_sheds,
+                                             'subws_id', 'mean')
     sub_value_dict['PET_mn'] = \
-        get_operation_value(eto_raster, sws_id_list, sub_mask, 'mean')
+        raster_utils.aggregate_raster_values(eto_raster, sub_sheds, 'subws_id',
+                                             'mean')
     sub_value_dict['AET_mn'] = aet_mn_dict
     sub_value_dict['wyield_mn'] = wyield_mn_dict
     sub_value_dict['wyield_sum'] = \
-        get_operation_value(wyield_raster, sws_id_list, sub_mask, 'sum')
-    
+        raster_utils.aggregate_raster_values(wyield_raster, sub_sheds, 'subws_id',
+                                             'sum')
     sub_field_list = ['ws_id', 'subws_id', 'precip_mn', 'PET_mn', 'AET_mn', 
                       'wyield_mn', 'wyield_sum']
     LOGGER.debug('sub_value_dict : %s', sub_value_dict)
     #Create the water yield watershed table
     value_dict = {}
     value_dict['precip_mn'] = \
-        get_operation_value(precip_raster, ws_id_list, shed_mask, 'mean')
+        raster_utils.aggregate_raster_values(precip_raster, sheds, 'ws_id',
+                                             'mean')
     value_dict['PET_mn'] = \
-        get_operation_value(eto_raster, ws_id_list, shed_mask, 'mean')
+        raster_utils.aggregate_raster_values(eto_raster, sheds, 'ws_id',
+                                             'mean')
     value_dict['AET_mn'] = \
-        get_operation_value(aet_raster, ws_id_list, shed_mask, 'mean')
+        raster_utils.aggregate_raster_values(aet_raster, sheds, 'ws_id',
+                                             'mean')
     value_dict['wyield_mn'] = \
-        get_operation_value(wyield_raster, ws_id_list, shed_mask, 'mean')
+        raster_utils.aggregate_raster_values(wyield_raster, sheds, 'ws_id',
+                                             'mean')
     value_dict['wyield_sum'] = \
-        get_operation_value(wyield_raster, ws_id_list, shed_mask, 'sum')
+        raster_utils.aggregate_raster_values(wyield_raster, sheds, 'ws_id',
+                                             'sum')
     
     field_list = ['ws_id', 'precip_mn', 'PET_mn', 'AET_mn', 'wyield_mn', 
                   'wyield_sum']
@@ -555,6 +580,30 @@ def get_shed_ids(value_array, nodata):
     result_array = np.delete(unique_array, np.where(unique_array == nodata))
     return result_array
     
+def get_area_of_polygons(shapefile, field_name):
+    """Creates and returns a dictionary of the relationship between each
+       polygons area and its field_name (commonly some ID value)
+    
+       shapefile - an OGR polygon shapefile
+       field_name - a string of an unique field in shapefile 
+                    (commonly an id field)
+       
+       returns - a python dictionary whose keys are unique values of the polygon
+                 features given by field_name and whose values are the area of 
+                 the polygon
+    """
+    LOGGER.debug('Starting create_area_raster')
+    area_dict = {}
+    layer = shapefile.GetLayer(0)
+    layer.ResetReading()
+    for feat in layer:
+        geom = feat.GetGeometryRef()
+        index = feat.GetFieldIndex(field_name)
+        value = feat.GetFieldAsInteger(index)
+        area_dict[value] = geom.GetArea()
+        
+    return area_dict
+
 def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
     """Creates a new raster representing the area per watershed or per
        sub watershed 
@@ -633,47 +682,6 @@ def create_operation_raster(raster, path, id_list, operation, shed_mask, op_dict
         
     band_op.WriteArray(new_data_array, 0, 0)
     return raster_op
-
-def clip_raster_from_polygon(shape, raster, path):
-    """Returns a raster where any value outside the bounds of the
-    polygon shape are set to nodata values. This represents clipping 
-    the raster to the dimensions of the polygon.
-    
-    shape - A polygon shapefile representing the bounds for the raster
-    raster - A raster to be bounded by shape
-    path - The path for the clipped output raster
-    
-    returns - The clipped raster    
-    """
-    shape.GetLayer(0).ResetReading()
-    #Create a new raster as a copy from 'raster'
-    copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-    copy_band = copy_raster.GetRasterBand(1)
-    #Set the copied rasters values to nodata to create a blank raster.
-    nodata = copy_band.GetNoDataValue()
-    copy_band.Fill(nodata)
-    #Rasterize the polygon layer onto the copied raster
-    gdal.RasterizeLayer(copy_raster, [1], shape.GetLayer(0))
-    def fill_bound_data(value, copy_value):
-        """If the copied raster's value is nodata then the pixel is not within
-        the polygon and should write nodata back. If copied raster's value
-        is not nodata, then pixel lies within polygon and the value 
-        from 'raster' should be written out.
-        
-        value - The pixel value of the raster to be bounded by the shape
-        copy_value - The pixel value of a copied raster where every pixel
-                     is nodata except for where the polygon was rasterized
-        
-        returns - Either a nodata value or relevant pixel value
-        """
-        if copy_value == nodata:
-            return copy_value
-        else:
-            return value
-    #Vectorize the two rasters using the operation fill_bound_data
-    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copy_band, \
-                                fill_bound_data, copy_band)
-    return copy_raster
     
 def raster_from_table_values(base_raster, new_path, bio_dict, field):
     """Creates a new raster from 'base_raster' whose values are data from a 
@@ -712,7 +720,7 @@ def raster_from_table_values(base_raster, new_path, bio_dict, field):
         else:
             return base_nodata
         
-    tmp_raster = raster_utils.vectorize_rasters([base_band], vop,
+    tmp_raster = raster_utils.vectorize_rasters([base_raster], vop,
         raster_out_uri = new_path, nodata = base_nodata)
     return tmp_raster
 
@@ -815,10 +823,6 @@ def water_scarcity(args):
     gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
                         options = ['ATTRIBUTE=ws_id'])
     
-    #Multiply calibration with wyield_vol raster to get cyield_vol
-    
-    wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
-    LOGGER.info('Creating cyield raster')
     def cyield_vol_op(wyield_vol, shed_id):
         """Function that computes the calibrated water yield volume
            per sub-watershed
@@ -835,17 +839,13 @@ def water_scarcity(args):
         else:
             return out_nodata
         
+    LOGGER.info('Creating cyield raster')
+    wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
+    #Multiply calibration with wyield_vol raster to get cyield_vol
     wyield_calib = \
-        raster_utils.new_raster_from_base(ws_mask, wyield_calib_path,
-                                             'GTiff', out_nodata, 
-                                             gdal.GDT_Float32)
-        
-    ws_band = ws_mask.GetRasterBand(1)
-    wyield_calib_band = wyield_calib.GetRasterBand(1)
-    wyield_vol_band = wyield_vol_raster.GetRasterBand(1)
-    
-    invest_core.vectorize2ArgOp(wyield_vol_band, ws_band, cyield_vol_op, 
-                                wyield_calib_band)
+        raster_utils.vectorize_rasters([wyield_vol_raster, ws_mask], cyield_vol_op, 
+                                       raster_out_uri = wyield_calib_path, 
+                                       nodata=out_nodata)
     
     def lulc_demand(lulc):
         """Function that maps demand values to the corresponding lulc_id
@@ -863,12 +863,13 @@ def water_scarcity(args):
     
     #Create raster from land use raster, subsituting in demand value
     LOGGER.info('Creating demand raster')
-    tmp_consump = raster_utils.vectorize_rasters([lulc_raster], lulc_demand,
+    clipped_consump = raster_utils.vectorize_rasters([lulc_raster], lulc_demand,
+        aoi = sheds, raster_out_uri = clipped_consump_path, 
         nodata = out_nodata)
 
     LOGGER.info('Clip raster from polygons')
-    clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, 
-                                               clipped_consump_path)
+#    clipped_consump = clip_raster_from_polygon(watersheds, tmp_consump, 
+#                                               clipped_consump_path)
     
     #Get a numpy array from rasterizing the sub watershed id values into
     #a raster. The numpy array will be the sub watershed mask used for
@@ -880,20 +881,26 @@ def water_scarcity(args):
     sws_id_list = get_shed_ids(sub_mask, out_nodata)
     LOGGER.debug('shed_id_list : %s', sws_id_list)
     LOGGER.info('Creating consump_vol raster')
-    sum_dict = {}
-    sum_raster = \
-        create_operation_raster(clipped_consump, consump_vol_path, sws_id_list, 
-                                'sum', sub_mask, sum_dict)
+    
+    sum_dict = \
+        raster_utils.aggregate_raster_values(clipped_consump, sub_sheds,
+                'subws_id', 'sum', aggregate_uri = consump_vol_path, 
+                 intermediate_directory = intermediate_dir)
+    
+    sum_raster = gdal.Open(consump_vol_path) 
         
     LOGGER.debug('sum_dict : %s', sum_dict)
     
     #Take mean of consump over sub watersheds making conusmp_mean
     LOGGER.info('Creating consump_mn raster')
-    mean_dict = {}
-    mean_raster = \
-        create_operation_raster(clipped_consump, consump_mean_path, 
-                                sws_id_list, 'mean', sub_mask, mean_dict)
+    mean_dict = \
+        raster_utils.aggregate_raster_values(clipped_consump, sub_sheds,
+                'subws_id', 'mean', aggregate_uri = consump_mean_path, 
+                 intermediate_directory = intermediate_dir)
+    
+    mean_raster = gdal.Open(comsump_mean_path)
     LOGGER.debug('mean_dict : %s', mean_dict)
+    
     #Make rsupply_vol by wyield_calib minus consump_vol
 
     nodata_calib = wyield_calib.GetRasterBand(1).GetNoDataValue()
@@ -968,7 +975,9 @@ def water_scarcity(args):
     
     field_name = 'ws_id'
     cyield_d = \
-        get_operation_value(wyield_calib, sws_id_list2, sub_mask2, 'mean')
+        raster_utils.aggregate_raster_values(wyield_calib, sub_sheds,
+                'subws_id', 'mean')
+#       get_operation_value(wyield_calib, sws_id_list2, sub_mask2, 'mean')
     cyield_vol_d = sum_mean_dict(shed_subshed_map, cyield_d, 'sum')
     new_keys_ws['cyield_vl'] = cyield_vol_d
     new_keys_sws['cyield_vl'] = cyield_d
@@ -987,7 +996,9 @@ def water_scarcity(args):
     rsupply_vl_raster = gdal.Open(rsupply_vol_path)
     field_name = 'ws_id'
     rsupply_vl_d = \
-        get_operation_value(rsupply_vl_raster, sws_id_list2, sub_mask2, 'mean')
+        raster_utils.aggregate_raster_values(rsupply_vl_raster, sub_sheds,
+        'subws_id', 'sum')
+#get_operation_value(rsupply_vl_raster, sws_id_list2, sub_mask2, 'mean')
     rsupply_vl_dt = sum_mean_dict(shed_subshed_map, rsupply_vl_d, 'sum')
     new_keys_ws['rsupply_vl'] = rsupply_vl_dt
     new_keys_sws['rsupply_vl'] = rsupply_vl_d
@@ -996,7 +1007,9 @@ def water_scarcity(args):
     rsupply_mn_raster = gdal.Open(rsupply_mean_path)
     field_name = 'ws_id'
     rsupply_mn_d = \
-        get_operation_value(rsupply_mn_raster, sws_id_list2, sub_mask2, 'mean')
+        raster_utils.aggregate_raster_values(rsupply_mn_raster, sub_sheds,
+        'subws_id', 'mean')
+#        get_operation_value(rsupply_mn_raster, sws_id_list2, sub_mask2, 'mean')
     rsupply_mn_dt = sum_mean_dict(shed_subshed_map, rsupply_mn_d, 'mean')
     new_keys_ws['rsupply_mn'] = rsupply_mn_dt
     new_keys_sws['rsupply_mn'] = rsupply_mn_d
@@ -1221,7 +1234,7 @@ def valuation(args):
                          watershed_value_table)
     write_csv_table(sws_scarcity_table, field_list_sws, \
                          subwatershed_value_table)
-    out_nodata = -1
+    out_nodata = -1.0
 
     hp_val_watershed_mask = \
         raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, 'GTiff', 
@@ -1244,7 +1257,7 @@ def valuation(args):
         else:
             return out_nodata
         
-    raster_utils.vectorize_rasters([hp_val_watershed_mask], nvp_op,
+    raster_utils.vectorize_rasters([hp_val_watershed_mask], npv_op,
         nodata = out_nodata, raster_out_uri = hp_val_path)
 
     
