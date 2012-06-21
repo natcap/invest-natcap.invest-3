@@ -293,16 +293,19 @@ class Executor(threading.Thread):
 
     def runModel(self, module, args):
         try:
-            LOGGER.debug('Invest version %s', invest_natcap.__version__)
             LOGGER.info('Loading the queued model')
             if os.path.isfile(module):
                 LOGGER.debug('Loading the model from %s', module)
                 model = imp.load_source('model', module)
+               # Model name is name of module file, minus the extension
+                model_name = os.path.splitext(os.path.basename(module))[0]
             else:
                 LOGGER.debug('Locating the module %s in the PATH', module)
                 module_list = module.split('.')
                 model = locate_module(module_list)
+                model_name = module_list[-1]  # model name is last entry in list
             LOGGER.info('Executing the loaded model')
+            invest_natcap.log_model(model_name)  # log model usage to ncp-dev
             model.execute(args)
         except:
             LOGGER.error('Error: a problem occurred while running the model')
