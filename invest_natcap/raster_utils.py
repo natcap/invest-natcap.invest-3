@@ -673,7 +673,8 @@ def vectorize_points(shapefile, datasource_field, raster):
     band.WriteArray(raster_out_array,0,0)
 
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation, 
-                            aggregate_uri = None, intermediate_directory = ''):
+                            aggregate_uri = None, intermediate_directory = '',
+                            ignore_nodata = True):
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
 
@@ -686,6 +687,9 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             values burned onto the masked raster
         intermediate_directory - (optional) a path to a directory to hold 
             intermediate files
+        ignore_nodata - (optional) if operation == 'mean' then it does not account
+            for nodata pixels when determing the average, otherwise all pixels in
+            the AOI are used for calculation of the mean.
 
         returns a dictionary whose keys are the values in shapefile_field and values
             are the aggregated values over raster.  If no values are aggregated
@@ -733,9 +737,15 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
             #Only consider values which lie in the polygon for attribute_id
             masked_values = raster_array[mask_array == attribute_id]
-            #Only consider values which are not nodata values
-            masked_values = masked_values[masked_values != raster_nodata]
-            attribute_sum = np.sum(masked_values)
+            if ignore_nodata:
+                #Only consider values which are not nodata values
+                masked_values = masked_values[masked_values != raster_nodata]
+                attribute_sum = np.sum(masked_values)
+            else:
+                #We leave masked_values alone, but only sum the non-nodata 
+                #values
+                attribute_sum = \
+                    np.sum(masked_values[masked_values != raster_nodata])
 
             try:
                 aggregate_dict_values[attribute_id] += attribute_sum
