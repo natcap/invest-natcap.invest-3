@@ -21,8 +21,6 @@ class TestWaterYield(unittest.TestCase):
         """This is a test that runs the water yield model with the default
            data given as input."""
 
-        raise SkipTest
-
         output_base = './data/test_out/hydropower_water_yield_default_inputs/'
         input_dir = './data/hydropower_data/test_input/'
         
