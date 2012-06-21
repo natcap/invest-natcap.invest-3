@@ -184,6 +184,9 @@ def interpolate_matrix(x, y, z, newx, newy, degree=1):
     spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=degree, ky=degree)
     return spl(newx, newy).transpose()
 
+def vectorize_aligned_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
+                     datatype=gdal.GDT_Float32, nodata=0.0):
+    pass
 
 def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
@@ -235,7 +238,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
     LOGGER.debug('calculating the overlapping rectangles')
-    aoi_box = calculate_intersection_rectangle(dataset_list, aoi)
+    aoi_box = calculate_intersection_rectangle(dataset_list)
     LOGGER.debug('the aoi box: %s' % aoi_box)
 
     #determine the minimum pixel size
