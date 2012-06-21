@@ -19,7 +19,7 @@ def log_model(model_name):
         # through distutils.
         release_num = 'development'
 
-    path = 'http://localhost/~jadoug06/test_ownership/server.php'
+    path = 'http://ncp-dev.stanford.edu/~invest-logger/log-modelname.php'
     data = {'model_name': model_name,
             'invest_release': release_num}
     try:
