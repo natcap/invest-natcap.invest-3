@@ -9,7 +9,7 @@ import time
 import subprocess
 import platform
 
-import invest_natcap.__version__ as invest_version
+import invest_natcap
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
@@ -293,6 +293,7 @@ class Executor(threading.Thread):
 
     def runModel(self, module, args):
         try:
+            LOGGER.debug('Invest version %s', invest_natcap.__version__)
             LOGGER.info('Loading the queued model')
             if os.path.isfile(module):
                 LOGGER.debug('Loading the model from %s', module)
