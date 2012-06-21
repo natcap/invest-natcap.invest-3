@@ -56,15 +56,21 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         reg_cy_hist = {1 : [(1, 3, 6260.48), (363, 365, 6260.48), (728, 730, 6260.48),
                                     (1093, 1095, 6260.48), (1458, 1460, 6260.48),
                                     (1823, 1825, 6260.48)],
-                        4 : [(20, 22, 21758.10), (382, 384, 21758.10), (747, 749, 21758.10),
-                                    (1112, 1114, 21758.10), (1477, 1479, 21758.10)]}
+                        4 : [(20, 22, 21758.10), (382, 384, 21758.10), (386, 388, 21758.1),
+                                (747, 749, 21758.10), (751, 753, 21758.1),
+                                (1112, 1114, 21758.10), (1116, 1118, 21758.1),
+                                (1477, 1479, 21758.10), (1481, 1483, 21758.1)]}
     
         cycle_history = finfish_aquaculture_core.calc_farm_cycles(
                                 self.ff_aqua_args, self.ff_aqua_args['g_param_a'],
                                 self.ff_aqua_args['g_param_b'], self.ff_aqua_args['water_temp_tbl'],
                                 self.ff_aqua_args['farm_op_tbl'], self.ff_aqua_args['duration'])
         
-        LOGGER.debug(reg_cy_hist)
-        LOGGER.debug(cycle_history)
+        #LOGGER.debug(reg_cy_hist)
+        #LOGGER.debug(cycle_history)
         
         self.assertEqual(reg_cy_hist, cycle_history, "These two cycle histories are not equal.")
+    
+    def calc_proc_weight(self):
+        
+        pass
