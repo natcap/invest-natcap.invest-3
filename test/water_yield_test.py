@@ -21,8 +21,6 @@ class TestWaterYield(unittest.TestCase):
         """This is a test that runs the water yield model with the default
            data given as input."""
 
-        raise SkipTest
-
         output_base = './data/test_out/hydropower_water_yield_default_inputs/'
         input_dir = './data/hydropower_data/test_input/'
         
@@ -49,6 +47,7 @@ class TestWaterYield(unittest.TestCase):
         """This is a regression test for the water yield model that takes
            hand calculated input rasters and checks them against hand verified
            regression files."""
+
 
         output_base = './data/test_out/hydropower_water_yield_uri/'
         input_dir = './data/hydropower_regression_data/hydro_regression_byhand/'

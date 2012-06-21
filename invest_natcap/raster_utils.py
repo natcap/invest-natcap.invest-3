@@ -184,6 +184,9 @@ def interpolate_matrix(x, y, z, newx, newy, degree=1):
     spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=degree, ky=degree)
     return spl(newx, newy).transpose()
 
+def vectorize_aligned_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
+                     datatype=gdal.GDT_Float32, nodata=0.0):
+    pass
 
 def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
@@ -235,7 +238,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
     LOGGER.debug('calculating the overlapping rectangles')
-    aoi_box = calculate_intersection_rectangle(dataset_list, aoi)
+    aoi_box = calculate_intersection_rectangle(dataset_list)
     LOGGER.debug('the aoi box: %s' % aoi_box)
 
     #determine the minimum pixel size
@@ -318,6 +321,36 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     mask_dataset.FlushCache()
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
+    #Check to see if all the input datasets are equal, if so then we
+    #don't need to interpolate them
+    all_equal = True
+    for dim_fun in [lambda ds: ds.RasterXSize, lambda ds: ds.RasterYSize]:
+        sizes = map(dim_fun, dataset_list)
+        all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
+
+    if all_equal:
+        LOGGER.debug("All input rasters are equal size, not interpolating and vectorizing directly")
+
+        #Loop over each row in out_band
+        n_cols = mask_dataset_band.XSize
+        for out_row_index in range(out_band.YSize):
+            out_row_coord = out_gt[3] + out_gt[5] * out_row_index
+            raster_array_stack = []
+            mask_array = mask_dataset_band.ReadAsArray(0,out_row_index,n_cols,1)
+            matrix_array_list = \
+                map(lambda x: x.GetRasterBand(1).ReadAsArray(0, out_row_index, n_cols, 1), dataset_list)
+            out_row = vectorized_op(*matrix_array_list)
+            out_row[mask_array == 1] = nodata
+            out_band.WriteArray(out_row, xoff=0, yoff=out_row_index)
+
+        #Calculate the min/max/avg/stdev on the out raster
+        calculate_raster_stats(out_dataset)
+
+        #return the new current_dataset
+        return out_dataset
+
+    #Otherwise they're misaligned and we need to do lots of interpolation
+
     #Loop over each row in out_band
     for out_row_index in range(out_band.YSize):
         out_row_coord = out_gt[3] + out_gt[5] * out_row_index
@@ -374,6 +407,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             current_col_coordinates = np.arange(current_col_steps)
             current_col_coordinates *= current_gt[1]
             current_col_coordinates += current_left_coordinate
+            
 
             #Equivalent of
             #    np.array([current_top_coordinate + index * current_gt[5] \
@@ -388,22 +422,30 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                 current_row_coordinates = current_row_coordinates[::-1]
                 current_array = current_array[::-1]
 
-            interpolator = \
-                scipy.interpolate.RectBivariateSpline(current_row_coordinates,
-                                                      current_col_coordinates, 
-                                                      current_array,
-                                                      kx=1, ky=1)
 
-            
-            #This does the interpolation for the output row stack later to be
-            #vectorized
-            interpolated_row = interpolator(np.array([out_row_coord]), 
-                                            out_col_coordinates)
+            #This interpolation scheme comes from a StackOverflow thread
+            #http://stackoverflow.com/questions/11144513/numpy-cartesian-product-of-x-and-y-array-points-into-single-array-of-2d-points#comment14610953_11144513
+            input_points = \
+                np.transpose([np.repeat(current_row_coordinates, 
+                                      len(current_col_coordinates)),
+                              np.tile(current_col_coordinates, 
+                                        len(current_row_coordinates))])
 
+            nearest_interpolator = \
+                scipy.interpolate.NearestNDInterpolator(input_points, 
+                                                        current_array.flatten())
+            output_points = \
+                np.transpose([np.repeat(out_row_coord, len(out_col_coordinates)),
+                              out_col_coordinates])
+
+            interpolated_row = nearest_interpolator(output_points)
             raster_array_stack.append(interpolated_row)
 
         #Vectorize the stack of rows and write to out_band
         out_row = vectorized_op(*raster_array_stack)
+        #We need to resize because GDAL expects to write 2D arrays even though our
+        #interpolator builds 1D arrays.
+        out_row.resize((1,len(out_col_coordinates)))
         #Mask out_row based on AOI
         out_row[mask_array == 1] = nodata
         out_band.WriteArray(out_row,xoff=0,yoff=out_row_index)
@@ -631,7 +673,8 @@ def vectorize_points(shapefile, datasource_field, raster):
     band.WriteArray(raster_out_array,0,0)
 
 def aggregate_raster_values(raster, shapefile, shapefile_field, operation, 
-                            aggregate_uri = None, intermediate_directory = ''):
+                            aggregate_uri = None, intermediate_directory = '',
+                            ignore_nodata = True):
     """Collect all the raster values that lie in shapefile depending on the value
         of operation
 
@@ -644,6 +687,9 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             values burned onto the masked raster
         intermediate_directory - (optional) a path to a directory to hold 
             intermediate files
+        ignore_nodata - (optional) if operation == 'mean' then it does not account
+            for nodata pixels when determing the average, otherwise all pixels in
+            the AOI are used for calculation of the mean.
 
         returns a dictionary whose keys are the values in shapefile_field and values
             are the aggregated values over raster.  If no values are aggregated
@@ -689,8 +735,17 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             if attribute_id == mask_nodata:
                 continue
 
+            #Only consider values which lie in the polygon for attribute_id
             masked_values = raster_array[mask_array == attribute_id]
-            attribute_sum = np.sum(masked_values)
+            if ignore_nodata:
+                #Only consider values which are not nodata values
+                masked_values = masked_values[masked_values != raster_nodata]
+                attribute_sum = np.sum(masked_values)
+            else:
+                #We leave masked_values alone, but only sum the non-nodata 
+                #values
+                attribute_sum = \
+                    np.sum(masked_values[masked_values != raster_nodata])
 
             try:
                 aggregate_dict_values[attribute_id] += attribute_sum
@@ -704,8 +759,11 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
         if operation == 'sum':
             result_dict[attribute_id] = aggregate_dict_values[attribute_id]
         elif operation == 'mean':
-            result_dict[attribute_id] = aggregate_dict_values[attribute_id] / \
-                aggregate_dict_counts[attribute_id]
+            if aggregate_dict_counts[attribute_id] != 0.0:
+                result_dict[attribute_id] = aggregate_dict_values[attribute_id] / \
+                    aggregate_dict_counts[attribute_id]
+            else:
+                result_dict[attribute_id] = 0.0
         else:
             LOGGER.warn("%s operation not defined" % operation)
     
