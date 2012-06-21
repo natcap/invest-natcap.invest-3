@@ -42,7 +42,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         ff_aqua_args['frac_post_process'] = 0.85
         
         #Valuation
-        ff_aqua_args['do_valuation'] = False
+        ff_aqua_args['do_valuation'] = True
         ff_aqua_args['p_per_kg']= 2.25
         ff_aqua_args['frac_p'] = .3
         ff_aqua_args['discount'] = 0.000192
@@ -64,8 +64,15 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                                              9244659.12, 9244659.12, 9244659.12]}
         #The value history contains a history of tuples that are (net revenue, npv)
         # for that particular cycle.
-        ff_aqua_args['reg_value_hist'] = {}
-        ff_aqua_args['reg_npv'] = {}
+        ff_aqua_args['reg_value_hist'] = {1 : [(5027352.88, 5024458.24), (5027352.88, 4687129.30),
+                                               (5027352.88, 4369930.18), (5027352.88, 4074197.36),
+                                               (5027352.88, 3798478.1), (5027352.88, 3541418.0)],
+                                          4 : [(1460338.11, 14504538.97), (1460338.11, 13525548.0),
+                                               (1460338.11, 13515165.36), (1460338.11, 12610213.34),
+                                               (1460338.11, 12600533.34), (1460338.11, 11756823.49),
+                                               (1460338.11, 11747798.59), (1460338.11, 10961186.38),
+                                               (1460338.11, 10952772.23)]}
+        ff_aqua_args['reg_npv'] = {1 : 25495611.18, 4 : 112174579.7}
         
         self.ff_aqua_args = ff_aqua_args
     
@@ -119,6 +126,5 @@ class TestFinfishAquacultureCore(unittest.TestCase):
             self.assertEqual(farms_npv, self.ff_aqua_args['reg_npv'],
                             "One or more of the total net present values in this \
                             dictionary do not match.")
-            
         else:
             pass

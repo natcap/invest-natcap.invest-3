@@ -348,8 +348,8 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
             #the 2 refers to the placement of day of harvest in the tuple for each cycle
             t = cycle_history[f][c][1]
             
-            net_rev = tpw * (price_per_kg *(1 - frac_mrkt_price))
-            npv = net_rev * (1 / (1 + discount) ** t)
+            net_rev = round(tpw * (price_per_kg *(1 - frac_mrkt_price)), 2)
+            npv = round(net_rev * (1 / (1 + discount) ** t), 2)
             
             val_history[f].append((net_rev, npv))
             
