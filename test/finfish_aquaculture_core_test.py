@@ -63,6 +63,9 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                                              9244659.12, 9244659.12, 9244659.12,
                                              9244659.12, 9244659.12, 9244659.12]}
         
+        ff_aqua_args['reg_value_hist'] = {}
+        ff_aqua_args['reg_npv'] = {}
+        
         self.ff_aqua_args = ff_aqua_args
     
     '''For these, we will basically have to run each test, get the values and compare
@@ -99,3 +102,22 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         self.assertEqual(indiv_cy_proc, self.ff_aqua_args['indiv_cy_tpw'], 
                          "The processed weight histories in one or more of the farms \
                          does not match.")
+        
+    def test_valuation(self):
+        
+        if self.ff_aqua_args['do_valuation'] == True:
+            
+            value_history, farms_npv = finfish_aquaculture_core.valuation(self.ff_aqua_args['p_per_kg'],
+                                            self.ff_aqua_args['frac_p'], self.ff_aqua_args['discount'],
+                                            self.ff_aqua_args['indiv_cy_tpw'],
+                                            self.ff_aqua_args['reg_cy_hist'])
+            
+            self.assertEqual(value_history, self.ff_aqua_args['reg_value_hist'],
+                            "One or more of the valuation histories in this \
+                            dictionary do not match.")
+            self.assertEqual(farms_npv, self.ff_aqua_args['reg_npv'],
+                            "One or more of the total net present values in this \
+                            dictionary do not match.")
+            
+        else:
+            pass
