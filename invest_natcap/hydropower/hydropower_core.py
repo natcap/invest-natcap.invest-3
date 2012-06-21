@@ -458,80 +458,6 @@ def sheds_map_subsheds(shape, sub_shape):
         
     return collection
 
-def get_operation_value(raster, id_list, shed_mask, operation):
-    """Calculates the mean or sum per watershed or sub watershed based on 
-       groups of pixels from a raster that fall within each watershed or sub 
-       watershed
-       
-       raster - a GDAL raster dataset of the values to find the mean or sum
-       id_list - a list of either the sub watershed or watershed id's
-       operation - a string of the operation to perform
-       shed_mask - a numpy array that represents the mask for where the 
-                   watersheds/sub watersheds fall on the raster
-       
-       returns - a dictionary whose keys are the sheds id's and values the mean
-                 or sum
-    """
-    LOGGER.debug('Starting get_operation_value')
-    band_mean = raster.GetRasterBand(1)
-    pixel_data_array = np.copy(band_mean.ReadAsArray())
-    sub_sheds_id_array = np.copy(shed_mask)
-    op_dict = {}
-
-    for shed_id in id_list:
-        mask_val = sub_sheds_id_array != shed_id
-        masked_array = np.ma.array(pixel_data_array, mask = mask_val)
-        comp_array = np.ma.compressed(masked_array)
-        op_val = None
-        if operation == 'mean':
-            op_val = sum(comp_array) / len(comp_array)
-        if operation == 'sum':
-            op_val = sum(comp_array)
-        op_dict[shed_id] = op_val
-        
-    return op_dict
-
-def get_mask(raster, path, shed_shape, field_name):
-    """Creates a copy of a raster and fills it with nodata values.  It then
-       rasterizes the id field from shed_shape onto that raster and returns
-       a numpy array representation of the raster
-       
-       raster - a GDAL raster dataset that has the desired pixel size and
-                dimensions
-       path - a uri string path for the creation of the copied raster
-       shed_shape - an OGR shapefile, either watershed or sub watershed
-       field_name - a string of the field name from shed_shape to rasterize
-       
-       returns - a numpy array representation of the rasterized shapes id 
-                 values
-    """
-    LOGGER.debug('Starting get_mask')
-    raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-    band = raster.GetRasterBand(1)
-    nodata = band.GetNoDataValue()
-    band.Fill(-1)
-    attribute_string = 'ATTRIBUTE=' + field_name
-    gdal.RasterizeLayer(raster, [1], shed_shape.GetLayer(0),
-                        options = [attribute_string])
-    sub_sheds_id_array = band.ReadAsArray()
-    
-    return sub_sheds_id_array
-
-def get_shed_ids(value_array, nodata):
-    """Creates a list of unique values from the input numpy array that are not
-       a nodata value
-       
-       value_array - a numpy array with type of integer 
-       nodata - an integer to ignore when collecting unique values
-       
-       returns - a numpy array of only one occurence of the unique values
-                 from value_array
-    """
-    tmp_array = np.copy(value_array)
-    unique_array = np.unique(tmp_array.flatten())
-    result_array = np.delete(unique_array, np.where(unique_array == nodata))
-    return result_array
-    
 def get_area_of_polygons(shapefile, field_name):
     """Creates and returns a dictionary of the relationship between each
        polygons area and its field_name (commonly some ID value)
@@ -544,7 +470,7 @@ def get_area_of_polygons(shapefile, field_name):
                  features given by field_name and whose values are the area of 
                  the polygon
     """
-    LOGGER.debug('Starting create_area_raster')
+    LOGGER.debug('Starting get_area_of_polygons')
     area_dict = {}
     layer = shapefile.GetLayer(0)
     layer.ResetReading()
@@ -555,126 +481,6 @@ def get_area_of_polygons(shapefile, field_name):
         area_dict[value] = geom.GetArea()
         
     return area_dict
-
-def create_area_raster(raster, path, shed_shape, field_name, shed_mask):
-    """Creates a new raster representing the area per watershed or per
-       sub watershed 
-    
-       raster - a GDAL raster dataset that has the desired pixel size and
-                dimensions
-       path - a uri string path for the creation of the area raster
-       shed_shape - an OGR shapefile, either watershed or sub watershed
-       field_name - a string of the id field from shed_shape
-       shed_mask - a numpy array representing the shed/sub shed id mask
-       
-       returns - a raster       
-    """
-    LOGGER.debug('Starting create_area_raster')
-    raster_area = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-    band_area = raster_area.GetRasterBand(1)
-    pixel_data_array = band_area.ReadAsArray()
-    nodata = band_area.GetNoDataValue()
-    band_area.Fill(nodata)
-    sub_sheds_id_array = np.copy(shed_mask)
-    new_data_array = np.copy(pixel_data_array)
-    layer = shed_shape.GetLayer(0)
-    layer.ResetReading()
-    for feat in layer:
-        geom = feat.GetGeometryRef()
-        index = feat.GetFieldIndex(field_name)
-        value = feat.GetFieldAsInteger(index)
-        set_mask_val = sub_sheds_id_array == value
-        np.putmask(new_data_array, set_mask_val, geom.GetArea())
-        
-    band_area.WriteArray(new_data_array, 0, 0)  
-    return raster_area
-
-def create_operation_raster(raster, path, id_list, operation, shed_mask, op_dict):
-    """Creates a new raster representing the mean or sum per watershed or per
-       sub watershed 
-    
-       raster - a GDAL raster dataset that has the desired pixel size and
-                dimensions as well as the values we want to take the mean or 
-                sum of
-       path - a uri string path for the creation of the new raster
-       id_list - a list of either the sub watershed or watershed id's
-       operation - a string of the operation to perform
-       shed_mask - a numpy array representing the shed/sub shed id mask
-       op_dict - a python dictionary to map the id's from id_list to the resulting
-                 values
-              
-       returns - a raster       
-    """
-    
-    LOGGER.debug('Starting create_operation_raster')
-    raster_op = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-    band_op = raster_op.GetRasterBand(1)
-    nodata = band_op.GetNoDataValue()
-    pixel_data_array = band_op.ReadAsArray()
-    #Set all the nodata values to 0 so that they do not influence the
-    #operation calculations
-    pixel_data_array_nodata = \
-        np.where(pixel_data_array == nodata, 0, pixel_data_array)
-    band_op.Fill(nodata)
-    sub_sheds_id_array = np.copy(shed_mask)
-    new_data_array = np.copy(pixel_data_array)
-
-    for shed_id in id_list:
-        mask_val = sub_sheds_id_array != shed_id
-        set_mask_val = sub_sheds_id_array == shed_id
-        masked_array = np.ma.array(pixel_data_array_nodata, mask = mask_val)
-        comp_array = np.ma.compressed(masked_array)
-        op_val = None
-        if operation == 'mean':
-            op_val = sum(comp_array) / len(comp_array)
-        if operation == 'sum':
-            op_val = sum(comp_array)
-        np.putmask(new_data_array, set_mask_val, op_val)
-        op_dict[shed_id] = op_val
-        
-    band_op.WriteArray(new_data_array, 0, 0)
-    return raster_op
-    
-def raster_from_table_values(base_raster, new_path, bio_dict, field):
-    """Creates a new raster from 'base_raster' whose values are data from a 
-       dictionary that directly relates to the pixel value from 'base_raster'
-    
-       base_raster - a GDAL raster dataset whose pixel values relate to the 
-                     keys in 'bio_dict'
-       new_path - a uri string for where the new raster should be written
-       bio_dict - a dictionary representing the biophysical csv table, whose
-                  keys are the lulc codes and whose values are the etk and root
-                  depth values.
-                  bio_dict[1] = {'etk':500, 'root_depth':700}
-                  bio_dict[11] = {'etk':100, 'root_depth':10}...
-                  
-       field - a string of which field in the table to use as the new raster
-               pixel values
-       
-       returns - a GDAL raster
-    """
-    
-    LOGGER.debug('Starting raster_from_table_values')
-    base_band = base_raster.GetRasterBand(1)
-    base_nodata = float(base_band.GetNoDataValue())
-    LOGGER.debug('raster_from_table_values.base_nodata : %s', base_nodata)
-        
-    def vop(lulc):
-        """Operation returns the 'field' value that directly corresponds to
-           it's lulc type
-           
-           lulc - a numpy array with the lulc type values as integers
-        
-           returns - the 'field' value corresponding to the lulc type
-        """
-        if lulc in bio_dict:
-            return bio_dict[lulc][field]
-        else:
-            return base_nodata
-        
-    tmp_raster = raster_utils.vectorize_rasters([base_raster], vop,
-        raster_out_uri = new_path, nodata = base_nodata)
-    return tmp_raster
 
 def water_scarcity(args):
     """Executes the water scarcity model
