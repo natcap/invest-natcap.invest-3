@@ -335,7 +335,7 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     val_history = {}
     valuations = {}
     
-    for f in range (1, len(cycle_history) + 1):
+    for f in cycle_history.keys():
         
         val_history[f] = []
         valuations[f] = 0

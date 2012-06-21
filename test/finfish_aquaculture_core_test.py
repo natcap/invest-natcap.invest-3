@@ -62,7 +62,8 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                                         4 : [9244659.12, 9244659.12, 9244659.12,
                                              9244659.12, 9244659.12, 9244659.12,
                                              9244659.12, 9244659.12, 9244659.12]}
-        
+        #The value history contains a history of tuples that are (net revenue, npv)
+        # for that particular cycle.
         ff_aqua_args['reg_value_hist'] = {}
         ff_aqua_args['reg_npv'] = {}
         
