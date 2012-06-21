@@ -22,7 +22,7 @@ class TestHydropowerValuation(unittest.TestCase):
         base = './data/hydropower_regression_data/'
         output_base = './data/test_out/hydro_regression_byhand/'
 	args = {}
-        args['workspace_dir'] = base
+        args['workspace_dir'] = output_base 
         args['cyield_uri'] = base + 'cyield_vol.tif'
         args['watersheds_uri'] = base + 'hydro_regression_byhand/simple_reg_ws.shp'
         args['sub_watersheds_uri'] = base + 'hydro_regression_byhand/simple_reg_subws.shp'

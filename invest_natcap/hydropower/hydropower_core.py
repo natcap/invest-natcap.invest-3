@@ -1208,7 +1208,7 @@ def valuation(args):
     sws_energy_dict = {}
     
     for key, val in sws_scarcity_table.iteritems():
-        ws_id = val['ws_id']
+        ws_id = int(val['ws_id'])
         subws_rsupply_vl = float(val['rsupply_vl'])
         ws_rsupply_vl = float(ws_scarcity_table[ws_id]['rsupply_vl'])
         
@@ -1246,22 +1246,25 @@ def valuation(args):
     gdal.RasterizeLayer(hp_val_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
-    def npv_op(hp_val):
-        """Maps the net present value to the correct sub watershed
-        
-           hp_val - a numpy array with values of the sub watershed id's, which
-                    correspond to their location
-        
-           returns - the correct net present value at the correct location
-        """
+    raster_utils.reclassify_by_dictionary(hp_val_watershed_mask, sws_npv_dict,
+                hp_val_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+    
+#   def npv_op(hp_val):
+#       """Maps the net present value to the correct sub watershed
+#       
+#          hp_val - a numpy array with values of the sub watershed id's, which
+#                   correspond to their location
+#       
+#          returns - the correct net present value at the correct location
+#       """
 
-        if hp_val != out_nodata:
-            return sws_npv_dict[str(int(hp_val))]
-        else:
-            return out_nodata
-        
-    raster_utils.vectorize_rasters([hp_val_watershed_mask], npv_op,
-        nodata = out_nodata, raster_out_uri = hp_val_path)
+#       if hp_val != out_nodata:
+#           return sws_npv_dict[str(int(hp_val))]
+#       else:
+#           return out_nodata
+#       
+#   raster_utils.vectorize_rasters([hp_val_watershed_mask], npv_op,
+#       nodata = out_nodata, raster_out_uri = hp_val_path)
 
     
     hp_energy_watershed_mask = \
@@ -1270,20 +1273,23 @@ def valuation(args):
     gdal.RasterizeLayer(hp_energy_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
     
-    def energy_op(energy_val):
-        """Maps the energy value to the correct sub watershed
-        
-           energy_val - a numpy array with values of the sub watershed id's, which
-                        correspond to their location
-        
-           returns - the correct energy value at the correct location
-        """
+    raster_utils.reclassify_by_dictionary(hp_energy_watershed_mask, sws_energy_dict,
+                hp_energy_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+    
+#   def energy_op(energy_val):
+#       """Maps the energy value to the correct sub watershed
+#       
+#          energy_val - a numpy array with values of the sub watershed id's, which
+#                       correspond to their location
+#       
+#          returns - the correct energy value at the correct location
+#       """
 
-        if energy_val != out_nodata:
-            return sws_energy_dict[str(int(energy_val))]
-        else:
-            return out_nodata
-        
-    #invest_core.vectorize1ArgOp(hp_energy_band_tmp, energy_op, hp_energy_band)
-    raster_utils.vectorize_rasters([hp_energy_watershed_mask], energy_op,
-        nodata = out_nodata, raster_out_uri = hp_energy_path)
+#       if energy_val != out_nodata:
+#           return sws_energy_dict[str(int(energy_val))]
+#       else:
+#           return out_nodata
+#       
+#   #invest_core.vectorize1ArgOp(hp_energy_band_tmp, energy_op, hp_energy_band)
+#   raster_utils.vectorize_rasters([hp_energy_watershed_mask], energy_op,
+#       nodata = out_nodata, raster_out_uri = hp_energy_path)
