@@ -822,28 +822,31 @@ def water_scarcity(args):
 
     gdal.RasterizeLayer(ws_mask, [1], watersheds.GetLayer(0),
                         options = ['ATTRIBUTE=ws_id'])
+    calib_raster = \
+        raster_utils.reclassify_by_dictionary(ws_mask, calib_dict,
+                '', 'MEM', out_nodata, gdal.GDT_Float32) 
     
-    def cyield_vol_op(wyield_vol, shed_id):
+    wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
+    
+    def cyield_vol_op(wyield_vol, calib_val):
         """Function that computes the calibrated water yield volume
            per sub-watershed
         
            wyield_vol - a numpy array of water yield volume values
-           shed_id - a numpy array where the values correspond to watershed
-                     locations
+           calib_val - a numpy array of calibrated values
                                 
            returns - the calibrated water yield volume value (cubic meters)
         """
         
-        if wyield_vol != wyield_vol_nodata and shed_id != out_nodata:
-            return wyield_vol * calib_dict[shed_id]
+        if wyield_vol != wyield_vol_nodata and calib_val != out_nodata:
+            return wyield_vol * calib_val
         else:
             return out_nodata
         
     LOGGER.info('Creating cyield raster')
-    wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
     #Multiply calibration with wyield_vol raster to get cyield_vol
     wyield_calib = \
-        raster_utils.vectorize_rasters([wyield_vol_raster, ws_mask], cyield_vol_op, 
+        raster_utils.vectorize_rasters([wyield_vol_raster, calib_raster], cyield_vol_op, 
                                        raster_out_uri = wyield_calib_path, 
                                        nodata=out_nodata)
     
@@ -864,7 +867,7 @@ def water_scarcity(args):
     #Create raster from land use raster, subsituting in demand value
     LOGGER.info('Creating demand raster')
     clipped_consump = raster_utils.vectorize_rasters([lulc_raster], lulc_demand,
-        aoi = sheds, raster_out_uri = clipped_consump_path, 
+        aoi = watersheds, raster_out_uri = clipped_consump_path, 
         nodata = out_nodata)
 
     LOGGER.info('Clip raster from polygons')
@@ -898,7 +901,7 @@ def water_scarcity(args):
                 'subws_id', 'mean', aggregate_uri = consump_mean_path, 
                  intermediate_directory = intermediate_dir)
     
-    mean_raster = gdal.Open(comsump_mean_path)
+    mean_raster = gdal.Open(consump_mean_path)
     LOGGER.debug('mean_dict : %s', mean_dict)
     
     #Make rsupply_vol by wyield_calib minus consump_vol
