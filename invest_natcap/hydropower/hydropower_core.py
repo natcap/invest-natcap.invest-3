@@ -246,7 +246,7 @@ def water_yield(args):
     #Create the water yield raster 
     wyield_raster = \
         raster_utils.vectorize_rasters([fractp_raster, precip_raster], 
-                                       wyield_op, aoi=sheds,  
+                                       wyield_op,   
                                        raster_out_uri = wyield_clipped_path, 
                                        nodata=out_nodata)
     
