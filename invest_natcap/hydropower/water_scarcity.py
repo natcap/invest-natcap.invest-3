@@ -87,7 +87,7 @@ def execute(args):
     watershed_yield_table_file = open(args['watershed_yield_table_uri'])
     reader = csv.DictReader(watershed_yield_table_file)
     for row in reader:
-        watershed_yield_table_map[row['ws_id']] = row
+        watershed_yield_table_map[int(row['ws_id'])] = row
     
     water_scarcity_args['watershed_yield_table'] = watershed_yield_table_map
     watershed_yield_table_file.close()
@@ -96,7 +96,7 @@ def execute(args):
     subwatershed_yield_table_file = open(args['subwatershed_yield_table_uri'])
     reader = csv.DictReader(subwatershed_yield_table_file)
     for row in reader:
-        subwatershed_yield_table_map[row['subws_id']] = row
+        subwatershed_yield_table_map[int(row['subws_id'])] = row
     
     water_scarcity_args['subwatershed_yield_table'] = \
         subwatershed_yield_table_map

@@ -85,7 +85,7 @@ def execute(args):
     valuation_table_file = open(args['valuation_table_uri'])
     reader = csv.DictReader(valuation_table_file)
     for row in reader:
-        valuation_table_map[row['ws_id']] = row
+        valuation_table_map[int(row['ws_id'])] = row
     
     val_args['valuation_table'] = valuation_table_map
     valuation_table_file.close()
@@ -94,7 +94,7 @@ def execute(args):
     water_scarcity_table_file = open(args['watershed_scarcity_table_uri'])
     reader = csv.DictReader(water_scarcity_table_file)
     for row in reader:
-        water_scarcity_map[row['ws_id']] = row
+        water_scarcity_map[int(row['ws_id'])] = row
     
     val_args['watershed_scarcity_table'] = water_scarcity_map
     water_scarcity_table_file.close()
@@ -103,7 +103,7 @@ def execute(args):
     subwater_scarcity_table_file = open(args['subwatershed_scarcity_table_uri'])
     reader = csv.DictReader(subwater_scarcity_table_file)
     for row in reader:
-        subwater_scarcity_map[row['subws_id']] = row
+        subwater_scarcity_map[int(row['subws_id'])] = row
     
     val_args['subwatershed_scarcity_table'] = subwater_scarcity_map
     subwater_scarcity_table_file.close()    

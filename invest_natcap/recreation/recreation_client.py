@@ -7,6 +7,7 @@ import urllib2
 def execute(args):
     aoiFileName = args["aoiFileName"]
     cellSize = args["cellSize"]
+    workspace_dir = args["workspace_dir"]
     
     dirname=os.path.dirname(aoiFileName)+os.sep
     fileName=os.path.basename(aoiFileName).strip(".shp") 
@@ -35,22 +36,13 @@ def execute(args):
     
     # Actually do the request, and get the response
     # This will display the output from the model including the path for the results
-    print urllib2.urlopen(request).read()
-    
-    #Get the results
-    #req = urllib2.urlopen(url)
-    #CHUNK = 16 * 1024
-    #with open(file, 'wb') as fp:
-    #  while True:
-    #    chunk = req.read(CHUNK)
-    #    if not chunk: break
-    #    fp.write(chunk)
+    results = eval(urllib2.urlopen(request).read())
+    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+results["sessid"].strip()
 
-if __name__ == "__main__":
-    aoiFileName="/home/mlacayo/workspace/recreation/test/data/recreation/LA.shp"
-
-    args={}
-    args["aoiFileName"]=aoiFileName
-    args["cellSize"]=5000
-
-    execute(args)
+    req = urllib2.urlopen(url)
+    CHUNK = 16 * 1024
+    with open(workspace_dir+os.sep+"results.zip", 'wb') as fp:
+      while True:
+        chunk = req.read(CHUNK)
+        if not chunk: break
+        fp.write(chunk)
