@@ -38,12 +38,30 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                                'start day for growing' : '20',
                                'Length of Fallowing period' : '0'}}
         ff_aqua_args['duration'] = 5
+        ff_aqua_args['mort_rate_daily'] = 0.000137
+        ff_aqua_args['frac_post_process'] = 0.85
         
         #Valuation
         ff_aqua_args['do_valuation'] = False
         ff_aqua_args['p_per_kg']= 2.25
         ff_aqua_args['frac_p'] = .3
         ff_aqua_args['discount'] = 0.000192
+        
+        ff_aqua_args['reg_cy_hist'] = {1 : [(1, 3, 6260.48), (363, 365, 6260.48), (728, 730, 6260.48),
+                                    (1093, 1095, 6260.48), (1458, 1460, 6260.48),
+                                    (1823, 1825, 6260.48)],
+                                       4 : [(20, 22, 21758.10), (382, 384, 21758.10), 
+                                (386, 388, 21758.1), (747, 749, 21758.10), 
+                                (751, 753, 21758.1), (1112, 1114, 21758.10), 
+                                (1116, 1118, 21758.1), (1477, 1479, 21758.10), 
+                                (1481, 1483, 21758.1)]}
+        
+        ff_aqua_args['tpw_totals'] = {1 : 19151820.48, 4 : 83201932.08}
+        ff_aqua_args['indiv_cy_tpw'] = {1 : [3191970.08, 3191970.08, 3191970.08, 
+                                             3191970.08, 3191970.08, 3191970.08], 
+                                        4 : [9244659.12, 9244659.12, 9244659.12,
+                                             9244659.12, 9244659.12, 9244659.12,
+                                             9244659.12, 9244659.12, 9244659.12]}
         
         self.ff_aqua_args = ff_aqua_args
     
@@ -52,14 +70,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
     and compare the two shapefiles(?)'''
         
     def test_calc_cycle_history(self):
-        
-        reg_cy_hist = {1 : [(1, 3, 6260.48), (363, 365, 6260.48), (728, 730, 6260.48),
-                                    (1093, 1095, 6260.48), (1458, 1460, 6260.48),
-                                    (1823, 1825, 6260.48)],
-                        4 : [(20, 22, 21758.10), (382, 384, 21758.10), (386, 388, 21758.1),
-                                (747, 749, 21758.10), (751, 753, 21758.1),
-                                (1112, 1114, 21758.10), (1116, 1118, 21758.1),
-                                (1477, 1479, 21758.10), (1481, 1483, 21758.1)]}
+
     
         cycle_history = finfish_aquaculture_core.calc_farm_cycles(
                                 self.ff_aqua_args, self.ff_aqua_args['g_param_a'],
@@ -69,8 +80,22 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         #LOGGER.debug(reg_cy_hist)
         #LOGGER.debug(cycle_history)
         
-        self.assertEqual(reg_cy_hist, cycle_history, "These two cycle histories are not equal.")
+        self.assertEqual(self.ff_aqua_args['reg_cy_hist'], cycle_history, 
+                         "These two cycle histories are not equal.")
     
-    def calc_proc_weight(self):
+    def test_calc_proc_weight(self):
         
-        pass
+        total_proc_weight, indiv_cy_proc = finfish_aquaculture_core.calc_proc_weight(
+                               self.ff_aqua_args['farm_op_tbl'], self.ff_aqua_args['frac_post_process'],
+                               self.ff_aqua_args['mort_rate_daily'], self.ff_aqua_args['reg_cy_hist'])
+        
+        
+        #LOGGER.debug(total_proc_weight)
+        LOGGER.debug(indiv_cy_proc)
+        
+        self.maxDiff = None
+        self.assertEqual(total_proc_weight, self.ff_aqua_args['tpw_totals'], 
+                         "One or more of the total weights do not match.")
+        self.assertEqual(indiv_cy_proc, self.ff_aqua_args['indiv_cy_tpw'], 
+                         "The processed weight histories in one or more of the farms \
+                         does not match.")

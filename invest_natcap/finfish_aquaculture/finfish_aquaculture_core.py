@@ -307,6 +307,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
             
             curr_cy_tpw = (harvest_weight / 1000) * frac * f_num_fish * \
                             math.exp(e_exponent)
+            curr_cy_tpw = round(curr_cy_tpw, 2)
             
             indiv_tpw_totals[f].append(curr_cy_tpw)
             curr_cycle_totals[f] += curr_cy_tpw
