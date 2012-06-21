@@ -10,9 +10,8 @@ import numpy as np
 from osgeo import gdal
 from osgeo import ogr
 
-import invest_cython_core
 from invest_natcap import raster_utils
-from invest_natcap.invest_core import invest_core
+#from invest_natcap.invest_core import invest_core
 from invest_natcap import raster_utils
 
 
@@ -137,14 +136,25 @@ def water_yield(args):
     #The nodata value that will be used for created output rasters
     out_nodata = -1.0
     
+    etk_dict = {}
+    root_dict = {}
+    for lulc_code in bio_dict:
+        etk_dict[lulc_code] = bio_dict[lulc_code]['etk']
+        root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
+
     #Create etk raster from table values to use in future calculations
+    LOGGER.info("Reclassifying temp_etk raster")
     tmp_etk_raster = \
-        raster_from_table_values(lulc_raster, tmp_etk_path, bio_dict, 'etk')
-    
+        raster_utils.reclassify_by_dictionary(lulc_raster, etk_dict,
+                tmp_etk_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+#        raster_from_table_values(lulc_raster, tmp_etk_path, bio_dict, 'etk')
     #Create root raster from table values to use in future calculations
-    tmp_root_raster = raster_from_table_values(lulc_raster, tmp_root_path, 
-                                               bio_dict, 'root_depth')
-   
+    LOGGER.info("Reclassifying tmp_root raster")
+    tmp_root_raster = \
+            raster_utils.reclassify_by_dictionary(lulc_raster, root_dict,
+                tmp_root_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+#   raster_from_table_values(lulc_raster, tmp_root_path, bio_dict, 'root_depth')
+
     #Get out_nodata values so that we can avoid any issues when running operations
     etk_nodata = tmp_etk_raster.GetRasterBand(1).GetNoDataValue()
     root_nodata = tmp_root_raster.GetRasterBand(1).GetNoDataValue()
@@ -274,9 +284,9 @@ def water_yield(args):
     #Get a numpy array from rasterizing the watershed id values into
     #a raster. The numpy array will be the watershed mask used for
     #calculating mean and sum values at a per watershed basis
-    shed_mask = get_mask(fractp_raster, shed_mask_raster_path,
-                         sheds, 'ws_id')
-    ws_id_list = get_shed_ids(shed_mask, out_nodata)
+    #shed_mask = get_mask(fractp_raster, shed_mask_raster_path,
+    #                     sheds, 'ws_id')
+    #ws_id_list = get_shed_ids(shed_mask, out_nodata)
     
     #Create mean rasters for fractp and water yield
     fract_mn_dict = {}
@@ -311,25 +321,11 @@ def water_yield(args):
     gdal.RasterizeLayer(subwatershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
 
-    def area_op(shed_val):
-        try:
-            return area_dict[shed_val]
-        except:
-            return out_nodata
+    wyield_area = \
+        raster_utils.reclassify_by_dictionary(subwatershed_mask, area_dict,
+                wyield_area_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
 
-    vop_area = np.vectorize(area_op)
-    wyield_area = raster_utils.new_raster_from_base(wyield_mean,
-            wyield_area_path, 'GTiff', out_nodata, gdal.GDT_Float32)
-    wyield_area_band = wyield_area.GetRasterBand(1)
-    mask_band = subwatershed_mask.GetRasterBand(1)
-    for row_index in range(wyield_area_band.YSize):
-        mask_array = mask_band.ReadAsArray(0,row_index, mask_band.XSize, 1)
-
-        wyield_area_array = vop_area(mask_array)
-        wyield_area_band.WriteArray(wyield_area_array, 0, row_index)
-    mask_band = None
     subwatershed_mask = None
-
     LOGGER.debug('Performing volume operation')
     
     def volume_op(wyield_mn, wyield_area):
@@ -382,7 +378,11 @@ def water_yield(args):
             
             returns - actual evapotranspiration values (mm)"""
         
-        if fractp != out_nodata and precip != precip_nodata:
+        #checking if fractp >= 0 because it's a value that's between 0 and 1
+        #and the nodata value is -1.  It's possible that vectorize rasters will
+        #attempt to interpoalte the nodata value thus yielding intermiedate
+        #values <0 but not == -1, thus we only accept values >= 0
+        if fractp >= 0 and precip != precip_nodata:
             return fractp * precip
         else:
             return out_nodata
@@ -682,47 +682,6 @@ def create_operation_raster(raster, path, id_list, operation, shed_mask, op_dict
         
     band_op.WriteArray(new_data_array, 0, 0)
     return raster_op
-
-def clip_raster_from_polygon(shape, raster, path):
-    """Returns a raster where any value outside the bounds of the
-    polygon shape are set to nodata values. This represents clipping 
-    the raster to the dimensions of the polygon.
-    
-    shape - A polygon shapefile representing the bounds for the raster
-    raster - A raster to be bounded by shape
-    path - The path for the clipped output raster
-    
-    returns - The clipped raster    
-    """
-    shape.GetLayer(0).ResetReading()
-    #Create a new raster as a copy from 'raster'
-    copy_raster = gdal.GetDriverByName('GTIFF').CreateCopy(path, raster)
-    copy_band = copy_raster.GetRasterBand(1)
-    #Set the copied rasters values to nodata to create a blank raster.
-    nodata = copy_band.GetNoDataValue()
-    copy_band.Fill(nodata)
-    #Rasterize the polygon layer onto the copied raster
-    gdal.RasterizeLayer(copy_raster, [1], shape.GetLayer(0))
-    def fill_bound_data(value, copy_value):
-        """If the copied raster's value is nodata then the pixel is not within
-        the polygon and should write nodata back. If copied raster's value
-        is not nodata, then pixel lies within polygon and the value 
-        from 'raster' should be written out.
-        
-        value - The pixel value of the raster to be bounded by the shape
-        copy_value - The pixel value of a copied raster where every pixel
-                     is nodata except for where the polygon was rasterized
-        
-        returns - Either a nodata value or relevant pixel value
-        """
-        if copy_value == nodata:
-            return copy_value
-        else:
-            return value
-    #Vectorize the two rasters using the operation fill_bound_data
-    invest_core.vectorize2ArgOp(raster.GetRasterBand(1), copy_band, \
-                                fill_bound_data, copy_band)
-    return copy_raster
     
 def raster_from_table_values(base_raster, new_path, bio_dict, field):
     """Creates a new raster from 'base_raster' whose values are data from a 
@@ -1275,7 +1234,7 @@ def valuation(args):
                          watershed_value_table)
     write_csv_table(sws_scarcity_table, field_list_sws, \
                          subwatershed_value_table)
-    out_nodata = -1
+    out_nodata = -1.0
 
     hp_val_watershed_mask = \
         raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, 'GTiff', 
@@ -1298,7 +1257,7 @@ def valuation(args):
         else:
             return out_nodata
         
-    raster_utils.vectorize_rasters([hp_val_watershed_mask], nvp_op,
+    raster_utils.vectorize_rasters([hp_val_watershed_mask], npv_op,
         nodata = out_nodata, raster_out_uri = hp_val_path)
 
     

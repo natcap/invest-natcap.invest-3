@@ -9,7 +9,6 @@ from nose.plugins.skip import SkipTest
 import numpy as np
 
 from invest_natcap.hydropower import water_yield
-import invest_cython_core
 import invest_test_core
 
 LOGGER = logging.getLogger('water_yield_test')
@@ -21,6 +20,8 @@ class TestWaterYield(unittest.TestCase):
     def test_water_yield_default_inputs(self):
         """This is a test that runs the water yield model with the default
            data given as input."""
+
+        raise SkipTest
 
         output_base = './data/test_out/hydropower_water_yield_default_inputs/'
         input_dir = './data/hydropower_data/test_input/'

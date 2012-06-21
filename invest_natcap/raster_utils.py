@@ -351,7 +351,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             elif current_bottom_index > out_band.YSize:
                 current_top_index -= 1
                 current_bottom_index -= 1
-                
+
             #These steps will tell us the size of the window to read from and
             #later help us determine the row and column coordinates for the 
             #interpolator.
@@ -659,15 +659,9 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
     raster_band = raster.GetRasterBand(1)
     raster_nodata = float(raster_band.GetNoDataValue())
 
-    clipped_raster = vectorize_rasters([raster], lambda x: float(x), 
-        aoi=shapefile, raster_out_uri='clipped_raster.tif', 
-        datatype=gdal.GDT_Float32, 
-        nodata=raster_nodata)
-    clipped_band = clipped_raster.GetRasterBand(1)
-
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1.0
-    mask_dataset = new_raster_from_base(clipped_raster, 
+    mask_dataset = new_raster_from_base(raster, 
         temporary_mask_filename, 'GTiff', mask_nodata, gdal.GDT_Float32)
 
     mask_band = mask_dataset.GetRasterBand(1)
@@ -685,9 +679,9 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
     aggregate_dict_counts = {}
 
     #Loop over each row in out_band
-    for row_index in range(clipped_band.YSize):
+    for row_index in range(raster_band.YSize):
         mask_array = mask_band.ReadAsArray(0,row_index,mask_band.XSize,1)
-        clipped_array = clipped_band.ReadAsArray(0,row_index,clipped_band.XSize,1)
+        raster_array = raster_band.ReadAsArray(0,row_index,raster_band.XSize,1)
 
 
         for attribute_id in np.unique(mask_array):
@@ -695,7 +689,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             if attribute_id == mask_nodata:
                 continue
 
-            masked_values = clipped_array[mask_array == attribute_id]
+            masked_values = raster_array[mask_array == attribute_id]
             attribute_sum = np.sum(masked_values)
 
             try:
@@ -724,7 +718,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
         vop = np.vectorize(aggregate_map_function)
 
-        aggregate_dataset = new_raster_from_base(clipped_raster, aggregate_uri,
+        aggregate_dataset = new_raster_from_base(raster, aggregate_uri,
             'GTiff', raster_nodata, gdal.GDT_Float32)
         aggregate_band = aggregate_dataset.GetRasterBand(1)
         
