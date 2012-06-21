@@ -740,8 +740,11 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
         if operation == 'sum':
             result_dict[attribute_id] = aggregate_dict_values[attribute_id]
         elif operation == 'mean':
-            result_dict[attribute_id] = aggregate_dict_values[attribute_id] / \
-                aggregate_dict_counts[attribute_id]
+            if aggregate_dict_counts[attribute_id] != 0.0:
+                result_dict[attribute_id] = aggregate_dict_values[attribute_id] / \
+                    aggregate_dict_counts[attribute_id]
+            else:
+                result_dict[attribute_id] = 0.0
         else:
             LOGGER.warn("%s operation not defined" % operation)
     
