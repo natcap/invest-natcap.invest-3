@@ -9,7 +9,7 @@ import time
 import subprocess
 import platform
 
-import invest_natcap.__version__ as invest_version
+import invest_natcap
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
@@ -297,11 +297,15 @@ class Executor(threading.Thread):
             if os.path.isfile(module):
                 LOGGER.debug('Loading the model from %s', module)
                 model = imp.load_source('model', module)
+               # Model name is name of module file, minus the extension
+                model_name = os.path.splitext(os.path.basename(module))[0]
             else:
                 LOGGER.debug('Locating the module %s in the PATH', module)
                 module_list = module.split('.')
                 model = locate_module(module_list)
+                model_name = module_list[-1]  # model name is last entry in list
             LOGGER.info('Executing the loaded model')
+            invest_natcap.log_model(model_name)  # log model usage to ncp-dev
             model.execute(args)
         except:
             LOGGER.error('Error: a problem occurred while running the model')

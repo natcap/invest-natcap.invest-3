@@ -606,25 +606,10 @@ def water_scarcity(args):
                                        raster_out_uri = wyield_calib_path, 
                                        nodata=out_nodata)
     
-    def lulc_demand(lulc):
-        """Function that maps demand values to the corresponding lulc_id
-        
-           lulc - a numpy array of the lulc code values
-           
-           returns - the demand value corresponding to the lulc code
-                     (cubic meters per year)
-        """
-        
-        if lulc in demand_dict:
-            return demand_dict[lulc]
-        else:
-            return out_nodata
-    
     #Create raster from land use raster, subsituting in demand value
-    LOGGER.info('Creating demand raster')
-    clipped_consump = raster_utils.vectorize_rasters([lulc_raster], lulc_demand,
-        aoi = watersheds, raster_out_uri = clipped_consump_path, 
-        nodata = out_nodata)
+    clipped_consump = \
+        raster_utils.reclassify_by_dictionary(lulc_raster, demand_dict,
+                clipped_consump_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
 
     LOGGER.info('Creating consump_vol raster')
     

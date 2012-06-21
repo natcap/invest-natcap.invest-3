@@ -731,7 +731,10 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             if attribute_id == mask_nodata:
                 continue
 
+            #Only consider values which lie in the polygon for attribute_id
             masked_values = raster_array[mask_array == attribute_id]
+            #Only consider values which are not nodata values
+            masked_values = masked_values[masked_values != raster_nodata]
             attribute_sum = np.sum(masked_values)
 
             try:
@@ -746,8 +749,11 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
         if operation == 'sum':
             result_dict[attribute_id] = aggregate_dict_values[attribute_id]
         elif operation == 'mean':
-            result_dict[attribute_id] = aggregate_dict_values[attribute_id] / \
-                aggregate_dict_counts[attribute_id]
+            if aggregate_dict_counts[attribute_id] != 0.0:
+                result_dict[attribute_id] = aggregate_dict_values[attribute_id] / \
+                    aggregate_dict_counts[attribute_id]
+            else:
+                result_dict[attribute_id] = 0.0
         else:
             LOGGER.warn("%s operation not defined" % operation)
     

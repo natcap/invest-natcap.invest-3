@@ -108,6 +108,7 @@ def execute(args):
     for row in reader:
         demand_table_map[int(row['lucode'])] = int(row['demand'])
     
+    LOGGER.debug('Demand_Dict : %s', demand_table_map)
     water_scarcity_args['demand_table'] = demand_table_map
     demand_table_file.close()
     
