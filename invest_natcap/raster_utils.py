@@ -722,7 +722,10 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
             if attribute_id == mask_nodata:
                 continue
 
+            #Only consider values which lie in the polygon for attribute_id
             masked_values = raster_array[mask_array == attribute_id]
+            #Only consider values which are not nodata values
+            masked_values = masked_values[masked_values != raster_nodata]
             attribute_sum = np.sum(masked_values)
 
             try:
