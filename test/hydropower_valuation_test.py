@@ -18,10 +18,20 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestHydropowerValuation(unittest.TestCase):
     """Main testing class for the hydropower valuation tests"""
-    def test_water_scarcity_re(self):
+    def test_hydropower_valuation_re(self):
         base = './data/hydropower_regression_data/'
-        output_base = './data/test_out/hydro_regression_byhand/'
-	args = {}
+        output_base = './data/test_out/hydropower_valuation_uri/'
+        
+        #Create the output directories
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+
+        for folder_name in ['Output', 'Service', 'Intermediate']:
+            folder_path = output_base + os.sep + folder_name
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
+	
+        args = {}
         args['workspace_dir'] = output_base 
         args['cyield_uri'] = base + 'cyield_vol.tif'
         args['watersheds_uri'] = base + 'hydro_regression_byhand/simple_reg_ws.shp'
