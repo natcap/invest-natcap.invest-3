@@ -436,7 +436,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                                                         current_array.flatten())
             output_points = \
                 np.transpose([np.repeat(out_row_coord, len(out_col_coordinates)),
-                              current_col_coordinates])
+                              out_col_coordinates])
+
             interpolated_row = nearest_interpolator(output_points)
             raster_array_stack.append(interpolated_row)
 
