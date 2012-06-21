@@ -321,6 +321,36 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     mask_dataset.FlushCache()
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
+    #Check to see if all the input datasets are equal, if so then we
+    #don't need to interpolate them
+    all_equal = True
+    for dim_fun in [lambda ds: ds.RasterXSize, lambda ds: ds.RasterYSize]:
+        sizes = map(dim_fun, dataset_list)
+        all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
+
+    if all_equal:
+        LOGGER.debug("All input rasters are equal size, not interpolating and vectorizing directly")
+
+        #Loop over each row in out_band
+        n_cols = mask_dataset_band.XSize
+        for out_row_index in range(out_band.YSize):
+            out_row_coord = out_gt[3] + out_gt[5] * out_row_index
+            raster_array_stack = []
+            mask_array = mask_dataset_band.ReadAsArray(0,out_row_index,n_cols,1)
+            matrix_array_list = \
+                map(lambda x: x.GetRasterBand(1).ReadAsArray(0, out_row_index, n_cols, 1), dataset_list)
+            out_row = vectorized_op(*matrix_array_list)
+            out_row[mask_array == 1] = nodata
+            out_band.WriteArray(out_row, xoff=0, yoff=out_row_index)
+
+        #Calculate the min/max/avg/stdev on the out raster
+        calculate_raster_stats(out_dataset)
+
+        #return the new current_dataset
+        return out_dataset
+
+    #Otherwise they're misaligned and we need to do lots of interpolation
+
     #Loop over each row in out_band
     for out_row_index in range(out_band.YSize):
         out_row_coord = out_gt[3] + out_gt[5] * out_row_index
