@@ -18,6 +18,40 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestWaterScarcity(unittest.TestCase):
     """Main testing class for the water scarcity tests"""
+    def test_water_scarcity_default_inputs(self):
+        
+        output_base = './data/test_out/hydropower_water_scarcity_default_inputs/'
+        input_dir = './data/hydropower_data/test_input/'
+        
+        #Create the output directories
+        if not os.path.isdir(output_base):
+            os.mkdir(output_base)
+
+        for folder_name in ['Output', 'Service', 'Intermediate']:
+            folder_path = output_base + os.sep + folder_name
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
+        
+        args = {}
+        args['workspace_dir'] = output_base
+        args['lulc_uri'] = input_dir + 'landuse_90/w001001.adf'
+        args['watersheds_uri'] = input_dir + 'watersheds.shp'
+        args['sub_watersheds_uri'] = input_dir + 'subwatersheds.shp'
+        args['water_yield_vol_uri'] = \
+            input_dir + 'wyield_vol.tif'
+        args['water_yield_mean_uri'] = \
+            input_dir + 'wyield_mn.tif'
+        args['watershed_yield_table_uri'] = \
+            input_dir + 'water_yield_watershed.csv'
+        args['subwatershed_yield_table_uri'] = \
+            input_dir + 'water_yield_subwatershed.csv'
+        args['hydro_calibration_table_uri'] = \
+            input_dir + 'hydro_calib_table.csv'
+        args['demand_table_uri'] = input_dir + 'demand_table.csv'
+        args['results_suffix'] = ''
+        
+        water_scarcity.execute(args)
+    
     def test_water_scarcity_re(self):
         
         output_base = './data/test_out/hydropower_water_scarcity_uri/'
