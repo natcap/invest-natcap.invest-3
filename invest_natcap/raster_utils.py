@@ -407,6 +407,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             current_col_coordinates = np.arange(current_col_steps)
             current_col_coordinates *= current_gt[1]
             current_col_coordinates += current_left_coordinate
+            
 
             #Equivalent of
             #    np.array([current_top_coordinate + index * current_gt[5] \
@@ -421,22 +422,29 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                 current_row_coordinates = current_row_coordinates[::-1]
                 current_array = current_array[::-1]
 
-            interpolator = \
-                scipy.interpolate.RectBivariateSpline(current_row_coordinates,
-                                                      current_col_coordinates, 
-                                                      current_array,
-                                                      kx=1, ky=1)
 
-            
-            #This does the interpolation for the output row stack later to be
-            #vectorized
-            interpolated_row = interpolator(np.array([out_row_coord]), 
-                                            out_col_coordinates)
+            #This interpolation scheme comes from a StackOverflow thread
+            #http://stackoverflow.com/questions/11144513/numpy-cartesian-product-of-x-and-y-array-points-into-single-array-of-2d-points#comment14610953_11144513
+            input_points = \
+                np.transpose([np.repeat(current_row_coordinates, 
+                                      len(current_col_coordinates)),
+                              np.tile(current_col_coordinates, 
+                                        len(current_row_coordinates))])
 
+            nearest_interpolator = \
+                scipy.interpolate.NearestNDInterpolator(input_points, 
+                                                        current_array.flatten())
+            output_points = \
+                np.transpose([np.repeat(out_row_coord, len(out_col_coordinates)),
+                              current_col_coordinates])
+            interpolated_row = nearest_interpolator(output_points)
             raster_array_stack.append(interpolated_row)
 
         #Vectorize the stack of rows and write to out_band
         out_row = vectorized_op(*raster_array_stack)
+        #We need to resize because GDAL expects to write 2D arrays even though our
+        #interpolator builds 1D arrays.
+        out_row.resize((1,len(out_col_coordinates)))
         #Mask out_row based on AOI
         out_row[mask_array == 1] = nodata
         out_band.WriteArray(out_row,xoff=0,yoff=out_row_index)
