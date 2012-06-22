@@ -73,6 +73,15 @@ class AbstractTableHandler(object):
         self.mask_trim = 0
         self.update(uri)
 
+    def __iter__(self):
+        """Reimplemented, allows the user to iterate through an instance of
+            AbstractTableHandler without actually returning self.table.  Having
+            this function allows this class to actually be iterable."""
+
+        # Since self.table is a list (which can be made iterable), all we need
+        # to do is return the iterable version of self.table.  Voila!
+        return iter(self.table)
+
     def update(self, uri):
         """Update the URI associated with this AbstractTableHandler object.
 
