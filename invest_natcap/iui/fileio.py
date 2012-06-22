@@ -84,6 +84,8 @@ class AbstractTableHandler(object):
 
     def update(self, uri):
         """Update the URI associated with this AbstractTableHandler object.
+            Updating the URI also rebuilds the fieldnames and internal
+            representation of the table.
 
             uri - a python string target URI to be set as the new URI of this
                 AbstractTableHandler.
@@ -112,7 +114,14 @@ class AbstractTableHandler(object):
     def set_field_mask(self, regexp=None, trim=0):
         """Set a mask for the table's self.fieldnames.  Any fieldnames that
             match regexp will have trim number of characters stripped off the
-            front."""
+            front.
+            
+            regexp=None - a python string or None.  If a python string, this
+                will be a regular expression.  If None, this represents no
+                regular expression.
+            trim - a python int.
+            
+            Returns nothing."""
 
         self.mask_regexp = regexp
         self.mask_trim = trim
@@ -168,8 +177,11 @@ class AbstractTableHandler(object):
 
     def get_table_dictionary(self, key_field):
         """Returns a python dictionary mapping a key value to all values in that
-            particular row dictionary.  If duplicate keys are found, the are
-            overwritten in the output dictionary.
+            particular row dictionary (including the key field).  If duplicate 
+            keys are found, the are overwritten in the output dictionary.
+
+            key_field - a python string of the desired field value to be used as
+                the key for the returned dictionary.
 
             returns a python dictionary of dictionaries."""
 
@@ -180,6 +192,9 @@ class AbstractTableHandler(object):
     def get_table_row(self, key_field, key_value):
         """Return the first full row where the value of key_field is equivalent
             to key_value.  Raises a KeyError if key_field does not exist.
+
+            key_field - a python string.
+            key_value - a value of appropriate type for this field.
 
             returns a python dictionary of the row, or None if the row does not
             exist."""
@@ -202,6 +217,9 @@ class AbstractTableHandler(object):
 
             If the table list has not been retrieved, it is retrieved before
             generating the map.
+
+            key_field - a python string.
+            value_field - a python string.
 
             returns a python dictionary mapping key_fields to value_fields."""
 
