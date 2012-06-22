@@ -70,7 +70,7 @@ def biophysical(args):
     #Process density layers / each threat
 
     #For all threats:
-    for threat, threat_data in args['threat_dict'].iteritems():
+#    for threat, threat_data in args['threat_dict'].iteritems():
         #get weight, name, max_idst, decay
         #mulitply max_dist by 1000 (must be a conversion to meters
         #get proper density raster, depending on land cover
