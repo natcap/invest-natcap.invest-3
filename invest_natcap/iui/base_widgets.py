@@ -581,6 +581,19 @@ class LabeledElement(DynamicPrimitive):
         if len(self.elements) == 0:
             return self.elements[0].isEnabled
         return self.elements[1].isEnabled()
+    
+    def setBGcolorSatisfied(self, satisfied=True):
+        """Color the background of this element's label.
+            
+            satisfied=True - a boolean, indicating whether this element's
+                requirements have been satisfied.
+            
+            returns nothing"""
+
+        if satisfied:
+            self.label.setStyleSheet("QWidget {}")
+        else:
+            self.label.setStyleSheet("QWidget { color: red }")
 
 class Label(QtGui.QLabel, DynamicPrimitive):
     def __init__(self, attributes):
@@ -1104,7 +1117,7 @@ class Dropdown(LabeledElement):
                 return self.dropdown.currentIndex()
         else:
             return self.dropdown.currentText()
-
+    
 class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
     """This class represents a checkbox for our UI interpreter.  It has the 
         ability to enable and disable other elements."""
