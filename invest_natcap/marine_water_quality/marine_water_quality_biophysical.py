@@ -36,7 +36,7 @@ def execute(args):
             of output grid.
         args['layer_depth'] - float indicating the depth of the grid cells in 
             meters.
-        args['kps'] - float indicating decay rate of pollutant (units?)
+        args['kps'] - float indicating decay rate of pollutant (kg/day)
         args['land_poly_uri'] - OGR polygon DataSource indicating areas where land
             is.
         args['source_points_uri'] - OGR point Datasource indicating point sources
@@ -180,13 +180,13 @@ def execute(args):
             LOGGER.warn("%s is an id defined in the data table which is not found in the shapefile. Ignoring that point." % (point_id))
             continue
 
-        #Convert WPS in kg/day to kg/s
-        wps_in_kilograms_sec = float(row['WPS'])/86400.0
+        #Look up the concentration
+        wps_concentration = float(row['WPS'])
 
         #This merges the current dictionary with a new one that includes WPS
         source_point_values[point_id] = \
             dict(source_point_values[point_id].items() + \
-                 {'WPS': wps_in_kilograms_sec}.items())
+                 {'WPS': wps_concentration}.items())
 
     LOGGER.info("Checking to see if all the points have WPS values")
     points_to_ignore = []
@@ -228,7 +228,7 @@ def execute(args):
     concentration_array = \
         marine_water_quality_core.diffusion_advection_solver(source_point_values,
         kps_sec, in_water_array, tide_e_array, adv_u_array, adv_v_array, 
-        nodata_out, cell_size, args['layer_depth'])
+        nodata_out, cell_size)
 
     raster_out_band = raster_out.GetRasterBand(1)
     raster_out_band.WriteArray(concentration_array, 0, 0)
