@@ -60,6 +60,8 @@ def execute(args):
                         remove undesirable parts
     args['mort_rate_daily']- mortality rate among fish  in a year, divided by 365
     args['duration']- duration of the simulation, in years
+    args['outplant_buffer'] - This value will allow the outplant start day to be flexible
+       plus or minus the number of days specified here.
     
     --Valuation arguments--
     args['do_valuation']- boolean indicating whether or not to run the valuation process
@@ -205,9 +207,6 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
         start_weight = 1000 * float(farm_op_dict[str(f)]['weight of fish at start (kg)'])
         tar_weight = 1000 * float(farm_op_dict[str(f)]['target weight of fish at harvest (kg)'])
         
-        #Will eventually have this passed in somehow
-        start_buffer = 3
-        
         fallow_days_left = start_day
         farm_history = []
         fish_weight = 0
@@ -219,6 +218,8 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
         #However, it should be kept in mind that when doing calculations for a given day,
         #you are using YESTRDAY'S temperatures and weights to get the value for today.
         
+        outplant_buffer = args['outplant_buffer']
+
         #Are going 1 day beyond on the off-chance that you ended a harvest the day
         #before, and need to record today. This should not create any false harvest
         #records, because the fish would be reaching the end growth weight today, not
@@ -248,8 +249,8 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
             
             #function that maps an incoming day to the same day % 365, then creates a
             #list to check against +/- buffer days from the start day
-            elif (day % 365) in map (lambda x: x%365, range(start_day - start_buffer, 
-                                                    start_day + start_buffer+1)):
+            elif (day % 365) in map (lambda x: x%365, range(start_day - outplant_buffer, 
+                                                    start_day + outplant_buffer+1)):
                     fish_weight = start_weight
                     outplant_date = day + 1
                     #file.write("Fish Weight for day " + str(day) + 

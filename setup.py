@@ -8,7 +8,7 @@ import datetime
 
 import numpy as np
 from Cython.Distutils import build_ext
-VERSION = '2.3.0a5'
+VERSION = '2.3.0a6'
 
 CYTHON_SOURCE_FILES = ['invest_cython_core/invest_cython_core.pyx',
                        'invest_cython_core/simplequeue.c']
@@ -67,7 +67,8 @@ if platform.system() == 'Windows':
          'invest_water_scarcity.py',
          'invest_marine_water_quality_biophysical.py',
          'invest_pollination_biophysical.py',
-         'invest_pollination_valuation.py']
+         'invest_pollination_valuation.py',
+         'invest_finfish_aquaculture.py']
 
     #Need to manually bring along the json configuration files to
     #the current build directory
@@ -82,6 +83,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/hydropower_valuation.json',
                'invest_natcap/iui/pollination_biophysical.json',
                'invest_natcap/iui/pollination_valuation.json',
+               'invest_natcap/iui/finfish_aquaculture.json',
                'invest_natcap/iui/marine_water_quality_biophysical.json']),
         ('invest_natcap/iui',
               ['invest_natcap/iui/dialog-close.png',
