@@ -7,7 +7,7 @@ import numpy as np
 
 def diffusion_advection_solver(source_point_data, kps, in_water_array, 
                                tide_e_array, adv_u_array, 
-                               adv_v_array, nodata, cell_size, layer_depth):
+                               adv_v_array, nodata, cell_size):
     """2D Water quality model to track a pollutant in the ocean.  Three input
        arrays must be of the same shape.  Returns the solution in an array of
        the same shape.
@@ -26,7 +26,6 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
        same shape as in_water_array (units?)
     nodata - the value in the input arrays that indicate a nodata value.
     cell_size - the length of the side of a cell in meters
-    layer_depth - the depth of a grid cell in meters, used to set initial value
     """
 
     n_rows = in_water_array.shape[0]
@@ -91,10 +90,8 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
 
             if  a_diagonal_index in source_points:
                 a_matrix[4, a_diagonal_index] = 1
-                #Set wps to be the concentration per unit volume.  This makes the 
-                #solution invariate over different cell sizes
-                wps = source_points[a_diagonal_index]['WPS'] / \
-                    (cell_size ** 2 * layer_depth)
+                #Set wps to be the concentration.
+                wps = source_points[a_diagonal_index]['WPS']
                 b_vector[a_diagonal_index] = wps
                 continue
 

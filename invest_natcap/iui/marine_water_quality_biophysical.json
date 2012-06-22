@@ -3,7 +3,7 @@
     "label": "Marine Water Quality Biophysical",
     "targetScript" : "invest_natcap.marine_water_quality.marine_water_quality_biophysical",
     "modelName" : "marine_water_quality_biophysical",
-    "localDocURI": "../documentation/marine_water_quality_biophysical.html",
+    "localDocURI": "../documentation/marine_water_quality.html",
     "height": 500,
     "width" : 700,
     "elements": [
@@ -19,42 +19,6 @@
                     "defaultValue": "../MarineWaterQuality",
                     "required": true
                 },
-                {
-                    "id" : "pixel_size",
-                    "type": "text",
-                    "label": "Output pixel Size in meters",
-                    "args_id": "pixel_size",
-                    "required": true,
-                    "defaultValue": "100",
-                    "validateAs": {"type": "number",
-                                   "gteq": 0},
-                    "dataType": "int",
-                    "helpText": "This is an integer value indicating the size of the output pixel resolution.  A smaller number will yield a more finely gridded solution, but will impact runtime and memory usage."
-                },
-                {
-                    "id" : "layer_depth",
-                    "type": "text",
-                    "label": "Layer Depth",
-                    "args_id": "layer_depth",
-                    "required": true,
-                    "defaultValue": "1.0",
-                    "validateAs": {"type": "number",
-                                   "gteq": 0},
-                    "dataType": "float",
-                    "helpText": "This value determines how deep the pollutant layer will be simulated.  A larger layer will yield a lower concentration."
-                },
-                {
-                    "id" : "kps",
-                    "type": "text",
-                    "label": "Absorption Coefficient (K)",
-                    "args_id": "kps",
-                    "required": true,
-                    "defaultValue": "0.001",
-                    "validateAs": {"type": "number",
-                                   "gteq": 0},
-                    "dataType": "float",
-                    "helpText": "Indicates the rate at which a pollutant is absorbed.  This number is global to the entire solution."
-                },                
 		{
                     "id" : "aoi_poly",
                     "args_id": "aoi_poly_uri",
@@ -74,6 +38,18 @@
                     "validateAs": {"type": "OGR"}
                 },
                 {
+                    "id" : "pixel_size",
+                    "type": "text",
+                    "label": "Output pixel Size in meters",
+                    "args_id": "pixel_size",
+                    "required": true,
+                    "defaultValue": "100",
+                    "validateAs": {"type": "number",
+                                   "gteq": 0},
+                    "dataType": "int",
+                    "helpText": "This is an integer value indicating the size of the output pixel resolution.  A smaller number will yield a more finely gridded solution, but will impact runtime and memory usage."
+                },
+                {
                     "id" : "source_points",
                     "args_id": "source_points_uri",
                     "type": "file",
@@ -86,11 +62,23 @@
                     "id" : "source_point_data",
                     "args_id": "source_point_data_uri",
                     "type": "file",
-                    "label": "Source Point Data Table",
+                    "label": "Source Point Loading Table",
                     "defaultValue": "../MarineWaterQuality/input/WQM_PAR.csv",
                     "required": true,
                     "validateAs": {"type":"CSV"}
                 },
+                {
+                    "id" : "kps",
+                    "type": "text",
+                    "label": "Decay Coefficient (Kb)",
+                    "args_id": "kps",
+                    "required": true,
+                    "defaultValue": "0.001",
+                    "validateAs": {"type": "number",
+                                   "gteq": 0},
+                    "dataType": "float",
+                    "helpText": "Indicates the rate at which a pollutant is absorbed.  This number is global to the entire solution."
+                },                
                 {
                     "id" : "tide_e",
                     "args_id": "tide_e_points_uri",

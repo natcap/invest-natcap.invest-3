@@ -8,7 +8,7 @@ import datetime
 
 import numpy as np
 from Cython.Distutils import build_ext
-VERSION = '2.3.0a1'
+VERSION = '2.3.0a5'
 
 CYTHON_SOURCE_FILES = ['invest_cython_core/invest_cython_core.pyx',
                        'invest_cython_core/simplequeue.c']
