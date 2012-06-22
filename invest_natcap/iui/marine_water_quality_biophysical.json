@@ -19,6 +19,24 @@
                     "defaultValue": "../MarineWaterQuality",
                     "required": true
                 },
+		{
+                    "id" : "aoi_poly",
+                    "args_id": "aoi_poly_uri",
+                    "type": "file",
+                    "label": "Area of Interest (AOI)",
+                    "defaultValue": "../MarineWaterQuality/input/AOI_clay_soundwideWQ.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR"}
+                },
+                {
+                    "id" : "land_poly",
+                    "args_id": "land_poly_uri",
+                    "type": "file",
+                    "label": "Land Polygon",
+                    "defaultValue": "../MarineWaterQuality/input/3005_VI_landPolygon.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR"}
+                },
                 {
                     "id" : "pixel_size",
                     "type": "text",
@@ -44,36 +62,6 @@
                     "helpText": "This value determines how deep the pollutant layer will be simulated.  A larger layer will yield a lower concentration."
                 },
                 {
-                    "id" : "kps",
-                    "type": "text",
-                    "label": "Absorption Coefficient (K)",
-                    "args_id": "kps",
-                    "required": true,
-                    "defaultValue": "0.001",
-                    "validateAs": {"type": "number",
-                                   "gteq": 0},
-                    "dataType": "float",
-                    "helpText": "Indicates the rate at which a pollutant is absorbed.  This number is global to the entire solution."
-                },                
-		{
-                    "id" : "aoi_poly",
-                    "args_id": "aoi_poly_uri",
-                    "type": "file",
-                    "label": "Area of Interest (AOI)",
-                    "defaultValue": "../MarineWaterQuality/input/AOI_clay_soundwideWQ.shp",
-                    "required": true,
-                    "validateAs": {"type": "OGR"}
-                },
-                {
-                    "id" : "land_poly",
-                    "args_id": "land_poly_uri",
-                    "type": "file",
-                    "label": "Land Polygon",
-                    "defaultValue": "../MarineWaterQuality/input/3005_VI_landPolygon.shp",
-                    "required": true,
-                    "validateAs": {"type": "OGR"}
-                },
-                {
                     "id" : "source_points",
                     "args_id": "source_points_uri",
                     "type": "file",
@@ -86,11 +74,23 @@
                     "id" : "source_point_data",
                     "args_id": "source_point_data_uri",
                     "type": "file",
-                    "label": "Source Point Data Table",
+                    "label": "Source Point Loading Table",
                     "defaultValue": "../MarineWaterQuality/input/WQM_PAR.csv",
                     "required": true,
                     "validateAs": {"type":"CSV"}
                 },
+                {
+                    "id" : "kps",
+                    "type": "text",
+                    "label": "Decay Coefficient (Kb)",
+                    "args_id": "kps",
+                    "required": true,
+                    "defaultValue": "0.001",
+                    "validateAs": {"type": "number",
+                                   "gteq": 0},
+                    "dataType": "float",
+                    "helpText": "Indicates the rate at which a pollutant is absorbed.  This number is global to the entire solution."
+                },                
                 {
                     "id" : "tide_e",
                     "args_id": "tide_e_points_uri",
