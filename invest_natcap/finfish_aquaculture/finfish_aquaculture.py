@@ -33,6 +33,9 @@ def execute(args):
     args['water_temp_tbl']- URI to a CSV table where daily water temperature
                             values are stored from one year
     args['farm_op_tbl']- URI to CSV table of static variables for calculations
+
+    args['outplant_buffer'] - This value will allow the outplant start day to be flexible
+       plus or minus the number of days specified here.
     
     --Valuation Args--
     args['do_valuation']- Boolean that indicates whether or not valuation should be
@@ -62,6 +65,7 @@ def execute(args):
     ff_aqua_args['farm_ID'] = args['farm_ID']
     ff_aqua_args['g_param_a'] = args['g_param_a']
     ff_aqua_args['g_param_b'] = args['g_param_b']
+    ff_aqua_args['outplant_buffer'] = args['outplant_buffer']
     
     #Both CSVs are being pulled in, but need to do some maintenance to remove undesirable
     #information before they can be passed into core
