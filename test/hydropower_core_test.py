@@ -239,6 +239,8 @@ class TestHydropowerCore(unittest.TestCase):
         for result, byhand in zip(result_dict, byhand_dict):
             self.assertAlmostEqual(result, byhand, 0)
 
+        shapefile = None
+
     def test_hydropower_core_water_scarcity_regression(self):
         """A regression test for the core water scarcity functionality
         
