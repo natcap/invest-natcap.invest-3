@@ -1474,7 +1474,11 @@ class MessageArea(QtGui.QLabel):
 
             returns nothing."""
 
-        self.show()
+        # If this widget is not visible, we want to show it.  Otherwise, leave
+        # it visible.
+        if not self.isVisible():
+            self.show()
+
         if not state:
             self.setStyleSheet('QLabel { padding: 15px;' +
                 'background-color: #d4efcc; border: 2px solid #3e895b;}')
