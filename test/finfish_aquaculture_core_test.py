@@ -21,7 +21,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         ff_aqua_args = {}
         
         #Biophysical
-        ff_aqua_args['workspace_dir'] = './test/data/aquaculture_output/Test'
+        ff_aqua_args['workspace_dir'] = './test/data/aquaculture_output/Re_Testing'
         ff_aqua_args['farm_ID'] = 'FarmID'
         ff_aqua_args['ff_farm_file'] = ogr.Open(ff_farm_loc)
         ff_aqua_args['g_param_a'] = 0.038
@@ -137,3 +137,9 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                                        self.ff_aqua_args['reg_npv'][item], 2)
         else:
             pass
+        
+        finfish_aquaculture_core.create_HTML_table(self.ff_aqua_args['workspace_dir'] + os.sep + 'Output', self.ff_aqua_args['farm_ID'], 
+                        self.ff_aqua_args['farm_op_tbl'], self.ff_aqua_args['reg_cy_hist'], 
+                        self.ff_aqua_args['tpw_totals'], self.ff_aqua_args['indiv_cy_tpw'], 
+                        self.ff_aqua_args['do_valuation'], self.ff_aqua_args['reg_npv'], 
+                        self.ff_aqua_args['reg_value_hist'])

@@ -3,7 +3,7 @@
     "label": "Water Scarcity",
     "targetScript" : "invest_natcap.hydropower.water_scarcity",
     "modelName" : "water_scarcity",
-    "localDocURI": "../documentation/water_scarcity.html",
+    "localDocURI": "../documentation/reservoirhydropowerproduction.html",
     "height": 500,
     "width" : 700,
     "elements": [

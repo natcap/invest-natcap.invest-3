@@ -41,6 +41,8 @@ def execute(args):
     args['frac_p']: Fraction of market price that accounts for costs rather than
                     profit
     args['discount']: Daily market discount rate
+    
+    returns nothing
     """ 
     
     #initialize new dictionary of purely biophysical/general arguments which will be

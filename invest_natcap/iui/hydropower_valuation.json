@@ -3,7 +3,7 @@
     "label": "Hydropower Valuation",
     "targetScript" : "invest_natcap.hydropower.hydropower_valuation",
     "modelName" : "hydropower_valuation",
-    "localDocURI": "../documentation/hydropower.html",
+    "localDocURI": "../documentation/reservoirhydropowerproduction.html",
     "height": 500,
     "width" : 700,
     "elements": [
