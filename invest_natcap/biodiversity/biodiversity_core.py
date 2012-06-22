@@ -109,7 +109,7 @@ def biophysical(args):
     z = 2.5
     ksq = k**z
     def quality_op(degradation,habitat):
-        returnhabitat * (1 - ((degredation**z) / (degredation**z + ksq))
+        returnhabitat * (1 - ((degredation**z) / (degredation**z + ksq)))
     quality_raster = raster_utils.vectorize_rasters([degredation_raster, habitat], quality_op)
 
 
