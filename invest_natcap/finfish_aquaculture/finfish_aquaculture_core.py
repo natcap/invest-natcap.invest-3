@@ -66,15 +66,17 @@ def execute(args):
     args['p_per_kg']: Market price per kilogram of processed fish
     args['frac_p']: Fraction of market price that accounts for costs rather than profit
     args['discount']: Daily market discount rate
+    
+    returns nothing
     '''
     
-    output_dir = args['workspace_dir'] + os.sep + 'Output'
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
     
     #using a tuple to get data back from function, then update the shape files 
     #to reflect these new attributes
     cycle_history = calc_farm_cycles(args, args['g_param_a'], 
                                           args['g_param_b'], args['water_temp_dict'], 
-                                          args['farm_op_dict'], args['duration'])
+                                          args['farm_op_dict'], float(args['duration']))
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
     out_path = output_dir + os.sep + 'Finfish_Harvest.shp'
@@ -126,7 +128,7 @@ def execute(args):
 
     #This will complete the valuation portion of the finfish aquaculture 
     #model, dependent on whether or not valuation is desired.
-    if (bool(args['do_valuation']) == True):
+    if (args['do_valuation'] == True):
         value_history, farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
                 proc_weight, cycle_history)
    
@@ -168,7 +170,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
             of each parameter.
         dur: Float which describes the length for the growth simulation to run in years.
         
-     Output:
+     returns cycle_history where:
          cycle_history: Dictionary which contains mappings from farms to a history of
              growth for each cycle completed on that farm. These entries are formatted
              as follows...
@@ -178,9 +180,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
     
     #temporary for viewing fish growth
     output_dir = args['workspace_dir'] + os.sep + 'Output'
-    
-    
-    
+        
     #One output, which will be a dictionary pointing to a list of tuples,
     #each of which contains 3 things- 
     #                (day of outplanting, day of harvest, harvest weight)
@@ -188,7 +188,6 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
     
     cycle_history = {}
     tau = 0.08
-    dur = float(dur)
 
     for f in farm_op_dict.keys():
         #filename = output_dir + os.sep + "Temporary Calcs" + f + ".txt"
@@ -236,13 +235,13 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
 
             elif fish_weight != 0:
                 #Grow 'dem fishies!                   
-                exponent = round(math.exp(float(water_temp_dict[str((day-1) % 365)][str(f)]) * tau), 2)
+                exponent = math.exp(float(water_temp_dict[str((day-1) % 365)][str(f)]) * tau)
                 #file.write("temp effect is: " + str(exponent) + "\n")
                 #file.write("(" + str(a) +","  + str(b) +"," + str(exponent) + "," + str(fish_weight) + ")")                
                 fish_weight = (a * (fish_weight ** b) * exponent) + \
                                 fish_weight
                                     
-                fish_weight = round(fish_weight, 2)
+                fish_weight = fish_weight
                               
                 #file.write("Fish Weight for day " + str(day) + 
                 #          ": " + str(fish_weight) + "\n")
@@ -264,9 +263,10 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
 
     '''   
     Input: 
-        cycle_hisory: Farm->List of Type (day of outplanting, 
+        cycle_history: Farm->List of Type (day of outplanting, 
                                       day of harvest, harvest weight (grams))                            
-    Output:
+    
+    returns (curr_cycle_totals,indiv_tpw_totals) where:
         curr_cycle_totals_: dictionary which will hold a mapping from every farm
                 (as identified by farm_ID) to the total processed weight of each farm
         indiv_tpw_totals: dictionary which will hold a farm->list mapping, where the list 
@@ -305,9 +305,11 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
             cycle_length = harvest_date - outplant_date
             e_exponent =  -mort * cycle_length
             
+            #This equation comes from total weight of fish produced per farm 
+            #from the user's guide
             curr_cy_tpw = (harvest_weight / 1000) * frac * f_num_fish * \
                             math.exp(e_exponent)
-            curr_cy_tpw = round(curr_cy_tpw, 2)
+            curr_cy_tpw = curr_cy_tpw
             
             indiv_tpw_totals[f].append(curr_cy_tpw)
             curr_cycle_totals[f] += curr_cy_tpw
@@ -321,11 +323,14 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     processed on that farm, in $1000s of dollars.
     
     Inputs:
+        price_per_kg
         cycle_hisory: Farm->List of Type (day of outplanting, 
                                           day of harvest, harvest weight (grams))
         proc_weight: Farm->List of TPW for each cycle (kilograms)
         
-    Outputs:
+        
+                
+    Returns a tuple (val_history, valuations):
         val_history: dictionary which will hold a farm->list mapping, where the 
                 list holds tuples containing (Net Revenue, Net Present Value) for
                 each cycle completed by that farm
@@ -346,11 +351,11 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
             
             tpw = proc_weight[f][c]
             #LOGGER.debug(tpw)
-            #the 2 refers to the placement of day of harvest in the tuple for each cycle
+            #the 1 refers to the placement of day of harvest in the tuple for each cycle
             t = cycle_history[f][c][1]
             
-            net_rev = round(tpw * (price_per_kg *(1 - frac_mrkt_price)), 2)
-            npv = round(net_rev * (1 / (1 + discount) ** t), 2)
+            net_rev = tpw * (price_per_kg *(1 - frac_mrkt_price))
+            npv = net_rev * (1 / (1 + discount) ** t)
             
             #LOGGER.debug("Net Rev: " + str(net_rev) + ", " + "NPV: " + str(npv))
             #LOGGER.debug("t: " + str(t))
@@ -393,9 +398,11 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
                     and year.
             - Output Table 2: Model outputs for each farm, including Farm ID, net present
                     value, number of completed harvest cycles, and total volume harvested.
+                    
+        Returns nothing.
     '''
-    filename = output_dir + os.sep + "HarvestResults_[" + \
-        datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + "].html"
+    filename = os.path.join(output_dir, "HarvestResults_[%s].html" % \
+        datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     file = open(filename, "w")
     
     file.write("<html>")
@@ -412,13 +419,13 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     
     #Here starts the information being put into the first table
     file.write("<H2>" + "Farm Operations (input)" + "</H2>")
-    file.write("<table border=\"1\", cellpadding=\"5\">")
+    file.write('<table border="1", cellpadding="5">')
     
-    #We are getting the keywords for the farm options off of an arbitrary element in
-    #in farm_op_dict. However, we had to create a copy in order to simulate a peek method
-    #and not remove that item from the original dictionary
-    cp_dict = farm_op_dict.copy()
-    str_headers = cp_dict.popitem()[1].keys()
+    #This gets the "first" key out of the dictionary so we can get at one of the 
+    #lower dictionaries.  It doesn't matter that it's at 0, but we are guaranteed
+    #it exists
+    random_farm_op_dict_key = farm_op_dict.keys()[0]
+    str_headers = farm_op_dict[random_farm_op_dict_key].keys() 
 
     inner_strings = []
     
@@ -434,9 +441,7 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     str_headers.insert(0, "Farm #:")
     
     for element in str_headers:
-        file.write("<td><b>")
-        file.write(element)
-        file.write("</b></td>")
+        file.write("<td><b>%s</b></td>" % element)
     file.write("</tr>")
     
     for element in inner_strings:
@@ -455,7 +460,7 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     
     inner_strings = []
     
-    for id in cycle_history.keys():
+    for id in cycle_history:
         
         #Explicitly getting the number of fish that the farm has, because we will need
         #it later when we write to the table
@@ -473,19 +478,19 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
             #harvest weight is the weight in grams on an individual fish at harvest. 
             #Need to multiply by the number of fish, then divide by 1000 to get kg
             #of fish total
-            total_harvest_weight = round(num_fishies*harvest_weight/1000)
+            total_harvest_weight = num_fishies*harvest_weight/1000
             
             out_day = outplant_date % 365
             out_year = outplant_date // 365 + 1
             
             str_line = ""
             #Need to make it so if we don't have valuation, those cells just show up red
-            if (do_valuation == True):
+            if do_valuation:
                 indiv_rev, indiv_npv = value_history[id][cycle]
     
                 #revenue and net present value should be in thousands of dollars
                 vars = [id, cycle_num, harvest_date, total_harvest_weight, 
-                        round(indiv_rev / 1000), round(indiv_npv/1000), out_day, out_year]
+                        indiv_rev / 1000, indiv_npv/1000, out_day, out_year]
             else:
                 
                 indiv_rev = ""
@@ -530,13 +535,12 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
     for id in cycle_history.keys():
         
         #pre-load variables
-        if (do_valuation == True): 
-            npv = round(farms_npv[id])
-        else:
-            npv = ""
+        npv = ""
+        if do_valuation: 
+            npv = round(farms_npv[id], 4)
             
         num_cy_complete = len(cycle_history[id])
-        total_harvested = round(sum_proc_weight[id])
+        total_harvested = round(sum_proc_weight[id], 4)
         
         vars = [npv, num_cy_complete, total_harvested]
         
@@ -603,7 +607,7 @@ def create_param_log(args):
     
     str_list.append("\nVALUATION ARGUMENTS \n")
     str_list.append("Valuation: " + str(args['do_valuation']))
-    if (args['do_valuation'] == True):
+    if args['do_valuation']:
         str_list.append("Price Per Kilogram of Fish: " + str(args['p_per_kg']))
         str_list.append("Fraction of Price Attributable to Costs: " + 
                         str(args['frac_p']))
