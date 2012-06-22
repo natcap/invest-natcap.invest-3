@@ -438,7 +438,12 @@ class DynamicPrimitive(DynamicElement):
     def check_validation_error(self):
         if self.validator.thread_finished():
             self.timer.stop()
-            self.set_error(self.validator.get_error())
+            error = self.validator.get_error()
+            self.set_error(error)
+
+            # Toggle dependent elements based on the results of this validation
+            DynamicElement.setState(self, not bool(error), includeSelf=False,
+                recursive=True)
 
 class InformationButton(QtGui.QPushButton):
     """This class represents the information that a user will see when pressing
@@ -1230,6 +1235,12 @@ class TableHandler(Dropdown):
         """Reimplemented from Dropdown.setState.  When state=False, the dropdown
         menu is cleared.  If state=True, the dropdown menu is populated with
         values from the corresponding table object."""
+
+        # If an error exists in the enabledBy element, disable self.
+        error = self.enabledBy.error_button.error_text
+        if error != None and error != '':
+            state = False
+
         Dropdown.setState(self, state, includeSelf, recursive)
 
         if state == False:

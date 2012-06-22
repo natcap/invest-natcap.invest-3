@@ -93,6 +93,7 @@ class AbstractTableHandler(object):
             Returns nothing."""
 
         self.uri = uri
+        self._open()
         self._get_field_names()
         if self.mask_regexp != None:
             # If the user has set a mask for the fieldnames, create a dictionary
