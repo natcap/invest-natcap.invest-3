@@ -84,11 +84,11 @@ class TestHydropowerValuation(unittest.TestCase):
         reg_hp_val_sws_uri = \
             regression_dir + 'hydropower_value_subwatershed.csv'
         
-        hp_energy_uri = output_base + 'Output/hp_energy.tif'
-        hp_val_uri = output_base + 'Output/hp_val.tif'
-        hp_val_ws_uri = output_base + 'Output/hydropower_value_watershed.csv'
+        hp_energy_uri = output_base + 'Service/hp_energy.tif'
+        hp_val_uri = output_base + 'Service/hp_val.tif'
+        hp_val_ws_uri = output_base + 'Service/hydropower_value_watershed.csv'
         hp_val_sws_uri = \
-            output_base + 'Output/hydropower_value_subwatershed.csv'
+            output_base + 'Service/hydropower_value_subwatershed.csv'
         
         invest_test_core.assertTwoDatasetEqualURI(self, reg_hp_energy_uri, 
                                                   hp_energy_uri)

@@ -104,7 +104,6 @@ def water_yield(args):
     #Paths for the fractp mean and water yield mean, area, and volume rasters
     fractp_mean_path = output_dir + os.sep + 'fractp_mn' + suffix_tif
     wyield_mean_path = service_dir + os.sep + 'wyield_mn' + suffix_tif
-    wyield_area_path = intermediate_dir + os.sep + 'wyield_area' + suffix_tif
     wyield_volume_path = \
         service_dir + os.sep + 'wyield_vol' + suffix_tif
     wyield_ha_path = service_dir + os.sep + 'wyield_ha' + suffix_tif
@@ -133,12 +132,12 @@ def water_yield(args):
     LOGGER.info("Reclassifying temp_etk raster")
     tmp_etk_raster = \
         raster_utils.reclassify_by_dictionary(lulc_raster, etk_dict,
-                tmp_etk_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+                '', 'MEM', out_nodata, gdal.GDT_Float32) 
     #Create root raster from table values to use in future calculations
     LOGGER.info("Reclassifying tmp_root raster")
     tmp_root_raster = \
             raster_utils.reclassify_by_dictionary(lulc_raster, root_dict,
-                tmp_root_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+                '', 'MEM', out_nodata, gdal.GDT_Float32) 
 
     #Get out_nodata values so that we can avoid any issues when running operations
     etk_nodata = tmp_etk_raster.GetRasterBand(1).GetNoDataValue()
@@ -276,7 +275,7 @@ def water_yield(args):
 
     wyield_area = \
         raster_utils.reclassify_by_dictionary(subwatershed_mask, area_dict,
-                wyield_area_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+                '', 'MEM', out_nodata, gdal.GDT_Float32) 
 
     subwatershed_mask = None
     LOGGER.debug('Performing volume operation')
@@ -609,7 +608,7 @@ def water_scarcity(args):
     #Create raster from land use raster, subsituting in demand value
     clipped_consump = \
         raster_utils.reclassify_by_dictionary(lulc_raster, demand_dict,
-                clipped_consump_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
+                '', 'MEM', out_nodata, gdal.GDT_Float32) 
 
     LOGGER.info('Creating consump_vol raster')
     
@@ -882,15 +881,12 @@ def valuation(args):
     
     #Paths for the watershed and subwatershed tables
     watershed_value_table = \
-        output_dir + os.sep + 'hydropower_value_watershed' + suffix_csv
+        service_dir + os.sep + 'hydropower_value_watershed' + suffix_csv
     subwatershed_value_table = \
-        output_dir + os.sep + 'hydropower_value_subwatershed' + suffix_csv
-    #Paths for the hydropower value raster
-    hp_val_tmppath = output_dir + os.sep + 'hp_val_tmp' + suffix_tif
-    hp_val_path = output_dir + os.sep + 'hp_val' + suffix_tif
-    #Paths for the hydropower energy raster
-    hp_energy_tmppath = output_dir + os.sep + 'hp_energy_tmp' + suffix_tif
-    hp_energy_path = output_dir + os.sep + 'hp_energy' + suffix_tif
+        service_dir + os.sep + 'hydropower_value_subwatershed' + suffix_csv
+    #Paths for the hydropower value and energy rasters
+    hp_val_path = service_dir + os.sep + 'hp_val' + suffix_tif
+    hp_energy_path = service_dir + os.sep + 'hp_energy' + suffix_tif
     
     energy_dict = {}
     npv_dict = {}
@@ -966,8 +962,8 @@ def valuation(args):
     out_nodata = -1.0
 
     hp_val_watershed_mask = \
-        raster_utils.new_raster_from_base(water_consump, hp_val_tmppath, \
-            'GTiff', out_nodata, gdal.GDT_Float32)
+        raster_utils.new_raster_from_base(water_consump, '', \
+            'MEM', out_nodata, gdal.GDT_Float32)
 
     gdal.RasterizeLayer(hp_val_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
@@ -978,8 +974,8 @@ def valuation(args):
                 hp_val_path, 'GTiff', out_nodata, gdal.GDT_Float32) 
     
     hp_energy_watershed_mask = \
-        raster_utils.new_raster_from_base(water_consump, hp_energy_tmppath, \
-            'GTiff', out_nodata, gdal.GDT_Float32)
+        raster_utils.new_raster_from_base(water_consump, '', \
+            'MEM', out_nodata, gdal.GDT_Float32)
    
     gdal.RasterizeLayer(hp_energy_watershed_mask, [1], sub_sheds.GetLayer(0),
                         options = ['ATTRIBUTE=subws_id'])
