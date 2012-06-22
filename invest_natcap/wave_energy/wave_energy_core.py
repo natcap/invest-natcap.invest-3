@@ -211,17 +211,18 @@ def biophysical(args):
     clipped_wave_shape = wave_power(clipped_wave_shape)
 
     #Create blank rasters bounded by the shape file of analyis area
-    raster_utils.create_raster_from_vector_extents(pixel_xsize, pixel_ysize, 
-                                                     datatype, nodata, \
-                                                     wave_energy_path, \
-                                                     aoi_shape)
-    raster_utils.create_raster_from_vector_extents(pixel_xsize, pixel_ysize, 
-                                                     datatype, nodata, \
-                                                     wave_power_path, aoi_shape)
-
-    #Open created rasters
-    wave_power_raster = gdal.Open(wave_power_path, GA_Update)
-    wave_energy_raster = gdal.Open(wave_energy_path, GA_Update)
+    wave_energy_raster = \
+            raster_utils.create_raster_from_vector_extents(pixel_xsize, \
+                                                           pixel_ysize, \
+                                                           datatype, nodata, \
+                                                           wave_energy_path, \
+                                                           aoi_shape)
+    wave_power_raster = \
+            raster_utils.create_raster_from_vector_extents(pixel_xsize, \
+                                                           pixel_ysize, \
+                                                           datatype, nodata, \
+                                                           wave_power_path, \
+                                                           aoi_shape)
 
     #Get the corresponding points and values from the shapefile to be used 
     #for interpolation
