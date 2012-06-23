@@ -137,9 +137,11 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
     #only those fields, where the overarching dictionary uses the Farm ID as the key for each of the sub dictionaries
     fieldnames =  line.split(delim)
     
-    reader = csv.DictReader(csv_file, fieldnames=fieldnames, dialect = dialect)
+    reader = csv.DictReader(csv_file, fieldnames=fieldnames, dialect = dialect, quoting=csv.QUOTE_NONE)
 
     for row in reader:
+        
+        LOGGER.debug(row)
         
         sub_dict = {}
         
@@ -147,9 +149,9 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
             if (key != farm_ID):
                 sub_dict[key] = row[key]
     
-        del sub_dict['Total mass in farm (kg)']
-        del sub_dict['Total dressed wt.']
-        del sub_dict['Total value']
+        #del sub_dict['Total mass in farm (kg)']
+        #del sub_dict['Total dressed wt.']
+        #del sub_dict['Total value']
         
         if row[farm_ID]!= '':
             new_dict_op[row[farm_ID]] = sub_dict
