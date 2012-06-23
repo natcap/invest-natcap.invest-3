@@ -403,7 +403,7 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
         Returns nothing.
     '''
     filename = os.path.join(output_dir, "HarvestResults_[%s].html" % \
-        datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+        datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
     file = open(filename, "w")
     
     file.write("<html>")
@@ -592,7 +592,7 @@ def create_param_log(args):
     output_dir = args['workspace_dir'] + os.sep + 'Output'
     
     filename = output_dir + os.sep + "Parameter_Log_[" + \
-        datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + "].txt"
+        datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") + "].txt"
     file = open(filename, "w")
     
     str_list = []
