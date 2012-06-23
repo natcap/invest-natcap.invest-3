@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "Marine Aquaculture: Finfish",
-    "targetScript" : "invest_natcap/finfish_aquaculture/finfish_aquaculture.py",
+    "targetScript" : "invest_natcap.finfish_aquaculture.finfish_aquaculture",
     "modelName" : "finfish_aquaculture",
     "localDocURI": "./documentation/marine_fish.html",
     "height": 1000,
