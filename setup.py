@@ -8,8 +8,11 @@ import datetime
 
 import numpy as np
 from Cython.Distutils import build_ext
-VERSION = '2.3.0a6'
+import invest_natcap
 
+# __version__ is set in invest_natcap/__init__.py, in accordance with PEP
+# 396:http://www.python.org/dev/peps/pep-0396/. 
+VERSION = invest_natcap.__version__
 CYTHON_SOURCE_FILES = ['invest_cython_core/invest_cython_core.pyx',
                        'invest_cython_core/simplequeue.c']
 
