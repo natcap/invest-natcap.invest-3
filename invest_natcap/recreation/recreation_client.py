@@ -48,7 +48,7 @@ def execute(args):
     results = eval(urllib2.urlopen(request).read())
     LOGGER.info("Processing response from server")
     
-    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+results["sessid"].strip()
+    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+results["sessid"].strip()+"/results.zip"
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
