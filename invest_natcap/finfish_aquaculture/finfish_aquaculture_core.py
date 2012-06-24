@@ -202,10 +202,10 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
         #keys as strings, and then casting result back to int
         #Are multiplying by 1000, because a and b are in grams, so need to do the whole
         #equation in grams
-        start_day = int(farm_op_dict[str(f)]['start day for growing']) - 1
-        fallow_per = int(farm_op_dict[str(f)]['Length of Fallowing period'])
-        start_weight = 1000 * float(farm_op_dict[str(f)]['weight of fish at start (kg)'])
-        tar_weight = 1000 * float(farm_op_dict[str(f)]['target weight of fish at harvest (kg)'])
+        start_day = int(farm_op_dict[f]['start day for growing']) - 1
+        fallow_per = int(farm_op_dict[f]['Length of Fallowing period'])
+        start_weight = 1000 * float(farm_op_dict[f]['weight of fish at start (kg)'])
+        tar_weight = 1000 * float(farm_op_dict[f]['target weight of fish at harvest (kg)'])
         
         fallow_days_left = start_day
         farm_history = []
@@ -236,7 +236,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
 
             elif fish_weight != 0:
                 #Grow 'dem fishies!                   
-                exponent = math.exp(float(water_temp_dict[str((day-1) % 365)][str(f)]) * tau)
+                exponent = math.exp(float(water_temp_dict[str((day-1) % 365)][f]) * tau)
                 #file.write("temp effect is: " + str(exponent) + "\n")
                 #file.write("(" + str(a) +","  + str(b) +"," + str(exponent) + "," + str(fish_weight) + ")")                
                 fish_weight = (a * (fish_weight ** b) * exponent) + \
@@ -256,7 +256,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
                     #file.write("Fish Weight for day " + str(day) + 
                   #             ": " + str(fish_weight) + "\n")      
     
-        cycle_history[f] = farm_history
+        cycle_history[int(f)] = farm_history
     
     return cycle_history
 
