@@ -263,11 +263,16 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
 def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
 
     '''   
-    Input: 
+    Input:
+        farm_op_dict: 2D dictionary which contains individual operating parameters for
+            each farm. The outer key is farm number, and the inner is string descriptors
+            of each parameter.
+        frac: A float representing the fraction of the fish that remains after processing.
+        mort: A float referring to the daily mortality rate of fishes on an aquaculture farm.
         cycle_history: Farm->List of Type (day of outplanting, 
                                       day of harvest, harvest weight (grams))                            
     
-    returns (curr_cycle_totals,indiv_tpw_totals) where:
+    Returns a tuple (curr_cycle_totals,indiv_tpw_totals) where:
         curr_cycle_totals_: dictionary which will hold a mapping from every farm
                 (as identified by farm_ID) to the total processed weight of each farm
         indiv_tpw_totals: dictionary which will hold a farm->list mapping, where the list 
