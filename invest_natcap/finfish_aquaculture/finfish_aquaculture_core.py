@@ -152,7 +152,7 @@ def execute(args):
         farms_npv = None
         
     #Now, want to build the HTML table of everything we have calculated to this point
-    create_HTML_table(output_dir, args['farm_ID'], args['farm_op_dict'], 
+    create_HTML_table(output_dir, args['farm_op_dict'], 
                       cycle_history, sum_proc_weight, proc_weight, 
                       args['do_valuation'], farms_npv, value_history)
     
@@ -319,12 +319,18 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
 
 def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
     
-    '''This performs the valuation calculations, and returns a dictionary with a
-    farm-> float mapping, where each float is the net processed value of the fish
-    processed on that farm, in $1000s of dollars.
+    '''This performs the valuation calculations, and returns tuple containing a 
+    dictionary with a farm-> float mapping, where each float is the net processed 
+    value of the fish processed on that farm, in $1000s of dollars, and a dictionary
+    containing a farm-> list mapping, where each entry in the list is a tuple of 
+    (Net Revenue, Net Present Value) for every cycle on that farm.
     
     Inputs:
-        price_per_kg
+        price_per_kg: Float representing the price per kilogram of finfish for 
+                valuation purposes.
+        frac_mrkt_price: Float that represents the fraction of market price that
+                is attributable to costs.
+        discount: Float that is the daily market discount rate.
         cycle_hisory: Farm->List of Type (day of outplanting, 
                                           day of harvest, harvest weight (grams))
         proc_weight: Farm->List of TPW for each cycle (kilograms)
@@ -368,9 +374,10 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     
     return val_history, valuations
 
-def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_weight, 
+def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight, 
                        proc_weight, do_valuation, farms_npv, value_history):
     '''Inputs:
+        output_dir: The directory in which we will be creating our .html file output.
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
                 contains 3 things- (day of outplanting, day of harvest, harvest weight of 
                 a single fish in grams)
@@ -583,13 +590,16 @@ def create_HTML_table (output_dir, FID, farm_op_dict, cycle_history, sum_proc_we
 
 def create_param_log(args):
     
-    '''Input: A dictionary of all input parameters for this run of the finfish
+    '''Input: 
+        args: A dictionary of all input parameters for this run of the finfish
             aquaculture model.
             
         Output: A .txt file that contains the run parameters for this run of the
             model. Named by date and time.
+            
+        Returns nothing.
     '''
-    output_dir = args['workspace_dir'] + os.sep + 'Output'
+    output_dir = os.join(args['workspace_dir'], 'Output')
     
     filename = output_dir + os.sep + "Parameter_Log_[" + \
         datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") + "].txt"
