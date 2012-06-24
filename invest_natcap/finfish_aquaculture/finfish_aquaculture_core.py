@@ -424,24 +424,23 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     inner_strings = []
     
     for id in farm_op_dict.keys():
-        single_str = "<td>" + id + "</td>"
+        single_str = "<td>%s</td>" % id
         
         for info in str_headers:
             
-            single_str += "<td>" + farm_op_dict[id][str(info)] + "</td>"
+            single_str += ("<td>%s</td>"  % farm_op_dict[id][str(info)])
             
         inner_strings.append(single_str)
     
     str_headers.insert(0, "Farm #:")
     
+    file.write("<tr>")
     for element in str_headers:
         file.write("<td><b>%s</b></td>" % element)
     file.write("</tr>")
     
     for element in inner_strings:
-        file.write("<tr>")
-        file.write(element)
-        file.write("</tr>")
+        file.write("<tr>%s</tr>" % element)
             
     file.write("</table>")
     
@@ -508,9 +507,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     file.write("<table border=\"1\", cellpadding=\"5\">")
     file.write("<tr>")
     for element in str_headers:
-        file.write("<td><b>")
-        file.write(element)
-        file.write("</b></td>")
+        file.write("<td><b>%s</b></td>" % element)
     file.write("</tr>")
     
     for element in inner_strings:
@@ -558,16 +555,12 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     file.write("<table border=\"1\", cellpadding=\"5\">")
     file.write("<tr>")
     for element in str_headers:
-        file.write("<td><b>")
-        file.write(element)
-        file.write("</b></td>")
+        file.write("<td><b>%s</b></td>" % element)
     file.write("</tr>")
     
     for element in inner_strings:
 
-        file.write("<tr>")
-        file.write(element)
-        file.write("</tr>")
+        file.write("<tr>%s</tr>" % element)
     file.write("</table>")
     
     #end page
