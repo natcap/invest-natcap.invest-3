@@ -162,6 +162,7 @@ def execute(args):
 def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
     '''
     Input:
+        args: Dictionary containing all arguments for this run of the aquaculture model.
         a: Growth parameter alpha. Float used as a scaler in the fish growth equation.
         b: Growth paramater beta. Float used as an exponential multiplier in the
             fish growth equation.
@@ -172,7 +173,8 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
             of each parameter.
         dur: Float which describes the length for the growth simulation to run in years.
         
-     returns cycle_history where:
+     Returns cycle_history where:
+     
          cycle_history: Dictionary which contains mappings from farms to a history of
              growth for each cycle completed on that farm. These entries are formatted
              as follows...
@@ -180,26 +182,11 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
             Farm->List of Type (day of outplanting,day of harvest, harvest weight (grams))
     '''
     
-    #temporary for viewing fish growth
-    output_dir = args['workspace_dir'] + os.sep + 'Output'
-        
-    #One output, which will be a dictionary pointing to a list of tuples,
-    #each of which contains 3 things- 
-    #                (day of outplanting, day of harvest, harvest weight)
-    #The dictionary will have a key of farm number, and a value of the tuple list
-    
     cycle_history = {}
     tau = 0.08
 
     for f in farm_op_dict.keys():
-        #filename = output_dir + os.sep + "Temporary Calcs" + f + ".txt"
-        #file = open(filename, "w")
-    
-        
-        f = int(f)
-        
-        #casting f to string because farm_op_dict came from biophysical with
-        #keys as strings, and then casting result back to int
+
         #Are multiplying by 1000, because a and b are in grams, so need to do the whole
         #equation in grams
         start_day = int(farm_op_dict[f]['start day for growing']) - 1
@@ -237,15 +224,11 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
             elif fish_weight != 0:
                 #Grow 'dem fishies!                   
                 exponent = math.exp(float(water_temp_dict[str((day-1) % 365)][f]) * tau)
-                #file.write("temp effect is: " + str(exponent) + "\n")
-                #file.write("(" + str(a) +","  + str(b) +"," + str(exponent) + "," + str(fish_weight) + ")")                
+              
                 fish_weight = (a * (fish_weight ** b) * exponent) + \
                                 fish_weight
                                     
                 fish_weight = fish_weight
-                              
-                #file.write("Fish Weight for day " + str(day) + 
-                #          ": " + str(fish_weight) + "\n")
             
             #function that maps an incoming day to the same day % 365, then creates a
             #list to check against +/- buffer days from the start day
@@ -253,8 +236,6 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
                                                     start_day + outplant_buffer+1)):
                     fish_weight = start_weight
                     outplant_date = day + 1
-                    #file.write("Fish Weight for day " + str(day) + 
-                  #             ": " + str(fish_weight) + "\n")      
     
         cycle_history[int(f)] = farm_history
     
