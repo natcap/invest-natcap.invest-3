@@ -343,16 +343,13 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
         for c in range (0, len(cycle_history[f])):
             
             tpw = proc_weight[f][c]
-            #LOGGER.debug(tpw)
+
             #the 1 refers to the placement of day of harvest in the tuple for each cycle
             t = cycle_history[f][c][1]
             
             net_rev = tpw * (price_per_kg *(1 - frac_mrkt_price))
             npv = net_rev * (1 / (1 + discount) ** t)
-            
-            #LOGGER.debug("Net Rev: " + str(net_rev) + ", " + "NPV: " + str(npv))
-            #LOGGER.debug("t: " + str(t))
-            
+
             val_history[f].append((net_rev, npv))
             
             #divide by 1000, because the number we want to return is in thousands of dollars
