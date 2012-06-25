@@ -76,7 +76,7 @@ def execute(args):
     
     #using a tuple to get data back from function, then update the shape files 
     #to reflect these new attributes
-    cycle_history = calc_farm_cycles(args, args['g_param_a'], 
+    cycle_history = calc_farm_cycles(args['outplant_buffer'], args['g_param_a'], 
                                           args['g_param_b'], args['water_temp_dict'], 
                                           args['farm_op_dict'], float(args['duration']))
 
@@ -99,7 +99,6 @@ def execute(args):
         
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
-        #casting to string because it's coming out of a CSV
         num_cycles = len(cycle_history[feature_ID])
         feature.SetField('Tot_Cycles', num_cycles)
         
@@ -124,7 +123,7 @@ def execute(args):
 
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
-        feature.SetField('Hrvwght_kg', int(sum_proc_weight[feature_ID]))
+        feature.SetField('Hrvwght_kg', sum_proc_weight[feature_ID])
         
         layer.SetFeature(feature)
 
@@ -144,7 +143,7 @@ def execute(args):
     
             accessor = args['farm_ID']
             feature_ID = feature.items()[accessor]
-            feature.SetField('NVP_USD_1k', int(farms_npv[feature_ID]))
+            feature.SetField('NVP_USD_1k', farms_npv[feature_ID])
             
             layer.SetFeature(feature)
     else:
@@ -159,18 +158,20 @@ def execute(args):
     #Last output is a text file of the parameters that the model was run with
     create_param_log(args)
 
-def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
+def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
     '''
     Input:
-        args: Dictionary containing all arguments for this run of the aquaculture model.
+        outplant_buffer: The number of days surrounding the outplant day during which
+            the fish growth cycle can still be started.
         a: Growth parameter alpha. Float used as a scaler in the fish growth equation.
         b: Growth paramater beta. Float used as an exponential multiplier in the
             fish growth equation.
         water_temp_dict: 2D dictionary which contains temperature values for farms. The
-            outer keys are calendar days, and the inner are farm numbers.
+            outer keys are calendar days as strings, and the inner are farm numbers as
+            strings.
         farm_op_dict: 2D dictionary which contains individual operating parameters for
-            each farm. The outer key is farm number, and the inner is string descriptors
-            of each parameter.
+            each farm. The outer key is farm number as a stting, and the inner is string
+            descriptors of each parameter.
         dur: Float which describes the length for the growth simulation to run in years.
         
      Returns cycle_history where:
@@ -188,7 +189,8 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
     for f in farm_op_dict.keys():
 
         #Are multiplying by 1000, because a and b are in grams, so need to do the whole
-        #equation in grams
+        #equation in grams. Have to explicit cast to get things in a format that will be
+        #usable later.
         start_day = int(farm_op_dict[f]['start day for growing']) - 1
         fallow_per = int(farm_op_dict[f]['Length of Fallowing period'])
         start_weight = 1000 * float(farm_op_dict[f]['weight of fish at start (kg)'])
@@ -198,14 +200,12 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
         farm_history = []
         fish_weight = 0
         outplant_date = None
-    
         #Have changed the water temp table to be accessed by keys 0 to 364, so now can just
         #grab straight from the table without having to deal with change in day
         
         #However, it should be kept in mind that when doing calculations for a given day,
         #you are using YESTRDAY'S temperatures and weights to get the value for today.
-        
-        outplant_buffer = args['outplant_buffer']
+
 
         #Are going 1 day beyond on the off-chance that you ended a harvest the day
         #before, and need to record today. This should not create any false harvest
@@ -233,7 +233,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
             #function that maps an incoming day to the same day % 365, then creates a
             #list to check against +/- buffer days from the start day
             elif (day % 365) in map (lambda x: x%365, range(start_day - outplant_buffer, 
-                                                    start_day + outplant_buffer+1)):
+                                                    start_day + outplant_buffer + 1)):
                     fish_weight = start_weight
                     outplant_date = day + 1
     
@@ -242,12 +242,11 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
     return cycle_history
 
 def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
-
     '''   
     Input:
         farm_op_dict: 2D dictionary which contains individual operating parameters for
-            each farm. The outer key is farm number, and the inner is string descriptors
-            of each parameter.
+            each farm. The outer key is farm number as a string, and the inner is string 
+            descriptors of each parameter.
         frac: A float representing the fraction of the fish that remains after processing.
         mort: A float referring to the daily mortality rate of fishes on an aquaculture farm.
         cycle_history: Farm->List of Type (day of outplanting, 
@@ -263,8 +262,10 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
     curr_cycle_totals = {}
     indiv_tpw_totals = {}
         
-    for f in farm_op_dict.keys():
+    for f in farm_op_dict:
         
+        #They keys from farm_op_dict are strings, sicne they came from a CSV. So, have to
+        #cast to strings in order to make them usable for refrencing everything else.
         f = int(f)
         
         #pre-load farm specific vars, have to cast some because they come out of
@@ -441,9 +442,8 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
             
     file.write("</table>")
     
-    #Here starts the second table
-    #For ease, am preloading a list with the headers for this table, since they aren't
-    #necessarily already input
+    #Here starts the second table. For ease, am preloading a list with the headers 
+    #for this table, since they aren't necessarily already input.
     str_headers = ['Farm ID Number', 'Cycle Number', 'Days Since Outplanting Date', 
                    'Harvested Weight', 'Net Revenue', 'Net Present Value', 'Outplant Day',
                    'Outplant Year']
@@ -491,7 +491,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
             
             for element in vars:
                 if element == indiv_rev or element == indiv_npv:
-                    str_line += "<td bgcolor= \"#FF0000\">"
+                    str_line += "<td bgcolor= '#FF0000'>"
                 else :
                     str_line += "<td>"
                 str_line += str(element)
@@ -501,7 +501,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     
     #Write the second table itself
     file.write("<br><HR><H2>Farm Harvesting (output)</H2>")
-    file.write("<table border=\"1\", cellpadding=\"5\">")
+    file.write("<table border='1', cellpadding='5'>")
     file.write("<tr>")
     for element in str_headers:
         file.write("<td><b>%s</b></td>" % element)
@@ -537,9 +537,9 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
         
         for element in vars:
             if element == npv:
-                str_line += "<td BGCOLOR=\"#ff0000\">"
+                str_line += "<td BGCOLOR='#ff0000'>"
             else:
-                str_line += "<td BGCOLOR=\"#ffff00\">"
+                str_line += "<td BGCOLOR='#ffff00'>"
             str_line += str(element)
             str_line += "</td>"
                 
@@ -549,7 +549,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
         
     #Write the third table itself
     file.write("<br><HR><H2>Farm Result Totals (output)</H2>")
-    file.write("<table border=\"1\", cellpadding=\"5\">")
+    file.write("<table border='1', cellpadding='5'>")
     file.write("<tr>")
     for element in str_headers:
         file.write("<td><b>%s</b></td>" % element)
@@ -564,8 +564,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     file.write("</html>")
     file.close()   
 
-def create_param_log(args):
-    
+def create_param_log(args):  
     '''Input: 
         args: A dictionary of all input parameters for this run of the finfish
             aquaculture model.
@@ -575,7 +574,7 @@ def create_param_log(args):
             
         Returns nothing.
     '''
-    output_dir = os.join(args['workspace_dir'], 'Output')
+    output_dir = args['workspace_dir'] + os.sep + 'Output'
     
     filename = output_dir + os.sep + "Parameter_Log_[" + \
         datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") + "].txt"
@@ -591,6 +590,7 @@ def create_param_log(args):
     str_list.append("Growth Parameter B: " + str(args['g_param_b']))
     str_list.append("Mortality Rate (Daily): " + str(args['mort_rate_daily']))
     str_list.append("Duration of Model: " + str(args['duration']))
+    str_list.append("Outplant Day Buffer: " + str(args['outplant_buffer']))
     
     str_list.append("\nVALUATION ARGUMENTS \n")
     str_list.append("Valuation: " + str(args['do_valuation']))
