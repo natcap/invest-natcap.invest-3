@@ -141,8 +141,6 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
 
     for row in reader:
         
-        LOGGER.debug(row)
-        
         sub_dict = {}
         
         for key in row:
