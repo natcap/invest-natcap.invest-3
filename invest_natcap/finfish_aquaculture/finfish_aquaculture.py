@@ -93,7 +93,23 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
     keyword to look for to identify the farm number to go with the parameters,
     and outputs a 2D dictionary that contains all parameters by farm and
     description. The outer key is farm number, and the inner key is a string
-    description of the parameter.'''
+    description of the parameter.
+    
+    Input:
+        op_path: URI to CSV table of static variables for calculations
+        farm_ID: The string to look for in order to identify the column in which
+            the farm numbers are stored. That column data will become the keys
+            for the dictionary output.
+        ff_aqua_args: Dictionary of arguments being created in order to be passed
+            to the aquaculture core function.
+    Output:
+        ff_aqua_args['farm_op_dict']: A dictonary that is built up to store the
+            static parameters for the aquaculture model run. This is a 2D
+            dictionary, where the outer key is the farm ID number, and the inner
+            keys are strings of parameter names.
+            
+    Returns nothing.
+    '''
     
     #NOTE: Have to do some explicit calls to strings here. This is BAD. Don't do it if
     #you don't have to. THESE EXPLICIT STRINGS COME FROM THE "Farm Operations" 
@@ -109,11 +125,9 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
     
     dialect = csv.Sniffer().sniff(csv_file.read())
     csv_file.seek(0)
-    delim = dialect.delimiter
-    #LOGGER.debug("delim: " + delim)
     
+    delim = dialect.delimiter
     end_line = dialect.lineterminator
-    #LOGGER.debug("end: " + end_line)
     
     while True:
         line = csv_file.readline().rstrip(end_line)
@@ -146,40 +160,50 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
         for key in row:
             if (key != farm_ID):
                 sub_dict[key] = row[key]
-    
-        #del sub_dict['Total mass in farm (kg)']
-        #del sub_dict['Total dressed wt.']
-        #del sub_dict['Total value']
         
         if row[farm_ID]!= '':
             new_dict_op[row[farm_ID]] = sub_dict
     
     ff_aqua_args['farm_op_dict'] = new_dict_op
-    #LOGGER.debug(ff_aqua_args['farm_op_dict'])
 
     #add the gen args in
     for key in general_ops.keys():
         ff_aqua_args[key] = general_ops[key]    
     
 def format_temp_table(temp_path, ff_aqua_args):
+    ''' This function is doing much the same thing as format_ops_table- it takes in
+    information from a temperature table, and is formatting it into a 2D dictonary
+    as an output.
+    
+    Input: 
+        temp_path: URI to a CSV file containing temperature data for 365 days for
+            the farms on which we will look at growth cycles.
+        ff_aqua_args: Dictionary of arguments that we are building up in order to
+            pass it to the aquaculture core module.
+    Output:
+        ff_aqua_args['water_temp_dict']: A 2D dictionary containing temperature data
+            for 365 days. The outer keys are days of the year from 0 to 364 (we need
+            to be able to check the day modulo 365) which we manually shift down by 1,
+            and the inner keys are farm ID numbers.
+            
+    Returns nothing.
+    '''
     
     #EXPLICIT STRINGS FROM "Temp_Daily"
-    
     water_temp_file = open(temp_path)
    
     new_dict_temp = {}
     line = None
     
+    #This allows us to dynamically determine if the CSV file is comma separated, or 
+    #semicolon separated.
     dialect = csv.Sniffer().sniff(water_temp_file.read())
     water_temp_file.seek(0)
     delim = dialect.delimiter
-    LOGGER.debug("delim: " + delim)
-    
     end_line = dialect.lineterminator
-    #LOGGER.debug("end: " + end_line)
     
-    #This is what I will use at the key for the key->dictionary pairing w/in the
-    #outer dictionary
+    #The farm ID numbers that fall under this column heading in the CSV will be used 
+    #as the keys in the second level of the dictionary. 
     day_marker = 'Day #'
     
     while True:
@@ -189,13 +213,9 @@ def format_temp_table(temp_path, ff_aqua_args):
     
     #this is explicitly telling it the fields that I want to get data for, and am removing
     #the Day/Month Field Since it's unnecessary
-
     fieldnames =  line.split(delim)
-    #fieldnames.remove('Day/Month')
     
     reader = csv.DictReader(water_temp_file, fieldnames, dialect = dialect)
-    
-    #LOGGER.debug(fieldnames)
     
     for row in reader:
        
@@ -209,7 +229,6 @@ def format_temp_table(temp_path, ff_aqua_args):
         
         #Subtract 1 here so that the day in the temp table allows for % 365
         new_dict_temp[str(int(row[day_marker]) - 1)] = sub_dict
-    #LOGGER.debug(new_dict_temp)
         
     ff_aqua_args['water_temp_dict'] = new_dict_temp
     

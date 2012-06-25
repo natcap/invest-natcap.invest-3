@@ -8,6 +8,7 @@ import logging
 import time
 import subprocess
 import platform
+import datetime
 
 import invest_natcap
 
@@ -177,6 +178,7 @@ class Executor(threading.Thread):
 
         threading.Thread.__init__(self)
 
+        self.log_file = None
         self.printQueue = deque([])
         self.printQueueLock = threading.Lock()
         self.threadFailed = False
@@ -190,6 +192,10 @@ class Executor(threading.Thread):
         self.printQueueLock.acquire()
         self.printQueue.append(string)
         self.printQueueLock.release()
+
+        if self.log_file != None:
+            if not self.log_file.closed:
+                self.log_file.write(string)
 
     def hasMessages(self):
         self.printQueueLock.acquire()
@@ -293,6 +299,15 @@ class Executor(threading.Thread):
 
     def runModel(self, module, args):
         try:
+            # Create the log filename from the current time and save that in the
+            # root of the user's workspace.  The file is actually written to
+            # whenever self.write() is called.
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d--%H_%M_%S")
+            filename = '%s-log-%s.txt' % (module.split('.')[-1], timestamp)
+            path = os.path.join(args['workspace_dir'], filename)
+            self.log_file = open(path, 'w')
+            LOGGER.info('Saving log messages to %s', path)
+
             LOGGER.info('Loading the queued model')
             if os.path.isfile(module):
                 LOGGER.debug('Loading the model from %s', module)
@@ -311,6 +326,7 @@ class Executor(threading.Thread):
             LOGGER.error('Error: a problem occurred while running the model')
             self.printTraceback()
             self.setThreadFailed(True)
+            self.log_file.close()
             #Quit the rest of the function
             return
 
@@ -338,3 +354,4 @@ class Executor(threading.Thread):
                 ' folder: %s', platform.system(), args['workspace_dir'])
 
         LOGGER.info('Finished.')
+        self.log_file.close()
