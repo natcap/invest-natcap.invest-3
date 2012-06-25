@@ -185,6 +185,7 @@ def format_temp_table(temp_path, ff_aqua_args):
             for 365 days. The outer keys are days of the year from 0 to 364 (we need
             to be able to check the day modulo 365) which we manually shift down by 1,
             and the inner keys are farm ID numbers.
+            
     Returns nothing.
     '''
     
@@ -194,14 +195,15 @@ def format_temp_table(temp_path, ff_aqua_args):
     new_dict_temp = {}
     line = None
     
+    #This allows us to dynamically determine if the CSV file is comma separated, or 
+    #semicolon separated.
     dialect = csv.Sniffer().sniff(water_temp_file.read())
     water_temp_file.seek(0)
     delim = dialect.delimiter
-    
     end_line = dialect.lineterminator
     
-    #This is what I will use at the key for the key->dictionary pairing w/in the
-    #outer dictionary
+    #The farm ID numbers that fall under this column heading in the CSV will be used 
+    #as the keys in the second level of the dictionary. 
     day_marker = 'Day #'
     
     while True:
@@ -211,7 +213,6 @@ def format_temp_table(temp_path, ff_aqua_args):
     
     #this is explicitly telling it the fields that I want to get data for, and am removing
     #the Day/Month Field Since it's unnecessary
-
     fieldnames =  line.split(delim)
     
     reader = csv.DictReader(water_temp_file, fieldnames, dialect = dialect)
