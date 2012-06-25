@@ -4,6 +4,8 @@ import os, sys
 import unittest
 import ogr
 import logging
+import re
+import filecmp
 
 from invest_natcap.finfish_aquaculture import finfish_aquaculture_core
 import invest_test_core
@@ -17,11 +19,11 @@ class TestFinfishAquacultureCore(unittest.TestCase):
     
     def setUp(self):
     
-        ff_farm_loc = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
+        ff_farm_loc = './Aquaculture/Input/Test_Data/Finfish_Netpens_Reg_Test.shp'
         ff_aqua_args = {}
         
         #Biophysical
-        ff_aqua_args['workspace_dir'] = './test/data/aquaculture_output/Re_Testing'
+        ff_aqua_args['workspace_dir'] = './Aquaculture/Re_Testing'
         ff_aqua_args['farm_ID'] = 'FarmID'
         ff_aqua_args['ff_farm_file'] = ogr.Open(ff_farm_loc)
         ff_aqua_args['g_param_a'] = 0.038
@@ -122,10 +124,15 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         ff_aqua_args['reg_npv'] = {1: 25520.257952021995, 4: 63041.293554722826}
         
         self.ff_aqua_args = ff_aqua_args
-    
-    '''For these, we will basically have to run each test, get the values and compare
-    against expected values. THEN, add everything to their corresponding shapefiles
-    and compare the two shapefiles(?)'''
+        
+        #Create the folder for everything to be written to. This well be deleted in
+        #the tearDown function.
+        if not (os.path.exists(ff_aqua_args['workspace_dir'])):
+            os.makedirs(ff_aqua_args['workspace_dir'])
+            
+    def tearDown(self):
+        
+        os.removedirs(self.ff_aqua_args['workspace_dir'])
         
     def test_calc_cycle_history(self):
 
@@ -212,13 +219,33 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         
         finfish_aquaculture.execute(args)
         
-        #Now, retrieve the results, and compare to the pre-calculated ones
+        #Now, retrieve the results, and compare to the pre-calculated ones.
+        
+        #Checking the shapefile
         completed_shp = self.ff_aqua_args['workspace_dir'] + os.sep + 'Output' + \
                     'Finfish_Harvest.shp'
         reg_shp = './Aquaculture/Input/Test_Data/Finfish_Harvest_Reg_Test_Final.shp'
         
-        
         invest_test_core.assertTwoShapesEqualURI(self, completed_shp, reg_shp)
+        
+        #Checking the .html file
+        r = re.compile("Harvest_Results_\[[0-9_-]*\]\.html")
+        
+        html_file = None
+        
+        #Finding the HarvestResults.html file that was created with our testing
+        for root, dirs, files in os.walk((self.ff_aqua_args['workspace_dir'] + \
+                                          os.sep + 'Output')):
+            html_out = [os.path.join(root, x) for x in files if r.match(x)]
+            
+            if html_out:
+                html_file = html_out
+        
+        reg_html_file = './Aquaculture/Input/Test_Data/Harvest_Results_Reg_Test.html'
+        
+        filecmp.cmp(html_file, reg_html_file)
+        
+        #Finding the parameter log file, and checking that against our own.
         
         
         
