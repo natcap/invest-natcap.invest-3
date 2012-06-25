@@ -16,7 +16,7 @@
                     "args_id" : "workspace_dir",
                     "type": "folder",
                     "label": "Workspace",
-                    "defaultValue": "Pollination",
+                    "defaultValue": "../Pollination",
                     "required": true,
                     "validateAs": {"type": "folder"},
                     "helpText": "Your workspace should be the same as it was for the pollination biophysical component.  It contains datasets used by this model."
