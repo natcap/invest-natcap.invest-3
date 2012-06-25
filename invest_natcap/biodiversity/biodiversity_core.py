@@ -67,50 +67,50 @@ def biophysical(args):
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
-    #Process density layers / each threat
+#   #Process density layers / each threat
 
-    #For all threats:
-#    for threat, threat_data in args['threat_dict'].iteritems():
-        #get weight, name, max_idst, decay
-        #mulitply max_dist by 1000 (must be a conversion to meters
-        #get proper density raster, depending on land cover
-        
-        #Adjust threat by distance:
-            #Calculate neighborhood
+#   #For all threats:
+#   for threat, threat_data in args['threat_dict'].iteritems():
+#       #get weight, name, max_idst, decay
+#       #mulitply max_dist by 1000 (must be a conversion to meters
+#       #get proper density raster, depending on land cover
+#       
+#       #Adjust threat by distance:
+#           #Calculate neighborhood
 
-        #Adjust threat by weight:
-#        weight_multiplier = float(threat_data['WEIGHT']) / weight_sum
-#        def adjust_weight(dist):
-#            return dist * weight_multiplier 
-#        raster_utils.vectorize1ArgOp(dist.GetRasterBand(1), adjust_weight, weight_out)
+#       #Adjust threat by weight:
+#       weight_multiplier = float(threat_data['WEIGHT']) / weight_sum
+#       def adjust_weight(dist):
+#           return dist * weight_multiplier 
+#       raster_utils.vectorize1ArgOp(dist.GetRasterBand(1), adjust_weight, weight_out)
 
-        #Adjust threat by protection / access
-#        if access_shape != None:
-#            def adjust_access(weight, access):
-#                return weight * access
-#            raster_utils.vectorize2ArgOp(weight_band, access_band, adjust_access, access_out)
+#       #Adjust threat by protection / access
+#       if access_shape != None:
+#           def adjust_access(weight, access):
+#               return weight * access
+#           raster_utils.vectorize2ArgOp(weight_band, access_band, adjust_access, access_out)
 
-        #Adjust threat by sensitivity
-#       sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
-#       sensitivity_raster = make_raster_from_lulc(args['landuse'], sens_uri)
-#       sensitivity_raster = raster_from_table_values(args['landuse'], sensitivity_raster, 
-#                                                     args['sensitivity_dict'], 'L_'+threat)        
-#       def adjust_sens(sens, acc):
-#           return sens * acc
+#       #Adjust threat by sensitivity
+#      sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
+#      sensitivity_raster = make_raster_from_lulc(args['landuse'], sens_uri)
+#      sensitivity_raster = raster_from_table_values(args['landuse'], sensitivity_raster, 
+#                                                    args['sensitivity_dict'], 'L_'+threat)        
+#      def adjust_sens(sens, acc):
+#          return sens * acc
 
-# I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
+##I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
 
-    #Compute Degradation of all threats
-        #Some all the final threat rasters from above. Prob store them in a list.
-#    def degredation_op(*raster):
-#        return sum(raster)
-#    degredation_raster = raster_utils.vectorize_rasters(threat_raster_list, degredation_op, nodata=-1.0)
-    #Compute quality for all threats
-    z = 2.5
-    ksq = k**z
-    def quality_op(degradation,habitat):
-        returnhabitat * (1 - ((degredation**z) / (degredation**z + ksq)))
-    quality_raster = raster_utils.vectorize_rasters([degredation_raster, habitat], quality_op)
+#   #Compute Degradation of all threats
+#       #Some all the final threat rasters from above. Prob store them in a list.
+#   def degredation_op(*raster):
+#       return sum(raster)
+#   degredation_raster = raster_utils.vectorize_rasters(threat_raster_list, degredation_op, nodata=-1.0)
+#   #Compute quality for all threats
+#   z = 2.5
+#   ksq = k**z
+#   def quality_op(degradation,habitat):
+#       returnhabitat * (1 - ((degredation**z) / (degredation**z + ksq)))
+#   quality_raster = raster_utils.vectorize_rasters([degredation_raster, habitat], quality_op)
 
 
     #Adjust quality by habitat status
