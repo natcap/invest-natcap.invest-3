@@ -67,6 +67,10 @@ def execute(args):
             raise TypeError
         LOGGER.info("adv_uv_points not provided, using zero values")
         adv_uv_points = None
+    except RuntimeError:
+        #This happens when you ogr.Open(None), same as not providing a value
+        LOGGER.info("adv_uv_points not provided, using zero values")
+        adv_uv_points = None
     
     output_directory = os.path.join(args['workspace_dir'],'output')
     intermediate_directory = os.path.join(args['workspace_dir'],'intermediate')

@@ -1,7 +1,10 @@
 from urllib import urlencode
 from urllib2 import Request
 from urllib2 import urlopen
-import pkg_resources
+
+# This should be left as 'development' unless programmatically set when building
+# a release.  DO NOT ALTER THIS VERSION BY HAND.
+__version__ = 'development'
 
 def log_model(model_name):
     """Submit a POST request to the defined URL with the modelname passed in as
@@ -12,16 +15,9 @@ def log_model(model_name):
 
     returns nothing."""
 
-    try:
-        release_num = pkg_resources.require("invest_natcap")[0].version
-    except pkg_resources.DistributionNotFound:
-        # This exception is thrown when a model is run without being installed
-        # through distutils.
-        release_num = 'development'
-
     path = 'http://ncp-dev.stanford.edu/~invest-logger/log-modelname.php'
     data = {'model_name': model_name,
-            'invest_release': release_num}
+            'invest_release': __version__}
     try:
         urlopen(Request(path, urlencode(data)))
     except:
