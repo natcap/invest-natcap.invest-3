@@ -3,6 +3,13 @@ from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 import urllib2
 
+import logging
+
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('recreation')
+
 
 def execute(args):
     aoiFileName = args["aoiFileName"]
@@ -34,10 +41,14 @@ def execute(args):
     # Create the Request object
     request = urllib2.Request("http://ncp-skookum.stanford.edu/~mlacayo/recreation.php", datagen, headers)
     
+    LOGGER.info("Sending request to server")
+    
     # Actually do the request, and get the response
     # This will display the output from the model including the path for the results
     results = eval(urllib2.urlopen(request).read())
-    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+results["sessid"].strip()
+    LOGGER.info("Processing response from server")
+    
+    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+results["sessid"].strip()+"/results.zip"
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
@@ -46,3 +57,27 @@ def execute(args):
         chunk = req.read(CHUNK)
         if not chunk: break
         fp.write(chunk)
+        
+    LOGGER.info("Transaction complete")
+        
+if __name__ == "__main__":
+    args = {}
+    if len(sys.argv)>1:
+        LOGGER.info("Running model with user provided parameters")
+        aoiFileName = sys.argv[1]
+        cellSize = float(sys.argv[2])
+        workspace_dir = sys.argv[3]
+        
+        args = {'aoiFileName':aoiFileName,
+                'cellSize':cellSize}
+    else:
+        LOGGER.info("Runnning model with test parameters")
+        dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
+        aoiFileName = dirname+"recreation_data/"+"aoi.shp"
+        cellSize = 5000
+
+        args["aoiFileName"] = aoiFileName
+        args["cellSize"] = cellSize
+        args["workspace_dir"] = dirname+"test_out/"
+
+    execute(args)
