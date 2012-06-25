@@ -240,14 +240,14 @@ def biophysical(args):
 
     #Clip the wave energy and wave power rasters so that they are confined 
     #to the AOI
-    wave_power_raster = clip_raster_from_polygon(aoi_shape, \
+    clipped_wave_power_raster = clip_raster_from_polygon(aoi_shape, \
         wave_power_raster, wave_power_path)
-    wave_energy_raster = clip_raster_from_polygon(aoi_shape, \
+    clipped_wave_energy_raster = clip_raster_from_polygon(aoi_shape, \
         wave_energy_raster, wave_energy_path)
     #Flush the cache to make sure all data has been saved to disk and nothing
     #is waiting in a buffer to be written
-    wave_energy_raster.FlushCache()
-    wave_power_raster.FlushCache()
+    clipped_wave_energy_raster.FlushCache()
+    clipped_wave_power_raster.FlushCache()
 
     #Create the percentile rasters for wave energy and wave power
     #These values are hard coded in because it's specified explicitly in  
@@ -259,11 +259,11 @@ def biophysical(args):
     wp_units_long = ' wave power per unit width of wave crest length (kW/m)'
     starting_percentile_range = '1'
     capwe_rc = \
-       create_percentile_rasters(wave_energy_raster, capwe_rc_path, \
+       create_percentile_rasters(clipped_wave_energy_raster, capwe_rc_path, \
                                  capwe_units_short, capwe_units_long, \
                                  starting_percentile_range, percentiles, nodata)
     wp_rc_raster = \
-        create_percentile_rasters(wave_power_raster, wp_rc_path, \
+        create_percentile_rasters(clipped_wave_power_raster, wp_rc_path, \
                                   wp_units_short, wp_units_long, \
                                   starting_percentile_range, percentiles, \
                                   nodata)
@@ -273,6 +273,8 @@ def biophysical(args):
     aoi_shape.Destroy()
     wave_energy_raster = None
     wave_power_raster = None
+    clipped_wave_energy_raster = None
+    clipped_wave_power_raster = None
     wp_rc_raster = None
     capwe_rc = None
     
