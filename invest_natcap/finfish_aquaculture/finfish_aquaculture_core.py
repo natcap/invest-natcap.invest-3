@@ -76,7 +76,7 @@ def execute(args):
     
     #using a tuple to get data back from function, then update the shape files 
     #to reflect these new attributes
-    cycle_history = calc_farm_cycles(args, args['g_param_a'], 
+    cycle_history = calc_farm_cycles(args['outplant_buffer'], args['g_param_a'], 
                                           args['g_param_b'], args['water_temp_dict'], 
                                           args['farm_op_dict'], float(args['duration']))
 
@@ -99,7 +99,6 @@ def execute(args):
         
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
-        #casting to string because it's coming out of a CSV
         num_cycles = len(cycle_history[feature_ID])
         feature.SetField('Tot_Cycles', num_cycles)
         
@@ -159,10 +158,11 @@ def execute(args):
     #Last output is a text file of the parameters that the model was run with
     create_param_log(args)
 
-def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
+def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
     '''
     Input:
-        args: Dictionary containing all arguments for this run of the aquaculture model.
+        outplant_buffer: The number of days surrounding the outplant day during which
+            the fish growth cycle can still be started.
         a: Growth parameter alpha. Float used as a scaler in the fish growth equation.
         b: Growth paramater beta. Float used as an exponential multiplier in the
             fish growth equation.
@@ -198,14 +198,12 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
         farm_history = []
         fish_weight = 0
         outplant_date = None
-    
         #Have changed the water temp table to be accessed by keys 0 to 364, so now can just
         #grab straight from the table without having to deal with change in day
         
         #However, it should be kept in mind that when doing calculations for a given day,
         #you are using YESTRDAY'S temperatures and weights to get the value for today.
-        
-        outplant_buffer = args['outplant_buffer']
+
 
         #Are going 1 day beyond on the off-chance that you ended a harvest the day
         #before, and need to record today. This should not create any false harvest
@@ -233,7 +231,7 @@ def calc_farm_cycles(args, a, b, water_temp_dict, farm_op_dict, dur):
             #function that maps an incoming day to the same day % 365, then creates a
             #list to check against +/- buffer days from the start day
             elif (day % 365) in map (lambda x: x%365, range(start_day - outplant_buffer, 
-                                                    start_day + outplant_buffer+1)):
+                                                    start_day + outplant_buffer + 1)):
                     fish_weight = start_weight
                     outplant_date = day + 1
     
