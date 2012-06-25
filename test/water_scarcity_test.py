@@ -21,7 +21,7 @@ class TestWaterScarcity(unittest.TestCase):
     def test_water_scarcity_default_inputs(self):
        
 
-        rasie SkipTest
+        raise SkipTest
 
         output_base = './data/test_out/hydropower_water_scarcity_default_inputs/'
         input_dir = './data/hydropower_data/test_input/'
