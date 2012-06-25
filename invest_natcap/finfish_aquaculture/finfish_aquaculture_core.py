@@ -393,7 +393,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
                     
         Returns nothing.
     '''
-    filename = os.path.join(output_dir, "HarvestResults_[%s].html" % \
+    filename = os.path.join(output_dir, "Harvest_Results_[%s].html" % \
         datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
     file = open(filename, "w")
     

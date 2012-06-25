@@ -219,8 +219,6 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         
         finfish_aquaculture.execute(args)
         
-        #Now, retrieve the results, and compare to the pre-calculated ones.
-        
         #Checking the shapefile
         completed_shp = self.ff_aqua_args['workspace_dir'] + os.sep + 'Output' + \
                     'Finfish_Harvest.shp'
@@ -228,12 +226,13 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         
         invest_test_core.assertTwoShapesEqualURI(self, completed_shp, reg_shp)
         
-        #Checking the .html file
+        
+        #Finding the HarvestResults.html file that was created with our testing,
+        #and comparing the inner text against our regression test file.
         r = re.compile("Harvest_Results_\[[0-9_-]*\]\.html")
         
         html_file = None
-        
-        #Finding the HarvestResults.html file that was created with our testing
+
         for root, dirs, files in os.walk((self.ff_aqua_args['workspace_dir'] + \
                                           os.sep + 'Output')):
             html_out = [os.path.join(root, x) for x in files if r.match(x)]
@@ -243,9 +242,21 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         
         reg_html_file = './Aquaculture/Input/Test_Data/Harvest_Results_Reg_Test.html'
         
-        filecmp.cmp(html_file, reg_html_file)
+        filecmp.cmp(html_file, reg_html_file, shallow=False)
         
         #Finding the parameter log file, and checking that against our own.
+        r = re.compile("Parameter_Log_\[[0-9_-]*\]\.txt")
         
+        text_file = None
+
+        for root, dirs, files in os.walk((self.ff_aqua_args['workspace_dir'] + \
+                                          os.sep + 'Output')):
+            text_out = [os.path.join(root, x) for x in files if r.match(x)]
+            
+            if text_out:
+                text_file = text_out
+                
+        reg_text_file = './Aquaculture/Input/Test_Data/Parameter_Log_Reg_Test.txt'
         
+        filecmp.cmp(text_file, reg_text_file, shallow=False)
         
