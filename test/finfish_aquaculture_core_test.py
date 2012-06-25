@@ -125,15 +125,6 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         
         self.ff_aqua_args = ff_aqua_args
         
-        #Create the folder for everything to be written to. This well be deleted in
-        #the tearDown function.
-        if not (os.path.exists(ff_aqua_args['workspace_dir'])):
-            os.makedirs(ff_aqua_args['workspace_dir'])
-            
-    def tearDown(self):
-        
-        os.removedirs(self.ff_aqua_args['workspace_dir'])
-        
     def test_calc_cycle_history(self):
 
     
@@ -196,67 +187,4 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                         self.ff_aqua_args['tpw_totals'], self.ff_aqua_args['indiv_cy_tpw'], 
                         self.ff_aqua_args['do_valuation'], self.ff_aqua_args['reg_npv'], 
                         self.ff_aqua_args['reg_value_hist'])
-        
-    def test_finfish_aquaculture(self):
-        
-        #Are going to have to run the test, then index into the file locations in order 
-        #to test things like the shapefile against some sort of pre-made thing.
-        
-        #Need to get the arguments in the proper form to pass to finfish_aquaculture
-        args = {}
-        args['workspace_dir'] = self.ff_aqua_args['workspace_dir']
-        args['ff_farm_loc'] = self.ff_aqua_args['ff_farm_loc']
-        args['farm_ID'] = self.ff_aqua_args['farm_ID']
-        args['g_param_a'] = self.ff_aqua_args['g_param_a']
-        args['g_param_b'] = self.ff_aqua_args['g_param_b']
-        args['water_temp_tbl'] = './Aquaculture/Input/Test_Data/Temp_Daily_Reg_Test.csv'
-        args['farm_op_tbl'] = './Aquaculture/Input/Test_Data/Farm_Operations_Reg_Test.csv'
-        args['outplant_buffer'] = self.ff_aqua_args['outplant_buffer']
-        args['do_valuation'] = self.ff_aqua_args['do_valuation']
-        args['p_per_kg'] = self.ff_aqua_args['p_per_kg']
-        args['frac_p'] = self.ff_aqua_args['frac_p']
-        args['discount'] = self.ff_aqua_args['discount']
-        
-        finfish_aquaculture.execute(args)
-        
-        #Checking the shapefile
-        completed_shp = self.ff_aqua_args['workspace_dir'] + os.sep + 'Output' + \
-                    'Finfish_Harvest.shp'
-        reg_shp = './Aquaculture/Input/Test_Data/Finfish_Harvest_Reg_Test_Final.shp'
-        
-        invest_test_core.assertTwoShapesEqualURI(self, completed_shp, reg_shp)
-        
-        
-        #Finding the HarvestResults.html file that was created with our testing,
-        #and comparing the inner text against our regression test file.
-        r = re.compile("Harvest_Results_\[[0-9_-]*\]\.html")
-        
-        html_file = None
-
-        for root, dirs, files in os.walk((self.ff_aqua_args['workspace_dir'] + \
-                                          os.sep + 'Output')):
-            html_out = [os.path.join(root, x) for x in files if r.match(x)]
-            
-            if html_out:
-                html_file = html_out
-        
-        reg_html_file = './Aquaculture/Input/Test_Data/Harvest_Results_Reg_Test.html'
-        
-        filecmp.cmp(html_file, reg_html_file, shallow=False)
-        
-        #Finding the parameter log file, and checking that against our own.
-        r = re.compile("Parameter_Log_\[[0-9_-]*\]\.txt")
-        
-        text_file = None
-
-        for root, dirs, files in os.walk((self.ff_aqua_args['workspace_dir'] + \
-                                          os.sep + 'Output')):
-            text_out = [os.path.join(root, x) for x in files if r.match(x)]
-            
-            if text_out:
-                text_file = text_out
-                
-        reg_text_file = './Aquaculture/Input/Test_Data/Parameter_Log_Reg_Test.txt'
-        
-        filecmp.cmp(text_file, reg_text_file, shallow=False)
         
