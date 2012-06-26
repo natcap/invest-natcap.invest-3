@@ -393,7 +393,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
                     
         Returns nothing.
     '''
-    filename = os.path.join(output_dir, "HarvestResults_[%s].html" % \
+    filename = os.path.join(output_dir, "Harvest_Results_[%s].html" % \
         datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
     file = open(filename, "w")
     
@@ -490,7 +490,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
                         indiv_rev, indiv_npv, out_day, out_year]
             
             for element in vars:
-                if element == indiv_rev or element == indiv_npv:
+                if not do_valuation and (element == indiv_rev or element == indiv_npv):
                     str_line += "<td bgcolor= '#FF0000'>"
                 else :
                     str_line += "<td>"
@@ -536,7 +536,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
         str_line += "<td>" + str(id) + "</td>"
         
         for element in vars:
-            if element == npv:
+            if not do_valuation and element == npv:
                 str_line += "<td BGCOLOR='#ff0000'>"
             else:
                 str_line += "<td BGCOLOR='#ffff00'>"
