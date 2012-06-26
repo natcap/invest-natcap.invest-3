@@ -87,7 +87,7 @@
                                    "fieldsExist": ["SPECIES", "ALPHA"],
                                    "restrictions": [{"field": "ALPHA",
                                                      "validateAs": {"type": "number",
-                                                                    "allowedValues": "[0-9]*\\.[0-9]*$"}}]},
+                                                                    "allowedValues": {"pattern":"[0-9]*\\.[0-9]*$"}}}]},
                     "helpText": "This table must be either a DBF or CSV.  It must contain information specific to the various pollinators you wish to model.  Please see the documentation for details on the structure of this table."
                 },
                 {
