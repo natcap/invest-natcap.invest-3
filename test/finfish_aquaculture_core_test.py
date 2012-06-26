@@ -19,11 +19,11 @@ class TestFinfishAquacultureCore(unittest.TestCase):
     
     def setUp(self):
     
-        ff_farm_loc = './Aquaculture/Input/Test_Data/Finfish_Netpens_Reg_Test.shp'
+        ff_farm_loc = './data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         ff_aqua_args = {}
         
         #Biophysical
-        ff_aqua_args['workspace_dir'] = './Aquaculture/Re_Testing'
+        ff_aqua_args['workspace_dir'] = './data/test_out/Aquaculture/Re_Testing'
         ff_aqua_args['farm_ID'] = 'FarmID'
         ff_aqua_args['ff_farm_file'] = ogr.Open(ff_farm_loc)
         ff_aqua_args['g_param_a'] = 0.038
@@ -89,23 +89,22 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         ff_aqua_args['frac_p'] = .3
         ff_aqua_args['discount'] = 0.000192
         
-        ff_aqua_args['reg_cy_hist'] = {1: [(1, 3, 6266.532049655182), 
-                                           (363, 365, 6266.532049655182), 
-                                           (728, 730, 6266.532049655182), 
-                                           (1093, 1095, 6266.532049655182), 
-                                           (1458, 1460, 6266.532049655182), 
-                                           (1823, 1825, 6266.532049655182)], 
-                                       4: [(20, 22, 21651.134982624022), 
-                                           (382, 384, 21651.134982624022), 
-                                           (747, 749, 21651.134982624022), 
-                                           (1112, 1114, 21651.134982624022), 
-                                           (1477, 1479, 21651.134982624022)]}
+        ff_aqua_args['reg_cy_hist'] = {1: [(1, 3, 6266.532049655182), (363, 365, 6266.532049655182), 
+                                           (728, 730, 6266.532049655182), (1093, 1095, 6266.532049655182), 
+                                           (1458, 1460, 6266.532049655182), (1823, 1825, 6266.532049655182)], 
+                                       4: [(20, 22, 21651.134982624022), (382, 384, 21651.134982624022), 
+                                           (386, 388, 21651.134982624022), (747, 749, 21651.134982624022), 
+                                           (751, 753, 21651.134982624022), (1112, 1114, 21651.134982624022), 
+                                           (1116, 1118, 21651.134982624022), (1477, 1479, 21651.134982624022), 
+                                           (1481, 1483, 21651.134982624022)]}
         
-        ff_aqua_args['tpw_totals'] =  {1: 19170334.68056063, 4: 45996057.19164784}
-        ff_aqua_args['indiv_cy_tpw'] = {1: [3195055.7800934385, 3195055.7800934385, 
-                                            3195055.7800934385, 3195055.7800934385, 
-                                            3195055.7800934385, 3195055.7800934385], 
+        ff_aqua_args['tpw_totals'] = {1: 19170334.68056063, 4: 82792902.94496611}
+        ff_aqua_args['indiv_cy_tpw'] = {1: [3195055.7800934385, 3195055.7800934385,
+                                             3195055.7800934385, 3195055.7800934385,
+                                              3195055.7800934385, 3195055.7800934385], 
                                         4: [9199211.438329568, 9199211.438329568, 
+                                            9199211.438329568, 9199211.438329568, 
+                                            9199211.438329568, 9199211.438329568, 
                                             9199211.438329568, 9199211.438329568, 
                                             9199211.438329568]}
         #The value history contains a history of tuples that are (net revenue, npv)
@@ -118,26 +117,29 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                                                (5032212.853647165, 3544841.5158939636)], 
                                            4: [(14488758.015369069, 14427692.42493477), 
                                                (14488758.015369069, 13459055.036178194), 
+                                               (14488758.015369069, 13448723.441551866), 
                                                (14488758.015369069, 12548220.25580618), 
+                                               (14488758.015369069, 12538587.846649937), 
                                                (14488758.015369069, 11699025.761093546), 
-                                               (14488758.015369069, 10907300.076710137)]}
-        ff_aqua_args['reg_npv'] = {1: 25520.257952021995, 4: 63041.293554722826}
+                                               (14488758.015369069, 11690045.220382353), 
+                                               (14488758.015369069, 10907300.076710137), 
+                                               (14488758.015369069, 10898927.28957483)]}
+        ff_aqua_args['reg_npv'] =  {1: 25520.257952021995, 4: 111617.57735288182}
         
         self.ff_aqua_args = ff_aqua_args
         
     def test_calc_cycle_history(self):
-
+        self.maxDiff = None
     
         cycle_history = finfish_aquaculture_core.calc_farm_cycles(
-                                self.ff_aqua_args, self.ff_aqua_args['g_param_a'],
+                                self.ff_aqua_args['outplant_buffer'], self.ff_aqua_args['g_param_a'],
                                 self.ff_aqua_args['g_param_b'], self.ff_aqua_args['water_temp_tbl'],
                                 self.ff_aqua_args['farm_op_tbl'], self.ff_aqua_args['duration'])
         
         #LOGGER.debug(reg_cy_hist)
         #LOGGER.debug(cycle_history)
         
-        self.assertEqual(self.ff_aqua_args['reg_cy_hist'], cycle_history, 
-                         "These two cycle histories are not equal.")
+        self.assertEqual(self.ff_aqua_args['reg_cy_hist'], cycle_history)
     
     def test_calc_proc_weight(self):
         
@@ -150,11 +152,8 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         #LOGGER.debug(indiv_cy_proc)
         
         self.maxDiff = None
-        self.assertEqual(total_proc_weight, self.ff_aqua_args['tpw_totals'], 
-                         "One or more of the total weights do not match.")
-        self.assertEqual(indiv_cy_proc, self.ff_aqua_args['indiv_cy_tpw'], 
-                         "The processed weight histories in one or more of the farms \
-                         does not match.")
+        self.assertEqual(total_proc_weight, self.ff_aqua_args['tpw_totals'])
+        self.assertEqual(indiv_cy_proc, self.ff_aqua_args['indiv_cy_tpw'])
         
     def test_valuation(self):
         
@@ -169,9 +168,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
             
             
             self.maxDiff = None
-            self.assertEqual(value_history, self.ff_aqua_args['reg_value_hist'],
-                             " One or more of the valuation histories in this \
-                                    dictionary do not match.")
+            self.assertEqual(value_history, self.ff_aqua_args['reg_value_hist'])
 
             #Have to re-write the check almost equal, since the assert doesn't
             #support dictionaries
@@ -182,7 +179,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         else:
             pass
         
-        finfish_aquaculture_core.create_HTML_table(self.ff_aqua_args['workspace_dir'] + os.sep + 'Output', self.ff_aqua_args['farm_ID'], 
+        finfish_aquaculture_core.create_HTML_table(self.ff_aqua_args['workspace_dir'] + os.sep + 'Output', 
                         self.ff_aqua_args['farm_op_tbl'], self.ff_aqua_args['reg_cy_hist'], 
                         self.ff_aqua_args['tpw_totals'], self.ff_aqua_args['indiv_cy_tpw'], 
                         self.ff_aqua_args['do_valuation'], self.ff_aqua_args['reg_npv'], 
