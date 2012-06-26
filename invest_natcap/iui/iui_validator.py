@@ -408,8 +408,8 @@ class TableChecker(FileChecker, ValidationAssembler):
                 return str('Required field: ' + required_field + ' not found')
 
     def verify_restrictions(self, restriction_list):
+        table = self._build_table()
         for restriction in restriction_list:
-            table = self._build_table()
             for row in table:
                 value = row[restriction['field']]
                 assembled_dict = self.assemble(value, restriction['validateAs'])
