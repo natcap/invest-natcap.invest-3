@@ -4,6 +4,8 @@ import os, sys
 import unittest
 import ogr
 import logging
+import re
+import filecmp
 
 from invest_natcap.finfish_aquaculture import finfish_aquaculture_core
 import invest_test_core
@@ -17,11 +19,11 @@ class TestFinfishAquacultureCore(unittest.TestCase):
     
     def setUp(self):
     
-        ff_farm_loc = './test/data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
+        ff_farm_loc = './Aquaculture/Input/Test_Data/Finfish_Netpens_Reg_Test.shp'
         ff_aqua_args = {}
         
         #Biophysical
-        ff_aqua_args['workspace_dir'] = './test/data/aquaculture_output/Re_Testing'
+        ff_aqua_args['workspace_dir'] = './Aquaculture/Re_Testing'
         ff_aqua_args['farm_ID'] = 'FarmID'
         ff_aqua_args['ff_farm_file'] = ogr.Open(ff_farm_loc)
         ff_aqua_args['g_param_a'] = 0.038
@@ -122,10 +124,6 @@ class TestFinfishAquacultureCore(unittest.TestCase):
         ff_aqua_args['reg_npv'] = {1: 25520.257952021995, 4: 63041.293554722826}
         
         self.ff_aqua_args = ff_aqua_args
-    
-    '''For these, we will basically have to run each test, get the values and compare
-    against expected values. THEN, add everything to their corresponding shapefiles
-    and compare the two shapefiles(?)'''
         
     def test_calc_cycle_history(self):
 
@@ -189,36 +187,4 @@ class TestFinfishAquacultureCore(unittest.TestCase):
                         self.ff_aqua_args['tpw_totals'], self.ff_aqua_args['indiv_cy_tpw'], 
                         self.ff_aqua_args['do_valuation'], self.ff_aqua_args['reg_npv'], 
                         self.ff_aqua_args['reg_value_hist'])
-        
-    def test_finfish_aquaculture(self):
-        
-        #Are going to have to run the test, then index into the file locations in order 
-        #to test things like the shapefile against some sort of pre-made thing.
-        
-        #Need to get the arguments in the proper form to pass to finfish_aquaculture
-        args = {}
-        args['workspace_dir'] = self.ff_aqua_args['workspace_dir']
-        args['ff_farm_loc'] = self.ff_aqua_args['ff_farm_loc']
-        args['farm_ID'] = self.ff_aqua_args['farm_ID']
-        args['g_param_a'] = self.ff_aqua_args['g_param_a']
-        args['g_param_b'] = self.ff_aqua_args['g_param_b']
-        args['water_temp_tbl'] = './Aquaculture/Input/Test_Data/Temp_Daily_Reg_Test.csv'
-        args['farm_op_tbl'] = './Aquaculture/Input/Test_Data/Farm_Operations_Reg_Test.csv'
-        args['outplant_buffer'] = self.ff_aqua_args['outplant_buffer']
-        args['do_valuation'] = self.ff_aqua_args['do_valuation']
-        args['p_per_kg'] = self.ff_aqua_args['p_per_kg']
-        args['frac_p'] = self.ff_aqua_args['frac_p']
-        args['discount'] = self.ff_aqua_args['discount']
-        
-        finfish_aquaculture.execute(args)
-        
-        #Now, retrieve the results, and compare to the pre-calculated ones
-        completed_shp = self.ff_aqua_args['workspace_dir'] + os.sep + 'Output' + \
-                    'Finfish_Harvest.shp'
-        reg_shp = './Aquaculture/Input/Test_Data/Finfish_Harvest_Reg_Test_Final.shp'
-        
-        
-        invest_test_core.assertTwoShapesEqualURI(self, completed_shp, reg_shp)
-        
-        
         

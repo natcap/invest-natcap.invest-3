@@ -1,8 +1,7 @@
 """InVEST Biodiversity model core function  module"""
 
-import invest_cython_core
 from invest_natcap.invest_core import invest_core
-import invest_natcap.raster_utils
+from invest_natcap import raster_utils
 
 from osgeo import gdal
 from osgeo import ogr
@@ -67,50 +66,64 @@ def biophysical(args):
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
-    #Process density layers / each threat
+    # 1) Blur all threats with gaussian filter
+    for threat, threat_data in args['threat_dict'].iteritems():
+        threat_raster = args['density_dict'][threat]
+        filtered_raster = \
+            raster_utils.new_raster_from_base(threat_raster, str(intermediate_dir +
+                    threat+'filtered.tif'),'GTiff', -1.0, gdal.GDT_Float32) 
+        filtered_out_matrix = \
+            clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
+                        ndimage.gaussian_filter, 
+                        threat_raster.GetRasterBand(1).GetNoDataValue())
+        filtered_band = filtered_raster.GetRasterBand(1)
+        filtered_band.WriteArray(filtered_out_matrix)
+    # 2) Apply threats on land cover
 
-    #For all threats:
-#    for threat, threat_data in args['threat_dict'].iteritems():
-        #get weight, name, max_idst, decay
-        #mulitply max_dist by 1000 (must be a conversion to meters
-        #get proper density raster, depending on land cover
-        
-        #Adjust threat by distance:
-            #Calculate neighborhood
+#   #Process density layers / each threat
 
-        #Adjust threat by weight:
-#        weight_multiplier = float(threat_data['WEIGHT']) / weight_sum
-#        def adjust_weight(dist):
-#            return dist * weight_multiplier 
-#        raster_utils.vectorize1ArgOp(dist.GetRasterBand(1), adjust_weight, weight_out)
+#   #For all threats:
+#   for threat, threat_data in args['threat_dict'].iteritems():
+#       #get weight, name, max_idst, decay
+#       #mulitply max_dist by 1000 (must be a conversion to meters)
+#       #get proper density raster, depending on land cover
+#       
+#       #Adjust threat by distance:
+#           #Calculate neighborhood
 
-        #Adjust threat by protection / access
-#        if access_shape != None:
-#            def adjust_access(weight, access):
-#                return weight * access
-#            raster_utils.vectorize2ArgOp(weight_band, access_band, adjust_access, access_out)
+#       #Adjust threat by weight:
+#       weight_multiplier = float(threat_data['WEIGHT']) / weight_sum
+#       def adjust_weight(dist):
+#           return dist * weight_multiplier 
+#       raster_utils.vectorize1ArgOp(dist.GetRasterBand(1), adjust_weight, weight_out)
 
-        #Adjust threat by sensitivity
-#       sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
-#       sensitivity_raster = make_raster_from_lulc(args['landuse'], sens_uri)
-#       sensitivity_raster = raster_from_table_values(args['landuse'], sensitivity_raster, 
-#                                                     args['sensitivity_dict'], 'L_'+threat)        
-#       def adjust_sens(sens, acc):
-#           return sens * acc
+#       #Adjust threat by protection / access
+#       if access_shape != None:
+#           def adjust_access(weight, access):
+#               return weight * access
+#           raster_utils.vectorize2ArgOp(weight_band, access_band, adjust_access, access_out)
 
-# I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
+#       #Adjust threat by sensitivity
+#      sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
+#      sensitivity_raster = make_raster_from_lulc(args['landuse'], sens_uri)
+#      sensitivity_raster = raster_from_table_values(args['landuse'], sensitivity_raster, 
+#                                                    args['sensitivity_dict'], 'L_'+threat)        
+#      def adjust_sens(sens, acc):
+#          return sens * acc
 
-    #Compute Degradation of all threats
-        #Some all the final threat rasters from above. Prob store them in a list.
-#    def degredation_op(*raster):
-#        return sum(raster)
-#    degredation_raster = raster_utils.vectorize_rasters(threat_raster_list, degredation_op, nodata=-1.0)
-    #Compute quality for all threats
-    z = 2.5
-    ksq = k**z
-    def quality_op(degradation,habitat):
-        returnhabitat * (1 - ((degredation**z) / (degredation**z + ksq)))
-    quality_raster = raster_utils.vectorize_rasters([degredation_raster, habitat], quality_op)
+##I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
+
+#   #Compute Degradation of all threats
+#       #Some all the final threat rasters from above. Prob store them in a list.
+#   def degredation_op(*raster):
+#       return sum(raster)
+#   degredation_raster = raster_utils.vectorize_rasters(threat_raster_list, degredation_op, nodata=-1.0)
+#   #Compute quality for all threats
+#   z = 2.5
+#   ksq = k**z
+#   def quality_op(degradation,habitat):
+#       returnhabitat * (1 - ((degredation**z) / (degredation**z + ksq)))
+#   quality_raster = raster_utils.vectorize_rasters([degredation_raster, habitat], quality_op)
 
 
     #Adjust quality by habitat status
@@ -119,6 +132,37 @@ def biophysical(args):
 
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
+
+def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
+    """Apply an operatoin to a matrix after the matrix is adjusted for nodata
+        values. After the operation is complete, the matrix will have pixels
+        culled based on the input matrix's original values that were less than 0
+        (which assumes a nodata value of below zero).
+
+        in_matrix - a numpy matrix for use as the first argument to op
+        arg1 - an argument of whatever type is necessary for the second argument
+            of op
+        op - a python callable object with two arguments: in_matrix and arg1
+        in_matrix_nodata - a python int or float
+        out_matrix_nodata - a python int or float
+        kwargs={} - a python dictionary of keyword arguments to be passed in to
+            op when it is called.
+
+        returns a numpy matrix."""
+
+    # Making a copy of the in_matrix so as to avoid side effects from putmask
+    matrix = in_matrix.copy()
+
+    # Convert nodata values to 0
+    np.putmask(matrix, matrix == in_matrix_nodata, 0)
+
+    # Apply the operation specified by the user
+    filtered_matrix = op(matrix, arg1, **kwargs)
+
+    # Restore nodata values to their proper places.
+    np.putmask(filtered_matrix, in_matrix== in_matrix_nodata, out_matrix_nodata)
+
+    return filtered_matrix
 
 def make_raster_from_shape(base_raster, shape, attr):
     """Burn an attribute value from a polygone shapefile onto an

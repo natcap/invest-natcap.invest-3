@@ -197,8 +197,8 @@ class ValidationAssembler(object):
         for restriction in valid_dict['restrictions']:
             field_rest = restriction['validateAs']
             if self._is_primitive(field_rest):
-                assembled_primitive = self._assemble_primitive(field_rest)
-                assembled_dict['restrictions'].append(assembled_primitive)
+                restriction['validateAs'] = self._assemble_primitive(field_rest)
+                assembled_dict['restrictions'].append(restriction)
 
         return assembled_dict
 
@@ -408,16 +408,17 @@ class TableChecker(FileChecker, ValidationAssembler):
                 return str('Required field: ' + required_field + ' not found')
 
     def verify_restrictions(self, restriction_list):
+        table = self._build_table()
         for restriction in restriction_list:
-            for row in self._build_table():
-                assembled_dict = {}
+            for row in table:
                 value = row[restriction['field']]
                 assembled_dict = self.assemble(value, restriction['validateAs'])
 
-                if row['type'] == 'number':
-                    error = self.num_checker(assembled_dict)
-                elif row['type'] == 'string':
-                    error = self.str_checker(assembled_dict)
+                error = None
+                if assembled_dict['type'] == 'number':
+                    error = self.num_checker.run_checks(assembled_dict)
+                else:  # assume the restriction type is a string
+                    error = self.str_checker.run_checks(assembled_dict)
 
                 if error != None and error != '':
                     return error
@@ -612,7 +613,8 @@ class PrimitiveChecker(Checker):
         pattern = re.compile(user_pattern, flag)
         value = valid_dict['value']
         if pattern.match(str(self.value)) == None:
-            return str(self.value + " value not allowed")
+            return str("Value '%s' not allowed (allowed values: %s)" %
+                (self.value, user_pattern))
 
 class NumberChecker(PrimitiveChecker):
     def __init__(self):
@@ -659,7 +661,7 @@ class CSVChecker(TableChecker):
 
         # Now that we know the csv file is probably good, we can actually open
         # the file and save the DictReader object.
-        self.file = csv.DictReader(open(self.uri))
+        self.file = csv.reader(open(self.uri))
 
     def _build_table(self):
         table_rows = []
