@@ -8,4 +8,4 @@ Duration of simulation (years);5;;;;
 Farm-Specific Operations Parameters;;;;;
 Farm #:;weight of fish at start (kg);target weight of fish at harvest (kg);number of fish in farm;start day for growing;Length of Fallowing period
 1;0.06;5.4;600000;1;30
-4;0.08;6;500000;20;22
+4;0.08;6;500000;20;0

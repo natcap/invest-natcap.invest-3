@@ -3,22 +3,25 @@
 import os, sys
 import unittest
 import shutil
+import re
+import filecmp
 
 from invest_natcap.finfish_aquaculture import finfish_aquaculture
 import invest_test_core
+from osgeo import ogr
 
 class TestFinfishAquaculture(unittest.TestCase):
     def setUp(self):
     
         ff_aqua_args = {}
         #Biophysical
-        ff_aqua_args['workspace_dir'] = './Aquaculture/Re_Testing'
-        ff_aqua_args['ff_farm_loc'] = './Aquaculture/Input/Test_Data/Finfish_Netpens_Reg_Test.shp'
+        ff_aqua_args['workspace_dir'] = './data/test_out/Aquaculture/Re_Testing'
+        ff_aqua_args['ff_farm_loc'] = './data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         ff_aqua_args['farm_ID'] = 'FarmID'
         ff_aqua_args['g_param_a'] = 0.038
         ff_aqua_args['g_param_b'] = 2.0
-        ff_aqua_args['water_temp_tbl'] = './Aquaculture/Input/Test_Data/Temp_Daily_Reg_Test.csv'
-        ff_aqua_args['farm_op_tbl'] = './Aquaculture/Input/Test_Data/Farm_Operations_Reg_Test.csv'
+        ff_aqua_args['water_temp_tbl'] = './data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
+        ff_aqua_args['farm_op_tbl'] = './data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         ff_aqua_args['outplant_buffer'] = 3
         
         #Valuation
@@ -63,6 +66,11 @@ class TestFinfishAquaculture(unittest.TestCase):
 
         self.ff_aqua_args = ff_aqua_args
         
+        output_dir = ff_aqua_args['workspace_dir'] + os.sep + 'Output'
+        
+        if not (os.path.exists(output_dir)):
+            os.makedirs(output_dir)
+            
     def test_format_ops_table(self):
         
         reg_ops_table = {'1': {'weight of fish at start (kg)' : '0.06',
@@ -123,7 +131,7 @@ class TestFinfishAquaculture(unittest.TestCase):
                                           '116': {'1': '7', '4': '8'}, '111': {'1': '7', '4': '8'}, '110': {'1': '7', '4': '8'}, '113': {'1': '7', '4': '8'}, '112': {'1': '7', '4': '8'}, '119': {'1': '7', '4': '8'}, '118': {'1': '7', '4': '8'}, '308': {'1': '7', '4': '8'}, '309': {'1': '7', '4': '8'}, '300': {'1': '7', '4': '8'}, '301': {'1': '7', '4': '8'}, '302': {'1': '7', '4': '8'}, 
                                           '303': {'1': '7', '4': '8'}, '304': {'1': '7', '4': '8'}, '305': {'1': '7', '4': '8'}, '306': {'1': '7', '4': '8'}, '307': {'1': '7', '4': '8'}, '229': {'1': '7', '4': '8'}, '228': {'1': '7', '4': '8'}, '227': {'1': '7', '4': '8'}, '226': {'1': '7', '4': '8'}, '225': {'1': '7', '4': '8'}, '224': {'1': '7', '4': '8'}, '223': {'1': '7', '4': '8'}, 
                                           '222': {'1': '7', '4': '8'}, '221': {'1': '7', '4': '8'}, '220': {'1': '7', '4': '8'}, '151': {'1': '7', '4': '8'}, '150': {'1': '7', '4': '8'}, '153': {'1': '7', '4': '8'}, '152': {'1': '7', '4': '8'}, '155': {'1': '7', '4': '8'}, '154': {'1': '7', '4': '8'}, '157': {'1': '7', '4': '8'}, '156': {'1': '7', '4': '8'}, '159': {'1': '7', '4': '8'}, '158': {'1': '7', '4': '8'}, 
-                                          '48': {'1': '7', '4': '8'}, '49': {'1': '7', '4': '8'}, '46': {'1': '7', '4': '8'}, '47': {'1': '7', '4': '8'}, '44': {'1': '7', '4': '8'}, '45': {'1': '7', '4': '8'}, '42': {'1': '7', '4': '8'}, '43': {'1': '7', '4': '8'}, '40': {'1': '7', '4': '8'}, '41': {'1': '7', '4': '8'}, '5': {'1': '7', '4': '8'}}
+                                          '48': {'1': '7', '4': '8'}, '49': {'1': '7', '4': '8'}, '46': {'1': '7', '4': '8'}, '47': {'1': '7', '4': '8'}, '44': {'1': '7', '4': '8'}, '45': {'1': '7', '4': '8'}, '42': {'1': '7', '4': '8'}, '43': {'1': '7', '4': '8'}, '40': {'1': '7', '4': '8'}, '41': {'1': '7', '4': '8'}, '5': {'1': '7', '4': '8'}, '364': {'1': '7', '4': '8'}}
         
         finfish_aquaculture.format_temp_table(self.ff_aqua_args['water_temp_tbl'], self.ff_aqua_args)
         norm_temp_table = self.ff_aqua_args['water_temp_dict']
@@ -143,8 +151,8 @@ class TestFinfishAquaculture(unittest.TestCase):
         args['farm_ID'] = self.ff_aqua_args['farm_ID']
         args['g_param_a'] = self.ff_aqua_args['g_param_a']
         args['g_param_b'] = self.ff_aqua_args['g_param_b']
-        args['water_temp_tbl'] = './Aquaculture/Input/Test_Data/Temp_Daily_Reg_Test.csv'
-        args['farm_op_tbl'] = './Aquaculture/Input/Test_Data/Farm_Operations_Reg_Test.csv'
+        args['water_temp_tbl'] = './data/aquaculture_data/Test_Data/Temp_Daily_Reg_Test.csv'
+        args['farm_op_tbl'] = './data/aquaculture_data/Test_Data/Farm_Operations_Reg_Test.csv'
         args['outplant_buffer'] = self.ff_aqua_args['outplant_buffer']
         args['do_valuation'] = self.ff_aqua_args['do_valuation']
         args['p_per_kg'] = self.ff_aqua_args['p_per_kg']
@@ -154,10 +162,16 @@ class TestFinfishAquaculture(unittest.TestCase):
         finfish_aquaculture.execute(args)
         
         #Checking the shapefile
-        completed_shp = self.ff_aqua_args['workspace_dir'] + os.sep + 'Output' + \
+        path = self.ff_aqua_args['workspace_dir'] + os.sep + 'Output' + os.sep + \
                     'Finfish_Harvest.shp'
-        reg_shp = './Aquaculture/Input/Test_Data/Finfish_Harvest_Reg_Test_Final.shp'
-        
+        print path
+        completed_shp = path
+       
+        reg_shp = './data/aquaculture_data/Test_Data/Finfish_Harvest_Reg_Test_Final.shp'
+
+        print type(completed_shp)
+        print type(reg_shp)
+
         invest_test_core.assertTwoShapesEqualURI(self, completed_shp, reg_shp)
         
         
@@ -169,12 +183,12 @@ class TestFinfishAquaculture(unittest.TestCase):
 
         for root, dirs, files in os.walk((self.ff_aqua_args['workspace_dir'] + \
                                           os.sep + 'Output')):
-            html_out = [os.path.join(root, x) for x in files if r.match(x)]
+            html_out = [os.path.join(root, x) for x in files if r.match(x)][0]
             
             if html_out:
                 html_file = html_out
         
-        reg_html_file = './Aquaculture/Input/Test_Data/Harvest_Results_Reg_Test.html'
+        reg_html_file = './data/aquaculture_data/Test_Data/Harvest_Results_Reg_Test.html'
         
         filecmp.cmp(html_file, reg_html_file, shallow=False)
         
@@ -185,18 +199,12 @@ class TestFinfishAquaculture(unittest.TestCase):
 
         for root, dirs, files in os.walk((self.ff_aqua_args['workspace_dir'] + \
                                           os.sep + 'Output')):
-            text_out = [os.path.join(root, x) for x in files if r.match(x)]
+            text_out = [os.path.join(root, x) for x in files if r.match(x)][0]
             
             if text_out:
                 text_file = text_out
                 
-        reg_text_file = './Aquaculture/Input/Test_Data/Parameter_Log_Reg_Test.txt'
+        reg_text_file = './data/aquaculture_data/Test_Data/Parameter_Log_Reg_Test.txt'
         
         filecmp.cmp(text_file, reg_text_file, shallow=False)
-        
-
-    def tearDown(self):
-        
-        if os.path.exists(self.ff_aqua_args['workspace_dir']):
-            shutil.rmtree(self.ff_aqua_args['workspace_dir'])
         

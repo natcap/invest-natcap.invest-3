@@ -19,7 +19,7 @@ class TestFinfishAquacultureCore(unittest.TestCase):
     
     def setUp(self):
     
-        ff_farm_loc = './Aquaculture/Input/Test_Data/Finfish_Netpens_Reg_Test.shp'
+        ff_farm_loc = './data/aquaculture_data/Test_Data/Finfish_Netpens_Reg_Test.shp'
         ff_aqua_args = {}
         
         #Biophysical
