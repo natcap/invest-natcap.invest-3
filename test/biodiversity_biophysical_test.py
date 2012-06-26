@@ -23,6 +23,6 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         args['sensitivity_uri'] = input_dir + 'sensitivity_samp.csv'
         args['access_uri'] = input_dir + 'access_samp.shp'
         args['half_saturation_constant'] = 30
-        args['results_suffix'] = input_dir + ''
+        args['results_suffix'] = ''
 
         biodiversity_biophysical.execute(args)
