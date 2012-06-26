@@ -1824,7 +1824,6 @@ class ExecRoot(Root):
     def setWindowSize(self):
         #this groups all elements together at the top, leaving the
         #buttons at the bottom of the window.
-
         if 'width' in self.attributes:
             width = self.attributes['width']
         else:
@@ -1837,6 +1836,17 @@ class ExecRoot(Root):
 
         if 'label' in self.attributes:
             self.setWindowTitle(self.attributes['label'])
+
+        # Check the height and width set in the UI.  Shrink them if they extend
+        # beyond the available height and width of the window manager.
+        screen_geometry = QtGui.QDesktopWidget().availableGeometry()
+        screen_height = screen_geometry.height()
+        screen_width = screen_geometry.width()
+        if width > screen_width:
+            width = screen_width - 50
+
+        if height > screen_height:
+            height = screen_height - 50
 
         self.resize(width, height)
         center_window(self)
