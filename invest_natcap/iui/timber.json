@@ -16,7 +16,7 @@
                     "type": "folder",
                     "label": "Workspace",
                     "required": true,
-                    "args_id": "output_dir",
+                    "args_id": "workspace_dir",
                     "defaultValue": "../timber"
                 },
                 {
