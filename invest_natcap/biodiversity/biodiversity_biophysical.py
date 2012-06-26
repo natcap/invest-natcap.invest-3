@@ -94,7 +94,7 @@ def execute(args):
         density_dict = {}
         for threat in biophysical_args['threat_dict']:
             try:
-                density_dict[str(threat+ext)] = gdal.Open(workspace+'input/'+str(threat+ext),gdal.GA_ReadOnly)
+                density_dict[str(threat)] = gdal.Open(workspace+'input/'+str(threat+ext),gdal.GA_ReadOnly)
             except:
                 LOGGER.debug('Could not find the threat raster : %s', workspace+'input/'+str(threat+ext))
         
