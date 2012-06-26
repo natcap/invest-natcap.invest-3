@@ -303,10 +303,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
             
             indiv_tpw_totals[f].append(curr_cy_tpw)
             curr_cycle_totals[f] += curr_cy_tpw
-            
-    LOGGER.debug(curr_cycle_totals)
-    LOGGER.debug(indiv_tpw_totals)
-            
+
     return (curr_cycle_totals, indiv_tpw_totals)
 
 def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
@@ -360,10 +357,7 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
             
             #divide by 1000, because the number we want to return is in thousands of dollars
             valuations[f] += npv / 1000
-    
-    LOGGER.debug(val_history)
-    LOGGER.debug(valuations)
-    
+
     return val_history, valuations
 
 def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight, 
