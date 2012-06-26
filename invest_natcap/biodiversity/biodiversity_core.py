@@ -1,8 +1,7 @@
 """InVEST Biodiversity model core function  module"""
 
-import invest_cython_core
 from invest_natcap.invest_core import invest_core
-import invest_natcap.raster_utils
+from invest_natcap import raster_utils
 
 from osgeo import gdal
 from osgeo import ogr
@@ -67,12 +66,26 @@ def biophysical(args):
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
+    # 1) Blur all threats with gaussian filter
+    for threat, threat_data in args['threat_dict'].iteritems():
+        threat_raster = args['density_dict'][threat]
+        filtered_raster = \
+            raster_utils.new_raster_from_base(threat_raster, str(intermediate_dir +
+                    threat+'filtered.tif'),'GTiff', -1.0, gdal.GDT_Float32) 
+        filtered_out_matrix = \
+            clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
+                        ndimage.gaussian_filter, 
+                        threat_raster.GetRasterBand(1).GetNoDataValue())
+        filtered_band = filtered_raster.GetRasterBand(1)
+        filtered_band.WriteArray(filtered_out_matrix)
+    # 2) Apply threats on land cover
+
 #   #Process density layers / each threat
 
 #   #For all threats:
 #   for threat, threat_data in args['threat_dict'].iteritems():
 #       #get weight, name, max_idst, decay
-#       #mulitply max_dist by 1000 (must be a conversion to meters
+#       #mulitply max_dist by 1000 (must be a conversion to meters)
 #       #get proper density raster, depending on land cover
 #       
 #       #Adjust threat by distance:
