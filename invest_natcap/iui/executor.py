@@ -9,6 +9,7 @@ import time
 import subprocess
 import platform
 import datetime
+import shutil
 
 import invest_natcap
 
@@ -297,6 +298,13 @@ class Executor(threading.Thread):
         self.outputObj.saveLastRun()
         LOGGER.info('Parameters saved to disk')
 
+    def move_log_file(self, workspace):
+        self.log_file.close()
+        shutil.move(self.log_file.name, workspace)
+        log_file_name = os.path.basename(self.log_file.name)
+        log_file_uri = os.path.join(workspace, log_file_name)
+        LOGGER.info('Saving log file to %s', log_file_uri)
+
     def runModel(self, module, args):
         try:
             # Create the log filename from the current time and save that in the
@@ -304,9 +312,11 @@ class Executor(threading.Thread):
             # whenever self.write() is called.
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d--%H_%M_%S")
             filename = '%s-log-%s.txt' % (module.split('.')[-1], timestamp)
-            path = os.path.join(args['workspace_dir'], filename)
-            self.log_file = open(path, 'w')
-            LOGGER.info('Saving log messages to %s', path)
+
+            # we want to save this file to the current directory until the model
+            # finishes, when we copy the log into the model's workspace
+            log_file_uri = os.path.abspath(os.path.join('.', filename))
+            self.log_file = open(log_file_uri, 'w')
 
             LOGGER.info('Loading the queued model')
             if os.path.isfile(module):
@@ -326,7 +336,7 @@ class Executor(threading.Thread):
             LOGGER.error('Error: a problem occurred while running the model')
             self.printTraceback()
             self.setThreadFailed(True)
-            self.log_file.close()
+            self.move_log_file(args['workspace_dir'])
             #Quit the rest of the function
             return
 
@@ -354,4 +364,4 @@ class Executor(threading.Thread):
                 ' folder: %s', platform.system(), args['workspace_dir'])
 
         LOGGER.info('Finished.')
-        self.log_file.close()
+        self.move_log_file(args['workspace_dir'])
