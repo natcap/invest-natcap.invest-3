@@ -76,7 +76,7 @@
                                     "fieldsExist": ["ws_id", "precip_mn", "PET_mn", "AET_mn", "wyield_mn", "wyield_sum", "cyield_vl", "consump_vl", "consump_mn", "rsupply_vl", "rsupply_mn"],
                                     "restrictions": [{"field": "ws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"^[0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+$"}
                                                                   }},
                                                      {"field": "precip_mn",
                                                       "validateAs": {"type": "number",
@@ -130,11 +130,11 @@
                                     "fieldsExist": ["ws_id", "subws_id", "precip_mn", "PET_mn", "AET_mn", "wyield_mn", "wyield_sum", "cyield_vl", "consump_vl", "consump_mn", "rsupply_vl", "rsupply_mn"],
                                     "restrictions": [{"field": "ws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"^[0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+$"}
                                                                   }},
                                                      {"field": "subws_id",
                                                       "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"^[0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+$"}
                                                                   }},
                                                      {"field": "precip_mn",
                                                       "validateAs": {"type": "number",
@@ -188,11 +188,11 @@
                                     "fieldsExist": ["ws_id", "time_span", "discount", "efficiency", "fraction", "cost", "height", "kw_price"],
                                     "restrictions": [{"field": "ws_id",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"^[0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+$"}
                                                                   }},
                                                     {"field": "time_span",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"^[0-9]+"}
+                                                                  "allowedValues": {"pattern":"^[0-9]+$"}
                                                                   }},                                                    
                                                     {"field": "discount",
                                                     "validateAs":{"type": "number",
@@ -212,7 +212,7 @@
                                                                   }},                                                    
                                                     {"field": "height",
                                                     "validateAs":{"type": "number",
-                                                                  "allowedValues": {"pattern":"^[0-9]+"}
+                                                                  "allowedValues": {"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}
                                                                   }},
                                                     
                                                     {"field": "kw_price",
