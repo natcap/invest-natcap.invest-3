@@ -4,8 +4,8 @@
     "targetScript" : "invest_natcap.finfish_aquaculture.finfish_aquaculture",
     "modelName" : "finfish_aquaculture",
     "localDocURI": "./documentation/marine_fish.html",
-    "height": 1000,
-    "width" : 600,
+    "height": 550,
+    "width" : 700,
     "elements": [
         {
             "id" : "workspace_list",

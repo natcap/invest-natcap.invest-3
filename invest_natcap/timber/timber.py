@@ -17,7 +17,7 @@ def execute(args):
     
     args - a dictionary object of arguments 
        
-    args['output_dir']        - The file location where the outputs will 
+    args['workspace_dir']        - The file location where the outputs will 
                                 be written (Required)
     args['timber_shape_uri']  - The shape file describing timber parcels with 
                                 fields as described in the user guide (Required)
@@ -31,14 +31,14 @@ def execute(args):
     timber_shape = ogr.Open(args['timber_shape_uri'].encode(filesystemencoding), 1)
 
     #Add the Output directory onto the given workspace
-    output_dir = args['output_dir'] + os.sep + 'Output/'
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
+    workspace_dir = args['workspace_dir'] + os.sep + 'Output/'
+    if not os.path.isdir(workspace_dir):
+        os.makedirs(workspace_dir)
 
     #CopyDataSource expects a python string, yet some versions of json load a 
     #'unicode' object from the dumped command line arguments.  The cast to a 
     #python string here should ensure we are able to proceed.
-    shape_source = str(output_dir + 'timber.shp')
+    shape_source = str(workspace_dir + 'timber.shp')
 
     #If there is already an existing shapefile with the same name and path, delete it
     if os.path.isfile(shape_source):
