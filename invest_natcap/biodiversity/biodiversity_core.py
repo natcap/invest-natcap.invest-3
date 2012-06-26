@@ -120,6 +120,37 @@ def biophysical(args):
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
 
+def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
+    """Apply an operatoin to a matrix after the matrix is adjusted for nodata
+        values. After the operation is complete, the matrix will have pixels
+        culled based on the input matrix's original values that were less than 0
+        (which assumes a nodata value of below zero).
+
+        in_matrix - a numpy matrix for use as the first argument to op
+        arg1 - an argument of whatever type is necessary for the second argument
+            of op
+        op - a python callable object with two arguments: in_matrix and arg1
+        in_matrix_nodata - a python int or float
+        out_matrix_nodata - a python int or float
+        kwargs={} - a python dictionary of keyword arguments to be passed in to
+            op when it is called.
+
+        returns a numpy matrix."""
+
+    # Making a copy of the in_matrix so as to avoid side effects from putmask
+    matrix = in_matrix.copy()
+
+    # Convert nodata values to 0
+    np.putmask(matrix, matrix == in_matrix_nodata, 0)
+
+    # Apply the operation specified by the user
+    filtered_matrix = op(matrix, arg1, **kwargs)
+
+    # Restore nodata values to their proper places.
+    np.putmask(filtered_matrix, in_matrix== in_matrix_nodata, out_matrix_nodata)
+
+    return filtered_matrix
+
 def make_raster_from_shape(base_raster, shape, attr):
     """Burn an attribute value from a polygone shapefile onto an
        existing blank raster
