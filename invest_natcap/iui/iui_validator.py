@@ -303,7 +303,8 @@ class Checker(registrar.Registrar):
                     if error != None:
                         return error
         except Exception as e:
-            return str(e)
+            print '%s: \'%s\' encountered, for input %s passing validation.' % \
+                (e.__class__.__name__, str(e), valid_dict['value'])
         return None
 
 class URIChecker(Checker):
