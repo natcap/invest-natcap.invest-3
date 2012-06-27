@@ -72,14 +72,19 @@ def biophysical(args):
         filtered_raster = \
             raster_utils.new_raster_from_base(threat_raster, str(intermediate_dir +
                     threat+'filtered.tif'),'GTiff',
-                    threat_raster.GetRasterBand(1).GetNoDataValue(), gdal.GDT_Float32) 
+                    -1.0, gdal.GDT_Float32)
+        filtered_raster.GetRasterBand(1).Fill(-1.0)
         sigma = 0.5
         filtered_out_matrix = \
             clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
                         ndimage.gaussian_filter, 
-                        threat_raster.GetRasterBand(1).GetNoDataValue())
+                        in_matrix_nodata=threat_raster.GetRasterBand(1).GetNoDataValue(),
+                        out_matrix_nodata=-1.0)
         filtered_band = filtered_raster.GetRasterBand(1)
         filtered_band.WriteArray(filtered_out_matrix)
+        filtered_band = None
+        filtered_raster.FlushCache()
+        break
     # 2) Apply threats on land cover
 
 #   #Process density layers / each threat
