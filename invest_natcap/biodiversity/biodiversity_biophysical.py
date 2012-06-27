@@ -61,6 +61,7 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
+    input_dir = os.path.join(workspace, 'input')
 
     for folder in [inter_dir, out_dir]:
         if not os.path.isdir(folder):
@@ -93,9 +94,12 @@ def execute(args):
         density_dict = {}
         for threat in biophysical_args['threat_dict']:
             try:
-                density_dict[str(threat)] = gdal.Open(workspace+'input/'+str(threat+ext),gdal.GA_ReadOnly)
+                density_dict[str(threat)] = \
+                    gdal.Open(os.path.join(input_dir, str(threat+ext+'.tif')),\
+                              gdal.GA_ReadOnly)
             except:
-                LOGGER.debug('Could not find the threat raster : %s', workspace+'input/'+str(threat+ext))
+                LOGGER.debug('Could not find the threat raster : %s', \
+                        os.path.join(input_dir, str(threat+ext+'.tif')))
         
         biophysical_args['density_dict'] = density_dict
         biodiversity_core.biophysical(biophysical_args)
