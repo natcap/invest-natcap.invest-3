@@ -212,6 +212,7 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
         #records, because the fish would be reaching the end growth weight today, not
         #yesterday.
         for day in range (0, int((365*dur)) + 1):
+         
             if fallow_days_left > 0:
                 fallow_days_left -= 1
 
@@ -232,13 +233,14 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
             
             #function that maps an incoming day to the same day % 365, then creates a
             #list to check against +/- buffer days from the start day
+            
             elif (day % 365) in map (lambda x: x%365, range(start_day - outplant_buffer, 
                                                     start_day + outplant_buffer + 1)):
                     fish_weight = start_weight
                     outplant_date = day + 1
     
         cycle_history[int(f)] = farm_history
-    
+
     return cycle_history
 
 def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
@@ -301,7 +303,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
             
             indiv_tpw_totals[f].append(curr_cy_tpw)
             curr_cycle_totals[f] += curr_cy_tpw
-            
+
     return (curr_cycle_totals, indiv_tpw_totals)
 
 def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
@@ -334,7 +336,7 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
     val_history = {}
     valuations = {}
     
-    for f in cycle_history.keys():
+    for f in cycle_history:
         
         val_history[f] = []
         valuations[f] = 0.0
@@ -355,7 +357,7 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
             
             #divide by 1000, because the number we want to return is in thousands of dollars
             valuations[f] += npv / 1000
-    
+
     return val_history, valuations
 
 def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight, 
