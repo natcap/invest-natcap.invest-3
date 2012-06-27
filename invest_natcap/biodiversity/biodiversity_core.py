@@ -1,6 +1,5 @@
 """InVEST Biodiversity model core function  module"""
 
-from invest_natcap.invest_core import invest_core
 from invest_natcap import raster_utils
 
 from osgeo import gdal
@@ -66,12 +65,15 @@ def biophysical(args):
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
+    #def tracer_op(
     # 1) Blur all threats with gaussian filter
     for threat, threat_data in args['threat_dict'].iteritems():
         threat_raster = args['density_dict'][threat]
         filtered_raster = \
             raster_utils.new_raster_from_base(threat_raster, str(intermediate_dir +
-                    threat+'filtered.tif'),'GTiff', -1.0, gdal.GDT_Float32) 
+                    threat+'filtered.tif'),'GTiff',
+                    threat_raster.GetRasterBand(1).GetNoDataValue(), gdal.GDT_Float32) 
+        sigma = 0.5
         filtered_out_matrix = \
             clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
                         ndimage.gaussian_filter, 
@@ -235,15 +237,16 @@ def raster_from_table_values(key_raster, out_raster, attr_dict, field):
         else:
             return out_nodata
 
-    out_band = out_raster.GetRasterBand(1)
-    invest_core.vectorize1ArgOp(key_band, vop, out_band)
+    #out_band = out_raster.GetRasterBand(1)
+    out_raster = raster_utils.vectorize_rasters([key_raster], vop, nodata=-1.0)
 
     return out_raster
 
 def make_raster_from_lulc(lulc_dataset, raster_uri):
     LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
-    dataset = invest_cython_core.newRasterFromBase(\
-        lulc_dataset, raster_uri, 'GTiff', -1, gdal.GDT_Float32)
+    dataset = \
+        raster_utils.new_raster_from_base(lulc_dataset, raster_uri, 'GTiff', \
+                                          -1, gdal.GDT_Float32)
     return dataset
 
 
