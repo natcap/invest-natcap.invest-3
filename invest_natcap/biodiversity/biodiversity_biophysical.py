@@ -6,7 +6,6 @@ import csv
 
 from invest_natcap.biodiversity import biodiversity_core
 from invest_natcap.iui import fileio
-import invest_cython_core
 
 import os.path
 import re
