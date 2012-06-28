@@ -584,6 +584,7 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     for shp_layer in shp:
         for feature in shp_layer:
             geometry = feature.GetGeometryRef()
+            #feature_extent = [xmin, xmax, ymin, ymax]
             feature_extent = geometry.GetEnvelope()
             #This is an array based way of mapping the right funciton
             #to the right index.
@@ -597,6 +598,7 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
                     #define this as the initial state
                     shp_extent = list(feature_extent)
 
+    #shp_extent = [xmin, xmax, ymin, ymax]
     tiff_width = int(np.ceil(abs(shp_extent[1] - shp_extent[0]) / xRes))
     tiff_height = int(np.ceil(abs(shp_extent[3] - shp_extent[2]) / yRes))
 
