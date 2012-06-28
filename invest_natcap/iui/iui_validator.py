@@ -6,6 +6,7 @@ import os
 import re
 import csv
 import threading
+import traceback
 
 import osgeo
 from osgeo import ogr
@@ -305,6 +306,7 @@ class Checker(registrar.Registrar):
         except Exception as e:
             print '%s: \'%s\' encountered, for input %s passing validation.' % \
                 (e.__class__.__name__, str(e), valid_dict['value'])
+            print traceback.format_exc()
         return None
 
 class URIChecker(Checker):
