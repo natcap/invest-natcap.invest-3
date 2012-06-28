@@ -5,6 +5,7 @@ import os
 import math
 import datetime
 import logging
+import webbrowser
 
 from osgeo import ogr
 from decimal import *
@@ -565,6 +566,8 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     #end page
     file.write("</html>")
     file.close()   
+
+    webbrowser.open(filename)
 
 def create_param_log(args):  
     '''Input: 
