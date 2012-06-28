@@ -1,31 +1,31 @@
-General Operations Parameters (applies to all farms),,,Instructions:,,,,,
-Fraction of fish remaining after processing,85%,,"When necessary, modify values for farm operations and/or add new farms (beginning with row ""32"").  Do not, however, modify the location of cells in this template.",,,Key:,,
-Natural mortality rate on the farm (daily),0.000137 ,,,,,remove?,,
-Duration of simulation (years),5 ,,,,,,,
-,,,,,,,,
-,,,,,,,,
-,,,,,,,,
-Farm-Specific Operations Parameters,,,,,,,,
-Farm #:,weight of fish at start (kg),target weight of fish at harvest (kg),number of fish in farm,start day for growing,Length of Fallowing period,Total mass in farm (kg),Total dressed wt.,Total value
-1,0.06,5.40 ,600000,60,0," 3,240,000 "," 2,754,000 ",#VALUE!
-2,0.06,5.40 ,600000,60,0," 3,240,000 "," 2,754,000 ",#VALUE!
-3,0.06,5.40 ,590000,50,90," 3,186,000 "," 2,708,100 ",#VALUE!
-4,0.06,5.40 ,730000,60,90," 3,942,000 "," 3,350,700 ",#VALUE!
-5,0.06,5.40 ,890000,20,10," 4,806,000 "," 4,085,100 ",#VALUE!
-6,0.06,5.40 ,900000,60,90," 4,860,000 "," 4,131,000 ",#VALUE!
-7,0.06,5.40 ,840000,60,90," 4,536,000 "," 3,855,600 ",#VALUE!
-8,0.06,5.40 ,970000,60,0," 5,238,000 "," 4,452,300 ",#VALUE!
-9,0.06,5.40 ,640000,60,90," 3,456,000 "," 2,937,600 ",#VALUE!
-10,0.06,5.40 ,1000000,60,90," 5,400,000 "," 4,590,000 ",#VALUE!
-11,0.06,5.40 ,740000,60,90," 3,996,000 "," 3,396,600 ",#VALUE!
-12,0.06,5.40 ,420000,70,5," 2,268,000 "," 1,927,800 ",#VALUE!
-13,0.06,5.40 ,920000,60,30," 4,968,000 "," 4,222,800 ",#VALUE!
-14,0.06,5.40 ,750000,40,90," 4,050,000 "," 3,442,500 ",#VALUE!
-15,0.06,5.40 ,410000,60,90," 2,214,000 "," 1,881,900 ",#VALUE!
-16,0.06,5.40 ,940000,30,90," 5,076,000 "," 4,314,600 ",#VALUE!
-17,0.06,5.40 ,570000,60,90," 3,078,000 "," 2,616,300 ",#VALUE!
-18,0.06,5.40 ,950000,80,90," 5,130,000 "," 4,360,500 ",#VALUE!
-19,0.06,5.40 ,440000,60,30," 2,376,000 "," 2,019,600 ",#VALUE!
-20,0.06,5.40 ,690000,60,90," 3,726,000 "," 3,167,100 ",#VALUE!
-21,0.06,5.40 ,300000,60,90,,,
-22,0.06,5.40 ,350000,60,90,,,
+General Operations Parameters (applies to all farms);;;Instructions:;;;
+Fraction of fish remaining after processing;85%;;"When necessary, modify values for farm operations and/or add new farms (beginning with row ""32"").  Do not, however, modify the location of cells in this template.";;;Key:
+Natural mortality rate on the farm (daily);0.000137;;;;;remove?
+Duration of simulation (years);5;;;;;
+;;;;;;
+;;;;;;
+;;;;;;
+Farm-Specific Operations Parameters;;;;;;
+Farm #:;weight of fish at start (kg);target weight of fish at harvest (kg);number of fish in farm;start day for growing;Length of Fallowing period;
+1;0.06;5.4;600000;60;0;
+2;0.06;5.4;600000;60;0;
+3;0.06;5.4;590000;50;90;
+4;0.06;5.4;730000;60;90;
+5;0.06;5.4;890000;20;10;
+6;0.06;5.4;900000;60;90;
+7;0.06;5.4;840000;60;90;
+8;0.06;5.4;970000;60;0;
+9;0.06;5.4;640000;60;90;
+10;0.06;5.4;1000000;60;90;
+11;0.06;5.4;740000;60;90;
+12;0.06;5.4;420000;70;5;
+13;0.06;5.4;920000;60;30;
+14;0.06;5.4;750000;40;90;
+15;0.06;5.4;410000;60;90;
+16;0.06;5.4;940000;30;90;
+17;0.06;5.4;570000;60;90;
+18;0.06;5.4;950000;80;90;
+19;0.06;5.4;440000;60;30;
+20;0.06;5.4;690000;60;90;
+21;0.06;5.4;300000;60;90;
+22;0.06;5.4;350000;60;90;
