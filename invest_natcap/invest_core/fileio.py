@@ -23,3 +23,27 @@ class TableDriverTemplate(object):
         file-specific package as necessary.  Should return a list of
         dictionaries."""
         return [{}]
+
+
+class TableHandler(object):
+    def __init__(self, uri, fieldnames=None):
+        """Constructor for the TableHandler class. uri is a python string.
+        fieldnames, if not None, should be a python list of python strings."""
+        self.driver = self.find_driver(uri, fieldnames)
+        self.table = self.driver.read_table()
+        self.fieldnames = self.driver.get_fieldnames()
+
+    def __iter__(self):
+        """Allow this handler object's table to be iterated through.  Returns an
+        iterable version of self.table."""
+        return iter(self.table)
+
+    def write_table(self, table=None, uri=None):
+        """Invoke the driver to save the table to disk.  If table == None,
+        self.table will be written, otherwise, the list of dictionaries passed
+        in to table will be written.  If uri is None, the table will be written
+        to the table's original uri, otherwise, the table object will be written
+        to uri."""
+        if table == None:
+            table = self.table
+        self.driver.write_table(table, uri)
