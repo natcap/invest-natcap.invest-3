@@ -664,17 +664,13 @@ class CSVChecker(TableChecker):
 
         # Now that we know the csv file is probably good, we can actually open
         # the file and save the DictReader object.
-        self.file = csv.reader(open(self.uri))
+        self.file = csv.DictReader(open(self.uri))
 
     def _build_table(self):
         table_rows = []
         fieldnames = self._get_fieldnames()
         for record in self.file:
-            row = {}
-            for field_name, value in zip(fieldnames, record):
-                row[field_name] = value
-
-            table_rows.append(row)
+            table_rows.append(record)
         return table_rows
 
     def _get_fieldnames(self):
