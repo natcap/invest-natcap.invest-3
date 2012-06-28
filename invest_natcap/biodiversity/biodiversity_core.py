@@ -1,6 +1,5 @@
 """InVEST Biodiversity model core function  module"""
 
-from invest_natcap.invest_core import invest_core
 from invest_natcap import raster_utils
 
 from osgeo import gdal
@@ -66,18 +65,28 @@ def biophysical(args):
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
+    #def tracer_op(
     # 1) Blur all threats with gaussian filter
     for threat, threat_data in args['threat_dict'].iteritems():
         threat_raster = args['density_dict'][threat]
+        threat_band = threat_raster.GetRasterBand(1)
+        threat_nodata = threat_band.GetNoDataValue()
+
         filtered_raster = \
             raster_utils.new_raster_from_base(threat_raster, str(intermediate_dir +
-                    threat+'filtered.tif'),'GTiff', -1.0, gdal.GDT_Float32) 
+                    threat+'filtered.tif'),'GTiff',
+                    -1.0, gdal.GDT_Float32)
+        #filtered_raster.GetRasterBand(1).Fill(-1.0)
+        sigma = 1.75
         filtered_out_matrix = \
             clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
-                        ndimage.gaussian_filter, 
-                        threat_raster.GetRasterBand(1).GetNoDataValue())
+                        ndimage.gaussian_filter, matrix_type=float, 
+                        in_matrix_nodata=float(threat_raster.GetRasterBand(1).GetNoDataValue()),
+                        out_matrix_nodata=-1.0)
         filtered_band = filtered_raster.GetRasterBand(1)
         filtered_band.WriteArray(filtered_out_matrix)
+        filtered_band = None
+        filtered_raster.FlushCache()
     # 2) Apply threats on land cover
 
 #   #Process density layers / each threat
@@ -133,7 +142,7 @@ def biophysical(args):
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
 
-def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
+def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
     """Apply an operatoin to a matrix after the matrix is adjusted for nodata
         values. After the operation is complete, the matrix will have pixels
         culled based on the input matrix's original values that were less than 0
@@ -151,7 +160,7 @@ def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, 
         returns a numpy matrix."""
 
     # Making a copy of the in_matrix so as to avoid side effects from putmask
-    matrix = in_matrix.copy()
+    matrix = np.array(in_matrix.copy(), dtype=matrix_type)
 
     # Convert nodata values to 0
     np.putmask(matrix, matrix == in_matrix_nodata, 0)
@@ -235,15 +244,16 @@ def raster_from_table_values(key_raster, out_raster, attr_dict, field):
         else:
             return out_nodata
 
-    out_band = out_raster.GetRasterBand(1)
-    invest_core.vectorize1ArgOp(key_band, vop, out_band)
+    #out_band = out_raster.GetRasterBand(1)
+    out_raster = raster_utils.vectorize_rasters([key_raster], vop, nodata=-1.0)
 
     return out_raster
 
 def make_raster_from_lulc(lulc_dataset, raster_uri):
     LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
-    dataset = invest_cython_core.newRasterFromBase(\
-        lulc_dataset, raster_uri, 'GTiff', -1, gdal.GDT_Float32)
+    dataset = \
+        raster_utils.new_raster_from_base(lulc_dataset, raster_uri, 'GTiff', \
+                                          -1, gdal.GDT_Float32)
     return dataset
 
 

@@ -1,0 +1,8 @@
+MAX_DIST,WEIGHT,DECAY,Threat
+8.0,0.7,0,crp
+5.0,0.6,0,rr
+10.0,1.0,0,urb
+6.0,0.5,0,rot
+3.0,1.0,0,prds
+1.0,0.7,0,srds
+0.5,0.5,0,lrds
