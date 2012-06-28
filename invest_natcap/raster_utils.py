@@ -578,11 +578,27 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
         returns a blank raster whose bounds fit within `shp`s bounding box
             and features are equivalent to the passed in data"""
 
-    #Determine the width and height of the tiff in pixels based on desired
-    #x and y resolution
-    shpExtent = shp.GetLayer(0).GetExtent()
-    tiff_width = int(np.ceil(abs(shpExtent[1] - shpExtent[0]) / xRes))
-    tiff_height = int(np.ceil(abs(shpExtent[3] - shpExtent[2]) / yRes))
+    #Determine the width and height of the tiff in pixels based on the 
+    #maximum size of the combined envelope of all the features
+    shp_extent = None
+    for shp_layer in shp:
+        for feature in shp_layer:
+            geometry = feature.GetGeometryRef()
+            feature_extent = geometry.GetEnvelope()
+            #This is an array based way of mapping the right funciton
+            #to the right index.
+            functions = [min, max, min, max]
+            for i in range(len(functions)):
+                try:
+                    shp_extent[i] = functions[i](shp_extent[i],feature_extent[i])
+                except TypeError:
+                    #need to cast to list becuase it gets returned as a tuple 
+                    #and we can't assign to a tuple's index, also need to 
+                    #define this as the initial state
+                    shp_extent = list(feature_extent)
+
+    tiff_width = int(np.ceil(abs(shp_extent[1] - shp_extent[0]) / xRes))
+    tiff_height = int(np.ceil(abs(shp_extent[3] - shp_extent[2]) / yRes))
 
     driver = gdal.GetDriverByName('GTiff')
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
@@ -590,7 +606,7 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
 
     #Set the transform based on the upper left corner and given pixel
     #dimensions
-    raster_transform = [shpExtent[0], xRes, 0.0, shpExtent[3], 0.0, -yRes]
+    raster_transform = [shp_extent[0], xRes, 0.0, shp_extent[3], 0.0, -yRes]
     raster.SetGeoTransform(raster_transform)
 
     #Use the same projection on the raster as the shapefile
