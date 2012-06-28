@@ -69,6 +69,10 @@ def biophysical(args):
     # 1) Blur all threats with gaussian filter
     for threat, threat_data in args['threat_dict'].iteritems():
         threat_raster = args['density_dict'][threat]
+        if threat_raster is None:
+            LOGGER.warn('No threat raster found for threat : %s',  threat)
+            LOGGER.warn('Continuing run without factoring in threat')
+            break
         threat_band = threat_raster.GetRasterBand(1)
         threat_nodata = threat_band.GetNoDataValue()
 

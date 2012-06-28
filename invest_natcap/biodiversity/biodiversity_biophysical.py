@@ -122,7 +122,7 @@ def open_ambiguous_raster(uri):
         if dataset is not None:
             break
      
-     return dataset
+    return dataset
 
 def make_dictionary_from_csv(csv_uri, key_field):
     """Make a basic dictionary representing a CSV file, where the
