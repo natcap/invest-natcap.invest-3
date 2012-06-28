@@ -160,7 +160,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, out
         returns a numpy matrix."""
 
     # Making a copy of the in_matrix so as to avoid side effects from putmask
-    matrix = np.array(in_matrix.copy(), dtype=matrix_type)
+    matrix = in_matrix.astype(matrix_type)
 
     # Convert nodata values to 0
     np.putmask(matrix, matrix == in_matrix_nodata, 0)
