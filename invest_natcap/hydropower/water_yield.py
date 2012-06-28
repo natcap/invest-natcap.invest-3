@@ -100,7 +100,7 @@ def execute(args):
     water_yield_args['biophysical_dictionary'] = biophysical_table_map
 
     #Add seasonality_constant and suffix to the arguments
-    water_yield_args['seasonality_constant'] = int(args['seasonality_constant'])
+    water_yield_args['seasonality_constant'] = float(args['seasonality_constant'])
     water_yield_args['results_suffix'] = args['results_suffix']
     
     #Call water_yield in hydropower_core.py
