@@ -4,7 +4,7 @@ from urllib2 import urlopen
 
 # This should be left as 'development' unless programmatically set when building
 # a release.  DO NOT ALTER THIS VERSION BY HAND.
-__version__ = '2.3.0b2'
+__version__ = 'development'
 
 def log_model(model_name):
     """Submit a POST request to the defined URL with the modelname passed in as
