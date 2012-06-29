@@ -61,7 +61,7 @@ def biophysical(args):
         #land area
         access_base.GetRasterBand(1).Fill(1)
         access_raster = make_raster_from_shape(access_base, access_shape, 'ACCESS')
-    except:
+    except KeyError:
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
@@ -80,8 +80,10 @@ def biophysical(args):
             raster_utils.new_raster_from_base(threat_raster, str(intermediate_dir +
                     threat+'filtered.tif'),'GTiff',
                     -1.0, gdal.GDT_Float32)
-        #filtered_raster.GetRasterBand(1).Fill(-1.0)
-        sigma = 1.75
+        # get the mean cell size
+        mean_cell_size = (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
+        sigma = 2.99 / mean_cell_size
+
         filtered_out_matrix = \
             clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
                         ndimage.gaussian_filter, matrix_type=float, 
