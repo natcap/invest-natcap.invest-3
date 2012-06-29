@@ -35,7 +35,8 @@ if platform.system() == 'Windows':
             #Sometimes if I don't include 'sip' it doesn't build, found
             #this on a stackoverflow thread that I've now lost
             'includes': ['sip',
-                         'invest_natcap'],
+                         'invest_natcap',
+                         'scipy.io.matlab.streams'],
             'dist_dir': DIST_DIR,
             'packages': ['invest_natcap',
                         'invest_natcap.carbon',
