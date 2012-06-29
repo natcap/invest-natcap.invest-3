@@ -77,7 +77,7 @@ def execute(args):
 
     try:
         biophysical_args['access_shape'] = ogr.Open(args['access_uri'])
-    except:
+    except KeyError:
         pass
 
     # Determine which land cover scenarios we should run, and append the
@@ -97,10 +97,11 @@ def execute(args):
                 density_dict[str(threat)] = \
                     open_ambiguous_raster(os.path.join(input_dir, threat+ext))
             except:
-                LOGGER.debug('Could not find the threat raster : %s', \
-                        os.path.join(input_dir, str(threat+ext+'.tif')))
+                LOGGER.warn('Error encountered getting raster threat : %s',
+                            os.path.join(input_dir, threat+ext))
         
         biophysical_args['density_dict'] = density_dict
+
         biodiversity_core.biophysical(biophysical_args)
 
 def open_ambiguous_raster(uri):
@@ -118,6 +119,8 @@ def open_ambiguous_raster(uri):
     possible_suffixes = ['', '.tif']
     
     for suffix in possible_suffixes:
+        if not os.path.exists(uri+suffix):
+            continue
         dataset = gdal.Open(uri+suffix, gdal.GA_ReadOnly)
         if dataset is not None:
             break
