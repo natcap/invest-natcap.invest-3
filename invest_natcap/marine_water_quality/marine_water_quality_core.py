@@ -4,6 +4,7 @@ import time
 import scipy.sparse
 from scipy.sparse.linalg import spsolve
 import numpy as np
+import pyamg
 
 def diffusion_advection_solver(source_point_data, kps, in_water_array, 
                                tide_e_array, adv_u_array, 
@@ -62,7 +63,12 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
     source_points = {}
     for source_id, source_data in source_point_data.iteritems():
         source_index = calc_index(*source_data['point'])
-        source_points[source_index] = source_data
+        if source_index not in source_points:
+            source_points[source_index] = source_data
+        else:
+            #There is another point at the same grid point, add the sources
+            source_points[source_index]['WPS'] += source_data['WPS']
+    
 
     #Build up an array of valid indexes.  These are locations where there is
     #water and well defined E and ADV points.
@@ -89,11 +95,11 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
                 continue
 
             if  a_diagonal_index in source_points:
-                #a_matrix[4, a_diagonal_index] = 1
-                #Set wps to be the concentration.
-                wps = source_points[a_diagonal_index]['WPS'] / cell_size ** 2
+                #Set wps to be daily loading the concentration, convert to / sec
+                #loading
+                wps = source_points[a_diagonal_index]['WPS'] / cell_size ** 2 \
+                    / 86400.0
                 b_vector[a_diagonal_index] = -wps
-                #continue
 
             E = e_array_flat[a_diagonal_index]
             adv_u = adv_u_flat[a_diagonal_index]
@@ -206,14 +212,12 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
     matrix = scipy.sparse.spdiags(a_matrix,
         [-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols], 
          n_rows * n_cols, n_rows * n_cols, "csc")
-    LOGGER.info('generating preconditioner via sparse incomplete lu decomposition')
-    #normally factor will use m*(n*m) extra space, we restrict to 
-    #\sqrt{m}*(n*m) extra space
-    P = scipy.sparse.linalg.spilu(matrix, fill_factor=int(np.sqrt(n_cols)))
+
+    LOGGER.info('generating preconditioner')
+    ml = pyamg.smoothed_aggregation_solver(matrix)
+    M = ml.aspreconditioner()
+
     LOGGER.info('Solving via gmres iteration')
-    #create linear operator for precondioner
-    M_x = lambda x: P.solve(x)
-    M = scipy.sparse.linalg.LinearOperator((n_rows * n_cols, n_rows * n_cols), M_x)
     result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
     LOGGER.info('(' + str(time.clock() - t0) + 's elapsed)')
 
