@@ -20,10 +20,11 @@ class TableDriverTemplate(object):
         """Return a list of strings containing the fieldnames."""
         return []
 
-    def write_table(self, table_list=[], uri=None):
+    def write_table(self, table_list, uri=None, fieldnames=None):
         """Take the table_list input and write its contents to the appropriate
         URI.  If uri == None, write the file to self.uri.  Otherwise, write the
-        table to uri (which may be a new file)."""
+        table to uri (which may be a new file).  If fieldnames == None, assume
+        that the default fieldnames order will be used."""
         pass
 
     def read_table(self):
@@ -38,17 +39,28 @@ class CSVDriver(TableDriverTemplate):
         return csv.DictReader(open(uri))
 
     def get_fieldnames(self):
-        if not hasattr(self.file_obj, 'fieldnames'):
-            fieldnames = self.file_obj.next()
+        file_object = self.get_file_object(self.uri)
+        if not hasattr(file_object, 'fieldnames'):
+            fieldnames = file_object.next()
         else:
-            fieldnames = self.file_obj.fieldnames
+            fieldnames = file_object.fieldnames
+        return fieldnames
 
-        self.fieldnames = [name.lower() for name in fieldnames]
-        self.orig_fieldnames = dict((name.lower(), name) for name in
-            fieldnames)
+    def read_table(self):
+        file_object = self.get_file_object(self.uri)
+        table = []
+        for row in file_object:
+            table.append(row)  # row is a dictionary of values
+        return table
 
+    def write_table(self, table_list, uri=None, fieldnames=None):
+        if uri == None:
+            uri = self.uri
+        if fieldnames == None:
+            fieldnames = self.get_fieldnames()
 
-
+        writer = csv.DictWriter(open(uri), fieldnames)
+        writer.writerows(table_list)
 
 
 class TableHandler(object):
