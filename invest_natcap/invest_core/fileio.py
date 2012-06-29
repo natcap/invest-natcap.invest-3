@@ -1,3 +1,5 @@
+import csv
+
 class TableDriverTemplate(object):
     """This class is merely a template to be subclassed for use with appropriate
     table filetype drivers.  Instantiating this object will yield a functional
@@ -7,6 +9,12 @@ class TableDriverTemplate(object):
         """Constructor for the TableDriverTemplate object.  uri is a python
         string.  fieldnames is an optional list of python strings."""
         self.uri = uri
+        self.file_obj = self.get_file_object(uri)
+
+    def get_file_object(self, uri=None):
+        """Return the library-specific file object by using the input uri.  If
+        uri is None, return use self.uri."""
+        return object
 
     def get_fieldnames(self):
         """Return a list of strings containing the fieldnames."""
@@ -23,6 +31,24 @@ class TableDriverTemplate(object):
         file-specific package as necessary.  Should return a list of
         dictionaries."""
         return [{}]
+
+
+class CSVDriver(TableDriverTemplate):
+    def get_file_object(self, uri):
+        return csv.DictReader(open(uri))
+
+    def get_fieldnames(self):
+        if not hasattr(self.file_obj, 'fieldnames'):
+            fieldnames = self.file_obj.next()
+        else:
+            fieldnames = self.file_obj.fieldnames
+
+        self.fieldnames = [name.lower() for name in fieldnames]
+        self.orig_fieldnames = dict((name.lower(), name) for name in
+            fieldnames)
+
+
+
 
 
 class TableHandler(object):
