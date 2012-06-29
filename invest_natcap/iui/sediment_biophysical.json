@@ -90,14 +90,14 @@
 		    "helpText": "The number of upstream pixels that define a stream pixel."
                 },
 		{        
-                    "id" : "threshold_flow_accumulation",
-                    "args_id" : "threshold_flow_accumulation",
+                    "id" : "slope_threshold",
+                    "args_id" : "slope_threshold",
                     "type": "text",
-                    "label": "Threshold Flow Accumluation",
-                    "defaultValue": "1000",
+                    "label": "Slope Threshold",
+                    "defaultValue": "5",
                     "required": true,
                     "validText": "^[0-9]+$",
-		    "helpText": "The number of upstream pixels that define a stream pixel."
+		    "helpText": "The cutoff slope before we use a different USLE runoff."
                 }
 	    ]
 	}
