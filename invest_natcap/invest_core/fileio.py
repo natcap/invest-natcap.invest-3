@@ -1,7 +1,19 @@
 import csv
 
 class TableDriverTemplate(object):
-    """This class is merely a template to be subclassed for use with appropriate
+    """ The TableDriverTemplate classes provide a uniform, simple way to
+    interact with specific tabular libraries.  This allows us to interact with
+    multiple filetypes in exactly the same way and in a uniform syntax.  By
+    extension, this also allows us to read and write to and from any desired
+    table format as long as the appropriate TableDriver class has been
+    implemented.
+
+    These driver classes exist for convenience, and though they can be accessed
+    directly by the user, these classes provide only the most basic
+    functionality.  Other classes, such as the TableHandler class, use these
+    drivers to provide a convenient layer of functionality to the end-user.
+
+    This class is merely a template to be subclassed for use with appropriate
     table filetype drivers.  Instantiating this object will yield a functional
     object, but it won't actually get you any relevant results."""
 
@@ -34,6 +46,7 @@ class TableDriverTemplate(object):
 
 
 class CSVDriver(TableDriverTemplate):
+    """The CSVDriver class is a subclass of TableDriverTemplate."""
     def get_file_object(self, uri=None):
         uri = max(uri, self.uri)
         return csv.DictReader(open(uri))
@@ -60,6 +73,7 @@ class CSVDriver(TableDriverTemplate):
         writer.writerows(table_list)
 
 class DBFDriver(TableDriverTemplate):
+    """The DBFDriver class is a subclass of TableDriverTemplate."""
     def get_file_object(self, uri=None):
         """Return the library-specific file object by using the input uri.  If
         uri is None, return use self.uri."""
@@ -101,6 +115,8 @@ class DBFDriver(TableDriverTemplate):
             if dbf_file.header.fields == fieldnames:
                 fields_match = True
 
+        # Now that we know all fields exist in this file, we can actually add
+        # the record-specfic data to it.
         for index, row in zip(range(len(table_list)), table_list):
             for field in fieldnames:
                 dbf_file[index][field] = row[field]
