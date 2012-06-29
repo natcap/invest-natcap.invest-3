@@ -8,7 +8,7 @@ import pyamg
 
 def diffusion_advection_solver(source_point_data, kps, in_water_array, 
                                tide_e_array, adv_u_array, 
-                               adv_v_array, nodata, cell_size):
+                               adv_v_array, nodata, cell_size, layer_depth):
     """2D Water quality model to track a pollutant in the ocean.  Three input
        arrays must be of the same shape.  Returns the solution in an array of
        the same shape.
@@ -27,6 +27,8 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
        same shape as in_water_array (units?)
     nodata - the value in the input arrays that indicate a nodata value.
     cell_size - the length of the side of a cell in meters
+    layer_depth - float indicating the depth of the grid cells in 
+            meters.
     """
 
     n_rows = in_water_array.shape[0]
@@ -97,8 +99,8 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
             if  a_diagonal_index in source_points:
                 #Set wps to be daily loading the concentration, convert to / sec
                 #loading
-                wps = source_points[a_diagonal_index]['WPS'] / cell_size ** 2 \
-                    / 86400.0
+                wps = source_points[a_diagonal_index]['WPS'] / (cell_size ** 2 * \
+                    layer_depth)
                 b_vector[a_diagonal_index] = -wps
 
             E = e_array_flat[a_diagonal_index]
