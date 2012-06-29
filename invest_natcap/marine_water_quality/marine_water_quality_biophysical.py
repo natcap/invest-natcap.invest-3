@@ -84,7 +84,7 @@ def execute(args):
     pixel_size = args['pixel_size']
     #the nodata value will be a min float
     nodata_out = -1.0
-    raster_out_uri = os.path.join(output_directory,'concentration.tif')
+    raster_out_uri = os.path.join(intermediate_directory,'concentration_grid.tif')
     raster_out = raster_utils.create_raster_from_vector_extents(pixel_size, 
         pixel_size, gdal.GDT_Float32, nodata_out, raster_out_uri, aoi_poly)
     
@@ -212,12 +212,16 @@ def execute(args):
     adv_v_band = adv_v_raster.GetRasterBand(1)
 
     tide_e_array = tide_e_band.ReadAsArray()
-    #convert E from km^2/day to m^2/sec
-    LOGGER.info("Convert tide E form km^2/day to m^2/sec")
-    tide_e_array[tide_e_array != nodata_out] *= 1000.0 ** 2 / 86400.0
+    #convert E from km^2/day to m^2/day
+    LOGGER.info("Convert tide E form km^2/day to m^2/day")
+    tide_e_array[tide_e_array != nodata_out] *= 1000.0 ** 2
 
+    #convert adv u from m/sec to m/day
     adv_u_array = adv_u_band.ReadAsArray()
     adv_v_array = adv_v_band.ReadAsArray()
+    adv_u_array[adv_u_array != nodata_out] *= 86400.0
+    adv_v_array[adv_v_array != nodata_out] *= 86400.0
+
 
     #If the cells are square then it doesn't matter if we look at x or y
     #but if different, we need just one value, so take the average.  Not the
@@ -226,21 +230,30 @@ def execute(args):
     if abs(raster_out_gt[1]) != abs(raster_out_gt[5]):
         LOGGER.warn("Warning, cells aren't square, so the results of the solver will be incorrect")
 
-    #Converting from 1/day to 1/sec
-    kps_sec = args['kps']/86400.0
-
     concentration_array = \
         marine_water_quality_core.diffusion_advection_solver(source_point_values,
-        kps_sec, in_water_array, tide_e_array, adv_u_array, adv_v_array, 
-        nodata_out, cell_size)
+        args['kps'], in_water_array, tide_e_array, adv_u_array, adv_v_array, 
+        nodata_out, cell_size, args['layer_depth'])
 
     raster_out_band = raster_out.GetRasterBand(1)
     raster_out_band.WriteArray(concentration_array, 0, 0)
 
-    raster_utils.calculate_raster_stats(raster_out)
+    #Rasterize anything outside the AOI as nodata as the final output
+    aoi_raster = raster_utils.new_raster_from_base(raster_out, 
+        os.path.join(intermediate_directory, 'aoi.tif'),
+        'GTiff', 255, gdal.GDT_Byte)
+    aoi_band = aoi_raster.GetRasterBand(1)
+    aoi_band.Fill(0)
+    aoi_band = None
+    gdal.RasterizeLayer(aoi_raster, [1], aoi_layer, burn_values=[1])
+    
+    masked_raster_out = raster_utils.vectorize_rasters([raster_out, aoi_raster],
+        lambda x, aoi: x if aoi == 1 else nodata_out, 
+        raster_out_uri = os.path.join(output_directory, 'concentration.tif'),
+        datatype = gdal.GDT_Float32, nodata=nodata_out)
 
-    #Set all the land areas and undefined tidal and adv areas to nodata
-    #gdal.RasterizeLayer(raster_out, [1], land_layer, burn_values=[nodata])
+    raster_utils.calculate_raster_stats(raster_out)
+    raster_utils.calculate_raster_stats(masked_raster_out)
 
     LOGGER.info("Done with marine water quality.")
     LOGGER.info("Intermediate rasters are located in %s" % intermediate_directory)
