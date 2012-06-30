@@ -103,7 +103,7 @@ def execute(args):
             for row in csv_dict_reader:
                 id_table[row[column_name]] = row
             biophysical_args[value] = id_table
-        except IOError, error:
+        except (IOError, KeyError), error:
             #Get here if file value is not found
             LOGGER.warning(error)
 
