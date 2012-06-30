@@ -135,6 +135,10 @@ class TableHandler(object):
         self.driver = self.find_driver(uri, fieldnames)
         self.table = self.driver.read_table()
         self.fieldnames = self.driver.get_fieldnames()
+        self.orig_fieldnames = {}
+        self.mask = {'regexp': None,
+                     'trim': 0}
+        self.update(self.driver.uri)
 
     def __iter__(self):
         """Allow this handler object's table to be iterated through.  Returns an
@@ -149,4 +153,152 @@ class TableHandler(object):
         to uri."""
         if table == None:
             table = self.table
+        if uri == None:
+            uri = self.uri
         self.driver.write_table(table, uri)
+
+    def update(self, uri):
+        """Update the URI associated with this AbstractTableHandler object.
+            Updating the URI also rebuilds the fieldnames and internal
+            representation of the table.
+
+            uri - a python string target URI to be set as the new URI of this
+                AbstractTableHandler.
+
+            Returns nothing."""
+
+        self.uri = uri
+        self._open()
+        self._get_field_names()
+        if self.mask_regexp != None:
+            # If the user has set a mask for the fieldnames, create a dictionary
+            # mapping the masked fieldnames to the original fieldnames and
+            # create a new (masked) list of fieldnames according to the user's
+            # mask.  Eventually, this will need to accommodate multiple forms of
+            # masking ... maybe a function call inside of the comprehension?
+            self.orig_fieldnames = dict((k[self.mask_trim:], v) if
+                re.match(self.mask_regexp, k) else (k, v) for (k, v) in
+                self.orig_fieldnames.iteritems())
+            self.fieldnames = [f[self.mask_trim:] if re.match(self.mask_regexp,
+                f) else f for f in self.fieldnames]
+
+        # Now that the orig_fieldnames dict and the fieldnames list have been
+        # set appropriately (masked or not), regenerate the table attribute to
+        # reflect these changes to the fieldnames.
+        self._get_table_list()
+
+    def set_field_mask(self, regexp=None, trim=0):
+        """Set a mask for the table's self.fieldnames.  Any fieldnames that
+            match regexp will have trim number of characters stripped off the
+            front.
+
+            regexp=None - a python string or None.  If a python string, this
+                will be a regular expression.  If None, this represents no
+                regular expression.
+            trim - a python int.
+
+            Returns nothing."""
+
+        self.mask_regexp = regexp
+        self.mask_trim = trim
+        self.update(self.uri)
+
+    def _open(self):
+        """Attempt to open the file provided by uri.
+
+            Sets self.file_obj to be a pointer to the relevant file object."""
+        pass
+
+    def get_file_object(self):
+        """Getter function for the underlying file object.  If the file object
+            has not been retrieved, retrieve it before returning the file
+            object.
+
+            returns a file object."""
+
+        if self.file_obj == None:
+            self._open()
+        return self.file_obj
+
+    def get_fieldnames(self, case='lower'):
+        """Returns a python list of the original fieldnames, true to their
+            original case.
+
+            case='lower' - a python string representing the desired status of the
+                fieldnames.  'lower' for lower case, 'orig' for original case.
+
+            returns a python list of strings."""
+
+        if case == 'lower':
+            return self.fieldnames
+        if case == 'orig':
+            return [self.orig_fieldnames[f] for f in self.fieldnames]
+
+    def _get_field_names(self):
+        """Function stub for reimplementation.
+
+            Sets self.fieldnames to a python list of lower-case versions of
+            the actual fieldnames.  Also sets self.orig_fieldnames to a python
+            dictionary mapping the lower-case name of each field to its
+            original, case-sensitive name."""
+        pass
+
+    def _get_table_list(self):
+        """Function stub for reimplementation.
+
+            Sets self.table to a python list of dictionaries where each
+            dictionary maps lower-case column names to the appropriate value.
+            """
+        pass
+
+    def get_table_dictionary(self, key_field):
+        """Returns a python dictionary mapping a key value to all values in that
+            particular row dictionary (including the key field).  If duplicate 
+            keys are found, the are overwritten in the output dictionary.
+
+            key_field - a python string of the desired field value to be used as
+                the key for the returned dictionary.
+
+            returns a python dictionary of dictionaries."""
+
+        if self.table == []:
+            self._get_table_list()
+        return dict((row[key_field], row) for row in self.table)
+
+    def get_table_row(self, key_field, key_value):
+        """Return the first full row where the value of key_field is equivalent
+            to key_value.  Raises a KeyError if key_field does not exist.
+
+            key_field - a python string.
+            key_value - a value of appropriate type for this field.
+
+            returns a python dictionary of the row, or None if the row does not
+            exist."""
+
+        if self.table == []:
+            self._get_table_list()
+        for row in self.table:
+            if row[key_field] == key_value:
+                return row
+        return None
+
+    def get_map(self, key_field, value_field):
+        """Returns a python dictionary mapping values contained in key_field to
+            values contained in value_field.  If duplicate keys are found, they
+            are overwritten in the output dictionary.
+
+            This is implemented as a dictionary comprehension on top of
+            self.get_table_list(), so there shouldn't be a need to reimplement
+            this for each subclass of AbstractTableHandler.
+
+            If the table list has not been retrieved, it is retrieved before
+            generating the map.
+
+            key_field - a python string.
+            value_field - a python string.
+
+            returns a python dictionary mapping key_fields to value_fields."""
+
+        if self.table == []:
+            self._get_table_list()
+        return dict((row[key_field], row[value_field]) for row in self.table)
