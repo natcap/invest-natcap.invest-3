@@ -61,7 +61,7 @@ def biophysical(args):
         #land area
         access_base.GetRasterBand(1).Fill(1)
         access_raster = make_raster_from_shape(access_base, access_shape, 'ACCESS')
-    except:
+    except KeyError:
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
@@ -69,6 +69,10 @@ def biophysical(args):
     # 1) Blur all threats with gaussian filter
     for threat, threat_data in args['threat_dict'].iteritems():
         threat_raster = args['density_dict'][threat]
+        if threat_raster is None:
+            LOGGER.warn('No threat raster found for threat : %s',  threat)
+            LOGGER.warn('Continuing run without factoring in threat')
+            break
         threat_band = threat_raster.GetRasterBand(1)
         threat_nodata = threat_band.GetNoDataValue()
 
@@ -76,8 +80,10 @@ def biophysical(args):
             raster_utils.new_raster_from_base(threat_raster, str(intermediate_dir +
                     threat+'filtered.tif'),'GTiff',
                     -1.0, gdal.GDT_Float32)
-        #filtered_raster.GetRasterBand(1).Fill(-1.0)
-        sigma = 1.75
+        # get the mean cell size
+        mean_cell_size = (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
+        sigma = 2.99 / mean_cell_size
+
         filtered_out_matrix = \
             clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
                         ndimage.gaussian_filter, matrix_type=float, 
@@ -160,7 +166,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, out
         returns a numpy matrix."""
 
     # Making a copy of the in_matrix so as to avoid side effects from putmask
-    matrix = np.array(in_matrix.copy(), dtype=matrix_type)
+    matrix = in_matrix.astype(matrix_type)
 
     # Convert nodata values to 0
     np.putmask(matrix, matrix == in_matrix_nodata, 0)

@@ -38,6 +38,7 @@
                     "label": "Future land cover map (optional)",
                     "required": false,
                     "validateAs": {"type": "GDAL"},
+                    "returns": {"ifEmpty": "pass"},
                     "helpText": "This must be a raster dataset that GDAL can open."
                 },
                 {        
@@ -48,6 +49,7 @@
                     "defaultValue": "../Biodiversity/Input/lc_samp_bse_b/w001001.adf",
                     "required": false,
                     "validateAs": {"type": "GDAL"},
+                    "returns": {"ifEmpty": "pass"},
                     "helpText": "This must be a raster dataset that GDAL can open."
                 },       
                 {
@@ -89,6 +91,7 @@
                                              }],
                                    "fieldsExist": ["Access"]
                                    },
+                    "returns": {"ifEmpty": "pass"},
                     "helpText": "This must be a polygon shapefile that OGR can open."
                 },
                 {

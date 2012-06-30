@@ -50,6 +50,17 @@
                     "helpText": "This is an integer value indicating the size of the output pixel resolution.  A smaller number will yield a more finely gridded solution, but will impact runtime and memory usage."
                 },
                 {
+                    "id" : "layer_depth",
+                    "type": "text",
+                    "label": "Grid Cell Depth",
+                    "args_id": "layer_depth",
+                    "required": true,
+                    "defaultValue": "1.0",
+                    "validateAs": {"type": "number",
+                                   "gteq": 0},
+                    "dataType": "float",
+                    "helpText": "This is a floating point value indicating the depth at which to simulate pollutant in the system.  A larger number will yield a lower overall concentration."
+                },                {
                     "id" : "source_points",
                     "args_id": "source_points_uri",
                     "type": "file",
