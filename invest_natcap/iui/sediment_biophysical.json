@@ -1,0 +1,105 @@
+{
+    "id" : "window",
+    "label": "Sediment Biophysical",
+    "targetScript" : "invest_natcap.sediment.sediment_biophysical",
+    "modelName" : "water_yield",
+    "localDocURI": "../documentation/sediment_retention.html",
+    "height": 500,
+    "width" : 700,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "../Sedimentation",
+                    "required": true
+                },          
+		{        
+                    "id" : "dem_uri",
+                    "args_id" : "dem_uri",
+                    "type": "file",
+                    "label": "DEM Raster",
+                    "defaultValue": "../Base_Data/Freshwater/dem",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"},
+		    "helpText": "Rich, fill this in."
+                },
+		{        
+                    "id" : "erosivity_uri",
+                    "args_id" : "erosivity_uri",
+                    "type": "file",
+                    "label": "Erosivity Raster",
+                    "defaultValue": "../Base_Data/Freshwater/erosivity",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"},
+		    "helpText": "Rich, fill this in."
+                },
+		{        
+                    "id" : "erodibility_uri",
+                    "args_id" : "erodibility_uri",
+                    "type": "file",
+                    "label": "Erodibility Raster",
+                    "defaultValue": "../Base_Data/Freshwater/erodibility",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"},
+		    "helpText": "Rich, fill this in."
+                },
+		{        
+                    "id" : "landuse_uri",
+                    "args_id" : "landuse_uri",
+                    "type": "file",
+                    "label": "LULC Raster",
+                    "defaultValue": "../Base_Data/Freshwater/landuse_90",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"},
+		    "helpText": "Rich, fill this in."
+                },
+		{        
+                    "id" : "watersheds_uri",
+                    "args_id" : "watersheds_uri",
+                    "type": "file",
+                    "label": "Watershed Polygons",
+                    "defaultValue": "../Base_Data/Freshwater/watersheds.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR"},
+		    "helpText": "Rich, fill this in."
+                },
+		{        
+                    "id" : "subwatersheds_uri",
+                    "args_id" : "subwatersheds_uri",
+                    "type": "file",
+                    "label": "Subwatershed Polygons",
+                    "defaultValue": "../Base_Data/Freshwater/subwatersheds.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR"},
+		    "helpText": "Rich, fill this in."
+                },
+                {        
+                    "id" : "threshold_flow_accumulation",
+                    "args_id" : "threshold_flow_accumulation",
+                    "type": "text",
+                    "label": "Threshold Flow Accumluation",
+                    "defaultValue": "1000",
+                    "required": true,
+                    "validText": "^[0-9]+$",
+		    "helpText": "The number of upstream pixels that define a stream pixel."
+                },
+		{        
+                    "id" : "slope_threshold",
+                    "args_id" : "slope_threshold",
+                    "type": "text",
+                    "label": "Slope Threshold",
+                    "defaultValue": "5",
+                    "required": true,
+                    "validText": "^[0-9]+$",
+		    "helpText": "The cutoff slope before we use a different USLE runoff."
+                }
+	    ]
+	}
+    ]
+}

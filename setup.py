@@ -35,7 +35,8 @@ if platform.system() == 'Windows':
             #Sometimes if I don't include 'sip' it doesn't build, found
             #this on a stackoverflow thread that I've now lost
             'includes': ['sip',
-                         'invest_natcap'],
+                         'invest_natcap',
+                         'scipy.io.matlab.streams'],
             'dist_dir': DIST_DIR,
             'packages': ['invest_natcap',
                         'invest_natcap.carbon',
@@ -71,7 +72,8 @@ if platform.system() == 'Windows':
          'invest_marine_water_quality_biophysical.py',
          'invest_pollination_biophysical.py',
          'invest_pollination_valuation.py',
-         'invest_finfish_aquaculture.py']
+         'invest_finfish_aquaculture.py',
+         'invest_sediment_biophysical.py']
 
     #Need to manually bring along the json configuration files to
     #the current build directory
@@ -87,7 +89,8 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/pollination_biophysical.json',
                'invest_natcap/iui/pollination_valuation.json',
                'invest_natcap/iui/finfish_aquaculture.json',
-               'invest_natcap/iui/marine_water_quality_biophysical.json']),
+               'invest_natcap/iui/marine_water_quality_biophysical.json',
+               'invest_natcap/iui/sediment_biophysical.json']),
         ('invest_natcap/iui',
               ['invest_natcap/iui/dialog-close.png',
                'invest_natcap/iui/dialog-ok.png',
