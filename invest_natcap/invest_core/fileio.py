@@ -1,4 +1,7 @@
 import csv
+import invest_natcap.dbfpy
+import os
+import re
 
 class TableDriverTemplate(object):
     """ The TableDriverTemplate classes provide a uniform, simple way to
@@ -132,18 +135,44 @@ class TableHandler(object):
     def __init__(self, uri, fieldnames=None):
         """Constructor for the TableHandler class. uri is a python string.
         fieldnames, if not None, should be a python list of python strings."""
+
+        # self.driver_types is a local dictionary in case a developer wants to
+        # subclass TableHandler to add some more custom drivers.
+        self.driver_types = {'.csv': CSVDriver,
+                             '.dbf': DBFDriver}
         self.driver = self.find_driver(uri, fieldnames)
         self.table = self.driver.read_table()
         self.fieldnames = self.driver.get_fieldnames()
-        self.orig_fieldnames = {}
+        self.orig_fieldnames = dict((f, f) for f in self.fieldnames)
         self.mask = {'regexp': None,
                      'trim': 0}
-        self.update(self.driver.uri)
 
     def __iter__(self):
         """Allow this handler object's table to be iterated through.  Returns an
         iterable version of self.table."""
         return iter(self.table)
+
+    def find_driver(self, uri, fieldnames=None):
+        class InvalidExtension(Exception): pass
+        base, ext = os.path.splitext(uri)
+        handler = None
+        try:
+            # Attempt to open the file with the filetype associated with the
+            # extension.  Raise an exception if it can't be opened.
+            driver = self.driver_types[ext.lower()](uri)
+            open_file = driver.get_file_object()
+            if open_file == None:
+                raise InvalidExtension
+        except KeyError, InvalidExtension:
+            # If the defined filetype doesn't exist in the filetypes dictionary,
+            # loop through all known drivers to try and open the file.
+            for class_reference in self.driver_types.valuse():
+                driver = class_reference(uri)
+                opened_file = driver.open(uri)
+                if opened_file != None:
+                    break
+        return driver
+
 
     def write_table(self, table=None, uri=None):
         """Invoke the driver to save the table to disk.  If table == None,
@@ -161,25 +190,6 @@ class TableHandler(object):
         """Return the table list object."""
         return self.table
 
-    def update(self, uri):
-        """Update the URI associated with this AbstractTableHandler object.
-            Updating the URI also rebuilds the fieldnames and internal
-            representation of the table.
-
-            uri - a python string target URI to be set as the new URI of this
-                AbstractTableHandler.
-
-            Returns nothing."""
-
-        self.uri = uri
-        self.driver = self.find_driver(uri, fieldnames=None)
-        self.fieldnames = self.driver.get_fieldnames()
-
-        # Now that the orig_fieldnames dict and the fieldnames list have been
-        # set appropriately (masked or not), regenerate the table attribute to
-        # reflect these changes to the fieldnames.
-        self._get_table_list()
-
     def set_field_mask(self, regexp=None, trim=0):
         """Set a mask for the table's self.fieldnames.  Any fieldnames that
             match regexp will have trim number of characters stripped off the
@@ -194,31 +204,30 @@ class TableHandler(object):
 
         self.mask['regexp'] = regexp
         self.mask['trim'] = trim
+        self._build_fieldnames()
+
+    def _build_fieldnames(self):
+        """(re)build the fieldnames based on the mask.  Regardless of the mask,
+            all fieldnames will be set to lowercase.  Returns nothing."""
+
+        current_fieldnames = self.fieldnames[:]
+        self.fieldnames = [f.lower() for f in self.driver.get_fieldnames()]
+
+        # If a mask is set, reprocess the fieldnames accordingly 
         if self.mask['regexp'] != None:
-            map_to_trimmed_fields = dict((v, k[self.mask['trim']:]) if
-                re.match(self.mask['regexp'], k) else (k, v) for (k, v) in
-                self.orig_fielnames.iteritems())
             # If the user has set a mask for the fieldnames, create a dictionary
             # mapping the masked fieldnames to the original fieldnames and
             # create a new (masked) list of fieldnames according to the user's
             # mask.  Eventually, this will need to accommodate multiple forms of
             # masking ... maybe a function call inside of the comprehension?
-            self.orig_fieldnames = dict((k[self.mask['trim']:], v) if
-                re.match(self.mask['regexp'], k) else (k, v) for (k, v) in
-                self.orig_fieldnames.iteritems())
             self.fieldnames = [f[self.mask['trim']:] if re.match(self.mask['regexp'],
                 f) else f for f in self.fieldnames]
 
-            # Regenerate the table list so we use the new mask
-           # new_table = []
-           # for row in self.table:
-           #     new_row = {}
-           #     for key, value in row.iteritems():
-           #         new_row[map_to_trimmed_fields[key]] = value
-           #     new_table.append(new_row)
-           # self.table = new_table
-            self.table = [dict((map_to_trimmed_fields[k], v) for (k,v) in
-                row.iteritems()) for row in self.table]
+        self.orig_fieldnames = dict((k, v) for (k, v) in zip(current_fieldnames,
+            self.fieldnames))
+
+        self.table = [dict((self.orig_fieldnames[k], v) for (k, v) in
+            row.iteritems()) for row in self.table]
 
     def get_fieldnames(self, case='lower'):
         """Returns a python list of the original fieldnames, true to their
