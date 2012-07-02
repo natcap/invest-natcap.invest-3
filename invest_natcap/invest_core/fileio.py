@@ -101,7 +101,7 @@ class DBFDriver(TableDriverTemplate):
                 if file_field != user_field:
                     # Determine the appropriate field type to use
                     field_class = table_list[0][user_field].__class__.__name__
-                    if class == 'int' or class == 'float':
+                    if field_class == 'int' or field_class == 'float':
                         new_field_def = ("N", 16, 6)
                     else:  # assume that this field is a string
                         new_field_def = ("C", 254, 0)
@@ -157,6 +157,10 @@ class TableHandler(object):
             uri = self.uri
         self.driver.write_table(table, uri)
 
+    def get_table(self):
+        """Return the table list object."""
+        return self.table
+
     def update(self, uri):
         """Update the URI associated with this AbstractTableHandler object.
             Updating the URI also rebuilds the fieldnames and internal
@@ -168,19 +172,8 @@ class TableHandler(object):
             Returns nothing."""
 
         self.uri = uri
-        self._open()
-        self._get_field_names()
-        if self.mask_regexp != None:
-            # If the user has set a mask for the fieldnames, create a dictionary
-            # mapping the masked fieldnames to the original fieldnames and
-            # create a new (masked) list of fieldnames according to the user's
-            # mask.  Eventually, this will need to accommodate multiple forms of
-            # masking ... maybe a function call inside of the comprehension?
-            self.orig_fieldnames = dict((k[self.mask_trim:], v) if
-                re.match(self.mask_regexp, k) else (k, v) for (k, v) in
-                self.orig_fieldnames.iteritems())
-            self.fieldnames = [f[self.mask_trim:] if re.match(self.mask_regexp,
-                f) else f for f in self.fieldnames]
+        self.driver = self.find_driver(uri, fieldnames=None)
+        self.fieldnames = self.driver.get_fieldnames()
 
         # Now that the orig_fieldnames dict and the fieldnames list have been
         # set appropriately (masked or not), regenerate the table attribute to
@@ -199,26 +192,33 @@ class TableHandler(object):
 
             Returns nothing."""
 
-        self.mask_regexp = regexp
-        self.mask_trim = trim
-        self.update(self.uri)
+        self.mask['regexp'] = regexp
+        self.mask['trim'] = trim
+        if self.mask['regexp'] != None:
+            map_to_trimmed_fields = dict((v, k[self.mask['trim']:]) if
+                re.match(self.mask['regexp'], k) else (k, v) for (k, v) in
+                self.orig_fielnames.iteritems())
+            # If the user has set a mask for the fieldnames, create a dictionary
+            # mapping the masked fieldnames to the original fieldnames and
+            # create a new (masked) list of fieldnames according to the user's
+            # mask.  Eventually, this will need to accommodate multiple forms of
+            # masking ... maybe a function call inside of the comprehension?
+            self.orig_fieldnames = dict((k[self.mask['trim']:], v) if
+                re.match(self.mask['regexp'], k) else (k, v) for (k, v) in
+                self.orig_fieldnames.iteritems())
+            self.fieldnames = [f[self.mask['trim']:] if re.match(self.mask['regexp'],
+                f) else f for f in self.fieldnames]
 
-    def _open(self):
-        """Attempt to open the file provided by uri.
-
-            Sets self.file_obj to be a pointer to the relevant file object."""
-        pass
-
-    def get_file_object(self):
-        """Getter function for the underlying file object.  If the file object
-            has not been retrieved, retrieve it before returning the file
-            object.
-
-            returns a file object."""
-
-        if self.file_obj == None:
-            self._open()
-        return self.file_obj
+            # Regenerate the table list so we use the new mask
+           # new_table = []
+           # for row in self.table:
+           #     new_row = {}
+           #     for key, value in row.iteritems():
+           #         new_row[map_to_trimmed_fields[key]] = value
+           #     new_table.append(new_row)
+           # self.table = new_table
+            self.table = [dict((map_to_trimmed_fields[k], v) for (k,v) in
+                row.iteritems()) for row in self.table]
 
     def get_fieldnames(self, case='lower'):
         """Returns a python list of the original fieldnames, true to their
@@ -233,23 +233,6 @@ class TableHandler(object):
             return self.fieldnames
         if case == 'orig':
             return [self.orig_fieldnames[f] for f in self.fieldnames]
-
-    def _get_field_names(self):
-        """Function stub for reimplementation.
-
-            Sets self.fieldnames to a python list of lower-case versions of
-            the actual fieldnames.  Also sets self.orig_fieldnames to a python
-            dictionary mapping the lower-case name of each field to its
-            original, case-sensitive name."""
-        pass
-
-    def _get_table_list(self):
-        """Function stub for reimplementation.
-
-            Sets self.table to a python list of dictionaries where each
-            dictionary maps lower-case column names to the appropriate value.
-            """
-        pass
 
     def get_table_dictionary(self, key_field):
         """Returns a python dictionary mapping a key value to all values in that
