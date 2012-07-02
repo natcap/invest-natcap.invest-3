@@ -42,10 +42,6 @@ def biophysical(args):
     habitat_raster = make_raster_from_lulc(args['landuse'], habitat_uri)
     habitat_raster = raster_from_table_values(args['landuse'], habitat_raster, args['sensitivity_dict'], 'HABITAT')
 
-    #Sum weight of threats
-    weight_sum = 0.0
-    for threat_info in threat_dict.itervalues():
-        weight_sum = weight_sum + float(threat_info['WEIGHT'])
 
     
     #Check that threat count matches with sensitivity
@@ -65,14 +61,16 @@ def biophysical(args):
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
+    weight_sum = 0.0
+
     #def tracer_op(
     # 1) Blur all threats with gaussian filter
-    for threat, threat_data in args['threat_dict'].iteritems():
+    for threat, threat_data in threat_dict.iteritems():
         threat_raster = args['density_dict'][threat]
         if threat_raster is None:
             LOGGER.warn('No threat raster found for threat : %s',  threat)
             LOGGER.warn('Continuing run without factoring in threat')
-            break
+            continue 
         threat_band = threat_raster.GetRasterBand(1)
         threat_nodata = threat_band.GetNoDataValue()
 
@@ -87,44 +85,28 @@ def biophysical(args):
         filtered_out_matrix = \
             clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
                         ndimage.gaussian_filter, matrix_type=float, 
-                        in_matrix_nodata=float(threat_raster.GetRasterBand(1).GetNoDataValue()),
+                        in_matrix_nodata=float(threat_nodata),
                         out_matrix_nodata=-1.0)
         filtered_band = filtered_raster.GetRasterBand(1)
         filtered_band.WriteArray(filtered_out_matrix)
         filtered_band = None
         filtered_raster.FlushCache()
-    # 2) Apply threats on land cover
+        #Sum weight of threats
+        weight_sum = weight_sum + float(threat_data['WEIGHT'])
 
-#   #Process density layers / each threat
+        # create sensitivity raster based on threat
+        sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
+        sensitivity_raster = \
+                raster_from_table_values(args['landuse'], sens_uri,\
+                                         args['sensitivity_dict'], 'L_'+threat)        
+        sensitivity_raster.FlushCache()
+        sensitivity_raster = None
+    
+#       def total_threat(th_ras, sens_ras, access):
 
-#   #For all threats:
-#   for threat, threat_data in args['threat_dict'].iteritems():
-#       #get weight, name, max_idst, decay
-#       #mulitply max_dist by 1000 (must be a conversion to meters)
-#       #get proper density raster, depending on land cover
-#       
-#       #Adjust threat by distance:
-#           #Calculate neighborhood
+#       raster_utils.vectorize_rasters([filtered_raster, sensitivity_raster,
+#           access_raster], total_threat, 
 
-#       #Adjust threat by weight:
-#       weight_multiplier = float(threat_data['WEIGHT']) / weight_sum
-#       def adjust_weight(dist):
-#           return dist * weight_multiplier 
-#       raster_utils.vectorize1ArgOp(dist.GetRasterBand(1), adjust_weight, weight_out)
-
-#       #Adjust threat by protection / access
-#       if access_shape != None:
-#           def adjust_access(weight, access):
-#               return weight * access
-#           raster_utils.vectorize2ArgOp(weight_band, access_band, adjust_access, access_out)
-
-#       #Adjust threat by sensitivity
-#      sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
-#      sensitivity_raster = make_raster_from_lulc(args['landuse'], sens_uri)
-#      sensitivity_raster = raster_from_table_values(args['landuse'], sensitivity_raster, 
-#                                                    args['sensitivity_dict'], 'L_'+threat)        
-#      def adjust_sens(sens, acc):
-#          return sens * acc
 
 ##I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
 
@@ -214,7 +196,7 @@ def get_raster_properties(dataset):
     LOGGER.debug('Raster_Properties : %s', dataset_dict)
     return dataset_dict
 
-def raster_from_table_values(key_raster, out_raster, attr_dict, field):
+def raster_from_table_values(key_raster, out_uri, attr_dict, field, nodata=-1.0):
     """Creates a new raster from 'key_raster' whose values are data from a 
        dictionary that directly relates to the pixel value from 'key_raster'
     
@@ -231,7 +213,7 @@ def raster_from_table_values(key_raster, out_raster, attr_dict, field):
 
     LOGGER.debug('Starting raster_from_table_values')
     key_band = key_raster.GetRasterBand(1)
-    out_nodata = out_raster.GetRasterBand(1).GetNoDataValue()
+    out_nodata = nodata 
     LOGGER.debug('raster_from_table_values.out_nodata : %s', out_nodata)
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
@@ -251,7 +233,8 @@ def raster_from_table_values(key_raster, out_raster, attr_dict, field):
             return out_nodata
 
     #out_band = out_raster.GetRasterBand(1)
-    out_raster = raster_utils.vectorize_rasters([key_raster], vop, nodata=-1.0)
+    out_raster = raster_utils.vectorize_rasters([key_raster], vop,
+            raster_out_uri = out_uri, nodata=-1.0)
 
     return out_raster
 
