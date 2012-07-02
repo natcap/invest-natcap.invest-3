@@ -35,6 +35,7 @@ def biophysical(args):
     output_dir = args['workspace_dir'] + os.sep + 'output/'
     intermediate_dir = args['workspace_dir'] + os.sep + 'intermediate/'
     threat_dict = args['threat_dict']
+    half_saturation = args['half_saturation']
     #Get raster properties: cellsize, width, height, cells = width * height, extent    
     lulc_prop = get_raster_properties(args['landuse'])
     #Create raster of habitat based on habitat field
@@ -105,10 +106,10 @@ def biophysical(args):
                                          args['sensitivity_dict'], 'L_'+threat)        
         sensitivity_raster.FlushCache()
         
-        def partial_degredation(*rasters):
+        def partial_degradation(*rasters):
             result = 1.0
             for val in rasters:
-                result = result * val
+                result = result * val * (float(threat_data['WEIGHT'])/weight_sum)
             return result
         
         ras_list = []
@@ -118,24 +119,31 @@ def biophysical(args):
             ras_list = [filtered_raster, sensitivity_raster, access_raster]
         
         deg_uri = intermediate_dir + 'deg_'+threat+'.tif'
-        raster_utils.vectorize_rasters(ras_list, partial_degredation, \
+        deg_ras =\
+            raster_utils.vectorize_rasters(ras_list, partial_degradation, \
                                        raster_out_uri=deg_uri, nodata=threat_nodata)
+        degradation_rasters.append(deg_ras)
 
+    def sum_degradation(*rasters):
+        return sum(rasters)
+    deg_sum_uri = os.path.join(intermediate_dir, 'deg_sum_out.tif')
+    sum_deg_raster = \
+        raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
+                                       raster_out_uri=deg_sum_uri, nodata=-1.0)
 
 
 ##I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
 
-#   #Compute Degradation of all threats
-#       #Some all the final threat rasters from above. Prob store them in a list.
-#   def degredation_op(*raster):
-#       return sum(raster)
-#   degredation_raster = raster_utils.vectorize_rasters(threat_raster_list, degredation_op, nodata=-1.0)
-#   #Compute quality for all threats
-#   z = 2.5
-#   ksq = k**z
-#   def quality_op(degradation,habitat):
-#       returnhabitat * (1 - ((degredation**z) / (degredation**z + ksq)))
-#   quality_raster = raster_utils.vectorize_rasters([degredation_raster, habitat], quality_op)
+    #Compute quality for all threats
+    z = 2.5
+    ksq = half_saturation**z
+    def quality_op(degradation, habitat):
+        return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
+    quality_uri = os.path.join(intermediate_dir, 'quality_out.tif')
+    quality_raster = \
+        raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
+                                       quality_op, raster_out_uri=quality_uri,
+                                       nodata=-1.0)
 
 
     #Adjust quality by habitat status
