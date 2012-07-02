@@ -48,6 +48,7 @@ def biophysical(args):
         #Will be doing this in validation (hopefully...) or at the uri level
 
     #If access_lyr: convert to raster, if value is null set to 1, else set to value
+    access_raster = None
     try:
         access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
@@ -67,7 +68,8 @@ def biophysical(args):
         #Sum weight of threats
         weight_sum = weight_sum + float(threat_data['WEIGHT'])
 
-    #def tracer_op(
+    degradation_rasters = []
+
     # 1) Blur all threats with gaussian filter
     for threat, threat_data in threat_dict.iteritems():
         threat_raster = args['density_dict'][threat]
@@ -102,12 +104,23 @@ def biophysical(args):
                 raster_from_table_values(args['landuse'], sens_uri,\
                                          args['sensitivity_dict'], 'L_'+threat)        
         sensitivity_raster.FlushCache()
-        sensitivity_raster = None
-    
-#       def total_threat(th_ras, sens_ras, access):
+        
+        def partial_degredation(*rasters):
+            result = 1.0
+            for val in rasters:
+                result = result * val
+            return result
+        
+        ras_list = []
+        if access_raster is None:
+            ras_list = [filtered_raster, sensitivity_raster]
+        else:
+            ras_list = [filtered_raster, sensitivity_raster, access_raster]
+        
+        deg_uri = intermediate_dir + 'deg_'+threat+'.tif'
+        raster_utils.vectorize_rasters(ras_list, partial_degredation, \
+                                       raster_out_uri=deg_uri, nodata=threat_nodata)
 
-#       raster_utils.vectorize_rasters([filtered_raster, sensitivity_raster,
-#           access_raster], total_threat, 
 
 
 ##I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
