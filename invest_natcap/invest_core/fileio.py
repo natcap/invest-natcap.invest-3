@@ -142,10 +142,10 @@ class TableHandler(object):
                              '.dbf': DBFDriver}
         self.driver = self.find_driver(uri, fieldnames)
         self.table = self.driver.read_table()
-        self.fieldnames = self.driver.get_fieldnames()
-        self.orig_fieldnames = dict((f, f) for f in self.fieldnames)
-        self.mask = {'regexp': None,
-                     'trim': 0}
+        self.fieldnames =[]
+        self.orig_fieldnames = {}
+        self.set_field_mask(None, 0)
+        self._build_fieldnames()
 
     def __iter__(self):
         """Allow this handler object's table to be iterated through.  Returns an
@@ -253,8 +253,6 @@ class TableHandler(object):
 
             returns a python dictionary of dictionaries."""
 
-        if self.table == []:
-            self._get_table_list()
         return dict((row[key_field], row) for row in self.table)
 
     def get_table_row(self, key_field, key_value):
@@ -267,8 +265,6 @@ class TableHandler(object):
             returns a python dictionary of the row, or None if the row does not
             exist."""
 
-        if self.table == []:
-            self._get_table_list()
         for row in self.table:
             if row[key_field] == key_value:
                 return row
@@ -291,6 +287,4 @@ class TableHandler(object):
 
             returns a python dictionary mapping key_fields to value_fields."""
 
-        if self.table == []:
-            self._get_table_list()
         return dict((row[key_field], row[value_field]) for row in self.table)
