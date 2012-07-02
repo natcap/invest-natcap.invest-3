@@ -40,8 +40,8 @@ def biophysical(args):
     lulc_prop = get_raster_properties(args['landuse'])
     #Create raster of habitat based on habitat field
     habitat_uri = intermediate_dir + 'habitat.tif'
-    habitat_raster = make_raster_from_lulc(args['landuse'], habitat_uri)
-    habitat_raster = raster_from_table_values(args['landuse'], habitat_raster, args['sensitivity_dict'], 'HABITAT')
+    #habitat_raster = make_raster_from_lulc(args['landuse'], habitat_uri)
+    habitat_raster = raster_from_table_values(args['landuse'], habitat_uri, args['sensitivity_dict'], 'HABITAT')
 
 
     
@@ -225,17 +225,17 @@ def raster_from_table_values(key_raster, out_uri, attr_dict, field, nodata=-1.0)
     
        key_raster - a GDAL raster dataset whose pixel values relate to the 
                      keys in 'attr_dict'
-       out_raster - a Gdal raster dataset to write out to
+       out_uri - a string for the output path of the created raster
        attr_dict - a dictionary representing a table of values we are interested
                    in making into a raster                  
        field - a string of which field in the table or key in the dictionary 
                to use as the new raster pixel values
+       nodata - a floating point value that is the nodata value. Default is -1.0
        
        returns - a GDAL raster
     """
 
     LOGGER.debug('Starting raster_from_table_values')
-    key_band = key_raster.GetRasterBand(1)
     out_nodata = nodata 
     LOGGER.debug('raster_from_table_values.out_nodata : %s', out_nodata)
     #Add the nodata value as a field to the dictionary so that the vectorized
@@ -257,11 +257,13 @@ def raster_from_table_values(key_raster, out_uri, attr_dict, field, nodata=-1.0)
 
     #out_band = out_raster.GetRasterBand(1)
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
-            raster_out_uri = out_uri, nodata=-1.0)
+            raster_out_uri=out_uri, nodata=out_nodata)
 
     return out_raster
 
 def make_raster_from_lulc(lulc_dataset, raster_uri):
+    """Create a new raster from the lulc
+    """
     LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
     dataset = \
         raster_utils.new_raster_from_base(lulc_dataset, raster_uri, 'GTiff', \
