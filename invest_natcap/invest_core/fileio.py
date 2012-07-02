@@ -101,7 +101,7 @@ class DBFDriver(TableDriverTemplate):
                 if file_field != user_field:
                     # Determine the appropriate field type to use
                     field_class = table_list[0][user_field].__class__.__name__
-                    if class == 'int' or class == 'float':
+                    if field_class == 'int' or field_class == 'float':
                         new_field_def = ("N", 16, 6)
                     else:  # assume that this field is a string
                         new_field_def = ("C", 254, 0)
@@ -219,17 +219,6 @@ class TableHandler(object):
            # self.table = new_table
             self.table = [dict((map_to_trimmed_fields[k], v) for (k,v) in
                 row.iteritems()) for row in self.table]
-
-    def get_file_object(self):
-        """Getter function for the underlying file object.  If the file object
-            has not been retrieved, retrieve it before returning the file
-            object.
-
-            returns a file object."""
-
-        if self.file_obj == None:
-            self._open()
-        return self.file_obj
 
     def get_fieldnames(self, case='lower'):
         """Returns a python list of the original fieldnames, true to their
