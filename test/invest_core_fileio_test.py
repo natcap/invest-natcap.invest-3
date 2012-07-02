@@ -32,3 +32,9 @@ class TableHandlerTest(unittest.TestCase):
         for row in self.handler.table:
             print row
 
+    def test_get_fieldnames_orig(self):
+        print self.handler.get_fieldnames('orig')
+
+    def test_get_fieldnames_lower(self):
+        print self.handler.get_fieldnames('lower')
+
