@@ -61,7 +61,11 @@ def biophysical(args):
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
+    # initialize the weight_sum
     weight_sum = 0.0
+    for threat_data in threat_dict.itervalues():
+        #Sum weight of threats
+        weight_sum = weight_sum + float(threat_data['WEIGHT'])
 
     #def tracer_op(
     # 1) Blur all threats with gaussian filter
@@ -91,8 +95,6 @@ def biophysical(args):
         filtered_band.WriteArray(filtered_out_matrix)
         filtered_band = None
         filtered_raster.FlushCache()
-        #Sum weight of threats
-        weight_sum = weight_sum + float(threat_data['WEIGHT'])
 
         # create sensitivity raster based on threat
         sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
