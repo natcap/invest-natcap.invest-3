@@ -66,7 +66,6 @@ def execute(args):
         else:
             LOGGER.info("Please wait.")
 
-    sessid = "f8f9pat17v0bmdrmoq1dqe73g2"
     LOGGER.info("Running regression")
     url = "http://ncp-skookum.stanford.edu/~mlacayo/regression.php"
     datagen, headers = multipart_encode({"sessid": sessid})
