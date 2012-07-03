@@ -1,21 +1,32 @@
 import unittest
+from csv import DictReader
 import invest_natcap.invest_core.fileio
 
 GUILDS_URI = './data/iui/Guild.csv'
 
 class CSVDriverTest(unittest.TestCase):
     def setUp(self):
-        print ''
         self.driver = invest_natcap.invest_core.fileio.CSVDriver(GUILDS_URI)
 
     def test_get_file_object(self):
-        print self.driver.get_file_object()
+        file_object = self.driver.get_file_object()
+        is_instance_of_csv = isinstance(file_object, DictReader)
+        self.assertEqual(True, is_instance_of_csv)
 
     def test_get_fieldnames(self):
-        print self.driver.get_fieldnames()
+        reg_fieldnames = ['species', 'NS_cavity', 'NS_ground', 'FS_spring',
+                          'FS_summer', 'Alpha']
+
+        fieldnames = self.driver.get_fieldnames()
+        self.assertEqual(reg_fieldnames, fieldnames)
 
     def test_read_table(self):
-        print self.driver.read_table()
+        reg_table = [{'FS_summer': '0.5', 'FS_spring': '0.5', 'Alpha': '500',
+                      'NS_cavity': '1', 'NS_ground': '1', 'species': 'Apis'},
+                     {'FS_summer': '0.6', 'FS_spring': '0.4', 'Alpha': '1500',
+                      'NS_cavity': '1', 'NS_ground': '0', 'species': 'Bombus'}]
+        table = self.driver.read_table()
+        self.assertEqual(table, reg_table)
 
 class TableHandlerTest(unittest.TestCase):
     def setUp(self):
