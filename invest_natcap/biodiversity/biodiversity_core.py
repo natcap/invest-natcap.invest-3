@@ -73,34 +73,44 @@ def biophysical(args):
 
     # 1) Blur all threats with gaussian filter
     for threat, threat_data in threat_dict.iteritems():
+        # get the density raster for the specific threat
         threat_raster = args['density_dict'][threat]
+        
+        # if there is no raster found for this threat then continue with the
+        # next threat
         if threat_raster is None:
             LOGGER.warn('No threat raster found for threat : %s',  threat)
             LOGGER.warn('Continuing run without factoring in threat')
             continue 
-        threat_band = threat_raster.GetRasterBand(1)
-        threat_nodata = threat_band.GetNoDataValue()
 
+        threat_band = threat_raster.GetRasterBand(1)
+        threat_nodata = float(threat_band.GetNoDataValue())
+        filtered_threat_uri = \
+            os.path.join(intermediate_dir, str(threat+'_filtered.tif'))
+        
+        # create a new raster to output distance adjustments to
         filtered_raster = \
-            raster_utils.new_raster_from_base(threat_raster, str(intermediate_dir +
-                    threat+'filtered.tif'),'GTiff',
-                    -1.0, gdal.GDT_Float32)
+            raster_utils.new_raster_from_base(threat_raster, filtered_threat_uri, 
+                                              'GTiff', -1.0, gdal.GDT_Float32)
         # get the mean cell size
         mean_cell_size = (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
+        
         # compute max distance as the number of pixels by taking max distance
         # from the table which is given in KM and multiply it by 1000 to convert
         # to meters.  Divide by mean cell size to get the number of pixels
         sigma = \
             -2.99573 / ((float(threat_data['MAX_DIST']) * 1000.0) / mean_cell_size)
         LOGGER.debug('Sigma for gaussian : %s', sigma)
+        
+        # use a gaussian_filter to compute the effect that a threat has over a
+        # distance, on a given pixel. 
         filtered_out_matrix = \
-            clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
-                        ndimage.gaussian_filter, matrix_type=float, 
-                        in_matrix_nodata=float(threat_nodata),
-                        out_matrix_nodata=-1.0)
+            clip_and_op(threat_band.ReadAsArray(), sigma,\
+                        ndimage.gaussian_filter, matrix_type=float,\
+                        in_matrix_nodata=threat_nodata, out_matrix_nodata=-1.0)
+        
         filtered_band = filtered_raster.GetRasterBand(1)
         filtered_band.WriteArray(filtered_out_matrix)
-        filtered_band = None
         filtered_raster.FlushCache()
 
         # create sensitivity raster based on threat
@@ -111,12 +121,17 @@ def biophysical(args):
         sensitivity_raster.FlushCache()
         
         def partial_degradation(*rasters):
+            """For a given threat return the weighted average of the product of
+                the threats sensitivity, the threats acces, and the threat 
+                adjusted by distance"""
             result = 1.0
             for val in rasters:
                 result = result * val * (float(threat_data['WEIGHT'])/weight_sum)
             return result
         
         ras_list = []
+        # set the raster list depending on whether the access shapefile was
+        # provided
         if access_raster is None:
             ras_list = [filtered_raster, sensitivity_raster]
         else:
@@ -134,9 +149,6 @@ def biophysical(args):
     sum_deg_raster = \
         raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
                                        raster_out_uri=deg_sum_uri, nodata=-1.0)
-
-
-##I can probably just do a giant vectorize_raster call on these 4 rasters and do the calculation at once        
 
     #Compute quality for all threats
     z = 2.5
