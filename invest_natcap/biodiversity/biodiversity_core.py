@@ -169,6 +169,31 @@ def biophysical(args):
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
 
+def raster_pixel_count(ds):
+    """Determine the number of each unique pixel in the ds
+    
+        ds - a GDAL raster dataset
+
+        returns -  a dictionary whose keys are the unique pixel values and whose
+                   values are the number of occurrences
+    """
+
+    band = ds.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+    counts = {}
+    for row_index in range(band.YSize):
+        cur_array = band.ReadAsArray(0, row_index, band.XSize, 1)
+        for val in np.unique(cur_array):
+            if val == nodata:
+                continue
+            if val in counts:
+                counts[val] = counts[val] + cur_array[cur_array==val].size
+            else:
+                counts[val] = cur_array[cur_array==val].size
+
+    return counts
+
+
 def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
     """Apply an operatoin to a matrix after the matrix is adjusted for nodata
         values. After the operation is complete, the matrix will have pixels
