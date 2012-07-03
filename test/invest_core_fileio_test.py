@@ -1,8 +1,10 @@
 import unittest
 from csv import DictReader
 import invest_natcap.invest_core.fileio
+import os 
 
 GUILDS_URI = './data/iui/Guild.csv'
+TEST_DIR = './data/iui/'
 
 class CSVDriverTest(unittest.TestCase):
     def setUp(self):
@@ -27,6 +29,22 @@ class CSVDriverTest(unittest.TestCase):
                       'NS_cavity': '1', 'NS_ground': '0', 'species': 'Bombus'}]
         table = self.driver.read_table()
         self.assertEqual(table, reg_table)
+
+    def test_write_table(self):
+        orig_table = self.driver.read_table()
+
+        # Build a new uri and write the table to this new uri
+        new_uri = TEST_DIR + 'test_csv.csv'
+        self.driver.write_table(orig_table, uri=new_uri)
+
+        # Open a new instance of CSVDriver for this new table and check it to
+        # ensure it's the same as the original table.
+        new_driver = invest_natcap.invest_core.fileio.CSVDriver(new_uri)
+        new_table = new_driver.read_table()
+        self.assertEqual(orig_table, new_table)
+
+        # Cleanup: remove the new table on disk.
+        os.remove(new_uri)
 
 class TableHandlerTest(unittest.TestCase):
     def setUp(self):

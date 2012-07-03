@@ -70,9 +70,27 @@ class CSVDriver(TableDriverTemplate):
         return table
 
     def write_table(self, table_list, uri=None, fieldnames=None):
-        uri = max(uri, self.uri)
-        fieldnames = max(fieldnames, self.get_fieldnames())
-        writer = csv.DictWriter(open(uri), fieldnames)
+        if uri == None:
+            uri = self.uri
+        if fieldnames == None:
+            fieldnames = self.get_fieldnames()
+        file_handler = open(uri, 'wb')
+        writer = csv.DictWriter(file_handler, fieldnames)
+        try:
+            writer.writeheader()
+        except AttributeError:
+            # Thrown in python 2/6 and earlier ... writer.writeheader() is new
+            # in 2.7.  Instead, we need to build up a new header string and
+            # write that manually to the file handler.
+            field_string = ''
+            for name in fieldnames:
+                field_string += str(name)
+                field_string += ','
+            field_string = field_string[:-1]
+            field_string += "\r\n"
+            file_handler.write(field_string)
+
+        # Now that the header has been written, write all the rows.
         writer.writerows(table_list)
 
 class DBFDriver(TableDriverTemplate):
