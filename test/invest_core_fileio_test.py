@@ -43,3 +43,9 @@ class TableHandlerTest(unittest.TestCase):
 
     def test_get_table_dictionary_nokey(self):
         print self.handler.get_table_dictionary('species', False)
+
+    def test_get_table_row(self):
+        print self.handler.get_table_row('fs_summer', '0.5')
+
+    def test_get_map(self):
+        print self.handler.get_map('species', 'alpha')
