@@ -19,33 +19,80 @@ class CSVDriverTest(unittest.TestCase):
 
 class TableHandlerTest(unittest.TestCase):
     def setUp(self):
-        print ''  # print a newline before each test.  makes printing prettier
         self.handler = invest_natcap.invest_core.fileio.TableHandler(GUILDS_URI)
 
     def test_get_table(self):
-        table = self.handler.get_table()
-        for row in table:
-            print row
+        """Assert the functionality of get_table()"""
+        reg_table = [{'fs_summer': '0.5', 'fs_spring': '0.5', 'alpha': '500',
+                      'ns_cavity': '1', 'ns_ground': '1', 'species': 'Apis'},
+                     {'fs_summer': '0.6', 'fs_spring': '0.4', 'alpha': '1500',
+                      'ns_cavity': '1', 'ns_ground': '0', 'species': 'Bombus'}]
+        self.assertEqual(self.handler.get_table(), reg_table)
 
     def test_set_field_mask(self):
+        """Assert the functionality of set_field_mask()"""
+        reg_table = [{'summer': '0.5', 'spring': '0.5', 'alpha': '500',
+                      'ns_cavity': '1', 'ns_ground': '1', 'species': 'Apis'},
+                     {'summer': '0.6', 'spring': '0.4', 'alpha': '1500',
+                      'ns_cavity': '1', 'ns_ground': '0', 'species': 'Bombus'}]
         self.handler.set_field_mask('^fs_', 3)
-        for row in self.handler.table:
-            print row
+        self.assertEqual(self.handler.get_table(), reg_table)
 
     def test_get_fieldnames_orig(self):
-        print self.handler.get_fieldnames('orig')
+        """Assert the functionality of get_fieldnames() (original case)"""
+        fieldnames = self.handler.get_fieldnames('orig')
+        reg_fieldnames = ['species', 'NS_cavity', 'NS_ground', 'FS_spring',
+            'FS_summer', 'Alpha']
+        self.assertEqual(fieldnames, reg_fieldnames)
 
     def test_get_fieldnames_lower(self):
-        print self.handler.get_fieldnames('lower')
+        """Assert the functionality of get_fieldnames() (lowercase)"""
+        fieldnames = self.handler.get_fieldnames('lower')
+        reg_fieldnames = ['species', 'ns_cavity', 'ns_ground', 'fs_spring',
+            'fs_summer', 'alpha']
+        self.assertEqual(fieldnames, reg_fieldnames)
 
     def test_get_table_dictionary_key(self):
-        print self.handler.get_table_dictionary('species')
+        """Assert the functionality of get_table_dictionary() (with key)"""
+        reg_dict = {'Bombus': {'fs_summer': '0.6',
+                               'fs_spring': '0.4',
+                               'alpha': '1500',
+                               'ns_cavity': '1',
+                               'ns_ground': '0',
+                               'species': 'Bombus'},
+                    'Apis': {'fs_summer': '0.5',
+                             'fs_spring': '0.5',
+                             'alpha': '500',
+                             'ns_cavity': '1',
+                             'ns_ground': '1',
+                             'species': 'Apis'}}
+        test_dict = self.handler.get_table_dictionary('species')
+        self.assertEqual(reg_dict, test_dict)
 
     def test_get_table_dictionary_nokey(self):
-        print self.handler.get_table_dictionary('species', False)
+        """Assert the functionality of get_table_dictionary() (without key)"""
+        reg_dict = {'Bombus': {'fs_summer': '0.6',
+                               'fs_spring': '0.4',
+                               'alpha': '1500',
+                               'ns_cavity': '1',
+                               'ns_ground': '0'},
+                    'Apis': {'fs_summer': '0.5',
+                             'fs_spring': '0.5',
+                             'alpha': '500',
+                             'ns_cavity': '1',
+                             'ns_ground': '1'}}
+        test_dict = self.handler.get_table_dictionary('species', False)
+        self.assertEqual(reg_dict, test_dict)
 
     def test_get_table_row(self):
-        print self.handler.get_table_row('fs_summer', '0.5')
+        """Assert the functionality of get_table_row()"""
+        reg_row = {'fs_summer': '0.5', 'fs_spring': '0.5', 'alpha': '500',
+                   'ns_cavity': '1', 'ns_ground': '1', 'species': 'Apis'}
+        row = self.handler.get_table_row('fs_summer', '0.5')
+        self.assertEqual(row, reg_row)
 
     def test_get_map(self):
-        print self.handler.get_map('species', 'alpha')
+        """Assert the functionality of get_map()"""
+        reg_map = {'Bombus': '1500', 'Apis': '500'}
+        test_map = self.handler.get_map('species', 'alpha')
+        self.assertEqual(test_map, reg_map)
