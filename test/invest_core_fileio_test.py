@@ -38,3 +38,8 @@ class TableHandlerTest(unittest.TestCase):
     def test_get_fieldnames_lower(self):
         print self.handler.get_fieldnames('lower')
 
+    def test_get_table_dictionary_key(self):
+        print self.handler.get_table_dictionary('species')
+
+    def test_get_table_dictionary_nokey(self):
+        print self.handler.get_table_dictionary('species', False)

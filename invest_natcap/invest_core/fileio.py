@@ -245,17 +245,24 @@ class TableHandler(object):
                 self.orig_fieldnames.iteritems())
             return [new_fieldnames[f] for f in self.fieldnames]
 
-    def get_table_dictionary(self, key_field):
+    def get_table_dictionary(self, key_field, include_key=True):
         """Returns a python dictionary mapping a key value to all values in that
             particular row dictionary (including the key field).  If duplicate 
             keys are found, the are overwritten in the output dictionary.
 
             key_field - a python string of the desired field value to be used as
                 the key for the returned dictionary.
+            include_key=True - a python boolean indicating whether the
+                key_field provided should be included in each row_dictionary.
 
             returns a python dictionary of dictionaries."""
 
-        return dict((row[key_field], row) for row in self.table)
+        def check_key(input_dict):
+            if not include_key:
+                del input_dict[key_field]
+            return input_dict
+
+        return dict((row[key_field], check_key(row)) for row in self.table)
 
     def get_table_row(self, key_field, key_value):
         """Return the first full row where the value of key_field is equivalent
