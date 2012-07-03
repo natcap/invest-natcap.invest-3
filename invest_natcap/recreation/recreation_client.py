@@ -64,13 +64,13 @@ def execute(args):
         else:
             LOGGER.info("Please wait.")
 
+    sessid = "f8f9pat17v0bmdrmoq1dqe73g2"
     LOGGER.info("Running regression")
     url = "http://ncp-skookum.stanford.edu/~mlacayo/regression.php"
     datagen, headers = multipart_encode({"sessid": sessid})
     request = urllib2.Request(url, datagen, headers)
     sessid2 = urllib2.urlopen(request).read().strip()
 
-    print sessid2
     if sessid2 != sessid:
         raise ValueError,"Something weird happened the sessid didn't match"
     
@@ -93,17 +93,16 @@ if __name__ == "__main__":
         aoiFileName = sys.argv[1]
         cellSize = float(sys.argv[2])
         workspace_dir = sys.argv[3]
-        
-        args = {'aoiFileName':aoiFileName,
-                'cellSize':cellSize}
+
     else:
         LOGGER.info("Runnning model with test parameters")
         dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
         aoiFileName = dirname+"recreation_data/"+"aoi.shp"
         cellSize = 5000
+        workspace_dir = dirname+"test_out/"
 
-        args["aoiFileName"] = aoiFileName
-        args["cellSize"] = cellSize
-        args["workspace_dir"] = dirname+"test_out/"
+    args["aoiFileName"] = aoiFileName
+    args["cellSize"] = cellSize
+    args["workspace_dir"] = workspace_dir
 
     execute(args)
