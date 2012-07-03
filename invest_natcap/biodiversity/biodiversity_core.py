@@ -87,7 +87,10 @@ def biophysical(args):
                     -1.0, gdal.GDT_Float32)
         # get the mean cell size
         mean_cell_size = (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
-        sigma = 2.99 / mean_cell_size
+        # compute max distance as the number of pixels by taking max distance
+        # from the table which is given in KM and multiply it by 1000 to convert
+        # to meters.  Divide by mean cell size to get the number of pixels
+        sigma = 2.99 / ((float(threat_data['MAX_DIST'])*1000.0) / mean_cell_size)
 
         filtered_out_matrix = \
             clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
