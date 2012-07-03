@@ -11,11 +11,13 @@ class CSVDriverTest(unittest.TestCase):
         self.driver = invest_natcap.invest_core.fileio.CSVDriver(GUILDS_URI)
 
     def test_get_file_object(self):
+        """Assert for CSVDriver that the class of the CSVDriver underlying object"""
         file_object = self.driver.get_file_object()
         is_instance_of_csv = isinstance(file_object, DictReader)
         self.assertEqual(True, is_instance_of_csv)
 
     def test_get_fieldnames(self):
+        """Assert for CSVDriver that the fieldnames of the driver's table"""
         reg_fieldnames = ['species', 'NS_cavity', 'NS_ground', 'FS_spring',
                           'FS_summer', 'Alpha']
 
@@ -23,6 +25,7 @@ class CSVDriverTest(unittest.TestCase):
         self.assertEqual(reg_fieldnames, fieldnames)
 
     def test_read_table(self):
+        """Assert for CSVDriver that the table read by the driver"""
         reg_table = [{'FS_summer': '0.5', 'FS_spring': '0.5', 'Alpha': '500',
                       'NS_cavity': '1', 'NS_ground': '1', 'species': 'Apis'},
                      {'FS_summer': '0.6', 'FS_spring': '0.4', 'Alpha': '1500',
@@ -31,6 +34,7 @@ class CSVDriverTest(unittest.TestCase):
         self.assertEqual(table, reg_table)
 
     def test_write_table(self):
+        """Assert for CSVDriver that that we can write correctly to a CSV"""
         orig_table = self.driver.read_table()
 
         # Build a new uri and write the table to this new uri
