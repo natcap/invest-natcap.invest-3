@@ -90,8 +90,9 @@ def biophysical(args):
         # compute max distance as the number of pixels by taking max distance
         # from the table which is given in KM and multiply it by 1000 to convert
         # to meters.  Divide by mean cell size to get the number of pixels
-        sigma = 2.99573 / ((float(threat_data['MAX_DIST'])*1000.0) / mean_cell_size)
-
+        sigma = \
+            -2.99573 / ((float(threat_data['MAX_DIST']) * 1000.0) / mean_cell_size)
+        LOGGER.debug('Sigma for gaussian : %s', sigma)
         filtered_out_matrix = \
             clip_and_op(threat_raster.GetRasterBand(1).ReadAsArray(), sigma, \
                         ndimage.gaussian_filter, matrix_type=float, 
