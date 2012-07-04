@@ -171,6 +171,9 @@ class TableHandler(object):
         return iter(self.table)
 
     def find_driver(self, uri, fieldnames=None):
+        """Locate the driver needed for uri.  Returns a driver object as
+        documented by self.driver_types."""
+
         class InvalidExtension(Exception): pass
         base, ext = os.path.splitext(uri)
         handler = None
@@ -191,6 +194,25 @@ class TableHandler(object):
                     break
         return driver
 
+    def create_column(self, column_name, position=None, default_value=0):
+        """Create a new column in the internal table object with the name
+        column_name.  If position == None, it will be appended to the end of the
+        fieldnames.  Otherwise, the column will be inserted at index position.
+        This function will also loop through the entire table object and create
+        an entry with the default value of default_value.
+
+        Note that it's up to the driver to actually add the field to the file on
+        disk.
+
+        Returns nothing"""
+
+        if position == None:
+            position = len(self.fieldnames)
+        self.fieldnames.insert(position, column_name)
+
+        # Create a new entry in self.table for this column.
+        for row in self.table:
+            row[column_name] = default_value
 
     def write_table(self, table=None, uri=None):
         """Invoke the driver to save the table to disk.  If table == None,
