@@ -79,6 +79,16 @@
                     "validateAs": {"type": "OGR"},
 		    "helpText": "Rich, fill this in."
                 },
+		{        
+                    "id" : "biophysical_table_uri",
+                    "args_id" : "biophysical_table_uri",
+                    "type": "file",
+                    "label": "Biophysical Table",
+                    "defaultValue": "../Base_Data/Freshwater/biophysical_table.csv",
+                    "required": true,
+                    "validateAs": {"type": "CSV"},
+		    "helpText": "Rich, fill this in."
+                },		
                 {        
                     "id" : "threshold_flow_accumulation",
                     "args_id" : "threshold_flow_accumulation",
