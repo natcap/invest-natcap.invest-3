@@ -2,7 +2,7 @@
     "id" : "window",
     "label": "Sediment Biophysical",
     "targetScript" : "invest_natcap.sediment.sediment_biophysical",
-    "modelName" : "water_yield",
+    "modelName" : "sediment_biophysical",
     "localDocURI": "../documentation/sediment_retention.html",
     "height": 500,
     "width" : 700,
