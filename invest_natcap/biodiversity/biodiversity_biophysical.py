@@ -89,13 +89,14 @@ def execute(args):
             landuse_scenarios[lu_time] = lu_ext
     
     landuse_dict = {}
+    density_dict = {}
     
     for scenario, ext in landuse_scenarios.iteritems():
         landuse_dict[ext] = \
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
         
-        density_dict = {}
-        
+        density_dict['density'+ext] = {}
+
         for threat in biophysical_args['threat_dict']:
             try:
                 density_dict['density'+ext][str(threat)] = \

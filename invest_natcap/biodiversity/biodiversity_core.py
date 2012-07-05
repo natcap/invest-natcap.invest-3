@@ -172,9 +172,9 @@ def biophysical(args):
                 raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
                                                quality_op, raster_out_uri=quality_uri,
                                                nodata=-1.0)
-    except KeyError:
-        LOGGER.debug('Landuse_time %s not provided', lulc_key)
-        continue 
+        except KeyError:
+            LOGGER.debug('Landuse_time %s not provided', lulc_key)
+            continue 
 
     #Adjust quality by habitat status
 
