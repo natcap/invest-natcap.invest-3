@@ -311,24 +311,27 @@ class Executor(threading.Thread):
             # root of the user's workspace.  The file is actually written to
             # whenever self.write() is called.
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d--%H_%M_%S")
-            filename = '%s-log-%s.txt' % (module.split('.')[-1], timestamp)
+
+            # the module name needs to be extracted differently if it's a python
+            # module or if it's a file on disk.  While we're at it, we can also
+            # locate the model to be loaded.
+            if os.path.isfile(module):
+                model = imp.load_source('model', module)
+               # Model name is name of module file, minus the extension
+                model_name = os.path.splitext(os.path.basename(module))[0]
+            else:
+                module_list = module.split('.')
+                model = locate_module(module_list)
+                model_name = module_list[-1]  # model name is last entry in list
+            filename = '%s-log-%s.txt' % (module_name, timestamp)
+            LOGGER.info('Logging will be saved to %s', filename)
 
             # we want to save this file to the current directory until the model
             # finishes, when we copy the log into the model's workspace
             log_file_uri = os.path.abspath(os.path.join('.', filename))
             self.log_file = open(log_file_uri, 'w')
 
-            LOGGER.info('Loading the queued model')
-            if os.path.isfile(module):
-                LOGGER.debug('Loading the model from %s', module)
-                model = imp.load_source('model', module)
-               # Model name is name of module file, minus the extension
-                model_name = os.path.splitext(os.path.basename(module))[0]
-            else:
-                LOGGER.debug('Locating the module %s in the PATH', module)
-                module_list = module.split('.')
-                model = locate_module(module_list)
-                model_name = module_list[-1]  # model name is last entry in list
+            LOGGER.debug('Loaded the model from %s', module)
             LOGGER.info('Executing the loaded model')
             invest_natcap.log_model(model_name)  # log model usage to ncp-dev
             model.execute(args)
