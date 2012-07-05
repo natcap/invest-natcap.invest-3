@@ -184,8 +184,26 @@ def biophysical(args):
 
     #Adjust quality by habitat status
 
-    #Comput Rarity if user supplied baseline raster
-
+    #Compute Rarity if user supplied baseline raster
+    try:    
+        #Create index that represents the rarity of LULC class on landscape
+        lulc_base = args['landuse_dict']['_b']
+        lulc_code_count_b = raster_pixel_count(lulc_base)
+        for lulc_cover in ['_c', '_f']:
+            try:
+                lulc_x = args['landuse_dict'][lulc_cover]
+                lulc_code_count_x = raster_pixel_count(lulc_x)
+                code_index = {}
+                for code in lulc_code_count_c.iterkeys():
+                    try:
+                        ratio = 1.0 - (lulc_code_count_c[code]/lulc_code_count_b[code])
+                        code_index[code] = ratio
+                    except KeyError:
+                        code_index[code] = 0.0
+            except KeyError:
+                pass
+    except KeyError:
+        LOGGER.info('Baseline not provided to compute Rarity')
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
 
@@ -207,9 +225,10 @@ def raster_pixel_count(ds):
             if val == nodata:
                 continue
             if val in counts:
-                counts[val] = counts[val] + cur_array[cur_array==val].size
+                counts[val] = \
+                    float(counts[val] + cur_array[cur_array==val].size)
             else:
-                counts[val] = cur_array[cur_array==val].size
+                counts[val] = float(cur_array[cur_array==val].size)
 
     return counts
 
