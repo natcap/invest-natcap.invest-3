@@ -88,18 +88,23 @@ def execute(args):
         if lu_uri in args:
             landuse_scenarios[lu_time] = lu_ext
     
+    landuse_dict = {}
+    
     for scenario, ext in landuse_scenarios.iteritems():
-        biophysical_args['landuse'+ext] = \
+        landuse_dict[ext] = \
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
+        
         density_dict = {}
+        
         for threat in biophysical_args['threat_dict']:
             try:
-                density_dict['dens'+ext][str(threat)] = \
+                density_dict['density'+ext][str(threat)] = \
                     open_ambiguous_raster(os.path.join(input_dir, threat+ext))
             except:
                 LOGGER.warn('Error encountered getting raster threat : %s',
                             os.path.join(input_dir, threat+ext))
-        
+    
+    biophysical_args['landuse_dict'] = landuse_dict
     biophysical_args['density_dict'] = density_dict
 
     biodiversity_core.biophysical(biophysical_args)
