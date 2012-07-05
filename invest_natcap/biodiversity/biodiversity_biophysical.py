@@ -123,14 +123,14 @@ def open_ambiguous_raster(uri):
     # a list of possible suffixes for raster datasets. We currently can handle
     # .tif and directory paths
     possible_suffixes = ['', '.tif']
-    
+    dataset = None 
     for suffix in possible_suffixes:
         if not os.path.exists(uri+suffix):
             continue
         dataset = gdal.Open(uri+suffix, gdal.GA_ReadOnly)
         if dataset is not None:
             break
-     
+    LOGGER.debug('DATASET : %s, %s', dataset, uri)
     return dataset
 
 def make_dictionary_from_csv(csv_uri, key_field):

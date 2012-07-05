@@ -89,7 +89,8 @@ def biophysical(args):
                 # if there is no raster found for this threat then continue with the
                 # next threat
                 if threat_raster is None:
-                    LOGGER.warn('No threat raster found for threat : %s',  threat)
+                    LOGGER.warn('No threat raster found for threat : %s',
+                                threat+lulc_key)
                     LOGGER.warn('Continuing run without factoring in threat')
                     continue 
 
@@ -124,7 +125,7 @@ def biophysical(args):
                 filtered_raster.FlushCache()
 
                 # create sensitivity raster based on threat
-                sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
+                sens_uri = intermediate_dir + 'sens_'+threat+lulc_key+'.tif'
                 sensitivity_raster = \
                         raster_from_table_values(lulc_ras, sens_uri,\
                                                  args['sensitivity_dict'], 'L_'+threat)        
@@ -147,33 +148,35 @@ def biophysical(args):
                 else:
                     ras_list = [filtered_raster, sensitivity_raster, access_raster]
                 
-                deg_uri = intermediate_dir + 'deg_'+threat+'.tif'
+                deg_uri = intermediate_dir + 'deg_'+threat+lulc_key+'.tif'
                 deg_ras =\
                     raster_utils.vectorize_rasters(ras_list, partial_degradation, \
                                                raster_out_uri=deg_uri, nodata=threat_nodata)
                 degradation_rasters.append(deg_ras)
+            
+            if len(degradation_rasters) > 0:
+                def sum_degradation(*rasters):
+                    return sum(rasters)
+                deg_sum_uri = \
+                    os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
+                sum_deg_raster = \
+                    raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
+                                                   raster_out_uri=deg_sum_uri, nodata=-1.0)
 
-            def sum_degradation(*rasters):
-                return sum(rasters)
-            deg_sum_uri = \
-                os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
-            sum_deg_raster = \
-                raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
-                                               raster_out_uri=deg_sum_uri, nodata=-1.0)
-
-            #Compute quality for all threats
-            z = 2.5
-            ksq = half_saturation**z
-            def quality_op(degradation, habitat):
-                return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
-            quality_uri = \
-                os.path.join(intermediate_dir, 'quality_out'+lulc_key+'.tif')
-            quality_raster = \
-                raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
-                                               quality_op, raster_out_uri=quality_uri,
-                                               nodata=-1.0)
-        except KeyError:
-            LOGGER.debug('Landuse_time %s not provided', lulc_key)
+                #Compute quality for all threats
+                z = 2.5
+                ksq = half_saturation**z
+                def quality_op(degradation, habitat):
+                    return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
+                quality_uri = \
+                    os.path.join(intermediate_dir, 'quality_out'+lulc_key+'.tif')
+                quality_raster = \
+                    raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
+                                                   quality_op, raster_out_uri=quality_uri,
+                                                   nodata=-1.0)
+        except:
+            LOGGER.error('An error was encountered processing landuse%s', lulc_key)
+            LOGGER.debug('Attempting to move on to next landuse map')
             continue 
 
     #Adjust quality by habitat status
