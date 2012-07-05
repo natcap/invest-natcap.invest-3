@@ -600,17 +600,22 @@ class LabeledElement(DynamicPrimitive):
         else:
             self.label.setStyleSheet("QWidget { color: red }")
 
-class Label(QtGui.QLabel, DynamicPrimitive):
+
+class StaticReturn(DynamicPrimitive):
     def __init__(self, attributes):
-        QtGui.QLabel.__init__(self)
         DynamicPrimitive.__init__(self, attributes)
-        self.setText(attributes['label'])
-        self.setWordWrap(True)
-        self.elements = [self.error_button, self, self.info_button]
 
     def value(self):
         if 'returns' in self.attributes:
             return self.attributes['returns']
+
+class Label(QtGui.QLabel, StaticReturn):
+    def __init__(self, attributes):
+        QtGui.QLabel.__init__(self)
+        StaticReturn.__init__(self, attributes)
+        self.setText(attributes['label'])
+        self.setWordWrap(True)
+        self.elements = [self.error_button, self, self.info_button]
 
 class DynamicText(LabeledElement):
     """Creates an object containing a label and a sigle-line text field for
@@ -1745,8 +1750,13 @@ class Root(DynamicElement):
         for id, element in self.allElements.iteritems():
             always_return = False
             if 'returns' in element.attributes:
-                if 'alwaysReturn' in element.attributes['returns']:
-                    always_return = element.attributes['returns']['alwaysReturn']
+                try:
+                    if 'alwaysReturn' in element.attributes['returns']:
+                        always_return = element.attributes['returns']['alwaysReturn']
+                except TypeError:
+                    # Thrown when attributes['returns'] is not a dictionary.
+                    # Assume that always_return should be False.
+                    pass
 
             if element.isEnabled() or always_return:
                 if 'args_id' in element.attributes:
@@ -2015,6 +2025,7 @@ class ElementRegistrar(registrar.Registrar):
                    'checkbox': CheckBox,
                    'scrollGroup': ScrollArea,
                    'OGRFieldDropdown': OGRFieldDropdown,
+                   'hiddenElement': StaticReturn,
                    'label': Label
                    }
         self.update_map(updates)
