@@ -7,4 +7,4 @@ points = {
     (1.0,1.0): 0,
     (0.5,0.5): 45}
 
-invest_test_core.make_sample_dem(100,100,points, 0.0, -1, 'random_dem.tif')
+invest_test_core.make_sample_dem(100,100,points, 1.0, -1, 'random_dem.tif')
