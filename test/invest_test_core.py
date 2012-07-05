@@ -6,6 +6,7 @@ import logging
 import random
 
 import numpy as np
+import scipy.interpolate
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -268,10 +269,15 @@ def make_sample_dem(cols, rows, height_points, roughness, nodata, out_uri):
     dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
 
     #Build the interplator
-    pass
+    points,values = zip(*height_points.items())
+    print points, values
+    interp = scipy.interpolate.LinearNDInterpolator(np.array(points),np.array(values))
 
     #Generate the output grid
-    matrix = np.zeros((rows,cols))
+    x,y = np.meshgrid(np.array(range(0,cols),dtype=np.float)/(cols-1),\
+                      np.array(range(0,rows),dtype=np.float)/(rows-1))
+    
+    matrix = interp(x,y).reshape((rows,cols))
 
     dataset.GetRasterBand(1).WriteArray(matrix)
     dataset.GetRasterBand(1).SetNoDataValue(-1)
