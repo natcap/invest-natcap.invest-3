@@ -11,11 +11,18 @@ points = {
     (1.0,1.0): 0,
     (0.5,0.5): 45}
 
-points_down = {
+points_right = {
     (0.0,0.0): 100,
     (0.0,1.0): 100,
     (1.0,0.0): 0,
     (1.0,1.0): 0}
+
+points_down = {
+    (0.0,0.0): 100,
+    (0.0,1.0): 0,
+    (1.0,0.0): 100,
+    (1.0,1.0): 0}
+
 
 
 dem = invest_test_core.make_sample_dem(100,100,points_down, 0.0, -1, 'random_dem.tif')
