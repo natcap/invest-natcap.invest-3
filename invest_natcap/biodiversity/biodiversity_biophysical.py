@@ -1,5 +1,5 @@
 """InVEST Biophysical model file handler module"""
-
+import glob
 from osgeo import gdal
 from osgeo import ogr
 import csv
@@ -77,7 +77,7 @@ def execute(args):
 
     try:
         biophysical_args['access_shape'] = ogr.Open(args['access_uri'])
-    except:
+    except KeyError:
         pass
 
     # Determine which land cover scenarios we should run, and append the
@@ -87,23 +87,52 @@ def execute(args):
     for lu_uri, lu_time, lu_ext in ('landuse_fut_uri','fut','_f'),('landuse_bas_uri','bas','_b'):
         if lu_uri in args:
             landuse_scenarios[lu_time] = lu_ext
-
+    
+    landuse_dict = {}
+    density_dict = {}
+    
     for scenario, ext in landuse_scenarios.iteritems():
-        biophysical_args['landuse'] = \
+        landuse_dict[ext] = \
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
-        density_dict = {}
+        
+        density_dict['density'+ext] = {}
+
         for threat in biophysical_args['threat_dict']:
             try:
-                density_dict[str(threat)] = \
-                    gdal.Open(os.path.join(input_dir, str(threat+ext+'.tif')),\
-                              gdal.GA_ReadOnly)
+                density_dict['density'+ext][str(threat)] = \
+                    open_ambiguous_raster(os.path.join(input_dir, threat+ext))
             except:
-                LOGGER.debug('Could not find the threat raster : %s', \
-                        os.path.join(input_dir, str(threat+ext+'.tif')))
-        
-        biophysical_args['density_dict'] = density_dict
-        biodiversity_core.biophysical(biophysical_args)
-        
+                LOGGER.warn('Error encountered getting raster threat : %s',
+                            os.path.join(input_dir, threat+ext))
+    
+    biophysical_args['landuse_dict'] = landuse_dict
+    biophysical_args['density_dict'] = density_dict
+
+    biodiversity_core.biophysical(biophysical_args)
+
+def open_ambiguous_raster(uri):
+    """Open and return a gdal dataset given a uri path that includes the file
+        name but not neccessarily the suffix or extension of how the raster may
+        be represented.
+
+        uri - a pythong string of the file path that includes the name of the
+              file but not it's extension
+
+        return - a gdal dataset or NONE if no file is found with the pre-defined
+                 suffixes and 'uri'"""
+    # a list of possible suffixes for raster datasets. We currently can handle
+    # .tif and directory paths
+    possible_suffixes = ['', '.tif']
+    dataset = None 
+    for suffix in possible_suffixes:
+        if not os.path.exists(uri+suffix):
+            continue
+        dataset = gdal.Open(uri+suffix, gdal.GA_ReadOnly)
+        if dataset is not None:
+            break
+    LOGGER.debug('DATASET : %s, %s', dataset, uri)
+    return dataset
+
 def make_dictionary_from_csv(csv_uri, key_field):
     """Make a basic dictionary representing a CSV file, where the
        keys are a unique field from the CSV file and the values are

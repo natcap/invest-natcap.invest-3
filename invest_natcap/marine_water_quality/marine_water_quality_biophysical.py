@@ -212,12 +212,16 @@ def execute(args):
     adv_v_band = adv_v_raster.GetRasterBand(1)
 
     tide_e_array = tide_e_band.ReadAsArray()
-    #convert E from km^2/day to m^2/sec
-    LOGGER.info("Convert tide E form km^2/day to m^2/sec")
-    tide_e_array[tide_e_array != nodata_out] *= 1000.0 ** 2 / 86400.0
+    #convert E from km^2/day to m^2/day
+    LOGGER.info("Convert tide E form km^2/day to m^2/day")
+    tide_e_array[tide_e_array != nodata_out] *= 1000.0 ** 2
 
+    #convert adv u from m/sec to m/day
     adv_u_array = adv_u_band.ReadAsArray()
     adv_v_array = adv_v_band.ReadAsArray()
+    adv_u_array[adv_u_array != nodata_out] *= 86400.0
+    adv_v_array[adv_v_array != nodata_out] *= 86400.0
+
 
     #If the cells are square then it doesn't matter if we look at x or y
     #but if different, we need just one value, so take the average.  Not the
@@ -226,13 +230,10 @@ def execute(args):
     if abs(raster_out_gt[1]) != abs(raster_out_gt[5]):
         LOGGER.warn("Warning, cells aren't square, so the results of the solver will be incorrect")
 
-    #Converting from 1/day to 1/sec
-    kps_sec = args['kps']/86400.0
-
     concentration_array = \
         marine_water_quality_core.diffusion_advection_solver(source_point_values,
-        kps_sec, in_water_array, tide_e_array, adv_u_array, adv_v_array, 
-        nodata_out, cell_size)
+        args['kps'], in_water_array, tide_e_array, adv_u_array, adv_v_array, 
+        nodata_out, cell_size, args['layer_depth'])
 
     raster_out_band = raster_out.GetRasterBand(1)
     raster_out_band.WriteArray(concentration_array, 0, 0)

@@ -15,7 +15,9 @@ Groups:
   - list
   - embeddedUI
 
-Primitive input elements:
+Primitive elements:
+  - label
+  - hiddenElement
   - file
   - folder
   - text
@@ -79,7 +81,7 @@ PRIMITIVE ELEMENTS:
 ==============================
 
 
-Attributes common to all primitive elements:
+Attributes common to all primitive input elements:
     "args_id"   : A string value representing the dictionary key with which this
                   element's value will be associated when the model is run.
                   This is the standard way of allowing the UI to assemble
@@ -126,6 +128,21 @@ Attributes common to text-based primitive elements (file, folder, text elements)
                     input to the textfield.  This field should not be necessary
                     to use on an element of type 'file' or 'folder' if you are
                     using validation.
+
+label
+==================
+The label element allows you to display text in the ui and has the ability to
+return a pre-set value, dictionary, list or whatever to the executor.  Anything
+that can be specified in the JSON definition in the "returns" attribute can be
+returned.  Text to be displayed may be formatted with HTML tags.  Use the
+"label" attribute to define the text to be displayed.
+
+hiddenElement
+=================
+The hiddenElement element allows the user to specify an element that is not
+displayed in the UI, but still allows anything to be returned with an args_id,
+rather like the label element.
+
 
 file
 ==================

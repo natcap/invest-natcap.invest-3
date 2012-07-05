@@ -2,6 +2,7 @@ import os, sys
 from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 import urllib2
+import time
 
 import logging
 
@@ -15,6 +16,7 @@ def execute(args):
     aoiFileName = args["aoiFileName"]
     cellSize = args["cellSize"]
     workspace_dir = args["workspace_dir"]
+    comments = args["comments"]
     
     dirname=os.path.dirname(aoiFileName)+os.sep
     fileName=os.path.basename(aoiFileName).strip(".shp") 
@@ -36,19 +38,44 @@ def execute(args):
                                          "aoiSHX": open(aoiFileNameSHX, "rb"),
                                          "aoiDBF": open(aoiFileNameDBF, "rb"),
                                          "aoiPRJ": open(aoiFileNamePRJ, "rb"),
-                                         "cellSize": cellSize})
+                                         "cellSize": cellSize,
+                                         "comments": comments})
     
     # Create the Request object
-    request = urllib2.Request("http://ncp-skookum.stanford.edu/~mlacayo/recreation.php", datagen, headers)
+    url = "http://ncp-skookum.stanford.edu/~mlacayo/recreation.php"
+    request = urllib2.Request(url, datagen, headers)
     
     LOGGER.info("Sending request to server")
     
     # Actually do the request, and get the response
     # This will display the output from the model including the path for the results
-    results = eval(urllib2.urlopen(request).read())
-    LOGGER.info("Processing response from server")
+    sessid = urllib2.urlopen(request).read().strip()
+    LOGGER.debug("Server session %s" % (sessid))
     
-    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+results["sessid"].strip()+"/results.zip"
+    LOGGER.info("Processing data")
+
+    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+sessid+"/log.txt"    
+    complete = False
+    while not complete:
+        time.sleep(15)
+        log = urllib2.urlopen(url).read()
+        
+        msg = log.strip().split("\n")[-1].split(",")[-1].strip()
+        if msg[-29:]=="Dropping intermediate tables.":
+            complete = True
+        else:
+            LOGGER.info("Please wait.")
+
+    LOGGER.info("Running regression")
+    url = "http://ncp-skookum.stanford.edu/~mlacayo/regression.php"
+    datagen, headers = multipart_encode({"sessid": sessid})
+    request = urllib2.Request(url, datagen, headers)
+    sessid2 = urllib2.urlopen(request).read().strip()
+
+    if sessid2 != sessid:
+        raise ValueError,"Something weird happened the sessid didn't match"
+    
+    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+sessid+"/results.zip"
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
@@ -67,17 +94,19 @@ if __name__ == "__main__":
         aoiFileName = sys.argv[1]
         cellSize = float(sys.argv[2])
         workspace_dir = sys.argv[3]
-        
-        args = {'aoiFileName':aoiFileName,
-                'cellSize':cellSize}
+        comments = sys.argv[3]
+
     else:
         LOGGER.info("Runnning model with test parameters")
         dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
         aoiFileName = dirname+"recreation_data/"+"aoi.shp"
         cellSize = 5000
+        workspace_dir = dirname+"test_out/"
+        comments = "Runnning model with test parameters"
 
-        args["aoiFileName"] = aoiFileName
-        args["cellSize"] = cellSize
-        args["workspace_dir"] = dirname+"test_out/"
+    args["aoiFileName"] = aoiFileName
+    args["cellSize"] = cellSize
+    args["workspace_dir"] = workspace_dir
+    args["comments"] = comments
 
     execute(args)

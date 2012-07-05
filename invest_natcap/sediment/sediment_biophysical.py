@@ -9,6 +9,7 @@ import simplejson as json
 from osgeo import gdal
 from osgeo import ogr
 
+from invest_natcap import raster_utils
 import invest_cython_core
 from invest_natcap.sediment import sediment_core
 
@@ -103,7 +104,7 @@ def execute(args):
             for row in csv_dict_reader:
                 id_table[row[column_name]] = row
             biophysical_args[value] = id_table
-        except IOError, error:
+        except (IOError, KeyError), error:
             #Get here if file value is not found
             LOGGER.warning(error)
 
@@ -137,7 +138,7 @@ def execute(args):
     for raster_name, raster_path in output_uris.iteritems():
         LOGGER.debug('creating output raster %s', raster_path)
         biophysical_args[raster_name] = \
-            invest_cython_core.newRasterFromBase(biophysical_args['dem'],
+            raster_utils.new_raster_from_base(biophysical_args['dem'],
                               raster_path, 'GTiff', -5.0, gdal.GDT_Float32)
 
     #We won't know the size of the output rasters until we vectorize the stack
