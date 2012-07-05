@@ -18,8 +18,8 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         args['workspace_dir'] = input_dir
         args['landuse_cur_uri'] = \
                 os.path.join(input_dir, 'lc_samp_cur_b.tif')
-        #args['landuse_bas_uri'] = input_dir + 'lc_samp_bse_b/w001001.adf'
-        #args['landuse_fut_uri'] = input_dir + 'lc_samp_fut_b/w001001.adf'
+        args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
         args['threat_uri'] = os.path.join(input_dir, 'threats_samp.csv')
         args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
         args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')

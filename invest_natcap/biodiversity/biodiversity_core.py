@@ -18,32 +18,40 @@ def biophysical(args):
 
        args - a python dictionary with at least the following components:
        args['workspace_dir'] - a uri to the directory that will write output
-       args['landuse'] - a Gdal dataset
+       args['landuse_dict'] - a python dictionary with keys depicting the
+                              landuse scenario (current, future, or baseline)
+                              and the values GDAL datasets.
        args['threat_dict'] - a python dictionary representing the threats table
        args['sensitivity_dict'] - a python dictionary representing the sensitivity table
-       args['density_dict'] - a python dictionary that stores one or more gdal datasets
-                              based on the number of threats given in the threat table
+       args['density_dict'] - a python dictionary that stores any density
+                              rasters (threat rasters) corresponding to the
+                              entries in the threat table and whether the
+                              density raster belongs to the current, future, or
+                              baseline raster. Example:
+           {'dens_c': {'crp_c' : crp_c.tif, 'srds_c' : srds_c.tif, ...},
+            'dens_f': {'crp_f' : crp_f.tif, 'srds_f' : srds_f.tif, ...},
+            'dens_b': {'crp_b' : crp_b.tif, 'srds_b' : srds_b.tif, ...}
+           }
        args['access_shape'] - a ogr polygon shapefile depicting any protected/reserved
                               land boundaries
        args['half_saturation'] - an integer
        args['result_suffix'] - a string
 
 
-        returns nothing."""
+       returns nothing."""
 
     LOGGER.debug('Starting biodiversity biophysical calculations')
-    output_dir = args['workspace_dir'] + os.sep + 'output/'
-    intermediate_dir = args['workspace_dir'] + os.sep + 'intermediate/'
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    cur_landuse = args['landuse_dict']['_c']
     threat_dict = args['threat_dict']
     half_saturation = args['half_saturation']
     #Get raster properties: cellsize, width, height, cells = width * height, extent    
-    lulc_prop = get_raster_properties(args['landuse'])
+    lulc_prop = get_raster_properties(cur_landuse)
     #Create raster of habitat based on habitat field
-    habitat_uri = intermediate_dir + 'habitat.tif'
+    habitat_uri = os.path.join(intermediate_dir, 'habitat.tif')
     #habitat_raster = make_raster_from_lulc(args['landuse'], habitat_uri)
-    habitat_raster = raster_from_table_values(args['landuse'], habitat_uri, args['sensitivity_dict'], 'HABITAT')
-
-
+    habitat_raster = raster_from_table_values(cur_landuse, habitat_uri, args['sensitivity_dict'], 'HABITAT')
     
     #Check that threat count matches with sensitivity
         #Will be doing this in validation (hopefully...) or at the uri level
@@ -53,8 +61,8 @@ def biophysical(args):
     try:
         access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
-        access_uri = intermediate_dir + 'access_layer.tif'
-        access_base = make_raster_from_lulc(args['landuse'], access_uri)
+        access_uri = os.path.join(intermediate_dir, 'access_layer.tif')
+        access_base = make_raster_from_lulc(cur_landuse, access_uri)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
         access_base.GetRasterBand(1).Fill(1)
@@ -68,104 +76,134 @@ def biophysical(args):
     for threat_data in threat_dict.itervalues():
         #Sum weight of threats
         weight_sum = weight_sum + float(threat_data['WEIGHT'])
+    
+    for lulc_key, lulc_ras in args['landuse_dict'].iteritems():
+        try:
+            degradation_rasters = []
 
-    degradation_rasters = []
+            # 1) Blur all threats with gaussian filter
+            for threat, threat_data in threat_dict.iteritems():
+                # get the density raster for the specific threat
+                threat_raster = args['density_dict']['density'+lulc_key][threat]
+            
+                # if there is no raster found for this threat then continue with the
+                # next threat
+                if threat_raster is None:
+                    LOGGER.warn('No threat raster found for threat : %s',
+                                threat+lulc_key)
+                    LOGGER.warn('Continuing run without factoring in threat')
+                    continue 
 
-    # 1) Blur all threats with gaussian filter
-    for threat, threat_data in threat_dict.iteritems():
-        # get the density raster for the specific threat
-        threat_raster = args['density_dict'][threat]
-        
-        # if there is no raster found for this threat then continue with the
-        # next threat
-        if threat_raster is None:
-            LOGGER.warn('No threat raster found for threat : %s',  threat)
-            LOGGER.warn('Continuing run without factoring in threat')
+                threat_band = threat_raster.GetRasterBand(1)
+                threat_nodata = float(threat_band.GetNoDataValue())
+                filtered_threat_uri = \
+                    os.path.join(intermediate_dir, str(threat+'_filtered.tif'))
+                
+                # create a new raster to output distance adjustments to
+                filtered_raster = \
+                    raster_utils.new_raster_from_base(threat_raster, filtered_threat_uri, 
+                                                      'GTiff', -1.0, gdal.GDT_Float32)
+                # get the mean cell size
+                mean_cell_size = (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
+                
+                # compute max distance as the number of pixels by taking max distance
+                # from the table which is given in KM and multiply it by 1000 to convert
+                # to meters.  Divide by mean cell size to get the number of pixels
+                sigma = \
+                    -2.99573 / ((float(threat_data['MAX_DIST']) * 1000.0) / mean_cell_size)
+                LOGGER.debug('Sigma for gaussian : %s', sigma)
+                
+                # use a gaussian_filter to compute the effect that a threat has over a
+                # distance, on a given pixel. 
+                filtered_out_matrix = \
+                    clip_and_op(threat_band.ReadAsArray(), sigma,\
+                                ndimage.gaussian_filter, matrix_type=float,\
+                                in_matrix_nodata=threat_nodata, out_matrix_nodata=-1.0)
+                
+                filtered_band = filtered_raster.GetRasterBand(1)
+                filtered_band.WriteArray(filtered_out_matrix)
+                filtered_raster.FlushCache()
+
+                # create sensitivity raster based on threat
+                sens_uri = \
+                    os.path.join(intermediate_dir, str('sens_'+threat+lulc_key+'.tif'))
+                sensitivity_raster = \
+                        raster_from_table_values(lulc_ras, sens_uri,\
+                                                 args['sensitivity_dict'], 'L_'+threat)        
+                sensitivity_raster.FlushCache()
+                
+                def partial_degradation(*rasters):
+                    """For a given threat return the weighted average of the product of
+                        the threats sensitivity, the threats acces, and the threat 
+                        adjusted by distance"""
+                    result = 1.0
+                    for val in rasters:
+                        result = result * val * (float(threat_data['WEIGHT'])/weight_sum)
+                    return result
+                
+                ras_list = []
+                # set the raster list depending on whether the access shapefile was
+                # provided
+                if access_raster is None:
+                    ras_list = [filtered_raster, sensitivity_raster]
+                else:
+                    ras_list = [filtered_raster, sensitivity_raster, access_raster]
+                
+                deg_uri = \
+                    os.path.join(intermediate_dir,
+                                 str('deg_'+threat+lulc_key+'.tif'))
+                deg_ras =\
+                    raster_utils.vectorize_rasters(ras_list, partial_degradation, \
+                                               raster_out_uri=deg_uri, nodata=threat_nodata)
+                degradation_rasters.append(deg_ras)
+            
+            if len(degradation_rasters) > 0:
+                def sum_degradation(*rasters):
+                    return sum(rasters)
+                deg_sum_uri = \
+                    os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
+                sum_deg_raster = \
+                    raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
+                                                   raster_out_uri=deg_sum_uri, nodata=-1.0)
+
+                #Compute quality for all threats
+                z = 2.5
+                ksq = half_saturation**z
+                def quality_op(degradation, habitat):
+                    return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
+                quality_uri = \
+                    os.path.join(intermediate_dir, 'quality_out'+lulc_key+'.tif')
+                quality_raster = \
+                    raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
+                                                   quality_op, raster_out_uri=quality_uri,
+                                                   nodata=-1.0)
+        except:
+            LOGGER.error('An error was encountered processing landuse%s', lulc_key)
+            LOGGER.debug('Attempting to move on to next landuse map')
             continue 
-
-        threat_band = threat_raster.GetRasterBand(1)
-        threat_nodata = float(threat_band.GetNoDataValue())
-        filtered_threat_uri = \
-            os.path.join(intermediate_dir, str(threat+'_filtered.tif'))
-        
-        # create a new raster to output distance adjustments to
-        filtered_raster = \
-            raster_utils.new_raster_from_base(threat_raster, filtered_threat_uri, 
-                                              'GTiff', -1.0, gdal.GDT_Float32)
-        # get the mean cell size
-        mean_cell_size = (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
-        
-        # compute max distance as the number of pixels by taking max distance
-        # from the table which is given in KM and multiply it by 1000 to convert
-        # to meters.  Divide by mean cell size to get the number of pixels
-        sigma = \
-            -2.99573 / ((float(threat_data['MAX_DIST']) * 1000.0) / mean_cell_size)
-        LOGGER.debug('Sigma for gaussian : %s', sigma)
-        
-        # use a gaussian_filter to compute the effect that a threat has over a
-        # distance, on a given pixel. 
-        filtered_out_matrix = \
-            clip_and_op(threat_band.ReadAsArray(), sigma,\
-                        ndimage.gaussian_filter, matrix_type=float,\
-                        in_matrix_nodata=threat_nodata, out_matrix_nodata=-1.0)
-        
-        filtered_band = filtered_raster.GetRasterBand(1)
-        filtered_band.WriteArray(filtered_out_matrix)
-        filtered_raster.FlushCache()
-
-        # create sensitivity raster based on threat
-        sens_uri = intermediate_dir + 'sens_'+threat+'.tif'
-        sensitivity_raster = \
-                raster_from_table_values(args['landuse'], sens_uri,\
-                                         args['sensitivity_dict'], 'L_'+threat)        
-        sensitivity_raster.FlushCache()
-        
-        def partial_degradation(*rasters):
-            """For a given threat return the weighted average of the product of
-                the threats sensitivity, the threats acces, and the threat 
-                adjusted by distance"""
-            result = 1.0
-            for val in rasters:
-                result = result * val * (float(threat_data['WEIGHT'])/weight_sum)
-            return result
-        
-        ras_list = []
-        # set the raster list depending on whether the access shapefile was
-        # provided
-        if access_raster is None:
-            ras_list = [filtered_raster, sensitivity_raster]
-        else:
-            ras_list = [filtered_raster, sensitivity_raster, access_raster]
-        
-        deg_uri = intermediate_dir + 'deg_'+threat+'.tif'
-        deg_ras =\
-            raster_utils.vectorize_rasters(ras_list, partial_degradation, \
-                                       raster_out_uri=deg_uri, nodata=threat_nodata)
-        degradation_rasters.append(deg_ras)
-
-    def sum_degradation(*rasters):
-        return sum(rasters)
-    deg_sum_uri = os.path.join(intermediate_dir, 'deg_sum_out.tif')
-    sum_deg_raster = \
-        raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
-                                       raster_out_uri=deg_sum_uri, nodata=-1.0)
-
-    #Compute quality for all threats
-    z = 2.5
-    ksq = half_saturation**z
-    def quality_op(degradation, habitat):
-        return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
-    quality_uri = os.path.join(intermediate_dir, 'quality_out.tif')
-    quality_raster = \
-        raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
-                                       quality_op, raster_out_uri=quality_uri,
-                                       nodata=-1.0)
-
 
     #Adjust quality by habitat status
 
-    #Comput Rarity if user supplied baseline raster
-
+    #Compute Rarity if user supplied baseline raster
+    try:    
+        #Create index that represents the rarity of LULC class on landscape
+        lulc_base = args['landuse_dict']['_b']
+        lulc_code_count_b = raster_pixel_count(lulc_base)
+        for lulc_cover in ['_c', '_f']:
+            try:
+                lulc_x = args['landuse_dict'][lulc_cover]
+                lulc_code_count_x = raster_pixel_count(lulc_x)
+                code_index = {}
+                for code in lulc_code_count_c.iterkeys():
+                    try:
+                        ratio = 1.0 - (lulc_code_count_c[code]/lulc_code_count_b[code])
+                        code_index[code] = ratio
+                    except KeyError:
+                        code_index[code] = 0.0
+            except KeyError:
+                pass
+    except KeyError:
+        LOGGER.info('Baseline not provided to compute Rarity')
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
 
@@ -187,9 +225,10 @@ def raster_pixel_count(ds):
             if val == nodata:
                 continue
             if val in counts:
-                counts[val] = counts[val] + cur_array[cur_array==val].size
+                counts[val] = \
+                    float(counts[val] + cur_array[cur_array==val].size)
             else:
-                counts[val] = cur_array[cur_array==val].size
+                counts[val] = float(cur_array[cur_array==val].size)
 
     return counts
 

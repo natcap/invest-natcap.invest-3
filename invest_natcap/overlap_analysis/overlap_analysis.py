@@ -66,7 +66,7 @@ def execute(args):
     #from core will be a shapefile with multiple polygons of user specified size
     #that are in an area stretching over the extent of the polygons
     if (args['do_grid']):
-        base_map = overlap_analysis_core.gridder(args['zone_layer_loc'], 
+        base_map = overlap_analysis_core.gridder(inter_dir, args['zone_layer_loc'], 
                                     args['grid_size'])
         oa_args['zone_layer_file'] = base_map
     else:    
