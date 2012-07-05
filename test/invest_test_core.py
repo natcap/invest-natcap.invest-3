@@ -279,7 +279,7 @@ def make_sample_dem(cols, rows, height_points, roughness, nodata, out_uri):
     matrix = interp(x,y).reshape((rows,cols))
 
     #add roughness
-    min_delta = (np.max(values)-np.min(values))/np.sqrt(cols**2+rows**2)
+    min_delta = roughness*(np.max(values)-np.min(values))/np.sqrt(cols**2+rows**2)
     matrix += min_delta*(np.random.random(matrix.shape)-0.5)
 
     dataset.GetRasterBand(1).WriteArray(matrix)
