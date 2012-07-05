@@ -21,15 +21,22 @@ def biophysical(args):
        args['landuse'] - a Gdal dataset
        args['threat_dict'] - a python dictionary representing the threats table
        args['sensitivity_dict'] - a python dictionary representing the sensitivity table
-       args['density_dict'] - a python dictionary that stores one or more gdal datasets
-                              based on the number of threats given in the threat table
+       args['density_dict'] - a python dictionary that stores any density
+                              rasters (threat rasters) corresponding to the
+                              entries in the threat table and whether the
+                              density raster belongs to the current, future, or
+                              baseline raster. Example:
+           {'dens_cur': {'crp_c' : crp_c.tif, 'srds_c' : srds_c.tif, ...},
+            'dens_fut': {'crp_f' : crp_f.tif, 'srds_f' : srds_f.tif, ...},
+            'dens_bse': {'crp_b' : crp_b.tif, 'srds_b' : srds_b.tif, ...}
+           }
        args['access_shape'] - a ogr polygon shapefile depicting any protected/reserved
                               land boundaries
        args['half_saturation'] - an integer
        args['result_suffix'] - a string
 
 
-        returns nothing."""
+       returns nothing."""
 
     LOGGER.debug('Starting biodiversity biophysical calculations')
     output_dir = args['workspace_dir'] + os.sep + 'output/'
