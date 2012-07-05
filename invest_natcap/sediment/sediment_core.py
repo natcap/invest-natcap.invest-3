@@ -8,6 +8,7 @@ from osgeo import gdal
 
 import invest_cython_core
 from invest_natcap.invest_core import invest_core
+from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('sediment_core')
 
@@ -92,7 +93,7 @@ def biophysical(args):
 
     #Nodata value to use for usle output raster
     usle_nodata = -1.0
-    usle_c_p_raster = invest_cython_core.newRasterFromBase(args['landuse'], '',
+    usle_c_p_raster = raster_utils.new_raster_from_base(args['landuse'], '',
         'MEM', usle_nodata, gdal.GDT_Float32)
     def lulc_to_cp(lulc_code):
         """This is a helper function that's used to map an LULC code to the
@@ -146,7 +147,7 @@ def biophysical(args):
     usle_vectorized_function = np.vectorize(usle_function)
 
     retention_efficiency_raster_raw = \
-        invest_cython_core.newRasterFromBase(args['landuse'], '', 'MEM',
+        raster_utils.new_raster_from_base(args['landuse'], '', 'MEM',
                                              usle_nodata, gdal.GDT_Float32)
 
     def lulc_to_retention(lulc_code):
@@ -261,7 +262,7 @@ def biophysical(args):
         WriteArray(potential_soil_loss_matrix, 0, 0)
     invest_core.calculateRasterStats(potential_soil_loss.GetRasterBand(1))
 
-    sret_dr_raw = invest_cython_core.newRasterFromBase(potential_soil_loss,
+    sret_dr_raw = raster_utils.new_raster_from_base(potential_soil_loss,
         '', 'MEM', -1.0, gdal.GDT_Float32)
 
     #now interpolate retention_efficiency_raster_raw to a raster that will
@@ -275,7 +276,7 @@ def biophysical(args):
             usle_vectorized_function, nodata=usle_nodata)
 
     #Create an output raster for routed sediment retention
-    sret_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
+    sret_dr = raster_utils.new_raster_from_base(potential_soil_loss,
         args['sret_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
 
     #Route the sediment across the landscape and store the amount retained
@@ -284,7 +285,7 @@ def biophysical(args):
         args['flow_direction'], retention_efficiency_raster, sret_dr)
 
     #Create an output raster for routed sediment export
-    sexp_dr = invest_cython_core.newRasterFromBase(potential_soil_loss,
+    sexp_dr = raster_utils.new_raster_from_base(potential_soil_loss,
         args['sexp_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
     invest_cython_core.calc_exported_sediment(potential_soil_loss,
         args['flow_direction'], retention_efficiency_raster,
