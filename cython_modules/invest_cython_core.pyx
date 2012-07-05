@@ -804,7 +804,7 @@ def flow_direction_inf(dem, bounding_box, flow):
         directions and upslope areas in grid digital elevation models," Water
         Resources Research, vol. 33, no. 2, pages 309 - 319, February 1997.
 
-       dem - (input) a single band raster with elevation values
+       dem - (input) a single band GDAL Dataset with elevation values
        bounding_box - (input) a 4 element array defining the GDAL read window
            for dem and output on flow
        flow - (output) a single band float raster of same dimensions as
