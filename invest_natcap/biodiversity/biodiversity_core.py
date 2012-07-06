@@ -41,15 +41,15 @@ def biophysical(args):
        returns nothing."""
 
     LOGGER.debug('Starting biodiversity biophysical calculations')
-    output_dir = args['workspace_dir'] + os.sep + 'output/'
-    intermediate_dir = args['workspace_dir'] + os.sep + 'intermediate/'
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     cur_landuse = args['landuse_dict']['_c']
     threat_dict = args['threat_dict']
     half_saturation = args['half_saturation']
     #Get raster properties: cellsize, width, height, cells = width * height, extent    
     lulc_prop = get_raster_properties(cur_landuse)
     #Create raster of habitat based on habitat field
-    habitat_uri = intermediate_dir + 'habitat.tif'
+    habitat_uri = os.path.join(intermediate_dir, 'habitat.tif')
     #habitat_raster = make_raster_from_lulc(args['landuse'], habitat_uri)
     habitat_raster = raster_from_table_values(cur_landuse, habitat_uri, args['sensitivity_dict'], 'HABITAT')
     
@@ -61,7 +61,7 @@ def biophysical(args):
     try:
         access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
-        access_uri = intermediate_dir + 'access_layer.tif'
+        access_uri = os.path.join(intermediate_dir, 'access_layer.tif')
         access_base = make_raster_from_lulc(cur_landuse, access_uri)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
@@ -125,7 +125,8 @@ def biophysical(args):
                 filtered_raster.FlushCache()
 
                 # create sensitivity raster based on threat
-                sens_uri = intermediate_dir + 'sens_'+threat+lulc_key+'.tif'
+                sens_uri = \
+                    os.path.join(intermediate_dir, str('sens_'+threat+lulc_key+'.tif'))
                 sensitivity_raster = \
                         raster_from_table_values(lulc_ras, sens_uri,\
                                                  args['sensitivity_dict'], 'L_'+threat)        
@@ -148,7 +149,9 @@ def biophysical(args):
                 else:
                     ras_list = [filtered_raster, sensitivity_raster, access_raster]
                 
-                deg_uri = intermediate_dir + 'deg_'+threat+lulc_key+'.tif'
+                deg_uri = \
+                    os.path.join(intermediate_dir,
+                                 str('deg_'+threat+lulc_key+'.tif'))
                 deg_ras =\
                     raster_utils.vectorize_rasters(ras_list, partial_degradation, \
                                                raster_out_uri=deg_uri, nodata=threat_nodata)
@@ -181,8 +184,26 @@ def biophysical(args):
 
     #Adjust quality by habitat status
 
-    #Comput Rarity if user supplied baseline raster
-
+    #Compute Rarity if user supplied baseline raster
+    try:    
+        #Create index that represents the rarity of LULC class on landscape
+        lulc_base = args['landuse_dict']['_b']
+        lulc_code_count_b = raster_pixel_count(lulc_base)
+        for lulc_cover in ['_c', '_f']:
+            try:
+                lulc_x = args['landuse_dict'][lulc_cover]
+                lulc_code_count_x = raster_pixel_count(lulc_x)
+                code_index = {}
+                for code in lulc_code_count_c.iterkeys():
+                    try:
+                        ratio = 1.0 - (lulc_code_count_c[code]/lulc_code_count_b[code])
+                        code_index[code] = ratio
+                    except KeyError:
+                        code_index[code] = 0.0
+            except KeyError:
+                pass
+    except KeyError:
+        LOGGER.info('Baseline not provided to compute Rarity')
 
     LOGGER.debug('Finished biodiversity biophysical calculations')
 
@@ -204,9 +225,10 @@ def raster_pixel_count(ds):
             if val == nodata:
                 continue
             if val in counts:
-                counts[val] = counts[val] + cur_array[cur_array==val].size
+                counts[val] = \
+                    float(counts[val] + cur_array[cur_array==val].size)
             else:
-                counts[val] = cur_array[cur_array==val].size
+                counts[val] = float(cur_array[cur_array==val].size)
 
     return counts
 
