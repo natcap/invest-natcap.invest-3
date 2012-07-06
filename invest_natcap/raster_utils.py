@@ -860,17 +860,21 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatyp
     output_dataset.FlushCache()
     return output_dataset
 
-def flow_accumulation_dinf(flow_direction, dem, bounding_box, 
-                           flow_accumulation_uri):
+def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     """Creates a raster of accumulated flow to each cell.
     
         flow_direction - (input) A raster showing direction of flow out of 
             each cell with directional values given in radians.
-        dem - (input) heightmap raster for the area of interest
-        bounding_box - (input) a 4 element array defining the GDAL read window
-           for dem and output on flow
+        dem - (input) heightmap raster that aligns perfectly for flow_direction
         flow_accumulation_uri - (input) A string to the flow accumulation output
            raster.  The output flow accumulation raster set
         
-        returns nothing"""
-    pass
+        returns flow accumulation raster"""
+
+    flow_accumulation_dataset = new_raster_from_base(flow_direction, 
+        flow_accumulation_uri, 'GTiff', -1, gdal.GDT_Int32)
+    
+    flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
+    flow_accumulation_band.Fill(0)
+
+    return flow_accumulation_dataset
