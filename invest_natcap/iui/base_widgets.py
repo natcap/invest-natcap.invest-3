@@ -877,7 +877,6 @@ class MultiFile(Container):
         self.file_def = {'id': 'tmp',
                          'type': 'file',
                          'label': 'testRaster?',
-                         'defaultValue': 'hello?',
                          'validateAs': {'type': 'GDAL'}}
 
         group_def = {'id': 'group',
@@ -904,6 +903,9 @@ class MultiFile(Container):
 
         self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
         self.setMinimumSize(self.sizeHint())
+
+        # Open the file selection dialog.
+        self.multi_widget.elements[-1].button.getFileName()
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
