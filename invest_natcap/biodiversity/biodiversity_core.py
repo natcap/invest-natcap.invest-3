@@ -139,15 +139,14 @@ def biophysical(args):
                         raster_from_table_values(lulc_ras, sens_uri,\
                                                  args['sensitivity_dict'], 'L_'+threat)        
                 sensitivity_raster.FlushCache()
-                
+               
+                weight_avg = float(threat_data['WEIGHT']) / weight_sum
+
                 def partial_degradation(*rasters):
                     """For a given threat return the weighted average of the product of
                         the threats sensitivity, the threats acces, and the threat 
                         adjusted by distance"""
-                    result = 1.0
-                    for val in rasters:
-                        result = result * val * (float(threat_data['WEIGHT'])/weight_sum)
-                    return result
+                    return reduce(lambda x, y: x*y, rasters)
                 
                 ras_list = []
                 # set the raster list depending on whether the access shapefile was
@@ -167,7 +166,7 @@ def biophysical(args):
             
             if len(degradation_rasters) > 0:
                 def sum_degradation(*rasters):
-                    return sum(rasters)
+                    return reduce(lambda x, y: x+y, rasters)
                 deg_sum_uri = \
                     os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
                 sum_deg_raster = \
