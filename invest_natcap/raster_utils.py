@@ -5,11 +5,15 @@ import itertools
 import random
 import string
 import os
+import time
 
 from osgeo import gdal
 from osgeo import osr
 import numpy as np
 import scipy.interpolate
+import scipy.sparse
+from scipy.sparse.linalg import spsolve
+import pyamg
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -83,7 +87,14 @@ def calculate_raster_stats(ds):
         #Write stats back to the band.  The function SetStatistics needs 
         #all the arguments to be floats and crashes if they are ints thats
         #what this map float deal is.
-        band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
+        try:
+            band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
+        except TypeError:
+            #This can occur if the band passed in is filled with nodata values
+            #in that case min_val, max_val, ...etc are None, and thus can't
+            #cast to floats.  This is okay, just don't calculate stats
+            LOGGER.warn("No non-nodata values were found so can't set " + \
+                            "statistics")
 
     LOGGER.info('finish calculate_raster_stats')
 
@@ -860,17 +871,87 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatyp
     output_dataset.FlushCache()
     return output_dataset
 
-def flow_accumulation_dinf(flow_direction, dem, bounding_box, 
-                           flow_accumulation_uri):
+def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     """Creates a raster of accumulated flow to each cell.
     
         flow_direction - (input) A raster showing direction of flow out of 
             each cell with directional values given in radians.
-        dem - (input) heightmap raster for the area of interest
-        bounding_box - (input) a 4 element array defining the GDAL read window
-           for dem and output on flow
+        dem - (input) heightmap raster that aligns perfectly for flow_direction
         flow_accumulation_uri - (input) A string to the flow accumulation output
            raster.  The output flow accumulation raster set
         
-        returns nothing"""
-    pass
+        returns flow accumulation raster"""
+
+    #Track for logging purposes
+    initial_time = time.clock()
+
+    flow_accumulation_dataset = new_raster_from_base(flow_direction, 
+        flow_accumulation_uri, 'GTiff', -1.0, gdal.GDT_Float32)
+    
+    flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
+    flow_accumulation_band.Fill(-1.0)
+
+    n_rows = flow_accumulation_dataset.RasterYSize
+    n_cols = flow_accumulation_dataset.RasterXSize
+
+    def calc_index(i, j):
+        """used to abstract the 2D to 1D index calculation below"""
+        if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
+            return i * n_cols + j
+        else:
+            return -1
+
+    #set up variables to hold the sparse system of equations
+    #upper bound  n*m*5 elements
+    b_vector = np.zeros(n_rows * n_cols)
+
+    #holds the rows for diagonal sparse matrix creation later, row 4 is 
+    #the diagonal
+    a_matrix = np.zeros((9, n_rows * n_cols))
+    diags = np.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
+                       1, n_cols-1, n_cols, n_cols+1])
+    
+    #Determine the inflow directions based on index offsets.  It's written 
+    #in terms of radian 4ths for easier readability and maintaince. 
+    #Derived all this crap from page 36 in Rich's notes.
+    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5),
+                         (-1, 1): (5.0/4.0 * np.pi, 2),
+                         (-1, 0): (6.0/4.0 * np.pi, 1),
+                         (-1,-1): (7.0/4.0 * np.pi, 0),
+                         ( 0,-1): (0.0, 3),
+                         ( 1,-1): (1.0/4.0 * np.pi, 6),
+                         ( 1, 0): (2.0/4.0 * np.pi, 7),
+                         ( 1, 1): (3.0/4.0 * np.pi, 8)}
+
+    LOGGER.info('Building diagonals for linear advection diffusion system.')
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            #diagonal element row_index,j always in bounds, calculate directly
+            a_diagonal_index = calc_index(row_index, col_index)
+            b_vector[a_diagonal_index] = 1.0
+            a_matrix[4, a_diagonal_index] = 1
+
+            #Determine inflow neighbors
+            for (row_offset, col_offset), (direction, diagonal_index) in \
+                    inflow_directions.iteritems():
+                pass
+
+
+    matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
+                                  format="csc")
+
+    LOGGER.info('generating preconditioner')
+    ml = pyamg.smoothed_aggregation_solver(matrix)
+    M = ml.aspreconditioner()
+
+    LOGGER.info('Solving via gmres iteration')
+    result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
+    print result
+    LOGGER.info('(' + str(time.clock() - initial_time) + 's elapsed)')
+
+    #Result is a 1D array of all values, put it back to 2D
+    result.resize(n_rows,n_cols)
+
+    flow_accumulation_band.WriteArray(result)
+
+    return flow_accumulation_dataset

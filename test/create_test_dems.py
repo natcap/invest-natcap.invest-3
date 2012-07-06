@@ -1,3 +1,5 @@
+import subprocess
+
 from osgeo import gdal
 
 import invest_test_core
@@ -40,15 +42,14 @@ dem = invest_test_core.make_sample_dem(100,100,points, 0.5, -1, 'random_dem.tif'
 
 flow_dataset = raster_utils.new_raster_from_base(dem, 'random_dem_flow.tif', 'GTiff',
                                                  -1, gdal.GDT_Float32)
-flow_accumulation_dataset = raster_utils.new_raster_from_base(dem, 'random_dem_flow_accum.tif', 'GTiff',
-                                                 -1, gdal.GDT_Float32)
-
 
 invest_cython_core.flow_direction_inf(dem, [0, 0, 100, 100], flow_dataset)
 
-invest_cython_core.flow_accumulation_dinf(flow_dataset, dem, [0,0,100,100], 
-                                          flow_accumulation_dataset)
+flow_dem_uri = 'random_dem_flow_accum.tif'
+flow_accumulation_dataset = raster_utils.flow_accumulation_dinf(flow_dataset, dem, flow_dem_uri)
 
 raster_utils.calculate_raster_stats(dem)
 raster_utils.calculate_raster_stats(flow_dataset)
 raster_utils.calculate_raster_stats(flow_accumulation_dataset)
+
+subprocess.Popen(["qgis", flow_dem_uri])
