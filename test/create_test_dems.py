@@ -52,4 +52,4 @@ raster_utils.calculate_raster_stats(dem)
 raster_utils.calculate_raster_stats(flow_dataset)
 raster_utils.calculate_raster_stats(flow_accumulation_dataset)
 
-subprocess.call(["qgis", flow_dem_uri])
+subprocess.Popen(["qgis", flow_dem_uri])
