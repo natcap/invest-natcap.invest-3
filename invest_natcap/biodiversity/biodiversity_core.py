@@ -6,7 +6,7 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
-
+import math
 import os.path
 import logging
 
@@ -76,13 +76,16 @@ def biophysical(args):
     for threat_data in threat_dict.itervalues():
         #Sum weight of threats
         weight_sum = weight_sum + float(threat_data['WEIGHT'])
-    
+    LOGGER.debug('landuse_dict : %s', args['landuse_dict']) 
     for lulc_key, lulc_ras in args['landuse_dict'].iteritems():
         try:
+            LOGGER.debug('Calculating results for landuse : %s', lulc_key)
             degradation_rasters = []
 
             # 1) Blur all threats with gaussian filter
             for threat, threat_data in threat_dict.iteritems():
+                LOGGER.debug('Calculating threat : %s', threat)
+                LOGGER.debug('Threat Data : %s', threat_data)
                 # get the density raster for the specific threat
                 threat_raster = args['density_dict']['density'+lulc_key][threat]
             
@@ -106,13 +109,18 @@ def biophysical(args):
                 # get the mean cell size
                 mean_cell_size = (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
                 
-                # compute max distance as the number of pixels by taking max distance
-                # from the table which is given in KM and multiply it by 1000 to convert
-                # to meters.  Divide by mean cell size to get the number of pixels
+                # convert max distance (given in KM) to meters
+                dr_max = float(threat_data['MAX_DIST']) * 1000.0
+                # convert max distance from meters to the number of pixels that
+                # represents on the raster
+                dr_pixel = dr_max / mean_cell_size
+                # compute sigma to be used in a gaussian filter.  Sigma is
+                # derived from using equation 12.2 in users manual and the
+                # gaussian equation.
                 sigma = \
-                    -2.99573 / ((float(threat_data['MAX_DIST']) * 1000.0) / mean_cell_size)
+                    math.sqrt(dr_pixel / (2.99573 * 2))
                 LOGGER.debug('Sigma for gaussian : %s', sigma)
-                
+
                 # use a gaussian_filter to compute the effect that a threat has over a
                 # distance, on a given pixel. 
                 filtered_out_matrix = \
@@ -194,9 +202,9 @@ def biophysical(args):
                 lulc_x = args['landuse_dict'][lulc_cover]
                 lulc_code_count_x = raster_pixel_count(lulc_x)
                 code_index = {}
-                for code in lulc_code_count_c.iterkeys():
+                for code in lulc_code_count_x.iterkeys():
                     try:
-                        ratio = 1.0 - (lulc_code_count_c[code]/lulc_code_count_b[code])
+                        ratio = 1.0 - (lulc_code_count_x[code]/lulc_code_count_b[code])
                         code_index[code] = ratio
                     except KeyError:
                         code_index[code] = 0.0
