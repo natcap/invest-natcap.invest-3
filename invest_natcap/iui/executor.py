@@ -323,7 +323,7 @@ class Executor(threading.Thread):
                 module_list = module.split('.')
                 model = locate_module(module_list)
                 model_name = module_list[-1]  # model name is last entry in list
-            filename = '%s-log-%s.txt' % (module_name, timestamp)
+            filename = '%s-log-%s.txt' % (model_name, timestamp)
             LOGGER.info('Logging will be saved to %s', filename)
 
             # we want to save this file to the current directory until the model
