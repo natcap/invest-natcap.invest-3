@@ -41,5 +41,36 @@ def gridder(inter_dir, URI, dimension):
     grid_shp = driver.CreateDataSource('gridded_shapefile.shp')
     layer = grid_shp.CreateLayer('Layer 1', spat_ref, ogr.wkbPoint)
     
+    field_def = ogr.FieldDefn('ID', ogr.OFTInteger)
+    layer.CreateField(field_def)
+    
     xsize = abs(rhs - lhs)
     ysize = abs(ts - bs)
+    
+    #In order to make sure that we cover the ENTIRE area, we will have to "round up"
+    #in terms of the number of squares we create. So, we need to cast the dividend to
+    #a double in order to get a double out that can be rounded up if not an integer.
+    num_x = math.ceil(float(xsize) / dimension)
+    num_y = math.ceil(float(ysize) / dimension)
+    
+    #Now, loop through all potential blocks that need to be created, and add them to our
+    #new shapefile. Counter just allows us to give each of the grid cells a unique
+    #identifier for a value.
+    counter = 0
+    
+    for i in range (0, num_y):
+        for j in range (0, num_x):
+            
+            #Creating the polygon itself
+            out_edge = ogr.Geometry(ogr.wkbLinearRing)
+            out_edge.AddPoint(lhs + (i * dimension), ts + j * dimension)
+            out_edge.AddPoint(lhs + (i+1) * dimension, ts + j * dimension)
+            out_edge.AddPoint(lhs + (i * dimension), ts + (j+1) * dimension)
+            out_edge.AddPoint(lhs + (i+1) * dimension, ts + (j+1) * dimension)
+            out_edge.CloseRing()
+            
+            square = ogr.Geometry(ogr.wkbPolygon)
+            square.AddGeometry(out_edge)
+            
+            
+            counter += 1
