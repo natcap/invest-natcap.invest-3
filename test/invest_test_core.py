@@ -6,6 +6,7 @@ import logging
 import random
 
 import numpy as np
+import scipy.interpolate
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -236,6 +237,55 @@ def makeRandomRaster(cols, rows, uri='test.tif', format='GTiff', min=0.0, max=1.
 
     return dataset
 
+def make_sample_dem(cols, rows, height_points, roughness, nodata, out_uri):
+    """Create a new raster with height values interpolated from given 
+       height points.
+
+       cols,rows - an int indicating the number of pixels wide/tall the 
+          output raster will be
+       height_points - map of tuples to height points where tuple values
+          indicate the percent across the grid ex: {(0.0,0.0): 45,
+          (0.5,0.25): 100, (1.0,1.0): 0}, (0.0,0.0) is upper left hand 
+          corner of grid.
+       roughness - a float indicating the maximum percentage of the
+          smallest delta-height to randomly perturb height values.
+       nodata - the nodata value of the output grid and the values
+          to plug into the grid that lie outside of height_points
+       out_uri - filepath to save the outgoing raster
+
+       returns the new GDAL Dataset"""
+    
+    driver = gdal.GetDriverByName('GTiff')
+    dataset_type = gdal.GDT_Float32
+    dataset = driver.Create(out_uri, cols, rows, 1, dataset_type)
+
+    #Random spatial reference from http://www.gdal.org/gdal_tutorial.html
+    srs = osr.SpatialReference()
+    srs.SetUTM( 11, 1 )
+    srs.SetWellKnownGeogCS( 'NAD27' )
+    dataset.SetProjection( srs.ExportToWkt() )
+
+    #Random geotransform from http://www.gdal.org/gdal_tutorial.html
+    dataset.SetGeoTransform( [ 444720, 30, 0, 3751320, 0, -30 ] )
+
+    #Build the interplator
+    points,values = map(np.array,zip(*height_points.items()))
+    interp = scipy.interpolate.LinearNDInterpolator(points,values)
+
+    #Generate the output grid
+    x,y = np.meshgrid(np.array(range(0,cols),dtype=np.float)/(cols-1),\
+                      np.array(range(0,rows),dtype=np.float)/(rows-1))
+    
+    matrix = interp(x,y).reshape((rows,cols))
+
+    #add roughness
+    min_delta = roughness*(np.max(values)-np.min(values))/np.sqrt(cols**2+rows**2)
+    matrix += min_delta*(np.random.random(matrix.shape)-0.5)
+
+    dataset.GetRasterBand(1).WriteArray(matrix)
+    dataset.GetRasterBand(1).SetNoDataValue(-1)
+
+    return dataset
 
 def assertTwoDatasets(unit, firstDS, secondDS, checkEqual, dict=None):
     firstDSBand = firstDS.GetRasterBand(1)

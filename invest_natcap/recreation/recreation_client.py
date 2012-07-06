@@ -16,7 +16,10 @@ def execute(args):
     aoiFileName = args["aoiFileName"]
     cellSize = args["cellSize"]
     workspace_dir = args["workspace_dir"]
-    comments = args["comments"]
+    try:
+        comments = args["comments"]
+    except KeyError:
+        comments =""
     
     dirname=os.path.dirname(aoiFileName)+os.sep
     fileName=os.path.basename(aoiFileName).strip(".shp") 
