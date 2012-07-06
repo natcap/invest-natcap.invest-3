@@ -83,7 +83,14 @@ def calculate_raster_stats(ds):
         #Write stats back to the band.  The function SetStatistics needs 
         #all the arguments to be floats and crashes if they are ints thats
         #what this map float deal is.
-        band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
+        try:
+            band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
+        except TypeError:
+            #This can occur if the band passed in is filled with nodata values
+            #in that case min_val, max_val, ...etc are None, and thus can't
+            #cast to floats.  This is okay, just don't calculate stats
+            LOGGER.warn("No non-nodata values were found so can't set " + \
+                            "statistics")
 
     LOGGER.info('finish calculate_raster_stats')
 
@@ -872,9 +879,21 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
         returns flow accumulation raster"""
 
     flow_accumulation_dataset = new_raster_from_base(flow_direction, 
-        flow_accumulation_uri, 'GTiff', -1, gdal.GDT_Int32)
+        flow_accumulation_uri, 'GTiff', -1.0, gdal.GDT_Float32)
     
     flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
-    flow_accumulation_band.Fill(0)
+    flow_accumulation_band.Fill(-1.0)
+
+    n_rows = flow_accumulation_dataset.RasterYSize
+    n_cols = flow_accumulation_dataset.RasterXSize
+
+    #set up variables to hold the sparse system of equations
+    #upper bound  n*m*5 elements
+    b_vector = np.zeros(n_rows * n_cols)
+
+    #holds the rows for diagonal sparse matrix creation later, row 4 is 
+    #the diagonal
+    a_matrix = np.zeros((9, n_rows * n_cols))
+    diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
 
     return flow_accumulation_dataset
