@@ -27,15 +27,18 @@ def gridder(inter_dir, URI, dimension):
             for the square ("grid") polygons on the new shapefile.
             
     Returns:
-        grid_shp- A .shp file that contains multiple polygons of dimension x
-            dimension size that cover the same area as the original shapes in
-            URI.
+        grid_shp- The URI to a .shp file that contains multiple polygons of 
+        dimension x dimension size that cover the same area as the original shapes 
+        in URI.
     '''
     #Get the spatial reference for the current shapefile, and pass it in as part
     #of the new shapefile that we're creating
     shape = ogr.Open(URI)
     spat_ref = shape.GetLayer().GetSpatialRef().Clone()
     lhs, rhs, ts, bs = shape.GetLayer(0).GetExtent()
+    
+    #Move to the intermediate file in order to create our shapefile
+    os.chdir(inter_dir)
     
     driver = ogr.GetDriverByName('ESRI Shapefile')
     grid_shp = driver.CreateDataSource('gridded_shapefile.shp')
@@ -56,7 +59,7 @@ def gridder(inter_dir, URI, dimension):
     #Now, loop through all potential blocks that need to be created, and add them to our
     #new shapefile. Counter just allows us to give each of the grid cells a unique
     #identifier for a value.
-    counter = 0
+    counter = 1
     
     for i in range (0, num_y):
         for j in range (0, num_x):
@@ -74,3 +77,26 @@ def gridder(inter_dir, URI, dimension):
             
             
             counter += 1
+            
+            #Create a feature with the geometry of our square and an ID according
+            #to our counter, add it to the layer, then delete the non-essentials so we
+            #don't pile them as we create new ones.
+            feat_def = layer.GetLayerDefn()
+            feature = ogr.Feature(feat_def)
+            feature.SetGeometry(square)
+            feature.SetField('ID', counter)
+            
+            layer.CreateFeature(feature)
+            
+            square.Destroy()
+            feature.Destroy()
+    
+    #Want to return the location of our new shapefile. Need to know the name of our data
+    #source before we destroy it.
+    file_name = inter_dir + grid_shp.GetName()
+            
+    #When done with adding all features to our file, also want to close the file. We do
+    #this by calling destroy. You know, because heart attacks are fun.
+    grid_shp.Destroy()
+    
+    return file_name
