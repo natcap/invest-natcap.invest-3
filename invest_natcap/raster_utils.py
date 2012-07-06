@@ -914,7 +914,32 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
             a_left_index = calc_index(i, j - 1)
             a_right_index = calc_index(i, j + 1)
 
-            
+    #Build up an array of valid indexes.  These are locations where there is
+    #water and well defined E and ADV points.
+    LOGGER.info('Building valid index lookup table.')
+    valid_indexes = in_water
+    valid_indexes *= e_array_flat != nodata
+    valid_indexes *= adv_u_flat != nodata
+    valid_indexes *= adv_v_flat != nodata
 
+    #Determine the inflow directions based on index offsets.  It's written 
+    #in terms of radian 4ths for easier readability and maintaince. 
+    #Derived all this crap from page 36 in Rich's notes.
+    inflow_directions = {( 0, 1): 4.0/4.0 * np.pi,
+                         (-1, 1): 5.0/4.0 * np.pi,
+                         (-1, 0): 6.0/4.0 * np.pi,
+                         (-1,-1): 7.0/4.0 * np.pi,
+                         ( 0,-1): 0.0,
+                         ( 1,-1): 1.0/4.0 * np.pi,
+                         ( 1, 0): 2.0/4.0 * np.pi,
+                         ( 1, 1): 3.0/4.0 * np.pi}
+
+    LOGGER.info('Building diagonals for linear advection diffusion system.')
+    for i in range(n_rows):
+        for j in range(n_cols):
+            #diagonal element i,j always in bounds, calculate directly
+            a_diagonal_index = calc_index(i, j)
+            b_vector[a_diagonal_index] = 1.0
+            a_matrix[4, a_diagonal_index] = 1
 
     return flow_accumulation_dataset
