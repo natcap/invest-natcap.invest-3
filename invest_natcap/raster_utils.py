@@ -5,11 +5,15 @@ import itertools
 import random
 import string
 import os
+import time
 
 from osgeo import gdal
 from osgeo import osr
 import numpy as np
 import scipy.interpolate
+import scipy.sparse
+from scipy.sparse.linalg import spsolve
+import pyamg
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -878,6 +882,9 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
         
         returns flow accumulation raster"""
 
+    #Track for logging purposes
+    initial_time = time.clock()
+
     flow_accumulation_dataset = new_raster_from_base(flow_direction, 
         flow_accumulation_uri, 'GTiff', -1.0, gdal.GDT_Float32)
     
@@ -904,24 +911,6 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
 
     
-    LOGGER.info('Building diagonals for linear system.')
-    for i in range(n_rows):
-        for j in range(n_cols):
-            #diagonal element i,j always in bounds, calculate directly
-            a_diagonal_index = calc_index(i, j)
-            a_up_index = calc_index(i - 1, j)
-            a_down_index = calc_index(i + 1, j)
-            a_left_index = calc_index(i, j - 1)
-            a_right_index = calc_index(i, j + 1)
-
-    #Build up an array of valid indexes.  These are locations where there is
-    #water and well defined E and ADV points.
-    LOGGER.info('Building valid index lookup table.')
-    valid_indexes = in_water
-    valid_indexes *= e_array_flat != nodata
-    valid_indexes *= adv_u_flat != nodata
-    valid_indexes *= adv_v_flat != nodata
-
     #Determine the inflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
@@ -934,6 +923,7 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
                          ( 1, 0): 2.0/4.0 * np.pi,
                          ( 1, 1): 3.0/4.0 * np.pi}
 
+
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for i in range(n_rows):
         for j in range(n_cols):
@@ -941,5 +931,23 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
             a_diagonal_index = calc_index(i, j)
             b_vector[a_diagonal_index] = 1.0
             a_matrix[4, a_diagonal_index] = 1
+
+    matrix = scipy.sparse.spdiags(a_matrix,
+        [-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols], 
+         n_rows * n_cols, n_rows * n_cols, "csc")
+
+    LOGGER.info('generating preconditioner')
+    ml = pyamg.smoothed_aggregation_solver(matrix)
+    M = ml.aspreconditioner()
+
+    LOGGER.info('Solving via gmres iteration')
+    result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
+    print result
+    LOGGER.info('(' + str(time.clock() - initial_time) + 's elapsed)')
+
+    #Result is a 1D array of all values, put it back to 2D
+    result.resize(n_rows,n_cols)
+
+    flow_accumulation_band.WriteArray(result)
 
     return flow_accumulation_dataset
