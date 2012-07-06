@@ -210,6 +210,15 @@ def biophysical(args):
     LOGGER.info('Calculating Wave Power.')
     clipped_wave_shape = wave_power(clipped_wave_shape)
 
+    #Reset the iterator head for the aoi_shape's layer so that it can properly
+    #iterate over the features.  NOTE: A better solution to this issue would be
+    #to handle shapefiles like Rich and I just did in
+    #raster_utils.create_raster_from_vector_extents, where we solved this issue
+    #by not iterating over the features but calling them specifically with their
+    #index which we got from getting the feature count.
+    aoi_layer = aoi_shape.GetLayer(0)
+    aoi_layer.ResetReading()
+
     #Create blank rasters bounded by the shape file of analyis area
     wave_energy_raster = \
             raster_utils.create_raster_from_vector_extents(pixel_xsize, \
