@@ -925,10 +925,10 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
 
 
     LOGGER.info('Building diagonals for linear advection diffusion system.')
-    for i in range(n_rows):
-        for j in range(n_cols):
-            #diagonal element i,j always in bounds, calculate directly
-            a_diagonal_index = calc_index(i, j)
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            #diagonal element row_index,j always in bounds, calculate directly
+            a_diagonal_index = calc_index(row_index, col_index)
             b_vector[a_diagonal_index] = 1.0
             a_matrix[4, a_diagonal_index] = 1
 
