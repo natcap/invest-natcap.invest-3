@@ -80,9 +80,22 @@ def diffusion_advection_solver(source_point_data, kps, in_water_array,
     valid_indexes *= adv_u_flat != nodata
     valid_indexes *= adv_v_flat != nodata
 
+    #Determine the inflow directions based on index offsets.  It's written 
+    #in terms of radian 4ths for easier readability and maintaince. 
+    #Derived all this crap from page 36 in Rich's notes.
+    inflow_directions = {( 0, 1): 4.0/4.0 * np.pi,
+                         (-1, 1): 5.0/4.0 * np.pi,
+                         (-1, 0): 6.0/4.0 * np.pi,
+                         (-1,-1): 7.0/4.0 * np.pi,
+                         ( 0,-1): 0.0,
+                         ( 1,-1): 1.0/4.0 * np.pi,
+                         ( 1, 0): 2.0/4.0 * np.pi,
+                         ( 1, 1): 3.0/4.0 * np.pi}
+
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for i in range(n_rows):
         for j in range(n_cols):
+
             #diagonal element i,j always in bounds, calculate directly
             a_diagonal_index = calc_index(i, j)
             a_up_index = calc_index(i - 1, j)

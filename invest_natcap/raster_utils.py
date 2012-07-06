@@ -887,6 +887,13 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     n_rows = flow_accumulation_dataset.RasterYSize
     n_cols = flow_accumulation_dataset.RasterXSize
 
+    def calc_index(i, j):
+        """used to abstract the 2D to 1D index calculation below"""
+        if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
+            return i * n_cols + j
+        else:
+            return -1
+
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
     b_vector = np.zeros(n_rows * n_cols)
@@ -895,5 +902,19 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     #the diagonal
     a_matrix = np.zeros((9, n_rows * n_cols))
     diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
+
+    
+    LOGGER.info('Building diagonals for linear system.')
+    for i in range(n_rows):
+        for j in range(n_cols):
+            #diagonal element i,j always in bounds, calculate directly
+            a_diagonal_index = calc_index(i, j)
+            a_up_index = calc_index(i - 1, j)
+            a_down_index = calc_index(i + 1, j)
+            a_left_index = calc_index(i, j - 1)
+            a_right_index = calc_index(i, j + 1)
+
+            
+
 
     return flow_accumulation_dataset
