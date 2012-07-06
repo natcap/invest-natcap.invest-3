@@ -93,7 +93,7 @@ def gridder(inter_dir, URI, dimension):
     
     #Want to return the location of our new shapefile. Need to know the name of our data
     #source before we destroy it.
-    file_name = inter_dir + grid_shp.GetName()
+    file_name = os.path.join(inter_dir, grid_shp.GetName())
             
     #When done with adding all features to our file, also want to close the file. We do
     #this by calling destroy. You know, because heart attacks are fun.
