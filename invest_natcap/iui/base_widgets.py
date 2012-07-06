@@ -903,6 +903,7 @@ class MultiFile(Container):
             self.multi_widget.layout().rowCount(), 2)
 
         self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+        self.setMinimumSize(self.sizeHint())
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
