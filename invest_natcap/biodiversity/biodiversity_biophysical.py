@@ -87,22 +87,28 @@ def execute(args):
     for lu_uri, lu_time, lu_ext in ('landuse_fut_uri','fut','_f'),('landuse_bas_uri','bas','_b'):
         if lu_uri in args:
             landuse_scenarios[lu_time] = lu_ext
-
+    
+    landuse_dict = {}
+    density_dict = {}
+    
     for scenario, ext in landuse_scenarios.iteritems():
-        biophysical_args['landuse'] = \
+        landuse_dict[ext] = \
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
-        density_dict = {}
+        
+        density_dict['density'+ext] = {}
+
         for threat in biophysical_args['threat_dict']:
             try:
-                density_dict[str(threat)] = \
+                density_dict['density'+ext][str(threat)] = \
                     open_ambiguous_raster(os.path.join(input_dir, threat+ext))
             except:
                 LOGGER.warn('Error encountered getting raster threat : %s',
                             os.path.join(input_dir, threat+ext))
-        
-        biophysical_args['density_dict'] = density_dict
+    
+    biophysical_args['landuse_dict'] = landuse_dict
+    biophysical_args['density_dict'] = density_dict
 
-        biodiversity_core.biophysical(biophysical_args)
+    biodiversity_core.biophysical(biophysical_args)
 
 def open_ambiguous_raster(uri):
     """Open and return a gdal dataset given a uri path that includes the file
@@ -117,14 +123,14 @@ def open_ambiguous_raster(uri):
     # a list of possible suffixes for raster datasets. We currently can handle
     # .tif and directory paths
     possible_suffixes = ['', '.tif']
-    
+    dataset = None 
     for suffix in possible_suffixes:
         if not os.path.exists(uri+suffix):
             continue
         dataset = gdal.Open(uri+suffix, gdal.GA_ReadOnly)
         if dataset is not None:
             break
-     
+    LOGGER.debug('DATASET : %s, %s', dataset, uri)
     return dataset
 
 def make_dictionary_from_csv(csv_uri, key_field):

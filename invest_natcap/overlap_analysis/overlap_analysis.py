@@ -63,12 +63,12 @@ def execute(args):
     oa_args['zone_type'] = args['analysis_zone_type']
     
     #This allows for options gridding of the vectors being passed in. The return
-    #from core will be a shapefile with multiple polygons of user specified size
-    #that are in an area stretching over the extent of the polygons
+    #from core will be a URI to a shapefile with multiple polygons of user specified 
+    #size that are in an area stretching over the extent of the polygons
     if (args['do_grid']):
-        base_map = overlap_analysis_core.gridder(args['zone_layer_loc'], 
+        base_map = overlap_analysis_core.gridder(inter_dir, args['zone_layer_loc'], 
                                     args['grid_size'])
-        oa_args['zone_layer_file'] = base_map
+        oa_args['zone_layer_file'] = ogr.Open(base_map)
     else:    
         oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
     
