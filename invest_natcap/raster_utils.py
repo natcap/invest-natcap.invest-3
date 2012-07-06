@@ -581,8 +581,10 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     #Determine the width and height of the tiff in pixels based on the 
     #maximum size of the combined envelope of all the features
     shp_extent = None
-    for shp_layer in shp:
-        for feature in shp_layer:
+    for layer_index in range(shp.GetLayerCount()):
+        shp_layer = shp.GetLayer(layer_index)
+        for feature_index in range(shp_layer.GetFeatureCount()):
+            feature = shp_layer.GetFeature(feature_index)
             geometry = feature.GetGeometryRef()
             #feature_extent = [xmin, xmax, ymin, ymax]
             feature_extent = geometry.GetEnvelope()
@@ -857,3 +859,18 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatyp
     output_band = None
     output_dataset.FlushCache()
     return output_dataset
+
+def flow_accumulation_dinf(flow_direction, dem, bounding_box, 
+                           flow_accumulation_uri):
+    """Creates a raster of accumulated flow to each cell.
+    
+        flow_direction - (input) A raster showing direction of flow out of 
+            each cell with directional values given in radians.
+        dem - (input) heightmap raster for the area of interest
+        bounding_box - (input) a 4 element array defining the GDAL read window
+           for dem and output on flow
+        flow_accumulation_uri - (input) A string to the flow accumulation output
+           raster.  The output flow accumulation raster set
+        
+        returns nothing"""
+    pass
