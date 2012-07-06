@@ -908,21 +908,20 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     #holds the rows for diagonal sparse matrix creation later, row 4 is 
     #the diagonal
     a_matrix = np.zeros((9, n_rows * n_cols))
-    diags = np.array([-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols])
-
+    diags = np.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
+                       1, n_cols-1, n_cols, n_cols+1])
     
     #Determine the inflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
-    inflow_directions = {( 0, 1): 4.0/4.0 * np.pi,
-                         (-1, 1): 5.0/4.0 * np.pi,
-                         (-1, 0): 6.0/4.0 * np.pi,
-                         (-1,-1): 7.0/4.0 * np.pi,
-                         ( 0,-1): 0.0,
-                         ( 1,-1): 1.0/4.0 * np.pi,
-                         ( 1, 0): 2.0/4.0 * np.pi,
-                         ( 1, 1): 3.0/4.0 * np.pi}
-
+    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5),
+                         (-1, 1): (5.0/4.0 * np.pi, 2),
+                         (-1, 0): (6.0/4.0 * np.pi, 1),
+                         (-1,-1): (7.0/4.0 * np.pi, 0),
+                         ( 0,-1): (0.0, 3),
+                         ( 1,-1): (1.0/4.0 * np.pi, 6),
+                         ( 1, 0): (2.0/4.0 * np.pi, 7),
+                         ( 1, 1): (3.0/4.0 * np.pi, 8)}
 
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for row_index in range(n_rows):
@@ -932,9 +931,14 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
             b_vector[a_diagonal_index] = 1.0
             a_matrix[4, a_diagonal_index] = 1
 
-    matrix = scipy.sparse.spdiags(a_matrix,
-        [-2 * n_cols, -n_cols, -2, -1, 0, 1, 2, n_cols, 2 * n_cols], 
-         n_rows * n_cols, n_rows * n_cols, "csc")
+            #Determine inflow neighbors
+            for (row_offset, col_offset), (direction, diagonal_index) in \
+                    inflow_directions.iteritems():
+                pass
+
+
+    matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
+                                  format="csc")
 
     LOGGER.info('generating preconditioner')
     ml = pyamg.smoothed_aggregation_solver(matrix)
