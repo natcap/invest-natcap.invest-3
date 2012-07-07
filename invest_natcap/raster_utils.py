@@ -891,6 +891,10 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
     flow_accumulation_band.Fill(-1.0)
 
+    flow_direction_band = flow_direction.GetRasterBand(1)
+    flow_direction_nodata = flow_direction_band.GetNoDataValue()
+    flow_direction_array = flow_direction_band.ReadAsArray().flatten()
+
     n_rows = flow_accumulation_dataset.RasterYSize
     n_cols = flow_accumulation_dataset.RasterXSize
 
@@ -934,7 +938,17 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
             #Determine inflow neighbors
             for (row_offset, col_offset), (direction, diagonal_index) in \
                     inflow_directions.iteritems():
-                pass
+                try:
+                    neighbor_index = calc_index(row_index+row_offset, 
+                                                col_index+col_offset)
+                    flow_angle = flow_direction_array[neighbor_index]
+                    if flow_angle == flow_direction_nodata:
+                        continue
+                    print flow_angle
+                except IndexError:
+                    #This will occur if we visit a neighbor out of bounds
+                    #it's okay, just skip it
+                    pass
 
 
     matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
