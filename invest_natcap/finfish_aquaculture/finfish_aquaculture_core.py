@@ -419,21 +419,26 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     #This gets the "first" key out of the dictionary so we can get at one of the 
     #lower dictionaries.  It doesn't matter that it's at 0, but we are guaranteed
     #it exists
-    random_farm_op_dict_key = farm_op_dict.keys()[0]
-    str_headers = farm_op_dict[random_farm_op_dict_key].keys() 
+    str_headers = ['Farm ID Number',
+                   'Weight of Fish at Start<br>(kg)',
+                   'Weight of Fish at Harvest<br>(kg)',
+                   'Number of Fish in Farm',
+                   'Start Day for Growing<br>(1-365)',
+                   'Length of Fallowing Period<br>(days)'
+                   ]
 
     inner_strings = []
     
-    for id in farm_op_dict.keys():
-        single_str = "<td>%s</td>" % id
+    #########################################
+    #Need to pr-load all vars, then add them into the string, or just load them in as you go.
+    #But, will have to make not dynamic, sadly.
+    for id in cycle_history:
         
-        for info in str_headers:
-            
-            single_str += ("<td>%s</td>"  % farm_op_dict[id][str(info)])
-            
-        inner_strings.append(single_str)
-    
-    str_headers.insert(0, "Farm #:")
+        #single_str = "<td>%s</td>" % id
+        vars = []
+        
+        fishies_weight = farm_op_dict[id]['']
+        
     
     file.write("<tr>")
     for element in str_headers:
