@@ -38,7 +38,7 @@ points_left = {
     (1.0,1.0): 100}
 
 
-dem = invest_test_core.make_sample_dem(100,100,points, 0.5, -1, 'random_dem.tif')
+dem = invest_test_core.make_sample_dem(100,100,points, 0.0, -1, 'random_dem.tif')
 
 flow_dataset = raster_utils.new_raster_from_base(dem, 'random_dem_flow.tif', 'GTiff',
                                                  -1, gdal.GDT_Float32)

@@ -932,19 +932,35 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
         for col_index in range(n_cols):
             #diagonal element row_index,j always in bounds, calculate directly
             a_diagonal_index = calc_index(row_index, col_index)
-            b_vector[a_diagonal_index] = 1.0
             a_matrix[4, a_diagonal_index] = 1
+            local_flow_angle = flow_direction_array[a_diagonal_index]
+            if local_flow_angle == flow_direction_nodata:
+                continue
+            b_vector[a_diagonal_index] = 1.0
+
+                
 
             #Determine inflow neighbors
-            for (row_offset, col_offset), (direction, diagonal_index) in \
+            for (row_offset, col_offset), (in_direction, diagonal_offset) in \
                     inflow_directions.iteritems():
                 try:
                     neighbor_index = calc_index(row_index+row_offset, 
                                                 col_index+col_offset)
                     flow_angle = flow_direction_array[neighbor_index]
+                    print row_index,col_index,row_offset,col_offset,diagonal_offset, flow_angle
                     if flow_angle == flow_direction_nodata:
                         continue
-                    print flow_angle
+
+                    #If this delta is within pi/4 it means there's an inflow
+                    #direction, see diagram on pg 36 of Rich's notes
+                    delta = abs(flow_angle - in_direction)
+                    
+                    if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
+                        inflow_fraction = abs(np.tan(delta))
+#                        print row_index,col_index,row_offset,col_offset,diagonal_offset, inflow_fraction
+                        #a_matrix[diagonal_offset, a_diagonal_index] = \
+                        #    inflow_fraction
+
                 except IndexError:
                     #This will occur if we visit a neighbor out of bounds
                     #it's okay, just skip it
