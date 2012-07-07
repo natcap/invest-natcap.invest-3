@@ -918,14 +918,14 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     #Determine the inflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
-    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5),
-                         (-1, 1): (5.0/4.0 * np.pi, 2),
-                         (-1, 0): (6.0/4.0 * np.pi, 1),
-                         (-1,-1): (7.0/4.0 * np.pi, 0),
-                         ( 0,-1): (0.0, 3),
-                         ( 1,-1): (1.0/4.0 * np.pi, 6),
-                         ( 1, 0): (2.0/4.0 * np.pi, 7),
-                         ( 1, 1): (3.0/4.0 * np.pi, 8)}
+    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5, False),
+                         (-1, 1): (5.0/4.0 * np.pi, 2, True),
+                         (-1, 0): (6.0/4.0 * np.pi, 1, False),
+                         (-1,-1): (7.0/4.0 * np.pi, 0, True),
+                         ( 0,-1): (0.0, 3, False),
+                         ( 1,-1): (1.0/4.0 * np.pi, 6, True),
+                         ( 1, 0): (2.0/4.0 * np.pi, 7, False),
+                         ( 1, 1): (3.0/4.0 * np.pi, 8, True)}
 
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for row_index in range(n_rows):
@@ -933,33 +933,40 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
             #diagonal element row_index,j always in bounds, calculate directly
             a_diagonal_index = calc_index(row_index, col_index)
             a_matrix[4, a_diagonal_index] = 1
+            
+            #Check to see if the current flow angle is defined, if not then
+            #set local flow accumulation to 0
             local_flow_angle = flow_direction_array[a_diagonal_index]
             if local_flow_angle == flow_direction_nodata:
+                #b_vector already == 0 at this point, so just continue
                 continue
+
+            #Otherwise, define 1.0 to indicate base flow from the pixel
             b_vector[a_diagonal_index] = 1.0
 
-                
-
             #Determine inflow neighbors
-            for (row_offset, col_offset), (in_direction, diagonal_offset) in \
+            for (row_offset, col_offset), (in_direction, diagonal_offset, diagonal_flow) in \
                     inflow_directions.iteritems():
                 try:
                     neighbor_index = calc_index(row_index+row_offset, 
                                                 col_index+col_offset)
                     flow_angle = flow_direction_array[neighbor_index]
-                    print row_index,col_index,row_offset,col_offset,diagonal_offset, flow_angle
+
                     if flow_angle == flow_direction_nodata:
                         continue
 
                     #If this delta is within pi/4 it means there's an inflow
                     #direction, see diagram on pg 36 of Rich's notes
                     delta = abs(flow_angle - in_direction)
-                    
+
                     if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
+                        if diagonal_flow:
+                            delta = np.pi/4-delta
                         inflow_fraction = abs(np.tan(delta))
-#                        print row_index,col_index,row_offset,col_offset,diagonal_offset, inflow_fraction
-                        #a_matrix[diagonal_offset, a_diagonal_index] = \
-                        #    inflow_fraction
+                        if not diagonal_flow:
+                            inflow_fraction = 1-inflow_fraction
+                        a_matrix[diagonal_offset, neighbor_index] = \
+                            -inflow_fraction
 
                 except IndexError:
                     #This will occur if we visit a neighbor out of bounds
@@ -975,8 +982,8 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     M = ml.aspreconditioner()
 
     LOGGER.info('Solving via gmres iteration')
-    result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
-    print result
+    #result = scipy.sparse.linalg.lgmres(matrix, b_vector, tol=1e-5, M=M)[0]
+    result = scipy.sparse.linalg.spsolve(matrix, b_vector)
     LOGGER.info('(' + str(time.clock() - initial_time) + 's elapsed)')
 
     #Result is a 1D array of all values, put it back to 2D
