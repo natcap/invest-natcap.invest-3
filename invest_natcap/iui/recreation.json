@@ -36,6 +36,13 @@
 					"type": "folder",
                 	"label": "Workspace",
                 	"required": true
+		        },
+		        {
+		        	"id" : "comments",
+		        	"args_id" : "comments",
+					"type": "text",
+                	"label": "Comments",
+                	"required": false
 		        }		        
 		   ]
 		   }

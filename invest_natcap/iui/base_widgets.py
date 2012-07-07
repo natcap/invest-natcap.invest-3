@@ -187,7 +187,7 @@ class DynamicGroup(DynamicElement):
         if registrar != None:
             self.createElements(attributes['elements'])
 
-    def createElements(self, elementsArray):
+    def createElements(self, elementsArray, start_index=0):
         """Create the elements defined in elementsArray as widgets within 
             this current grouping widget.  All elements are created as widgets
             within this grouping widget's layout.
@@ -195,6 +195,8 @@ class DynamicGroup(DynamicElement):
             elementsArray - a python array of elements, where each element is a
                 python dictionary with string keys to each of its attributes as
                 defined in the input JSON file.
+            start_index=0 - a python int representing the row to start appending
+                to.
                 
             no return value"""
 
@@ -202,7 +204,7 @@ class DynamicGroup(DynamicElement):
         # in this iteration of the loop.  Used excluseively when the layout
         #manager is an instance of QtGui.QGridLayout(), as both the row and
         #column indices are required in QGridLayout's addWidget() method.    
-        i = 0
+        i = start_index
 
         #loop through all entries in the input elementsArray and create the 
         #appropriate elements.  As new element classes are created, they must
@@ -862,6 +864,48 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
         self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
             recursive=True)
+
+class MultiFile(Container):
+    def __init__(self, attributes, registrar=None):
+        # If the user has not defined any extra elements to be added to this
+        # group, assume that there are no elements.
+        if 'elements' not in attributes:
+            attributes['elements'] = []
+
+        Container.__init__(self, attributes, registrar)
+
+        self.file_def = {'id': 'tmp',
+                         'type': 'file',
+                         'label': 'testRaster?',
+                         'validateAs': {'type': 'GDAL'}}
+
+        group_def = {'id': 'group',
+                     'type': 'list',
+                     'elements': []}
+
+        print('reg', self.registrar)
+        self.multi_widget = GridList(group_def, registrar=self.registrar)
+        self.multi_widget.createElements([self.file_def])
+        self.layout().addWidget(self.multi_widget)
+        self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+
+        self.create_element_link = QtGui.QLabel('<a href=\'google.com\'' +
+            '>Select another</a>')
+        self.create_element_link.linkActivated.connect(self.add_element)
+        self.multi_widget.layout().addWidget(self.create_element_link,
+            self.multi_widget.layout().rowCount(), 2)
+
+    def add_element(self):
+        self.multi_widget.createElements([self.file_def],
+            self.multi_widget.layout().rowCount() - 1)
+        self.multi_widget.layout().addWidget(self.create_element_link,
+            self.multi_widget.layout().rowCount(), 2)
+
+        self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+        self.setMinimumSize(self.sizeHint())
+
+        # Open the file selection dialog.
+        self.multi_widget.elements[-1].button.getFileName()
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
@@ -2026,6 +2070,7 @@ class ElementRegistrar(registrar.Registrar):
                    'scrollGroup': ScrollArea,
                    'OGRFieldDropdown': OGRFieldDropdown,
                    'hiddenElement': StaticReturn,
+                   'multiFile': MultiFile,
                    'label': Label
                    }
         self.update_map(updates)
