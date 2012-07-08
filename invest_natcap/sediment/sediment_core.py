@@ -300,3 +300,19 @@ def valuation(args):
         returns nothing"""
 
     LOGGER.info('not implemented yet')
+
+def effective_retention_to_stream(flow_direction_dataset, 
+    retention_efficiency_dataset, retention_to_stream_uri):
+    """Creates a raster of accumulated flow to each cell.
+    
+        flow_direction_dataset - (input) A raster showing direction of flow out 
+            of each cell with directional values given in radians.
+        retention_efficiency_dataset - (input) raster indicating percent of 
+            sediment retained per pixel.  Streams are indicated by retention 
+            efficiency of 0.
+        effective_retention_uri - (input) The URI to the output dataset
+        
+        returns a dataset whose pixel values indicate the effective retention to
+            stream"""
+
+    pass
