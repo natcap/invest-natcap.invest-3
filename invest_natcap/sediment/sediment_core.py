@@ -355,7 +355,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     #Determine the outflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
-    inflow_directions = {( 0, 1): (0.0/4.0 * np.pi, 5, False),
+    outflow_directions = {( 0, 1): (0.0/4.0 * np.pi, 5, False),
                          (-1, 1): (1.0/4.0 * np.pi, 2, True),
                          (-1, 0): (2.0/4.0 * np.pi, 1, False),
                          (-1,-1): (3.0/4.0 * np.pi, 0, True),
@@ -375,29 +375,26 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
             #set local flow accumulation to 0
             local_flow_angle = flow_direction_array[cell_index]
             if local_flow_angle == flow_direction_nodata:
-                #b_vector already == 0 at this point, so just continue
+                #We could flow off the edge
+                b_vector[cell_index] = 1.0
                 continue
 
             #Determine outflow neighbors
             sink = True
+            total_fraction = 0.0
+            fraction_count = 0
             for (row_offset, col_offset), (outflow_angle, diagonal_offset, diagonal_outflow) in \
-                    inflow_directions.iteritems():
+                    outflow_directions.iteritems():
                 try:
                     neighbor_index = calc_index(row_index+row_offset,
                                                 col_index+col_offset)
-                    flow_angle = flow_direction_array[neighbor_index]
-
-                    if flow_angle == flow_direction_nodata:
-                        continue
 
                     #If this delta is within pi/4 it means there's an outflow
                     #direction, see diagram on pg 36 of Rich's notes
-                    delta = abs(flow_angle - outflow_angle)
+                    delta = abs(local_flow_angle - outflow_angle)
 
                     if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
-
                         neighbor_retention = retention_efficiency_array[neighbor_index]
-
                         if neighbor_retention == retention_efficiency_nodata:
                             continue
 
@@ -419,12 +416,15 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
                         a_matrix[diagonal_offset, neighbor_index] = \
                             -outflow_fraction * (1.0-neighbor_retention)
                         sink = False
+                        total_fraction += outflow_fraction
+                        fraction_count += 1
 
                 except IndexError:
                     #This will occur if we visit a neighbor out of bounds
                     #it's okay, just skip it
                     pass
-                #A sink will have 100% export (to stream)
+            #A sink will have 100% export (to stream)
+            if sink:
                 b_vector[cell_index] = 1.0
 
     matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
