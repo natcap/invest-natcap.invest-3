@@ -998,3 +998,16 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     flow_accumulation_band.WriteArray(result)
 
     return flow_accumulation_dataset
+
+def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
+    """Creates a raster of accumulated flow to each cell.
+    
+        flow_accumulation_data - (input) A flow accumulation dataset
+        flow_threshold - (input) a number indicating the threshold to declare
+            a pixel a stream or no
+        stream_uri - (input) the uri of the output stream dataset
+        
+        returns stream dataset"""
+
+
+    pass
