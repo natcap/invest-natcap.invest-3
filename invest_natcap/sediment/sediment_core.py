@@ -352,17 +352,17 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     diags = np.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
                        1, n_cols-1, n_cols, n_cols+1])
     
-    #Determine the inflow directions based on index offsets.  It's written 
+    #Determine the outflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
-    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5, False),
-                         (-1, 1): (5.0/4.0 * np.pi, 2, True),
-                         (-1, 0): (6.0/4.0 * np.pi, 1, False),
-                         (-1,-1): (7.0/4.0 * np.pi, 0, True),
-                         ( 0,-1): (0.0, 3, False),
-                         ( 1,-1): (1.0/4.0 * np.pi, 6, True),
-                         ( 1, 0): (2.0/4.0 * np.pi, 7, False),
-                         ( 1, 1): (3.0/4.0 * np.pi, 8, True)}
+    inflow_directions = {( 0, 1): (0.0/4.0 * np.pi, 5, False),
+                         (-1, 1): (1.0/4.0 * np.pi, 2, True),
+                         (-1, 0): (2.0/4.0 * np.pi, 1, False),
+                         (-1,-1): (3.0/4.0 * np.pi, 0, True),
+                         ( 0,-1): (4.0/4.0 * np.pi, 3, False),
+                         ( 1,-1): (5.0/4.0 * np.pi, 6, True),
+                         ( 1, 0): (6.0/4.0 * np.pi, 7, False),
+                         ( 1, 1): (7.0/4.0 * np.pi, 8, True)}
 
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for row_index in range(n_rows):
@@ -378,26 +378,30 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
                 #b_vector already == 0 at this point, so just continue
                 continue
 
-            #Otherwise, define 1.0 to indicate base flow from the pixel
-            b_vector[cell_index] = 1.0
-
-            #Determine inflow neighbors
-            for (row_offset, col_offset), (inflow_angle, diagonal_offset, diagonal_inflow) in \
+            #Determine outflow neighbors
+            sink = True
+            for (row_offset, col_offset), (outflow_angle, diagonal_offset, diagonal_outflow) in \
                     inflow_directions.iteritems():
                 try:
-                    neighbor_index = calc_index(row_index+row_offset, 
+                    neighbor_index = calc_index(row_index+row_offset,
                                                 col_index+col_offset)
                     flow_angle = flow_direction_array[neighbor_index]
 
                     if flow_angle == flow_direction_nodata:
                         continue
 
-                    #If this delta is within pi/4 it means there's an inflow
+                    #If this delta is within pi/4 it means there's an outflow
                     #direction, see diagram on pg 36 of Rich's notes
-                    delta = abs(flow_angle - inflow_angle)
+                    delta = abs(flow_angle - outflow_angle)
 
                     if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
-                        if diagonal_inflow:
+
+                        neighbor_retention = retention_efficiency_array[neighbor_index]
+
+                        if neighbor_retention == retention_efficiency_nodata:
+                            continue
+
+                        if diagonal_outflow:
                             #We want to measure the far side of the unit triangle
                             #so we measure that angle UP from theta = 0 on a unit
                             #circle
@@ -405,21 +409,23 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
 
                         #Taking absolute value because it might be on a 0,-45 
                         #degree angle
-                        inflow_fraction = abs(np.tan(delta))
-                        if not diagonal_inflow:
+                        outflow_fraction = abs(np.tan(delta))
+                        if not diagonal_outflow:
                             #If not diagonal then we measure the direct flow in
                             #which is the inverse of the tangent function
-                            inflow_fraction = 1-inflow_fraction
+                            outflow_fraction = 1-outflow_fraction
                         
                         #Finally set the appropriate inflow variable
                         a_matrix[diagonal_offset, neighbor_index] = \
-                            -inflow_fraction
+                            -outflow_fraction * (1.0-neighbor_retention)
+                        sink = False
 
                 except IndexError:
                     #This will occur if we visit a neighbor out of bounds
                     #it's okay, just skip it
                     pass
-
+                #A sink will have 100% export (to stream)
+                b_vector[cell_index] = 1.0
 
     matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
                                   format="csc")
