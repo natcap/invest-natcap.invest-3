@@ -194,7 +194,7 @@ class TestSedimentBiophysical(unittest.TestCase):
             os.makedirs(base_dir)
 
         dem_uri = os.path.join(base_dir,'random_dem.tif')
-        dem = invest_test_core.make_sample_dem(n,n,dem_points, 1.0, -1, dem_uri)
+        dem = invest_test_core.make_sample_dem(n,n,dem_points, 5.0, -1, dem_uri)
 
         retention_efficiency_uri = \
             os.path.join(base_dir, 'retention_efficiency.tif')
