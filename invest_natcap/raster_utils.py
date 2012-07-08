@@ -1010,4 +1010,21 @@ def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
         returns stream dataset"""
 
 
-    pass
+    stream_dataset = new_raster_from_base(flow_accumulation_dataset, 
+        stream_uri, 'GTiff', 255, gdal.GDT_Byte)
+    stream_band = stream_dataset.GetRasterBand(1)
+    stream_band.Fill(255)
+    stream_array = stream_band.ReadAsArray()
+
+    flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
+    flow_accumulation_nodata = flow_accumulation_band.GetNoDataValue()
+    flow_accumulation_array = flow_accumulation_band.ReadAsArray()
+
+    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
+                     (flow_accumulation_array >= flow_threshold)] = 1
+    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
+                     (flow_accumulation_array < flow_threshold)] = 0
+
+    stream_band.WriteArray(stream_array)
+
+    return stream_dataset
