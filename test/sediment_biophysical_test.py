@@ -214,4 +214,4 @@ class TestSedimentBiophysical(unittest.TestCase):
         raster_utils.calculate_raster_stats(flow_dataset)
         raster_utils.calculate_raster_stats(effective_retention_dataset)
         
-        subprocess.Popen(["qgis", dem_uri, retention_efficiency_uri, flow_uri])
+        subprocess.Popen(["qgis", dem_uri, retention_efficiency_uri, flow_uri, effective_retention_uri])
