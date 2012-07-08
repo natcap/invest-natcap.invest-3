@@ -186,7 +186,7 @@ class TestSedimentBiophysical(unittest.TestCase):
             (1.0,1.0): 0,
             (0.5,0.5): 0.3}
 
-        n = 20
+        n = 100
 
         base_dir = 'data/test_out/sediment_biophysical'
 
@@ -194,7 +194,7 @@ class TestSedimentBiophysical(unittest.TestCase):
             os.makedirs(base_dir)
 
         dem_uri = os.path.join(base_dir,'random_dem.tif')
-        dem = invest_test_core.make_sample_dem(n,n,dem_points, 0.0, -1, dem_uri)
+        dem = invest_test_core.make_sample_dem(n,n,dem_points, 1.0, -1, dem_uri)
 
         retention_efficiency_uri = \
             os.path.join(base_dir, 'retention_efficiency.tif')
@@ -206,12 +206,20 @@ class TestSedimentBiophysical(unittest.TestCase):
                                                  -1, gdal.GDT_Float32)
         invest_cython_core.flow_direction_inf(dem, [0, 0, n, n], flow_dataset)
 
+        flow_accumulation_uri = os.path.join(base_dir, 'flow_accumulation.tif')
+        flow_accumulation_dataset = raster_utils.flow_accumulation_dinf(flow_dataset, dem, 
+                                                                flow_accumulation_uri)
+
+        stream_uri = os.path.join(base_dir, 'streams.tif')
+        stream_dataset = raster_utils.stream_threshold(flow_accumulation_dataset, 20, stream_uri)
+
         effective_retention_uri = os.path.join(base_dir, 'effective_retention.tif')
         effective_retention_dataset = sediment_core.effective_retention(flow_dataset, 
-            retention_efficiency_dataset, effective_retention_uri)
+            retention_efficiency_dataset, stream_dataset, effective_retention_uri)
 
         raster_utils.calculate_raster_stats(dem)
         raster_utils.calculate_raster_stats(flow_dataset)
         raster_utils.calculate_raster_stats(effective_retention_dataset)
         
-        subprocess.Popen(["qgis", dem_uri, retention_efficiency_uri, flow_uri, effective_retention_uri])
+        subprocess.Popen(["qgis", dem_uri, retention_efficiency_uri, flow_uri, effective_retention_uri,
+                          flow_accumulation_uri, stream_uri])
