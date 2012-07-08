@@ -304,14 +304,15 @@ def valuation(args):
     LOGGER.info('not implemented yet')
 
 def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
-                        effective_retention_uri):
+                        stream_dataset, effective_retention_uri):
     """Creates a raster of accumulated flow to each cell.
     
         flow_direction_dataset - (input) A raster showing direction of flow out 
             of each cell with directional values given in radians.
         retention_efficiency_dataset - (input) raster indicating percent of 
-            sediment retained per pixel.  Streams are indicated by retention 
-            efficiency of 0.
+            sediment retained per pixel.  
+        stream_dataset - (input) raster indicating the presence (1) or absence
+            (0) of a stream.
         effective_retention_uri - (input) The URI to the output dataset
         
         returns a dataset whose pixel values indicate the effective retention to
@@ -331,6 +332,10 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     retention_efficiency_nodata = retention_efficiency_band.GetNoDataValue()
     retention_efficiency_array = \
         retention_efficiency_band.ReadAsArray().flatten()
+
+    stream_band = stream_dataset.GetRasterBand(1)
+    stream_nodata = stream_band.GetNoDataValue()
+    stream_array = stream_band.ReadAsArray()
 
     n_rows = effective_retention_dataset.RasterYSize
     n_cols = effective_retention_dataset.RasterXSize
@@ -371,6 +376,11 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
             cell_index = calc_index(row_index, col_index)
             a_matrix[4, cell_index] = 1
             
+            if stream_array[cell_index] == 1.0:
+                #We're in a stream
+                b_vector[cell_index] = 1.0
+                continue
+
             #Check to see if the current flow angle is defined, if not then
             #set local flow accumulation to 0
             local_flow_angle = flow_direction_array[cell_index]
