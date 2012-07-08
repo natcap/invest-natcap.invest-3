@@ -3,6 +3,7 @@
 import unittest
 import logging
 import os
+import subprocess
 
 from osgeo import gdal
 from nose.plugins.skip import SkipTest
@@ -198,7 +199,7 @@ class TestSedimentBiophysical(unittest.TestCase):
         retention_efficiency_uri = \
             os.path.join(base_dir, 'retention_efficiency.tif')
         retention_efficiency_dataset = invest_test_core.make_sample_dem(n, n, 
-            retention_points, 0.0, -1, dem_uri)
+            retention_points, 0.0, -1, retention_efficiency_uri)
 
         flow_uri = os.path.join(base_dir,'random_dem_flow.tif')
         flow_dataset = raster_utils.new_raster_from_base(dem, flow_uri, 'GTiff',
@@ -213,5 +214,4 @@ class TestSedimentBiophysical(unittest.TestCase):
         raster_utils.calculate_raster_stats(flow_dataset)
         raster_utils.calculate_raster_stats(effective_retention_dataset)
         
-        #subprocess.Popen(["qgis", dem_uri, retention_efficiency_uri, flow_uri])
-
+        subprocess.Popen(["qgis", dem_uri, retention_efficiency_uri, flow_uri])
