@@ -335,7 +335,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
 
     stream_band = stream_dataset.GetRasterBand(1)
     stream_nodata = stream_band.GetNoDataValue()
-    stream_array = stream_band.ReadAsArray()
+    stream_array = stream_band.ReadAsArray().flatten()
 
     n_rows = effective_retention_dataset.RasterYSize
     n_cols = effective_retention_dataset.RasterXSize
