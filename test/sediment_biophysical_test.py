@@ -187,7 +187,7 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         n = 20
 
-        base_dir = 'test/data/test_out/sediment_biophysical'
+        base_dir = 'data/test_out/sediment_biophysical'
 
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
