@@ -3,6 +3,8 @@
 
 import logging
 
+import scipy.sparse
+import scipy.sparse.linalg
 import numpy as np
 from osgeo import gdal
 
@@ -315,15 +317,13 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
         returns a dataset whose pixel values indicate the effective retention to
             stream"""
 
-    #Track for logging purposes
-    initial_time = time.clock()
 
-    effective_retention_dataset = new_raster_from_base(flow_direction_dataset, 
-        retention_to_stream_uri, 'GTiff', -1.0, gdal.GDT_Float32)
+    effective_retention_dataset = raster_utils.new_raster_from_base(flow_direction_dataset, 
+        effective_retention_uri, 'GTiff', -1.0, gdal.GDT_Float32)
     effective_retention_band = effective_retention_dataset.GetRasterBand(1)
     effective_retention_band.Fill(-1.0)
 
-    flow_direction_band = flow_direction.GetRasterBand(1)
+    flow_direction_band = flow_direction_dataset.GetRasterBand(1)
     flow_direction_nodata = flow_direction_band.GetNoDataValue()
     flow_direction_array = flow_direction_band.ReadAsArray().flatten()
 
@@ -427,7 +427,6 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     LOGGER.info('Solving via sparse direct solver')
     solver = scipy.sparse.linalg.factorized(matrix)
     result = solver(b_vector)
-    LOGGER.info('(' + str(time.clock() - initial_time) + 's elapsed)')
 
     #Result is a 1D array of all values, put it back to 2D
     result.resize(n_rows,n_cols)
