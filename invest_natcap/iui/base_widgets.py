@@ -224,6 +224,8 @@ class DynamicGroup(DynamicElement):
             if isinstance(self.layout(), QtGui.QGridLayout):
                 j = 0
                 for subElement in widget.elements:
+                    if subElement.sizeHint().isValid():
+                        subElement.setMinimumSize(subElement.sizeHint())
                     self.layout().addWidget(subElement, i, j)
                     j += 1
             else:
