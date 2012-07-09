@@ -900,6 +900,7 @@ class MultiFile(Container):
     def add_element(self):
         self.multi_widget.createElements([self.file_def],
             self.multi_widget.layout().rowCount() - 1)
+        self.multi_widget.elements[-1].updateLinks(self.root)
         self.multi_widget.layout().addWidget(self.create_element_link,
             self.multi_widget.layout().rowCount(), 2)
 
