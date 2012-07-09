@@ -36,15 +36,15 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
             os.makedirs(base_dir)
 
         dem_uri = os.path.join(base_dir,'dem_ls.tif')
-        dem = invest_test_core.make_sample_dem(n,n,dem_points, 5.0, -1, dem_uri)
+        dem_dataset = invest_test_core.make_sample_dem(n,n,dem_points, 5.0, -1, dem_uri)
 
         flow_uri = os.path.join(base_dir,'flow_ls.tif')
-        flow_dataset = raster_utils.new_raster_from_base(dem, flow_uri, 'GTiff',
+        flow_dataset = raster_utils.new_raster_from_base(dem_dataset, flow_uri, 'GTiff',
                                                          -1, gdal.GDT_Float32)
-        invest_cython_core.flow_direction_inf(dem, [0, 0, n, n], flow_dataset)
+        invest_cython_core.flow_direction_inf(dem_dataset, [0, 0, n, n], flow_dataset)
 
         flow_accumulation_uri = os.path.join(base_dir, 'ls_flow_accumulation.tif')
-        flow_accumulation_dataset = raster_utils.flow_accumulation_dinf(flow_dataset, dem, 
+        flow_accumulation_dataset = raster_utils.flow_accumulation_dinf(flow_dataset, dem_dataset, 
                                                                         flow_accumulation_uri)
 
         slope_uri = os.path.join(base_dir,'raster_slope.tif')
