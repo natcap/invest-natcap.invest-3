@@ -224,6 +224,8 @@ class DynamicGroup(DynamicElement):
             if isinstance(self.layout(), QtGui.QGridLayout):
                 j = 0
                 for subElement in widget.elements:
+                    if subElement.sizeHint().isValid():
+                        subElement.setMinimumSize(subElement.sizeHint())
                     self.layout().addWidget(subElement, i, j)
                     j += 1
             else:
@@ -866,6 +868,19 @@ class Container(QtGui.QGroupBox, DynamicGroup):
             recursive=True)
 
 class MultiFile(Container):
+    class MinusButton(QtGui.QPushButton):
+        def __init__(self, row_num, parent):
+            QtGui.QPushButton.__init__(self, '-')
+            self.row_num = row_num
+            self.parent = parent
+            self.pressed.connect(self.remove_element)
+
+        def remove_element(self):
+            self.parent.remove_element(self.row_num)
+
+        def set_row_num(self, row_num):
+            self.row_num = row_num
+
     def __init__(self, attributes, registrar=None):
         # If the user has not defined any extra elements to be added to this
         # group, assume that there are no elements.
@@ -885,27 +900,64 @@ class MultiFile(Container):
 
         print('reg', self.registrar)
         self.multi_widget = GridList(group_def, registrar=self.registrar)
-        self.multi_widget.createElements([self.file_def])
         self.layout().addWidget(self.multi_widget)
         self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
 
         self.create_element_link = QtGui.QLabel('<a href=\'google.com\'' +
-            '>Select another</a>')
+            '>Select a file</a>')
         self.create_element_link.linkActivated.connect(self.add_element)
         self.multi_widget.layout().addWidget(self.create_element_link,
             self.multi_widget.layout().rowCount(), 2)
 
+    def remove_element(self, row_num):
+        print row_num
+        print('removing row', row_num)
+        for element, row_num in zip(self.multi_widget.elements,
+            range(len(self.multi_widget.elements))):
+            element.elements[1].set_row_num(row_num)
+            print('set_row_num', element.elements[1].row_num)
+        del self.multi_widget.elements[row_num]
+
+        row_num += 1  # gridlayout indices are not 0-based.
+        print ('layout row num', row_num)
+        for j in range(self.multi_widget.layout().columnCount()):
+            print (row_num, j)
+            sub_item = self.multi_widget.layout().itemAtPosition(row_num, j)
+            sub_widget = sub_item.widget()
+            self.multi_widget.layout().removeWidget(sub_widget)
+            sub_widget.deleteLater()
+            print 'removing %s' % str(sub_widget)
+        print 'removed row %s' % row_num
+        print self.multi_widget.elements
+
     def add_element(self):
-        self.multi_widget.createElements([self.file_def],
-            self.multi_widget.layout().rowCount() - 1)
+        row_index = self.multi_widget.layout().rowCount()
+        new_element = self.multi_widget.registrar.eval(self.file_def['type'],
+            self.file_def)
+        new_element.updateLinks(self.root)
+        minus_button = self.MinusButton(row_index - 2, self)
+        print('adding element at row', row_index - 2)
+        new_element.elements.insert(1, minus_button)
+
+        # Open the file selection dialog.
+        new_element.button.getFileName()
+
+        if  len(new_element.value()) > 0:
+            for subElement, col_index in zip(new_element.elements,\
+                range(len(new_element.elements))):
+                if subElement.sizeHint().isValid():
+                    subElement.setMinimumSize(subElement.sizeHint())
+                self.multi_widget.layout().addWidget(subElement, row_index - 1,
+                    col_index)
+            self.multi_widget.elements.append(new_element)
+        print('elements length', len(self.multi_widget.elements))
+
         self.multi_widget.layout().addWidget(self.create_element_link,
             self.multi_widget.layout().rowCount(), 2)
 
         self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
         self.setMinimumSize(self.sizeHint())
 
-        # Open the file selection dialog.
-        self.multi_widget.elements[-1].button.getFileName()
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
