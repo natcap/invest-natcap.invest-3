@@ -55,4 +55,43 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
                                                        slope_dataset,
                                                        flow_dataset,
                                                        ls_uri)
-        subprocess.Popen(["qgis", ls_uri, dem_uri, flow_uri, flow_accumulation_uri])
+
+
+        c_p_points = {
+            (0.0,0.0): 0.5,
+            (0.0,1.0): 0.9,
+            (1.0,0.0): 0.25,
+            (1.0,1.0): 0.1,
+            (0.5,0.5): 0.7}
+
+        c_uri = os.path.join(base_dir,'c.tif')
+        c_dataset = invest_test_core.make_sample_dem(n,n,c_p_points, 5.0, -1, c_uri)
+        p_uri = os.path.join(base_dir,'p.tif')
+        p_dataset = invest_test_core.make_sample_dem(n,n,c_p_points, 5.0, -1, p_uri)
+
+        erosivity_points = {
+            (0.0,0.0): 0.15,
+            (0.0,1.0): 0.3,
+            (1.0,0.0): 0.2,
+            (1.0,1.0): 0.1,
+            (0.5,0.5): 0.21}
+
+        erosivity_uri = os.path.join(base_dir,'erosivity.tif')
+        erosivity_dataset = invest_test_core.make_sample_dem(n,n, erosivity_points, 
+                                                             5.0, -1, erosivity_uri)
+
+
+        erodibility_points = {
+            (0.0,0.0): 2240,
+            (0.0,1.0): 1999,
+            (1.0,0.0): 1200,
+            (1.0,1.0): 1500,
+            (0.5,0.5): 1000}
+
+        erodibility_uri = os.path.join(base_dir,'erodibility.tif')
+        erodibility_dataset = invest_test_core.make_sample_dem(n,n, erodibility_points, 
+                                                             5.0, -1, erodibility_uri)
+
+
+        subprocess.Popen(["qgis", ls_uri, dem_uri, flow_uri, flow_accumulation_uri, c_uri, 
+                          p_uri, erosivity_uri, erodibility_uri])
