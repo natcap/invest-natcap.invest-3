@@ -997,63 +997,6 @@ def flow_direction_inf(dem, bounding_box, flow):
     flow.GetRasterBand(1).FlushCache()
     invest_core.calculateRasterStats(flow.GetRasterBand(1))
 
-def calculate_slope(dem, bounding_box, slope):
-    """Generates raster maps of slope.  Follows the algorithm described here:
-        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
-        
-        dem - (input) a single band raster of z values.  z units should be identical
-            to ground units.
-        bounding_box - (input) a 4 element array defining the GDAL read window
-           for dem and output on flow
-        slope - (modified output) a single band raster of the same dimensions 
-            as dem whose elements are percent rise
-            
-        returns nothing"""
-
-    LOGGER = logging.getLogger('calculateSlope')
-    #Read the DEM directly into an array
-    demBand = dem.GetRasterBand(1)
-    demBandMatrix = demBand.ReadAsArray(*bounding_box)
-    LOGGER.debug('demBandMatrix size %s' % (demBandMatrix.size))
-
-    #Create an empty slope matrix
-    slopeMatrix = np.empty((demBand.YSize, demBand.XSize))
-    LOGGER.debug('slopeMatrix size %s' % (slopeMatrix.size))
-
-    gp = dem.GetGeoTransform()
-    cellXSize = gp[1]
-    cellYSize = gp[5]
-    nodata = demBand.GetNoDataValue()
-    LOGGER.info('starting pixelwise slope calculation')
-
-    LOGGER.debug('building kernels')
-    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
-    dzdyKernel = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64)
-    dzdxKernel = dzdyKernel.transpose().copy()
-    dzdyKernel /= (8 * cellYSize)
-    dzdxKernel /= (8 * cellXSize)
-
-    LOGGER.debug('doing convolution')
-    dzdx = scipy.signal.convolve2d(demBandMatrix, dzdxKernel, 'same')
-    dzdy = scipy.signal.convolve2d(demBandMatrix, dzdyKernel, 'same')
-    slopeMatrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
-
-    #Now, "nodata" out the points that used nodata from the demBandMatrix
-    noDataIndex = demBandMatrix == nodata
-    LOGGER.debug('slopeMatrix and noDataIndex shape %s %s' %
-                 (slopeMatrix.shape, noDataIndex.shape))
-    slopeMatrix[noDataIndex] = -1
-
-    offsets = [(1, 1), (0, 1), (-1, 1), (1, 0), (-1, 0), (1, -1), (0, -1),
-               (-1, -1)]
-    for offset in offsets:
-        slopeMatrix[shiftMatrix(noDataIndex, *offset)] = \
-            slope.GetRasterBand(1).GetNoDataValue()
-
-    slope.GetRasterBand(1).WriteArray(slopeMatrix,*bounding_box[0:2])
-    slope.GetRasterBand(1).FlushCache()
-    invest_core.calculateRasterStats(slope.GetRasterBand(1))
-
 def calculate_ls_factor(upslope_area, slope_raster, aspect, 
                         bounding_box, ls_factor):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
