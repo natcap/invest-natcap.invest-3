@@ -92,6 +92,14 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
         erodibility_dataset = invest_test_core.make_sample_dem(n,n, erodibility_points, 
                                                              5.0, -1, erodibility_uri)
 
+        potential_soil_loss_uri = os.path.join(base_dir,'soil_loss.tif')
 
+        stream_uri = os.path.join(base_dir, 'streams.tif')
+        stream_dataset = raster_utils.stream_threshold(flow_accumulation_dataset, 20, stream_uri)
+
+        sediment_core.calculate_potential_soil_loss(ls_dataset, erosivity_dataset, 
+                                  erodibility_dataset, c_dataset, p_dataset,
+                                  stream_dataset, potential_soil_loss_uri)
+        
         subprocess.Popen(["qgis", ls_uri, dem_uri, flow_uri, flow_accumulation_uri, c_uri, 
-                          p_uri, erosivity_uri, erodibility_uri])
+                          p_uri, erosivity_uri, erodibility_uri, potential_soil_loss_uri])
