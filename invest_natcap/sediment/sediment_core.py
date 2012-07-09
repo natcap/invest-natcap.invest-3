@@ -127,7 +127,7 @@ def biophysical(args):
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
     def usle_function(ls_factor, erosivity, erodibility, usle_c_p, v_stream):
-        """Calculates the USLE equation 
+        """Calculates the USLE equation
         
         ls_factor - length/slope factor
         erosivity - related to peak rainfall events
@@ -558,3 +558,53 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
 
     raster_utils.calculate_raster_stats(ls_factor_dataset)
     return ls_factor_dataset
+
+def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset, 
+                                  erodibility_dataset, c_dataset, p_dataset,
+                                  stream_dataset, potential_soil_loss_uri):
+
+    """Calculates per-pixel potential soil loss using the RUSLE (revised 
+        universial soil loss equation).
+
+        ls_factor_dataset - GDAL dataset with the LS factor pre-calculated
+        erosivity_dataset - GDAL dataset with per pixel erosivity 
+        erodibility_dataset - GDAL dataset with per pixel erodibility
+        c_dataset - GDAL dataset per pixel crop managment factor
+        p_dataset - GDAL dataset per pixel land management factor
+        stream_dataset - GDAL dataset indicating locations with streams
+            (0 is no stream, 1 stream)
+        potential_soil_loss_uri - string input indicating the path to disk
+            for the resulting potential soil loss raster
+
+        return GDAL dataset with potential per pixel soil loss"""
+
+    def usle_function(ls_factor, erosivity, erodibility, usle_c_p, v_stream):
+        """Calculates the USLE equation
+        
+        ls_factor - length/slope factor
+        erosivity - related to peak rainfall events
+        erodibility - related to the potential for soil to erode
+        usle_c_p - crop and practice factor which helps to abate soil erosion
+        v_stream - 1 or 0 depending if there is a stream there.  If so, no
+            potential soil loss due to USLE
+        
+        returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
+            defined, nodata if some are not defined, 0 if in a stream
+            (v_stream)"""
+
+        if ls_factor == usle_nodata or erosivity == usle_nodata or \
+            erodibility == usle_nodata or usle_c_p == usle_nodata or \
+            v_stream == v_stream_nodata:
+            return usle_nodata
+        if v_stream == 1:
+            return 0
+        return ls_factor * erosivity * erodibility * usle_c_p
+
+
+    dataset_list = [ls_factor_dataset, erosivity_dataset, erodibility_dataset, 
+                    c_dataset, p_dataset, stream_dataset]
+
+    potential_soil_loss_dataset = raster_utils.vectorize_rasters(dataset_list,
+        potential_soil_loss_uri, datatype=gdal.GDT_Float32, nodata = -1.0)
+
+    return potential_soil_loss_dataset
