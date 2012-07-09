@@ -607,4 +607,29 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
     potential_soil_loss_dataset = raster_utils.vectorize_rasters(dataset_list,
         potential_soil_loss_uri, datatype=gdal.GDT_Float32, nodata = -1.0)
 
+
+    #change units from tons per hectare to tons per cell.  We need to do this
+    #after the vectorize raster operation since we won't know the cell size
+    #until then.
+    cell_area = raster_utils.pixel_area(potential_soil_loss_dataset)
+
+    potential_soil_loss_band = potential_soil_loss_dataset.GetRasterBand(1)
+    potential_soil_loss_matrix = potential_soil_loss_band.ReadAsArray()
+    potential_soil_loss_nodata = potential_soil_loss_band.GetNoDataValue()
+    potential_soil_loss_nodata_mask = \
+        potential_soil_loss_matrix == potential_soil_loss_nodata
+
+
+    #Why?
+    potential_soil_loss_matrix *= cell_area / 10000.0
+
+
+    potential_soil_loss_matrix[potential_soil_loss_nodata_mask] = \
+        potential_soil_loss_nodata
+    #Get rid of any negative values due to outside interpolation:
+    potential_soil_loss_matrix[potential_soil_loss_matrix < 0] = \
+        potential_soil_loss_nodata
+    potential_soil_loss_band.WriteArray(potential_soil_loss_matrix)
+    raster_utils.calculate_raster_stats(potential_soil_loss_dataset)
+
     return potential_soil_loss_dataset
