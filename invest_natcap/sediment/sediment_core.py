@@ -450,3 +450,105 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     effective_retention_band.WriteArray(result)
 
     return effective_retention_dataset
+
+def calculate_ls_factor(upslope_area, slope_raster, aspect, 
+                        bounding_box, ls_factor_uri):
+    """Calculates the LS factor as Equation 3 from "Extension and validation 
+        of a geographic information system-based method for calculating the
+        Revised Universal Soil Loss Equation length-slope factor for erosion
+        risk assessments in large watersheds"   
+        
+        (Required that all raster inputs are same dimensions and projections
+        and have square cells)
+        upslope_area - a single band raster of type float that indicates
+            the contributing area at the inlet of a grid cell
+        slope_raster - a single band raster of type float that indicates
+            the slope at a pixel given as a proportion (e.g. a value of 0.05
+            is a slope of 5%)
+        aspect - a single band raster of type float that indicates the 
+            direction that slopes are facing in terms of radians east and
+            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
+            0 or 2pi is east.
+        ls_factor_uri - (input) a string to the path where the LS raster will 
+            be written 
+            
+        returns a GDAL dataset that is the ls_raster as the same dimensions as 
+            inputs"""
+    
+    #Tease out all the nodata values for reading and setting
+    upslope_area_band = upslope_area.GetRasterBand(1)
+    upslope_area_nodata = upslope_area.upslope_area_band.GetNoDataValue()
+    upslope_area_matrix = upslope_area_band.ReadAsArray()
+
+    slope_band = slope_raster.GetRasterBand(1)
+    slope_nodata = slope_band.GetNoDataValue()
+    slope_matrix = slope_band.ReadAsArray()
+
+    aspect_band = aspect.GetRasterBand(1)
+    aspect_nodata = aspect_band.GetNoDataValue()
+    aspect_matrix = aspect_band.ReadAsArray()
+
+    #Assumes that cells are square
+    cell_size = abs(upslope_area.GetGeoTransform()[1])
+    cell_area = cell_size ** 2
+
+    def ls_factor_function(aspect, slope, upslope_area, alpha):
+        #Skip the calculation if any of the inputs are nodata
+        if aspect == aspect_nodata or slope == slope_nodata or \
+                upslope_area == upslope_nodata:
+            return ls_nodata
+
+        #Here the aspect direciton can range from 0 to 2PI, but the purpose
+        #of the term is to determine the length of the flow path on the
+        #pixel, thus we take the absolute value of each trigometric
+        #function to keep the computation in the first quadrant
+        xij = abs(sin(alpha))+ abs(cos(alpha))
+            
+        contributing_area = (upslope_area-1) * cell_area
+
+        #A placeholder for simplified slope stuff
+        slope_in_radians = atan(slope)
+            
+        #From Equation 4 in "Extension and validataion of a geographic 
+        #information system ..."
+        if slope < 0.09:
+            slope_factor =  10.8*sin(slope_in_radians)+0.03
+        else:
+            slope_factor =  16.8*sin(slope_in_radians)-0.5
+            
+        #Set the m value to the lookup table that's from Yonas's handwritten
+        #notes.  On the margin it says "Equation 15".  Don't know from
+        #where.
+        beta = (sin(slope_in_radians) / 0.0896) / \
+            (3*pow(sin(slope_in_radians),0.8)+0.56)
+        slope_table = [0.01, 0.035, 0.05, 0.09]
+        exponent_table = [0.2, 0.3, 0.4, 0.5, beta/(1+beta)]
+            
+        #Use the bisect function to do a nifty range 
+        #lookup. http://docs.python.org/library/bisect.html#other-examples
+        m = exponent_table[bisect.bisect(slope_table,slope)]
+
+        #Use the bisect function to do a nifty range 
+        #lookup. http://docs.python.org/library/bisect.html#other-examples
+        m = exponent_table[bisect.bisect(slope_table,slope)]
+        #The length part of the ls_factor:
+        ls_factor = ((contributing_area+cell_area)**(m+1)- \
+                         contributing_area**(m+1)) / \
+                         ((cell_size**(m+2))*(xij**m)*(22.13**m))
+                
+        #From the paper "as a final check against exessively long slope
+        #length calculations ... cap of 333m"
+        if ls_factor > 333:
+            ls_factor = 333
+                
+        return ls_factor * slope_factor
+
+
+    #Call vectorize rasters for ls_factor
+    DOIT
+    ls_factor_dataset = raster_utils.new_raster_from_base(upslope_area, 
+        ls_factor_uri, 'GTiff', ls_nodata, gdal.GDT_Float32)
+
+    invest_core.calculateRasterStats(ls_factor.GetRasterBand(1))
+
+
