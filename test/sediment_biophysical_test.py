@@ -3,6 +3,7 @@
 import unittest
 import logging
 import os
+import subprocess
 
 from osgeo import gdal
 from nose.plugins.skip import SkipTest
@@ -12,6 +13,9 @@ from invest_natcap import postprocessing
 from invest_natcap.sediment import sediment_biophysical
 import invest_cython_core
 import invest_test_core
+from invest_natcap.sediment import sediment_core
+from invest_natcap import raster_utils
+
 
 LOGGER = logging.getLogger('sediment_biophysical_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -57,6 +61,7 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with default InVEST 
            sample input."""
+        raise SkipTest
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
         base_dir = './data/sediment_test_data'
@@ -91,6 +96,7 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_simple_1(self):
         """This test is a smaller version of a real world case that failed"""
         #Create two 3x3 rasters in memory
+        raise SkipTest
         base = gdal.Open('./data/sediment_test_data/dem', gdal.GA_ReadOnly)
         cols = 3
         rows = 3
@@ -163,3 +169,57 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         #Direction 5.117281 was calculated by hand
         self.assertAlmostEqual(flowArray[0][0], 0.0)
+
+    def test_effective_retention(self):
+        """Call effective retention with some sample datasets"""
+        dem_points = {
+            (0.0,0.0): 50,
+            (0.0,1.0): 100,
+            (1.0,0.0): 90,
+            (1.0,1.0): 0,
+            (0.5,0.5): 45}
+
+        retention_points = {
+            (0.0,0.0): 0.5,
+            (0.0,1.0): 0.25,
+            (1.0,0.0): 0.1,
+            (1.0,1.0): 0,
+            (0.5,0.5): 0.3}
+
+        n = 100
+
+        base_dir = 'data/test_out/sediment_biophysical'
+
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        dem_uri = os.path.join(base_dir,'random_dem.tif')
+        dem = invest_test_core.make_sample_dem(n,n,dem_points, 5.0, -1, dem_uri)
+
+        retention_efficiency_uri = \
+            os.path.join(base_dir, 'retention_efficiency.tif')
+        retention_efficiency_dataset = invest_test_core.make_sample_dem(n, n, 
+            retention_points, 0.0, -1, retention_efficiency_uri)
+
+        flow_uri = os.path.join(base_dir,'random_dem_flow.tif')
+        flow_dataset = raster_utils.new_raster_from_base(dem, flow_uri, 'GTiff',
+                                                 -1, gdal.GDT_Float32)
+        invest_cython_core.flow_direction_inf(dem, [0, 0, n, n], flow_dataset)
+
+        flow_accumulation_uri = os.path.join(base_dir, 'flow_accumulation.tif')
+        flow_accumulation_dataset = raster_utils.flow_accumulation_dinf(flow_dataset, dem, 
+                                                                flow_accumulation_uri)
+
+        stream_uri = os.path.join(base_dir, 'streams.tif')
+        stream_dataset = raster_utils.stream_threshold(flow_accumulation_dataset, 20, stream_uri)
+
+        effective_retention_uri = os.path.join(base_dir, 'effective_retention.tif')
+        effective_retention_dataset = sediment_core.effective_retention(flow_dataset, 
+            retention_efficiency_dataset, stream_dataset, effective_retention_uri)
+
+        raster_utils.calculate_raster_stats(dem)
+        raster_utils.calculate_raster_stats(flow_dataset)
+        raster_utils.calculate_raster_stats(effective_retention_dataset)
+        
+        subprocess.Popen(["qgis", dem_uri, retention_efficiency_uri, flow_uri, effective_retention_uri,
+                          flow_accumulation_uri, stream_uri])
