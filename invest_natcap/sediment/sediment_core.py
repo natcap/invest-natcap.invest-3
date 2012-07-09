@@ -578,7 +578,17 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
 
         return GDAL dataset with potential per pixel soil loss"""
 
-    def usle_function(ls_factor, erosivity, erodibility, usle_c_p, v_stream):
+
+    ls_factor_nodata = ls_factor_dataset.GetRasterBand(1).GetNoDataValue()
+    erosivity_nodata = erosivity_dataset.GetRasterBand(1).GetNoDataValue()
+    erodibility_nodata = erodibility_dataset.GetRasterBand(1).GetNoDataValue()
+    c_nodata = c_dataset.GetRasterBand(1).GetNoDataValue()
+    p_nodata = p_dataset.GetRasterBand(1).GetNoDataValue()
+    stream_nodata = stream_dataset.GetRasterBand(1).GetNoDataValue()
+
+    usle_nodata = -1.0
+
+    def usle_function(ls_factor, erosivity, erodibility, usle_c, usle_p, v_stream):
         """Calculates the USLE equation
         
         ls_factor - length/slope factor
@@ -592,20 +602,21 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
             defined, nodata if some are not defined, 0 if in a stream
             (v_stream)"""
 
-        if ls_factor == usle_nodata or erosivity == usle_nodata or \
-            erodibility == usle_nodata or usle_c_p == usle_nodata or \
-            v_stream == v_stream_nodata:
+        if ls_factor == ls_factor_nodata or erosivity == erosivity_nodata or \
+            erodibility == erodibility_nodata or usle_c == c_nodata or \
+            usle_p == p_nodata or v_stream == stream_nodata:
             return usle_nodata
         if v_stream == 1:
             return 0
-        return ls_factor * erosivity * erodibility * usle_c_p
+        return ls_factor * erosivity * erodibility * usle_c * usle_p
 
 
     dataset_list = [ls_factor_dataset, erosivity_dataset, erodibility_dataset, 
                     c_dataset, p_dataset, stream_dataset]
 
     potential_soil_loss_dataset = raster_utils.vectorize_rasters(dataset_list,
-        potential_soil_loss_uri, datatype=gdal.GDT_Float32, nodata = -1.0)
+        usle_function, raster_out_uri = potential_soil_loss_uri, 
+        datatype=gdal.GDT_Float32, nodata = usle_nodata)
 
 
     #change units from tons per hectare to tons per cell.  We need to do this
