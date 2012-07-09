@@ -420,22 +420,19 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     #lower dictionaries.  It doesn't matter that it's at 0, but we are guaranteed
     #it exists
     str_headers = ['Farm ID Number',
-                   'Weight of Fish at Start<br>(kg)',
-                   'Weight of Fish at Harvest<br>(kg)',
+                   'Weight of Fish at Start<br></b>(kg)<b>',
+                   'Weight of Fish at Harvest<br></b>(kg)<b>',
                    'Number of Fish in Farm',
-                   'Start Day for Growing<br>(1-365)',
-                   'Length of Fallowing Period<br>(days)'
+                   'Start Day for Growing<br></b>(1-365)<b>',
+                   'Length of Fallowing Period<br></b>(days)<b>'
                    ]
 
     inner_strings = []
     
-    #########################################
-    #Need to pr-load all vars, then add them into the string, or just load them in as you go.
-    #But, will have to make not dynamic, sadly.
     vars = []
     for id in cycle_history:
         
-        #single_str = "<td>%s</td>" % id
+        id = str(id)
         
         init_weight = farm_op_dict[id]['weight of fish at start (kg)']
         
@@ -461,7 +458,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     
     file.write("<tr>")
     for element in str_headers:
-        file.write("<td><b>%s</b></td>" % element)
+        file.write("<td><center><b>%s</b></center></td>" % element)
     file.write("</tr>")
     
     for element in inner_strings:
@@ -472,11 +469,11 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     #Here starts the second table. For ease, am preloading a list with the headers 
     #for this table, since they aren't necessarily already input.
     str_headers = ['Farm ID Number', 'Cycle Number', 
-                   'Days Since Outplanting Date<br>(Including Fallowing Period)', 
-                   'Harvested Weight<br>(kg/cycle)', 
-                   'Net Revenue<br>(Thousands of $)',
-                    'Net Present Value<br>(Thousands of $)', 
-                    'Outplant Day<br>(Julian Day)',
+                   'Days Since Outplanting Date<br></b>(Including Fallowing Period)<b>', 
+                   'Harvested Weight<br></b>(kg/cycle)<b>', 
+                   'Net Revenue<br></b>(Thousands of $)<b>',
+                    'Net Present Value<br></b>(Thousands of $)<b>', 
+                    'Outplant Day<br></b>(Julian Day)<b>',
                    'Outplant Year']
     
     inner_strings = []
@@ -535,7 +532,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     file.write("<table border='1', cellpadding='5'>")
     file.write("<tr>")
     for element in str_headers:
-        file.write("<td><b>%s</b></td>" % element)
+        file.write("<td><b><center>%s</center></b></td>" % element)
     file.write("</tr>")
     
     for element in inner_strings:
@@ -547,9 +544,10 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     #Here starts the creation of the third table. Like the last one, I am pre-loading
     #the headers, since they aren't actually input anywhere
     str_headers = ['Farm ID Number', 
-                   'Net Present Value<br>(Thousands of $)<br>(For Duration of Model Run)', 
+                   'Net Present Value<br>(Thousands of $)<br></b>\
+                   (For Duration of Model Run)<b>', 
                    'Number of Completed Harvest Cycles', 
-                   'Total Volume Harvested<br>(kg)(After Processing Occurs)']
+                   'Total Volume Harvested<br></b>(kg)(After Processing Occurs)<b>']
     
     inner_strings = []
 
@@ -585,7 +583,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
     file.write("<table border='1', cellpadding='5'>")
     file.write("<tr>")
     for element in str_headers:
-        file.write("<td><b>%s</b></td>" % element)
+        file.write("<td><b><center>%s</center></b></td>" % element)
     file.write("</tr>")
     
     for element in inner_strings:
