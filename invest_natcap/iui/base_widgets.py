@@ -908,6 +908,19 @@ class MultiFile(Container):
 
         # Open the file selection dialog.
         self.multi_widget.elements[-1].button.getFileName()
+        # If the cancel button was probably pressed, undo the new element
+        # creation.
+        print len(self.multi_widget.elements)
+        if len(self.multi_widget.elements[-1].value()) == 0:
+            for subElement in self.multi_widget.elements[-1].elements:
+                self.multi_widget.layout().removeWidget(subElement)
+                subElement.deleteLater()
+                subElement = None
+            del self.multi_widget.elements[-1]
+            # Re-insert the create element link below the latest fileEntry.
+            self.multi_widget.layout().addWidget(self.create_element_link,
+                self.multi_widget.layout().rowCount(), 2)
+        print len(self.multi_widget.elements)
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
