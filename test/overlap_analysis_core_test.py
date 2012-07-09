@@ -16,3 +16,12 @@ class TestOverlapAnalysisCore(unittest.TestCase):
         args = {}
         args['workspace'] = './data/test_out/Overlap'
         args['intermediate'] = os.path.join(args['workspace'], 'Intermediate')
+        args['map'] = './data/overlap_analysis/AOI_WCVI.shp'
+        args['dim'] = 100
+        
+        self.args = args
+        
+    def test_gridder(self):
+        
+        overlap_analysis_core.gridder(self.args['intermediate'], self.args['map'],
+                                      self.args['dim'])
