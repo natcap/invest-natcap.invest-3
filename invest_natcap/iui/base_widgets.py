@@ -868,7 +868,25 @@ class Container(QtGui.QGroupBox, DynamicGroup):
             recursive=True)
 
 class MultiFile(Container):
+    """Defines a class that allows the user to select an arbitrary number of the
+    same input by providing an hyperlink by which to add another element.
+    Validation applies as usual and the same validation is applied to all
+    elements.  As a result, it is best to have a single multi-input element for
+    each desired validation or input type as inputs cannot be mixed and matched.
+
+    example JSON:
+        "id": "multi-file",
+        "type": "multiFile",
+        "label": "Test multi-file",
+        "sampleElement": {"id": "sample_id",
+                          "type": "text",
+                          "label": "Input raster",
+                          "validateAs": {"type": "GDAL"}},
+        "linkText": "Add another"
+    """
     class MinusButton(QtGui.QPushButton):
+        """This class defines the '-' button that is used by the MultiFile
+        class."""
         def __init__(self, row_num, parent):
             QtGui.QPushButton.__init__(self)
             self.row_num = row_num
@@ -877,10 +895,8 @@ class MultiFile(Container):
             self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'list-remove.png')))
 
         def remove_element(self):
+            """A callback that is triggered when the button is pressed."""
             self.parent.remove_element(self.row_num)
-
-        def set_row_num(self, row_num):
-            self.row_num = row_num
 
     def __init__(self, attributes, registrar=None):
         # If the user has not defined any extra elements to be added to this
@@ -909,6 +925,9 @@ class MultiFile(Container):
             self.multi_widget.layout().rowCount(), 2)
 
     def remove_element(self, row_num):
+        """Remove the element located at row_num in the layout.  row_num is
+            assumed to be 1-based, not zero-based."""
+
         for element in self.multi_widget.elements:
             element_row_num = element.elements[1].row_num
             if element_row_num == row_num - 1:
@@ -922,6 +941,9 @@ class MultiFile(Container):
             sub_widget.deleteLater()
 
     def add_element(self):
+        """Add another element entry using the default element json provided by
+            the json configuration."""
+
         row_index = self.multi_widget.layout().rowCount()
         new_element = self.multi_widget.registrar.eval(self.file_def['type'],
             self.file_def)
@@ -938,7 +960,7 @@ class MultiFile(Container):
             # element.
             add_element = True
 
-        if len(element_value) > 0:
+        if add_element:
             for subElement, col_index in zip(new_element.elements,\
                 range(len(new_element.elements))):
                 if subElement.sizeHint().isValid():
