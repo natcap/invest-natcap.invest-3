@@ -1,4 +1,5 @@
 '''inVEST core module to handle all actual processing of overlap analysis data.'''
+import os
 
 from osgeo import ogr
 
