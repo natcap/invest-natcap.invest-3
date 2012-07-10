@@ -630,16 +630,10 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
     potential_soil_loss_nodata_mask = \
         potential_soil_loss_matrix == potential_soil_loss_nodata
 
+    #current unit is tons/ha, multiply by ha/cell (cell area in m^2/100**2)
+    potential_soil_loss_matrix[potential_soil_loss_nodata_mask] *= \
+        cell_area / 10000.0
 
-    #Why?
-    potential_soil_loss_matrix *= cell_area / 10000.0
-
-
-    potential_soil_loss_matrix[potential_soil_loss_nodata_mask] = \
-        potential_soil_loss_nodata
-    #Get rid of any negative values due to outside interpolation:
-    potential_soil_loss_matrix[potential_soil_loss_matrix < 0] = \
-        potential_soil_loss_nodata
     potential_soil_loss_band.WriteArray(potential_soil_loss_matrix)
     raster_utils.calculate_raster_stats(potential_soil_loss_dataset)
 

@@ -20,7 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestSedimentBiophysicalCore(unittest.TestCase):
     """Main testing class for the biophysical sediment tests"""
-    def test_sediment_ls_factor(self):
+    def test_potential_sediment(self):
         dem_points = {
             (0.0,0.0): 50,
             (0.0,1.0): 100,
