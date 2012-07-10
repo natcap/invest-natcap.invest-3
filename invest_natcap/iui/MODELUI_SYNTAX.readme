@@ -74,7 +74,7 @@ Attributes
     "configURI" : A string uri relative to the current directory that points to
 
 
-MultiFile
+Multi Element
 =================
 Defines a class that allows the user to select an arbitrary number of the
 same input by providing an hyperlink by which to add another element.
@@ -84,7 +84,7 @@ each desired validation or input type as inputs cannot be mixed and matched.
 
 example JSON:
     "id": "multi-file",
-    "type": "multiFile",
+    "type": "multi",
     "label": "Test multi-file",
     "sampleElement": {"id": "sample_id",
                       "type": "text",

@@ -867,7 +867,7 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
             recursive=True)
 
-class MultiFile(Container):
+class MultiElement(Container):
     """Defines a class that allows the user to select an arbitrary number of the
     same input by providing an hyperlink by which to add another element.
     Validation applies as usual and the same validation is applied to all
@@ -2137,7 +2137,7 @@ class ElementRegistrar(registrar.Registrar):
                    'scrollGroup': ScrollArea,
                    'OGRFieldDropdown': OGRFieldDropdown,
                    'hiddenElement': StaticReturn,
-                   'multiFile': MultiFile,
+                   'multi': MultiElement,
                    'label': Label
                    }
         self.update_map(updates)

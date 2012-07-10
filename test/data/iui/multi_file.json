@@ -30,7 +30,7 @@
         },        
         {
             "id": "multi-file",
-            "type": "multiFile",
+            "type": "multi",
             "label": "Test multi-file",
             "sampleElement": {"id": "sample_id",
                               "type": "text",
