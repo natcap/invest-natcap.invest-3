@@ -889,11 +889,10 @@ class MultiFile(Container):
             attributes['elements'] = []
 
         Container.__init__(self, attributes, registrar)
+        self.file_def = attributes['sampleElement']
 
-        self.file_def = {'id': 'tmp',
-                         'type': 'file',
-                         'label': 'testRaster?',
-                         'validateAs': {'type': 'GDAL'}}
+        if 'linkText' not in attributes:
+            attributes['linkText'] = 'Add another'
 
         group_def = {'id': 'group',
                      'type': 'list',
@@ -905,7 +904,7 @@ class MultiFile(Container):
         self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
 
         self.create_element_link = QtGui.QLabel('<a href=\'google.com\'' +
-            '>Select a file</a>')
+            '>%s</a>' % attributes['linkText'])
         self.create_element_link.linkActivated.connect(self.add_element)
         self.multi_widget.layout().addWidget(self.create_element_link,
             self.multi_widget.layout().rowCount(), 2)
@@ -931,10 +930,16 @@ class MultiFile(Container):
         minus_button = self.MinusButton(row_index - 1, self)
         new_element.elements.insert(1, minus_button)
 
-        # Open the file selection dialog.
-        new_element.button.getFileName()
+        try:
+            # Open the file selection dialog.
+            new_element.button.getFileName()
+            add_element = bool(new_element.value())  # False if len(value) == 0
+        except AttributeError:
+            # Thrown if the element is not a FileEntry.  In this case, add the
+            # element.
+            add_element = True
 
-        if len(new_element.value()) > 0:
+        if len(element_value) > 0:
             for subElement, col_index in zip(new_element.elements,\
                 range(len(new_element.elements))):
                 if subElement.sizeHint().isValid():

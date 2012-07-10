@@ -31,7 +31,12 @@
         {
             "id": "multi-file",
             "type": "multiFile",
-            "label": "Test multi-file"
+            "label": "Test multi-file",
+            "sampleElement": {"id": "sample_id",
+                              "type": "text",
+                              "label": "Input raster",
+                              "validateAs": {"type": "GDAL"}},
+            "linkText": "Add another"
         },
         {
             "id" : "cur_lulc_box",
