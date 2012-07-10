@@ -12,6 +12,7 @@ from osgeo import osr
 import numpy as np
 import scipy.interpolate
 import scipy.sparse
+import scipy.signal
 from scipy.sparse.linalg import spsolve
 import pyamg
 
@@ -1028,3 +1029,65 @@ def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
     stream_band.WriteArray(stream_array)
 
     return stream_dataset
+
+def calculate_slope(dem_dataset, slope_uri):
+    """Generates raster maps of slope.  Follows the algorithm described here:
+        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
+        
+        dem_dataset - (input) a single band raster of z values.
+        slope_uri - (input) a path to the output slope uri
+            
+        returns GDAL single band raster of the same dimensions as dem whose elements are percent rise"""
+
+    LOGGER = logging.getLogger('calculateSlope')
+    #Read the DEM directly into an array
+    dem_band = dem_dataset.GetRasterBand(1)
+    dem_nodata = dem_band.GetNoDataValue()
+    dem_matrix = dem_band.ReadAsArray()
+
+    gp = dem_dataset.GetGeoTransform()
+    cell_size = gp[1] #assume square cells
+
+    LOGGER.debug('building kernels')
+    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
+    dzdy_kernel = \
+        np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64) / \
+        (8 * cell_size)
+    dzdx_kernel = dzdy_kernel.transpose().copy()
+
+    LOGGER.debug('doing convolution')
+    dzdx = scipy.signal.convolve2d(dem_matrix, dzdx_kernel, 'same')
+    dzdy = scipy.signal.convolve2d(dem_matrix, dzdy_kernel, 'same')
+    slope_matrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
+
+    def shift_matrix(M, x, y):
+        """Shifts M along the given x and y axis.
+    
+        M - a 2D numpy array
+        x - the number of elements x-wise to shift M
+        y - the number of elements y-wise to shift M
+    
+        returns M rolled x and y elements along the x and y axis"""
+
+        LOGGER.debug('shifting by %s %s' % (x, y))
+        return np.roll(np.roll(M, x, axis=1), y, axis=0)
+
+    slope_nodata = -1.0
+    nodata_mask = dem_matrix == dem_nodata
+    slope_matrix[nodata_mask] = slope_nodata
+    offsets = [(1, 1), (0, 1), (-1, 1), 
+               (1, 0), (-1, 0), (1, -1), 
+               (0, -1), (-1, -1)]
+
+    #Set everything that's next to the nodata dem also to nodata
+    for offset in offsets:
+        slope_matrix[shift_matrix(nodata_mask, *offset)] = \
+            slope_nodata
+
+    slope_dataset = new_raster_from_base(dem_dataset, slope_uri, 'GTiff', 
+                                         slope_nodata, gdal.GDT_Float32)
+    slope_band = slope_dataset.GetRasterBand(1)
+    slope_band.WriteArray(slope_matrix)
+    calculate_raster_stats(slope_dataset)
+
+    return slope_dataset
