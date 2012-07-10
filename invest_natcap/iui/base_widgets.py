@@ -898,7 +898,6 @@ class MultiFile(Container):
                      'type': 'list',
                      'elements': []}
 
-        print('reg', self.registrar)
         self.multi_widget = GridList(group_def, registrar=self.registrar)
         self.layout().addWidget(self.multi_widget)
         self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
