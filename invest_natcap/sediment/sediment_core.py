@@ -319,11 +319,11 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
         returns a dataset whose pixel values indicate the effective retention to
             stream"""
 
-
+    effective_retention_nodata = -1.0
     effective_retention_dataset = raster_utils.new_raster_from_base(flow_direction_dataset, 
-        effective_retention_uri, 'GTiff', -1.0, gdal.GDT_Float32)
+        effective_retention_uri, 'GTiff', effective_retention_nodata, gdal.GDT_Float32)
     effective_retention_band = effective_retention_dataset.GetRasterBand(1)
-    effective_retention_band.Fill(-1.0)
+    effective_retention_band.Fill(effective_retention_nodata)
 
     flow_direction_band = flow_direction_dataset.GetRasterBand(1)
     flow_direction_nodata = flow_direction_band.GetNoDataValue()
@@ -346,7 +346,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
         if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
             return i * n_cols + j
         else:
-            return -1
+            return effective_retention_nodata
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
@@ -638,3 +638,42 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
     raster_utils.calculate_raster_stats(potential_soil_loss_dataset)
 
     return potential_soil_loss_dataset
+
+def calculate_pixel_export(potential_sediment_loss_dataset, 
+                           effective_retention_dataset, pixel_export_uri):
+    """Calculate per pixel export based on potential soil loss and the 
+        effective per pixel retention factor.
+
+        potential_sediment_loss_dataset - a gdal dataset with per pixel 
+            potential export in units of tons per pixel
+        effective_retention_dataset - a gdal dataset whose values indicate
+            the amount of potential export from a particular pixel to 
+            the stream
+        pixel_export_uri - the path to disk for the output raster
+
+        returns a dataset that has effective per pixel export to stream"""
+
+    pixel_export_nodata = -1.0
+
+    potential_sediment_loss_band = potential_sediment_loss_dataset.GetRasterBand(1)
+    potential_sediment_loss_nodata = potential_sediment_loss_band.GetNoDataValue()
+
+    effective_retention_band = effective_retention_dataset.GetRasterBand(1)
+    effective_retention_nodata = effective_retention_band.GetNoDataValue()
+
+    def pixel_export_op(potential_sediment_loss, retention):
+        """This either returns nodata in undefined areas or multplies the
+            sediment export by the effective retention"""
+        if potential_sediment_loss == potential_sediment_loss_nodata or \
+                retention == effective_retention_nodata:
+            return pixel_export_nodata
+        return potential_sediment_loss * retention
+
+    #Still call vectorize rasters for memory and/or interpolation reasons.
+    pixel_export_dataset = \
+        raster_utils.vectorize_rasters([potential_sediment_loss_dataset, \
+        effective_retention_dataset], pixel_export_op, \
+        datatype = gdal.GDT_Float32, nodata = pixel_export_nodata, \
+        raster_out_uri = pixel_export_uri)
+
+    return pixel_export_dataset
