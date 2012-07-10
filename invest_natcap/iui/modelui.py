@@ -1,7 +1,4 @@
 import sys
-
-sys.path.append("/home/mlacayo/workspace/invest-natcap.invest-3")
-
 import imp
 import os
 import platform
