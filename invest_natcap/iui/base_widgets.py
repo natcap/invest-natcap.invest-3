@@ -870,10 +870,11 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 class MultiFile(Container):
     class MinusButton(QtGui.QPushButton):
         def __init__(self, row_num, parent):
-            QtGui.QPushButton.__init__(self, '-')
+            QtGui.QPushButton.__init__(self)
             self.row_num = row_num
             self.parent = parent
             self.pressed.connect(self.remove_element)
+            self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'list-remove.png')))
 
         def remove_element(self):
             self.parent.remove_element(self.row_num)
@@ -910,26 +911,17 @@ class MultiFile(Container):
             self.multi_widget.layout().rowCount(), 2)
 
     def remove_element(self, row_num):
-        print('removing row', row_num)
-        print self.multi_widget.elements
         for element in self.multi_widget.elements:
             element_row_num = element.elements[1].row_num
             if element_row_num == row_num - 1:
                 self.multi_widget.elements.remove(element)
                 break
 
-        print self.multi_widget.elements
-
-        #row_num += 1  # gridlayout indices are not 0-based.
-        print ('layout row num', row_num)
         for j in range(self.multi_widget.layout().columnCount()):
-            print (row_num, j)
             sub_item = self.multi_widget.layout().itemAtPosition(row_num, j)
             sub_widget = sub_item.widget()
             self.multi_widget.layout().removeWidget(sub_widget)
             sub_widget.deleteLater()
-            #print 'removing %s' % str(sub_widget)
-        print 'removed row %s' % row_num
 
     def add_element(self):
         row_index = self.multi_widget.layout().rowCount()
@@ -937,7 +929,6 @@ class MultiFile(Container):
             self.file_def)
         new_element.updateLinks(self.root)
         minus_button = self.MinusButton(row_index - 1, self)
-        print('adding element at row', row_index - 1)
         new_element.elements.insert(1, minus_button)
 
         # Open the file selection dialog.
@@ -950,17 +941,12 @@ class MultiFile(Container):
                     subElement.setMinimumSize(subElement.sizeHint())
                 self.multi_widget.layout().addWidget(subElement, row_index - 1,
                     col_index)
-            print('adding element at row', row_index - 1)
             self.multi_widget.elements.append(new_element)
             self.multi_widget.layout().addWidget(self.create_element_link,
                 row_index, 2)
-            print('adding link at row', row_index)
 
             self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
             self.setMinimumSize(self.sizeHint())
-            print('elements length', len(self.multi_widget.elements))
-
-
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
