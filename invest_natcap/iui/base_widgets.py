@@ -912,13 +912,15 @@ class MultiFile(Container):
     def remove_element(self, row_num):
         print row_num
         print('removing row', row_num)
+        print self.multi_widget.elements
         for element, row_num in zip(self.multi_widget.elements,
             range(len(self.multi_widget.elements))):
             element.elements[1].set_row_num(row_num)
             print('set_row_num', element.elements[1].row_num)
         del self.multi_widget.elements[row_num]
+        print self.multi_widget.elements
 
-        row_num += 1  # gridlayout indices are not 0-based.
+        #row_num += 1  # gridlayout indices are not 0-based.
         print ('layout row num', row_num)
         for j in range(self.multi_widget.layout().columnCount()):
             print (row_num, j)
@@ -926,9 +928,8 @@ class MultiFile(Container):
             sub_widget = sub_item.widget()
             self.multi_widget.layout().removeWidget(sub_widget)
             sub_widget.deleteLater()
-            print 'removing %s' % str(sub_widget)
+            #print 'removing %s' % str(sub_widget)
         print 'removed row %s' % row_num
-        print self.multi_widget.elements
 
     def add_element(self):
         row_index = self.multi_widget.layout().rowCount()
@@ -942,7 +943,7 @@ class MultiFile(Container):
         # Open the file selection dialog.
         new_element.button.getFileName()
 
-        if  len(new_element.value()) > 0:
+        if len(new_element.value()) > 0:
             for subElement, col_index in zip(new_element.elements,\
                 range(len(new_element.elements))):
                 if subElement.sizeHint().isValid():
@@ -950,13 +951,13 @@ class MultiFile(Container):
                 self.multi_widget.layout().addWidget(subElement, row_index - 1,
                     col_index)
             self.multi_widget.elements.append(new_element)
-        print('elements length', len(self.multi_widget.elements))
+            self.multi_widget.layout().addWidget(self.create_element_link,
+                row_index, 2)
 
-        self.multi_widget.layout().addWidget(self.create_element_link,
-            self.multi_widget.layout().rowCount(), 2)
+            self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+            self.setMinimumSize(self.sizeHint())
+            print('elements length', len(self.multi_widget.elements))
 
-        self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
-        self.setMinimumSize(self.sizeHint())
 
 
 class GridList(DynamicGroup):
