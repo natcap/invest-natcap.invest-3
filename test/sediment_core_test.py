@@ -56,7 +56,6 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
                                                        flow_dataset,
                                                        ls_uri)
 
-
         c_p_points = {
             (0.0,0.0): 0.5,
             (0.0,1.0): 0.9,
@@ -68,6 +67,9 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
         c_dataset = invest_test_core.make_sample_dem(n,n,c_p_points, 5.0, -1, c_uri)
         p_uri = os.path.join(base_dir,'p.tif')
         p_dataset = invest_test_core.make_sample_dem(n,n,c_p_points, 5.0, -1, p_uri)
+
+        sedret_eff_uri = os.path.join(base_dir, 'sed_ret.tif')
+        sedret_eff_dataset = invest_test_core.make_sample_dem(n, n, c_p_points, 0.0, -1, sedret_eff_uri)
 
         erosivity_points = {
             (0.0,0.0): 0.15,
@@ -97,9 +99,23 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
         stream_uri = os.path.join(base_dir, 'streams.tif')
         stream_dataset = raster_utils.stream_threshold(flow_accumulation_dataset, 20, stream_uri)
 
-        sediment_core.calculate_potential_soil_loss(ls_dataset, erosivity_dataset, 
-                                  erodibility_dataset, c_dataset, p_dataset,
-                                  stream_dataset, potential_soil_loss_uri)
+        potential_sediment_export_dataset = \
+            sediment_core.calculate_potential_soil_loss(ls_dataset, \
+                erosivity_dataset, erodibility_dataset, c_dataset, p_dataset,\
+                stream_dataset, potential_soil_loss_uri)
         
+
+
+        effective_retention_uri = os.path.join(base_dir, 'effective_retention.tif')
+        effective_retention_dataset = \
+            sediment_core.effective_retention(flow_dataset, \
+                sedret_eff_dataset, stream_dataset, effective_retention_uri)
+
+        pixel_export_uri = os.path.join(base_dir, 'pixel_export.tif')
+        sediment_core.calculate_pixel_export(potential_sediment_export_dataset,
+                                             sedret_eff_dataset, pixel_export_uri)
+                                             
+
         subprocess.Popen(["qgis", ls_uri, dem_uri, flow_uri, flow_accumulation_uri, c_uri, 
-                          p_uri, erosivity_uri, erodibility_uri, potential_soil_loss_uri])
+                          p_uri, erosivity_uri, erodibility_uri, potential_soil_loss_uri,
+                          pixel_export_uri, effective_retention_uri])
