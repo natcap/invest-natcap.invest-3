@@ -28,6 +28,10 @@ def execute(args):
     aoiFileNameDBF = dirname+fileName+".dbf"
     aoiFileNamePRJ = dirname+fileName+".prj"
     
+    if not os.path.exists(aoiFileNamePRJ):
+        LOGGER.error("The shapefile must have a PRJ file.")
+        raise IOError, "Missing PRJ file."
+    
     # Register the streaming http handlers with urllib2
     register_openers()
     

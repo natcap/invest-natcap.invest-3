@@ -20,7 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestSedimentBiophysicalCore(unittest.TestCase):
     """Main testing class for the biophysical sediment tests"""
-    def test_sediment_ls_factor(self):
+    def test_potential_sediment(self):
         dem_points = {
             (0.0,0.0): 50,
             (0.0,1.0): 100,
@@ -29,6 +29,7 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
             (0.5,0.5): 45}
 
         n = 100
+        noise = 0.5
 
         base_dir = 'data/test_out/sediment_biophysical_core'
 
@@ -36,7 +37,7 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
             os.makedirs(base_dir)
 
         dem_uri = os.path.join(base_dir,'dem_ls.tif')
-        dem_dataset = invest_test_core.make_sample_dem(n,n,dem_points, 5.0, -1, dem_uri)
+        dem_dataset = invest_test_core.make_sample_dem(n,n,dem_points, noise, -1, dem_uri)
 
         flow_uri = os.path.join(base_dir,'flow_ls.tif')
         flow_dataset = raster_utils.new_raster_from_base(dem_dataset, flow_uri, 'GTiff',
@@ -56,7 +57,6 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
                                                        flow_dataset,
                                                        ls_uri)
 
-
         c_p_points = {
             (0.0,0.0): 0.5,
             (0.0,1.0): 0.9,
@@ -65,9 +65,12 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
             (0.5,0.5): 0.7}
 
         c_uri = os.path.join(base_dir,'c.tif')
-        c_dataset = invest_test_core.make_sample_dem(n,n,c_p_points, 5.0, -1, c_uri)
+        c_dataset = invest_test_core.make_sample_dem(n,n,c_p_points, noise, -1, c_uri)
         p_uri = os.path.join(base_dir,'p.tif')
-        p_dataset = invest_test_core.make_sample_dem(n,n,c_p_points, 5.0, -1, p_uri)
+        p_dataset = invest_test_core.make_sample_dem(n,n,c_p_points, noise, -1, p_uri)
+
+        sedret_eff_uri = os.path.join(base_dir, 'sed_ret.tif')
+        sedret_eff_dataset = invest_test_core.make_sample_dem(n, n, c_p_points, 0.0, -1, sedret_eff_uri)
 
         erosivity_points = {
             (0.0,0.0): 0.15,
@@ -78,7 +81,7 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
 
         erosivity_uri = os.path.join(base_dir,'erosivity.tif')
         erosivity_dataset = invest_test_core.make_sample_dem(n,n, erosivity_points, 
-                                                             5.0, -1, erosivity_uri)
+                                                             noise, -1, erosivity_uri)
 
 
         erodibility_points = {
@@ -90,16 +93,30 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
 
         erodibility_uri = os.path.join(base_dir,'erodibility.tif')
         erodibility_dataset = invest_test_core.make_sample_dem(n,n, erodibility_points, 
-                                                             5.0, -1, erodibility_uri)
+                                                             noise, -1, erodibility_uri)
 
         potential_soil_loss_uri = os.path.join(base_dir,'soil_loss.tif')
 
         stream_uri = os.path.join(base_dir, 'streams.tif')
-        stream_dataset = raster_utils.stream_threshold(flow_accumulation_dataset, 20, stream_uri)
+        stream_dataset = raster_utils.stream_threshold(flow_accumulation_dataset, 80, stream_uri)
 
-        sediment_core.calculate_potential_soil_loss(ls_dataset, erosivity_dataset, 
-                                  erodibility_dataset, c_dataset, p_dataset,
-                                  stream_dataset, potential_soil_loss_uri)
+        potential_sediment_export_dataset = \
+            sediment_core.calculate_potential_soil_loss(ls_dataset, \
+                erosivity_dataset, erodibility_dataset, c_dataset, p_dataset,\
+                stream_dataset, potential_soil_loss_uri)
         
+
+
+        effective_retention_uri = os.path.join(base_dir, 'effective_retention.tif')
+        effective_retention_dataset = \
+            sediment_core.effective_retention(flow_dataset, \
+                sedret_eff_dataset, stream_dataset, effective_retention_uri)
+
+        pixel_export_uri = os.path.join(base_dir, 'pixel_export.tif')
+        sediment_core.calculate_pixel_export(potential_sediment_export_dataset,
+                                             effective_retention_dataset, pixel_export_uri)
+                                             
+
         subprocess.Popen(["qgis", ls_uri, dem_uri, flow_uri, flow_accumulation_uri, c_uri, 
-                          p_uri, erosivity_uri, erodibility_uri, potential_soil_loss_uri])
+                          p_uri, erosivity_uri, erodibility_uri, potential_soil_loss_uri,
+                          effective_retention_uri, pixel_export_uri])

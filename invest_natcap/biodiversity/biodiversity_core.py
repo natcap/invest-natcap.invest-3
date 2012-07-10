@@ -88,7 +88,7 @@ def biophysical(args):
             # initialize a list that will store all the density/threat rasters
             # after they have been adjusted for distance, weight, and access
             degradation_rasters = []
-
+            deg_nodata_list = []
             # adjust each density/threat raster for distance, weight, and access 
             for threat, threat_data in threat_dict.iteritems():
                 LOGGER.debug('Calculating threat : %s', threat)
@@ -163,15 +163,27 @@ def biophysical(args):
 
                         returns - the degradation for this threat
                         """
-                    return reduce(lambda x, y: x*y, rasters)
+                    # there is a nodata value if this list is not empty
+                    if len(filter(lambda (x,y): x==y, zip(rasters,
+                        nodata_list))) == 0:
+                        return np.prod(rasters)
+                    return out_nodata
                 
                 # set the raster list depending on whether the access shapefile was
                 # provided
                 ras_list = []
+                nodata_list = []
                 if access_raster is None:
                     ras_list = [filtered_raster, sensitivity_raster]
+                    nodata_list =\
+                        [filtered_raster.GetRasterBand(1).GetNoDataValue(),
+                         sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
                 else:
                     ras_list = [filtered_raster, sensitivity_raster, access_raster]
+                    nodata_list =\
+                        [filtered_raster.GetRasterBand(1).GetNoDataValue(),
+                         sensitivity_raster.GetRasterBand(1).GetNoDataValue(),
+                         access_raster.GetRasterBand(1).GetNoDataValue()]
                 
                 deg_uri = \
                     os.path.join(intermediate_dir,
@@ -182,13 +194,20 @@ def biophysical(args):
                         nodata=out_nodata)
                 
                 degradation_rasters.append(deg_ras)
+                deg_nodata_list.append(deg_ras.GetRasterBand(1).GetNoDataValue())
 
             # if there was at least one threat compute the total degradation
             if len(degradation_rasters) > 0:
                 def sum_degradation(*rasters):
-                    return reduce(lambda x, y: x+y, rasters)
+                    # there is a nodata value if this list is not empty
+                    if len(filter(lambda (x,y): x==y, zip(rasters,
+                        deg_nodata_list))) == 0:
+                        return np.sum(rasters)
+                    return out_nodata
+                
                 deg_sum_uri = \
                     os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
+                
                 sum_deg_raster = \
                     raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
                                                    raster_out_uri=deg_sum_uri,
@@ -198,10 +217,24 @@ def biophysical(args):
                 # z = 2.5 is taken from the users guide
                 z = 2.5
                 ksq = half_saturation**z
+                
+                sum_deg_nodata =\
+                    sum_deg_raster.GetRasterBand(1).GetNoDataValue()
+                
+                habitat_nodata =\
+                    habitat_raster.GetRasterBand(1).GetNoDataValue()
+                
                 def quality_op(degradation, habitat):
+                    # there is a nodata value if this list is not empty
+                    if degradation == sum_deg_nodata or \
+                            habitat == habitat_nodata:
+                        return out_nodata
+
                     return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
+                
                 quality_uri = \
                     os.path.join(intermediate_dir, 'quality_out'+lulc_key+'.tif')
+                
                 quality_raster = \
                     raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
                                                    quality_op, raster_out_uri=quality_uri,
