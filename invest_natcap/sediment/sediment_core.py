@@ -319,11 +319,11 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
         returns a dataset whose pixel values indicate the effective retention to
             stream"""
 
-
+    effective_retention_nodata = -1.0
     effective_retention_dataset = raster_utils.new_raster_from_base(flow_direction_dataset, 
-        effective_retention_uri, 'GTiff', -1.0, gdal.GDT_Float32)
+        effective_retention_uri, 'GTiff', effective_retention_nodata, gdal.GDT_Float32)
     effective_retention_band = effective_retention_dataset.GetRasterBand(1)
-    effective_retention_band.Fill(-1.0)
+    effective_retention_band.Fill(effective_retention_nodata)
 
     flow_direction_band = flow_direction_dataset.GetRasterBand(1)
     flow_direction_nodata = flow_direction_band.GetNoDataValue()
@@ -346,7 +346,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
         if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
             return i * n_cols + j
         else:
-            return -1
+            return effective_retention_nodata
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
