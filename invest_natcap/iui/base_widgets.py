@@ -910,14 +910,14 @@ class MultiFile(Container):
             self.multi_widget.layout().rowCount(), 2)
 
     def remove_element(self, row_num):
-        print row_num
         print('removing row', row_num)
         print self.multi_widget.elements
-        for element, row_num in zip(self.multi_widget.elements,
-            range(len(self.multi_widget.elements))):
-            element.elements[1].set_row_num(row_num)
-            print('set_row_num', element.elements[1].row_num)
-        del self.multi_widget.elements[row_num]
+        for element in self.multi_widget.elements:
+            element_row_num = element.elements[1].row_num
+            if element_row_num == row_num - 1:
+                self.multi_widget.elements.remove(element)
+                break
+
         print self.multi_widget.elements
 
         #row_num += 1  # gridlayout indices are not 0-based.
@@ -936,8 +936,8 @@ class MultiFile(Container):
         new_element = self.multi_widget.registrar.eval(self.file_def['type'],
             self.file_def)
         new_element.updateLinks(self.root)
-        minus_button = self.MinusButton(row_index - 2, self)
-        print('adding element at row', row_index - 2)
+        minus_button = self.MinusButton(row_index - 1, self)
+        print('adding element at row', row_index - 1)
         new_element.elements.insert(1, minus_button)
 
         # Open the file selection dialog.
@@ -950,9 +950,11 @@ class MultiFile(Container):
                     subElement.setMinimumSize(subElement.sizeHint())
                 self.multi_widget.layout().addWidget(subElement, row_index - 1,
                     col_index)
+            print('adding element at row', row_index - 1)
             self.multi_widget.elements.append(new_element)
             self.multi_widget.layout().addWidget(self.create_element_link,
                 row_index, 2)
+            print('adding link at row', row_index)
 
             self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
             self.setMinimumSize(self.sizeHint())
