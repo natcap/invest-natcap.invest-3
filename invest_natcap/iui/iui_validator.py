@@ -608,6 +608,10 @@ class PrimitiveChecker(Checker):
             # regex.  Raises a KeyError if the user has not provided a regular
             # expression to use.
             user_pattern = valid_dict['allowedValues']['pattern']
+            # if user's pattern is a list, assume logical OR regular expression.
+            # Build a string to make it so.
+            if isinstance(user_pattern, list):
+                user_pattern = '|'.join(user_pattern)
         except KeyError:
             # If the user has not provided a regular expression, we should use
             # the default regular expression instead.
