@@ -1,5 +1,6 @@
 '''inVEST core module to handle all actual processing of overlap analysis data.'''
 import os
+import math
 
 from osgeo import ogr
 
