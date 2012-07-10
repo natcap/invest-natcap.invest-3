@@ -5,11 +5,16 @@ import itertools
 import random
 import string
 import os
+import time
 
 from osgeo import gdal
 from osgeo import osr
 import numpy as np
 import scipy.interpolate
+import scipy.sparse
+import scipy.signal
+from scipy.sparse.linalg import spsolve
+import pyamg
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -83,7 +88,14 @@ def calculate_raster_stats(ds):
         #Write stats back to the band.  The function SetStatistics needs 
         #all the arguments to be floats and crashes if they are ints thats
         #what this map float deal is.
-        band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
+        try:
+            band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
+        except TypeError:
+            #This can occur if the band passed in is filled with nodata values
+            #in that case min_val, max_val, ...etc are None, and thus can't
+            #cast to floats.  This is okay, just don't calculate stats
+            LOGGER.warn("No non-nodata values were found so can't set " + \
+                            "statistics")
 
     LOGGER.info('finish calculate_raster_stats')
 
@@ -860,17 +872,222 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatyp
     output_dataset.FlushCache()
     return output_dataset
 
-def flow_accumulation_dinf(flow_direction, dem, bounding_box, 
-                           flow_accumulation_uri):
+def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
     """Creates a raster of accumulated flow to each cell.
     
         flow_direction - (input) A raster showing direction of flow out of 
             each cell with directional values given in radians.
-        dem - (input) heightmap raster for the area of interest
-        bounding_box - (input) a 4 element array defining the GDAL read window
-           for dem and output on flow
+        dem - (input) heightmap raster that aligns perfectly for flow_direction
         flow_accumulation_uri - (input) A string to the flow accumulation output
            raster.  The output flow accumulation raster set
         
-        returns nothing"""
-    pass
+        returns flow accumulation raster"""
+
+    #Track for logging purposes
+    initial_time = time.clock()
+
+    flow_accumulation_dataset = new_raster_from_base(flow_direction, 
+        flow_accumulation_uri, 'GTiff', -1.0, gdal.GDT_Float32)
+    
+    flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
+    flow_accumulation_band.Fill(-1.0)
+
+    flow_direction_band = flow_direction.GetRasterBand(1)
+    flow_direction_nodata = flow_direction_band.GetNoDataValue()
+    flow_direction_array = flow_direction_band.ReadAsArray().flatten()
+
+    n_rows = flow_accumulation_dataset.RasterYSize
+    n_cols = flow_accumulation_dataset.RasterXSize
+
+    def calc_index(i, j):
+        """used to abstract the 2D to 1D index calculation below"""
+        if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
+            return i * n_cols + j
+        else:
+            return -1
+
+    #set up variables to hold the sparse system of equations
+    #upper bound  n*m*5 elements
+    b_vector = np.zeros(n_rows * n_cols)
+
+    #holds the rows for diagonal sparse matrix creation later, row 4 is 
+    #the diagonal
+    a_matrix = np.zeros((9, n_rows * n_cols))
+    diags = np.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
+                       1, n_cols-1, n_cols, n_cols+1])
+    
+    #Determine the inflow directions based on index offsets.  It's written 
+    #in terms of radian 4ths for easier readability and maintaince. 
+    #Derived all this crap from page 36 in Rich's notes.
+    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5, False),
+                         (-1, 1): (5.0/4.0 * np.pi, 2, True),
+                         (-1, 0): (6.0/4.0 * np.pi, 1, False),
+                         (-1,-1): (7.0/4.0 * np.pi, 0, True),
+                         ( 0,-1): (0.0, 3, False),
+                         ( 1,-1): (1.0/4.0 * np.pi, 6, True),
+                         ( 1, 0): (2.0/4.0 * np.pi, 7, False),
+                         ( 1, 1): (3.0/4.0 * np.pi, 8, True)}
+
+    LOGGER.info('Building diagonals for linear advection diffusion system.')
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            #diagonal element row_index,j always in bounds, calculate directly
+            cell_index = calc_index(row_index, col_index)
+            a_matrix[4, cell_index] = 1
+            
+            #Check to see if the current flow angle is defined, if not then
+            #set local flow accumulation to 0
+            local_flow_angle = flow_direction_array[cell_index]
+            if local_flow_angle == flow_direction_nodata:
+                #b_vector already == 0 at this point, so just continue
+                continue
+
+            #Otherwise, define 1.0 to indicate base flow from the pixel
+            b_vector[cell_index] = 1.0
+
+            #Determine inflow neighbors
+            for (row_offset, col_offset), (inflow_angle, diagonal_offset, diagonal_inflow) in \
+                    inflow_directions.iteritems():
+                try:
+                    neighbor_index = calc_index(row_index+row_offset, 
+                                                col_index+col_offset)
+                    flow_angle = flow_direction_array[neighbor_index]
+
+                    if flow_angle == flow_direction_nodata:
+                        continue
+
+                    #If this delta is within pi/4 it means there's an inflow
+                    #direction, see diagram on pg 36 of Rich's notes
+                    delta = abs(flow_angle - inflow_angle)
+
+                    if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
+                        if diagonal_inflow:
+                            #We want to measure the far side of the unit triangle
+                            #so we measure that angle UP from theta = 0 on a unit
+                            #circle
+                            delta = np.pi/4-delta
+
+                        #Taking absolute value because it might be on a 0,-45 
+                        #degree angle
+                        inflow_fraction = abs(np.tan(delta))
+                        if not diagonal_inflow:
+                            #If not diagonal then we measure the direct flow in
+                            #which is the inverse of the tangent function
+                            inflow_fraction = 1-inflow_fraction
+                        
+                        #Finally set the appropriate inflow variable
+                        a_matrix[diagonal_offset, neighbor_index] = \
+                            -inflow_fraction
+
+                except IndexError:
+                    #This will occur if we visit a neighbor out of bounds
+                    #it's okay, just skip it
+                    pass
+
+
+    matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
+                                  format="csc")
+
+    LOGGER.info('Solving via sparse direct solver')
+    solver = scipy.sparse.linalg.factorized(matrix)
+    result = solver(b_vector)
+    LOGGER.info('(' + str(time.clock() - initial_time) + 's elapsed)')
+
+    #Result is a 1D array of all values, put it back to 2D
+    result.resize(n_rows,n_cols)
+
+    flow_accumulation_band.WriteArray(result)
+
+    return flow_accumulation_dataset
+
+def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
+    """Creates a raster of accumulated flow to each cell.
+    
+        flow_accumulation_data - (input) A flow accumulation dataset
+        flow_threshold - (input) a number indicating the threshold to declare
+            a pixel a stream or no
+        stream_uri - (input) the uri of the output stream dataset
+        
+        returns stream dataset"""
+
+
+    stream_dataset = new_raster_from_base(flow_accumulation_dataset, 
+        stream_uri, 'GTiff', 255, gdal.GDT_Byte)
+    stream_band = stream_dataset.GetRasterBand(1)
+    stream_band.Fill(255)
+    stream_array = stream_band.ReadAsArray()
+
+    flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
+    flow_accumulation_nodata = flow_accumulation_band.GetNoDataValue()
+    flow_accumulation_array = flow_accumulation_band.ReadAsArray()
+
+    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
+                     (flow_accumulation_array >= flow_threshold)] = 1
+    stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
+                     (flow_accumulation_array < flow_threshold)] = 0
+
+    stream_band.WriteArray(stream_array)
+
+    return stream_dataset
+
+def calculate_slope(dem_dataset, slope_uri):
+    """Generates raster maps of slope.  Follows the algorithm described here:
+        http://webhelp.esri.com/arcgiSDEsktop/9.3/index.cfm?TopicName=How%20Slope%20works 
+        
+        dem_dataset - (input) a single band raster of z values.
+        slope_uri - (input) a path to the output slope uri
+            
+        returns GDAL single band raster of the same dimensions as dem whose elements are percent rise"""
+
+    LOGGER = logging.getLogger('calculateSlope')
+    #Read the DEM directly into an array
+    dem_band = dem_dataset.GetRasterBand(1)
+    dem_nodata = dem_band.GetNoDataValue()
+    dem_matrix = dem_band.ReadAsArray()
+
+    gp = dem_dataset.GetGeoTransform()
+    cell_size = gp[1] #assume square cells
+
+    LOGGER.debug('building kernels')
+    #Got idea for this from this thread http://stackoverflow.com/q/8174467/42897
+    dzdy_kernel = \
+        np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], dtype=np.float64) / \
+        (8 * cell_size)
+    dzdx_kernel = dzdy_kernel.transpose().copy()
+
+    LOGGER.debug('doing convolution')
+    dzdx = scipy.signal.convolve2d(dem_matrix, dzdx_kernel, 'same')
+    dzdy = scipy.signal.convolve2d(dem_matrix, dzdy_kernel, 'same')
+    slope_matrix = np.sqrt(dzdx ** 2 + dzdy ** 2)
+
+    def shift_matrix(M, x, y):
+        """Shifts M along the given x and y axis.
+    
+        M - a 2D numpy array
+        x - the number of elements x-wise to shift M
+        y - the number of elements y-wise to shift M
+    
+        returns M rolled x and y elements along the x and y axis"""
+
+        LOGGER.debug('shifting by %s %s' % (x, y))
+        return np.roll(np.roll(M, x, axis=1), y, axis=0)
+
+    slope_nodata = -1.0
+    nodata_mask = dem_matrix == dem_nodata
+    slope_matrix[nodata_mask] = slope_nodata
+    offsets = [(1, 1), (0, 1), (-1, 1), 
+               (1, 0), (-1, 0), (1, -1), 
+               (0, -1), (-1, -1)]
+
+    #Set everything that's next to the nodata dem also to nodata
+    for offset in offsets:
+        slope_matrix[shift_matrix(nodata_mask, *offset)] = \
+            slope_nodata
+
+    slope_dataset = new_raster_from_base(dem_dataset, slope_uri, 'GTiff', 
+                                         slope_nodata, gdal.GDT_Float32)
+    slope_band = slope_dataset.GetRasterBand(1)
+    slope_band.WriteArray(slope_matrix)
+    calculate_raster_stats(slope_dataset)
+
+    return slope_dataset

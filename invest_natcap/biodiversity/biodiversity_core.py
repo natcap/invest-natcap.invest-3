@@ -12,9 +12,8 @@ import logging
 
 LOGGER = logging.getLogger('biodiversity_core')
 
-
 def biophysical(args):
-    """Execute the biophysical component of the pollination model.
+    """Execute the biophysical component of the biodiversity model.
 
        args - a python dictionary with at least the following components:
        args['workspace_dir'] - a uri to the directory that will write output
@@ -32,30 +31,32 @@ def biophysical(args):
             'dens_f': {'crp_f' : crp_f.tif, 'srds_f' : srds_f.tif, ...},
             'dens_b': {'crp_b' : crp_b.tif, 'srds_b' : srds_b.tif, ...}
            }
-       args['access_shape'] - a ogr polygon shapefile depicting any protected/reserved
+       args['access_shape'] - an OGR datasource of polygons depicting any protected/reserved
                               land boundaries
-       args['half_saturation'] - an integer
-       args['result_suffix'] - a string
-
+       args['half_saturation'] - an integer that determines the spread and
+                                 central tendency of habitat quality scores
+       args['result_suffix'] - a string of the desired suffix
 
        returns nothing."""
 
     LOGGER.debug('Starting biodiversity biophysical calculations')
+
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     cur_landuse = args['landuse_dict']['_c']
     threat_dict = args['threat_dict']
     half_saturation = args['half_saturation']
+    
+    out_nodata = -1.0
+
     #Get raster properties: cellsize, width, height, cells = width * height, extent    
     lulc_prop = get_raster_properties(cur_landuse)
+    
     #Create raster of habitat based on habitat field
     habitat_uri = os.path.join(intermediate_dir, 'habitat.tif')
-    #habitat_raster = make_raster_from_lulc(args['landuse'], habitat_uri)
+    
     habitat_raster = raster_from_table_values(cur_landuse, habitat_uri, args['sensitivity_dict'], 'HABITAT')
     
-    #Check that threat count matches with sensitivity
-        #Will be doing this in validation (hopefully...) or at the uri level
-
     #If access_lyr: convert to raster, if value is null set to 1, else set to value
     access_raster = None
     try:
@@ -76,16 +77,23 @@ def biophysical(args):
     for threat_data in threat_dict.itervalues():
         #Sum weight of threats
         weight_sum = weight_sum + float(threat_data['WEIGHT'])
+    
     LOGGER.debug('landuse_dict : %s', args['landuse_dict']) 
+
+    # for each land cover raster provided compute habitat quality
     for lulc_key, lulc_ras in args['landuse_dict'].iteritems():
         try:
             LOGGER.debug('Calculating results for landuse : %s', lulc_key)
-            degradation_rasters = []
 
-            # 1) Blur all threats with gaussian filter
+            # initialize a list that will store all the density/threat rasters
+            # after they have been adjusted for distance, weight, and access
+            degradation_rasters = []
+            deg_nodata_list = []
+            # adjust each density/threat raster for distance, weight, and access 
             for threat, threat_data in threat_dict.iteritems():
                 LOGGER.debug('Calculating threat : %s', threat)
                 LOGGER.debug('Threat Data : %s', threat_data)
+           
                 # get the density raster for the specific threat
                 threat_raster = args['density_dict']['density'+lulc_key][threat]
             
@@ -105,20 +113,23 @@ def biophysical(args):
                 # create a new raster to output distance adjustments to
                 filtered_raster = \
                     raster_utils.new_raster_from_base(threat_raster, filtered_threat_uri, 
-                                                      'GTiff', -1.0, gdal.GDT_Float32)
-                # get the mean cell size
+                                                      'GTiff', out_nodata, gdal.GDT_Float32)
+                # get the mean cell size, using absolute value because we could
+                # get a negative for height or width
                 mean_cell_size = (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
                 
                 # convert max distance (given in KM) to meters
                 dr_max = float(threat_data['MAX_DIST']) * 1000.0
+                
                 # convert max distance from meters to the number of pixels that
                 # represents on the raster
                 dr_pixel = dr_max / mean_cell_size
+                
                 # compute sigma to be used in a gaussian filter.  Sigma is
                 # derived from using equation 12.2 in users manual and the
-                # gaussian equation.
+                # gaussian equation. 2.99573 is from users guide and old code
                 sigma = \
-                    math.sqrt(dr_pixel / (2.99573 * 2))
+                    math.sqrt(dr_pixel / (2.99573 * 2.0))
                 LOGGER.debug('Sigma for gaussian : %s', sigma)
 
                 # use a gaussian_filter to compute the effect that a threat has over a
@@ -126,7 +137,8 @@ def biophysical(args):
                 filtered_out_matrix = \
                     clip_and_op(threat_band.ReadAsArray(), sigma,\
                                 ndimage.gaussian_filter, matrix_type=float,\
-                                in_matrix_nodata=threat_nodata, out_matrix_nodata=-1.0)
+                                in_matrix_nodata=threat_nodata,
+                                out_matrix_nodata=out_nodata)
                 
                 filtered_band = filtered_raster.GetRasterBand(1)
                 filtered_band.WriteArray(filtered_out_matrix)
@@ -136,62 +148,104 @@ def biophysical(args):
                 sens_uri = \
                     os.path.join(intermediate_dir, str('sens_'+threat+lulc_key+'.tif'))
                 sensitivity_raster = \
-                        raster_from_table_values(lulc_ras, sens_uri,\
-                                                 args['sensitivity_dict'], 'L_'+threat)        
+                    raster_from_table_values(lulc_ras, sens_uri,\
+                                             args['sensitivity_dict'], 'L_'+threat)        
                 sensitivity_raster.FlushCache()
-                
+               
+                weight_avg = float(threat_data['WEIGHT']) / weight_sum
+
                 def partial_degradation(*rasters):
                     """For a given threat return the weighted average of the product of
-                        the threats sensitivity, the threats acces, and the threat 
-                        adjusted by distance"""
-                    result = 1.0
-                    for val in rasters:
-                        result = result * val * (float(threat_data['WEIGHT'])/weight_sum)
-                    return result
+                        the threats sensitivity, the threats access, and the threat 
+                        adjusted by distance
+                        
+                        *rasters - a list of floats
+
+                        returns - the degradation for this threat
+                        """
+                    # there is a nodata value if this list is not empty
+                    if len(filter(lambda (x,y): x==y, zip(rasters,
+                        nodata_list))) == 0:
+                        return np.prod(rasters)
+                    return out_nodata
                 
-                ras_list = []
                 # set the raster list depending on whether the access shapefile was
                 # provided
+                ras_list = []
+                nodata_list = []
                 if access_raster is None:
                     ras_list = [filtered_raster, sensitivity_raster]
+                    nodata_list =\
+                        [filtered_raster.GetRasterBand(1).GetNoDataValue(),
+                         sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
                 else:
                     ras_list = [filtered_raster, sensitivity_raster, access_raster]
+                    nodata_list =\
+                        [filtered_raster.GetRasterBand(1).GetNoDataValue(),
+                         sensitivity_raster.GetRasterBand(1).GetNoDataValue(),
+                         access_raster.GetRasterBand(1).GetNoDataValue()]
                 
                 deg_uri = \
                     os.path.join(intermediate_dir,
                                  str('deg_'+threat+lulc_key+'.tif'))
                 deg_ras =\
-                    raster_utils.vectorize_rasters(ras_list, partial_degradation, \
-                                               raster_out_uri=deg_uri, nodata=threat_nodata)
+                    raster_utils.vectorize_rasters(ras_list, \
+                        partial_degradation, raster_out_uri=deg_uri,\
+                        nodata=out_nodata)
+                
                 degradation_rasters.append(deg_ras)
-            
+                deg_nodata_list.append(deg_ras.GetRasterBand(1).GetNoDataValue())
+
+            # if there was at least one threat compute the total degradation
             if len(degradation_rasters) > 0:
                 def sum_degradation(*rasters):
-                    return sum(rasters)
+                    # there is a nodata value if this list is not empty
+                    if len(filter(lambda (x,y): x==y, zip(rasters,
+                        deg_nodata_list))) == 0:
+                        return np.sum(rasters)
+                    return out_nodata
+                
                 deg_sum_uri = \
                     os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
+                
                 sum_deg_raster = \
                     raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
-                                                   raster_out_uri=deg_sum_uri, nodata=-1.0)
+                                                   raster_out_uri=deg_sum_uri,
+                                                   nodata=out_nodata)
 
-                #Compute quality for all threats
+                #Compute habitat quality
+                # z = 2.5 is taken from the users guide
                 z = 2.5
                 ksq = half_saturation**z
+                
+                sum_deg_nodata =\
+                    sum_deg_raster.GetRasterBand(1).GetNoDataValue()
+                
+                habitat_nodata =\
+                    habitat_raster.GetRasterBand(1).GetNoDataValue()
+                
                 def quality_op(degradation, habitat):
+                    # there is a nodata value if this list is not empty
+                    if degradation == sum_deg_nodata or \
+                            habitat == habitat_nodata:
+                        return out_nodata
+
                     return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
+                
                 quality_uri = \
                     os.path.join(intermediate_dir, 'quality_out'+lulc_key+'.tif')
+                
                 quality_raster = \
                     raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
                                                    quality_op, raster_out_uri=quality_uri,
-                                                   nodata=-1.0)
+                                                   nodata=out_nodata)
+            else:
+                LOGGER.warn('No Threat rasters were found for this land cover')
         except:
             LOGGER.error('An error was encountered processing landuse%s', lulc_key)
             LOGGER.debug('Attempting to move on to next landuse map')
             continue 
-
-    #Adjust quality by habitat status
-
+    
     #Compute Rarity if user supplied baseline raster
     try:    
         #Create index that represents the rarity of LULC class on landscape
@@ -216,7 +270,7 @@ def biophysical(args):
     LOGGER.debug('Finished biodiversity biophysical calculations')
 
 def raster_pixel_count(ds):
-    """Determine the number of each unique pixel in the ds
+    """Determine how many of each unique pixel lies in the datasoure (ds)
     
         ds - a GDAL raster dataset
 
@@ -241,7 +295,8 @@ def raster_pixel_count(ds):
     return counts
 
 
-def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
+def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, 
+                out_matrix_nodata=-1, kwargs={}):
     """Apply an operatoin to a matrix after the matrix is adjusted for nodata
         values. After the operation is complete, the matrix will have pixels
         culled based on the input matrix's original values that were less than 0
@@ -251,6 +306,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, out
         arg1 - an argument of whatever type is necessary for the second argument
             of op
         op - a python callable object with two arguments: in_matrix and arg1
+        matrix_type - a python type, default is float
         in_matrix_nodata - a python int or float
         out_matrix_nodata - a python int or float
         kwargs={} - a python dictionary of keyword arguments to be passed in to
@@ -273,16 +329,16 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, out
     return filtered_matrix
 
 def make_raster_from_shape(base_raster, shape, attr):
-    """Burn an attribute value from a polygone shapefile onto an
+    """Burn an attribute value from a polygon shapefile onto an
        existing blank raster
 
        base_raster - a gdal raster dataset to burn the shapefile
                      values onto
-       shape - a ogr polygon shapefile
+       shape - a ORG datasource polygon shapefile
        attr - a python string of the attribute field to burn values
               from
 
-       returns - a gdal raster"""
+       returns - a GDAL raster dataset"""
     
     attribute_string = 'ATTRIBUTE=' + attr
     gdal.RasterizeLayer(base_raster, [1], shape.GetLayer(0),
@@ -308,8 +364,9 @@ def get_raster_properties(dataset):
     return dataset_dict
 
 def raster_from_table_values(key_raster, out_uri, attr_dict, field, nodata=-1.0):
-    """Creates a new raster from 'key_raster' whose values are data from a 
-       dictionary that directly relates to the pixel value from 'key_raster'
+    """Creates a new raster from 'key_raster' where the pixel values from
+       'key_raster' are the keys to a dictionary 'attr_dict'. The values 
+       corresponding to those keys is what is written to the new raster.
     
        key_raster - a GDAL raster dataset whose pixel values relate to the 
                      keys in 'attr_dict'
@@ -325,17 +382,19 @@ def raster_from_table_values(key_raster, out_uri, attr_dict, field, nodata=-1.0)
 
     LOGGER.debug('Starting raster_from_table_values')
     out_nodata = nodata 
-    LOGGER.debug('raster_from_table_values.out_nodata : %s', out_nodata)
+    
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
     attr_dict[out_nodata] = {field:float(out_nodata)}
 
     def vop(lulc):
-        """Operation returns the 'field' value that directly corresponds to
-           it's lulc type
+        """Operation passed to numpy function vectorize that uses 'lulc' as the 
+            key to the local dictionary 'attr_dict'. Returns the value in place
+            of the key for the new raster
            
-           lulc - a numpy array with the lulc type values as integers
-        
+           lulc - a float/int/string from the local raster 'key_raster' that
+               be used to look up a value in the dictionary 'attr_dict'
+
            returns - the 'field' value corresponding to the lulc type
         """
         if str(lulc) in attr_dict:

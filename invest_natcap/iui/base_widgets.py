@@ -187,7 +187,7 @@ class DynamicGroup(DynamicElement):
         if registrar != None:
             self.createElements(attributes['elements'])
 
-    def createElements(self, elementsArray):
+    def createElements(self, elementsArray, start_index=0):
         """Create the elements defined in elementsArray as widgets within 
             this current grouping widget.  All elements are created as widgets
             within this grouping widget's layout.
@@ -195,6 +195,8 @@ class DynamicGroup(DynamicElement):
             elementsArray - a python array of elements, where each element is a
                 python dictionary with string keys to each of its attributes as
                 defined in the input JSON file.
+            start_index=0 - a python int representing the row to start appending
+                to.
                 
             no return value"""
 
@@ -202,7 +204,7 @@ class DynamicGroup(DynamicElement):
         # in this iteration of the loop.  Used excluseively when the layout
         #manager is an instance of QtGui.QGridLayout(), as both the row and
         #column indices are required in QGridLayout's addWidget() method.    
-        i = 0
+        i = start_index
 
         #loop through all entries in the input elementsArray and create the 
         #appropriate elements.  As new element classes are created, they must
@@ -222,6 +224,8 @@ class DynamicGroup(DynamicElement):
             if isinstance(self.layout(), QtGui.QGridLayout):
                 j = 0
                 for subElement in widget.elements:
+                    if subElement.sizeHint().isValid():
+                        subElement.setMinimumSize(subElement.sizeHint())
                     self.layout().addWidget(subElement, i, j)
                     j += 1
             else:
@@ -862,6 +866,113 @@ class Container(QtGui.QGroupBox, DynamicGroup):
 
         self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
             recursive=True)
+
+class MultiFile(Container):
+    """Defines a class that allows the user to select an arbitrary number of the
+    same input by providing an hyperlink by which to add another element.
+    Validation applies as usual and the same validation is applied to all
+    elements.  As a result, it is best to have a single multi-input element for
+    each desired validation or input type as inputs cannot be mixed and matched.
+
+    example JSON:
+        "id": "multi-file",
+        "type": "multiFile",
+        "label": "Test multi-file",
+        "sampleElement": {"id": "sample_id",
+                          "type": "text",
+                          "label": "Input raster",
+                          "validateAs": {"type": "GDAL"}},
+        "linkText": "Add another"
+    """
+    class MinusButton(QtGui.QPushButton):
+        """This class defines the '-' button that is used by the MultiFile
+        class."""
+        def __init__(self, row_num, parent):
+            QtGui.QPushButton.__init__(self)
+            self.row_num = row_num
+            self.parent = parent
+            self.pressed.connect(self.remove_element)
+            self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'list-remove.png')))
+
+        def remove_element(self):
+            """A callback that is triggered when the button is pressed."""
+            self.parent.remove_element(self.row_num)
+
+    def __init__(self, attributes, registrar=None):
+        # If the user has not defined any extra elements to be added to this
+        # group, assume that there are no elements.
+        if 'elements' not in attributes:
+            attributes['elements'] = []
+
+        Container.__init__(self, attributes, registrar)
+        self.file_def = attributes['sampleElement']
+
+        if 'linkText' not in attributes:
+            attributes['linkText'] = 'Add another'
+
+        group_def = {'id': 'group',
+                     'type': 'list',
+                     'elements': []}
+
+        self.multi_widget = GridList(group_def, registrar=self.registrar)
+        self.layout().addWidget(self.multi_widget)
+        self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+
+        self.create_element_link = QtGui.QLabel('<a href=\'google.com\'' +
+            '>%s</a>' % attributes['linkText'])
+        self.create_element_link.linkActivated.connect(self.add_element)
+        self.multi_widget.layout().addWidget(self.create_element_link,
+            self.multi_widget.layout().rowCount(), 2)
+
+    def remove_element(self, row_num):
+        """Remove the element located at row_num in the layout.  row_num is
+            assumed to be 1-based, not zero-based."""
+
+        for element in self.multi_widget.elements:
+            element_row_num = element.elements[1].row_num
+            if element_row_num == row_num - 1:
+                self.multi_widget.elements.remove(element)
+                break
+
+        for j in range(self.multi_widget.layout().columnCount()):
+            sub_item = self.multi_widget.layout().itemAtPosition(row_num, j)
+            sub_widget = sub_item.widget()
+            self.multi_widget.layout().removeWidget(sub_widget)
+            sub_widget.deleteLater()
+
+    def add_element(self):
+        """Add another element entry using the default element json provided by
+            the json configuration."""
+
+        row_index = self.multi_widget.layout().rowCount()
+        new_element = self.multi_widget.registrar.eval(self.file_def['type'],
+            self.file_def)
+        new_element.updateLinks(self.root)
+        minus_button = self.MinusButton(row_index - 1, self)
+        new_element.elements.insert(1, minus_button)
+
+        try:
+            # Open the file selection dialog.
+            new_element.button.getFileName()
+            add_element = bool(new_element.value())  # False if len(value) == 0
+        except AttributeError:
+            # Thrown if the element is not a FileEntry.  In this case, add the
+            # element.
+            add_element = True
+
+        if add_element:
+            for subElement, col_index in zip(new_element.elements,\
+                range(len(new_element.elements))):
+                if subElement.sizeHint().isValid():
+                    subElement.setMinimumSize(subElement.sizeHint())
+                self.multi_widget.layout().addWidget(subElement, row_index - 1,
+                    col_index)
+            self.multi_widget.elements.append(new_element)
+            self.multi_widget.layout().addWidget(self.create_element_link,
+                row_index, 2)
+
+            self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+            self.setMinimumSize(self.sizeHint())
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
@@ -2026,6 +2137,7 @@ class ElementRegistrar(registrar.Registrar):
                    'scrollGroup': ScrollArea,
                    'OGRFieldDropdown': OGRFieldDropdown,
                    'hiddenElement': StaticReturn,
+                   'multiFile': MultiFile,
                    'label': Label
                    }
         self.update_map(updates)

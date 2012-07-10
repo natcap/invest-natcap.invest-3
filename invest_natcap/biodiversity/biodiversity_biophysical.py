@@ -1,20 +1,17 @@
 """InVEST Biophysical model file handler module"""
-import glob
 from osgeo import gdal
 from osgeo import ogr
 import csv
 
 from invest_natcap.biodiversity import biodiversity_core
-from invest_natcap.iui import fileio
 
 import os.path
-import re
 import logging
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('biodiversity_biophysical')
-
 
 def execute(args):
     """Open files necessary for the biophysical portion of the biodiversity
@@ -26,7 +23,7 @@ def execute(args):
         args['landuse_cur_uri'] - a uri to an input land use/land cover raster
             (required)
         args['landuse_bas_uri'] - a uri to an input land use/land cover raster
-            (optional)
+            (optional, but required for rarity calculations)
         args['landuse_fut_uri'] - a uri to an input land use/land cover raster
             (optional)
         args['threat_uri'] - a uri to an input CSV containing data
@@ -75,6 +72,7 @@ def execute(args):
 
     biophysical_args['half_saturation'] = int(args['half_saturation_constant'])    
 
+    # if the access shapefile was provided add it to the dictionary
     try:
         biophysical_args['access_shape'] = ogr.Open(args['access_uri'])
     except KeyError:
@@ -87,22 +85,31 @@ def execute(args):
     for lu_uri, lu_time, lu_ext in ('landuse_fut_uri','fut','_f'),('landuse_bas_uri','bas','_b'):
         if lu_uri in args:
             landuse_scenarios[lu_time] = lu_ext
-    
+
+    # declare dictionaries to store the land cover rasters and the density
+    # rasters pertaining to the different threats
     landuse_dict = {}
     density_dict = {}
     
+    # for each possible land cover the was provided try opening the raster and
+    # adding it to the dictionary. Also compile all the threat/density rasters
+    # associated with the land cover
     for scenario, ext in landuse_scenarios.iteritems():
         landuse_dict[ext] = \
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
         
+        # add a key to the density dictionary that associates all density/threat
+        # rasters with this land cover
         density_dict['density'+ext] = {}
 
+        # for each threat given in the CSV file try opening the associated
+        # raster which should be found in workspace/input/
         for threat in biophysical_args['threat_dict']:
             try:
                 density_dict['density'+ext][str(threat)] = \
                     open_ambiguous_raster(os.path.join(input_dir, threat+ext))
             except:
-                LOGGER.warn('Error encountered getting raster threat : %s',
+                LOGGER.warn('Error encountered getting raster for threat : %s',
                             os.path.join(input_dir, threat+ext))
     
     biophysical_args['landuse_dict'] = landuse_dict
@@ -123,14 +130,18 @@ def open_ambiguous_raster(uri):
     # a list of possible suffixes for raster datasets. We currently can handle
     # .tif and directory paths
     possible_suffixes = ['', '.tif']
+    
+    # initialize dataset to None in the case that all paths do not exist
     dataset = None 
     for suffix in possible_suffixes:
         if not os.path.exists(uri+suffix):
             continue
         dataset = gdal.Open(uri+suffix, gdal.GA_ReadOnly)
+        # return as soon as a valid gdal dataset is found
         if dataset is not None:
             break
-    LOGGER.debug('DATASET : %s, %s', dataset, uri)
+
+    #LOGGER.debug('DATASET : %s, %s', dataset, uri)
     return dataset
 
 def make_dictionary_from_csv(csv_uri, key_field):
