@@ -31,9 +31,10 @@
         {
             "id": "multi-file",
             "type": "multi",
+            "args_id": "test_list",
             "label": "Test multi-file",
             "sampleElement": {"id": "sample_id",
-                              "type": "text",
+                              "type": "file",
                               "label": "Input raster",
                               "validateAs": {"type": "GDAL"}},
             "linkText": "Add another"

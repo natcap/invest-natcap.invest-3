@@ -784,7 +784,7 @@ class DynamicText(LabeledElement):
         
             returns a string."""
         value = self.textField.text()
-        return value
+        return str(value)
 
     def setValue(self, text):
         """Set the value of self.textField.
@@ -973,6 +973,11 @@ class MultiElement(Container):
 
             self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
             self.setMinimumSize(self.sizeHint())
+
+    def value(self):
+        """Return a python list of the values for all enclosed elements."""
+        return [r.value() for r in self.multi_widget.elements]
+
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
@@ -1872,6 +1877,7 @@ class Root(DynamicElement):
             if element.isEnabled() or always_return:
                 if 'args_id' in element.attributes:
                     element_value = element.getOutputValue()
+                    print element_value
                     if element_value != None:
 
                         args_id = element.attributes['args_id']
