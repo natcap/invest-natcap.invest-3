@@ -45,7 +45,7 @@ if platform.system() == 'Windows':
                         'invest_natcap.invest_core',
                         'invest_natcap.iui',
                         'invest_natcap.iui.dbfpy',
-			'invest_natcap.recreation',
+			            'invest_natcap.recreation',
                         'invest_natcap.sediment',
                         'invest_natcap.timber',
                         'invest_natcap.validator_core',
@@ -54,7 +54,8 @@ if platform.system() == 'Windows':
                         'invest_natcap.finfish_aquaculture',
                         'invest_natcap.marine_water_quality',
                         'invest_natcap.biodiversity',
-                        'invest_natcap.coastal_vulnerability'],
+                        'invest_natcap.coastal_vulnerability',
+                        'invest_natcap.overlap_analysis'],
             #http://www.py2exe.org/index.cgi/ListOfOptions
             'skip_archive': True
             }
@@ -121,7 +122,8 @@ setup(name='invest_natcap',
                 'invest_natcap.finfish_aquaculture',
                 'invest_natcap.marine_water_quality',
                 'invest_natcap.biodiversity',
-	        'invest_natcap.coastal_vulnerability'],
+	            'invest_natcap.coastal_vulnerability',
+                'invest_natcap.overlap_analysis'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
