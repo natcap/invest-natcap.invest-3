@@ -9,7 +9,7 @@ import logging
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('recreation')
+LOGGER = logging.getLogger('recreation_client')
 
 
 def execute(args):
