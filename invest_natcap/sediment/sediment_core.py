@@ -2,6 +2,7 @@
     including the biophysical and valuation functions"""
 
 import logging
+import bisect
 
 import scipy.sparse
 import scipy.sparse.linalg
@@ -126,7 +127,7 @@ def biophysical(args):
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
     def usle_function(ls_factor, erosivity, erodibility, usle_c_p, v_stream):
-        """Calculates the USLE equation 
+        """Calculates the USLE equation
         
         ls_factor - length/slope factor
         erosivity - related to peak rainfall events
@@ -318,11 +319,11 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
         returns a dataset whose pixel values indicate the effective retention to
             stream"""
 
-
+    effective_retention_nodata = -1.0
     effective_retention_dataset = raster_utils.new_raster_from_base(flow_direction_dataset, 
-        effective_retention_uri, 'GTiff', -1.0, gdal.GDT_Float32)
+        effective_retention_uri, 'GTiff', effective_retention_nodata, gdal.GDT_Float32)
     effective_retention_band = effective_retention_dataset.GetRasterBand(1)
-    effective_retention_band.Fill(-1.0)
+    effective_retention_band.Fill(effective_retention_nodata)
 
     flow_direction_band = flow_direction_dataset.GetRasterBand(1)
     flow_direction_nodata = flow_direction_band.GetNoDataValue()
@@ -345,7 +346,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
         if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
             return i * n_cols + j
         else:
-            return -1
+            return effective_retention_nodata
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
@@ -450,3 +451,229 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     effective_retention_band.WriteArray(result)
 
     return effective_retention_dataset
+
+def calculate_ls_factor(flow_accumulation_dataset, slope_dataset, 
+                        aspect_dataset, ls_factor_uri):
+    """Calculates the LS factor as Equation 3 from "Extension and validation 
+        of a geographic information system-based method for calculating the
+        Revised Universal Soil Loss Equation length-slope factor for erosion
+        risk assessments in large watersheds"   
+        
+        (Required that all raster inputs are same dimensions and projections
+        and have square cells)
+        flow_accumulation_dataset - a single band raster of type float that 
+            indicates the contributing area at the inlet of a grid cell
+        slope_dataset - a single band raster of type float that indicates
+            the slope at a pixel given as a proportion (e.g. a value of 0.05
+            is a slope of 5%)
+        aspect_dataset - a single band raster of type float that indicates the 
+            direction that slopes are facing in terms of radians east and
+            increase clockwise: pi/2 is north, pi is west, 3pi/2, south and 
+            0 or 2pi is east.
+        ls_factor_uri - (input) a string to the path where the LS raster will 
+            be written 
+            
+        returns a GDAL dataset that is the ls_raster as the same dimensions as 
+            inputs"""
+    
+    #Tease out all the nodata values for reading and setting
+    flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
+    flow_accumulation_nodata = flow_accumulation_band.GetNoDataValue()
+    flow_accumulation_matrix = flow_accumulation_band.ReadAsArray()
+
+    slope_band = slope_dataset.GetRasterBand(1)
+    slope_nodata = slope_band.GetNoDataValue()
+    slope_matrix = slope_band.ReadAsArray()
+
+    aspect_band = aspect_dataset.GetRasterBand(1)
+    aspect_nodata = aspect_band.GetNoDataValue()
+    aspect_matrix = aspect_band.ReadAsArray()
+
+    #Assumes that cells are square
+    cell_size = abs(flow_accumulation_dataset.GetGeoTransform()[1])
+    cell_area = cell_size ** 2
+
+    ls_nodata = -1.0
+
+    def ls_factor_function(aspect, slope, flow_accumulation, aspect_angle):
+        #Skip the calculation if any of the inputs are nodata
+        if aspect == aspect_nodata or slope == slope_nodata or \
+                flow_accumulation == flow_accumulation_nodata:
+            return ls_nodata
+
+        #Here the aspect direciton can range from 0 to 2PI, but the purpose
+        #of the term is to determine the length of the flow path on the
+        #pixel, thus we take the absolute value of each trigometric
+        #function to keep the computation in the first quadrant
+        xij = abs(np.sin(aspect_angle))+ abs(np.cos(aspect_angle))
+            
+        contributing_area = (flow_accumulation-1) * cell_area
+
+        #A placeholder for simplified slope stuff
+        slope_in_radians = np.arctan(slope)
+            
+        #From Equation 4 in "Extension and validataion of a geographic 
+        #information system ..."
+        if slope < 0.09:
+            slope_factor =  10.8*np.sin(slope_in_radians)+0.03
+        else:
+            slope_factor =  16.8*np.sin(slope_in_radians)-0.5
+            
+        #Set the m value to the lookup table that's from Yonas's handwritten
+        #notes.  On the margin it says "Equation 15".  Don't know from
+        #where.
+        beta = (np.sin(slope_in_radians) / 0.0896) / \
+            (3*pow(np.sin(slope_in_radians),0.8)+0.56)
+        slope_table = [0.01, 0.035, 0.05, 0.09]
+        exponent_table = [0.2, 0.3, 0.4, 0.5, beta/(1+beta)]
+            
+        #Use the bisect function to do a nifty range 
+        #lookup. http://docs.python.org/library/bisect.html#other-examples
+        m = exponent_table[bisect.bisect(slope_table,slope)]
+
+        #Use the bisect function to do a nifty range 
+        #lookup. http://docs.python.org/library/bisect.html#other-examples
+        m = exponent_table[bisect.bisect(slope_table,slope)]
+        #The length part of the ls_factor:
+        ls_factor = ((contributing_area+cell_area)**(m+1)- \
+                         contributing_area**(m+1)) / \
+                         ((cell_size**(m+2))*(xij**m)*(22.13**m))
+                
+        #From the paper "as a final check against exessively long slope
+        #length calculations ... cap of 333m"
+        if ls_factor > 333:
+            ls_factor = 333
+                
+        return ls_factor * slope_factor
+
+
+    #Call vectorize rasters for ls_factor
+    dataset_list = [aspect_dataset, slope_dataset, flow_accumulation_dataset, 
+                    aspect_dataset]
+    ls_factor_dataset = \
+        raster_utils.vectorize_rasters(dataset_list, ls_factor_function, \
+                                       raster_out_uri=ls_factor_uri,\
+                                       datatype=gdal.GDT_Float32, \
+                                       nodata=ls_nodata)
+
+    raster_utils.calculate_raster_stats(ls_factor_dataset)
+    return ls_factor_dataset
+
+def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset, 
+                                  erodibility_dataset, c_dataset, p_dataset,
+                                  stream_dataset, potential_soil_loss_uri):
+
+    """Calculates per-pixel potential soil loss using the RUSLE (revised 
+        universial soil loss equation).
+
+        ls_factor_dataset - GDAL dataset with the LS factor pre-calculated
+        erosivity_dataset - GDAL dataset with per pixel erosivity 
+        erodibility_dataset - GDAL dataset with per pixel erodibility
+        c_dataset - GDAL dataset per pixel crop managment factor
+        p_dataset - GDAL dataset per pixel land management factor
+        stream_dataset - GDAL dataset indicating locations with streams
+            (0 is no stream, 1 stream)
+        potential_soil_loss_uri - string input indicating the path to disk
+            for the resulting potential soil loss raster
+
+        return GDAL dataset with potential per pixel soil loss"""
+
+
+    ls_factor_nodata = ls_factor_dataset.GetRasterBand(1).GetNoDataValue()
+    erosivity_nodata = erosivity_dataset.GetRasterBand(1).GetNoDataValue()
+    erodibility_nodata = erodibility_dataset.GetRasterBand(1).GetNoDataValue()
+    c_nodata = c_dataset.GetRasterBand(1).GetNoDataValue()
+    p_nodata = p_dataset.GetRasterBand(1).GetNoDataValue()
+    stream_nodata = stream_dataset.GetRasterBand(1).GetNoDataValue()
+
+    usle_nodata = -1.0
+
+    def usle_function(ls_factor, erosivity, erodibility, usle_c, usle_p, v_stream):
+        """Calculates the USLE equation
+        
+        ls_factor - length/slope factor
+        erosivity - related to peak rainfall events
+        erodibility - related to the potential for soil to erode
+        usle_c_p - crop and practice factor which helps to abate soil erosion
+        v_stream - 1 or 0 depending if there is a stream there.  If so, no
+            potential soil loss due to USLE
+        
+        returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
+            defined, nodata if some are not defined, 0 if in a stream
+            (v_stream)"""
+
+        if ls_factor == ls_factor_nodata or erosivity == erosivity_nodata or \
+            erodibility == erodibility_nodata or usle_c == c_nodata or \
+            usle_p == p_nodata or v_stream == stream_nodata:
+            return usle_nodata
+        if v_stream == 1:
+            return 0
+        return ls_factor * erosivity * erodibility * usle_c * usle_p
+
+
+    dataset_list = [ls_factor_dataset, erosivity_dataset, erodibility_dataset, 
+                    c_dataset, p_dataset, stream_dataset]
+
+    potential_soil_loss_dataset = raster_utils.vectorize_rasters(dataset_list,
+        usle_function, raster_out_uri = potential_soil_loss_uri, 
+        datatype=gdal.GDT_Float32, nodata = usle_nodata)
+
+
+    #change units from tons per hectare to tons per cell.  We need to do this
+    #after the vectorize raster operation since we won't know the cell size
+    #until then.
+    cell_area = raster_utils.pixel_area(potential_soil_loss_dataset)
+
+    potential_soil_loss_band = potential_soil_loss_dataset.GetRasterBand(1)
+    potential_soil_loss_matrix = potential_soil_loss_band.ReadAsArray()
+    potential_soil_loss_nodata = potential_soil_loss_band.GetNoDataValue()
+    potential_soil_loss_nodata_mask = \
+        potential_soil_loss_matrix == potential_soil_loss_nodata
+
+    #current unit is tons/ha, multiply by ha/cell (cell area in m^2/100**2)
+    potential_soil_loss_matrix[potential_soil_loss_nodata_mask] *= \
+        cell_area / 10000.0
+
+    potential_soil_loss_band.WriteArray(potential_soil_loss_matrix)
+    raster_utils.calculate_raster_stats(potential_soil_loss_dataset)
+
+    return potential_soil_loss_dataset
+
+def calculate_pixel_export(potential_sediment_loss_dataset, 
+                           effective_retention_dataset, pixel_export_uri):
+    """Calculate per pixel export based on potential soil loss and the 
+        effective per pixel retention factor.
+
+        potential_sediment_loss_dataset - a gdal dataset with per pixel 
+            potential export in units of tons per pixel
+        effective_retention_dataset - a gdal dataset whose values indicate
+            the amount of potential export from a particular pixel to 
+            the stream
+        pixel_export_uri - the path to disk for the output raster
+
+        returns a dataset that has effective per pixel export to stream"""
+
+    pixel_export_nodata = -1.0
+
+    potential_sediment_loss_band = potential_sediment_loss_dataset.GetRasterBand(1)
+    potential_sediment_loss_nodata = potential_sediment_loss_band.GetNoDataValue()
+
+    effective_retention_band = effective_retention_dataset.GetRasterBand(1)
+    effective_retention_nodata = effective_retention_band.GetNoDataValue()
+
+    def pixel_export_op(potential_sediment_loss, retention):
+        """This either returns nodata in undefined areas or multplies the
+            sediment export by the effective retention"""
+        if potential_sediment_loss == potential_sediment_loss_nodata or \
+                retention == effective_retention_nodata:
+            return pixel_export_nodata
+        return potential_sediment_loss * retention
+
+    #Still call vectorize rasters for memory and/or interpolation reasons.
+    pixel_export_dataset = \
+        raster_utils.vectorize_rasters([potential_sediment_loss_dataset, \
+        effective_retention_dataset], pixel_export_op, \
+        datatype = gdal.GDT_Float32, nodata = pixel_export_nodata, \
+        raster_out_uri = pixel_export_uri)
+
+    return pixel_export_dataset
