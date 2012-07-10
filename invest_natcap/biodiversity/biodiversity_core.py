@@ -163,7 +163,7 @@ def biophysical(args):
 
                         returns - the degradation for this threat
                         """
-                    return reduce(lambda x, y: x*y, rasters)
+                    return np.prod(rasters)
                 
                 # set the raster list depending on whether the access shapefile was
                 # provided
@@ -186,7 +186,7 @@ def biophysical(args):
             # if there was at least one threat compute the total degradation
             if len(degradation_rasters) > 0:
                 def sum_degradation(*rasters):
-                    return reduce(lambda x, y: x+y, rasters)
+                    return np.sum(rasters)
                 deg_sum_uri = \
                     os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
                 sum_deg_raster = \
