@@ -166,8 +166,8 @@ def biophysical(args):
                     # there is a nodata value if this list is not empty
                     if len(filter(lambda (x,y): x==y, zip(rasters,
                         nodata_list))) == 0:
-                        return out_nodata
-                    return np.prod(rasters)
+                        return np.prod(rasters)
+                    return out_nodata
                 
                 # set the raster list depending on whether the access shapefile was
                 # provided
@@ -202,8 +202,8 @@ def biophysical(args):
                     # there is a nodata value if this list is not empty
                     if len(filter(lambda (x,y): x==y, zip(rasters,
                         deg_nodata_list))) == 0:
-                        return out_nodata
-                    return np.sum(rasters)
+                        return np.sum(rasters)
+                    return out_nodata
                 
                 deg_sum_uri = \
                     os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
