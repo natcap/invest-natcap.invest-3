@@ -8,7 +8,6 @@ from osgeo import ogr
 from invest_naptcap.overlap_analysis import overlap_analysis_core
 
 def execute(args):
-    
     '''This function will take care of preparing files passed into 
     the overlap analysis model. It will handle all files/inputs associated
     with calculations and manipulations. It will create objects to be 
@@ -43,6 +42,14 @@ def execute(args):
             activity zones as they get farther away from these locations.
         args['decay']- float between 0 and 1, representing the decay of interest
             in areas as you get farther away from human hubs.
+            
+    Output:
+        oa_args- The dictionary of all arguments that are needed by the
+            overlap_analysis_core.py class. This is the dictionary that will be
+            directly passed to that class in order to do processing for the 
+            final output of the model.
+
+    Returns nothing.
     '''
     
     global oa_args
@@ -88,6 +95,12 @@ def execute(args):
     oa_args['overlap_files'] = file_dict
     
     oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
+    
+    oa_args['import_field'] = args['import_field']
+    oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
+    oa_args['decay'] = args['decay']
+    
+    overlap_analysis_core.execute(oa_args)
     
 def format_over_table(over_tbl):
     ''' While the file actually contains names for the files, we are going to use the ID
