@@ -638,3 +638,19 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
     raster_utils.calculate_raster_stats(potential_soil_loss_dataset)
 
     return potential_soil_loss_dataset
+
+def calculate_pixel_export(potential_sediment_loss_dataset, 
+                           effective_retention_datset, pixel_export_uri):
+    """Calculate per pixel export based on potential soil loss and the 
+        effective per pixel retention factor.
+
+        potential_sediment_loss_dataset - a gdal dataset with per pixel 
+            potential export in units of tons per pixel
+        effective_retention_datset - a gdal dataset whose values indicate
+            the amount of potential export from a particular pixel to 
+            the stream
+        pixel_export_uri - the path to disk for the output raster
+
+        returns a dataset that has effective per pixel export to stream"""
+
+    pass
