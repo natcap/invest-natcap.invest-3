@@ -2,7 +2,7 @@
     "id" : "window",
     "label": "Carbon Storage and Sequestration",
     "targetScript" : "invest_natcap.carbon.carbon_biophysical",
-    "modelName" : "carbon_biophysical",
+    "modelName" : "multi_file_test_carbonish",
     "localDocURI": "../documentation/carbonstorage.html",
     "height": 600,
     "width" : 700,
@@ -30,10 +30,11 @@
         },        
         {
             "id": "multi-file",
-            "type": "multiFile",
+            "type": "multi",
+            "args_id": "test_list",
             "label": "Test multi-file",
             "sampleElement": {"id": "sample_id",
-                              "type": "text",
+                              "type": "file",
                               "label": "Input raster",
                               "validateAs": {"type": "GDAL"}},
             "linkText": "Add another"

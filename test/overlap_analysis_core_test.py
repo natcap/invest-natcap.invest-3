@@ -16,8 +16,12 @@ class TestOverlapAnalysisCore(unittest.TestCase):
         args = {}
         args['workspace'] = './data/test_out/Overlap'
         args['intermediate'] = os.path.join(args['workspace'], 'Intermediate')
+        
+        if not os.path.isdir(args['intermediate']):
+            os.makedirs(args['intermediate'])
+            
         args['map'] = './data/overlap_analysis/AOI_WCVI.shp'
-        args['dim'] = 100
+        args['dim'] = 1000
         
         self.args = args
         
