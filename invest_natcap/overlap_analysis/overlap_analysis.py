@@ -8,7 +8,6 @@ from osgeo import ogr
 from invest_naptcap.overlap_analysis import overlap_analysis_core
 
 def execute(args):
-    
     '''This function will take care of preparing files passed into 
     the overlap analysis model. It will handle all files/inputs associated
     with calculations and manipulations. It will create objects to be 
@@ -43,6 +42,14 @@ def execute(args):
             activity zones as they get farther away from these locations.
         args['decay']- float between 0 and 1, representing the decay of interest
             in areas as you get farther away from human hubs.
+            
+    Output:
+        oa_args- The dictionary of all arguments that are needed by the
+            overlap_analysis_core.py class. This is the dictionary that will be
+            directly passed to that class in order to do processing for the 
+            final output of the model.
+
+    Returns nothing.
     '''
     
     global oa_args
@@ -89,13 +96,59 @@ def execute(args):
     
     oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
     
-def format_over_table(over_tbl):
+    oa_args['import_field'] = args['import_field']
+    oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
+    oa_args['decay'] = args['decay']
     
+    overlap_analysis_core.execute(oa_args)
+    
+def format_over_table(over_tbl):
+    ''' While the file actually contains names for the files, we are going to use the ID
+    itself as an identifier for the dictionary, then just parse through the names
+    of the files to find an int in order to match them up. Since each of the files
+    is required to contain an ID at the end, this will allow us to bypass the problem
+    of names not being the same (i.e- Fish_CommGF vs CommGF_Fish).
+    
+        Input:
+            over_tbl- A CSV that contains a list of each interest shapefile, as well
+                as the unique ID that identifies it, and the optional buffers and
+                weights of the layers.
+                
+        Returns:
+            over_dict- The analysis layer dictionary that maps the unique ID of each
+                layer to the optional parameters of inter-activity weight and buffer.
+                Each ID number will map to a list containing the two values, with the
+                form being as follows ({ID: [inter-activity weight, buffer], ...}):
+                
+                {1: [2.0, 0], 2: [1.50, 0], 3: [1.50, 0], ...}
+    
+    '''
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
     
     over_dict = {}
     
-    
+    #USING EXPLICIT STRING CALLS to the layers table (these should not be unique to the
+    #type of table, but rather, are items that ALL layers tables should contain). I am
+    #casting both of the optional values to floats, since both will be used for later
+    #calculations. Casting ID number to int for ease of access later.
+    for row in reader:
+        
+        #Setting the default values for inter-activity weight and buffer, since they
+        #are not actually required to be filled in.
+        
+        #NEED TO FIGURE OUT IF THESE SHOULD BE 0 OR 1
+        inter_act = 1
+        buffer = 0
+        
+        for key in row:
+            if 'Inter-Activity' in key:
+                inter_act = float(row[key])
+            if 'Buffer' in key:
+                buffer = float(row[key])
+                
+        id_num = int(row['ID'])
+        
+        over_dict[id_num] = [inter_act, buffer]
     
     return over_dict
