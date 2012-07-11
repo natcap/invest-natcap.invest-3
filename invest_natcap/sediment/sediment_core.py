@@ -639,8 +639,8 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
 
     return potential_soil_loss_dataset
 
-def calculate_pixel_export(potential_sediment_loss_dataset, 
-                           effective_retention_dataset, pixel_export_uri):
+def multiply_rasters(potential_sediment_loss_dataset, 
+                     effective_retention_dataset, pixel_export_uri):
     """Calculate per pixel export based on potential soil loss and the 
         effective per pixel retention factor.
 
@@ -817,4 +817,4 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
 
     pixel_sediment_flow_band.WriteArray(result)
 
-    return pixel_sediment_flow_band
+    return pixel_sediment_flow_dataset
