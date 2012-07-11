@@ -784,7 +784,7 @@ class DynamicText(LabeledElement):
         
             returns a string."""
         value = self.textField.text()
-        return value
+        return str(value)
 
     def setValue(self, text):
         """Set the value of self.textField.
@@ -867,19 +867,36 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
             recursive=True)
 
-class MultiFile(Container):
+class MultiElement(Container):
+    """Defines a class that allows the user to select an arbitrary number of the
+    same input by providing an hyperlink by which to add another element.
+    Validation applies as usual and the same validation is applied to all
+    elements.  As a result, it is best to have a single multi-input element for
+    each desired validation or input type as inputs cannot be mixed and matched.
+
+    example JSON:
+        "id": "multi-file",
+        "type": "multiFile",
+        "label": "Test multi-file",
+        "sampleElement": {"id": "sample_id",
+                          "type": "text",
+                          "label": "Input raster",
+                          "validateAs": {"type": "GDAL"}},
+        "linkText": "Add another"
+    """
     class MinusButton(QtGui.QPushButton):
+        """This class defines the '-' button that is used by the MultiFile
+        class."""
         def __init__(self, row_num, parent):
-            QtGui.QPushButton.__init__(self, '-')
+            QtGui.QPushButton.__init__(self)
             self.row_num = row_num
             self.parent = parent
             self.pressed.connect(self.remove_element)
+            self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'list-remove.png')))
 
         def remove_element(self):
+            """A callback that is triggered when the button is pressed."""
             self.parent.remove_element(self.row_num)
-
-        def set_row_num(self, row_num):
-            self.row_num = row_num
 
     def __init__(self, attributes, registrar=None):
         # If the user has not defined any extra elements to be added to this
@@ -888,61 +905,74 @@ class MultiFile(Container):
             attributes['elements'] = []
 
         Container.__init__(self, attributes, registrar)
+        self.file_def = attributes['sampleElement']
 
-        self.file_def = {'id': 'tmp',
-                         'type': 'file',
-                         'label': 'testRaster?',
-                         'validateAs': {'type': 'GDAL'}}
+        if 'linkText' not in attributes:
+            attributes['linkText'] = 'Add another'
 
         group_def = {'id': 'group',
                      'type': 'list',
                      'elements': []}
 
-        print('reg', self.registrar)
         self.multi_widget = GridList(group_def, registrar=self.registrar)
         self.layout().addWidget(self.multi_widget)
         self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
 
         self.create_element_link = QtGui.QLabel('<a href=\'google.com\'' +
-            '>Select a file</a>')
-        self.create_element_link.linkActivated.connect(self.add_element)
+            '>%s</a>' % attributes['linkText'])
+        self.create_element_link.linkActivated.connect(self.add_element_callback)
         self.multi_widget.layout().addWidget(self.create_element_link,
             self.multi_widget.layout().rowCount(), 2)
 
-    def remove_element(self, row_num):
-        print row_num
-        print('removing row', row_num)
-        for element, row_num in zip(self.multi_widget.elements,
-            range(len(self.multi_widget.elements))):
-            element.elements[1].set_row_num(row_num)
-            print('set_row_num', element.elements[1].row_num)
-        del self.multi_widget.elements[row_num]
+    def add_element_callback(self, event=None):
+        """Function wrapper for add_element.  event is expected to be a Qt
+        event.  It is ignored."""
+        self.add_element()
 
-        row_num += 1  # gridlayout indices are not 0-based.
-        print ('layout row num', row_num)
+    def remove_element(self, row_num):
+        """Remove the element located at row_num in the layout.  row_num is
+            assumed to be 1-based, not zero-based."""
+
+        for element in self.multi_widget.elements:
+            element_row_num = element.elements[1].row_num
+            if element_row_num == row_num:
+                self.multi_widget.elements.remove(element)
+                break
+
         for j in range(self.multi_widget.layout().columnCount()):
-            print (row_num, j)
             sub_item = self.multi_widget.layout().itemAtPosition(row_num, j)
             sub_widget = sub_item.widget()
             self.multi_widget.layout().removeWidget(sub_widget)
             sub_widget.deleteLater()
-            print 'removing %s' % str(sub_widget)
-        print 'removed row %s' % row_num
-        print self.multi_widget.elements
 
-    def add_element(self):
+    def add_element(self, default_value=None):
+        """Add another element entry using the default element json provided by
+            the json configuration.  If default_value is not None, the value
+            provided will be set as the element's value."""
+
         row_index = self.multi_widget.layout().rowCount()
         new_element = self.multi_widget.registrar.eval(self.file_def['type'],
             self.file_def)
         new_element.updateLinks(self.root)
-        minus_button = self.MinusButton(row_index - 2, self)
-        print('adding element at row', row_index - 2)
+        minus_button = self.MinusButton(row_index - 1, self)
         new_element.elements.insert(1, minus_button)
 
-        # Open the file selection dialog.
-        new_element.button.getFileName()
+        # Only open the file dialog if a default value has not been provided by
+        # the user.
+        if default_value == None:
+            try:
+                # Open the file selection dialog.
+                new_element.button.getFileName()
+                add_element = bool(new_element.value())  # False if len(value) == 0
+            except AttributeError:
+                # Thrown if the element is not a FileEntry.  In this case, add the
+                # element.
+                add_element = True
+        else:
+            new_element.setValue(default_value)
+            add_element = True
 
-        if  len(new_element.value()) > 0:
+        if add_element:
             for subElement, col_index in zip(new_element.elements,\
                 range(len(new_element.elements))):
                 if subElement.sizeHint().isValid():
@@ -950,14 +980,22 @@ class MultiFile(Container):
                 self.multi_widget.layout().addWidget(subElement, row_index - 1,
                     col_index)
             self.multi_widget.elements.append(new_element)
-        print('elements length', len(self.multi_widget.elements))
+            self.multi_widget.layout().addWidget(self.create_element_link,
+                row_index, 2)
 
-        self.multi_widget.layout().addWidget(self.create_element_link,
-            self.multi_widget.layout().rowCount(), 2)
+            self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
+            self.setMinimumSize(self.sizeHint())
 
-        self.multi_widget.setMinimumSize(self.multi_widget.sizeHint())
-        self.setMinimumSize(self.sizeHint())
+    def value(self):
+        """Return a python list of the values for all enclosed elements."""
+        return [r.value() for r in self.multi_widget.elements]
 
+    def setValue(self, values):
+        """Set the local input values to values.  values should be a python
+            list of values to be set.  A new element will be created for each
+            item in values.   Returns nothing."""
+        for value in values:
+            self.add_element(value)
 
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
@@ -1797,8 +1835,10 @@ class Root(DynamicElement):
         #loop through all elements known to the UI, assemble into a dictionary
         #with the mapping element ID -> element value
         for id, element in self.allElements.iteritems():
-            if issubclass(element.__class__, DynamicPrimitive):
-                user_args[id] = str(element.value())
+            try:
+                user_args[id] = element.value()
+            except:
+                pass
 
         self.last_run_handler.write_to_disk(user_args)
 
@@ -2122,7 +2162,7 @@ class ElementRegistrar(registrar.Registrar):
                    'scrollGroup': ScrollArea,
                    'OGRFieldDropdown': OGRFieldDropdown,
                    'hiddenElement': StaticReturn,
-                   'multiFile': MultiFile,
+                   'multi': MultiElement,
                    'label': Label
                    }
         self.update_map(updates)
