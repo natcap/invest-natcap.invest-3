@@ -248,20 +248,74 @@ def biophysical(args):
     
     #Compute Rarity if user supplied baseline raster
     try:    
-        #Create index that represents the rarity of LULC class on landscape
+        # will throw a KeyError exception if no base raster is provided
         lulc_base = args['landuse_dict']['_b']
+        base_nodata = lulc_base.GetRasterBand(1).GetNoDataValue()
         lulc_code_count_b = raster_pixel_count(lulc_base)
+        
+        # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
                 lulc_x = args['landuse_dict'][lulc_cover]
-                lulc_code_count_x = raster_pixel_count(lulc_x)
+                lulc_nodata = lulc_x.GetRasterBand(1).GetNoDataValue()
+                
+                def trim_op(base, cover_x):
+                    """Vectorized function used in vectorized_rasters. Trim
+                        cover_x to the mask of base
+                        
+                        base - the base raster from 'lulc_base' above
+                        cover_x - either the future or current land cover raster
+                            from 'lulc_x' above
+                        
+                        return - out_nodata if base or cover_x is equal to their
+                            nodata values or the cover_x value
+                        """
+                    if base==base_nodata or cover_x==lulc_nodata:
+                        return out_nodata
+                    return cover_x
+                
+                LOGGER.debug('Create new cover for %s', lulc_cover)
+                new_cover_uri = \
+                    os.path.join(intermediate_dir, 'new_cover'+lulc_cover+'.tif')
+                # set the current/future land cover to be masked to the base
+                # land cover
+                new_cover = \
+                    raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
+                            raster_out_uri=new_cover_uri, nodata=out_nodata)
+                
+                lulc_code_count_x = raster_pixel_count(new_cover)
                 code_index = {}
+                
+                # compute the ratio or rarity index for each lulc code where we
+                # return 0.0 if an lulc code is found in the cur/fut land cover
+                # but not the baseline
                 for code in lulc_code_count_x.iterkeys():
                     try:
                         ratio = 1.0 - (lulc_code_count_x[code]/lulc_code_count_b[code])
                         code_index[code] = ratio
                     except KeyError:
                         code_index[code] = 0.0
+                
+                rarity_nodata = float(np.finfo(np.float32).tiny)
+                
+                def map_ratio(cover):
+                    """Vectorized operation used to map a dictionary to a lulc raster
+                    
+                    cover - refers to the 'new_cover' raster generated above
+                    
+                    return - rarity_nodata if code is not in the dictionary,
+                        otherwise return the rarity index pertaining to that
+                        code"""
+                    if cover in code_index:
+                        return code_index[cover]
+                    return rarity_nodata
+                
+                rarity_uri = \
+                    os.path.join(intermediate_dir, 'rarity'+lulc_cover+'.tif')
+
+                rarity = raster_utils.vectorize_rasters([new_cover], map_ratio,
+                        raster_out_uri=rarity_uri, nodata=rarity_nodata)
+                rarity = None
             except KeyError:
                 pass
     except KeyError:

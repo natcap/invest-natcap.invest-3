@@ -7,6 +7,7 @@ import random
 
 import numpy as np
 import scipy.interpolate
+import scipy.spatial.Delaunay
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -254,7 +255,14 @@ def make_sample_dem(cols, rows, height_points, roughness, nodata, out_uri):
        out_uri - filepath to save the outgoing raster
 
        returns the new GDAL Dataset"""
+
+    #Create triangles
+    delaunay_generator = scipy.spatial.Delaunay(height_points.keys())
+    heights = height_points.values()
+    #keep bisecting...
     
+    #User results of bisection below.
+
     driver = gdal.GetDriverByName('GTiff')
     dataset_type = gdal.GDT_Float32
     dataset = driver.Create(out_uri, cols, rows, 1, dataset_type)
