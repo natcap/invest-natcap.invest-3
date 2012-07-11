@@ -122,11 +122,10 @@ setup(name='invest_natcap',
                 'invest_natcap.finfish_aquaculture',
                 'invest_natcap.marine_water_quality',
                 'invest_natcap.biodiversity',
-	            'invest_natcap.coastal_vulnerability',
+                'invest_natcap.coastal_vulnerability',
                 'invest_natcap.overlap_analysis'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
                              sources = CYTHON_SOURCE_FILES)],
       **py2exe_args)
-
