@@ -12,7 +12,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Smoke test for biodiversity_biophysical function.  Shouldn't crash with \
            zero length inputs"""
 
-        raise SkipTest
+        #raise SkipTest
 
         input_dir = './data/biodiversity_regression_data/samp_input'
         out_dir = './data/test_out/biodiversity/'
@@ -36,7 +36,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Smoke test for biodiversity_biophysical function.  Shouldn't crash with \
            zero length inputs"""
         
-        #raise SkipTest
+        raise SkipTest
         
         input_dir = './data/biodiversity_data/samp_input'
         out_dir = './data/test_out/biodiversity/'
