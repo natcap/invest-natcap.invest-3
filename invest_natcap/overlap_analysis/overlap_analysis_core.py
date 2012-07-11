@@ -43,8 +43,12 @@ def gridder(inter_dir, URI, dimension):
     os.chdir(inter_dir)
     
     driver = ogr.GetDriverByName('ESRI Shapefile')
+    
+    if os.path.exists('gridded_shapefile.shp'):
+            driver.DeleteDataSource('gridded_shapefile.shp')
+            
     grid_shp = driver.CreateDataSource('gridded_shapefile.shp')
-    layer = grid_shp.CreateLayer('Layer 1', spat_ref, ogr.wkbPoint)
+    layer = grid_shp.CreateLayer('Layer 1', spat_ref, ogr.wkbPolygon)
     
     field_def = ogr.FieldDefn('ID', ogr.OFTInteger)
     layer.CreateField(field_def)
@@ -55,13 +59,13 @@ def gridder(inter_dir, URI, dimension):
     #In order to make sure that we cover the ENTIRE area, we will have to "round up"
     #in terms of the number of squares we create. So, we need to cast the dividend to
     #a double in order to get a double out that can be rounded up if not an integer.
-    num_x = math.ceil(float(xsize) / dimension)
-    num_y = math.ceil(float(ysize) / dimension)
+    num_x = int(math.ceil(float(xsize) / dimension))
+    num_y = int(math.ceil(float(ysize) / dimension))
     
     #Now, loop through all potential blocks that need to be created, and add them to our
     #new shapefile. Counter just allows us to give each of the grid cells a unique
     #identifier for a value.
-    counter = 1
+    counter = 0
     
     for i in range (0, num_y):
         for j in range (0, num_x):
@@ -72,7 +76,7 @@ def gridder(inter_dir, URI, dimension):
             out_edge.AddPoint(lhs + (i+1) * dimension, ts + j * dimension)
             out_edge.AddPoint(lhs + (i * dimension), ts + (j+1) * dimension)
             out_edge.AddPoint(lhs + (i+1) * dimension, ts + (j+1) * dimension)
-            out_edge.CloseRing()
+            out_edge.CloseRings()
             
             square = ogr.Geometry(ogr.wkbPolygon)
             square.AddGeometry(out_edge)
