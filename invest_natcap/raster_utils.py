@@ -1102,7 +1102,16 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
         out_dataset_uri - path to disk for the clipped
 
         returns the clipped dataset that lives at out_dataset_uri"""
-    pass
+
+    band, nodata = extract_band_and_nodata(source_dataset)
+
+    def op(x):
+        return x
+
+    clipped_dataset = vectorize_rasters([source_dataset], op, aoi=aoi_datasource, 
+                      raster_out_uri = out_dataset_uri, 
+                      datatype = band.DataType, nodata=nodata)
+    return clipped_dataset
 
 def extract_band_and_nodata(dataset, get_array = False):
     """It's often useful to get the first band and corresponding nodata value
