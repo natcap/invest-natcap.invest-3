@@ -301,6 +301,33 @@ class PrimitiveCheckerTester(CheckerTester):
         self.validate_as['allowedValues']['pattern'] = '[a-z]+.+'
         self.assertNoError()
 
+    def test_list_pattern(self):
+        """Assert that PrimitiveChecker uses list pattern like '|'"""
+        self.validate_as['value'] = 'a'
+        self.validate_as['allowedValues']['pattern'] = ['a', 'b', 'c']
+        self.assertNoError()
+
+        # Now check something that should fail
+        self.validate_as['value'] = 'aa'
+        self.assertError()
+
+    def test_pattern_dictionary(self):
+        """Assert that PrimitiveChecker supports dict regexp definitions"""
+        self.validate_as['value'] = 'a'
+        self.validate_as['allowedValues']['pattern'] = {'join': '|',\
+            'sub': '^%s$', 'values': ['a', 'b', 'c']}
+        self.assertNoError()
+
+        del self.validate_as['allowedValues']['pattern']['join']
+        self.assertNoError()
+
+        del self.validate_as['allowedValues']['pattern']['sub']
+        self.assertNoError()
+
+        del self.validate_as['allowedValues']['pattern']['values']
+        self.assertNoError()
+
+
 class NumberCheckerTester(CheckerTester):
     """Test the class iui_validator.NumberChecker"""
     def setUp(self):

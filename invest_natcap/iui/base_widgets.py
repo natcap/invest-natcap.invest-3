@@ -997,6 +997,15 @@ class MultiElement(Container):
         for value in values:
             self.add_element(value)
 
+    def resetValue(self):
+        """Reimplemented from the Container class.  Removes all rows."""
+
+        # Need to make a deep copy of the elements so we don't have some
+        # conflict with self.remove_element.
+        elements = self.multi_widget.elements[:]
+        for element in elements:
+            self.remove_element(element.elements[1].row_num)
+
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
         layout manager."""
