@@ -633,6 +633,22 @@ class PrimitiveChecker(Checker):
                 string is provided, no flags are applied to the regular
                 expression matching.
 
+            example valid_dicts:
+                # This would try to match '[a-z_]* in 'sample_string_pattern'
+                valid_dict = {'value' : 'sample_string pattern',
+                              'allowed_values' : {'pattern': '[a-z_]*'}}
+
+                # This would try to match '^test$|^word$' in 'sample_list_pattern'
+                valid_dict = {'value' : 'sample_list_pattern',
+                              'allowed_values': {'pattern': ['test', 'word']}}
+
+                # This would try to match 'test.words' in sample_dict_pattern
+                valid_dict = {'value' : 'sample_dict_pattern',
+                              'allowed_values': {'pattern': {
+                                  'values': ['test', 'words'],
+                                  'join': '.',
+                                  'sub': '%s'}
+
             This function builds a single regular expression string (if
             necessary) and checks to see if valid_dict['value'] matches that
             string.  If not, a python string with an error message is returned.
