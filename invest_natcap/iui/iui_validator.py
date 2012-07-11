@@ -607,11 +607,26 @@ class PrimitiveChecker(Checker):
             # Attempt to build a regexp object based on the user's provided
             # regex.  Raises a KeyError if the user has not provided a regular
             # expression to use.
-            user_pattern = valid_dict['allowedValues']['pattern']
-            # if user's pattern is a list, assume logical OR regular expression.
-            # Build a string to make it so.
-            if isinstance(user_pattern, list):
-                user_pattern = '|'.join(user_pattern)
+            valid_pattern = valid_dict['allowedValues']['pattern']
+            if isinstance(valid_pattern, str):
+                user_pattern = valid_pattern
+            else:
+                pattern_dict = {}
+                if isinstance(valid_pattern, dict):
+                    pattern_dict = valid_pattern.copy()
+                elif isinstance(valid_pattern, list):
+                    pattern_dict['values'] = valid_pattern
+
+                if 'join' not in pattern_dict:
+                    pattern_dict['join'] = '|'
+                if 'sub' not in pattern_dict:
+                    pattern_dict['sub'] = '^%s$'
+                if 'values' not in pattern_dict:
+                    pattern_dict['values'] = ['.*']
+
+                rendered_list = [pattern_dict['sub'] % r for r in
+                    pattern_dict['values']]
+                user_pattern = pattern_dict['join'].join(rendered_list)
         except KeyError:
             # If the user has not provided a regular expression, we should use
             # the default regular expression instead.
