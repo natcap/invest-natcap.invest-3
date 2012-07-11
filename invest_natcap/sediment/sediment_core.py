@@ -346,7 +346,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
         if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
             return i * n_cols + j
         else:
-            return effective_retention_nodata
+            return -1
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
@@ -720,7 +720,7 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
         if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
             return i * n_cols + j
         else:
-            return effective_retention_nodata
+            return -1
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
@@ -735,14 +735,14 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
     #Determine the outflow directions based on index offsets.  It's written 
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
-    outflow_directions = {( 0, 1): (0.0/4.0 * np.pi, 5, False),
-                         (-1, 1): (1.0/4.0 * np.pi, 2, True),
-                         (-1, 0): (2.0/4.0 * np.pi, 1, False),
-                         (-1,-1): (3.0/4.0 * np.pi, 0, True),
-                         ( 0,-1): (4.0/4.0 * np.pi, 3, False),
-                         ( 1,-1): (5.0/4.0 * np.pi, 6, True),
-                         ( 1, 0): (6.0/4.0 * np.pi, 7, False),
-                         ( 1, 1): (7.0/4.0 * np.pi, 8, True)}
+    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5, False),
+                         (-1, 1): (5.0/4.0 * np.pi, 2, True),
+                         (-1, 0): (6.0/4.0 * np.pi, 1, False),
+                         (-1,-1): (7.0/4.0 * np.pi, 0, True),
+                         ( 0,-1): (0.0/4.0 * np.pi, 3, False),
+                         ( 1,-1): (1.0/4.0 * np.pi, 6, True),
+                         ( 1, 0): (2.0/4.0 * np.pi, 7, False),
+                         ( 1, 1): (3.0/4.0 * np.pi, 8, True)}
 
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for row_index in range(n_rows):
@@ -754,31 +754,35 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
             #Check to see if the current flow angle is defined, if not then
             #set local flow accumulation to 0
             local_flow_angle = flow_direction_array[cell_index]
-            if local_flow_angle == flow_direction_nodata:
-                #We could flow off the edge
-                b_vector[cell_index] = 1.0
-                continue
+            local_retention = retention_efficiency_array[cell_index]
+            local_sediment_loss = potential_sediment_loss_array[cell_index]
 
-            #Determine outflow neighbors
-            sink = True
-            total_fraction = 0.0
-            fraction_count = 0
-            for (row_offset, col_offset), (outflow_angle, diagonal_offset, diagonal_outflow) in \
-                    outflow_directions.iteritems():
+            if local_sediment_loss == potential_sediment_loss_nodata or \
+                    local_retention == retention_efficiency_nodata or \
+                    local_flow_angle == flow_direction_nodata:
+                #if the local sediment is undefined we're gonna have a bad time
+                #set to nodata value
+                b_vector[cell_index] = pixel_sediment_flow_nodata
+
+            b_vector[cell_index] = local_sediment_loss
+
+            #Determine inflow neighbors
+            for (row_offset, col_offset), (inflow_angle, diagonal_offset, diagonal_inflow) in \
+                    inflow_directions.iteritems():
                 try:
                     neighbor_index = calc_index(row_index+row_offset,
                                                 col_index+col_offset)
 
-                    #If this delta is within pi/4 it means there's an outflow
+                    #If this delta is within pi/4 it means there's an inflow
                     #direction, see diagram on pg 36 of Rich's notes
-                    delta = abs(local_flow_angle - outflow_angle)
+                    delta = abs(local_flow_angle - inflow_angle)
 
                     if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
                         neighbor_retention = retention_efficiency_array[neighbor_index]
                         if neighbor_retention == retention_efficiency_nodata:
                             continue
 
-                        if diagonal_outflow:
+                        if diagonal_inflow:
                             #We want to measure the far side of the unit triangle
                             #so we measure that angle UP from theta = 0 on a unit
                             #circle
@@ -786,26 +790,20 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
 
                         #Taking absolute value because it might be on a 0,-45 
                         #degree angle
-                        outflow_fraction = abs(np.tan(delta))
-                        if not diagonal_outflow:
+                        inflow_fraction = abs(np.tan(delta))
+                        if not diagonal_inflow:
                             #If not diagonal then we measure the direct flow in
                             #which is the inverse of the tangent function
-                            outflow_fraction = 1-outflow_fraction
+                            inflow_fraction = 1-inflow_fraction
                         
                         #Finally set the appropriate inflow variable
                         a_matrix[diagonal_offset, neighbor_index] = \
-                            -outflow_fraction * (1.0-neighbor_retention)
-                        sink = False
-                        total_fraction += outflow_fraction
-                        fraction_count += 1
+                            -inflow_fraction * local_retention
 
                 except IndexError:
                     #This will occur if we visit a neighbor out of bounds
                     #it's okay, just skip it
                     pass
-            #A sink will have 100% export (to stream)
-            if sink:
-                b_vector[cell_index] = 1.0
 
     matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
                                   format="csc")
