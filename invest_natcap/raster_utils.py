@@ -1102,5 +1102,23 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
         out_dataset_uri - path to disk for the clipped
 
         returns the clipped dataset that lives at out_dataset_uri"""
-
     pass
+
+def extract_band_and_nodata(dataset, get_array = False):
+    """It's often useful to get the first band and corresponding nodata value
+        for a dataset.  This function does that.
+
+        dataset - a GDAL dataset
+        get_array - if True also returns the dataset as a numpy array
+
+        returns (first GDAL band in dataset, nodata value for that band"""
+
+    band = dataset.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    if get_array:
+        array = band.ReadAsArray()
+        return band, nodata, array
+
+    #Otherwise just return the band and nodata
+    return band, nodata
