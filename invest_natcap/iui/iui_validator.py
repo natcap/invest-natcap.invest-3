@@ -593,6 +593,51 @@ class PrimitiveChecker(Checker):
                              'dotAll': re.DOTALL}
 
     def check_regexp(self, valid_dict):
+        """Check an input regular expression contained in valid_dict.
+
+            valid_dict - a python dictionary with the following structure:
+            valid_dict['value'] - (required) a python string to be matched
+            valid_dict['allowed_values'] - (required) a python dictionary with the
+                following entries:
+            valid_dict['allowed_values']['pattern'] - ('required') must match
+                one of the following formats:
+                    * A python string regular expression formatted according to
+                      the re module (http://docs.python.org/library/re.html)
+                    * A python list of values to be matched.  These are treated
+                      as logical or ('|' in the built regular expression).  Note
+                      that the entire input pattern will be matched if you use
+                      this option.  For more fine-tuned matching, use the dict
+                      described below.
+                    * A python dict with the following entries:
+                        'values' - (optional) a python list of strings that are
+                            joined by the 'join' key to create a single regular
+                            expression.  If this a 'values' list is not
+                            provided, it's assumed to be ['.*'], which matches
+                            all patterns.
+                        'join' - (optional) the character with which to join all
+                            provided values to form a single regular expression.
+                            If the 'join' value is not provided, it defaults to
+                            '|', the operator for logical or.
+                        'sub' - (optional) a string on which string substitution
+                            will be performed for all elements in the 'values'
+                            list.  If this value is not provided, it defaults to
+                            '^%s$', which causes the entire string to be
+                            matched.  This string uses python's standard string
+                            formatting operations:
+                            http://docs.python.org/library/stdtypes.html#string-formatting-operations
+                            but should only use a single '%s'
+            valid_dict['allowed_values']['flag'] - (optional) a python string
+                representing one of the python re module's available
+                regexp flags.  Available values are: 'ignoreCase', 'verbose',
+                'debug', 'locale', 'multiline', 'dotAll'.  If a different
+                string is provided, no flags are applied to the regular
+                expression matching.
+
+            This function builds a single regular expression string (if
+            necessary) and checks to see if valid_dict['value'] matches that
+            string.  If not, a python string with an error message is returned.
+            Otherwise, None is returned.
+            """
         try:
             # Attempt to get the user's selected flag from the validation
             # dictionary.  Raises a KeyError if it isn't found.
@@ -604,39 +649,59 @@ class PrimitiveChecker(Checker):
             flag = 0
 
         try:
-            # Attempt to build a regexp object based on the user's provided
-            # regex.  Raises a KeyError if the user has not provided a regular
+            # Attempt to build a regexp object based on the regex info.
+            # Raises a KeyError if the user has not provided a regular
             # expression to use.
             valid_pattern = valid_dict['allowedValues']['pattern']
+
+            # If the user's provided pattern is a string, we should use it
+            # directly and assume it's a stright-up regular expression.
             if isinstance(valid_pattern, str):
                 user_pattern = valid_pattern
             else:
-                pattern_dict = {}
-                if isinstance(valid_pattern, dict):
-                    pattern_dict = valid_pattern.copy()
-                elif isinstance(valid_pattern, list):
-                    pattern_dict['values'] = valid_pattern
+                # If the user provides a data structure instead of a string, we
+                # should build a regular expression from the user's information.
+                try:
+                    join_char = valid_pattern['join']
+                except (KeyError, TypeError):
+                    # KeyError thrown when 'join' key does not exist.
+                    # TypeError thrown when valid_pattern is not a dict.
+                    join_char = '|'
 
-                if 'join' not in pattern_dict:
-                    pattern_dict['join'] = '|'
-                if 'sub' not in pattern_dict:
-                    pattern_dict['sub'] = '^%s$'
-                if 'values' not in pattern_dict:
-                    pattern_dict['values'] = ['.*']
+                try:
+                    sub_string = valid_pattern['sub']
+                except (KeyError, TypeError):
+                    # KeyError thrown when 'sub' key does not exist.
+                    # TypeError thrown when valid_pattern is not a dict.
+                    sub_string = '^%s$'
 
-                rendered_list = [pattern_dict['sub'] % r for r in
-                    pattern_dict['values']]
-                user_pattern = pattern_dict['join'].join(rendered_list)
+                try:
+                    value_list = valid_pattern['values']
+                except KeyError:
+                    # Thrown when the user does not provide a list of values
+                    value_list = ['.*']
+                except TypeError:
+                    # Thrown when valid_pattern is not a dictionary.
+                    # value_list must be a python list, so we should convert
+                    # whatever is given us into a list.  Casting a list to a
+                    # list results in a list.
+                    value_list = list(valid_pattern)
+
+                # Apply the user's configuration options to all values defined
+                # and actually build a single regular expression string for
+                # python's re module.
+                rendered_list = [sub_string % r for r in value_list]
+                user_pattern = join_char.join(rendered_list)
         except KeyError:
             # If the user has not provided a regular expression, we should use
             # the default regular expression instead.
             user_pattern = self.default_regexp
 
         pattern = re.compile(user_pattern, flag)
-        value = valid_dict['value']
-        if pattern.match(str(self.value)) == None:
+        value = valid_dict['value']  # the value to compare against our regex
+        if pattern.match(str(value)) == None:
             return str("Value '%s' not allowed (allowed values: %s)" %
-                (self.value, user_pattern))
+                (value, user_pattern))
 
 class NumberChecker(PrimitiveChecker):
     def __init__(self):
