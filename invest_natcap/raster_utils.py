@@ -1091,3 +1091,16 @@ def calculate_slope(dem_dataset, slope_uri):
     calculate_raster_stats(slope_dataset)
 
     return slope_dataset
+
+def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
+    """This function will clip source_dataset to the bounding box of the 
+        polygons in aoi_datasource and mask out the values in source_dataset
+        outside of the AOI with the nodata values in source_dataset.
+
+        source_dataset - single band GDAL dataset to clip
+        aoi_datasource - collection of polygons
+        out_dataset_uri - path to disk for the clipped
+
+        returns the clipped dataset that lives at out_dataset_uri"""
+
+    pass
