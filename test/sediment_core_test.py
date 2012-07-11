@@ -115,8 +115,11 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
         pixel_export_uri = os.path.join(base_dir, 'pixel_export.tif')
         sediment_core.calculate_pixel_export(potential_sediment_export_dataset,
                                              effective_retention_dataset, pixel_export_uri)
-                                             
+
+        pixel_sediment_flow_uri = os.path.join(base_dir, 'pixel_sed_flow.tif')
+        sediment_core.pixel_sediment_flow(potential_sediment_export_dataset, \
+            flow_dataset, sedret_eff_dataset, pixel_sediment_flow_uri)
 
         subprocess.Popen(["qgis", ls_uri, dem_uri, flow_uri, flow_accumulation_uri, c_uri, 
                           p_uri, erosivity_uri, erodibility_uri, potential_soil_loss_uri,
-                          effective_retention_uri, pixel_export_uri])
+                          effective_retention_uri, pixel_export_uri, pixel_sediment_flow_uri])
