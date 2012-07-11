@@ -21,7 +21,7 @@ class TestOverlapAnalysisCore(unittest.TestCase):
             os.makedirs(args['intermediate'])
             
         args['map'] = './data/overlap_analysis/AOI_WCVI.shp'
-        args['dim'] = 100
+        args['dim'] = 1000
         
         self.args = args
         
