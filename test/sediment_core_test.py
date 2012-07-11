@@ -113,7 +113,7 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
                 sedret_eff_dataset, stream_dataset, effective_retention_uri)
 
         pixel_export_uri = os.path.join(base_dir, 'pixel_export.tif')
-        sediment_core.multiply_rasters(potential_sediment_export_dataset,
+        sediment_core.calculate_per_pixel_export(potential_sediment_export_dataset,
                                        effective_retention_dataset, pixel_export_uri)
 
         pixel_sediment_flow_uri = os.path.join(base_dir, 'pixel_sed_flow.tif')
@@ -123,7 +123,7 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
 
         sediment_retained_uri = os.path.join(base_dir, 'pixel_retained.tif')
 
-        sediment_core.multiply_rasters(pixel_sediment_core_dataset,
+        sediment_core.calculate_pixel_retained(pixel_sediment_core_dataset,
             sedret_eff_dataset, sediment_retained_uri)
 
         subprocess.Popen(["qgis", ls_uri, dem_uri, flow_uri, flow_accumulation_uri, c_uri, 

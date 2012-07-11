@@ -639,7 +639,7 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
 
     return potential_soil_loss_dataset
 
-def multiply_rasters(potential_sediment_loss_dataset, 
+def calculate_per_pixel_export(potential_sediment_loss_dataset, 
                      effective_retention_dataset, pixel_export_uri):
     """Calculate per pixel export based on potential soil loss and the 
         effective per pixel retention factor.
@@ -818,3 +818,37 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
     pixel_sediment_flow_band.WriteArray(result)
 
     return pixel_sediment_flow_dataset
+
+def calculate_pixel_retained(pixel_sediment_flow_dataset, 
+                             retention_efficiency_dataset,
+                             per_pixel_retained_uri):
+    """Creates a raster of total sediment retention in each pixel.
+    
+        pixel_sediment_flow_dataset - a gdal dataset with per pixel 
+            sediment outflow
+        retention_efficiency_dataset - (input) raster indicating percent of 
+            sediment retained per pixel.  
+        pixel_retained_uri - (input) The URI to the output dataset
+
+        returns a dataset that has an amount of sediment in tons outflowing
+            from each pixel"""
+
+
+    pixel_sediment_flow_band = pixel_sediment_flow_dataset.GetRasterBand(1)
+    pixel_sediment_flow_nodata = pixel_sediment_flow_band.GetNoDataValue()
+    pixel_sediment_flow_array = pixel_sediment_flow_band.ReadAsArray().flatten()
+
+    retention_efficiency_band = retention_efficiency_dataset.GetRasterBand(1)
+    retention_efficiency_nodata = retention_efficiency_band.GetNoDataValue()
+    retention_efficiency_array = retention_efficiency_band.ReadAsArray().flatten()
+
+    pixel_retained_nodata = -1.0
+    pixel_retained_dataset = raster_utils.new_raster_from_base(pixel_sediment_flow_dataset, 
+        per_pixel_retained_uri, 'GTiff', pixel_retained_nodata, gdal.GDT_Float32)
+    pixel_retained_band = pixel_retained_dataset.GetRasterBand(1)
+    pixel_retained_band.Fill(pixel_retained_nodata)
+
+    n_rows = pixel_retained_dataset.RasterYSize
+    n_cols = pixel_retained_dataset.RasterXSize
+
+    return pixel_retained_dataset
