@@ -274,7 +274,7 @@ def biophysical(args):
                         """
                     if base==base_nodata or cover_x==lulc_nodata:
                         return out_nodata
-                    return cover_x
+                    return float(cover_x) 
                 
                 LOGGER.debug('Create new cover for %s', lulc_cover)
                 new_cover_uri = \
