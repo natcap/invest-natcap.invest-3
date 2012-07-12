@@ -72,7 +72,7 @@ def biophysical(args):
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
-    # initialize the weight_sum
+    # calculate the weight sum which is the sum of all the threats weights
     weight_sum = 0.0
     for threat_data in threat_dict.itervalues():
         #Sum weight of threats
@@ -88,7 +88,11 @@ def biophysical(args):
             # initialize a list that will store all the density/threat rasters
             # after they have been adjusted for distance, weight, and access
             degradation_rasters = []
-            deg_nodata_list = []
+            
+            # intitialize a list to store raster nodata values that correspond
+            # to the rasters stored in 'degradation_rasters' above
+            deg_adjusted_nodata_list = []
+
             # adjust each density/threat raster for distance, weight, and access 
             for threat, threat_data in threat_dict.iteritems():
                 LOGGER.debug('Calculating threat : %s', threat)
@@ -164,23 +168,23 @@ def biophysical(args):
                         returns - the degradation for this threat
                         """
                     # there is a nodata value if this list is not empty
-                    if len(filter(lambda (x,y): x==y, zip(rasters,
-                        nodata_list))) == 0:
-                        return np.prod(rasters)
+                    if len(filter(lambda (x,y): x==y, \
+                               zip(rasters, adjusted_nodata_list))) == 0:
+                        return np.prod(rasters) * weight_avg
                     return out_nodata
                 
-                # set the raster list depending on whether the access shapefile was
-                # provided
-                ras_list = []
-                nodata_list = []
+                # set the adjusted raster list depending on whether the 
+                # access shapefile was provided
+                adjusted_list = []
+                adjusted_nodata_list = []
                 if access_raster is None:
-                    ras_list = [filtered_raster, sensitivity_raster]
-                    nodata_list =\
+                    adjusted_list = [filtered_raster, sensitivity_raster]
+                    adjusted_nodata_list =\
                         [filtered_raster.GetRasterBand(1).GetNoDataValue(),
                          sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
                 else:
-                    ras_list = [filtered_raster, sensitivity_raster, access_raster]
-                    nodata_list =\
+                    adjusted_list = [filtered_raster, sensitivity_raster, access_raster]
+                    adjusted_nodata_list =\
                         [filtered_raster.GetRasterBand(1).GetNoDataValue(),
                          sensitivity_raster.GetRasterBand(1).GetNoDataValue(),
                          access_raster.GetRasterBand(1).GetNoDataValue()]
@@ -189,19 +193,19 @@ def biophysical(args):
                     os.path.join(intermediate_dir,
                                  str('deg_'+threat+lulc_key+'.tif'))
                 deg_ras =\
-                    raster_utils.vectorize_rasters(ras_list, \
+                    raster_utils.vectorize_rasters(adjusted_list, \
                         partial_degradation, raster_out_uri=deg_uri,\
                         nodata=out_nodata)
                 
                 degradation_rasters.append(deg_ras)
-                deg_nodata_list.append(deg_ras.GetRasterBand(1).GetNoDataValue())
+                deg_adjusted_nodata_list.append(deg_ras.GetRasterBand(1).GetNoDataValue())
 
             # if there was at least one threat compute the total degradation
             if len(degradation_rasters) > 0:
                 def sum_degradation(*rasters):
                     # there is a nodata value if this list is not empty
                     if len(filter(lambda (x,y): x==y, zip(rasters,
-                        deg_nodata_list))) == 0:
+                        deg_adjusted_nodata_list))) == 0:
                         return np.sum(rasters)
                     return out_nodata
                 
