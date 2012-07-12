@@ -252,8 +252,8 @@ def biophysical(args):
         lulc_base = args['landuse_dict']['_b']
         base_nodata = lulc_base.GetRasterBand(1).GetNoDataValue()
         lulc_code_count_b = raster_pixel_count(lulc_base)
-        #rarity_nodata = float(np.finfo(np.float32).tiny)
-        rarity_nodata = -1000.0
+        rarity_nodata = float(np.finfo(np.float32).min)
+        
         # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
@@ -283,7 +283,8 @@ def biophysical(args):
                 # land cover
                 new_cover = \
                     raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
-                            raster_out_uri=new_cover_uri, nodata=out_nodata)
+                            raster_out_uri=new_cover_uri,
+                            datatype=gdal.GDT_Int32, nodata=out_nodata)
                 
                 lulc_code_count_x = raster_pixel_count(new_cover)
                 code_index = {}
@@ -293,7 +294,7 @@ def biophysical(args):
                 # but not the baseline
                 for code in lulc_code_count_x.iterkeys():
                     try:
-                        ratio = 1.0 - (lulc_code_count_x[code]/lulc_code_count_b[code])
+                        ratio = 1.0 - (float(lulc_code_count_x[code])/lulc_code_count_b[code])
                         code_index[code] = ratio
                     except KeyError:
                         code_index[code] = 0.0
