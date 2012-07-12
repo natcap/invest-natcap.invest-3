@@ -252,13 +252,15 @@ def biophysical(args):
         lulc_base = args['landuse_dict']['_b']
         base_nodata = lulc_base.GetRasterBand(1).GetNoDataValue()
         lulc_code_count_b = raster_pixel_count(lulc_base)
-        
+        #rarity_nodata = float(np.finfo(np.float32).tiny)
+        rarity_nodata = -1000.0
         # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
                 lulc_x = args['landuse_dict'][lulc_cover]
                 lulc_nodata = lulc_x.GetRasterBand(1).GetNoDataValue()
-                
+                LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
+                        lulc_nodata) 
                 def trim_op(base, cover_x):
                     """Vectorized function used in vectorized_rasters. Trim
                         cover_x to the mask of base
@@ -295,8 +297,6 @@ def biophysical(args):
                         code_index[code] = ratio
                     except KeyError:
                         code_index[code] = 0.0
-                
-                rarity_nodata = float(np.finfo(np.float32).tiny)
                 
                 def map_ratio(cover):
                     """Vectorized operation used to map a dictionary to a lulc raster
