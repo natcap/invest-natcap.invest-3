@@ -55,6 +55,7 @@ class DynamicElement(QtGui.QWidget):
         self.enabledBy = None #a pointer to an element, if an ID is specified.
         self.enables = [] #a list of pointers
         self.requiredIf = [] #a list of pointers
+        self.triggers = {}  # a dictionary of trigger strings -> pointers
 
         #initialize the elements array in case the user has defined sub-elements
         self.elements = []
@@ -88,6 +89,23 @@ class DynamicElement(QtGui.QWidget):
             idString = self.attributes['enabledBy']
             self.enabledBy = self.root.allElements[idString]
             self.enabledBy.enables.append(self)
+
+        # Triggers is expected to be a dictionary.
+        try:
+            for key, id_string in self.attributes['triggers'].iteritems():
+                try:
+                    self.triggers[key] = self.root.allElements[id_string]
+                except KeyError:
+                    print 'trigger element id \'%s\' not found' % id_string
+        except KeyError:
+            # If no triggers dictionary exists, pass cause we don't care that
+            # the user doesn't want to take advantage of these sweet triggers.
+            pass
+        except AttributeError:
+            # if self.attributes['triggers'] does not have the function
+            # iteritems(), it probably wasn't a dict.  Print a message to stdout
+            # and pass.
+            print 'attributes[\'triggers\'] must be a dictionary.'
 
         #requiredIf is a list
         if 'requiredIf' in self.attributes:
