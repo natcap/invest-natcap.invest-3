@@ -55,6 +55,7 @@ class DynamicElement(QtGui.QWidget):
         self.enabledBy = None #a pointer to an element, if an ID is specified.
         self.enables = [] #a list of pointers
         self.requiredIf = [] #a list of pointers
+        self.triggers = {}  # a dictionary of trigger strings -> pointers
 
         #initialize the elements array in case the user has defined sub-elements
         self.elements = []
@@ -82,12 +83,28 @@ class DynamicElement(QtGui.QWidget):
             have the ability to be enabled by other elements"""
 
         self.root = rootPointer
-
         #enabledBy is only a single string ID
         if 'enabledBy' in self.attributes:
             idString = self.attributes['enabledBy']
             self.enabledBy = self.root.allElements[idString]
             self.enabledBy.enables.append(self)
+
+        # Triggers is expected to be a dictionary.
+        try:
+            for key, id_string in self.attributes['triggers'].iteritems():
+                try:
+                    self.triggers[key] = self.root.allElements[id_string]
+                except KeyError:
+                    print 'trigger element id \'%s\' not found' % id_string
+        except KeyError:
+            # If no triggers dictionary exists, pass cause we don't care that
+            # the user doesn't want to take advantage of these sweet triggers.
+            pass
+        except AttributeError:
+            # if self.attributes['triggers'] does not have the function
+            # iteritems(), it probably wasn't a dict.  Print a message to stdout
+            # and pass.
+            print 'attributes[\'triggers\'] must be a dictionary.'
 
         #requiredIf is a list
         if 'requiredIf' in self.attributes:
@@ -114,10 +131,12 @@ class DynamicElement(QtGui.QWidget):
 
     def setState(self, state, includeSelf=True, recursive=True):
         if includeSelf:
+            self.setEnabled(state)
             for element in self.elements:
                 element.setEnabled(state)
 
         if recursive:
+            state = self.requirementsMet()
             for element in self.enables:
                 element.setState(state)
 
@@ -345,6 +364,7 @@ class DynamicPrimitive(DynamicElement):
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
             self.error_button.deactivate()
+            self.setBGcolorSatisfied(True)
         else:
             self.validate()
 
@@ -692,10 +712,12 @@ class DynamicText(LabeledElement):
 
             returns nothing."""
 
-        # Enable/disable necessary elements before validating.
-        self.setState(self.requirementsMet(), includeSelf=False)
         self.setBGcolorSatisfied(True)  # assume valid until validation fails
-        self.validate()
+        if self.validator != None:
+            self.validate()
+        else:
+            self.setState(self.requirementsMet(), includeSelf=False,
+                recursive=True)
 
 
     def setValidateField(self, regexp):
@@ -1302,12 +1324,12 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         #connect the button to the toggle function.
         self.toggled.connect(self.toggle)
 
-    def toggle(self, isChecked):
+    def toggle(self, event=None):
         """Enable/disable all elements controlled by this element.
         
             returns nothing."""
 
-        self.setState(isChecked, includeSelf=False)
+        self.setState(self.value(), includeSelf=False)
 
 #    def isEnabled(self):
 #        """Check to see if this element is checked.
@@ -1348,7 +1370,7 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         self.setState(value, includeSelf=False)
 
     def requirementsMet(self):
-        return self.value()
+        return self.isChecked()
 
     def setBGcolorSatisfied(self, state):
         pass
