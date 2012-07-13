@@ -250,7 +250,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
     LOGGER.debug('calculating the overlapping rectangles')
-    aoi_box = calculate_intersection_rectangle(dataset_list)
+    aoi_box = calculate_intersection_rectangle(dataset_list, aoi)
     LOGGER.debug('the aoi box: %s' % aoi_box)
 
     #determine the minimum pixel size
@@ -334,8 +334,9 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     #Check to see if all the input datasets are equal, if so then we
-    #don't need to interpolate them
-    all_equal = True
+    #don't need to interpolate them, but if there's an AOI you always need to interpolate, 
+    #so initializing to aoi == None (True if no aoi)
+    all_equal = aoi == None
     for dim_fun in [lambda ds: ds.RasterXSize, lambda ds: ds.RasterYSize]:
         sizes = map(dim_fun, dataset_list)
         all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
@@ -433,7 +434,6 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             if gt[5] < 0:
                 current_row_coordinates = current_row_coordinates[::-1]
                 current_array = current_array[::-1]
-
 
             #This interpolation scheme comes from a StackOverflow thread
             #http://stackoverflow.com/questions/11144513/numpy-cartesian-product-of-x-and-y-array-points-into-single-array-of-2d-points#comment14610953_11144513

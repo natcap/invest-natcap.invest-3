@@ -9,7 +9,6 @@ from osgeo import gdal
 from nose.plugins.skip import SkipTest
 import numpy as np
 
-from invest_natcap import postprocessing
 from invest_natcap.sediment import sediment_biophysical
 import invest_cython_core
 import invest_test_core
@@ -61,9 +60,9 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with default InVEST 
            sample input."""
-        raise SkipTest
+#        raise SkipTest
         args = {}
-        args['workspace_dir'] = './data/sediment_biophysical_output'
+        args['workspace_dir'] = './data/test_out/sediment_biophysical_output'
         base_dir = './data/sediment_test_data'
         args['dem_uri'] = '%s/dem' % base_dir
         args['erosivity_uri'] = '%s/erosivity' % base_dir
@@ -83,7 +82,20 @@ class TestSedimentBiophysical(unittest.TestCase):
         args['threshold_flow_accumulation'] = 1000
         args['slope_threshold'] = 70.0
 
+        intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+
+        intermediate_files = ['dem_clip.tif', 'flow_accumulation.tif', 
+                              'slope.tif', 'ls.tif', 
+                              'flow_direction.tif', 'retention.tif', 'c_factor.tif',
+                              'p_factor.tif', 'v_stream.tif']
+        output_dir = os.path.join(args['workspace_dir'], 'Output')
+
+        output_files = ['usle.tif']
+
         sediment_biophysical.execute(args)
+
+        subprocess.Popen(["qgis"] + map(lambda x: os.path.join(intermediate_dir,x), intermediate_files) \
+                             + map(lambda x: os.path.join(output_dir,x), output_files))
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + os.sep + "/Intermediate/flow_direction.tif",
@@ -172,6 +184,7 @@ class TestSedimentBiophysical(unittest.TestCase):
 
     def test_effective_retention(self):
         """Call effective retention with some sample datasets"""
+        raise SkipTest
         dem_points = {
             (0.0,0.0): 50,
             (0.0,1.0): 100,
