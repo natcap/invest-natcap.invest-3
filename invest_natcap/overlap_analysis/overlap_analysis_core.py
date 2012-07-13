@@ -71,11 +71,16 @@ def gridder(inter_dir, URI, dimension):
         for j in range (0, num_x):
             
             #Creating the polygon itself
+            #Note, these have to be y, x (row, then column)
             out_edge = ogr.Geometry(ogr.wkbLinearRing)
-            out_edge.AddPoint(lhs + (i * dimension), ts + j * dimension)
-            out_edge.AddPoint(lhs + (i+1) * dimension, ts + j * dimension)
-            out_edge.AddPoint(lhs + (i * dimension), ts + (j+1) * dimension)
-            out_edge.AddPoint(lhs + (i+1) * dimension, ts + (j+1) * dimension)
+            #top left
+            out_edge.AddPoint(ts + j * dimension, lhs + (i * dimension))
+            #bottom left
+            out_edge.AddPoint(ts + (j+1) * dimension, lhs + (i * dimension))
+            #bottom right
+            out_edge.AddPoint(ts + (j+1) * dimension, lhs + (i+1) * dimension)
+            #top right
+            out_edge.AddPoint(ts + j * dimension, lhs + (i+1) * dimension)
             out_edge.CloseRings()
             
             square = ogr.Geometry(ogr.wkbPolygon)

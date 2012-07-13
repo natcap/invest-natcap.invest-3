@@ -250,7 +250,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
     LOGGER.debug('calculating the overlapping rectangles')
-    aoi_box = calculate_intersection_rectangle(dataset_list)
+    aoi_box = calculate_intersection_rectangle(dataset_list, aoi)
     LOGGER.debug('the aoi box: %s' % aoi_box)
 
     #determine the minimum pixel size
@@ -334,8 +334,9 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     #Check to see if all the input datasets are equal, if so then we
-    #don't need to interpolate them
-    all_equal = True
+    #don't need to interpolate them, but if there's an AOI you always need to interpolate, 
+    #so initializing to aoi == None (True if no aoi)
+    all_equal = aoi == None
     for dim_fun in [lambda ds: ds.RasterXSize, lambda ds: ds.RasterYSize]:
         sizes = map(dim_fun, dataset_list)
         all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
@@ -433,7 +434,6 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             if gt[5] < 0:
                 current_row_coordinates = current_row_coordinates[::-1]
                 current_array = current_array[::-1]
-
 
             #This interpolation scheme comes from a StackOverflow thread
             #http://stackoverflow.com/questions/11144513/numpy-cartesian-product-of-x-and-y-array-points-into-single-array-of-2d-points#comment14610953_11144513
@@ -1091,3 +1091,43 @@ def calculate_slope(dem_dataset, slope_uri):
     calculate_raster_stats(slope_dataset)
 
     return slope_dataset
+
+def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
+    """This function will clip source_dataset to the bounding box of the 
+        polygons in aoi_datasource and mask out the values in source_dataset
+        outside of the AOI with the nodata values in source_dataset.
+
+        source_dataset - single band GDAL dataset to clip
+        aoi_datasource - collection of polygons
+        out_dataset_uri - path to disk for the clipped
+
+        returns the clipped dataset that lives at out_dataset_uri"""
+
+    band, nodata = extract_band_and_nodata(source_dataset)
+
+    def op(x):
+        return x
+
+    clipped_dataset = vectorize_rasters([source_dataset], op, aoi=aoi_datasource, 
+                      raster_out_uri = out_dataset_uri, 
+                      datatype = band.DataType, nodata=nodata)
+    return clipped_dataset
+
+def extract_band_and_nodata(dataset, get_array = False):
+    """It's often useful to get the first band and corresponding nodata value
+        for a dataset.  This function does that.
+
+        dataset - a GDAL dataset
+        get_array - if True also returns the dataset as a numpy array
+
+        returns (first GDAL band in dataset, nodata value for that band"""
+
+    band = dataset.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    if get_array:
+        array = band.ReadAsArray()
+        return band, nodata, array
+
+    #Otherwise just return the band and nodata
+    return band, nodata

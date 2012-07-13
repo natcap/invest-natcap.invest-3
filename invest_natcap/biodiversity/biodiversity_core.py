@@ -72,7 +72,7 @@ def biophysical(args):
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
 
-    # initialize the weight_sum
+    # calculate the weight sum which is the sum of all the threats weights
     weight_sum = 0.0
     for threat_data in threat_dict.itervalues():
         #Sum weight of threats
@@ -88,7 +88,11 @@ def biophysical(args):
             # initialize a list that will store all the density/threat rasters
             # after they have been adjusted for distance, weight, and access
             degradation_rasters = []
-            deg_nodata_list = []
+            
+            # intitialize a list to store raster nodata values that correspond
+            # to the rasters stored in 'degradation_rasters' above
+            deg_adjusted_nodata_list = []
+
             # adjust each density/threat raster for distance, weight, and access 
             for threat, threat_data in threat_dict.iteritems():
                 LOGGER.debug('Calculating threat : %s', threat)
@@ -164,23 +168,23 @@ def biophysical(args):
                         returns - the degradation for this threat
                         """
                     # there is a nodata value if this list is not empty
-                    if len(filter(lambda (x,y): x==y, zip(rasters,
-                        nodata_list))) == 0:
-                        return np.prod(rasters)
+                    if len(filter(lambda (x,y): x==y, \
+                               zip(rasters, adjusted_nodata_list))) == 0:
+                        return np.prod(rasters) * weight_avg
                     return out_nodata
                 
-                # set the raster list depending on whether the access shapefile was
-                # provided
-                ras_list = []
-                nodata_list = []
+                # set the adjusted raster list depending on whether the 
+                # access shapefile was provided
+                adjusted_list = []
+                adjusted_nodata_list = []
                 if access_raster is None:
-                    ras_list = [filtered_raster, sensitivity_raster]
-                    nodata_list =\
+                    adjusted_list = [filtered_raster, sensitivity_raster]
+                    adjusted_nodata_list =\
                         [filtered_raster.GetRasterBand(1).GetNoDataValue(),
                          sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
                 else:
-                    ras_list = [filtered_raster, sensitivity_raster, access_raster]
-                    nodata_list =\
+                    adjusted_list = [filtered_raster, sensitivity_raster, access_raster]
+                    adjusted_nodata_list =\
                         [filtered_raster.GetRasterBand(1).GetNoDataValue(),
                          sensitivity_raster.GetRasterBand(1).GetNoDataValue(),
                          access_raster.GetRasterBand(1).GetNoDataValue()]
@@ -189,19 +193,19 @@ def biophysical(args):
                     os.path.join(intermediate_dir,
                                  str('deg_'+threat+lulc_key+'.tif'))
                 deg_ras =\
-                    raster_utils.vectorize_rasters(ras_list, \
+                    raster_utils.vectorize_rasters(adjusted_list, \
                         partial_degradation, raster_out_uri=deg_uri,\
                         nodata=out_nodata)
                 
                 degradation_rasters.append(deg_ras)
-                deg_nodata_list.append(deg_ras.GetRasterBand(1).GetNoDataValue())
+                deg_adjusted_nodata_list.append(deg_ras.GetRasterBand(1).GetNoDataValue())
 
             # if there was at least one threat compute the total degradation
             if len(degradation_rasters) > 0:
                 def sum_degradation(*rasters):
                     # there is a nodata value if this list is not empty
                     if len(filter(lambda (x,y): x==y, zip(rasters,
-                        deg_nodata_list))) == 0:
+                        deg_adjusted_nodata_list))) == 0:
                         return np.sum(rasters)
                     return out_nodata
                 
@@ -248,20 +252,75 @@ def biophysical(args):
     
     #Compute Rarity if user supplied baseline raster
     try:    
-        #Create index that represents the rarity of LULC class on landscape
+        # will throw a KeyError exception if no base raster is provided
         lulc_base = args['landuse_dict']['_b']
+        base_nodata = lulc_base.GetRasterBand(1).GetNoDataValue()
         lulc_code_count_b = raster_pixel_count(lulc_base)
+        rarity_nodata = float(np.finfo(np.float32).min)
+        
+        # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
                 lulc_x = args['landuse_dict'][lulc_cover]
-                lulc_code_count_x = raster_pixel_count(lulc_x)
+                lulc_nodata = lulc_x.GetRasterBand(1).GetNoDataValue()
+                LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
+                        lulc_nodata) 
+                def trim_op(base, cover_x):
+                    """Vectorized function used in vectorized_rasters. Trim
+                        cover_x to the mask of base
+                        
+                        base - the base raster from 'lulc_base' above
+                        cover_x - either the future or current land cover raster
+                            from 'lulc_x' above
+                        
+                        return - out_nodata if base or cover_x is equal to their
+                            nodata values or the cover_x value
+                        """
+                    if base==base_nodata or cover_x==lulc_nodata:
+                        return out_nodata
+                    return float(cover_x) 
+                
+                LOGGER.debug('Create new cover for %s', lulc_cover)
+                new_cover_uri = \
+                    os.path.join(intermediate_dir, 'new_cover'+lulc_cover+'.tif')
+                # set the current/future land cover to be masked to the base
+                # land cover
+                new_cover = \
+                    raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
+                            raster_out_uri=new_cover_uri,
+                            datatype=gdal.GDT_Int32, nodata=out_nodata)
+                
+                lulc_code_count_x = raster_pixel_count(new_cover)
                 code_index = {}
+                
+                # compute the ratio or rarity index for each lulc code where we
+                # return 0.0 if an lulc code is found in the cur/fut land cover
+                # but not the baseline
                 for code in lulc_code_count_x.iterkeys():
                     try:
-                        ratio = 1.0 - (lulc_code_count_x[code]/lulc_code_count_b[code])
+                        ratio = 1.0 - (float(lulc_code_count_x[code])/lulc_code_count_b[code])
                         code_index[code] = ratio
                     except KeyError:
                         code_index[code] = 0.0
+                
+                def map_ratio(cover):
+                    """Vectorized operation used to map a dictionary to a lulc raster
+                    
+                    cover - refers to the 'new_cover' raster generated above
+                    
+                    return - rarity_nodata if code is not in the dictionary,
+                        otherwise return the rarity index pertaining to that
+                        code"""
+                    if cover in code_index:
+                        return code_index[cover]
+                    return rarity_nodata
+                
+                rarity_uri = \
+                    os.path.join(intermediate_dir, 'rarity'+lulc_cover+'.tif')
+
+                rarity = raster_utils.vectorize_rasters([new_cover], map_ratio,
+                        raster_out_uri=rarity_uri, nodata=rarity_nodata)
+                rarity = None
             except KeyError:
                 pass
     except KeyError:

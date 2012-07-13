@@ -5,14 +5,34 @@ import os
 import subprocess
 
 from osgeo import gdal
+from osgeo import ogr
 from nose.plugins.skip import SkipTest
 import numpy as np
 from invest_natcap import raster_utils
 import invest_test_core
 
 
-class TestSedimentBiophysical(unittest.TestCase):
+class TestRasterUtils(unittest.TestCase):
+    def test_clip_datset(self):
+        base_dir = 'data/test_out/raster_utils'
+
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        data_dir = 'data/sediment_test_data'
+        dem_uri = os.path.join(data_dir,'dem')
+        dem = gdal.Open(dem_uri)
+        aoi_uri = os.path.join(data_dir,'subwatersheds.shp')
+        aoi = ogr.Open(aoi_uri)
+        
+        clip_dataset = os.path.join(base_dir,'clipped.tif')
+        raster_utils.clip_dataset(dem, aoi, clip_dataset)
+
+        subprocess.Popen(["qgis", dem_uri, aoi_uri, clip_dataset])
+
+
     def test_calculate_slope(self):
+        raise SkipTest
         dem_points = {
             (0.0,0.0): 50,
             (0.0,1.0): 100,

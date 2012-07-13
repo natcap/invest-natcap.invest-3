@@ -3,6 +3,7 @@
 
 import logging
 import bisect
+import os
 
 import scipy.sparse
 import scipy.sparse.linalg
@@ -46,17 +47,15 @@ def biophysical(args):
             part of a stream.  required if 'v_stream' is not provided.
         args['slope_threshold'] - A percentage slope threshold as described in
             the user's guide.
-        args['slope'] - an output raster file that holds the slope percentage
+        args['slope_uri'] - an output raster file that holds the slope percentage
             as a proporition from the dem
-        args['ls_factor'] - an output raster file containing the ls_factor
-            calculated on the particular dem
-        args['v_stream_out'] - An output raster file that classifies the
+        args['ls_uri'] - an output path for the ls_factor calculated on the 
+            particular dem
+        args['stream_uri'] - A path to a  file that classifies the
             watersheds into stream and non-stream regions based on the
             value of 'threshold_flow_accumulation'
         args['flow_direction'] - An output raster indicating the flow direction
             on each pixel
-        args['v_stream'] - An output raster indicating the areas that are
-            classified as streams based on flow_direction
         args['sret_dr_uri'] - An output raster uri showing the amount of
             sediment retained on each pixel during routing.  It breaks
             convention to pass a URI here, but we won't know the shape of
@@ -65,7 +64,7 @@ def biophysical(args):
             sediment exported from each pixel during routing.  It breaks
             convention to pass a URI here, but we won't know the shape of
             the raster until after all the input rasters are rasterized.
-            
+        args['intermediate_uri'] - A path to store itermediate rasters
         returns nothing"""
 
     ##############Set up vectorize functions and function-wide values
@@ -76,53 +75,10 @@ def biophysical(args):
     v_stream_nodata = \
         args['v_stream'].GetRasterBand(1).GetNoDataValue()
 
-    def stream_classifier(flow_accumulation):
-        """This function classifies pixels into streams or no streams based
-            on the threshold_flow_accumulation value.
-
-            flow_accumulation - GIS definition of flow accumulation (upstream
-                pixel inflow)
-
-            returns 1 if flow_accumulation exceeds
-                args['threshold_flow_accumulation'], 0 if not, and nodata
-                if in a nodata region
-        """
-        if flow_accumulation == flow_accumulation_nodata:
-            return v_stream_nodata
-        if flow_accumulation >= args['threshold_flow_accumulation']:
-            return 1.0
-        else:
-            return 0.0
-
     #Nodata value to use for usle output raster
     usle_nodata = -1.0
-    usle_c_p_raster = raster_utils.new_raster_from_base(args['landuse'], '',
-        'MEM', usle_nodata, gdal.GDT_Float32)
-    def lulc_to_cp(lulc_code):
-        """This is a helper function that's used to map an LULC code to the
-            C * P values needed by the sediment model and defined
-            in the biophysical table in the closure above.  The intent is this
-            function is used in a vectorize operation for a single raster.
-            
-            lulc_code - an integer representing a LULC value in a raster
-            
-            returns C*P where C and P are defined in the 
-                args['biophysical_table']
-        """
-        #There are string casts here because the biophysical table is all 
-        #strings thanks to the csv table conversion.
-        if str(lulc_code) not in args['biophysical_table']:
-            return usle_nodata
-        #We need to divide the c and p factors by 1000 (10*6 == 1000*1000) 
-        #because they're stored in the table as C * 1000 and P * 1000.  See 
-        #the user's guide:
-        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
-        return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
-            float(args['biophysical_table'][str(lulc_code)]['usle_p']) / \
-                10 ** 6
 
     #Set up structures and functions for USLE calculation
-    ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
@@ -153,6 +109,46 @@ def biophysical(args):
         raster_utils.new_raster_from_base(args['landuse'], '', 'MEM',
                                              usle_nodata, gdal.GDT_Float32)
 
+    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
+        """Used for interpolating efficiency raster to be the same dimensions
+            as soil_loss and also knocking out retention on the streams"""
+
+        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
+        #to scale efficiency especially if v_steram is interpolated 
+        #intelligently
+        return (1 - v_stream) * efficiency
+
+    ############## Calculation Starts here
+
+    dem_dataset = args['dem']
+    n_rows = dem_dataset.RasterYSize
+    n_cols = dem_dataset.RasterXSize
+    
+    #Calculate flow
+    LOGGER.info("calculating flow direction")
+    bounding_box = [0, 0, n_cols, n_rows]
+    invest_cython_core.flow_direction_inf(dem_dataset, bounding_box, 
+        args['flow_direction'])
+
+    #Calculate slope
+    LOGGER.info("Calculating slope")
+    slope_dataset = raster_utils.calculate_slope(dem_dataset, args['slope_uri'])
+
+    #Calcualte flow accumulation
+    LOGGER.info("calculating flow accumulation")
+    invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
+        args['dem'], bounding_box, args['flow_accumulation'])
+
+    #classify streams from the flow accumulation raster
+    LOGGER.info("Classifying streams from flow accumulation raster")
+    stream_dataset = raster_utils.stream_threshold(args['flow_accumulation'], 
+        args['threshold_flow_accumulation'], args['stream_uri'])
+
+    #Calculate LS term
+    ls_dataset = calculate_ls_factor(args['flow_accumulation'], slope_dataset, 
+                                     args['flow_direction'], args['ls_uri'])
+
+
     def lulc_to_retention(lulc_code):
         """This is a helper function that's used to map an LULC code to the
             retention values needed by the sediment model and defined
@@ -174,16 +170,51 @@ def biophysical(args):
         return float(args['biophysical_table'] \
                      [str(lulc_code)]['sedret_eff']) / 100.0
 
-    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
-        """Used for interpolating efficiency raster to be the same dimensions
-            as soil_loss and also knocking out retention on the streams"""
+    retention_uri = os.path.join(args['intermediate_uri'],'retention.tif')
+    raster_utils.vectorize_rasters([args['landuse']], lulc_to_retention, 
+                                   raster_out_uri = retention_uri, 
+                                   datatype=gdal.GDT_Float32, nodata=-1.0)
 
-        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
-        #to scale efficiency especially if v_steram is interpolated 
-        #intelligently
-        return (1 - v_stream) * efficiency
 
-    ############## Calculation Starts here
+    def lulc_to_c_or_p(key, lulc_code):
+        """This is a helper function that's used to map an LULC code to the
+            C * P values needed by the sediment model and defined
+            in the biophysical table in the closure above.  The intent is this
+            function is used in a vectorize operation for a single raster.
+            
+            key - either 'usle_c' or 'usle_p'
+            lulc_code - an integer representing a LULC value in a raster
+            
+            returns C or P where C and P are defined in the 
+                args['biophysical_table']
+        """
+        #There are string casts here because the biophysical table is all 
+        #strings thanks to the csv table conversion.
+        if str(lulc_code) not in args['biophysical_table']:
+            return usle_nodata
+        #We need to divide the c and p factors by 1000
+        #because they're stored in the table as C * 1000 and P * 1000.  See 
+        #the user's guide:
+        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
+        return float(args['biophysical_table'][str(lulc_code)][key]) / 1000.0
+
+    c_factor_uri = os.path.join(args['intermediate_uri'],'c_factor.tif')
+    p_factor_uri = os.path.join(args['intermediate_uri'],'p_factor.tif')
+    c_dataset = raster_utils.vectorize_rasters([args['landuse']], 
+                                   lambda x: lulc_to_c_or_p('usle_c',x), 
+                                   raster_out_uri = c_factor_uri, 
+                                   datatype=gdal.GDT_Float32, nodata=-1.0)
+    p_dataset = raster_utils.vectorize_rasters([args['landuse']], 
+                                   lambda x: lulc_to_c_or_p('usle_p',x), 
+                                   raster_out_uri = p_factor_uri, 
+                                   datatype=gdal.GDT_Float32, nodata=-1.0)
+
+    potential_sediment_export_dataset = \
+       calculate_potential_soil_loss(ls_dataset, \
+                args['erosivity'], args['erodibility'], c_dataset, p_dataset,\
+                stream_dataset, args['potential_soil_loss_uri'])
+    
+    return
 
     for watershed_feature in args['watersheds'].GetLayer():
         LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())
@@ -587,7 +618,7 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
     stream_nodata = stream_dataset.GetRasterBand(1).GetNoDataValue()
 
     usle_nodata = -1.0
-
+    ls_factor_nodata = -1.0
     def usle_function(ls_factor, erosivity, erodibility, usle_c, usle_p, v_stream):
         """Calculates the USLE equation
         
