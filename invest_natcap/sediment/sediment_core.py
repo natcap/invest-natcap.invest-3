@@ -77,30 +77,6 @@ def biophysical(args):
 
     #Nodata value to use for usle output raster
     usle_nodata = -1.0
-    def lulc_to_cp(lulc_code):
-        """This is a helper function that's used to map an LULC code to the
-            C * P values needed by the sediment model and defined
-            in the biophysical table in the closure above.  The intent is this
-            function is used in a vectorize operation for a single raster.
-            
-            lulc_code - an integer representing a LULC value in a raster
-            
-            returns C*P where C and P are defined in the 
-                args['biophysical_table']
-        """
-        #There are string casts here because the biophysical table is all 
-        #strings thanks to the csv table conversion.
-        if str(lulc_code) not in args['biophysical_table']:
-            return usle_nodata
-        #We need to divide the c and p factors by 1000 (10*6 == 1000*1000) 
-        #because they're stored in the table as C * 1000 and P * 1000.  See 
-        #the user's guide:
-        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
-        return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
-            float(args['biophysical_table'][str(lulc_code)]['usle_p']) / \
-                10 ** 6
-
-
 
     #Set up structures and functions for USLE calculation
     ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
@@ -200,9 +176,36 @@ def biophysical(args):
                                    raster_out_uri = retention_uri, 
                                    datatype=gdal.GDT_Float32, nodata=-1.0)
 
-    #invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
-    #                            lulc_to_cp, usle_c_p_raster.GetRasterBand(1),
-    #                            lulc_watershed_bounding_box)
+
+    def lulc_to_cp(lulc_code):
+        """This is a helper function that's used to map an LULC code to the
+            C * P values needed by the sediment model and defined
+            in the biophysical table in the closure above.  The intent is this
+            function is used in a vectorize operation for a single raster.
+            
+            lulc_code - an integer representing a LULC value in a raster
+            
+            returns C*P where C and P are defined in the 
+                args['biophysical_table']
+        """
+        #There are string casts here because the biophysical table is all 
+        #strings thanks to the csv table conversion.
+        if str(lulc_code) not in args['biophysical_table']:
+            return usle_nodata
+        #We need to divide the c and p factors by 1000 (10*6 == 1000*1000) 
+        #because they're stored in the table as C * 1000 and P * 1000.  See 
+        #the user's guide:
+        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
+        return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
+            float(args['biophysical_table'][str(lulc_code)]['usle_p']) / \
+                10 ** 6
+
+    cp_factor_uri = os.path.join(args['intermediate_uri'],'cp_factor.tif')
+    raster_utils.vectorize_rasters([args['landuse']], lulc_to_cp, 
+                                   raster_out_uri = cp_factor_uri, 
+                                   datatype=gdal.GDT_Float32, nodata=-1.0)
+
+
 
 
     #Calculate USLE (potential soil loss) term
