@@ -83,7 +83,6 @@ class DynamicElement(QtGui.QWidget):
             have the ability to be enabled by other elements"""
 
         self.root = rootPointer
-
         #enabledBy is only a single string ID
         if 'enabledBy' in self.attributes:
             idString = self.attributes['enabledBy']
@@ -132,10 +131,12 @@ class DynamicElement(QtGui.QWidget):
 
     def setState(self, state, includeSelf=True, recursive=True):
         if includeSelf:
+            self.setEnabled(state)
             for element in self.elements:
                 element.setEnabled(state)
 
         if recursive:
+            state = self.requirementsMet()
             for element in self.enables:
                 element.setState(state)
 
@@ -363,6 +364,7 @@ class DynamicPrimitive(DynamicElement):
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
             self.error_button.deactivate()
+            self.setBGcolorSatisfied(True)
         else:
             self.validate()
 
@@ -710,10 +712,12 @@ class DynamicText(LabeledElement):
 
             returns nothing."""
 
-        # Enable/disable necessary elements before validating.
-        self.setState(self.requirementsMet(), includeSelf=False)
         self.setBGcolorSatisfied(True)  # assume valid until validation fails
-        self.validate()
+        if self.validator != None:
+            self.validate()
+        else:
+            self.setState(self.requirementsMet(), includeSelf=False,
+                recursive=True)
 
 
     def setValidateField(self, regexp):
@@ -1320,12 +1324,12 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         #connect the button to the toggle function.
         self.toggled.connect(self.toggle)
 
-    def toggle(self, isChecked):
+    def toggle(self, event=None):
         """Enable/disable all elements controlled by this element.
         
             returns nothing."""
 
-        self.setState(isChecked, includeSelf=False)
+        self.setState(self.value(), includeSelf=False)
 
 #    def isEnabled(self):
 #        """Check to see if this element is checked.
@@ -1366,7 +1370,7 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         self.setState(value, includeSelf=False)
 
     def requirementsMet(self):
-        return self.value()
+        return self.isChecked()
 
     def setBGcolorSatisfied(self, state):
         pass
