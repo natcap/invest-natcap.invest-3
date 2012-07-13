@@ -50,13 +50,11 @@ def biophysical(args):
             as a proporition from the dem
         args['ls_factor'] - an output raster file containing the ls_factor
             calculated on the particular dem
-        args['v_stream_out'] - An output raster file that classifies the
+        args['stream_uri'] - A path to a  file that classifies the
             watersheds into stream and non-stream regions based on the
             value of 'threshold_flow_accumulation'
         args['flow_direction'] - An output raster indicating the flow direction
             on each pixel
-        args['v_stream'] - An output raster indicating the areas that are
-            classified as streams based on flow_direction
         args['sret_dr_uri'] - An output raster uri showing the amount of
             sediment retained on each pixel during routing.  It breaks
             convention to pass a URI here, but we won't know the shape of
@@ -205,6 +203,10 @@ def biophysical(args):
     invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
         args['dem'], bounding_box, args['flow_accumulation'])
 
+    #classify streams from the flow accumulation raster
+    LOGGER.info("Classifying streams from flow accumulation raster")
+    stream_dataset = raster_utils.stream_threshold(args['flow_accumulation'], 
+        args['threshold_flow_accumulation'], args['stream_uri'])
 
     return
 
