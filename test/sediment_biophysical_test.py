@@ -9,7 +9,6 @@ from osgeo import gdal
 from nose.plugins.skip import SkipTest
 import numpy as np
 
-from invest_natcap import postprocessing
 from invest_natcap.sediment import sediment_biophysical
 import invest_cython_core
 import invest_test_core
@@ -61,7 +60,7 @@ class TestSedimentBiophysical(unittest.TestCase):
     def test_sediment_biophysical_re(self):
         """Test for sediment_biophysical function running with default InVEST 
            sample input."""
-        raise SkipTest
+#        raise SkipTest
         args = {}
         args['workspace_dir'] = './data/sediment_biophysical_output'
         base_dir = './data/sediment_test_data'
@@ -172,6 +171,7 @@ class TestSedimentBiophysical(unittest.TestCase):
 
     def test_effective_retention(self):
         """Call effective retention with some sample datasets"""
+        raise SkipTest
         dem_points = {
             (0.0,0.0): 50,
             (0.0,1.0): 100,
