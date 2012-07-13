@@ -9,8 +9,46 @@ def execute(args):
     overlap_analysis.py in the args dictionary, and perform calculations using
     these data to determine the optimal areas for activities.
     
+    Input:
+        args['workspace_dir'] - The directory in which all output and intermediate
+            files should be placed.
+        oa_args['zone_layer_file']
+        args['do_grid'] - This tells us whether the area of interest file that was
+            being passed in was a management zone divided shapefile, or was
+            pre-gridded into identical squares.
+        args['overlap_files'] - A dictionary which maps the name of the shapefile
+            (excluding the .shp extension) to the open datasource itself. This can
+            be used directly.
+        args['over_layer_dict'] - A dictionary which contains the weights of each
+            of the various shapefiles included in the 'overlap_files' dictionary.
+            The dictionary key is the ID number of each shapefile. This ID maps
+            to a list containing the two values, with the form being as follows:
+                ({ID: [inter-activity weight, buffer], ...}):    
+        args['import_field']- string which corresponds to a field within the
+           layers being passed in within overlap analysis directory. This is
+           the intra-activity importance for each activity.
+        args['hum_use_hubs_loc']- An open shapefile of major hubs of human 
+            activity. This would allow you to degrade the weight of activity
+            zones as they get farther away from these locations.
+        args['decay']- float between 0 and 1, representing the decay of interest
+           in areas as you get farther away from human hubs.
     
+    Intermediate:
+        Rasterized Shapefiles- For each shapefile that we passed in 'overlap_files'
+            we are creating a raster with the shape burned onto a band of the same
+            size as our AOI. 
+        <Some Other Things>
     
+    Output:
+        <Insert Raster Name Here>- This is a raster output which depicts the
+            unweighted frequency of activity within a gridded area or management
+            zone.
+        <Insert Raster Name Here>- This is a raster depicting the importance scores
+            for each grid or management zone in the area of interest.
+        Parameters Text File- A file created every time the model is run listing
+            all variable parameters used during that run.
+            
+    Returns nothing.
     '''
     pass
     
@@ -37,7 +75,7 @@ def gridder(inter_dir, URI, dimension):
     #of the new shapefile that we're creating
     shape = ogr.Open(URI)
     spat_ref = shape.GetLayer().GetSpatialRef().Clone()
-    lhs, rhs, ts, bs = shape.GetLayer(0).GetExtent()
+    lhs, rhs, ts, bs = shape.GetLayer().GetExtent()
     
     #Move to the intermediate file in order to create our shapefile
     os.chdir(inter_dir)
