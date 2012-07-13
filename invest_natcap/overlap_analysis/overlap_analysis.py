@@ -79,7 +79,7 @@ def execute(args):
     else:    
         oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
     
-    #Still need to pass in do_grid because we need to know if we're treating managament
+    #Still need to pass in do_grid because we need to know if we're treating management
     #zones or exact gridded squares....don't we?
     oa_args['do_grid'] = args['do_grid']
     
@@ -125,7 +125,6 @@ def format_over_table(over_tbl):
                 form being as follows ({ID: [inter-activity weight, buffer], ...}):
                 
                 {1: [2.0, 0], 2: [1.50, 0], 3: [1.50, 0], ...}
-    
     '''
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
