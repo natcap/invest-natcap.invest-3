@@ -86,7 +86,8 @@ class TestSedimentBiophysical(unittest.TestCase):
 
         intermediate_files = ['dem_clip.tif', 'flow_accumulation.tif', 
                               'slope.tif', 'ls_factor.tif', 'v_stream.tif', 
-                              'flow_direction.tif', 'retention.tif', 'cp_factor.tif']
+                              'flow_direction.tif', 'retention.tif', 'c_factor.tif',
+                              'p_factor.tif']
 
         sediment_biophysical.execute(args)
 
