@@ -48,8 +48,8 @@ def biophysical(args):
             the user's guide.
         args['slope_uri'] - an output raster file that holds the slope percentage
             as a proporition from the dem
-        args['ls_factor'] - an output raster file containing the ls_factor
-            calculated on the particular dem
+        args['ls_uri'] - an output path for the ls_factor calculated on the 
+            particular dem
         args['stream_uri'] - A path to a  file that classifies the
             watersheds into stream and non-stream regions based on the
             value of 'threshold_flow_accumulation'
@@ -207,6 +207,11 @@ def biophysical(args):
     LOGGER.info("Classifying streams from flow accumulation raster")
     stream_dataset = raster_utils.stream_threshold(args['flow_accumulation'], 
         args['threshold_flow_accumulation'], args['stream_uri'])
+
+    #Calculate LS term
+    ls_dataset = calculate_ls_factor(args['flow_accumulation'], slope_dataset, 
+                                     args['flow_direction'], args['ls_uri'])
+
 
     return
 

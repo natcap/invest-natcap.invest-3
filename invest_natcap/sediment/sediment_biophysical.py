@@ -147,7 +147,7 @@ def execute(args):
     biophysical_args['sexp_dr_uri'] = os.path.join(output_dir,'sexp_dr.tif')
     biophysical_args['slope_uri'] = os.path.join(output_dir,'slope.tif')
     biophysical_args['stream_uri'] = os.path.join(output_dir,'v_stream.tif')
-
+    biophysical_args['ls_uri'] = os.path.join(intermediate_dir,'ls.tif')
     
     LOGGER.info('starting biophysical model')
     sediment_core.biophysical(biophysical_args)
