@@ -88,10 +88,14 @@ class TestSedimentBiophysical(unittest.TestCase):
                               'slope.tif', 'ls_factor.tif', 'v_stream.tif', 
                               'flow_direction.tif', 'retention.tif', 'c_factor.tif',
                               'p_factor.tif']
+        output_dir = os.path.join(args['workspace_dir'], 'Output')
+
+        output_files = ['usle.tif']
 
         sediment_biophysical.execute(args)
 
-        subprocess.Popen(["qgis"] + map(lambda x: os.path.join(intermediate_dir,x), intermediate_files))
+        subprocess.Popen(["qgis"] + map(lambda x: os.path.join(intermediate_dir,x), intermediate_files) \
+                             + map(lambda x: os.path.join(output_dir,x), output_files))
 
         invest_test_core.assertTwoDatasetEqualURI(self,
             args['workspace_dir'] + os.sep + "/Intermediate/flow_direction.tif",

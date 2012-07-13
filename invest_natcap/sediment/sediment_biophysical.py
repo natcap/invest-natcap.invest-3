@@ -148,6 +148,7 @@ def execute(args):
     biophysical_args['slope_uri'] = os.path.join(output_dir,'slope.tif')
     biophysical_args['stream_uri'] = os.path.join(output_dir,'v_stream.tif')
     biophysical_args['ls_uri'] = os.path.join(intermediate_dir,'ls.tif')
+    biophysical_args['potential_soil_loss_uri'] = os.path.join(output_dir,'usle.tif')
     
     biophysical_args['intermediate_uri'] = intermediate_dir
 

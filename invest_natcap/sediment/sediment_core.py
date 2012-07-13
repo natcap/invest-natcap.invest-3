@@ -210,11 +210,11 @@ def biophysical(args):
                                    raster_out_uri = p_factor_uri, 
                                    datatype=gdal.GDT_Float32, nodata=-1.0)
 
-    #potential_sediment_export_dataset = \
-    #   sediment_core.calculate_potential_soil_loss(ls_dataset, \
-    #            args['erosivity'], args['erodibility'], c_dataset, p_dataset,\
-    #            stream_dataset, potential_soil_loss_uri)
-    #
+    potential_sediment_export_dataset = \
+       calculate_potential_soil_loss(ls_dataset, \
+                args['erosivity'], args['erodibility'], c_dataset, p_dataset,\
+                stream_dataset, args['potential_soil_loss_uri'])
+    
 
 
 
