@@ -62,7 +62,7 @@ class TestSedimentBiophysical(unittest.TestCase):
            sample input."""
 #        raise SkipTest
         args = {}
-        args['workspace_dir'] = './data/sediment_biophysical_output'
+        args['workspace_dir'] = './data/test_out/sediment_biophysical_output'
         base_dir = './data/sediment_test_data'
         args['dem_uri'] = '%s/dem' % base_dir
         args['erosivity_uri'] = '%s/erosivity' % base_dir
