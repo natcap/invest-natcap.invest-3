@@ -85,9 +85,9 @@ class TestSedimentBiophysical(unittest.TestCase):
         intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
         intermediate_files = ['dem_clip.tif', 'flow_accumulation.tif', 
-                              'slope.tif', 'ls.tif', 'v_stream.tif', 
+                              'slope.tif', 'ls.tif', 
                               'flow_direction.tif', 'retention.tif', 'c_factor.tif',
-                              'p_factor.tif']
+                              'p_factor.tif', 'v_stream.tif']
         output_dir = os.path.join(args['workspace_dir'], 'Output')
 
         output_files = ['usle.tif']
