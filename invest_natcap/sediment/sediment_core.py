@@ -79,7 +79,6 @@ def biophysical(args):
     usle_nodata = -1.0
 
     #Set up structures and functions for USLE calculation
-    ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
@@ -215,10 +214,6 @@ def biophysical(args):
                 args['erosivity'], args['erodibility'], c_dataset, p_dataset,\
                 stream_dataset, args['potential_soil_loss_uri'])
     
-
-
-
-
     return
 
     for watershed_feature in args['watersheds'].GetLayer():
@@ -623,7 +618,7 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
     stream_nodata = stream_dataset.GetRasterBand(1).GetNoDataValue()
 
     usle_nodata = -1.0
-
+    ls_factor_nodata = -1.0
     def usle_function(ls_factor, erosivity, erodibility, usle_c, usle_p, v_stream):
         """Calculates the USLE equation
         
