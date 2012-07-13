@@ -148,6 +148,11 @@ def execute(args):
     biophysical_args['sret_dr_uri'] = outputDirectoryPrefix + 'sret_dr.tif'
     biophysical_args['sexp_dr_uri'] = outputDirectoryPrefix + 'sexp_dr.tif'
 
+    biophysical_args['intermediate_uri'] = os.path.join(args['workspace_dir'],
+                                                       'intermediate')
+    if not os.path.exists(biophysical_args['intermediate_uri']):
+        os.makedirs(biophysical_args['intermediate_uri'])
+
     LOGGER.info('starting biophysical model')
     sediment_core.biophysical(biophysical_args)
     LOGGER.info('finished biophysical model')

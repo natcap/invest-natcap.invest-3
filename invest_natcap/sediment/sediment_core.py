@@ -65,7 +65,7 @@ def biophysical(args):
             sediment exported from each pixel during routing.  It breaks
             convention to pass a URI here, but we won't know the shape of
             the raster until after all the input rasters are rasterized.
-            
+        args['intermediate_uri'] - A path to store itermediate rasters
         returns nothing"""
 
     ##############Set up vectorize functions and function-wide values
@@ -184,6 +184,8 @@ def biophysical(args):
         return (1 - v_stream) * efficiency
 
     ############## Calculation Starts here
+
+
 
     for watershed_feature in args['watersheds'].GetLayer():
         LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())
