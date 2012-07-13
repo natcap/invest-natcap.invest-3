@@ -88,9 +88,10 @@ def execute(args):
     for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
         original_dataset = gdal.Open(args[raster_name + '_uri'],
                                      gdal.GA_ReadOnly)
+        clipped_uri = os.path.join(intermediate_dir,raster_name + "_clip.tif")
         biophysical_args[raster_name] = \
             raster_utils.clip_dataset(original_dataset, 
-            biophysical_args['watersheds'], args[raster_name + '_uri'])
+            biophysical_args['watersheds'], clipped_uri)
             #biophysical_args[raster_name] = gdal.Open(args[raster_name + '_uri'],
             #                                    gdal.GA_ReadOnly)
         LOGGER.debug('load %s as: %s' % (args[raster_name + '_uri'],
