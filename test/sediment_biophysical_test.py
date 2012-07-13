@@ -82,6 +82,13 @@ class TestSedimentBiophysical(unittest.TestCase):
         args['threshold_flow_accumulation'] = 1000
         args['slope_threshold'] = 70.0
 
+        intermediate_dir = os.path.join(base_dir, 'Intermediate')
+
+        intermediate_files = ['dem_clip.tif', 'flow_accumulation.tif', 
+                              'slope.tif', 'ls_factor.tif', 'v_stream.tif', 
+                              'flow_direction.tif']
+
+
         sediment_biophysical.execute(args)
 
         invest_test_core.assertTwoDatasetEqualURI(self,
