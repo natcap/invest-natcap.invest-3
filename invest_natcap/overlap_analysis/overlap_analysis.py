@@ -79,6 +79,10 @@ def execute(args):
     else:    
         oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
     
+    #Still need to pass in do_grid because we need to know if we're treating managament
+    #zones or exact gridded squares....don't we?
+    oa_args['do_grid'] = args['do_grid']
+    
     #Glob.glob gets all of the files that fall into the form .shp, and makes them
     #into a list. Then, each item in the list is added to a dictionary as an open
     #file with the key of it's filename without the extension, and that whole
