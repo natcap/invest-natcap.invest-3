@@ -74,28 +74,8 @@ def biophysical(args):
     v_stream_nodata = \
         args['v_stream'].GetRasterBand(1).GetNoDataValue()
 
-    def stream_classifier(flow_accumulation):
-        """This function classifies pixels into streams or no streams based
-            on the threshold_flow_accumulation value.
-
-            flow_accumulation - GIS definition of flow accumulation (upstream
-                pixel inflow)
-
-            returns 1 if flow_accumulation exceeds
-                args['threshold_flow_accumulation'], 0 if not, and nodata
-                if in a nodata region
-        """
-        if flow_accumulation == flow_accumulation_nodata:
-            return v_stream_nodata
-        if flow_accumulation >= args['threshold_flow_accumulation']:
-            return 1.0
-        else:
-            return 0.0
-
     #Nodata value to use for usle output raster
     usle_nodata = -1.0
-    usle_c_p_raster = raster_utils.new_raster_from_base(args['landuse'], '',
-        'MEM', usle_nodata, gdal.GDT_Float32)
     def lulc_to_cp(lulc_code):
         """This is a helper function that's used to map an LULC code to the
             C * P values needed by the sediment model and defined
@@ -211,6 +191,24 @@ def biophysical(args):
     #Calculate LS term
     ls_dataset = calculate_ls_factor(args['flow_accumulation'], slope_dataset, 
                                      args['flow_direction'], args['ls_uri'])
+
+
+    #Calculate CP term
+
+    landuse_dataset = args['landuse']
+    invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
+                                lulc_to_cp, usle_c_p_raster.GetRasterBand(1),
+                                lulc_watershed_bounding_box)
+
+
+    #Calculate USLE (potential soil loss) term
+    potential_sediment_export_dataset = \
+        sediment_core.calculate_potential_soil_loss(ls_dataset, \
+                args['erosivity'], args['erodibility'], c_dataset, p_dataset,\
+                stream_dataset, potential_soil_loss_uri)
+    
+
+
 
 
     return
