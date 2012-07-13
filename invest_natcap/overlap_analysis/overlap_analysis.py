@@ -67,7 +67,6 @@ def execute(args):
         os.makedirs(inter_dir)
         
     oa_args['workspace_dir'] = args['workspace_dir']
-    oa_args['zone_type'] = args['analysis_zone_type']
     
     #This allows for options gridding of the vectors being passed in. The return
     #from core will be a URI to a shapefile with multiple polygons of user specified 
