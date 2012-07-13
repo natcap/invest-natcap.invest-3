@@ -46,7 +46,7 @@ def biophysical(args):
             part of a stream.  required if 'v_stream' is not provided.
         args['slope_threshold'] - A percentage slope threshold as described in
             the user's guide.
-        args['slope'] - an output raster file that holds the slope percentage
+        args['slope_uri'] - an output raster file that holds the slope percentage
             as a proporition from the dem
         args['ls_factor'] - an output raster file containing the ls_factor
             calculated on the particular dem
@@ -185,7 +185,28 @@ def biophysical(args):
 
     ############## Calculation Starts here
 
+    dem_dataset = args['dem']
+    n_rows = dem_dataset.RasterYSize
+    n_cols = dem_dataset.RasterXSize
+    
+    #Calculate flow
+    LOGGER.info("calculating flow direction")
+    bounding_box = [0, 0, n_cols, n_rows]
+    invest_cython_core.flow_direction_inf(dem_dataset, bounding_box, 
+        args['flow_direction'])
 
+    #Calculate slope
+    LOGGER.info("Calculating slope")
+    slope_dataset = raster_utils.calculate_slope(dem_dataset, args['slope_uri'])
+
+
+    #Calcualte flow accumulation
+    LOGGER.info("calculating flow accumulation")
+    invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
+        args['dem'], bounding_box, args['flow_accumulation'])
+
+
+    return
 
     for watershed_feature in args['watersheds'].GetLayer():
         LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())
