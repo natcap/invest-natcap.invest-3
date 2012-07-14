@@ -34,7 +34,7 @@ def biophysical(args):
         args['subwatersheds'] - an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds' shape provided as input. (required)
-        args['usle_uri'] - a URI location to the temporary USLE raster
+        args['potential_soil_loss_uri'] - a URI location to the temporary USLE raster
         args['reservoir_locations'] - an input shape file with 
             points indicating reservoir locations with IDs. (optional)
         args['reservoir_properties'] - an input CSV table 
@@ -638,9 +638,8 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
             usle_p == p_nodata or v_stream == stream_nodata:
             return usle_nodata
         if v_stream == 1:
-            return 0
+            return 0.0
         return ls_factor * erosivity * erodibility * usle_c * usle_p
-
 
     dataset_list = [ls_factor_dataset, erosivity_dataset, erodibility_dataset, 
                     c_dataset, p_dataset, stream_dataset]
@@ -658,11 +657,11 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
     potential_soil_loss_band = potential_soil_loss_dataset.GetRasterBand(1)
     potential_soil_loss_matrix = potential_soil_loss_band.ReadAsArray()
     potential_soil_loss_nodata = potential_soil_loss_band.GetNoDataValue()
-    potential_soil_loss_nodata_mask = \
-        potential_soil_loss_matrix == potential_soil_loss_nodata
+    potential_soil_loss_data_mask = \
+        potential_soil_loss_matrix != potential_soil_loss_nodata
 
     #current unit is tons/ha, multiply by ha/cell (cell area in m^2/100**2)
-    potential_soil_loss_matrix[potential_soil_loss_nodata_mask] *= \
+    potential_soil_loss_matrix[potential_soil_loss_data_mask] *= \
         cell_area / 10000.0
 
     potential_soil_loss_band.WriteArray(potential_soil_loss_matrix)

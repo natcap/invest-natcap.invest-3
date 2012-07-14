@@ -92,8 +92,6 @@ def execute(args):
         biophysical_args[raster_name] = \
             raster_utils.clip_dataset(original_dataset, 
             biophysical_args['watersheds'], clipped_uri)
-            #biophysical_args[raster_name] = gdal.Open(args[raster_name + '_uri'],
-            #                                    gdal.GA_ReadOnly)
         LOGGER.debug('load %s as: %s' % (args[raster_name + '_uri'],
                                          biophysical_args[raster_name]))
     #check that they have the same projection
@@ -142,13 +140,13 @@ def execute(args):
     #We won't know the size of the output rasters until we vectorize the stack
     #of input rasters.  So we just pass a uri to its final location to the
     #biophysical part.
-    biophysical_args['usle_uri'] = os.path.join(output_dir,'usle_sm.tif')
     biophysical_args['sret_dr_uri'] = os.path.join(output_dir,'sret_dr.tif')
     biophysical_args['sexp_dr_uri'] = os.path.join(output_dir,'sexp_dr.tif')
     biophysical_args['slope_uri'] = os.path.join(intermediate_dir,'slope.tif')
     biophysical_args['stream_uri'] = os.path.join(intermediate_dir,'v_stream.tif')
     biophysical_args['ls_uri'] = os.path.join(intermediate_dir,'ls.tif')
-    biophysical_args['potential_soil_loss_uri'] = os.path.join(output_dir,'usle.tif')
+    biophysical_args['potential_soil_loss_uri'] = \
+        os.path.join(output_dir,'usle.tif')
     
     biophysical_args['intermediate_uri'] = intermediate_dir
 
