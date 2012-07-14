@@ -187,11 +187,12 @@ class TableHandler(object):
         except KeyError, InvalidExtension:
             # If the defined filetype doesn't exist in the filetypes dictionary,
             # loop through all known drivers to try and open the file.
-            for class_reference in self.driver_types.valuse():
+            for class_reference in self.driver_types.values():
                 driver = class_reference(uri)
-                opened_file = driver.open(uri)
+                opened_file = driver.get_file_object(uri)
                 if opened_file != None:
-                    break
+                    return driver
+            return None  # if no driver can be found
         return driver
 
     def create_column(self, column_name, position=None, default_value=0):

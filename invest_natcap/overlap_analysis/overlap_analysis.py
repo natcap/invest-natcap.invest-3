@@ -67,7 +67,6 @@ def execute(args):
         os.makedirs(inter_dir)
         
     oa_args['workspace_dir'] = args['workspace_dir']
-    oa_args['zone_type'] = args['analysis_zone_type']
     
     #This allows for options gridding of the vectors being passed in. The return
     #from core will be a URI to a shapefile with multiple polygons of user specified 
@@ -76,8 +75,16 @@ def execute(args):
         base_map = overlap_analysis_core.gridder(inter_dir, args['zone_layer_loc'], 
                                     args['grid_size'])
         oa_args['zone_layer_file'] = ogr.Open(base_map)
+        #Some of the raster utils will need to know what the size of the grids are in
+        #order to match the raster pixel dimensions to that.
+        oa_args['grid_size'] = args['grid_size']
     else:    
         oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
+    
+    #Still need to pass in do_grid because we need to know if we're treating management
+    #zones or exact gridded squares....don't we?
+    oa_args['do_grid'] = args['do_grid']
+    
     
     #Glob.glob gets all of the files that fall into the form .shp, and makes them
     #into a list. Then, each item in the list is added to a dictionary as an open
@@ -121,7 +128,6 @@ def format_over_table(over_tbl):
                 form being as follows ({ID: [inter-activity weight, buffer], ...}):
                 
                 {1: [2.0, 0], 2: [1.50, 0], 3: [1.50, 0], ...}
-    
     '''
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
