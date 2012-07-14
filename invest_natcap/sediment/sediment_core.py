@@ -65,6 +65,7 @@ def biophysical(args):
             convention to pass a URI here, but we won't know the shape of
             the raster until after all the input rasters are rasterized.
         args['intermediate_uri'] - A path to store itermediate rasters
+        args['output_uri'] - A path to store output rasters
         returns nothing"""
 
     ##############Set up vectorize functions and function-wide values
@@ -226,6 +227,10 @@ def biophysical(args):
     effective_retention_dataset = \
         effective_retention(args['flow_direction'], \
                 retention_efficiency_dataset, stream_dataset, effective_retention_uri)
+
+    pixel_export_uri = os.path.join(args['output_uri'], 'pixel_export.tif')
+    calculate_per_pixel_export(potential_sediment_export_dataset,
+                                             effective_retention_dataset, pixel_export_uri)
 
     
     return

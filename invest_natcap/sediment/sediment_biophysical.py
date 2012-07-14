@@ -149,6 +149,7 @@ def execute(args):
         os.path.join(output_dir,'usle.tif')
     
     biophysical_args['intermediate_uri'] = intermediate_dir
+    biophysical_args['output_uri'] = output_dir
 
     LOGGER.info('starting biophysical model')
     sediment_core.biophysical(biophysical_args)
