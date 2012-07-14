@@ -232,6 +232,12 @@ def biophysical(args):
     calculate_per_pixel_export(potential_sediment_export_dataset,
                                              effective_retention_dataset, pixel_export_uri)
 
+    pixel_sediment_flow_uri = os.path.join(args['intermediate_uri'], 'pixel_sed_flow.tif')
+    pixel_sediment_core_dataset = \
+        pixel_sediment_flow(potential_sediment_export_dataset, \
+            args['flow_direction'], effective_retention_dataset, pixel_sediment_flow_uri)
+
+
     
     return
 
