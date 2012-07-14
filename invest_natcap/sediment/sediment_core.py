@@ -726,7 +726,11 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
 
                     if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
                         neighbor_retention = retention_efficiency_array[neighbor_index]
-                        if neighbor_retention == retention_efficiency_nodata:
+                        neighbor_sediment_loss = \
+                            potential_sediment_loss_array[neighbor_index]
+
+                        if neighbor_retention == retention_efficiency_nodata or \
+                                neighbor_sediment_loss == potential_sediment_loss_nodata:
                             continue
 
                         if diagonal_inflow:
