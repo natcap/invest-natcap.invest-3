@@ -213,6 +213,20 @@ def biophysical(args):
        calculate_potential_soil_loss(ls_dataset, \
                 args['erosivity'], args['erodibility'], c_dataset, p_dataset,\
                 stream_dataset, args['potential_soil_loss_uri'])
+
+    effective_retention_uri = os.path.join(args['intermediate_uri'], 
+                                           'effective_retention.tif')
+
+    retention_efficiency_uri = os.path.join(args['intermediate_uri'],'sed_ret_eff.tif')
+    retention_efficiency_dataset = raster_utils.vectorize_rasters([args['landuse']], 
+                                   lulc_to_retention, 
+                                   raster_out_uri = retention_efficiency_uri,
+                                   datatype=gdal.GDT_Float32, nodata=-1.0)
+
+    effective_retention_dataset = \
+        effective_retention(args['flow_direction'], \
+                retention_efficiency_dataset, stream_dataset, effective_retention_uri)
+
     
     return
 
@@ -417,8 +431,8 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
             #set local flow accumulation to 0
             local_flow_angle = flow_direction_array[cell_index]
             if local_flow_angle == flow_direction_nodata:
-                #We could flow off the edge
-                b_vector[cell_index] = 1.0
+                #It's purely a nodata value
+                b_vector[cell_index] = effective_retention_nodata
                 continue
 
             #Determine outflow neighbors
@@ -465,9 +479,10 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
                     #This will occur if we visit a neighbor out of bounds
                     #it's okay, just skip it
                     pass
+
             #A sink will have 100% export (to stream)
             if sink:
-                b_vector[cell_index] = 1.0
+                b_vector[cell_index] = 0.0
 
     matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
                                   format="csc")
