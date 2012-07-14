@@ -145,8 +145,8 @@ def execute(args):
     biophysical_args['usle_uri'] = os.path.join(output_dir,'usle_sm.tif')
     biophysical_args['sret_dr_uri'] = os.path.join(output_dir,'sret_dr.tif')
     biophysical_args['sexp_dr_uri'] = os.path.join(output_dir,'sexp_dr.tif')
-    biophysical_args['slope_uri'] = os.path.join(output_dir,'slope.tif')
-    biophysical_args['stream_uri'] = os.path.join(output_dir,'v_stream.tif')
+    biophysical_args['slope_uri'] = os.path.join(intermediate_dir,'slope.tif')
+    biophysical_args['stream_uri'] = os.path.join(intermediate_dir,'v_stream.tif')
     biophysical_args['ls_uri'] = os.path.join(intermediate_dir,'ls.tif')
     biophysical_args['potential_soil_loss_uri'] = os.path.join(output_dir,'usle.tif')
     
