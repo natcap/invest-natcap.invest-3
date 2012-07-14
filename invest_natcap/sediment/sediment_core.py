@@ -237,8 +237,10 @@ def biophysical(args):
         pixel_sediment_flow(potential_sediment_export_dataset, \
             args['flow_direction'], effective_retention_dataset, pixel_sediment_flow_uri)
 
+    sediment_retained_uri = os.path.join(args['output_uri'], 'pixel_retained.tif')
+    calculate_pixel_retained(pixel_sediment_core_dataset,
+        effective_retention_dataset, args['flow_direction'], sediment_retained_uri)
 
-    
     return
 
     for watershed_feature in args['watersheds'].GetLayer():
@@ -952,6 +954,7 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
                     local_flow_angle == flow_direction_nodata:
                 #if the local sediment is undefined we're gonna have a bad time
                 #set to nodata value
+                result[cell_index] = pixel_retained_nodata
                 continue
 
             #Determine inflow neighbors

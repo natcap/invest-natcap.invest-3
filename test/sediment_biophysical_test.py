@@ -91,7 +91,7 @@ class TestSedimentBiophysical(unittest.TestCase):
                               'sed_ret_eff.tif', 'pixel_sed_flow.tif']
         output_dir = os.path.join(args['workspace_dir'], 'Output')
 
-        output_files = ['usle.tif', 'pixel_export.tif']
+        output_files = ['usle.tif', 'pixel_export.tif', 'pixel_retained.tif']
 
         sediment_biophysical.execute(args)
 
