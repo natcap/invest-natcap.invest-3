@@ -2,6 +2,7 @@ import sys
 import imp
 import os
 import time
+import traceback
 
 from PyQt4 import QtGui, QtCore
 
@@ -1684,7 +1685,11 @@ class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
-        self.super = None
+        
+        if not hasattr(self, 'super'):
+            print(self, 'setting super to None')
+            self.super = None
+        
         self.obj_registrar = object_registrar
 
         self.find_and_replace(attributes)
@@ -1726,7 +1731,18 @@ class Root(DynamicElement):
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
 
+        self.updateLinksLater = []
         for id, element in self.allElements.iteritems():
+            try:
+                element.updateLinks(self)
+            except:
+                # If an exception is thrown when trying to update links, assume
+                # that it's an issue of not really knowing where the element is
+                # located and try to address it once all other elements have
+                # updated their links.
+                self.updateLinksLater.append(element)
+
+        for element in self.updateLinksLater:
             element.updateLinks(self)
 
         self.operationDialog = OperationDialog(self)
@@ -1958,18 +1974,25 @@ class Root(DynamicElement):
         """Return an element pointer if found.  None if not found."""
         #if the element id can be found in the current UI, return that
         #otherwise, get the element from this element's root.
-        if element_id in self.allElements:
+        try:
             return self.allElements[element_id]
-        else:
-            if self.super != None:
+        except KeyError:
+            try:
                 return self.super.find_element_ptr(element_id)
+            except AttributeError:
+                print traceback.print_exc()
+                print(self.attributes['id'], element_id)
+                raise AttributeError
+
 
 class EmbeddedUI(Root):
     def __init__(self, attributes, registrar):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
+        self.super = registrar.root_ui
+        print('super_ui', self.super)
         Root.__init__(self, uri, layout, registrar)
-       
+
         #removing the reference to self in self.allElements.  If a reference to
         #self is in self.allElements and self has an args_id, the args_id is
         #replicated at two levels: the embeddedUI level and in the super ui,
@@ -1985,8 +2008,8 @@ class EmbeddedUI(Root):
         return self.assembleOutputDict()
 
     def updateLinks(self, rootPointer):
-        self.super = rootPointer
-        Root.updateLinks(self, rootPointer)
+        for element_id, element_ptr in self.allElements.iteritems():
+            element_ptr.updateLinks(self)
 
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
