@@ -1,6 +1,7 @@
 """InVEST Biophysical model file handler module"""
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 import csv
 
 from invest_natcap.biodiversity import biodiversity_core
@@ -92,7 +93,7 @@ def execute(args):
     density_dict = {}
 
     resolutions = []
-    
+
     # for each possible land cover the was provided try opening the raster and
     # adding it to the dictionary. Also compile all the threat/density rasters
     # associated with the land cover
@@ -101,7 +102,7 @@ def execute(args):
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
         
         resolutions.append(get_raster_resolution(landuse_dict[ext]))        
-        
+
         # add a key to the density dictionary that associates all density/threat
         # rasters with this land cover
         density_dict['density'+ext] = {}
@@ -120,6 +121,11 @@ def execute(args):
     biophysical_args['density_dict'] = density_dict
 
     quit_model = False
+    
+    # checking to make sure the land covers have the same projections and are
+    # projected in meters
+    quit_model = check_projections(landuse_dict, 1.0)
+    
     LOGGER.debug('Resolutions : %s', resolutions)
     for index in range(len(resolutions)):
         if resolutions[0] != resolutions[index]:
@@ -191,6 +197,36 @@ def get_raster_resolution(dataset):
     row_width = int(gt[5])
     return (col_width, row_width)
 
+def check_projections(ds_dict, proj_unit):
+    """Check that a group of gdal datasets are projected and that they are
+        projected in a certain unit. 
+
+        ds_dict - a dictionary of gdal datasets
+        proj_unit - a float that specifies what units the projection should be
+            in. ex: 1.0 is meters.
+
+        returns - true if one of the datasets is not projected or not in the
+            correct projection type, otherwise returns false if datasets are
+            properly projected
+    """
+    # a list to hold the projection types to compare later
+    projections = []
+
+    for ds in ds_dict.itervalues():
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(ds.GetProjection())
+        if not srs.IsProjected():
+            return True
+        if srs.GetLinearUnits() != proj_unit:
+            return True
+        projections.append(srs.GetAttrValue("PROJECTION"))
+    
+    # check that all the datasets have the same projection type
+    for index in range(len(projections)):
+        if projections[0] != projections[index]:
+            return True
+
+    return False
 
 
 
