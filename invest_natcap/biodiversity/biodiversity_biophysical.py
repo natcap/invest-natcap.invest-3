@@ -92,8 +92,6 @@ def execute(args):
     landuse_dict = {}
     density_dict = {}
 
-    resolutions = []
-
     # for each possible land cover the was provided try opening the raster and
     # adding it to the dictionary. Also compile all the threat/density rasters
     # associated with the land cover
@@ -101,8 +99,6 @@ def execute(args):
         landuse_dict[ext] = \
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
         
-        resolutions.append(get_raster_resolution(landuse_dict[ext]))        
-
         # add a key to the density dictionary that associates all density/threat
         # rasters with this land cover
         density_dict['density'+ext] = {}
@@ -126,16 +122,11 @@ def execute(args):
     # projected in meters
     quit_model = check_projections(landuse_dict, 1.0)
     
-    LOGGER.debug('Resolutions : %s', resolutions)
-    for index in range(len(resolutions)):
-        if resolutions[0] != resolutions[index]:
-            LOGGER.error(str('The resolutions between the land cover rasters were\
-                          not the same, please make sure they all have the\
-                          same resolutions'))
-            quit_model = True
+    if quit_model:
+        raise Exception('Land cover projections are not the same or are not\
+            projected in meters')
 
-    if not quit_model:
-        biodiversity_core.biophysical(biophysical_args)
+    biodiversity_core.biophysical(biophysical_args)
 
 def open_ambiguous_raster(uri):
     """Open and return a gdal dataset given a uri path that includes the file
