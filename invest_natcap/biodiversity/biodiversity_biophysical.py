@@ -71,6 +71,13 @@ def execute(args):
     biophysical_args['sensitivity_dict'] = \
         make_dictionary_from_csv(args['sensitivity_uri'],'LULC')
 
+    # check that the threat names in the threats table match with the threats
+    # columns in the sensitivity table. Raise exception if they don't.
+    if compare_threats_sensitivity(biophysical_args['threat_dict'],\
+            biophysical_args['sensitivity_dict']):
+        raise Exception('The threat names in the threat table do not match the\
+                columns in the sensitivity table')
+
     biophysical_args['half_saturation'] = int(args['half_saturation_constant'])    
 
     # if the access shapefile was provided add it to the dictionary
@@ -214,6 +221,27 @@ def check_projections(ds_dict, proj_unit):
             return True
 
     return False
+
+def compare_threats_sensitivity(threat_dict, sens_dict):
+    """Check that the threat names in the threat table match the columns in the
+        sensitivity table that represent the sensitivity of each threat on a 
+        lulc.
+
+        threat_dict - a dictionary representing the threat table
+        sens_dict - a dictionary representing the sensitivity table
+
+        returns - True if there is a mismatch in threat names or False if
+            everything passes"""
+    # get a representation of a row from the sensitivity table where 'sens_row'
+    # will be a dictionary with the column headers as the keys
+    sens_row = sens_dict[sens_dict.keys()[0]]  
+    
+    for threat in threat_dict:
+        sens_key = 'L_'+threat
+        if not sens_key in sens_row:
+            return True
+    return False
+
 
 
 
