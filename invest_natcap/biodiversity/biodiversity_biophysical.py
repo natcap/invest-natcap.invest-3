@@ -100,7 +100,7 @@ def execute(args):
         landuse_dict[ext] = \
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
         
-	resolutions.append(get_raster_resolution(landuse_dict[ext]))        
+        resolutions.append(get_raster_resolution(landuse_dict[ext]))        
         
         # add a key to the density dictionary that associates all density/threat
         # rasters with this land cover
@@ -120,12 +120,12 @@ def execute(args):
     biophysical_args['density_dict'] = density_dict
 
     quit_model = False
-
+    LOGGER.debug('Resolutions : %s', resolutions)
     for index in range(len(resolutions)):
         if resolutions[0] != resolutions[index]:
-            LOGGER.error('The resolutions between the land cover rasters were\
+            LOGGER.error(str('The resolutions between the land cover rasters were\
                           not the same, please make sure they all have the\
-                          same resolutions')
+                          same resolutions'))
             quit_model = True
 
     if not quit_model:
@@ -186,10 +186,9 @@ def get_raster_resolution(dataset):
        returns a tupple of the column and row width in that order
     """
 
-    band = dataset.GetRasterBand(1)
-    gt = band.GetGeoTransform()
-    col_width = gt[1]
-    row_width = gt[5]
+    gt = dataset.GetGeoTransform()
+    col_width = int(gt[1])
+    row_width = int(gt[5])
     return (col_width, row_width)
 
 
