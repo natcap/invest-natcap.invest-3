@@ -90,6 +90,8 @@ def execute(args):
     # rasters pertaining to the different threats
     landuse_dict = {}
     density_dict = {}
+
+    resolutions = []
     
     # for each possible land cover the was provided try opening the raster and
     # adding it to the dictionary. Also compile all the threat/density rasters
@@ -97,6 +99,8 @@ def execute(args):
     for scenario, ext in landuse_scenarios.iteritems():
         landuse_dict[ext] = \
             gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
+        
+	resolutions.append(get_raster_resolution(landuse_dict[ext]))        
         
         # add a key to the density dictionary that associates all density/threat
         # rasters with this land cover
@@ -115,7 +119,17 @@ def execute(args):
     biophysical_args['landuse_dict'] = landuse_dict
     biophysical_args['density_dict'] = density_dict
 
-    biodiversity_core.biophysical(biophysical_args)
+    quit_model = False
+
+    for index in range(len(resolutions)):
+        if resolutions[0] != resolutions[index]:
+            LOGGER.error('The resolutions between the land cover rasters were\
+                          not the same, please make sure they all have the\
+                          same resolutions')
+            quit_model = True
+
+    if not quit_model:
+        biodiversity_core.biophysical(biophysical_args)
 
 def open_ambiguous_raster(uri):
     """Open and return a gdal dataset given a uri path that includes the file
@@ -163,7 +177,20 @@ def make_dictionary_from_csv(csv_uri, key_field):
     csv_file.close()
     return out_dict
     
+def get_raster_resolution(dataset):
+    """Get the resolution or the pixel size of the dataset and return it as a
+       tupple (col_width, row_width)
 
+       dataset - a GDAL raster dataset
+
+       returns a tupple of the column and row width in that order
+    """
+
+    band = dataset.GetRasterBand(1)
+    gt = band.GetGeoTransform()
+    col_width = gt[1]
+    row_width = gt[5]
+    return (col_width, row_width)
 
 
 
