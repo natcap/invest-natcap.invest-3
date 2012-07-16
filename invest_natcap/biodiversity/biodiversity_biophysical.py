@@ -116,13 +116,9 @@ def execute(args):
     biophysical_args['landuse_dict'] = landuse_dict
     biophysical_args['density_dict'] = density_dict
 
-    quit_model = False
-    
     # checking to make sure the land covers have the same projections and are
     # projected in meters
-    quit_model = check_projections(landuse_dict, 1.0)
-    
-    if quit_model:
+    if check_projections(landuse_dict, 1.0):
         raise Exception('Land cover projections are not the same or are not\
             projected in meters')
 
