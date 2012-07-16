@@ -617,6 +617,7 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     tiff_height = int(np.ceil(abs(shp_extent[3] - shp_extent[2]) / yRes))
 
     driver = gdal.GetDriverByName('GTiff')
+    #1 means only create 1 band
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
