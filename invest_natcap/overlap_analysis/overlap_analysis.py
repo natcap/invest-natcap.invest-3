@@ -5,7 +5,7 @@ import csv
 import glob
 
 from osgeo import ogr
-from invest_naptcap.overlap_analysis import overlap_analysis_core
+from invest_natcap.overlap_analysis import overlap_analysis_core
 
 def execute(args):
     '''This function will take care of preparing files passed into 
@@ -110,24 +110,22 @@ def execute(args):
     overlap_analysis_core.execute(oa_args)
     
 def format_over_table(over_tbl):
-    ''' While the file actually contains names for the files, we are going to use the ID
-    itself as an identifier for the dictionary, then just parse through the names
-    of the files to find an int in order to match them up. Since each of the files
-    is required to contain an ID at the end, this will allow us to bypass the problem
-    of names not being the same (i.e- Fish_CommGF vs CommGF_Fish).
+    '''This CSV file contains a string which can be used to uniquely identify a .shp
+    file to which the values in that string's row will correspond. This string,
+    therefore, should be used as the key for the ovlap_analysis dictionary, so that we
+    can get all corresponding values for a shapefile at once by knowing its name.
     
         Input:
-            over_tbl- A CSV that contains a list of each interest shapefile, as well
-                as the unique ID that identifies it, and the optional buffers and
-                weights of the layers.
+            over_tbl- A CSV that contains a list of each interest shapefile, and any 
+            the optional buffers and weights of the layers.
                 
         Returns:
-            over_dict- The analysis layer dictionary that maps the unique ID of each
+            over_dict- The analysis layer dictionary that maps the unique name of each
                 layer to the optional parameters of inter-activity weight and buffer.
-                Each ID number will map to a list containing the two values, with the
-                form being as follows ({ID: [inter-activity weight, buffer], ...}):
+                Each string will map to a tuple containing the two values, with the
+                form being as follows ({Name: [inter-activity weight, buffer], ...}):
                 
-                {1: [2.0, 0], 2: [1.50, 0], 3: [1.50, 0], ...}
+                {CommGF_Fish: (2.0, 0), CommSalmonTroll_Fish: (1.50, 0), ...}
     '''
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
@@ -137,7 +135,7 @@ def format_over_table(over_tbl):
     #USING EXPLICIT STRING CALLS to the layers table (these should not be unique to the
     #type of table, but rather, are items that ALL layers tables should contain). I am
     #casting both of the optional values to floats, since both will be used for later
-    #calculations. Casting ID number to int for ease of access later.
+    #calculations.
     for row in reader:
         
         #Setting the default values for inter-activity weight and buffer, since they
@@ -148,13 +146,13 @@ def format_over_table(over_tbl):
         buffer = 0
         
         for key in row:
-            if 'Inter-Activity' in key:
+            if 'Inter-Activity' in key and row[key] != '':
                 inter_act = float(row[key])
-            if 'Buffer' in key:
+            if 'Buffer' in key and row[key] != '':
                 buffer = float(row[key])
                 
-        id_num = int(row['ID'])
+        name = row['LIST OF HUMAN USES']
         
-        over_dict[id_num] = [inter_act, buffer]
+        over_dict[name] = (inter_act, buffer)
     
     return over_dict
