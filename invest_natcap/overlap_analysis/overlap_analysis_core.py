@@ -81,14 +81,12 @@ def execute(args):
     
     #When we go to actually burn, should have a "0" where there is AOI, not same as nodata
     activities_uri = os.path.join(output_dir, 'hu_freq.tif')
-    activities_nodata= -1
     
     #By putting it within execute, we are able to use execute's own variables, so we can
     #just use aoi_nodata without havig to pass it somehow
     def get_raster_sum(aoi_pixel, *activity_pixels):
         '''For any given pixel, if the AOI covers the pixel, we want to ignore nodata 
         value activities, and sum all other activities happening on that pixel.
-        
         
         Input:
             aoi_pixel- This is the pixel from our base area of interest raster file. 
@@ -99,16 +97,28 @@ def execute(args):
                 combine.
                 
         Returns:
-            sum_pixel- This is either a nodata value if the AOI is not turned on in that
-                area, or, if the AOI does cover this pixel, this is the sum of all
-                activities that are taking place in that area.
+            sum_pixel- This is either the aoi_nodata value if the AOI is not turned on
+                in that area, or, if the AOI does cover this pixel, this is the sum of 
+                all activities that are taking place in that area.
         '''
+        #We have pre-decided that nodata for the activity pixel will produce a different
+        #result from the "no activities within that AOI area" result of 0.
+        if aoi_pixel == aoi_nodata:
+            return aoi_nodata
+        
+        sum_pixel = 0
+        
+        for activ in activity_pixels:
+            if activ == 1:
+                
+                sum_pixel += 1
+         
+        return sum_pixel   
         
         
     raster_utils.vectorize_rasters(raster_files, get_raster_sum, 
                                    raster_out_uri = activities_uri, 
                                    datatype = gdal.GDT_Int32, nodata = activities_nodata)
-    
     
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''This will pluck each of the files out of the dictionary and create a new raster
