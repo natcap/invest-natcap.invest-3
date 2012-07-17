@@ -267,8 +267,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
     #Together with the AOI and min pixel size we define the output dataset's 
     #columns and out_n_rows
-    out_n_cols = int(np.ceil((aoi_box[2] - aoi_box[0]) / pixel_width))
-    out_n_rows = int(np.ceil((aoi_box[3] - aoi_box[1]) / pixel_height))
+    out_n_cols = int(np.round((aoi_box[2] - aoi_box[0]) / pixel_width))
+    out_n_rows = int(np.round((aoi_box[3] - aoi_box[1]) / pixel_height))
     LOGGER.debug('number of pixel out_n_cols and out_n_rows %s %s' % \
                  (out_n_cols, out_n_rows))
 
