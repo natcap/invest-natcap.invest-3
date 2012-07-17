@@ -493,7 +493,7 @@ def raster_from_dict(key_raster, out_uri, attr_dict, field, out_nodata,\
             if str(key) in attr_dict:
                 return attr_dict[str(key)][field]
             else:
-                raise Exception(error_message)
+                raise KeyError(error_message)
     else:
         def vop(key):
             """Operation passed to numpy function vectorize that uses 'key' as the 
