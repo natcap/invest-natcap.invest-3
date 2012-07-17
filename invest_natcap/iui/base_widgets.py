@@ -1956,7 +1956,7 @@ class Root(DynamicElement):
     def find_embedded_elements(self):
         uis = []
         for id, element in self.allElements.iteritems():
-            if isinstance(EmbeddedUI, element):
+            if issubclass(element.__class__, EmbeddedUI):
                 uis.append(element)
         return uis
 
