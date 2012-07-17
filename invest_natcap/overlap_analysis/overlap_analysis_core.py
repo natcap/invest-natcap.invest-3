@@ -49,7 +49,7 @@ def execute(args):
         <Some Other Things>
     
     Output:
-        <Insert Raster Name Here>- This is a raster output which depicts the
+        activities_uri- This is a raster output which depicts the
             unweighted frequency of activity within a gridded area or management
             zone.
         <Insert Raster Name Here>- This is a raster depicting the importance scores
@@ -83,7 +83,7 @@ def execute(args):
     activities_uri = os.path.join(output_dir, 'hu_freq.tif')
     
     #By putting it within execute, we are able to use execute's own variables, so we can
-    #just use aoi_nodata without havig to pass it somehow
+    #just use aoi_nodata without having to pass it somehow
     def get_raster_sum(aoi_pixel, *activity_pixels):
         '''For any given pixel, if the AOI covers the pixel, we want to ignore nodata 
         value activities, and sum all other activities happening on that pixel.
@@ -133,7 +133,7 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
             need to be rasterized. The key for this dictionary is the name of the 
             file itself, minus the .shp extension. This key maps to the open shapefile
             of that name.
-        aoi_raster- The dataset for out Area Of Interest. This will be the base map for
+        aoi_raster- The dataset for our Area Of Interest. This will be the base map for
             all following datasets.
             
     Returns:
