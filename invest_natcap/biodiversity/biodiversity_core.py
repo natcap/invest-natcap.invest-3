@@ -48,9 +48,6 @@ def biophysical(args):
     half_saturation = args['half_saturation']
     
     out_nodata = -1.0
-
-    #Get raster properties: cellsize, width, height, cells = width * height, extent    
-    lulc_prop = get_raster_properties(cur_landuse)
     
     #Create raster of habitat based on habitat field
     habitat_uri = os.path.join(intermediate_dir, 'habitat.tif')
@@ -84,6 +81,8 @@ def biophysical(args):
     for lulc_key, lulc_ras in args['landuse_dict'].iteritems():
         try:
             LOGGER.debug('Calculating results for landuse : %s', lulc_key)
+            #Get raster properties: cellsize, width, height, cells = width * height, extent    
+            lulc_prop = get_raster_properties(cur_landuse)
 
             # initialize a list that will store all the density/threat rasters
             # after they have been adjusted for distance, weight, and access
@@ -254,17 +253,31 @@ def biophysical(args):
     try:    
         # will throw a KeyError exception if no base raster is provided
         lulc_base = args['landuse_dict']['_b']
+        
+        # get the area of a base pixel to use for computing rarity where the 
+        # pixel sizes are different between base and cur/fut rasters
+        base_properties = get_raster_properties(lulc_base)
+        base_area = base_properties['width'] * base_properties['height']
+
         base_nodata = lulc_base.GetRasterBand(1).GetNoDataValue()
-        lulc_code_count_b = raster_pixel_count(lulc_base)
         rarity_nodata = float(np.finfo(np.float32).min)
+        
+        lulc_code_count_b = raster_pixel_count(lulc_base)
         
         # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
                 lulc_x = args['landuse_dict'][lulc_cover]
+                
+                # get the area of a cur/fut pixel
+                lulc_properties = get_raster_properties(lulc_x)
+                lulc_area = lulc_properties['width'] * lulc_properties['height']
+                
                 lulc_nodata = lulc_x.GetRasterBand(1).GetNoDataValue()
+                
                 LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
                         lulc_nodata) 
+                
                 def trim_op(base, cover_x):
                     """Vectorized function used in vectorized_rasters. Trim
                         cover_x to the mask of base
@@ -283,6 +296,7 @@ def biophysical(args):
                 LOGGER.debug('Create new cover for %s', lulc_cover)
                 new_cover_uri = \
                     os.path.join(intermediate_dir, 'new_cover'+lulc_cover+'.tif')
+                
                 # set the current/future land cover to be masked to the base
                 # land cover
                 new_cover = \
@@ -298,7 +312,9 @@ def biophysical(args):
                 # but not the baseline
                 for code in lulc_code_count_x.iterkeys():
                     try:
-                        ratio = 1.0 - (float(lulc_code_count_x[code])/lulc_code_count_b[code])
+                        numerator = float(lulc_code_count_x[code] * lulc_area)
+                        denominator = float(lulc_code_count_b[code] * base_area)
+                        ratio = 1.0 - (numerator / denominator)
                         code_index[code] = ratio
                     except KeyError:
                         code_index[code] = 0.0
@@ -414,8 +430,8 @@ def get_raster_properties(dataset):
     """
     dataset_dict = {}
     gt = dataset.GetGeoTransform()
-    dataset_dict['width'] = gt[1]
-    dataset_dict['height'] = gt[5]
+    dataset_dict['width'] = float(gt[1])
+    dataset_dict['height'] = float(gt[5])
     dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize    
     dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
     dataset_dict['mask'] = dataset.GetRasterBand(1).GetMaskBand()
