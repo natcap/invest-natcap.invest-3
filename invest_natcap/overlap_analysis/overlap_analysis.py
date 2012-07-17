@@ -146,13 +146,13 @@ def format_over_table(over_tbl):
         buffer = 0
         
         for key in row:
-            if 'Inter-Activity' in key:
+            if 'Inter-Activity' in key and row[key] != '':
                 inter_act = float(row[key])
-            if 'Buffer' in key:
+            if 'Buffer' in key and row[key] != '':
                 buffer = float(row[key])
                 
-        id_num = int(row['LIST OF HUMAN USES'])
+        name = row['LIST OF HUMAN USES']
         
-        over_dict[id_num] = [inter_act, buffer]
+        over_dict[name] = [inter_act, buffer]
     
     return over_dict
