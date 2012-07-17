@@ -1133,6 +1133,17 @@ def extract_band_and_nodata(dataset, get_array = False):
     #Otherwise just return the band and nodata
     return band, nodata
 
+def calculate_value_not_in_dataset(dataset):
+    """Calcualte a value not contained in a dataset.  Useful for calculating
+        nodata values.
+
+        dataset - a GDAL dataset
+
+        returns a number not contained in the dataset"""
+
+    band,nodata,array = extract_band_and_nodata(dataset, get_array = True)
+    return calculate_value_not_in_array(array)
+
 def calculate_value_not_in_array(array):
     """This function calcualtes a number that is not in the given array, if 
         possible.
