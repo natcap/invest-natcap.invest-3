@@ -176,20 +176,6 @@ def make_dictionary_from_csv(csv_uri, key_field):
         out_dict[row[key_field]] = row
     csv_file.close()
     return out_dict
-    
-def get_raster_resolution(dataset):
-    """Get the resolution or the pixel size of the dataset and return it as a
-       tupple (col_width, row_width)
-
-       dataset - a GDAL raster dataset
-
-       returns a tupple of the column and row width in that order
-    """
-
-    gt = dataset.GetGeoTransform()
-    col_width = int(gt[1])
-    row_width = int(gt[5])
-    return (col_width, row_width)
 
 def check_projections(ds_dict, proj_unit):
     """Check that a group of gdal datasets are projected and that they are
