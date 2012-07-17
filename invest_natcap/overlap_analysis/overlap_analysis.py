@@ -122,10 +122,10 @@ def format_over_table(over_tbl):
         Returns:
             over_dict- The analysis layer dictionary that maps the unique name of each
                 layer to the optional parameters of inter-activity weight and buffer.
-                Each string will map to a list containing the two values, with the
+                Each string will map to a tuple containing the two values, with the
                 form being as follows ({Name: [inter-activity weight, buffer], ...}):
                 
-                {CommGF_Fish: [2.0, 0], CommSalmonTroll_Fish: [1.50, 0], ...}
+                {CommGF_Fish: (2.0, 0), CommSalmonTroll_Fish: (1.50, 0), ...}
     '''
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
@@ -153,6 +153,6 @@ def format_over_table(over_tbl):
                 
         name = row['LIST OF HUMAN USES']
         
-        over_dict[name] = [inter_act, buffer]
+        over_dict[name] = (inter_act, buffer)
     
     return over_dict
