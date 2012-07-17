@@ -1134,6 +1134,15 @@ def extract_band_and_nodata(dataset, get_array = False):
     return band, nodata
 
 def calculate_value_not_in_array(array):
+    """This function calcualtes a number that is not in the given array, if 
+        possible.
+
+        array - a numpy array
+
+        returns a number not in array that is not "close" to any value in array
+            ideally calculated in the middle of the maximum delta between any two
+            consecutive numbers in the array"""
+
     sorted_array = np.sort(array.flatten())
     array_type = type(sorted_array[0])
     diff_array = np.array([-1,1])
