@@ -48,14 +48,13 @@ def biophysical(args):
     half_saturation = args['half_saturation']
     
     out_nodata = -1.0
-
-    #Get raster properties: cellsize, width, height, cells = width * height, extent    
-    lulc_prop = get_raster_properties(cur_landuse)
     
     #Create raster of habitat based on habitat field
     habitat_uri = os.path.join(intermediate_dir, 'habitat.tif')
     
-    habitat_raster = raster_from_table_values(cur_landuse, habitat_uri, args['sensitivity_dict'], 'HABITAT')
+    habitat_raster = \
+        raster_from_dict(cur_landuse, habitat_uri, args['sensitivity_dict'],\
+            'HABITAT', -1.0, False)
     
     #If access_lyr: convert to raster, if value is null set to 1, else set to value
     access_raster = None
@@ -84,6 +83,8 @@ def biophysical(args):
     for lulc_key, lulc_ras in args['landuse_dict'].iteritems():
         try:
             LOGGER.debug('Calculating results for landuse : %s', lulc_key)
+            #Get raster properties: cellsize, width, height, cells = width * height, extent    
+            lulc_prop = get_raster_properties(cur_landuse)
 
             # initialize a list that will store all the density/threat rasters
             # after they have been adjusted for distance, weight, and access
@@ -152,8 +153,10 @@ def biophysical(args):
                 sens_uri = \
                     os.path.join(intermediate_dir, str('sens_'+threat+lulc_key+'.tif'))
                 sensitivity_raster = \
-                    raster_from_table_values(lulc_ras, sens_uri,\
-                                             args['sensitivity_dict'], 'L_'+threat)        
+                    raster_from_dict(lulc_ras, sens_uri,\
+                        args['sensitivity_dict'], 'L_'+threat, -1.0, True,\
+                        'A lulc type in the land cover was not found in the\
+                        sensitivity table. The erroring pixel value was : ')        
                 sensitivity_raster.FlushCache()
                
                 weight_avg = float(threat_data['WEIGHT']) / weight_sum
@@ -254,17 +257,31 @@ def biophysical(args):
     try:    
         # will throw a KeyError exception if no base raster is provided
         lulc_base = args['landuse_dict']['_b']
+        
+        # get the area of a base pixel to use for computing rarity where the 
+        # pixel sizes are different between base and cur/fut rasters
+        base_properties = get_raster_properties(lulc_base)
+        base_area = base_properties['width'] * base_properties['height']
+
         base_nodata = lulc_base.GetRasterBand(1).GetNoDataValue()
-        lulc_code_count_b = raster_pixel_count(lulc_base)
         rarity_nodata = float(np.finfo(np.float32).min)
+        
+        lulc_code_count_b = raster_pixel_count(lulc_base)
         
         # compute rarity for current landscape and future (if provided)
         for lulc_cover in ['_c', '_f']:
             try:
                 lulc_x = args['landuse_dict'][lulc_cover]
+                
+                # get the area of a cur/fut pixel
+                lulc_properties = get_raster_properties(lulc_x)
+                lulc_area = lulc_properties['width'] * lulc_properties['height']
+                
                 lulc_nodata = lulc_x.GetRasterBand(1).GetNoDataValue()
+                
                 LOGGER.debug('Base and Cover NODATA : %s : %s', base_nodata,
                         lulc_nodata) 
+                
                 def trim_op(base, cover_x):
                     """Vectorized function used in vectorized_rasters. Trim
                         cover_x to the mask of base
@@ -283,6 +300,7 @@ def biophysical(args):
                 LOGGER.debug('Create new cover for %s', lulc_cover)
                 new_cover_uri = \
                     os.path.join(intermediate_dir, 'new_cover'+lulc_cover+'.tif')
+                
                 # set the current/future land cover to be masked to the base
                 # land cover
                 new_cover = \
@@ -298,7 +316,9 @@ def biophysical(args):
                 # but not the baseline
                 for code in lulc_code_count_x.iterkeys():
                     try:
-                        ratio = 1.0 - (float(lulc_code_count_x[code])/lulc_code_count_b[code])
+                        numerator = float(lulc_code_count_x[code] * lulc_area)
+                        denominator = float(lulc_code_count_b[code] * base_area)
+                        ratio = 1.0 - (numerator / denominator)
                         code_index[code] = ratio
                     except KeyError:
                         code_index[code] = 0.0
@@ -414,18 +434,23 @@ def get_raster_properties(dataset):
     """
     dataset_dict = {}
     gt = dataset.GetGeoTransform()
-    dataset_dict['width'] = gt[1]
-    dataset_dict['height'] = gt[5]
+    dataset_dict['width'] = float(gt[1])
+    dataset_dict['height'] = float(gt[5])
     dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize    
     dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
     dataset_dict['mask'] = dataset.GetRasterBand(1).GetMaskBand()
     LOGGER.debug('Raster_Properties : %s', dataset_dict)
     return dataset_dict
 
-def raster_from_table_values(key_raster, out_uri, attr_dict, field, nodata=-1.0):
+def raster_from_dict(key_raster, out_uri, attr_dict, field, out_nodata,\
+        raise_error, error_message='An Error occured mapping a dictionary to a\
+        raster'):
     """Creates a new raster from 'key_raster' where the pixel values from
        'key_raster' are the keys to a dictionary 'attr_dict'. The values 
-       corresponding to those keys is what is written to the new raster.
+       corresponding to those keys is what is written to the new raster. If a
+       value from 'key_raster' does not appear as a key in 'attr_dict' then
+       raise an Exception if 'raise_error' is True, otherwise return a
+       'out_nodata'
     
        key_raster - a GDAL raster dataset whose pixel values relate to the 
                      keys in 'attr_dict'
@@ -434,34 +459,59 @@ def raster_from_table_values(key_raster, out_uri, attr_dict, field, nodata=-1.0)
                    in making into a raster                  
        field - a string of which field in the table or key in the dictionary 
                to use as the new raster pixel values
-       nodata - a floating point value that is the nodata value. Default is -1.0
-       
-       returns - a GDAL raster
+       out_nodata - a floating point value that is the nodata value.
+       raise_error - a boolean that decides how to handle the case where the
+           value from 'key_raster' is not found in 'attr_dict'. If 'raise_error'
+           is True, raise Exception, if False, return 'out_nodata'
+       error_message - a string that is printed out with the raised Exception if
+           'raise_error' is set to True
+
+       returns - a GDAL raster, or raises an Exception and fail if:
+           1) raise_error is True and
+           2) the value from 'key_raster' is not a key in 'attr_dict'
     """
 
-    LOGGER.debug('Starting raster_from_table_values')
-    out_nodata = nodata 
+    LOGGER.debug('Starting raster_from_dict')
     
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
     attr_dict[out_nodata] = {field:float(out_nodata)}
 
-    def vop(lulc):
-        """Operation passed to numpy function vectorize that uses 'lulc' as the 
-            key to the local dictionary 'attr_dict'. Returns the value in place
-            of the key for the new raster
-           
-           lulc - a float/int/string from the local raster 'key_raster' that
-               be used to look up a value in the dictionary 'attr_dict'
+    if raise_error:
+        def vop(key):
+            """Operation passed to numpy function vectorize that uses 'key' as the 
+                key to the local dictionary 'attr_dict'. Returns the value in place
+                of the key for the new raster
+               
+                key - a float or int or string from the local raster 
+                    'key_raster' that is used to look up a value in the 
+                    dictionary 'attr_dict'
 
-           returns - the 'field' value corresponding to the lulc type
-        """
-        if str(lulc) in attr_dict:
-            return attr_dict[str(lulc)][field]
-        else:
-            return out_nodata
+               returns - the 'field' value corresponding to the 'key' or raises
+                   an Exception if 'key' is not found as a key in 'attr_dict'
+            """
+            if str(key) in attr_dict:
+                return attr_dict[str(key)][field]
+            else:
+                raise Exception(error_message)
+    else:
+        def vop(key):
+            """Operation passed to numpy function vectorize that uses 'key' as the 
+                key to the local dictionary 'attr_dict'. Returns the value in place
+                of the key for the new raster
+               
+                key - a float or int or string from the local raster 
+                    'key_raster' that is used to look up a value in the 
+                    dictionary 'attr_dict'
 
-    #out_band = out_raster.GetRasterBand(1)
+               returns - the 'field' value corresponding to the 'key' or
+                   'out_nodata' if 'key' is not a key in 'attr_dict'
+            """
+            if str(key) in attr_dict:
+                return attr_dict[str(key)][field]
+            else:
+                return out_nodata
+
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
             raster_out_uri=out_uri, nodata=out_nodata)
 

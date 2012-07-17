@@ -49,7 +49,7 @@ def execute(args):
         <Some Other Things>
     
     Output:
-        <Insert Raster Name Here>- This is a raster output which depicts the
+        activities_uri- This is a raster output which depicts the
             unweighted frequency of activity within a gridded area or management
             zone.
         <Insert Raster Name Here>- This is a raster depicting the importance scores
@@ -59,20 +59,119 @@ def execute(args):
             
     Returns nothing.
     '''
-    output_dir = os.join(args['workspace_dir'], 'Output')
-    inter_dir = os.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
-    aoi_rast_file = os.join(inter_dir, 'AOI_Raster.tif')
+    aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     #Need to figure out what to do with management zones
     aoi_raster = raster_utils.create_raster_from_vector_extents(args['grid_size'], 
                                     args['grid_size'], gdal.GDT_Int32, -1, aoi_rast_file,
                                     args['zone_layer_file'])
-    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_rast_file)
+    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
     aoi_band.Fill(aoi_nodata)
     
-    gdal.RasterizeLayer(aoi_rast_file, [1], aoi_shp_layer, burn_value = [1]) 
+    gdal.RasterizeLayer(aoi_raster, [1], aoi_shp_layer, burn_value = [1])
     
+    #Want to get each interest layer, and rasterize them, then combine them all at
+    #the end. Could do a list of the filenames that we are creating within the
+    #intermediate directory, so that we can access later. Want to pass in the
+    #inter_dir, as well as the list of shapefiles, and the AOI raster to get info from
+    raster_files = make_indiv_rasters(inter_dir, args['overlap_files'], aoi_raster)
+    
+    #When we go to actually burn, should have a "0" where there is AOI, not same as nodata
+    activities_uri = os.path.join(output_dir, 'hu_freq.tif')
+    
+    #By putting it within execute, we are able to use execute's own variables, so we can
+    #just use aoi_nodata without having to pass it somehow
+    def get_raster_sum(aoi_pixel, *activity_pixels):
+        '''For any given pixel, if the AOI covers the pixel, we want to ignore nodata 
+        value activities, and sum all other activities happening on that pixel.
+        
+        Input:
+            aoi_pixel- This is the pixel from our base area of interest raster file. 
+                This is guaranteed to be the fist item in the list, since we
+                manually add it first.
+            *activity_pixels- This expands into a dynamic list of single variables, each
+                of which is a pixel from the overlap rasters that we are looking to
+                combine.
+                
+        Returns:
+            sum_pixel- This is either the aoi_nodata value if the AOI is not turned on
+                in that area, or, if the AOI does cover this pixel, this is the sum of 
+                all activities that are taking place in that area.
+        '''
+        #We have pre-decided that nodata for the activity pixel will produce a different
+        #result from the "no activities within that AOI area" result of 0.
+        if aoi_pixel == aoi_nodata:
+            return aoi_nodata
+        
+        sum_pixel = 0
+        
+        for activ in activity_pixels:
+            if activ == 1:
+                
+                sum_pixel += 1
+         
+        return sum_pixel   
+        
+        
+    raster_utils.vectorize_rasters(raster_files, get_raster_sum, 
+                                   raster_out_uri = activities_uri, 
+                                   datatype = gdal.GDT_Int32, nodata = activities_nodata)
+    
+def make_indiv_rasters(dir, overlap_files, aoi_raster):
+    '''This will pluck each of the files out of the dictionary and create a new raster
+    file out of them. The new file will be named the same as the original shapefile,
+    but with a .tif extension, and will be placed in the intermediate directory that
+    is being passed in as a parameter
+    
+    Input:
+        dir- This is the directory into which our completed raster files should be
+            placed when completed.
+        overlap_files- This is a dictionary containing all of the open shapefiles which
+            need to be rasterized. The key for this dictionary is the name of the 
+            file itself, minus the .shp extension. This key maps to the open shapefile
+            of that name.
+        aoi_raster- The dataset for our Area Of Interest. This will be the base map for
+            all following datasets.
+            
+    Returns:
+        raster_files- This is a list of the datasets that we want to sum. The first will
+            ALWAYS be the AOI dataset, and the rest will be the variable number of other
+            datasets that we want to sum.
+    '''
+    #Want to switch directories so that we can easily write our files
+    os.chdir(dir)
+    
+    #aoi_raster has to be the first so that we can use it as an easy "weed out" for
+    #pixel summary later
+    raster_files = [aoi_raster]
+    overlap_burn_value = 1
+    
+    #Remember, this defaults to element being the keys of the dictionary
+    for element in overlap_files:
+        
+        datasource = overlap_files[element]
+        layer = datasource.GetLayer()
+        
+        outgoing_uri = os.join(element, ".tif")
+        
+        
+        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
+                                -1, gdal.GDT_Int32)
+        band, nodata = raster_utils.extract_band_and_nodata(dataset)
+        
+        #Do we want to specify -1, or just fill with generic nodata (which in this case
+        #should actually be -1)
+        band.Fill(no_data)
+        
+        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[overlap_burn_value])
+        
+        raster_files.append(dataset)
+        
+    return raster_files
+
 def gridder(inter_dir, URI, dimension):
     '''This function will take in the URI to a shapefile, and will return an
     open shapefile that contains polygons of size dimension x dimension, and
