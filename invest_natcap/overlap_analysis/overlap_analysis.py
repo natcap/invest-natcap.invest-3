@@ -3,9 +3,14 @@
 import os
 import csv
 import glob
+import logging
 
 from osgeo import ogr
 from invest_natcap.overlap_analysis import overlap_analysis_core
+
+LOGGER = logging.getLogger('overlap_analysis')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
     '''This function will take care of preparing files passed into 
@@ -68,6 +73,7 @@ def execute(args):
         
     oa_args['workspace_dir'] = args['workspace']
     
+    LOGGER.debug(args['zone_layer_loc'])
     #This allows for options gridding of the vectors being passed in. The return
     #from core will be a URI to a shapefile with multiple polygons of user specified 
     #size that are in an area stretching over the extent of the polygons
@@ -80,6 +86,8 @@ def execute(args):
         oa_args['grid_size'] = args['grid_size']
     else:    
         oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
+    
+    LOGGER.debug(oa_args['zone_layer_file'])
     
     #Still need to pass in do_grid because we need to know if we're treating management
     #zones or exact gridded squares....don't we?
@@ -103,9 +111,10 @@ def execute(args):
     
     oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
     
-    oa_args['import_field'] = args['import_field']
-    oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
-    oa_args['decay'] = args['decay']
+    #We don't actually get these yet, so commenting them out
+    #oa_args['import_field'] = args['import_field']
+    #oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
+    #oa_args['decay'] = args['decay']
     
     overlap_analysis_core.execute(oa_args)
     
