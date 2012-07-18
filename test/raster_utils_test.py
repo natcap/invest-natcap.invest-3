@@ -14,6 +14,7 @@ import invest_test_core
 
 class TestRasterUtils(unittest.TestCase):
     def test_clip_datset(self):
+        raise SkipTest
         base_dir = 'data/test_out/raster_utils'
 
         if not os.path.exists(base_dir):
@@ -28,7 +29,7 @@ class TestRasterUtils(unittest.TestCase):
         clip_dataset = os.path.join(base_dir,'clipped.tif')
         raster_utils.clip_dataset(dem, aoi, clip_dataset)
 
-        subprocess.Popen(["qgis", dem_uri, aoi_uri, clip_dataset])
+#        subprocess.Popen(["qgis", dem_uri, aoi_uri, clip_dataset])
 
 
     def test_calculate_slope(self):
@@ -54,3 +55,19 @@ class TestRasterUtils(unittest.TestCase):
         raster_utils.calculate_slope(dem_dataset, slope_uri)
 
         subprocess.Popen(["qgis", dem_uri, slope_uri])
+
+    def test_calculate_value_not_in_array(self):
+        array = np.array([-1,2,5,-8,-9])
+        value = raster_utils.calculate_value_not_in_array(array)
+        print value
+        self.assertFalse(value in array)
+
+        array = np.array([-1,-1,-1])
+        value = raster_utils.calculate_value_not_in_array(array)
+        print value
+        self.assertFalse(value in array)
+
+        array = np.array([-1.1,-1.2,-1.2])
+        value = raster_utils.calculate_value_not_in_array(array)
+        print value
+        self.assertFalse(value in array)

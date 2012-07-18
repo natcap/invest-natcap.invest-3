@@ -237,11 +237,11 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     gdal_bool_types = [gdal.GDT_Byte]
 
     if datatype in gdal_int_types:
-        nodata = int(nodata)
+        nodata = np.int(nodata)
     if datatype in gdal_float_types:
-        nodata = float(nodata)
+        nodata = np.float(nodata)
     if datatype in gdal_bool_types:
-        nodata = bool(nodata)
+        nodata = np.bool(nodata)
 
     #create a new current_dataset with the minimum resolution of dataset_list and
     #bounding box that contains aoi_box
@@ -316,7 +316,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         vectorized_op = op
 
     #If there's an AOI, we need to mask out values
-    mask_dataset = new_raster_from_base(out_dataset, 'mask.tif', 'GTiff', 255, gdal.GDT_Byte)
+    mask_dataset = new_raster_from_base(out_dataset, '', 'MEM', 255, gdal.GDT_Byte)
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     if aoi != None:
@@ -1132,3 +1132,43 @@ def extract_band_and_nodata(dataset, get_array = False):
 
     #Otherwise just return the band and nodata
     return band, nodata
+
+def calculate_value_not_in_dataset(dataset):
+    """Calcualte a value not contained in a dataset.  Useful for calculating
+        nodata values.
+
+        dataset - a GDAL dataset
+
+        returns a number not contained in the dataset"""
+
+    band,nodata,array = extract_band_and_nodata(dataset, get_array = True)
+    return calculate_value_not_in_array(array)
+
+def calculate_value_not_in_array(array):
+    """This function calcualtes a number that is not in the given array, if 
+        possible.
+
+        array - a numpy array
+
+        returns a number not in array that is not "close" to any value in array
+            ideally calculated in the middle of the maximum delta between any two
+            consecutive numbers in the array"""
+
+    sorted_array = np.sort(array.flatten())
+    array_type = type(sorted_array[0])
+    diff_array = np.array([-1,1])
+    deltas = scipy.signal.correlate(sorted_array, diff_array, mode='valid')
+    
+    max_delta_index = np.argmax(deltas)
+
+    #Try to return the average of the maximum delta
+    if deltas[max_delta_index] > 0:
+        return array_type((sorted_array[max_delta_index+1]-
+                           sorted_array[max_delta_index])/2.0)
+
+    #Else, all deltas are too small so go one smaller or one larger than the 
+    #min or max.  Catching an exception in case there's an overflow.
+    try:
+        return sorted_array[0]-1
+    except:
+        return sorted_array[-1]+1

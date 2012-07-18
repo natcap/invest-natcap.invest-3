@@ -13,8 +13,8 @@ import invest_natcap
 # __version__ is set in invest_natcap/__init__.py, in accordance with PEP
 # 396:http://www.python.org/dev/peps/pep-0396/. 
 VERSION = invest_natcap.__version__
-CYTHON_SOURCE_FILES = ['cython_modules/invest_cython_core.pyx',
-                       'cython_modules/simplequeue.c']
+CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
+                       'invest_natcap/cython_modules/simplequeue.c']
 
 console = []
 data_files = []
