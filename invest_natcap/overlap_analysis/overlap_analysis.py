@@ -4,6 +4,7 @@ import os
 import csv
 import glob
 import logging
+import re
 
 from osgeo import ogr
 from invest_natcap.overlap_analysis import overlap_analysis_core
@@ -73,7 +74,8 @@ def execute(args):
         
     oa_args['workspace_dir'] = args['workspace']
     
-    LOGGER.debug(args['zone_layer_loc'])
+    #LOGGER.debug(args['zone_layer_loc'])
+    
     #This allows for options gridding of the vectors being passed in. The return
     #from core will be a URI to a shapefile with multiple polygons of user specified 
     #size that are in an area stretching over the extent of the polygons
@@ -102,7 +104,11 @@ def execute(args):
     
     for file in file_names:
         
-        name = os.path.splitext(file)[0]
+        #The return of os.path.split is a tuple where everything after the final slash
+        #is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes before
+        #the file extension, and the second is the extension itself 
+        name = os.path.splitext(os.path.split(file)[1])[0]
         file_dict[name] = ogr.Open(file)
         
     oa_args['overlap_files'] = file_dict
