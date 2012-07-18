@@ -30,7 +30,7 @@ class TestOverlapAnalysis(unittest.TestCase):
         args['zone_layer_loc'] = './data/overlap_analysis/AOI_WCVI.shp'
         args['do_grid'] = True
         args['grid_size'] = 1000
-        args['overlap_data_dir_loc'] = './data/overlap_analysis/FisheriesLayer_RI'
+        args['overlap_data_dir_loc'] = './data/overlap_analysis/FisheriesLayers_RI'
         args['overlap_layer_tbl'] = './data/overlap_analysis/Fisheries_Inputs.csv'
         
         self.args = args
@@ -39,7 +39,7 @@ class TestOverlapAnalysis(unittest.TestCase):
         
         overlap_analysis.execute(self.args)
         
-        output_dir = os.path.join(args['workspace'], 'Output')
+        output_dir = os.path.join(self.args['workspace'], 'Output')
         
         #Want to get the file with the .tif extension, and compare it to a pre-made one.
         #The question is which to compare it to.
