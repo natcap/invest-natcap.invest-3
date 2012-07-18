@@ -1132,3 +1132,43 @@ def extract_band_and_nodata(dataset, get_array = False):
 
     #Otherwise just return the band and nodata
     return band, nodata
+
+def calculate_value_not_in_dataset(dataset):
+    """Calcualte a value not contained in a dataset.  Useful for calculating
+        nodata values.
+
+        dataset - a GDAL dataset
+
+        returns a number not contained in the dataset"""
+
+    band,nodata,array = extract_band_and_nodata(dataset, get_array = True)
+    return calculate_value_not_in_array(array)
+
+def calculate_value_not_in_array(array):
+    """This function calcualtes a number that is not in the given array, if 
+        possible.
+
+        array - a numpy array
+
+        returns a number not in array that is not "close" to any value in array
+            ideally calculated in the middle of the maximum delta between any two
+            consecutive numbers in the array"""
+
+    sorted_array = np.sort(array.flatten())
+    array_type = type(sorted_array[0])
+    diff_array = np.array([-1,1])
+    deltas = scipy.signal.correlate(sorted_array, diff_array, mode='valid')
+    
+    max_delta_index = np.argmax(deltas)
+
+    #Try to return the average of the maximum delta
+    if deltas[max_delta_index] > 0:
+        return array_type((sorted_array[max_delta_index+1]-
+                           sorted_array[max_delta_index])/2.0)
+
+    #Else, all deltas are too small so go one smaller or one larger than the 
+    #min or max.  Catching an exception in case there's an overflow.
+    try:
+        return sorted_array[0]-1
+    except:
+        return sorted_array[-1]+1

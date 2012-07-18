@@ -87,30 +87,13 @@ class DynamicElement(QtGui.QWidget):
         #enabledBy is only a single string ID
         if 'enabledBy' in self.attributes:
             idString = self.attributes['enabledBy']
-            self.enabledBy = self.root.allElements[idString]
+            self.enabledBy = self.root.find_element_ptr(idString)
             self.enabledBy.enables.append(self)
-
-        # Triggers is expected to be a dictionary.
-        try:
-            for key, id_string in self.attributes['triggers'].iteritems():
-                try:
-                    self.triggers[key] = self.root.allElements[id_string]
-                except KeyError:
-                    print 'trigger element id \'%s\' not found' % id_string
-        except KeyError:
-            # If no triggers dictionary exists, pass cause we don't care that
-            # the user doesn't want to take advantage of these sweet triggers.
-            pass
-        except AttributeError:
-            # if self.attributes['triggers'] does not have the function
-            # iteritems(), it probably wasn't a dict.  Print a message to stdout
-            # and pass.
-            print 'attributes[\'triggers\'] must be a dictionary.'
 
         #requiredIf is a list
         if 'requiredIf' in self.attributes:
             for idString in self.attributes['requiredIf']:
-                elementPointer = self.root.allElements[idString]
+                elementPointer = self.root.find_element_ptr(idString)
                 self.requiredIf.append(elementPointer)
 
     def isRequired(self):
@@ -1748,8 +1731,9 @@ class Root(DynamicElement):
         self.operationDialog = OperationDialog(self)
         self.assembler = ElementAssembler(self.allElements)        
 
+        self.embedded_uis = []
         self.initElements()
-        
+
     def find_and_replace(self, attributes):
         """Initiates a recursive search and replace of the attributes
             dictionary according to the 'inheritFrom' capabilities of the JSON
@@ -1967,23 +1951,14 @@ class Root(DynamicElement):
             dictionary[key] = self.set_dict_value(temp_dict, list, element_value)
         else:
             dictionary[key] = element_value
-    
         return dictionary
 
-    def find_element_ptr(self, element_id):
-        """Return an element pointer if found.  None if not found."""
-        #if the element id can be found in the current UI, return that
-        #otherwise, get the element from this element's root.
-        try:
-            return self.allElements[element_id]
-        except KeyError:
-            try:
-                return self.super.find_element_ptr(element_id)
-            except AttributeError:
-                print traceback.print_exc()
-                print(self.attributes['id'], element_id)
-                raise AttributeError
-
+    def find_embedded_elements(self):
+        uis = []
+        for id, element in self.allElements.iteritems():
+            if issubclass(element.__class__, EmbeddedUI):
+                uis.append(element)
+        return uis
 
 class EmbeddedUI(Root):
     def __init__(self, attributes, registrar):
@@ -2011,6 +1986,15 @@ class EmbeddedUI(Root):
         for element_id, element_ptr in self.allElements.iteritems():
             element_ptr.updateLinks(self)
 
+    def find_element_ptr(self, element_id):
+        """Return an element pointer if found.  None if not found."""
+        #if the element id can be found in the current UI, return that
+        #otherwise, get the element from this element's root.
+        try:
+            return self.allElements[element_id]
+        except KeyError:
+            return None
+
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
         self.messageArea = MessageArea()
@@ -2020,6 +2004,21 @@ class ExecRoot(Root):
         self.addBottomButtons()
         self.setWindowSize()
         self.error_dialog = ErrorDialog()
+
+    def find_element_ptr(self, element_id):
+        """Return an element pointer if found.  None if not found."""
+        #if the element id can be found in the current UI, return that
+        #otherwise, get the element from this element's root.
+        try:
+            return self.allElements[element_id]
+        except KeyError:
+            if self.embedded_uis == []:
+                self.embedded_uis = self.find_embedded_elements()
+
+            for embedded_ui in self.embedded_uis:
+                emb_ptr = embedded_ui.find_element_ptr(element_id)
+                if emb_ptr != None:
+                    return emb_ptr
 
     def setWindowSize(self):
         #this groups all elements together at the top, leaving the
