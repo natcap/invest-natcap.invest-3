@@ -87,8 +87,6 @@ def execute(args):
     else:    
         oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
     
-    LOGGER.debug(oa_args['zone_layer_file'])
-    
     #Still need to pass in do_grid because we need to know if we're treating management
     #zones or exact gridded squares....don't we?
     oa_args['do_grid'] = args['do_grid']
@@ -98,7 +96,7 @@ def execute(args):
     #into a list. Then, each item in the list is added to a dictionary as an open
     #file with the key of it's filename without the extension, and that whole
     #dictionary is made an argument of the oa_args dictionary
-    file_names = glob.glob(args['overlap_data_dir_loc'] + os.sep + '/*.shp')
+    file_names = glob.glob(args['overlap_data_dir_loc'] + os.sep + '*.shp')
     
     file_dict = {}
     
