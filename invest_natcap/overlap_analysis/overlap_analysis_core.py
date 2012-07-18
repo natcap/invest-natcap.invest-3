@@ -67,7 +67,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     
-    LOGGER.debug(args['zone_layer_file'])
+    #LOGGER.debug(args['zone_layer_file'])
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     #Need to figure out what to do with management zones
@@ -77,7 +77,7 @@ def execute(args):
     aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
     aoi_band.Fill(aoi_nodata)
     
-    gdal.RasterizeLayer(aoi_raster, [1], aoi_shp_layer, burn_value = [1])
+    gdal.RasterizeLayer(aoi_raster, [1], aoi_shp_layer, burn_values=[1])
     
     #Want to get each interest layer, and rasterize them, then combine them all at
     #the end. Could do a list of the filenames that we are creating within the
@@ -121,10 +121,10 @@ def execute(args):
          
         return sum_pixel   
         
-        
-    raster_utils.vectorize_rasters(raster_files, get_raster_sum, 
+    LOGGER.debug(raster_files)
+    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi=None,
                                    raster_out_uri = activities_uri, 
-                                   datatype = gdal.GDT_Int32, nodata = activities_nodata)
+                                   datatype = gdal.GDT_Int32, nodata = aoi_nodata)
     
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''This will pluck each of the files out of the dictionary and create a new raster
@@ -156,14 +156,16 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
     raster_files = [aoi_raster]
     overlap_burn_value = 1
     
+    print overlap_files
+    
     #Remember, this defaults to element being the keys of the dictionary
     for element in overlap_files:
         
         datasource = overlap_files[element]
         layer = datasource.GetLayer()
         
-        outgoing_uri = os.join(dir, element, ".tif")
-        
+             
+        outgoing_uri = dir + os.sep + element + ".tif"        
         
         dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
                                 -1, gdal.GDT_Int32)
@@ -171,7 +173,7 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         
         #Do we want to specify -1, or just fill with generic nodata (which in this case
         #should actually be -1)
-        band.Fill(no_data)
+        band.Fill(nodata)
         
         gdal.RasterizeLayer(dataset, [1], layer, burn_values=[overlap_burn_value])
         
@@ -276,5 +278,5 @@ def gridder(inter_dir, URI, dimension):
     #this by calling destroy. You know, because heart attacks are fun.
     grid_shp.Destroy()
     
-    LOGGER.debug(file_name)
+    #LOGGER.debug(file_name)
     return file_name
