@@ -1,10 +1,15 @@
 '''inVEST core module to handle all actual processing of overlap analysis data.'''
 import os
 import math
+import logging
 
 from osgeo import ogr
 from osgeo import gdal
 from invest_natcap import raster_utils
+
+LOGGER = logging.getLogger('overlap_analysis_core')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
     '''This function will take the properly formatted arguments passed to it by
@@ -62,6 +67,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     
+    LOGGER.debug(args['zone_layer_file'])
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     #Need to figure out what to do with management zones
@@ -264,10 +270,11 @@ def gridder(inter_dir, URI, dimension):
     
     #Want to return the location of our new shapefile. Need to know the name of our data
     #source before we destroy it.
-    file_name = os.path.join(inter_dir, grid_shp.GetName())
+    file_name = os.path.join(grid_shp.GetName())
             
     #When done with adding all features to our file, also want to close the file. We do
     #this by calling destroy. You know, because heart attacks are fun.
     grid_shp.Destroy()
     
+    LOGGER.debug(file_name)
     return file_name
