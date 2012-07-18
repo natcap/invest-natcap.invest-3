@@ -56,7 +56,7 @@ def execute(args):
     
     oa_args = {}
     
-    workspace = args['workspace_dir']
+    workspace = args['workspace']
     output_dir = workspace + os.sep + 'Output'
     inter_dir = workspace + os.sep + 'Intermediate'
         
@@ -66,7 +66,7 @@ def execute(args):
     if not (os.path.exists(inter_dir)):
         os.makedirs(inter_dir)
         
-    oa_args['workspace_dir'] = args['workspace_dir']
+    oa_args['workspace_dir'] = args['workspace']
     
     #This allows for options gridding of the vectors being passed in. The return
     #from core will be a URI to a shapefile with multiple polygons of user specified 
@@ -127,6 +127,8 @@ def format_over_table(over_tbl):
                 
                 {CommGF_Fish: (2.0, 0), CommSalmonTroll_Fish: (1.50, 0), ...}
     '''
+    #print os.getcwd()
+    
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
     

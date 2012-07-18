@@ -142,7 +142,8 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
             datasets that we want to sum.
     '''
     #Want to switch directories so that we can easily write our files
-    os.chdir(dir)
+    #THIS IS A TERRIBLE IDEA
+    #os.chdir(dir)
     
     #aoi_raster has to be the first so that we can use it as an easy "weed out" for
     #pixel summary later
@@ -155,7 +156,7 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         datasource = overlap_files[element]
         layer = datasource.GetLayer()
         
-        outgoing_uri = os.join(element, ".tif")
+        outgoing_uri = os.join(dir, element, ".tif")
         
         
         dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
@@ -197,14 +198,16 @@ def gridder(inter_dir, URI, dimension):
     lhs, rhs, ts, bs = shape.GetLayer().GetExtent()
     
     #Move to the intermediate file in order to create our shapefile
-    os.chdir(inter_dir)
+    #STILL A TERRIBLE IDEA
+    #os.chdir(inter_dir)
     
     driver = ogr.GetDriverByName('ESRI Shapefile')
     
-    if os.path.exists('gridded_shapefile.shp'):
-            driver.DeleteDataSource('gridded_shapefile.shp')
+    shape_uri = os.path.join(inter_dir, 'gridded_shapefile.shp')
+    if os.path.exists(shape_uri):
+            driver.DeleteDataSource(shape_uri)
             
-    grid_shp = driver.CreateDataSource('gridded_shapefile.shp')
+    grid_shp = driver.CreateDataSource(shape_uri)
     layer = grid_shp.CreateLayer('Layer 1', spat_ref, ogr.wkbPolygon)
     
     field_def = ogr.FieldDefn('ID', ogr.OFTInteger)
