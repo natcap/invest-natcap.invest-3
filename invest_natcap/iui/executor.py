@@ -333,7 +333,14 @@ class Executor(threading.Thread):
 
             LOGGER.debug('Loaded the model from %s', module)
             LOGGER.info('Executing the loaded model')
-            invest_natcap.log_model(model_name)  # log model usage to ncp-dev
+
+            try:
+                model_version = model.__version__
+                LOGGER.info('Running model version %s', model_version)
+            except AttributeError:
+                model_version = None
+
+            invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
             model.execute(args)
         except:
             LOGGER.error('Error: a problem occurred while running the model')
