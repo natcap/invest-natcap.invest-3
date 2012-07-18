@@ -36,8 +36,13 @@ class TestOverlapAnalysis(unittest.TestCase):
         self.args = args
         
     def test_execute(self):
-        #DO WE WANT TO TEST FINAL OUTPUTS OR INTERMEDIATE CREATED FILES
-        pass
+        
+        overlap_analysis.execute(self.args)
+        
+        output_dir = os.path.join(args['workspace'], 'Output')
+        
+        #Want to get the file with the .tif extension, and compare it to a pre-made one.
+        #The question is which to compare it to.
         
     def test_format_over_table(self):
         
