@@ -93,7 +93,7 @@
                                                       "validateAs": {"type": "number",
                                                                      "allowedValues":{"pattern":"[01]"}
                                                                   }}]},
-                    "helpText":"A CSV table of all the threats for the model to
+                    "helpText":"A CSV file of all the threats for the model to
                     consider. Each row in the table is a degradation source and
                     each column contains a different attribute of each
                     degradation source (THREAT, MAX_DIST, WEIGHT, DECAY). See
@@ -140,11 +140,15 @@
                                                       "validateAs": {"type": "number",
                                                                      "allowedValues":{"pattern":"^[0-9]*\\.?[0-9]+$"}
                                                                   }}]},
-                    "helpText":"A CSV file containing information on the
-                    sensitivity of LULC types to a given threat. Each row
-                    should be a different LULC type that matches those from the
-                    input landcover maps. See the users guide for information
-                    on the columns and what values can be represented."
+                    "helpText":"A CSV file of LULC types, whether or not they
+                    are considered habitat, and, for LULC types that are
+                    habitat, their specific sensitivity to each threat. Each
+                    row is a LULC type with the following columns: LULC, NAME,
+                    HABITAT, L_THREAT1, L_THREAT2, ... Each L_THREATN should
+                    match exactly with the threat names given in the threat
+                    CSV file, where the THREATN is what matches. Please see the users
+                    guide for more detailed information on proper column values
+                    and column names for each threat."
                 },
                 {
                     "id" : "half_saturation_constant",
@@ -155,8 +159,14 @@
                     "label": "Half-saturation constant",
                     "defaultValue": "30",
                     "required": true,
-                    "helpText":"An integer value. See user's guide for setting
-                    this constant properly."
+                    "helpText":"A positive Integer value that is defaulted at
+                    30. This is the value of the parameter k in equation
+                    (4). In general, set k to half of the highest grid cell
+                    degradation value on the landscape. To perform this model
+                    calibration you will have to run the model once to find the
+                    highest degradation value and set k for your landscape.
+                    Note that the choice of k only determines the spread and
+                    central tendency of habitat quality cores."
                 },                         
                 {
                     "id" : "results_suffix",
@@ -167,8 +177,9 @@
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
                     "required": false,
-                    "helpText":"A string that will be added onto the end of the
+                    "helpText":"A String that will be added to the end of the
                     output uris."
+
                 }                         
             ]
         }
