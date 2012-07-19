@@ -196,10 +196,6 @@ def interpolate_matrix(x, y, z, newx, newy, degree=1):
     spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=degree, ky=degree)
     return spl(newx, newy).transpose()
 
-def vectorize_aligned_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
-                     datatype=gdal.GDT_Float32, nodata=0.0):
-    pass
-
 def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
     """Apply the numpy vectorized operation `op` on the first band of the
@@ -1172,3 +1168,52 @@ def calculate_value_not_in_array(array):
         return sorted_array[0]-1
     except:
         return sorted_array[-1]+1
+
+def create_rat(dataset, attr_dict, key_name, value_name):
+    """Create a raster attribute table from a provided dictionary that maps the
+        keys to the first column and values to the second column
+
+        dataset - a GDAL raster dataset to create the RAT for 
+        attr_dict - a dictionary with keys that point to a primitive type
+        key_name - a string for the column name that maps the keys
+        value_name - a string for the column name that maps the values
+        
+        returns - a GDAL raster dataset with an updated RAT
+        """
+    band = dataset.GetRasterBand(1)
+
+    # check to see if the there is currently a RAT
+    # if there is not one, create a new one, otherwise make a copy of the 
+    # current one
+    if band.GetDefaultRAT() is None:
+        rat = gdal.RasterAttributeTable()
+    else:
+        rat = band.GetDefaultRAT().Clone()
+
+    # get the number of rows from the RAT
+    cur_num_rows = rat.GetRowCount()
+    # the number of keys represents the number of rows we intend to write
+    keys = np.array(attr_dict.keys())
+    new_num_rows = len(keys)
+    # set the row count if the number of keys is great than the current number
+    # of rows. Although I think you can dynamically add the next row
+    if cur_num_rows < new_num_rows:
+        rat.SetRowCount(new_num_rows)
+    
+    # create columns
+    rat.CreateColumn(key_name, gdal.GFT_String, gdal.GFU_Generic)
+    rat.CreateColumn(value_name, gdal.GFT_String, gdal.GFU_Generic)
+
+    row_count = 0
+    keys_sorted = np.sort(keys)
+    
+    for key in keys_sorted:
+        LOGGER.debug('Row:Key, %s:%s', row_count, str(key))
+        LOGGER.debug('Row:Val, %s:%s', row_count, str(attr_dict[key]))
+        rat.SetValueAsString(row_count, 0, str(key))
+        rat.SetValueAsString(row_count, 1, str(attr_dict[key]))
+        row_count += 1
+    
+    band.SetDefaultRAT(rat)
+
+    return dataset
