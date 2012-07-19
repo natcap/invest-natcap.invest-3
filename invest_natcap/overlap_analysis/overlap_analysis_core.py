@@ -1,10 +1,15 @@
 '''inVEST core module to handle all actual processing of overlap analysis data.'''
 import os
 import math
+import logging
 
 from osgeo import ogr
 from osgeo import gdal
 from invest_natcap import raster_utils
+
+LOGGER = logging.getLogger('overlap_analysis_core')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
     '''This function will take the properly formatted arguments passed to it by
@@ -62,6 +67,7 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     
+    #LOGGER.debug(args['zone_layer_file'])
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     #Need to figure out what to do with management zones
@@ -71,7 +77,7 @@ def execute(args):
     aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
     aoi_band.Fill(aoi_nodata)
     
-    gdal.RasterizeLayer(aoi_raster, [1], aoi_shp_layer, burn_value = [1])
+    gdal.RasterizeLayer(aoi_raster, [1], aoi_shp_layer, burn_values=[1])
     
     #Want to get each interest layer, and rasterize them, then combine them all at
     #the end. Could do a list of the filenames that we are creating within the
@@ -115,10 +121,10 @@ def execute(args):
          
         return sum_pixel   
         
-        
-    raster_utils.vectorize_rasters(raster_files, get_raster_sum, 
+    LOGGER.debug(raster_files)
+    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi=None,
                                    raster_out_uri = activities_uri, 
-                                   datatype = gdal.GDT_Int32, nodata = activities_nodata)
+                                   datatype = gdal.GDT_Int32, nodata = aoi_nodata)
     
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''This will pluck each of the files out of the dictionary and create a new raster
@@ -142,12 +148,15 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
             datasets that we want to sum.
     '''
     #Want to switch directories so that we can easily write our files
-    os.chdir(dir)
+    #THIS IS A TERRIBLE IDEA
+    #os.chdir(dir)
     
     #aoi_raster has to be the first so that we can use it as an easy "weed out" for
     #pixel summary later
     raster_files = [aoi_raster]
     overlap_burn_value = 1
+    
+    print overlap_files
     
     #Remember, this defaults to element being the keys of the dictionary
     for element in overlap_files:
@@ -155,8 +164,8 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         datasource = overlap_files[element]
         layer = datasource.GetLayer()
         
-        outgoing_uri = os.join(element, ".tif")
-        
+             
+        outgoing_uri = dir + os.sep + element + ".tif"        
         
         dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
                                 -1, gdal.GDT_Int32)
@@ -164,7 +173,7 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         
         #Do we want to specify -1, or just fill with generic nodata (which in this case
         #should actually be -1)
-        band.Fill(no_data)
+        band.Fill(nodata)
         
         gdal.RasterizeLayer(dataset, [1], layer, burn_values=[overlap_burn_value])
         
@@ -197,14 +206,16 @@ def gridder(inter_dir, URI, dimension):
     lhs, rhs, ts, bs = shape.GetLayer().GetExtent()
     
     #Move to the intermediate file in order to create our shapefile
-    os.chdir(inter_dir)
+    #STILL A TERRIBLE IDEA
+    #os.chdir(inter_dir)
     
     driver = ogr.GetDriverByName('ESRI Shapefile')
     
-    if os.path.exists('gridded_shapefile.shp'):
-            driver.DeleteDataSource('gridded_shapefile.shp')
+    shape_uri = os.path.join(inter_dir, 'gridded_shapefile.shp')
+    if os.path.exists(shape_uri):
+            driver.DeleteDataSource(shape_uri)
             
-    grid_shp = driver.CreateDataSource('gridded_shapefile.shp')
+    grid_shp = driver.CreateDataSource(shape_uri)
     layer = grid_shp.CreateLayer('Layer 1', spat_ref, ogr.wkbPolygon)
     
     field_def = ogr.FieldDefn('ID', ogr.OFTInteger)
@@ -261,10 +272,11 @@ def gridder(inter_dir, URI, dimension):
     
     #Want to return the location of our new shapefile. Need to know the name of our data
     #source before we destroy it.
-    file_name = os.path.join(inter_dir, grid_shp.GetName())
+    file_name = os.path.join(grid_shp.GetName())
             
     #When done with adding all features to our file, also want to close the file. We do
     #this by calling destroy. You know, because heart attacks are fun.
     grid_shp.Destroy()
     
+    #LOGGER.debug(file_name)
     return file_name

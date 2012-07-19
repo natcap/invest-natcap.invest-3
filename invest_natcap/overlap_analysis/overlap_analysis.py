@@ -3,9 +3,15 @@
 import os
 import csv
 import glob
+import logging
+import re
 
 from osgeo import ogr
 from invest_natcap.overlap_analysis import overlap_analysis_core
+
+LOGGER = logging.getLogger('overlap_analysis')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
     '''This function will take care of preparing files passed into 
@@ -56,7 +62,7 @@ def execute(args):
     
     oa_args = {}
     
-    workspace = args['workspace_dir']
+    workspace = args['workspace']
     output_dir = workspace + os.sep + 'Output'
     inter_dir = workspace + os.sep + 'Intermediate'
         
@@ -66,7 +72,9 @@ def execute(args):
     if not (os.path.exists(inter_dir)):
         os.makedirs(inter_dir)
         
-    oa_args['workspace_dir'] = args['workspace_dir']
+    oa_args['workspace_dir'] = args['workspace']
+    
+    #LOGGER.debug(args['zone_layer_loc'])
     
     #This allows for options gridding of the vectors being passed in. The return
     #from core will be a URI to a shapefile with multiple polygons of user specified 
@@ -90,22 +98,27 @@ def execute(args):
     #into a list. Then, each item in the list is added to a dictionary as an open
     #file with the key of it's filename without the extension, and that whole
     #dictionary is made an argument of the oa_args dictionary
-    file_names = glob.glob(args['overlap_data_dir_loc'] + os.sep + '/*.shp')
+    file_names = glob.glob(args['overlap_data_dir_loc'] + os.sep + '*.shp')
     
     file_dict = {}
     
     for file in file_names:
         
-        name = os.path.splitext(file)[0]
+        #The return of os.path.split is a tuple where everything after the final slash
+        #is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes before
+        #the file extension, and the second is the extension itself 
+        name = os.path.splitext(os.path.split(file)[1])[0]
         file_dict[name] = ogr.Open(file)
         
     oa_args['overlap_files'] = file_dict
     
     oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
     
-    oa_args['import_field'] = args['import_field']
-    oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
-    oa_args['decay'] = args['decay']
+    #We don't actually get these yet, so commenting them out
+    #oa_args['import_field'] = args['import_field']
+    #oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
+    #oa_args['decay'] = args['decay']
     
     overlap_analysis_core.execute(oa_args)
     
@@ -127,6 +140,8 @@ def format_over_table(over_tbl):
                 
                 {CommGF_Fish: (2.0, 0), CommSalmonTroll_Fish: (1.50, 0), ...}
     '''
+    #print os.getcwd()
+    
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
     

@@ -237,11 +237,11 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     gdal_bool_types = [gdal.GDT_Byte]
 
     if datatype in gdal_int_types:
-        nodata = int(nodata)
+        nodata = np.int(nodata)
     if datatype in gdal_float_types:
-        nodata = float(nodata)
+        nodata = np.float(nodata)
     if datatype in gdal_bool_types:
-        nodata = bool(nodata)
+        nodata = np.bool(nodata)
 
     #create a new current_dataset with the minimum resolution of dataset_list and
     #bounding box that contains aoi_box
@@ -316,7 +316,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         vectorized_op = op
 
     #If there's an AOI, we need to mask out values
-    mask_dataset = new_raster_from_base(out_dataset, 'mask.tif', 'GTiff', 255, gdal.GDT_Byte)
+    mask_dataset = new_raster_from_base(out_dataset, '', 'MEM', 255, gdal.GDT_Byte)
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     if aoi != None:
