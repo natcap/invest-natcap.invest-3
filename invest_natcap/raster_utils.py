@@ -1173,27 +1173,37 @@ def calculate_value_not_in_array(array):
     except:
         return sorted_array[-1]+1
 
-def create_rat(attr_dict, key_name, value_name, rat=None):
+def create_rat(dataset, attr_dict, key_name, value_name):
     """Create a raster attribute table from a provided dictionary that maps the
         keys to the first column and values to the second column
 
+        dataset - a GDAL raster dataset to create the RAT for 
         attr_dict - a dictionary with keys that point to a primitive type
         key_name - a string for the column name that maps the keys
         value_name - a string for the column name that maps the values
-        rat - a raster attribute table (RAT) to build on or if None then create
-            a new RAT. Default is None
         
-        returns - a raster attribute table
+        returns - a GDAL raster dataset with an updated RAT
         """
-    if rat is None:
+    band = dataset.GetRasterBand(1)
+
+    # check to see if the there is currently a RAT
+    # if there is not one, create a new one, otherwise make a copy of the 
+    # current one
+    if band.GetDefaultRAT() is None:
         rat = gdal.RasterAttributeTable()
-        
+    else:
+        rat = band.GetDefaultRAT().Clone()
+
+    # get the number of rows from the RAT
     cur_num_rows = rat.GetRowCount()
+    # the number of keys represents the number of rows we intend to write
     new_num_rows = len(attr_dict.keys())
-    
+    # set the row count if the number of keys is great than the current number
+    # of rows. Although I think you can dynamically add the next row
     if cur_num_rows < new_num_rows:
         rat.SetRowCount(new_num_rows)
-
+    
+    # create columns
     rat.CreateColumn(key_name, gdal.GFT_String, gdal.GFU_Generic)
     rat.CreateColumn(value_name, gdal.GFT_String, gdal.GFU_Generic)
 
@@ -1203,4 +1213,6 @@ def create_rat(attr_dict, key_name, value_name, rat=None):
         rat.SetValueAsInt(row_count, 0, str(key))
         rat.SetValueAsString(row_count, 1, str(value))
 
-    return rat
+    dataset.SetDefaultRAT(rat)
+
+    return dataset
