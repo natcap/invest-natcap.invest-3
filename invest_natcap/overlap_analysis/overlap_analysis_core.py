@@ -122,9 +122,9 @@ def execute(args):
         return sum_pixel   
         
     LOGGER.debug(raster_files)
-    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi=None,
-                                   raster_out_uri = activities_uri, 
-                                   datatype = gdal.GDT_Int32, nodata = aoi_nodata)
+#    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi=None,
+#                                   raster_out_uri = activities_uri, 
+#                                   datatype = gdal.GDT_Int32, nodata = aoi_nodata)
     
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''This will pluck each of the files out of the dictionary and create a new raster
@@ -154,17 +154,17 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
     #aoi_raster has to be the first so that we can use it as an easy "weed out" for
     #pixel summary later
     raster_files = [aoi_raster]
-    overlap_burn_value = 1
     
     print overlap_files
     
     #Remember, this defaults to element being the keys of the dictionary
     for element in overlap_files:
-        
+
         datasource = overlap_files[element]
-        layer = datasource.GetLayer()
-        
-             
+        layer = datasource.GetLayer()       
+        LOGGER.debug(datasource)
+        LOGGER.debug(layer)
+        LOGGER.debug(element)
         outgoing_uri = dir + os.sep + element + ".tif"        
         
         dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
@@ -175,7 +175,10 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         #should actually be -1)
         band.Fill(nodata)
         
-        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[overlap_burn_value])
+        overlap_burn_value = 1
+        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[5])
+        #this should do something about flushing the buffer
+        dataset.FlushCache()
         
         raster_files.append(dataset)
         
@@ -203,7 +206,7 @@ def gridder(inter_dir, URI, dimension):
     #of the new shapefile that we're creating
     shape = ogr.Open(URI)
     spat_ref = shape.GetLayer().GetSpatialRef().Clone()
-    lhs, rhs, ts, bs = shape.GetLayer().GetExtent()
+    lhs, rhs, bs, ts = shape.GetLayer().GetExtent()
     
     #Move to the intermediate file in order to create our shapefile
     #STILL A TERRIBLE IDEA
@@ -235,20 +238,19 @@ def gridder(inter_dir, URI, dimension):
     #identifier for a value.
     counter = 0
     
-    for i in range (0, num_y):
-        for j in range (0, num_x):
+    for i in range (0, num_x):
+        for j in range (0, num_y):
             
             #Creating the polygon itself
-            #Note, these have to be y, x (row, then column)
             out_edge = ogr.Geometry(ogr.wkbLinearRing)
             #top left
-            out_edge.AddPoint(ts + j * dimension, lhs + (i * dimension))
+            out_edge.AddPoint(lhs + (i * dimension), bs + j * dimension)
             #bottom left
-            out_edge.AddPoint(ts + (j+1) * dimension, lhs + (i * dimension))
+            out_edge.AddPoint(lhs + (i * dimension), bs + (j+1) * dimension)
             #bottom right
-            out_edge.AddPoint(ts + (j+1) * dimension, lhs + (i+1) * dimension)
+            out_edge.AddPoint(lhs + (i+1) * dimension, bs + (j+1) * dimension)
             #top right
-            out_edge.AddPoint(ts + j * dimension, lhs + (i+1) * dimension)
+            out_edge.AddPoint(lhs + (i+1) * dimension, bs + j * dimension)
             out_edge.CloseRings()
             
             square = ogr.Geometry(ogr.wkbPolygon)
