@@ -1172,3 +1172,35 @@ def calculate_value_not_in_array(array):
         return sorted_array[0]-1
     except:
         return sorted_array[-1]+1
+
+def create_rat(attr_dict, key_name, value_name, rat=None):
+    """Create a raster attribute table from a provided dictionary that maps the
+        keys to the first column and values to the second column
+
+        attr_dict - a dictionary with keys that point to a primitive type
+        key_name - a string for the column name that maps the keys
+        value_name - a string for the column name that maps the values
+        rat - a raster attribute table (RAT) to build on or if None then create
+            a new RAT. Default is None
+        
+        returns - a raster attribute table
+        """
+    if rat is None:
+        rat = gdal.RasterAttributeTable()
+        
+    cur_num_rows = rat.GetRowCount()
+    new_num_rows = len(attr_dict.keys())
+    
+    if cur_num_rows < new_num_rows:
+        rat.SetRowCount(new_num_rows)
+
+    rat.CreateColumn(key_name, gdal.GFT_String, gdal.GFU_Generic)
+    rat.CreateColumn(value_name, gdal.GFT_String, gdal.GFU_Generic)
+
+    row_count = 0
+
+    for key, val in attr_dict.iteritems():
+        rat.SetValueAsInt(row_count, 0, str(key))
+        rat.SetValueAsString(row_count, 1, str(value))
+
+    return rat
