@@ -122,9 +122,9 @@ def execute(args):
         return sum_pixel   
         
     LOGGER.debug(raster_files)
-    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi=None,
-                                   raster_out_uri = activities_uri, 
-                                   datatype = gdal.GDT_Int32, nodata = aoi_nodata)
+#    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi=None,
+#                                   raster_out_uri = activities_uri, 
+#                                   datatype = gdal.GDT_Int32, nodata = aoi_nodata)
     
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''This will pluck each of the files out of the dictionary and create a new raster
@@ -154,17 +154,17 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
     #aoi_raster has to be the first so that we can use it as an easy "weed out" for
     #pixel summary later
     raster_files = [aoi_raster]
-    overlap_burn_value = 1
     
     print overlap_files
     
     #Remember, this defaults to element being the keys of the dictionary
     for element in overlap_files:
-        
+
         datasource = overlap_files[element]
-        layer = datasource.GetLayer()
-        
-             
+        layer = datasource.GetLayer()       
+        LOGGER.debug(datasource)
+        LOGGER.debug(layer)
+        LOGGER.debug(element)
         outgoing_uri = dir + os.sep + element + ".tif"        
         
         dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
@@ -175,108 +175,11 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         #should actually be -1)
         band.Fill(nodata)
         
-        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[overlap_burn_value])
+        overlap_burn_value = 1
+        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[5])
+        #this should do something about flushing the buffer
+        dataset.FlushCache()
         
         raster_files.append(dataset)
         
     return raster_files
-
-def gridder(inter_dir, URI, dimension):
-    '''This function will take in the URI to a shapefile, and will return an
-    open shapefile that contains polygons of size dimension x dimension, and
-    conforms to the bounding box of the original shape passed.
-    
-    Input:
-        inter_dir- The intermediate directory in which our shapefile output
-            can be stored.
-        URI- This is the location of a shapefile that is the desired base for
-            the gridded output.
-        dimension- This is an int that describes the desired length and height
-            for the square ("grid") polygons on the new shapefile.
-            
-    Returns:
-        grid_shp- The URI to a .shp file that contains multiple polygons of 
-        dimension x dimension size that cover the same area as the original shapes 
-        in URI.
-    '''
-    #Get the spatial reference for the current shapefile, and pass it in as part
-    #of the new shapefile that we're creating
-    shape = ogr.Open(URI)
-    spat_ref = shape.GetLayer().GetSpatialRef().Clone()
-    lhs, rhs, ts, bs = shape.GetLayer().GetExtent()
-    
-    #Move to the intermediate file in order to create our shapefile
-    #STILL A TERRIBLE IDEA
-    #os.chdir(inter_dir)
-    
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    
-    shape_uri = os.path.join(inter_dir, 'gridded_shapefile.shp')
-    if os.path.exists(shape_uri):
-            driver.DeleteDataSource(shape_uri)
-            
-    grid_shp = driver.CreateDataSource(shape_uri)
-    layer = grid_shp.CreateLayer('Layer 1', spat_ref, ogr.wkbPolygon)
-    
-    field_def = ogr.FieldDefn('ID', ogr.OFTInteger)
-    layer.CreateField(field_def)
-    
-    xsize = abs(rhs - lhs)
-    ysize = abs(ts - bs)
-    
-    #In order to make sure that we cover the ENTIRE area, we will have to "round up"
-    #in terms of the number of squares we create. So, we need to cast the dividend to
-    #a double in order to get a double out that can be rounded up if not an integer.
-    num_x = int(math.ceil(float(xsize) / dimension))
-    num_y = int(math.ceil(float(ysize) / dimension))
-    
-    #Now, loop through all potential blocks that need to be created, and add them to our
-    #new shapefile. Counter just allows us to give each of the grid cells a unique
-    #identifier for a value.
-    counter = 0
-    
-    for i in range (0, num_y):
-        for j in range (0, num_x):
-            
-            #Creating the polygon itself
-            #Note, these have to be y, x (row, then column)
-            out_edge = ogr.Geometry(ogr.wkbLinearRing)
-            #top left
-            out_edge.AddPoint(ts + j * dimension, lhs + (i * dimension))
-            #bottom left
-            out_edge.AddPoint(ts + (j+1) * dimension, lhs + (i * dimension))
-            #bottom right
-            out_edge.AddPoint(ts + (j+1) * dimension, lhs + (i+1) * dimension)
-            #top right
-            out_edge.AddPoint(ts + j * dimension, lhs + (i+1) * dimension)
-            out_edge.CloseRings()
-            
-            square = ogr.Geometry(ogr.wkbPolygon)
-            square.AddGeometry(out_edge)
-            
-            
-            counter += 1
-            
-            #Create a feature with the geometry of our square and an ID according
-            #to our counter, add it to the layer, then delete the non-essentials so we
-            #don't pile them as we create new ones.
-            feat_def = layer.GetLayerDefn()
-            feature = ogr.Feature(feat_def)
-            feature.SetGeometry(square)
-            feature.SetField('ID', counter)
-            
-            layer.CreateFeature(feature)
-            
-            square.Destroy()
-            feature.Destroy()
-    
-    #Want to return the location of our new shapefile. Need to know the name of our data
-    #source before we destroy it.
-    file_name = os.path.join(grid_shp.GetName())
-            
-    #When done with adding all features to our file, also want to close the file. We do
-    #this by calling destroy. You know, because heart attacks are fun.
-    grid_shp.Destroy()
-    
-    #LOGGER.debug(file_name)
-    return file_name
