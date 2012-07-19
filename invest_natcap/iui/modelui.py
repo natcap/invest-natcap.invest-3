@@ -80,17 +80,24 @@ class ModelUI(base_widgets.ExecRoot):
             self.show()
 
     def addLinks(self):
-        docURI = 'file:///' + os.path.abspath(self.attributes['localDocURI'])
+        links = []
+        try:
+            doc_uri = 'file:///' + os.path.abspath(self.attributes['localDocURI'])
+            links.append('<a href=\"%s\">Model documentation</a>' % doc_uri)
+        except KeyError:
+            # Thrown if attributes['localDocURI'] is not present
+            print 'Attribute localDocURI not found for this model; skipping.'
+
+        feedback_uri = 'mailto:richsharp@stanford.edu?subject=InVEST Feedback'
+        links.append('<a href=\"%s\">Send feedback</a>' % feedback_uri)
+
         self.feedbackBody = "Please include the following information:\
 \n\n1) InVEST model you're having difficulty with\n2) Explicit error message or \
 behavior\n3) If possible, a screenshot of the state of your InVEST toolset when \
 you get the error.\n4)ArcGIS version and service pack number\n\n\
 Feel free to also contact us about requests for collaboration, suggestions for \
 improvement, or anything else you'd like to share."
-        self.feedbackURI = 'mailto:richsharp@stanford.edu?subject=InVEST Feedback'
-        self.links.setText('<a href=\"' + docURI + '\">Model documentation' + 
-                             '</a> | <a href=\"' + self.feedbackURI + '\">' + 
-                             'Send feedback</a>')
+        self.links.setText(' | '.join(links))
         self.links.linkActivated.connect(self.contactPopup)
 
     def contactPopup(self, uri):
