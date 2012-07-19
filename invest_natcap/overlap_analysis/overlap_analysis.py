@@ -76,18 +76,10 @@ def execute(args):
     
     #LOGGER.debug(args['zone_layer_loc'])
     
-    #This allows for options gridding of the vectors being passed in. The return
-    #from core will be a URI to a shapefile with multiple polygons of user specified 
-    #size that are in an area stretching over the extent of the polygons
-    if (args['do_grid']):
-        base_map = overlap_analysis_core.gridder(inter_dir, args['zone_layer_loc'], 
-                                    args['grid_size'])
-        oa_args['zone_layer_file'] = ogr.Open(base_map)
-        #Some of the raster utils will need to know what the size of the grids are in
-        #order to match the raster pixel dimensions to that.
-        oa_args['grid_size'] = args['grid_size']
-    else:    
-        oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
+    #We are passing in the AOi shapefile, as well as the dimension that we want the
+    #raster pixels to be. 
+    oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
+    oa_args['grid_size'] = args['grid_size']
     
     #Still need to pass in do_grid because we need to know if we're treating management
     #zones or exact gridded squares....don't we?
