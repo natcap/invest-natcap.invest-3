@@ -74,7 +74,7 @@ def execute(args):
     time.sleep(5)
     while not complete:
         log = urllib2.urlopen(url).read()
-        if log[-29:]=="Dropping intermediate tables.":
+        if log[-30:-1]=="Dropping intermediate tables.":
             complete = True
         else:
             LOGGER.info("Please wait.")
