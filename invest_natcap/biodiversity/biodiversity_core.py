@@ -213,7 +213,7 @@ def biophysical(args):
                     return out_nodata
                 
                 deg_sum_uri = \
-                    os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
+                    os.path.join(output_dir, 'deg_sum_out'+lulc_key+'.tif')
                 
                 sum_deg_raster = \
                     raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
@@ -240,7 +240,7 @@ def biophysical(args):
                     return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
                 
                 quality_uri = \
-                    os.path.join(intermediate_dir, 'quality_out'+lulc_key+'.tif')
+                    os.path.join(output_dir, 'quality_out'+lulc_key+'.tif')
                 
                 quality_raster = \
                     raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
@@ -336,7 +336,7 @@ def biophysical(args):
                     return rarity_nodata
                 
                 rarity_uri = \
-                    os.path.join(intermediate_dir, 'rarity'+lulc_cover+'.tif')
+                    os.path.join(output_dir, 'rarity'+lulc_cover+'.tif')
 
                 rarity = raster_utils.vectorize_rasters([new_cover], map_ratio,
                         raster_out_uri=rarity_uri, nodata=rarity_nodata)
