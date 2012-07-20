@@ -46,7 +46,6 @@
                     "args_id" : "landuse_bas_uri",
                     "type": "file",
                     "label": "Baseline land cover map (optional)",
-                    "defaultValue": "../Biodiversity/Input/lc_samp_bse_b/w001001.adf",
                     "required": false,
                     "validateAs": {"type": "GDAL"},
                     "returns": {"ifEmpty": "pass"},
@@ -90,7 +89,7 @@
                                    "layers": [{"name": {"inheritFrom": "file"}, 
                                                "type": "polygons"
                                              }],
-                                   "fieldsExist": ["Access"]
+                                   "fieldsExist": ["ACCESS"]
                                    },
                     "returns": {"ifEmpty": "pass"},
                     "helpText": "This must be a polygon shapefile that OGR can open. The input contains data on the relative protection that legal / institutional / social / physical barriers provide against threats. Should contain polygons with values ranging from 0 - 1 where 1 is fully accessible. Any cells not covered by a polygon will be set to 1."
@@ -122,7 +121,7 @@
                     "args_id" : "half_saturation_constant",
                     "type": "text",
                     "dataType": "int",
-                    "validText": "^[0-9].*",
+                    "validText": "^[0-9]+",
                     "label": "Half-saturation constant",
                     "defaultValue": "30",
                     "required": true,
