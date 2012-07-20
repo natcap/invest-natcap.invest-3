@@ -122,4 +122,43 @@ class TestRasterUtils(unittest.TestCase):
         ds_rat = None
         
 
+    def test_create_rat_with_rat(self):
+        test_out = './data/test_out/raster_utils/create_rat/'
+        regression_uri = './data/biodiversity_regression_data/'
+        out_uri = os.path.join(test_out, 'test_RAT_modified.tif')
+        input_uri = os.path.join(regression_uri, 'test_RAT.tif')
+
+        if not os.path.isdir(test_out):
+            os.makedirs(test_out)
+        
+        ds = gdal.Open(input_uri)
+        ds_mod = gdal.GetDriverByName('GTiff').CreateCopy(out_uri, ds)
+
+        tmp_dict = {0.25:1, 0.5:2, 0.75:3, 0.8:4, 1.0:5}
+        new_field1 = 'RARITY'
+        new_field2 = 'POS'
+        
+        known_results = np.array([[1, 'farm', 0.25, 1],
+                                  [2, 'swamp', 0.5, 2],
+                                  [3, 'marsh', 0.75, 3],
+                                  [4, 'forest', 0.8, 4],
+                                  [5, 'river', 1.0, 5]])
+
+
+        ds_rat = raster_utils.create_rat(ds_mod, tmp_dict, new_field1, new_field2)
+
+        band = ds_rat.GetRasterBand(1)
+        rat = band.GetDefaultRAT()
+        col_count = rat.GetColumnCount()
+        row_count = rat.GetRowCount()
+
+        for row in range(row_count):
+            for col in range(col_count):
+                self.assertEqual(str(known_results[row][col]), rat.GetValueAsString(row, col))
+             
+        band = None
+        rat = None
+        ds = None
+        ds_mod = None
+        ds_rat = None
 
