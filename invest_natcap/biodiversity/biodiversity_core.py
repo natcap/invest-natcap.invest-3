@@ -206,6 +206,15 @@ def biophysical(args):
             # if there was at least one threat compute the total degradation
             if len(degradation_rasters) > 0:
                 def sum_degradation(*rasters):
+                    """A vectorized function that sums all the degradation
+                        rasters created above.
+
+                        *rasters - a list of floats where each float is a
+                            degradation score from a pixel from one of the
+                            threat rasters.
+
+                        returns - the total degradation score for the pixel
+                    """
                     # there is a nodata value if this list is not empty
                     if len(filter(lambda (x,y): x==y, zip(rasters,
                         deg_adjusted_nodata_list))) == 0:
@@ -213,7 +222,7 @@ def biophysical(args):
                     return out_nodata
                 
                 deg_sum_uri = \
-                    os.path.join(intermediate_dir, 'deg_sum_out'+lulc_key+'.tif')
+                    os.path.join(output_dir, 'deg_sum_out'+lulc_key+'.tif')
                 
                 sum_deg_raster = \
                     raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
@@ -221,8 +230,10 @@ def biophysical(args):
                                                    nodata=out_nodata)
 
                 #Compute habitat quality
-                # z = 2.5 is taken from the users guide
+                # z is a scaling parameter set to 2.5 as noted in the users
+                # guide
                 z = 2.5
+                # a term used below to compute habitat quality
                 ksq = half_saturation**z
                 
                 sum_deg_nodata =\
@@ -232,6 +243,17 @@ def biophysical(args):
                     habitat_raster.GetRasterBand(1).GetNoDataValue()
                 
                 def quality_op(degradation, habitat):
+                    """Vectorized function that computes habitat quality given
+                        a degradation and habitat value.
+
+                        degradation - a float from the created degradation
+                            raster above. 
+                        habitat - a float indicating habitat suitability from
+                            from the habitat raster created above.
+
+                        returns - a float representing the habitat quality
+                            score for a pixel
+                    """
                     # there is a nodata value if this list is not empty
                     if degradation == sum_deg_nodata or \
                             habitat == habitat_nodata:
@@ -240,7 +262,7 @@ def biophysical(args):
                     return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
                 
                 quality_uri = \
-                    os.path.join(intermediate_dir, 'quality_out'+lulc_key+'.tif')
+                    os.path.join(output_dir, 'quality_out'+lulc_key+'.tif')
                 
                 quality_raster = \
                     raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
@@ -336,7 +358,7 @@ def biophysical(args):
                     return rarity_nodata
                 
                 rarity_uri = \
-                    os.path.join(intermediate_dir, 'rarity'+lulc_cover+'.tif')
+                    os.path.join(output_dir, 'rarity'+lulc_cover+'.tif')
 
                 rarity = raster_utils.vectorize_rasters([new_cover], map_ratio,
                         raster_out_uri=rarity_uri, nodata=rarity_nodata)
