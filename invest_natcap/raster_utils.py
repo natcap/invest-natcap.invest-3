@@ -30,13 +30,9 @@ def calculate_raster_stats(ds):
     
         returns nothing"""
 
-    LOGGER.info('starting calculate_raster_stats')
-
     for band_number in range(ds.RasterCount):
         band = ds.GetRasterBand(band_number+1)
         nodata = band.GetNoDataValue()
-        LOGGER.info('in band %s' % band)
-        #Use this for initialization
         min_val = None
         max_val = None
         running_sum = 0.0
@@ -82,9 +78,6 @@ def calculate_raster_stats(ds):
         mean = running_sum / float(n_pixels)
         std_dev = np.sqrt(running_sum_square/float(n_pixels)-mean**2)
         
-        LOGGER.debug("min_val %s, max_val %s, mean %s, std_dev %s" %
-                     (min_val, max_val, mean, std_dev))
-
         #Write stats back to the band.  The function SetStatistics needs 
         #all the arguments to be floats and crashes if they are ints thats
         #what this map float deal is.
@@ -96,8 +89,6 @@ def calculate_raster_stats(ds):
             #cast to floats.  This is okay, just don't calculate stats
             LOGGER.warn("No non-nodata values were found so can't set " + \
                             "statistics")
-
-    LOGGER.info('finish calculate_raster_stats')
 
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
@@ -245,9 +236,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #generally pixelywidthforx and pixelxwidthfory are zero for maps where 
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
-    LOGGER.debug('calculating the overlapping rectangles')
     aoi_box = calculate_intersection_rectangle(dataset_list, aoi)
-    LOGGER.debug('the aoi box: %s' % aoi_box)
 
     #determine the minimum pixel size
     gt = dataset_list[0].GetGeoTransform()
@@ -258,15 +247,11 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         #pixel size versus what we've seen so far.
         pixel_width = min(pixel_width, gt[1], key=abs)
         pixel_height = min(pixel_height, gt[5], key=abs)
-    LOGGER.debug('min pixel width and height: %s %s' % (pixel_width,
-                                                        pixel_height))
 
     #Together with the AOI and min pixel size we define the output dataset's 
     #columns and out_n_rows
     out_n_cols = int(np.round((aoi_box[2] - aoi_box[0]) / pixel_width))
     out_n_rows = int(np.round((aoi_box[3] - aoi_box[1]) / pixel_height))
-    LOGGER.debug('number of pixel out_n_cols and out_n_rows %s %s' % \
-                 (out_n_cols, out_n_rows))
 
     #out_geotransform order: 
     #1) left coordinate of top left corner
@@ -373,9 +358,9 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             #out left edget to current left edge and dividing by the width
             #of current pixel.
             current_left_index = \
-                int(np.floor((out_left_coord - current_gt[0])/current_gt[1]))
+                int(np.round((out_left_coord - current_gt[0])/current_gt[1]))
             current_right_index = \
-                int(np.ceil((out_right_coord - current_gt[0])/current_gt[1]))
+                int(np.round((out_right_coord - current_gt[0])/current_gt[1]))
 
             current_top_index = \
                 int(np.floor((out_row_coord - current_gt[3])/current_gt[5]))-1
@@ -547,9 +532,6 @@ def calculate_intersection_rectangle(rasterList, aoi=None):
     for band in rasterList:
         #intersect the current bounding box with the one just read
         gt = band.GetGeoTransform()
-        LOGGER.debug('geotransform on raster band %s %s' % (gt, band))
-        LOGGER.debug('pixel x and y %s %s' % (band.RasterXSize,
-                                              band.RasterYSize))
         rec = [gt[0], gt[3], gt[0] + gt[1] * band.RasterXSize,
                gt[3] + gt[5] * band.RasterYSize]
         #This intersects rec with the current bounding box
