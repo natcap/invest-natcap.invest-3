@@ -1174,13 +1174,21 @@ def create_rat(dataset, attr_dict, key_name, value_name):
 
     # get the number of rows from the RAT
     cur_num_rows = rat.GetRowCount()
+    LOGGER.debug('Row Count : %s', cur_num_rows)
+    
     # the number of keys represents the number of rows we intend to write
     keys = np.array(attr_dict.keys())
     new_num_rows = len(keys)
+    
     # set the row count if the number of keys is great than the current number
     # of rows. Although I think you can dynamically add the next row
     if cur_num_rows < new_num_rows:
         rat.SetRowCount(new_num_rows)
+  
+    # get current number of columns so that we can properly set values into the
+    # right columns below
+    col_count = rat.GetColumnCount()
+    LOGGER.debug('Column Count : %s', col_count)
     
     # create columns
     rat.CreateColumn(key_name, gdal.GFT_String, gdal.GFU_Generic)
@@ -1192,8 +1200,8 @@ def create_rat(dataset, attr_dict, key_name, value_name):
     for key in keys_sorted:
         LOGGER.debug('Row:Key, %s:%s', row_count, str(key))
         LOGGER.debug('Row:Val, %s:%s', row_count, str(attr_dict[key]))
-        rat.SetValueAsString(row_count, 0, str(key))
-        rat.SetValueAsString(row_count, 1, str(attr_dict[key]))
+        rat.SetValueAsString(row_count, col_count, str(key))
+        rat.SetValueAsString(row_count, col_count + 1, str(attr_dict[key]))
         row_count += 1
     
     band.SetDefaultRAT(rat)

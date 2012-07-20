@@ -66,7 +66,7 @@ def execute(args):
             os.makedirs(folder)
 
     biophysical_args['threat_dict'] = \
-        make_dictionary_from_csv(args['threat_uri'],'Threat')
+        make_dictionary_from_csv(args['threat_uri'],'THREAT')
 
     biophysical_args['sensitivity_dict'] = \
         make_dictionary_from_csv(args['sensitivity_uri'],'LULC')
