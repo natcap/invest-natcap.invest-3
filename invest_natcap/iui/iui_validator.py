@@ -98,7 +98,7 @@ class Validator(registrar.Registrar):
         Returns None if no error found.  String error message if an error was
         found."""
 
-        return self.thread.error_msg
+        return self.thread.get_error()
 
     def init_type_checker(self, validator_type):
         """Initialize the type checker based on the input validator_type.
@@ -147,8 +147,6 @@ class ValidationThread(threading.Thread):
         both being python strings.  If no error message is present, None is
         returned."""
 
-        if self.error_msg == None and self.error_state == None:
-            return None
         return (self.error_msg, self.error_state)
 
     def run(self):
@@ -334,8 +332,8 @@ class Checker(registrar.Registrar):
             print '%s: \'%s\' encountered, for input %s passing validation.' % \
                 (e.__class__.__name__, str(e), valid_dict['value'])
             print traceback.format_exc()
-            raise Warning('An unexpected error was encountered.  Use this input
-                    at your own risk.')
+            raise Warning('An unexpected error was encountered.  Use this' +
+                ' at your own risk.')
         return None
 
 class URIChecker(Checker):
