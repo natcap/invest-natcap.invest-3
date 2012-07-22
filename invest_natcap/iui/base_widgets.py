@@ -425,11 +425,17 @@ class DynamicPrimitive(DynamicElement):
         self.error_button.set_error(msg, state)
 
     def has_error(self):
-        if str(self.error_button.error_text) == '' or\
-           not self.error_button.isEnabled():
-            return False
-        return True
+        if self.error_button.error_state == 'error' and\
+            self.error_button.isEnabled():
+            return True
+        return False
         
+    def has_warning(self):
+        if self.error_button.error_state == 'warning' and\
+            self.error_button.isEnabled():
+            return True
+        return False
+
     def validate(self):
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
@@ -1852,9 +1858,26 @@ class Root(DynamicElement):
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
                 if element.has_error():
-                    error_msg = element.error_button.error_text
-                    errors.append((element.attributes['label'], error_msg))
+                    try:
+                        error_msg = element.error_button.error_text
+                        errors.append((element.attributes['label'], error_msg))
+                    except:
+                        pass
         return errors
+
+    def warnings_exist(self):
+        """Check to see if any elements in this UI have warnings.
+        
+           returns a list of tuples, where the first tuple entry is the element
+           label and the second tuple entry is the element's error message.."""
+
+        warnings = []
+        for id, element in self.allElements.iteritems():
+            if issubclass(element.__class__, DynamicPrimitive):
+                if element.has_warning():
+                    error_msg = element.error_button.error_text
+                    warnings.append(element.attributes['label'])
+        return warnings
 
     def queueOperations(self):
         #placeholder for custom implementations.
@@ -2011,6 +2034,7 @@ class ExecRoot(Root):
         self.addBottomButtons()
         self.setWindowSize()
         self.error_dialog = ErrorDialog()
+        self.warning_dialog = WarningDialog()
 
     def find_element_ptr(self, element_id):
         """Return an element pointer if found.  None if not found."""
@@ -2081,6 +2105,17 @@ class ExecRoot(Root):
 
         errors = self.errors_exist()
         if len(errors) == 0:
+            warnings = self.warnings_exist()
+            
+            if len(warnings) > 0:
+                self.warning_dialog.set_messages(warnings)
+                exit_code = self.warning_dialog.exec_()
+
+                # If the user pressed 'back' on the warning dialog, return to
+                # the UI.
+                if exit_code == 0:
+                    return
+
             # Check to see if the user has specified whether we should save the
             # last run.  If the user has not specified, assume that the last run
             # should be saved.
@@ -2095,7 +2130,7 @@ class ExecRoot(Root):
             self.queueOperations()
             self.runProgram()
         else:
-            self.error_dialog.set_errors(errors)
+            self.error_dialog.set_messages(errors)
             self.error_dialog.exec_()
 
 
@@ -2155,22 +2190,21 @@ class ExecRoot(Root):
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
 
-
-class ErrorDialog(QtGui.QDialog):
+class InfoDialog(QtGui.QDialog):
     def __init__(self):
         QtGui.QDialog.__init__(self)
-        self.errors = []
+        self.messages = []
         self.resize(400, 200)
         self.setWindowTitle('Errors exist!')
         self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'natcap_logo.png')))
         self.setLayout(QtGui.QVBoxLayout())
-        self.error_icon = QtGui.QLabel()
-        self.error_icon.setStyleSheet('QLabel { padding: 10px }')
-        self.error_icon.setPixmap(QtGui.QPixmap(os.path.join(IUI_DIR,
-            'dialog-error.png')))
-        self.error_icon.setSizePolicy(QtGui.QSizePolicy.Fixed,
+        self.icon = QtGui.QLabel()
+        self.icon.setStyleSheet('QLabel { padding: 10px }')
+        self.set_icon('dialog-error.png')
+        self.icon.setSizePolicy(QtGui.QSizePolicy.Fixed,
             QtGui.QSizePolicy.Fixed)
-        self.title = QtGui.QLabel("Whoops!")
+        self.title = QtGui.QLabel()
+        self.set_title('Whoops!')
         self.title.setStyleSheet('QLabel { font: bold 18px }')
         self.body = QtGui.QLabel()
         self.body.setWordWrap(True)
@@ -2179,7 +2213,7 @@ class ErrorDialog(QtGui.QDialog):
 
         error_widget = QtGui.QWidget()
         error_widget.setLayout(QtGui.QHBoxLayout())
-        error_widget.layout().addWidget(self.error_icon)
+        error_widget.layout().addWidget(self.icon)
         self.layout().addWidget(error_widget)
 
         body_widget = QtGui.QWidget()
@@ -2192,17 +2226,39 @@ class ErrorDialog(QtGui.QDialog):
         self.button_box.addButton(self.ok_button, QtGui.QDialogButtonBox.AcceptRole)
         self.layout().addWidget(self.button_box)
 
-    def set_errors(self, errors):
-        self.errors = errors
+    def set_icon(self, uri):
+        self.icon.setPixmap(QtGui.QPixmap(os.path.join(IUI_DIR, uri)))
+
+    def set_title(self, title):
+        self.title.setText(title)
+    
+    def set_messages(self, message_list):
+        self.messages = message_list
+
+class WarningDialog(InfoDialog):
+    def __init__(self):
+        InfoDialog.__init__(self)
+        self.set_title('Warning...')
+        self.set_icon('dialog-warning-big.png')
+        self.body.setText('Some inputs cannot be validated and may cause ' +
+           'this program to fail.  Continue anyways?')
+        self.no_button = QtGui.QPushButton('Back')
+        self.no_button.clicked.connect(self.reject)
+        self.button_box.addButton(self.no_button, QtGui.QDialogButtonBox.RejectRole)
+    
+class ErrorDialog(InfoDialog):
+    def __init__(self):
+        InfoDialog.__init__(self)
+        self.set_title('Whoops!')
 
     def showEvent(self, event=None):
         label_string = '<ul>'
-        for element_tuple in self.errors:
+        for element_tuple in self.messages:
             label_string += '<li>%s: %s</li>' % element_tuple
         label_string += '</ul>'
 
         self.body.setText(str("There are %s error(s) that must be resolved" +
-            " before this tool can be run:%s") % (len(self.errors), label_string))
+            " before this tool can be run:%s") % (len(self.messages), label_string))
         self.body.setMinimumSize(self.body.sizeHint())
 
 class ElementRegistrar(registrar.Registrar):
