@@ -411,14 +411,18 @@ class DynamicPrimitive(DynamicElement):
                 return self.cast_value()
             return value
 
-    def set_error(self, error):
+    def set_error(self, error, state):
         if error == None or error == '':
             msg = ''
-            self.setBGcolorSatisfied(True)
         else:
             msg = str(error)
-            self.setBGcolorSatisfied(False)
-        self.error_button.set_error(msg)
+
+        satisfied = False
+        if state == 'warning' or state == None:
+            satisfied = True
+        
+        self.setBGcolorSatisfied(satisfied)
+        self.error_button.set_error(msg, state)
 
     def has_error(self):
         if str(self.error_button.error_text) == '' or\
@@ -428,12 +432,12 @@ class DynamicPrimitive(DynamicElement):
         
     def validate(self):
         if self.isRequired() and not self.requirementsMet():
-            self.set_error('Element is required')
+            self.set_error('Element is required', 'error')
         else:
             # If there's no validation for this element but its requirements are
             # met and it's enabled, we should mark it as not having an error.
             if self.isEnabled() and self.validator == None:
-                self.set_error(None)
+                self.set_error(None, None)
 
             if self.isEnabled() and self.validator != None and\
             self.requirementsMet() and self.validator.thread_finished():
@@ -446,8 +450,8 @@ class DynamicPrimitive(DynamicElement):
     def check_validation_error(self):
         if self.validator.thread_finished():
             self.timer.stop()
-            error = self.validator.get_error()
-            self.set_error(error)
+            error, state = self.validator.get_error()
+            self.set_error(error, state)
 
             # Toggle dependent elements based on the results of this validation
             DynamicElement.setState(self, not bool(error), includeSelf=False,
@@ -526,23 +530,31 @@ class ErrorButton(InformationButton):
         attribute.  Title and body_text are python strings."""
         InformationButton.__init__(self, title, body_text)
         self.error_text = ''
+        self.error_state = None
         self.deactivate()
 
     def setEnabled(self, state):
         if state == False:
             self.setIcon(QtGui.QIcon(''))
         else:
-            self.set_error(self.error_text)
+            self.set_error(self.error_text, self.error_state)
 
         QtGui.QWidget.setEnabled(self, state)
 
-    def set_error(self, error_string):
+    def set_error(self, error_string, state):
         """Set the error string of this InformationPopup and also set this
             button's icon according to the error contained in error_string.
             error_string is a python string."""
+
         self.error_text = error_string
+        self.error_state = state
         button_is_flat = False
-        button_icon = 'validate-fail.png'
+        button_icon = ''
+
+        if state == 'error':
+            button_icon = 'validate-fail.png'
+        elif state == 'warning':
+            button_icon = 'dialog-warning.png'
 
         # If no error, change button settings accordingly.
         if error_string == '':
