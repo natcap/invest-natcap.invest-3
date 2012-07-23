@@ -1173,6 +1173,9 @@ def create_rat(dataset, attr_dict, key_name, value_name):
     # the number of keys represents the number of rows we intend to write
     keys = np.array(attr_dict.keys())
     
+    col_count = rat.GetColumnCount()
+    LOGGER.debug('Column Count : %s', col_count)
+    
     # create columns
     rat.CreateColumn(key_name, gdal.GFT_String, gdal.GFU_Generic)
     rat.CreateColumn(value_name, gdal.GFT_String, gdal.GFU_Generic)

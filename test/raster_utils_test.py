@@ -103,49 +103,17 @@ class TestRasterUtils(unittest.TestCase):
         band.WriteArray(matrix)
         band = None
 
-        tmp_dict = {1:'farm', 2:'swamp', 3:'marsh', 4:'forest', 5:'river'}
+        tmp_dict = {11:'farm', 23:'swamp', 13:'marsh', 22:'forest', 3:'river'}
         field_1 = 'LULC'
         field_2 = 'DESC'
-        
+       
+        known_results = np.array([[3, 'river'],
+                                  [11, 'farm'],
+                                  [13, 'marsh'],
+                                  [22, 'forest'],
+                                  [23, 'swamp']])
+
         ds_rat = raster_utils.create_rat(ds, tmp_dict, field_1, field_2)
-
-        band = ds_rat.GetRasterBand(1)
-        rat = band.GetDefaultRAT()
-        
-        for x in range(4):
-            self.assertEqual(x+1, rat.GetValueAsInt(x,0))
-            self.assertEqual(tmp_dict[x+1], rat.GetValueAsString(x, 1))
-             
-        band = None
-        rat = None
-        ds = None
-        ds_rat = None
-        
-
-    def test_create_rat_with_rat(self):
-        test_out = './data/test_out/raster_utils/create_rat/'
-        regression_uri = './data/biodiversity_regression_data/'
-        out_uri = os.path.join(test_out, 'test_RAT_modified.tif')
-        input_uri = os.path.join(regression_uri, 'test_RAT.tif')
-
-        if not os.path.isdir(test_out):
-            os.makedirs(test_out)
-        
-        ds = gdal.Open(input_uri)
-        ds_mod = gdal.GetDriverByName('GTiff').CreateCopy(out_uri, ds)
-
-        tmp_dict = {0.25:1, 0.5:2, 0.75:3, 0.8:4, 1.0:5}
-        new_field1 = 'RARITY'
-        new_field2 = 'POS'
-        
-        known_results = np.array([[1, 'farm', 0.25, 1],
-                                  [2, 'swamp', 0.5, 2],
-                                  [3, 'marsh', 0.75, 3],
-                                  [4, 'forest', 0.8, 4],
-                                  [5, 'river', 1.0, 5]])
-
-
-        ds_rat = raster_utils.create_rat(ds_mod, tmp_dict, new_field1, new_field2)
 
         band = ds_rat.GetRasterBand(1)
         rat = band.GetDefaultRAT()
@@ -155,10 +123,10 @@ class TestRasterUtils(unittest.TestCase):
         for row in range(row_count):
             for col in range(col_count):
                 self.assertEqual(str(known_results[row][col]), rat.GetValueAsString(row, col))
-             
+        
         band = None
         rat = None
         ds = None
-        ds_mod = None
         ds_rat = None
+        
 
