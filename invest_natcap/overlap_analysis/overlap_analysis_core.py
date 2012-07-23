@@ -90,7 +90,7 @@ def execute(args):
     
     #By putting it within execute, we are able to use execute's own variables, so we can
     #just use aoi_nodata without having to pass it somehow
-    def get_raster_sum(aoi_pixel, *activity_pixels):
+    def get_raster_sum(*activity_pixels):
         '''For any given pixel, if the AOI covers the pixel, we want to ignore nodata 
         value activities, and sum all other activities happening on that pixel.
         
@@ -109,12 +109,16 @@ def execute(args):
         '''
         #We have pre-decided that nodata for the activity pixel will produce a different
         #result from the "no activities within that AOI area" result of 0.
+        
+        aoi_pixel = activity_pixels[0]
+        
         if aoi_pixel == aoi_nodata:
             return aoi_nodata
         
         sum_pixel = 0
         
-        for activ in activity_pixels:
+        for activ in activity_pixels[1::]:
+            LOGGER.debug("get inside pixel sum.")
             if activ == 1:
                 
                 sum_pixel += 1
@@ -122,9 +126,9 @@ def execute(args):
         return sum_pixel   
         
     LOGGER.debug(raster_files)
-#    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi=None,
-#                                   raster_out_uri = activities_uri, 
-#                                   datatype = gdal.GDT_Int32, nodata = aoi_nodata)
+    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi = None,
+                                   raster_out_uri = activities_uri, 
+                                   datatype = gdal.GDT_Int32, nodata = aoi_nodata)
     
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''This will pluck each of the files out of the dictionary and create a new raster
@@ -148,8 +152,6 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
             datasets that we want to sum.
     '''
     #Want to switch directories so that we can easily write our files
-    #THIS IS A TERRIBLE IDEA
-    #os.chdir(dir)
     
     #aoi_raster has to be the first so that we can use it as an easy "weed out" for
     #pixel summary later
@@ -176,7 +178,7 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         band.Fill(nodata)
         
         overlap_burn_value = 1
-        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[5])
+        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1])
         #this should do something about flushing the buffer
         dataset.FlushCache()
         
