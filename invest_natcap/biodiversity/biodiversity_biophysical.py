@@ -59,12 +59,18 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    input_dir = os.path.join(workspace, 'input')
 
     for folder in [inter_dir, out_dir]:
         if not os.path.isdir(folder):
             os.makedirs(folder)
 
+    # if the input directory is not present in the workspace then throw an
+    # exception because the threat rasters can't be located.
+    input_dir = os.path.join(workspace, 'input')
+    if not os.path.isdir(input_dir):
+        raise Exception('The input directory where the threat rasters should\
+                be cannot be found.')
+    
     biophysical_args['threat_dict'] = \
         make_dictionary_from_csv(args['threat_uri'],'THREAT')
 
@@ -136,7 +142,7 @@ def open_ambiguous_raster(uri):
         name but not neccessarily the suffix or extension of how the raster may
         be represented.
 
-        uri - a pythong string of the file path that includes the name of the
+        uri - a python string of the file path that includes the name of the
               file but not it's extension
 
         return - a gdal dataset or NONE if no file is found with the pre-defined
