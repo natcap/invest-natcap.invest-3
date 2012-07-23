@@ -52,7 +52,7 @@ class CSVDriver(TableDriverTemplate):
     """The CSVDriver class is a subclass of TableDriverTemplate."""
     def get_file_object(self, uri=None):
         uri = max(uri, self.uri)
-        return csv.DictReader(open(uri), 'rU')
+        return csv.DictReader(open(uri, 'rU'))
 
     def get_fieldnames(self):
         file_object = self.get_file_object(self.uri)
@@ -266,7 +266,8 @@ class TableHandler(object):
 
         self.orig_fieldnames = dict((k, v) for (k, v) in zip(current_fieldnames,
             self.fieldnames))
-
+        print self.table
+        print self.orig_fieldnames
         self.table = [dict((self.orig_fieldnames[k], v) for (k, v) in
             row.iteritems()) for row in self.table]
 
