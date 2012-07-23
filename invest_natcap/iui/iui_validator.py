@@ -98,7 +98,7 @@ class Validator(registrar.Registrar):
         Returns None if no error found.  String error message if an error was
         found."""
 
-        return self.thread.error_msg
+        return self.thread.get_error()
 
     def init_type_checker(self, validator_type):
         """Initialize the type checker based on the input validator_type.
@@ -126,17 +126,28 @@ class ValidationThread(threading.Thread):
         self.type_checker = type_checker
         self.valid_dict = valid_dict
         self.error_msg = None
+        self.error_state = None
 
-    def set_error(self, error):
+    def set_error(self, error, state='error'):
         """Set the local variable error_msg to the input error message.  This
         local variable is necessary to allow for another thread to be able to
         retrieve it from this thread object.
 
             error - a string.
+            state - a python string indicating the kind of message being
+                reported (e.g. 'error' or 'warning')
 
         returns nothing."""
 
         self.error_msg = error
+        self.error_state = state
+
+    def get_error(self):
+        """Returns a tuple containing the error message and the error state,
+        both being python strings.  If no error message is present, None is
+        returned."""
+
+        return (self.error_msg, self.error_state)
 
     def run(self):
         """Reimplemented from threading.Thread.run().  Performs the actual work
@@ -147,9 +158,23 @@ class ValidationThread(threading.Thread):
             if error != None:
                 self.set_error(error)
 
-        if self.type_checker != None:
-            error = self.type_checker.run_checks(self.valid_dict)
-            self.set_error(error)
+        try:
+            message = self.type_checker.run_checks(self.valid_dict)
+            if message != '' and message != None:
+                status = 'error'
+            else:
+                status = None
+        except AttributeError:
+            # Thrown when self.type_checker == None, set both message and
+            # status to None.
+            message = None
+            status = None
+        except Warning as warning:
+            # Raised when an unexpected exception was raised by a validator.
+            message = warning
+            status = 'warning'
+
+        self.set_error(message, status)
 
 class ValidationAssembler(object):
     """This class allows other checker classes (such as the abstract
@@ -307,6 +332,8 @@ class Checker(registrar.Registrar):
             print '%s: \'%s\' encountered, for input %s passing validation.' % \
                 (e.__class__.__name__, str(e), valid_dict['value'])
             print traceback.format_exc()
+            raise Warning('An unexpected error was encountered.  Use this' +
+                ' at your own risk.')
         return None
 
 class URIChecker(Checker):
