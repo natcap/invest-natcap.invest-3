@@ -74,7 +74,7 @@ def execute(args):
     time.sleep(5)
     while not complete:
         log = urllib2.urlopen(url).read()
-        if log[-29:]=="Dropping intermediate tables.":
+        if log[-30:-1]=="Dropping intermediate tables.":
             complete = True
         else:
             LOGGER.info("Please wait.")
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     else:
         LOGGER.info("Runnning model with test parameters")
         dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
-        aoiFileName = dirname+"recreation_data/"+"aoi.shp"
+        aoiFileName = dirname+"recreation_data/"+"FIPS-11001.shp"
         cellSize = 5000
         workspace_dir = dirname+"test_out/"
         comments = "Runnning model with test parameters"

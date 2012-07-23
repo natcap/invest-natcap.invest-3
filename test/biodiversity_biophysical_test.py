@@ -55,3 +55,29 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         args['results_suffix'] = ''
 
         biodiversity_biophysical.execute(args)
+
+    def test_biodiversity_biophysical_open_amb(self):
+        """Test multiple uri types for open_ambiguous_raster and assert that
+            the proper behavior is seen """
+        reg_dir = './data/biodiversity_regression_data/'
+        uri_1 = os.path.join(reg_dir, '')
+        uri_2 = os.path.join(reg_dir, '')
+        uri_3 = os.path.join(reg_dir, '')
+        
+        uri_list = [uri_1, uri_2, uri_3]
+
+        for uri in uri_list():
+            ds = biodiversity_biophsyical.open_ambiguous_raster(uri)
+            
+    def test_biodiversity_biophysical_make_dict_from_csv(self):
+        """Test a few hand made CSV files to make sure make_dict_from_csv
+            returns properly """
+
+    def test_biodiversity_biophysical_check_projections(self):
+        """Test a list of gdal datasets and assert that we see success and
+            failures where we would expect """
+
+    def test_biodiversity_biophsyical_compare_threats_sensitivity(self):
+        """Test hand created dictionaries representing the formats of the
+            threats and sensitivity CSV files """
+
