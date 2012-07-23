@@ -12,7 +12,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Smoke test for biodiversity_biophysical function.  Shouldn't crash with \
            zero length inputs"""
 
-        #raise SkipTest
+        raise SkipTest
 
         input_dir = './data/biodiversity_regression_data/samp_input'
         out_dir = './data/test_out/biodiversity/'
@@ -60,15 +60,21 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Test multiple uri types for open_ambiguous_raster and assert that
             the proper behavior is seen """
         reg_dir = './data/biodiversity_regression_data/'
-        uri_1 = os.path.join(reg_dir, '')
-        uri_2 = os.path.join(reg_dir, '')
-        uri_3 = os.path.join(reg_dir, '')
+        uri_1 = os.path.join(reg_dir, 'empty_dir')
+        uri_2 = os.path.join(reg_dir, 'test_dir')
+        uri_3 = os.path.join(reg_dir, 'test_open_amb')
+        uri_4 = os.path.join(reg_dir, 'test_empty_open_amb')
+        uri_5 = os.path.join(reg_dir, 'test_none_open_amb')
         
-        uri_list = [uri_1, uri_2, uri_3]
+        uri_list = [uri_1, uri_2, uri_3, uri_4, uri_5]
+        uri_results = [None, 1, 1, None, None]
+        for uri, res in zip(uri_list, uri_results):
+            ds = biodiversity_biophysical.open_ambiguous_raster(uri)
+            if not ds is None:
+                self.assertEqual(res, 1)
+            else:
+                self.assertEqual(res, ds)
 
-        for uri in uri_list():
-            ds = biodiversity_biophsyical.open_ambiguous_raster(uri)
-            
     def test_biodiversity_biophysical_make_dict_from_csv(self):
         """Test a few hand made CSV files to make sure make_dict_from_csv
             returns properly """
