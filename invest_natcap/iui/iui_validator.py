@@ -791,7 +791,7 @@ class CSVChecker(TableChecker):
 
         # Now that we know the csv file is probably good, we can actually open
         # the file and save the DictReader object.
-        self.file = csv.DictReader(open(self.uri))
+        self.file = csv.DictReader(open(self.uri, 'rU'))
 
     def _build_table(self):
         table_rows = []
