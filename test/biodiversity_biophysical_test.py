@@ -78,12 +78,18 @@ class TestBiodiversityBiophysical(unittest.TestCase):
     def test_biodiversity_biophysical_make_dict_from_csv(self):
         """Test a few hand made CSV files to make sure make_dict_from_csv
             returns properly """
-    #    reg_dir = './data/biodiversity_regression_data/'
-   #     csv_uri = os.path.join(reg_dir, 'test_csv')
-  #      result_dict = {'0':{'LULC':'0','DESC':'farm','RARITY':'0.4'},
- #                      }'0':{'LULC':'0','DESC':'farm','RARITY':'0.4'},
-#'0':{'LULC':'0','DESC':'farm','RARITY':'0.4'},
+        reg_dir = './data/biodiversity_regression_data/'
+        csv_uri = os.path.join(reg_dir, 'test_csv.csv')
+        field = 'LULC'
 
+        result_dict = {'0':{'LULC':'0','DESC':'farm','RARITY':'0.4'},
+                       '3':{'LULC':'3','DESC':'water','RARITY':'1.0'},
+                       '23':{'LULC':'23','DESC':'swamp','RARITY':'0.2'}}
+        created_dict =\
+            biodiversity_biophysical.make_dictionary_from_csv(csv_uri, field)
+
+        self.assertEqual(result_dict, created_dict)
+        
     def test_biodiversity_biophysical_check_projections(self):
         """Test a list of gdal datasets and assert that we see success and
             failures where we would expect """
