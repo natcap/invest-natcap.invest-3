@@ -333,7 +333,7 @@ class Checker(registrar.Registrar):
                 (e.__class__.__name__, str(e), valid_dict['value'])
             print traceback.format_exc()
             raise Warning('An unexpected error was encountered during' +
-                          'validation.  Use this input at your own risk.')
+                          ' validation.  Use this input at your own risk.')
         return None
 
 class URIChecker(Checker):
