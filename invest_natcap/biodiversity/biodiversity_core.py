@@ -152,11 +152,13 @@ def biophysical(args):
                 # create sensitivity raster based on threat
                 sens_uri = \
                     os.path.join(intermediate_dir, str('sens_'+threat+lulc_key+'.tif'))
+                
                 sensitivity_raster = \
                     raster_from_dict(lulc_ras, sens_uri,\
                         args['sensitivity_dict'], 'L_'+threat, -1.0, True,\
-                        'A lulc type in the land cover was not found in the\
-                        sensitivity table. The erroring pixel value was : ')        
+                        error_message='A lulc type in the land cover was not\
+                        found in the sensitivity table. The erroring pixel\
+                        value was : ')        
                 sensitivity_raster.FlushCache()
                
                 weight_avg = float(threat_data['WEIGHT']) / weight_sum
@@ -233,6 +235,7 @@ def biophysical(args):
                 # z is a scaling parameter set to 2.5 as noted in the users
                 # guide
                 z = 2.5
+                
                 # a term used below to compute habitat quality
                 ksq = half_saturation**z
                 
@@ -331,6 +334,9 @@ def biophysical(args):
                             datatype=gdal.GDT_Int32, nodata=out_nodata)
                 
                 lulc_code_count_x = raster_pixel_count(new_cover)
+                
+                # a dictionary to map LULC types to a number that depicts how
+                # rare they are considered                
                 code_index = {}
                 
                 # compute the ratio or rarity index for each lulc code where we
@@ -360,11 +366,15 @@ def biophysical(args):
                 rarity_uri = \
                     os.path.join(output_dir, 'rarity'+lulc_cover+'.tif')
 
-                rarity = raster_utils.vectorize_rasters([new_cover], map_ratio,
+                rarity = \
+                    raster_utils.vectorize_rasters([new_cover], map_ratio,\
                         raster_out_uri=rarity_uri, nodata=rarity_nodata)
+                
                 rarity = None
+            
             except KeyError:
-                pass
+                continue
+    
     except KeyError:
         LOGGER.info('Baseline not provided to compute Rarity')
 
