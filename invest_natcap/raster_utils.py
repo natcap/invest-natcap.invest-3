@@ -1153,7 +1153,8 @@ def calculate_value_not_in_array(array):
 
 def create_rat(dataset, attr_dict, key_name, value_name):
     """Create a raster attribute table from a provided dictionary that maps the
-        keys to the first column and values to the second column
+        keys to the first column and values to the second column. WARNING: this
+        will blow away any raster attribute table that is set to this dataset
 
         dataset - a GDAL raster dataset to create the RAT for 
         attr_dict - a dictionary with keys that point to a primitive type
@@ -1164,31 +1165,13 @@ def create_rat(dataset, attr_dict, key_name, value_name):
         """
     band = dataset.GetRasterBand(1)
 
-    # check to see if the there is currently a RAT
-    # if there is not one, create a new one, otherwise make a copy of the 
-    # current one
-    if band.GetDefaultRAT() is None:
-        rat = gdal.RasterAttributeTable()
-    else:
-        rat = band.GetDefaultRAT().Clone()
+    # If there was already a RAT associated with this dataset it will be blown
+    # away and replaced by a new one
+    LOGGER.warn('Blowing away any current raster attribute table')
+    rat = gdal.RasterAttributeTable()
 
-    # get the number of rows from the RAT
-    cur_num_rows = rat.GetRowCount()
-    LOGGER.debug('Row Count : %s', cur_num_rows)
-    
     # the number of keys represents the number of rows we intend to write
     keys = np.array(attr_dict.keys())
-    new_num_rows = len(keys)
-    
-    # set the row count if the number of keys is great than the current number
-    # of rows. Although I think you can dynamically add the next row
-    if cur_num_rows < new_num_rows:
-        rat.SetRowCount(new_num_rows)
-  
-    # get current number of columns so that we can properly set values into the
-    # right columns below
-    col_count = rat.GetColumnCount()
-    LOGGER.debug('Column Count : %s', col_count)
     
     # create columns
     rat.CreateColumn(key_name, gdal.GFT_String, gdal.GFU_Generic)
@@ -1198,8 +1181,8 @@ def create_rat(dataset, attr_dict, key_name, value_name):
     keys_sorted = np.sort(keys)
     
     for key in keys_sorted:
-        LOGGER.debug('Row:Key, %s:%s', row_count, str(key))
-        LOGGER.debug('Row:Val, %s:%s', row_count, str(attr_dict[key]))
+        #LOGGER.debug('Row:Key, %s:%s', row_count, str(key))
+        #LOGGER.debug('Row:Val, %s:%s', row_count, str(attr_dict[key]))
         rat.SetValueAsString(row_count, col_count, str(key))
         rat.SetValueAsString(row_count, col_count + 1, str(attr_dict[key]))
         row_count += 1
