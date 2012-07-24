@@ -145,7 +145,8 @@ class TestBiodiversityBiophysical(unittest.TestCase):
     
     def test_biodiversity_biophsyical_compare_threats_sensitivity_fail(self):
         """Test hand created dictionaries representing the formats of the
-            threats and sensitivity CSV files """
+            threats and sensitivity CSV files. We purposely put an error in
+            here so that the function will return True """
 
         threat_dict =\
             {'crp':{'THREAT':'crp','MAX_DIST':'8','DECAY':'0','WEIGHT':0.3},

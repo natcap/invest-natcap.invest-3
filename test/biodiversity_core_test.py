@@ -6,6 +6,7 @@ import logging
 from osgeo import ogr, gdal, osr
 from osgeo.gdalconst import *
 import numpy as np
+from nose.plugins.skip import SkipTest
 
 from invest_natcap.biodiversity import biodiversity_core
 
@@ -154,3 +155,31 @@ class TestInvestBiodiversityCore(unittest.TestCase):
                 out_uri, test_dict, field, out_nodata, True,
                 error_message='missing key')
 
+    def test_make_raster_from_lulc(self):
+        """ """
+        raise SkipTest
+
+        ds = biodiversity_core.make_raster_from_lulc(lulc_ds, raster_uri)
+
+    def test_get_raster_properties(self):
+        """ """
+        reg_dir = './data/biodiversity_regression_data/samp_input/'
+        ds = gdal.Open(os.path.join(reg_dir, 'lc_samp_cur_b.tif'))
+
+        calc_res = {'width':30,'height':-30,'x_size':1125,'y_size':991}
+        
+        prop = biodiversity_core.get_raster_properties(ds)
+
+        self.assertEqual(calc_res, prop)
+
+    def test_make_raster_from_shape(self):
+        """ """
+        raise SkipTest
+
+        biodiversity_core.make_raster_from_shape(base_raster, shape, attr)
+
+    def test_clip_and_op(self):
+        """ """
+        raise SkipTest
+        #biodiversity_core.clip_and_op(in_matrix, arg1, op,\
+            #matrix_type=,in_matrix_nodata,out_matrix_nodata,kwargs= ) 

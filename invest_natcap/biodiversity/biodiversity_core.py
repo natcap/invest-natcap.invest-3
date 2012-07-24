@@ -470,7 +470,6 @@ def get_raster_properties(dataset):
     dataset_dict['height'] = float(gt[5])
     dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize    
     dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
-    dataset_dict['mask'] = dataset.GetRasterBand(1).GetMaskBand()
     LOGGER.debug('Raster_Properties : %s', dataset_dict)
     return dataset_dict
 
