@@ -74,8 +74,10 @@ def execute(args):
     time.sleep(5)
     while not complete:
         log = urllib2.urlopen(url).read()
-        if log[-31:-1]=="Dropped intermediate tables.":
+        if log.split(",")[-1].strip()=="Dropped intermediate tables.":
             complete = True
+        elif log.split(",")[-2].strip()=="ERROR":
+            raise IOError, "Error on server: %s" % (log.split(",")[-1].strip())
         else:
             LOGGER.info("Please wait.")
             time.sleep(15)                    
