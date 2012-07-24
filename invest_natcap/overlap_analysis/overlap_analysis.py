@@ -35,11 +35,18 @@ def execute(args):
         args['overlap_data_dir_loc']- URI pointing to a directory where multiple
             shapefiles are located. Each shapefile represents an activity of
             interest for the model.
+        args['do-inter']-Boolean that indicates whether or not inter-activity
+            weighting is desired. This will decide if the overlap table will be
+            created.
+        args['do_intra']- Boolean which indicates whether or not intra-activity
+            weighting is desired. This will will pull attributes from shapefiles
+            passed in in 'zone_layer_loc'
+            
+            
+        --Optional--
         args['overlap_layer_tbl'] URI to a CSV file that holds relational data
             and identifier data for all layers being passed in within the
-            overlap analysis directory.
-    
-        --Optional--
+            overlap analysis directory.    
         args['import_field']- string which corresponds to a field within the
             layers being passed in within overlap analysis directory. This is
             the intra-activity importance for each activity.
@@ -105,7 +112,11 @@ def execute(args):
         
     oa_args['overlap_files'] = file_dict
     
-    oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
+    #No need to format the table if no inter-activity weighting is desired.
+    oa_args['do_inter'] = args['do_inter']
+    
+    if args['do_inter']:
+        oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
     
     #We don't actually get these yet, so commenting them out
     #oa_args['import_field'] = args['import_field']
