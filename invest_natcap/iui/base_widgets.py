@@ -577,15 +577,24 @@ class ErrorButton(InformationButton):
             single string containing HTML markup.  Returns a python string."""
         width_table = '<table style="width:400px"></table>'
         title = '<h3 style="color:black">%s</h3><br/>' % (self.title)
-        error = self.error_text
-        if error != '':
-            error = '<b style="color:red">ERROR: %s</b><br/>' % (error)
+
+        #### CHECK ERROR STATE TO DETERMINE TEXT
+        if self.error_state == 'warning':
+            color = 'orange'
+            text = 'WARNING:'
+        elif self.error_state == 'error':
+            color = 'red'
+            text = 'ERROR:'
         else:
-            error = '<b style="color:green">Validation successful</b><br/>'
+            color = 'green'
+            text = 'Validation successful'
+
+        message = '<b style="color:%s">%s %s</b><br/>' % (color, text,
+            self.error_text)
 
         body = '<div style="color:black">%s</div>' % (self.body_text)
 
-        return str(title + error + body + width_table)
+        return str(title + message + body + width_table)
 
 class LabeledElement(DynamicPrimitive):
     def __init__(self, attributes):
