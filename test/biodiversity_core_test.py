@@ -8,6 +8,7 @@ from osgeo.gdalconst import *
 import numpy as np
 from nose.plugins.skip import SkipTest
 
+from invest_natcap import raster_utils
 from invest_natcap.biodiversity import biodiversity_core
 
 LOGGER = logging.getLogger('water_yield_test')
@@ -155,12 +156,6 @@ class TestInvestBiodiversityCore(unittest.TestCase):
                 out_uri, test_dict, field, out_nodata, True,
                 error_message='missing key')
 
-    def test_make_raster_from_lulc(self):
-        """ """
-        raise SkipTest
-
-        ds = biodiversity_core.make_raster_from_lulc(lulc_ds, raster_uri)
-
     def test_get_raster_properties(self):
         """ """
         reg_dir = './data/biodiversity_regression_data/samp_input/'
@@ -180,6 +175,60 @@ class TestInvestBiodiversityCore(unittest.TestCase):
 
     def test_clip_and_op(self):
         """ """
-        raise SkipTest
-        #biodiversity_core.clip_and_op(in_matrix, arg1, op,\
-            #matrix_type=,in_matrix_nodata,out_matrix_nodata,kwargs= ) 
+        #raise SkipTest
+        
+        out_dir = './data/test_out/biodiversity/clip_and_op/'
+        out_uri = os.path.join(out_dir, 'clip_and_op.tif')
+
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        out_uri = os.path.join(out_dir, 'error.tif')
+        
+        driver = gdal.GetDriverByName('MEM')
+        dataset_type = gdal.GDT_Int32
+
+        dataset = driver.Create('', 5, 5, 1, dataset_type)
+
+        srs = osr.SpatialReference()
+        srs.SetUTM( 11, 1 )
+        srs.SetWellKnownGeogCS( 'NAD27' )
+        dataset.SetProjection( srs.ExportToWkt() )
+
+        dataset.SetGeoTransform( [444720, 30, 0, 3751320, 0, -30 ] )
+
+        raster = np.array([[256,1,1,1,256],
+                           [256,3,3,3,256],
+                           [2,2,2,2,256],
+                           [256,1,1,2,2],
+                           [256,256,3,256,256]])
+
+        dataset.GetRasterBand(1).SetNoDataValue(256)
+        dataset.GetRasterBand(1).WriteArray(raster)
+        expected = np.array([[256,1,1,1,256],
+                           [256,3,3,3,256],
+                           [2,2,2,2,256],
+                           [256,1,1,2,2],
+                           [256,256,3,256,256]])
+    
+#       expected = np.array([[-1,5,5,5-1],
+#                            [-1,15,15,15,-1],
+#                            [10,10,10,10,-1],
+#                            [-1,5,5,10,10],
+#                            [-1,-1,15,-1,-1]])
+
+        ds_out = raster_utils.new_raster_from_base(dataset, out_uri, 'GTiff',
+                -1, gdal.GDT_Int32)
+
+        in_matrix = dataset.GetRasterBand(1).ReadAsArray()
+        out_matrix = ds_out.GetRasterBand(1).ReadAsArray()
+        arg1 = 5
+        matrix_out = \
+            biodiversity_core.clip_and_op(in_matrix, arg1, np.multiply,\
+                matrix_type=int, in_matrix_nodata=256, out_matrix_nodata=-1) 
+
+        self.assertEqual(matrix_out, expected)
+
+
+
+
