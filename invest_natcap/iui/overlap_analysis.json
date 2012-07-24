@@ -27,7 +27,7 @@
                     "type": "file",
                     "label": "Analysis Zones Layer",
                     "defaultValue": "../OverlapAnalysis/Input/AOI_WCVI.shp",
-                    "validateAs": {"type": "OGR"}
+                    "validateAs": {"type": "OGR"},
                     "required": true,
                     "helpText": "If you are using Management Zones to analyze overlap data, this should be a polygon shapefile containing multiple polygons. If, on the other hand, you wish to use gridding in order to separate the area, this can be a single polygon shapefile."
                 },
@@ -46,7 +46,7 @@
                     "type": "text",
                     "label": "Analysis Cell Size",
                     "defaultValue": "1000",
-                    "validateAs": {"type": "number"}
+                    "validateAs": {"type": "number"},
                     "required": false,
                     "requiredIf": ["gridding"],
                     "enabledBy": "gridding",
@@ -58,7 +58,7 @@
                     "type": "folder",
                     "label": "Overlap Analysis Data Directory",
                     "defaultValue": "../OverlapAnalysis/Input/FisheriesLayers_RI",
-                    "validateAs": {"type": "folder"}
+                    "validateAs": {"type": "folder"},
                     "required": true,
                     "helpText": "Users are required to specify the path on their system to a folder containing only the input data for the Overlap Analysis model. Input data can be point, line or polygon data layers indicating where in the coastal and marine environment the human use activity takes place."
                 },
@@ -70,15 +70,6 @@
                     "defaultValue": false,
                     "required": true,
                     "helpText": "By checking this box, you are indicating that you would like to use intra-activity valuation of the data. These weights will be retrieved from the column in the attribute table of the shapefile specified in 'Analysis Zones Layer' that bears the name specified in the 'Intra-Activity Field Name' field below."
-                },
-                 {
-                    "id" : "inter",
-                    "args_id" : "do_inter",
-                    "type": "checkbox",
-                    "label": "Inter-Activity Weighting?",
-                    "defaultValue": false,
-                    "required": true,
-                    "helpText": "By checking this box, you are indicating that you would like to use inter-activity valuation of the data. These weights will be derived from the data included in the CSV provided in the 'Overlap Analysis Importance Score Table' field."
                 },
                 {
                     "id" : "IS_field_name",
@@ -92,6 +83,15 @@
                     "helpText": "The column heading in the Analysis Zone Layer attribute table that gives intra-activity weights."               
             	},
             	{
+                    "id" : "inter",
+                    "args_id" : "do_inter",
+                    "type": "checkbox",
+                    "label": "Inter-Activity Weighting?",
+                    "defaultValue": false,
+                    "required": true,
+                    "helpText": "By checking this box, you are indicating that you would like to use inter-activity valuation of the data. These weights will be derived from the data included in the CSV provided in the 'Overlap Analysis Importance Score Table' field."
+                },
+            	{
                     "id" : "IS_tbl",
                     "args_id" : "overlap_layer_tbl",
                     "type": "file",
@@ -100,7 +100,7 @@
                     "required": false,
                     "requiredIf": ["inter"],
                     "enabledBy": "inter",
-                    "validateAs": {"type": "CSV"}
+                    "validateAs": {"type": "CSV"},
                     "helpText": "The name of the CSV table that links each provided activity layer to the desired inter-activity weight."               
             	}
             ]
