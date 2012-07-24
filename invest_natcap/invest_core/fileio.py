@@ -266,8 +266,7 @@ class TableHandler(object):
 
         self.orig_fieldnames = dict((k, v) for (k, v) in zip(current_fieldnames,
             self.fieldnames))
-        print self.table
-        print self.orig_fieldnames
+
         self.table = [dict((self.orig_fieldnames[k], v) for (k, v) in
             row.iteritems()) for row in self.table]
 
