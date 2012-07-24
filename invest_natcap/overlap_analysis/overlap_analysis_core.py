@@ -95,12 +95,9 @@ def execute(args):
         value activities, and sum all other activities happening on that pixel.
         
         Input:
-            aoi_pixel- This is the pixel from our base area of interest raster file. 
-                This is guaranteed to be the fist item in the list, since we
-                manually add it first.
-            *activity_pixels- This expands into a dynamic list of single variables, each
-                of which is a pixel from the overlap rasters that we are looking to
-                combine.
+            *activity_pixels- This expands into a dynamic list of single variables. The 
+                first will always be the AOI pixels. Those following will be a pixel
+                from the overlap rasters that we are looking to combine.
                 
         Returns:
             sum_pixel- This is either the aoi_nodata value if the AOI is not turned on
@@ -118,7 +115,7 @@ def execute(args):
         sum_pixel = 0
         
         for activ in activity_pixels[1::]:
-            LOGGER.debug("get inside pixel sum.")
+
             if activ == 1:
                 
                 sum_pixel += 1

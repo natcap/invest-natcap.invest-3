@@ -332,8 +332,8 @@ class Checker(registrar.Registrar):
             print '%s: \'%s\' encountered, for input %s passing validation.' % \
                 (e.__class__.__name__, str(e), valid_dict['value'])
             print traceback.format_exc()
-            raise Warning('An unexpected error was encountered.  Use this' +
-                ' at your own risk.')
+            raise Warning('An unexpected error was encountered during' +
+                          ' validation.  Use this input at your own risk.')
         return None
 
 class URIChecker(Checker):
@@ -791,7 +791,7 @@ class CSVChecker(TableChecker):
 
         # Now that we know the csv file is probably good, we can actually open
         # the file and save the DictReader object.
-        self.file = csv.DictReader(open(self.uri))
+        self.file = csv.DictReader(open(self.uri, 'rU'))
 
     def _build_table(self):
         table_rows = []
