@@ -125,3 +125,18 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Test hand created dictionaries representing the formats of the
             threats and sensitivity CSV files """
 
+            threat_dict =\
+                {'crp':{'THREAT':'crp','MAX_DIST':'8','DECAY':'0':'WEIGHT':0.3},
+                 'road':{'THREAT':'road','MAX_DIST':'5','DECAY':'1':'WEIGHT':0.3},
+                 'bld':{'THREAT':'bld','MAX_DIST':'7','DECAY':'0':'WEIGHT':0.3}}
+            sens_dict = \
+                {'0':{'LULC':'0','HABITAT':'1','L_crp':'0.8','L_road':'0.5','L_bld':'0.9'},
+                     '1': {'LULC':'0','HABITAT':'1','L_crp':'0.8','L_road':'0.5','L_bld':'0.9'},
+                     '2': {'LULC':'0','HABITAT':'1','L_crp':'0.8','L_road':'0.5','L_bld':'0.9'},
+                     '3': {'LULC':'0','HABITAT':'1','L_crp':'0.8','L_road':'0.5','L_bld':'0.9'}}
+
+
+            result = biodiversity_biophysical.\
+                         compare_threats_sensitivity(threat_dict, sens_dict)
+
+            self.assertTrue(not result)
