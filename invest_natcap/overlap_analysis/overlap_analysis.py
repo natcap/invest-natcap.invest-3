@@ -143,7 +143,6 @@ def format_over_table(over_tbl):
                 
                 {CommGF_Fish: (2.0, 0), CommSalmonTroll_Fish: (1.50, 0), ...}
     '''
-    #print os.getcwd()
     
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
