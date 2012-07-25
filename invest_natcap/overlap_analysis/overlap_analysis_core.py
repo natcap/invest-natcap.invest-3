@@ -47,6 +47,11 @@ def execute(args):
             zones as they get farther away from these locations.
         args['decay']- float between 0 and 1, representing the decay of interest
            in areas as you get farther away from human hubs.
+        args['do-inter']-Boolean that indicates whether or not inter-activity
+            weighting is desired. This tells us if the overlap table exists.
+        args['do_intra']- Boolean which indicates whether or not intra-activity
+            weighting is desired. This will will pull attributes from shapefiles
+            passed in in 'zone_layer_file'.
     
     Intermediate:
         Rasterized Shapefiles- For each shapefile that we passed in 'overlap_files'
@@ -130,9 +135,10 @@ def execute(args):
     
     #Now we want to create a second raster that includes all of the weighting information
     create_weighted_raster(output_dir, args['over_layer_dict'], args['overlap_files'],
-                            args['import_field'])
+                            args['import_field'], args['do_inter'], args['do_intra'])
     
-def create_weighted_raster(dir, inter_weights_dict, layers_dict, field_name):
+def create_weighted_raster(dir, inter_weights_dict, layers_dict, field_name,
+                           do_inter, do_intra):
     '''This function will create an output raster that takes into account both inter-
     activity weighting and intra-activity weighting. This will produce a map that looks
     both at where activities are occurring, and how much people value those activities
@@ -157,6 +163,15 @@ def create_weighted_raster(dir, inter_weights_dict, layers_dict, field_name):
             weights and intra-activity weights.
             
     Returns nothing.
+    '''
+    
+    ''' The equation that we are given to work with is:
+            IS = (1/n) * SUM (U{i,j}*I{j}
+        Where:
+            IS = Importance Score
+            n = Number of human use activities included
+            U{i,j}:
+    
     '''
     
     pass    
