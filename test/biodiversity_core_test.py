@@ -205,17 +205,12 @@ class TestInvestBiodiversityCore(unittest.TestCase):
 
         dataset.GetRasterBand(1).SetNoDataValue(256)
         dataset.GetRasterBand(1).WriteArray(raster)
-        expected = np.array([[256,1,1,1,256],
-                           [256,3,3,3,256],
-                           [2,2,2,2,256],
-                           [256,1,1,2,2],
-                           [256,256,3,256,256]])
     
-#       expected = np.array([[-1,5,5,5-1],
-#                            [-1,15,15,15,-1],
-#                            [10,10,10,10,-1],
-#                            [-1,5,5,10,10],
-#                            [-1,-1,15,-1,-1]])
+        expected = np.array([[-1,5,5,5,-1],
+                             [-1,15,15,15,-1],
+                             [10,10,10,10,-1],
+                             [-1,5,5,10,10],
+                             [-1,-1,15,-1,-1]])
 
         ds_out = raster_utils.new_raster_from_base(dataset, out_uri, 'GTiff',
                 -1, gdal.GDT_Int32)
@@ -227,7 +222,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
             biodiversity_core.clip_and_op(in_matrix, arg1, np.multiply,\
                 matrix_type=int, in_matrix_nodata=256, out_matrix_nodata=-1) 
 
-        self.assertEqual(matrix_out, expected)
+        self.assertTrue((matrix_out==expected).all())
 
 
 
