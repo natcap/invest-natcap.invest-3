@@ -74,27 +74,31 @@ def execute(args):
     time.sleep(5)
     while not complete:
         log = urllib2.urlopen(url).read()
-        if log.split(",")[-1].strip()=="Dropped intermediate tables.":
-            complete = True
-        elif log.split(",")[-2].strip()=="ERROR":
-            raise IOError, "Error on server: %s" % (log.split(",")[-1].strip())
+        serverLogging = log[len(oldlog):].strip()
+        if len(serverLogging) > 0:
+            serverLogging=serverLogging.split("\n")        
+            if serverLogging[-1][-1] != ".":
+                serverLogging.pop(-1)
+        else:
+            serverLogging=[]
+            
+        for entry in serverLogging:
+            timestamp,msgType,msg = entry.split(",")
+            if msgType == "INFO":
+                LOGGER.info(msg)
+            elif msgType == "DEBUG":
+                LOGGER.debug(msg)
+            elif msgType == "ERROR":
+                LOGGER.error(msg)
+                raise IOError, "Error on server: %s" % (msg)
+            
+        oldlog=log
+        
+        if msg=="Dropped intermediate tables.":
+            complete = True            
         else:
             LOGGER.info("Please wait.")
             time.sleep(15)                    
-#        log = log[:log.rfind(".")]
-#        newlog = log[len(oldlog):]
-#        oldlog = log
-#                
-#        if newlog[-29:]=="Dropping intermediate tables.":
-#            complete = True
-#            for line in newlog.split("\n"):
-#                LOGGER.info(line.split(",")[-1])
-#        elif newlog == "":
-#            LOGGER.info("Please wait.")
-#            time.sleep(15)
-#        else:
-#            for line in newlog[:newlog.rfind(".")+1].split("\n"):
-#                LOGGER.info(line.split(",")[-1])
                 
     LOGGER.info("Running regression")
     url = severPath+"/"+regressionScript
