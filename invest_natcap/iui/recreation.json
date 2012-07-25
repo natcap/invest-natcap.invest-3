@@ -30,6 +30,14 @@
 		            "dataType": "float",
 		            "required": true
 		        },
+				{
+				    "id": "cellUnit",
+				    "type": "cellUnit",
+				    "label": "Cell unit",
+				    "options":["kilometer", "meter", "mile", "foot"],
+				    "returns": {"mapValues" : {"kilometer" : 1000, "meter" : 1, "mile":1609.344, "foot" : 0.3048}},
+				    "defaultValue": 0
+				},
 		        {
 		        	"id" : "workspace_dir",
 		        	"args_id" : "workspace_dir",

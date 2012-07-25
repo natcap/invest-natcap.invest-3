@@ -22,11 +22,9 @@ def execute(args):
     
     aoiFileName = args["aoiFileName"]
     cellSize = args["cellSize"]
+    cellUnit = args["cellUnit"]
     workspace_dir = args["workspace_dir"]
-    try:
-        comments = args["comments"]
-    except KeyError:
-        comments =""
+    comments = args["comments"]
     
     dirname=os.path.dirname(aoiFileName)+os.sep
     fileName=os.path.basename(aoiFileName).strip(".shp") 
@@ -52,7 +50,7 @@ def execute(args):
                                          "aoiSHX": open(aoiFileNameSHX, "rb"),
                                          "aoiDBF": open(aoiFileNameDBF, "rb"),
                                          "aoiPRJ": open(aoiFileNamePRJ, "rb"),
-                                         "cellSize": cellSize,
+                                         "cellSize": cellSize*cellUnit,
                                          "comments": comments})
     
     # Create the Request object
@@ -127,19 +125,22 @@ if __name__ == "__main__":
         LOGGER.info("Running model with user provided parameters.")
         aoiFileName = sys.argv[1]
         cellSize = float(sys.argv[2])
-        workspace_dir = sys.argv[3]
-        comments = sys.argv[3]
+        cellUnit = float(sys.argv[3])
+        workspace_dir = sys.argv[4]
+        comments = sys.argv[5]
 
     else:
         LOGGER.info("Runnning model with test parameters.")
         dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
         aoiFileName = dirname+"recreation_data/"+"FIPS-11001.shp"
         cellSize = 1000
+        cellUnit = 1
         workspace_dir = dirname+"test_out/"
         comments = "Runnning model with test parameters."
 
     args["aoiFileName"] = aoiFileName
     args["cellSize"] = cellSize
+    args["cellUnit"] = cellUnit
     args["workspace_dir"] = workspace_dir
     args["comments"] = comments
 
