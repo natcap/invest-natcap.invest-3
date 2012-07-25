@@ -171,7 +171,21 @@ def create_weighted_raster(dir, inter_weights_dict, layers_dict, field_name,
             IS = Importance Score
             n = Number of human use activities included
             U{i,j}:
-    
+                If do_intra:
+                    U{i,j} = X{i,j} / X{max}
+                        X {i,j} = intra-activity weight of activity j in grid cell i
+                        X{max} = The max potential intra-activity weight for all cells
+                            where activity j occurs.
+                Else:
+                    U{i,j} = 1 if activity exists, or 0 if it doesn't.
+            I{j}:
+                If do_inter:
+                    I{j} = Y{j} / Y{max}
+                        Y{j} = inter-activity weight of an activuty
+                        Y{max} = max inter-activity weight of an activity weight for all
+                            activities.
+                Else:
+                    I{j} = 1    
     '''
     
     pass    
