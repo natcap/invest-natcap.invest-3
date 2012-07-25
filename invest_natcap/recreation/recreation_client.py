@@ -22,7 +22,7 @@ def execute(args):
     
     aoiFileName = args["aoiFileName"]
     cellSize = args["cellSize"]
-    cellUnit = args["cellUnit"]
+    cellUnit = float(args["cellUnit"])
     workspace_dir = args["workspace_dir"]
     comments = args["comments"]
     
