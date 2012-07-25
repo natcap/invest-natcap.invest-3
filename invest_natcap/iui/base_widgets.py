@@ -2,6 +2,7 @@ import sys
 import imp
 import os
 import time
+import traceback
 
 from PyQt4 import QtGui, QtCore
 
@@ -55,6 +56,7 @@ class DynamicElement(QtGui.QWidget):
         self.enabledBy = None #a pointer to an element, if an ID is specified.
         self.enables = [] #a list of pointers
         self.requiredIf = [] #a list of pointers
+        self.triggers = {}  # a dictionary of trigger strings -> pointers
 
         #initialize the elements array in case the user has defined sub-elements
         self.elements = []
@@ -82,17 +84,16 @@ class DynamicElement(QtGui.QWidget):
             have the ability to be enabled by other elements"""
 
         self.root = rootPointer
-
         #enabledBy is only a single string ID
         if 'enabledBy' in self.attributes:
             idString = self.attributes['enabledBy']
-            self.enabledBy = self.root.allElements[idString]
+            self.enabledBy = self.root.find_element_ptr(idString)
             self.enabledBy.enables.append(self)
 
         #requiredIf is a list
         if 'requiredIf' in self.attributes:
             for idString in self.attributes['requiredIf']:
-                elementPointer = self.root.allElements[idString]
+                elementPointer = self.root.find_element_ptr(idString)
                 self.requiredIf.append(elementPointer)
 
     def isRequired(self):
@@ -114,10 +115,12 @@ class DynamicElement(QtGui.QWidget):
 
     def setState(self, state, includeSelf=True, recursive=True):
         if includeSelf:
+            self.setEnabled(state)
             for element in self.elements:
                 element.setEnabled(state)
 
         if recursive:
+            state = self.requirementsMet()
             for element in self.enables:
                 element.setState(state)
 
@@ -345,6 +348,7 @@ class DynamicPrimitive(DynamicElement):
     def setState(self, state, includeSelf=True, recursive=True):
         if state == False:
             self.error_button.deactivate()
+            self.setBGcolorSatisfied(True)
         else:
             self.validate()
 
@@ -407,29 +411,39 @@ class DynamicPrimitive(DynamicElement):
                 return self.cast_value()
             return value
 
-    def set_error(self, error):
+    def set_error(self, error, state):
         if error == None or error == '':
             msg = ''
-            self.setBGcolorSatisfied(True)
         else:
             msg = str(error)
-            self.setBGcolorSatisfied(False)
-        self.error_button.set_error(msg)
+
+        satisfied = False
+        if state == 'warning' or state == None:
+            satisfied = True
+        
+        self.setBGcolorSatisfied(satisfied)
+        self.error_button.set_error(msg, state)
 
     def has_error(self):
-        if str(self.error_button.error_text) == '' or\
-           not self.error_button.isEnabled():
-            return False
-        return True
+        if self.error_button.error_state == 'error' and\
+            self.error_button.isEnabled():
+            return True
+        return False
         
+    def has_warning(self):
+        if self.error_button.error_state == 'warning' and\
+            self.error_button.isEnabled():
+            return True
+        return False
+
     def validate(self):
         if self.isRequired() and not self.requirementsMet():
-            self.set_error('Element is required')
+            self.set_error('Element is required', 'error')
         else:
             # If there's no validation for this element but its requirements are
             # met and it's enabled, we should mark it as not having an error.
             if self.isEnabled() and self.validator == None:
-                self.set_error(None)
+                self.set_error(None, None)
 
             if self.isEnabled() and self.validator != None and\
             self.requirementsMet() and self.validator.thread_finished():
@@ -442,8 +456,8 @@ class DynamicPrimitive(DynamicElement):
     def check_validation_error(self):
         if self.validator.thread_finished():
             self.timer.stop()
-            error = self.validator.get_error()
-            self.set_error(error)
+            error, state = self.validator.get_error()
+            self.set_error(error, state)
 
             # Toggle dependent elements based on the results of this validation
             DynamicElement.setState(self, not bool(error), includeSelf=False,
@@ -522,23 +536,31 @@ class ErrorButton(InformationButton):
         attribute.  Title and body_text are python strings."""
         InformationButton.__init__(self, title, body_text)
         self.error_text = ''
+        self.error_state = None
         self.deactivate()
 
     def setEnabled(self, state):
         if state == False:
             self.setIcon(QtGui.QIcon(''))
         else:
-            self.set_error(self.error_text)
+            self.set_error(self.error_text, self.error_state)
 
         QtGui.QWidget.setEnabled(self, state)
 
-    def set_error(self, error_string):
+    def set_error(self, error_string, state):
         """Set the error string of this InformationPopup and also set this
             button's icon according to the error contained in error_string.
             error_string is a python string."""
+
         self.error_text = error_string
+        self.error_state = state
         button_is_flat = False
-        button_icon = 'validate-fail.png'
+        button_icon = ''
+
+        if state == 'error':
+            button_icon = 'validate-fail.png'
+        elif state == 'warning':
+            button_icon = 'dialog-warning.png'
 
         # If no error, change button settings accordingly.
         if error_string == '':
@@ -555,15 +577,24 @@ class ErrorButton(InformationButton):
             single string containing HTML markup.  Returns a python string."""
         width_table = '<table style="width:400px"></table>'
         title = '<h3 style="color:black">%s</h3><br/>' % (self.title)
-        error = self.error_text
-        if error != '':
-            error = '<b style="color:red">ERROR: %s</b><br/>' % (error)
+
+        #### CHECK ERROR STATE TO DETERMINE TEXT
+        if self.error_state == 'warning':
+            color = 'orange'
+            text = 'WARNING:'
+        elif self.error_state == 'error':
+            color = 'red'
+            text = 'ERROR:'
         else:
-            error = '<b style="color:green">Validation successful</b><br/>'
+            color = 'green'
+            text = 'Validation successful'
+
+        message = '<b style="color:%s">%s %s</b><br/>' % (color, text,
+            self.error_text)
 
         body = '<div style="color:black">%s</div>' % (self.body_text)
 
-        return str(title + error + body + width_table)
+        return str(title + message + body + width_table)
 
 class LabeledElement(DynamicPrimitive):
     def __init__(self, attributes):
@@ -692,10 +723,12 @@ class DynamicText(LabeledElement):
 
             returns nothing."""
 
-        # Enable/disable necessary elements before validating.
-        self.setState(self.requirementsMet(), includeSelf=False)
         self.setBGcolorSatisfied(True)  # assume valid until validation fails
-        self.validate()
+        if self.validator != None:
+            self.validate()
+        else:
+            self.setState(self.requirementsMet(), includeSelf=False,
+                recursive=True)
 
 
     def setValidateField(self, regexp):
@@ -997,6 +1030,15 @@ class MultiElement(Container):
         for value in values:
             self.add_element(value)
 
+    def resetValue(self):
+        """Reimplemented from the Container class.  Removes all rows."""
+
+        # Need to make a deep copy of the elements so we don't have some
+        # conflict with self.remove_element.
+        elements = self.multi_widget.elements[:]
+        for element in elements:
+            self.remove_element(element.elements[1].row_num)
+
 class GridList(DynamicGroup):
     """Class GridList represents a DynamicGroup that has a QGridLayout as a 
         layout manager."""
@@ -1293,12 +1335,12 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         #connect the button to the toggle function.
         self.toggled.connect(self.toggle)
 
-    def toggle(self, isChecked):
+    def toggle(self, event=None):
         """Enable/disable all elements controlled by this element.
         
             returns nothing."""
 
-        self.setState(isChecked, includeSelf=False)
+        self.setState(self.value(), includeSelf=False)
 
 #    def isEnabled(self):
 #        """Check to see if this element is checked.
@@ -1339,7 +1381,7 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         self.setState(value, includeSelf=False)
 
     def requirementsMet(self):
-        return self.value()
+        return self.isChecked()
 
     def setBGcolorSatisfied(self, state):
         pass
@@ -1637,11 +1679,6 @@ class MessageArea(QtGui.QLabel):
 
             returns nothing."""
 
-        # If this widget is not visible, we want to show it.  Otherwise, leave
-        # it visible.
-        if not self.isVisible():
-            self.show()
-
         if not state:
             self.setStyleSheet('QLabel { padding: 15px;' +
                 'background-color: #d4efcc; border: 2px solid #3e895b;}')
@@ -1653,7 +1690,11 @@ class Root(DynamicElement):
     def __init__(self, uri, layout, object_registrar):
         self.config_loader = fileio.JSONHandler(uri)
         attributes = self.config_loader.get_attributes()
-        self.super = None
+        
+        if not hasattr(self, 'super'):
+            print(self, 'setting super to None')
+            self.super = None
+        
         self.obj_registrar = object_registrar
 
         self.find_and_replace(attributes)
@@ -1695,14 +1736,26 @@ class Root(DynamicElement):
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
 
+        self.updateLinksLater = []
         for id, element in self.allElements.iteritems():
+            try:
+                element.updateLinks(self)
+            except:
+                # If an exception is thrown when trying to update links, assume
+                # that it's an issue of not really knowing where the element is
+                # located and try to address it once all other elements have
+                # updated their links.
+                self.updateLinksLater.append(element)
+
+        for element in self.updateLinksLater:
             element.updateLinks(self)
 
         self.operationDialog = OperationDialog(self)
         self.assembler = ElementAssembler(self.allElements)        
 
+        self.embedded_uis = []
         self.initElements()
-        
+
     def find_and_replace(self, attributes):
         """Initiates a recursive search and replace of the attributes
             dictionary according to the 'inheritFrom' capabilities of the JSON
@@ -1814,9 +1867,26 @@ class Root(DynamicElement):
         for id, element in self.allElements.iteritems():
             if issubclass(element.__class__, DynamicPrimitive):
                 if element.has_error():
-                    error_msg = element.error_button.error_text
-                    errors.append((element.attributes['label'], error_msg))
+                    try:
+                        error_msg = element.error_button.error_text
+                        errors.append((element.attributes['label'], error_msg))
+                    except:
+                        pass
         return errors
+
+    def warnings_exist(self):
+        """Check to see if any elements in this UI have warnings.
+        
+           returns a list of tuples, where the first tuple entry is the element
+           label and the second tuple entry is the element's error message.."""
+
+        warnings = []
+        for id, element in self.allElements.iteritems():
+            if issubclass(element.__class__, DynamicPrimitive):
+                if element.has_warning():
+                    error_msg = element.error_button.error_text
+                    warnings.append(element.attributes['label'])
+        return warnings
 
     def queueOperations(self):
         #placeholder for custom implementations.
@@ -1920,25 +1990,23 @@ class Root(DynamicElement):
             dictionary[key] = self.set_dict_value(temp_dict, list, element_value)
         else:
             dictionary[key] = element_value
-    
         return dictionary
 
-    def find_element_ptr(self, element_id):
-        """Return an element pointer if found.  None if not found."""
-        #if the element id can be found in the current UI, return that
-        #otherwise, get the element from this element's root.
-        if element_id in self.allElements:
-            return self.allElements[element_id]
-        else:
-            if self.super != None:
-                return self.super.find_element_ptr(element_id)
+    def find_embedded_elements(self):
+        uis = []
+        for id, element in self.allElements.iteritems():
+            if issubclass(element.__class__, EmbeddedUI):
+                uis.append(element)
+        return uis
 
 class EmbeddedUI(Root):
     def __init__(self, attributes, registrar):
         uri = attributes['configURI']
         layout = QtGui.QVBoxLayout()
+        self.super = registrar.root_ui
+        print('super_ui', self.super)
         Root.__init__(self, uri, layout, registrar)
-       
+
         #removing the reference to self in self.allElements.  If a reference to
         #self is in self.allElements and self has an args_id, the args_id is
         #replicated at two levels: the embeddedUI level and in the super ui,
@@ -1954,8 +2022,17 @@ class EmbeddedUI(Root):
         return self.assembleOutputDict()
 
     def updateLinks(self, rootPointer):
-        self.super = rootPointer
-        Root.updateLinks(self, rootPointer)
+        for element_id, element_ptr in self.allElements.iteritems():
+            element_ptr.updateLinks(self)
+
+    def find_element_ptr(self, element_id):
+        """Return an element pointer if found.  None if not found."""
+        #if the element id can be found in the current UI, return that
+        #otherwise, get the element from this element's root.
+        try:
+            return self.allElements[element_id]
+        except KeyError:
+            return None
 
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
@@ -1966,6 +2043,22 @@ class ExecRoot(Root):
         self.addBottomButtons()
         self.setWindowSize()
         self.error_dialog = ErrorDialog()
+        self.warning_dialog = WarningDialog()
+
+    def find_element_ptr(self, element_id):
+        """Return an element pointer if found.  None if not found."""
+        #if the element id can be found in the current UI, return that
+        #otherwise, get the element from this element's root.
+        try:
+            return self.allElements[element_id]
+        except KeyError:
+            if self.embedded_uis == []:
+                self.embedded_uis = self.find_embedded_elements()
+
+            for embedded_ui in self.embedded_uis:
+                emb_ptr = embedded_ui.find_element_ptr(element_id)
+                if emb_ptr != None:
+                    return emb_ptr
 
     def setWindowSize(self):
         #this groups all elements together at the top, leaving the
@@ -2021,6 +2114,17 @@ class ExecRoot(Root):
 
         errors = self.errors_exist()
         if len(errors) == 0:
+            warnings = self.warnings_exist()
+            
+            if len(warnings) > 0:
+                self.warning_dialog.set_messages(warnings)
+                exit_code = self.warning_dialog.exec_()
+
+                # If the user pressed 'back' on the warning dialog, return to
+                # the UI.
+                if exit_code == 0:
+                    return
+
             # Check to see if the user has specified whether we should save the
             # last run.  If the user has not specified, assume that the last run
             # should be saved.
@@ -2035,7 +2139,7 @@ class ExecRoot(Root):
             self.queueOperations()
             self.runProgram()
         else:
-            self.error_dialog.set_errors(errors)
+            self.error_dialog.set_messages(errors)
             self.error_dialog.exec_()
 
 
@@ -2095,22 +2199,21 @@ class ExecRoot(Root):
         #add the buttonBox to the window.        
         self.layout().addWidget(self.buttonBox)
 
-
-class ErrorDialog(QtGui.QDialog):
+class InfoDialog(QtGui.QDialog):
     def __init__(self):
         QtGui.QDialog.__init__(self)
-        self.errors = []
+        self.messages = []
         self.resize(400, 200)
         self.setWindowTitle('Errors exist!')
         self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'natcap_logo.png')))
         self.setLayout(QtGui.QVBoxLayout())
-        self.error_icon = QtGui.QLabel()
-        self.error_icon.setStyleSheet('QLabel { padding: 10px }')
-        self.error_icon.setPixmap(QtGui.QPixmap(os.path.join(IUI_DIR,
-            'dialog-error.png')))
-        self.error_icon.setSizePolicy(QtGui.QSizePolicy.Fixed,
+        self.icon = QtGui.QLabel()
+        self.icon.setStyleSheet('QLabel { padding: 10px }')
+        self.set_icon('dialog-error.png')
+        self.icon.setSizePolicy(QtGui.QSizePolicy.Fixed,
             QtGui.QSizePolicy.Fixed)
-        self.title = QtGui.QLabel("Whoops!")
+        self.title = QtGui.QLabel()
+        self.set_title('Whoops!')
         self.title.setStyleSheet('QLabel { font: bold 18px }')
         self.body = QtGui.QLabel()
         self.body.setWordWrap(True)
@@ -2119,7 +2222,7 @@ class ErrorDialog(QtGui.QDialog):
 
         error_widget = QtGui.QWidget()
         error_widget.setLayout(QtGui.QHBoxLayout())
-        error_widget.layout().addWidget(self.error_icon)
+        error_widget.layout().addWidget(self.icon)
         self.layout().addWidget(error_widget)
 
         body_widget = QtGui.QWidget()
@@ -2132,17 +2235,39 @@ class ErrorDialog(QtGui.QDialog):
         self.button_box.addButton(self.ok_button, QtGui.QDialogButtonBox.AcceptRole)
         self.layout().addWidget(self.button_box)
 
-    def set_errors(self, errors):
-        self.errors = errors
+    def set_icon(self, uri):
+        self.icon.setPixmap(QtGui.QPixmap(os.path.join(IUI_DIR, uri)))
+
+    def set_title(self, title):
+        self.title.setText(title)
+    
+    def set_messages(self, message_list):
+        self.messages = message_list
+
+class WarningDialog(InfoDialog):
+    def __init__(self):
+        InfoDialog.__init__(self)
+        self.set_title('Warning...')
+        self.set_icon('dialog-warning-big.png')
+        self.body.setText('Some inputs cannot be validated and may cause ' +
+           'this program to fail.  Continue anyways?')
+        self.no_button = QtGui.QPushButton('Back')
+        self.no_button.clicked.connect(self.reject)
+        self.button_box.addButton(self.no_button, QtGui.QDialogButtonBox.RejectRole)
+    
+class ErrorDialog(InfoDialog):
+    def __init__(self):
+        InfoDialog.__init__(self)
+        self.set_title('Whoops!')
 
     def showEvent(self, event=None):
         label_string = '<ul>'
-        for element_tuple in self.errors:
+        for element_tuple in self.messages:
             label_string += '<li>%s: %s</li>' % element_tuple
         label_string += '</ul>'
 
         self.body.setText(str("There are %s error(s) that must be resolved" +
-            " before this tool can be run:%s") % (len(self.errors), label_string))
+            " before this tool can be run:%s") % (len(self.messages), label_string))
         self.body.setMinimumSize(self.body.sizeHint())
 
 class ElementRegistrar(registrar.Registrar):

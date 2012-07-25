@@ -13,8 +13,8 @@ import invest_natcap
 # __version__ is set in invest_natcap/__init__.py, in accordance with PEP
 # 396:http://www.python.org/dev/peps/pep-0396/. 
 VERSION = invest_natcap.__version__
-CYTHON_SOURCE_FILES = ['cython_modules/invest_cython_core.pyx',
-                       'cython_modules/simplequeue.c']
+CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
+                       'invest_natcap/cython_modules/simplequeue.c']
 
 console = []
 data_files = []
@@ -45,7 +45,7 @@ if platform.system() == 'Windows':
                         'invest_natcap.invest_core',
                         'invest_natcap.iui',
                         'invest_natcap.iui.dbfpy',
-			'invest_natcap.recreation',
+			            'invest_natcap.recreation',
                         'invest_natcap.sediment',
                         'invest_natcap.timber',
                         'invest_natcap.validator_core',
@@ -54,7 +54,8 @@ if platform.system() == 'Windows':
                         'invest_natcap.finfish_aquaculture',
                         'invest_natcap.marine_water_quality',
                         'invest_natcap.biodiversity',
-                        'invest_natcap.coastal_vulnerability'],
+                        'invest_natcap.coastal_vulnerability',
+                        'invest_natcap.overlap_analysis'],
             #http://www.py2exe.org/index.cgi/ListOfOptions
             'skip_archive': True
             }
@@ -101,6 +102,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/natcap_logo.png',
                'invest_natcap/iui/validate-pass.png',
                'invest_natcap/iui/validate-fail.png',
+               'invest_natcap/iui/dialog-warning.png',
                'invest_natcap/iui/dialog-error.png'])]
 #The standard distutils setup command
 setup(name='invest_natcap',
@@ -121,10 +123,10 @@ setup(name='invest_natcap',
                 'invest_natcap.finfish_aquaculture',
                 'invest_natcap.marine_water_quality',
                 'invest_natcap.biodiversity',
-	        'invest_natcap.coastal_vulnerability'],
+                'invest_natcap.coastal_vulnerability',
+                'invest_natcap.overlap_analysis'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
                              sources = CYTHON_SOURCE_FILES)],
       **py2exe_args)
-

@@ -3,6 +3,7 @@
 
 import logging
 import bisect
+import os
 
 import scipy.sparse
 import scipy.sparse.linalg
@@ -33,7 +34,7 @@ def biophysical(args):
         args['subwatersheds'] - an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds' shape provided as input. (required)
-        args['usle_uri'] - a URI location to the temporary USLE raster
+        args['potential_soil_loss_uri'] - a URI location to the temporary USLE raster
         args['reservoir_locations'] - an input shape file with 
             points indicating reservoir locations with IDs. (optional)
         args['reservoir_properties'] - an input CSV table 
@@ -46,17 +47,15 @@ def biophysical(args):
             part of a stream.  required if 'v_stream' is not provided.
         args['slope_threshold'] - A percentage slope threshold as described in
             the user's guide.
-        args['slope'] - an output raster file that holds the slope percentage
+        args['slope_uri'] - an output raster file that holds the slope percentage
             as a proporition from the dem
-        args['ls_factor'] - an output raster file containing the ls_factor
-            calculated on the particular dem
-        args['v_stream_out'] - An output raster file that classifies the
+        args['ls_uri'] - an output path for the ls_factor calculated on the 
+            particular dem
+        args['stream_uri'] - A path to a  file that classifies the
             watersheds into stream and non-stream regions based on the
             value of 'threshold_flow_accumulation'
         args['flow_direction'] - An output raster indicating the flow direction
             on each pixel
-        args['v_stream'] - An output raster indicating the areas that are
-            classified as streams based on flow_direction
         args['sret_dr_uri'] - An output raster uri showing the amount of
             sediment retained on each pixel during routing.  It breaks
             convention to pass a URI here, but we won't know the shape of
@@ -65,7 +64,8 @@ def biophysical(args):
             sediment exported from each pixel during routing.  It breaks
             convention to pass a URI here, but we won't know the shape of
             the raster until after all the input rasters are rasterized.
-            
+        args['intermediate_uri'] - A path to store itermediate rasters
+        args['output_uri'] - A path to store output rasters
         returns nothing"""
 
     ##############Set up vectorize functions and function-wide values
@@ -76,53 +76,10 @@ def biophysical(args):
     v_stream_nodata = \
         args['v_stream'].GetRasterBand(1).GetNoDataValue()
 
-    def stream_classifier(flow_accumulation):
-        """This function classifies pixels into streams or no streams based
-            on the threshold_flow_accumulation value.
-
-            flow_accumulation - GIS definition of flow accumulation (upstream
-                pixel inflow)
-
-            returns 1 if flow_accumulation exceeds
-                args['threshold_flow_accumulation'], 0 if not, and nodata
-                if in a nodata region
-        """
-        if flow_accumulation == flow_accumulation_nodata:
-            return v_stream_nodata
-        if flow_accumulation >= args['threshold_flow_accumulation']:
-            return 1.0
-        else:
-            return 0.0
-
     #Nodata value to use for usle output raster
     usle_nodata = -1.0
-    usle_c_p_raster = raster_utils.new_raster_from_base(args['landuse'], '',
-        'MEM', usle_nodata, gdal.GDT_Float32)
-    def lulc_to_cp(lulc_code):
-        """This is a helper function that's used to map an LULC code to the
-            C * P values needed by the sediment model and defined
-            in the biophysical table in the closure above.  The intent is this
-            function is used in a vectorize operation for a single raster.
-            
-            lulc_code - an integer representing a LULC value in a raster
-            
-            returns C*P where C and P are defined in the 
-                args['biophysical_table']
-        """
-        #There are string casts here because the biophysical table is all 
-        #strings thanks to the csv table conversion.
-        if str(lulc_code) not in args['biophysical_table']:
-            return usle_nodata
-        #We need to divide the c and p factors by 1000 (10*6 == 1000*1000) 
-        #because they're stored in the table as C * 1000 and P * 1000.  See 
-        #the user's guide:
-        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
-        return float(args['biophysical_table'][str(lulc_code)]['usle_c']) * \
-            float(args['biophysical_table'][str(lulc_code)]['usle_p']) / \
-                10 ** 6
 
     #Set up structures and functions for USLE calculation
-    ls_nodata = args['ls_factor'].GetRasterBand(1).GetNoDataValue()
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
@@ -153,6 +110,46 @@ def biophysical(args):
         raster_utils.new_raster_from_base(args['landuse'], '', 'MEM',
                                              usle_nodata, gdal.GDT_Float32)
 
+    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
+        """Used for interpolating efficiency raster to be the same dimensions
+            as soil_loss and also knocking out retention on the streams"""
+
+        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
+        #to scale efficiency especially if v_steram is interpolated 
+        #intelligently
+        return (1 - v_stream) * efficiency
+
+    ############## Calculation Starts here
+
+    dem_dataset = args['dem']
+    n_rows = dem_dataset.RasterYSize
+    n_cols = dem_dataset.RasterXSize
+    
+    #Calculate flow
+    LOGGER.info("calculating flow direction")
+    bounding_box = [0, 0, n_cols, n_rows]
+    invest_cython_core.flow_direction_inf(dem_dataset, bounding_box, 
+        args['flow_direction'])
+
+    #Calculate slope
+    LOGGER.info("Calculating slope")
+    slope_dataset = raster_utils.calculate_slope(dem_dataset, args['slope_uri'])
+
+    #Calcualte flow accumulation
+    LOGGER.info("calculating flow accumulation")
+    invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
+        args['dem'], bounding_box, args['flow_accumulation'])
+
+    #classify streams from the flow accumulation raster
+    LOGGER.info("Classifying streams from flow accumulation raster")
+    stream_dataset = raster_utils.stream_threshold(args['flow_accumulation'], 
+        args['threshold_flow_accumulation'], args['stream_uri'])
+
+    #Calculate LS term
+    ls_dataset = calculate_ls_factor(args['flow_accumulation'], slope_dataset, 
+                                     args['flow_direction'], args['ls_uri'])
+
+
     def lulc_to_retention(lulc_code):
         """This is a helper function that's used to map an LULC code to the
             retention values needed by the sediment model and defined
@@ -174,125 +171,75 @@ def biophysical(args):
         return float(args['biophysical_table'] \
                      [str(lulc_code)]['sedret_eff']) / 100.0
 
-    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
-        """Used for interpolating efficiency raster to be the same dimensions
-            as soil_loss and also knocking out retention on the streams"""
+    retention_uri = os.path.join(args['intermediate_uri'],'retention.tif')
+    raster_utils.vectorize_rasters([args['landuse']], lulc_to_retention, 
+                                   raster_out_uri = retention_uri, 
+                                   datatype=gdal.GDT_Float32, nodata=-1.0)
 
-        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
-        #to scale efficiency especially if v_steram is interpolated 
-        #intelligently
-        return (1 - v_stream) * efficiency
 
-    ############## Calculation Starts here
+    def lulc_to_c_or_p(key, lulc_code):
+        """This is a helper function that's used to map an LULC code to the
+            C * P values needed by the sediment model and defined
+            in the biophysical table in the closure above.  The intent is this
+            function is used in a vectorize operation for a single raster.
+            
+            key - either 'usle_c' or 'usle_p'
+            lulc_code - an integer representing a LULC value in a raster
+            
+            returns C or P where C and P are defined in the 
+                args['biophysical_table']
+        """
+        #There are string casts here because the biophysical table is all 
+        #strings thanks to the csv table conversion.
+        if str(lulc_code) not in args['biophysical_table']:
+            return usle_nodata
+        #We need to divide the c and p factors by 1000
+        #because they're stored in the table as C * 1000 and P * 1000.  See 
+        #the user's guide:
+        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
+        return float(args['biophysical_table'][str(lulc_code)][key]) / 1000.0
 
-    for watershed_feature in args['watersheds'].GetLayer():
-        LOGGER.info('Working on watershed_feature %s' % watershed_feature.GetFID())
-        watershed_bounding_box = \
-            invest_core.bounding_box_index(watershed_feature, args['dem'])
-        LOGGER.info('Bounding box %s' % (watershed_bounding_box))
+    c_factor_uri = os.path.join(args['intermediate_uri'],'c_factor.tif')
+    p_factor_uri = os.path.join(args['intermediate_uri'],'p_factor.tif')
+    c_dataset = raster_utils.vectorize_rasters([args['landuse']], 
+                                   lambda x: lulc_to_c_or_p('usle_c',x), 
+                                   raster_out_uri = c_factor_uri, 
+                                   datatype=gdal.GDT_Float32, nodata=-1.0)
+    p_dataset = raster_utils.vectorize_rasters([args['landuse']], 
+                                   lambda x: lulc_to_c_or_p('usle_p',x), 
+                                   raster_out_uri = p_factor_uri, 
+                                   datatype=gdal.GDT_Float32, nodata=-1.0)
 
-        #Read the subraster that overlaps the watershed bounding box
-        #dem_matrix = \
-        #    args['dem'].GetRasterBand(1).ReadAsArray(watershed_bounding_box)
-        LOGGER.info("calculating flow direction")
-        invest_cython_core.flow_direction_inf(args['dem'],
-                                              watershed_bounding_box,
-                                              args['flow_direction'])
+    potential_sediment_export_dataset = \
+       calculate_potential_soil_loss(ls_dataset, \
+                args['erosivity'], args['erodibility'], c_dataset, p_dataset,\
+                stream_dataset, args['potential_soil_loss_uri'])
 
-        LOGGER.info("calculating flow accumulation")
-        invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
-                                                  args['dem'],
-                                                  watershed_bounding_box,
-                                                  args['flow_accumulation'])
+    effective_retention_uri = os.path.join(args['intermediate_uri'], 
+                                           'effective_retention.tif')
 
-        #classify streams from the flow accumulation raster
-        LOGGER.info("Classifying streams from flow accumulation raster")
-        invest_core.vectorize1ArgOp(args['flow_accumulation'].GetRasterBand(1),
-            stream_classifier, args['v_stream'].GetRasterBand(1),
-            watershed_bounding_box)
+    retention_efficiency_uri = os.path.join(args['intermediate_uri'],'sed_ret_eff.tif')
+    retention_efficiency_dataset = raster_utils.vectorize_rasters([args['landuse']], 
+                                   lulc_to_retention, 
+                                   raster_out_uri = retention_efficiency_uri,
+                                   datatype=gdal.GDT_Float32, nodata=-1.0)
 
-        LOGGER.info("Calculating slope")
-        invest_cython_core.calculate_slope(args['dem'],
-            watershed_bounding_box, args['slope'])
+    effective_retention_dataset = \
+        effective_retention(args['flow_direction'], \
+                retention_efficiency_dataset, stream_dataset, effective_retention_uri)
 
-        LOGGER.info("calculating LS factor accumulation")
-        invest_cython_core.calculate_ls_factor(args['flow_accumulation'],
-                                               args['slope'],
-                                               args['flow_direction'],
-                                               watershed_bounding_box,
-                                               args['ls_factor'])
-        #map lulc to a usle_c * usle_p raster
-        LOGGER.info('mapping landuse types to crop and practice management values')
+    pixel_export_uri = os.path.join(args['output_uri'], 'pixel_export.tif')
+    calculate_per_pixel_export(potential_sediment_export_dataset,
+                                             effective_retention_dataset, pixel_export_uri)
 
-        lulc_watershed_bounding_box = \
-            invest_core.bounding_box_index(watershed_feature, args['landuse'])
-        invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
-            lulc_to_cp, usle_c_p_raster.GetRasterBand(1),
-            lulc_watershed_bounding_box)
+    pixel_sediment_flow_uri = os.path.join(args['intermediate_uri'], 'pixel_sed_flow.tif')
+    pixel_sediment_core_dataset = \
+        pixel_sediment_flow(potential_sediment_export_dataset, \
+            args['flow_direction'], effective_retention_dataset, pixel_sediment_flow_uri)
 
-        #map lulc to a usle_c * usle_p raster
-        LOGGER.info('mapping landuse types to vegetation retention efficiencies')
-        invest_core.vectorize1ArgOp(args['landuse'].GetRasterBand(1),
-            lulc_to_retention,
-            retention_efficiency_raster_raw.GetRasterBand(1),
-            lulc_watershed_bounding_box)
-
-    LOGGER.info("calculating potential soil loss")
-    potential_soil_loss = invest_core.vectorizeRasters([args['ls_factor'],
-        args['erosivity'], args['erodibility'], usle_c_p_raster,
-        args['v_stream']], usle_vectorized_function, args['usle_uri'],
-        nodata=usle_nodata)
-
-    #change units from tons per hectare to tons per cell.  We need to do this
-    #after the vectorize raster operation since we won't know the cell size
-    #until then.  Convert cell_area to meters (in Ha by default)
-    cell_area = invest_cython_core.pixelArea(potential_soil_loss) * (10 ** 4)
-    LOGGER.debug("{cell_area: %s" % cell_area)
-    potential_soil_loss_matrix = potential_soil_loss.GetRasterBand(1). \
-        ReadAsArray(0, 0, potential_soil_loss.RasterXSize,
-                    potential_soil_loss.RasterYSize)
-    potential_soil_loss_nodata = \
-        potential_soil_loss.GetRasterBand(1).GetNoDataValue()
-    potential_soil_loss_nodata_mask = \
-        potential_soil_loss_matrix == potential_soil_loss_nodata
-    potential_soil_loss_matrix *= cell_area / 10000.0
-    potential_soil_loss_matrix[potential_soil_loss_nodata_mask] = \
-        potential_soil_loss_nodata
-    #Get rid of any negative values due to outside interpolation:
-    potential_soil_loss_matrix[potential_soil_loss_matrix < 0] = \
-        potential_soil_loss_nodata
-    potential_soil_loss.GetRasterBand(1). \
-        WriteArray(potential_soil_loss_matrix, 0, 0)
-    invest_core.calculateRasterStats(potential_soil_loss.GetRasterBand(1))
-
-    sret_dr_raw = raster_utils.new_raster_from_base(potential_soil_loss,
-        '', 'MEM', -1.0, gdal.GDT_Float32)
-
-    #now interpolate retention_efficiency_raster_raw to a raster that will
-    #overlay potential_soil_loss, bastardizing vectorizeRasters here for
-    #its interpolative functionality by only returning efficiency in the
-    #vectorized op.
-    usle_vectorized_function = np.vectorize(efficiency_raster_creator)
-    retention_efficiency_raster = \
-        invest_core.vectorizeRasters([potential_soil_loss,
-            retention_efficiency_raster_raw, args['v_stream']],
-            usle_vectorized_function, nodata=usle_nodata)
-
-    #Create an output raster for routed sediment retention
-    sret_dr = raster_utils.new_raster_from_base(potential_soil_loss,
-        args['sret_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
-
-    #Route the sediment across the landscape and store the amount retained
-    #per pixel
-    invest_cython_core.calc_retained_sediment(potential_soil_loss,
-        args['flow_direction'], retention_efficiency_raster, sret_dr)
-
-    #Create an output raster for routed sediment export
-    sexp_dr = raster_utils.new_raster_from_base(potential_soil_loss,
-        args['sexp_dr_uri'], 'GTiff', -1.0, gdal.GDT_Float32)
-    invest_cython_core.calc_exported_sediment(potential_soil_loss,
-        args['flow_direction'], retention_efficiency_raster,
-        args['flow_accumulation'], args['v_stream'], sexp_dr)
+    sediment_retained_uri = os.path.join(args['output_uri'], 'pixel_retained.tif')
+    calculate_pixel_retained(pixel_sediment_core_dataset,
+        effective_retention_dataset, args['flow_direction'], sediment_retained_uri)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -346,7 +293,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
         if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
             return i * n_cols + j
         else:
-            return effective_retention_nodata
+            return -1
 
     #set up variables to hold the sparse system of equations
     #upper bound  n*m*5 elements
@@ -386,8 +333,8 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
             #set local flow accumulation to 0
             local_flow_angle = flow_direction_array[cell_index]
             if local_flow_angle == flow_direction_nodata:
-                #We could flow off the edge
-                b_vector[cell_index] = 1.0
+                #It's purely a nodata value
+                b_vector[cell_index] = effective_retention_nodata
                 continue
 
             #Determine outflow neighbors
@@ -434,9 +381,10 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
                     #This will occur if we visit a neighbor out of bounds
                     #it's okay, just skip it
                     pass
+
             #A sink will have 100% export (to stream)
             if sink:
-                b_vector[cell_index] = 1.0
+                b_vector[cell_index] = 0.0
 
     matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
                                   format="csc")
@@ -587,7 +535,7 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
     stream_nodata = stream_dataset.GetRasterBand(1).GetNoDataValue()
 
     usle_nodata = -1.0
-
+    ls_factor_nodata = -1.0
     def usle_function(ls_factor, erosivity, erodibility, usle_c, usle_p, v_stream):
         """Calculates the USLE equation
         
@@ -607,9 +555,8 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
             usle_p == p_nodata or v_stream == stream_nodata:
             return usle_nodata
         if v_stream == 1:
-            return 0
+            return 0.0
         return ls_factor * erosivity * erodibility * usle_c * usle_p
-
 
     dataset_list = [ls_factor_dataset, erosivity_dataset, erodibility_dataset, 
                     c_dataset, p_dataset, stream_dataset]
@@ -627,11 +574,11 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
     potential_soil_loss_band = potential_soil_loss_dataset.GetRasterBand(1)
     potential_soil_loss_matrix = potential_soil_loss_band.ReadAsArray()
     potential_soil_loss_nodata = potential_soil_loss_band.GetNoDataValue()
-    potential_soil_loss_nodata_mask = \
-        potential_soil_loss_matrix == potential_soil_loss_nodata
+    potential_soil_loss_data_mask = \
+        potential_soil_loss_matrix != potential_soil_loss_nodata
 
     #current unit is tons/ha, multiply by ha/cell (cell area in m^2/100**2)
-    potential_soil_loss_matrix[potential_soil_loss_nodata_mask] *= \
+    potential_soil_loss_matrix[potential_soil_loss_data_mask] *= \
         cell_area / 10000.0
 
     potential_soil_loss_band.WriteArray(potential_soil_loss_matrix)
@@ -639,8 +586,8 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
 
     return potential_soil_loss_dataset
 
-def calculate_pixel_export(potential_sediment_loss_dataset, 
-                           effective_retention_dataset, pixel_export_uri):
+def calculate_per_pixel_export(potential_sediment_loss_dataset, 
+                     effective_retention_dataset, pixel_export_uri):
     """Calculate per pixel export based on potential soil loss and the 
         effective per pixel retention factor.
 
@@ -677,3 +624,274 @@ def calculate_pixel_export(potential_sediment_loss_dataset,
         raster_out_uri = pixel_export_uri)
 
     return pixel_export_dataset
+
+def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
+                        retention_efficiency_dataset, pixel_sediment_flow_uri):
+    """Creates a raster of total sediment outflow from each pixel.
+    
+        potential_sediment_loss_dataset - a gdal dataset with per pixel 
+            potential export in units of tons per pixel
+        flow_direction_dataset - (input) A raster showing direction of flow out 
+            of each cell with directional values given in radians.
+        retention_efficiency_dataset - (input) raster indicating percent of 
+            sediment retained per pixel.  
+        pixel_sediment_flow_uri - (input) The URI to the output dataset
+
+        returns a dataset that has an amount of sediment in tons outflowing
+            from each pixel"""
+
+    potential_sediment_loss_band = potential_sediment_loss_dataset.GetRasterBand(1)
+    potential_sediment_loss_nodata = potential_sediment_loss_band.GetNoDataValue()
+    potential_sediment_loss_array = potential_sediment_loss_band.ReadAsArray().flatten()
+
+    flow_direction_band = flow_direction_dataset.GetRasterBand(1)
+    flow_direction_nodata = flow_direction_band.GetNoDataValue()
+    flow_direction_array = flow_direction_band.ReadAsArray().flatten()
+
+    retention_efficiency_band = retention_efficiency_dataset.GetRasterBand(1)
+    retention_efficiency_nodata = retention_efficiency_band.GetNoDataValue()
+    retention_efficiency_array = \
+        retention_efficiency_band.ReadAsArray().flatten()
+
+    pixel_sediment_flow_nodata = -1.0
+    pixel_sediment_flow_dataset = raster_utils.new_raster_from_base(flow_direction_dataset, 
+        pixel_sediment_flow_uri, 'GTiff', pixel_sediment_flow_nodata, gdal.GDT_Float32)
+    pixel_sediment_flow_band = pixel_sediment_flow_dataset.GetRasterBand(1)
+    pixel_sediment_flow_band.Fill(pixel_sediment_flow_nodata)
+
+    n_rows = pixel_sediment_flow_dataset.RasterYSize
+    n_cols = pixel_sediment_flow_dataset.RasterXSize
+
+    def calc_index(i, j):
+        """used to abstract the 2D to 1D index calculation below"""
+        if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
+            return i * n_cols + j
+        else:
+            return -1
+
+    #set up variables to hold the sparse system of equations
+    #upper bound  n*m*5 elements
+    b_vector = np.zeros(n_rows * n_cols)
+
+    #holds the rows for diagonal sparse matrix creation later, row 4 is 
+    #the diagonal
+    a_matrix = np.zeros((9, n_rows * n_cols))
+    diags = np.array([-n_cols-1, -n_cols, -n_cols+1, -1, 0, 
+                       1, n_cols-1, n_cols, n_cols+1])
+    
+    #Determine the outflow directions based on index offsets.  It's written 
+    #in terms of radian 4ths for easier readability and maintaince. 
+    #Derived all this crap from page 36 in Rich's notes.
+    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5, False),
+                         (-1, 1): (5.0/4.0 * np.pi, 2, True),
+                         (-1, 0): (6.0/4.0 * np.pi, 1, False),
+                         (-1,-1): (7.0/4.0 * np.pi, 0, True),
+                         ( 0,-1): (0.0/4.0 * np.pi, 3, False),
+                         ( 1,-1): (1.0/4.0 * np.pi, 6, True),
+                         ( 1, 0): (2.0/4.0 * np.pi, 7, False),
+                         ( 1, 1): (3.0/4.0 * np.pi, 8, True)}
+
+    LOGGER.info('Building diagonals for linear advection diffusion system.')
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            #diagonal element row_index,j always in bounds, calculate directly
+            cell_index = calc_index(row_index, col_index)
+            a_matrix[4, cell_index] = 1
+            
+            #Check to see if the current flow angle is defined, if not then
+            #set local flow accumulation to 0
+            local_flow_angle = flow_direction_array[cell_index]
+            local_retention = retention_efficiency_array[cell_index]
+            local_sediment_loss = potential_sediment_loss_array[cell_index]
+
+            if local_sediment_loss == potential_sediment_loss_nodata or \
+                    local_retention == retention_efficiency_nodata or \
+                    local_flow_angle == flow_direction_nodata:
+                #if the local sediment is undefined we're gonna have a bad time
+                #set to nodata value
+                b_vector[cell_index] = pixel_sediment_flow_nodata
+
+            b_vector[cell_index] = local_sediment_loss
+
+            #Determine inflow neighbors
+            for (row_offset, col_offset), (inflow_angle, diagonal_offset, diagonal_inflow) in \
+                    inflow_directions.iteritems():
+                try:
+                    neighbor_index = calc_index(row_index+row_offset,
+                                                col_index+col_offset)
+
+                    #If this delta is within pi/4 it means there's an inflow
+                    #direction, see diagram on pg 36 of Rich's notes
+                    delta = abs(local_flow_angle - inflow_angle)
+
+                    if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
+                        neighbor_retention = retention_efficiency_array[neighbor_index]
+                        neighbor_sediment_loss = \
+                            potential_sediment_loss_array[neighbor_index]
+
+                        if neighbor_retention == retention_efficiency_nodata or \
+                                neighbor_sediment_loss == potential_sediment_loss_nodata:
+                            continue
+
+                        if diagonal_inflow:
+                            #We want to measure the far side of the unit triangle
+                            #so we measure that angle UP from theta = 0 on a unit
+                            #circle
+                            delta = np.pi/4-delta
+
+                        #Taking absolute value because it might be on a 0,-45 
+                        #degree angle
+                        inflow_fraction = abs(np.tan(delta))
+                        if not diagonal_inflow:
+                            #If not diagonal then we measure the direct flow in
+                            #which is the inverse of the tangent function
+                            inflow_fraction = 1-inflow_fraction
+                        
+                        #Finally set the appropriate inflow variable
+                        a_matrix[diagonal_offset, neighbor_index] = \
+                            -inflow_fraction * local_retention
+
+                except IndexError:
+                    #This will occur if we visit a neighbor out of bounds
+                    #it's okay, just skip it
+                    pass
+
+    matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
+                                  format="csc")
+
+    LOGGER.info('Solving via sparse direct solver')
+    solver = scipy.sparse.linalg.factorized(matrix)
+    result = solver(b_vector)
+
+    #Result is a 1D array of all values, put it back to 2D
+    result.resize(n_rows,n_cols)
+
+    pixel_sediment_flow_band.WriteArray(result)
+
+    return pixel_sediment_flow_dataset
+
+def calculate_pixel_retained(pixel_sediment_flow_dataset, 
+                             retention_efficiency_dataset,
+                             flow_direction_dataset,
+                             per_pixel_retained_uri):
+    """Creates a raster of total sediment retention in each pixel.
+    
+        pixel_sediment_flow_dataset - a gdal dataset with per pixel 
+            sediment outflow
+        retention_efficiency_dataset - (input) raster indicating percent of 
+            sediment retained per pixel.  
+        flow_direction_dataset - A raster showing direction of flow out 
+            of each cell with directional values given in radians.
+        pixel_retained_uri - The URI to the output dataset
+
+        returns a dataset that has an amount of sediment in tons outflowing
+            from each pixel"""
+
+
+    pixel_sediment_flow_band = pixel_sediment_flow_dataset.GetRasterBand(1)
+    pixel_sediment_flow_nodata = pixel_sediment_flow_band.GetNoDataValue()
+    pixel_sediment_flow_array = pixel_sediment_flow_band.ReadAsArray().flatten()
+
+    retention_efficiency_band = retention_efficiency_dataset.GetRasterBand(1)
+    retention_efficiency_nodata = retention_efficiency_band.GetNoDataValue()
+    retention_efficiency_array = retention_efficiency_band.ReadAsArray().flatten()
+
+    flow_direction_band = flow_direction_dataset.GetRasterBand(1)
+    flow_direction_nodata = flow_direction_band.GetNoDataValue()
+    flow_direction_array = flow_direction_band.ReadAsArray().flatten()
+
+    pixel_retained_nodata = -1.0
+    pixel_retained_dataset = raster_utils.new_raster_from_base(pixel_sediment_flow_dataset, 
+        per_pixel_retained_uri, 'GTiff', pixel_retained_nodata, gdal.GDT_Float32)
+    pixel_retained_band = pixel_retained_dataset.GetRasterBand(1)
+    pixel_retained_band.Fill(pixel_retained_nodata)
+
+    n_rows = pixel_retained_dataset.RasterYSize
+    n_cols = pixel_retained_dataset.RasterXSize
+
+    def calc_index(i, j):
+        """used to abstract the 2D to 1D index calculation below"""
+        if i >= 0 and i < n_rows and j >= 0 and j < n_cols:
+            return i * n_cols + j
+        else:
+            return -1
+
+    result = np.zeros(n_rows*n_cols)
+
+    #Determine the outflow directions based on index offsets.  It's written 
+    #in terms of radian 4ths for easier readability and maintaince. 
+    #Derived all this crap from page 36 in Rich's notes.
+    inflow_directions = {( 0, 1): (4.0/4.0 * np.pi, 5, False),
+                         (-1, 1): (5.0/4.0 * np.pi, 2, True),
+                         (-1, 0): (6.0/4.0 * np.pi, 1, False),
+                         (-1,-1): (7.0/4.0 * np.pi, 0, True),
+                         ( 0,-1): (0.0/4.0 * np.pi, 3, False),
+                         ( 1,-1): (1.0/4.0 * np.pi, 6, True),
+                         ( 1, 0): (2.0/4.0 * np.pi, 7, False),
+                         ( 1, 1): (3.0/4.0 * np.pi, 8, True)}
+
+    LOGGER.info('Building diagonals for linear advection diffusion system.')
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            #diagonal element row_index,j always in bounds, calculate directly
+            cell_index = calc_index(row_index, col_index)
+            
+            #Check to see if the current flow angle is defined, if not then
+            #set local flow accumulation to 0
+            local_flow_angle = flow_direction_array[cell_index]
+            local_retention = retention_efficiency_array[cell_index]
+            local_sediment_flow = pixel_sediment_flow_array[cell_index]
+
+            if local_sediment_flow == pixel_sediment_flow_nodata or \
+                    local_retention == retention_efficiency_nodata or \
+                    local_flow_angle == flow_direction_nodata:
+                #if the local sediment is undefined we're gonna have a bad time
+                #set to nodata value
+                result[cell_index] = pixel_retained_nodata
+                continue
+
+            #Determine inflow neighbors
+            for (row_offset, col_offset), (inflow_angle, diagonal_offset, diagonal_inflow) in \
+                    inflow_directions.iteritems():
+                try:
+                    neighbor_index = calc_index(row_index+row_offset,
+                                                col_index+col_offset)
+
+                    #If this delta is within pi/4 it means there's an inflow
+                    #direction, see diagram on pg 36 of Rich's notes
+                    delta = abs(local_flow_angle - inflow_angle)
+
+                    if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
+                        neighbor_retention = retention_efficiency_array[neighbor_index]
+                        if neighbor_retention == retention_efficiency_nodata:
+                            continue
+
+                        if diagonal_inflow:
+                            #We want to measure the far side of the unit triangle
+                            #so we measure that angle UP from theta = 0 on a unit
+                            #circle
+                            delta = np.pi/4-delta
+
+                        #Taking absolute value because it might be on a 0,-45 
+                        #degree angle
+                        inflow_fraction = abs(np.tan(delta))
+                        if not diagonal_inflow:
+                            #If not diagonal then we measure the direct flow in
+                            #which is the inverse of the tangent function
+                            inflow_fraction = 1-inflow_fraction
+                        
+                        #Finally set the appropriate inflow variable
+
+                        neighbor_flow = pixel_sediment_flow_array[neighbor_index]
+                        if neighbor_flow == pixel_sediment_flow_nodata:
+                            #Don't count undefined neighbor flow. DON'T DO IT!
+                            continue
+                        result[cell_index] += inflow_fraction * neighbor_flow
+
+                except IndexError:
+                    #This will occur if we visit a neighbor out of bounds
+                    #it's okay, just skip it
+                    pass
+
+    pixel_retained_band.WriteArray(result.reshape((n_rows,n_cols)))
+    return pixel_retained_dataset

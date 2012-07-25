@@ -254,7 +254,12 @@ def make_sample_dem(cols, rows, height_points, roughness, nodata, out_uri):
        out_uri - filepath to save the outgoing raster
 
        returns the new GDAL Dataset"""
+
+    #Create triangles
+    #keep bisecting...
     
+    #User results of bisection below.
+
     driver = gdal.GetDriverByName('GTiff')
     dataset_type = gdal.GDT_Float32
     dataset = driver.Create(out_uri, cols, rows, 1, dataset_type)

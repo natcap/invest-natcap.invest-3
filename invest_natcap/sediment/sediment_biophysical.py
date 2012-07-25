@@ -57,9 +57,11 @@ def execute(args):
 
         returns nothing."""
 
+    intermediate_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+
     #Sets up the intermediate and output directory structure for the workspace
-    for directory in [args['workspace_dir'] + os.sep + 'Output' + os.sep,
-              args['workspace_dir'] + os.sep + 'Intermediate' + os.sep]:
+    for directory in [output_dir, intermediate_dir]:
         if not os.path.exists(directory):
             LOGGER.debug('creating directory %s', directory)
             os.makedirs(directory)
@@ -69,16 +71,6 @@ def execute(args):
     #Load and copy relevant inputs from args into a dictionary that
     #can be passed to the biophysical core model
     biophysical_args = {}
-
-    #load rasters
-    for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
-        biophysical_args[raster_name] = gdal.Open(args[raster_name + '_uri'],
-                                                gdal.GA_ReadOnly)
-        LOGGER.debug('load %s as: %s' % (args[raster_name + '_uri'],
-                                         biophysical_args[raster_name]))
-    #check that they have the same projection
-    for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
-        LOGGER.debug(biophysical_args[raster_name].GetProjection())
 
     #load shapefiles
     for shapefile_name in ['watersheds',
@@ -91,6 +83,20 @@ def execute(args):
                 ogr.Open(args[uri_name].encode(fsencoding))
             LOGGER.debug('load %s as: %s' % (args[uri_name],
                                          biophysical_args[shapefile_name]))
+
+    #load and clip rasters
+    for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
+        original_dataset = gdal.Open(args[raster_name + '_uri'],
+                                     gdal.GA_ReadOnly)
+        clipped_uri = os.path.join(intermediate_dir,raster_name + "_clip.tif")
+        biophysical_args[raster_name] = \
+            raster_utils.clip_dataset(original_dataset, 
+            biophysical_args['watersheds'], clipped_uri)
+        LOGGER.debug('load %s as: %s' % (args[raster_name + '_uri'],
+                                         biophysical_args[raster_name]))
+    #check that they have the same projection
+    for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
+        LOGGER.debug(biophysical_args[raster_name].GetProjection())
 
     #table
     for value, column_name in [('reservoir_properties', 'id'),
@@ -114,16 +120,6 @@ def execute(args):
         LOGGER.debug('%s=%s' % (value, biophysical_args[value]))
 
     #build output rasters
-    #first determine the minimum resolution of each of the input rasters
-    #These lines sets up the output directory structure for the workspace
-    outputDirectoryPrefix = args['workspace_dir'] + os.sep + 'Output' + os.sep
-    intermediateDirectoryPrefix = args['workspace_dir'] + os.sep + \
-        'Intermediate' + os.sep
-    for d in [outputDirectoryPrefix, intermediateDirectoryPrefix]:
-        if not os.path.exists(d):
-            logger.debug('creating directory %s', d)
-            os.makedirs(d)
-
     #This defines a dictionary that links output/temporary GDAL/OAL objects
     #to their locations on disk.  Helpful for creating the objects in the 
     #next step
@@ -131,7 +127,7 @@ def execute(args):
     intermediate_rasters = ['flow_direction', 'flow_accumulation', 'slope',
                             'ls_factor', 'v_stream']
     for id in intermediate_rasters:
-        output_uris[id] = intermediateDirectoryPrefix + id + '.tif'
+        output_uris[id] = os.path.join(intermediate_dir, id + '.tif')
 
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
@@ -144,9 +140,16 @@ def execute(args):
     #We won't know the size of the output rasters until we vectorize the stack
     #of input rasters.  So we just pass a uri to its final location to the
     #biophysical part.
-    biophysical_args['usle_uri'] = outputDirectoryPrefix + 'usle_sm.tif'
-    biophysical_args['sret_dr_uri'] = outputDirectoryPrefix + 'sret_dr.tif'
-    biophysical_args['sexp_dr_uri'] = outputDirectoryPrefix + 'sexp_dr.tif'
+    biophysical_args['sret_dr_uri'] = os.path.join(output_dir,'sret_dr.tif')
+    biophysical_args['sexp_dr_uri'] = os.path.join(output_dir,'sexp_dr.tif')
+    biophysical_args['slope_uri'] = os.path.join(intermediate_dir,'slope.tif')
+    biophysical_args['stream_uri'] = os.path.join(intermediate_dir,'v_stream.tif')
+    biophysical_args['ls_uri'] = os.path.join(intermediate_dir,'ls.tif')
+    biophysical_args['potential_soil_loss_uri'] = \
+        os.path.join(output_dir,'usle.tif')
+    
+    biophysical_args['intermediate_uri'] = intermediate_dir
+    biophysical_args['output_uri'] = output_dir
 
     LOGGER.info('starting biophysical model')
     sediment_core.biophysical(biophysical_args)

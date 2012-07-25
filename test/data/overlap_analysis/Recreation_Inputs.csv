@@ -1,0 +1,7 @@
+LIST OF HUMAN USES,"OPTIONAL:         Inter-Activity 
+Weight",OPTIONAL:    Buffer                         (meters),,
+Beaches_Rec,,250,,"To properly link the information in this spreadsheet, label all input shapefiles ending with ""_ID"".  For example, the spatial dataset for the first entry should read: ""Rec_Beaches_1.shp"".   Only modify values in yellow cells from A2 to D19.   "
+Scuba_Rec,,0,,
+Fishing_Rec,,0,,
+Surfspots_Rec,,250,,
+WildlifeSights_Rec,,250,,

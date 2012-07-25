@@ -30,13 +30,9 @@ def calculate_raster_stats(ds):
     
         returns nothing"""
 
-    LOGGER.info('starting calculate_raster_stats')
-
     for band_number in range(ds.RasterCount):
         band = ds.GetRasterBand(band_number+1)
         nodata = band.GetNoDataValue()
-        LOGGER.info('in band %s' % band)
-        #Use this for initialization
         min_val = None
         max_val = None
         running_sum = 0.0
@@ -82,9 +78,6 @@ def calculate_raster_stats(ds):
         mean = running_sum / float(n_pixels)
         std_dev = np.sqrt(running_sum_square/float(n_pixels)-mean**2)
         
-        LOGGER.debug("min_val %s, max_val %s, mean %s, std_dev %s" %
-                     (min_val, max_val, mean, std_dev))
-
         #Write stats back to the band.  The function SetStatistics needs 
         #all the arguments to be floats and crashes if they are ints thats
         #what this map float deal is.
@@ -96,8 +89,6 @@ def calculate_raster_stats(ds):
             #cast to floats.  This is okay, just don't calculate stats
             LOGGER.warn("No non-nodata values were found so can't set " + \
                             "statistics")
-
-    LOGGER.info('finish calculate_raster_stats')
 
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
@@ -196,10 +187,6 @@ def interpolate_matrix(x, y, z, newx, newy, degree=1):
     spl = scipy.interpolate.RectBivariateSpline(x, y, z.transpose(), kx=degree, ky=degree)
     return spl(newx, newy).transpose()
 
-def vectorize_aligned_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
-                     datatype=gdal.GDT_Float32, nodata=0.0):
-    pass
-
 def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
                      datatype=gdal.GDT_Float32, nodata=0.0):
     """Apply the numpy vectorized operation `op` on the first band of the
@@ -237,11 +224,11 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     gdal_bool_types = [gdal.GDT_Byte]
 
     if datatype in gdal_int_types:
-        nodata = int(nodata)
+        nodata = np.int(nodata)
     if datatype in gdal_float_types:
-        nodata = float(nodata)
+        nodata = np.float(nodata)
     if datatype in gdal_bool_types:
-        nodata = bool(nodata)
+        nodata = np.bool(nodata)
 
     #create a new current_dataset with the minimum resolution of dataset_list and
     #bounding box that contains aoi_box
@@ -249,9 +236,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #generally pixelywidthforx and pixelxwidthfory are zero for maps where 
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
-    LOGGER.debug('calculating the overlapping rectangles')
-    aoi_box = calculate_intersection_rectangle(dataset_list)
-    LOGGER.debug('the aoi box: %s' % aoi_box)
+    aoi_box = calculate_intersection_rectangle(dataset_list, aoi)
 
     #determine the minimum pixel size
     gt = dataset_list[0].GetGeoTransform()
@@ -262,15 +247,11 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         #pixel size versus what we've seen so far.
         pixel_width = min(pixel_width, gt[1], key=abs)
         pixel_height = min(pixel_height, gt[5], key=abs)
-    LOGGER.debug('min pixel width and height: %s %s' % (pixel_width,
-                                                        pixel_height))
 
     #Together with the AOI and min pixel size we define the output dataset's 
     #columns and out_n_rows
-    out_n_cols = int(np.ceil((aoi_box[2] - aoi_box[0]) / pixel_width))
-    out_n_rows = int(np.ceil((aoi_box[3] - aoi_box[1]) / pixel_height))
-    LOGGER.debug('number of pixel out_n_cols and out_n_rows %s %s' % \
-                 (out_n_cols, out_n_rows))
+    out_n_cols = int(np.round((aoi_box[2] - aoi_box[0]) / pixel_width))
+    out_n_rows = int(np.round((aoi_box[3] - aoi_box[1]) / pixel_height))
 
     #out_geotransform order: 
     #1) left coordinate of top left corner
@@ -316,7 +297,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         vectorized_op = op
 
     #If there's an AOI, we need to mask out values
-    mask_dataset = new_raster_from_base(out_dataset, 'mask.tif', 'GTiff', 255, gdal.GDT_Byte)
+    mask_dataset = new_raster_from_base(out_dataset, '', 'MEM', 255, gdal.GDT_Byte)
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     if aoi != None:
@@ -334,8 +315,9 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     mask_dataset_band = mask_dataset.GetRasterBand(1)
 
     #Check to see if all the input datasets are equal, if so then we
-    #don't need to interpolate them
-    all_equal = True
+    #don't need to interpolate them, but if there's an AOI you always need to interpolate, 
+    #so initializing to aoi == None (True if no aoi)
+    all_equal = aoi == None
     for dim_fun in [lambda ds: ds.RasterXSize, lambda ds: ds.RasterYSize]:
         sizes = map(dim_fun, dataset_list)
         all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
@@ -376,9 +358,9 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             #out left edget to current left edge and dividing by the width
             #of current pixel.
             current_left_index = \
-                int(np.floor((out_left_coord - current_gt[0])/current_gt[1]))
+                int(np.round((out_left_coord - current_gt[0])/current_gt[1]))
             current_right_index = \
-                int(np.ceil((out_right_coord - current_gt[0])/current_gt[1]))
+                int(np.round((out_right_coord - current_gt[0])/current_gt[1]))
 
             current_top_index = \
                 int(np.floor((out_row_coord - current_gt[3])/current_gt[5]))-1
@@ -433,7 +415,6 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             if gt[5] < 0:
                 current_row_coordinates = current_row_coordinates[::-1]
                 current_array = current_array[::-1]
-
 
             #This interpolation scheme comes from a StackOverflow thread
             #http://stackoverflow.com/questions/11144513/numpy-cartesian-product-of-x-and-y-array-points-into-single-array-of-2d-points#comment14610953_11144513
@@ -551,9 +532,6 @@ def calculate_intersection_rectangle(rasterList, aoi=None):
     for band in rasterList:
         #intersect the current bounding box with the one just read
         gt = band.GetGeoTransform()
-        LOGGER.debug('geotransform on raster band %s %s' % (gt, band))
-        LOGGER.debug('pixel x and y %s %s' % (band.RasterXSize,
-                                              band.RasterYSize))
         rec = [gt[0], gt[3], gt[0] + gt[1] * band.RasterXSize,
                gt[3] + gt[5] * band.RasterYSize]
         #This intersects rec with the current bounding box
@@ -617,6 +595,7 @@ def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile,
     tiff_height = int(np.ceil(abs(shp_extent[3] - shp_extent[2]) / yRes))
 
     driver = gdal.GetDriverByName('GTiff')
+    #1 means only create 1 band
     raster = driver.Create(rasterFile, tiff_width, tiff_height, 1, format)
     raster.GetRasterBand(1).SetNoDataValue(nodata)
 
@@ -1091,3 +1070,126 @@ def calculate_slope(dem_dataset, slope_uri):
     calculate_raster_stats(slope_dataset)
 
     return slope_dataset
+
+def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
+    """This function will clip source_dataset to the bounding box of the 
+        polygons in aoi_datasource and mask out the values in source_dataset
+        outside of the AOI with the nodata values in source_dataset.
+
+        source_dataset - single band GDAL dataset to clip
+        aoi_datasource - collection of polygons
+        out_dataset_uri - path to disk for the clipped
+
+        returns the clipped dataset that lives at out_dataset_uri"""
+
+    band, nodata = extract_band_and_nodata(source_dataset)
+
+    def op(x):
+        return x
+
+    clipped_dataset = vectorize_rasters([source_dataset], op, aoi=aoi_datasource, 
+                      raster_out_uri = out_dataset_uri, 
+                      datatype = band.DataType, nodata=nodata)
+    return clipped_dataset
+
+def extract_band_and_nodata(dataset, get_array = False):
+    """It's often useful to get the first band and corresponding nodata value
+        for a dataset.  This function does that.
+
+        dataset - a GDAL dataset
+        get_array - if True also returns the dataset as a numpy array
+
+        returns (first GDAL band in dataset, nodata value for that band"""
+
+    band = dataset.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    if get_array:
+        array = band.ReadAsArray()
+        return band, nodata, array
+
+    #Otherwise just return the band and nodata
+    return band, nodata
+
+def calculate_value_not_in_dataset(dataset):
+    """Calcualte a value not contained in a dataset.  Useful for calculating
+        nodata values.
+
+        dataset - a GDAL dataset
+
+        returns a number not contained in the dataset"""
+
+    band,nodata,array = extract_band_and_nodata(dataset, get_array = True)
+    return calculate_value_not_in_array(array)
+
+def calculate_value_not_in_array(array):
+    """This function calcualtes a number that is not in the given array, if 
+        possible.
+
+        array - a numpy array
+
+        returns a number not in array that is not "close" to any value in array
+            ideally calculated in the middle of the maximum delta between any two
+            consecutive numbers in the array"""
+
+    sorted_array = np.sort(array.flatten())
+    array_type = type(sorted_array[0])
+    diff_array = np.array([-1,1])
+    deltas = scipy.signal.correlate(sorted_array, diff_array, mode='valid')
+    
+    max_delta_index = np.argmax(deltas)
+
+    #Try to return the average of the maximum delta
+    if deltas[max_delta_index] > 0:
+        return array_type((sorted_array[max_delta_index+1]-
+                           sorted_array[max_delta_index])/2.0)
+
+    #Else, all deltas are too small so go one smaller or one larger than the 
+    #min or max.  Catching an exception in case there's an overflow.
+    try:
+        return sorted_array[0]-1
+    except:
+        return sorted_array[-1]+1
+
+def create_rat(dataset, attr_dict, key_name, value_name):
+    """Create a raster attribute table from a provided dictionary that maps the
+        keys to the first column and values to the second column. WARNING: this
+        will blow away any raster attribute table that is set to this dataset
+
+        dataset - a GDAL raster dataset to create the RAT for 
+        attr_dict - a dictionary with keys that point to a primitive type
+        key_name - a string for the column name that maps the keys
+        value_name - a string for the column name that maps the values
+        
+        returns - a GDAL raster dataset with an updated RAT
+        """
+    band = dataset.GetRasterBand(1)
+
+    # If there was already a RAT associated with this dataset it will be blown
+    # away and replaced by a new one
+    LOGGER.warn('Blowing away any current raster attribute table')
+    rat = gdal.RasterAttributeTable()
+
+    # the number of keys represents the number of rows we intend to write
+    keys = np.array(attr_dict.keys())
+    
+    col_count = rat.GetColumnCount()
+    LOGGER.debug('Column Count : %s', col_count)
+    
+    # create columns
+    rat.CreateColumn(key_name, gdal.GFT_String, gdal.GFU_Generic)
+    rat.CreateColumn(value_name, gdal.GFT_String, gdal.GFU_Generic)
+
+    row_count = 0
+    keys_sorted = np.sort(keys)
+    
+    for key in keys_sorted:
+        #LOGGER.debug('Row:Key, %s:%s', row_count, str(key))
+        #LOGGER.debug('Row:Val, %s:%s', row_count, str(attr_dict[key]))
+        rat.SetValueAsString(row_count, col_count, str(key))
+        rat.SetValueAsString(row_count, col_count + 1, str(attr_dict[key]))
+        row_count += 1
+    
+    band.SetDefaultRAT(rat)
+
+    return dataset

@@ -1,6 +1,7 @@
 """InVEST Biophysical model file handler module"""
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 import csv
 
 from invest_natcap.biodiversity import biodiversity_core
@@ -58,17 +59,30 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    input_dir = os.path.join(workspace, 'input')
 
     for folder in [inter_dir, out_dir]:
         if not os.path.isdir(folder):
             os.makedirs(folder)
 
+    # if the input directory is not present in the workspace then throw an
+    # exception because the threat rasters can't be located.
+    input_dir = os.path.join(workspace, 'input')
+    if not os.path.isdir(input_dir):
+        raise Exception('The input directory where the threat rasters should\
+                be cannot be found.')
+    
     biophysical_args['threat_dict'] = \
-        make_dictionary_from_csv(args['threat_uri'],'Threat')
+        make_dictionary_from_csv(args['threat_uri'],'THREAT')
 
     biophysical_args['sensitivity_dict'] = \
         make_dictionary_from_csv(args['sensitivity_uri'],'LULC')
+
+    # check that the threat names in the threats table match with the threats
+    # columns in the sensitivity table. Raise exception if they don't.
+    if compare_threats_sensitivity(biophysical_args['threat_dict'],\
+            biophysical_args['sensitivity_dict']):
+        raise Exception('The threat names in the threat table do not match the\
+                columns in the sensitivity table')
 
     biophysical_args['half_saturation'] = int(args['half_saturation_constant'])    
 
@@ -90,7 +104,7 @@ def execute(args):
     # rasters pertaining to the different threats
     landuse_dict = {}
     density_dict = {}
-    
+
     # for each possible land cover the was provided try opening the raster and
     # adding it to the dictionary. Also compile all the threat/density rasters
     # associated with the land cover
@@ -115,6 +129,12 @@ def execute(args):
     biophysical_args['landuse_dict'] = landuse_dict
     biophysical_args['density_dict'] = density_dict
 
+    # checking to make sure the land covers have the same projections and are
+    # projected in meters
+    if check_projections(landuse_dict, 1.0):
+        raise Exception('Land cover projections are not the same or are not\
+            projected in meters')
+
     biodiversity_core.biophysical(biophysical_args)
 
 def open_ambiguous_raster(uri):
@@ -122,7 +142,7 @@ def open_ambiguous_raster(uri):
         name but not neccessarily the suffix or extension of how the raster may
         be represented.
 
-        uri - a pythong string of the file path that includes the name of the
+        uri - a python string of the file path that includes the name of the
               file but not it's extension
 
         return - a gdal dataset or NONE if no file is found with the pre-defined
@@ -162,8 +182,57 @@ def make_dictionary_from_csv(csv_uri, key_field):
         out_dict[row[key_field]] = row
     csv_file.close()
     return out_dict
-    
 
+def check_projections(ds_dict, proj_unit):
+    """Check that a group of gdal datasets are projected and that they are
+        projected in a certain unit. 
+
+        ds_dict - a dictionary of gdal datasets
+        proj_unit - a float that specifies what units the projection should be
+            in. ex: 1.0 is meters.
+
+        returns - true if one of the datasets is not projected or not in the
+            correct projection type, otherwise returns false if datasets are
+            properly projected
+    """
+    # a list to hold the projection types to compare later
+    projections = []
+
+    for ds in ds_dict.itervalues():
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(ds.GetProjection())
+        if not srs.IsProjected():
+            return True
+        if srs.GetLinearUnits() != proj_unit:
+            return True
+        projections.append(srs.GetAttrValue("PROJECTION"))
+    
+    # check that all the datasets have the same projection type
+    for index in range(len(projections)):
+        if projections[0] != projections[index]:
+            return True
+
+    return False
+
+def compare_threats_sensitivity(threat_dict, sens_dict):
+    """Check that the threat names in the threat table match the columns in the
+        sensitivity table that represent the sensitivity of each threat on a 
+        lulc.
+
+        threat_dict - a dictionary representing the threat table
+        sens_dict - a dictionary representing the sensitivity table
+
+        returns - True if there is a mismatch in threat names or False if
+            everything passes"""
+    # get a representation of a row from the sensitivity table where 'sens_row'
+    # will be a dictionary with the column headers as the keys
+    sens_row = sens_dict[sens_dict.keys()[0]]  
+    
+    for threat in threat_dict:
+        sens_key = 'L_'+threat
+        if not sens_key in sens_row:
+            return True
+    return False
 
 
 

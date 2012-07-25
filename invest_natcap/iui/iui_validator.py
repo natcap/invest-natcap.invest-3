@@ -98,7 +98,7 @@ class Validator(registrar.Registrar):
         Returns None if no error found.  String error message if an error was
         found."""
 
-        return self.thread.error_msg
+        return self.thread.get_error()
 
     def init_type_checker(self, validator_type):
         """Initialize the type checker based on the input validator_type.
@@ -126,17 +126,28 @@ class ValidationThread(threading.Thread):
         self.type_checker = type_checker
         self.valid_dict = valid_dict
         self.error_msg = None
+        self.error_state = None
 
-    def set_error(self, error):
+    def set_error(self, error, state='error'):
         """Set the local variable error_msg to the input error message.  This
         local variable is necessary to allow for another thread to be able to
         retrieve it from this thread object.
 
             error - a string.
+            state - a python string indicating the kind of message being
+                reported (e.g. 'error' or 'warning')
 
         returns nothing."""
 
         self.error_msg = error
+        self.error_state = state
+
+    def get_error(self):
+        """Returns a tuple containing the error message and the error state,
+        both being python strings.  If no error message is present, None is
+        returned."""
+
+        return (self.error_msg, self.error_state)
 
     def run(self):
         """Reimplemented from threading.Thread.run().  Performs the actual work
@@ -147,9 +158,23 @@ class ValidationThread(threading.Thread):
             if error != None:
                 self.set_error(error)
 
-        if self.type_checker != None:
-            error = self.type_checker.run_checks(self.valid_dict)
-            self.set_error(error)
+        try:
+            message = self.type_checker.run_checks(self.valid_dict)
+            if message != '' and message != None:
+                status = 'error'
+            else:
+                status = None
+        except AttributeError:
+            # Thrown when self.type_checker == None, set both message and
+            # status to None.
+            message = None
+            status = None
+        except Warning as warning:
+            # Raised when an unexpected exception was raised by a validator.
+            message = warning
+            status = 'warning'
+
+        self.set_error(message, status)
 
 class ValidationAssembler(object):
     """This class allows other checker classes (such as the abstract
@@ -307,6 +332,8 @@ class Checker(registrar.Registrar):
             print '%s: \'%s\' encountered, for input %s passing validation.' % \
                 (e.__class__.__name__, str(e), valid_dict['value'])
             print traceback.format_exc()
+            raise Warning('An unexpected error was encountered during' +
+                          ' validation.  Use this input at your own risk.')
         return None
 
 class URIChecker(Checker):
@@ -593,6 +620,67 @@ class PrimitiveChecker(Checker):
                              'dotAll': re.DOTALL}
 
     def check_regexp(self, valid_dict):
+        """Check an input regular expression contained in valid_dict.
+
+            valid_dict - a python dictionary with the following structure:
+            valid_dict['value'] - (required) a python string to be matched
+            valid_dict['allowed_values'] - (required) a python dictionary with the
+                following entries:
+            valid_dict['allowed_values']['pattern'] - ('required') must match
+                one of the following formats:
+                    * A python string regular expression formatted according to
+                      the re module (http://docs.python.org/library/re.html)
+                    * A python list of values to be matched.  These are treated
+                      as logical or ('|' in the built regular expression).  Note
+                      that the entire input pattern will be matched if you use
+                      this option.  For more fine-tuned matching, use the dict
+                      described below.
+                    * A python dict with the following entries:
+                        'values' - (optional) a python list of strings that are
+                            joined by the 'join' key to create a single regular
+                            expression.  If this a 'values' list is not
+                            provided, it's assumed to be ['.*'], which matches
+                            all patterns.
+                        'join' - (optional) the character with which to join all
+                            provided values to form a single regular expression.
+                            If the 'join' value is not provided, it defaults to
+                            '|', the operator for logical or.
+                        'sub' - (optional) a string on which string substitution
+                            will be performed for all elements in the 'values'
+                            list.  If this value is not provided, it defaults to
+                            '^%s$', which causes the entire string to be
+                            matched.  This string uses python's standard string
+                            formatting operations:
+                            http://docs.python.org/library/stdtypes.html#string-formatting-operations
+                            but should only use a single '%s'
+            valid_dict['allowed_values']['flag'] - (optional) a python string
+                representing one of the python re module's available
+                regexp flags.  Available values are: 'ignoreCase', 'verbose',
+                'debug', 'locale', 'multiline', 'dotAll'.  If a different
+                string is provided, no flags are applied to the regular
+                expression matching.
+
+            example valid_dicts:
+                # This would try to match '[a-z_]* in 'sample_string_pattern'
+                valid_dict = {'value' : 'sample_string pattern',
+                              'allowed_values' : {'pattern': '[a-z_]*'}}
+
+                # This would try to match '^test$|^word$' in 'sample_list_pattern'
+                valid_dict = {'value' : 'sample_list_pattern',
+                              'allowed_values': {'pattern': ['test', 'word']}}
+
+                # This would try to match 'test.words' in sample_dict_pattern
+                valid_dict = {'value' : 'sample_dict_pattern',
+                              'allowed_values': {'pattern': {
+                                  'values': ['test', 'words'],
+                                  'join': '.',
+                                  'sub': '%s'}
+
+            This function builds a single regular expression string (if
+            necessary) and checks to see if valid_dict['value'] matches that
+            string.  If not, a python string with an error message is returned.
+            Otherwise, None is returned.
+            """
         try:
             # Attempt to get the user's selected flag from the validation
             # dictionary.  Raises a KeyError if it isn't found.
@@ -604,20 +692,59 @@ class PrimitiveChecker(Checker):
             flag = 0
 
         try:
-            # Attempt to build a regexp object based on the user's provided
-            # regex.  Raises a KeyError if the user has not provided a regular
+            # Attempt to build a regexp object based on the regex info.
+            # Raises a KeyError if the user has not provided a regular
             # expression to use.
-            user_pattern = valid_dict['allowedValues']['pattern']
+            valid_pattern = valid_dict['allowedValues']['pattern']
+
+            # If the user's provided pattern is a string, we should use it
+            # directly and assume it's a stright-up regular expression.
+            if isinstance(valid_pattern, str):
+                user_pattern = valid_pattern
+            else:
+                # If the user provides a data structure instead of a string, we
+                # should build a regular expression from the user's information.
+                try:
+                    join_char = valid_pattern['join']
+                except (KeyError, TypeError):
+                    # KeyError thrown when 'join' key does not exist.
+                    # TypeError thrown when valid_pattern is not a dict.
+                    join_char = '|'
+
+                try:
+                    sub_string = valid_pattern['sub']
+                except (KeyError, TypeError):
+                    # KeyError thrown when 'sub' key does not exist.
+                    # TypeError thrown when valid_pattern is not a dict.
+                    sub_string = '^%s$'
+
+                try:
+                    value_list = valid_pattern['values']
+                except KeyError:
+                    # Thrown when the user does not provide a list of values
+                    value_list = ['.*']
+                except TypeError:
+                    # Thrown when valid_pattern is not a dictionary.
+                    # value_list must be a python list, so we should convert
+                    # whatever is given us into a list.  Casting a list to a
+                    # list results in a list.
+                    value_list = list(valid_pattern)
+
+                # Apply the user's configuration options to all values defined
+                # and actually build a single regular expression string for
+                # python's re module.
+                rendered_list = [sub_string % r for r in value_list]
+                user_pattern = join_char.join(rendered_list)
         except KeyError:
             # If the user has not provided a regular expression, we should use
             # the default regular expression instead.
             user_pattern = self.default_regexp
 
         pattern = re.compile(user_pattern, flag)
-        value = valid_dict['value']
-        if pattern.match(str(self.value)) == None:
+        value = valid_dict['value']  # the value to compare against our regex
+        if pattern.match(str(value)) == None:
             return str("Value '%s' not allowed (allowed values: %s)" %
-                (self.value, user_pattern))
+                (value, user_pattern))
 
 class NumberChecker(PrimitiveChecker):
     def __init__(self):
@@ -664,7 +791,7 @@ class CSVChecker(TableChecker):
 
         # Now that we know the csv file is probably good, we can actually open
         # the file and save the DictReader object.
-        self.file = csv.DictReader(open(self.uri))
+        self.file = csv.DictReader(open(self.uri, 'rU'))
 
     def _build_table(self):
         table_rows = []

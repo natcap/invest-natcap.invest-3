@@ -9,10 +9,17 @@ import logging
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('recreation')
+LOGGER = logging.getLogger('recreation_client')
 
 
 def execute(args):
+    severPath="http://ncp-skookum.stanford.edu/~mlacayo"
+    recreationScript="recreation.php"
+    regressionScript="regression.php"
+    dataFolder="data"
+    logName="log.txt"
+    resultsZip="results.zip"
+    
     aoiFileName = args["aoiFileName"]
     cellSize = args["cellSize"]
     workspace_dir = args["workspace_dir"]
@@ -27,6 +34,10 @@ def execute(args):
     aoiFileNameSHX = dirname+fileName+".shx"
     aoiFileNameDBF = dirname+fileName+".dbf"
     aoiFileNamePRJ = dirname+fileName+".prj"
+    
+    if not os.path.exists(aoiFileNamePRJ):
+        LOGGER.error("The shapefile must have a PRJ file.")
+        raise IOError, "Missing PRJ file."
     
     # Register the streaming http handlers with urllib2
     register_openers()
@@ -45,7 +56,7 @@ def execute(args):
                                          "comments": comments})
     
     # Create the Request object
-    url = "http://ncp-skookum.stanford.edu/~mlacayo/recreation.php"
+    url = severPath+"/"+recreationScript
     request = urllib2.Request(url, datagen, headers)
     
     LOGGER.info("Sending request to server")
@@ -57,20 +68,36 @@ def execute(args):
     
     LOGGER.info("Processing data")
 
-    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+sessid+"/log.txt"    
+    url = severPath+"/"+dataFolder+"/"+sessid+"/"+logName    
     complete = False
+    oldlog=""
+    time.sleep(5)
     while not complete:
-        time.sleep(15)
         log = urllib2.urlopen(url).read()
-        
-        msg = log.strip().split("\n")[-1].split(",")[-1].strip()
-        if msg[-29:]=="Dropping intermediate tables.":
+        if log.split(",")[-1].strip()=="Dropped intermediate tables.":
             complete = True
+        elif log.split(",")[-2].strip()=="ERROR":
+            raise IOError, "Error on server: %s" % (log.split(",")[-1].strip())
         else:
             LOGGER.info("Please wait.")
-
+            time.sleep(15)                    
+#        log = log[:log.rfind(".")]
+#        newlog = log[len(oldlog):]
+#        oldlog = log
+#                
+#        if newlog[-29:]=="Dropping intermediate tables.":
+#            complete = True
+#            for line in newlog.split("\n"):
+#                LOGGER.info(line.split(",")[-1])
+#        elif newlog == "":
+#            LOGGER.info("Please wait.")
+#            time.sleep(15)
+#        else:
+#            for line in newlog[:newlog.rfind(".")+1].split("\n"):
+#                LOGGER.info(line.split(",")[-1])
+                
     LOGGER.info("Running regression")
-    url = "http://ncp-skookum.stanford.edu/~mlacayo/regression.php"
+    url = severPath+"/"+regressionScript
     datagen, headers = multipart_encode({"sessid": sessid})
     request = urllib2.Request(url, datagen, headers)
     sessid2 = urllib2.urlopen(request).read().strip()
@@ -78,11 +105,11 @@ def execute(args):
     if sessid2 != sessid:
         raise ValueError,"Something weird happened the sessid didn't match"
     
-    url = "http://ncp-skookum.stanford.edu/~mlacayo/data/"+sessid+"/results.zip"
+    url = severPath+"/"+dataFolder+"/"+sessid+"/"+resultsZip
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
-    with open(workspace_dir+os.sep+"results.zip", 'wb') as fp:
+    with open(workspace_dir+os.sep+resultsZip, 'wb') as fp:
       while True:
         chunk = req.read(CHUNK)
         if not chunk: break
@@ -102,7 +129,7 @@ if __name__ == "__main__":
     else:
         LOGGER.info("Runnning model with test parameters")
         dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
-        aoiFileName = dirname+"recreation_data/"+"aoi.shp"
+        aoiFileName = dirname+"recreation_data/"+"FIPS-11001.shp"
         cellSize = 5000
         workspace_dir = dirname+"test_out/"
         comments = "Runnning model with test parameters"
