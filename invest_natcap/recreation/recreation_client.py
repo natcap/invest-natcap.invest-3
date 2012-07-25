@@ -59,14 +59,14 @@ def execute(args):
     url = severPath+"/"+recreationScript
     request = urllib2.Request(url, datagen, headers)
     
-    LOGGER.info("Sending request to server")
+    LOGGER.info("Sending request to server.")
     
     # Actually do the request, and get the response
     # This will display the output from the model including the path for the results
     sessid = urllib2.urlopen(request).read().strip()
-    LOGGER.debug("Server session %s" % (sessid))
+    LOGGER.debug("Server session %s." % (sessid))
     
-    LOGGER.info("Processing data")
+    LOGGER.info("Processing data.")
 
     url = severPath+"/"+dataFolder+"/"+sessid+"/"+logName    
     complete = False
@@ -100,14 +100,14 @@ def execute(args):
             LOGGER.info("Please wait.")
             time.sleep(15)                    
                 
-    LOGGER.info("Running regression")
+    LOGGER.info("Running regression.")
     url = severPath+"/"+regressionScript
     datagen, headers = multipart_encode({"sessid": sessid})
     request = urllib2.Request(url, datagen, headers)
     sessid2 = urllib2.urlopen(request).read().strip()
 
     if sessid2 != sessid:
-        raise ValueError,"Something weird happened the sessid didn't match"
+        raise ValueError,"Something weird happened the sessid didn't match."
     
     url = severPath+"/"+dataFolder+"/"+sessid+"/"+resultsZip
 
@@ -124,19 +124,19 @@ def execute(args):
 if __name__ == "__main__":
     args = {}
     if len(sys.argv)>1:
-        LOGGER.info("Running model with user provided parameters")
+        LOGGER.info("Running model with user provided parameters.")
         aoiFileName = sys.argv[1]
         cellSize = float(sys.argv[2])
         workspace_dir = sys.argv[3]
         comments = sys.argv[3]
 
     else:
-        LOGGER.info("Runnning model with test parameters")
+        LOGGER.info("Runnning model with test parameters.")
         dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
         aoiFileName = dirname+"recreation_data/"+"FIPS-11001.shp"
         cellSize = 1000
         workspace_dir = dirname+"test_out/"
-        comments = "Runnning model with test parameters"
+        comments = "Runnning model with test parameters."
 
     args["aoiFileName"] = aoiFileName
     args["cellSize"] = cellSize
