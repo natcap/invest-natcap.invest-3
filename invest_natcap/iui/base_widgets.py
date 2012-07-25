@@ -1299,6 +1299,12 @@ class Dropdown(LabeledElement):
         elif 'returns' in self.attributes:
             if self.attributes['returns'] == 'strings':
                 return self.dropdown.currentText()
+            elif 'mapValues' in self.attributes['returns']:
+                text = str(self.dropdown.currentText())
+                try:
+                    return self.attributes['returns']['mapValues'][text]
+                except KeyError:
+                    return text
             else: #return the ordinal
                 return self.dropdown.currentIndex()
         else:
