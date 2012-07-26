@@ -1299,6 +1299,12 @@ class Dropdown(LabeledElement):
         elif 'returns' in self.attributes:
             if self.attributes['returns'] == 'strings':
                 return self.dropdown.currentText()
+            elif 'mapValues' in self.attributes['returns']:
+                text = str(self.dropdown.currentText())
+                try:
+                    return self.attributes['returns']['mapValues'][text]
+                except KeyError:
+                    return text
             else: #return the ordinal
                 return self.dropdown.currentIndex()
         else:
@@ -1872,6 +1878,11 @@ class Root(DynamicElement):
                         errors.append((element.attributes['label'], error_msg))
                     except:
                         pass
+            elif issubclass(element.__class__, EmbeddedUI):
+                embedded_errors = element.errors_exist()
+                if len(embedded_errors) > 0:
+                    for error_tuple in embedded_errors:
+                        errors.append(error_tuple)
         return errors
 
     def warnings_exist(self):
@@ -2266,8 +2277,14 @@ class ErrorDialog(InfoDialog):
             label_string += '<li>%s: %s</li>' % element_tuple
         label_string += '</ul>'
 
-        self.body.setText(str("There are %s error(s) that must be resolved" +
-            " before this tool can be run:%s") % (len(self.messages), label_string))
+        num_messages = len(self.messages)
+        if num_messages == 1:
+            num_error_string = 'is 1 error'
+        else:
+            num_error_string = 'are %s errors' % num_messages
+
+        self.body.setText(str("There %s that must be resolved" +
+            " before this tool can be run:%s") % (num_error_string, label_string))
         self.body.setMinimumSize(self.body.sizeHint())
 
 class ElementRegistrar(registrar.Registrar):
