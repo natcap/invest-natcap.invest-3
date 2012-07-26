@@ -1081,11 +1081,16 @@ class FileEntry(DynamicText):
         super(FileEntry, self).__init__(attributes)
 
         try:
-            filter_type = attributes['validateAs']['type']
+            filter_type = str(attributes['validateAs']['type'])
         except KeyError:
             filter_type = 'all'
+
+        file_type = 'folder'
+        if issubclass(self.__class__, FileEntry) and filter_type != 'folder':
+            file_type = 'file'
+
         self.button = FileButton(attributes['label'], self.textField,
-            attributes['type'], filter_type)
+            file_type, filter_type)
         self.addElement(self.button)
 
         # Holy cow, this is hacky.  I'm trying to override the mousePressEvent
