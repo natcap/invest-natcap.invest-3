@@ -1085,9 +1085,10 @@ class FileEntry(DynamicText):
         except KeyError:
             filter_type = 'all'
 
-        file_type = attributes['type']
-        if file_type in ['activityTableFile']:
+        file_type = 'folder'
+        if issubclass(self.__class__, FileEntry) and filter_type != 'folder':
             file_type = 'file'
+
         self.button = FileButton(attributes['label'], self.textField,
             file_type, filter_type)
         self.addElement(self.button)
