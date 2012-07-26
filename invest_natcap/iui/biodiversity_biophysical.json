@@ -70,7 +70,7 @@
                                                                   }},
                                                      {"field": "WEIGHT",
                                                       "validateAs": {"type": "number",
-                                                                     "allowedValues":{"pattern":"^[0]*\\.?[0-9]+$"}
+                                                                     "allowedValues":{"pattern":"(^[0]*\\.?[0-9]+$)|(^[1]\\.?[0]+$)"}
                                                                   }},
                                                      {"field": "DECAY",
                                                       "validateAs": {"type": "number",
