@@ -20,6 +20,7 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('raster_utils')
+gdal.UseExceptions()
 
 def calculate_raster_stats(ds):
     """Calculates and sets the min, max, stdev, and mean for the bands in
