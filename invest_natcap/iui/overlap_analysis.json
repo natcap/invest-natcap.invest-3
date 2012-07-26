@@ -73,7 +73,7 @@
                 },
                 {
                     "id" : "IS_field_name",
-                    "args_id" : "import_name",
+                    "args_id" : "intra_name",
                     "type": "text",
                     "label": "Intra-Activity Attribute Name",
                     "defaultValue": "RIS",
