@@ -2,6 +2,9 @@ from urllib import urlencode
 from urllib2 import Request
 from urllib2 import urlopen
 
+from osgeo import gdal
+gdal.UseExceptions()
+
 # This should be left as 'development' unless programmatically set when building
 # a release.  DO NOT ALTER THIS VERSION BY HAND.
 __version__ = 'development'
