@@ -47,7 +47,7 @@ def execute(args):
         args['overlap_layer_tbl'] URI to a CSV file that holds relational data
             and identifier data for all layers being passed in within the
             overlap analysis directory.    
-        args['import_field']- string which corresponds to a field within the
+        args['intra_name']- string which corresponds to a field within the
             layers being passed in within overlap analysis directory. This is
             the intra-activity importance for each activity.
         args['hum_use_hubs_loc']- URI that points to a shapefile of major hubs
@@ -117,9 +117,13 @@ def execute(args):
     
     if args['do_inter']:
         oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
+        
+    oa_args['do_intra'] = args['do_intra']
+    
+    if args['do_intra']:
+        oa_args['intra_name'] = args['intra_name']
     
     #We don't actually get these yet, so commenting them out
-    #oa_args['import_field'] = args['import_field']
     #oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
     #oa_args['decay'] = args['decay']
     
