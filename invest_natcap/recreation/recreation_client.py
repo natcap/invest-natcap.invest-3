@@ -22,11 +22,9 @@ def execute(args):
     
     aoiFileName = args["aoiFileName"]
     cellSize = args["cellSize"]
+    cellUnit = float(args["cellUnit"])
     workspace_dir = args["workspace_dir"]
-    try:
-        comments = args["comments"]
-    except KeyError:
-        comments =""
+    comments = args["comments"]
     
     dirname=os.path.dirname(aoiFileName)+os.sep
     fileName=os.path.basename(aoiFileName).strip(".shp") 
@@ -52,21 +50,21 @@ def execute(args):
                                          "aoiSHX": open(aoiFileNameSHX, "rb"),
                                          "aoiDBF": open(aoiFileNameDBF, "rb"),
                                          "aoiPRJ": open(aoiFileNamePRJ, "rb"),
-                                         "cellSize": cellSize,
+                                         "cellSize": cellSize*cellUnit,
                                          "comments": comments})
     
     # Create the Request object
     url = severPath+"/"+recreationScript
     request = urllib2.Request(url, datagen, headers)
     
-    LOGGER.info("Sending request to server")
+    LOGGER.info("Sending request to server.")
     
     # Actually do the request, and get the response
     # This will display the output from the model including the path for the results
     sessid = urllib2.urlopen(request).read().strip()
-    LOGGER.debug("Server session %s" % (sessid))
+    LOGGER.debug("Server session %s." % (sessid))
     
-    LOGGER.info("Processing data")
+    LOGGER.info("Processing data.")
 
     url = severPath+"/"+dataFolder+"/"+sessid+"/"+logName    
     complete = False
@@ -74,36 +72,40 @@ def execute(args):
     time.sleep(5)
     while not complete:
         log = urllib2.urlopen(url).read()
-        if log.split(",")[-1].strip()=="Dropped intermediate tables.":
-            complete = True
-        elif log.split(",")[-2].strip()=="ERROR":
-            raise IOError, "Error on server: %s" % (log.split(",")[-1].strip())
+        serverLogging = log[len(oldlog):].strip()
+        if len(serverLogging) > 0:
+            serverLogging=serverLogging.split("\n")        
+            if serverLogging[-1][-1] != ".":
+                serverLogging.pop(-1)
+        else:
+            serverLogging=[]
+            
+        for entry in serverLogging:
+            timestamp,msgType,msg = entry.split(",")
+            if msgType == "INFO":
+                LOGGER.info(msg)
+            elif msgType == "DEBUG":
+                LOGGER.debug(msg)
+            elif msgType == "ERROR":
+                LOGGER.error(msg)
+                raise IOError, "Error on server: %s" % (msg)
+            
+        oldlog=log
+        
+        if msg=="Dropped intermediate tables.":
+            complete = True            
         else:
             LOGGER.info("Please wait.")
             time.sleep(15)                    
-#        log = log[:log.rfind(".")]
-#        newlog = log[len(oldlog):]
-#        oldlog = log
-#                
-#        if newlog[-29:]=="Dropping intermediate tables.":
-#            complete = True
-#            for line in newlog.split("\n"):
-#                LOGGER.info(line.split(",")[-1])
-#        elif newlog == "":
-#            LOGGER.info("Please wait.")
-#            time.sleep(15)
-#        else:
-#            for line in newlog[:newlog.rfind(".")+1].split("\n"):
-#                LOGGER.info(line.split(",")[-1])
                 
-    LOGGER.info("Running regression")
+    LOGGER.info("Running regression.")
     url = severPath+"/"+regressionScript
     datagen, headers = multipart_encode({"sessid": sessid})
     request = urllib2.Request(url, datagen, headers)
     sessid2 = urllib2.urlopen(request).read().strip()
 
     if sessid2 != sessid:
-        raise ValueError,"Something weird happened the sessid didn't match"
+        raise ValueError,"Something weird happened the sessid didn't match."
     
     url = severPath+"/"+dataFolder+"/"+sessid+"/"+resultsZip
 
@@ -120,22 +122,25 @@ def execute(args):
 if __name__ == "__main__":
     args = {}
     if len(sys.argv)>1:
-        LOGGER.info("Running model with user provided parameters")
+        LOGGER.info("Running model with user provided parameters.")
         aoiFileName = sys.argv[1]
         cellSize = float(sys.argv[2])
-        workspace_dir = sys.argv[3]
-        comments = sys.argv[3]
+        cellUnit = float(sys.argv[3])
+        workspace_dir = sys.argv[4]
+        comments = sys.argv[5]
 
     else:
-        LOGGER.info("Runnning model with test parameters")
+        LOGGER.info("Runnning model with test parameters.")
         dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
         aoiFileName = dirname+"recreation_data/"+"FIPS-11001.shp"
-        cellSize = 5000
+        cellSize = 1000
+        cellUnit = 1
         workspace_dir = dirname+"test_out/"
-        comments = "Runnning model with test parameters"
+        comments = "Runnning model with test parameters."
 
     args["aoiFileName"] = aoiFileName
     args["cellSize"] = cellSize
+    args["cellUnit"] = cellUnit
     args["workspace_dir"] = workspace_dir
     args["comments"] = comments
 
