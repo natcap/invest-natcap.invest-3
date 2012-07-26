@@ -1878,6 +1878,11 @@ class Root(DynamicElement):
                         errors.append((element.attributes['label'], error_msg))
                     except:
                         pass
+            elif issubclass(element.__class__, EmbeddedUI):
+                embedded_errors = element.errors_exist()
+                if len(embedded_errors) > 0:
+                    for error_tuple in embedded_errors:
+                        errors.append(error_tuple)
         return errors
 
     def warnings_exist(self):
