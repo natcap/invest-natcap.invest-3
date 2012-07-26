@@ -2277,8 +2277,14 @@ class ErrorDialog(InfoDialog):
             label_string += '<li>%s: %s</li>' % element_tuple
         label_string += '</ul>'
 
-        self.body.setText(str("There are %s error(s) that must be resolved" +
-            " before this tool can be run:%s") % (len(self.messages), label_string))
+        num_messages = len(self.messages)
+        if num_messages == 1:
+            num_error_string = 'is 1 error'
+        else:
+            num_error_string = 'are %s errors' % num_messages
+
+        self.body.setText(str("There %s that must be resolved" +
+            " before this tool can be run:%s") % (num_error_string, label_string))
         self.body.setMinimumSize(self.body.sizeHint())
 
 class ElementRegistrar(registrar.Registrar):
