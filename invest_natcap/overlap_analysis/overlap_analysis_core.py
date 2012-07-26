@@ -35,10 +35,11 @@ def execute(args):
             be used directly.
         args['over_layer_dict'] - A dictionary which contains the weights of each
             of the various shapefiles included in the 'overlap_files' dictionary.
-            The dictionary key is the ID number of each shapefile. This ID maps
-            to a list containing the two values, with the form being as follows:
-                ({ID: [inter-activity weight, buffer], ...}):    
-        args['import_field']- string which corresponds to a field within the
+            The dictionary key is the string name of each shapefile, minus the .shp
+            extension. This ID maps to a list containing the two values, with 
+            the form being as follows:
+                ({ID: [inter-activity weight, buffer], ...})    
+        args['import_field']- A string which corresponds to a field within the
            layers being passed in within overlap analysis directory. This is
            the intra-activity importance for each activity.
         args['hum_use_hubs_loc']- An open shapefile of major hubs of human 
@@ -46,6 +47,11 @@ def execute(args):
             zones as they get farther away from these locations.
         args['decay']- float between 0 and 1, representing the decay of interest
            in areas as you get farther away from human hubs.
+        args['do-inter']-Boolean that indicates whether or not inter-activity
+            weighting is desired. This tells us if the overlap table exists.
+        args['do_intra']- Boolean which indicates whether or not intra-activity
+            weighting is desired. This will will pull attributes from shapefiles
+            passed in in 'zone_layer_file'.
     
     Intermediate:
         Rasterized Shapefiles- For each shapefile that we passed in 'overlap_files'
@@ -126,6 +132,49 @@ def execute(args):
     raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi = None,
                                    raster_out_uri = activities_uri, 
                                    datatype = gdal.GDT_Int32, nodata = aoi_nodata)
+    
+    #Now we want to create a second raster that includes all of the weighting information
+    create_weighted_raster(output_dir, args['over_layer_dict'], args['overlap_files'],
+                            args['import_field'], args['do_inter'], args['do_intra'])
+    
+def create_weighted_raster(dir, inter_weights_dict, layers_dict, field_name,
+                           do_inter, do_intra):
+    '''This function will create an output raster that takes into account both inter-
+    activity weighting and intra-activity weighting. This will produce a map that looks
+    both at where activities are occurring, and how much people value those activities
+    and areas.
+    
+    Input:
+        dir- This is the directory into which our completed raster file should be placed
+            when completed.
+        inter_weights_dict- The dictionary that holds the mappings from layer names to
+            the inter-activity weights passed in by CSV. The dictionary key is the string
+            name of each shapefile, minus the .shp extension. This ID maps to a list 
+            containing the two values, with the form being as follows:
+                ({ID: [inter-activity weight, buffer], ...})
+       layers_dict- This dictionary contains all the activity layers that are included
+           in the particular model run. This maps the name of the shapefile (excluding 
+           the .shp extension) to the open datasource itself.
+        field_name- A string which represents the desired field name in our shapefiles.
+            This field should contain the intra-activity weight for that particular shape.
+            
+    Output:
+        weighted_raster- A raster file output that takes into account both inter-activity
+            weights and intra-activity weights.
+            
+    Returns nothing.
+    '''
+    
+    ''' The equation that we are given to work with is:
+            IS = (1/n) * SUM (U{i,j}*I{j}
+        Where:
+            IS = Importance Score
+            n = Number of human use activities included
+            U{i,j}:
+    
+    '''
+    
+    pass    
     
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''This will pluck each of the files out of the dictionary and create a new raster

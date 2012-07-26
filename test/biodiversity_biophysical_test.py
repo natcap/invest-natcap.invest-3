@@ -93,35 +93,35 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
         self.assertEqual(result_dict, created_dict)
         
-#   def test_biodiversity_biophysical_check_projections(self):
-#       """Test a list of gdal datasets and assert that we see success and
-#           failures where we would expect """
+    def test_biodiversity_biophysical_check_projections(self):
+        """Test a list of gdal datasets and assert that we see success and
+            failures where we would expect """
 
-#       reg_dir = './data/biodiversity_regression_data/samp_input/'
-#       ds_1 = gdal.Open(os.path.join(reg_dir, 'lc_samp_bse_b.tif'))
-#       ds_2 = gdal.Open(os.path.join(reg_dir, 'lc_samp_cur_b.tif'))
-#       ds_3 = gdal.Open(os.path.join(reg_dir, 'lc_samp_fut_b.tif'))
+        reg_dir = './data/biodiversity_regression_data/samp_input/'
+        ds_1 = gdal.Open(os.path.join(reg_dir, 'lc_samp_bse_b.tif'))
+        ds_2 = gdal.Open(os.path.join(reg_dir, 'lc_samp_cur_b.tif'))
+        ds_3 = gdal.Open(os.path.join(reg_dir, 'lc_samp_fut_b.tif'))
 
-#       ds_dict = {'_c':ds_2, '_b':ds_1,'_f':ds_3}
+        ds_dict = {'_c':ds_2, '_b':ds_1,'_f':ds_3}
 
-#       result = biodiversity_biophysical.check_projections(ds_dict, 1.0)
-#       
-#       self.assertTrue(not result)
+        result = biodiversity_biophysical.check_projections(ds_dict, 1.0)
+        
+        self.assertTrue(not result)
 
-#   def test_biodiversity_biophysical_check_projections_fail(self):
-#       """Test a list of gdal datasets and assert that we see success and
-#           failures where we would expect """
+    def test_biodiversity_biophysical_check_projections_fail(self):
+        """Test a list of gdal datasets and assert that we see success and
+            failures where we would expect """
 
-#       reg_dir = './data/biodiversity_regression_data/'
-#       ds_1 = gdal.Open(os.path.join(reg_dir, 'samp_input/lc_samp_bse_b.tif'))
-#       ds_2 = gdal.Open(os.path.join(reg_dir, 'samp_input/lc_samp_cur_b.tif'))
-#       ds_3 = gdal.Open(os.path.join(reg_dir, 'test_RAT.tif'))
+        reg_dir = './data/biodiversity_regression_data/'
+        ds_1 = gdal.Open(os.path.join(reg_dir, 'samp_input/lc_samp_bse_b.tif'))
+        ds_2 = gdal.Open(os.path.join(reg_dir, 'samp_input/lc_samp_cur_b.tif'))
+        ds_3 = gdal.Open(os.path.join(reg_dir, 'test_RAT.tif'))
 
-#       ds_dict = {'_c':ds_2, '_b':ds_1,'_f':ds_3}
+        ds_dict = {'_c':ds_2, '_b':ds_1,'_f':ds_3}
 
-#       result = biodiversity_biophysical.check_projections(ds_dict, 1.0)
-#       
-#       self.assertTrue(result)
+        result = biodiversity_biophysical.check_projections(ds_dict, 1.0)
+        
+        self.assertTrue(result)
 
     def test_biodiversity_biophsyical_compare_threats_sensitivity(self):
         """Test hand created dictionaries representing the formats of the
