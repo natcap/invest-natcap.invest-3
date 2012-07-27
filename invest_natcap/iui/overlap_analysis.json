@@ -23,7 +23,7 @@
                 },
                 {
                     "id" : "aoi",
-                    "args_id" : "zone_layer_file",
+                    "args_id" : "zone_layer_loc",
                     "type": "file",
                     "label": "Analysis Zones Layer",
                     "defaultValue": "../OverlapAnalysis/Input/AOI_WCVI.shp",

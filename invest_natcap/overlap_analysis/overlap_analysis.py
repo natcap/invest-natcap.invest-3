@@ -23,7 +23,7 @@ def execute(args):
     Input:
         args: A python dictionary created by the UI and passed to this method.
             It will contain the following data.
-        args['workspace']- The directory in which to place all resulting files,
+        args['workspace_dir']- The directory in which to place all resulting files,
             will come in as a string.
         args['zone_layer_loc']- A URI pointing to a shapefile with the analysis
             zones on it.
@@ -69,7 +69,7 @@ def execute(args):
     
     oa_args = {}
     
-    workspace = args['workspace']
+    workspace = args['workspace_dir']
     output_dir = workspace + os.sep + 'Output'
     inter_dir = workspace + os.sep + 'Intermediate'
         
@@ -79,7 +79,7 @@ def execute(args):
     if not (os.path.exists(inter_dir)):
         os.makedirs(inter_dir)
         
-    oa_args['workspace_dir'] = args['workspace']
+    oa_args['workspace_dir'] = args['workspace_dir']
     
     #LOGGER.debug(args['zone_layer_loc'])
     
