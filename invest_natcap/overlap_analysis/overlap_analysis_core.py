@@ -157,7 +157,7 @@ def execute(args):
         #Now we want to create a second raster that includes all of the weighting information
         create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
                                args['overlap_files'], intra_name, 
-                               args['do_inter'], args['do_intra'], aoi_raster)
+                               args['do_inter'], args['do_intra'], raster_files)
         
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
                            layers_dict, intra_name, do_inter, do_intra, raster_files):
@@ -223,7 +223,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     
     #aoi_raster has to be the first so that we can easily pull it out later when we go
     #to combine them. Will need the aoi_nodata for later as well.
-    raster_files = [aoi_raster]
+    weighted_raster_files = [aoi_raster]
     aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
     
     for element in layers_dict:
@@ -243,7 +243,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         #this should do something about flushing the buffer
         dataset.FlushCache()
         
-        raster_files.append(dataset)
+        weighted_raster_files.append(dataset)
         
     #Need to get the X{max} now, so iterate through the features on a layer, and make a
     #dictionary that maps the name of the layer to the max potential 
@@ -266,7 +266,19 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #so we will need to pick out the first element in the set, then get the max for
     #all of them on the layer.
     max_inter_weight = max( map(operator.itemgetter(0), inter_weights_dict.values()))    
-     
+    
+    #Assuming that inter-activity valuation is desired, whereas intra-activity is not,
+    #we should use the original rasterized layers as the pixels to combine. If, on the
+    #other hand, inter is not wanted, then we should just use 1 in our equation
+    
+    def combine_weighted_pixels(*activity_pixels):
+        
+        aoi_pixel = activity_pixels[0]
+        
+        if aoi_pixel == aoi_nodata:
+            return aoi_nodata
+        
+        
         
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''This will pluck each of the files out of the dictionary and create a new raster
