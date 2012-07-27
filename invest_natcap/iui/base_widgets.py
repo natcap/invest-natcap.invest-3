@@ -280,6 +280,10 @@ class DynamicGroup(DynamicElement):
         """TO BE IMPLEMENTED"""
         return True
 
+    def setValue(self, value):
+        """TO BE IMPLEMENTED"""
+        pass
+
 class DynamicPrimitive(DynamicElement):
     """DynamicPrimitive represents the class of all elements that can be listed
         individually in the JSON file that themselves cannot group other 
@@ -1955,7 +1959,9 @@ class Root(DynamicElement):
         #with the mapping element ID -> element value
         for id, element in self.allElements.iteritems():
             try:
-                user_args[id] = element.value()
+                value = element.value()
+                if value != None:
+                    user_args[id] = value
             except:
                 pass
 
@@ -1974,8 +1980,9 @@ class Root(DynamicElement):
                 try:
                     element = self.allElements[str(id)]
                     element.setValue(value)
-                except:
-                    pass
+                except Exception as e:
+                    print 'Error %s when setting lastrun value %s to %s' %
+                        (e, value, str(id))
 
             if hasattr(self, 'messageArea'):
                 self.messageArea.setText('Parameters have been loaded from the' +
