@@ -443,7 +443,7 @@ class DynamicPrimitive(DynamicElement):
             # If there's no validation for this element but its requirements are
             # met and it's enabled, we should mark it as not having an error.
             if self.isEnabled() and self.validator == None:
-                self.set_error(None, None)
+                self.error_button.deactivate()
 
             if self.isEnabled() and self.validator != None and\
             self.requirementsMet() and self.validator.thread_finished():
@@ -1356,6 +1356,7 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         # boolean if the user has not specified differently.
         if 'dataType' not in attributes:
             attributes['dataType'] = 'boolean'
+
         QtGui.QCheckBox.__init__(self)
         DynamicPrimitive.__init__(self, attributes)
 
