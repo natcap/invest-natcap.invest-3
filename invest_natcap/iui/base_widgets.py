@@ -1715,6 +1715,7 @@ class MessageArea(QtGui.QLabel):
     def __init__(self):
         QtGui.QLabel.__init__(self)
         self.setWordWrap(True)
+        self.messages = []
 
     def clear(self):
         """Clear all text and set the stylesheet to none."""
@@ -1722,6 +1723,19 @@ class MessageArea(QtGui.QLabel):
         self.hide()
         self.setText('')
         self.setStyleSheet('')
+
+    def setText(self, text=None):
+        if text == None:
+            text = []
+        else:
+            text = [text + '<br/>']
+        messages = text + self.messages
+        string = "<br/>".join(messages)
+        QtGui.QLabel.setText(self, string)
+
+    def append(self, string):
+        self.messages.append(string)
+        self.setText()
 
     def setError(self, state):
         """Set the background color according to the error status passed in.
@@ -2119,17 +2133,23 @@ class ExecRoot(Root):
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
             'rios_lastrun.rios', filter = QtCore.QString('RIOS Lastrun file' +
             ' (*.rios);;All files (*.* *)'))
+        filename = str(filename)
         save_handler = fileio.JSONHandler(filename)
         save_handler.write_to_disk(self.value())
         print 'parameters written to %s' % filename
+        basename = os.path.basename(filename)
+        self.messageArea.append('Parameters saved to %s' % basename)
 
     def load_parameters_from_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Select file to load...',
             filter = QtCore.QString('RIOS Lastrun file' +
             ' (*.rios);;All files (*.* *)'))
+        filename = str(filename)
         load_handler = fileio.JSONHandler(filename)
         attributes = load_handler.get_attributes()
         self.load_elements_from_save(attributes)
+        basename = os.path.basename(filename)
+        self.messageArea.append('Parameters loaded from %s' % basename)
 
 
     def saveLastRun(self):
