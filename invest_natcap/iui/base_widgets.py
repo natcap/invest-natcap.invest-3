@@ -2066,6 +2066,12 @@ class MainWindow(QtGui.QMainWindow):
         self.ui = root_class(uri)
         self.setCentralWidget(self.ui)
 
+        self.file_menu = QtGui.QMenu('&File')
+        self.file_menu.addAction('&Load parameters from file ...')
+        self.file_menu.addAction('&Save parameters ...')
+        self.file_menu.addAction('Exit')
+        self.menuBar().addMenu(self.file_menu)
+
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
         self.messageArea = MessageArea()
