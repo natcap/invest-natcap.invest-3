@@ -2060,6 +2060,12 @@ class EmbeddedUI(Root):
                     (e, element_id, value)
                 print traceback.print_exc()
 
+class MainWindow(QtGui.QMainWindow):
+    def __init__(self, root_class, uri):
+        QtGui.QMainWindow.__init__(self)
+        self.ui = root_class(uri)
+        self.setCentralWidget(self.ui)
+
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
         self.messageArea = MessageArea()
