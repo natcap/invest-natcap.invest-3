@@ -1762,8 +1762,8 @@ class Root(DynamicElement):
         except KeyError:
             use_lastrun = True
         self.lastRun = {}
+        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
         if use_lastrun:
-            self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
             self.lastRun = self.last_run_handler.get_attributes()
 
         self.outputDict = {}
