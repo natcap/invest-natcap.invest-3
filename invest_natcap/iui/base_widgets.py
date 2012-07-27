@@ -418,7 +418,7 @@ class DynamicPrimitive(DynamicElement):
             msg = str(error)
 
         satisfied = False
-        if state == 'warning' or state == None:
+        if state == 'warning' or state == 'pass':
             satisfied = True
         
         self.setBGcolorSatisfied(satisfied)
@@ -443,7 +443,7 @@ class DynamicPrimitive(DynamicElement):
             # If there's no validation for this element but its requirements are
             # met and it's enabled, we should mark it as not having an error.
             if self.isEnabled() and self.validator == None:
-                self.error_button.deactivate()
+                self.set_error(None, None)
 
             if self.isEnabled() and self.validator != None and\
             self.requirementsMet() and self.validator.thread_finished():
@@ -457,6 +457,8 @@ class DynamicPrimitive(DynamicElement):
         if self.validator.thread_finished():
             self.timer.stop()
             error, state = self.validator.get_error()
+            if state == None:
+                state = 'pass'
             self.set_error(error, state)
 
             # Toggle dependent elements based on the results of this validation
@@ -561,10 +563,10 @@ class ErrorButton(InformationButton):
             button_icon = 'validate-fail.png'
         elif state == 'warning':
             button_icon = 'dialog-warning.png'
-
-        # If no error, change button settings accordingly.
-        if error_string == '':
+        elif state == 'pass':
             button_icon = 'validate-pass.png'
+
+        if state == 'pass' or state == None:
             button_is_flat = True
 
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, button_icon)))
@@ -611,9 +613,6 @@ class LabeledElement(DynamicPrimitive):
 
     def setState(self, state, includeSelf=True, recursive=True):
         DynamicPrimitive.setState(self, state, includeSelf, recursive)
-
-        if state == True:
-            self.validate()
 
     def isEnabled(self):
         #Labeled elements are designed to have more than one element, but in
