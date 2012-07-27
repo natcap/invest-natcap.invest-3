@@ -1167,13 +1167,14 @@ class FileButton(QtGui.QPushButton):
                                  "[GDAL] GeoTiff (*.tif *.tiff *.TIF *.TIFF)"],
                         "OGR": ["[OGR] ESRI Shapefiles (*.shp *.SHP)"]
                        }
+        self.last_filter = QtCore.QString()
 
         filters = self.filters['all']
         if filetype == 'file':
             if filter != 'all':
-                filters = self.filters[filter] + filters
+                filters += self.filters[filter] 
 
-        self.filter_string = ';;'.join(filters)
+        self.filter_string = QtCore.QString(';;'.join(filters))
 
         #connect the button (self) with the filename function.
         self.clicked.connect(self.getFileName)
@@ -1196,8 +1197,9 @@ class FileButton(QtGui.QPushButton):
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
         else:
             file_dialog = QtGui.QFileDialog()
-            filename = file_dialog.getOpenFileName(self, 'Select ' + self.text, '.',
-                filter=QtCore.QString(self.filter_string))
+            filename, filter = file_dialog.getOpenFileNameAndFilter(self, 'Select ' + self.text, '.',
+                filter=self.filter_string, initialFilter = self.last_filter)
+        self.last_filter = filter
 
         #Set the value of the URIfield.
         if filename == '':
