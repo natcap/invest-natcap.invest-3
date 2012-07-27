@@ -120,7 +120,12 @@ class DynamicElement(QtGui.QWidget):
                 element.setEnabled(state)
 
         if recursive:
-            state = self.requirementsMet()
+            try:
+                state = self.requirementsMet() and not self.has_error()
+            except AttributeError:
+                # Thrown when this element does not have self.has_error()
+                state = self.requirementsMet()
+
             for element in self.enables:
                 element.setState(state)
 
@@ -462,7 +467,8 @@ class DynamicPrimitive(DynamicElement):
             self.set_error(error, state)
 
             # Toggle dependent elements based on the results of this validation
-            DynamicElement.setState(self, not bool(error), includeSelf=False,
+            enable = not self.has_error() and self.requirementsMet()
+            DynamicElement.setState(self, enable, includeSelf=False,
                 recursive=True)
 
 class InformationButton(QtGui.QPushButton):
@@ -726,7 +732,7 @@ class DynamicText(LabeledElement):
         if self.validator != None:
             self.validate()
         else:
-            self.setState(self.requirementsMet(), includeSelf=False,
+           self.setState(self.requirementsMet(), includeSelf=False,
                 recursive=True)
 
 
