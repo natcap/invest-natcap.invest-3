@@ -27,7 +27,7 @@ def execute(args):
             (optional, but required for rarity calculations)
         args['landuse_fut_uri'] - a uri to an input land use/land cover raster
             (optional)
-        args['threat_uri'] - a uri to an input CSV containing data
+        args['threats_uri'] - a uri to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
             following names: 'THREAT','MAX_DIST','WEIGHT','DECAY' (required).
@@ -72,7 +72,7 @@ def execute(args):
                 be cannot be found.')
     
     biophysical_args['threat_dict'] = \
-        make_dictionary_from_csv(args['threat_uri'],'THREAT')
+        make_dictionary_from_csv(args['threats_uri'],'THREAT')
 
     biophysical_args['sensitivity_dict'] = \
         make_dictionary_from_csv(args['sensitivity_uri'],'LULC')

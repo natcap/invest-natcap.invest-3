@@ -699,7 +699,8 @@ class PrimitiveChecker(Checker):
 
             # If the user's provided pattern is a string, we should use it
             # directly and assume it's a stright-up regular expression.
-            if isinstance(valid_pattern, str):
+            if isinstance(valid_pattern, str) or isinstance(valid_pattern,
+                    unicode):
                 user_pattern = valid_pattern
             else:
                 # If the user provides a data structure instead of a string, we
@@ -739,7 +740,7 @@ class PrimitiveChecker(Checker):
             # If the user has not provided a regular expression, we should use
             # the default regular expression instead.
             user_pattern = self.default_regexp
-
+        
         pattern = re.compile(user_pattern, flag)
         value = valid_dict['value']  # the value to compare against our regex
         if pattern.match(str(value)) == None:

@@ -1079,7 +1079,18 @@ class FileEntry(DynamicText):
                 validate_type = 'exists'
             attributes['validateAs'] = {"type": validate_type}
         super(FileEntry, self).__init__(attributes)
-        self.button = FileButton(attributes['label'], self.textField, attributes['type'])
+
+        try:
+            filter_type = str(attributes['validateAs']['type'])
+        except KeyError:
+            filter_type = 'all'
+
+        file_type = 'folder'
+        if issubclass(self.__class__, FileEntry) and filter_type != 'folder':
+            file_type = 'file'
+
+        self.button = FileButton(attributes['label'], self.textField,
+            file_type, filter_type)
         self.addElement(self.button)
 
         # Holy cow, this is hacky.  I'm trying to override the mousePressEvent
@@ -1143,12 +1154,26 @@ class FileButton(QtGui.QPushButton):
         URIField - a QtGui.QLineEdit.  This object will receive the string URI
             from the QFileDialog."""
 
-    def __init__(self, text, URIfield, filetype='file'):
+    def __init__(self, text, URIfield, filetype='file', filter='all'):
         super(FileButton, self).__init__()
         self.text = text
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'document-open.png')))
         self.URIfield = URIfield
         self.filetype = filetype
+        self.filters = {"all": ["All files (* *.*)"],
+                        "CSV": ["Comma separated value file (*.csv *.CSV)"],
+                        "GDAL": ["[GDAL] Arc/Info Binary Grid (hdr.adf HDR.ADF hdr.ADF)",
+                                 "[GDAL] Arc/Info ASCII Grid (*.asc *.ASC)",
+                                 "[GDAL] GeoTiff (*.tif *.tiff *.TIF *.TIFF)"],
+                        "OGR": ["[OGR] ESRI Shapefiles (*.shp *.SHP)"]
+                       }
+
+        filters = self.filters['all']
+        if filetype == 'file':
+            if filter != 'all':
+                filters = self.filters[filter] + filters
+
+        self.filter_string = ';;'.join(filters)
 
         #connect the button (self) with the filename function.
         self.clicked.connect(self.getFileName)
@@ -1170,7 +1195,9 @@ class FileButton(QtGui.QPushButton):
         if self.filetype == 'folder':
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
         else:
-            filename = QtGui.QFileDialog.getOpenFileName(self, 'Select ' + self.text, '.')
+            file_dialog = QtGui.QFileDialog()
+            filename = file_dialog.getOpenFileName(self, 'Select ' + self.text, '.',
+                filter=QtCore.QString(self.filter_string))
 
         #Set the value of the URIfield.
         if filename == '':
@@ -1298,7 +1325,7 @@ class Dropdown(LabeledElement):
             return None
         elif 'returns' in self.attributes:
             if self.attributes['returns'] == 'strings':
-                return self.dropdown.currentText()
+                return str(self.dropdown.currentText())
             elif 'mapValues' in self.attributes['returns']:
                 text = str(self.dropdown.currentText())
                 try:
@@ -1308,7 +1335,7 @@ class Dropdown(LabeledElement):
             else: #return the ordinal
                 return self.dropdown.currentIndex()
         else:
-            return self.dropdown.currentText()
+            return str(self.dropdown.currentText())
     
 class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
     """This class represents a checkbox for our UI interpreter.  It has the 
@@ -1735,8 +1762,8 @@ class Root(DynamicElement):
         except KeyError:
             use_lastrun = True
         self.lastRun = {}
+        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
         if use_lastrun:
-            self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
             self.lastRun = self.last_run_handler.get_attributes()
 
         self.outputDict = {}
