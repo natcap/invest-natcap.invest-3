@@ -62,7 +62,7 @@
                                     "fieldsExist": ["THREAT", "MAX_DIST", "WEIGHT", "DECAY"],
                                     "restrictions": [{"field": "THREAT",
                                                     "validateAs":{"type": "string",
-                                                                  "allowedValues": {"pattern":"[a-zA-Z_].*"}
+                                                                  "allowedValues": {"pattern":"^[a-zA-Z_]+$"}
                                                                   }},
                                                      {"field": "MAX_DIST",
                                                       "validateAs": {"type": "number",
@@ -70,11 +70,11 @@
                                                                   }},
                                                      {"field": "WEIGHT",
                                                       "validateAs": {"type": "number",
-                                                                     "allowedValues":{"pattern":"^[0]*\\.?[0-9]+$"}
+                                                                     "allowedValues":{"pattern":"(^[0]*\\.?[0-9]+$)|(^[1]\\.?[0]+$)"}
                                                                   }},
                                                      {"field": "DECAY",
                                                       "validateAs": {"type": "number",
-                                                                     "allowedValues":{"pattern":"[01]"}
+                                                                     "allowedValues":{"pattern":"^[01]$"}
                                                                   }}]},
                     "helpText":"A CSV file of all the threats for the model to consider. Each row in the table is a degradation source and each column contains a different attribute of each degradation source (THREAT, MAX_DIST, WEIGHT, DECAY). See the user's guide for valid values for these columns."
                 },
@@ -108,7 +108,8 @@
                                                                   "allowedValues": {"pattern":"^[0-9].*"}
                                                                   }},
                                                      {"field": "NAME",
-                                                      "validateAs": {"type": "string"}
+                                                      "validateAs": {"type": "string",
+                                                                     "allowedValues":{"pattern":"[a-zA-Z0-9_].*"}}
                                                                   },
                                                      {"field": "HABITAT",
                                                       "validateAs": {"type": "number",

@@ -2,8 +2,14 @@ from urllib import urlencode
 from urllib2 import Request
 from urllib2 import urlopen
 
-from osgeo import gdal
-gdal.UseExceptions()
+#The following line of code hides some errors that seem important and doesn't
+#raise exceptions on them.  FOr example:
+#ERROR 5: Access window out of range in RasterIO().  Requested
+#(1,15) of size 25x3 on raster of 26x17.
+#disappears when this line is turned on.  Probably not a good idea to uncomment
+#until we know what's happening
+#from osgeo import gdal
+#gdal.UseExceptions()
 
 # This should be left as 'development' unless programmatically set when building
 # a release.  DO NOT ALTER THIS VERSION BY HAND.

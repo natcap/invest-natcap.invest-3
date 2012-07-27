@@ -27,7 +27,7 @@ def execute(args):
     comments = args["comments"]
     
     dirname=os.path.dirname(aoiFileName)+os.sep
-    fileName=os.path.basename(aoiFileName).strip(".shp") 
+    fileName=os.path.basename(aoiFileName)[:-4]
     aoiFileNameSHP = dirname+fileName+".shp"
     aoiFileNameSHX = dirname+fileName+".shx"
     aoiFileNameDBF = dirname+fileName+".dbf"

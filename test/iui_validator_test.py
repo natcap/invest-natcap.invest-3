@@ -278,6 +278,10 @@ class PrimitiveCheckerTester(CheckerTester):
                             'allowedValues': {'pattern': '[a-z]+'}}
         self.checker = iui_validator.PrimitiveChecker()
 
+    def test_unicode(self):
+        """Assert that PrimitiveChecker can validate a unicode regex."""
+        self.validate_as['value'] = unicode('aaaaaakljh')
+
     def test_value(self):
         """Assert that PrimitiveChecker can validate a regexp."""
         self.validate_as['value'] = 'aaaabasd'

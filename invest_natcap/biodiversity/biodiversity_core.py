@@ -56,8 +56,8 @@ def biophysical(args):
         raster_from_dict(cur_landuse, habitat_uri, args['sensitivity_dict'],\
             'HABITAT', -1.0, False)
     
-    #If access_lyr: convert to raster, if value is null set to 1, else set to value
-    access_raster = None
+    # If access_lyr: convert to raster, if value is null set to 1, 
+    # else set to value
     try:
         access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
@@ -70,6 +70,7 @@ def biophysical(args):
     except KeyError:
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
+        access_raster = None
 
     # calculate the weight sum which is the sum of all the threats weights
     weight_sum = 0.0
@@ -83,7 +84,8 @@ def biophysical(args):
     for lulc_key, lulc_ras in args['landuse_dict'].iteritems():
         try:
             LOGGER.debug('Calculating results for landuse : %s', lulc_key)
-            #Get raster properties: cellsize, width, height, cells = width * height, extent    
+            # get raster properties: cellsize, width, height, 
+            # cells = width * height, extent    
             lulc_prop = get_raster_properties(cur_landuse)
 
             # initialize a list that will store all the density/threat rasters
@@ -93,21 +95,29 @@ def biophysical(args):
             # intitialize a list to store raster nodata values that correspond
             # to the rasters stored in 'degradation_rasters' above
             deg_adjusted_nodata_list = []
+            
+            # variable to indicate whether we should break out of calculations
+            # for a land cover because a threat raster was not found
+            exit_landcover = False
 
             # adjust each density/threat raster for distance, weight, and access 
             for threat, threat_data in threat_dict.iteritems():
+                if exit_landcover:
+                    continue
+
                 LOGGER.debug('Calculating threat : %s', threat)
                 LOGGER.debug('Threat Data : %s', threat_data)
            
                 # get the density raster for the specific threat
                 threat_raster = args['density_dict']['density'+lulc_key][threat]
             
-                # if there is no raster found for this threat then continue with the
-                # next threat
+                # if there is no raster found for this threat then we skip over
+                # to the next landcover
                 if threat_raster is None:
                     LOGGER.warn('No threat raster found for threat : %s',
                                 threat+lulc_key)
-                    LOGGER.warn('Continuing run without factoring in threat')
+                    LOGGER.warn('Moving to next period')
+                    exit_landcover = True
                     continue 
 
                 threat_band = threat_raster.GetRasterBand(1)
@@ -178,21 +188,20 @@ def biophysical(args):
                         return np.prod(rasters) * weight_avg
                     return out_nodata
                 
-                # set the adjusted raster list depending on whether the 
+                # build lists of the two rasters and their respective nodata
+                # values to be used to calculate their individual degradation
+                # raster
+                adjusted_list = [filtered_raster, sensitivity_raster]
+                adjusted_nodata_list =\
+                    [filtered_raster.GetRasterBand(1).GetNoDataValue(),
+                     sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
+                
+                # set the adjusted raster lists depending on whether the 
                 # access shapefile was provided
-                adjusted_list = []
-                adjusted_nodata_list = []
-                if access_raster is None:
-                    adjusted_list = [filtered_raster, sensitivity_raster]
-                    adjusted_nodata_list =\
-                        [filtered_raster.GetRasterBand(1).GetNoDataValue(),
-                         sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
-                else:
-                    adjusted_list = [filtered_raster, sensitivity_raster, access_raster]
-                    adjusted_nodata_list =\
-                        [filtered_raster.GetRasterBand(1).GetNoDataValue(),
-                         sensitivity_raster.GetRasterBand(1).GetNoDataValue(),
-                         access_raster.GetRasterBand(1).GetNoDataValue()]
+                if access_raster is not None:
+                    adjusted_list.append(acces_raster)
+                    access_band = access_raster.GetRasterBand(1)
+                    adjusted_nodata_list.append(access_band.GetNoDataValue())
                 
                 deg_uri = \
                     os.path.join(intermediate_dir,
@@ -205,74 +214,70 @@ def biophysical(args):
                 degradation_rasters.append(deg_ras)
                 deg_adjusted_nodata_list.append(deg_ras.GetRasterBand(1).GetNoDataValue())
 
-            # if there was at least one threat compute the total degradation
-            if len(degradation_rasters) > 0:
-                def sum_degradation(*rasters):
-                    """A vectorized function that sums all the degradation
-                        rasters created above.
+            def sum_degradation(*rasters):
+                """A vectorized function that sums all the degradation
+                    rasters created above.
 
-                        *rasters - a list of floats where each float is a
-                            degradation score from a pixel from one of the
-                            threat rasters.
+                    *rasters - a list of floats where each float is a
+                        degradation score from a pixel from one of the
+                        threat rasters.
 
-                        returns - the total degradation score for the pixel
-                    """
-                    # there is a nodata value if this list is not empty
-                    if len(filter(lambda (x,y): x==y, zip(rasters,
-                        deg_adjusted_nodata_list))) == 0:
-                        return np.sum(rasters)
+                    returns - the total degradation score for the pixel
+                """
+                # there is a nodata value if this list is not empty
+                if len(filter(lambda (x,y): x==y, zip(rasters,
+                    deg_adjusted_nodata_list))) == 0:
+                    return np.sum(rasters)
+                return out_nodata
+            
+            deg_sum_uri = \
+                os.path.join(output_dir, 'deg_sum_out'+lulc_key+'.tif')
+            
+            sum_deg_raster = \
+                raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
+                                               raster_out_uri=deg_sum_uri,
+                                               nodata=out_nodata)
+
+            #Compute habitat quality
+            # z is a scaling parameter set to 2.5 as noted in the users
+            # guide
+            z = 2.5
+            
+            # a term used below to compute habitat quality
+            ksq = half_saturation**z
+            
+            sum_deg_nodata =\
+                sum_deg_raster.GetRasterBand(1).GetNoDataValue()
+            
+            habitat_nodata =\
+                habitat_raster.GetRasterBand(1).GetNoDataValue()
+            
+            def quality_op(degradation, habitat):
+                """Vectorized function that computes habitat quality given
+                    a degradation and habitat value.
+
+                    degradation - a float from the created degradation
+                        raster above. 
+                    habitat - a float indicating habitat suitability from
+                        from the habitat raster created above.
+
+                    returns - a float representing the habitat quality
+                        score for a pixel
+                """
+                # there is a nodata value if this list is not empty
+                if degradation == sum_deg_nodata or \
+                        habitat == habitat_nodata:
                     return out_nodata
-                
-                deg_sum_uri = \
-                    os.path.join(output_dir, 'deg_sum_out'+lulc_key+'.tif')
-                
-                sum_deg_raster = \
-                    raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
-                                                   raster_out_uri=deg_sum_uri,
-                                                   nodata=out_nodata)
 
-                #Compute habitat quality
-                # z is a scaling parameter set to 2.5 as noted in the users
-                # guide
-                z = 2.5
-                
-                # a term used below to compute habitat quality
-                ksq = half_saturation**z
-                
-                sum_deg_nodata =\
-                    sum_deg_raster.GetRasterBand(1).GetNoDataValue()
-                
-                habitat_nodata =\
-                    habitat_raster.GetRasterBand(1).GetNoDataValue()
-                
-                def quality_op(degradation, habitat):
-                    """Vectorized function that computes habitat quality given
-                        a degradation and habitat value.
-
-                        degradation - a float from the created degradation
-                            raster above. 
-                        habitat - a float indicating habitat suitability from
-                            from the habitat raster created above.
-
-                        returns - a float representing the habitat quality
-                            score for a pixel
-                    """
-                    # there is a nodata value if this list is not empty
-                    if degradation == sum_deg_nodata or \
-                            habitat == habitat_nodata:
-                        return out_nodata
-
-                    return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
-                
-                quality_uri = \
-                    os.path.join(output_dir, 'quality_out'+lulc_key+'.tif')
-                
-                quality_raster = \
-                    raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
-                                                   quality_op, raster_out_uri=quality_uri,
-                                                   nodata=out_nodata)
-            else:
-                LOGGER.warn('No Threat rasters were found for this land cover')
+                return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
+            
+            quality_uri = \
+                os.path.join(output_dir, 'quality_out'+lulc_key+'.tif')
+            
+            quality_raster = \
+                raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
+                                               quality_op, raster_out_uri=quality_uri,
+                                               nodata=out_nodata)
         except:
             LOGGER.error('An error was encountered processing landuse%s', lulc_key)
             LOGGER.debug('Attempting to move on to next landuse map')

@@ -23,7 +23,7 @@
                 },
                 {
                     "id" : "aoi",
-                    "args_id" : "zone_layer_file",
+                    "args_id" : "zone_layer_loc",
                     "type": "file",
                     "label": "Analysis Zones Layer",
                     "defaultValue": "../OverlapAnalysis/Input/AOI_WCVI.shp",
@@ -73,14 +73,14 @@
                 },
                 {
                     "id" : "IS_field_name",
-                    "args_id" : "import_name",
-                    "type": "OGRFieldDropdown",
-                    "label": "Analysis Cell Size",
-                    "defaultValue": "intra-activity_weight",
+                    "args_id" : "intra_name",
+                    "type": "text",
+                    "label": "Intra-Activity Attribute Name",
+                    "defaultValue": "RIS",
                     "required": false,
                     "requiredIf": ["intra"],
                     "enabledBy": "intra",
-                    "helpText": "The column heading in the Analysis Zone Layer attribute table that gives intra-activity weights."               
+                    "helpText": "The column heading to look for in the activity layers' attribute tables that gives intra-activity weights."               
             	},
             	{
                     "id" : "inter",

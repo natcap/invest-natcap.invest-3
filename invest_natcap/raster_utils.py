@@ -20,7 +20,14 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('raster_utils')
-gdal.UseExceptions()
+
+#The following line of code hides some errors that seem important and doesn't
+#raise exceptions on them.  FOr example:
+#ERROR 5: Access window out of range in RasterIO().  Requested
+#(1,15) of size 25x3 on raster of 26x17.
+#disappears when this line is turned on.  Probably not a good idea to uncomment
+#until we know what's happening
+#gdal.UseExceptions()
 
 def calculate_raster_stats(ds):
     """Calculates and sets the min, max, stdev, and mean for the bands in
@@ -376,7 +383,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             if current_top_index < 0:
                 current_top_index += 1
                 current_bottom_index += 1
-            elif current_bottom_index > out_band.YSize:
+            elif current_bottom_index >= current_band.YSize:
                 current_top_index -= 1
                 current_bottom_index -= 1
 
@@ -1159,6 +1166,7 @@ def create_rat(dataset, attr_dict, key_name, value_name):
 
         dataset - a GDAL raster dataset to create the RAT for 
         attr_dict - a dictionary with keys that point to a primitive type
+           {integer_id_1: value_1, ... integer_id_n: value_n}
         key_name - a string for the column name that maps the keys
         value_name - a string for the column name that maps the values
         
