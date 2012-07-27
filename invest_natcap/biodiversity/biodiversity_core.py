@@ -93,21 +93,29 @@ def biophysical(args):
             # intitialize a list to store raster nodata values that correspond
             # to the rasters stored in 'degradation_rasters' above
             deg_adjusted_nodata_list = []
+            
+            # variable to indicate whether we should break out of calculations
+            # for a land cover because a threat raster was not found
+            exit_landcover = False
 
             # adjust each density/threat raster for distance, weight, and access 
             for threat, threat_data in threat_dict.iteritems():
+                if exit_landcover:
+                    continue
+
                 LOGGER.debug('Calculating threat : %s', threat)
                 LOGGER.debug('Threat Data : %s', threat_data)
            
                 # get the density raster for the specific threat
                 threat_raster = args['density_dict']['density'+lulc_key][threat]
             
-                # if there is no raster found for this threat then continue with the
-                # next threat
+                # if there is no raster found for this threat then we skip over
+                # to the next landcover
                 if threat_raster is None:
                     LOGGER.warn('No threat raster found for threat : %s',
                                 threat+lulc_key)
-                    LOGGER.warn('Continuing run without factoring in threat')
+                    LOGGER.warn('Moving to next period')
+                    exit_landcover = True
                     continue 
 
                 threat_band = threat_raster.GetRasterBand(1)
