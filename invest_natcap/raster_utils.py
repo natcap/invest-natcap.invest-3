@@ -270,6 +270,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #6) pixel height in y direction 
     out_gt = [aoi_box[0], pixel_width, 0.0, aoi_box[1], 0.0, pixel_height]
 
+    LOGGER.debug("out_gt %s" % str(out_gt))
+
     #The output projection will be the same as any in dataset_list, so just take
     #the first one.
     out_projection = dataset_list[0].GetProjection()
@@ -283,6 +285,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
     #Build the new output dataset and reference the band for later.  the '1'
     #means only 1 output band.
+    LOGGER.debug("out_n_cols, out_n_rows %s %s" % (out_n_cols, out_n_rows))
     out_dataset = new_raster(out_n_cols, out_n_rows, out_projection,
         out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
