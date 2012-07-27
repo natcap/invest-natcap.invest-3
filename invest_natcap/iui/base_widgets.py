@@ -2067,10 +2067,14 @@ class MainWindow(QtGui.QMainWindow):
         self.setCentralWidget(self.ui)
 
         self.file_menu = QtGui.QMenu('&File')
-        self.file_menu.addAction('&Load parameters from file ...')
-        self.file_menu.addAction('&Save parameters ...')
-        self.file_menu.addAction('Exit')
+        self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
+        self.save_file_action = self.file_menu.addAction('&Save parameters ...')
+        self.exit_action = self.file_menu.addAction('Exit')
         self.menuBar().addMenu(self.file_menu)
+
+        self.exit_action.triggered.connect(self.ui.closeWindow)
+        self.save_file_action.triggered.connect(self.ui.save_parameters_to_file)
+        self.load_file_action.triggered.connect(self.ui.load_parameters_from_file)
 
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
@@ -2111,6 +2115,23 @@ class ExecRoot(Root):
                 if emb_ptr != None:
                     return emb_ptr
 
+    def save_parameters_to_file(self):
+        filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
+            'rios_lastrun.rios', filter = QtCore.QString('RIOS Lastrun file' +
+            ' (*.rios);;All files (*.* *)'))
+        save_handler = fileio.JSONHandler(filename)
+        save_handler.write_to_disk(self.value())
+        print 'parameters written to %s' % filename
+
+    def load_parameters_from_file(self):
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select file to load...',
+            filter = QtCore.QString('RIOS Lastrun file' +
+            ' (*.rios);;All files (*.* *)'))
+        load_handler = fileio.JSONHandler(filename)
+        attributes = load_handler.get_attributes()
+        self.load_elements_from_save(attributes)
+
+
     def saveLastRun(self):
         """Saves the current values of all input elements to a JSON object on 
             disc.
@@ -2118,6 +2139,17 @@ class ExecRoot(Root):
             returns nothing"""
 
         self.last_run_handler.write_to_disk(self.value())
+
+    def load_elements_from_save(self, save_dict):
+        for id, value in save_dict.iteritems():
+            try:
+                element = self.allElements[str(id)]
+                element.setValue(value)
+            except Exception as e:
+                print traceback.print_exc()
+                print 'Error \'%s\' when setting lastrun value %s to %s' %\
+                    (e, value, str(id))
+
 
     def initElements(self):
         """Set the enabled/disabled state and text from the last run for all 
@@ -2128,14 +2160,7 @@ class ExecRoot(Root):
         if self.lastRun == {}:
             self.resetParametersToDefaults()
         else:
-            for id, value in self.lastRun.iteritems():
-                try:
-                    element = self.allElements[str(id)]
-                    element.setValue(value)
-                except Exception as e:
-                    print traceback.print_exc()
-                    print 'Error \'%s\' when setting lastrun value %s to %s' %\
-                        (e, value, str(id))
+            self.load_elements_from_save(self.lastRun)
 
             if hasattr(self, 'messageArea'):
                 self.messageArea.setText('Parameters have been loaded from the' +
