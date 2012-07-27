@@ -1171,7 +1171,10 @@ class FileButton(QtGui.QPushButton):
         filters = self.filters['all']
         if filetype == 'file':
             if filter != 'all':
-                filters += self.filters[filter] 
+                try:
+                    filters += self.filters[filter.upper()]
+                except:
+                    print 'Could not find filters for %s' % filter.upper()
 
         self.filter_string = QtCore.QString(';;'.join(filters))
 
