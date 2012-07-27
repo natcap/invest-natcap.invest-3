@@ -120,7 +120,12 @@ class DynamicElement(QtGui.QWidget):
                 element.setEnabled(state)
 
         if recursive:
-            state = self.requirementsMet()
+            try:
+                state = self.requirementsMet() and not self.has_error()
+            except AttributeError:
+                # Thrown when this element does not have self.has_error()
+                state = self.requirementsMet()
+
             for element in self.enables:
                 element.setState(state)
 
@@ -274,6 +279,10 @@ class DynamicGroup(DynamicElement):
     def value(self):
         """TO BE IMPLEMENTED"""
         return True
+
+    def setValue(self, value):
+        """TO BE IMPLEMENTED"""
+        pass
 
 class DynamicPrimitive(DynamicElement):
     """DynamicPrimitive represents the class of all elements that can be listed
@@ -462,7 +471,8 @@ class DynamicPrimitive(DynamicElement):
             self.set_error(error, state)
 
             # Toggle dependent elements based on the results of this validation
-            DynamicElement.setState(self, not bool(error), includeSelf=False,
+            enable = not self.has_error() and self.requirementsMet()
+            DynamicElement.setState(self, enable, includeSelf=False,
                 recursive=True)
 
 class InformationButton(QtGui.QPushButton):
@@ -726,7 +736,7 @@ class DynamicText(LabeledElement):
         if self.validator != None:
             self.validate()
         else:
-            self.setState(self.requirementsMet(), includeSelf=False,
+           self.setState(self.requirementsMet(), includeSelf=False,
                 recursive=True)
 
 
@@ -1949,7 +1959,9 @@ class Root(DynamicElement):
         #with the mapping element ID -> element value
         for id, element in self.allElements.iteritems():
             try:
-                user_args[id] = element.value()
+                value = element.value()
+                if value != None:
+                    user_args[id] = value
             except:
                 pass
 
@@ -1968,8 +1980,9 @@ class Root(DynamicElement):
                 try:
                     element = self.allElements[str(id)]
                     element.setValue(value)
-                except:
-                    pass
+                except Exception as e:
+                    print 'Error %s when setting lastrun value %s to %s' %
+                        (e, value, str(id))
 
             if hasattr(self, 'messageArea'):
                 self.messageArea.setText('Parameters have been loaded from the' +
