@@ -1325,7 +1325,7 @@ class Dropdown(LabeledElement):
             return None
         elif 'returns' in self.attributes:
             if self.attributes['returns'] == 'strings':
-                return self.dropdown.currentText()
+                return str(self.dropdown.currentText())
             elif 'mapValues' in self.attributes['returns']:
                 text = str(self.dropdown.currentText())
                 try:
@@ -1335,7 +1335,7 @@ class Dropdown(LabeledElement):
             else: #return the ordinal
                 return self.dropdown.currentIndex()
         else:
-            return self.dropdown.currentText()
+            return str(self.dropdown.currentText())
     
 class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
     """This class represents a checkbox for our UI interpreter.  It has the 
@@ -1762,8 +1762,8 @@ class Root(DynamicElement):
         except KeyError:
             use_lastrun = True
         self.lastRun = {}
+        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
         if use_lastrun:
-            self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
             self.lastRun = self.last_run_handler.get_attributes()
 
         self.outputDict = {}

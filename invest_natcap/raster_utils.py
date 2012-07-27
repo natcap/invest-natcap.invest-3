@@ -383,7 +383,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             if current_top_index < 0:
                 current_top_index += 1
                 current_bottom_index += 1
-            elif current_bottom_index > out_band.YSize:
+            elif current_bottom_index >= current_band.YSize:
                 current_top_index -= 1
                 current_bottom_index -= 1
 
