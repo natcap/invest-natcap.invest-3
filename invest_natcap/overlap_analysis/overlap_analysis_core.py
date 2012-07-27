@@ -219,32 +219,16 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #If intra-activity weighting is desired, we need to create a whole new set of values,
     #where the burn value of each pixel is the attribute value of the polygon that it
     #resides within. This means that we need the AOI raster, and need to rebuild based on
-    #that, then move on from there.
+    #that, then move on from there. I'm abstracting this to a different file for ease of
+    #reading. It will return a tuple of two lists- the first will be the list of 
+    #rasterized aoi/layers, and the second will be a list of the original file names in
+    #the same order as the layers so that the dictionaries with other weights can be
+    #cross referenced. 
     
-    #aoi_raster has to be the first so that we can easily pull it out later when we go
-    #to combine them. Will need the aoi_nodata for later as well.
-    weighted_raster_files = [aoi_raster]
-    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
-    
-    for element in layers_dict:
-        
-        datasource = layers_dict[element]
-        layer = datasource.GetLayer()
-        
-        outgoing_uri = inter_dir + os.sep + element + ".tif"
-        
-        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
-                                -1, gdal.GDT_Float32)
-        band, nodata = raster_utils.extract_band_and_nodata(dataset)
-        
-        band.Fill(nodata)
-        
-        gdal.RasterizeLayer(dataset, [1], layer, options = ["ATTRIBUTE= %s" %intra_name])
-        #this should do something about flushing the buffer
-        dataset.FlushCache()
-        
-        weighted_raster_files.append(dataset)
-        
+    weighted_raster_files, weighted_raster_names = make_indiv_weight_rasters(inter_dir,
+                                                                             aoi_raster,
+                                                                             layers_dict)
+      
     #Need to get the X{max} now, so iterate through the features on a layer, and make a
     #dictionary that maps the name of the layer to the max potential 
     #intra-activity weight
@@ -278,13 +262,71 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         if aoi_pixel == aoi_nodata:
             return aoi_nodata
         
+def make_indiv_weight_rasters(dir, aoi_raster, layers_dict):
+    ''' This is a helper function for create_weighted_raster, which abstracts some of the
+    work for getting the intra-activity weights per pixel to a separate function. This
+    function will take in a list of the activities layers, and using the aoi_raster as a
+    base for the tranformation, will rasterize the shapefile layers into rasters where the
+    burn value is based on a per-pixel intra-activity weight (specified in each polygon on
+    the layer). This function will return a tuple of two lists- the first is a list of the
+    rasterized shapefiles, starting with the aoi. The second is a list of the shapefile
+    names (minus the extension) in the same order as they were added to the first list.
+    This will be used to reference the dictionaries containing the rest of the weighting
+    information for the final weighted raster calculation.
+    
+    Input:
+        dir: The directory into which the weighted rasters should be placed.
+        aoi_raster: The razterized version of the area of interest. This will be used as a
+            basis for all following rasterizations.
+        layers_dict: A dictionary of all shapefiles to be rasterized. The key is the name
+            of the original file, minus the file extension. The value is an open shapefile
+            datasource.
+            
+    Output:
+        weighted_raster_files: A list of raster versions of the original activity
+            shapefiles. The first file will ALWAYS be the AOI, followed by the rasterized
+            layers.
+        weighted_names: A list of the filenames minus extensions, of the rasterized files
+            in weighted_raster_files. These can be used to reference properties of the 
+            raster files that are located in other dictionaries.
+    '''
+       
+    #aoi_raster has to be the first so that we can easily pull it out later when we go
+    #to combine them. Will need the aoi_nodata for later as well.
+    weighted_raster_files = [aoi_raster]
+    #Inserting 'aoi' as a placeholder so that when I go through the list, I can reference
+    #other indicies without having to convert for the missing first element in names.
+    weighted_names = ['aoi']
+    
+    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
+    
+    for element in layers_dict:
         
+        datasource = layers_dict[element]
+        layer = datasource.GetLayer()
+        
+        outgoing_uri = inter_dir + os.sep + element + ".tif"
+        
+        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
+                                -1, gdal.GDT_Float32)
+        band, nodata = raster_utils.extract_band_and_nodata(dataset)
+        
+        band.Fill(nodata)
+        
+        gdal.RasterizeLayer(dataset, [1], layer, options = ["ATTRIBUTE= %s" %intra_name])
+        #this should do something about flushing the buffer
+        dataset.FlushCache()
+        
+        weighted_raster_files.append(dataset)
+        weighted_names.append(element)
+        
+    return weighted_raster_files, weighted_names
         
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
     '''This will pluck each of the files out of the dictionary and create a new raster
     file out of them. The new file will be named the same as the original shapefile,
     but with a .tif extension, and will be placed in the intermediate directory that
-    is being passed in as a parameter
+    is being passed in as a parameter.
     
     Input:
         dir- This is the directory into which our completed raster files should be
