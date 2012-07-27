@@ -375,6 +375,9 @@ class DynamicPrimitive(DynamicElement):
         if 'enabled' in self.attributes:
             self.setState(self.attributes['enabled'])
 
+    def setValue(self, value):
+        pass
+
     def getElementsDictionary(self):
         """Assemble a python dictionary mapping this object's string ID to its
             pointer.
@@ -1770,17 +1773,6 @@ class Root(DynamicElement):
         else:
             self.layout().addWidget(self.body)
 
-        # Check to see if we should load the last run.  Defaults to false if the
-        # user has not specified.
-        try:
-            use_lastrun = attributes['loadLastRun']
-        except KeyError:
-            use_lastrun = True
-        self.lastRun = {}
-        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
-        if use_lastrun:
-            self.lastRun = self.last_run_handler.get_attributes()
-
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
 
@@ -1802,7 +1794,6 @@ class Root(DynamicElement):
         self.assembler = ElementAssembler(self.allElements)        
 
         self.embedded_uis = []
-        self.initElements()
 
     def find_and_replace(self, attributes):
         """Initiates a recursive search and replace of the attributes
@@ -1947,54 +1938,6 @@ class Root(DynamicElement):
         #for the given model.
         return
 
-    def saveLastRun(self):
-        """Saves the current values of all input elements to a JSON object on 
-            disc.
-            
-            returns nothing"""
-
-        user_args = {}
-
-        #loop through all elements known to the UI, assemble into a dictionary
-        #with the mapping element ID -> element value
-        for id, element in self.allElements.iteritems():
-            try:
-                value = element.value()
-                if value != None:
-                    user_args[id] = value
-            except:
-                pass
-
-        self.last_run_handler.write_to_disk(user_args)
-
-    def initElements(self):
-        """Set the enabled/disabled state and text from the last run for all 
-            elements
-        
-            returns nothing"""
-
-        if self.lastRun == {}:
-            self.resetParametersToDefaults()
-        else:
-            for id, value in self.lastRun.iteritems():
-                try:
-                    element = self.allElements[str(id)]
-                    element.setValue(value)
-                except Exception as e:
-                    print 'Error %s when setting lastrun value %s to %s' %
-                        (e, value, str(id))
-
-            if hasattr(self, 'messageArea'):
-                self.messageArea.setText('Parameters have been loaded from the' +
-                    ' most recent run of this model.  <a href=\'default\'>' +
-                    ' Reset to defaults</a>')
-                try:
-                    self.messageArea.linkActivated.disconnect()
-                except TypeError:
-                    # Raised if we can't disconnect any signals
-                    pass
-                self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
-
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
         
@@ -2055,6 +1998,21 @@ class Root(DynamicElement):
                 uis.append(element)
         return uis
 
+    def value(self):
+        user_args = {}
+
+        if self.isEnabled():
+            #loop through all elements known to the UI, assemble into a dictionary
+            #with the mapping element ID -> element value
+            for id, element in self.allElements.iteritems():
+                try:
+                    value = element.value()
+                    if value != None:
+                        user_args[id] = value
+                except:
+                    pass
+        return user_args
+
 class EmbeddedUI(Root):
     def __init__(self, attributes, registrar):
         uri = attributes['configURI']
@@ -2090,16 +2048,41 @@ class EmbeddedUI(Root):
         except KeyError:
             return None
 
+    def setValue(self, parameters):
+        for element_id, value in parameters.iteritems():
+            try:
+                self.allElements[element_id].setValue(value)
+            except KeyError:
+                print 'Could not find %s in EmbUI %s' % (element_id,
+                    self.attributes['id'])
+            except Exception as e:
+                print 'Error \'%s\' encountered setting %s to %s' %\
+                    (e, element_id, value)
+                print traceback.print_exc()
+
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar):
         self.messageArea = MessageArea()
         self.messageArea.setError(False)
         Root.__init__(self, uri, layout, object_registrar)
+
+        # Check to see if we should load the last run.  Defaults to false if the
+        # user has not specified.
+        try:
+            use_lastrun = self.attributes['loadLastRun']
+        except KeyError:
+            use_lastrun = True
+        self.lastRun = {}
+        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+        if use_lastrun:
+            self.lastRun = self.last_run_handler.get_attributes()
+
         self.layout().addWidget(self.messageArea)
         self.addBottomButtons()
         self.setWindowSize()
         self.error_dialog = ErrorDialog()
         self.warning_dialog = WarningDialog()
+        self.initElements()
 
     def find_element_ptr(self, element_id):
         """Return an element pointer if found.  None if not found."""
@@ -2115,6 +2098,43 @@ class ExecRoot(Root):
                 emb_ptr = embedded_ui.find_element_ptr(element_id)
                 if emb_ptr != None:
                     return emb_ptr
+
+    def saveLastRun(self):
+        """Saves the current values of all input elements to a JSON object on 
+            disc.
+            
+            returns nothing"""
+
+        self.last_run_handler.write_to_disk(self.value())
+
+    def initElements(self):
+        """Set the enabled/disabled state and text from the last run for all 
+            elements
+        
+            returns nothing"""
+
+        if self.lastRun == {}:
+            self.resetParametersToDefaults()
+        else:
+            for id, value in self.lastRun.iteritems():
+                try:
+                    element = self.allElements[str(id)]
+                    element.setValue(value)
+                except Exception as e:
+                    print traceback.print_exc()
+                    print 'Error \'%s\' when setting lastrun value %s to %s' %\
+                        (e, value, str(id))
+
+            if hasattr(self, 'messageArea'):
+                self.messageArea.setText('Parameters have been loaded from the' +
+                    ' most recent run of this model.  <a href=\'default\'>' +
+                    ' Reset to defaults</a>')
+                try:
+                    self.messageArea.linkActivated.disconnect()
+                except TypeError:
+                    # Raised if we can't disconnect any signals
+                    pass
+                self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
 
     def setWindowSize(self):
         #this groups all elements together at the top, leaving the
