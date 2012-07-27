@@ -56,8 +56,8 @@ def biophysical(args):
         raster_from_dict(cur_landuse, habitat_uri, args['sensitivity_dict'],\
             'HABITAT', -1.0, False)
     
-    #If access_lyr: convert to raster, if value is null set to 1, else set to value
-    access_raster = None
+    # If access_lyr: convert to raster, if value is null set to 1, 
+    # else set to value
     try:
         access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
@@ -70,6 +70,7 @@ def biophysical(args):
     except KeyError:
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
+        access_raster = None
 
     # calculate the weight sum which is the sum of all the threats weights
     weight_sum = 0.0
@@ -83,7 +84,8 @@ def biophysical(args):
     for lulc_key, lulc_ras in args['landuse_dict'].iteritems():
         try:
             LOGGER.debug('Calculating results for landuse : %s', lulc_key)
-            #Get raster properties: cellsize, width, height, cells = width * height, extent    
+            # get raster properties: cellsize, width, height, 
+            # cells = width * height, extent    
             lulc_prop = get_raster_properties(cur_landuse)
 
             # initialize a list that will store all the density/threat rasters
