@@ -186,21 +186,20 @@ def biophysical(args):
                         return np.prod(rasters) * weight_avg
                     return out_nodata
                 
-                # set the adjusted raster list depending on whether the 
+                # build lists of the two rasters and their respective nodata
+                # values to be used to calculate their individual degradation
+                # raster
+                adjusted_list = [filtered_raster, sensitivity_raster]
+                adjusted_nodata_list =\
+                    [filtered_raster.GetRasterBand(1).GetNoDataValue(),
+                     sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
+                
+                # set the adjusted raster lists depending on whether the 
                 # access shapefile was provided
-                adjusted_list = []
-                adjusted_nodata_list = []
-                if access_raster is None:
-                    adjusted_list = [filtered_raster, sensitivity_raster]
-                    adjusted_nodata_list =\
-                        [filtered_raster.GetRasterBand(1).GetNoDataValue(),
-                         sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
-                else:
-                    adjusted_list = [filtered_raster, sensitivity_raster, access_raster]
-                    adjusted_nodata_list =\
-                        [filtered_raster.GetRasterBand(1).GetNoDataValue(),
-                         sensitivity_raster.GetRasterBand(1).GetNoDataValue(),
-                         access_raster.GetRasterBand(1).GetNoDataValue()]
+                if access_raster is not None:
+                    adjusted_list.append(acces_raster)
+                    access_band = access_raster.GetRasterBand(1)
+                    adjusted_nodata_list.append(access_band.GetNoDataValue())
                 
                 deg_uri = \
                     os.path.join(intermediate_dir,
