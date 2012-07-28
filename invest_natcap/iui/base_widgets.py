@@ -2291,7 +2291,19 @@ class ExecRoot(Root):
         
             returns nothing"""
 
-        sys.exit(0)
+        dialog = WarningDialog()
+        dialog.setWindowTitle('Are you sure you want to quit?')
+        dialog.set_title('Really quit?')
+        dialog.set_icon('dialog-information-2.png')
+        dialog.body.setText('You will lose any unsaved changes to your ' +
+            'parameters.  Your existing RIOS workspaces will not be affected.')
+        dialog.ok_button.setText('Quit')
+
+        exit_code = dialog.exec_()
+        # An exit code of 0 means cancel.
+        # If the user pressed OK, the program should quit
+        if exit_code != 0:
+            sys.exit(0)
 
     def closeEvent(self, event=None):
         """Terminates the application. This function is a Qt-defined callback 
