@@ -2077,7 +2077,7 @@ class EmbeddedUI(Root):
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, root_class, uri):
         QtGui.QMainWindow.__init__(self)
-        self.ui = root_class(uri)
+        self.ui = root_class(uri, self)
         self.setCentralWidget(self.ui)
 
         self.file_menu = QtGui.QMenu('&File')
@@ -2091,7 +2091,12 @@ class MainWindow(QtGui.QMainWindow):
         self.load_file_action.triggered.connect(self.ui.load_parameters_from_file)
 
 class ExecRoot(Root):
-    def __init__(self, uri, layout, object_registrar):
+    def __init__(self, uri, layout, object_registrar, main_window=None):
+        if main_window == None:
+            self.main_window = self
+        else:
+            self.main_window = main_window # a pointer
+
         self.messageArea = MessageArea()
         self.messageArea.setError(False)
         Root.__init__(self, uri, layout, object_registrar)
@@ -2220,10 +2225,10 @@ class ExecRoot(Root):
         if height > screen_height:
             height = screen_height - 50
 
-        self.resize(width, height)
-        center_window(self)
+        self.main_window.resize(width, height)
+        center_window(self.main_window)
 
-        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+        self.main_window.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
 
     def resetParametersToDefaults(self):
