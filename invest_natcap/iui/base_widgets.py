@@ -430,7 +430,7 @@ class DynamicPrimitive(DynamicElement):
             msg = str(error)
 
         satisfied = False
-        if state == 'warning' or state == 'pass':
+        if state == 'warning' or state == 'pass' or state == None:
             satisfied = True
         
         self.setBGcolorSatisfied(satisfied)
@@ -739,9 +739,8 @@ class DynamicText(LabeledElement):
         if self.validator != None:
             self.validate()
         else:
-           self.setState(self.requirementsMet(), includeSelf=False,
+            self.setState(self.requirementsMet(), includeSelf=False,
                 recursive=True)
-
 
     def setValidateField(self, regexp):
         """Set input validation on the text field to conform with the input
@@ -1715,6 +1714,7 @@ class MessageArea(QtGui.QLabel):
     def __init__(self):
         QtGui.QLabel.__init__(self)
         self.setWordWrap(True)
+        self.messages = []
 
     def clear(self):
         """Clear all text and set the stylesheet to none."""
@@ -1722,6 +1722,19 @@ class MessageArea(QtGui.QLabel):
         self.hide()
         self.setText('')
         self.setStyleSheet('')
+
+    def setText(self, text=None):
+        if text == None:
+            text = []
+        else:
+            text = [text + '<br/>']
+        messages = text + self.messages
+        string = "<br/>".join(messages)
+        QtGui.QLabel.setText(self, string)
+
+    def append(self, string):
+        self.messages.append(string)
+        self.setText()
 
     def setError(self, state):
         """Set the background color according to the error status passed in.
@@ -2060,8 +2073,29 @@ class EmbeddedUI(Root):
                     (e, element_id, value)
                 print traceback.print_exc()
 
+class MainWindow(QtGui.QMainWindow):
+    def __init__(self, root_class, uri):
+        QtGui.QMainWindow.__init__(self)
+        self.ui = root_class(uri, self)
+        self.setCentralWidget(self.ui)
+
+        self.file_menu = QtGui.QMenu('&File')
+        self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
+        self.save_file_action = self.file_menu.addAction('&Save parameters ...')
+        self.exit_action = self.file_menu.addAction('Exit')
+        self.menuBar().addMenu(self.file_menu)
+
+        self.exit_action.triggered.connect(self.ui.closeWindow)
+        self.save_file_action.triggered.connect(self.ui.save_parameters_to_file)
+        self.load_file_action.triggered.connect(self.ui.load_parameters_from_file)
+
 class ExecRoot(Root):
-    def __init__(self, uri, layout, object_registrar):
+    def __init__(self, uri, layout, object_registrar, main_window=None):
+        if main_window == None:
+            self.main_window = self
+        else:
+            self.main_window = main_window # a pointer
+
         self.messageArea = MessageArea()
         self.messageArea.setError(False)
         Root.__init__(self, uri, layout, object_registrar)
@@ -2099,6 +2133,29 @@ class ExecRoot(Root):
                 if emb_ptr != None:
                     return emb_ptr
 
+    def save_parameters_to_file(self):
+        filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
+            'rios_lastrun.rios', filter = QtCore.QString('RIOS Lastrun file' +
+            ' (*.rios);;All files (*.* *)'))
+        filename = str(filename)
+        save_handler = fileio.JSONHandler(filename)
+        save_handler.write_to_disk(self.value())
+        print 'parameters written to %s' % filename
+        basename = os.path.basename(filename)
+        self.messageArea.append('Parameters saved to %s' % basename)
+
+    def load_parameters_from_file(self):
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select file to load...',
+            filter = QtCore.QString('RIOS Lastrun file' +
+            ' (*.rios);;All files (*.* *)'))
+        filename = str(filename)
+        load_handler = fileio.JSONHandler(filename)
+        attributes = load_handler.get_attributes()
+        self.load_elements_from_save(attributes)
+        basename = os.path.basename(filename)
+        self.messageArea.append('Parameters loaded from %s' % basename)
+
+
     def saveLastRun(self):
         """Saves the current values of all input elements to a JSON object on 
             disc.
@@ -2106,6 +2163,17 @@ class ExecRoot(Root):
             returns nothing"""
 
         self.last_run_handler.write_to_disk(self.value())
+
+    def load_elements_from_save(self, save_dict):
+        for id, value in save_dict.iteritems():
+            try:
+                element = self.allElements[str(id)]
+                element.setValue(value)
+            except Exception as e:
+                print traceback.print_exc()
+                print 'Error \'%s\' when setting lastrun value %s to %s' %\
+                    (e, value, str(id))
+
 
     def initElements(self):
         """Set the enabled/disabled state and text from the last run for all 
@@ -2116,14 +2184,7 @@ class ExecRoot(Root):
         if self.lastRun == {}:
             self.resetParametersToDefaults()
         else:
-            for id, value in self.lastRun.iteritems():
-                try:
-                    element = self.allElements[str(id)]
-                    element.setValue(value)
-                except Exception as e:
-                    print traceback.print_exc()
-                    print 'Error \'%s\' when setting lastrun value %s to %s' %\
-                        (e, value, str(id))
+            self.load_elements_from_save(self.lastRun)
 
             if hasattr(self, 'messageArea'):
                 self.messageArea.setText('Parameters have been loaded from the' +
@@ -2163,10 +2224,10 @@ class ExecRoot(Root):
         if height > screen_height:
             height = screen_height - 50
 
-        self.resize(width, height)
-        center_window(self)
+        self.main_window.resize(width, height)
+        center_window(self.main_window)
 
-        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+        self.main_window.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
 
     def resetParametersToDefaults(self):
@@ -2234,7 +2295,19 @@ class ExecRoot(Root):
         
             returns nothing"""
 
-        sys.exit(0)
+        dialog = WarningDialog()
+        dialog.setWindowTitle('Are you sure you want to quit?')
+        dialog.set_title('Really quit?')
+        dialog.set_icon('dialog-information-2.png')
+        dialog.body.setText('You will lose any unsaved changes to your ' +
+            'parameters.  Your existing RIOS workspaces will not be affected.')
+        dialog.ok_button.setText('Quit')
+
+        exit_code = dialog.exec_()
+        # An exit code of 0 means cancel.
+        # If the user pressed OK, the program should quit
+        if exit_code != 0:
+            sys.exit(0)
 
     def closeEvent(self, event=None):
         """Terminates the application. This function is a Qt-defined callback 
