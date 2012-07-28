@@ -430,7 +430,7 @@ class DynamicPrimitive(DynamicElement):
             msg = str(error)
 
         satisfied = False
-        if state == 'warning' or state == 'pass':
+        if state == 'warning' or state == 'pass' or state == None:
             satisfied = True
         
         self.setBGcolorSatisfied(satisfied)
@@ -739,9 +739,8 @@ class DynamicText(LabeledElement):
         if self.validator != None:
             self.validate()
         else:
-           self.setState(self.requirementsMet(), includeSelf=False,
+            self.setState(self.requirementsMet(), includeSelf=False,
                 recursive=True)
-
 
     def setValidateField(self, regexp):
         """Set input validation on the text field to conform with the input
