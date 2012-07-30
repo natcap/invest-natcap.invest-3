@@ -1070,6 +1070,7 @@ class FileEntry(DynamicText):
     class FileField(QtGui.QLineEdit):
         def dropEvent(self, event=None):
             self.setText(event.mimeData().text())
+            event.acceptProposedAction()
 
     """This object represents a file.  It has three components, all of which
         are subclasses of QtGui.QWidget: a label (QtGui.QLabel), a textfield
@@ -2148,22 +2149,24 @@ class ExecRoot(Root):
             'rios_lastrun.rios', filter = QtCore.QString('RIOS Lastrun file' +
             ' (*.rios);;All files (*.* *)'))
         filename = str(filename)
-        save_handler = fileio.JSONHandler(filename)
-        save_handler.write_to_disk(self.value())
-        print 'parameters written to %s' % filename
-        basename = os.path.basename(filename)
-        self.messageArea.append('Parameters saved to %s' % basename)
+        if filename != '':
+            save_handler = fileio.JSONHandler(filename)
+            save_handler.write_to_disk(self.value())
+            print 'parameters written to %s' % filename
+            basename = os.path.basename(filename)
+            self.messageArea.append('Parameters saved to %s' % basename)
 
     def load_parameters_from_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Select file to load...',
             filter = QtCore.QString('RIOS Lastrun file' +
             ' (*.rios);;All files (*.* *)'))
         filename = str(filename)
-        load_handler = fileio.JSONHandler(filename)
-        attributes = load_handler.get_attributes()
-        self.load_elements_from_save(attributes)
-        basename = os.path.basename(filename)
-        self.messageArea.append('Parameters loaded from %s' % basename)
+        if filename != '':
+            load_handler = fileio.JSONHandler(filename)
+            attributes = load_handler.get_attributes()
+            self.load_elements_from_save(attributes)
+            basename = os.path.basename(filename)
+            self.messageArea.append('Parameters loaded from %s' % basename)
 
 
     def saveLastRun(self):
