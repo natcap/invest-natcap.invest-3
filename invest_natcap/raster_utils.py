@@ -270,6 +270,8 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #6) pixel height in y direction 
     out_gt = [aoi_box[0], pixel_width, 0.0, aoi_box[1], 0.0, pixel_height]
 
+    LOGGER.debug("out_gt %s" % str(out_gt))
+
     #The output projection will be the same as any in dataset_list, so just take
     #the first one.
     out_projection = dataset_list[0].GetProjection()
@@ -283,6 +285,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
     #Build the new output dataset and reference the band for later.  the '1'
     #means only 1 output band.
+    LOGGER.debug("out_n_cols, out_n_rows %s %s" % (out_n_cols, out_n_rows))
     out_dataset = new_raster(out_n_cols, out_n_rows, out_projection,
         out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
@@ -517,47 +520,65 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
 
     return new_raster
 
-def calculate_intersection_rectangle(rasterList, aoi=None):
+def calculate_intersection_rectangle(dataset_list, aoi=None):
     """Return a bounding box of the intersections of all the rasters in the
         list.
         
-        rasterList - a list of GDAL rasters in the same projection and 
+        dataset_list - a list of GDAL datasets in the same projection and 
             coordinate system
         aoi - an OGR polygon datasource which may optionally also restrict
             the extents of the intersection rectangle based on its own
             extents.
-
             
         returns a 4 element list that bounds the intersection of all the 
-            rasters in rasterList.  [left, top, right, bottom]"""
+            rasters in dataset_list.  [left, top, right, bottom]"""
+
+    def valid_bounding_box(bb):
+        """Check to make sure bounding box doesn't collapse on itself
+
+        bb - a bounding box of the form [left, top, right, bottom]
+
+        returns True if bb is valid, false otherwise"""
+
+        return bb[0] <= bb[2] and bb[3] <= bb[1]
 
     #Define the initial bounding box
-    gt = rasterList[0].GetGeoTransform()
+    gt = dataset_list[0].GetGeoTransform()
     #order is left, top, right, bottom of rasterbounds
-    boundingBox = [gt[0], gt[3], gt[0] + gt[1] * rasterList[0].RasterXSize,
-                   gt[3] + gt[5] * rasterList[0].RasterYSize]
+    bounding_box = [gt[0], gt[3], gt[0] + gt[1] * dataset_list[0].RasterXSize,
+                   gt[3] + gt[5] * dataset_list[0].RasterYSize]
 
-    for band in rasterList:
+    dataset_files = []
+    for dataset in dataset_list:
+        dataset_files.append(dataset.GetDescription())
         #intersect the current bounding box with the one just read
-        gt = band.GetGeoTransform()
-        rec = [gt[0], gt[3], gt[0] + gt[1] * band.RasterXSize,
-               gt[3] + gt[5] * band.RasterYSize]
+        gt = dataset.GetGeoTransform()
+        rec = [gt[0], gt[3], gt[0] + gt[1] * dataset.RasterXSize,
+               gt[3] + gt[5] * dataset.RasterYSize]
         #This intersects rec with the current bounding box
-        boundingBox = [max(rec[0], boundingBox[0]),
-                       min(rec[1], boundingBox[1]),
-                       min(rec[2], boundingBox[2]),
-                       max(rec[3], boundingBox[3])]
+        bounding_box = [max(rec[0], bounding_box[0]),
+                       min(rec[1], bounding_box[1]),
+                       min(rec[2], bounding_box[2]),
+                       max(rec[3], bounding_box[3])]
+        
+        #Left can't be greater than right or bottom greater than top)
+        if not valid_bounding_box(bounding_box):
+            raise Exception("These rasters %s don't overlap with this one %s" % \
+                                (str(dataset_files[0:-1]), dataset_files[-1]))
 
     if aoi != None:
         aoi_layer = aoi.GetLayer(0)
         aoi_extent = aoi_layer.GetExtent()
         LOGGER.debug("aoi_extent %s" % (str(aoi_extent)))
-        boundingBox = [max(aoi_extent[0], boundingBox[0]),
-                       min(aoi_extent[3], boundingBox[1]),
-                       min(aoi_extent[1], boundingBox[2]),
-                       max(aoi_extent[2], boundingBox[3])]
+        bounding_box = [max(aoi_extent[0], bounding_box[0]),
+                       min(aoi_extent[3], bounding_box[1]),
+                       min(aoi_extent[1], bounding_box[2]),
+                       max(aoi_extent[2], bounding_box[3])]
+        if not valid_bounding_box(bounding_box):
+            raise Exception("The aoi layer %s doesn't overlap with %s" % \
+                                (aoi, str(dataset_files)))
 
-    return boundingBox
+    return bounding_box
 
 def create_raster_from_vector_extents(xRes, yRes, format, nodata, rasterFile, 
                                       shp):

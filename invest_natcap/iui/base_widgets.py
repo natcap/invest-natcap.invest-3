@@ -120,7 +120,12 @@ class DynamicElement(QtGui.QWidget):
                 element.setEnabled(state)
 
         if recursive:
-            state = self.requirementsMet()
+            try:
+                state = self.requirementsMet() and not self.has_error()
+            except AttributeError:
+                # Thrown when this element does not have self.has_error()
+                state = self.requirementsMet()
+
             for element in self.enables:
                 element.setState(state)
 
@@ -275,6 +280,10 @@ class DynamicGroup(DynamicElement):
         """TO BE IMPLEMENTED"""
         return True
 
+    def setValue(self, value):
+        """TO BE IMPLEMENTED"""
+        pass
+
 class DynamicPrimitive(DynamicElement):
     """DynamicPrimitive represents the class of all elements that can be listed
         individually in the JSON file that themselves cannot group other 
@@ -366,6 +375,9 @@ class DynamicPrimitive(DynamicElement):
         if 'enabled' in self.attributes:
             self.setState(self.attributes['enabled'])
 
+    def setValue(self, value):
+        pass
+
     def getElementsDictionary(self):
         """Assemble a python dictionary mapping this object's string ID to its
             pointer.
@@ -418,7 +430,7 @@ class DynamicPrimitive(DynamicElement):
             msg = str(error)
 
         satisfied = False
-        if state == 'warning' or state == None:
+        if state == 'warning' or state == 'pass' or state == None:
             satisfied = True
         
         self.setBGcolorSatisfied(satisfied)
@@ -457,10 +469,13 @@ class DynamicPrimitive(DynamicElement):
         if self.validator.thread_finished():
             self.timer.stop()
             error, state = self.validator.get_error()
+            if state == None:
+                state = 'pass'
             self.set_error(error, state)
 
             # Toggle dependent elements based on the results of this validation
-            DynamicElement.setState(self, not bool(error), includeSelf=False,
+            enable = not self.has_error() and self.requirementsMet()
+            DynamicElement.setState(self, enable, includeSelf=False,
                 recursive=True)
 
 class InformationButton(QtGui.QPushButton):
@@ -561,10 +576,10 @@ class ErrorButton(InformationButton):
             button_icon = 'validate-fail.png'
         elif state == 'warning':
             button_icon = 'dialog-warning.png'
-
-        # If no error, change button settings accordingly.
-        if error_string == '':
+        elif state == 'pass':
             button_icon = 'validate-pass.png'
+
+        if state == 'pass' or state == None:
             button_is_flat = True
 
         self.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, button_icon)))
@@ -611,9 +626,6 @@ class LabeledElement(DynamicPrimitive):
 
     def setState(self, state, includeSelf=True, recursive=True):
         DynamicPrimitive.setState(self, state, includeSelf, recursive)
-
-        if state == True:
-            self.validate()
 
     def isEnabled(self):
         #Labeled elements are designed to have more than one element, but in
@@ -686,7 +698,8 @@ class DynamicText(LabeledElement):
         #create the new textField widget and save it locally.  This textfield
         #is consistent across all included subclasses of DynamicText, though
         #the way the textfield is used may differ from class to class.
-        self.textField = QtGui.QLineEdit()
+        if not hasattr(self, 'textField'):
+            self.textField = QtGui.QLineEdit()
 
         #All subclasses of DynamicText must contain at least these two elements.
         self.addElement(self.textField)
@@ -729,7 +742,6 @@ class DynamicText(LabeledElement):
         else:
             self.setState(self.requirementsMet(), includeSelf=False,
                 recursive=True)
-
 
     def setValidateField(self, regexp):
         """Set input validation on the text field to conform with the input
@@ -1055,6 +1067,10 @@ class GridList(DynamicGroup):
         super(GridList, self).__init__(attributes, QtGui.QGridLayout(), registrar)
 
 class FileEntry(DynamicText):
+    class FileField(QtGui.QLineEdit):
+        def dropEvent(self, event=None):
+            self.setText(event.mimeData().text())
+
     """This object represents a file.  It has three components, all of which
         are subclasses of QtGui.QWidget: a label (QtGui.QLabel), a textfield
         for the URI (QtGui.QLineEdit), and a button to engage the file dialog
@@ -1078,6 +1094,9 @@ class FileEntry(DynamicText):
             else:  # type is assumed to be file
                 validate_type = 'exists'
             attributes['validateAs'] = {"type": validate_type}
+
+        self.textField = self.FileField()
+
         super(FileEntry, self).__init__(attributes)
 
         try:
@@ -1089,6 +1108,7 @@ class FileEntry(DynamicText):
         if issubclass(self.__class__, FileEntry) and filter_type != 'folder':
             file_type = 'file'
 
+        self.textField.setAcceptDrops(True)
         self.button = FileButton(attributes['label'], self.textField,
             file_type, filter_type)
         self.addElement(self.button)
@@ -1167,13 +1187,17 @@ class FileButton(QtGui.QPushButton):
                                  "[GDAL] GeoTiff (*.tif *.tiff *.TIF *.TIFF)"],
                         "OGR": ["[OGR] ESRI Shapefiles (*.shp *.SHP)"]
                        }
+        self.last_filter = QtCore.QString()
 
         filters = self.filters['all']
         if filetype == 'file':
             if filter != 'all':
-                filters = self.filters[filter] + filters
+                try:
+                    filters += self.filters[filter.upper()]
+                except:
+                    print 'Could not find filters for %s' % filter.upper()
 
-        self.filter_string = ';;'.join(filters)
+        self.filter_string = QtCore.QString(';;'.join(filters))
 
         #connect the button (self) with the filename function.
         self.clicked.connect(self.getFileName)
@@ -1194,10 +1218,12 @@ class FileButton(QtGui.QPushButton):
 
         if self.filetype == 'folder':
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
+            filter = self.last_filter
         else:
             file_dialog = QtGui.QFileDialog()
-            filename = file_dialog.getOpenFileName(self, 'Select ' + self.text, '.',
-                filter=QtCore.QString(self.filter_string))
+            filename, filter = file_dialog.getOpenFileNameAndFilter(self, 'Select ' + self.text, '.',
+                filter=self.filter_string, initialFilter = self.last_filter)
+        self.last_filter = filter
 
         #Set the value of the URIfield.
         if filename == '':
@@ -1354,6 +1380,7 @@ class CheckBox(QtGui.QCheckBox, DynamicPrimitive):
         # boolean if the user has not specified differently.
         if 'dataType' not in attributes:
             attributes['dataType'] = 'boolean'
+
         QtGui.QCheckBox.__init__(self)
         DynamicPrimitive.__init__(self, attributes)
 
@@ -1697,6 +1724,7 @@ class MessageArea(QtGui.QLabel):
     def __init__(self):
         QtGui.QLabel.__init__(self)
         self.setWordWrap(True)
+        self.messages = []
 
     def clear(self):
         """Clear all text and set the stylesheet to none."""
@@ -1704,6 +1732,19 @@ class MessageArea(QtGui.QLabel):
         self.hide()
         self.setText('')
         self.setStyleSheet('')
+
+    def setText(self, text=None):
+        if text == None:
+            text = []
+        else:
+            text = [text + '<br/>']
+        messages = text + self.messages
+        string = "<br/>".join(messages)
+        QtGui.QLabel.setText(self, string)
+
+    def append(self, string):
+        self.messages.append(string)
+        self.setText()
 
     def setError(self, state):
         """Set the background color according to the error status passed in.
@@ -1755,17 +1796,6 @@ class Root(DynamicElement):
         else:
             self.layout().addWidget(self.body)
 
-        # Check to see if we should load the last run.  Defaults to false if the
-        # user has not specified.
-        try:
-            use_lastrun = attributes['loadLastRun']
-        except KeyError:
-            use_lastrun = True
-        self.lastRun = {}
-        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
-        if use_lastrun:
-            self.lastRun = self.last_run_handler.get_attributes()
-
         self.outputDict = {}
         self.allElements = self.body.getElementsDictionary()
 
@@ -1787,7 +1817,6 @@ class Root(DynamicElement):
         self.assembler = ElementAssembler(self.allElements)        
 
         self.embedded_uis = []
-        self.initElements()
 
     def find_and_replace(self, attributes):
         """Initiates a recursive search and replace of the attributes
@@ -1932,51 +1961,6 @@ class Root(DynamicElement):
         #for the given model.
         return
 
-    def saveLastRun(self):
-        """Saves the current values of all input elements to a JSON object on 
-            disc.
-            
-            returns nothing"""
-
-        user_args = {}
-
-        #loop through all elements known to the UI, assemble into a dictionary
-        #with the mapping element ID -> element value
-        for id, element in self.allElements.iteritems():
-            try:
-                user_args[id] = element.value()
-            except:
-                pass
-
-        self.last_run_handler.write_to_disk(user_args)
-
-    def initElements(self):
-        """Set the enabled/disabled state and text from the last run for all 
-            elements
-        
-            returns nothing"""
-
-        if self.lastRun == {}:
-            self.resetParametersToDefaults()
-        else:
-            for id, value in self.lastRun.iteritems():
-                try:
-                    element = self.allElements[str(id)]
-                    element.setValue(value)
-                except:
-                    pass
-
-            if hasattr(self, 'messageArea'):
-                self.messageArea.setText('Parameters have been loaded from the' +
-                    ' most recent run of this model.  <a href=\'default\'>' +
-                    ' Reset to defaults</a>')
-                try:
-                    self.messageArea.linkActivated.disconnect()
-                except TypeError:
-                    # Raised if we can't disconnect any signals
-                    pass
-                self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
-
     def assembleOutputDict(self):
         """Assemble an output dictionary for use in the target model
         
@@ -2037,6 +2021,21 @@ class Root(DynamicElement):
                 uis.append(element)
         return uis
 
+    def value(self):
+        user_args = {}
+
+        if self.isEnabled():
+            #loop through all elements known to the UI, assemble into a dictionary
+            #with the mapping element ID -> element value
+            for id, element in self.allElements.iteritems():
+                try:
+                    value = element.value()
+                    if value != None:
+                        user_args[id] = value
+                except:
+                    pass
+        return user_args
+
 class EmbeddedUI(Root):
     def __init__(self, attributes, registrar):
         uri = attributes['configURI']
@@ -2072,16 +2071,62 @@ class EmbeddedUI(Root):
         except KeyError:
             return None
 
+    def setValue(self, parameters):
+        for element_id, value in parameters.iteritems():
+            try:
+                self.allElements[element_id].setValue(value)
+            except KeyError:
+                print 'Could not find %s in EmbUI %s' % (element_id,
+                    self.attributes['id'])
+            except Exception as e:
+                print 'Error \'%s\' encountered setting %s to %s' %\
+                    (e, element_id, value)
+                print traceback.print_exc()
+
+class MainWindow(QtGui.QMainWindow):
+    def __init__(self, root_class, uri):
+        QtGui.QMainWindow.__init__(self)
+        self.ui = root_class(uri, self)
+        self.setCentralWidget(self.ui)
+
+        self.file_menu = QtGui.QMenu('&File')
+        self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
+        self.save_file_action = self.file_menu.addAction('&Save parameters ...')
+        self.exit_action = self.file_menu.addAction('Exit')
+        self.menuBar().addMenu(self.file_menu)
+
+        self.exit_action.triggered.connect(self.ui.closeWindow)
+        self.save_file_action.triggered.connect(self.ui.save_parameters_to_file)
+        self.load_file_action.triggered.connect(self.ui.load_parameters_from_file)
+
 class ExecRoot(Root):
-    def __init__(self, uri, layout, object_registrar):
+    def __init__(self, uri, layout, object_registrar, main_window=None):
+        if main_window == None:
+            self.main_window = self
+        else:
+            self.main_window = main_window # a pointer
+
         self.messageArea = MessageArea()
         self.messageArea.setError(False)
         Root.__init__(self, uri, layout, object_registrar)
+
+        # Check to see if we should load the last run.  Defaults to false if the
+        # user has not specified.
+        try:
+            use_lastrun = self.attributes['loadLastRun']
+        except KeyError:
+            use_lastrun = True
+        self.lastRun = {}
+        self.last_run_handler = fileio.LastRunHandler(self.attributes['modelName'])
+        if use_lastrun:
+            self.lastRun = self.last_run_handler.get_attributes()
+
         self.layout().addWidget(self.messageArea)
         self.addBottomButtons()
         self.setWindowSize()
         self.error_dialog = ErrorDialog()
         self.warning_dialog = WarningDialog()
+        self.initElements()
 
     def find_element_ptr(self, element_id):
         """Return an element pointer if found.  None if not found."""
@@ -2097,6 +2142,70 @@ class ExecRoot(Root):
                 emb_ptr = embedded_ui.find_element_ptr(element_id)
                 if emb_ptr != None:
                     return emb_ptr
+
+    def save_parameters_to_file(self):
+        filename = QtGui.QFileDialog.getSaveFileName(self, 'Select file to save...',
+            'rios_lastrun.rios', filter = QtCore.QString('RIOS Lastrun file' +
+            ' (*.rios);;All files (*.* *)'))
+        filename = str(filename)
+        save_handler = fileio.JSONHandler(filename)
+        save_handler.write_to_disk(self.value())
+        print 'parameters written to %s' % filename
+        basename = os.path.basename(filename)
+        self.messageArea.append('Parameters saved to %s' % basename)
+
+    def load_parameters_from_file(self):
+        filename = QtGui.QFileDialog.getOpenFileName(self, 'Select file to load...',
+            filter = QtCore.QString('RIOS Lastrun file' +
+            ' (*.rios);;All files (*.* *)'))
+        filename = str(filename)
+        load_handler = fileio.JSONHandler(filename)
+        attributes = load_handler.get_attributes()
+        self.load_elements_from_save(attributes)
+        basename = os.path.basename(filename)
+        self.messageArea.append('Parameters loaded from %s' % basename)
+
+
+    def saveLastRun(self):
+        """Saves the current values of all input elements to a JSON object on 
+            disc.
+            
+            returns nothing"""
+
+        self.last_run_handler.write_to_disk(self.value())
+
+    def load_elements_from_save(self, save_dict):
+        for id, value in save_dict.iteritems():
+            try:
+                element = self.allElements[str(id)]
+                element.setValue(value)
+            except Exception as e:
+                print traceback.print_exc()
+                print 'Error \'%s\' when setting lastrun value %s to %s' %\
+                    (e, value, str(id))
+
+
+    def initElements(self):
+        """Set the enabled/disabled state and text from the last run for all 
+            elements
+        
+            returns nothing"""
+
+        if self.lastRun == {}:
+            self.resetParametersToDefaults()
+        else:
+            self.load_elements_from_save(self.lastRun)
+
+            if hasattr(self, 'messageArea'):
+                self.messageArea.setText('Parameters have been loaded from the' +
+                    ' most recent run of this model.  <a href=\'default\'>' +
+                    ' Reset to defaults</a>')
+                try:
+                    self.messageArea.linkActivated.disconnect()
+                except TypeError:
+                    # Raised if we can't disconnect any signals
+                    pass
+                self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
 
     def setWindowSize(self):
         #this groups all elements together at the top, leaving the
@@ -2125,10 +2234,10 @@ class ExecRoot(Root):
         if height > screen_height:
             height = screen_height - 50
 
-        self.resize(width, height)
-        center_window(self)
+        self.main_window.resize(width, height)
+        center_window(self.main_window)
 
-        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
+        self.main_window.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
             'natcap_logo.png')))
 
     def resetParametersToDefaults(self):
@@ -2196,7 +2305,19 @@ class ExecRoot(Root):
         
             returns nothing"""
 
-        sys.exit(0)
+        dialog = WarningDialog()
+        dialog.setWindowTitle('Are you sure you want to quit?')
+        dialog.set_title('Really quit?')
+        dialog.set_icon('dialog-information-2.png')
+        dialog.body.setText('You will lose any unsaved changes to your ' +
+            'parameters.  Your existing RIOS workspaces will not be affected.')
+        dialog.ok_button.setText('Quit')
+
+        exit_code = dialog.exec_()
+        # An exit code of 0 means cancel.
+        # If the user pressed OK, the program should quit
+        if exit_code != 0:
+            sys.exit(0)
 
     def closeEvent(self, event=None):
         """Terminates the application. This function is a Qt-defined callback 
