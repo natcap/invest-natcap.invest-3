@@ -1209,7 +1209,7 @@ class FileButton(QtGui.QPushButton):
 
         if self.filetype == 'folder':
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
-            filter = QtCore.QString()
+            filter = self.last_filter
         else:
             file_dialog = QtGui.QFileDialog()
             filename, filter = file_dialog.getOpenFileNameAndFilter(self, 'Select ' + self.text, '.',
