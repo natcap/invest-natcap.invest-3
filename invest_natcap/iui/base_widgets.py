@@ -698,7 +698,8 @@ class DynamicText(LabeledElement):
         #create the new textField widget and save it locally.  This textfield
         #is consistent across all included subclasses of DynamicText, though
         #the way the textfield is used may differ from class to class.
-        self.textField = QtGui.QLineEdit()
+        if not hasattr(self, 'textField'):
+            self.textField = QtGui.QLineEdit()
 
         #All subclasses of DynamicText must contain at least these two elements.
         self.addElement(self.textField)
@@ -1066,6 +1067,10 @@ class GridList(DynamicGroup):
         super(GridList, self).__init__(attributes, QtGui.QGridLayout(), registrar)
 
 class FileEntry(DynamicText):
+    class FileField(QtGui.QLineEdit):
+        def dropEvent(self, event=None):
+            self.setText(event.mimeData().text())
+
     """This object represents a file.  It has three components, all of which
         are subclasses of QtGui.QWidget: a label (QtGui.QLabel), a textfield
         for the URI (QtGui.QLineEdit), and a button to engage the file dialog
@@ -1089,6 +1094,9 @@ class FileEntry(DynamicText):
             else:  # type is assumed to be file
                 validate_type = 'exists'
             attributes['validateAs'] = {"type": validate_type}
+
+        self.textField = self.FileField()
+
         super(FileEntry, self).__init__(attributes)
 
         try:
@@ -1100,6 +1108,7 @@ class FileEntry(DynamicText):
         if issubclass(self.__class__, FileEntry) and filter_type != 'folder':
             file_type = 'file'
 
+        self.textField.setAcceptDrops(True)
         self.button = FileButton(attributes['label'], self.textField,
             file_type, filter_type)
         self.addElement(self.button)
