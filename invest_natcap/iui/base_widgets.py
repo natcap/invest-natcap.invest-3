@@ -698,7 +698,8 @@ class DynamicText(LabeledElement):
         #create the new textField widget and save it locally.  This textfield
         #is consistent across all included subclasses of DynamicText, though
         #the way the textfield is used may differ from class to class.
-        self.textField = QtGui.QLineEdit()
+        if not hasattr(self, 'textField'):
+            self.textField = QtGui.QLineEdit()
 
         #All subclasses of DynamicText must contain at least these two elements.
         self.addElement(self.textField)
@@ -1066,6 +1067,11 @@ class GridList(DynamicGroup):
         super(GridList, self).__init__(attributes, QtGui.QGridLayout(), registrar)
 
 class FileEntry(DynamicText):
+    class FileField(QtGui.QLineEdit):
+        def dropEvent(self, event=None):
+            self.setText(event.mimeData().text())
+            event.acceptProposedAction()
+
     """This object represents a file.  It has three components, all of which
         are subclasses of QtGui.QWidget: a label (QtGui.QLabel), a textfield
         for the URI (QtGui.QLineEdit), and a button to engage the file dialog
@@ -1089,6 +1095,9 @@ class FileEntry(DynamicText):
             else:  # type is assumed to be file
                 validate_type = 'exists'
             attributes['validateAs'] = {"type": validate_type}
+
+        self.textField = self.FileField()
+
         super(FileEntry, self).__init__(attributes)
 
         try:
@@ -1100,6 +1109,7 @@ class FileEntry(DynamicText):
         if issubclass(self.__class__, FileEntry) and filter_type != 'folder':
             file_type = 'file'
 
+        self.textField.setAcceptDrops(True)
         self.button = FileButton(attributes['label'], self.textField,
             file_type, filter_type)
         self.addElement(self.button)
@@ -1209,6 +1219,7 @@ class FileButton(QtGui.QPushButton):
 
         if self.filetype == 'folder':
             filename = QtGui.QFileDialog.getExistingDirectory(self, 'Select ' + self.text, '.')
+            filter = self.last_filter
         else:
             file_dialog = QtGui.QFileDialog()
             filename, filter = file_dialog.getOpenFileNameAndFilter(self, 'Select ' + self.text, '.',
@@ -2138,22 +2149,24 @@ class ExecRoot(Root):
             'rios_lastrun.rios', filter = QtCore.QString('RIOS Lastrun file' +
             ' (*.rios);;All files (*.* *)'))
         filename = str(filename)
-        save_handler = fileio.JSONHandler(filename)
-        save_handler.write_to_disk(self.value())
-        print 'parameters written to %s' % filename
-        basename = os.path.basename(filename)
-        self.messageArea.append('Parameters saved to %s' % basename)
+        if filename != '':
+            save_handler = fileio.JSONHandler(filename)
+            save_handler.write_to_disk(self.value())
+            print 'parameters written to %s' % filename
+            basename = os.path.basename(filename)
+            self.messageArea.append('Parameters saved to %s' % basename)
 
     def load_parameters_from_file(self):
         filename = QtGui.QFileDialog.getOpenFileName(self, 'Select file to load...',
             filter = QtCore.QString('RIOS Lastrun file' +
             ' (*.rios);;All files (*.* *)'))
         filename = str(filename)
-        load_handler = fileio.JSONHandler(filename)
-        attributes = load_handler.get_attributes()
-        self.load_elements_from_save(attributes)
-        basename = os.path.basename(filename)
-        self.messageArea.append('Parameters loaded from %s' % basename)
+        if filename != '':
+            load_handler = fileio.JSONHandler(filename)
+            attributes = load_handler.get_attributes()
+            self.load_elements_from_save(attributes)
+            basename = os.path.basename(filename)
+            self.messageArea.append('Parameters loaded from %s' % basename)
 
 
     def saveLastRun(self):
