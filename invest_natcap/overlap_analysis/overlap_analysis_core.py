@@ -224,7 +224,6 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #rasterized aoi/layers, and the second will be a list of the original file names in
     #the same order as the layers so that the dictionaries with other weights can be
     #cross referenced. 
-    
     weighted_raster_files, weighted_raster_names = make_indiv_weight_rasters(inter_dir,
                                                                              aoi_raster,
                                                                              layers_dict,
@@ -261,7 +260,11 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         aoi_pixel = activity_pixels[0]
         
         if aoi_pixel == aoi_nodata:
-            return aoi_nodata
+        	return aoi_nodata
+
+	for i in range(1, n + 1):
+		pass
+        
         
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts some of the
@@ -302,8 +305,6 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     #other indicies without having to convert for the missing first element in names.
     weighted_names = ['aoi']
     
-    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
-    
     for element in layers_dict:
         
         datasource = layers_dict[element]
@@ -317,16 +318,10 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
         
         band.Fill(nodata)
         
-        gdal.RasterizeLayer(dataset, [1], layer, options = ["ATTRIBUTE= %s" %intra_name])
+        gdal.RasterizeLayer(dataset, [1], layer, options = ["ATTRIBUTE=%s" %intra_name])
         #this should do something about flushing the buffer
         dataset.FlushCache()
        
-	for feature in layer:
-		
-   		 attrib = feature.items()[intra_name]
-		 id = feature.items()['Id']
-		 LOGGER.debug("Id: " + str(id) + "--" + str(attrib))
- 
         weighted_raster_files.append(dataset)
         weighted_names.append(element)
         
