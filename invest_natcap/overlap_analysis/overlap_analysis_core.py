@@ -291,8 +291,10 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 	
 	curr_pix_sum = 0
 
-	if aoi_pixel = aoi_nodata:
+	if aoi_pixel == aoi_nodata:
 		return aoi_nodata
+	LOGGER.debug("Inter-dict-keys::::::::")
+	LOGGER.debug(inter_weights_dict.keys())
 
 	for i in range(1, n+1):
 		#Can assume that if we have gotten here, that intra-activity weighting
@@ -300,7 +302,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 		#are the intra weights.
 		layer_name = weighted_raster_names[i]
 		X = activity_pixels[i]
-		x_max = max_intra_weights[layer_name]	
+		X_max = max_intra_weights[layer_name]	
 		
 		U = X / X_max
 		I = None
@@ -383,7 +385,10 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
        
         weighted_raster_files.append(dataset)
         weighted_names.append(element)
-        
+   
+    LOGGER.debug("WeightedRaster keys:::::::")
+    LOGGER.debug(weighted_names)
+    
     return weighted_raster_files, weighted_names
         
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
@@ -435,5 +440,8 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         
         raster_files.append(dataset)
 	raster_names.append(element)
+    
+    LOGGER.debug("Raster keys:::::::")
+    LOGGER.debug(raster_names)
         
     return raster_files, raster_names
