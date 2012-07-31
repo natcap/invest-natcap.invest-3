@@ -227,7 +227,8 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     
     weighted_raster_files, weighted_raster_names = make_indiv_weight_rasters(inter_dir,
                                                                              aoi_raster,
-                                                                             layers_dict)
+                                                                             layers_dict,
+									     intra_name)
       
     #Need to get the X{max} now, so iterate through the features on a layer, and make a
     #dictionary that maps the name of the layer to the max potential 
@@ -243,7 +244,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             
             attribute = feature.items()[intra_name]
             
-            if not max_intra_weights[element] or max_intra_weights[element] < attribute:
+            if (not element in max_intra_weights) or max_intra_weights[element] < attribute:
                 max_intra_weights[element] = attribute
      
     #We also need to know the max inter activuty weight- for now that is a tuple,
@@ -262,7 +263,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         if aoi_pixel == aoi_nodata:
             return aoi_nodata
         
-def make_indiv_weight_rasters(dir, aoi_raster, layers_dict):
+def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts some of the
     work for getting the intra-activity weights per pixel to a separate function. This
     function will take in a list of the activities layers, and using the aoi_raster as a
@@ -281,6 +282,9 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict):
         layers_dict: A dictionary of all shapefiles to be rasterized. The key is the name
             of the original file, minus the file extension. The value is an open shapefile
             datasource.
+	intra_name: The string corresponding to the value we wish to pull out of the
+		shapefile layer. This is an attribute of all polygons corresponding to
+		the intra-activity weight of a given shape.
             
     Output:
         weighted_raster_files: A list of raster versions of the original activity
@@ -305,8 +309,8 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict):
         datasource = layers_dict[element]
         layer = datasource.GetLayer()
         
-        outgoing_uri = inter_dir + os.sep + element + ".tif"
-        
+        outgoing_uri = os.path.join(dir, element + ".tif")
+ 
         dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
                                 -1, gdal.GDT_Float32)
         band, nodata = raster_utils.extract_band_and_nodata(dataset)
@@ -316,7 +320,13 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict):
         gdal.RasterizeLayer(dataset, [1], layer, options = ["ATTRIBUTE= %s" %intra_name])
         #this should do something about flushing the buffer
         dataset.FlushCache()
-        
+       
+	for feature in layer:
+		
+   		 attrib = feature.items()[intra_name]
+		 id = feature.items()['Id']
+		 LOGGER.debug("Id: " + str(id) + "--" + str(attrib))
+ 
         weighted_raster_files.append(dataset)
         weighted_names.append(element)
         
