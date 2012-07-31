@@ -77,8 +77,6 @@ def execute(args):
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     
-    LOGGER.debug(args['zone_layer_file'])
-    LOGGER.debug(aoi_shp_layer)
     #Need to figure out what to do with management zones
     aoi_raster = raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
                                     int(args['grid_size']), gdal.GDT_Int32, -1, aoi_rast_file,
@@ -92,7 +90,7 @@ def execute(args):
     #the end. Could do a list of the filenames that we are creating within the
     #intermediate directory, so that we can access later. Want to pass in the
     #inter_dir, as well as the list of shapefiles, and the AOI raster to get info from
-    raster_files = make_indiv_rasters(inter_dir, args['overlap_files'], aoi_raster)
+    raster_files, raster_names = make_indiv_rasters(inter_dir, args['overlap_files'], aoi_raster)
     
     #When we go to actually burn, should have a "0" where there is AOI, not same as nodata
     activities_uri = os.path.join(output_dir, 'hu_freq.tif')
@@ -157,10 +155,10 @@ def execute(args):
         #Now we want to create a second raster that includes all of the weighting information
         create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
                                args['overlap_files'], intra_name, 
-                               args['do_inter'], args['do_intra'], raster_files)
+                               args['do_inter'], args['do_intra'], raster_files, raster_names)
         
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
-                           layers_dict, intra_name, do_inter, do_intra, raster_files):
+                           layers_dict, intra_name, do_inter, do_intra, raster_filesi, raster_names):
     '''This function will create an output raster that takes into account both inter-
     activity weighting and intra-activity weighting. This will produce a map that looks
     both at where activities are occurring, and how much people value those activities
@@ -184,6 +182,12 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         do_intra- A boolean that indicates whether intra-activity weighting is desired.
         aoi_raster- The dataset for our Area Of Interest. This will be the base map for
             all following datasets.
+	raster_files- A list of open unweighted raster files created my make_indiv_rasters
+	    that begins with the AOI raster. This will be used when intra-activity
+	    weighting is not desired.
+	raster_names- A list of file names that goes along with the unweighted raster files.
+	    These strings can be used as keys to the other ID-based dictionaries, and will
+	    be in the same order as the 'raster_files' list.
     Output:
         weighted_raster- A raster file output that takes into account both inter-activity
             weights and intra-activity weights.
@@ -215,7 +219,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #Want to set up vars that will be universal across all pixels first.
     #n should NOT include the AOI, since it is not an interest layer
     n = len(layers_dict)
-    
+    outgoing_uri = os.path.join(out_dir, 'hu_impscore.tif') 
+    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
+
     #If intra-activity weighting is desired, we need to create a whole new set of values,
     #where the burn value of each pixel is the attribute value of the polygon that it
     #resides within. This means that we need the AOI raster, and need to rebuild based on
@@ -224,7 +230,6 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #rasterized aoi/layers, and the second will be a list of the original file names in
     #the same order as the layers so that the dictionaries with other weights can be
     #cross referenced. 
-    
     weighted_raster_files, weighted_raster_names = make_indiv_weight_rasters(inter_dir,
                                                                              aoi_raster,
                                                                              layers_dict,
@@ -260,9 +265,68 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         
         aoi_pixel = activity_pixels[0]
         
+	curr_pix_sum = 0
+
         if aoi_pixel == aoi_nodata:
-            return aoi_nodata
-        
+        	return aoi_nodata
+
+	for i in range(1, n+1):
+		#This will either be a 0 or 1, since the burn value for the unweighted
+		#raster files was a 1.
+		U =  activity_pixels[i]
+		I = None
+		if do_inter:
+			layer_name = raster_names[i]
+			Y = inter_weights_dict[layer_name]
+			I = Y / max_inter_weights
+		else:
+			I = 1
+
+		#This is coming from the documentation, refer to additional info in the
+		#docstring
+		curr_pix_sum += ((1/n) * U * I)	
+    def combine_weighted_pixels_intra(*activity_pixels):
+
+	aoi_pixel = activity_pixels[0]
+	
+	curr_pix_sum = 0
+
+	if aoi_pixel == aoi_nodata:
+		return aoi_nodata
+	LOGGER.debug("Inter-dict-keys::::::::")
+	LOGGER.debug(inter_weights_dict.keys())
+
+	for i in range(1, n+1):
+		#Can assume that if we have gotten here, that intra-activity weighting
+		#is desired. Compute U for that weighting, assuming the raster pixels
+		#are the intra weights.
+		layer_name = weighted_raster_names[i]
+		X = activity_pixels[i]
+		X_max = max_intra_weights[layer_name]	
+		
+		U = X / X_max
+		I = None
+
+		if do_inter:
+			layer_name = raster_names[i]
+			Y = inter_weights_dict[layer_name]
+			I = Y / max_inter_weights
+		else:
+			I = 1
+
+		#This is coming from the documentation, refer to additional info in the
+		#docstring
+		curr_pix_sum += ((1/n) * U * I)	
+	
+    if do_intra:
+    	raster_utils.vectorize_rasters(weighted_raster_files, combine_weighted_pixels_intra,
+				   aoi = None, raster_out_uri = outgoing_uri, 
+                                   datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+    else:
+	raster_utils.vectorize_rasters(raster_files, combine_weighted_pixels,
+				   aoi = None, raster_out_uri = outgoing_uri,
+				   datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+  
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts some of the
     work for getting the intra-activity weights per pixel to a separate function. This
@@ -302,8 +366,6 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     #other indicies without having to convert for the missing first element in names.
     weighted_names = ['aoi']
     
-    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
-    
     for element in layers_dict:
         
         datasource = layers_dict[element]
@@ -317,19 +379,16 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
         
         band.Fill(nodata)
         
-        gdal.RasterizeLayer(dataset, [1], layer, options = ["ATTRIBUTE= %s" %intra_name])
+        gdal.RasterizeLayer(dataset, [1], layer, options = ["ATTRIBUTE=%s" %intra_name])
         #this should do something about flushing the buffer
         dataset.FlushCache()
        
-	for feature in layer:
-		
-   		 attrib = feature.items()[intra_name]
-		 id = feature.items()['Id']
-		 LOGGER.debug("Id: " + str(id) + "--" + str(attrib))
- 
         weighted_raster_files.append(dataset)
         weighted_names.append(element)
-        
+   
+    LOGGER.debug("WeightedRaster keys:::::::")
+    LOGGER.debug(weighted_names)
+    
     return weighted_raster_files, weighted_names
         
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
@@ -356,6 +415,7 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
     #aoi_raster has to be the first so that we can use it as an easy "weed out" for
     #pixel summary later
     raster_files = [aoi_raster]
+    raster_names = ['aoi']
     
     print overlap_files
     
@@ -379,5 +439,9 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         dataset.FlushCache()
         
         raster_files.append(dataset)
+	raster_names.append(element)
+    
+    LOGGER.debug("Raster keys:::::::")
+    LOGGER.debug(raster_names)
         
-    return raster_files
+    return raster_files, raster_names
