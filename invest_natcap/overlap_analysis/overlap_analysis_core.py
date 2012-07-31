@@ -77,8 +77,6 @@ def execute(args):
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     
-    LOGGER.debug(args['zone_layer_file'])
-    LOGGER.debug(aoi_shp_layer)
     #Need to figure out what to do with management zones
     aoi_raster = raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
                                     int(args['grid_size']), gdal.GDT_Int32, -1, aoi_rast_file,
@@ -92,7 +90,7 @@ def execute(args):
     #the end. Could do a list of the filenames that we are creating within the
     #intermediate directory, so that we can access later. Want to pass in the
     #inter_dir, as well as the list of shapefiles, and the AOI raster to get info from
-    raster_files = make_indiv_rasters(inter_dir, args['overlap_files'], aoi_raster)
+    raster_files, raster_names = make_indiv_rasters(inter_dir, args['overlap_files'], aoi_raster)
     
     #When we go to actually burn, should have a "0" where there is AOI, not same as nodata
     activities_uri = os.path.join(output_dir, 'hu_freq.tif')
@@ -157,10 +155,10 @@ def execute(args):
         #Now we want to create a second raster that includes all of the weighting information
         create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
                                args['overlap_files'], intra_name, 
-                               args['do_inter'], args['do_intra'], raster_files)
+                               args['do_inter'], args['do_intra'], raster_files, raster_names)
         
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
-                           layers_dict, intra_name, do_inter, do_intra, raster_files):
+                           layers_dict, intra_name, do_inter, do_intra, raster_filesi, raster_names):
     '''This function will create an output raster that takes into account both inter-
     activity weighting and intra-activity weighting. This will produce a map that looks
     both at where activities are occurring, and how much people value those activities
@@ -186,7 +184,10 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             all following datasets.
 	raster_files- A list of open unweighted raster files created my make_indiv_rasters
 	    that begins with the AOI raster. This will be used when intra-activity
-	    weighting is not desired. 
+	    weighting is not desired.
+	raster_names- A list of file names that goes along with the unweighted raster files.
+	    These strings can be used as keys to the other ID-based dictionaries, and will
+	    be in the same order as the 'raster_files' list.
     Output:
         weighted_raster- A raster file output that takes into account both inter-activity
             weights and intra-activity weights.
@@ -269,15 +270,52 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         if aoi_pixel == aoi_nodata:
         	return aoi_nodata
 
-	for i in range(1, n + 1):
+	for i in range(1, n+1):
 		#This will either be a 0 or 1, since the burn value for the unweighted
 		#raster files was a 1.
 		U =  activity_pixels[i]
 		I = None
 		if do_inter:
-			layer_name = 	
+			layer_name = raster_names[i]
+			Y = inter_weights_dict[layer_name]
+			I = Y / max_inter_weights
+		else:
+			I = 1
+
+		#This is coming from the documentation, refer to additional info in the
+		#docstring
+		curr_pix_sum += ((1/n) * U * I)	
+    def combine_weighted_pixels_intra(*activity_pixels):
+
+	aoi_pixel = activity_pixels[0]
 	
+	curr_pix_sum = 0
+
+	if aoi_pixel = aoi_nodata:
+		return aoi_nodata
+
+	for i in range(1, n+1):
+		#Can assume that if we have gotten here, that intra-activity weighting
+		#is desired. Compute U for that weighting, assuming the raster pixels
+		#are the intra weights.
+		layer_name = weighted_raster_names[i]
+		X = activity_pixels[i]
+		x_max = max_intra_weights[layer_name]	
 		
+		U = X / X_max
+		I = None
+
+		if do_inter:
+			layer_name = raster_names[i]
+			Y = inter_weights_dict[layer_name]
+			I = Y / max_inter_weights
+		else:
+			I = 1
+
+		#This is coming from the documentation, refer to additional info in the
+		#docstring
+		curr_pix_sum += ((1/n) * U * I)	
+	
     if do_intra:
     	raster_utils.vectorize_rasters(weighted_raster_files, combine_weighted_pixels_intra,
 				   aoi = None, raster_out_uri = outgoing_uri, 
@@ -287,7 +325,6 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 				   aoi = None, raster_out_uri = outgoing_uri,
 				   datatype = gdal.GDT_Float32, nodata = aoi_nodata)
   
-        
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts some of the
     work for getting the intra-activity weights per pixel to a separate function. This
