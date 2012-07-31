@@ -184,6 +184,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         do_intra- A boolean that indicates whether intra-activity weighting is desired.
         aoi_raster- The dataset for our Area Of Interest. This will be the base map for
             all following datasets.
+	raster_files- A list of open unweighted raster files created my make_indiv_rasters
+	    that begins with the AOI raster. This will be used when intra-activity
+	    weighting is not desired. 
     Output:
         weighted_raster- A raster file output that takes into account both inter-activity
             weights and intra-activity weights.
@@ -215,7 +218,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #Want to set up vars that will be universal across all pixels first.
     #n should NOT include the AOI, since it is not an interest layer
     n = len(layers_dict)
-    
+    outgoing_uri = os.path.join(out_dir, 'hu_impscore.tif') 
+    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
+
     #If intra-activity weighting is desired, we need to create a whole new set of values,
     #where the burn value of each pixel is the attribute value of the polygon that it
     #resides within. This means that we need the AOI raster, and need to rebuild based on
@@ -259,12 +264,29 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         
         aoi_pixel = activity_pixels[0]
         
+	curr_pix_sum = 0
+
         if aoi_pixel == aoi_nodata:
         	return aoi_nodata
 
 	for i in range(1, n + 1):
-		pass
-        
+		#This will either be a 0 or 1, since the burn value for the unweighted
+		#raster files was a 1.
+		U =  activity_pixels[i]
+		I = None
+		if do_inter:
+			layer_name = 	
+	
+		
+    if do_intra:
+    	raster_utils.vectorize_rasters(weighted_raster_files, combine_weighted_pixels_intra,
+				   aoi = None, raster_out_uri = outgoing_uri, 
+                                   datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+    else:
+	raster_utils.vectorize_rasters(raster_files, combine_weighted_pixels,
+				   aoi = None, raster_out_uri = outgoing_uri,
+				   datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+  
         
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts some of the
@@ -351,6 +373,7 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
     #aoi_raster has to be the first so that we can use it as an easy "weed out" for
     #pixel summary later
     raster_files = [aoi_raster]
+    raster_names = ['aoi']
     
     print overlap_files
     
@@ -374,5 +397,6 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         dataset.FlushCache()
         
         raster_files.append(dataset)
+	raster_names.append(element)
         
-    return raster_files
+    return raster_files, raster_names
