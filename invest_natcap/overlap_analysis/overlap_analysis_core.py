@@ -253,10 +253,10 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             if (not element in max_intra_weights) or max_intra_weights[element] < attribute:
                 max_intra_weights[element] = attribute
      
-    #We also need to know the max inter activuty weight- for now that is a tuple,
-    #so we will need to pick out the first element in the set, then get the max for
-    #all of them on the layer.
-    max_inter_weight = max(inter_weights_dict.values())    
+    #We also need to know the maximum of the inter-activity value weights, but only
+    #if inter-activity weighting is desired at all. If it is not, we don't need this
+    #value, so we can just set it to a None type.
+    max_inter_weight = max(inter_weights_dict.values()) if do_inter == True else None   
     
     #Assuming that inter-activity valuation is desired, whereas intra-activity is not,
     #we should use the original rasterized layers as the pixels to combine. If, on the
@@ -284,8 +284,8 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 			I = 1
 
 		#This is coming from the documentation, refer to additional info in the
-		#docstring
-		curr_pix_sum += ((1/n) * U * I)
+		#docstring. n gets cast to a float so that it can be used in division.
+		curr_pix_sum += ((1/float(n)) * U * I)
 	return curr_pix_sum	
     def combine_weighted_pixels_intra(*activity_pixels):
 	
@@ -315,7 +315,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 			I = 1
 
 		#This is coming from the documentation, refer to additional info in the
-		#docstring  
+		#docstring.
+		#n is getting cast to a float so that we can use non-integer division in
+		#the calculations.  
 		curr_pix_sum += ((1/float(n)) * U * I)
 	return curr_pix_sum
 
