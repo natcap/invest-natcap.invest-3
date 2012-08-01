@@ -157,7 +157,23 @@ def execute(args):
         create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
                                args['overlap_files'], intra_name, 
                                args['do_inter'], args['do_intra'], raster_files, raster_names)
-        
+   
+    make_param_file(args)
+
+def make_param_file(args):
+    ''' This function will output a .txt file that contains the user-selected parameters
+	for this run of the overlap_analysis model.
+	
+	Input:
+		args- The entire args dictionary which contains all information passed from the
+			the IUI. 
+	Ouput:
+		textfile- A .txt file output that will contain all user-controlled paramaters
+			that were selected for use with this run of the model.
+
+	Returns nothing.
+    '''
+     
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
                            layers_dict, intra_name, do_inter, do_intra, raster_filesi, raster_names):
     '''This function will create an output raster that takes into account both inter-
