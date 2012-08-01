@@ -289,16 +289,12 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 	return curr_pix_sum	
     def combine_weighted_pixels_intra(*activity_pixels):
 	
-	LOGGER.debug(activity_pixels)
-
 	aoi_pixel = activity_pixels[0]
 	
-	curr_pix_sum = 0
+	curr_pix_sum = 0.0
 
 	if aoi_pixel == aoi_nodata:
 		return aoi_nodata
-#	LOGGER.debug("Inter-dict-keys::::::::")
-#	LOGGER.debug(inter_weights_dict.keys())
 
 	for i in range(1, n+1):
 		#Can assume that if we have gotten here, that intra-activity weighting
@@ -320,8 +316,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 
 		#This is coming from the documentation, refer to additional info in the
 		#docstring  
-		curr_pix_sum += ((1/n) * U * I)
-#	LOGGER.debug("Pixel sum:::: " + str(curr_pix_sum))	
+		curr_pix_sum += ((1/float(n)) * U * I)
 	return curr_pix_sum
 
     if do_intra:
