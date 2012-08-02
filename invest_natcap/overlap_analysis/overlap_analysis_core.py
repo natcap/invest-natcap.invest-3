@@ -174,37 +174,37 @@ def make_param_file(args):
 	Returns nothing.
     '''
 
-	output_dir = os.path.join(args['workspace_dir'], 'Output')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
 
-	textfile  = os.path.join(output_dir, "Parameter_Log_[",
-				    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"), "].txt")
-	file = open(textfile, "w")
-	
-	list = []
-	list.append("ARGUMENTS \n")
-	list.append("Workspace: " + args['workspace_dir'])
-	list.append("Zone Layer: " + args['zone_layer_file'].GetName())
-	list.append("Gridding Desired?: " + args['do_grid'])
-	list.append("Inter-Activity Weighting Desired?: " + args['do_inter'])
-	list.append("Intra-Activity Weighting Desired?: " + args['do_intra'])
-	
-	list.append("Activity Layers: ")
-	for name in args['overlap_files'].keys():
-		list.append("--- " + name)
+    textfile  = os.path.join(output_dir, "Parameter_Log_[",
+                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"), "].txt")
+    file = open(textfile, "w")
+    
+    list = []
+    list.append("ARGUMENTS \n")
+    list.append("Workspace: " + args['workspace_dir'])
+    list.append("Zone Layer: " + args['zone_layer_file'].GetName())
+    list.append("Gridding Desired?: " + args['do_grid'])
+    list.append("Inter-Activity Weighting Desired?: " + args['do_inter'])
+    list.append("Intra-Activity Weighting Desired?: " + args['do_intra'])
+    
+    list.append("Activity Layers: ")
+    for name in args['overlap_files'].keys():
+        list.append("--- " + name)
 
-	list.append("\nOPTIONAL ARGUMENTS \n")
+    list.append("\nOPTIONAL ARGUMENTS \n")
 
-	if args['do_grid']:
-		list.append("Grid Size: " + args['grid_size'])
+    if args['do_grid']:
+        list.append("Grid Size: " + args['grid_size'])
 
-	if args['do_intra']:
-		list.append("Intra-Activity Field Name: " + args['intra_name'])
+    if args['do_intra']:
+        list.append("Intra-Activity Field Name: " + args['intra_name'])
 
-	for element in list:
-		file.write(element)
-		file.write("\n")
+    for element in list:
+        file.write(element)
+        file.write("\n")
 
-	file.close()
+    file.close()
 	
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
                            layers_dict, intra_name, do_inter, do_intra, raster_filesi, raster_names):
