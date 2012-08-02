@@ -141,11 +141,9 @@ def format_over_table(over_tbl):
                 
         Returns:
             over_dict- The analysis layer dictionary that maps the unique name of each
-                layer to the optional parameters of inter-activity weight and buffer.
-                Each string will map to a tuple containing the two values, with the
-                form being as follows ({Name: [inter-activity weight, buffer], ...}):
-                
-                {CommGF_Fish: (2.0, 0), CommSalmonTroll_Fish: (1.50, 0), ...}
+                layer to the optional parameter of inter-activity weight. For each entry,
+		the key will be the string name of the layer that it represents, and the 
+		value will be the inter-activity weight for that layer.                
     '''
     
     over_layer_file = open(over_tbl)
@@ -169,11 +167,9 @@ def format_over_table(over_tbl):
         for key in row:
             if 'Inter-Activity' in key and row[key] != '':
                 inter_act = float(row[key])
-            if 'Buffer' in key and row[key] != '':
-                buffer = float(row[key])
                 
         name = row['LIST OF HUMAN USES']
         
-        over_dict[name] = (inter_act, buffer)
+        over_dict[name] = inter_act
     
     return over_dict
