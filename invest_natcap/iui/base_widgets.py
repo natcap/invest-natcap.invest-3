@@ -3,6 +3,8 @@ import imp
 import os
 import time
 import traceback
+import re
+import platform
 
 from PyQt4 import QtGui, QtCore
 
@@ -1069,7 +1071,13 @@ class GridList(DynamicGroup):
 class FileEntry(DynamicText):
     class FileField(QtGui.QLineEdit):
         def dropEvent(self, event=None):
-            self.setText(event.mimeData().text())
+            print 'drop event!'
+            path = event.mimeData().urls()[0].path()
+            print path
+            if platform.system() == 'Windows':
+                path = path[1:]
+            # If we're on windows, remove the preceding /
+            self.setText(path)
             event.acceptProposedAction()
 
     """This object represents a file.  It has three components, all of which
