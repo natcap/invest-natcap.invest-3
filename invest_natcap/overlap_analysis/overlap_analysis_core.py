@@ -3,6 +3,7 @@ import os
 import math
 import logging
 import operator
+import datetime
 
 from osgeo import ogr
 from osgeo import gdal
@@ -181,17 +182,17 @@ def make_param_file(args):
 
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
-    textfile  = os.path.join(output_dir, "Parameter_Log_[",
-                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"), "].txt")
+    textfile  = os.path.join(output_dir, "Parameter_Log_[" + \
+                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") +  "].txt")
     file = open(textfile, "w")
     
     list = []
     list.append("ARGUMENTS \n")
     list.append("Workspace: " + args['workspace_dir'])
     list.append("Zone Layer: " + args['zone_layer_file'].GetName())
-    list.append("Gridding Desired?: " + args['do_grid'])
-    list.append("Inter-Activity Weighting Desired?: " + args['do_inter'])
-    list.append("Intra-Activity Weighting Desired?: " + args['do_intra'])
+    list.append("Gridding Desired?: " + str(args['do_grid']))
+    list.append("Inter-Activity Weighting Desired?: " + str(args['do_inter']))
+    list.append("Intra-Activity Weighting Desired?: " + str(args['do_intra']))
     
     list.append("Activity Layers: ")
     for name in args['overlap_files'].keys():
@@ -200,7 +201,7 @@ def make_param_file(args):
     list.append("\nOPTIONAL ARGUMENTS \n")
 
     if args['do_grid']:
-        list.append("Grid Size: " + args['grid_size'])
+        list.append("Grid Size: " + str(args['grid_size']))
 
     if args['do_intra']:
         list.append("Intra-Activity Field Name: " + args['intra_name'])

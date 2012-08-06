@@ -95,7 +95,7 @@
                     "id" : "IS_tbl",
                     "args_id" : "overlap_layer_tbl",
                     "type": "file",
-                    "label": "Analysis Cell Size",
+                    "label": "Inter-Activity Weight Table",
                     "defaultValue": "../OverlapAnalysis/Input/Fisheries_Inputs.csv",
                     "required": false,
                     "requiredIf": ["inter"],
