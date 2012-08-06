@@ -26,13 +26,16 @@ class TestOverlapAnalysis(unittest.TestCase):
         args['decay']- float between 0 and 1, representing the decay of interest
             in areas as you get farther away from human hubs.
         '''
-        args['workspace'] = './data/overlap_analysis'
+        args['workspace_dir'] = './data/overlap_analysis'
         args['zone_layer_loc'] = './data/overlap_analysis/AOI_WCVI.shp'
         args['do_grid'] = True
         args['grid_size'] = 1000
         args['overlap_data_dir_loc'] = './data/overlap_analysis/FisheriesLayers_RI'
         args['overlap_layer_tbl'] = './data/overlap_analysis/Fisheries_Inputs.csv'
-        
+		args['do_inter'] = True
+		args['do_intra'] = True
+
+
         self.args = args
         
     def test_execute(self):

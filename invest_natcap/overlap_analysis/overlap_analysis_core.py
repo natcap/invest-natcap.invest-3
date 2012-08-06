@@ -3,6 +3,7 @@ import os
 import math
 import logging
 import operator
+import datetime
 
 from osgeo import ogr
 from osgeo import gdal
@@ -37,8 +38,8 @@ def execute(args):
         args['over_layer_dict'] - A dictionary which contains the weights of each
             of the various shapefiles included in the 'overlap_files' dictionary.
             The dictionary key is the string name of the shapefile it represents,
-	    minus the .shp extension. This ID maps to a double representing that
-	    layer's inter-activity weight.
+	    	minus the .shp extension. This ID maps to a double representing that
+	    	layer's inter-activity weight.
         args['intra_name']- A string which corresponds to a field within the
            layers being passed in within overlap analysis directory. This is
            the intra-activity importance for each activity.
@@ -58,17 +59,22 @@ def execute(args):
             we are creating a raster with the shape burned onto a band of the same
             size as our AOI. 
         Weighted Rasterized Shapefiles- For each shapefile, if intra-activity
-	    weighting is also desired, we will create a rasterized file where the
-	    burn value is the 'intra_name' attribute of that particular polygon.
+	    	weighting is also desired, we will create a rasterized file where the
+	    	burn value is the 'intra_name' attribute of that particular polygon.
+			These files will be placed within a 'Weighted' folder within the
+			Intermediate directory.
     
     Output:
         activities_uri- This is a raster output which depicts the
             unweighted frequency of activity within a gridded area or management
             zone.
-        <Insert Raster Name Here>- This is a raster depicting the importance scores
-            for each grid or management zone in the area of interest.
-        Parameters Text File- A file created every time the model is run listing
-            all variable parameters used during that run.
+        hu_impscore.tif- This is a raster depicting the importance scores
+            for each grid or management zone in the area of interest. This
+			combines the desired inter or intra activity weighting into one raster
+			and is an explicitly named file within the make_weighted_raster function.
+        textfile- A file created every time the model is run listing all variable
+			parameters used during that run. This is created within the
+			make_param_file function. 
             
     Returns nothing.
     '''
@@ -176,17 +182,17 @@ def make_param_file(args):
 
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
-    textfile  = os.path.join(output_dir, "Parameter_Log_[",
-                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"), "].txt")
+    textfile  = os.path.join(output_dir, "Parameter_Log_[" + \
+                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") +  "].txt")
     file = open(textfile, "w")
     
     list = []
     list.append("ARGUMENTS \n")
     list.append("Workspace: " + args['workspace_dir'])
     list.append("Zone Layer: " + args['zone_layer_file'].GetName())
-    list.append("Gridding Desired?: " + args['do_grid'])
-    list.append("Inter-Activity Weighting Desired?: " + args['do_inter'])
-    list.append("Intra-Activity Weighting Desired?: " + args['do_intra'])
+    list.append("Gridding Desired?: " + str(args['do_grid']))
+    list.append("Inter-Activity Weighting Desired?: " + str(args['do_inter']))
+    list.append("Intra-Activity Weighting Desired?: " + str(args['do_intra']))
     
     list.append("Activity Layers: ")
     for name in args['overlap_files'].keys():
@@ -195,7 +201,7 @@ def make_param_file(args):
     list.append("\nOPTIONAL ARGUMENTS \n")
 
     if args['do_grid']:
-        list.append("Grid Size: " + args['grid_size'])
+        list.append("Grid Size: " + str(args['grid_size']))
 
     if args['do_intra']:
         list.append("Intra-Activity Field Name: " + args['intra_name'])
