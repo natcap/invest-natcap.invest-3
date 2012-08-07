@@ -8,24 +8,31 @@ import unittest
 
 import invest_test_core
 from invest_natcap.overlap_analysis import overlap_analysis_core
+from osgeo import ogr
 
 class TestOverlapAnalysisCore(unittest.TestCase):
 
     def setUp(self):
+
+		args = {}
+		args['workspace'] = './data/test_out/Overlap'
+		args['intermediate'] = os.path.join(args['workspace'], 'Intermediate')
+
+		if not os.path.isdir(args['intermediate']):
+			os.makedirs(args['intermediate'])
+			
+		args['do_grid'] = True
+		args['grid_size'] = 1000
+
+		self.args = args
         
-        args = {}
-        args['workspace'] = './data/test_out/Overlap'
-        args['intermediate'] = os.path.join(args['workspace'], 'Intermediate')
-        
-        if not os.path.isdir(args['intermediate']):
-            os.makedirs(args['intermediate'])
-            
-        args['map'] = './data/overlap_analysis/AOI_WCVI.shp'
-        args['dim'] = 1000
-        
-        self.args = args
-        
-    def test_gridder(self):
-        
-        overlap_analysis_core.gridder(self.args['intermediate'], self.args['map'],
-                                      self.args['dim'])
+	def test_reg_overall:
+		
+		self.args['zone_layer_file'] = ogr.Open('./data/overlap_analysis/AOI_WCVI.shp')
+		self.args['do_inter'] = True
+		self.args['do_intra'] = True
+
+		files_loc = './data/test_out/Overlap/Input/Test_Activity'
+
+		files_dict = {}
+
