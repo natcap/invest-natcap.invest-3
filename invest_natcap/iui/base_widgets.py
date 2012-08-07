@@ -1186,7 +1186,8 @@ class FileButton(QtGui.QPushButton):
                         "GDAL": ["[GDAL] Arc/Info Binary Grid (hdr.adf HDR.ADF hdr.ADF)",
                                  "[GDAL] Arc/Info ASCII Grid (*.asc *.ASC)",
                                  "[GDAL] GeoTiff (*.tif *.tiff *.TIF *.TIFF)"],
-                        "OGR": ["[OGR] ESRI Shapefiles (*.shp *.SHP)"]
+                        "OGR": ["[OGR] ESRI Shapefiles (*.shp *.SHP)"],
+                        "DBF": ["[DBF] dBase legacy file (*dbf *.DBF)"]
                        }
         self.last_filter = QtCore.QString()
 
