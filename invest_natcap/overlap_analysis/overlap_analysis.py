@@ -162,7 +162,6 @@ def format_over_table(over_tbl):
         
         #NEED TO FIGURE OUT IF THESE SHOULD BE 0 OR 1
         inter_act = 1
-        buffer = 0
         
         for key in row:
             if 'Inter-Activity' in key and row[key] != '':
