@@ -45,8 +45,6 @@ if platform.system() == 'Windows':
                         'invest_natcap.invest_core',
                         'invest_natcap.iui',
                         'invest_natcap.iui.dbfpy',
-			            'invest_natcap.recreation',
-                        'invest_natcap.sediment',
                         'invest_natcap.timber',
                         'invest_natcap.validator_core',
                         'invest_natcap.wave_energy',
@@ -54,8 +52,7 @@ if platform.system() == 'Windows':
                         'invest_natcap.finfish_aquaculture',
                         'invest_natcap.marine_water_quality',
                         'invest_natcap.biodiversity',
-                        'invest_natcap.coastal_vulnerability',
-                        'invest_natcap.overlap_analysis'],
+                        'invest_natcap.coastal_vulnerability'],
             #http://www.py2exe.org/index.cgi/ListOfOptions
             'skip_archive': True
             }
@@ -74,8 +71,7 @@ if platform.system() == 'Windows':
          'invest_marine_water_quality_biophysical.py',
          'invest_pollination_biophysical.py',
          'invest_pollination_valuation.py',
-         'invest_finfish_aquaculture.py',
-         'invest_sediment_biophysical.py']
+         'invest_finfish_aquaculture.py']
 
     #Need to manually bring along the json configuration files to
     #the current build directory
@@ -91,8 +87,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/pollination_biophysical.json',
                'invest_natcap/iui/pollination_valuation.json',
                'invest_natcap/iui/finfish_aquaculture.json',
-               'invest_natcap/iui/marine_water_quality_biophysical.json',
-               'invest_natcap/iui/sediment_biophysical.json']),
+               'invest_natcap/iui/marine_water_quality_biophysical.json']),
         ('invest_natcap/iui',
               ['invest_natcap/iui/dialog-close.png',
                'invest_natcap/iui/dialog-ok.png',
@@ -115,8 +110,6 @@ setup(name='invest_natcap',
                 'invest_natcap.invest_core',
                 'invest_natcap.iui',
                 'invest_natcap.iui.dbfpy',
-                'invest_natcap.recreation',
-                'invest_natcap.sediment',
                 'invest_natcap.timber',
                 'invest_natcap.validator_core',
                 'invest_natcap.wave_energy',
@@ -124,8 +117,7 @@ setup(name='invest_natcap',
                 'invest_natcap.finfish_aquaculture',
                 'invest_natcap.marine_water_quality',
                 'invest_natcap.biodiversity',
-                'invest_natcap.coastal_vulnerability',
-                'invest_natcap.overlap_analysis'],
+                'invest_natcap.coastal_vulnerability'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       ext_modules=[Extension(name="invest_cython_core",
