@@ -107,6 +107,22 @@ shapefile. We will have a completely separate set of outputs from the gridded ra
 
 	Returns nothing.
 '''
+	
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+
+	#Want to run through all polygons in the AOI, and see if any intersect or contain
+	#all shapefiles from all other layers. Little bit gnarly in terms of runtime, but
+	#at least doable.
+
+	zoned_shape = args['zone_layer_file']
+	layers_dict = args['over_layer_dict']
+
+	z_layer = zoned_shape.GetLayer()
+
+	for polygon in z_layer:
+
+		for activ in layers_dict: 
 
 def gridded_rasters(args):
 
