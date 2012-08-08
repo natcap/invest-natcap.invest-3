@@ -2276,6 +2276,29 @@ class ExecRoot(Root):
                 if exit_code == 0:
                     return
 
+            #If workspace has an output directory, prompt the user that it will
+            #be overwritten
+            if True:
+                dialog = WarningDialog()
+                dialog.setWindowTitle('Output Exists')
+                dialog.set_title('Output Exists')
+                dialog.set_icon('dialog-information-2.png')
+                dialog.body.setText('The directory workspace/output ' + 
+                    'exists.  Are you sure you want overwrite output from ' +
+                    'previous model run?')
+                dialog.ok_button.setText('Run Model')
+                dialog.ok_button.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 
+                    'dialog-ok.png')))
+                exit_code = dialog.exec_()
+                # An exit code of 0 means go back.
+                if exit_code == 0:
+                    return
+
+            # A non-0 exit code means go go go, so just fall through
+
+
+
+
             # Check to see if the user has specified whether we should save the
             # last run.  If the user has not specified, assume that the last run
             # should be saved.
