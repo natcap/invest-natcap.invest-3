@@ -65,22 +65,96 @@ def execute(args):
 			Intermediate directory.
     
     Output:
-        activities_uri- This is a raster output which depicts the
-            unweighted frequency of activity within a gridded area or management
-            zone.
-        hu_impscore.tif- This is a raster depicting the importance scores
-            for each grid or management zone in the area of interest. This
-			combines the desired inter or intra activity weighting into one raster
-			and is an explicitly named file within the make_weighted_raster function.
+		(If Rasters):
+			activities_uri- This is a raster output which depicts the
+				unweighted frequency of activity within a gridded area or management
+				zone.
+			hu_impscore.tif- This is a raster depicting the importance scores
+				for each grid or management zone in the area of interest. This
+				combines the desired inter or intra activity weighting into one raster
+				and is an explicitly named file within the make_weighted_raster function.
+		(If Shapefile):
+			zone_shapefile- An updated version of the args['zone_layer_file'] that came
+				in through the IUI. We will copy that datasource, and create a version
+				that also contains an "activities count" field which specifies how many
+				activities are performed within each polygon.
         textfile- A file created every time the model is run listing all variable
 			parameters used during that run. This is created within the
 			make_param_file function. 
             
     Returns nothing.
     '''
+	#We need to have two different tracks. One in which the managamenet zones should
+	#be used- in which case, we will only be returning one file, but it will be
+	#constructed differently from the gridded. Or, we would have the standard return,
+	#in which case, we would be rasterizing the shapefile.
+	
+	#Make rasters
+	if (args['do_grid']):
+		gridded_rasters(args)
+		
+	#Make a single shape
+	else:
+		zone_shapefiles(args)
+   	
+	#This file should be output regardless of the input file.
+    make_param_file(args)
+
+def zone_shapefile(args):
+'''This function describes all that should be done if we should have a management zoned
+shapefile. We will have a completely separate set of outputs from the gridded rasters.
+	
+	Input:
+		args- The entire arguments dictionary, as passed in by the overlap_analysis.py
+			module.
+
+	Output:
+		zoned_shape.shp- This is a shapefile output identical to the one passed in, except
+			that it will contain the additional field of activity number per polygon.
+
+	Returns nothing.
+'''
+	
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-    
+
+	#Want to run through all polygons in the AOI, and see if any intersect or contain
+	#all shapefiles from all other layers. Little bit gnarly in terms of runtime, but
+	#at least doable.
+
+	zoned_shape_old = args['zone_layer_file']
+	layers_dict = args['over_layer_dict']
+	
+	path = os.path.join(output_dir, 'zone_shape.shp')
+
+	#This creates a new shapefile that is a copy of the old one, but at the path location
+	#That way we can edit without worrying about changing the Input file.
+	z_copy = zone_shape_old.CopyDataSource(zoned_shape_old, path)
+
+	z_layer = z_copy.GetLayer()
+
+	#Creating a definition for our new activity count field.
+	field_defn = ogr.FieldDefn('ACTIVITY_COUNT', ogr.OFTReal)
+	z_layer.CreeateField(field_defn)
+
+	for polygon in z_layer:
+		
+		count = 0
+
+		for activ in layers_dict: 
+			
+			shape_file = layers_dict[activ]
+			layer = shape_file.GetLayer()
+			
+			for element in layer:
+			#If it contains or overlaps
+				count += 1
+
+def gridded_rasters(args):
+
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     
@@ -163,8 +237,7 @@ def execute(args):
         create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
                                args['overlap_files'], intra_name, 
                                args['do_inter'], args['do_intra'], raster_files, raster_names)
-   
-    make_param_file(args)
+	
 
 def make_param_file(args):
     ''' This function will output a .txt file that contains the user-selected parameters
