@@ -207,7 +207,7 @@ def gridded_rasters(args):
          
         return sum_pixel   
         
-    LOGGER.debug(raster_files)
+    #LOGGER.debug(raster_files)
     raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi = None,
                                    raster_out_uri = activities_uri, 
                                    datatype = gdal.GDT_Int32, nodata = aoi_nodata)
@@ -283,7 +283,7 @@ def make_param_file(args):
     file.close()
     
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
-                           layers_dict, intra_name, do_inter, do_intra, raster_filesi, raster_names):
+                           layers_dict, intra_name, do_inter, do_intra, raster_files, raster_names):
     '''This function will create an output raster that takes into account both inter-
     activity weighting and intra-activity weighting. This will produce a map that looks
     both at where activities are occurring, and how much people value those activities
@@ -340,7 +340,10 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
                             activities.
                 Else:
                     I{j} = 1
-    '''    
+    '''
+    #LOGGER.debug(":::::")
+    #LOGGER.debug(raster_names)
+
     #Want to set up vars that will be universal across all pixels first.
     #n should NOT include the AOI, since it is not an interest layer
     n = len(layers_dict)
@@ -358,7 +361,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     weighted_raster_files, weighted_raster_names = make_indiv_weight_rasters(inter_dir,
                                                                              aoi_raster,
                                                                              layers_dict,
-                                         intra_name)
+                                                                             intra_name)
       
     #Need to get the X{max} now, so iterate through the features on a layer, and make a
     #dictionary that maps the name of the layer to the max potential 
@@ -423,6 +426,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             return aoi_nodata
 
         for i in range(1, n+1):
+
             #Can assume that if we have gotten here, that intra-activity weighting
             #is desired. Compute U for that weighting, assuming the raster pixels
             #are the intra weights.
@@ -518,9 +522,6 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
         weighted_raster_files.append(dataset)
         weighted_names.append(element)
    
-    #LOGGER.debug("WeightedRaster keys:::::::")
-    #LOGGER.debug(weighted_names)
-    
     return weighted_raster_files, weighted_names
         
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
@@ -571,9 +572,6 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         dataset.FlushCache()
         
         raster_files.append(dataset)
-    raster_names.append(element)
+        raster_names.append(element)
     
-    #LOGGER.debug("Raster keys:::::::")
-    #LOGGER.debug(raster_names)
-       
     return raster_files, raster_names

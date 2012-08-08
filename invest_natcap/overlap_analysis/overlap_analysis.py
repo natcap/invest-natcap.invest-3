@@ -89,6 +89,8 @@ def execute(args):
       
     #Abstracting this to its own function for use in testing. Returns dictionary.
     file_dict = get_files_dict(args['overlap_data_dir_loc'])
+    #LOGGER.debug(file_dict)
+    #LOGGER.debug("MMMMMMMMMMMMMMMMM")
     oa_args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
@@ -128,7 +130,6 @@ def get_files_dict(folder):
     #file with the key of it's filename without the extension, and that whole
     #dictionary is made an argument of the oa_args dictionary
     file_names = glob.glob(os.path.join(folder, '*.shp'))
-    
     file_dict = {}
     
     for file in file_names:
@@ -139,7 +140,7 @@ def get_files_dict(folder):
         #the file extension, and the second is the extension itself 
         name = os.path.splitext(os.path.split(file)[1])[0]
         file_dict[name] = ogr.Open(file)
-    
+   
     return file_dict
 
 def format_over_table(over_tbl):
@@ -161,6 +162,8 @@ def format_over_table(over_tbl):
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
 
+    
+
     over_dict = {}
 
     #USING EXPLICIT STRING CALLS to the layers table (these should not be unique to the
@@ -168,6 +171,7 @@ def format_over_table(over_tbl):
     #casting both of the optional values to floats, since both will be used for later
     #calculations.
     for row in reader:
+        LOGGER.debug(row)     
         
         #Setting the default values for inter-activity weight and buffer, since they
         #are not actually required to be filled in.
