@@ -65,13 +65,19 @@ def execute(args):
 			Intermediate directory.
     
     Output:
-        activities_uri- This is a raster output which depicts the
-            unweighted frequency of activity within a gridded area or management
-            zone.
-        hu_impscore.tif- This is a raster depicting the importance scores
-            for each grid or management zone in the area of interest. This
-			combines the desired inter or intra activity weighting into one raster
-			and is an explicitly named file within the make_weighted_raster function.
+		(If Rasters):
+			activities_uri- This is a raster output which depicts the
+				unweighted frequency of activity within a gridded area or management
+				zone.
+			hu_impscore.tif- This is a raster depicting the importance scores
+				for each grid or management zone in the area of interest. This
+				combines the desired inter or intra activity weighting into one raster
+				and is an explicitly named file within the make_weighted_raster function.
+		(If Shapefile):
+			zone_shapefile- An updated version of the args['zone_layer_file'] that came
+				in through the IUI. We will copy that datasource, and create a version
+				that also contains an "activities count" field which specifies how many
+				activities are performed within each polygon.
         textfile- A file created every time the model is run listing all variable
 			parameters used during that run. This is created within the
 			make_param_file function. 
@@ -90,7 +96,8 @@ def execute(args):
 	#Make a single shape
 	else:
 		zone_shapefiles(args)
-   
+   	
+	#This file should be output regardless of the input file.
     make_param_file(args)
 
 def zone_shapefile(args):
@@ -102,7 +109,7 @@ shapefile. We will have a completely separate set of outputs from the gridded ra
 			module.
 
 	Output:
-		zoned_shape- This is a shapefile output identical to the one passed in, except
+		zoned_shape.shp- This is a shapefile output identical to the one passed in, except
 			that it will contain the additional field of activity number per polygon.
 
 	Returns nothing.
@@ -115,14 +122,27 @@ shapefile. We will have a completely separate set of outputs from the gridded ra
 	#all shapefiles from all other layers. Little bit gnarly in terms of runtime, but
 	#at least doable.
 
-	zoned_shape = args['zone_layer_file']
+	zoned_shape_old = args['zone_layer_file']
 	layers_dict = args['over_layer_dict']
+	
+	path = os.path.join(output_dir, 'zone_shape.shp')
 
-	z_layer = zoned_shape.GetLayer()
+	#This creates a new shapefile that is a copy of the old one, but at the path location
+	#That way we can edit without worrying about changing the Input file.
+	z_copy = zone_shape_old.CopyDataSource(zoned_shape_old, path)
+
+	z_layer = z_copy.GetLayer()
 
 	for polygon in z_layer:
 
 		for activ in layers_dict: 
+			
+			shape_file = layers_dict[activ]
+			layer = shape_file.GetLayer()
+			
+			for element in layer:
+			#If it contains or overlaps
+				pass
 
 def gridded_rasters(args):
 
