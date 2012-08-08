@@ -109,79 +109,78 @@ def execute(args):
 	overlap_analysis_core.execute(oa_args)
 
 def get_files_dict(folder):
-'Returns a dictionary of all .shp files in the folder.
+	'''Returns a dictionary of all .shp files in the folder.
 
-	Input:
-		folder- The location of all layer files. Among these, there should be
-			files with the extension .shp. These will be used for all
-			activity calculations.
+		Input:
+			folder- The location of all layer files. Among these, there should be
+				files with the extension .shp. These will be used for all
+				activity calculations.
 
-	Returns:
-		file_dict- A dictionary which maps the name (minus file extension) of
-			a shapefile to the open datasource itself. The key in this dictionary
-			is the name of the file (not including file path or extension), and 
-			the value is the open shapefile.
-'''
+		Returns:
+			file_dict- A dictionary which maps the name (minus file extension) of
+				a shapefile to the open datasource itself. The key in this dictionary
+				is the name of the file (not including file path or extension), and 
+				the value is the open shapefile.
+	'''
 
-    #Glob.glob gets all of the files that fall into the form .shp, and makes them
-    #into a list. Then, each item in the list is added to a dictionary as an open
-    #file with the key of it's filename without the extension, and that whole
-    #dictionary is made an argument of the oa_args dictionary
-    file_names = glob.glob(os.path.join(folder, '*.shp'))
+	#Glob.glob gets all of the files that fall into the form .shp, and makes them
+	#into a list. Then, each item in the list is added to a dictionary as an open
+	#file with the key of it's filename without the extension, and that whole
+	#dictionary is made an argument of the oa_args dictionary
+	file_names = glob.glob(os.path.join(folder, '*.shp'))
     
-    file_dict = {}
+	file_dict = {}
     
-    for file in file_names:
+	for file in file_names:
         
         #The return of os.path.split is a tuple where everything after the final slash
         #is returned as the 'tail' in the second element of the tuple
         #path.splitext returns a tuple such that the first element is what comes before
         #the file extension, and the second is the extension itself 
-        name = os.path.splitext(os.path.split(file)[1])[0]
-        file_dict[name] = ogr.Open(file)
+		name = os.path.splitext(os.path.split(file)[1])[0]
+		file_dict[name] = ogr.Open(file)
 	
 	return file_dict
 
 def format_over_table(over_tbl):
-    '''This CSV file contains a string which can be used to uniquely identify a .shp
-    file to which the values in that string's row will correspond. This string,
-    therefore, should be used as the key for the ovlap_analysis dictionary, so that we
-    can get all corresponding values for a shapefile at once by knowing its name.
-    
-        Input:
-            over_tbl- A CSV that contains a list of each interest shapefile, and any 
-            the optional buffers and weights of the layers.
+	'''This CSV file contains a string which can be used to uniquely identify a .shp
+	file to which the values in that string's row will correspond. This string,
+	therefore, should be used as the key for the ovlap_analysis dictionary, so that we
+	can get all corresponding values for a shapefile at once by knowing its name.
+
+		Input:
+			over_tbl- A CSV that contains a list of each interest shapefile, and any 
+			the optional buffers and weights of the layers.
+				
+		Returns:
+			over_dict- The analysis layer dictionary that maps the unique name of each
+				layer to the optional parameter of inter-activity weight. For each entry,
+				the key will be the string name of the layer that it represents, and the 
+				value will be the inter-activity weight for that layer.                
+	'''
+	over_layer_file = open(over_tbl)
+	reader = csv.DictReader(over_layer_file)
+
+	over_dict = {}
+
+	#USING EXPLICIT STRING CALLS to the layers table (these should not be unique to the
+	#type of table, but rather, are items that ALL layers tables should contain). I am
+	#casting both of the optional values to floats, since both will be used for later
+	#calculations.
+	for row in reader:
+        
+		#Setting the default values for inter-activity weight and buffer, since they
+		#are not actually required to be filled in.
+
+		#NEED TO FIGURE OUT IF THESE SHOULD BE 0 OR 1
+		inter_act = 1
+
+		for key in row:
+			if 'Inter-Activity' in key and row[key] != '':
+				inter_act = float(row[key])
                 
-        Returns:
-            over_dict- The analysis layer dictionary that maps the unique name of each
-                layer to the optional parameter of inter-activity weight. For each entry,
-		the key will be the string name of the layer that it represents, and the 
-		value will be the inter-activity weight for that layer.                
-    '''
-    
-    over_layer_file = open(over_tbl)
-    reader = csv.DictReader(over_layer_file)
-    
-    over_dict = {}
-    
-    #USING EXPLICIT STRING CALLS to the layers table (these should not be unique to the
-    #type of table, but rather, are items that ALL layers tables should contain). I am
-    #casting both of the optional values to floats, since both will be used for later
-    #calculations.
-    for row in reader:
+			name = row['LIST OF HUMAN USES']
         
-        #Setting the default values for inter-activity weight and buffer, since they
-        #are not actually required to be filled in.
-        
-        #NEED TO FIGURE OUT IF THESE SHOULD BE 0 OR 1
-        inter_act = 1
-        
-        for key in row:
-            if 'Inter-Activity' in key and row[key] != '':
-                inter_act = float(row[key])
-                
-        name = row['LIST OF HUMAN USES']
-        
-        over_dict[name] = inter_act
+		over_dict[name] = inter_act
     
-    return over_dict
+	return over_dict

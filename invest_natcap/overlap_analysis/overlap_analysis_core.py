@@ -16,55 +16,55 @@ ogr.UseExceptions()
 gdal.UseExceptions()
 
 def execute(args):
-    '''This function will take the properly formatted arguments passed to it by
-    overlap_analysis.py in the args dictionary, and perform calculations using
-    these data to determine the optimal areas for activities.
-    
-    Input:
-        args['workspace_dir'] - The directory in which all output and intermediate
-            files should be placed.
-        args['zone_layer_file'] - This is the shapefile representing our area of
-            interest. If 'do_grid' is true, we will rasterize this using cells of
-            'grid_size' by 'grid_size'.
-        args['do_grid'] - This tells us whether the area of interest file that was
-            being passed in was a management zone divided shapefile, or was
-            pre-gridded into identical squares.
-        args['grid_size'] - This is the size of 1 side of each of the square polygons
-            present on 'zone_layer_file'. This can be used to set the size of the
-            pixels for the intermediate rasters.
-        args['overlap_files'] - A dictionary which maps the name of the shapefile
-            (excluding the .shp extension) to the open datasource itself. This can
-            be used directly.
-        args['over_layer_dict'] - A dictionary which contains the weights of each
-            of the various shapefiles included in the 'overlap_files' dictionary.
-            The dictionary key is the string name of the shapefile it represents,
-	    	minus the .shp extension. This ID maps to a double representing that
-	    	layer's inter-activity weight.
-        args['intra_name']- A string which corresponds to a field within the
-           layers being passed in within overlap analysis directory. This is
-           the intra-activity importance for each activity.
-        args['hum_use_hubs_loc']- An open shapefile of major hubs of human 
-            activity. This would allow you to degrade the weight of activity
-            zones as they get farther away from these locations.
-        args['decay']- float between 0 and 1, representing the decay of interest
-           in areas as you get farther away from human hubs.
-        args['do-inter']-Boolean that indicates whether or not inter-activity
-            weighting is desired. This tells us if the overlap table exists.
-        args['do_intra']- Boolean which indicates whether or not intra-activity
-            weighting is desired. This will will pull attributes from shapefiles
-            passed in in 'zone_layer_file'.
-    
-    Intermediate:
-        Rasterized Shapefiles- For each shapefile that we passed in 'overlap_files'
-            we are creating a raster with the shape burned onto a band of the same
-            size as our AOI. 
-        Weighted Rasterized Shapefiles- For each shapefile, if intra-activity
-	    	weighting is also desired, we will create a rasterized file where the
-	    	burn value is the 'intra_name' attribute of that particular polygon.
+	'''This function will take the properly formatted arguments passed to it by
+	overlap_analysis.py in the args dictionary, and perform calculations using
+	these data to determine the optimal areas for activities.
+
+	Input:
+		args['workspace_dir'] - The directory in which all output and intermediate
+			files should be placed.
+		args['zone_layer_file'] - This is the shapefile representing our area of
+			interest. If 'do_grid' is true, we will rasterize this using cells of
+			'grid_size' by 'grid_size'.
+		args['do_grid'] - This tells us whether the area of interest file that was
+			being passed in was a management zone divided shapefile, or was
+			pre-gridded into identical squares.
+		args['grid_size'] - This is the size of 1 side of each of the square polygons
+			present on 'zone_layer_file'. This can be used to set the size of the
+			pixels for the intermediate rasters.
+		args['overlap_files'] - A dictionary which maps the name of the shapefile
+			(excluding the .shp extension) to the open datasource itself. This can
+			be used directly.
+		args['over_layer_dict'] - A dictionary which contains the weights of each
+			of the various shapefiles included in the 'overlap_files' dictionary.
+			The dictionary key is the string name of the shapefile it represents,
+			minus the .shp extension. This ID maps to a double representing that
+			layer's inter-activity weight.
+		args['intra_name']- A string which corresponds to a field within the
+		   layers being passed in within overlap analysis directory. This is
+		   the intra-activity importance for each activity.
+		args['hum_use_hubs_loc']- An open shapefile of major hubs of human 
+			activity. This would allow you to degrade the weight of activity
+			zones as they get farther away from these locations.
+		args['decay']- float between 0 and 1, representing the decay of interest
+			in areas as you get farther away from human hubs.
+		args['do-inter']-Boolean that indicates whether or not inter-activity
+			weighting is desired. This tells us if the overlap table exists.
+		args['do_intra']- Boolean which indicates whether or not intra-activity
+			weighting is desired. This will will pull attributes from shapefiles
+			passed in in 'zone_layer_file'.
+
+	Intermediate:
+		Rasterized Shapefiles- For each shapefile that we passed in 'overlap_files'
+			we are creating a raster with the shape burned onto a band of the same
+			size as our AOI. 
+		Weighted Rasterized Shapefiles- For each shapefile, if intra-activity
+			weighting is also desired, we will create a rasterized file where the
+			burn value is the 'intra_name' attribute of that particular polygon.
 			These files will be placed within a 'Weighted' folder within the
 			Intermediate directory.
-    
-    Output:
+
+	Output:
 		(If Rasters):
 			activities_uri- This is a raster output which depicts the
 				unweighted frequency of activity within a gridded area or management
@@ -78,17 +78,16 @@ def execute(args):
 				in through the IUI. We will copy that datasource, and create a version
 				that also contains an "activities count" field which specifies how many
 				activities are performed within each polygon.
-        textfile- A file created every time the model is run listing all variable
+		textfile- A file created every time the model is run listing all variable
 			parameters used during that run. This is created within the
 			make_param_file function. 
-            
-    Returns nothing.
-    '''
+
+		Returns nothing.'''
 	#We need to have two different tracks. One in which the managamenet zones should
 	#be used- in which case, we will only be returning one file, but it will be
 	#constructed differently from the gridded. Or, we would have the standard return,
 	#in which case, we would be rasterizing the shapefile.
-	
+
 	#Make rasters
 	if (args['do_grid']):
 		gridded_rasters(args)
@@ -98,25 +97,23 @@ def execute(args):
 		zone_shapefiles(args)
    	
 	#This file should be output regardless of the input file.
-    make_param_file(args)
+	make_param_file(args)
 
 def zone_shapefile(args):
-'''This function describes all that should be done if we should have a management zoned
-shapefile. We will have a completely separate set of outputs from the gridded rasters.
-	
-	Input:
-		args- The entire arguments dictionary, as passed in by the overlap_analysis.py
-			module.
+	'''This function describes all that should be done if we should have a management zoned
+	shapefile. We will have a completely separate set of outputs from the gridded rasters.
+		
+		Input:
+			args- The entire arguments dictionary, as passed in by the overlap_analysis.py
+				module.
 
-	Output:
-		zoned_shape.shp- This is a shapefile output identical to the one passed in, except
-			that it will contain the additional field of activity number per polygon.
+		Output:
+			zoned_shape.shp- This is a shapefile output identical to the one passed in, except
+				that it will contain the additional field of activity number per polygon.
 
-	Returns nothing.
-'''
-	
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+		Returns nothing.'''
+	output_dir = os.path.join(args['workspace_dir'], 'Output')
+	inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
 	#Want to run through all polygons in the AOI, and see if any intersect or contain
 	#all shapefiles from all other layers. Little bit gnarly in terms of runtime, but
@@ -124,7 +121,7 @@ shapefile. We will have a completely separate set of outputs from the gridded ra
 
 	zoned_shape_old = args['zone_layer_file']
 	layers_dict = args['over_layer_dict']
-	
+
 	path = os.path.join(output_dir, 'zone_shape.shp')
 
 	#This creates a new shapefile that is a copy of the old one, but at the path location
