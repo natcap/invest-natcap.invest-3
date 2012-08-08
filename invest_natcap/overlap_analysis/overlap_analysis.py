@@ -11,105 +11,102 @@ from invest_natcap.overlap_analysis import overlap_analysis_core
 
 LOGGER = logging.getLogger('overlap_analysis')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+	%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
-    '''This function will take care of preparing files passed into 
-    the overlap analysis model. It will handle all files/inputs associated
-    with calculations and manipulations. It will create objects to be 
-    passed to the overlap_analysis_core.py module. It may write log, 
-    warning, or error messages to stdout.
-    
-    Input:
-        args: A python dictionary created by the UI and passed to this method.
-            It will contain the following data.
-        args['workspace_dir']- The directory in which to place all resulting files,
-            will come in as a string.
-        args['zone_layer_loc']- A URI pointing to a shapefile with the analysis
-            zones on it.
-        args['do_grid']- Boolean for whether or not gridding of the passed in
-            shapefile is desired on the file specified by 'zone_layer_loc'
-        args['grid_size']- May or may not be in the args directory. Will only
-            exist if 'do_grid' is true. This is an int specifying how large the
-            gridded squares over the shapefile should be.
-        args['overlap_data_dir_loc']- URI pointing to a directory where multiple
-            shapefiles are located. Each shapefile represents an activity of
-            interest for the model.
-        args['do-inter']-Boolean that indicates whether or not inter-activity
-            weighting is desired. This will decide if the overlap table will be
-            created.
-        args['do_intra']- Boolean which indicates whether or not intra-activity
-            weighting is desired. This will will pull attributes from shapefiles
-            passed in in 'zone_layer_loc'
-            
-            
-        --Optional--
-        args['overlap_layer_tbl'] URI to a CSV file that holds relational data
-            and identifier data for all layers being passed in within the
-            overlap analysis directory.    
-        args['intra_name']- string which corresponds to a field within the
-            layers being passed in within overlap analysis directory. This is
-            the intra-activity importance for each activity.
-        args['hum_use_hubs_loc']- URI that points to a shapefile of major hubs
-            of human activity. This would allow you to degrade the weight of
-            activity zones as they get farther away from these locations.
-        args['decay']- float between 0 and 1, representing the decay of interest
-            in areas as you get farther away from human hubs.
-            
-    Output:
-        oa_args- The dictionary of all arguments that are needed by the
-            overlap_analysis_core.py class. This is the dictionary that will be
-            directly passed to that class in order to do processing for the 
-            final output of the model.
+	'''This function will take care of preparing files passed into 
+	the overlap analysis model. It will handle all files/inputs associated
+	with calculations and manipulations. It will create objects to be 
+	passed to the overlap_analysis_core.py module. It may write log, 
+	warning, or error messages to stdout.
 
-    Returns nothing.
-    '''
-    
-    global oa_args
-    
-    oa_args = {}
-    
-    workspace = args['workspace_dir']
-    output_dir = workspace + os.sep + 'Output'
-    inter_dir = workspace + os.sep + 'Intermediate'
-        
-    if not (os.path.exists(output_dir)):
-        os.makedirs(output_dir)
-        
-    if not (os.path.exists(inter_dir)):
-        os.makedirs(inter_dir)
-        
-    oa_args['workspace_dir'] = args['workspace_dir']
-    
-    #We are passing in the AOi shapefile, as well as the dimension that we want the
-    #raster pixels to be. 
-    oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
-    oa_args['grid_size'] = args['grid_size']
+	Input:
+		args: A python dictionary created by the UI and passed to this method.
+			It will contain the following data.
+		args['workspace_dir']- The directory in which to place all resulting files,
+			will come in as a string.
+		args['zone_layer_loc']- A URI pointing to a shapefile with the analysis
+			zones on it.
+		args['do_grid']- Boolean for whether or not gridding of the passed in
+			shapefile is desired on the file specified by 'zone_layer_loc'
+		args['grid_size']- May or may not be in the args directory. Will only
+			exist if 'do_grid' is true. This is an int specifying how large the
+			gridded squares over the shapefile should be.
+		args['overlap_data_dir_loc']- URI pointing to a directory where multiple
+			shapefiles are located. Each shapefile represents an activity of
+			interest for the model.
+		args['do-inter']-Boolean that indicates whether or not inter-activity
+			weighting is desired. This will decide if the overlap table will be
+			created.
+		args['do_intra']- Boolean which indicates whether or not intra-activity
+			weighting is desired. This will will pull attributes from shapefiles
+			passed in in 'zone_layer_loc'
+			
+		--Optional--
+		args['overlap_layer_tbl'] URI to a CSV file that holds relational data
+			and identifier data for all layers being passed in within the
+			overlap analysis directory.    
+		args['intra_name']- string which corresponds to a field within the
+			layers being passed in within overlap analysis directory. This is
+			the intra-activity importance for each activity.
+		args['hum_use_hubs_loc']- URI that points to a shapefile of major hubs
+			of human activity. This would allow you to degrade the weight of
+			activity zones as they get farther away from these locations.
+		args['decay']- float between 0 and 1, representing the decay of interest
+			in areas as you get farther away from human hubs.
+			
+	Output:
+		oa_args- The dictionary of all arguments that are needed by the
+			overlap_analysis_core.py class. This is the dictionary that will be
+			directly passed to that class in order to do processing for the 
+			final output of the model.
+
+	Returns nothing.'''
+	global oa_args
+
+	oa_args = {}
+
+	workspace = args['workspace_dir']
+	output_dir = workspace + os.sep + 'Output'
+	inter_dir = workspace + os.sep + 'Intermediate'
+		
+	if not (os.path.exists(output_dir)):
+		os.makedirs(output_dir)
+		
+	if not (os.path.exists(inter_dir)):
+		os.makedirs(inter_dir)
+		
+	oa_args['workspace_dir'] = args['workspace_dir']
+
+	#We are passing in the AOi shapefile, as well as the dimension that we want the
+	#raster pixels to be. 
+	oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
+	oa_args['grid_size'] = args['grid_size']
     
     #Still need to pass in do_grid because we need to know if we're treating management
     #zones or exact gridded squares....don't we?
-    oa_args['do_grid'] = args['do_grid']
+	oa_args['do_grid'] = args['do_grid']
   	
 	#Abstracting this to its own function for use in testing. Returns dictionary.
-   	file_dict = get_files_dict(args['overlap_data_dir_loc')
-    oa_args['overlap_files'] = file_dict
+	file_dict = get_files_dict(args['overlap_data_dir_loc'])
+	oa_args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
-    oa_args['do_inter'] = args['do_inter']
+	oa_args['do_inter'] = args['do_inter']
     
-    if args['do_inter']:
-        oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
-        
-    oa_args['do_intra'] = args['do_intra']
-    
-    if args['do_intra']:
-        oa_args['intra_name'] = args['intra_name']
-    
-    #We don't actually get these yet, so commenting them out
-    #oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
-    #oa_args['decay'] = args['decay']
-    
-    overlap_analysis_core.execute(oa_args)
+	if args['do_inter']:
+		oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
+		
+	oa_args['do_intra'] = args['do_intra']
+
+	if args['do_intra']:
+		oa_args['intra_name'] = args['intra_name']
+
+	#We don't actually get these yet, so commenting them out
+	#oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
+	#oa_args['decay'] = args['decay']
+
+	overlap_analysis_core.execute(oa_args)
 
 def get_files_dict(folder):
 'Returns a dictionary of all .shp files in the folder.
