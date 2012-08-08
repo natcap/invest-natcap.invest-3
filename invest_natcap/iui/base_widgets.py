@@ -1186,7 +1186,8 @@ class FileButton(QtGui.QPushButton):
                         "GDAL": ["[GDAL] Arc/Info Binary Grid (hdr.adf HDR.ADF hdr.ADF)",
                                  "[GDAL] Arc/Info ASCII Grid (*.asc *.ASC)",
                                  "[GDAL] GeoTiff (*.tif *.tiff *.TIF *.TIFF)"],
-                        "OGR": ["[OGR] ESRI Shapefiles (*.shp *.SHP)"]
+                        "OGR": ["[OGR] ESRI Shapefiles (*.shp *.SHP)"],
+                        "DBF": ["[DBF] dBase legacy file (*dbf *.DBF)"]
                        }
         self.last_filter = QtCore.QString()
 
@@ -2274,6 +2275,36 @@ class ExecRoot(Root):
                 # the UI.
                 if exit_code == 0:
                     return
+
+            #Check if workspace has an output directory, prompt the user that 
+            #it will be overwritten
+            try:
+                uri = str(self.allElements['workspace'].textField.text())
+                if os.path.isdir(os.path.join(uri,'output')) or \
+                        os.path.isdir(os.path.join(uri,'Output')):
+                    dialog = WarningDialog()
+                    dialog.setWindowTitle('Output Exists')
+                    dialog.set_title('Output Exists')
+                    dialog.set_icon('dialog-information-2.png')
+                    dialog.body.setText('The directory workspace/output ' + 
+                        'exists.  Are you sure you want overwrite output ' + 
+                        'from previous model run? %s' % str())
+
+                    dialog.ok_button.setText('Run Model')
+                    dialog.ok_button.setIcon(QtGui.QIcon(os.path.join(IUI_DIR, 
+                        'dialog-ok.png')))
+                    exit_code = dialog.exec_()
+                    # An exit code of 0 means go back.
+                    if exit_code == 0:
+                        return
+                    # A non-0 exit code means go go go, so just fall through
+            except KeyError:
+                #A keyerror means that 'workspace' isn't in the ui elements
+                #concievable since this is a general framework.  Since this is
+                #a little hacky this serves as a mechansim to handle the 
+                #workspace #cases as well as a point of reference if we 
+                #ever try to refactor
+                pass
 
             # Check to see if the user has specified whether we should save the
             # last run.  If the user has not specified, assume that the last run

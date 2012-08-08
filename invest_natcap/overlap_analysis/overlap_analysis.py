@@ -81,8 +81,6 @@ def execute(args):
         
     oa_args['workspace_dir'] = args['workspace_dir']
     
-    #LOGGER.debug(args['zone_layer_loc'])
-    
     #We are passing in the AOi shapefile, as well as the dimension that we want the
     #raster pixels to be. 
     oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
@@ -91,25 +89,9 @@ def execute(args):
     #Still need to pass in do_grid because we need to know if we're treating management
     #zones or exact gridded squares....don't we?
     oa_args['do_grid'] = args['do_grid']
-    
-    
-    #Glob.glob gets all of the files that fall into the form .shp, and makes them
-    #into a list. Then, each item in the list is added to a dictionary as an open
-    #file with the key of it's filename without the extension, and that whole
-    #dictionary is made an argument of the oa_args dictionary
-    file_names = glob.glob(args['overlap_data_dir_loc'] + os.sep + '*.shp')
-    
-    file_dict = {}
-    
-    for file in file_names:
-        
-        #The return of os.path.split is a tuple where everything after the final slash
-        #is returned as the 'tail' in the second element of the tuple
-        #path.splitext returns a tuple such that the first element is what comes before
-        #the file extension, and the second is the extension itself 
-        name = os.path.splitext(os.path.split(file)[1])[0]
-        file_dict[name] = ogr.Open(file)
-        
+  	
+	#Abstracting this to its own function for use in testing. Returns dictionary.
+   	file_dict = get_files_dict(args['overlap_data_dir_loc')
     oa_args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
@@ -128,7 +110,41 @@ def execute(args):
     #oa_args['decay'] = args['decay']
     
     overlap_analysis_core.execute(oa_args)
+
+def get_files_dict(folder):
+'Returns a dictionary of all .shp files in the folder.
+
+	Input:
+		folder- The location of all layer files. Among these, there should be
+			files with the extension .shp. These will be used for all
+			activity calculations.
+
+	Returns:
+		file_dict- A dictionary which maps the name (minus file extension) of
+			a shapefile to the open datasource itself. The key in this dictionary
+			is the name of the file (not including file path or extension), and 
+			the value is the open shapefile.
+'''
+
+    #Glob.glob gets all of the files that fall into the form .shp, and makes them
+    #into a list. Then, each item in the list is added to a dictionary as an open
+    #file with the key of it's filename without the extension, and that whole
+    #dictionary is made an argument of the oa_args dictionary
+    file_names = glob.glob(os.path.join(folder, '*.shp'))
     
+    file_dict = {}
+    
+    for file in file_names:
+        
+        #The return of os.path.split is a tuple where everything after the final slash
+        #is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes before
+        #the file extension, and the second is the extension itself 
+        name = os.path.splitext(os.path.split(file)[1])[0]
+        file_dict[name] = ogr.Open(file)
+	
+	return file_dict
+
 def format_over_table(over_tbl):
     '''This CSV file contains a string which can be used to uniquely identify a .shp
     file to which the values in that string's row will correspond. This string,
@@ -162,7 +178,6 @@ def format_over_table(over_tbl):
         
         #NEED TO FIGURE OUT IF THESE SHOULD BE 0 OR 1
         inter_act = 1
-        buffer = 0
         
         for key in row:
             if 'Inter-Activity' in key and row[key] != '':
