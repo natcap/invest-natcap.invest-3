@@ -78,9 +78,41 @@ def execute(args):
             
     Returns nothing.
     '''
+	#We need to have two different tracks. One in which the managamenet zones should
+	#be used- in which case, we will only be returning one file, but it will be
+	#constructed differently from the gridded. Or, we would have the standard return,
+	#in which case, we would be rasterizing the shapefile.
+	
+	#Make rasters
+	if (args['do_grid']):
+		gridded_rasters(args)
+		
+	#Make a single shape
+	else:
+		zone_shapefiles(args)
+   
+    make_param_file(args)
+
+def zone_shapefile(args):
+'''This function describes all that should be done if we should have a management zoned
+shapefile. We will have a completely separate set of outputs from the gridded rasters.
+	
+	Input:
+		args- The entire arguments dictionary, as passed in by the overlap_analysis.py
+			module.
+
+	Output:
+		zoned_shape- This is a shapefile output identical to the one passed in, except
+			that it will contain the additional field of activity number per polygon.
+
+	Returns nothing.
+'''
+
+def gridded_rasters(args):
+
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-    
+
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     
@@ -163,8 +195,7 @@ def execute(args):
         create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
                                args['overlap_files'], intra_name, 
                                args['do_inter'], args['do_intra'], raster_files, raster_names)
-   
-    make_param_file(args)
+	
 
 def make_param_file(args):
     ''' This function will output a .txt file that contains the user-selected parameters
