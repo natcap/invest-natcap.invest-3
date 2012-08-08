@@ -133,7 +133,13 @@ shapefile. We will have a completely separate set of outputs from the gridded ra
 
 	z_layer = z_copy.GetLayer()
 
+	#Creating a definition for our new activity count field.
+	field_defn = ogr.FieldDefn('ACTIVITY_COUNT', ogr.OFTReal)
+	z_layer.CreeateField(field_defn)
+
 	for polygon in z_layer:
+		
+		count = 0
 
 		for activ in layers_dict: 
 			
@@ -142,7 +148,7 @@ shapefile. We will have a completely separate set of outputs from the gridded ra
 			
 			for element in layer:
 			#If it contains or overlaps
-				pass
+				count += 1
 
 def gridded_rasters(args):
 
