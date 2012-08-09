@@ -86,9 +86,13 @@ def execute(args):
                 LOGGER.info(msg)
             elif msgType == "DEBUG":
                 LOGGER.debug(msg)
+            elif msgType == "WARN":
+                LOGGER.warn(msg)
             elif msgType == "ERROR":
                 LOGGER.error(msg)
                 raise IOError, "Error on server: %s" % (msg)
+            else:
+                LOGGER.warn("Unknown logging message type %s: %s" % (msgType,msg))
             
         oldlog=log
         
