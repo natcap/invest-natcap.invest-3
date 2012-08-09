@@ -114,7 +114,7 @@ def execute(args):
     
     #Interpolate the ogr datasource points onto a raster the same size as raster_out
     LOGGER.info("Interpolating kh_km2_day onto raster")
-    raster_utils.vectorize_points(tide_e_points, 'kh_km2_day', tide_e_raster)
+    raster_utils.vectorize_points(tide_e_points, 'E_km2_day', tide_e_raster)
     if adv_uv_points != None:
         LOGGER.info("Interpolating U_m_sec_ onto raster")
         raster_utils.vectorize_points(adv_uv_points, 'U_m_sec_', adv_u_raster)
