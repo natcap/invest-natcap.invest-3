@@ -19,7 +19,7 @@ def execute(args):
     with calculations and manipulations. It will create objects to be 
     passed to the overlap_analysis_core.py module. It may write log, 
     warning, or error messages to stdout.
-    
+
     Input:
         args: A python dictionary created by the UI and passed to this method.
             It will contain the following data.
@@ -42,7 +42,6 @@ def execute(args):
             weighting is desired. This will will pull attributes from shapefiles
             passed in in 'zone_layer_loc'
             
-            
         --Optional--
         args['overlap_layer_tbl'] URI to a CSV file that holds relational data
             and identifier data for all layers being passed in within the
@@ -62,13 +61,11 @@ def execute(args):
             directly passed to that class in order to do processing for the 
             final output of the model.
 
-    Returns nothing.
-    '''
-    
+    Returns nothing.'''
     global oa_args
-    
+
     oa_args = {}
-    
+
     workspace = args['workspace_dir']
     output_dir = workspace + os.sep + 'Output'
     inter_dir = workspace + os.sep + 'Intermediate'
@@ -80,7 +77,7 @@ def execute(args):
         os.makedirs(inter_dir)
         
     oa_args['workspace_dir'] = args['workspace_dir']
-    
+
     #We are passing in the AOi shapefile, as well as the dimension that we want the
     #raster pixels to be. 
     oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
@@ -89,9 +86,11 @@ def execute(args):
     #Still need to pass in do_grid because we need to know if we're treating management
     #zones or exact gridded squares....don't we?
     oa_args['do_grid'] = args['do_grid']
-  	
-	#Abstracting this to its own function for use in testing. Returns dictionary.
-   	file_dict = get_files_dict(args['overlap_data_dir_loc')
+      
+    #Abstracting this to its own function for use in testing. Returns dictionary.
+    file_dict = get_files_dict(args['overlap_data_dir_loc'])
+    #LOGGER.debug(file_dict)
+    #LOGGER.debug("MMMMMMMMMMMMMMMMM")
     oa_args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
@@ -101,37 +100,36 @@ def execute(args):
         oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
         
     oa_args['do_intra'] = args['do_intra']
-    
+
     if args['do_intra']:
         oa_args['intra_name'] = args['intra_name']
-    
+
     #We don't actually get these yet, so commenting them out
     #oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
     #oa_args['decay'] = args['decay']
-    
+
     overlap_analysis_core.execute(oa_args)
 
 def get_files_dict(folder):
-'Returns a dictionary of all .shp files in the folder.
+    '''Returns a dictionary of all .shp files in the folder.
 
-	Input:
-		folder- The location of all layer files. Among these, there should be
-			files with the extension .shp. These will be used for all
-			activity calculations.
+        Input:
+            folder- The location of all layer files. Among these, there should be
+                files with the extension .shp. These will be used for all
+                activity calculations.
 
-	Returns:
-		file_dict- A dictionary which maps the name (minus file extension) of
-			a shapefile to the open datasource itself. The key in this dictionary
-			is the name of the file (not including file path or extension), and 
-			the value is the open shapefile.
-'''
+        Returns:
+            file_dict- A dictionary which maps the name (minus file extension) of
+                a shapefile to the open datasource itself. The key in this dictionary
+                is the name of the file (not including file path or extension), and 
+                the value is the open shapefile.
+    '''
 
     #Glob.glob gets all of the files that fall into the form .shp, and makes them
     #into a list. Then, each item in the list is added to a dictionary as an open
     #file with the key of it's filename without the extension, and that whole
     #dictionary is made an argument of the oa_args dictionary
     file_names = glob.glob(os.path.join(folder, '*.shp'))
-    
     file_dict = {}
     
     for file in file_names:
@@ -142,15 +140,15 @@ def get_files_dict(folder):
         #the file extension, and the second is the extension itself 
         name = os.path.splitext(os.path.split(file)[1])[0]
         file_dict[name] = ogr.Open(file)
-	
-	return file_dict
+   
+    return file_dict
 
 def format_over_table(over_tbl):
     '''This CSV file contains a string which can be used to uniquely identify a .shp
     file to which the values in that string's row will correspond. This string,
     therefore, should be used as the key for the ovlap_analysis dictionary, so that we
     can get all corresponding values for a shapefile at once by knowing its name.
-    
+
         Input:
             over_tbl- A CSV that contains a list of each interest shapefile, and any 
             the optional buffers and weights of the layers.
@@ -158,32 +156,34 @@ def format_over_table(over_tbl):
         Returns:
             over_dict- The analysis layer dictionary that maps the unique name of each
                 layer to the optional parameter of inter-activity weight. For each entry,
-		the key will be the string name of the layer that it represents, and the 
-		value will be the inter-activity weight for that layer.                
+                the key will be the string name of the layer that it represents, and the 
+                value will be the inter-activity weight for that layer.                
     '''
-    
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
+
     
+
     over_dict = {}
-    
+
     #USING EXPLICIT STRING CALLS to the layers table (these should not be unique to the
     #type of table, but rather, are items that ALL layers tables should contain). I am
     #casting both of the optional values to floats, since both will be used for later
     #calculations.
     for row in reader:
+        LOGGER.debug(row)     
         
         #Setting the default values for inter-activity weight and buffer, since they
         #are not actually required to be filled in.
-        
+
         #NEED TO FIGURE OUT IF THESE SHOULD BE 0 OR 1
         inter_act = 1
-        
+
         for key in row:
             if 'Inter-Activity' in key and row[key] != '':
                 inter_act = float(row[key])
                 
-        name = row['LIST OF HUMAN USES']
+            name = row['LIST OF HUMAN USES']
         
         over_dict[name] = inter_act
     
