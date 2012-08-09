@@ -71,10 +71,8 @@ def execute(args, out):
             else:
                 raster = gdal.Open(args[key])
                 if not isinstance(raster, osgeo.gdal.Dataset):
-                    out.append(label + args[key] + ': Must be a raster dataset \
-that can be opened with GDAL.')
-
-                    
+                    out.append(label + args[key] + ': Must be a raster ' + \
+                                   'dataset that can be opened with GDAL.')
     
     #verify that the pools dbf exists and can be opened
     prefix = 'Carbon pools table ' + args['carbon_pools_uri'] 
@@ -82,7 +80,8 @@ that can be opened with GDAL.')
         out.append(prefix + ' does not exist')
         dbfFile = None
     else:
-        dbfFile = dbf.Dbf(args['carbon_pools_uri'])
+        #Setting readOnly to true because we are only reading the dbf
+        dbfFile = dbf.Dbf(args['carbon_pools_uri'], readOnly=True)
         if not isinstance(dbfFile, dbf.Dbf):
             out.append(prefix + ' must be a dbf file')
         else:            

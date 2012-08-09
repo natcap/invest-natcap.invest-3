@@ -509,8 +509,8 @@ def create_attribute_table(raster_uri, percentile_ranges, counter):
     #If the dbf file already exists, delete it
     if os.path.isfile(output_path):
         os.remove(output_path)
-    #Create new table
-    dataset_attribute_table = dbf.Dbf(output_path, new=True)
+    #Create new table, making readOnly explicit
+    dataset_attribute_table = dbf.Dbf(output_path, new = True, readOnly = False)
     #Set the defined fields for the table
     dataset_attribute_table.addField(
                  #integer field
