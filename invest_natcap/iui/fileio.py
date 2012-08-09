@@ -250,8 +250,10 @@ class OGRHandler(AbstractTableHandler):
             self.orig_fieldnames = {}
 
 class DBFHandler(AbstractTableHandler):
-    def _open(self):
-        self.file_obj = dbf.Dbf(self.uri)
+    def _open(self, read_only = True):
+        #Passing readOnly because it's likely we only need to read the file
+        #not write it.
+        self.file_obj = dbf.Dbf(self.uri, readOnly = read_only)
 
     def _get_field_names(self):
         dbf_file = self.get_file_object()
