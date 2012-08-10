@@ -42,7 +42,7 @@ def execute(args):
     file_dict = get_files_dict(args['overlap_data_dir_loc'])
     mz_args['overlap_files'] = file_dict
     
-    overlap_analysis_core.execute(mz_args)
+    overlap_analysis_mz_core.execute(mz_args)
 
 def get_files_dict(folder):
     '''Returns a dictionary of all .shp files in the folder.
