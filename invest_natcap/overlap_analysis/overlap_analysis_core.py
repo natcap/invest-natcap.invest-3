@@ -133,7 +133,7 @@ def zone_shapefile(args):
 
     #Creating a definition for our new activity count field.
     field_defn = ogr.FieldDefn('ACTIVITY_COUNT', ogr.OFTReal)
-    z_layer.CreeateField(field_defn)
+    z_layer.CreateField(field_defn)
 
     for polygon in z_layer:
         

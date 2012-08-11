@@ -34,4 +34,77 @@ def execute(args):
         zone_shapefile- A copy of 'zone_layer_file' with the added attribute 
             "ACTIVITY_COUNT" that will total the number of activities taking
             place in each polygon.
-     '''
+     Returns nothing.'''
+
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+
+    #Want to run through all polygons in the AOI, and see if any intersect or contain
+    #all shapefiles from all other layers. Little bit gnarly in terms of runtime, but
+    #at least doable.
+
+    zoned_shape_old = args['zone_layer_file']
+    layers_dict = args['over_layer_dict']
+
+    path = os.path.join(output_dir, 'zone_shape.shp')
+
+    #This creates a new shapefile that is a copy of the old one, but at the path location
+    #That way we can edit without worrying about changing the Input file.
+    z_copy = zone_shape_old.CopyDataSource(zoned_shape_old, path)
+
+    z_layer = z_copy.GetLayer()
+
+    #Creating a definition for our new activity count field.
+    field_defn = ogr.FieldDefn('ACTIVITY_COUNT', ogr.OFTReal)
+    z_layer.CreateField(field_defn)
+
+    for polygon in z_layer:
+        
+        count = 0
+
+        for activ in layers_dict: 
+            
+            shape_file = layers_dict[activ]
+            layer = shape_file.GetLayer()
+            
+            for element in layer:
+            #If it contains or overlaps
+                count += 1
+
+    make_param_file(args)
+
+def make_param_file(args):
+    ''' This function will output a .txt file that contains the user-selected parameters
+    for this run of the overlap_analysis model.
+    
+    Input:
+        args- The entire args dictionary which contains all information passed from the
+            the IUI. 
+    Ouput:
+        textfile- A .txt file output that will contain all user-controlled paramaters
+            that were selected for use with this run of the model.
+
+    Returns nothing.
+    '''
+
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+
+    textfile  = os.path.join(output_dir, "Parameter_Log_[" + \
+                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") +  "].txt")
+    file = open(textfile, "w")
+    
+    list = []
+    list.append("ARGUMENTS \n")
+    list.append("Workspace: " + args['workspace_dir'])
+    list.append("Zone Layer: " + args['zone_layer_file'].GetName())
+    
+    list.append("Activity Layers: ")
+    for name in args['overlap_files'].keys():
+        list.append("--- " + name)
+
+    for element in list:
+        file.write(element)
+        file.write("\n")
+
+    file.close()
+    
