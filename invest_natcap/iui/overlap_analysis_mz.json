@@ -30,28 +30,7 @@
                     "validateAs": {"type": "OGR"},
                     "required": true,
                     "helpText": "If you are using Management Zones to analyze overlap data, this should be a polygon shapefile containing multiple polygons. If, on the other hand, you wish to use gridding in order to separate the area, this can be a single polygon shapefile."
-                },
-                {
-                    "id" : "gridding",
-                    "args_id" : "do_grid",
-                    "type": "checkbox",
-                    "label": "Do Gridding?",
-                    "defaultValue": true,
-                    "required": true,
-                    "helpText": "By checking this box, you are indicating that this is not a Management Zone divided shapefile, and instead should be gridded into areas of the size indicated on the next line."
-                },
-                {
-                    "id" : "grid_size",
-                    "args_id" : "grid_size",
-                    "type": "text",
-                    "label": "Analysis Cell Size",
-                    "defaultValue": "1000",
-                    "validateAs": {"type": "number"},
-                    "required": false,
-                    "requiredIf": ["gridding"],
-                    "enabledBy": "gridding",
-                    "helpText": "By specifying a number in the interface, an analysis grid within the AOI of size x size will be created."
-                },
+                }
                 {
                     "id" : "data_dir",
                     "args_id" : "overlap_data_dir_loc",
@@ -61,49 +40,8 @@
                     "validateAs": {"type": "folder"},
                     "required": true,
                     "helpText": "Users are required to specify the path on their system to a folder containing only the input data for the Overlap Analysis model. Input data can be point, line or polygon data layers indicating where in the coastal and marine environment the human use activity takes place."
-                },
-                 {
-                    "id" : "intra",
-                    "args_id" : "do_intra",
-                    "type": "checkbox",
-                    "label": "Intra-Activity Weighting?",
-                    "defaultValue": false,
-                    "required": true,
-                    "helpText": "By checking this box, you are indicating that you would like to use intra-activity valuation of the data. These weights will be retrieved from the column in the attribute table of the shapefile specified in 'Analysis Zones Layer' that bears the name specified in the 'Intra-Activity Field Name' field below."
-                },
-                {
-                    "id" : "IS_field_name",
-                    "args_id" : "intra_name",
-                    "type": "text",
-                    "label": "Intra-Activity Attribute Name",
-                    "defaultValue": "RIS",
-                    "required": false,
-                    "requiredIf": ["intra"],
-                    "enabledBy": "intra",
-                    "helpText": "The column heading to look for in the activity layers' attribute tables that gives intra-activity weights."               
-            	},
-            	{
-                    "id" : "inter",
-                    "args_id" : "do_inter",
-                    "type": "checkbox",
-                    "label": "Inter-Activity Weighting?",
-                    "defaultValue": false,
-                    "required": true,
-                    "helpText": "By checking this box, you are indicating that you would like to use inter-activity valuation of the data. These weights will be derived from the data included in the CSV provided in the 'Overlap Analysis Importance Score Table' field."
-                },
-            	{
-                    "id" : "IS_tbl",
-                    "args_id" : "overlap_layer_tbl",
-                    "type": "file",
-                    "label": "Inter-Activity Weight Table",
-                    "defaultValue": "../OverlapAnalysis/Input/Fisheries_Inputs.csv",
-                    "required": false,
-                    "requiredIf": ["inter"],
-                    "enabledBy": "inter",
-                    "validateAs": {"type": "CSV"},
-                    "helpText": "The name of the CSV table that links each provided activity layer to the desired inter-activity weight."               
-            	}
-            ]
+                }            
+                ]
         }
     ]
 }

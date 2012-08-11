@@ -82,7 +82,8 @@ def execute(args):
             parameters used during that run. This is created within the
             make_param_file function. 
 
-        Returns nothing.'''
+    Returns nothing.'''
+    
     #We need to have two different tracks. One in which the managamenet zones should
     #be used- in which case, we will only be returning one file, but it will be
     #constructed differently from the gridded. Or, we would have the standard return,
@@ -132,7 +133,7 @@ def zone_shapefile(args):
 
     #Creating a definition for our new activity count field.
     field_defn = ogr.FieldDefn('ACTIVITY_COUNT', ogr.OFTReal)
-    z_layer.CreeateField(field_defn)
+    z_layer.CreateField(field_defn)
 
     for polygon in z_layer:
         
