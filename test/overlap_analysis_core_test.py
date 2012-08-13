@@ -29,7 +29,7 @@ class TestOverlapAnalysisCore(unittest.TestCase):
             os.makedirs(args['intermediate'])
             
         args['do_grid'] = True
-        args['grid_size'] = 1000
+        args['grid_size'] = 500 
 
         self.args = args
         
