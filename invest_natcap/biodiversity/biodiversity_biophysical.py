@@ -202,14 +202,18 @@ def check_projections(ds_dict, proj_unit):
         srs = osr.SpatialReference()
         srs.ImportFromWkt(ds.GetProjection())
         if not srs.IsProjected():
+            LOGGER.debug('The Raster is Not Projected')
             return True
         if srs.GetLinearUnits() != proj_unit:
+            LOGGER.debug('Proj units do not match %s:%s', \
+                    proj_units, srs.GetLinearUnits())
             return True
         projections.append(srs.GetAttrValue("PROJECTION"))
     
     # check that all the datasets have the same projection type
     for index in range(len(projections)):
         if projections[0] != projections[index]:
+            LOGGER.debug('Projections are not the same')
             return True
 
     return False

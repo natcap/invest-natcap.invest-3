@@ -16,6 +16,11 @@ import scipy.signal
 from scipy.sparse.linalg import spsolve
 import pyamg
 
+
+#Used to raise an exception if rasters, shapefiles, or both don't overlap
+#in regions that should
+class SpatialExtentOverlapException(Exception): pass
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -530,6 +535,9 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
             the extents of the intersection rectangle based on its own
             extents.
             
+        raises a SpatialExtentOverlapException in cases where the dataset 
+            list and aoi don't overlap.
+
         returns a 4 element list that bounds the intersection of all the 
             rasters in dataset_list.  [left, top, right, bottom]"""
 
@@ -561,9 +569,9 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
                        min(rec[2], bounding_box[2]),
                        max(rec[3], bounding_box[3])]
         
-        #Left can't be greater than right or bottom greater than top)
+        #Left can't be greater than right or bottom greater than top
         if not valid_bounding_box(bounding_box):
-            raise Exception("These rasters %s don't overlap with this one %s" % \
+            raise SpatialExtentOverlapException("These rasters %s don't overlap with this one %s" % \
                                 (str(dataset_files[0:-1]), dataset_files[-1]))
 
     if aoi != None:
@@ -575,7 +583,7 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
                        min(aoi_extent[1], bounding_box[2]),
                        max(aoi_extent[2], bounding_box[3])]
         if not valid_bounding_box(bounding_box):
-            raise Exception("The aoi layer %s doesn't overlap with %s" % \
+            raise SpatialExtentOverlapException("The aoi layer %s doesn't overlap with %s" % \
                                 (aoi, str(dataset_files)))
 
     return bounding_box
