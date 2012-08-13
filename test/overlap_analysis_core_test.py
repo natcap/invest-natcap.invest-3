@@ -13,7 +13,7 @@ from invest_natcap.overlap_analysis import overlap_analysis_core
 from invest_natcap.overlap_analysis import overlap_analysis
 from osgeo import ogr
 
-LOGGER = logging.getLogger('overlap_analysisi_core_test')
+LOGGER = logging.getLogger('overlap_analysis_core_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 

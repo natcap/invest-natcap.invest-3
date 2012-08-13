@@ -4,12 +4,17 @@ version.'''
 
 import unittest
 import os
-
+import logging
 import invest_test_core
 
 from osgeo import ogr
 from invest_natcap.overlap_analysis import overlap_analysis_mz_core
 from invest_natcap.overlap_analysis import overlap_analysis_mz
+
+LOGGER = logging.getLogger('overlap_analysis_mz_core_test')
+
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 class TestMZCore(unittest.TestCase):
 
