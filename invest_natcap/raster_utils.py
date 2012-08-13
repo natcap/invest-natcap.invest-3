@@ -535,8 +535,8 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
             the extents of the intersection rectangle based on its own
             extents.
             
-
-        raises a 
+        raises a SpatialExtentOverlapException in cases where the dataset 
+            list and aoi don't overlap.
 
         returns a 4 element list that bounds the intersection of all the 
             rasters in dataset_list.  [left, top, right, bottom]"""
