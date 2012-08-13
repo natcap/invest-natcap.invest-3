@@ -1069,7 +1069,12 @@ class GridList(DynamicGroup):
 class FileEntry(DynamicText):
     class FileField(QtGui.QLineEdit):
         def dropEvent(self, event=None):
-            self.setText(event.mimeData().text())
+            """Overriding the default Qt DropEvent function when a file is
+            dragged and dropped onto this qlineedit."""
+            path = event.mimeData().urls()[0].path()
+            if platform.system() == 'Windows':
+                path = path[1:]
+            self.setText(path)
             event.acceptProposedAction()
 
     """This object represents a file.  It has three components, all of which
