@@ -3,6 +3,7 @@ import imp
 import os
 import time
 import traceback
+import platform
 
 from PyQt4 import QtGui, QtCore
 
@@ -1068,12 +1069,22 @@ class GridList(DynamicGroup):
 
 class FileEntry(DynamicText):
     class FileField(QtGui.QLineEdit):
+        def __init__(self):
+            QtGui.QLineEdit.__init__(self)
+            self.setAcceptDrops(True)
+
+        def dragEnterEvent(self, event=None):
+            """Overriding the default dragEnterEvent function for when a file is
+            dragged and dropped onto this qlineedit.  This reimplementation is
+            necessary for the dropEvent function to work on Windows."""
+            event.accept()
+
         def dropEvent(self, event=None):
             """Overriding the default Qt DropEvent function when a file is
             dragged and dropped onto this qlineedit."""
             path = event.mimeData().urls()[0].path()
             if platform.system() == 'Windows':
-                path = path[1:]
+                path = path[1:]  # Remove the '/' ahead of disk letter
             self.setText(path)
             event.acceptProposedAction()
 
@@ -1114,7 +1125,6 @@ class FileEntry(DynamicText):
         if issubclass(self.__class__, FileEntry) and filter_type != 'folder':
             file_type = 'file'
 
-        self.textField.setAcceptDrops(True)
         self.button = FileButton(attributes['label'], self.textField,
             file_type, filter_type)
         self.addElement(self.button)
