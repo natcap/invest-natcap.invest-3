@@ -258,6 +258,9 @@ def biophysical(args):
     clipped_wave_energy_raster.FlushCache()
     clipped_wave_power_raster.FlushCache()
 
+    raster_utils.calculate_raster_stats(clipped_wave_power_raster)
+    raster_utils.calculate_raster_stats(clipped_wave_energy_raster)
+
     #Create the percentile rasters for wave energy and wave power
     #These values are hard coded in because it's specified explicitly in  
     #the user's guide what the percentile ranges are and what the units will be.
