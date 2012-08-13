@@ -78,7 +78,7 @@ def execute(args):
         
     oa_args['workspace_dir'] = args['workspace_dir']
 
-    #We are passing in the AOi shapefile, as well as the dimension that we want the
+    #We are passing in the AOI shapefile, as well as the dimension that we want the
     #raster pixels to be. 
     oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
     oa_args['grid_size'] = args['grid_size']
@@ -89,8 +89,6 @@ def execute(args):
       
     #Abstracting this to its own function for use in testing. Returns dictionary.
     file_dict = get_files_dict(args['overlap_data_dir_loc'])
-    #LOGGER.debug(file_dict)
-    #LOGGER.debug("MMMMMMMMMMMMMMMMM")
     oa_args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
