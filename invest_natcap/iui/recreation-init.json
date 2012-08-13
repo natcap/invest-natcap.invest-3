@@ -1,6 +1,6 @@
 {
     "id" : "window",
-    "label": "Recreation Model",
+    "label": "Recreation Model - Initial Run",
     "targetScript" : "invest_natcap.recreation.recreation_client",
     "modelName" : "recreation",
     "localDocURI": "",
