@@ -60,6 +60,7 @@ def execute(args):
 
     for polygon in z_layer:
         
+        zone_geom = polygon.GetGeometryRef()
         count = 0
 
         for activ in layers_dict: 
@@ -67,9 +68,19 @@ def execute(args):
             shape_file = layers_dict[activ]
             layer = shape_file.GetLayer()
             
+
             for element in layer:
-            #If it contains or overlaps
-                count += 1
+                #If it contains or overlaps
+                activ_geom = element.GetGeometryRef()
+
+                if zone_geom.Contains(activ_geom) or zone_geom.Overlaps(activ_geom):
+                    count += 1
+                    break
+
+            layer.ResetReading()
+
+        polygon.SetField('ACTIVITY_COUNT', count)
+        z_layer.SetFeature(polygon)
 
     make_param_file(args)
 
