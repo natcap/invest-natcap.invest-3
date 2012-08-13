@@ -64,18 +64,22 @@ def biophysical(args):
     #Workspace Directory path
     workspace_dir = args['workspace_dir']
     #Intermediate Directory path to store information
-    intermediate_dir = workspace_dir + os.sep + 'Intermediate'
+    intermediate_dir = os.path.join(workspace_dir, 'Intermediate')
     #Output Directory path to store output rasters
-    output_dir = workspace_dir + os.sep + 'Output'
+    output_dir = os.path.join(workspace_dir, 'Output')
     #Path for clipped wave point shapefile holding wave attribute information
     clipped_wave_shape_path = \
         intermediate_dir + os.sep + 'WEM_InputOutput_Pts.shp'
     #Paths for wave energy and wave power raster
-    wave_energy_path = output_dir + os.sep + 'capwe_mwh.tif'
-    wave_power_path = output_dir + os.sep + 'wp_kw.tif'
+    wave_energy_unclipped_path = os.path.join(intermediate_dir, 
+                                              'capwe_mwh_unclipped.tif')
+    wave_power_unclipped_path = os.path.join(intermediate_dir,
+                                             'wp_kw_unclipped.tif')
+    wave_energy_path = os.path.join(output_dir, 'capwe_mwh.tif')
+    wave_power_path = os.path.join(output_dir, 'wp_kw.tif')
     #Paths for wave energy and wave power percentile rasters
-    wp_rc_path = output_dir + os.sep + 'wp_rc.tif'
-    capwe_rc_path = output_dir + os.sep + 'capwe_rc.tif'
+    wp_rc_path = os.path.join(output_dir, 'wp_rc.tif')
+    capwe_rc_path = os.path.join(output_dir, 'capwe_rc.tif')
     global_dem = args['dem']
     #Set nodata value and datatype for new rasters
     nodata = 0
@@ -221,17 +225,14 @@ def biophysical(args):
 
     #Create blank rasters bounded by the shape file of analyis area
     wave_energy_raster = \
-            raster_utils.create_raster_from_vector_extents(pixel_xsize, \
-                                                           pixel_ysize, \
-                                                           datatype, nodata, \
-                                                           wave_energy_path, \
-                                                           aoi_shape)
+        raster_utils.create_raster_from_vector_extents(pixel_xsize, \
+           pixel_ysize, datatype, nodata, wave_energy_unclipped_path, \
+           aoi_shape)
+
     wave_power_raster = \
-            raster_utils.create_raster_from_vector_extents(pixel_xsize, \
-                                                           pixel_ysize, \
-                                                           datatype, nodata, \
-                                                           wave_power_path, \
-                                                           aoi_shape)
+        raster_utils.create_raster_from_vector_extents(pixel_xsize, \
+            pixel_ysize, datatype, nodata, wave_power_unclipped_path, \
+            aoi_shape)
 
     #Get the corresponding points and values from the shapefile to be used 
     #for interpolation
