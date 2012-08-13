@@ -444,6 +444,9 @@ def create_percentile_rasters(raster_dataset, output_path, units_short, \
     #Generate the attribute table for the percentile raster
     create_attribute_table(output_path, percentile_ranges, pixel_count)
 
+    #calculate min, max, std for visualization in arc
+    raster_utils.calculate_raster_stats(percentile_raster)
+
     return percentile_raster
 
 def get_percentiles(value_list, percentile_list):
