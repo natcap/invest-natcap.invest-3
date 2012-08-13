@@ -11,39 +11,34 @@
             "id" : "workspace_list",
             "type": "list",	        
 		    "elements": [
-		            {
-		            "id" : "aoiFileName",
-		            "args_id" : "aoiFileName",
-		            "type": "file",
-		            "label": "Area of Interest",
-		            "defaultValue": "",
-		            "validateAs": {"type": "OGR"},
-		            "required": true
-		        },
-		        {
-		            "id" : "cellSize",
-		            "args_id" : "cellSize",
-		            "type": "text",
-		            "label": "Cell size",
-		            "defaultValue": "",
-		            "validText": "[0-9]+(\\.[0-9][0-9])?",
-		            "dataType": "float",
-		            "required": true
-		        },
 				{
-				    "id": "cellUnit",
-				    "args_id" : "cellUnit",
-				    "type": "dropdown",
-				    "label": "Cell unit",
-				    "options":["kilometer", "meter", "mile", "foot"],
-				    "returns": {"mapValues" : {"kilometer" : 1000, "meter" : 1, "mile":1609.344, "foot" : 0.3048}},
-				    "defaultValue": 0
+				    "id" : "grid",
+				    "args_id" : "grid",
+				    "type": "file",
+				    "label": "Grid",
+				    "validateAs": {"type": "OGR"},
+				    "required": true
 				},
+				{
+				    "id" : "params",
+				    "args_id" : "params",
+				    "type": "file",
+				    "label": "Params",
+				    "validateAs": {"type": "CSV"},
+				    "required": true
+				},					        
+		        {
+		        	"id" : "scenario_dir",
+		        	"args_id" : "scenario_dir",
+					"type": "folder",
+                	"label": "Data Directory",
+                	"required": true
+		        },
 		        {
 		        	"id" : "workspace_dir",
 		        	"args_id" : "workspace_dir",
 					"type": "folder",
-                	"label": "Workspace",
+                	"label": "Workspace Directory",
                 	"required": true
 		        },
 		        {
@@ -52,7 +47,7 @@
 					"type": "text",
                 	"label": "Comments",
                 	"required": false
-		        }		        
+		        }
 		   ]
 		   }
     ]
