@@ -520,40 +520,25 @@ def raster_from_dict(key_raster, out_uri, attr_dict, field, out_nodata,\
     #operation can just look it up instead of having an if,else statement
     attr_dict[out_nodata] = {field:float(out_nodata)}
 
-    if raise_error:
-        def vop(key):
-            """Operation passed to numpy function vectorize that uses 'key' as the 
-                key to the local dictionary 'attr_dict'. Returns the value in place
-                of the key for the new raster
-               
-                key - a float or int or string from the local raster 
-                    'key_raster' that is used to look up a value in the 
-                    dictionary 'attr_dict'
+    def vop(key):
+        """Operation passed to numpy function vectorize that uses 'key' as the 
+            key to the local dictionary 'attr_dict'. Returns the value in place
+            of the key for the new raster
+           
+            key - a float or int or string from the local raster 
+                'key_raster' that is used to look up a value in the 
+                dictionary 'attr_dict'
 
-               returns - the 'field' value corresponding to the 'key' or raises
-                   an Exception if 'key' is not found as a key in 'attr_dict'
-            """
-            if str(key) in attr_dict:
-                return attr_dict[str(key)][field]
-            else:
+           returns - the 'field' value corresponding to the 'key'. If 'key' is
+               not found then it raises an exception if raise_error is true or
+               simply returns out_nodata if raise_error is false
+        """
+        if str(key) in attr_dict:
+            return attr_dict[str(key)][field]
+        else:
+            if raise_error:
                 raise KeyError(error_message)
-    else:
-        def vop(key):
-            """Operation passed to numpy function vectorize that uses 'key' as the 
-                key to the local dictionary 'attr_dict'. Returns the value in place
-                of the key for the new raster
-               
-                key - a float or int or string from the local raster 
-                    'key_raster' that is used to look up a value in the 
-                    dictionary 'attr_dict'
-
-               returns - the 'field' value corresponding to the 'key' or
-                   'out_nodata' if 'key' is not a key in 'attr_dict'
-            """
-            if str(key) in attr_dict:
-                return attr_dict[str(key)][field]
-            else:
-                return out_nodata
+            return out_nodata
 
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
             raster_out_uri=out_uri, nodata=out_nodata)
