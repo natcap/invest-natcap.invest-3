@@ -5,6 +5,7 @@ entire class.
 
 import os
 import unittest
+import logging
 
 import invest_test_core
 
@@ -12,19 +13,23 @@ from invest_natcap.overlap_analysis import overlap_analysis_core
 from invest_natcap.overlap_analysis import overlap_analysis
 from osgeo import ogr
 
+LOGGER = logging.getLogger('overlap_analysis_core_test')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
 class TestOverlapAnalysisCore(unittest.TestCase):
 
     def setUp(self):
 
         args = {}
-        args['workspace'] = './data/test_out/Overlap'
-        args['intermediate'] = os.path.join(args['workspace'], 'Intermediate')
+        args['workspace_dir'] = './data/test_out/Overlap'
+        args['intermediate'] = os.path.join(args['workspace_dir'], 'Intermediate')
 
         if not os.path.isdir(args['intermediate']):
             os.makedirs(args['intermediate'])
             
         args['do_grid'] = True
-        args['grid_size'] = 1000
+        args['grid_size'] = 500 
 
         self.args = args
         
@@ -33,6 +38,7 @@ class TestOverlapAnalysisCore(unittest.TestCase):
         self.args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_aoi.shp')
         self.args['do_inter'] = True
         self.args['do_intra'] = True
+        self.args['intra_name'] = 'RI'    
 
         files_loc = './data/test_out/Overlap/Input/Test_Activity'
 
@@ -40,17 +46,23 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
         self.args['overlap_files'] = files_dict
      
-         inter_table_loc = './data/test_out/Overlap/Input/inter_activ_table.csv'
+        inter_table_loc = './data/test_out/Overlap/Input/inter_activ_table.csv'
         inter_table = overlap_analysis.format_over_table(inter_table_loc)
         self.args['over_layer_dict'] = inter_table
 
+        output_dir = os.path.join(self.args['workspace_dir'], 'Output')
+
+        #since we aren't using overlap_analysis.py as the prep, need to create the output folder ourselves
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
         overlap_analysis_core.execute(self.args)
 
-        #Now, using the workspace folder that we have selected, need to retrieve it and compare
-        #the two output files against hand-calculated rasters? Or somehow make raster myself.
+        #now, using the workspace_dir folder that we have selected, need to retrieve it and compare
+        #the two output files against hand-calculated rasters? or somehow make raster myself.
         
-        #In the meantime, get the created files.
-        output_dir = os.path.join(self.args['workspace'], 'Output')
+        #in the meantime, get the created files.
+
         unweighted_output = os.path.join(output_dir, 'hu_freq.tif')
         weighted_output = os.path.join(output_dir, 'hu_impscore.tif')
 

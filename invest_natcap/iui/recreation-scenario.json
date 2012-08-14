@@ -1,0 +1,55 @@
+{
+    "id" : "window",
+    "label": "Recreation Model - Scenario Run",
+    "targetScript" : "invest_natcap.recreation.recreation_client",
+    "modelName" : "recreation",
+    "localDocURI": "",
+    "height": 600,
+    "width" : 700,
+    "elements": [
+            {
+            "id" : "workspace_list",
+            "type": "list",	        
+		    "elements": [
+				{
+				    "id" : "grid",
+				    "args_id" : "grid",
+				    "type": "file",
+				    "label": "Grid",
+				    "validateAs": {"type": "OGR"},
+				    "required": true
+				},
+				{
+				    "id" : "params",
+				    "args_id" : "params",
+				    "type": "file",
+				    "label": "Params",
+				    "validateAs": {"type": "CSV"},
+				    "required": true
+				},					        
+		        {
+		        	"id" : "scenario_dir",
+		        	"args_id" : "scenario_dir",
+					"type": "folder",
+                	"label": "Data Directory",
+                	"required": true
+		        },
+		        {
+		        	"id" : "workspace_dir",
+		        	"args_id" : "workspace_dir",
+					"type": "folder",
+                	"label": "Workspace Directory",
+                	"required": true
+		        },
+		        {
+		        	"id" : "comments",
+		        	"args_id" : "comments",
+					"type": "text",
+                	"label": "Comments",
+                	"required": false
+		        }
+		   ]
+		   }
+    ]
+}
+                
