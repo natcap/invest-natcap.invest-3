@@ -95,11 +95,13 @@ class CSVDriver(TableDriverTemplate):
 
 class DBFDriver(TableDriverTemplate):
     """The DBFDriver class is a subclass of TableDriverTemplate."""
-    def get_file_object(self, uri=None):
+    def get_file_object(self, uri=None, read_only = True):
         """Return the library-specific file object by using the input uri.  If
         uri is None, return use self.uri."""
         uri = max(uri, self.uri)
-        return dbf.Dbf(uri, new=not os.path.exists(uri))
+        #passing readOnly because it's likely we only need to read not write the
+        #dbf
+        return dbf.Dbf(uri, new=not os.path.exists(uri), readOnly = read_only)
 
     def get_fieldnames(self):
         """Return a list of strings containing the fieldnames."""

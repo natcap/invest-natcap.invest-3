@@ -578,10 +578,12 @@ class OGRChecker(TableChecker):
         return table_rows
 
 class DBFChecker(TableChecker):
-    def open(self, valid_dict):
+    def open(self, valid_dict, read_only = True):
         """Attempt to open the DBF."""
 
-        self.file = dbf.Dbf(str(self.uri))
+        #Passing in the value of readOnly, because we might only need to
+        #check to see if it's available for reading
+        self.file = dbf.Dbf(str(self.uri), readOnly = read_only)
 
         if not isinstance(self.file, dbf.Dbf):
             return str('Must be a DBF file')

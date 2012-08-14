@@ -86,7 +86,7 @@ def execute(args):
                 LOGGER.info(msg)
             elif msgType == "DEBUG":
                 LOGGER.debug(msg)
-            elif msgType == "WARN":
+            elif msgType == "WARNING":
                 LOGGER.warn(msg)
             elif msgType == "ERROR":
                 LOGGER.error(msg)

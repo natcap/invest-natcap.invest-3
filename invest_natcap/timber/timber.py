@@ -54,8 +54,10 @@ def execute(args):
 
     timber_output_shape = ogr.Open(shape_source.encode(filesystemencoding), 1)
 
+
     args = {'timber_shape': timber_output_shape,
-            'attr_table': dbf.Dbf(args['attr_table_uri']),
+            #Making readOnly because dbf will not be written to
+            'attr_table': dbf.Dbf(args['attr_table_uri'], readOnly = True),
             'mdr': args['market_disc_rate']}
 
     timber_core.execute(args)

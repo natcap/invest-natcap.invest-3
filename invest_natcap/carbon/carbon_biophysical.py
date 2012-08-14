@@ -76,7 +76,10 @@ def execute(args):
     #Always need carbon pools, if uncertainty calculation they also need
     #to have range columns in them, but no need to check at this level.
     logger.debug('loading %s', args['carbon_pools_uri'])
-    biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'])
+
+    #setting readOnly true because we won't write to it
+    biophysicalArgs['carbon_pools'] = dbf.Dbf(args['carbon_pools_uri'], 
+                                              readOnly=True)
 
     #At this point all inputs are loaded into biophysicalArgs.  The 
     #biophysical model also needs temporary and output files to do its
