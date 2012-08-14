@@ -51,17 +51,21 @@ def execute(args):
     zone_shape_old = args['zone_layer_file']
     layers_dict = args['over_layer_dict']
 
+    path = os.path.join(output_dir, 'mz_frequency.shp')
+    if os.path.isfile(path):
+        os.remove(path)
+    
     #This creates a new shapefile that is a copy of the old one, but at the path location
     #That way we can edit without worrying about changing the Input file.
-    z_copy = driver.CopyDataSource(zone_shape_old, output_dir)
+    z_copy = driver.CopyDataSource(zone_shape_old, path)
     LOGGER.debug(z_copy)
 
     z_layer = z_copy.GetLayer()
 
     #Creating a definition for our new activity count field.
-    field_defn = ogr.FieldDefn('ACTIV_CT', ogr.OFTReal)
+    field_defn = ogr.FieldDefn('ACTIV_COUNT', ogr.OFTReal)
     z_layer.CreateField(field_defn)
-
+    
     for polygon in z_layer:
         
         zone_geom = polygon.GetGeometryRef()
@@ -71,7 +75,6 @@ def execute(args):
             
             shape_file = layers_dict[activ]
             layer = shape_file.GetLayer()
-            
 
             for element in layer:
                 #If it contains or overlaps
@@ -83,7 +86,8 @@ def execute(args):
 
             layer.ResetReading()
 
-        polygon.SetField('ACTIV_CT', count)
+        polygon.SetField('ACTIV_COUNT', count)
+        
         z_layer.SetFeature(polygon)
 
     make_param_file(args)
