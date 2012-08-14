@@ -1,15 +1,14 @@
 """InVEST Biodiversity model core function  module"""
-
-from invest_natcap import raster_utils
+import math
+import os.path
+import logging
 
 from osgeo import gdal
 from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
-import math
-import os.path
-import logging
 
+from invest_natcap import raster_utils
 LOGGER = logging.getLogger('biodiversity_core')
 
 def biophysical(args):
@@ -18,8 +17,9 @@ def biophysical(args):
        args - a python dictionary with at least the following components:
        args['workspace_dir'] - a uri to the directory that will write output
        args['landuse_dict'] - a python dictionary with keys depicting the
-                              landuse scenario (current, future, or baseline)
-                              and the values GDAL datasets.
+           landuse scenario (current, future, or baseline) and the values GDAL
+           datasets.
+           {'_c':current dataset, '_f':future dataset, '_b':baseline dataset}
        args['threat_dict'] - a python dictionary representing the threats table
             {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7','DECAY':'0'},
              'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3','DECAY':'0'},
@@ -29,18 +29,17 @@ def biophysical(args):
              '11':{'LULC':'11','NAME':'Urban','HABITAT':'1','L_crp':'0.6','L_urb':'0.3'...},
              ...}
        args['density_dict'] - a python dictionary that stores any density
-                              rasters (threat rasters) corresponding to the
-                              entries in the threat table and whether the
-                              density raster belongs to the current, future, or
-                              baseline raster. Example:
+           rasters (threat rasters) corresponding to the entries in the threat
+           table and whether the density raster belongs to the current, future,
+           or baseline raster. Example:
            {'dens_c': {'crp_c' : crp_c.tif, 'srds_c' : srds_c.tif, ...},
             'dens_f': {'crp_f' : crp_f.tif, 'srds_f' : srds_f.tif, ...},
             'dens_b': {'crp_b' : crp_b.tif, 'srds_b' : srds_b.tif, ...}
            }
        args['access_shape'] - an OGR datasource of polygons depicting any protected/reserved
-                              land boundaries
+           land boundaries
        args['half_saturation'] - an integer that determines the spread and
-                                 central tendency of habitat quality scores
+           central tendency of habitat quality scores
        args['result_suffix'] - a string of the desired suffix
 
        returns nothing."""
