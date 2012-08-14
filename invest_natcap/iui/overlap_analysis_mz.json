@@ -26,10 +26,10 @@
                     "args_id" : "zone_layer_loc",
                     "type": "file",
                     "label": "Analysis Zones Layer",
-                    "defaultValue": "../OverlapAnalysis/Input/AOI_WCVI.shp",
+                    "defaultValue": "../OverlapAnalysis/Input/ManagementZones_WCVI.shp",
                     "validateAs": {"type": "OGR"},
                     "required": true,
-                    "helpText": "If you are using Management Zones to analyze overlap data, this should be a polygon shapefile containing multiple polygons. If, on the other hand, you wish to use gridding in order to separate the area, this can be a single polygon shapefile."
+                    "helpText": "Since we are using Management Zones to analyze overlap data, this should be a polygon shapefile containing multiple polygons."
                 }
                 {
                     "id" : "data_dir",
