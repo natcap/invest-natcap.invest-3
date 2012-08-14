@@ -1,13 +1,16 @@
 """InVEST Biophysical model file handler module"""
+import os.path
+import logging
+import csv
+
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import csv
 
-from invest_natcap.biodiversity import biodiversity_core
-
-import os.path
-import logging
+try:
+    import biodiversity_core
+except ImportError:
+    from invest_natcap.biodiversity import biodiversity_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -46,9 +49,12 @@ def execute(args):
 
     workspace = args['workspace_dir']
     
+    # create dictionary to hold values that will be passed to the core
+    # functionality
     biophysical_args = {}
     biophysical_args['workspace_dir'] = workspace
-    # If the user has not provided a results suffix, assume it to be an empty
+
+    # if the user has not provided a results suffix, assume it to be an empty
     # string.
     try:
         suffix = args['results_suffix']
@@ -69,7 +75,7 @@ def execute(args):
     input_dir = os.path.join(workspace, 'input')
     if not os.path.isdir(input_dir):
         raise Exception('The input directory where the threat rasters should\
-                be cannot be found.')
+                be located cannot be found.')
     
     biophysical_args['threat_dict'] = \
         make_dictionary_from_csv(args['threats_uri'],'THREAT')
@@ -105,7 +111,7 @@ def execute(args):
     landuse_dict = {}
     density_dict = {}
 
-    # for each possible land cover the was provided try opening the raster and
+    # for each possible land cover that was provided try opening the raster and
     # adding it to the dictionary. Also compile all the threat/density rasters
     # associated with the land cover
     for scenario, ext in landuse_scenarios.iteritems():
@@ -130,7 +136,7 @@ def execute(args):
     biophysical_args['density_dict'] = density_dict
 
     # checking to make sure the land covers have the same projections and are
-    # projected in meters
+    # projected in meters. We pass in 1.0 because that is the unit for meters
     if check_projections(landuse_dict, 1.0):
         raise Exception('Land cover projections are not the same or are not\
             projected in meters')
@@ -161,7 +167,6 @@ def open_ambiguous_raster(uri):
         if dataset is not None:
             break
 
-    #LOGGER.debug('DATASET : %s, %s', dataset, uri)
     return dataset
 
 def make_dictionary_from_csv(csv_uri, key_field):
@@ -202,7 +207,7 @@ def check_projections(ds_dict, proj_unit):
         srs = osr.SpatialReference()
         srs.ImportFromWkt(ds.GetProjection())
         if not srs.IsProjected():
-            LOGGER.debug('The Raster is Not Projected')
+            LOGGER.debug('A Raster is Not Projected')
             return True
         if srs.GetLinearUnits() != proj_unit:
             LOGGER.debug('Proj units do not match %s:%s', \
@@ -223,8 +228,14 @@ def compare_threats_sensitivity(threat_dict, sens_dict):
         sensitivity table that represent the sensitivity of each threat on a 
         lulc.
 
-        threat_dict - a dictionary representing the threat table
-        sens_dict - a dictionary representing the sensitivity table
+        threat_dict - a dictionary representing the threat table:
+            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7','DECAY':'0'},
+             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3','DECAY':'0'},
+             ... }
+        sens_dict - a dictionary representing the sensitivity table:
+            {'1':{'LULC':'1','NAME':'Residential','HABITAT':'1','L_crp':'0.4','L_urb':'0.45'...},
+             '11':{'LULC':'11','NAME':'Urban','HABITAT':'1','L_crp':'0.6','L_urb':'0.3'...},
+             ...}
 
         returns - True if there is a mismatch in threat names or False if
             everything passes"""
