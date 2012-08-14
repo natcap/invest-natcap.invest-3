@@ -199,7 +199,7 @@ def biophysical(args):
                 # set the adjusted raster lists depending on whether the 
                 # access shapefile was provided
                 if access_raster is not None:
-                    adjusted_list.append(acces_raster)
+                    adjusted_list.append(access_raster)
                     access_band = access_raster.GetRasterBand(1)
                     adjusted_nodata_list.append(access_band.GetNoDataValue())
                 
