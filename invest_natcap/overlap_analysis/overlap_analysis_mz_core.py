@@ -8,6 +8,10 @@ from osgeo import ogr
 from osgeo import gdal
 from invest_natcap import raster_utils
 
+LOGGER = logging.getLogger('overlap_analysis_mz_core')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
 def execute(args):
 
     '''This is the core module for the management zone model, which was
@@ -42,24 +46,25 @@ def execute(args):
     #Want to run through all polygons in the AOI, and see if any intersect or contain
     #all shapefiles from all other layers. Little bit gnarly in terms of runtime, but
     #at least doable.
-
-    zoned_shape_old = args['zone_layer_file']
+    
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    zone_shape_old = args['zone_layer_file']
     layers_dict = args['over_layer_dict']
-
-    path = os.path.join(output_dir, 'zone_shape.shp')
 
     #This creates a new shapefile that is a copy of the old one, but at the path location
     #That way we can edit without worrying about changing the Input file.
-    z_copy = zone_shape_old.CopyDataSource(zoned_shape_old, path)
+    z_copy = driver.CopyDataSource(zone_shape_old, output_dir)
+    LOGGER.debug(z_copy)
 
     z_layer = z_copy.GetLayer()
 
     #Creating a definition for our new activity count field.
-    field_defn = ogr.FieldDefn('ACTIVITY_COUNT', ogr.OFTReal)
+    field_defn = ogr.FieldDefn('ACTIV_CT', ogr.OFTReal)
     z_layer.CreateField(field_defn)
 
     for polygon in z_layer:
         
+        zone_geom = polygon.GetGeometryRef()
         count = 0
 
         for activ in layers_dict: 
@@ -67,9 +72,19 @@ def execute(args):
             shape_file = layers_dict[activ]
             layer = shape_file.GetLayer()
             
+
             for element in layer:
-            #If it contains or overlaps
-                count += 1
+                #If it contains or overlaps
+                activ_geom = element.GetGeometryRef()
+
+                if zone_geom.Contains(activ_geom) or zone_geom.Overlaps(activ_geom):
+                    count += 1
+                    break
+
+            layer.ResetReading()
+
+        polygon.SetField('ACTIV_CT', count)
+        z_layer.SetFeature(polygon)
 
     make_param_file(args)
 
@@ -99,7 +114,7 @@ def make_param_file(args):
     list.append("Zone Layer: " + args['zone_layer_file'].GetName())
     
     list.append("Activity Layers: ")
-    for name in args['overlap_files'].keys():
+    for name in args['over_layer_dict'].keys():
         list.append("--- " + name)
 
     for element in list:
