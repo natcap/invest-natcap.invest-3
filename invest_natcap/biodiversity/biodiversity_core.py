@@ -50,6 +50,7 @@ def biophysical(args):
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
     cur_landuse = args['landuse_dict']['_c']
     threat_dict = args['threat_dict']
+    sensitivity_dict = args['sensitivity_dict']
     half_saturation = args['half_saturation']
     
     out_nodata = -1.0
@@ -58,8 +59,8 @@ def biophysical(args):
     habitat_uri = os.path.join(intermediate_dir, 'habitat.tif')
     
     habitat_raster = \
-        raster_from_dict(cur_landuse, habitat_uri, args['sensitivity_dict'],\
-            'HABITAT', -1.0, False)
+        raster_from_dict(cur_landuse, habitat_uri, sensitivity_dict,\
+                         'HABITAT', out_nodata, False)
     
     # If access_lyr: convert to raster, if value is null set to 1, 
     # else set to value
@@ -168,7 +169,7 @@ def biophysical(args):
                 
                 sensitivity_raster = \
                     raster_from_dict(lulc_ras, sens_uri,\
-                        args['sensitivity_dict'], 'L_'+threat, -1.0, True,\
+                        sensitivity_dict, 'L_'+threat, -1.0, True,\
                         error_message='A lulc type in the land cover was not\
                         found in the sensitivity table. The erroring pixel\
                         value was : ')        
