@@ -71,7 +71,7 @@ def execute(args):
     # exception because the threat rasters can't be located.
     input_dir = os.path.join(workspace, 'input')
     if not os.path.isdir(input_dir):
-        raise Exception('The input directory where the threat rasters ' + 
+        raise Exception('The input directory where the threat rasters ' + \
                         'should be located cannot be found.')
     
     biophysical_args['threat_dict'] = \
@@ -82,8 +82,8 @@ def execute(args):
 
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
-    if compare_threats_sensitivity(biophysical_args['threat_dict'],\
-            biophysical_args['sensitivity_dict']):
+    if not threat_names_match(biophysical_args['threat_dict'],\
+            biophysical_args['sensitivity_dict'], 'L_'):
         raise Exception('The threat names in the threat table do ' + \
             'not match the columns in the sensitivity table')
 
@@ -99,7 +99,7 @@ def execute(args):
     # appropriate suffix to the landuser_scenarios list as necessary for the
     # scenario.
     landuse_scenarios = {'cur':'_c'}
-    scenario_constants = [('landuse_fut_uri','fut','_f'), \  
+    scenario_constants = [('landuse_fut_uri','fut','_f'), \
                           ('landuse_bas_uri','bas','_b')]
     for lu_uri, lu_time, lu_ext in scenario_constants:
         if lu_uri in args:
@@ -115,30 +115,30 @@ def execute(args):
     # associated with the land cover
     for scenario, ext in landuse_scenarios.iteritems():
         landuse_dict[ext] = \
-            gdal.Open(str(args['landuse_'+scenario+'_uri']), gdal.GA_ReadOnly)
+            gdal.Open(args['landuse_' + scenario + '_uri'], gdal.GA_ReadOnly)
         
         # add a key to the density dictionary that associates all density/threat
         # rasters with this land cover
-        density_dict['density'+ext] = {}
+        density_dict['density' + ext] = {}
 
         # for each threat given in the CSV file try opening the associated
         # raster which should be found in workspace/input/
         for threat in biophysical_args['threat_dict']:
             try:
-                density_dict['density'+ext][str(threat)] = \
-                    open_ambiguous_raster(os.path.join(input_dir, threat+ext))
+                density_dict['density' + ext][threat] = \
+                    open_ambiguous_raster(os.path.join(input_dir, threat + ext))
             except:
-                LOGGER.warn('Error encountered getting raster for threat : %s',
-                            os.path.join(input_dir, threat+ext))
+                LOGGER.warn('Error encountered getting raster for threat : %s',\
+                            os.path.join(input_dir, threat + ext))
     
     biophysical_args['landuse_dict'] = landuse_dict
     biophysical_args['density_dict'] = density_dict
 
     # checking to make sure the land covers have the same projections and are
     # projected in meters. We pass in 1.0 because that is the unit for meters
-    if check_projections(landuse_dict, 1.0):
-        raise Exception('Land cover projections are not the same or are not\
-            projected in meters')
+    if not check_projections(landuse_dict, 1.0):
+        raise Exception('Land cover projections are not the same or are' +\
+                        'not projected in meters')
 
     biodiversity_core.biophysical(biophysical_args)
 
@@ -159,7 +159,7 @@ def open_ambiguous_raster(uri):
     # initialize dataset to None in the case that all paths do not exist
     dataset = None 
     for suffix in possible_suffixes:
-        if not os.path.exists(uri+suffix):
+        if not os.path.exists(uri + suffix):
             continue
         dataset = gdal.Open(uri+suffix, gdal.GA_ReadOnly)
         # return as soon as a valid gdal dataset is found
@@ -195,8 +195,8 @@ def check_projections(ds_dict, proj_unit):
         proj_unit - a float that specifies what units the projection should be
             in. ex: 1.0 is meters.
 
-        returns - true if one of the datasets is not projected or not in the
-            correct projection type, otherwise returns false if datasets are
+        returns - False if one of the datasets is not projected or not in the
+            correct projection type, otherwise returns True if datasets are
             properly projected
     """
     # a list to hold the projection types to compare later
@@ -207,22 +207,22 @@ def check_projections(ds_dict, proj_unit):
         srs.ImportFromWkt(ds.GetProjection())
         if not srs.IsProjected():
             LOGGER.debug('A Raster is Not Projected')
-            return True
+            return False
         if srs.GetLinearUnits() != proj_unit:
             LOGGER.debug('Proj units do not match %s:%s', \
-                    proj_units, srs.GetLinearUnits())
-            return True
+                         proj_units, srs.GetLinearUnits())
+            return False
         projections.append(srs.GetAttrValue("PROJECTION"))
     
     # check that all the datasets have the same projection type
     for index in range(len(projections)):
         if projections[0] != projections[index]:
             LOGGER.debug('Projections are not the same')
-            return True
+            return False
 
-    return False
+    return True
 
-def compare_threats_sensitivity(threat_dict, sens_dict):
+def threat_names_match(threat_dict, sens_dict, prefix):
     """Check that the threat names in the threat table match the columns in the
         sensitivity table that represent the sensitivity of each threat on a 
         lulc.
@@ -236,7 +236,10 @@ def compare_threats_sensitivity(threat_dict, sens_dict):
              '11':{'LULC':'11','NAME':'Urban','HABITAT':'1','L_crp':'0.6','L_urb':'0.3'...},
              ...}
 
-        returns - True if there is a mismatch in threat names or False if
+        prefix - a string that specifies the prefix to the threat names that is
+            found in the sensitivity table
+
+        returns - False if there is a mismatch in threat names or True if
             everything passes"""
 
     # get a representation of a row from the sensitivity table where 'sens_row'
@@ -244,7 +247,7 @@ def compare_threats_sensitivity(threat_dict, sens_dict):
     sens_row = sens_dict[sens_dict.keys()[0]]  
     
     for threat in threat_dict:
-        sens_key = 'L_'+threat
+        sens_key = prefix + threat
         if not sens_key in sens_row:
-            return True
-    return False
+            return False
+    return True
