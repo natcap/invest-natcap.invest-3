@@ -238,6 +238,7 @@ def compare_threats_sensitivity(threat_dict, sens_dict):
 
         returns - True if there is a mismatch in threat names or False if
             everything passes"""
+
     # get a representation of a row from the sensitivity table where 'sens_row'
     # will be a dictionary with the column headers as the keys
     sens_row = sens_dict[sens_dict.keys()[0]]  
@@ -247,7 +248,3 @@ def compare_threats_sensitivity(threat_dict, sens_dict):
         if not sens_key in sens_row:
             return True
     return False
-
-
-
-
