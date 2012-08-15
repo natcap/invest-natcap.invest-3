@@ -1669,6 +1669,9 @@ class OperationDialog(QtGui.QDialog):
         else:
             self.messageArea.setText('Model completed successfully.')
         self.messageArea.setError(errors_found)
+        self.messageArea.show()
+        self.cursor.movePosition(QtGui.QTextCursor.End)
+        self.statusArea.setTextCursor(self.cursor)
 
     def closeEvent(self, data=None):
         """When a closeEvent is detected, run self.closeWindow().
