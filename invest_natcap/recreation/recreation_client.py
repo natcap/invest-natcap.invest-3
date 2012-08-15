@@ -25,6 +25,28 @@ def execute(args):
     cellUnit = float(args["cellUnit"])
     workspace_dir = args["workspace_dir"]
     comments = args["comments"]
+
+    predictorKeys = ["landscan",
+                     "osm_point",
+                     "osm_line",
+                     "osm_poly",
+                     "protected",
+                     "lulc",
+                     "mangroves",
+                     "reefs",
+                     "grass"]
+    if args.has_key("mask"):
+        for k,b in zip(predictorKeys,args["mask"]):
+            args[k]=b
+    landscan=args["landscan"]
+    osm_point=args["osm_point"]
+    osm_line=args["osm_line"]
+    osm_poly=args["osm_poly"]
+    protected=args["protected"]
+    lulc=args["lulc"]
+    mangroves=args["mangroves"]
+    reefs=args["reefs"]
+    grass=args["grass"]
     
     dirname=os.path.dirname(aoiFileName)+os.sep
     fileName=os.path.basename(aoiFileName)[:-4]
@@ -132,20 +154,26 @@ if __name__ == "__main__":
         cellUnit = float(sys.argv[3])
         workspace_dir = sys.argv[4]
         comments = sys.argv[5]
+        data_dir = sys.argv[6]
+        mask = map(bool,sys.argv[7:16])
 
     else:
         LOGGER.info("Runnning model with test parameters.")
         dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
         aoiFileName = dirname+"recreation_data/"+"FIPS-11001.shp"
-        cellSize = 1000
-        cellUnit = 1
+        cellSize = 3
+        cellUnit = 1000
         workspace_dir = dirname+"test_out/"
         comments = "Runnning model with test parameters."
+        data_dir = ""
+        mask = [True]*9
 
     args["aoiFileName"] = aoiFileName
     args["cellSize"] = cellSize
     args["cellUnit"] = cellUnit
     args["workspace_dir"] = workspace_dir
     args["comments"] = comments
+    args["data_dir"] = data_dir
+    args["mask"] = mask
 
     execute(args)
