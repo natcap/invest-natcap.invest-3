@@ -58,6 +58,8 @@ def execute(args):
     except:
         suffix = ''
 
+    biophysical_args['suffix'] = suffix
+
     # Check to see if each of the workspace folders exists.  If not, create the
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
@@ -82,12 +84,13 @@ def execute(args):
 
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
-    if not threat_names_match(biophysical_args['threat_dict'],\
+    if not threat_names_match(biophysical_args['threat_dict'], \
             biophysical_args['sensitivity_dict'], 'L_'):
         raise Exception('The threat names in the threat table do ' + \
             'not match the columns in the sensitivity table')
 
-    biophysical_args['half_saturation'] = int(args['half_saturation_constant'])    
+    biophysical_args['half_saturation'] = \
+            int(args['half_saturation_constant'])    
 
     # if the access shapefile was provided add it to the dictionary
     try:
@@ -99,8 +102,8 @@ def execute(args):
     # appropriate suffix to the landuser_scenarios list as necessary for the
     # scenario.
     landuse_scenarios = {'cur':'_c'}
-    scenario_constants = [('landuse_fut_uri','fut','_f'), \
-                          ('landuse_bas_uri','bas','_b')]
+    scenario_constants = [('landuse_fut_uri', 'fut', '_f'), \
+                          ('landuse_bas_uri', 'bas', '_b')]
     for lu_uri, lu_time, lu_ext in scenario_constants:
         if lu_uri in args:
             landuse_scenarios[lu_time] = lu_ext
@@ -128,7 +131,7 @@ def execute(args):
                 density_dict['density' + ext][threat] = \
                     open_ambiguous_raster(os.path.join(input_dir, threat + ext))
             except:
-                LOGGER.warn('Error encountered getting raster for threat : %s',\
+                LOGGER.warn('Error getting raster for threat : %s', \
                             os.path.join(input_dir, threat + ext))
     
     biophysical_args['landuse_dict'] = landuse_dict
@@ -202,15 +205,15 @@ def check_projections(ds_dict, proj_unit):
     # a list to hold the projection types to compare later
     projections = []
 
-    for ds in ds_dict.itervalues():
+    for dataset in ds_dict.itervalues():
         srs = osr.SpatialReference()
-        srs.ImportFromWkt(ds.GetProjection())
+        srs.ImportFromWkt(dataset.GetProjection())
         if not srs.IsProjected():
             LOGGER.debug('A Raster is Not Projected')
             return False
         if srs.GetLinearUnits() != proj_unit:
             LOGGER.debug('Proj units do not match %s:%s', \
-                         proj_units, srs.GetLinearUnits())
+                         proj_unit, srs.GetLinearUnits())
             return False
         projections.append(srs.GetAttrValue("PROJECTION"))
     
