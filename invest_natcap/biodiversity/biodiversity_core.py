@@ -168,7 +168,7 @@ def biophysical(args):
                 os.path.join(intermediate_dir, str('sens_'+threat+lulc_key+'.tif'))
             
             sensitivity_raster = \
-                raster_from_dict(lulc_ras, sens_uri,\
+                raster_from_dict(lulc_ds, sens_uri,\
                     sensitivity_dict, 'L_'+threat, out_nodata, True,\
                     error_message='A lulc type in the land cover was not\
                     found in the sensitivity table. The erroring pixel\
@@ -519,6 +519,8 @@ def raster_from_dict(key_raster, out_uri, attr_dict, field, out_nodata,\
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
     attr_dict[out_nodata] = {field:float(out_nodata)}
+    attr_dict[str(int(key_raster.GetRasterBand(1).GetNoDataValue()))] =\
+        {field:float(out_nodata)}
 
     def vop(key):
         """Operation passed to numpy function vectorize that uses 'key' as the 
@@ -537,7 +539,7 @@ def raster_from_dict(key_raster, out_uri, attr_dict, field, out_nodata,\
             return attr_dict[str(key)][field]
         else:
             if raise_error:
-                raise KeyError(error_message)
+                raise KeyError(error_message + str(key))
             return out_nodata
 
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
