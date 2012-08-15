@@ -7,10 +7,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-try:
-    import biodiversity_core
-except ImportError:
-    from invest_natcap.biodiversity import biodiversity_core
+from invest_natcap.biodiversity import biodiversity_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -74,8 +71,8 @@ def execute(args):
     # exception because the threat rasters can't be located.
     input_dir = os.path.join(workspace, 'input')
     if not os.path.isdir(input_dir):
-        raise Exception('The input directory where the threat rasters should\
-                be located cannot be found.')
+        raise Exception('The input directory where the threat rasters ' + 
+                        'should be located cannot be found.')
     
     biophysical_args['threat_dict'] = \
         make_dictionary_from_csv(args['threats_uri'],'THREAT')
@@ -87,8 +84,8 @@ def execute(args):
     # columns in the sensitivity table. Raise exception if they don't.
     if compare_threats_sensitivity(biophysical_args['threat_dict'],\
             biophysical_args['sensitivity_dict']):
-        raise Exception('The threat names in the threat table do not match the\
-                columns in the sensitivity table')
+        raise Exception('The threat names in the threat table do ' + \
+            'not match the columns in the sensitivity table')
 
     biophysical_args['half_saturation'] = int(args['half_saturation_constant'])    
 
@@ -102,7 +99,9 @@ def execute(args):
     # appropriate suffix to the landuser_scenarios list as necessary for the
     # scenario.
     landuse_scenarios = {'cur':'_c'}
-    for lu_uri, lu_time, lu_ext in ('landuse_fut_uri','fut','_f'),('landuse_bas_uri','bas','_b'):
+    scenario_constants = [('landuse_fut_uri','fut','_f'), \  
+                          ('landuse_bas_uri','bas','_b')]
+    for lu_uri, lu_time, lu_ext in scenario_constants:
         if lu_uri in args:
             landuse_scenarios[lu_time] = lu_ext
 
@@ -239,6 +238,7 @@ def compare_threats_sensitivity(threat_dict, sens_dict):
 
         returns - True if there is a mismatch in threat names or False if
             everything passes"""
+
     # get a representation of a row from the sensitivity table where 'sens_row'
     # will be a dictionary with the column headers as the keys
     sens_row = sens_dict[sens_dict.keys()[0]]  
@@ -248,7 +248,3 @@ def compare_threats_sensitivity(threat_dict, sens_dict):
         if not sens_key in sens_row:
             return True
     return False
-
-
-
-
