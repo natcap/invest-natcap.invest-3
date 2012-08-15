@@ -1664,8 +1664,10 @@ class OperationDialog(QtGui.QDialog):
         self.stop_buttons()
         errors_found = self.exec_controller.thread_failed
         if errors_found:
-            self.messageArea.setText('An error was encountered running this' +
-                ' model.')
+            thread_exception = self.exec_controller.thread_exception
+            self.messageArea.setText(str('<b>%s</b> encountered: <em>%s</em> <br/>' +
+                'See the log for details.') % (thread_exception.__class__.__name__,
+                str(thread_exception)))
         else:
             self.messageArea.setText('Model completed successfully.')
         self.messageArea.setError(errors_found)
