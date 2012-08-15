@@ -3,6 +3,7 @@ import datetime
 import glob
 
 from osgeo import ogr
+from invest_natcap.overlap_analysis import overlap_analysis_mz_core
 
 def execute(args):
     '''
@@ -41,7 +42,7 @@ def execute(args):
     mz_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
 
     file_dict = get_files_dict(args['overlap_data_dir_loc'])
-    mz_args['overlap_files'] = file_dict
+    mz_args['over_layer_dict'] = file_dict
     
     overlap_analysis_mz_core.execute(mz_args)
 

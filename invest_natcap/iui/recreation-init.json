@@ -110,14 +110,6 @@
 				    "required": false
 				},				
 				{
-				    "id" : "grass",
-				    "args_id" : "grass",
-				    "type": "checkbox",
-				    "label": "Sea Grass",
-				    "defaultValue": true,
-				    "required": false
-				},
-				{
 				    "id" : "mangroves",
 				    "args_id" : "mangroves",
 				    "type": "checkbox",
@@ -132,7 +124,15 @@
 				    "label": "Reefs",
 				    "defaultValue": true,
 				    "required": false
-				}
+				},
+				{
+				    "id" : "grass",
+				    "args_id" : "grass",
+				    "type": "checkbox",
+				    "label": "Sea Grass",
+				    "defaultValue": true,
+				    "required": false
+				}				
 		   ]
 		   }
     ]
