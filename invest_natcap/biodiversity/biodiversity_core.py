@@ -165,7 +165,7 @@ def biophysical(args):
 
             # create sensitivity raster based on threat
             sens_uri = \
-                os.path.join(intermediate_dir, str('sens_'+threat+lulc_key+'.tif'))
+                os.path.join(intermediate_dir, 'sens_'+threat+lulc_key+'.tif')
             
             sensitivity_raster = \
                 raster_from_dict(lulc_ras, sens_uri,\
