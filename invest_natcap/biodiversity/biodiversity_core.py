@@ -68,7 +68,9 @@ def biophysical(args):
         access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
         access_uri = os.path.join(intermediate_dir, 'access_layer.tif')
-        access_base = make_raster_from_lulc(cur_landuse, access_uri)
+        access_base = \
+            raster_utils.new_raster_from_base(cur_landuse, accessr_uri, \
+                'GTiff', -1, gdal.GDT_Float32)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
         access_base.GetRasterBand(1).Fill(1)
@@ -547,11 +549,3 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, out_nodata,
 
     return out_raster
 
-def make_raster_from_lulc(lulc_dataset, raster_uri):
-    """Create a new raster from the lulc
-    """
-    LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
-    dataset = \
-        raster_utils.new_raster_from_base(lulc_dataset, raster_uri, 'GTiff', \
-                                          -1, gdal.GDT_Float32)
-    return dataset
