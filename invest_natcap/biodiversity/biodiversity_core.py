@@ -553,5 +553,3 @@ def make_raster_from_lulc(lulc_dataset, raster_uri):
         raster_utils.new_raster_from_base(lulc_dataset, raster_uri, 'GTiff', \
                                           -1, gdal.GDT_Float32)
     return dataset
-
-
