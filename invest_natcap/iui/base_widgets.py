@@ -738,6 +738,7 @@ class DynamicText(LabeledElement):
             returns nothing."""
 
         self.setBGcolorSatisfied(True)  # assume valid until validation fails
+        self.error_button.deactivate()
         if self.validator != None:
             self.validate()
         else:
