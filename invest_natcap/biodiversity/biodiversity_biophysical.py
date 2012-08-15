@@ -7,10 +7,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-try:
-    import biodiversity_core
-except ImportError:
-    from invest_natcap.biodiversity import biodiversity_core
+from invest_natcap.biodiversity import biodiversity_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
