@@ -99,7 +99,9 @@ def execute(args):
     # appropriate suffix to the landuser_scenarios list as necessary for the
     # scenario.
     landuse_scenarios = {'cur':'_c'}
-    for lu_uri, lu_time, lu_ext in ('landuse_fut_uri','fut','_f'),('landuse_bas_uri','bas','_b'):
+    scenario_constants = [('landuse_fut_uri','fut','_f'), \  
+                          ('landuse_bas_uri','bas','_b')]
+    for lu_uri, lu_time, lu_ext in scenario_constants:
         if lu_uri in args:
             landuse_scenarios[lu_time] = lu_ext
 
