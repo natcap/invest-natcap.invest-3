@@ -71,8 +71,8 @@ def execute(args):
     # exception because the threat rasters can't be located.
     input_dir = os.path.join(workspace, 'input')
     if not os.path.isdir(input_dir):
-        raise Exception('The input directory where the threat rasters should\
-                be located cannot be found.')
+        raise Exception('The input directory where the threat rasters ' + \
+                        'should be located cannot be found.')
     
     biophysical_args['threat_dict'] = \
         make_dictionary_from_csv(args['threats_uri'],'THREAT')
