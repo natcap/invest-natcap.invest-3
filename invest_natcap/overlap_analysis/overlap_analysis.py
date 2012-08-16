@@ -27,11 +27,8 @@ def execute(args):
             will come in as a string.
         args['zone_layer_loc']- A URI pointing to a shapefile with the analysis
             zones on it.
-        args['do_grid']- Boolean for whether or not gridding of the passed in
-            shapefile is desired on the file specified by 'zone_layer_loc'
-        args['grid_size']- May or may not be in the args directory. Will only
-            exist if 'do_grid' is true. This is an int specifying how large the
-            gridded squares over the shapefile should be.
+        args['grid_size']- This is an int specifying how large the gridded 
+            squares over the shapefile should be.
         args['overlap_data_dir_loc']- URI pointing to a directory where multiple
             shapefiles are located. Each shapefile represents an activity of
             interest for the model.
@@ -82,10 +79,6 @@ def execute(args):
     #raster pixels to be. 
     oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
     oa_args['grid_size'] = args['grid_size']
-    
-    #Still need to pass in do_grid because we need to know if we're treating management
-    #zones or exact gridded squares....don't we?
-    oa_args['do_grid'] = args['do_grid']
       
     #Abstracting this to its own function for use in testing. Returns dictionary.
     file_dict = get_files_dict(args['overlap_data_dir_loc'])

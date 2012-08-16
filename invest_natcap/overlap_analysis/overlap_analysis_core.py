@@ -492,7 +492,8 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         band.Fill(nodata)
         
         overlap_burn_value = 1
-        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1])
+        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1], 
+                                        options=['ALL_TOUCHED=TRUE'])
         #this should do something about flushing the buffer
         dataset.FlushCache()
         
