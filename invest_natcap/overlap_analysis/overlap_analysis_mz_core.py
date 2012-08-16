@@ -63,7 +63,7 @@ def execute(args):
     z_layer = z_copy.GetLayer()
 
     #Creating a definition for our new activity count field.
-    field_defn = ogr.FieldDefn('ACTIV_COUNT', ogr.OFTReal)
+    field_defn = ogr.FieldDefn('ACTIV_CNT', ogr.OFTReal)
     z_layer.CreateField(field_defn)
     
     for polygon in z_layer:
@@ -86,7 +86,7 @@ def execute(args):
 
             layer.ResetReading()
 
-        polygon.SetField('ACTIV_COUNT', count)
+        polygon.SetField('ACTIV_CNT', count)
         
         z_layer.SetFeature(polygon)
 

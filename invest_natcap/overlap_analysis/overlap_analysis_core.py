@@ -24,11 +24,8 @@ def execute(args):
         args['workspace_dir'] - The directory in which all output and intermediate
             files should be placed.
         args['zone_layer_file'] - This is the shapefile representing our area of
-            interest. If 'do_grid' is true, we will rasterize this using cells of
-            'grid_size' by 'grid_size'.
-        args['do_grid'] - This tells us whether the area of interest file that was
-            being passed in was a management zone divided shapefile, or was
-            pre-gridded into identical squares.
+            interest. We will rasterize this using cells of 'grid_size' by 
+            'grid_size'.
         args['grid_size'] - This is the size of 1 side of each of the square polygons
             present on 'zone_layer_file'. This can be used to set the size of the
             pixels for the intermediate rasters.
@@ -43,12 +40,6 @@ def execute(args):
         args['intra_name']- A string which corresponds to a field within the
            layers being passed in within overlap analysis directory. This is
            the intra-activity importance for each activity.
-        args['hum_use_hubs_loc']- An open shapefile of major hubs of human 
-            activity. This would allow you to degrade the weight of activity
-            zones as they get farther away from these locations.
-        args['decay']- float between 0 and 1, representing the decay of interest
-            in areas as you get farther away from human hubs.
-        args['do-inter']-Boolean that indicates whether or not inter-activity
             weighting is desired. This tells us if the overlap table exists.
         args['do_intra']- Boolean which indicates whether or not intra-activity
             weighting is desired. This will will pull attributes from shapefiles
@@ -65,88 +56,23 @@ def execute(args):
             Intermediate directory.
 
     Output:
-        (If Rasters):
-            activities_uri- This is a raster output which depicts the
-                unweighted frequency of activity within a gridded area or management
-                zone.
-            hu_impscore.tif- This is a raster depicting the importance scores
-                for each grid or management zone in the area of interest. This
-                combines the desired inter or intra activity weighting into one raster
-                and is an explicitly named file within the make_weighted_raster function.
-        (If Shapefile):
-            zone_shapefile- An updated version of the args['zone_layer_file'] that came
-                in through the IUI. We will copy that datasource, and create a version
-                that also contains an "activities count" field which specifies how many
-                activities are performed within each polygon.
+        activities_uri- This is a raster output which depicts the
+            unweighted frequency of activity within a gridded area or management
+            zone.
+        hu_impscore.tif- This is a raster depicting the importance scores
+            for each grid or management zone in the area of interest. This
+            combines the desired inter or intra activity weighting into one raster
+            and is an explicitly named file within the make_weighted_raster function.
         textfile- A file created every time the model is run listing all variable
             parameters used during that run. This is created within the
             make_param_file function. 
 
     Returns nothing.'''
     
-    #We need to have two different tracks. One in which the managamenet zones should
-    #be used- in which case, we will only be returning one file, but it will be
-    #constructed differently from the gridded. Or, we would have the standard return,
-    #in which case, we would be rasterizing the shapefile.
-
-    #Make rasters
-    if (args['do_grid']):
-        gridded_rasters(args)
+    gridded_rasters(args)
         
-    #Make a single shape
-    else:
-        zone_shapefiles(args)
-       
     #This file should be output regardless of the input file.
     make_param_file(args)
-
-def zone_shapefile(args):
-    '''This function describes all that should be done if we should have a management zoned
-    shapefile. We will have a completely separate set of outputs from the gridded rasters.
-        
-        Input:
-            args- The entire arguments dictionary, as passed in by the overlap_analysis.py
-                module.
-
-        Output:
-            zoned_shape.shp- This is a shapefile output identical to the one passed in, except
-                that it will contain the additional field of activity number per polygon.
-
-        Returns nothing.'''
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-
-    #Want to run through all polygons in the AOI, and see if any intersect or contain
-    #all shapefiles from all other layers. Little bit gnarly in terms of runtime, but
-    #at least doable.
-
-    zoned_shape_old = args['zone_layer_file']
-    layers_dict = args['over_layer_dict']
-
-    path = os.path.join(output_dir, 'zone_shape.shp')
-
-    #This creates a new shapefile that is a copy of the old one, but at the path location
-    #That way we can edit without worrying about changing the Input file.
-    z_copy = zone_shape_old.CopyDataSource(zoned_shape_old, path)
-
-    z_layer = z_copy.GetLayer()
-
-    #Creating a definition for our new activity count field.
-    field_defn = ogr.FieldDefn('ACTIVITY_COUNT', ogr.OFTReal)
-    z_layer.CreateField(field_defn)
-
-    for polygon in z_layer:
-        
-        count = 0
-
-        for activ in layers_dict: 
-            
-            shape_file = layers_dict[activ]
-            layer = shape_file.GetLayer()
-            
-            for element in layer:
-            #If it contains or overlaps
-                count += 1
 
 def gridded_rasters(args):
 
@@ -261,18 +187,16 @@ def make_param_file(args):
     list.append("ARGUMENTS \n")
     list.append("Workspace: " + args['workspace_dir'])
     list.append("Zone Layer: " + args['zone_layer_file'].GetName())
-    list.append("Gridding Desired?: " + str(args['do_grid']))
+    list.append("Grid Size: " + str(args['grid_size']))
     list.append("Inter-Activity Weighting Desired?: " + str(args['do_inter']))
     list.append("Intra-Activity Weighting Desired?: " + str(args['do_intra']))
-    
+
     list.append("Activity Layers: ")
     for name in args['overlap_files'].keys():
         list.append("--- " + name)
 
     list.append("\nOPTIONAL ARGUMENTS \n")
 
-    if args['do_grid']:
-        list.append("Grid Size: " + str(args['grid_size']))
 
     if args['do_intra']:
         list.append("Intra-Activity Field Name: " + args['intra_name'])
@@ -554,7 +478,7 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
     print overlap_files
     
     #Remember, this defaults to element being the keys of the dictionary
-    for element in overlap_files:
+    for element, datasource in overlap_files.iteritems():
 
         datasource = overlap_files[element]
         layer = datasource.GetLayer()       
