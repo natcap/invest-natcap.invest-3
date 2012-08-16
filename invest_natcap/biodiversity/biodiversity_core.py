@@ -94,7 +94,7 @@ def biophysical(args):
         
         # get raster properties: cellsize, width, height, 
         # cells = width * height, extent    
-        lulc_prop = get_raster_properties(cur_landuse)
+        lulc_prop = raster_utils.raster_utils.get_raster_properties(cur_landuse)
 
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
@@ -299,7 +299,7 @@ def biophysical(args):
         
         # get the area of a base pixel to use for computing rarity where the 
         # pixel sizes are different between base and cur/fut rasters
-        base_properties = get_raster_properties(lulc_base)
+        base_properties = raster_utils.get_raster_properties(lulc_base)
         base_area = base_properties['width'] * base_properties['height']
 
         base_nodata = lulc_base.GetRasterBand(1).GetNoDataValue()
@@ -313,7 +313,7 @@ def biophysical(args):
                 lulc_x = args['landuse_dict'][lulc_cover]
                 
                 # get the area of a cur/fut pixel
-                lulc_properties = get_raster_properties(lulc_x)
+                lulc_properties = raster_utils.get_raster_properties(lulc_x)
                 lulc_area = lulc_properties['width'] * lulc_properties['height']
                 
                 lulc_nodata = lulc_x.GetRasterBand(1).GetNoDataValue()
@@ -471,22 +471,6 @@ def make_raster_from_shape(base_raster, shape, attr):
 
     return base_raster 
        
-def get_raster_properties(dataset):
-    """Get the width, height, cover, extent of the raster
-
-       dataset - a raster dataset
-        
-      returns - a dictionary with the properties stored under relevant keys
-    """
-    dataset_dict = {}
-    gt = dataset.GetGeoTransform()
-    dataset_dict['width'] = float(gt[1])
-    dataset_dict['height'] = float(gt[5])
-    dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize    
-    dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
-    LOGGER.debug('Raster_Properties : %s', dataset_dict)
-    return dataset_dict
-
 def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, out_nodata,\
         raise_error, error_message='An Error occured mapping a dictionary to a\
         raster'):
