@@ -59,7 +59,7 @@ def biophysical(args):
     habitat_uri = os.path.join(intermediate_dir, 'habitat.tif')
     
     habitat_raster = \
-        raster_from_dict(cur_landuse, habitat_uri, sensitivity_dict,\
+       map_raster_to_dict_values(cur_landuse, habitat_uri, sensitivity_dict,\
                          'HABITAT', out_nodata, False)
     
     # If access_lyr: convert to raster, if value is null set to 1, 
@@ -68,7 +68,9 @@ def biophysical(args):
         access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
         access_uri = os.path.join(intermediate_dir, 'access_layer.tif')
-        access_base = make_raster_from_lulc(cur_landuse, access_uri)
+        access_base = \
+            raster_utils.new_raster_from_base(cur_landuse, accessr_uri, \
+                'GTiff', -1, gdal.GDT_Float32)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
         access_base.GetRasterBand(1).Fill(1)
@@ -92,7 +94,7 @@ def biophysical(args):
         
         # get raster properties: cellsize, width, height, 
         # cells = width * height, extent    
-        lulc_prop = get_raster_properties(cur_landuse)
+        lulc_prop = raster_utils.raster_utils.get_raster_properties(cur_landuse)
 
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
@@ -165,10 +167,10 @@ def biophysical(args):
 
             # create sensitivity raster based on threat
             sens_uri = \
-                os.path.join(intermediate_dir, str('sens_'+threat+lulc_key+'.tif'))
+                os.path.join(intermediate_dir, 'sens_'+threat+lulc_key+'.tif')
             
             sensitivity_raster = \
-                raster_from_dict(lulc_ras, sens_uri,\
+                map_raster_to_dict_values(lulc_ds, sens_uri,\
                     sensitivity_dict, 'L_'+threat, out_nodata, True,\
                     error_message='A lulc type in the land cover was not\
                     found in the sensitivity table. The erroring pixel\
@@ -297,7 +299,7 @@ def biophysical(args):
         
         # get the area of a base pixel to use for computing rarity where the 
         # pixel sizes are different between base and cur/fut rasters
-        base_properties = get_raster_properties(lulc_base)
+        base_properties = raster_utils.get_raster_properties(lulc_base)
         base_area = base_properties['width'] * base_properties['height']
 
         base_nodata = lulc_base.GetRasterBand(1).GetNoDataValue()
@@ -311,7 +313,7 @@ def biophysical(args):
                 lulc_x = args['landuse_dict'][lulc_cover]
                 
                 # get the area of a cur/fut pixel
-                lulc_properties = get_raster_properties(lulc_x)
+                lulc_properties = raster_utils.get_raster_properties(lulc_x)
                 lulc_area = lulc_properties['width'] * lulc_properties['height']
                 
                 lulc_nodata = lulc_x.GetRasterBand(1).GetNoDataValue()
@@ -469,23 +471,7 @@ def make_raster_from_shape(base_raster, shape, attr):
 
     return base_raster 
        
-def get_raster_properties(dataset):
-    """Get the width, height, cover, extent of the raster
-
-       dataset - a raster dataset
-        
-      returns - a dictionary with the properties stored under relevant keys
-    """
-    dataset_dict = {}
-    gt = dataset.GetGeoTransform()
-    dataset_dict['width'] = float(gt[1])
-    dataset_dict['height'] = float(gt[5])
-    dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize    
-    dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
-    LOGGER.debug('Raster_Properties : %s', dataset_dict)
-    return dataset_dict
-
-def raster_from_dict(key_raster, out_uri, attr_dict, field, out_nodata,\
+def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, out_nodata,\
         raise_error, error_message='An Error occured mapping a dictionary to a\
         raster'):
     """Creates a new raster from 'key_raster' where the pixel values from
@@ -499,7 +485,7 @@ def raster_from_dict(key_raster, out_uri, attr_dict, field, out_nodata,\
                      keys in 'attr_dict'
        out_uri - a string for the output path of the created raster
        attr_dict - a dictionary representing a table of values we are interested
-                   in making into a raster                  
+                   in making into a raster
        field - a string of which field in the table or key in the dictionary 
                to use as the new raster pixel values
        out_nodata - a floating point value that is the nodata value.
@@ -514,11 +500,13 @@ def raster_from_dict(key_raster, out_uri, attr_dict, field, out_nodata,\
            2) the value from 'key_raster' is not a key in 'attr_dict'
     """
 
-    LOGGER.debug('Starting raster_from_dict')
+    LOGGER.debug('Starting map_raster_to_dict_values')
     
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
     attr_dict[out_nodata] = {field:float(out_nodata)}
+    attr_dict[str(int(key_raster.GetRasterBand(1).GetNoDataValue()))] =\
+        {field:float(out_nodata)}
 
     def vop(key):
         """Operation passed to numpy function vectorize that uses 'key' as the 
@@ -537,21 +525,11 @@ def raster_from_dict(key_raster, out_uri, attr_dict, field, out_nodata,\
             return attr_dict[str(key)][field]
         else:
             if raise_error:
-                raise KeyError(error_message)
+                raise KeyError(error_message + str(key))
             return out_nodata
 
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
             raster_out_uri=out_uri, nodata=out_nodata)
 
     return out_raster
-
-def make_raster_from_lulc(lulc_dataset, raster_uri):
-    """Create a new raster from the lulc
-    """
-    LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
-    dataset = \
-        raster_utils.new_raster_from_base(lulc_dataset, raster_uri, 'GTiff', \
-                                          -1, gdal.GDT_Float32)
-    return dataset
-
 
