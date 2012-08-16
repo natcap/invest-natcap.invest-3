@@ -94,7 +94,7 @@ def biophysical(args):
         
         # get raster properties: cellsize, width, height, 
         # cells = width * height, extent    
-        lulc_prop = raster_utils.raster_utils.get_raster_properties(cur_landuse)
+        lulc_prop = raster_utils.get_raster_properties(cur_landuse)
 
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
