@@ -172,9 +172,9 @@ def biophysical(args):
             sensitivity_raster = \
                 map_raster_to_dict_values(lulc_ds, sens_uri,\
                     sensitivity_dict, 'L_'+threat, out_nodata, True,\
-                    error_message='A lulc type in the land cover was not\
-                    found in the sensitivity table. The erroring pixel\
-                    value was : ')        
+                    error_message='A lulc type in the land cover with ' + \
+                    'postfix, ' + lulc_key + ', was not found in the ' + \
+                    'sensitivity table. The erroring value was : ')        
 
             sensitivity_raster.FlushCache()
            
@@ -501,6 +501,11 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, out_nodata,
     """
 
     LOGGER.debug('Starting map_raster_to_dict_values')
+
+    # a self defined exception to use if an exception is raised below. This is
+    # for a very specific error to provide the best feedback to the user
+    class LULC_Code_Error(Exception):
+        pass
     
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
@@ -521,11 +526,12 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, out_nodata,
                not found then it raises an exception if raise_error is true or
                simply returns out_nodata if raise_error is false
         """
+
         if str(key) in attr_dict:
             return attr_dict[str(key)][field]
         else:
             if raise_error:
-                raise KeyError(error_message + str(key))
+                raise LULC_Code_Error(error_message + str(key))
             return out_nodata
 
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
