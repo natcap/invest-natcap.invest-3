@@ -13,6 +13,10 @@ LOGGER = logging.getLogger('recreation_client')
 
 
 def execute(args):
+    # Register the streaming http handlers with urllib2
+    register_openers()
+    
+    #constants
     severPath="http://ncp-skookum.stanford.edu/~mlacayo"
     recreationScript="recreation.php"
     regressionScript="regression.php"
@@ -20,6 +24,7 @@ def execute(args):
     logName="log.txt"
     resultsZip="results.zip"
     
+    #parameters
     aoiFileName = args["aoiFileName"]
     cellSize = args["cellSize"]
     cellUnit = float(args["cellUnit"])
@@ -48,6 +53,8 @@ def execute(args):
     reefs=args["reefs"]
     grass=args["grass"]
     
+    
+    
     dirname=os.path.dirname(aoiFileName)+os.sep
     fileName=os.path.basename(aoiFileName)[:-4]
     aoiFileNameSHP = dirname+fileName+".shp"
@@ -58,9 +65,6 @@ def execute(args):
     if not os.path.exists(aoiFileNamePRJ):
         LOGGER.error("The shapefile must have a PRJ file.")
         raise IOError, "Missing PRJ file."
-    
-    # Register the streaming http handlers with urllib2
-    register_openers()
     
     # Start the multipart/form-data encoding of the file "DSC0001.jpg"
     # "image1" is the name of the parameter, which is normally set
