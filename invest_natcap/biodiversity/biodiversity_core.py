@@ -69,7 +69,7 @@ def biophysical(args):
         LOGGER.debug('Handling Access Shape')
         access_uri = os.path.join(intermediate_dir, 'access_layer.tif')
         access_base = \
-            raster_utils.new_raster_from_base(cur_landuse, accessr_uri, \
+            raster_utils.new_raster_from_base(cur_landuse, access_uri, \
                 'GTiff', -1, gdal.GDT_Float32)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
