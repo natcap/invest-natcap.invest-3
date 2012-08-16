@@ -71,8 +71,16 @@ def execute(args):
 
     # if the input directory is not present in the workspace then throw an
     # exception because the threat rasters can't be located.
-    input_dir = os.path.join(workspace, 'input')
-    if not os.path.isdir(input_dir):
+    input_dir_low = os.path.join(workspace, 'input')
+    input_dir_up = os.path.join(workspace, 'Input')
+    input_dir = None
+
+    for input_dir_case in [input_dir_low, input_dir_up]:
+        if os.path.isdir(input_dir_case):
+            input_dir = input_dir_case
+            break
+    
+    if input_dir is None:
         raise Exception('The input directory where the threat rasters ' + \
                         'should be located cannot be found.')
     
