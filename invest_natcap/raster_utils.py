@@ -1231,3 +1231,24 @@ def create_rat(dataset, attr_dict, key_name, value_name):
     band.SetDefaultRAT(rat)
 
     return dataset
+
+def get_raster_properties(dataset):
+    """Get the width, height, X size, and Y size of the dataset and return the
+        values in a dictionary. 
+        *This function can be expanded to return more properties if needed*
+
+       dataset - a GDAL raster dataset to get the properties from
+        
+       returns - a dictionary with the properties stored under relevant keys.
+           The current list of things returned is:
+           width (w-e pixel resolution), height (n-s pixel resolution), 
+           XSize, YSize
+    """
+    dataset_dict = {}
+    gt = dataset.GetGeoTransform()
+    dataset_dict['width'] = float(gt[1])
+    dataset_dict['height'] = float(gt[5])
+    dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize    
+    dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
+    LOGGER.debug('Raster_Properties : %s', dataset_dict)
+    return dataset_dict
