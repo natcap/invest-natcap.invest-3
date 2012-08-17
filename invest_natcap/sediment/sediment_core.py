@@ -68,39 +68,6 @@ def biophysical(args):
         args['output_uri'] - A path to store output rasters
         returns nothing"""
 
-    #Set up structures and functions for USLE calculation for the usle_function
-    #closure below
-    usle_nodata = -1.0
-    v_stream_nodata = args['v_stream'].GetRasterBand(1).GetNoDataValue()
-    erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
-    erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
-
-    def usle_function(ls_factor, erosivity, erodibility, usle_c_p, v_stream):
-        """Calculates the USLE equation
-        
-        ls_factor - length/slope factor
-        erosivity - related to peak rainfall events
-        erodibility - related to the potential for soil to erode
-        usle_c_p - crop and practice factor which helps to abate soil erosion
-        v_stream - 1 or 0 depending if there is a stream there.  If so, no
-            potential soil loss due to USLE
-        
-        returns ls_factor * erosivity * erodibility * usle_c_p if all arguments
-            defined, nodata if some are not defined, 0 if in a stream
-            (v_stream)"""
-
-        if ls_factor == usle_nodata or erosivity == erosivity_nodata or \
-            erodibility == erodibility_nodata or usle_c_p == usle_nodata or \
-            v_stream == v_stream_nodata:
-            return usle_nodata
-        if v_stream == 1:
-            return 0
-        return ls_factor * erosivity * erodibility * usle_c_p
-
-    usle_vectorized_function = np.vectorize(usle_function)
-
-    ############## Calculation Starts here
-
     dem_dataset = args['dem']
     n_rows = dem_dataset.RasterYSize
     n_cols = dem_dataset.RasterXSize
@@ -126,6 +93,7 @@ def biophysical(args):
         args['threshold_flow_accumulation'], args['v_stream_uri'])
 
     #Calculate LS term
+    usle_nodata = -1.0
     ls_dataset = calculate_ls_factor(args['flow_accumulation'], slope_dataset, 
         args['flow_direction'], args['ls_uri'], usle_nodata)
 
@@ -225,16 +193,6 @@ def biophysical(args):
     calculate_pixel_retained(pixel_sediment_core_dataset,
         effective_retention_dataset, args['flow_direction'], 
         sediment_retained_uri)
-
-def valuation(args):
-    """Executes the basic carbon model that maps a carbon pool dataset to a
-        LULC raster.
-    
-        args - is a dictionary with the following entries:
-        
-        returns nothing"""
-
-    LOGGER.info('not implemented yet')
 
 def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
                         stream_dataset, effective_retention_uri):
