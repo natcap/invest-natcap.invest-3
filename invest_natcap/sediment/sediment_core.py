@@ -69,8 +69,6 @@ def biophysical(args):
         returns nothing"""
 
     ##############Set up vectorize functions and function-wide values
-    LOGGER = logging.getLogger('sediment_core: biophysical')
-
     flow_accumulation_nodata = \
             args['flow_accumulation'].GetRasterBand(1).GetNoDataValue()
     v_stream_nodata = \
@@ -109,15 +107,6 @@ def biophysical(args):
     retention_efficiency_raster_raw = \
         raster_utils.new_raster_from_base(args['landuse'], '', 'MEM',
                                              usle_nodata, gdal.GDT_Float32)
-
-    def efficiency_raster_creator(soil_loss, efficiency, v_stream):
-        """Used for interpolating efficiency raster to be the same dimensions
-            as soil_loss and also knocking out retention on the streams"""
-
-        #v_stream is 1 in a stream 0 otherwise, so 1-v_stream can be used
-        #to scale efficiency especially if v_steram is interpolated 
-        #intelligently
-        return (1 - v_stream) * efficiency
 
     ############## Calculation Starts here
 
