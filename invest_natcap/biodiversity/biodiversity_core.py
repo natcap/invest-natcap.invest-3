@@ -115,13 +115,13 @@ def biophysical(args):
             LOGGER.debug('Threat Data : %s', threat_data)
        
             # get the density raster for the specific threat
-            threat_raster = args['density_dict']['density'+lulc_key][threat]
+            threat_raster = args['density_dict']['density' + lulc_key][threat]
         
             # if threat / density raster is not found for a landcover, that
             # landcover should be skipped
             if threat_raster is None:
                 LOGGER.warn('No threat raster found for threat : %s',
-                            threat+lulc_key)
+                            threat + lulc_key)
                 LOGGER.warn('Moving to next landcover')
                 exit_landcover = True
                 break 
@@ -129,15 +129,17 @@ def biophysical(args):
             threat_band = threat_raster.GetRasterBand(1)
             threat_nodata = float(threat_band.GetNoDataValue())
             filtered_threat_uri = \
-                os.path.join(intermediate_dir, str(threat+'_filtered.tif'))
+                os.path.join(intermediate_dir, str(threat + '_filtered.tif'))
             
             # create a new raster to output distance adjustments to
             filtered_raster = \
-                raster_utils.new_raster_from_base(threat_raster, filtered_threat_uri, 
-                                                  'GTiff', out_nodata, gdal.GDT_Float32)
+                raster_utils.new_raster_from_base(threat_raster, \
+                    filtered_threat_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+
             # get the mean cell size, using absolute value because we could
             # get a negative for height or width
-            mean_cell_size = (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
+            mean_cell_size = \
+                (abs(lulc_prop['width']) + abs(lulc_prop['height'])) / 2.0
             
             # convert max distance (given in KM) to meters
             dr_max = float(threat_data['MAX_DIST']) * 1000.0
@@ -153,12 +155,12 @@ def biophysical(args):
                 math.sqrt(dr_pixel / (2.99573 * 2.0))
             LOGGER.debug('Sigma for gaussian : %s', sigma)
 
-            # use a gaussian_filter to compute the effect that a threat has over a
-            # distance, on a given pixel. 
+            # use a gaussian_filter to compute the effect that a threat has
+            # over a distance, on a given pixel. 
             filtered_out_matrix = \
-                clip_and_op(threat_band.ReadAsArray(), sigma,\
-                            ndimage.gaussian_filter, matrix_type=float,\
-                            in_matrix_nodata=threat_nodata,
+                clip_and_op(threat_band.ReadAsArray(), sigma, \
+                            ndimage.gaussian_filter, matrix_type=float, \
+                            in_matrix_nodata=threat_nodata, \
                             out_matrix_nodata=out_nodata)
             
             filtered_band = filtered_raster.GetRasterBand(1)
@@ -167,7 +169,8 @@ def biophysical(args):
 
             # create sensitivity raster based on threat
             sens_uri = \
-                os.path.join(intermediate_dir, 'sens_'+threat+lulc_key+'.tif')
+                os.path.join(intermediate_dir, 
+                        'sens_' + threat + lulc_key + '.tif')
             
             sensitivity_raster = \
                 map_raster_to_dict_values(lulc_ds, sens_uri,\
@@ -181,9 +184,9 @@ def biophysical(args):
             weight_avg = float(threat_data['WEIGHT']) / weight_sum
 
             def partial_degradation(*rasters):
-                """For a given threat return the weighted average of the product of
-                    the threats sensitivity, the threats access, and the threat 
-                    adjusted by distance
+                """For a given threat return the weighted average of the 
+                    product of the threats sensitivity, the threats access, 
+                     and the threat adjusted by distance
                     
                     *rasters - a list of floats, representing sensitivity,
                         access, and threat adjusted by distance
@@ -200,7 +203,7 @@ def biophysical(args):
             # values to be used to calculate their individual degradation
             # raster
             adjusted_list = [filtered_raster, sensitivity_raster]
-            adjusted_nodata_list =\
+            adjusted_nodata_list = \
                 [filtered_raster.GetRasterBand(1).GetNoDataValue(),
                  sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
             
@@ -212,11 +215,11 @@ def biophysical(args):
                 adjusted_nodata_list.append(access_band.GetNoDataValue())
             
             deg_uri = \
-                os.path.join(intermediate_dir,
-                             str('deg_'+threat+lulc_key+'.tif'))
+                os.path.join(intermediate_dir, \
+                             'deg_' + threat + lulc_key + '.tif')
             deg_ras =\
                 raster_utils.vectorize_rasters(adjusted_list, \
-                    partial_degradation, raster_out_uri=deg_uri,\
+                    partial_degradation, raster_out_uri=deg_uri, \
                     nodata=out_nodata)
             
             degradation_rasters.append(deg_ras)
@@ -244,12 +247,11 @@ def biophysical(args):
             return out_nodata
         
         deg_sum_uri = \
-            os.path.join(output_dir, 'deg_sum_out'+lulc_key+'.tif')
+            os.path.join(output_dir, 'deg_sum_out' + lulc_key + '.tif')
         
         sum_deg_raster = \
-            raster_utils.vectorize_rasters(degradation_rasters, sum_degradation,\
-                                           raster_out_uri=deg_sum_uri,
-                                           nodata=out_nodata)
+            raster_utils.vectorize_rasters(degradation_rasters, sum_degradation, \
+                raster_out_uri=deg_sum_uri, nodata=out_nodata)
 
         #Compute habitat quality
         # z is a scaling parameter set to 2.5 as noted in the users
@@ -285,12 +287,11 @@ def biophysical(args):
             return habitat * (1 - ((degradation**z) / (degradation**z + ksq)))
         
         quality_uri = \
-            os.path.join(output_dir, 'quality_out'+lulc_key+'.tif')
+            os.path.join(output_dir, 'quality_out' + lulc_key + '.tif')
         
         quality_raster = \
             raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
-                                           quality_op, raster_out_uri=quality_uri,
-                                           nodata=out_nodata)
+                quality_op, raster_out_uri=quality_uri, nodata=out_nodata)
 
     #Compute Rarity if user supplied baseline raster
     try:    
@@ -338,7 +339,8 @@ def biophysical(args):
                 
                 LOGGER.debug('Create new cover for %s', lulc_cover)
                 new_cover_uri = \
-                    os.path.join(intermediate_dir, 'new_cover'+lulc_cover+'.tif')
+                    os.path.join(intermediate_dir, 
+                        'new_cover' + lulc_cover + '.tif')
                 
                 # set the current/future land cover to be masked to the base
                 # land cover
@@ -378,7 +380,7 @@ def biophysical(args):
                     return rarity_nodata
                 
                 rarity_uri = \
-                    os.path.join(output_dir, 'rarity'+lulc_cover+'.tif')
+                    os.path.join(output_dir, 'rarity' + lulc_cover + '.tif')
 
                 rarity = \
                     raster_utils.vectorize_rasters([new_cover], map_ratio,\
@@ -449,7 +451,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
     filtered_matrix = op(matrix, arg1, **kwargs)
 
     # Restore nodata values to their proper places.
-    np.putmask(filtered_matrix, in_matrix== in_matrix_nodata, out_matrix_nodata)
+    np.putmask(filtered_matrix, in_matrix==in_matrix_nodata, out_matrix_nodata)
 
     return filtered_matrix
 
