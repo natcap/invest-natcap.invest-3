@@ -820,9 +820,9 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
     retention_efficiency_array = \
         retention_efficiency_band.ReadAsArray().flatten()
 
-    flow_band, flow_nodata = \
-        raster_utils.extract_band_and_nodata(flow_dataset)
-    flow_array = flow_band.ReadAsArray().flatten()
+    flow_direction_band, flow_direction_nodata = \
+        raster_utils.extract_band_and_nodata(flow_direction_dataset)
+    flow_direction_array = flow_direction_band.ReadAsArray().flatten()
 
     pixel_retained_nodata = -1.0
     pixel_retained_dataset = \
