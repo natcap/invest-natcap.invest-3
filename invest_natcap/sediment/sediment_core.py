@@ -11,7 +11,6 @@ import numpy as np
 from osgeo import gdal
 
 import invest_cython_core
-from invest_natcap.invest_core import invest_core
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('sediment_core')
