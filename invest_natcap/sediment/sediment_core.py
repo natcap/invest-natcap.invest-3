@@ -373,17 +373,10 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
             inputs"""
     
     #Tease out all the nodata values for reading and setting
-    flow_accumulation_band = flow_accumulation_dataset.GetRasterBand(1)
-    flow_accumulation_nodata = flow_accumulation_band.GetNoDataValue()
-    flow_accumulation_matrix = flow_accumulation_band.ReadAsArray()
-
-    slope_band = slope_dataset.GetRasterBand(1)
-    slope_nodata = slope_band.GetNoDataValue()
-    slope_matrix = slope_band.ReadAsArray()
-
-    aspect_band = aspect_dataset.GetRasterBand(1)
-    aspect_nodata = aspect_band.GetNoDataValue()
-    aspect_matrix = aspect_band.ReadAsArray()
+    _, flow_accumulation_nodata = \
+        raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
+    _, slope_nodata = raster_utils.extract_band_and_nodata(slope_dataset)
+    _, aspect_nodata = raster_utils.extract_band_and_nodata(aspect_dataset)
 
     #Assumes that cells are square
     cell_size = abs(flow_accumulation_dataset.GetGeoTransform()[1])
