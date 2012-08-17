@@ -140,8 +140,7 @@ def execute(args):
     #We won't know the size of the output rasters until we vectorize the stack
     #of input rasters.  So we just pass a uri to its final location to the
     #biophysical part.
-    output_uris = ['sret_dr_uri', 'sexp_dr_uri', 'slope_uri', 'stream_uri',
-                   'ls_uri', 'usle_uri']
+    output_uris = ['sret_dr', 'sexp_dr', 'slope', 'stream', 'ls', 'usle']
     for raster_id in output_uris:
         biophysical_args[raster_id + '_uri'] = \
             os.path.join(output_dir,raster_id + '.tif')
