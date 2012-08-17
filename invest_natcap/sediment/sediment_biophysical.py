@@ -125,7 +125,7 @@ def execute(args):
     #next step
     output_uris = {}
     intermediate_rasters = ['flow_direction', 'flow_accumulation', 'slope',
-                            'ls_factor', 'v_stream']
+                            'v_stream']
     for id in intermediate_rasters:
         output_uris[id] = os.path.join(intermediate_dir, id + '.tif')
 
