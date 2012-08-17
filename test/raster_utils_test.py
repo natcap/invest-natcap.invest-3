@@ -129,4 +129,36 @@ class TestRasterUtils(unittest.TestCase):
         ds = None
         ds_rat = None
         
+    def test_get_raster_properties(self):
+        """Test get_raster_properties against a known raster saved on disk"""
+        data_dir = './data/raster_utils_data'
+        ds_uri = os.path.join(data_dir, 'get_raster_properties_ds.tif')
 
+        ds = gdal.Open(ds_uri)
+
+        result_dict = raster_utils.get_raster_properties(ds)
+
+        expected_dict = {'width':30, 'height':-30, 'x_size':1125, 'y_size':991}
+
+        self.assertEqual(result_dict, expected_dict)
+
+    def test_get_raster_properties_unit_test(self):
+        """Test get_raster_properties against a hand created raster with set 
+            properties"""
+        driver = gdal.GetDriverByName('MEM')
+        ds_type = gdal.GDT_Int32
+        dataset = driver.Create('', 112, 142, 1, ds_type)
+
+        srs = osr.SpatialReference()
+        srs.SetUTM(11, 1)
+        srs.SetWellKnownGeogCS('NAD27')
+        dataset.SetProjection(srs.ExportToWkt())
+        dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
+        dataset.GetRasterBand(1).SetNoDataValue(-1)
+        dataset.GetRasterBand(1).Fill(5)
+        
+        result_dict = raster_utils.get_raster_properties(dataset)
+
+        expected_dict = {'width':30, 'height':-30, 'x_size':112, 'y_size':142}
+
+        self.assertEqual(result_dict, expected_dict)

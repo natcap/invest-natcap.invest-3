@@ -59,7 +59,7 @@
                     "defaultValue": "../Biodiversity/Input/threats_samp.csv",
                     "required": true,
                     "validateAs": { "type": "CSV",
-                                    "fieldsExist": ["THREAT", "MAX_DIST", "WEIGHT", "DECAY"],
+                                    "fieldsExist": ["THREAT", "MAX_DIST", "WEIGHT"],
                                     "restrictions": [{"field": "THREAT",
                                                     "validateAs":{"type": "string",
                                                                   "allowedValues": {"pattern":"^[a-zA-Z_]+$"}
@@ -71,10 +71,6 @@
                                                      {"field": "WEIGHT",
                                                       "validateAs": {"type": "number",
                                                                      "allowedValues":{"pattern":"(^[0]*\\.?[0-9]+$)|(^[1]\\.?[0]+$)"}
-                                                                  }},
-                                                     {"field": "DECAY",
-                                                      "validateAs": {"type": "number",
-                                                                     "allowedValues":{"pattern":"^[01]$"}
                                                                   }}]},
                     "helpText":"A CSV file of all the threats for the model to consider. Each row in the table is a degradation source and each column contains a different attribute of each degradation source (THREAT, MAX_DIST, WEIGHT, DECAY). See the user's guide for valid values for these columns."
                 },
@@ -89,7 +85,7 @@
                                    "layers": [{"name": {"inheritFrom": "file"}, 
                                                "type": "polygons"
                                              }],
-                                   "fieldsExist": ["Access"]
+                                   "fieldsExist": ["ACCESS"]
                                    },
                     "returns": {"ifEmpty": "pass"},
                     "helpText": "This must be a polygon shapefile that OGR can open. The input contains data on the relative protection that legal / institutional / social / physical barriers provide against threats. Should contain polygons with values ranging from 0 - 1 where 1 is fully accessible. Any cells not covered by a polygon will be set to 1."
