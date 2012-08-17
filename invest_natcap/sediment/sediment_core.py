@@ -83,17 +83,23 @@ def biophysical(args):
 
     #Calcualte flow accumulation
     LOGGER.info("calculating flow accumulation")
+    flow_accumulation_uri = os.path.join(args['intermediate_uri'], 
+                                         'flow_accumulation.tif')
+    flow_accumulation_dataset = \
+        raster_utils.new_raster_from_base(slope_dataset,
+            flow_accumulation_uri, 'GTiff', -1.0, gdal.GDT_Float32)
+
     invest_cython_core.flow_accumulation_dinf(args['flow_direction'],
-        args['dem'], bounding_box, args['flow_accumulation'])
+        args['dem'], bounding_box, flow_accumulation_dataset)
 
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
-    stream_dataset = raster_utils.stream_threshold(args['flow_accumulation'], 
+    stream_dataset = raster_utils.stream_threshold(flow_accumulation_dataset,
         args['threshold_flow_accumulation'], args['v_stream_uri'])
 
     #Calculate LS term
     usle_nodata = -1.0
-    ls_dataset = calculate_ls_factor(args['flow_accumulation'], slope_dataset, 
+    ls_dataset = calculate_ls_factor(flow_accumulation_dataset, slope_dataset, 
         args['flow_direction'], args['ls_uri'], usle_nodata)
 
     def lulc_to_retention(lulc_code):
