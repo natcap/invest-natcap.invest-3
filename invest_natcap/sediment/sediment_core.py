@@ -308,13 +308,13 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     #in terms of radian 4ths for easier readability and maintaince. 
     #Derived all this crap from page 36 in Rich's notes.
     outflow_directions = {( 0, 1): (0.0/4.0 * np.pi, 5, False),
-                         (-1, 1): (1.0/4.0 * np.pi, 2, True),
-                         (-1, 0): (2.0/4.0 * np.pi, 1, False),
-                         (-1,-1): (3.0/4.0 * np.pi, 0, True),
-                         ( 0,-1): (4.0/4.0 * np.pi, 3, False),
-                         ( 1,-1): (5.0/4.0 * np.pi, 6, True),
-                         ( 1, 0): (6.0/4.0 * np.pi, 7, False),
-                         ( 1, 1): (7.0/4.0 * np.pi, 8, True)}
+                          (-1, 1): (1.0/4.0 * np.pi, 2, True),
+                          (-1, 0): (2.0/4.0 * np.pi, 1, False),
+                          (-1,-1): (3.0/4.0 * np.pi, 0, True),
+                          ( 0,-1): (4.0/4.0 * np.pi, 3, False),
+                          ( 1,-1): (5.0/4.0 * np.pi, 6, True),
+                          ( 1, 0): (6.0/4.0 * np.pi, 7, False),
+                          ( 1, 1): (7.0/4.0 * np.pi, 8, True)}
 
     LOGGER.info('Building diagonals for linear advection diffusion system.')
     for row_index in range(n_rows):
