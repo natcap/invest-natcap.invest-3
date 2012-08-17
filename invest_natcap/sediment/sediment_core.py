@@ -431,11 +431,8 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
             
         #Use the bisect function to do a nifty range 
         #lookup. http://docs.python.org/library/bisect.html#other-examples
-        m = exponent_table[bisect.bisect(slope_table,slope)]
+        m = exponent_table[bisect.bisect(slope_table, slope)]
 
-        #Use the bisect function to do a nifty range 
-        #lookup. http://docs.python.org/library/bisect.html#other-examples
-        m = exponent_table[bisect.bisect(slope_table,slope)]
         #The length part of the ls_factor:
         ls_factor = ((contributing_area+cell_area)**(m+1)- \
                          contributing_area**(m+1)) / \
@@ -725,7 +722,7 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
     result = solver(b_vector)
 
     #Result is a 1D array of all values, put it back to 2D
-    result.resize(n_rows,n_cols)
+    result.resize(n_rows, n_cols)
 
     pixel_sediment_flow_band.WriteArray(result)
 
@@ -862,5 +859,5 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
                     #it's okay, just skip it
                     pass
 
-    pixel_retained_band.WriteArray(result.reshape((n_rows,n_cols)))
+    pixel_retained_band.WriteArray(result.reshape((n_rows, n_cols)))
     return pixel_retained_dataset
