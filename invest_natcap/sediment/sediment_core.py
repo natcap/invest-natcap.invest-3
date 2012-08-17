@@ -199,7 +199,7 @@ def biophysical(args):
                                    raster_out_uri = p_factor_uri, 
                                    datatype=gdal.GDT_Float32, nodata=-1.0)
 
-    potential_sediment_export_dataset = \
+    usle_export_dataset = \
        calculate_potential_soil_loss(ls_dataset, \
                 args['erosivity'], args['erodibility'], c_dataset, p_dataset,\
                 stream_dataset, args['usle_uri'])
@@ -220,13 +220,13 @@ def biophysical(args):
             effective_retention_uri)
 
     pixel_export_uri = os.path.join(args['output_uri'], 'pixel_export.tif')
-    calculate_per_pixel_export(potential_sediment_export_dataset,
+    calculate_per_pixel_export(usle_export_dataset,
         effective_retention_dataset, pixel_export_uri)
 
     pixel_sediment_flow_uri = \
         os.path.join(args['intermediate_uri'], 'pixel_sed_flow.tif')
     pixel_sediment_core_dataset = \
-        pixel_sediment_flow(potential_sediment_export_dataset, \
+        pixel_sediment_flow(usle_export_dataset, \
             args['flow_direction'], effective_retention_dataset, 
             pixel_sediment_flow_uri)
 
@@ -591,12 +591,12 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
 
     return potential_soil_loss_dataset
 
-def calculate_per_pixel_export(potential_sediment_loss_dataset, 
+def calculate_per_pixel_export(usle_loss_dataset, 
                      effective_retention_dataset, pixel_export_uri):
     """Calculate per pixel export based on potential soil loss and the 
         effective per pixel retention factor.
 
-        potential_sediment_loss_dataset - a gdal dataset with per pixel 
+        usle_loss_dataset - a gdal dataset with per pixel 
             potential export in units of tons per pixel
         effective_retention_dataset - a gdal dataset whose values indicate
             the amount of potential export from a particular pixel to 
@@ -607,34 +607,34 @@ def calculate_per_pixel_export(potential_sediment_loss_dataset,
 
     pixel_export_nodata = -1.0
 
-    potential_sediment_loss_band, potential_sediment_loss_nodata = \
-        raster_utils.extract_band_and_nodata(potential_sediment_loss_dataset)
+    usle_loss_band, usle_loss_nodata = \
+        raster_utils.extract_band_and_nodata(usle_loss_dataset)
 
     effective_retention_band, effective_retention_nodata = \
         raster_utils.extract_band_and_nodata(effective_retention_dataset)
 
-    def pixel_export_op(potential_sediment_loss, retention):
+    def pixel_export_op(usle_loss, retention):
         """This either returns nodata in undefined areas or multplies the
             sediment export by the effective retention"""
-        if potential_sediment_loss == potential_sediment_loss_nodata or \
+        if usle_loss == usle_loss_nodata or \
                 retention == effective_retention_nodata:
             return pixel_export_nodata
-        return potential_sediment_loss * retention
+        return usle_loss * retention
 
     #Still call vectorize rasters for memory and/or interpolation reasons.
     pixel_export_dataset = \
-        raster_utils.vectorize_rasters([potential_sediment_loss_dataset, \
+        raster_utils.vectorize_rasters([usle_loss_dataset, \
         effective_retention_dataset], pixel_export_op, \
         datatype = gdal.GDT_Float32, nodata = pixel_export_nodata, \
         raster_out_uri = pixel_export_uri)
 
     return pixel_export_dataset
 
-def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
+def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
                         retention_efficiency_dataset, pixel_sediment_flow_uri):
     """Creates a raster of total sediment outflow from each pixel.
     
-        potential_sediment_loss_dataset - a gdal dataset with per pixel 
+        usle_loss_dataset - a gdal dataset with per pixel 
             potential export in units of tons per pixel
         flow_direction_dataset - (input) A raster showing direction of flow out 
             of each cell with directional values given in radians.
@@ -645,10 +645,10 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
         returns a dataset that has an amount of sediment in tons outflowing
             from each pixel"""
 
-    potential_sediment_loss_band, potential_sediment_loss_nodata = \
-        raster_utils.extract_band_and_nodata(potential_sediment_loss_dataset)
-    potential_sediment_loss_array = \
-        potential_sediment_loss_band.ReadAsArray().flatten()
+    usle_loss_band, usle_loss_nodata = \
+        raster_utils.extract_band_and_nodata(usle_loss_dataset)
+    usle_loss_array = \
+        usle_loss_band.ReadAsArray().flatten()
 
     flow_direction_band, flow_direction_nodata = \
         raster_utils.extract_band_and_nodata(flow_direction_dataset)
@@ -711,9 +711,9 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
             #set local flow accumulation to 0
             local_flow_angle = flow_direction_array[cell_index]
             local_retention = retention_efficiency_array[cell_index]
-            local_sediment_loss = potential_sediment_loss_array[cell_index]
+            local_sediment_loss = usle_loss_array[cell_index]
 
-            if local_sediment_loss == potential_sediment_loss_nodata or \
+            if local_sediment_loss == usle_loss_nodata or \
                     local_retention == retention_efficiency_nodata or \
                     local_flow_angle == flow_direction_nodata:
                 #if the local sediment is undefined we're gonna have a bad time
@@ -739,10 +739,10 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
                         neighbor_retention = \
                             retention_efficiency_array[neighbor_index]
                         neighbor_sediment_loss = \
-                            potential_sediment_loss_array[neighbor_index]
+                            usle_loss_array[neighbor_index]
 
                         if neighbor_retention == retention_efficiency_nodata or \
-                                neighbor_sediment_loss == potential_sediment_loss_nodata:
+                                neighbor_sediment_loss == usle_loss_nodata:
                             continue
 
                         if diagonal_inflow:
