@@ -316,7 +316,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
                           ( 1, 0): (6.0/4.0 * np.pi, 7, False),
                           ( 1, 1): (7.0/4.0 * np.pi, 8, True)}
 
-    LOGGER.info('Building diagonals for linear advection diffusion system.')
+    LOGGER.info('Building diagonals for effective retention system.')
     for row_index in range(n_rows):
         for col_index in range(n_cols):
             #diagonal element row_index,j always in bounds, calculate directly
