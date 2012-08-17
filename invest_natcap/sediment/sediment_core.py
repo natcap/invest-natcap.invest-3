@@ -68,16 +68,10 @@ def biophysical(args):
         args['output_uri'] - A path to store output rasters
         returns nothing"""
 
-    ##############Set up vectorize functions and function-wide values
-    flow_accumulation_nodata = \
-            args['flow_accumulation'].GetRasterBand(1).GetNoDataValue()
-    v_stream_nodata = \
-        args['v_stream'].GetRasterBand(1).GetNoDataValue()
-
-    #Nodata value to use for usle output raster
+    #Set up structures and functions for USLE calculation for the usle_function
+    #closure below
     usle_nodata = -1.0
-
-    #Set up structures and functions for USLE calculation
+    v_stream_nodata = args['v_stream'].GetRasterBand(1).GetNoDataValue()
     erosivity_nodata = args['erosivity'].GetRasterBand(1).GetNoDataValue()
     erodibility_nodata = args['erodibility'].GetRasterBand(1).GetNoDataValue()
 
@@ -95,18 +89,15 @@ def biophysical(args):
             defined, nodata if some are not defined, 0 if in a stream
             (v_stream)"""
 
-        if ls_factor == usle_nodata or erosivity == usle_nodata or \
-            erodibility == usle_nodata or usle_c_p == usle_nodata or \
+        if ls_factor == usle_nodata or erosivity == erosivity_nodata or \
+            erodibility == erodibility_nodata or usle_c_p == usle_nodata or \
             v_stream == v_stream_nodata:
             return usle_nodata
         if v_stream == 1:
             return 0
         return ls_factor * erosivity * erodibility * usle_c_p
-    usle_vectorized_function = np.vectorize(usle_function)
 
-    retention_efficiency_raster_raw = \
-        raster_utils.new_raster_from_base(args['landuse'], '', 'MEM',
-                                             usle_nodata, gdal.GDT_Float32)
+    usle_vectorized_function = np.vectorize(usle_function)
 
     ############## Calculation Starts here
 
@@ -136,8 +127,7 @@ def biophysical(args):
 
     #Calculate LS term
     ls_dataset = calculate_ls_factor(args['flow_accumulation'], slope_dataset, 
-                                     args['flow_direction'], args['ls_uri'])
-
+        args['flow_direction'], args['ls_uri'], usle_nodata)
 
     def lulc_to_retention(lulc_code):
         """This is a helper function that's used to map an LULC code to the
@@ -405,7 +395,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     return effective_retention_dataset
 
 def calculate_ls_factor(flow_accumulation_dataset, slope_dataset, 
-                        aspect_dataset, ls_factor_uri):
+                        aspect_dataset, ls_factor_uri, ls_nodata):
     """Calculates the LS factor as Equation 3 from "Extension and validation 
         of a geographic information system-based method for calculating the
         Revised Universal Soil Loss Equation length-slope factor for erosion
@@ -444,8 +434,6 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
     #Assumes that cells are square
     cell_size = abs(flow_accumulation_dataset.GetGeoTransform()[1])
     cell_area = cell_size ** 2
-
-    ls_nodata = -1.0
 
     def ls_factor_function(aspect, slope, flow_accumulation, aspect_angle):
         #Skip the calculation if any of the inputs are nodata
