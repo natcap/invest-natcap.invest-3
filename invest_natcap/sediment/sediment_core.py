@@ -376,7 +376,7 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
     _, flow_accumulation_nodata = \
         raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
     _, slope_nodata = raster_utils.extract_band_and_nodata(slope_dataset)
-    _, aspect_nodata = raster_utils.extract_band_and_nodata(aspect_dataset)
+    _, aspect_nodata = raster_utils.extract_band_and_nodata(aspect_dataseth)
 
     #Assumes that cells are square
     cell_size = abs(flow_accumulation_dataset.GetGeoTransform()[1])
@@ -546,10 +546,10 @@ def calculate_per_pixel_export(usle_loss_dataset,
 
     pixel_export_nodata = -1.0
 
-    usle_loss_band, usle_loss_nodata = \
+    _, usle_loss_nodata = \
         raster_utils.extract_band_and_nodata(usle_loss_dataset)
 
-    effective_retention_band, effective_retention_nodata = \
+    _, effective_retention_nodata = \
         raster_utils.extract_band_and_nodata(effective_retention_dataset)
 
     def pixel_export_op(usle_loss, retention):
