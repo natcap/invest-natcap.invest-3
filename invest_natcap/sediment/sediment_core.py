@@ -285,8 +285,6 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
 
             #Determine outflow neighbors
             sink = True
-            total_fraction = 0.0
-            fraction_count = 0
             for flow_coords, flow_properties in outflow_directions.iteritems():
                 try:
                     row_offset, col_offset = flow_coords
@@ -325,8 +323,6 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
                         a_matrix[diagonal_offset, neighbor_index] = \
                             -outflow_fraction * (1.0-neighbor_retention)
                         sink = False
-                        total_fraction += outflow_fraction
-                        fraction_count += 1
 
                 except IndexError:
                     #This will occur if we visit a neighbor out of bounds
