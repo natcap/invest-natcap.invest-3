@@ -227,7 +227,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     retention_efficiency_array = \
         retention_efficiency_band.ReadAsArray().flatten()
 
-    stream_band, stream_nodata = \
+    stream_band, _ = \
         raster_utils.extract_band_and_nodata(stream_dataset)
     stream_array = stream_band.ReadAsArray().flatten()
 
@@ -393,9 +393,17 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
     cell_size = abs(flow_accumulation_dataset.GetGeoTransform()[1])
     cell_area = cell_size ** 2
 
-    def ls_factor_function(aspect, slope, flow_accumulation, aspect_angle):
+    def ls_factor_function(aspect_angle, slope, flow_accumulation):
+        """Calculate the ls factor
+
+            aspect_angle - flow direction in radians
+            slope - slope in terms of (units?)
+            flow_accumulation - upstream pixels at this point
+
+            returns the ls_factor calculation for this point"""
+
         #Skip the calculation if any of the inputs are nodata
-        if aspect == aspect_nodata or slope == slope_nodata or \
+        if aspect_angle == aspect_nodata or slope == slope_nodata or \
                 flow_accumulation == flow_accumulation_nodata:
             return ls_nodata
 
@@ -446,13 +454,12 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
 
 
     #Call vectorize rasters for ls_factor
-    dataset_list = [aspect_dataset, slope_dataset, flow_accumulation_dataset, 
-                    aspect_dataset]
+    dataset_list = [aspect_dataset, slope_dataset, flow_accumulation_dataset]
+
     ls_factor_dataset = \
         raster_utils.vectorize_rasters(dataset_list, ls_factor_function, \
-                                       raster_out_uri=ls_factor_uri,\
-                                       datatype=gdal.GDT_Float32, \
-                                       nodata=ls_nodata)
+            raster_out_uri=ls_factor_uri, datatype=gdal.GDT_Float32, \
+            nodata=ls_nodata)
 
     raster_utils.calculate_raster_stats(ls_factor_dataset)
     return ls_factor_dataset
