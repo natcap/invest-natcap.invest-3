@@ -34,7 +34,7 @@ def biophysical(args):
         args['subwatersheds'] - an input shapefile of the 
             subwatersheds of interest that are contained in the
             'watersheds' shape provided as input. (required)
-        args['potential_soil_loss_uri'] - a URI location to the temporary USLE raster
+        args['usle_uri'] - a URI location to the temporary USLE raster
         args['reservoir_locations'] - an input shape file with 
             points indicating reservoir locations with IDs. (optional)
         args['reservoir_properties'] - an input CSV table 
@@ -51,7 +51,7 @@ def biophysical(args):
             as a proporition from the dem
         args['ls_uri'] - an output path for the ls_factor calculated on the 
             particular dem
-        args['stream_uri'] - A path to a  file that classifies the
+        args['v_stream_uri'] - A path to a  file that classifies the
             watersheds into stream and non-stream regions based on the
             value of 'threshold_flow_accumulation'
         args['flow_direction'] - An output raster indicating the flow direction
@@ -143,7 +143,7 @@ def biophysical(args):
     #classify streams from the flow accumulation raster
     LOGGER.info("Classifying streams from flow accumulation raster")
     stream_dataset = raster_utils.stream_threshold(args['flow_accumulation'], 
-        args['threshold_flow_accumulation'], args['stream_uri'])
+        args['threshold_flow_accumulation'], args['v_stream_uri'])
 
     #Calculate LS term
     ls_dataset = calculate_ls_factor(args['flow_accumulation'], slope_dataset, 
@@ -213,7 +213,7 @@ def biophysical(args):
     potential_sediment_export_dataset = \
        calculate_potential_soil_loss(ls_dataset, \
                 args['erosivity'], args['erodibility'], c_dataset, p_dataset,\
-                stream_dataset, args['potential_soil_loss_uri'])
+                stream_dataset, args['usle_uri'])
 
     effective_retention_uri = os.path.join(args['intermediate_uri'], 
                                            'effective_retention.tif')
@@ -509,7 +509,7 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
 
 def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset, 
                                   erodibility_dataset, c_dataset, p_dataset,
-                                  stream_dataset, potential_soil_loss_uri):
+                                  stream_dataset, usle_uri):
 
     """Calculates per-pixel potential soil loss using the RUSLE (revised 
         universial soil loss equation).
@@ -521,7 +521,7 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
         p_dataset - GDAL dataset per pixel land management factor
         stream_dataset - GDAL dataset indicating locations with streams
             (0 is no stream, 1 stream)
-        potential_soil_loss_uri - string input indicating the path to disk
+        usle_uri - string input indicating the path to disk
             for the resulting potential soil loss raster
 
         return GDAL dataset with potential per pixel soil loss"""
@@ -562,7 +562,7 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
                     c_dataset, p_dataset, stream_dataset]
 
     potential_soil_loss_dataset = raster_utils.vectorize_rasters(dataset_list,
-        usle_function, raster_out_uri = potential_soil_loss_uri, 
+        usle_function, raster_out_uri = usle_uri, 
         datatype=gdal.GDT_Float32, nodata = usle_nodata)
 
 

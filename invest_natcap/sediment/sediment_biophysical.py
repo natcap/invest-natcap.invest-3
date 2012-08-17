@@ -140,13 +140,11 @@ def execute(args):
     #We won't know the size of the output rasters until we vectorize the stack
     #of input rasters.  So we just pass a uri to its final location to the
     #biophysical part.
-    biophysical_args['sret_dr_uri'] = os.path.join(output_dir,'sret_dr.tif')
-    biophysical_args['sexp_dr_uri'] = os.path.join(output_dir,'sexp_dr.tif')
-    biophysical_args['slope_uri'] = os.path.join(intermediate_dir,'slope.tif')
-    biophysical_args['stream_uri'] = os.path.join(intermediate_dir,'v_stream.tif')
-    biophysical_args['ls_uri'] = os.path.join(intermediate_dir,'ls.tif')
-    biophysical_args['potential_soil_loss_uri'] = \
-        os.path.join(output_dir,'usle.tif')
+    output_uris = ['sret_dr_uri', 'sexp_dr_uri', 'slope_uri', 'stream_uri',
+                   'ls_uri', 'usle_uri']
+    for raster_id in output_uris:
+        biophysical_args[raster_id + '_uri'] = \
+            os.path.join(output_dir,raster_id + '.tif')
     
     biophysical_args['intermediate_uri'] = intermediate_dir
     biophysical_args['output_uri'] = output_dir
