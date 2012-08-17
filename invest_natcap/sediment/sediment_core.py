@@ -272,17 +272,16 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     effective_retention_band = effective_retention_dataset.GetRasterBand(1)
     effective_retention_band.Fill(effective_retention_nodata)
 
-    flow_direction_band = flow_direction_dataset.GetRasterBand(1)
-    flow_direction_nodata = flow_direction_band.GetNoDataValue()
+    flow_direction_band, flow_direction_nodata = \
+        raster_utils.extract_band_and_nodata(flow_direction_dataset)
     flow_direction_array = flow_direction_band.ReadAsArray().flatten()
 
-    retention_efficiency_band = retention_efficiency_dataset.GetRasterBand(1)
-    retention_efficiency_nodata = retention_efficiency_band.GetNoDataValue()
-    retention_efficiency_array = \
-        retention_efficiency_band.ReadAsArray().flatten()
+    retention_efficiency_band, retention_efficiency_nodata = \
+        raster_utils.extract_band_and_nodata(retention_efficiency_dataset)
+    retention_efficiency_array = retention_efficiency_band.ReadAsArray().flatten()
 
-    stream_band = stream_dataset.GetRasterBand(1)
-    stream_nodata = stream_band.GetNoDataValue()
+    stream_band, stream_nodata = \
+        raster_utils.extract_band_and_nodata(stream_dataset)
     stream_array = stream_band.ReadAsArray().flatten()
 
     n_rows = effective_retention_dataset.RasterYSize
