@@ -106,7 +106,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
         result = biodiversity_biophysical.check_projections(ds_dict, 1.0)
         
-        self.assertTrue(not result)
+        self.assertTrue(result)
 
     def test_biodiversity_biophysical_check_projections_fail(self):
         """Test a list of gdal datasets and assert that we see success and
@@ -121,7 +121,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
         result = biodiversity_biophysical.check_projections(ds_dict, 1.0)
         
-        self.assertTrue(result)
+        self.assertTrue(not result)
 
     def test_biodiversity_biophsyical_compare_threats_sensitivity(self):
         """Test hand created dictionaries representing the formats of the
@@ -139,9 +139,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
 
         result = biodiversity_biophysical.\
-                     compare_threats_sensitivity(threat_dict, sens_dict)
+                     threat_names_match(threat_dict, sens_dict, 'L_')
 
-        self.assertTrue(not result)
+        self.assertTrue(result)
     
     def test_biodiversity_biophsyical_compare_threats_sensitivity_fail(self):
         """Test hand created dictionaries representing the formats of the
@@ -160,6 +160,6 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
 
         result = biodiversity_biophysical.\
-                     compare_threats_sensitivity(threat_dict, sens_dict)
+                     threat_names_match(threat_dict, sens_dict, 'L_')
 
-        self.assertTrue(result)
+        self.assertTrue(not result)
