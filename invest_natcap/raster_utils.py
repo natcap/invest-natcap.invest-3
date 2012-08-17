@@ -1264,7 +1264,5 @@ def gdal_cast(value, gdal_type):
         value = np.int(value)
     if gdal_type in gdal_float_types:
         value = np.float(value)
-    if gdal_type in gdal_bool_types:
-        value = np.bool(value)
 
     return value
