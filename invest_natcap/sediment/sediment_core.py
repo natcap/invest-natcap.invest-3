@@ -376,7 +376,7 @@ def calculate_ls_factor(flow_accumulation_dataset, slope_dataset,
     _, flow_accumulation_nodata = \
         raster_utils.extract_band_and_nodata(flow_accumulation_dataset)
     _, slope_nodata = raster_utils.extract_band_and_nodata(slope_dataset)
-    _, aspect_nodata = raster_utils.extract_band_and_nodata(aspect_dataseth)
+    _, aspect_nodata = raster_utils.extract_band_and_nodata(aspect_dataset)
 
     #Assumes that cells are square
     cell_size = abs(flow_accumulation_dataset.GetGeoTransform()[1])
