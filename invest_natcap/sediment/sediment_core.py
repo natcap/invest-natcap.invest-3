@@ -172,7 +172,7 @@ def biophysical(args):
             datatype = gdal.GDT_Float32, nodata = -1.0)
 
     effective_retention_dataset = \
-        effective_retention(args['flow_direction'], \
+        calculate_effective_retention(args['flow_direction'], \
             retention_efficiency_dataset, stream_dataset, 
             effective_retention_uri)
 
@@ -193,9 +193,10 @@ def biophysical(args):
         effective_retention_dataset, args['flow_direction'], 
         sediment_retained_uri)
 
-def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
-                        stream_dataset, effective_retention_uri):
-    """Creates a raster of accumulated flow to each cell.
+def calculate_effective_retention(flow_direction_dataset, 
+    retention_efficiency_dataset, stream_dataset, effective_retention_uri):
+    """Creates a raster that is the effective retention of the local flow 
+        to the stream.
     
         flow_direction_dataset - (input) A raster showing direction of flow out 
             of each cell with directional values given in radians.
