@@ -1015,7 +1015,6 @@ def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
         
         returns stream dataset"""
 
-
     stream_dataset = new_raster_from_base(flow_accumulation_dataset, 
         stream_uri, 'GTiff', 255, gdal.GDT_Byte)
     stream_band = stream_dataset.GetRasterBand(1)
