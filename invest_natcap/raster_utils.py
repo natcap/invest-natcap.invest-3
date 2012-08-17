@@ -1260,11 +1260,11 @@ def gdal_cast(value, gdal_type):
     gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32, 
                         gdal.GDT_Float64, gdal.GDT_Float32]
 
-    if datatype in gdal_int_types:
+    if gdal_type in gdal_int_types:
         value = np.int(value)
-    if datatype in gdal_float_types:
+    if gdal_type in gdal_float_types:
         value = np.float(value)
-    if datatype in gdal_bool_types:
+    if gdal_type in gdal_bool_types:
         value = np.bool(value)
 
     return value
