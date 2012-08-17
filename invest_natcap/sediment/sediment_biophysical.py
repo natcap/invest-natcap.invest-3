@@ -10,7 +10,6 @@ from osgeo import gdal
 from osgeo import ogr
 
 from invest_natcap import raster_utils
-import invest_cython_core
 from invest_natcap.sediment import sediment_core
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -88,7 +87,7 @@ def execute(args):
     for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
         original_dataset = gdal.Open(args[raster_name + '_uri'],
                                      gdal.GA_ReadOnly)
-        clipped_uri = os.path.join(intermediate_dir,raster_name + "_clip.tif")
+        clipped_uri = os.path.join(intermediate_dir, raster_name + "_clip.tif")
         biophysical_args[raster_name] = \
             raster_utils.clip_dataset(original_dataset, 
             biophysical_args['watersheds'], clipped_uri)
@@ -98,13 +97,11 @@ def execute(args):
     for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
         LOGGER.debug(biophysical_args[raster_name].GetProjection())
 
-    #table
-    for value, column_name in [('reservoir_properties', 'id'),
-                            ('biophysical_table', 'lucode')]:
+    #build up each table into a python dictionary
+    data_tables = [('reservoir_properties', 'id'), 
+                   ('biophysical_table', 'lucode')]
+    for value, column_name in data_tables:
         try:
-            uri_name = value + '_uri'
-            LOGGER.debug('load %s' % args[uri_name])
-            local_file = open(args[uri_name])
             csv_dict_reader = csv.DictReader(open(args[value + '_uri']))
             id_table = {}
             for row in csv_dict_reader:
@@ -126,8 +123,9 @@ def execute(args):
     output_uris = {}
     intermediate_rasters = ['flow_direction', 'flow_accumulation', 'slope',
                             'v_stream']
-    for id in intermediate_rasters:
-        output_uris[id] = os.path.join(intermediate_dir, id + '.tif')
+    for raster_id in intermediate_rasters:
+        output_uris[raster_id] = os.path.join(intermediate_dir, 
+                                              raster_id + '.tif')
 
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
