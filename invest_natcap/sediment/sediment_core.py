@@ -218,28 +218,34 @@ def biophysical(args):
     effective_retention_uri = os.path.join(args['intermediate_uri'], 
                                            'effective_retention.tif')
 
-    retention_efficiency_uri = os.path.join(args['intermediate_uri'],'sed_ret_eff.tif')
-    retention_efficiency_dataset = raster_utils.vectorize_rasters([args['landuse']], 
-                                   lulc_to_retention, 
-                                   raster_out_uri = retention_efficiency_uri,
-                                   datatype=gdal.GDT_Float32, nodata=-1.0)
+    retention_efficiency_uri = \
+        os.path.join(args['intermediate_uri'],'sed_ret_eff.tif')
+    retention_efficiency_dataset = \
+        raster_utils.vectorize_rasters([args['landuse']], lulc_to_retention, 
+            raster_out_uri = retention_efficiency_uri, 
+            datatype = gdal.GDT_Float32, nodata = -1.0)
 
     effective_retention_dataset = \
         effective_retention(args['flow_direction'], \
-                retention_efficiency_dataset, stream_dataset, effective_retention_uri)
+            retention_efficiency_dataset, stream_dataset, 
+            effective_retention_uri)
 
     pixel_export_uri = os.path.join(args['output_uri'], 'pixel_export.tif')
     calculate_per_pixel_export(potential_sediment_export_dataset,
-                                             effective_retention_dataset, pixel_export_uri)
+        effective_retention_dataset, pixel_export_uri)
 
-    pixel_sediment_flow_uri = os.path.join(args['intermediate_uri'], 'pixel_sed_flow.tif')
+    pixel_sediment_flow_uri = \
+        os.path.join(args['intermediate_uri'], 'pixel_sed_flow.tif')
     pixel_sediment_core_dataset = \
         pixel_sediment_flow(potential_sediment_export_dataset, \
-            args['flow_direction'], effective_retention_dataset, pixel_sediment_flow_uri)
+            args['flow_direction'], effective_retention_dataset, 
+            pixel_sediment_flow_uri)
 
-    sediment_retained_uri = os.path.join(args['output_uri'], 'pixel_retained.tif')
+    sediment_retained_uri = \
+        os.path.join(args['output_uri'], 'pixel_retained.tif')
     calculate_pixel_retained(pixel_sediment_core_dataset,
-        effective_retention_dataset, args['flow_direction'], sediment_retained_uri)
+        effective_retention_dataset, args['flow_direction'], 
+        sediment_retained_uri)
 
 def valuation(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -267,8 +273,11 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
             stream"""
 
     effective_retention_nodata = -1.0
-    effective_retention_dataset = raster_utils.new_raster_from_base(flow_direction_dataset, 
-        effective_retention_uri, 'GTiff', effective_retention_nodata, gdal.GDT_Float32)
+    effective_retention_dataset = \
+        raster_utils.new_raster_from_base(flow_direction_dataset,
+            effective_retention_uri, 'GTiff', effective_retention_nodata, 
+            gdal.GDT_Float32)
+
     effective_retention_band = effective_retention_dataset.GetRasterBand(1)
     effective_retention_band.Fill(effective_retention_nodata)
 
@@ -278,7 +287,8 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
 
     retention_efficiency_band, retention_efficiency_nodata = \
         raster_utils.extract_band_and_nodata(retention_efficiency_dataset)
-    retention_efficiency_array = retention_efficiency_band.ReadAsArray().flatten()
+    retention_efficiency_array = \
+        retention_efficiency_band.ReadAsArray().flatten()
 
     stream_band, stream_nodata = \
         raster_utils.extract_band_and_nodata(stream_dataset)
@@ -340,9 +350,12 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
             sink = True
             total_fraction = 0.0
             fraction_count = 0
-            for (row_offset, col_offset), (outflow_angle, diagonal_offset, diagonal_outflow) in \
-                    outflow_directions.iteritems():
+            for flow_coords, flow_properties in outflow_directions.iteritems():
                 try:
+                    row_offset, col_offset = flow_coords
+                    outflow_angle, diagonal_offset, diagonal_outflow = \
+                        flow_properties
+
                     neighbor_index = calc_index(row_index+row_offset,
                                                 col_index+col_offset)
 
@@ -351,14 +364,16 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
                     delta = abs(local_flow_angle - outflow_angle)
 
                     if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
-                        neighbor_retention = retention_efficiency_array[neighbor_index]
+                        neighbor_retention = \
+                            retention_efficiency_array[neighbor_index]
+
                         if neighbor_retention == retention_efficiency_nodata:
                             continue
 
                         if diagonal_outflow:
-                            #We want to measure the far side of the unit triangle
-                            #so we measure that angle UP from theta = 0 on a unit
-                            #circle
+                            #We want to measure the far side of the unit 
+                            #triangle so we measure that angle UP from 
+                            #theta = 0 on a unit circle
                             delta = np.pi/4-delta
 
                         #Taking absolute value because it might be on a 0,-45 
@@ -385,7 +400,8 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
             if sink:
                 b_vector[cell_index] = 0.0
 
-    matrix = scipy.sparse.spdiags(a_matrix, diags, n_rows * n_cols, n_rows * n_cols, 
+    n_elements = n_rows * n_cols
+    matrix = scipy.sparse.spdiags(a_matrix, diags, n_elements, n_elements, 
                                   format="csc")
 
     LOGGER.info('Solving via sparse direct solver')
@@ -393,7 +409,7 @@ def effective_retention(flow_direction_dataset, retention_efficiency_dataset,
     result = solver(b_vector)
 
     #Result is a 1D array of all values, put it back to 2D
-    result.resize(n_rows,n_cols)
+    result.resize(n_rows, n_cols)
 
     effective_retention_band.WriteArray(result)
 
@@ -535,7 +551,8 @@ def calculate_potential_soil_loss(ls_factor_dataset, erosivity_dataset,
 
     usle_nodata = -1.0
     ls_factor_nodata = -1.0
-    def usle_function(ls_factor, erosivity, erodibility, usle_c, usle_p, v_stream):
+    def usle_function(ls_factor, erosivity, erodibility, usle_c, usle_p, 
+                      v_stream):
         """Calculates the USLE equation
         
         ls_factor - length/slope factor
@@ -601,11 +618,11 @@ def calculate_per_pixel_export(potential_sediment_loss_dataset,
 
     pixel_export_nodata = -1.0
 
-    potential_sediment_loss_band = potential_sediment_loss_dataset.GetRasterBand(1)
-    potential_sediment_loss_nodata = potential_sediment_loss_band.GetNoDataValue()
+    potential_sediment_loss_band, potential_sediment_loss_nodata = \
+        raster_utils.extract_band_and_nodataa(potential_sediment_loss_dataset)
 
-    effective_retention_band = effective_retention_dataset.GetRasterBand(1)
-    effective_retention_nodata = effective_retention_band.GetNoDataValue()
+    effective_retention_band, effective_retention_nodata = \
+        raster_utils.extract_band_and_nodataa(effective_retention_dataset)
 
     def pixel_export_op(potential_sediment_loss, retention):
         """This either returns nodata in undefined areas or multplies the
@@ -639,22 +656,26 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
         returns a dataset that has an amount of sediment in tons outflowing
             from each pixel"""
 
-    potential_sediment_loss_band = potential_sediment_loss_dataset.GetRasterBand(1)
-    potential_sediment_loss_nodata = potential_sediment_loss_band.GetNoDataValue()
-    potential_sediment_loss_array = potential_sediment_loss_band.ReadAsArray().flatten()
+    potential_sediment_loss_band, potential_sediment_loss_nodata = \
+        raster_utils.extract_band_and_nodata(potential_sediment_loss_dataset)
+    potential_sediment_loss_array = \
+        potential_sediment_loss_band.ReadAsArray().flatten()
 
-    flow_direction_band = flow_direction_dataset.GetRasterBand(1)
-    flow_direction_nodata = flow_direction_band.GetNoDataValue()
+    flow_direction_band, flow_direction_nodata = \
+        raster_utils.extract_band_and_nodata(flow_direction_dataset)
     flow_direction_array = flow_direction_band.ReadAsArray().flatten()
 
-    retention_efficiency_band = retention_efficiency_dataset.GetRasterBand(1)
-    retention_efficiency_nodata = retention_efficiency_band.GetNoDataValue()
+    retention_efficiency_band, retention_efficiency_nodata = \
+        raster_utils.extract_band_and_nodata(retention_efficiency_dataset)
     retention_efficiency_array = \
         retention_efficiency_band.ReadAsArray().flatten()
 
     pixel_sediment_flow_nodata = -1.0
-    pixel_sediment_flow_dataset = raster_utils.new_raster_from_base(flow_direction_dataset, 
-        pixel_sediment_flow_uri, 'GTiff', pixel_sediment_flow_nodata, gdal.GDT_Float32)
+    pixel_sediment_flow_dataset = \
+        raster_utils.new_raster_from_base(flow_direction_dataset, 
+            pixel_sediment_flow_uri, 'GTiff', pixel_sediment_flow_nodata, 
+            gdal.GDT_Float32)
+
     pixel_sediment_flow_band = pixel_sediment_flow_dataset.GetRasterBand(1)
     pixel_sediment_flow_band.Fill(pixel_sediment_flow_nodata)
 
@@ -713,9 +734,11 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
             b_vector[cell_index] = local_sediment_loss
 
             #Determine inflow neighbors
-            for (row_offset, col_offset), (inflow_angle, diagonal_offset, diagonal_inflow) in \
-                    inflow_directions.iteritems():
+            for flow_coords, flow_properties in inflow_directions.iteritems():
                 try:
+                    row_offset, col_offset = flow_coords
+                    inflow_angle, diagonal_offset, diagonal_inflow = \
+                        flow_properties
                     neighbor_index = calc_index(row_index+row_offset,
                                                 col_index+col_offset)
 
@@ -724,7 +747,8 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
                     delta = abs(local_flow_angle - inflow_angle)
 
                     if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
-                        neighbor_retention = retention_efficiency_array[neighbor_index]
+                        neighbor_retention = \
+                            retention_efficiency_array[neighbor_index]
                         neighbor_sediment_loss = \
                             potential_sediment_loss_array[neighbor_index]
 
@@ -733,12 +757,12 @@ def pixel_sediment_flow(potential_sediment_loss_dataset, flow_direction_dataset,
                             continue
 
                         if diagonal_inflow:
-                            #We want to measure the far side of the unit triangle
-                            #so we measure that angle UP from theta = 0 on a unit
-                            #circle
+                            #We want to measure the far side of the unit 
+                            #triangle so we measure that angle UP from 
+                            #theta = 0 on a unit circle
                             delta = np.pi/4-delta
 
-                        #Taking absolute value because it might be on a 0,-45 
+                        #Taking absolute value because it might be on a 0,-45
                         #degree angle
                         inflow_fraction = abs(np.tan(delta))
                         if not diagonal_inflow:
@@ -787,21 +811,24 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
             from each pixel"""
 
 
-    pixel_sediment_flow_band = pixel_sediment_flow_dataset.GetRasterBand(1)
-    pixel_sediment_flow_nodata = pixel_sediment_flow_band.GetNoDataValue()
+    pixel_sediment_flow_band, pixel_sediment_flow_nodata = \
+        raster_utils.extract_band_and_nodata(pixel_sediment_flow_dataset)
     pixel_sediment_flow_array = pixel_sediment_flow_band.ReadAsArray().flatten()
 
-    retention_efficiency_band = retention_efficiency_dataset.GetRasterBand(1)
-    retention_efficiency_nodata = retention_efficiency_band.GetNoDataValue()
-    retention_efficiency_array = retention_efficiency_band.ReadAsArray().flatten()
+    retention_efficiency_band, retention_efficiency_nodata = \
+        raster_utils.extract_band_and_nodata(retention_efficiency_dataset)
+    retention_efficiency_array = \
+        retention_efficiency_band.ReadAsArray().flatten()
 
-    flow_direction_band = flow_direction_dataset.GetRasterBand(1)
-    flow_direction_nodata = flow_direction_band.GetNoDataValue()
-    flow_direction_array = flow_direction_band.ReadAsArray().flatten()
+    flow_band, flow_nodata = \
+        raster_utils.extract_band_and_nodata(flow_dataset)
+    flow_array = flow_band.ReadAsArray().flatten()
 
     pixel_retained_nodata = -1.0
-    pixel_retained_dataset = raster_utils.new_raster_from_base(pixel_sediment_flow_dataset, 
-        per_pixel_retained_uri, 'GTiff', pixel_retained_nodata, gdal.GDT_Float32)
+    pixel_retained_dataset = \
+        raster_utils.new_raster_from_base(pixel_sediment_flow_dataset, 
+        per_pixel_retained_uri, 'GTiff', pixel_retained_nodata, 
+        gdal.GDT_Float32)
     pixel_retained_band = pixel_retained_dataset.GetRasterBand(1)
     pixel_retained_band.Fill(pixel_retained_nodata)
 
@@ -850,9 +877,12 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
                 continue
 
             #Determine inflow neighbors
-            for (row_offset, col_offset), (inflow_angle, diagonal_offset, diagonal_inflow) in \
-                    inflow_directions.iteritems():
+
+            for flow_coords, flow_properties in inflow_directions.iteritems():
                 try:
+                    row_offset, col_offset = flow_coords
+                    inflow_angle, diagonal_offset, diagonal_inflow = \
+                        flow_properties
                     neighbor_index = calc_index(row_index+row_offset,
                                                 col_index+col_offset)
 
@@ -861,14 +891,15 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
                     delta = abs(local_flow_angle - inflow_angle)
 
                     if delta < np.pi/4.0 or (2*np.pi - delta) < np.pi/4.0:
-                        neighbor_retention = retention_efficiency_array[neighbor_index]
+                        neighbor_retention = \
+                            retention_efficiency_array[neighbor_index]
                         if neighbor_retention == retention_efficiency_nodata:
                             continue
 
                         if diagonal_inflow:
-                            #We want to measure the far side of the unit triangle
-                            #so we measure that angle UP from theta = 0 on a unit
-                            #circle
+                            #We want to measure the far side of the unit 
+                            #triangle so we measure that angle UP from 
+                            #theta = 0 on a unit circle
                             delta = np.pi/4-delta
 
                         #Taking absolute value because it might be on a 0,-45 
@@ -881,7 +912,8 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
                         
                         #Finally set the appropriate inflow variable
 
-                        neighbor_flow = pixel_sediment_flow_array[neighbor_index]
+                        neighbor_flow = \
+                            pixel_sediment_flow_array[neighbor_index]
                         if neighbor_flow == pixel_sediment_flow_nodata:
                             #Don't count undefined neighbor flow. DON'T DO IT!
                             continue
