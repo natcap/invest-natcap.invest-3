@@ -619,10 +619,10 @@ def calculate_per_pixel_export(potential_sediment_loss_dataset,
     pixel_export_nodata = -1.0
 
     potential_sediment_loss_band, potential_sediment_loss_nodata = \
-        raster_utils.extract_band_and_nodataa(potential_sediment_loss_dataset)
+        raster_utils.extract_band_and_nodata(potential_sediment_loss_dataset)
 
     effective_retention_band, effective_retention_nodata = \
-        raster_utils.extract_band_and_nodataa(effective_retention_dataset)
+        raster_utils.extract_band_and_nodata(effective_retention_dataset)
 
     def pixel_export_op(potential_sediment_loss, retention):
         """This either returns nodata in undefined areas or multplies the
