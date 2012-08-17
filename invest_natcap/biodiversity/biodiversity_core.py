@@ -21,8 +21,8 @@ def biophysical(args):
            datasets.
            {'_c':current dataset, '_f':future dataset, '_b':baseline dataset}
        args['threat_dict'] - a python dictionary representing the threats table
-            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7','DECAY':'0'},
-             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3','DECAY':'0'},
+            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7'},
+             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3'},
              ... }
        args['sensitivity_dict'] - a python dictionary representing the sensitivity table
             {'1':{'LULC':'1','NAME':'Residential','HABITAT':'1','L_crp':'0.4','L_urb':'0.45'...},

@@ -30,7 +30,7 @@ def execute(args):
         args['threats_uri'] - a uri to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
-            following names: 'THREAT','MAX_DIST','WEIGHT','DECAY' (required).
+            following names: 'THREAT','MAX_DIST','WEIGHT' (required).
         args['access_uri'] - a uri to an input polygon shapefile containing
             data on the relative protection against threats (optional)
         args['sensitivity_uri'] - a uri to an input CSV file of LULC types,
@@ -239,8 +239,8 @@ def threat_names_match(threat_dict, sens_dict, prefix):
         lulc.
 
         threat_dict - a dictionary representing the threat table:
-            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7','DECAY':'0'},
-             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3','DECAY':'0'},
+            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7'},
+             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3'},
              ... }
         sens_dict - a dictionary representing the sensitivity table:
             {'1':{'LULC':'1','NAME':'Residential','HABITAT':'1','L_crp':'0.4','L_urb':'0.45'...},
