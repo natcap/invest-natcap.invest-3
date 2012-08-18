@@ -121,7 +121,7 @@ def execute(args):
     #to their locations on disk.  Helpful for creating the objects in the 
     #next step
     output_uris = {}
-    intermediate_rasters = ['flow_direction', 'slope', 'v_stream']
+    intermediate_rasters = ['flow_direction', 'slope']
     for raster_id in intermediate_rasters:
         output_uris[raster_id] = os.path.join(intermediate_dir, 
                                               raster_id + '.tif')
