@@ -230,18 +230,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #We need to ensure that the type of nodata is the same as the raster type so
     #we don't encounter bugs where we return an int nodata for a float raster or
     #vice versa
-    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
-                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32]
-    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32, 
-                        gdal.GDT_Float64, gdal.GDT_Float32]
-    gdal_bool_types = [gdal.GDT_Byte]
-
-    if datatype in gdal_int_types:
-        nodata = np.int(nodata)
-    if datatype in gdal_float_types:
-        nodata = np.float(nodata)
-    if datatype in gdal_bool_types:
-        nodata = np.bool(nodata)
+    nodata = gdal_cast(nodata, datatype)
 
     #create a new current_dataset with the minimum resolution of dataset_list and
     #bounding box that contains aoi_box
@@ -1026,7 +1015,6 @@ def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
         
         returns stream dataset"""
 
-
     stream_dataset = new_raster_from_base(flow_accumulation_dataset, 
         stream_uri, 'GTiff', 255, gdal.GDT_Byte)
     stream_band = stream_dataset.GetRasterBand(1)
@@ -1120,6 +1108,8 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
         returns the clipped dataset that lives at out_dataset_uri"""
 
     band, nodata = extract_band_and_nodata(source_dataset)
+
+    LOGGER.warn(nodata)
 
     def op(x):
         return x
@@ -1252,3 +1242,26 @@ def get_raster_properties(dataset):
     dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
     LOGGER.debug('Raster_Properties : %s', dataset_dict)
     return dataset_dict
+
+def gdal_cast(value, gdal_type):
+    """Cast value to the given gdal type.
+
+        value - some raw python value
+        gdal_type - one of: gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
+            gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32, gdal.GDT_CFloat64, 
+            gdal.GDT_CFloat32, gdal.GDT_Float64, gdal.GDT_Float32, gdal.GDT_Byte
+
+        return gdal_type(value) (basterdized cast notation)"""
+
+    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
+                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32, 
+                      gdal.GDT_Byte]
+    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32, 
+                        gdal.GDT_Float64, gdal.GDT_Float32]
+
+    if gdal_type in gdal_int_types:
+        value = np.int(value)
+    if gdal_type in gdal_float_types:
+        value = np.float(value)
+
+    return value
