@@ -1008,7 +1008,8 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
 def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
     """Creates a raster of accumulated flow to each cell.
     
-        flow_accumulation_data - (input) A flow accumulation dataset
+        flow_accumulation_data - (input) A flow accumulation dataset of type
+            floating point
         flow_threshold - (input) a number indicating the threshold to declare
             a pixel a stream or no
         stream_uri - (input) the uri of the output stream dataset
