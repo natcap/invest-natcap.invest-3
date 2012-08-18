@@ -1026,11 +1026,13 @@ def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
     flow_accumulation_array = flow_accumulation_band.ReadAsArray()
 
     stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array >= flow_threshold)] = 1
+                     (flow_accumulation_array >= float(flow_threshold))] = 1
     stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array < flow_threshold)] = 0
+                     (flow_accumulation_array < float(flow_threshold))] = 0
 
     stream_band.WriteArray(stream_array)
+    stream_array = None
+    stream_band = None
 
     return stream_dataset
 
