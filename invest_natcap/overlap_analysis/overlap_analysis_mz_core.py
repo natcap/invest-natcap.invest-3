@@ -58,28 +58,28 @@ def execute(args):
     
     #This creates a new shapefile that is a copy of the old one, but at the path location
     #That way we can edit without worrying about changing the Input file.
-    z_copy = driver.CopyDataSource(zone_shape_old, path)
-    LOGGER.debug(z_copy)
+    mz_freq_shape = driver.CopyDataSource(zone_shape_old, path)
+    LOGGER.debug(mz_freq_shape)
 
-    z_layer = z_copy.GetLayer()
+    mz_freq_layer = mz_freq_shape.GetLayer()
 
     #Creating a definition for our new activity count field.
     field_defn = ogr.FieldDefn('ACTIV_CNT', ogr.OFTReal)
-    z_layer.CreateField(field_defn)
+    mz_freq_layer.CreateField(field_defn)
     
-    for polygon in z_layer:
+    for mz_polygon in mz_freq_layer:
         
-        zone_geom = polygon.GetGeometryRef()
+        zone_geom = mz_polygon.GetGeometryRef()
         activity_count = 0
 
         for activ in layers_dict:
             
             shape_file = layers_dict[activ]
-            layer = shape_file.GetLayer()
+            activ_layer = shape_file.GetLayer()
 
-            for element in layer:
+            for feature in activ_layer:
                 #If it contains or overlaps
-                activ_geom = element.GetGeometryRef()
+                activ_geom = feature.GetGeometryRef()
 
                 if zone_geom.Contains(activ_geom) or zone_geom.Overlaps(activ_geom):
                     activity_count += 1
@@ -87,6 +87,6 @@ def execute(args):
 
             layer.ResetReading()
 
-        polygon.SetField('ACTIV_CNT', activity_count)
+        mz_polygon.SetField('ACTIV_CNT', activity_count)
         
-        z_layer.SetFeature(polygon)
+        mz_freq_layer.SetFeature(mz_polygon)
