@@ -33,11 +33,13 @@ def execute(args):
             (excluding the .shp extension) to the open datasource itself. These
             files are each an activity layer that will be counted within the
             totals per management zone.
+        args['over_layer_dict'] -  NAME ME?
 
     Output:
-        zone_shapefile- A copy of 'zone_layer_file' with the added attribute 
-            "ACTIVITY_COUNT" that will total the number of activities taking
-            place in each polygon.
+        A file named [workspace_dir]/Ouput/mz_frequency.shp which is a copy of 
+        args['zone_layer_file'] with the added attribute "ACTIV_CNT" that will 
+        total the number of activities taking place in each polygon.
+
      Returns nothing.'''
 
     output_dir = os.path.join(args['workspace_dir'], 'Output')
@@ -69,9 +71,9 @@ def execute(args):
     for polygon in z_layer:
         
         zone_geom = polygon.GetGeometryRef()
-        count = 0
+        activity_count = 0
 
-        for activ in layers_dict: 
+        for activ in layers_dict:
             
             shape_file = layers_dict[activ]
             layer = shape_file.GetLayer()
@@ -81,49 +83,11 @@ def execute(args):
                 activ_geom = element.GetGeometryRef()
 
                 if zone_geom.Contains(activ_geom) or zone_geom.Overlaps(activ_geom):
-                    count += 1
+                    activity_count += 1
                     break
 
             layer.ResetReading()
 
-        polygon.SetField('ACTIV_CNT', count)
+        polygon.SetField('ACTIV_CNT', activity_count)
         
         z_layer.SetFeature(polygon)
-
-    make_param_file(args)
-
-def make_param_file(args):
-    ''' This function will output a .txt file that contains the user-selected parameters
-    for this run of the overlap_analysis model.
-    
-    Input:
-        args- The entire args dictionary which contains all information passed from the
-            the IUI. 
-    Ouput:
-        textfile- A .txt file output that will contain all user-controlled paramaters
-            that were selected for use with this run of the model.
-
-    Returns nothing.
-    '''
-
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-
-    textfile  = os.path.join(output_dir, "Parameter_Log_[" + \
-                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") +  "].txt")
-    file = open(textfile, "w")
-    
-    list = []
-    list.append("ARGUMENTS \n")
-    list.append("Workspace: " + args['workspace_dir'])
-    list.append("Zone Layer: " + args['zone_layer_file'].GetName())
-    
-    list.append("Activity Layers: ")
-    for name in args['over_layer_dict'].keys():
-        list.append("--- " + name)
-
-    for element in list:
-        file.write(element)
-        file.write("\n")
-
-    file.close()
-    
