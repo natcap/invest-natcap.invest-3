@@ -248,11 +248,12 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             except KeyError:
                 max_intra_weights[layer_name] = attribute
 
-     
     #We also need to know the maximum of the inter-activity value weights, but only
     #if inter-activity weighting is desired at all. If it is not, we don't need this
     #value, so we can just set it to a None type.
-    max_inter_weight = max(inter_weights_dict.values()) if do_inter == True else None   
+    max_inter_weight = None
+    if do_inter:
+        max_inter_weight = max(inter_weights_dict.values())
     
     #Assuming that inter-activity valuation is desired, whereas intra-activity is not,
     #we should use the original rasterized layers as the pixels to combine. If, on the
@@ -266,7 +267,6 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 
         if aoi_pixel == aoi_nodata:
             return aoi_nodata
-
 
         for i in range(1, n+1):
             #This will either be a 0 or 1, since the burn value for the unweighted
