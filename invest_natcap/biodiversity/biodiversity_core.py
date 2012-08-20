@@ -34,15 +34,15 @@ def biophysical(args):
            rasters (threat rasters) corresponding to the entries in the threat
            table and whether the density raster belongs to the current, future,
            or baseline raster. Example:
-           {'dens_c': {'crp_c' : crp_c.tif, 'srds_c' : srds_c.tif, ...},
-            'dens_f': {'crp_f' : crp_f.tif, 'srds_f' : srds_f.tif, ...},
-            'dens_b': {'crp_b' : crp_b.tif, 'srds_b' : srds_b.tif, ...}
+           {'density_c': {'crp' : crp_c.tif, 'srds' : srds_c.tif, ...},
+            'density_f': {'crp' : crp_f.tif, 'srds' : srds_f.tif, ...},
+            'density_b': {'crp' : crp_b.tif, 'srds' : srds_b.tif, ...}
            }
        args['access_shape'] - an OGR datasource of polygons depicting any 
            protected/reserved land boundaries
        args['half_saturation'] - an integer that determines the spread and
            central tendency of habitat quality scores
-       args['result_suffix'] - a string of the desired suffix
+       args['suffix'] - a string of the desired suffix
 
        returns nothing."""
 
@@ -62,7 +62,7 @@ def biophysical(args):
     habitat_uri = os.path.join(intermediate_dir, 'habitat' + suffix)
     
     habitat_raster = \
-       map_raster_to_dict_values(cur_landuse, habitat_uri, sensitivity_dict,\
+       map_raster_to_dict_values(cur_landuse, habitat_uri, sensitivity_dict, \
                          'HABITAT', out_nodata, False)
     
     # If access_lyr: convert to raster, if value is null set to 1, 
@@ -265,7 +265,7 @@ def biophysical(args):
         scaling_param = 2.5
         
         # a term used below to compute habitat quality
-        ksq = half_saturation**scaling_param
+        ksq = float(half_saturation**scaling_param)
         
         sum_deg_nodata = \
             sum_deg_raster.GetRasterBand(1).GetNoDataValue()
@@ -290,11 +290,11 @@ def biophysical(args):
                     habitat == habitat_nodata:
                 return out_nodata
 
-            return habitat * (1 - ((degradation**scaling_param) / \
+            return float(habitat) * (1.0 - ((degradation**scaling_param) / \
                 (degradation**scaling_param + ksq)))
         
         quality_uri = \
-            os.path.join(output_dir, 'quality_out' + lulc_key + '.tif')
+            os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
         
         quality_raster = \
             raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
