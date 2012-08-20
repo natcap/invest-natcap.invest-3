@@ -311,8 +311,6 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         for item in dens_list_c:
             args['density_dict']['density_b'][item[:len(item)-2]] = None
 
-        LOGGER.debug(args['density_dict'])
-
         biodiversity_core.biophysical(args)
     
         regression_dir = \
