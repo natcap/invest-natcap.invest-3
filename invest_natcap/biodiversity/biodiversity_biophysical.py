@@ -243,8 +243,10 @@ def threat_names_match(threat_dict, sens_dict, prefix):
              'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3'},
              ... }
         sens_dict - a dictionary representing the sensitivity table:
-            {'1':{'LULC':'1','NAME':'Residential','HABITAT':'1','L_crp':'0.4','L_urb':'0.45'...},
-             '11':{'LULC':'11','NAME':'Urban','HABITAT':'1','L_crp':'0.6','L_urb':'0.3'...},
+            {'1':{'LULC':'1', 'NAME':'Residential', 'HABITAT':'1', 
+                  'L_crp':'0.4', 'L_urb':'0.45'...},
+             '11':{'LULC':'11', 'NAME':'Urban', 'HABITAT':'1', 
+                   'L_crp':'0.6', 'L_urb':'0.3'...},
              ...}
 
         prefix - a string that specifies the prefix to the threat names that is

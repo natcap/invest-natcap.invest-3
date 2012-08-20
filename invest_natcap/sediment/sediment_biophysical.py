@@ -98,12 +98,11 @@ def execute(args):
     for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
         LOGGER.debug(biophysical_args[raster_name].GetProjection())
 
-    #table
-    for value, column_name in [('reservoir_properties', 'id'),
-                            ('biophysical_table', 'lucode')]:
+    #build up each table into a python dictionary
+    data_tables = [('reservoir_properties', 'id'), 
+                   ('biophysical_table', 'lucode')]
+    for value, column_name in data_tables:
         try:
-            uri_name = value + '_uri'
-            LOGGER.debug('load %s' % args[uri_name])
             csv_dict_reader = csv.DictReader(open(args[value + '_uri']))
             id_table = {}
             for row in csv_dict_reader:
@@ -139,13 +138,10 @@ def execute(args):
     #We won't know the size of the output rasters until we vectorize the stack
     #of input rasters.  So we just pass a uri to its final location to the
     #biophysical part.
-    biophysical_args['sret_dr_uri'] = os.path.join(output_dir, 'sret_dr.tif')
-    biophysical_args['sexp_dr_uri'] = os.path.join(output_dir, 'sexp_dr.tif')
-    biophysical_args['slope_uri'] = os.path.join(intermediate_dir, 'slope.tif')
-    biophysical_args['stream_uri'] = os.path.join(intermediate_dir, 'v_stream.tif')
-    biophysical_args['ls_uri'] = os.path.join(intermediate_dir, 'ls.tif')
-    biophysical_args['potential_soil_loss_uri'] = \
-        os.path.join(output_dir, 'usle.tif')
+    output_uris = ['sret_dr', 'sexp_dr', 'slope', 'v_stream', 'ls', 'usle']
+    for raster_id in output_uris:
+        biophysical_args[raster_id + '_uri'] = \
+            os.path.join(output_dir,raster_id + '.tif')
 
     biophysical_args['intermediate_uri'] = intermediate_dir
     biophysical_args['output_uri'] = output_dir
