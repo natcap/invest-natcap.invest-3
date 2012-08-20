@@ -259,9 +259,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #we should use the original rasterized layers as the pixels to combine. If, on the
     #other hand, inter is not wanted, then we should just use 1 in our equation
     
-    def combine_weighted_pixels(*activity_pixels):
+    def combine_weighted_pixels(*pixel_parameter_list):
         
-        aoi_pixel = activity_pixels[0]
+        aoi_pixel = pixel_parameter_list[0]
         
         curr_pix_sum = 0
 
@@ -271,7 +271,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         for i in range(1, n+1):
             #This will either be a 0 or 1, since the burn value for the unweighted
             #raster files was a 1.
-            U =  activity_pixels[i]
+            U =  pixel_parameter_list[i]
             I = None
             if do_inter:
                 layer_name = raster_names[i]
@@ -285,9 +285,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             curr_pix_sum += ((1/float(n)) * U * I)
         return curr_pix_sum    
 
-    def combine_weighted_pixels_intra(*activity_pixels):
+    def combine_weighted_pixels_intra(*pixel_parameter_list):
     
-        aoi_pixel = activity_pixels[0]
+        aoi_pixel = pixel_parameter_list[0]
 
         curr_pix_sum = 0.0
 
@@ -300,7 +300,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             #is desired. Compute U for that weighting, assuming the raster pixels
             #are the intra weights.
             layer_name = weighted_raster_names[i]
-            X = activity_pixels[i]
+            X = pixel_parameter_list[i]
             X_max = max_intra_weights[layer_name]    
 
             U = X / X_max
