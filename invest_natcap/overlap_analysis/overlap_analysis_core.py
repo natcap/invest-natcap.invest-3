@@ -121,21 +121,14 @@ def execute(args):
         sum_pixel = 0
         
         for activ in activity_pixels[1::]:
-
             if activ == 1:
-                
                 sum_pixel += 1
          
         return sum_pixel   
         
-    #LOGGER.debug(raster_files)
     raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi = None,
                                    raster_out_uri = activities_uri, 
                                    datatype = gdal.GDT_Int32, nodata = aoi_nodata)
-    
-    ####################################################
-    #Do we want to even create the weighted raster if both do_inter and do_intra
-    #are false?
     
     #Need to set up dummy var for when inter or intra are available without the other so
     #that all parameters can be filled in.
@@ -216,8 +209,6 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
                 Else:
                     I{j} = 1
     '''
-    #LOGGER.debug(":::::")
-    #LOGGER.debug(raster_names)
 
     #Want to set up vars that will be universal across all pixels first.
     #n should NOT include the AOI, since it is not an interest layer
@@ -233,27 +224,27 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #rasterized aoi/layers, and the second will be a list of the original file names in
     #the same order as the layers so that the dictionaries with other weights can be
     #cross referenced. 
-    weighted_raster_files, weighted_raster_names = make_indiv_weight_rasters(inter_dir,
-                                                                             aoi_raster,
-                                                                             layers_dict,
-                                                                             intra_name)
+    weighted_raster_files, weighted_raster_names = \
+        make_indiv_weight_rasters(inter_dir, aoi_raster, layers_dict, 
+                                  intra_name)
       
     #Need to get the X{max} now, so iterate through the features on a layer, and make a
     #dictionary that maps the name of the layer to the max potential 
     #intra-activity weight
     max_intra_weights = {}
     
-    for element in layers_dict:
+    for layer_name in layers_dict:
         
-        datasource = layers_dict[element]
+        datasource = layers_dict[layer_name]
         layer = datasource.GetLayer()
         
         for feature in layer:
             
             attribute = feature.items()[intra_name]
             
-            if (not element in max_intra_weights) or max_intra_weights[element] < attribute:
-                max_intra_weights[element] = attribute
+
+            if (layer_name not in max_intra_weights) or max_intra_weights[layer_name] < attribute:
+                max_intra_weights[layer_name] = attribute
      
     #We also need to know the maximum of the inter-activity value weights, but only
     #if inter-activity weighting is desired at all. If it is not, we don't need this
