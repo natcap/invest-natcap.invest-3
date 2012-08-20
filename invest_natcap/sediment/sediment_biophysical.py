@@ -17,36 +17,37 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 
 LOGGER = logging.getLogger('sediment_biophysical')
 
+
 def execute(args):
     """This function invokes the biophysical part of the sediment model given
         URI inputs of files. It will do filehandling and open/create
-        appropriate objects to pass to the core sediment biophysical 
-        processing function.  It may write log, warning, or error messages to 
+        appropriate objects to pass to the core sediment biophysical
+        processing function.  It may write log, warning, or error messages to
         stdout.
-        
+
         args - a python dictionary with at the following possible entries:
         args['workspace_dir'] - a uri to the directory that will write output
             and other temporary files during calculation. (required)
         args['dem_uri'] - a uri to a digital elevation raster file (required)
-        args['erosivity_uri'] - a uri to an input raster describing the 
+        args['erosivity_uri'] - a uri to an input raster describing the
             rainfall eroisivity index (required)
-        args['erodibility_uri'] - a uri to an input raster describing soil 
+        args['erodibility_uri'] - a uri to an input raster describing soil
             erodibility (required)
         args['landuse_uri'] - a uri to a land use/land cover raster whose
             LULC indexes correspond to indexs in the biophysical table input.
-            Used for determining soil retention and other biophysical 
+            Used for determining soil retention and other biophysical
             properties of the landscape.  (required)
         args['watersheds_uri'] - a uri to an input shapefile of the watersheds
             of interest as polygons. (required)
-        args['subwatersheds_uri'] - a uri to an input shapefile of the 
+        args['subwatersheds_uri'] - a uri to an input shapefile of the
             subwatersheds of interest that are contained in the
             'watersheds_uri' shape provided as input. (required)
-        args['reservoir_locations_uri'] - a uri to an input shape file with 
+        args['reservoir_locations_uri'] - a uri to an input shape file with
             points indicating reservoir locations with IDs. (optional)
-        args['reservoir_properties_uri'] - a uri to an input CSV table 
-            describing properties of input reservoirs provided in the 
+        args['reservoir_properties_uri'] - a uri to an input CSV table
+            describing properties of input reservoirs provided in the
             reservoirs_uri shapefile (optional)
-        args['biophysical_table_uri'] - a uri to an input CSV file with 
+        args['biophysical_table_uri'] - a uri to an input CSV file with
             biophysical information about each of the land use classes.
         args['threshold_flow_accumulation'] - an integer describing the number
             of upstream cells that must flow int a cell before it's considered
@@ -81,7 +82,7 @@ def execute(args):
             biophysical_args[shapefile_name] = \
                 ogr.Open(args[uri_name].encode(fsencoding))
             LOGGER.debug('load %s as: %s' % (args[uri_name],
-                                         biophysical_args[shapefile_name]))
+                biophysical_args[shapefile_name]))
 
     #load and clip rasters
     for raster_name in ['dem', 'erosivity', 'erodibility', 'landuse']:
@@ -89,7 +90,7 @@ def execute(args):
                                      gdal.GA_ReadOnly)
         clipped_uri = os.path.join(intermediate_dir, raster_name + "_clip.tif")
         biophysical_args[raster_name] = \
-            raster_utils.clip_dataset(original_dataset, 
+            raster_utils.clip_dataset(original_dataset,
             biophysical_args['watersheds'], clipped_uri)
         LOGGER.debug('load %s as: %s' % (args[raster_name + '_uri'],
                                          biophysical_args[raster_name]))
@@ -118,13 +119,13 @@ def execute(args):
 
     #build output rasters
     #This defines a dictionary that links output/temporary GDAL/OAL objects
-    #to their locations on disk.  Helpful for creating the objects in the 
+    #to their locations on disk.  Helpful for creating the objects in the
     #next step
     output_uris = {}
-    intermediate_rasters = ['flow_direction', 'slope', 'v_stream']
-    for raster_id in intermediate_rasters:
-        output_uris[raster_id] = os.path.join(intermediate_dir, 
-                                              raster_id + '.tif')
+    intermediate_rasters = ['flow_direction', 'flow_accumulation', 'slope',
+                            'ls_factor', 'v_stream']
+    for base_name in intermediate_rasters:
+        output_uris[id] = os.path.join(intermediate_dir, base_name + '.tif')
 
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC
@@ -141,7 +142,7 @@ def execute(args):
     for raster_id in output_uris:
         biophysical_args[raster_id + '_uri'] = \
             os.path.join(output_dir,raster_id + '.tif')
-    
+
     biophysical_args['intermediate_uri'] = intermediate_dir
     biophysical_args['output_uri'] = output_dir
 

@@ -54,11 +54,12 @@ def biophysical(args):
     threat_dict = args['threat_dict']
     sensitivity_dict = args['sensitivity_dict']
     half_saturation = args['half_saturation']
-    
+    suffix = args['suffix'] + '.tif'
+       
     out_nodata = -1.0
     
     #Create raster of habitat based on habitat field
-    habitat_uri = os.path.join(intermediate_dir, 'habitat.tif')
+    habitat_uri = os.path.join(intermediate_dir, 'habitat' + suffix)
     
     habitat_raster = \
        map_raster_to_dict_values(cur_landuse, habitat_uri, sensitivity_dict,\
@@ -69,7 +70,7 @@ def biophysical(args):
     try:
         access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
-        access_uri = os.path.join(intermediate_dir, 'access_layer.tif')
+        access_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
         access_base = \
             raster_utils.new_raster_from_base(cur_landuse, access_uri, \
                 'GTiff', -1, gdal.GDT_Float32)
@@ -132,7 +133,7 @@ def biophysical(args):
             threat_band = threat_raster.GetRasterBand(1)
             threat_nodata = float(threat_band.GetNoDataValue())
             filtered_threat_uri = \
-                os.path.join(intermediate_dir, str(threat + '_filtered.tif'))
+               os.path.join(intermediate_dir, threat + '_filtered' + suffix)
             
             # create a new raster to output distance adjustments to
             filtered_raster = \
@@ -173,7 +174,7 @@ def biophysical(args):
             # create sensitivity raster based on threat
             sens_uri = \
                 os.path.join(intermediate_dir, 
-                        'sens_' + threat + lulc_key + '.tif')
+                        'sens_' + threat + lulc_key + suffix )
             
             sensitivity_raster = \
                 map_raster_to_dict_values(lulc_ds, sens_uri,\
@@ -219,7 +220,7 @@ def biophysical(args):
             
             deg_uri = \
                 os.path.join(intermediate_dir, \
-                             'deg_' + threat + lulc_key + '.tif')
+                             'deg_' + threat + lulc_key + suffix)
             deg_ras = \
                 raster_utils.vectorize_rasters(adjusted_list, \
                     partial_degradation, raster_out_uri=deg_uri, \
@@ -251,7 +252,7 @@ def biophysical(args):
             return out_nodata
         
         deg_sum_uri = \
-            os.path.join(output_dir, 'deg_sum_out' + lulc_key + '.tif')
+            os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
         
         sum_deg_raster = \
             raster_utils.vectorize_rasters(degradation_rasters, \
@@ -346,7 +347,7 @@ def biophysical(args):
                 LOGGER.debug('Create new cover for %s', lulc_cover)
                 new_cover_uri = \
                     os.path.join(intermediate_dir, 
-                        'new_cover' + lulc_cover + '.tif')
+                        'new_cover' + lulc_cover + suffix)
                 
                 # set the current/future land cover to be masked to the base
                 # land cover
@@ -387,7 +388,7 @@ def biophysical(args):
                     return rarity_nodata
                 
                 rarity_uri = \
-                    os.path.join(output_dir, 'rarity' + lulc_cover + '.tif')
+                    os.path.join(output_dir, 'rarity' + lulc_cover + suffix)
 
                 rarity = \
                     raster_utils.vectorize_rasters([new_cover], map_ratio, \
