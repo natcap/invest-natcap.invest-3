@@ -895,3 +895,15 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
 
     pixel_retained_band.WriteArray(result.reshape((n_rows,n_cols)))
     return pixel_retained_dataset
+
+def sum_over_region(dataset, aoi):
+    """A function to aggregate the sum of all the pixels in dataset that
+        overlap the aoi .
+
+        dataset - a single band GDAL dataset
+        aoi - an OGR datasource
+
+        returns the sum of all the pixels in the first band of dataset
+            that overlaps all the layers/features in aoi."""
+
+    pass
