@@ -13,7 +13,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         """Smoke test for biodiversity_biophysical function.  Shouldn't crash with \
            zero length inputs"""
 
-        raise SkipTest
+        #raise SkipTest
 
         input_dir = './data/biodiversity_regression_data/samp_input'
         out_dir = './data/test_out/biodiversity/'
@@ -24,8 +24,8 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         args['landuse_cur_uri'] = \
                 os.path.join(input_dir, 'lc_samp_cur_b.tif')
         args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
-        #args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
-        args['threat_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
         args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
         args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
         args['half_saturation_constant'] = 30
@@ -49,7 +49,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
                 os.path.join(input_dir, 'lc_samp_cur_b/')
         args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b/')
         args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b/')
-        args['threat_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
         args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
         args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
         args['half_saturation_constant'] = 30
@@ -60,7 +60,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
     def test_biodiversity_biophysical_open_amb(self):
         """Test multiple uri types for open_ambiguous_raster and assert that
             the proper behavior is seen """
-        raise SkipTest
+        #raise SkipTest
         reg_dir = './data/biodiversity_regression_data/'
         uri_1 = os.path.join(reg_dir, 'empty_dir')
         uri_2 = os.path.join(reg_dir, 'test_dir')
@@ -80,7 +80,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
     def test_biodiversity_biophysical_make_dict_from_csv(self):
         """Test a few hand made CSV files to make sure make_dict_from_csv
             returns properly """
-        raise SkipTest
+        #raise SkipTest
         reg_dir = './data/biodiversity_regression_data/'
         csv_uri = os.path.join(reg_dir, 'test_csv.csv')
         field = 'LULC'
@@ -106,7 +106,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
         result = biodiversity_biophysical.check_projections(ds_dict, 1.0)
         
-        self.assertTrue(not result)
+        self.assertTrue(result)
 
     def test_biodiversity_biophysical_check_projections_fail(self):
         """Test a list of gdal datasets and assert that we see success and
@@ -115,13 +115,13 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         reg_dir = './data/biodiversity_regression_data/'
         ds_1 = gdal.Open(os.path.join(reg_dir, 'samp_input/lc_samp_bse_b.tif'))
         ds_2 = gdal.Open(os.path.join(reg_dir, 'samp_input/lc_samp_cur_b.tif'))
-        ds_3 = gdal.Open(os.path.join(reg_dir, 'test_RAT.tif'))
+        ds_3 = gdal.Open(os.path.join(reg_dir, 'unprojected_raster.tif'))
 
         ds_dict = {'_c':ds_2, '_b':ds_1,'_f':ds_3}
 
         result = biodiversity_biophysical.check_projections(ds_dict, 1.0)
         
-        self.assertTrue(result)
+        self.assertTrue(not result)
 
     def test_biodiversity_biophsyical_compare_threats_sensitivity(self):
         """Test hand created dictionaries representing the formats of the
@@ -139,9 +139,9 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
 
         result = biodiversity_biophysical.\
-                     compare_threats_sensitivity(threat_dict, sens_dict)
+                     threat_names_match(threat_dict, sens_dict, 'L_')
 
-        self.assertTrue(not result)
+        self.assertTrue(result)
     
     def test_biodiversity_biophsyical_compare_threats_sensitivity_fail(self):
         """Test hand created dictionaries representing the formats of the
@@ -160,6 +160,6 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
 
         result = biodiversity_biophysical.\
-                     compare_threats_sensitivity(threat_dict, sens_dict)
+                     threat_names_match(threat_dict, sens_dict, 'L_')
 
-        self.assertTrue(result)
+        self.assertTrue(not result)

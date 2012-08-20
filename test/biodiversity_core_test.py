@@ -10,8 +10,9 @@ from nose.plugins.skip import SkipTest
 
 from invest_natcap import raster_utils
 from invest_natcap.biodiversity import biodiversity_core
+import invest_test_core
 
-LOGGER = logging.getLogger('water_yield_test')
+LOGGER = logging.getLogger('biodiversity_core_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -26,9 +27,20 @@ class TestInvestBiodiversityCore(unittest.TestCase):
 
         results = biodiversity_core.raster_pixel_count(ds)
 
+        expected_results = \
+                {1:5724, 2:422, 3:20, 6:403, 7:40, 8:2134, 11:1748, 16:6283,
+                 18:2829, 20:1675, 21:10940, 24:15524, 32:3814, 33:3399, \
+                 39:274, 40:1, 49: 504, 51:175, 52:746, 53:67418, 54:183419, \
+                 55:266, 56:22836, 57:6711, 58:39266, 59:24049, 60:79733, \
+                 61:20146, 62:1470, 66:242, 67:170388, 68:26102, 71:23748, \
+                 72:2322, 73:1172, 74:546, 75:1, 76:160, 78:1, 79:7001, \
+                 80:7197, 81:1606, 82:10442, 83:69676, 84:2506, 85:118181, \
+                 86:10807, 87:107541, 88:5629, 89:3424, 90:22816, 91:2296, \
+                 92:12278, 93:6750, 95:74}
+
         ds = None
 
-        LOGGER.debug('Pixel Counts : %s', results)
+        self.assertEqual(results, expected_results)
 
     def test_biodiversity_core_pixel_count_hand(self):
         """Test a hand created GDAL raster dataset to make sure the correct
@@ -60,18 +72,16 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         self.assertEqual(results, manual_count)
         dataset = None
 
-        LOGGER.debug('Hand Pixel Counts : %s', results)
-
-    def test_biodiversity_core_raster_from_dict(self):
+    def test_biodiversity_core_map_raster_to_dict_values(self):
         """Test mapping a set of values from a dictionary to a raster by hand
         creating a raster and dictionary"""
         
-        out_dir = './data/test_out/biodiversity/raster_from_dict/'
+        out_dir = './data/test_out/biodiversity/map_raster_to_dict_values/'
         
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
 
-        out_uri = os.path.join(out_dir, 'normal.tif')
+        out_uri = os.path.join(out_dir, 'raster_from_dict.tif')
         
         driver = gdal.GetDriverByName('MEM')
         dataset_type = gdal.GDT_Int32
@@ -97,11 +107,12 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         test_dict = {'1':{'sensitivity':0.75}, 
                      '2':{'sensitivity':0.5},
                      '3':{'sensitivity':1.0}}
+        
         field = 'sensitivity'
         out_nodata = -1.0
-        out_raster =\
-            biodiversity_core.raster_from_dict(dataset, out_uri, test_dict,\
-                field, out_nodata, False)
+        out_raster = \
+            biodiversity_core.map_raster_to_dict_values(dataset, out_uri, \
+                test_dict, field, out_nodata, False)
 
         expected_array =  np.array([[-1.0,0.75,0.75,0.75,-1.0],
                                     [-1.0,1.0,1.0,1.0,-1.0],
@@ -114,13 +125,13 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         LOGGER.debug('expected array : %s', expected_array)
         self.assertTrue((expected_array==result_array).all())
 
-    def test_biodiversity_core_raster_from_dict_error(self):
+    def test_biodiversity_core_map_raster_to_dict_values_error(self):
         """Test mapping a set of values from a dictionary to a raster by hand
         creating a raster and dictionary. However, this time let us purposfully
         leave out a value from the sensitivity table and assert that an
         exception was raised"""
         
-        out_dir = './data/test_out/biodiversity/raster_from_dict/'
+        out_dir = './data/test_out/biodiversity/map_raster_to_dict_values/'
         
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
@@ -152,29 +163,42 @@ class TestInvestBiodiversityCore(unittest.TestCase):
                      '3':{'sensitivity':1.0}}
         field = 'sensitivity'
         out_nodata = -1.0
-        self.assertRaises(KeyError, biodiversity_core.raster_from_dict, dataset,
-                out_uri, test_dict, field, out_nodata, True,
+        self.assertRaises(Exception, biodiversity_core.map_raster_to_dict_values,
+                dataset, out_uri, test_dict, field, out_nodata, True, \
                 error_message='missing key')
 
-    def test_get_raster_properties(self):
-        """ """
-        reg_dir = './data/biodiversity_regression_data/samp_input/'
-        ds = gdal.Open(os.path.join(reg_dir, 'lc_samp_cur_b.tif'))
+    def test_biodiversity_core_make_raster_from_shape(self):
+        """A regression test for make_raster_from_shape """
+        #raise SkipTest
+        test_dir = './data/biodiversity_regression_data/samp_input/'
+        out_dir = './data/test_out/biodiversity/make_raster_from_shape/'
+        shape_uri = os.path.join(test_dir, 'access_samp.shp')
+        base_ds_uri = os.path.join(test_dir, 'lc_samp_cur_b.tif')
+        out_uri = os.path.join(out_dir, 'new_raster.tif')
+        regression_ds_uri = \
+            './data/biodiversity_regression_data/access_regression.tif'
 
-        calc_res = {'width':30,'height':-30,'x_size':1125,'y_size':991}
-        
-        prop = biodiversity_core.get_raster_properties(ds)
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
 
-        self.assertEqual(calc_res, prop)
+        base_ds = gdal.Open(base_ds_uri)
+        regression_ds = gdal.Open(regression_ds_uri)
+        shape = ogr.Open(shape_uri)
+        attr = 'ACCESS'
 
-    def test_make_raster_from_shape(self):
-        """ """
-        raise SkipTest
+        base_raster = \
+            raster_utils.new_raster_from_base(base_ds, out_uri, 'GTiff', \
+                -1, gdal.GDT_Float32) 
 
-        biodiversity_core.make_raster_from_shape(base_raster, shape, attr)
+        new_raster = \
+            biodiversity_core.make_raster_from_shape(base_raster, shape, attr)
 
-    def test_clip_and_op(self):
-        """ """
+        invest_test_core.assertTwoDatasetsEqual(self, regression_ds, new_raster)
+
+    def test_biodiversity_core_clip_and_op(self):
+        """A unit test for clip_and_op that tests the function by passing in the
+            numpy.multiply operation and checking the results against hand
+            calculated values"""
         #raise SkipTest
         
         out_dir = './data/test_out/biodiversity/clip_and_op/'
@@ -183,8 +207,6 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
 
-        out_uri = os.path.join(out_dir, 'error.tif')
-        
         driver = gdal.GetDriverByName('MEM')
         dataset_type = gdal.GDT_Int32
 

@@ -16,6 +16,11 @@ import scipy.signal
 from scipy.sparse.linalg import spsolve
 import pyamg
 
+
+#Used to raise an exception if rasters, shapefiles, or both don't overlap
+#in regions that should
+class SpatialExtentOverlapException(Exception): pass
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -225,18 +230,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #We need to ensure that the type of nodata is the same as the raster type so
     #we don't encounter bugs where we return an int nodata for a float raster or
     #vice versa
-    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
-                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32]
-    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32, 
-                        gdal.GDT_Float64, gdal.GDT_Float32]
-    gdal_bool_types = [gdal.GDT_Byte]
-
-    if datatype in gdal_int_types:
-        nodata = np.int(nodata)
-    if datatype in gdal_float_types:
-        nodata = np.float(nodata)
-    if datatype in gdal_bool_types:
-        nodata = np.bool(nodata)
+    nodata = gdal_cast(nodata, datatype)
 
     #create a new current_dataset with the minimum resolution of dataset_list and
     #bounding box that contains aoi_box
@@ -530,6 +524,9 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
             the extents of the intersection rectangle based on its own
             extents.
             
+        raises a SpatialExtentOverlapException in cases where the dataset 
+            list and aoi don't overlap.
+
         returns a 4 element list that bounds the intersection of all the 
             rasters in dataset_list.  [left, top, right, bottom]"""
 
@@ -561,9 +558,9 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
                        min(rec[2], bounding_box[2]),
                        max(rec[3], bounding_box[3])]
         
-        #Left can't be greater than right or bottom greater than top)
+        #Left can't be greater than right or bottom greater than top
         if not valid_bounding_box(bounding_box):
-            raise Exception("These rasters %s don't overlap with this one %s" % \
+            raise SpatialExtentOverlapException("These rasters %s don't overlap with this one %s" % \
                                 (str(dataset_files[0:-1]), dataset_files[-1]))
 
     if aoi != None:
@@ -575,7 +572,7 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
                        min(aoi_extent[1], bounding_box[2]),
                        max(aoi_extent[2], bounding_box[3])]
         if not valid_bounding_box(bounding_box):
-            raise Exception("The aoi layer %s doesn't overlap with %s" % \
+            raise SpatialExtentOverlapException("The aoi layer %s doesn't overlap with %s" % \
                                 (aoi, str(dataset_files)))
 
     return bounding_box
@@ -1011,13 +1008,13 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
 def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
     """Creates a raster of accumulated flow to each cell.
     
-        flow_accumulation_data - (input) A flow accumulation dataset
+        flow_accumulation_data - (input) A flow accumulation dataset of type
+            floating point
         flow_threshold - (input) a number indicating the threshold to declare
             a pixel a stream or no
         stream_uri - (input) the uri of the output stream dataset
         
         returns stream dataset"""
-
 
     stream_dataset = new_raster_from_base(flow_accumulation_dataset, 
         stream_uri, 'GTiff', 255, gdal.GDT_Byte)
@@ -1030,11 +1027,13 @@ def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
     flow_accumulation_array = flow_accumulation_band.ReadAsArray()
 
     stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array >= flow_threshold)] = 1
+                     (flow_accumulation_array >= float(flow_threshold))] = 1
     stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array < flow_threshold)] = 0
+                     (flow_accumulation_array < float(flow_threshold))] = 0
 
     stream_band.WriteArray(stream_array)
+    stream_array = None
+    stream_band = None
 
     return stream_dataset
 
@@ -1112,6 +1111,8 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
         returns the clipped dataset that lives at out_dataset_uri"""
 
     band, nodata = extract_band_and_nodata(source_dataset)
+
+    LOGGER.warn(nodata)
 
     def op(x):
         return x
@@ -1223,3 +1224,47 @@ def create_rat(dataset, attr_dict, key_name, value_name):
     band.SetDefaultRAT(rat)
 
     return dataset
+
+def get_raster_properties(dataset):
+    """Get the width, height, X size, and Y size of the dataset and return the
+        values in a dictionary. 
+        *This function can be expanded to return more properties if needed*
+
+       dataset - a GDAL raster dataset to get the properties from
+        
+       returns - a dictionary with the properties stored under relevant keys.
+           The current list of things returned is:
+           width (w-e pixel resolution), height (n-s pixel resolution), 
+           XSize, YSize
+    """
+    dataset_dict = {}
+    gt = dataset.GetGeoTransform()
+    dataset_dict['width'] = float(gt[1])
+    dataset_dict['height'] = float(gt[5])
+    dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize    
+    dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
+    LOGGER.debug('Raster_Properties : %s', dataset_dict)
+    return dataset_dict
+
+def gdal_cast(value, gdal_type):
+    """Cast value to the given gdal type.
+
+        value - some raw python value
+        gdal_type - one of: gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
+            gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32, gdal.GDT_CFloat64, 
+            gdal.GDT_CFloat32, gdal.GDT_Float64, gdal.GDT_Float32, gdal.GDT_Byte
+
+        return gdal_type(value) (basterdized cast notation)"""
+
+    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
+                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32, 
+                      gdal.GDT_Byte]
+    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32, 
+                        gdal.GDT_Float64, gdal.GDT_Float32]
+
+    if gdal_type in gdal_int_types:
+        value = np.int(value)
+    if gdal_type in gdal_float_types:
+        value = np.float(value)
+
+    return value

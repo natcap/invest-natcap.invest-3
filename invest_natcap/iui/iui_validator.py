@@ -578,10 +578,12 @@ class OGRChecker(TableChecker):
         return table_rows
 
 class DBFChecker(TableChecker):
-    def open(self, valid_dict):
+    def open(self, valid_dict, read_only = True):
         """Attempt to open the DBF."""
 
-        self.file = dbf.Dbf(str(self.uri))
+        #Passing in the value of readOnly, because we might only need to
+        #check to see if it's available for reading
+        self.file = dbf.Dbf(str(self.uri), readOnly = read_only)
 
         if not isinstance(self.file, dbf.Dbf):
             return str('Must be a DBF file')
@@ -781,18 +783,14 @@ class CSVChecker(TableChecker):
         """Attempt to open the CSV file"""
 
         try:
-            # Using CSV's sniffer class allows us to check to see if it's a CSV
-            # that python's CSV module can detect.  If not, a csv.Error
-            # exception is raised.  This method catches many more erroneous
-            # files than the previous method of testing the classname of a
-            # CSV.DictReader.
-            dialect = csv.Sniffer().sniff(open(self.uri).read())
-        except csv.Error:
-            return str("Must be a CSV file")
-
-        # Now that we know the csv file is probably good, we can actually open
-        # the file and save the DictReader object.
-        self.file = csv.DictReader(open(self.uri, 'rU'))
+            #The best we can do is try to open the file as a CSV dictionary
+            #and if it fails as an IOError kick that out as an error
+            #we used to try to use sniffer to see if it was valid but had
+            #big issues about it.  See the following for details:
+            #http://code.google.com/p/invest-natcap/issues/detail?id=1076
+            self.file = csv.DictReader(open(self.uri, 'rU'))
+        except IOError as e:
+            return str("IOError: %s" % str(e))
 
     def _build_table(self):
         table_rows = []

@@ -59,6 +59,7 @@ class Controller(object):
         self.msg_checker = PrintQueueChecker(self.executor)
         self.thread_finished = False
         self.thread_failed = False
+        self.thread_exception = None
 
     def get_message(self):
         """Check to see if the message checker thread is alive and returns the
@@ -94,6 +95,7 @@ class Controller(object):
             Returns nothing."""
 
         self.thread_failed = self.executor.isThreadFailed()
+        self.thread_exception = self.executor.failure_exception
         del self.executor
         self.executor = None
         del self.msg_checker
@@ -183,6 +185,7 @@ class Executor(threading.Thread):
         self.printQueue = deque([])
         self.printQueueLock = threading.Lock()
         self.threadFailed = False
+        self.failure_exception = None
         self.cancelFlag = threading.Event()
         self.operations = []
         self.funcMap = {'validator': self.runValidator,
@@ -228,8 +231,11 @@ class Executor(threading.Thread):
     def isCancelled(self):
         return self.cancelFlag.isSet()
 
-    def setThreadFailed(self, state):
+    def setThreadFailed(self, state, exception=None):
+        """Set the flag of whether the thread has failed.  exception should be a
+        pointer to a python Exception or a boolean."""
         self.threadFailed = state
+        self.failure_exception = exception
 
     def isThreadFailed(self):
         return self.threadFailed
@@ -342,10 +348,10 @@ class Executor(threading.Thread):
 
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
             model.execute(args)
-        except:
+        except Exception as e:
             LOGGER.error('Error: a problem occurred while running the model')
             self.printTraceback()
-            self.setThreadFailed(True)
+            self.setThreadFailed(True, e)
             self.move_log_file(args['workspace_dir'])
             #Quit the rest of the function
             return

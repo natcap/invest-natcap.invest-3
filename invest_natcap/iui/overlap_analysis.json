@@ -32,24 +32,13 @@
                     "helpText": "If you are using Management Zones to analyze overlap data, this should be a polygon shapefile containing multiple polygons. If, on the other hand, you wish to use gridding in order to separate the area, this can be a single polygon shapefile."
                 },
                 {
-                    "id" : "gridding",
-                    "args_id" : "do_grid",
-                    "type": "checkbox",
-                    "label": "Do Gridding?",
-                    "defaultValue": true,
-                    "required": true,
-                    "helpText": "By checking this box, you are indicating that this is not a Management Zone divided shapefile, and instead should be gridded into areas of the size indicated on the next line."
-                },
-                {
                     "id" : "grid_size",
                     "args_id" : "grid_size",
                     "type": "text",
                     "label": "Analysis Cell Size",
                     "defaultValue": "1000",
                     "validateAs": {"type": "number"},
-                    "required": false,
-                    "requiredIf": ["gridding"],
-                    "enabledBy": "gridding",
+                    "required": true,
                     "helpText": "By specifying a number in the interface, an analysis grid within the AOI of size x size will be created."
                 },
                 {
@@ -95,7 +84,7 @@
                     "id" : "IS_tbl",
                     "args_id" : "overlap_layer_tbl",
                     "type": "file",
-                    "label": "Analysis Cell Size",
+                    "label": "Inter-Activity Weight Table",
                     "defaultValue": "../OverlapAnalysis/Input/Fisheries_Inputs.csv",
                     "required": false,
                     "requiredIf": ["inter"],

@@ -73,7 +73,8 @@ def execute(args, out):
         out.append(prefix + ' does not exist')
         dbfFile = None
     else:
-        dbfFile = dbf.Dbf(args['attr_table_uri'])
+        #Making readOnly because it is not necessary to write to
+        dbfFile = dbf.Dbf(args['attr_table_uri'], readOnly = True)
         if not isinstance(dbfFile, dbf.Dbf):
             out.append(prefix + ' must be a dbf file')
  
