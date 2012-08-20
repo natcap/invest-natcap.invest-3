@@ -9,16 +9,15 @@ from invest_natcap.biodiversity import biodiversity_biophysical
 import invest_test_core
 
 class TestBiodiversityBiophysical(unittest.TestCase):
-    def test_biodiversity_biophysical_sample_smoke(self):
-        """Smoke test for biodiversity_biophysical function.  Shouldn't crash with \
-           zero length inputs"""
-
+    def test_biodiversity_biophysical_sample_regression(self):
+        """A regression test for the biodiversity model with all possible inputs"""
         #raise SkipTest
-
         input_dir = './data/biodiversity_regression_data/samp_input'
-        out_dir = './data/test_out/biodiversity/'
+        out_dir = './data/biodiversity_regression_data/samp_input/output/'
+        
         if not os.path.isdir(out_dir):
             os.makedirs(out_dir)
+        
         args = {}
         args['workspace_dir'] = input_dir
         args['landuse_cur_uri'] = \
@@ -28,11 +27,79 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
         args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
         args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
-        args['half_saturation_constant'] = 30
-        args['results_suffix'] = ''
+        # using 1 because we get more interesting results. Using a higher number
+        # makes the quality_out raster have numbers that just bump to 1
+        args['half_saturation_constant'] = 1 
+        args['suffix'] = ''
 
         biodiversity_biophysical.execute(args)
     
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/'
+        
+        reg_rarity_c = os.path.join(regression_dir, 'rarity_c.tif')
+        reg_rarity_f = os.path.join(regression_dir, 'rarity_f.tif')
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_c.tif')
+        reg_quality_f = os.path.join(regression_dir, 'quality_out_f.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_c.tif')
+        reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_f.tif')
+
+        rarity_c = os.path.join(out_dir, 'rarity_c.tif')
+        rarity_f = os.path.join(out_dir, 'rarity_f.tif')
+        quality_c = os.path.join(out_dir, 'quality_out_c.tif')
+        quality_f = os.path.join(out_dir, 'quality_out_f.tif')
+        deg_sum_c = os.path.join(out_dir, 'deg_sum_out_c.tif')
+        deg_sum_f = os.path.join(out_dir, 'deg_sum_out_f.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_c, rarity_c)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_rarity_f, rarity_f)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_quality_c, quality_c)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_deg_sum_c, deg_sum_c)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_deg_sum_f, deg_sum_f)
+    
+    def test_biodiversity_biophysical_sample_regression2(self):
+        """A regression test for the biodiversity model with Current and Future
+        landcover but no access or baseline"""
+        #raise SkipTest
+        input_dir = './data/biodiversity_regression_data/samp_input'
+        out_dir = './data/biodiversity_regression_data/samp_input/output/'
+        
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+        
+        args = {}
+        args['workspace_dir'] = input_dir
+        args['landuse_cur_uri'] = \
+                os.path.join(input_dir, 'lc_samp_cur_b.tif')
+        #args['landuse_bas_uri'] = os.path.join(input_dir, 'lc_samp_bse_b.tif')
+        args['landuse_fut_uri'] = os.path.join(input_dir, 'lc_samp_fut_b.tif')
+        args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
+        args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
+        #args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
+        args['half_saturation_constant'] = 30
+        args['suffix'] = ''
+
+        biodiversity_biophysical.execute(args)
+    
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/'
+        
+        reg_quality_c = os.path.join(regression_dir, 'quality_out_ccf.tif')
+        reg_quality_f = os.path.join(regression_dir, 'quality_out_fcf.tif')
+        reg_deg_sum_c = os.path.join(regression_dir, 'deg_sum_out_ccf.tif')
+        reg_deg_sum_f = os.path.join(regression_dir, 'deg_sum_out_fcf.tif')
+
+        quality_c = os.path.join(out_dir, 'quality_out_c.tif')
+        quality_f = os.path.join(out_dir, 'quality_out_f.tif')
+        deg_sum_c = os.path.join(out_dir, 'deg_sum_out_c.tif')
+        deg_sum_f = os.path.join(out_dir, 'deg_sum_out_f.tif')
+
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_quality_c, quality_c)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_quality_f, quality_f)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_deg_sum_c, deg_sum_c)
+        invest_test_core.assertTwoDatasetEqualURI(self, reg_deg_sum_f, deg_sum_f)
+
     def test_biodiversity_biophysical_default_smoke(self):
         """Smoke test for biodiversity_biophysical function.  Shouldn't crash with \
            zero length inputs"""
@@ -53,7 +120,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
         args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
         args['half_saturation_constant'] = 30
-        args['results_suffix'] = ''
+        args['suffix'] = ''
 
         biodiversity_biophysical.execute(args)
 
@@ -121,16 +188,17 @@ class TestBiodiversityBiophysical(unittest.TestCase):
 
         result = biodiversity_biophysical.check_projections(ds_dict, 1.0)
         
+        # Asserting not True because we expect to get False back
         self.assertTrue(not result)
 
-    def test_biodiversity_biophsyical_compare_threats_sensitivity(self):
+    def test_biodiversity_biophsyical_threat_names_match(self):
         """Test hand created dictionaries representing the formats of the
             threats and sensitivity CSV files """
 
         threat_dict =\
-            {'crp':{'THREAT':'crp','MAX_DIST':'8','DECAY':'0','WEIGHT':0.3},
-            'road':{'THREAT':'road','MAX_DIST':'5','DECAY':'1','WEIGHT':0.3},
-             'bld':{'THREAT':'bld','MAX_DIST':'7','DECAY':'0','WEIGHT':0.3}}
+            {'crp':{'THREAT':'crp','MAX_DIST':'8','WEIGHT':0.3},
+            'road':{'THREAT':'road','MAX_DIST':'5','WEIGHT':0.3},
+             'bld':{'THREAT':'bld','MAX_DIST':'7','WEIGHT':0.3}}
         sens_dict = \
             {'0':{'LULC':'0','HABITAT':'1','L_crp':'0.8','L_road':'0.5','L_bld':'0.9'},
              '1': {'LULC':'0','HABITAT':'1','L_crp':'0.8','L_road':'0.5','L_bld':'0.9'},
@@ -138,15 +206,16 @@ class TestBiodiversityBiophysical(unittest.TestCase):
              '3': {'LULC':'0','HABITAT':'1','L_crp':'0.8','L_road':'0.5','L_bld':'0.9'}}
 
 
-        result = biodiversity_biophysical.\
-                     threat_names_match(threat_dict, sens_dict, 'L_')
+        result = \
+            biodiversity_biophysical.threat_names_match(threat_dict, \
+                sens_dict, 'L_')
 
         self.assertTrue(result)
     
-    def test_biodiversity_biophsyical_compare_threats_sensitivity_fail(self):
+    def test_biodiversity_biophsyical_threat_names_match_fail(self):
         """Test hand created dictionaries representing the formats of the
             threats and sensitivity CSV files. We purposely put an error in
-            here so that the function will return True """
+            here so that the function will return False """
 
         threat_dict =\
             {'crp':{'THREAT':'crp','MAX_DIST':'8','DECAY':'0','WEIGHT':0.3},
@@ -162,4 +231,5 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         result = biodiversity_biophysical.\
                      threat_names_match(threat_dict, sens_dict, 'L_')
 
+        #asserting not true because we expect to get False back
         self.assertTrue(not result)
