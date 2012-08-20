@@ -242,9 +242,12 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             
             attribute = feature.items()[intra_name]
             
-
-            if (layer_name not in max_intra_weights) or max_intra_weights[layer_name] < attribute:
+            try:
+                max_intra_weights[layer_name] = \
+                    max(attribute, max_intra_weights[layer_name])
+            except KeyError:
                 max_intra_weights[layer_name] = attribute
+
      
     #We also need to know the maximum of the inter-activity value weights, but only
     #if inter-activity weighting is desired at all. If it is not, we don't need this
