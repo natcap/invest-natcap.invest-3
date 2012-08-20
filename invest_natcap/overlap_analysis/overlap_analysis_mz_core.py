@@ -66,7 +66,10 @@ def execute(args):
     #Creating a definition for our new activity count field.
     field_defn = ogr.FieldDefn('ACTIV_CNT', ogr.OFTReal)
     mz_freq_layer.CreateField(field_defn)
-    
+   
+    #This will loop through all management zone polygons, as defined by the MZ
+    #input file. For each of those polygons, it will look through the list of
+    #activity layers, and check against each shape on every one of those layers.
     for mz_polygon in mz_freq_layer:
         
         zone_geom = mz_polygon.GetGeometryRef()
