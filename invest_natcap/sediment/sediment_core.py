@@ -815,8 +815,7 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
             for flow_coords, flow_properties in inflow_directions.iteritems():
                 try:
                     row_offset, col_offset = flow_coords
-                    inflow_angle, diagonal_offset, diagonal_inflow = \
-                        flow_properties
+                    inflow_angle, _, diagonal_inflow = flow_properties
                     neighbor_index = calc_index(row_index+row_offset,
                                                 col_index+col_offset)
 
