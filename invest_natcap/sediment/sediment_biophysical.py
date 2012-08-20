@@ -125,7 +125,7 @@ def execute(args):
     intermediate_rasters = ['flow_direction', 'flow_accumulation', 'slope',
                             'ls_factor', 'v_stream']
     for base_name in intermediate_rasters:
-        output_uris[id] = os.path.join(intermediate_dir, base_name + '.tif')
+        output_uris[base_name] = os.path.join(intermediate_dir, base_name + '.tif')
 
     #Create the output and intermediate rasters to be the same size/format as
     #the base LULC

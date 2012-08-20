@@ -5,6 +5,7 @@ import glob
 from osgeo import ogr
 
 from invest_natcap.overlap_analysis import overlap_analysis_mz_core
+from invest_natcap.overlap_analysis import overlap_core
 
 def execute(args):
     '''
@@ -42,40 +43,9 @@ def execute(args):
     #raster pixels to be. 
     mz_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
 
-    file_dict = get_files_dict(args['overlap_data_dir_loc'])
+    file_dict = overlap_core.get_files_dict(args['overlap_data_dir_loc'])
+  
     mz_args['over_layer_dict'] = file_dict
     
     overlap_analysis_mz_core.execute(mz_args)
 
-def get_files_dict(folder):
-    '''Returns a dictionary of all .shp files in the folder.
-
-        Input:
-            folder- The location of all layer files. Among these, there should be
-                files with the extension .shp. These will be used for all
-                activity calculations.
-
-        Returns:
-            file_dict- A dictionary which maps the name (minus file extension) of
-                a shapefile to the open datasource itself. The key in this dictionary
-                is the name of the file (not including file path or extension), and 
-                the value is the open shapefile.
-    '''
-
-    #Glob.glob gets all of the files that fall into the form .shp, and makes them
-    #into a list. Then, each item in the list is added to a dictionary as an open
-    #file with the key of it's filename without the extension, and that whole
-    #dictionary is made an argument of the mz_args dictionary
-    file_names = glob.glob(os.path.join(folder, '*.shp'))
-    file_dict = {}
-    
-    for file in file_names:
-        
-        #The return of os.path.split is a tuple where everything after the final slash
-        #is returned as the 'tail' in the second element of the tuple
-        #path.splitext returns a tuple such that the first element is what comes before
-        #the file extension, and the second is the extension itself 
-        name = os.path.splitext(os.path.split(file)[1])[0]
-        file_dict[name] = ogr.Open(file)
-   
-    return file_dict

@@ -889,7 +889,8 @@ def sum_over_region(dataset, aoi, mask_path = None):
     mask_dataset_band.Fill(0)
     for layer_id in aoi.GetLayerCount():
         layer = aoi.GetLayer(layer_id)
-        gdal.RasterizeLayer(mask_dataset, [1], layer, burn_values=[1])
+        gdal.RasterizeLayer(mask_dataset, [1], layer, burn_values=[1],
+                            options = ["ALL_TOUCHED=TRUE"])
 
     running_sum = 0.0
 
