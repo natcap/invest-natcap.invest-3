@@ -348,10 +348,12 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
         layers_dict: A dictionary of all shapefiles to be rasterized. The key is the name
             of the original file, minus the file extension. The value is an open shapefile
             datasource.
-    intra_name: The string corresponding to the value we wish to pull out of the
-        shapefile layer. This is an attribute of all polygons corresponding to
-        the intra-activity weight of a given shape.
+        intra_name: The string corresponding to the value we wish to pull out of the
+            shapefile layer. This is an attribute of all polygons corresponding to
+            the intra-activity weight of a given shape.
             
+    RETURNS is output?
+
     Output:
         weighted_raster_files: A list of raster versions of the original activity
             shapefiles. The first file will ALWAYS be the AOI, followed by the rasterized
@@ -375,9 +377,9 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
         
         outgoing_uri = os.path.join(dir, element + ".tif")
 
-    #Setting nodata value to 0 so that the nodata pixels can be used directly in
-    #calucilations without messing up the weighted total equations for the second
-    #output file.
+        #Setting nodata value to 0 so that the nodata pixels can be used directly in
+        #calculations without messing up the weighted total equations for the second
+        #output file.
         dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
                                 0, gdal.GDT_Float32)
         band, nodata = raster_utils.extract_band_and_nodata(dataset)
@@ -418,8 +420,6 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
     #pixel summary later
     raster_files = [aoi_raster]
     raster_names = ['aoi']
-    
-    print overlap_files
     
     #Remember, this defaults to element being the keys of the dictionary
     for element, datasource in overlap_files.iteritems():
