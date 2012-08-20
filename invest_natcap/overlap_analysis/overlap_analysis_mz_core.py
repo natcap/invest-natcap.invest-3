@@ -29,11 +29,10 @@ def execute(args):
             management zone polygons. It should be noted that this should not
             be edited directly but instead, should have a copy made in order
             to add the attribute field.
-        args['overlap_files'] - A dictionary which maps the name of the shapefile
+        args['over_layer_dict'] - A dictionary which maps the name of the shapefile
             (excluding the .shp extension) to the open datasource itself. These
             files are each an activity layer that will be counted within the
             totals per management zone.
-        args['over_layer_dict'] -  NAME ME?
 
     Output:
         A file named [workspace_dir]/Ouput/mz_frequency.shp which is a copy of 
