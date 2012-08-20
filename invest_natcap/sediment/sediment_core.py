@@ -919,10 +919,22 @@ def sum_over_region(dataset, aoi, mask_path = None):
 
     mask_dataset = raster_utils.new_raster_from_base(dataset, mask_path, 
         raster_type, 255, gdal.GDT_Byte)
-    mask_dataset_band = mask_dataset.GetRasterBand(1)
+    mask_band = mask_dataset.GetRasterBand(1)
 
     #Fill the  mask with 0's then add 1's everywhere there is a polygon
     mask_dataset_band.Fill(0)
     for layer_id in aoi.GetLayerCount():
         layer = aoi.GetLayer(layer_id)
         gdal.RasterizeLayer(mask_dataset, [1], layer, burn_values=[1])
+
+    running_sum = 0.0
+
+    #Loop through each row, set nodata values to 0, multiply with mask
+    #and sum!
+    for row_index in range(band.YSize):
+        row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
+        row_array[row_array == nodata] = 0
+        mask_array = mask_band.ReadAsArray(0, row_index, band.XSize, 1)
+        np.sum(row_array*mask_array)
+
+    return running_sum
