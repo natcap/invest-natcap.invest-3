@@ -95,10 +95,6 @@ def execute(args):
     if args['do_intra']:
         oa_args['intra_name'] = args['intra_name']
 
-    #We don't actually get these yet, so commenting them out
-    #oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
-    #oa_args['decay'] = args['decay']
-
     overlap_analysis_core.execute(oa_args)
 
 def get_files_dict(folder):
@@ -153,8 +149,6 @@ def format_over_table(over_tbl):
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
 
-    
-
     over_dict = {}
 
     #USING EXPLICIT STRING CALLS to the layers table (these should not be unique to the
@@ -179,3 +173,4 @@ def format_over_table(over_tbl):
         over_dict[name] = inter_act
     
     return over_dict
+

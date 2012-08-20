@@ -3,6 +3,7 @@ import datetime
 import glob
 
 from osgeo import ogr
+
 from invest_natcap.overlap_analysis import overlap_analysis_mz_core
 
 def execute(args):

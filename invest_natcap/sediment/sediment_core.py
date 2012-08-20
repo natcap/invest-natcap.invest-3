@@ -815,8 +815,7 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
             for flow_coords, flow_properties in inflow_directions.iteritems():
                 try:
                     row_offset, col_offset = flow_coords
-                    inflow_angle, diagonal_offset, diagonal_inflow = \
-                        flow_properties
+                    inflow_angle, _, diagonal_inflow = flow_properties
                     neighbor_index = calc_index(row_index+row_offset,
                                                 col_index+col_offset)
 
@@ -860,3 +859,46 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
 
     pixel_retained_band.WriteArray(result.reshape((n_rows, n_cols)))
     return pixel_retained_dataset
+
+def sum_over_region(dataset, aoi, mask_path = None):
+    """A function to aggregate the sum of all the pixels in dataset that
+        overlap the aoi .
+
+        dataset - a single band GDAL dataset
+        aoi - an OGR datasource
+        mask_path - (optional) a path to a file that can be written for 
+            masking the dataset for aggregation.  If None then uses a
+            memory raster the same size as dataset
+
+        returns the sum of all the pixels in the first band of dataset
+            that overlaps all the layers/features in aoi."""
+
+    band, nodata = raster_utils.extract_band_and_nodata(dataset)
+
+    if mask_path == None:
+        mask_path = ''
+        raster_type = 'MEM'
+    else:
+        raster_type = 'GTiff'
+
+    mask_dataset = raster_utils.new_raster_from_base(dataset, mask_path, 
+        raster_type, 255, gdal.GDT_Byte)
+    mask_band = mask_dataset.GetRasterBand(1)
+
+    #Fill the  mask with 0's then add 1's everywhere there is a polygon
+    mask_dataset_band.Fill(0)
+    for layer_id in aoi.GetLayerCount():
+        layer = aoi.GetLayer(layer_id)
+        gdal.RasterizeLayer(mask_dataset, [1], layer, burn_values=[1])
+
+    running_sum = 0.0
+
+    #Loop through each row, set nodata values to 0, multiply with mask
+    #and sum!
+    for row_index in range(band.YSize):
+        row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
+        row_array[row_array == nodata] = 0
+        mask_array = mask_band.ReadAsArray(0, row_index, band.XSize, 1)
+        np.sum(row_array*mask_array)
+
+    return running_sum
