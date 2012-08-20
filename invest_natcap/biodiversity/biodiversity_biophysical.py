@@ -39,7 +39,7 @@ def execute(args):
         args['half_saturation_constant'] - a python integer that determines
             the spread and central tendency of habitat quality scores 
             (required)
-        args['results_suffix'] - a python string that will be inserted into all
+        args['suffix'] - a python string that will be inserted into all
             raster uri paths just before the file extension.
 
         returns nothing."""
@@ -54,7 +54,7 @@ def execute(args):
     # if the user has not provided a results suffix, assume it to be an empty
     # string.
     try:
-        suffix = args['results_suffix']
+        suffix = '_' + args['suffix']
     except:
         suffix = ''
 
