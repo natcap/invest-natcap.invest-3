@@ -7,6 +7,7 @@ import datetime
 
 from osgeo import ogr
 from osgeo import gdal
+
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('overlap_analysis_core')
@@ -69,13 +70,6 @@ def execute(args):
 
     Returns nothing.'''
     
-    gridded_rasters(args)
-        
-    #This file should be output regardless of the input file.
-    make_param_file(args)
-
-def gridded_rasters(args):
-
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
@@ -163,50 +157,6 @@ def gridded_rasters(args):
                                args['do_inter'], args['do_intra'], raster_files, raster_names)
     
 
-def make_param_file(args):
-    ''' This function will output a .txt file that contains the user-selected parameters
-    for this run of the overlap_analysis model.
-    
-    Input:
-        args- The entire args dictionary which contains all information passed from the
-            the IUI. 
-    Ouput:
-        textfile- A .txt file output that will contain all user-controlled paramaters
-            that were selected for use with this run of the model.
-
-    Returns nothing.
-    '''
-
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-
-    textfile  = os.path.join(output_dir, "Parameter_Log_[" + \
-                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") +  "].txt")
-    file = open(textfile, "w")
-    
-    list = []
-    list.append("ARGUMENTS \n")
-    list.append("Workspace: " + args['workspace_dir'])
-    list.append("Zone Layer: " + args['zone_layer_file'].GetName())
-    list.append("Grid Size: " + str(args['grid_size']))
-    list.append("Inter-Activity Weighting Desired?: " + str(args['do_inter']))
-    list.append("Intra-Activity Weighting Desired?: " + str(args['do_intra']))
-
-    list.append("Activity Layers: ")
-    for name in args['overlap_files'].keys():
-        list.append("--- " + name)
-
-    list.append("\nOPTIONAL ARGUMENTS \n")
-
-
-    if args['do_intra']:
-        list.append("Intra-Activity Field Name: " + args['intra_name'])
-
-    for element in list:
-        file.write(element)
-        file.write("\n")
-
-    file.close()
-    
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
                            layers_dict, intra_name, do_inter, do_intra, raster_files, raster_names):
     '''This function will create an output raster that takes into account both inter-
