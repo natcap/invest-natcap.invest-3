@@ -161,6 +161,7 @@ def biophysical(args):
 
             # use a gaussian_filter to compute the effect that a threat has
             # over a distance, on a given pixel. 
+            LOGGER.debug('Starting Gaussian Blur')
             filtered_out_matrix = \
                 clip_and_op(threat_band.ReadAsArray(), sigma, \
                             ndimage.gaussian_filter, matrix_type=float, \
@@ -170,6 +171,7 @@ def biophysical(args):
             filtered_band = filtered_raster.GetRasterBand(1)
             filtered_band.WriteArray(filtered_out_matrix)
             filtered_raster.FlushCache()
+            LOGGER.debug('Finished Gaussian Blur')
 
             # create sensitivity raster based on threat
             sens_uri = \
@@ -221,10 +223,12 @@ def biophysical(args):
             deg_uri = \
                 os.path.join(intermediate_dir, \
                              'deg_' + threat + lulc_key + suffix)
+            LOGGER.debug('Starting vectorize on partial_degradation')
             deg_ras = \
                 raster_utils.vectorize_rasters(adjusted_list, \
                     partial_degradation, raster_out_uri=deg_uri, \
                     nodata=out_nodata)
+            LOGGER.debug('Finished vectorize on partial_degradation')
             
             degradation_rasters.append(deg_ras)
             deg_band = deg_ras.GetRasterBand(1)
@@ -253,11 +257,12 @@ def biophysical(args):
         
         deg_sum_uri = \
             os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
-        
+        LOGGER.debug('Starting vectorize on sum_degradation') 
         sum_deg_raster = \
             raster_utils.vectorize_rasters(degradation_rasters, \
                 sum_degradation, raster_out_uri=deg_sum_uri, \
                 nodata=out_nodata)
+        LOGGER.debug('Finished vectorize on sum_degradation') 
 
         #Compute habitat quality
         # scaling_param is a scaling parameter set to 2.5 as noted in the users
@@ -295,10 +300,11 @@ def biophysical(args):
         
         quality_uri = \
             os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
-        
+        LOGGER.debug('Starting vectorize on quality_op') 
         quality_raster = \
             raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
                 quality_op, raster_out_uri=quality_uri, nodata=out_nodata)
+        LOGGER.debug('Finished vectorize on quality_op') 
 
     #Compute Rarity if user supplied baseline raster
     try:    
@@ -351,10 +357,12 @@ def biophysical(args):
                 
                 # set the current/future land cover to be masked to the base
                 # land cover
+                LOGGER.debug('Starting vectorize on trim_op')
                 new_cover = \
                     raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
                             raster_out_uri=new_cover_uri,
                             datatype=gdal.GDT_Int32, nodata=out_nodata)
+                LOGGER.debug('Finished vectorize on trim_op')
                 
                 lulc_code_count_x = raster_pixel_count(new_cover)
                 
@@ -389,10 +397,11 @@ def biophysical(args):
                 
                 rarity_uri = \
                     os.path.join(output_dir, 'rarity' + lulc_cover + suffix)
-
+                LOGGER.debug('Starting vectorize on map_ratio')
                 rarity = \
                     raster_utils.vectorize_rasters([new_cover], map_ratio, \
                         raster_out_uri=rarity_uri, nodata=rarity_nodata)
+                LOGGER.debug('Finished vectorize on map_ratio')
                 
                 rarity = None
             
@@ -412,7 +421,7 @@ def raster_pixel_count(dataset):
         returns -  a dictionary whose keys are the unique pixel values and whose
                    values are the number of occurrences
     """
-
+    LOGGER.debug('Entering raster_pixel_count')
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
     counts = {}
@@ -427,6 +436,7 @@ def raster_pixel_count(dataset):
             else:
                 counts[val] = float(cur_array[cur_array==val].size)
 
+    LOGGER.debug('Leaving raster_pixel_count')
     return counts
 
 
@@ -448,6 +458,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
             op when it is called.
 
         returns a numpy matrix."""
+    LOGGER.debug('Entering clip_op')
 
     # Making a copy of the in_matrix so as to avoid side effects from putmask
     matrix = in_matrix.astype(matrix_type)
@@ -461,6 +472,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
     # Restore nodata values to their proper places.
     np.putmask(filtered_matrix, in_matrix==in_matrix_nodata, out_matrix_nodata)
 
+    LOGGER.debug('Leaving clip_op')
     return filtered_matrix
 
 def make_raster_from_shape(base_raster, shape, attr):
@@ -474,10 +486,12 @@ def make_raster_from_shape(base_raster, shape, attr):
               from
 
        returns - a GDAL raster dataset"""
+    LOGGER.debug('Entering make_raster_from_shape')
     
     attribute_string = 'ATTRIBUTE=' + attr
     gdal.RasterizeLayer(base_raster, [1], shape.GetLayer(0),
                         options = [attribute_string])
+    LOGGER.debug('Leaving make_raster_from_shape')
 
     return base_raster 
        
@@ -548,5 +562,6 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
             raster_out_uri=out_uri, nodata=out_nodata)
 
+    LOGGER.debug('Leaving map_rater_to_dict_values')
     return out_raster
 
