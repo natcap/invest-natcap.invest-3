@@ -900,6 +900,6 @@ def sum_over_region(dataset, aoi, mask_path = None):
         row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
         row_array[row_array == nodata] = 0
         mask_array = mask_band.ReadAsArray(0, row_index, band.XSize, 1)
-        np.sum(row_array*mask_array)
+        running_sum += np.sum(row_array*mask_array)
 
     return running_sum
