@@ -73,6 +73,41 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         self.assertEqual(results, manual_count)
         dataset = None
 
+    def test_biodiversity_core_map_raster_to_dict_values_regression(self):
+        """A regression test for map_raster_to_dict_values"""
+
+        out_dir = './data/test_out/biodiversity/map_raster_to_dict_values/'
+        input_dir = './data/biodiversity_regression_data/samp_input/'
+                
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        out_uri = os.path.join(out_dir, 'raster_from_dict_regression.tif')
+        sensitivity_uri = os.path.join(input_dir, 'sensitivity_samp.csv')
+        dataset = gdal.Open(os.path.join(input_dir, 'lc_samp_cur_b.tif'))
+        
+        sensitivity_dict = {}
+        sensitivity_file = open(sensitivity_uri)
+        reader = csv.DictReader(sensitivity_file)
+        for row in reader:
+            sensitivity_dict[row['LULC']] = row
+        sensitivity_file.close()
+       
+        field = 'L_crp'
+        out_nodata = -1.0
+
+        out_raster = \
+            biodiversity_core.map_raster_to_dict_values(dataset, out_uri, \
+                    sensitivity_dict, field, out_nodata, True)
+
+        regression_dir = \
+            './data/biodiversity_regression_data/regression_outputs/'
+
+        regression_ds = \
+                gdal.Open(os.path.join(regression_dir, 'sens_crp_c.tif'))
+
+        invest_test_core.assertTwoDatasetsEqual(self, out_raster, regression_ds)
+
     def test_biodiversity_core_map_raster_to_dict_values(self):
         """Test mapping a set of values from a dictionary to a raster by hand
         creating a raster and dictionary"""
@@ -249,7 +284,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
 
     def test_biodiversity_biophysical_regression(self):
         """A regression test for the biodiversity model with all possible inputs"""
-        #raise SkipTest
+        raise SkipTest
         input_dir = './data/biodiversity_regression_data/samp_input'
         out_dir = './data/biodiversity_regression_data/samp_input/output/'
         
