@@ -929,13 +929,33 @@ def generate_report(sediment_export_dataset, sediment_retained_dataset,
     
     field_name_set = set()
 
+    table_file = open(output_table_uri, 'w')
+
     for field_index in range(layer_definition.GetFieldCount()):
         field_definition = layer_definition.GetFieldDefn(field_index)
         field_name_set.add(field_definition.GetName())
+        
+    #Write the header row
+    header_line = ''
+    for field_name in field_name_set:
+        header_line += field_name + ','
+    #Add the output columns from the sediment model
+    header_line += 'sed_exported,sed_retained\n'
+    table_file.write(header_line)
 
+    #Now visit each feature to dump its feature values plus the calcualted
+    #values from the sediment model
     for feature_index in range(watershed_layer.GetFeatureCount()):
         feature = watershed_layer.GetFeature(feature_index)
+        value_line = ''
+        #Dump the field values to the output row
         for field_name in field_name_set:
             field_index = feature.GetFieldIndex(field_name)
             field_value = feature.GetField(field_index)
-            LOGGER.info("%s %s" % (field_name, field_value))
+            value_line += str(field_value) + ','
+        #Dump the calculated values to the output row
+        #sediment export
+        value_line += '0.0,'
+        #sediment retained
+        value_line += '0.0\n'
+        table_file.write(value_line)
