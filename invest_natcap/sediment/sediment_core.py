@@ -923,4 +923,19 @@ def generate_report(sediment_export_dataset, sediment_retained_dataset,
             -sediment export
             -sediment export for dredging
             -sediment export for water quality"""
-    pass
+    
+    watershed_layer = watershed_aoi.GetLayer()
+    layer_definition = watershed_layer.GetLayerDefn()
+    
+    field_name_set = set()
+
+    for field_index in range(layer_definition.GetFieldCount()):
+        field_definition = layer_definition.GetFieldDefn(field_index)
+        field_name_set.add(field_definition.GetName())
+
+    for feature_index in range(watershed_layer.GetFeatureCount()):
+        feature = watershed_layer.GetFeature(feature_index)
+        for field_name in field_name_set:
+            field_index = feature.GetFieldIndex(field_name)
+            field_value = feature.GetField(field_index)
+            LOGGER.info("%s %s" % (field_name, field_value))
