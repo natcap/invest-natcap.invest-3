@@ -60,9 +60,10 @@ def execute(args):
 
     Output:
         A raster file named ['workspace_dir']/Output/hu_freq.tif. This depicts the 
-            unweighted frequency of activity within a gridded area or management
-            zone.
-        (Optional) A raster file named ['workspace_dir']/Ouput/hu_impscore.tif. 
+        unweighted frequency of activity within a gridded area or management
+        zone.
+       
+       (Optional) A raster file named ['workspace_dir']/Ouput/hu_impscore.tif. 
         This depicts the importance scores for each grid cell in the area of 
         interest. This combines the desired inter or intra activity weighting
         into one raster.
@@ -417,13 +418,17 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
             need to be rasterized. The key for this dictionary is the name of the 
             file itself, minus the .shp extension. This key maps to the open shapefile
             of that name.
-        aoi_raster- The dataset for our Area Of Interest. This will be the base map for
+        aoi_raster- The dataset for our AOI. This will be the base map for
             all following datasets.
             
     Returns:
         raster_files- This is a list of the datasets that we want to sum. The first will
             ALWAYS be the AOI dataset, and the rest will be the variable number of other
             datasets that we want to sum.
+        raster_names- This is a list of layer names that corresponds to the
+            files in 'raster_files'. The first layer is guaranteed to be the
+            AOI, but all names after that will be in the same order as the
+            files so that it can be used for indexing later.
     '''    
     #aoi_raster has to be the first so that we can use it as an easy "weed out" for
     #pixel summary later
