@@ -47,11 +47,6 @@ def execute(args):
         args['intra_name']- string which corresponds to a field within the
             layers being passed in within overlap analysis directory. This is
             the intra-activity importance for each activity.
-        args['hum_use_hubs_loc']- URI that points to a shapefile of major hubs
-            of human activity. This would allow you to degrade the weight of
-            activity zones as they get farther away from these locations.
-        args['decay']- float between 0 and 1, representing the decay of interest
-            in areas as you get farther away from human hubs.
             
     Output:
         oa_args- The dictionary of all arguments that are needed by the
