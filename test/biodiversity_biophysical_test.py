@@ -30,7 +30,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         # using 1 because we get more interesting results. Using a higher number
         # makes the quality_out raster have numbers that just bump to 1
         args['half_saturation_constant'] = 1 
-        args['suffix'] = ''
+        ##args['suffix'] = ''
 
         biodiversity_biophysical.execute(args)
     
@@ -78,7 +78,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
         #args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
         args['half_saturation_constant'] = 30
-        args['suffix'] = ''
+        ##args['suffix'] = ''
 
         biodiversity_biophysical.execute(args)
     
@@ -120,7 +120,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
         args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
         args['half_saturation_constant'] = 30
-        args['suffix'] = ''
+        #args['suffix'] = ''
 
         biodiversity_biophysical.execute(args)
 

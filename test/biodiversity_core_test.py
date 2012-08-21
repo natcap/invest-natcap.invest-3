@@ -269,7 +269,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         # using 1 because we get more interesting results. Using a higher number
         # makes the quality_out raster have numbers that just bump to 1
         args['half_saturation'] = 1 
-        args['suffix'] = ''
+        #args['suffix'] = ''
 
         threats_dict = {}
         threats_file = open(threats_uri)
