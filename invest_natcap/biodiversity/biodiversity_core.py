@@ -103,7 +103,7 @@ def biophysical(args):
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
         degradation_rasters = []
-        
+        weight_list = []
         # intitialize a list to store raster nodata values that correspond
         # to the rasters stored in 'degradation_rasters' above
         deg_adjusted_nodata_list = []
@@ -189,81 +189,111 @@ def biophysical(args):
            
             weight_avg = float(threat_data['WEIGHT']) / weight_sum
 
-            def partial_degradation(*rasters):
-                """For a given threat return the weighted average of the 
-                    product of the threats sensitivity, the threats access, 
-                     and the threat adjusted by distance
-                    
-                    *rasters - a list of floats, representing sensitivity,
-                        access, and threat adjusted by distance
+#           def partial_degradation(*rasters):
+#               """For a given threat return the weighted average of the 
+#                   product of the threats sensitivity, the threats access, 
+#                    and the threat adjusted by distance
+#                   
+#                   *rasters - a list of floats, representing sensitivity,
+#                       access, and threat adjusted by distance
 
-                    returns - the degradation for this threat
-                    """
-                # there is a nodata value if this list is not empty
-                if len(filter(lambda (x, y): x==y, \
-                           zip(rasters, adjusted_nodata_list))) == 0:
-                    return np.prod(rasters) * weight_avg
-                return out_nodata
-            
-            # build lists of the two rasters and their respective nodata
-            # values to be used to calculate their individual degradation
-            # raster
-            adjusted_list = [filtered_raster, sensitivity_raster]
-            adjusted_nodata_list = \
-                [filtered_raster.GetRasterBand(1).GetNoDataValue(),
-                 sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
-            
-            # set the adjusted raster lists depending on whether the 
-            # access shapefile was provided
-            if access_raster is not None:
-                adjusted_list.append(access_raster)
-                access_band = access_raster.GetRasterBand(1)
-                adjusted_nodata_list.append(access_band.GetNoDataValue())
-            
-            deg_uri = \
-                os.path.join(intermediate_dir, \
-                             'deg_' + threat + lulc_key + suffix)
-            LOGGER.debug('Starting vectorize on partial_degradation')
-            deg_ras = \
-                raster_utils.vectorize_rasters(adjusted_list, \
-                    partial_degradation, raster_out_uri=deg_uri, \
-                    nodata=out_nodata)
-            LOGGER.debug('Finished vectorize on partial_degradation')
-            
-            degradation_rasters.append(deg_ras)
-            deg_band = deg_ras.GetRasterBand(1)
-            deg_adjusted_nodata_list.append(deg_band.GetNoDataValue())
-        
+#                   returns - the degradation for this threat
+#                   """
+#               # there is a nodata value if this list is not empty
+#               if len(filter(lambda (x, y): x==y, \
+#                          zip(rasters, adjusted_nodata_list))) == 0:
+#                   return np.prod(rasters) * weight_avg
+#               return out_nodata
+#           
+#           # build lists of the two rasters and their respective nodata
+#           # values to be used to calculate their individual degradation
+#           # raster
+#           adjusted_list = [filtered_raster, sensitivity_raster]
+#           adjusted_nodata_list = \
+#               [filtered_raster.GetRasterBand(1).GetNoDataValue(),
+#                sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
+#           
+#           # set the adjusted raster lists depending on whether the 
+#           # access shapefile was provided
+#           if access_raster is not None:
+#               adjusted_list.append(access_raster)
+#               access_band = access_raster.GetRasterBand(1)
+#               adjusted_nodata_list.append(access_band.GetNoDataValue())
+#           
+#           deg_uri = \
+#               os.path.join(intermediate_dir, \
+#                            'deg_' + threat + lulc_key + suffix)
+#           LOGGER.debug('Starting vectorize on partial_degradation')
+#           deg_ras = \
+#               raster_utils.vectorize_rasters(adjusted_list, \
+#                   partial_degradation, raster_out_uri=deg_uri, \
+#                   nodata=out_nodata)
+#           LOGGER.debug('Finished vectorize on partial_degradation')
+#           
+#           degradation_rasters.append(deg_ras)
+#           deg_band = deg_ras.GetRasterBand(1)
+#           deg_adjusted_nodata_list.append(deg_band.GetNoDataValue())
+
+            for item in [filtered_raster, sensitivity_raster]:
+                degradation_rasters.append(item)
+            weight_list.append(weight_avg)
+
         # check to see if we got here because a threat raster was missing
         # and if so then we want to skip to the next landcover
         if exit_landcover:
             continue
 
-        def sum_degradation(*rasters):
-            """A vectorized function that sums all the degradation
-                rasters created above.
+#       def sum_degradation(*rasters):
+#           """A vectorized function that sums all the degradation
+#               rasters created above.
 
-                *rasters - a list of floats where each float is a
-                    degradation score from a pixel from one of the
-                    threat rasters.
+#               *rasters - a list of floats where each float is a
+#                   degradation score from a pixel from one of the
+#                   threat rasters.
 
-                returns - the total degradation score for the pixel
-            """
-            # there is a nodata value if this list is not empty
-            if len(filter(lambda (x, y): x==y, \
-                       zip(rasters, deg_adjusted_nodata_list))) == 0:
-                return np.sum(rasters)
-            return out_nodata
-        
+#               returns - the total degradation score for the pixel
+#           """
+#           # there is a nodata value if this list is not empty
+#           if len(filter(lambda (x, y): x==y, \
+#                      zip(rasters, deg_adjusted_nodata_list))) == 0:
+#               return np.sum(rasters)
+#           return out_nodata
+#       
+#       deg_sum_uri = \
+#           os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
+#       LOGGER.debug('Starting vectorize on sum_degradation') 
+#       sum_deg_raster = \
+#           raster_utils.vectorize_rasters(degradation_rasters, \
+#               sum_degradation, raster_out_uri=deg_sum_uri, \
+#               nodata=out_nodata)
+#       LOGGER.debug('Finished vectorize on sum_degradation') 
+
+
+        def sum_degradation(*raster):
+            n = len(raster)
+            access = raster[-1]
+            summ = 0.0
+
+            for num in raster:
+                if num == -1:
+                    return -1
+
+            for index in range(n / 2):
+                step = index * 2
+                summ += (raster[step] * raster[step + 1] * weight_list[index])
+
+            return summ
+
+        degradation_rasters.append(access_raster)
         deg_sum_uri = \
             os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
-        LOGGER.debug('Starting vectorize on sum_degradation') 
+
         sum_deg_raster = \
             raster_utils.vectorize_rasters(degradation_rasters, \
                 sum_degradation, raster_out_uri=deg_sum_uri, \
                 nodata=out_nodata)
-        LOGGER.debug('Finished vectorize on sum_degradation') 
 
+           
         #Compute habitat quality
         # scaling_param is a scaling parameter set to 2.5 as noted in the users
         # guide
