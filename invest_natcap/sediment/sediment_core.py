@@ -904,12 +904,15 @@ def sum_over_region(dataset, aoi, mask_path = None):
 
     return running_sum
 
-def generate_report(sediment_export_dataset, watershed_aoi, output_table_uri):
+def generate_report(sediment_export_dataset, sediment_retained_dataset, 
+                    watershed_aoi, output_table_uri):
     """Generates a CSV table that summarizes the amount of sediment retained
         in each watershed
 
         sediment_export_raster - a GDAL dataset whose values contain the amount
             of sediment exported on a given pixel
+        sediment_retained_raster - a GDAL dataset whose values contain the amount
+            of sediment retained on a given pixel
         watershed_aoi - an OGR datasource that contains a feature for each 
             watershed.  This will result in a row on each output table
         output_table_uri - a path to a csv file that will be created to dump
