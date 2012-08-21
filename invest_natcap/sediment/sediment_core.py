@@ -860,7 +860,7 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
     pixel_retained_band.WriteArray(result.reshape((n_rows, n_cols)))
     return pixel_retained_dataset
 
-def sum_over_region(dataset, aoi, mask_path = None):
+def sum_over_region(dataset, aoi, mask_path = None, mask_field_value = None):
     """A function to aggregate the sum of all the pixels in dataset that
         overlap the aoi .
 
@@ -869,6 +869,9 @@ def sum_over_region(dataset, aoi, mask_path = None):
         mask_path - (optional) a path to a file that can be written for 
             masking the dataset for aggregation.  If None then uses a
             memory raster the same size as dataset
+        mask_field_value - (optional) a tuple links an attribute
+            field name to field values that should be exclusively considered
+            during a summation.  Example ('ws_id', 2)
 
         returns the sum of all the pixels in the first band of dataset
             that overlaps all the layers/features in aoi."""
@@ -889,8 +892,11 @@ def sum_over_region(dataset, aoi, mask_path = None):
     mask_band.Fill(0)
     for layer_id in xrange(aoi.GetLayerCount()):
         layer = aoi.GetLayer(layer_id)
+        rasterize_options = ["ALL_TOUCHED=TRUE"]
+        if mask_field_value is not None:
+            rasterize_options.append("ATTRIBUTE=%s" % mask_field_value[0])
         gdal.RasterizeLayer(mask_dataset, [1], layer, burn_values=[1],
-                            options = ["ALL_TOUCHED=TRUE"])
+                            options = rasterize_options)
 
     running_sum = 0.0
 
@@ -899,6 +905,12 @@ def sum_over_region(dataset, aoi, mask_path = None):
     for row_index in range(band.YSize):
         row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
         row_array[row_array == nodata] = 0
+
+        #Mask out the field value based on the attribute value
+        if mask_field_value is not None:
+            row_array[row_array != mask_field_value[1]] = 0
+            row_array[row_array == mask_field_value[1]] = 1
+
         mask_array = mask_band.ReadAsArray(0, row_index, band.XSize, 1)
         running_sum += np.sum(row_array*mask_array)
 
