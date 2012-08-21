@@ -900,6 +900,24 @@ def sum_over_region(dataset, aoi, mask_path = None):
         row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
         row_array[row_array == nodata] = 0
         mask_array = mask_band.ReadAsArray(0, row_index, band.XSize, 1)
-        np.sum(row_array*mask_array)
+        running_sum += np.sum(row_array*mask_array)
 
     return running_sum
+
+def generate_report(sediment_export_dataset, watershed_aoi, output_table_uri):
+    """Generates a CSV table that summarizes the amount of sediment retained
+        in each watershed
+
+        sediment_export_raster - a GDAL dataset whose values contain the amount
+            of sediment exported on a given pixel
+        watershed_aoi - an OGR datasource that contains a feature for each 
+            watershed.  This will result in a row on each output table
+        output_table_uri - a path to a csv file that will be created to dump
+            the report to
+
+        returns nothing, but writes a table to output_table_uri that contains
+            -watershed id
+            -sediment export
+            -sediment export for dredging
+            -sediment export for water quality"""
+    pass
