@@ -47,26 +47,29 @@ def execute(args):
             passed in in 'zone_layer_file'.
 
     Intermediate:
-        Rasterized Shapefiles- For each shapefile that we passed in 'overlap_files'
-            we are creating a raster with the shape burned onto a band of the same
-            size as our AOI. 
-        Weighted Rasterized Shapefiles- For each shapefile, if intra-activity
-            weighting is also desired, we will create a rasterized file where the
-            burn value is the 'intra_name' attribute of that particular polygon.
-            These files will be placed within a 'Weighted' folder within the
-            Intermediate directory.
+        A set of rasterized shapefiles of the form 
+        args['workspace_dir']/Intermediate/<filename>. For each shapefile that we
+        passed in args['overlap_files'] we create a raster with the shape
+        burned onto a band of the same size as our AOI.
+
+        (Optional) A set of weighted rasterized shapefiles of the form
+        args['wprkspace_dir']/Intermediate/Weighted/<filename>. For each 
+        shapefile, if intra-activity weighting is also desired, we will create 
+        a rasterized file where the burn value is the args['intra_name']
+        attribute of that particular polygon.
 
     Output:
-        activities_uri- This is a raster output which depicts the
+        A raster file named ['workspace_dir']/Output/hu_freq.tif. This depicts the 
             unweighted frequency of activity within a gridded area or management
             zone.
-        hu_impscore.tif- This is a raster depicting the importance scores
-            for each grid or management zone in the area of interest. This
-            combines the desired inter or intra activity weighting into one raster
-            and is an explicitly named file within the make_weighted_raster function.
-        textfile- A file created every time the model is run listing all variable
-            parameters used during that run. This is created within the
-            make_param_file function. 
+        (Optional) A raster file named ['workspace_dir']/Ouput/hu_impscore.tif. 
+        This depicts the importance scores for each grid cell in the area of 
+        interest. This combines the desired inter or intra activity weighting
+        into one raster.
+
+        A textfile created every time the model is run listing all variable
+        parameters used during that run. This is created within the 
+        make_param_file function. It will be of the form ['workspace_dir]/Output/*. 
 
     Returns nothing.'''
     
