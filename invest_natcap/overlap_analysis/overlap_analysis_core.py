@@ -76,6 +76,32 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
+    create_unweighted_raster(args)
+
+    #Need to set up dummy var for when inter or intra are available without the other so
+    #that all parameters can be filled in.
+    if (args['do_inter'] or args['do_intra']):
+        
+        layer_dict = args['over_layer_dict'] if args['do_inter'] else None
+        intra_name = args['intra_name'] if args['do_intra'] else None
+        
+        #Want some place to put weighted rasters so we aren't blasting over the
+        #unweighted rasters
+        weighted_dir = os.path.join(inter_dir, 'Weighted')
+        
+        if not (os.path.exists(weighted_dir)):
+            os.makedirs(weighted_dir)
+        
+        #Now we want to create a second raster that includes all of the weighting information
+        create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
+                               args['overlap_files'], intra_name, 
+                               args['do_inter'], args['do_intra'], raster_files, raster_names)
+
+def create_unweighted_raster(args):
+
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     
@@ -132,26 +158,6 @@ def execute(args):
     raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi = None,
                                    raster_out_uri = activities_uri, 
                                    datatype = gdal.GDT_Int32, nodata = aoi_nodata)
-    
-    #Need to set up dummy var for when inter or intra are available without the other so
-    #that all parameters can be filled in.
-    if (args['do_inter'] or args['do_intra']):
-        
-        layer_dict = args['over_layer_dict'] if args['do_inter'] else None
-        intra_name = args['intra_name'] if args['do_intra'] else None
-        
-        #Want some place to put weighted rasters so we aren't blasting over the
-        #unweighted rasters
-        weighted_dir = os.path.join(inter_dir, 'Weighted')
-        
-        if not (os.path.exists(weighted_dir)):
-            os.makedirs(weighted_dir)
-        
-        #Now we want to create a second raster that includes all of the weighting information
-        create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
-                               args['overlap_files'], intra_name, 
-                               args['do_inter'], args['do_intra'], raster_files, raster_names)
-    
 
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
                            layers_dict, intra_name, do_inter, do_intra, raster_files, raster_names):
