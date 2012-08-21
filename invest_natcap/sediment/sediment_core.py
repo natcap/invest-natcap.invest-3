@@ -886,8 +886,8 @@ def sum_over_region(dataset, aoi, mask_path = None):
     mask_band = mask_dataset.GetRasterBand(1)
 
     #Fill the  mask with 0's then add 1's everywhere there is a polygon
-    mask_dataset_band.Fill(0)
-    for layer_id in aoi.GetLayerCount():
+    mask_band.Fill(0)
+    for layer_id in xrange(aoi.GetLayerCount()):
         layer = aoi.GetLayer(layer_id)
         gdal.RasterizeLayer(mask_dataset, [1], layer, burn_values=[1],
                             options = ["ALL_TOUCHED=TRUE"])
