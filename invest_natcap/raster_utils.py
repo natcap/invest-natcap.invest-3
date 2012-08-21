@@ -225,7 +225,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         
         returns a single band current_dataset"""
 
-    LOGGER.debug('starting vectorize_rasters')
+    LOGGER.info('starting vectorize_rasters')
 
     #We need to ensure that the type of nodata is the same as the raster type so
     #we don't encounter bugs where we return an int nodata for a float raster or
@@ -264,8 +264,6 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #6) pixel height in y direction 
     out_gt = [aoi_box[0], pixel_width, 0.0, aoi_box[1], 0.0, pixel_height]
 
-    LOGGER.debug("out_gt %s" % str(out_gt))
-
     #The output projection will be the same as any in dataset_list, so just take
     #the first one.
     out_projection = dataset_list[0].GetProjection()
@@ -279,7 +277,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
     #Build the new output dataset and reference the band for later.  the '1'
     #means only 1 output band.
-    LOGGER.debug("out_n_cols, out_n_rows %s %s" % (out_n_cols, out_n_rows))
+    LOGGER.info("Output dataset is a % X %s raster" % (out_n_cols, out_n_rows))
     out_dataset = new_raster(out_n_cols, out_n_rows, out_projection,
         out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
@@ -328,7 +326,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
 
     if all_equal:
-        LOGGER.debug("All input rasters are equal size, not interpolating and vectorizing directly")
+        LOGGER.info("All input rasters are equal size, not interpolating and vectorizing directly")
 
         #Loop over each row in out_band
         n_cols = mask_dataset_band.XSize
@@ -566,7 +564,6 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
     if aoi != None:
         aoi_layer = aoi.GetLayer(0)
         aoi_extent = aoi_layer.GetExtent()
-        LOGGER.debug("aoi_extent %s" % (str(aoi_extent)))
         bounding_box = [max(aoi_extent[0], bounding_box[0]),
                        min(aoi_extent[3], bounding_box[1]),
                        min(aoi_extent[1], bounding_box[2]),
