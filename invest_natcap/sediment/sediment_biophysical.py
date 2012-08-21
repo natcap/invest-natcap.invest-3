@@ -150,6 +150,10 @@ def execute(args):
     sediment_core.biophysical(biophysical_args)
     LOGGER.info('finished biophysical model')
 
+    LOGGER.info('generating report')
+    sediment_export_dataset, watershed_aoi, output_table_uri = (None, None, None)
+    sediment_core.generate_report(sediment_export_dataset, watershed_aoi, output_table_uri)
+
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary
 if __name__ == '__main__':
