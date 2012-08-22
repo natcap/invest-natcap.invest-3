@@ -151,8 +151,16 @@ def execute(args):
     LOGGER.info('finished biophysical model')
 
     LOGGER.info('generating report')
-    sediment_export_dataset, watershed_aoi, output_table_uri = (None, None, None)
-    sediment_core.generate_report(sediment_export_dataset, watershed_aoi, output_table_uri)
+
+    #Load the relevant output datasets so we can output them in the report
+    pixel_export_dataset = \
+        gdal.Open(os.path.join(output_dir, 'pixel_export.tif'))
+    pixel_retained_dataset = \
+        gdal.Open(os.path.join(output_dir, 'pixel_retained.tif'))
+    output_table_uri = os.path.join(output_dir, 'sediment_watershed.csv')
+
+    sediment_core.generate_report(pixel_export_dataset, pixel_retained_dataset,
+        biophysical_args['watersheds'], output_table_uri)
 
 #This part is for command line invocation and allows json objects to be passed
 #as the argument dictionary

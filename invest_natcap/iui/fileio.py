@@ -1,6 +1,6 @@
 import json
 import ogr
-from platform import node
+import platform
 import csv
 import os
 import re
@@ -43,8 +43,12 @@ class JSONHandler(object):
 
 class LastRunHandler(JSONHandler):
     def __init__(self, modelname):
-        uri = './cfg/' + modelname + '_lastrun_' + node() + '.json'
-        JSONHandler.__init__(self, uri)
+        if platform.system() == 'Windows':
+            config_folder = os.path.expanduser('~/AppData/Local/NatCap')
+        else:
+            config_folder = os.path.expanduser('~/.natcap/')
+        uri = modelname + '_lastrun_' + platform.node() + '.json'
+        JSONHandler.__init__(self, os.path.join(config_folder, uri))
 
 class AbstractTableHandler(object):
     """This class provides an abstract class for specific reimplementation for
