@@ -860,7 +860,7 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
     pixel_retained_band.WriteArray(result.reshape((n_rows, n_cols)))
     return pixel_retained_dataset
 
-def sum_over_region(dataset, aoi, mask_path = None):
+def sum_over_region(dataset, aoi, mask_path = None, mask_field_value = None):
     """A function to aggregate the sum of all the pixels in dataset that
         overlap the aoi .
 
@@ -869,6 +869,9 @@ def sum_over_region(dataset, aoi, mask_path = None):
         mask_path - (optional) a path to a file that can be written for 
             masking the dataset for aggregation.  If None then uses a
             memory raster the same size as dataset
+        mask_field_value - (optional) a tuple links an attribute
+            field name to field values that should be exclusively considered
+            during a summation.  Example ('ws_id', 2)
 
         returns the sum of all the pixels in the first band of dataset
             that overlaps all the layers/features in aoi."""
@@ -889,8 +892,11 @@ def sum_over_region(dataset, aoi, mask_path = None):
     mask_band.Fill(0)
     for layer_id in xrange(aoi.GetLayerCount()):
         layer = aoi.GetLayer(layer_id)
+        rasterize_options = ["ALL_TOUCHED=TRUE"]
+        if mask_field_value is not None:
+            rasterize_options.append("ATTRIBUTE=%s" % mask_field_value[0])
         gdal.RasterizeLayer(mask_dataset, [1], layer, burn_values=[1],
-                            options = ["ALL_TOUCHED=TRUE"])
+                            options = rasterize_options)
 
     running_sum = 0.0
 
@@ -899,17 +905,26 @@ def sum_over_region(dataset, aoi, mask_path = None):
     for row_index in range(band.YSize):
         row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
         row_array[row_array == nodata] = 0
+
+        #Mask out the field value based on the attribute value
+        if mask_field_value is not None:
+            row_array[row_array != mask_field_value[1]] = 0
+            row_array[row_array == mask_field_value[1]] = 1
+
         mask_array = mask_band.ReadAsArray(0, row_index, band.XSize, 1)
         running_sum += np.sum(row_array*mask_array)
 
     return running_sum
 
-def generate_report(sediment_export_dataset, watershed_aoi, output_table_uri):
+def generate_report(sediment_export_dataset, sediment_retained_dataset, 
+                    watershed_aoi, output_table_uri):
     """Generates a CSV table that summarizes the amount of sediment retained
         in each watershed
 
         sediment_export_raster - a GDAL dataset whose values contain the amount
             of sediment exported on a given pixel
+        sediment_retained_raster - a GDAL dataset whose values contain the amount
+            of sediment retained on a given pixel
         watershed_aoi - an OGR datasource that contains a feature for each 
             watershed.  This will result in a row on each output table
         output_table_uri - a path to a csv file that will be created to dump
@@ -920,4 +935,47 @@ def generate_report(sediment_export_dataset, watershed_aoi, output_table_uri):
             -sediment export
             -sediment export for dredging
             -sediment export for water quality"""
-    pass
+    
+    watershed_layer = watershed_aoi.GetLayer()
+    layer_definition = watershed_layer.GetLayerDefn()
+    
+    field_name_set = set()
+
+    table_file = open(output_table_uri, 'w')
+
+    for field_index in range(layer_definition.GetFieldCount()):
+        field_definition = layer_definition.GetFieldDefn(field_index)
+        field_name_set.add(field_definition.GetName())
+        
+    #Write the header row
+    header_line = ''
+    for field_name in field_name_set:
+        header_line += field_name + ','
+    #Add the output columns from the sediment model
+    header_line += 'sed_exported,sed_retained\n'
+    table_file.write(header_line)
+
+    #Now visit each feature to dump its feature values plus the calcualted
+    #values from the sediment model
+    for feature_index in range(watershed_layer.GetFeatureCount()):
+        feature = watershed_layer.GetFeature(feature_index)
+        value_line = ''
+        #Dump the field values to the output row
+        field_name = None
+        for field_name in field_name_set:
+            field_index = feature.GetFieldIndex(field_name)
+            field_value = feature.GetField(field_index)
+            value_line += str(field_value) + ','
+        #Dump the calculated values to the output row
+        #sediment export
+        sed_export = \
+            sum_over_region(sediment_export_dataset, watershed_layer, 
+            mask_path = None, mask_field_value = (field_name, field_value))
+        sed_retained = \
+            sum_over_region(sediment_retained_dataset, watershed_layer, 
+            mask_path = None, mask_field_value = (field_name, field_value))
+
+        value_line += str(sed_export) + ','
+        #sediment retained
+        value_line += str(sed_retained) + '\n'
+        table_file.write(value_line)

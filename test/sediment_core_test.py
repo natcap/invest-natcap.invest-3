@@ -34,6 +34,26 @@ class TestSedimentBiophysicalCore(unittest.TestCase):
         value = sediment_core.sum_over_region(dataset, aoi, 
             mask_path = os.path.join(out_path, 'mask.tif'))
         LOGGER.info('total sum is %s' % value)
+
+        expected = 9003638.0
+        self.assertEqual(value, expected, "not equal expected %s got %s" % (expected,value))
+
+    def test_sum_over_region_with_field_mask(self):
+        base_path = 'data/sediment_test_data/'
+        dataset = gdal.Open(os.path.join(base_path, 'flowregression.tif'))
+        aoi = ogr.Open(os.path.join(base_path, 'watersheds.shp'))
+        
+        out_path = 'data/test_out/sediment_out'
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+
+        value = sediment_core.sum_over_region(dataset, aoi, 
+            mask_path = os.path.join(out_path, 'mask.tif'), 
+            mask_field_value = ('ws_id', 0))
+
+        LOGGER.info('total sum is %s' % value)
+        expected = 136948.0
+        self.assertEqual(value, expected, "not equal expected %s got %s" % (expected,value))
         
     def test_potential_sediment(self):
         raise SkipTest

@@ -77,7 +77,7 @@ class TestBiodiversityBiophysical(unittest.TestCase):
         args['threats_uri'] = os.path.join(input_dir, 'threats_samp.csv')
         args['sensitivity_uri'] = os.path.join(input_dir , 'sensitivity_samp.csv')
         #args['access_uri'] = os.path.join(input_dir , 'access_samp.shp')
-        args['half_saturation_constant'] = 30
+        args['half_saturation_constant'] = 1
         ##args['suffix'] = ''
 
         biodiversity_biophysical.execute(args)

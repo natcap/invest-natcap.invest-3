@@ -73,7 +73,7 @@ def biophysical(args):
         access_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
         access_base = \
             raster_utils.new_raster_from_base(cur_landuse, access_uri, \
-                'GTiff', -1, gdal.GDT_Float32)
+                'GTiff', out_nodata, gdal.GDT_Float32)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
         access_base.GetRasterBand(1).Fill(1)
@@ -103,7 +103,7 @@ def biophysical(args):
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
         degradation_rasters = []
-        
+        weight_list = []
         # intitialize a list to store raster nodata values that correspond
         # to the rasters stored in 'degradation_rasters' above
         deg_adjusted_nodata_list = []
@@ -161,6 +161,7 @@ def biophysical(args):
 
             # use a gaussian_filter to compute the effect that a threat has
             # over a distance, on a given pixel. 
+            LOGGER.debug('Starting Gaussian Blur')
             filtered_out_matrix = \
                 clip_and_op(threat_band.ReadAsArray(), sigma, \
                             ndimage.gaussian_filter, matrix_type=float, \
@@ -170,6 +171,7 @@ def biophysical(args):
             filtered_band = filtered_raster.GetRasterBand(1)
             filtered_band.WriteArray(filtered_out_matrix)
             filtered_raster.FlushCache()
+            LOGGER.debug('Finished Gaussian Blur')
 
             # create sensitivity raster based on threat
             sens_uri = \
@@ -187,78 +189,114 @@ def biophysical(args):
            
             weight_avg = float(threat_data['WEIGHT']) / weight_sum
 
-            def partial_degradation(*rasters):
-                """For a given threat return the weighted average of the 
-                    product of the threats sensitivity, the threats access, 
-                     and the threat adjusted by distance
-                    
-                    *rasters - a list of floats, representing sensitivity,
-                        access, and threat adjusted by distance
+#           def partial_degradation(*rasters):
+#               """For a given threat return the weighted average of the 
+#                   product of the threats sensitivity, the threats access, 
+#                    and the threat adjusted by distance
+#                   
+#                   *rasters - a list of floats, representing sensitivity,
+#                       access, and threat adjusted by distance
 
-                    returns - the degradation for this threat
-                    """
-                # there is a nodata value if this list is not empty
-                if len(filter(lambda (x, y): x==y, \
-                           zip(rasters, adjusted_nodata_list))) == 0:
-                    return np.prod(rasters) * weight_avg
-                return out_nodata
-            
-            # build lists of the two rasters and their respective nodata
-            # values to be used to calculate their individual degradation
-            # raster
-            adjusted_list = [filtered_raster, sensitivity_raster]
-            adjusted_nodata_list = \
-                [filtered_raster.GetRasterBand(1).GetNoDataValue(),
-                 sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
-            
-            # set the adjusted raster lists depending on whether the 
-            # access shapefile was provided
-            if access_raster is not None:
-                adjusted_list.append(access_raster)
-                access_band = access_raster.GetRasterBand(1)
-                adjusted_nodata_list.append(access_band.GetNoDataValue())
-            
-            deg_uri = \
-                os.path.join(intermediate_dir, \
-                             'deg_' + threat + lulc_key + suffix)
-            deg_ras = \
-                raster_utils.vectorize_rasters(adjusted_list, \
-                    partial_degradation, raster_out_uri=deg_uri, \
-                    nodata=out_nodata)
-            
-            degradation_rasters.append(deg_ras)
-            deg_band = deg_ras.GetRasterBand(1)
-            deg_adjusted_nodata_list.append(deg_band.GetNoDataValue())
-        
+#                   returns - the degradation for this threat
+#                   """
+#               # there is a nodata value if this list is not empty
+#               if len(filter(lambda (x, y): x==y, \
+#                          zip(rasters, adjusted_nodata_list))) == 0:
+#                   return np.prod(rasters) * weight_avg
+#               return out_nodata
+#           
+#           # build lists of the two rasters and their respective nodata
+#           # values to be used to calculate their individual degradation
+#           # raster
+#           adjusted_list = [filtered_raster, sensitivity_raster]
+#           adjusted_nodata_list = \
+#               [filtered_raster.GetRasterBand(1).GetNoDataValue(),
+#                sensitivity_raster.GetRasterBand(1).GetNoDataValue()]
+#           
+#           # set the adjusted raster lists depending on whether the 
+#           # access shapefile was provided
+#           if access_raster is not None:
+#               adjusted_list.append(access_raster)
+#               access_band = access_raster.GetRasterBand(1)
+#               adjusted_nodata_list.append(access_band.GetNoDataValue())
+#           
+#           deg_uri = \
+#               os.path.join(intermediate_dir, \
+#                            'deg_' + threat + lulc_key + suffix)
+#           LOGGER.debug('Starting vectorize on partial_degradation')
+#           deg_ras = \
+#               raster_utils.vectorize_rasters(adjusted_list, \
+#                   partial_degradation, raster_out_uri=deg_uri, \
+#                   nodata=out_nodata)
+#           LOGGER.debug('Finished vectorize on partial_degradation')
+#           
+#           degradation_rasters.append(deg_ras)
+#           deg_band = deg_ras.GetRasterBand(1)
+#           deg_adjusted_nodata_list.append(deg_band.GetNoDataValue())
+
+            for item in [filtered_raster, sensitivity_raster]:
+                degradation_rasters.append(item)
+            weight_list.append(weight_avg)
+
         # check to see if we got here because a threat raster was missing
         # and if so then we want to skip to the next landcover
         if exit_landcover:
             continue
 
-        def sum_degradation(*rasters):
-            """A vectorized function that sums all the degradation
-                rasters created above.
+#       def sum_degradation(*rasters):
+#           """A vectorized function that sums all the degradation
+#               rasters created above.
 
-                *rasters - a list of floats where each float is a
-                    degradation score from a pixel from one of the
-                    threat rasters.
+#               *rasters - a list of floats where each float is a
+#                   degradation score from a pixel from one of the
+#                   threat rasters.
 
-                returns - the total degradation score for the pixel
-            """
-            # there is a nodata value if this list is not empty
-            if len(filter(lambda (x, y): x==y, \
-                       zip(rasters, deg_adjusted_nodata_list))) == 0:
-                return np.sum(rasters)
-            return out_nodata
+#               returns - the total degradation score for the pixel
+#           """
+#           # there is a nodata value if this list is not empty
+#           if len(filter(lambda (x, y): x==y, \
+#                      zip(rasters, deg_adjusted_nodata_list))) == 0:
+#               return np.sum(rasters)
+#           return out_nodata
+#       
+#       deg_sum_uri = \
+#           os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
+#       LOGGER.debug('Starting vectorize on sum_degradation') 
+#       sum_deg_raster = \
+#           raster_utils.vectorize_rasters(degradation_rasters, \
+#               sum_degradation, raster_out_uri=deg_sum_uri, \
+#               nodata=out_nodata)
+#       LOGGER.debug('Finished vectorize on sum_degradation') 
+
+
+        def sum_degradation(*raster):
+            n = len(raster)
+            if access_raster is not None:
+                access = raster[-1]
+            summ = 0.0
+
+            for num in raster:
+                if num == out_nodata:
+                    return out_nodata
+
+            for index in range(n / 2):
+                step = index * 2
+                summ += (raster[step] * raster[step + 1] * weight_list[index])
+
+            return summ
+        
+        if access_raster is not None:
+            degradation_rasters.append(access_raster)
         
         deg_sum_uri = \
             os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
-        
+
         sum_deg_raster = \
             raster_utils.vectorize_rasters(degradation_rasters, \
                 sum_degradation, raster_out_uri=deg_sum_uri, \
                 nodata=out_nodata)
 
+           
         #Compute habitat quality
         # scaling_param is a scaling parameter set to 2.5 as noted in the users
         # guide
@@ -295,10 +333,11 @@ def biophysical(args):
         
         quality_uri = \
             os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
-        
+        LOGGER.debug('Starting vectorize on quality_op') 
         quality_raster = \
             raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
                 quality_op, raster_out_uri=quality_uri, nodata=out_nodata)
+        LOGGER.debug('Finished vectorize on quality_op') 
 
     #Compute Rarity if user supplied baseline raster
     try:    
@@ -351,10 +390,12 @@ def biophysical(args):
                 
                 # set the current/future land cover to be masked to the base
                 # land cover
+                LOGGER.debug('Starting vectorize on trim_op')
                 new_cover = \
                     raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
                             raster_out_uri=new_cover_uri,
                             datatype=gdal.GDT_Int32, nodata=out_nodata)
+                LOGGER.debug('Finished vectorize on trim_op')
                 
                 lulc_code_count_x = raster_pixel_count(new_cover)
                 
@@ -389,10 +430,11 @@ def biophysical(args):
                 
                 rarity_uri = \
                     os.path.join(output_dir, 'rarity' + lulc_cover + suffix)
-
+                LOGGER.debug('Starting vectorize on map_ratio')
                 rarity = \
                     raster_utils.vectorize_rasters([new_cover], map_ratio, \
                         raster_out_uri=rarity_uri, nodata=rarity_nodata)
+                LOGGER.debug('Finished vectorize on map_ratio')
                 
                 rarity = None
             
@@ -412,7 +454,7 @@ def raster_pixel_count(dataset):
         returns -  a dictionary whose keys are the unique pixel values and whose
                    values are the number of occurrences
     """
-
+    LOGGER.debug('Entering raster_pixel_count')
     band = dataset.GetRasterBand(1)
     nodata = band.GetNoDataValue()
     counts = {}
@@ -427,6 +469,7 @@ def raster_pixel_count(dataset):
             else:
                 counts[val] = float(cur_array[cur_array==val].size)
 
+    LOGGER.debug('Leaving raster_pixel_count')
     return counts
 
 
@@ -448,6 +491,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
             op when it is called.
 
         returns a numpy matrix."""
+    LOGGER.debug('Entering clip_op')
 
     # Making a copy of the in_matrix so as to avoid side effects from putmask
     matrix = in_matrix.astype(matrix_type)
@@ -461,6 +505,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
     # Restore nodata values to their proper places.
     np.putmask(filtered_matrix, in_matrix==in_matrix_nodata, out_matrix_nodata)
 
+    LOGGER.debug('Leaving clip_op')
     return filtered_matrix
 
 def make_raster_from_shape(base_raster, shape, attr):
@@ -474,10 +519,12 @@ def make_raster_from_shape(base_raster, shape, attr):
               from
 
        returns - a GDAL raster dataset"""
+    LOGGER.debug('Entering make_raster_from_shape')
     
     attribute_string = 'ATTRIBUTE=' + attr
     gdal.RasterizeLayer(base_raster, [1], shape.GetLayer(0),
                         options = [attribute_string])
+    LOGGER.debug('Leaving make_raster_from_shape')
 
     return base_raster 
        
@@ -548,5 +595,6 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
             raster_out_uri=out_uri, nodata=out_nodata)
 
+    LOGGER.debug('Leaving map_rater_to_dict_values')
     return out_raster
 
