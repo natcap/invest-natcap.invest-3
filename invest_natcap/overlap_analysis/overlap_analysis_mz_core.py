@@ -29,15 +29,16 @@ def execute(args):
             management zone polygons. It should be noted that this should not
             be edited directly but instead, should have a copy made in order
             to add the attribute field.
-        args['overlap_files'] - A dictionary which maps the name of the shapefile
+        args['over_layer_dict'] - A dictionary which maps the name of the shapefile
             (excluding the .shp extension) to the open datasource itself. These
             files are each an activity layer that will be counted within the
             totals per management zone.
 
     Output:
-        zone_shapefile- A copy of 'zone_layer_file' with the added attribute 
-            "ACTIVITY_COUNT" that will total the number of activities taking
-            place in each polygon.
+        A file named [workspace_dir]/Ouput/mz_frequency.shp which is a copy of 
+        args['zone_layer_file'] with the added attribute "ACTIV_CNT" that will 
+        total the number of activities taking place in each polygon.
+
      Returns nothing.'''
 
     output_dir = os.path.join(args['workspace_dir'], 'Output')
@@ -57,73 +58,38 @@ def execute(args):
     
     #This creates a new shapefile that is a copy of the old one, but at the path location
     #That way we can edit without worrying about changing the Input file.
-    z_copy = driver.CopyDataSource(zone_shape_old, path)
-    LOGGER.debug(z_copy)
+    mz_freq_shape = driver.CopyDataSource(zone_shape_old, path)
+    LOGGER.debug(mz_freq_shape)
 
-    z_layer = z_copy.GetLayer()
+    mz_freq_layer = mz_freq_shape.GetLayer()
 
     #Creating a definition for our new activity count field.
     field_defn = ogr.FieldDefn('ACTIV_CNT', ogr.OFTReal)
-    z_layer.CreateField(field_defn)
-    
-    for polygon in z_layer:
+    mz_freq_layer.CreateField(field_defn)
+   
+    #This will loop through all management zone polygons, as defined by the MZ
+    #input file. For each of those polygons, it will look through the list of
+    #activity layers, and check against each shape on every one of those layers.
+    for mz_polygon in mz_freq_layer:
         
-        zone_geom = polygon.GetGeometryRef()
-        count = 0
+        zone_geom = mz_polygon.GetGeometryRef()
+        activity_count = 0
 
-        for activ in layers_dict: 
+        for activ in layers_dict:
             
             shape_file = layers_dict[activ]
-            layer = shape_file.GetLayer()
+            activ_layer = shape_file.GetLayer()
 
-            for element in layer:
+            for feature in activ_layer:
                 #If it contains or overlaps
-                activ_geom = element.GetGeometryRef()
+                activ_geom = feature.GetGeometryRef()
 
                 if zone_geom.Contains(activ_geom) or zone_geom.Overlaps(activ_geom):
-                    count += 1
+                    activity_count += 1
                     break
 
             layer.ResetReading()
 
-        polygon.SetField('ACTIV_CNT', count)
+        mz_polygon.SetField('ACTIV_CNT', activity_count)
         
-        z_layer.SetFeature(polygon)
-
-    make_param_file(args)
-
-def make_param_file(args):
-    ''' This function will output a .txt file that contains the user-selected parameters
-    for this run of the overlap_analysis model.
-    
-    Input:
-        args- The entire args dictionary which contains all information passed from the
-            the IUI. 
-    Ouput:
-        textfile- A .txt file output that will contain all user-controlled paramaters
-            that were selected for use with this run of the model.
-
-    Returns nothing.
-    '''
-
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-
-    textfile  = os.path.join(output_dir, "Parameter_Log_[" + \
-                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") +  "].txt")
-    file = open(textfile, "w")
-    
-    list = []
-    list.append("ARGUMENTS \n")
-    list.append("Workspace: " + args['workspace_dir'])
-    list.append("Zone Layer: " + args['zone_layer_file'].GetName())
-    
-    list.append("Activity Layers: ")
-    for name in args['over_layer_dict'].keys():
-        list.append("--- " + name)
-
-    for element in list:
-        file.write(element)
-        file.write("\n")
-
-    file.close()
-    
+        mz_freq_layer.SetFeature(mz_polygon)

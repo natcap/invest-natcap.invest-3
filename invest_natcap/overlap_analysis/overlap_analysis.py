@@ -8,6 +8,7 @@ import re
 
 from osgeo import ogr
 from invest_natcap.overlap_analysis import overlap_analysis_core
+from invest_natcap.overlap_analysis import overlap_core
 
 LOGGER = logging.getLogger('overlap_analysis')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -46,11 +47,6 @@ def execute(args):
         args['intra_name']- string which corresponds to a field within the
             layers being passed in within overlap analysis directory. This is
             the intra-activity importance for each activity.
-        args['hum_use_hubs_loc']- URI that points to a shapefile of major hubs
-            of human activity. This would allow you to degrade the weight of
-            activity zones as they get farther away from these locations.
-        args['decay']- float between 0 and 1, representing the decay of interest
-            in areas as you get farther away from human hubs.
             
     Output:
         oa_args- The dictionary of all arguments that are needed by the
@@ -81,7 +77,7 @@ def execute(args):
     oa_args['grid_size'] = args['grid_size']
       
     #Abstracting this to its own function for use in testing. Returns dictionary.
-    file_dict = get_files_dict(args['overlap_data_dir_loc'])
+    file_dict = overlap_core.get_files_dict(args['overlap_data_dir_loc'])
     oa_args['overlap_files'] = file_dict
     
     #No need to format the table if no inter-activity weighting is desired.
@@ -95,44 +91,7 @@ def execute(args):
     if args['do_intra']:
         oa_args['intra_name'] = args['intra_name']
 
-    #We don't actually get these yet, so commenting them out
-    #oa_args['hubs_loc'] = ogr.Open(args['hum_use_hubs_loc'])
-    #oa_args['decay'] = args['decay']
-
     overlap_analysis_core.execute(oa_args)
-
-def get_files_dict(folder):
-    '''Returns a dictionary of all .shp files in the folder.
-
-        Input:
-            folder- The location of all layer files. Among these, there should be
-                files with the extension .shp. These will be used for all
-                activity calculations.
-
-        Returns:
-            file_dict- A dictionary which maps the name (minus file extension) of
-                a shapefile to the open datasource itself. The key in this dictionary
-                is the name of the file (not including file path or extension), and 
-                the value is the open shapefile.
-    '''
-
-    #Glob.glob gets all of the files that fall into the form .shp, and makes them
-    #into a list. Then, each item in the list is added to a dictionary as an open
-    #file with the key of it's filename without the extension, and that whole
-    #dictionary is made an argument of the oa_args dictionary
-    file_names = glob.glob(os.path.join(folder, '*.shp'))
-    file_dict = {}
-    
-    for file in file_names:
-        
-        #The return of os.path.split is a tuple where everything after the final slash
-        #is returned as the 'tail' in the second element of the tuple
-        #path.splitext returns a tuple such that the first element is what comes before
-        #the file extension, and the second is the extension itself 
-        name = os.path.splitext(os.path.split(file)[1])[0]
-        file_dict[name] = ogr.Open(file)
-   
-    return file_dict
 
 def format_over_table(over_tbl):
     '''This CSV file contains a string which can be used to uniquely identify a .shp
@@ -152,8 +111,6 @@ def format_over_table(over_tbl):
     '''
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
-
-    
 
     over_dict = {}
 
@@ -179,3 +136,4 @@ def format_over_table(over_tbl):
         over_dict[name] = inter_act
     
     return over_dict
+

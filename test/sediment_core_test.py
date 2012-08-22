@@ -4,6 +4,7 @@ import os
 import subprocess
 
 from osgeo import gdal
+from osgeo import ogr
 from nose.plugins.skip import SkipTest
 import numpy as np
 
@@ -20,7 +21,23 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 
 class TestSedimentBiophysicalCore(unittest.TestCase):
     """Main testing class for the biophysical sediment tests"""
+
+    def test_sum_over_region(self):
+        base_path = 'data/sediment_test_data/'
+        dataset = gdal.Open(os.path.join(base_path, 'flowregression.tif'))
+        aoi = ogr.Open(os.path.join(base_path, 'watersheds.shp'))
+        
+        out_path = 'data/test_out/sediment_out'
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+
+        value = sediment_core.sum_over_region(dataset, aoi, 
+            mask_path = os.path.join(out_path, 'mask.tif'))
+        LOGGER.info('total sum is %s' % value)
+        
     def test_potential_sediment(self):
+        raise SkipTest
+
         dem_points = {
             (0.0,0.0): 50,
             (0.0,1.0): 100,
