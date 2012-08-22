@@ -961,13 +961,21 @@ def generate_report(sediment_export_dataset, sediment_retained_dataset,
         feature = watershed_layer.GetFeature(feature_index)
         value_line = ''
         #Dump the field values to the output row
+        field_name = None
         for field_name in field_name_set:
             field_index = feature.GetFieldIndex(field_name)
             field_value = feature.GetField(field_index)
             value_line += str(field_value) + ','
         #Dump the calculated values to the output row
         #sediment export
-        value_line += '0.0,'
+        sed_export = \
+            sum_over_region(sediment_export_dataset, watershed_layer, 
+            mask_path = None, mask_field_value = (field_name, field_value))
+        sed_retained = \
+            sum_over_region(sediment_retained_dataset, watershed_layer, 
+            mask_path = None, mask_field_value = (field_name, field_value))
+
+        value_line += str(sed_export) + ','
         #sediment retained
-        value_line += '0.0\n'
+        value_line += str(sed_retained) + '\n'
         table_file.write(value_line)
