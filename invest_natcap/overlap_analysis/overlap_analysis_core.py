@@ -84,7 +84,7 @@ def execute(args):
     
     aoi_raster =  \
         raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
-                                    int(args['grid_size'] gdal.GDT_Int32, -1,
+                                    int(args['grid_size']), gdal.GDT_Int32, -1,
                                     aoi_rast_file, args['zone_layer_file'])
 
     aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
@@ -97,8 +97,7 @@ def execute(args):
     #intermediate directory, so that we can access later.   
     raster_files, raster_names = make_indiv_rasters(inter_dir, args['over_layer_dict'], aoi_raster)
 
-    create_unweighted_raster(output_dir, inter_dir, args['grid_size'], 
-                            args['zone_layer_file'], args['overlap_files'])
+    create_unweighted_raster(output_dir, aoi_raster, raster_files)
 
     #Need to set up dummy var for when inter or intra are available without the
     #other so that all parameters can be filled in.
@@ -121,7 +120,7 @@ def execute(args):
                                intra_name, args['do_inter'], 
                                args['do_intra'], raster_files, raster_names)
 
-def create_unweighted_raster(output_dir, inter_dir,grid_size, aoi, activ_layers):
+def create_unweighted_raster(output_dir, aoi_raster, raster_files):
     '''This will create the set of unweighted rasters- both the AOI and
     individual rasterizations of the activity layers. These will all be
     combined to output a final raster displaying unweighted activity frequency
@@ -130,34 +129,25 @@ def create_unweighted_raster(output_dir, inter_dir,grid_size, aoi, activ_layers)
     Input:
         output_dir- This is the directory in which the final frequency raster will
             be placed. That file will be named 'hu_freq.tif'.
-        inter_dir- This is a directory in which the intermediate rasters can be
-            stored. These are the individual rasterizations of the AOI and the
-            activity layers, and should only consist of nodata or "1" to
-            indicate activity existance. 
-        activ_layers- A dictionary which maps the name of the individual
-            activity shapefile (excluding the .shp extension) to the open 
-            datasource itself. This can be used directly.
-    
+        aoi_raster- The rasterized version of the AOI file passed in with
+            args['zone_layer_file']. We will use this within the combination
+            function to determine where to place nodata values.
+        raster_files- The rasterized version of the files passed in through
+            args['over_layer_dict']. Each raster file shows the presence or
+            absence of the activity that it represents.
     Output:
-        A set of rasterized shapefiles of the form 
-        args['workspace_dir']/Intermediate/<filename>. For each shapefile that we
-        passed in activ_layers we create a raster with the shape burned onto a 
-        band of the same size as our AOI.
-
         A raster file named ['workspace_dir']/Output/hu_freq.tif. This depicts the 
         unweighted frequency of activity within a gridded area or management
         zone.
 
     Returns nothing. 
     '''
-
+    aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)[1]
     
     #When we go to actually burn, should have a "0" where there is AOI, not 
     #same as nodata. Need the 0 for later combination function.
     activities_uri = os.path.join(output_dir, 'hu_freq.tif')
     
-    #By putting it within execute, we are able to use execute's own variables, so we can
-    #just use aoi_nodata without having to pass it somehow
     def get_raster_sum(*activity_pixels):
         '''For any given pixel, if the AOI covers the pixel, we want to ignore nodata 
         value activities, and sum all other activities happening on that pixel.
@@ -193,7 +183,8 @@ def create_unweighted_raster(output_dir, inter_dir,grid_size, aoi, activ_layers)
                                    datatype = gdal.GDT_Int32, nodata = aoi_nodata)
 
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
-                           layers_dict, intra_name, do_inter, do_intra, raster_files, raster_names):
+                           layers_dict, intra_name, do_inter, do_intra, 
+                           raster_files, raster_names):
     '''This function will create an output raster that takes into account both inter-
     activity weighting and intra-activity weighting. This will produce a map that looks
     both at where activities are occurring, and how much people value those activities
