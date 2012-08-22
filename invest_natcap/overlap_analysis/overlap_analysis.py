@@ -2,9 +2,7 @@
 
 import os
 import csv
-import glob
 import logging
-import re
 
 from osgeo import ogr
 from invest_natcap.overlap_analysis import overlap_analysis_core
@@ -55,8 +53,6 @@ def execute(args):
             final output of the model.
 
     Returns nothing.'''
-    global oa_args
-
     oa_args = {}
 
     workspace = args['workspace_dir']
