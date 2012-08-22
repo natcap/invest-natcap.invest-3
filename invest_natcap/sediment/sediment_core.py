@@ -977,10 +977,10 @@ def generate_report(sediment_export_dataset, sediment_retained_dataset,
         #sediment export
         sed_export = \
             sum_over_region(sediment_export_dataset, watershed_aoi, 
-            mask_path = 'export_mask%s.tif' % feature_index, mask_field_value = (field_name, field_value))
+            mask_path = None, mask_field_value = (field_name, field_value))
         sed_retained = \
             sum_over_region(sediment_retained_dataset, watershed_aoi, 
-            mask_path = 'retained_mask%s.tif' % feature_index, mask_field_value = (field_name, field_value))
+            mask_path = None, mask_field_value = (field_name, field_value))
 
         value_line += str(sed_export) + ','
         #sediment retained
