@@ -1,6 +1,6 @@
+'''This is the preperatory class for the management zone portion of overlap 
+analysis.'''
 import os
-import datetime
-import glob
 
 from osgeo import ogr
 
