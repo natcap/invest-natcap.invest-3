@@ -1,9 +1,6 @@
-'''inVEST core module to handle all actual processing of overlap analysis data.'''
+'''inVEST core module to handle processing of overlap analysis data.'''
 import os
-import math
 import logging
-import operator
-import datetime
 
 from osgeo import ogr
 from osgeo import gdal
@@ -77,10 +74,11 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
-    create_unweighted_raster(args)
+    create_unweighted_raster(output_dir, inter_dir, args['grid_size'], 
+                            args['zone_layer_file'], args['overlap_files'])
 
-    #Need to set up dummy var for when inter or intra are available without the other so
-    #that all parameters can be filled in.
+    #Need to set up dummy var for when inter or intra are available without the
+    #other so that all parameters can be filled in.
     if (args['do_inter'] or args['do_intra']):
         
         layer_dict = args['over_layer_dict'] if args['do_inter'] else None
@@ -93,23 +91,25 @@ def execute(args):
         if not (os.path.exists(weighted_dir)):
             os.makedirs(weighted_dir)
         
-        #Now we want to create a second raster that includes all of the weighting information
-        create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
-                               args['overlap_files'], intra_name, 
-                               args['do_inter'], args['do_intra'], raster_files, raster_names)
+        #Now we want to create a second raster that includes all of the
+        #weighting information
+        create_weighted_raster(output_dir, weighted_dir, aoi_raster, 
+                               layer_dict, args['overlap_files'], 
+                               intra_name, args['do_inter'], 
+                               args['do_intra'], raster_files, raster_names)
 
-def create_unweighted_raster(args):
+def create_unweighted_raster(output, inter, grid_size, aoi, activ_layers):
 
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     
     #Need to figure out what to do with management zones
-    aoi_raster = raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
-                                    int(args['grid_size']), gdal.GDT_Int32, -1, aoi_rast_file,
-                                    args['zone_layer_file'])
+    aoi_raster =  \
+        raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
+                                    int(args['grid_size']), gdal.GDT_Int32, -1,
+                                    aoi_rast_file, args['zone_layer_file'])
+
     aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
     aoi_band.Fill(aoi_nodata)
     
@@ -117,11 +117,11 @@ def create_unweighted_raster(args):
     
     #Want to get each interest layer, and rasterize them, then combine them all at
     #the end. Could do a list of the filenames that we are creating within the
-    #intermediate directory, so that we can access later. Want to pass in the
-    #inter_dir, as well as the list of shapefiles, and the AOI raster to get info from
+    #intermediate directory, so that we can access later.   
     raster_files, raster_names = make_indiv_rasters(inter_dir, args['overlap_files'], aoi_raster)
     
-    #When we go to actually burn, should have a "0" where there is AOI, not same as nodata
+    #When we go to actually burn, should have a "0" where there is AOI, not 
+    #same as nodata. Need the 0 for later combination function.
     activities_uri = os.path.join(output_dir, 'hu_freq.tif')
     
     #By putting it within execute, we are able to use execute's own variables, so we can
