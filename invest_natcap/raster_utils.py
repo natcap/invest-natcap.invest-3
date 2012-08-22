@@ -277,7 +277,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
     #Build the new output dataset and reference the band for later.  the '1'
     #means only 1 output band.
-    LOGGER.info("Output dataset is a % X %s raster" % (out_n_cols, out_n_rows))
+    LOGGER.info("Output dataset is a %s X %s raster" % (out_n_cols, out_n_rows))
     out_dataset = new_raster(out_n_cols, out_n_rows, out_projection,
         out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
