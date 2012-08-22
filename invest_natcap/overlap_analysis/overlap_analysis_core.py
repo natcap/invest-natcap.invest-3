@@ -99,7 +99,36 @@ def execute(args):
                                args['do_intra'], raster_files, raster_names)
 
 def create_unweighted_raster(output, inter, grid_size, aoi, activ_layers):
+    '''This will create the set of unweighted rasters- both the AOI and
+    individual rasterizations of the activity layers. These will all be
+    combined to output a final raster displaying unweighted activity frequency
+    within the area of interest.
 
+    Input:
+        output- This is the directory in which the final frequency raster will
+            be placed. That file will be named 'hu_freq.tif'.
+        inter- This is a directory in which the intermediate rasters can be
+            stored. These are the individual rasterizations of the AOI and the
+            activity layers, and should only consist of nodata or "1" to
+            indicate activity existance. 
+        grid_size- The desired pixel size for the raster outputs (both 
+            intermediate and final), which will be grid_size x grid_size. 
+        activ_layers- A dictionary which maps the name of the individual
+            activity shapefile (excluding the .shp extension) to the open 
+            datasource itself. This can be used directly.
+    
+    Output:
+        A set of rasterized shapefiles of the form 
+        args['workspace_dir']/Intermediate/<filename>. For each shapefile that we
+        passed in activ_layers we create a raster with the shape burned onto a 
+        band of the same size as our AOI.
+
+        A raster file named ['workspace_dir']/Output/hu_freq.tif. This depicts the 
+        unweighted frequency of activity within a gridded area or management
+        zone.
+
+    Returns nothing. 
+    '''
 
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
