@@ -73,7 +73,7 @@ def biophysical(args):
         access_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
         access_base = \
             raster_utils.new_raster_from_base(cur_landuse, access_uri, \
-                'GTiff', -1, gdal.GDT_Float32)
+                'GTiff', out_nodata, gdal.GDT_Float32)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
         access_base.GetRasterBand(1).Fill(1)
@@ -271,20 +271,23 @@ def biophysical(args):
 
         def sum_degradation(*raster):
             n = len(raster)
-            access = raster[-1]
+            if access_raster is not None:
+                access = raster[-1]
             summ = 0.0
 
             for num in raster:
-                if num == -1:
-                    return -1
+                if num == out_nodata:
+                    return out_nodata
 
             for index in range(n / 2):
                 step = index * 2
                 summ += (raster[step] * raster[step + 1] * weight_list[index])
 
             return summ
-
-        degradation_rasters.append(access_raster)
+        
+        if access_raster is not None:
+            degradation_rasters.append(access_raster)
+        
         deg_sum_uri = \
             os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
 
