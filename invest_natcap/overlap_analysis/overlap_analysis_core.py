@@ -71,14 +71,31 @@ def execute(args):
 
     Returns nothing.'''
    
-   #Create the unweighted rasters, since that will be one of the outputs
-   #regardless. However, after they are created, tehre will be two calls-
-   #one to teh combine unweighted function, and then the option call for the
-   #weighted raster combination that uses the unweighted pre-created rasters.
-
+    #Create the unweighted rasters, since that will be one of the outputs
+    #regardless. However, after they are created, tehre will be two calls-
+    #one to the combine unweighted function, and then the option call for the
+    #weighted raster combination that uses the unweighted pre-created rasters.
 
     output_dir = os.path.join(args['workspace_dir'], 'Output')
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    
+    aoi_shp_layer = args['zone_layer_file'].GetLayer()
+    aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
+    
+    aoi_raster =  \
+        raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
+                                    int(args['grid_size'] gdal.GDT_Int32, -1,
+                                    aoi_rast_file, args['zone_layer_file'])
+
+    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
+    aoi_band.Fill(aoi_nodata)
+    
+    gdal.RasterizeLayer(aoi_raster, [1], aoi_shp_layer, burn_values=[1])
+    
+    #Want to get each interest layer, and rasterize them, then combine them all at
+    #the end. Could do a list of the filenames that we are creating within the
+    #intermediate directory, so that we can access later.   
+    raster_files, raster_names = make_indiv_rasters(inter_dir, args['over_layer_dict'], aoi_raster)
 
     create_unweighted_raster(output_dir, inter_dir, args['grid_size'], 
                             args['zone_layer_file'], args['overlap_files'])
@@ -117,8 +134,6 @@ def create_unweighted_raster(output_dir, inter_dir,grid_size, aoi, activ_layers)
             stored. These are the individual rasterizations of the AOI and the
             activity layers, and should only consist of nodata or "1" to
             indicate activity existance. 
-        grid_size- The desired pixel size for the raster outputs (both 
-            intermediate and final), which will be grid_size x grid_size. 
         activ_layers- A dictionary which maps the name of the individual
             activity shapefile (excluding the .shp extension) to the open 
             datasource itself. This can be used directly.
@@ -136,23 +151,6 @@ def create_unweighted_raster(output_dir, inter_dir,grid_size, aoi, activ_layers)
     Returns nothing. 
     '''
 
-    aoi_shp_layer = aoi.GetLayer()
-    aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
-    
-    aoi_raster =  \
-        raster_utils.create_raster_from_vector_extents(int(grid_size), 
-                                    int(grid_size), gdal.GDT_Int32, -1,
-                                    aoi_rast_file, aoi)
-
-    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
-    aoi_band.Fill(aoi_nodata)
-    
-    gdal.RasterizeLayer(aoi_raster, [1], aoi_shp_layer, burn_values=[1])
-    
-    #Want to get each interest layer, and rasterize them, then combine them all at
-    #the end. Could do a list of the filenames that we are creating within the
-    #intermediate directory, so that we can access later.   
-    raster_files, raster_names = make_indiv_rasters(inter_dir, activ_layers, aoi_raster)
     
     #When we go to actually burn, should have a "0" where there is AOI, not 
     #same as nodata. Need the 0 for later combination function.
