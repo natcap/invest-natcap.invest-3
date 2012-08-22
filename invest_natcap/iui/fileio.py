@@ -7,6 +7,16 @@ import re
 
 from dbfpy import dbf
 
+def settings_folder():
+    """Return the file location of the user's settings folder.  This folder
+    location is OS-dependent."""
+    if platform.system() == 'Windows':
+        config_folder = '~/AppData/Local/NatCap'
+    else:
+        config_folder = '~/.natcap/'
+    return os.path.expanduser(config_folder)
+
+
 class JSONHandler(object):
     def __init__(self, uri):
         object.__init__(self)
@@ -43,12 +53,8 @@ class JSONHandler(object):
 
 class LastRunHandler(JSONHandler):
     def __init__(self, modelname):
-        if platform.system() == 'Windows':
-            config_folder = os.path.expanduser('~/AppData/Local/NatCap')
-        else:
-            config_folder = os.path.expanduser('~/.natcap/')
         uri = modelname + '_lastrun_' + platform.node() + '.json'
-        JSONHandler.__init__(self, os.path.join(config_folder, uri))
+        JSONHandler.__init__(self, os.path.join(settings_folder(), uri))
 
 class AbstractTableHandler(object):
     """This class provides an abstract class for specific reimplementation for

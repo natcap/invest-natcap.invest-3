@@ -334,7 +334,9 @@ class Executor(threading.Thread):
 
             # we want to save this file to the current directory until the model
             # finishes, when we copy the log into the model's workspace
-            log_file_uri = os.path.abspath(os.path.join('.', filename))
+            settings_folder = invest_natcap.iui.fileio.settings_folder()
+            log_file_uri = os.path.abspath(os.path.join(settings_folder,
+                filename))
             self.log_file = open(log_file_uri, 'w')
 
             LOGGER.debug('Loaded the model from %s', module)
