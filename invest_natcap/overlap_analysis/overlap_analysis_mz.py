@@ -39,8 +39,8 @@ def execute(args):
         
     mz_args['workspace_dir'] = args['workspace_dir']
 
-    #We are passing in the AOI shapefile, as well as the dimension that we want the
-    #raster pixels to be. 
+    #We are passing in the AOI shapefile, as well as the dimension that we want
+    #the raster pixels to be. 
     mz_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
 
     file_dict = overlap_core.get_files_dict(args['overlap_data_dir_loc'])
