@@ -535,33 +535,87 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
     attr_dict[out_nodata] = {field:float(out_nodata)}
-    attr_dict[str(int(key_raster.GetRasterBand(1).GetNoDataValue()))] =\
-        {field:float(out_nodata)}
+    key_raster_nodata = key_raster.GetRasterBand(1).GetNoDataValue()
+    attr_dict[str(int(key_raster_nodata))] = {field:float(out_nodata)}
 
-    def vop(key):
-        """Operation passed to numpy function vectorize that uses 'key' as the 
-            key to the local dictionary 'attr_dict'. Returns the value in place
-            of the key for the new raster
-           
-            key - a float or int or string from the local raster 
-                'key_raster' that is used to look up a value in the 
-                dictionary 'attr_dict'
+    lulc_array = np.array([])
+    val_array = np.array([])
 
-           returns - the 'field' value corresponding to the 'key'. If 'key' is
-               not found then it raises an exception if raise_error is true or
-               simply returns out_nodata if raise_error is false
-        """
+    for key in attr_dict.iterkeys():
+        lulc_array = np.append(lulc_array, int(key))
+        val = attr_dict[key][field]
+        val_array = np.append(val_array, float(val))
+   
 
-        if str(key) in attr_dict:
-            return attr_dict[str(key)][field]
-        else:
+    copy_raster = raster_utils.new_raster_from_base(key_raster, out_uri, \
+                'GTiff', out_nodata, gdal.GDT_Float32)
+    copy_raster.GetRasterBand(1).WriteArray(key_raster.GetRasterBand(1).ReadAsArray())
+    #copy_raster = gdal.GetDriverByName('GTiff').CreateCopy(out_uri, key_raster)
+    copy_array = copy_raster.GetRasterBand(1).ReadAsArray()
+    unique_codes = np.unique(copy_array)
+    lulc_raster_codes = \
+        np.trim_zeros(np.sort(np.where(unique_codes == key_raster_nodata, 0, unique_codes))) 
+
+    #LOGGER.debug('LULC Codes : Key_RASTER : %s', lulc_raster_codes)
+    
+    #LOGGER.debug('LULC Codes : ATTR_dict : %s', lulc_array)
+    #LOGGER.debug('LULC Codes : VAL_Array : %s', val_array)
+
+    lulc_array = lulc_array.astype(float)
+
+    for lulc_code in lulc_raster_codes:
+        if not (lulc_array == lulc_code).any():
+            #LOGGER.debug('A code in key_raster NOT FOUND')
             if raise_error:
-                raise LulcCodeError(error_message + str(key))
-            return out_nodata
+                raise LulcCodeError(error_message + str(lulc_code))
+            else:
+                np.append(lulc_array, lulc_code)
+                np.append(val_array, out_nodata)
 
-    out_raster = raster_utils.vectorize_rasters([key_raster], vop,
-            raster_out_uri=out_uri, nodata=out_nodata)
+    #LOGGER.debug('COPY_ARRAY : %s', copy_array)
+
+    tmp_array = np.copy(copy_array)
+
+    for lulc_code, val in zip(lulc_array, val_array):
+        #LOGGER.debug('lulc_code : %s', lulc_code)
+        #LOGGER.debug('val : %s', val)
+        copy_array[tmp_array == lulc_code] =  val
+    
+        #LOGGER.debug('COPY_ARRAY : %s', copy_array)
+    
+    copy_raster.GetRasterBand(1).WriteArray(copy_array)
+
+#   def vop(key):
+#       """Operation passed to numpy function vectorize that uses 'key' as the 
+#           key to the local dictionary 'attr_dict'. Returns the value in place
+#           of the key for the new raster
+#          
+#           key - a float or int or string from the local raster 
+#               'key_raster' that is used to look up a value in the 
+#               dictionary 'attr_dict'
+
+#          returns - the 'field' value corresponding to the 'key'. If 'key' is
+#              not found then it raises an exception if raise_error is true or
+#              simply returns out_nodata if raise_error is false
+#       """
+
+#       if str(key) in attr_dict:
+#           return attr_dict[str(key)][field]
+#       else:
+#           if raise_error:
+#               raise LulcCodeError(error_message + str(key))
+#           return out_nodata
+
+#       try:
+#           return attr_dict[str(key)][field]
+#       except KeyError:
+#           if raise_error:
+#               raise LulcCodeError(error_message + str(key))
+#           return out_nodata
+
+#   out_raster = raster_utils.vectorize_rasters([key_raster], vop,
+#           raster_out_uri=out_uri, nodata=out_nodata)
 
     LOGGER.debug('Leaving map_rater_to_dict_values')
-    return out_raster
+    return copy_raster
 

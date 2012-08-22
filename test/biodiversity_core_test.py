@@ -21,6 +21,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
     def test_biodiversity_core_pixel_count(self):
         """Test a GDAL raster dataset to make sure the correct pixel counts are
             being returned"""
+        #raise SkipTest
 
         samp_lulc_cur_uri = \
             './data/biodiversity_regression_data/samp_input/lc_samp_cur_b.tif'
@@ -46,7 +47,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
     def test_biodiversity_core_pixel_count_hand(self):
         """Test a hand created GDAL raster dataset to make sure the correct
             pixel counts are being returned"""
-
+        #raise SkipTest
         driver = gdal.GetDriverByName('MEM')
         dataset_type = gdal.GDT_Int32
 
@@ -75,7 +76,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
 
     def test_biodiversity_core_map_raster_to_dict_values_regression(self):
         """A regression test for map_raster_to_dict_values"""
-
+        #raise SkipTest
         out_dir = './data/test_out/biodiversity/map_raster_to_dict_values/'
         input_dir = './data/biodiversity_regression_data/samp_input/'
                 
@@ -166,7 +167,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         creating a raster and dictionary. However, this time let us purposfully
         leave out a value from the sensitivity table and assert that an
         exception was raised"""
-        
+        #raise SkipTest 
         out_dir = './data/test_out/biodiversity/map_raster_to_dict_values/'
         
         if not os.path.isdir(out_dir):
@@ -284,7 +285,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
 
     def test_biodiversity_biophysical_regression(self):
         """A regression test for the biodiversity model with all possible inputs"""
-        #raise SkipTest
+        raise SkipTest
         input_dir = './data/biodiversity_regression_data/samp_input'
         out_dir = './data/biodiversity_regression_data/samp_input/output/'
         
