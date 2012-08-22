@@ -67,8 +67,8 @@ def execute(args):
         
     oa_args['workspace_dir'] = args['workspace_dir']
 
-    #We are passing in the AOI shapefile, as well as the dimension that we want the
-    #raster pixels to be. 
+    #We are passing in the AOI shapefile, as well as the dimension that we want
+    #the raster pixels to be. 
     oa_args['zone_layer_file'] = ogr.Open(args['zone_layer_loc'])
     oa_args['grid_size'] = args['grid_size']
       
@@ -80,7 +80,8 @@ def execute(args):
     oa_args['do_inter'] = args['do_inter']
     
     if args['do_inter']:
-        oa_args['over_layer_dict'] = format_over_table(args['overlap_layer_tbl'])
+        oa_args['over_layer_dict'] = \
+                format_over_table(args['overlap_layer_tbl'])
         
     oa_args['do_intra'] = args['do_intra']
 
@@ -90,35 +91,37 @@ def execute(args):
     overlap_analysis_core.execute(oa_args)
 
 def format_over_table(over_tbl):
-    '''This CSV file contains a string which can be used to uniquely identify a .shp
-    file to which the values in that string's row will correspond. This string,
-    therefore, should be used as the key for the ovlap_analysis dictionary, so that we
-    can get all corresponding values for a shapefile at once by knowing its name.
+    '''This CSV file contains a string which can be used to uniquely identify a
+    .shp file to which the values in that string's row will correspond. This 
+    string, therefore, should be used as the key for the ovlap_analysis 
+    dictionary, so that we can get all corresponding values for a shapefile at 
+    once by knowing its name.
 
         Input:
-            over_tbl- A CSV that contains a list of each interest shapefile, and any 
-            the optional buffers and weights of the layers.
+            over_tbl- A CSV that contains a list of each interest shapefile, 
+                and the inter activity weights corresponding to those layers.
                 
         Returns:
-            over_dict- The analysis layer dictionary that maps the unique name of each
-                layer to the optional parameter of inter-activity weight. For each entry,
-                the key will be the string name of the layer that it represents, and the 
-                value will be the inter-activity weight for that layer.                
+            over_dict- The analysis layer dictionary that maps the unique name 
+                of each layer to the optional parameter of inter-activity 
+                weight. For each entry, the key will be the string name of the 
+                layer that it represents, and the value will be the 
+                inter-activity weight for that layer.                
     '''
     over_layer_file = open(over_tbl)
     reader = csv.DictReader(over_layer_file)
 
     over_dict = {}
 
-    #USING EXPLICIT STRING CALLS to the layers table (these should not be unique to the
-    #type of table, but rather, are items that ALL layers tables should contain). I am
-    #casting both of the optional values to floats, since both will be used for later
-    #calculations.
+    #USING EXPLICIT STRING CALLS to the layers table (these should not be unique
+    #to the type of table, but rather, are items that ALL layers tables should 
+    #contain). I am casting both of the optional values to floats, since both 
+    #will be used for later calculations.
     for row in reader:
         LOGGER.debug(row)     
         
-        #Setting the default values for inter-activity weight and buffer, since they
-        #are not actually required to be filled in.
+        #Setting the default values for inter-activity weight and buffer, since
+        #they are not actually required to be filled in.
 
         #NEED TO FIGURE OUT IF THESE SHOULD BE 0 OR 1
         inter_act = 1
