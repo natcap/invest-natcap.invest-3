@@ -1,12 +1,10 @@
-'''inVEST core module to handle all actual processing of overlap analysis data.'''
+'''inVEST core module to handle processing of overlap analysis data.'''
 import os
-import math
 import logging
-import operator
-import datetime
 
 from osgeo import ogr
 from osgeo import gdal
+
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('overlap_analysis_core')
@@ -24,11 +22,8 @@ def execute(args):
         args['workspace_dir'] - The directory in which all output and intermediate
             files should be placed.
         args['zone_layer_file'] - This is the shapefile representing our area of
-            interest. If 'do_grid' is true, we will rasterize this using cells of
-            'grid_size' by 'grid_size'.
-        args['do_grid'] - This tells us whether the area of interest file that was
-            being passed in was a management zone divided shapefile, or was
-            pre-gridded into identical squares.
+            interest. We will rasterize this using cells of 'grid_size' by 
+            'grid_size'.
         args['grid_size'] - This is the size of 1 side of each of the square polygons
             present on 'zone_layer_file'. This can be used to set the size of the
             pixels for the intermediate rasters.
@@ -43,182 +38,70 @@ def execute(args):
         args['intra_name']- A string which corresponds to a field within the
            layers being passed in within overlap analysis directory. This is
            the intra-activity importance for each activity.
-        args['hum_use_hubs_loc']- An open shapefile of major hubs of human 
-            activity. This would allow you to degrade the weight of activity
-            zones as they get farther away from these locations.
-        args['decay']- float between 0 and 1, representing the decay of interest
-            in areas as you get farther away from human hubs.
-        args['do-inter']-Boolean that indicates whether or not inter-activity
             weighting is desired. This tells us if the overlap table exists.
         args['do_intra']- Boolean which indicates whether or not intra-activity
             weighting is desired. This will will pull attributes from shapefiles
             passed in in 'zone_layer_file'.
 
     Intermediate:
-        Rasterized Shapefiles- For each shapefile that we passed in 'overlap_files'
-            we are creating a raster with the shape burned onto a band of the same
-            size as our AOI. 
-        Weighted Rasterized Shapefiles- For each shapefile, if intra-activity
-            weighting is also desired, we will create a rasterized file where the
-            burn value is the 'intra_name' attribute of that particular polygon.
-            These files will be placed within a 'Weighted' folder within the
-            Intermediate directory.
+        A set of rasterized shapefiles of the form 
+        args['workspace_dir']/Intermediate/<filename>. For each shapefile that we
+        passed in args['overlap_files'] we create a raster with the shape
+        burned onto a band of the same size as our AOI.
+
+        (Optional) A set of weighted rasterized shapefiles of the form
+        args['wprkspace_dir']/Intermediate/Weighted/<filename>. For each 
+        shapefile, if intra-activity weighting is also desired, we will create 
+        a rasterized file where the burn value is the args['intra_name']
+        attribute of that particular polygon.
 
     Output:
-        (If Rasters):
-            activities_uri- This is a raster output which depicts the
-                unweighted frequency of activity within a gridded area or management
-                zone.
-            hu_impscore.tif- This is a raster depicting the importance scores
-                for each grid or management zone in the area of interest. This
-                combines the desired inter or intra activity weighting into one raster
-                and is an explicitly named file within the make_weighted_raster function.
-        (If Shapefile):
-            zone_shapefile- An updated version of the args['zone_layer_file'] that came
-                in through the IUI. We will copy that datasource, and create a version
-                that also contains an "activities count" field which specifies how many
-                activities are performed within each polygon.
-        textfile- A file created every time the model is run listing all variable
-            parameters used during that run. This is created within the
-            make_param_file function. 
+        A raster file named ['workspace_dir']/Output/hu_freq.tif. This depicts the 
+        unweighted frequency of activity within a gridded area or management
+        zone.
+       
+       (Optional) A raster file named ['workspace_dir']/Ouput/hu_impscore.tif. 
+        This depicts the importance scores for each grid cell in the area of 
+        interest. This combines the desired inter or intra activity weighting
+        into one raster.
+
+        A textfile created every time the model is run listing all variable
+        parameters used during that run. This is created within the 
+        make_param_file function. It will be of the form ['workspace_dir]/Output/*. 
 
     Returns nothing.'''
+   
+    #Create the unweighted rasters, since that will be one of the outputs
+    #regardless. However, after they are created, tehre will be two calls-
+    #one to the combine unweighted function, and then the option call for the
+    #weighted raster combination that uses the unweighted pre-created rasters.
+
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     
-    #We need to have two different tracks. One in which the managamenet zones should
-    #be used- in which case, we will only be returning one file, but it will be
-    #constructed differently from the gridded. Or, we would have the standard return,
-    #in which case, we would be rasterizing the shapefile.
-
-    #Make rasters
-    if (args['do_grid']):
-        gridded_rasters(args)
-        
-    #Make a single shape
-    else:
-        zone_shapefiles(args)
-       
-    #This file should be output regardless of the input file.
-    make_param_file(args)
-
-def zone_shapefile(args):
-    '''This function describes all that should be done if we should have a management zoned
-    shapefile. We will have a completely separate set of outputs from the gridded rasters.
-        
-        Input:
-            args- The entire arguments dictionary, as passed in by the overlap_analysis.py
-                module.
-
-        Output:
-            zoned_shape.shp- This is a shapefile output identical to the one passed in, except
-                that it will contain the additional field of activity number per polygon.
-
-        Returns nothing.'''
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-
-    #Want to run through all polygons in the AOI, and see if any intersect or contain
-    #all shapefiles from all other layers. Little bit gnarly in terms of runtime, but
-    #at least doable.
-
-    zoned_shape_old = args['zone_layer_file']
-    layers_dict = args['over_layer_dict']
-
-    path = os.path.join(output_dir, 'zone_shape.shp')
-
-    #This creates a new shapefile that is a copy of the old one, but at the path location
-    #That way we can edit without worrying about changing the Input file.
-    z_copy = zone_shape_old.CopyDataSource(zoned_shape_old, path)
-
-    z_layer = z_copy.GetLayer()
-
-    #Creating a definition for our new activity count field.
-    field_defn = ogr.FieldDefn('ACTIVITY_COUNT', ogr.OFTReal)
-    z_layer.CreateField(field_defn)
-
-    for polygon in z_layer:
-        
-        count = 0
-
-        for activ in layers_dict: 
-            
-            shape_file = layers_dict[activ]
-            layer = shape_file.GetLayer()
-            
-            for element in layer:
-            #If it contains or overlaps
-                count += 1
-
-def gridded_rasters(args):
-
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
-
     aoi_shp_layer = args['zone_layer_file'].GetLayer()
     aoi_rast_file = os.path.join(inter_dir, 'AOI_Raster.tif')
     
-    #Need to figure out what to do with management zones
-    aoi_raster = raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
-                                    int(args['grid_size']), gdal.GDT_Int32, -1, aoi_rast_file,
-                                    args['zone_layer_file'])
+    aoi_raster =  \
+        raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
+                                    int(args['grid_size']), gdal.GDT_Int32, 0,
+                                    aoi_rast_file, args['zone_layer_file'])
+
     aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
     aoi_band.Fill(aoi_nodata)
     
     gdal.RasterizeLayer(aoi_raster, [1], aoi_shp_layer, burn_values=[1])
     
-    #Want to get each interest layer, and rasterize them, then combine them all at
-    #the end. Could do a list of the filenames that we are creating within the
-    #intermediate directory, so that we can access later. Want to pass in the
-    #inter_dir, as well as the list of shapefiles, and the AOI raster to get info from
-    raster_files, raster_names = make_indiv_rasters(inter_dir, args['overlap_files'], aoi_raster)
-    
-    #When we go to actually burn, should have a "0" where there is AOI, not same as nodata
-    activities_uri = os.path.join(output_dir, 'hu_freq.tif')
-    
-    #By putting it within execute, we are able to use execute's own variables, so we can
-    #just use aoi_nodata without having to pass it somehow
-    def get_raster_sum(*activity_pixels):
-        '''For any given pixel, if the AOI covers the pixel, we want to ignore nodata 
-        value activities, and sum all other activities happening on that pixel.
-        
-        Input:
-            *activity_pixels- This expands into a dynamic list of single variables. The 
-                first will always be the AOI pixels. Those following will be a pixel
-                from the overlap rasters that we are looking to combine.
-                
-        Returns:
-            sum_pixel- This is either the aoi_nodata value if the AOI is not turned on
-                in that area, or, if the AOI does cover this pixel, this is the sum of 
-                all activities that are taking place in that area.
-        '''
-        #We have pre-decided that nodata for the activity pixel will produce a different
-        #result from the "no activities within that AOI area" result of 0.
-        
-        aoi_pixel = activity_pixels[0]
-        
-        if aoi_pixel == aoi_nodata:
-            return aoi_nodata
-        
-        sum_pixel = 0
-        
-        for activ in activity_pixels[1::]:
+    #Want to get each interest layer, and rasterize them, then combine them all
+    #at the end. Could do a list of the filenames that we are creating within 
+    #the intermediate directory, so that we can access later.   
+    raster_files, raster_names = make_indiv_rasters(inter_dir, 
+                                    args['overlap_files'], aoi_raster)
 
-            if activ == 1:
-                
-                sum_pixel += 1
-         
-        return sum_pixel   
-        
-    #LOGGER.debug(raster_files)
-    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi = None,
-                                   raster_out_uri = activities_uri, 
-                                   datatype = gdal.GDT_Int32, nodata = aoi_nodata)
-    
-    ####################################################
-    #Do we want to even create the weighted raster if both do_inter and do_intra
-    #are false?
-    
-    #Need to set up dummy var for when inter or intra are available without the other so
-    #that all parameters can be filled in.
+    create_unweighted_raster(output_dir, aoi_raster, raster_files)
+
+    #Need to set up dummy var for when inter or intra are available without the
+    #other so that all parameters can be filled in.
     if (args['do_inter'] or args['do_intra']):
         
         layer_dict = args['over_layer_dict'] if args['do_inter'] else None
@@ -231,92 +114,119 @@ def gridded_rasters(args):
         if not (os.path.exists(weighted_dir)):
             os.makedirs(weighted_dir)
         
-        #Now we want to create a second raster that includes all of the weighting information
-        create_weighted_raster(output_dir, weighted_dir, aoi_raster, layer_dict, 
-                               args['overlap_files'], intra_name, 
-                               args['do_inter'], args['do_intra'], raster_files, raster_names)
-    
+        #Now we want to create a second raster that includes all of the
+        #weighting information
+        create_weighted_raster(output_dir, weighted_dir, aoi_raster, 
+                               layer_dict, args['overlap_files'], 
+                               intra_name, args['do_inter'], 
+                               args['do_intra'], raster_files, raster_names)
 
-def make_param_file(args):
-    ''' This function will output a .txt file that contains the user-selected parameters
-    for this run of the overlap_analysis model.
-    
+def create_unweighted_raster(output_dir, aoi_raster, raster_files):
+    '''This will create the set of unweighted rasters- both the AOI and
+    individual rasterizations of the activity layers. These will all be
+    combined to output a final raster displaying unweighted activity frequency
+    within the area of interest.
+
     Input:
-        args- The entire args dictionary which contains all information passed from the
-            the IUI. 
-    Ouput:
-        textfile- A .txt file output that will contain all user-controlled paramaters
-            that were selected for use with this run of the model.
-
-    Returns nothing.
-    '''
-
-    output_dir = os.path.join(args['workspace_dir'], 'Output')
-
-    textfile  = os.path.join(output_dir, "Parameter_Log_[" + \
-                    datetime.datetime.now().strftime("%Y-%m-%d_%H_%M") +  "].txt")
-    file = open(textfile, "w")
-    
-    list = []
-    list.append("ARGUMENTS \n")
-    list.append("Workspace: " + args['workspace_dir'])
-    list.append("Zone Layer: " + args['zone_layer_file'].GetName())
-    list.append("Gridding Desired?: " + str(args['do_grid']))
-    list.append("Inter-Activity Weighting Desired?: " + str(args['do_inter']))
-    list.append("Intra-Activity Weighting Desired?: " + str(args['do_intra']))
-    
-    list.append("Activity Layers: ")
-    for name in args['overlap_files'].keys():
-        list.append("--- " + name)
-
-    list.append("\nOPTIONAL ARGUMENTS \n")
-
-    if args['do_grid']:
-        list.append("Grid Size: " + str(args['grid_size']))
-
-    if args['do_intra']:
-        list.append("Intra-Activity Field Name: " + args['intra_name'])
-
-    for element in list:
-        file.write(element)
-        file.write("\n")
-
-    file.close()
-    
-def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
-                           layers_dict, intra_name, do_inter, do_intra, raster_files, raster_names):
-    '''This function will create an output raster that takes into account both inter-
-    activity weighting and intra-activity weighting. This will produce a map that looks
-    both at where activities are occurring, and how much people value those activities
-    and areas.
-    
-    Input:
-        out_dir- This is the directory into which our completed raster file should be placed
-            when completed.
-        inter_dir- The directory in which the weighted raster files can be stored.
-        inter_weights_dict- The dictionary that holds the mappings from layer names to
-            the inter-activity weights passed in by CSV. The dictionary key is the string
-            name of each shapefile, minus the .shp extension. This ID maps to a list 
-            containing the two values, with the form being as follows:
-                ({ID: [inter-activity weight, buffer], ...})
-       layers_dict- This dictionary contains all the activity layers that are included
-           in the particular model run. This maps the name of the shapefile (excluding 
-           the .shp extension) to the open datasource itself.
-        intra_name- A string which represents the desired field name in our shapefiles.
-            This field should contain the intra-activity weight for that particular shape.
-        do_inter- A boolean that indicates whether inter-activity weighting is desired.
-        do_intra- A boolean that indicates whether intra-activity weighting is desired.
-        aoi_raster- The dataset for our Area Of Interest. This will be the base map for
-            all following datasets.
-    raster_files- A list of open unweighted raster files created my make_indiv_rasters
-        that begins with the AOI raster. This will be used when intra-activity
-        weighting is not desired.
-    raster_names- A list of file names that goes along with the unweighted raster files.
-        These strings can be used as keys to the other ID-based dictionaries, and will
-        be in the same order as the 'raster_files' list.
+        output_dir- This is the directory in which the final frequency raster will
+            be placed. That file will be named 'hu_freq.tif'.
+        aoi_raster- The rasterized version of the AOI file passed in with
+            args['zone_layer_file']. We will use this within the combination
+            function to determine where to place nodata values.
+        raster_files- The rasterized version of the files passed in through
+            args['over_layer_dict']. Each raster file shows the presence or
+            absence of the activity that it represents.
     Output:
-        weighted_raster- A raster file output that takes into account both inter-activity
-            weights and intra-activity weights.
+        A raster file named ['workspace_dir']/Output/hu_freq.tif. This depicts the 
+        unweighted frequency of activity within a gridded area or management
+        zone.
+
+    Returns nothing. 
+    '''
+    aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)[1]
+    
+    #When we go to actually burn, should have a "0" where there is AOI, not 
+    #same as nodata. Need the 0 for later combination function.
+    activities_uri = os.path.join(output_dir, 'hu_freq.tif')
+    
+    def get_raster_sum(*activity_pixels):
+        '''For any given pixel, if the AOI covers the pixel, we want to ignore 
+        nodata value activities, and sum all other activities happening on that
+        pixel.
+        
+        Input:
+            *activity_pixels- This expands into a dynamic list of single 
+                variables. The first will always be the AOI pixels. Those 
+                following will be a pixel from the overlap rasters that we are 
+                looking to combine.
+                
+        Returns:
+            sum_pixel- This is either the aoi_nodata value if the AOI is not
+                turned on in that area, or, if the AOI does cover this pixel,
+                this is the sum of all activities that are taking place in that
+                area.
+        '''
+        #We have pre-decided that nodata for the activity pixel will produce a 
+        #different result from the "no activities within that AOI area" result 
+        #of 0.
+        
+        aoi_pixel = activity_pixels[0]
+        
+        if aoi_pixel == aoi_nodata:
+            return aoi_nodata
+        
+        sum_pixel = 0
+        
+        for activ in activity_pixels[1::]:
+            if activ == 1:
+                sum_pixel += 1
+         
+        return sum_pixel   
+        
+    raster_utils.vectorize_rasters(raster_files, get_raster_sum, aoi = None,
+                                   raster_out_uri = activities_uri, 
+                                   datatype = gdal.GDT_Int32, 
+                                   nodata = aoi_nodata)
+
+def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
+                           layers_dict, intra_name, do_inter, do_intra, 
+                           raster_files, raster_names):
+    '''This function will create an output raster that takes into account both
+    inter-activity weighting and intra-activity weighting. This will produce a
+    map that looks both at where activities are occurring, and how much people 
+    value those activities and areas.
+    
+    Input:
+        out_dir- This is the directory into which our completed raster file 
+            should be placed when completed.
+        inter_dir- The directory in which the weighted raster files can be stored.
+        inter_weights_dict- The dictionary that holds the mappings from layer 
+            names to the inter-activity weights passed in by CSV. The dictionary
+            key is the string name of each shapefile, minus the .shp extension.
+            This ID maps to a double representing ther inter-activity weight
+            of each activity layer.
+       layers_dict- This dictionary contains all the activity layers that are 
+           included in the particular model run. This maps the name of the 
+           shapefile (excluding the .shp extension) to the open datasource 
+           itself.
+        intra_name- A string which represents the desired field name in our 
+            shapefiles. This field should contain the intra-activity weight for
+            that particular shape.
+        do_inter- A boolean that indicates whether inter-activity weighting is 
+            desired.
+        do_intra- A boolean that indicates whether intra-activity weighting is 
+            desired.
+        aoi_raster- The dataset for our Area Of Interest. This will be the base
+            map for all following datasets.
+    raster_files- A list of open unweighted raster files created by 
+        make_indiv_rasters that begins with the AOI raster. This will be used 
+        when intra-activity weighting is not desired.
+    raster_names- A list of file names that goes along with the unweighted 
+        raster files. These strings can be used as keys to the other ID-based
+        dictionaries, and will be in the same order as the 'raster_files' list.
+    Output:
+        weighted_raster- A raster file output that takes into account both 
+            inter-activity weights and intra-activity weights.
             
     Returns nothing.
     '''
@@ -328,98 +238,102 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             U{i,j}:
                 If do_intra:
                     U{i,j} = X{i,j} / X{max}
-                        X {i,j} = intra-activity weight of activity j in grid cell i
-                        X{max} = The max potential intra-activity weight for all cells
-                            where activity j occurs.
+                        X {i,j} = intra-activity weight of activity j in 
+                            grid cell i
+                        X{max} = The max potential intra-activity weight for all
+                            cells where activity j occurs.
                 Else:
                     U{i,j} = 1 if activity exists, or 0 if it doesn't.
             I{j}:
                 If do_inter:
                     I{j} = Y{j} / Y{max}
                         Y{j} = inter-activity weight of an activity
-                        Y{max} = max inter-activity weight of an activity weight for all
-                            activities.
+                        Y{max} = max inter-activity weight of an activity weight
+                            for all activities.
                 Else:
-                    I{j} = 1
-    '''
-    #LOGGER.debug(":::::")
-    #LOGGER.debug(raster_names)
+                    I{j} = 1'''
 
     #Want to set up vars that will be universal across all pixels first.
     #n should NOT include the AOI, since it is not an interest layer
     n = len(layers_dict)
     outgoing_uri = os.path.join(out_dir, 'hu_impscore.tif') 
-    aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
+    aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)[1]
 
-    #If intra-activity weighting is desired, we need to create a whole new set of values,
-    #where the burn value of each pixel is the attribute value of the polygon that it
-    #resides within. This means that we need the AOI raster, and need to rebuild based on
-    #that, then move on from there. I'm abstracting this to a different file for ease of
-    #reading. It will return a tuple of two lists- the first will be the list of 
-    #rasterized aoi/layers, and the second will be a list of the original file names in
-    #the same order as the layers so that the dictionaries with other weights can be
-    #cross referenced. 
-    weighted_raster_files, weighted_raster_names = make_indiv_weight_rasters(inter_dir,
-                                                                             aoi_raster,
-                                                                             layers_dict,
-                                                                             intra_name)
+    #If intra-activity weighting is desired, we need to create a whole new set 
+    #of values, where the burn value of each pixel is the attribute value of the
+    #polygon that it resides within. This means that we need the AOI raster, and
+    #need to rebuild based on that, then move on from there. I'm abstracting 
+    #this to a different file for ease of reading. It will return a tuple of two
+    #lists- the first will be the list of rasterized aoi/layers, and the second
+    #will be a list of the original file names in the same order as the layers 
+    #so that the dictionaries with other weights can be cross referenced. 
+    weighted_raster_files, weighted_raster_names = \
+        make_indiv_weight_rasters(inter_dir, aoi_raster, layers_dict, 
+                                  intra_name)
       
-    #Need to get the X{max} now, so iterate through the features on a layer, and make a
-    #dictionary that maps the name of the layer to the max potential 
+    #Need to get the X{max} now, so iterate through the features on a layer, and
+    #make a dictionary that maps the name of the layer to the max potential 
     #intra-activity weight
-    max_intra_weights = {}
-    
-    for element in layers_dict:
+    if do_intra:
+        max_intra_weights = {}
         
-        datasource = layers_dict[element]
-        layer = datasource.GetLayer()
-        
-        for feature in layer:
+        for layer_name in layers_dict:
             
-            attribute = feature.items()[intra_name]
+            datasource = layers_dict[layer_name]
+            layer = datasource.GetLayer()
             
-            if (not element in max_intra_weights) or max_intra_weights[element] < attribute:
-                max_intra_weights[element] = attribute
-     
-    #We also need to know the maximum of the inter-activity value weights, but only
-    #if inter-activity weighting is desired at all. If it is not, we don't need this
-    #value, so we can just set it to a None type.
-    max_inter_weight = max(inter_weights_dict.values()) if do_inter == True else None   
+            for feature in layer:
+                
+                attribute = feature.items()[intra_name]
+                
+                try:
+                    max_intra_weights[layer_name] = \
+                        max(attribute, max_intra_weights[layer_name])
+                except KeyError:
+                    max_intra_weights[layer_name] = attribute
+
+    #We also need to know the maximum of the inter-activity value weights, but
+    #only if inter-activity weighting is desired at all. If it is not, we don't
+    #need this value, so we can just set it to a None type.
+    max_inter_weight = None
+    if do_inter:
+        max_inter_weight = max(inter_weights_dict.values())
     
-    #Assuming that inter-activity valuation is desired, whereas intra-activity is not,
-    #we should use the original rasterized layers as the pixels to combine. If, on the
-    #other hand, inter is not wanted, then we should just use 1 in our equation
+    #Assuming that inter-activity valuation is desired, whereas intra-activity 
+    #is not, we should use the original rasterized layers as the pixels to 
+    #combine. If, on the other hand, inter is not wanted, then we should just 
+    #use 1 in our equation.
     
-    def combine_weighted_pixels(*activity_pixels):
+    def combine_weighted_pixels(*pixel_parameter_list):
         
-        aoi_pixel = activity_pixels[0]
+        aoi_pixel = pixel_parameter_list[0]
         
         curr_pix_sum = 0
 
         if aoi_pixel == aoi_nodata:
             return aoi_nodata
 
-
         for i in range(1, n+1):
-            #This will either be a 0 or 1, since the burn value for the unweighted
-            #raster files was a 1.
-            U =  activity_pixels[i]
+            #This will either be a 0 or 1, since the burn value for the 
+            #unweighted raster files was a 1.
+            U =  pixel_parameter_list[i]
             I = None
             if do_inter:
                 layer_name = raster_names[i]
                 Y = inter_weights_dict[layer_name]
-                I = Y / max_inter_weights
+                I = Y / max_inter_weight
             else:
                 I = 1
 
-            #This is coming from the documentation, refer to additional info in the
-            #docstring. n gets cast to a float so that it can be used in division.
+            #This is coming from the documentation, refer to additional info in
+            #the docstring. n gets cast to a float so that it can be used 
+            #in division.
             curr_pix_sum += ((1/float(n)) * U * I)
         return curr_pix_sum    
 
-    def combine_weighted_pixels_intra(*activity_pixels):
+    def combine_weighted_pixels_intra(*pixel_parameter_list):
     
-        aoi_pixel = activity_pixels[0]
+        aoi_pixel = pixel_parameter_list[0]
 
         curr_pix_sum = 0.0
 
@@ -428,11 +342,11 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 
         for i in range(1, n+1):
 
-            #Can assume that if we have gotten here, that intra-activity weighting
-            #is desired. Compute U for that weighting, assuming the raster pixels
-            #are the intra weights.
+            #Can assume that if we have gotten here, that intra-activity 
+            #weighting is desired. Compute U for that weighting, assuming the
+            #raster pixels are the intra weights.
             layer_name = weighted_raster_names[i]
-            X = activity_pixels[i]
+            X = pixel_parameter_list[i]
             X_max = max_intra_weights[layer_name]    
 
             U = X / X_max
@@ -445,59 +359,64 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             else:
                 I = 1
 
-            #This is coming from the documentation, refer to additional info in the
-            #docstring.
-            #n is getting cast to a float so that we can use non-integer division in
-            #the calculations.  
+            #This is coming from the documentation, refer to additional info in
+            #the docstring.
+            #n is getting cast to a float so that we can use non-integer
+            #division in the calculations.  
             curr_pix_sum += ((1/float(n)) * U * I)
         return curr_pix_sum
 
     if do_intra:
-        raster_utils.vectorize_rasters(weighted_raster_files, combine_weighted_pixels_intra,
-                   aoi = None, raster_out_uri = outgoing_uri, 
-                                   datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+        raster_utils.vectorize_rasters(weighted_raster_files, 
+                    combine_weighted_pixels_intra,
+                    aoi = None, raster_out_uri = outgoing_uri, 
+                    datatype = gdal.GDT_Float32, nodata = aoi_nodata)
     else:
         raster_utils.vectorize_rasters(raster_files, combine_weighted_pixels,
                    aoi = None, raster_out_uri = outgoing_uri,
                    datatype = gdal.GDT_Float32, nodata = aoi_nodata)
   
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
-    ''' This is a helper function for create_weighted_raster, which abstracts some of the
-    work for getting the intra-activity weights per pixel to a separate function. This
-    function will take in a list of the activities layers, and using the aoi_raster as a
-    base for the tranformation, will rasterize the shapefile layers into rasters where the
-    burn value is based on a per-pixel intra-activity weight (specified in each polygon on
-    the layer). This function will return a tuple of two lists- the first is a list of the
-    rasterized shapefiles, starting with the aoi. The second is a list of the shapefile
-    names (minus the extension) in the same order as they were added to the first list.
-    This will be used to reference the dictionaries containing the rest of the weighting
-    information for the final weighted raster calculation.
+    ''' This is a helper function for create_weighted_raster, which abstracts 
+    some of the work for getting the intra-activity weights per pixel to a 
+    separate function. This function will take in a list of the activities
+    layers, and using the aoi_raster as a base for the tranformation, will 
+    rasterize the shapefile layers into rasters where the burn value is based on
+    a per-pixel intra-activity weight (specified in each polygon on the layer).
+    This function will return a tuple of two lists- the first is a list of the 
+    rasterized shapefiles, starting with the aoi. The second is a list of the 
+    shapefile names (minus the extension) in the same order as they were added 
+    to the first list. This will be used to reference the dictionaries 
+    containing the rest of the weighting information for the final weighted 
+    raster calculation.
     
     Input:
         dir: The directory into which the weighted rasters should be placed.
-        aoi_raster: The razterized version of the area of interest. This will be used as a
-            basis for all following rasterizations.
-        layers_dict: A dictionary of all shapefiles to be rasterized. The key is the name
-            of the original file, minus the file extension. The value is an open shapefile
-            datasource.
-    intra_name: The string corresponding to the value we wish to pull out of the
-        shapefile layer. This is an attribute of all polygons corresponding to
-        the intra-activity weight of a given shape.
+        aoi_raster: The razterized version of the area of interest. This will be
+            used as a basis for all following rasterizations.
+        layers_dict: A dictionary of all shapefiles to be rasterized. The key is
+            the name of the original file, minus the file extension. The value
+            is an open shapefile datasource.
+        intra_name: The string corresponding to the value we wish to pull out of
+            the shapefile layer. This is an attribute of all polygons 
+            corresponding to the intra-activity weight of a given shape.
             
-    Output:
-        weighted_raster_files: A list of raster versions of the original activity
-            shapefiles. The first file will ALWAYS be the AOI, followed by the rasterized
-            layers.
-        weighted_names: A list of the filenames minus extensions, of the rasterized files
-            in weighted_raster_files. These can be used to reference properties of the 
-            raster files that are located in other dictionaries.
+    Returns:
+        weighted_raster_files: A list of raster versions of the original 
+            activity shapefiles. The first file will ALWAYS be the AOI, followed
+            by the rasterized layers.
+        weighted_names: A list of the filenames minus extensions, of the 
+            rasterized files in weighted_raster_files. These can be used to 
+            reference properties of the raster files that are located in other 
+            dictionaries.
     '''
        
-    #aoi_raster has to be the first so that we can easily pull it out later when we go
-    #to combine them. Will need the aoi_nodata for later as well.
+    #aoi_raster has to be the first so that we can easily pull it out later when
+    #we go to combine them. Will need the aoi_nodata for later as well.
     weighted_raster_files = [aoi_raster]
-    #Inserting 'aoi' as a placeholder so that when I go through the list, I can reference
-    #other indicies without having to convert for the missing first element in names.
+    #Inserting 'aoi' as a placeholder so that when I go through the list, I can
+    #reference other indicies without having to convert for the missing first 
+    #element in names.
     weighted_names = ['aoi']
     
     for element in layers_dict:
@@ -507,16 +426,17 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
         
         outgoing_uri = os.path.join(dir, element + ".tif")
 
-    #Setting nodata value to 0 so that the nodata pixels can be used directly in
-    #calucilations without messing up the weighted total equations for the second
-    #output file.
-        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
-                                0, gdal.GDT_Float32)
+        #Setting nodata value to 0 so that the nodata pixels can be used 
+        #directly in calculations without messing up the weighted total 
+        #equations for the second output file.
+        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 
+                                'GTiff', 0, gdal.GDT_Float32)
         band, nodata = raster_utils.extract_band_and_nodata(dataset)
         
         band.Fill(nodata)
         
-        gdal.RasterizeLayer(dataset, [1], layer, options = ["ATTRIBUTE=%s" %intra_name])
+        gdal.RasterizeLayer(dataset, [1], layer, 
+                                options = ["ATTRIBUTE=%s" %intra_name])
         #this should do something about flushing the buffer
         dataset.FlushCache()
        
@@ -526,49 +446,51 @@ def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     return weighted_raster_files, weighted_names
         
 def make_indiv_rasters(dir, overlap_files, aoi_raster):
-    '''This will pluck each of the files out of the dictionary and create a new raster
-    file out of them. The new file will be named the same as the original shapefile,
-    but with a .tif extension, and will be placed in the intermediate directory that
-    is being passed in as a parameter.
+    '''This will pluck each of the files out of the dictionary and create a new
+    raster file out of them. The new file will be named the same as the original
+    shapefile, but with a .tif extension, and will be placed in the intermediate
+    directory that is being passed in as a parameter.
     
     Input:
-        dir- This is the directory into which our completed raster files should be
-            placed when completed.
-        overlap_files- This is a dictionary containing all of the open shapefiles which
-            need to be rasterized. The key for this dictionary is the name of the 
-            file itself, minus the .shp extension. This key maps to the open shapefile
-            of that name.
-        aoi_raster- The dataset for our Area Of Interest. This will be the base map for
+        dir- This is the directory into which our completed raster files should
+            be placed when completed.
+        overlap_files- This is a dictionary containing all of the open 
+            shapefiles which need to be rasterized. The key for this dictionary
+            is the name of the file itself, minus the .shp extension. This key 
+            maps to the open shapefile of that name.
+        aoi_raster- The dataset for our AOI. This will be the base map for
             all following datasets.
             
     Returns:
-        raster_files- This is a list of the datasets that we want to sum. The first will
-            ALWAYS be the AOI dataset, and the rest will be the variable number of other
-            datasets that we want to sum.
+        raster_files- This is a list of the datasets that we want to sum. The 
+            first will ALWAYS be the AOI dataset, and the rest will be the 
+            variable number of other datasets that we want to sum.
+        raster_names- This is a list of layer names that corresponds to the
+            files in 'raster_files'. The first layer is guaranteed to be the
+            AOI, but all names after that will be in the same order as the
+            files so that it can be used for indexing later.
     '''    
-    #aoi_raster has to be the first so that we can use it as an easy "weed out" for
-    #pixel summary later
+    #aoi_raster has to be the first so that we can use it as an easy "weed out"
+    #for pixel summary later
     raster_files = [aoi_raster]
     raster_names = ['aoi']
     
-    print overlap_files
-    
     #Remember, this defaults to element being the keys of the dictionary
-    for element in overlap_files:
+    for element, datasource in overlap_files.iteritems():
 
         datasource = overlap_files[element]
         layer = datasource.GetLayer()       
 
         outgoing_uri = os.path.join(dir, element + ".tif")        
         
-        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 'GTiff',
-                                -1, gdal.GDT_Int32)
+        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 
+                          'GTiff', 0, gdal.GDT_Int32)
         band, nodata = raster_utils.extract_band_and_nodata(dataset)
         
         band.Fill(nodata)
         
-        overlap_burn_value = 1
-        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1])
+        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1], 
+                                        options=['ALL_TOUCHED=TRUE'])
         #this should do something about flushing the buffer
         dataset.FlushCache()
         

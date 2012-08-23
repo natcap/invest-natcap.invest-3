@@ -225,23 +225,12 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         
         returns a single band current_dataset"""
 
-    LOGGER.debug('starting vectorize_rasters')
+    LOGGER.info('starting vectorize_rasters')
 
     #We need to ensure that the type of nodata is the same as the raster type so
     #we don't encounter bugs where we return an int nodata for a float raster or
     #vice versa
-    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
-                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32]
-    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32, 
-                        gdal.GDT_Float64, gdal.GDT_Float32]
-    gdal_bool_types = [gdal.GDT_Byte]
-
-    if datatype in gdal_int_types:
-        nodata = np.int(nodata)
-    if datatype in gdal_float_types:
-        nodata = np.float(nodata)
-    if datatype in gdal_bool_types:
-        nodata = np.bool(nodata)
+    nodata = gdal_cast(nodata, datatype)
 
     #create a new current_dataset with the minimum resolution of dataset_list and
     #bounding box that contains aoi_box
@@ -275,8 +264,6 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #6) pixel height in y direction 
     out_gt = [aoi_box[0], pixel_width, 0.0, aoi_box[1], 0.0, pixel_height]
 
-    LOGGER.debug("out_gt %s" % str(out_gt))
-
     #The output projection will be the same as any in dataset_list, so just take
     #the first one.
     out_projection = dataset_list[0].GetProjection()
@@ -290,7 +277,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
 
     #Build the new output dataset and reference the band for later.  the '1'
     #means only 1 output band.
-    LOGGER.debug("out_n_cols, out_n_rows %s %s" % (out_n_cols, out_n_rows))
+    LOGGER.info("Output dataset is a %s X %s raster" % (out_n_cols, out_n_rows))
     out_dataset = new_raster(out_n_cols, out_n_rows, out_projection,
         out_gt, format, nodata, datatype, 1, output_uri)
     out_band = out_dataset.GetRasterBand(1)
@@ -339,7 +326,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         all_equal = all_equal and sizes.count(sizes[0]) == len(sizes)
 
     if all_equal:
-        LOGGER.debug("All input rasters are equal size, not interpolating and vectorizing directly")
+        LOGGER.info("All input rasters are equal size, not interpolating and vectorizing directly")
 
         #Loop over each row in out_band
         n_cols = mask_dataset_band.XSize
@@ -360,6 +347,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         return out_dataset
 
     #Otherwise they're misaligned and we need to do lots of interpolation
+    LOGGER.info("Input rasters are misaligned/different sizes and needs some expensive interpolation")
 
     #Loop over each row in out_band
     for out_row_index in range(out_band.YSize):
@@ -577,7 +565,6 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
     if aoi != None:
         aoi_layer = aoi.GetLayer(0)
         aoi_extent = aoi_layer.GetExtent()
-        LOGGER.debug("aoi_extent %s" % (str(aoi_extent)))
         bounding_box = [max(aoi_extent[0], bounding_box[0]),
                        min(aoi_extent[3], bounding_box[1]),
                        min(aoi_extent[1], bounding_box[2]),
@@ -1019,13 +1006,13 @@ def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
 def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
     """Creates a raster of accumulated flow to each cell.
     
-        flow_accumulation_data - (input) A flow accumulation dataset
+        flow_accumulation_data - (input) A flow accumulation dataset of type
+            floating point
         flow_threshold - (input) a number indicating the threshold to declare
             a pixel a stream or no
         stream_uri - (input) the uri of the output stream dataset
         
         returns stream dataset"""
-
 
     stream_dataset = new_raster_from_base(flow_accumulation_dataset, 
         stream_uri, 'GTiff', 255, gdal.GDT_Byte)
@@ -1038,11 +1025,13 @@ def stream_threshold(flow_accumulation_dataset, flow_threshold, stream_uri):
     flow_accumulation_array = flow_accumulation_band.ReadAsArray()
 
     stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array >= flow_threshold)] = 1
+                     (flow_accumulation_array >= float(flow_threshold))] = 1
     stream_array[(flow_accumulation_array != flow_accumulation_nodata) * \
-                     (flow_accumulation_array < flow_threshold)] = 0
+                     (flow_accumulation_array < float(flow_threshold))] = 0
 
     stream_band.WriteArray(stream_array)
+    stream_array = None
+    stream_band = None
 
     return stream_dataset
 
@@ -1120,6 +1109,8 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
         returns the clipped dataset that lives at out_dataset_uri"""
 
     band, nodata = extract_band_and_nodata(source_dataset)
+
+    LOGGER.warn(nodata)
 
     def op(x):
         return x
@@ -1231,3 +1222,47 @@ def create_rat(dataset, attr_dict, key_name, value_name):
     band.SetDefaultRAT(rat)
 
     return dataset
+
+def get_raster_properties(dataset):
+    """Get the width, height, X size, and Y size of the dataset and return the
+        values in a dictionary. 
+        *This function can be expanded to return more properties if needed*
+
+       dataset - a GDAL raster dataset to get the properties from
+        
+       returns - a dictionary with the properties stored under relevant keys.
+           The current list of things returned is:
+           width (w-e pixel resolution), height (n-s pixel resolution), 
+           XSize, YSize
+    """
+    dataset_dict = {}
+    gt = dataset.GetGeoTransform()
+    dataset_dict['width'] = float(gt[1])
+    dataset_dict['height'] = float(gt[5])
+    dataset_dict['x_size'] = dataset.GetRasterBand(1).XSize    
+    dataset_dict['y_size'] = dataset.GetRasterBand(1).YSize    
+    LOGGER.debug('Raster_Properties : %s', dataset_dict)
+    return dataset_dict
+
+def gdal_cast(value, gdal_type):
+    """Cast value to the given gdal type.
+
+        value - some raw python value
+        gdal_type - one of: gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
+            gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32, gdal.GDT_CFloat64, 
+            gdal.GDT_CFloat32, gdal.GDT_Float64, gdal.GDT_Float32, gdal.GDT_Byte
+
+        return gdal_type(value) (basterdized cast notation)"""
+
+    gdal_int_types = [gdal.GDT_CInt16, gdal.GDT_CInt32, gdal.GDT_Int16, 
+                      gdal.GDT_Int32, gdal.GDT_UInt16, gdal.GDT_UInt32, 
+                      gdal.GDT_Byte]
+    gdal_float_types = [gdal.GDT_CFloat64, gdal.GDT_CFloat32, 
+                        gdal.GDT_Float64, gdal.GDT_Float32]
+
+    if gdal_type in gdal_int_types:
+        value = np.int(value)
+    if gdal_type in gdal_float_types:
+        value = np.float(value)
+
+    return value

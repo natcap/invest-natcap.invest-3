@@ -30,7 +30,7 @@ def execute(args):
         args['threats_uri'] - a uri to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
-            following names: 'THREAT','MAX_DIST','WEIGHT','DECAY' (required).
+            following names: 'THREAT','MAX_DIST','WEIGHT' (required).
         args['access_uri'] - a uri to an input polygon shapefile containing
             data on the relative protection against threats (optional)
         args['sensitivity_uri'] - a uri to an input CSV file of LULC types,
@@ -39,7 +39,7 @@ def execute(args):
         args['half_saturation_constant'] - a python integer that determines
             the spread and central tendency of habitat quality scores 
             (required)
-        args['results_suffix'] - a python string that will be inserted into all
+        args['suffix'] - a python string that will be inserted into all
             raster uri paths just before the file extension.
 
         returns nothing."""
@@ -54,7 +54,7 @@ def execute(args):
     # if the user has not provided a results suffix, assume it to be an empty
     # string.
     try:
-        suffix = args['results_suffix']
+        suffix = '_' + args['suffix']
     except:
         suffix = ''
 
@@ -71,8 +71,16 @@ def execute(args):
 
     # if the input directory is not present in the workspace then throw an
     # exception because the threat rasters can't be located.
-    input_dir = os.path.join(workspace, 'input')
-    if not os.path.isdir(input_dir):
+    input_dir_low = os.path.join(workspace, 'input')
+    input_dir_up = os.path.join(workspace, 'Input')
+    input_dir = None
+
+    for input_dir_case in [input_dir_low, input_dir_up]:
+        if os.path.isdir(input_dir_case):
+            input_dir = input_dir_case
+            break
+    
+    if input_dir is None:
         raise Exception('The input directory where the threat rasters ' + \
                         'should be located cannot be found.')
     
@@ -231,12 +239,14 @@ def threat_names_match(threat_dict, sens_dict, prefix):
         lulc.
 
         threat_dict - a dictionary representing the threat table:
-            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7','DECAY':'0'},
-             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3','DECAY':'0'},
+            {'crp':{'THREAT':'crp','MAX_DIST':'8.0','WEIGHT':'0.7'},
+             'urb':{'THREAT':'urb','MAX_DIST':'5.0','WEIGHT':'0.3'},
              ... }
         sens_dict - a dictionary representing the sensitivity table:
-            {'1':{'LULC':'1','NAME':'Residential','HABITAT':'1','L_crp':'0.4','L_urb':'0.45'...},
-             '11':{'LULC':'11','NAME':'Urban','HABITAT':'1','L_crp':'0.6','L_urb':'0.3'...},
+            {'1':{'LULC':'1', 'NAME':'Residential', 'HABITAT':'1', 
+                  'L_crp':'0.4', 'L_urb':'0.45'...},
+             '11':{'LULC':'11', 'NAME':'Urban', 'HABITAT':'1', 
+                   'L_crp':'0.6', 'L_urb':'0.3'...},
              ...}
 
         prefix - a string that specifies the prefix to the threat names that is

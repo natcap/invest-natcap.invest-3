@@ -453,7 +453,7 @@ def flowDirectionD8(dem, bounding_box, flow):
                                      *bounding_box[0:2])
     free(demPixels)
     
-    distanceRaster = newRasterFromBase(flow,'distance.tiff', 'GTiff', -5.0,
+    distanceRaster = newRasterFromBase(flow,'', 'MEM', -5.0,
         gdal.GDT_Float32)
     distanceRaster.GetRasterBand(1).WriteArray(distanceToDrain.transpose(),
                                                *bounding_box[0:2])
