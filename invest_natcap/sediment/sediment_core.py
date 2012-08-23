@@ -884,15 +884,19 @@ def sum_over_region(dataset, aoi, mask_path = None, mask_field_value = None):
     else:
         raster_type = 'GTiff'
 
+    mask_nodata = 255
     mask_dataset = raster_utils.new_raster_from_base(dataset, mask_path, 
-        raster_type, 255, gdal.GDT_Byte)
+        raster_type, mask_nodata, gdal.GDT_Byte)
     mask_band = mask_dataset.GetRasterBand(1)
+    mask_band.Fill(mask_nodata)
 
-    #Fill the  mask with 0's then add 1's everywhere there is a polygon
-    mask_band.Fill(0)
+    #Fill the mask with nodatas then add 1's everywhere there is a polygon
     for layer_id in xrange(aoi.GetLayerCount()):
         layer = aoi.GetLayer(layer_id)
         rasterize_options = ["ALL_TOUCHED=TRUE"]
+        
+        #if the mask field parameter is defined we'll burn the value of the
+        #polygon field into the raster to filter out later
         if mask_field_value is not None:
             rasterize_options.append("ATTRIBUTE=%s" % mask_field_value[0])
         gdal.RasterizeLayer(mask_dataset, [1], layer, burn_values=[1],
@@ -900,19 +904,22 @@ def sum_over_region(dataset, aoi, mask_path = None, mask_field_value = None):
 
     running_sum = 0.0
 
-    #Loop through each row, set nodata values to 0, multiply with mask
-    #and sum!
+    #Loop through each row, set nodata values or mask field values to 0
     for row_index in range(band.YSize):
         row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
         row_array[row_array == nodata] = 0
 
-        #Mask out the field value based on the attribute value
-        if mask_field_value is not None:
-            row_array[row_array != mask_field_value[1]] = 0
-            row_array[row_array == mask_field_value[1]] = 1
-
         mask_array = mask_band.ReadAsArray(0, row_index, band.XSize, 1)
-        running_sum += np.sum(row_array*mask_array)
+        if mask_field_value is not None:
+            #Mask out the field value based on the attribute value
+            valid_mask = mask_array == mask_field_value[1]
+        else:
+            #if there is no field value than nodata is the only guide
+            valid_mask = mask_array != mask_nodata
+
+        #Set everything that's not valid to 0, then sum
+        row_array[~valid_mask] = 0
+        running_sum += np.sum(row_array)
 
     return running_sum
 
@@ -969,10 +976,10 @@ def generate_report(sediment_export_dataset, sediment_retained_dataset,
         #Dump the calculated values to the output row
         #sediment export
         sed_export = \
-            sum_over_region(sediment_export_dataset, watershed_layer, 
+            sum_over_region(sediment_export_dataset, watershed_aoi, 
             mask_path = None, mask_field_value = (field_name, field_value))
         sed_retained = \
-            sum_over_region(sediment_retained_dataset, watershed_layer, 
+            sum_over_region(sediment_retained_dataset, watershed_aoi, 
             mask_path = None, mask_field_value = (field_name, field_value))
 
         value_line += str(sed_export) + ','

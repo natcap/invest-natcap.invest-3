@@ -1,19 +1,16 @@
+'''This is the core module for the management zone analysis portion of the
+Overlap Analysis model.'''
+
 import os
-import math
 import logging
-import operator
-import datetime
 
 from osgeo import ogr
-from osgeo import gdal
-from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('overlap_analysis_mz_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
-
     '''This is the core module for the management zone model, which was
     extracted from the overlap analysis model. This particular one will take
     in a shapefile conatining a series of AOI's, and a folder containing
@@ -42,11 +39,10 @@ def execute(args):
      Returns nothing.'''
 
     output_dir = os.path.join(args['workspace_dir'], 'Output')
-    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
 
-    #Want to run through all polygons in the AOI, and see if any intersect or contain
-    #all shapefiles from all other layers. Little bit gnarly in terms of runtime, but
-    #at least doable.
+    #Want to run through all polygons in the AOI, and see if any intersect or
+    #contain all shapefiles from all other layers. Little bit gnarly in terms 
+    #of runtime, but at least doable.
     
     driver = ogr.GetDriverByName('ESRI Shapefile')
     zone_shape_old = args['zone_layer_file']
@@ -56,12 +52,13 @@ def execute(args):
     if os.path.isfile(path):
         os.remove(path)
     
-    #This creates a new shapefile that is a copy of the old one, but at the path location
-    #That way we can edit without worrying about changing the Input file.
+    #This creates a new shapefile that is a copy of the old one, but at the path
+    #location. That way we can edit without worrying about changing the Input
+    #file.
     mz_freq_shape = driver.CopyDataSource(zone_shape_old, path)
-    LOGGER.debug(mz_freq_shape)
 
     mz_freq_layer = mz_freq_shape.GetLayer()
+    LOGGER.debug(mz_freq_layer)
 
     #Creating a definition for our new activity count field.
     field_defn = ogr.FieldDefn('ACTIV_CNT', ogr.OFTReal)
@@ -83,13 +80,14 @@ def execute(args):
             for feature in activ_layer:
                 #If it contains or overlaps
                 activ_geom = feature.GetGeometryRef()
-
+                
                 if zone_geom.Contains(activ_geom) or zone_geom.Overlaps(activ_geom):
                     activity_count += 1
                     break
 
-            layer.ResetReading()
+            activ_layer.ResetReading()
 
         mz_polygon.SetField('ACTIV_CNT', activity_count)
         
         mz_freq_layer.SetFeature(mz_polygon)
+

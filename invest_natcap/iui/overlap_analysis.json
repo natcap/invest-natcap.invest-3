@@ -65,7 +65,7 @@
                     "args_id" : "intra_name",
                     "type": "text",
                     "label": "Intra-Activity Attribute Name",
-                    "defaultValue": "RIS",
+                    "defaultValue": "RI",
                     "required": false,
                     "requiredIf": ["intra"],
                     "enabledBy": "intra",
