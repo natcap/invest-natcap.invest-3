@@ -84,7 +84,7 @@ def execute(args):
     
     aoi_raster =  \
         raster_utils.create_raster_from_vector_extents(int(args['grid_size']), 
-                                    int(args['grid_size']), gdal.GDT_Int32, -1,
+                                    int(args['grid_size']), gdal.GDT_Int32, 0,
                                     aoi_rast_file, args['zone_layer_file'])
 
     aoi_band, aoi_nodata = raster_utils.extract_band_and_nodata(aoi_raster)
@@ -484,7 +484,7 @@ def make_indiv_rasters(dir, overlap_files, aoi_raster):
         outgoing_uri = os.path.join(dir, element + ".tif")        
         
         dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 
-                          'GTiff', -1, gdal.GDT_Int32)
+                          'GTiff', 0, gdal.GDT_Int32)
         band, nodata = raster_utils.extract_band_and_nodata(dataset)
         
         band.Fill(nodata)
