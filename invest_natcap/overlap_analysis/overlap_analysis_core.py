@@ -274,22 +274,23 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #Need to get the X{max} now, so iterate through the features on a layer, and
     #make a dictionary that maps the name of the layer to the max potential 
     #intra-activity weight
-    max_intra_weights = {}
-    
-    for layer_name in layers_dict:
+    if do_intra:
+        max_intra_weights = {}
         
-        datasource = layers_dict[layer_name]
-        layer = datasource.GetLayer()
-        
-        for feature in layer:
+        for layer_name in layers_dict:
             
-            attribute = feature.items()[intra_name]
+            datasource = layers_dict[layer_name]
+            layer = datasource.GetLayer()
             
-            try:
-                max_intra_weights[layer_name] = \
-                    max(attribute, max_intra_weights[layer_name])
-            except KeyError:
-                max_intra_weights[layer_name] = attribute
+            for feature in layer:
+                
+                attribute = feature.items()[intra_name]
+                
+                try:
+                    max_intra_weights[layer_name] = \
+                        max(attribute, max_intra_weights[layer_name])
+                except KeyError:
+                    max_intra_weights[layer_name] = attribute
 
     #We also need to know the maximum of the inter-activity value weights, but
     #only if inter-activity weighting is desired at all. If it is not, we don't
