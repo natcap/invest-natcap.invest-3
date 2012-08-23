@@ -242,6 +242,7 @@ def biophysical(args):
             # and compound it to the sum. so at the end of this loop we will
             # have computed the degradation for each threat on the pixel and
             # summed them together
+
             for index in range(len_list / 2):
                 step = index * 2
                 sum_degradation += (raster[step] * raster[step + 1] * \
