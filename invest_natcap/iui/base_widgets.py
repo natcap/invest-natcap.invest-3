@@ -1158,7 +1158,7 @@ class FileEntry(DynamicText):
 
         # Expand a '~' in the parameter text if it is present.  Otherwise, this
         # returns the path as it was passed in.
-        text = os.path.expanduser(text)
+        text = os.path.abspath(os.path.expanduser(text))
 
         if os.path.isabs(text):
             self.textField.setText(text)
