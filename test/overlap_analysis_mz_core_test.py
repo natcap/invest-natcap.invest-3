@@ -8,11 +8,11 @@ import logging
 import invest_test_core
 
 from osgeo import ogr
+
 from invest_natcap.overlap_analysis import overlap_analysis_mz_core
-from invest_natcap.overlap_analysis import overlap_analysis_mz
+from invest_natcap.overlap_analysis import overlap_core
 
 LOGGER = logging.getLogger('overlap_analysis_mz_core_test')
-
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -27,7 +27,8 @@ class TestMZCore(unittest.TestCase):
         
         files_loc = './data/test_out/Overlap/Input/Test_Activity'
 
-        files_dict = overlap_analysis_mz.get_files_dict(files_loc)
+        files_dict = overlap_core.get_files_dict(files_loc)
+        
 
         args['over_layer_dict'] = files_dict
 
