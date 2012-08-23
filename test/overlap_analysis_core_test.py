@@ -10,7 +10,9 @@ import logging
 import invest_test_core
 
 from invest_natcap.overlap_analysis import overlap_analysis_core
+from invest_natcap.overlap_analysis import overlap_core
 from invest_natcap.overlap_analysis import overlap_analysis
+
 from osgeo import ogr
 
 LOGGER = logging.getLogger('overlap_analysis_core_test')
@@ -45,7 +47,7 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
         files_loc = './data/test_out/Overlap/Input/Test_Activity'
 
-        files_dict = overlap_analysis.get_files_dict(files_loc)
+        files_dict = overlap_core.get_files_dict(files_loc)
 
         self.args['overlap_files'] = files_dict
      
@@ -73,7 +75,7 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
         files_loc = './data/test_out/Overlap/Input/Test_Activity'
 
-        files_dict = overlap_analysis.get_files_dict(files_loc)
+        files_dict = overlap_core.get_files_dict(files_loc)
 
         self.args['overlap_files'] = files_dict
      
@@ -99,7 +101,7 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
         files_loc = './data/test_out/Overlap/Input/Test_Activity'
 
-        files_dict = overlap_analysis.get_files_dict(files_loc)
+        files_dict = overlap_core.get_files_dict(files_loc)
 
         self.args['overlap_files'] = files_dict
      
@@ -115,7 +117,7 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
         files_loc = './data/test_out/Overlap/Input/Test_Activity'
 
-        files_dict = overlap_analysis.get_files_dict(files_loc)
+        files_dict = overlap_core.get_files_dict(files_loc)
 
         self.args['overlap_files'] = files_dict
      

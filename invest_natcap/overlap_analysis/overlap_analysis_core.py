@@ -96,7 +96,7 @@ def execute(args):
     #at the end. Could do a list of the filenames that we are creating within 
     #the intermediate directory, so that we can access later.   
     raster_files, raster_names = make_indiv_rasters(inter_dir, 
-                                    args['over_layer_dict'], aoi_raster)
+                                    args['overlap_files'], aoi_raster)
 
     create_unweighted_raster(output_dir, aoi_raster, raster_files)
 
