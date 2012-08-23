@@ -56,9 +56,9 @@ def execute(args):
     #location. That way we can edit without worrying about changing the Input
     #file.
     mz_freq_shape = driver.CopyDataSource(zone_shape_old, path)
-    LOGGER.debug(mz_freq_shape)
 
     mz_freq_layer = mz_freq_shape.GetLayer()
+    LOGGER.debug(mz_freq_layer)
 
     #Creating a definition for our new activity count field.
     field_defn = ogr.FieldDefn('ACTIV_CNT', ogr.OFTReal)
@@ -80,13 +80,14 @@ def execute(args):
             for feature in activ_layer:
                 #If it contains or overlaps
                 activ_geom = feature.GetGeometryRef()
-
+                
                 if zone_geom.Contains(activ_geom) or zone_geom.Overlaps(activ_geom):
                     activity_count += 1
                     break
 
-            mz_freq_layer.ResetReading()
+            activ_layer.ResetReading()
 
         mz_polygon.SetField('ACTIV_CNT', activity_count)
         
         mz_freq_layer.SetFeature(mz_polygon)
+
