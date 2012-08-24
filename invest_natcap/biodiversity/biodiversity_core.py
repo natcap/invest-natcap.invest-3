@@ -68,7 +68,6 @@ def biophysical(args):
     # If access_lyr: convert to raster, if value is null set to 1, 
     # else set to value
     try:
-        access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
         access_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
         access_base = \
@@ -76,13 +75,14 @@ def biophysical(args):
                 'GTiff', out_nodata, gdal.GDT_Float32)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
-        access_base.GetRasterBand(1).Fill(1)
+        access_base.GetRasterBand(1).Fill(1.0)
+        access_shape = args['access_shape']
         access_raster = \
                 make_raster_from_shape(access_base, access_shape, 'ACCESS')
     except KeyError:
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
-        access_raster = None
+        access_raster = access_base
 
     # calculate the weight sum which is the sum of all the threats weights
     weight_sum = 0.0
@@ -222,13 +222,8 @@ def biophysical(args):
                 returns - the total degradation score for the pixel"""
 
             len_list = len(raster)
-            
-            # we need to know if access_raster was provided as part of the
-            # input and if so then get that value
-            if access_raster is None:
-                access = 1.0
-            else: 
-                access = raster[-1]
+            # get the access value 
+            access = raster[-1]
             
             sum_degradation = 0.0
             
@@ -249,11 +244,10 @@ def biophysical(args):
                                     weight_list[index])
             return sum_degradation * access
 
-
-        # if the access_raster is not None add it to the degradation_rasters
-        # so it can be used in the total_degradation operation
-        if access_raster is not None:
-            degradation_rasters.append(access_raster)
+        # add the access_raster onto the end of the collected raster list. The
+        # access_raster will be values from the shapefile if provided or a
+        # raster filled with all 1's if not
+        degradation_rasters.append(access_raster)
         
         deg_sum_uri = \
             os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
