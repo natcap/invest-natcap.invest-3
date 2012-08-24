@@ -59,14 +59,6 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
         overlap_analysis_core.execute(self.args)
 
-        #now, using the workspace_dir folder that we have selected, need to retrieve it and compare
-        #the two output files against hand-calculated rasters? or somehow make raster myself.
-        
-        #in the meantime, get the created files.
-
-        unweighted_output = os.path.join(output_dir, 'hu_freq.tif')
-        weighted_output = os.path.join(output_dir, 'hu_impscore.tif')
-
     def test_no_weighted(self):
 
         self.args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_aoi.shp')
@@ -83,14 +75,6 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
         overlap_analysis_core.execute(self.args)
 
-        #now, using the workspace_dir folder that we have selected, need to retrieve it and compare
-        #the two output files against hand-calculated rasters? or somehow make raster myself.
-        
-        #in the meantime, get the created files.
-
-        unweighted_output = os.path.join(output_dir, 'hu_freq.tif')
-        weighted_output = os.path.join(output_dir, 'hu_impscore.tif')
-       
 
     def test_only_intra(self):
 
@@ -128,4 +112,5 @@ class TestOverlapAnalysisCore(unittest.TestCase):
         output_dir = os.path.join(self.args['workspace_dir'], 'Output')
 
         overlap_analysis_core.execute(self.args)
-        
+    
+

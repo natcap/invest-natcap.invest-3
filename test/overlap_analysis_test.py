@@ -28,8 +28,7 @@ class TestOverlapAnalysis(unittest.TestCase):
 
         args['workspace_dir'] = './data/overlap_analysis'
         args['zone_layer_loc'] = './data/overlap_analysis/AOI_WCVI.shp'
-        args['do_grid'] = True
-        args['grid_size'] = 1000
+        args['grid_size'] = 500 
         args['overlap_data_dir_loc'] = './data/overlap_analysis/FisheriesLayers_RI'
         args['overlap_layer_tbl'] = './data/overlap_analysis/Fisheries_Inputs.csv'
         args['do_inter'] = True
@@ -39,13 +38,9 @@ class TestOverlapAnalysis(unittest.TestCase):
         self.args = args
         
     def test_execute(self):
-        
+
+        #This just tests that OA doesn't fail.     
         overlap_analysis.execute(self.args)
-        
-        output_dir = os.path.join(self.args['workspace_dir'], 'Output')
-        
-        #Want to get the file with the .tif extension, and compare it to a pre-made one.
-        #The question is which to compare it to.
         
     def test_format_over_table(self):
         
@@ -70,3 +65,18 @@ class TestOverlapAnalysis(unittest.TestCase):
                         
             else:
                 self.fail("Element %s is not a key in the test-created table.", element)
+
+    def test_reg_default_data(self):
+
+        overlap_analysis.execute(self.args)
+
+        output_dir = os.path.join(self.args['workspace_dir'], 'Output')
+
+        unweighted_output = os.path.join(output_dir, 'hu_freq.tif')
+        weighted_output = os.path.join(output_dir, 'hu_impscore.tif')
+        
+        reg_unweighted = './data/overlap_analysis_regression_data/hu_freq.tif'
+        reg_weighted ='./data/overlap_analysis_regression_data/hu_impscore.tif'
+
+        assertTwoDatasetEqualURI(self, unweighted_output, reg_unweighted)
+        assertTwoDatasetEqualURI(self, weighted_output, reg_weighted)
