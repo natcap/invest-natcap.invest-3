@@ -536,31 +536,28 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
     
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
-    attr_dict[out_nodata] = {field:float(out_nodata)}
     key_raster_nodata = key_raster.GetRasterBand(1).GetNoDataValue()
-    attr_dict[str(int(key_raster_nodata))] = {field:float(out_nodata)}
+    attr_dict[str(key_raster_nodata)] = {field:float(out_nodata)}
 
+    # create a more concise dictionary where the keys are converted to integers
+    # which pair directly with the value we are interested in. This saves times
+    # in the vectorized operation of casting
     int_attr_dict = {}
     for key in attr_dict:
         int_attr_dict[int(key)] = attr_dict[key][field]
 
-
-
     def vop(key):
         """Operation passed to numpy function vectorize that uses 'key' as the 
-            key to the local dictionary 'attr_dict'. Returns the value in place
-            of the key for the new raster
+            key to the local dictionary 'int_attr_dict'. Returns the value in 
+            place of the key for the new raster
            
-            key - a float or int or string from the local raster 
-                'key_raster' that is used to look up a value in the 
-                dictionary 'attr_dict'
+            key - an int from the local raster 'key_raster' that is used to 
+                look up a value in the dictionary 'int_attr_dict'
 
-           returns - the 'field' value corresponding to the 'key'. If 'key' is
+           returns - the value paired to the 'key'. If 'key' is
                not found then it raises an exception if raise_error is true or
                simply returns out_nodata if raise_error is false
         """
-
-
         try:
             return int_attr_dict[key]
         except KeyError:
@@ -568,10 +565,8 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
                 raise LulcCodeError(error_message + str(key))
             return out_nodata
 
-    LOGGER.debug('Starting vectorize rasters')
-
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
            raster_out_uri=out_uri, nodata=out_nodata)
 
-    LOGGER.debug('Leaving map_rater_to_dict_values')
+    LOGGER.debug('Leaving map_raster_to_dict_values')
     return out_raster
