@@ -78,5 +78,5 @@ class TestOverlapAnalysis(unittest.TestCase):
         reg_unweighted = './data/overlap_analysis_regression_data/hu_freq.tif'
         reg_weighted ='./data/overlap_analysis_regression_data/hu_impscore.tif'
 
-        assertTwoDatasetEqualURI(self, unweighted_output, reg_unweighted)
-        assertTwoDatasetEqualURI(self, weighted_output, reg_weighted)
+        invest_test_core.assertTwoDatasetEqualURI(self, unweighted_output, reg_unweighted)
+        invest_test_core.assertTwoDatasetEqualURI(self, weighted_output, reg_weighted)

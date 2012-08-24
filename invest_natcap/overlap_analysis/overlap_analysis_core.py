@@ -218,12 +218,12 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
             desired.
         aoi_raster- The dataset for our Area Of Interest. This will be the base
             map for all following datasets.
-    raster_files- A list of open unweighted raster files created by 
-        make_indiv_rasters that begins with the AOI raster. This will be used 
-        when intra-activity weighting is not desired.
-    raster_names- A list of file names that goes along with the unweighted 
-        raster files. These strings can be used as keys to the other ID-based
-        dictionaries, and will be in the same order as the 'raster_files' list.
+        raster_files- A list of open unweighted raster files created by 
+            make_indiv_rasters that begins with the AOI raster. This will be used 
+            when intra-activity weighting is not desired.
+        raster_names- A list of file names that goes along with the unweighted 
+            raster files. These strings can be used as keys to the other ID-based
+            dictionaries, and will be in the same order as the 'raster_files' list.
     Output:
         weighted_raster- A raster file output that takes into account both 
             inter-activity weights and intra-activity weights.
@@ -267,8 +267,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     #lists- the first will be the list of rasterized aoi/layers, and the second
     #will be a list of the original file names in the same order as the layers 
     #so that the dictionaries with other weights can be cross referenced. 
-    weighted_raster_files, weighted_raster_names = \
-        make_indiv_weight_rasters(inter_dir, aoi_raster, layers_dict, 
+    if do_intra:
+        weighted_raster_files, weighted_raster_names = \
+            make_indiv_weight_rasters(inter_dir, aoi_raster, layers_dict, 
                                   intra_name)
       
     #Need to get the X{max} now, so iterate through the features on a layer, and
