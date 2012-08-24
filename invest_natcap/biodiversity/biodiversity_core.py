@@ -103,10 +103,9 @@ def biophysical(args):
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
         degradation_rasters = []
+       
+        # a list to keep track of the normalized weight for each threat
         weight_list = []
-        # intitialize a list to store raster nodata values that correspond
-        # to the rasters stored in 'degradation_rasters' above
-        deg_adjusted_nodata_list = []
         
         # variable to indicate whether we should break out of calculations
         # for a land cover because a threat raster was not found
@@ -253,6 +252,7 @@ def biophysical(args):
             os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
 
         LOGGER.debug('Starting vectorize on total_degradation') 
+        
         sum_deg_raster = \
             raster_utils.vectorize_rasters(degradation_rasters, \
                 total_degradation, raster_out_uri=deg_sum_uri, \
@@ -296,10 +296,12 @@ def biophysical(args):
         
         quality_uri = \
             os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
+        
         LOGGER.debug('Starting vectorize on quality_op') 
-        quality_raster = \
-            raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
+        
+        _ = raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
                 quality_op, raster_out_uri=quality_uri, nodata=out_nodata)
+        
         LOGGER.debug('Finished vectorize on quality_op') 
 
     #Compute Rarity if user supplied baseline raster
@@ -347,17 +349,20 @@ def biophysical(args):
                     return float(cover_x) 
                 
                 LOGGER.debug('Create new cover for %s', lulc_cover)
+                
                 new_cover_uri = \
                     os.path.join(intermediate_dir, 
                         'new_cover' + lulc_cover + suffix)
                 
+                LOGGER.debug('Starting vectorize on trim_op')
+                
                 # set the current/future land cover to be masked to the base
                 # land cover
-                LOGGER.debug('Starting vectorize on trim_op')
                 new_cover = \
                     raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
                             raster_out_uri=new_cover_uri,
                             datatype=gdal.GDT_Int32, nodata=out_nodata)
+                
                 LOGGER.debug('Finished vectorize on trim_op')
                 
                 lulc_code_count_x = raster_pixel_count(new_cover)
@@ -393,14 +398,14 @@ def biophysical(args):
                 
                 rarity_uri = \
                     os.path.join(output_dir, 'rarity' + lulc_cover + suffix)
+               
                 LOGGER.debug('Starting vectorize on map_ratio')
-                rarity = \
-                    raster_utils.vectorize_rasters([new_cover], map_ratio, \
+               
+                _ = raster_utils.vectorize_rasters([new_cover], map_ratio, \
                         raster_out_uri=rarity_uri, nodata=rarity_nodata)
+               
                 LOGGER.debug('Finished vectorize on map_ratio')
                 
-                rarity = None
-            
             except KeyError:
                 continue
     
