@@ -528,10 +528,7 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
         """A self defined Exception for a missing lulc code"""
         pass
     
-    #Add the nodata value as a field to the dictionary so that the vectorized
-    #operation can just look it up instead of having an if,else statement
     key_raster_nodata = key_raster.GetRasterBand(1).GetNoDataValue()
-    attr_dict[str(key_raster_nodata)] = {field:float(out_nodata)}
 
     # create a more concise dictionary where the keys are converted to integers
     # which pair directly with the value we are interested in. This saves times
@@ -539,6 +536,10 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
     int_attr_dict = {}
     for key in attr_dict:
         int_attr_dict[int(key)] = attr_dict[key][field]
+    
+    #Add the nodata value as a field to the dictionary so that the vectorized
+    #operation can just look it up instead of having an if,else statement
+    int_attr_dict[int(key_raster_nodata)] = float(out_nodata)
 
     def vop(key):
         """Operation passed to numpy function vectorize that uses 'key' as the 

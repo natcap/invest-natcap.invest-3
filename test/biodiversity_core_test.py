@@ -285,7 +285,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
 
     def test_biodiversity_biophysical_regression(self):
         """A regression test for the biodiversity model with all possible inputs"""
-        raise SkipTest
+        #raise SkipTest
         input_dir = './data/biodiversity_regression_data/samp_input'
         out_dir = './data/biodiversity_regression_data/samp_input/output/'
         
