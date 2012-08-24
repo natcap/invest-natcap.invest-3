@@ -68,7 +68,6 @@ def biophysical(args):
     # If access_lyr: convert to raster, if value is null set to 1, 
     # else set to value
     try:
-        access_shape = args['access_shape']
         LOGGER.debug('Handling Access Shape')
         access_uri = os.path.join(intermediate_dir, 'access_layer' + suffix)
         access_base = \
@@ -76,13 +75,14 @@ def biophysical(args):
                 'GTiff', out_nodata, gdal.GDT_Float32)
         #Fill raster to all 1's (fully accessible) incase polygons do not cover
         #land area
-        access_base.GetRasterBand(1).Fill(1)
+        access_base.GetRasterBand(1).Fill(1.0)
+        access_shape = args['access_shape']
         access_raster = \
                 make_raster_from_shape(access_base, access_shape, 'ACCESS')
     except KeyError:
         LOGGER.debug('No Access Shape Provided')
         access_shape = None
-        access_raster = None
+        access_raster = access_base
 
     # calculate the weight sum which is the sum of all the threats weights
     weight_sum = 0.0
@@ -103,10 +103,9 @@ def biophysical(args):
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
         degradation_rasters = []
+       
+        # a list to keep track of the normalized weight for each threat
         weight_list = []
-        # intitialize a list to store raster nodata values that correspond
-        # to the rasters stored in 'degradation_rasters' above
-        deg_adjusted_nodata_list = []
         
         # variable to indicate whether we should break out of calculations
         # for a land cover because a threat raster was not found
@@ -222,13 +221,8 @@ def biophysical(args):
                 returns - the total degradation score for the pixel"""
 
             len_list = len(raster)
-            
-            # we need to know if access_raster was provided as part of the
-            # input and if so then get that value
-            if access_raster is None:
-                access = 1.0
-            else: 
-                access = raster[-1]
+            # get the access value 
+            access = raster[-1]
             
             sum_degradation = 0.0
             
@@ -249,16 +243,16 @@ def biophysical(args):
                                     weight_list[index])
             return sum_degradation * access
 
-
-        # if the access_raster is not None add it to the degradation_rasters
-        # so it can be used in the total_degradation operation
-        if access_raster is not None:
-            degradation_rasters.append(access_raster)
+        # add the access_raster onto the end of the collected raster list. The
+        # access_raster will be values from the shapefile if provided or a
+        # raster filled with all 1's if not
+        degradation_rasters.append(access_raster)
         
         deg_sum_uri = \
             os.path.join(output_dir, 'deg_sum_out' + lulc_key + suffix)
 
         LOGGER.debug('Starting vectorize on total_degradation') 
+        
         sum_deg_raster = \
             raster_utils.vectorize_rasters(degradation_rasters, \
                 total_degradation, raster_out_uri=deg_sum_uri, \
@@ -302,10 +296,12 @@ def biophysical(args):
         
         quality_uri = \
             os.path.join(output_dir, 'quality_out' + lulc_key + suffix)
+        
         LOGGER.debug('Starting vectorize on quality_op') 
-        quality_raster = \
-            raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
+        
+        _ = raster_utils.vectorize_rasters([sum_deg_raster, habitat_raster], 
                 quality_op, raster_out_uri=quality_uri, nodata=out_nodata)
+        
         LOGGER.debug('Finished vectorize on quality_op') 
 
     #Compute Rarity if user supplied baseline raster
@@ -353,17 +349,20 @@ def biophysical(args):
                     return float(cover_x) 
                 
                 LOGGER.debug('Create new cover for %s', lulc_cover)
+                
                 new_cover_uri = \
                     os.path.join(intermediate_dir, 
                         'new_cover' + lulc_cover + suffix)
                 
+                LOGGER.debug('Starting vectorize on trim_op')
+                
                 # set the current/future land cover to be masked to the base
                 # land cover
-                LOGGER.debug('Starting vectorize on trim_op')
                 new_cover = \
                     raster_utils.vectorize_rasters([lulc_base, lulc_x], trim_op,
                             raster_out_uri=new_cover_uri,
                             datatype=gdal.GDT_Int32, nodata=out_nodata)
+                
                 LOGGER.debug('Finished vectorize on trim_op')
                 
                 lulc_code_count_x = raster_pixel_count(new_cover)
@@ -399,14 +398,14 @@ def biophysical(args):
                 
                 rarity_uri = \
                     os.path.join(output_dir, 'rarity' + lulc_cover + suffix)
+               
                 LOGGER.debug('Starting vectorize on map_ratio')
-                rarity = \
-                    raster_utils.vectorize_rasters([new_cover], map_ratio, \
+               
+                _ = raster_utils.vectorize_rasters([new_cover], map_ratio, \
                         raster_out_uri=rarity_uri, nodata=rarity_nodata)
+               
                 LOGGER.debug('Finished vectorize on map_ratio')
                 
-                rarity = None
-            
             except KeyError:
                 continue
     
@@ -534,33 +533,31 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
         """A self defined Exception for a missing lulc code"""
         pass
     
-    #Add the nodata value as a field to the dictionary so that the vectorized
-    #operation can just look it up instead of having an if,else statement
-    attr_dict[out_nodata] = {field:float(out_nodata)}
     key_raster_nodata = key_raster.GetRasterBand(1).GetNoDataValue()
-    attr_dict[str(int(key_raster_nodata))] = {field:float(out_nodata)}
 
+    # create a more concise dictionary where the keys are converted to integers
+    # which pair directly with the value we are interested in. This saves times
+    # in the vectorized operation of casting
     int_attr_dict = {}
     for key in attr_dict:
         int_attr_dict[int(key)] = attr_dict[key][field]
-
-
+    
+    #Add the nodata value as a field to the dictionary so that the vectorized
+    #operation can just look it up instead of having an if,else statement
+    int_attr_dict[int(key_raster_nodata)] = float(out_nodata)
 
     def vop(key):
         """Operation passed to numpy function vectorize that uses 'key' as the 
-            key to the local dictionary 'attr_dict'. Returns the value in place
-            of the key for the new raster
+            key to the local dictionary 'int_attr_dict'. Returns the value in 
+            place of the key for the new raster
            
-            key - a float or int or string from the local raster 
-                'key_raster' that is used to look up a value in the 
-                dictionary 'attr_dict'
+            key - an int from the local raster 'key_raster' that is used to 
+                look up a value in the dictionary 'int_attr_dict'
 
-           returns - the 'field' value corresponding to the 'key'. If 'key' is
+           returns - the value paired to the 'key'. If 'key' is
                not found then it raises an exception if raise_error is true or
                simply returns out_nodata if raise_error is false
         """
-
-
         try:
             return int_attr_dict[key]
         except KeyError:
@@ -568,10 +565,8 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
                 raise LulcCodeError(error_message + str(key))
             return out_nodata
 
-    LOGGER.debug('Starting vectorize rasters')
-
     out_raster = raster_utils.vectorize_rasters([key_raster], vop,
            raster_out_uri=out_uri, nodata=out_nodata)
 
-    LOGGER.debug('Leaving map_rater_to_dict_values')
+    LOGGER.debug('Leaving map_raster_to_dict_values')
     return out_raster
