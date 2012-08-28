@@ -120,9 +120,24 @@ class ResourceHandlerTest(unittest.TestCase):
 
     def test_get_icon(self):
         icon_path = self.handler.icon('application')
-        icon_uri = os.sep.join(icon_path.split(os.sep)[-2:])
-        self.assertEqual(icon_uri, 'images/natcap_logo.png')
+        icon_uri = os.sep.join(icon_path.split(os.sep)[-1:])
+        self.assertEqual(icon_uri, 'test_image.png')
 
         # Assert keyError raised when bogus key requested.
         self.assertRaises(KeyError, self.handler.icon, 'not-present')
+
+class ResourceManager(unittest.TestCase):
+    def test_no_overrides(self):
+        # Provide an overrides dir that doesn't exist, defaults should be used
+        self.overrides_dir = ''
+        self.manager = fileio.ResourceManager(self.overrides_dir)
+        self.assertRaises(KeyError, self.manager.icon, 'application')
+
+        self.overrides_dir = './data/iui/test_resources'
+        self.manager = fileio.ResourceManager(self.overrides_dir)
+        icon_path = os.sep.join(self.manager.icon('application').split(os.sep)[-1:])
+        default_icon_path = 'test_image.png'
+        self.assertEqual(default_icon_path, icon_path)
+
+
 
