@@ -123,3 +123,6 @@ class ResourceHandlerTest(unittest.TestCase):
         icon_uri = os.sep.join(icon_path.split(os.sep)[-2:])
         self.assertEqual(icon_uri, 'images/natcap_logo.png')
 
+        # Assert keyError raised when bogus key requested.
+        self.assertRaises(KeyError, self.handler.icon, 'not-present')
+
