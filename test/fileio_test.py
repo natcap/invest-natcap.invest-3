@@ -95,3 +95,21 @@ class DBFHandlerTest(TableTestTemplate, unittest.TestCase):
         self.input_file = './data/iui/Guild.dbf'
         self.handler = fileio.find_handler(self.input_file)
 
+class JSONHandlerTest(unittest.TestCase):
+    def setUp(self):
+        self.uri = './data/iui/test_resources/resources.json'
+        self.handler = fileio.JSONHandler(self.uri)
+
+    def test_get_attributes(self):
+        """Get_attributes should return a dictionary of attributes with some
+        entries.."""
+        attributes = self.handler.get_attributes()
+        print attributes
+        self.assertNotEqual(len(attributes), 0)
+
+        # If we give a filepath to a json file that does not exist, the
+        # attributes dictionary should have no entries whatsoever.
+        self.handler = fileio.JSONHandler('')
+        attributes = self.handler.get_attributes()
+        self.assertEqual(len(attributes), 0)
+
