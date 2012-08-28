@@ -56,6 +56,79 @@ class LastRunHandler(JSONHandler):
         uri = modelname + '_lastrun_' + platform.node() + '.json'
         JSONHandler.__init__(self, os.path.join(settings_folder(), uri))
 
+class ResourceManager(object):
+    """ResourceManager reconciles overrides supplied by the user against the
+    default values saved to the internal iui_resources resource file.  It
+    adheres to the ResourceInterface interface and will print messages to stdout
+    when defaulting to iui's internal resources."""
+
+    def __init__(self, user_resource_dir=''):
+        """Initialize the ResourceManager instance.
+
+            user_resource_dir=''- a python string path to the user's resource
+                directory.  If no path is provided, the default resources will
+                be assumed and no warning messages will be printed.
+
+            Returns nothing."""
+        super(ResourceManager, self).__init__()
+        iui_resource = os.path.abspath(os.path.join(__file__, 'iui_resources'))
+        self.defaults = ResourceHandler(iui_resource)
+        self.user_resources = ResourceHandler(user_resource_dir)
+
+        self.print_warnings = True
+        if user_resource_dir == '':
+            self.print_warnings = False
+
+    def _warn(self, message):
+        """Print a warning message to stdout, but only if warning messages are
+        allowed.  Returns nothing."""
+        if self.print_warnings:
+            print message
+
+    def icon(self, icon_key):
+        """Return the appropriate icon path based on the path returned by the
+        user's resource file and the path returned by the default resource file.
+        Defaults are used if the specified python string key cannot be found in
+        the user_resources file
+
+            icon_key - a python string key for the desired icon.
+
+        Returns a python string."""
+
+        try:
+            return self.user_resources.icon(icon_key)
+        except KeyError:
+            self._warn('Icon key %s missing from user resources using default.' %
+                    icon_key)
+            return self.defaults.icon(icon_key)
+
+class ResourceHandler(JSONHandler):
+    """This class allows actually handles reading a resource handler file from
+    disk."""
+    def __init__(self, resource_dir):
+        """The constructor for the ResourceHandler class.
+
+            resource_dir - a python string path to the folder containing the
+                target resources.  Must contain a resources.json file.
+
+        Returns an instance of ResourceHandler for the resources dir specified."""
+
+        self.resource_dir = resource_dir
+        resource_file = os.path.join(resource_dir, 'resources.json')
+        super(ResourceHandler, self).__init__(resource_file)
+
+    def icon(self, icon_key):
+        """Fetch the URI based on the icon_key.  If the key is not found, raises
+        a keyError.
+
+            icon_key - a python string key to be accessed from the resources
+                file.
+
+        Returns an absolute path to the resource."""
+
+        icon_path = os.path.join(self.resource_dir, self.dict['icons'][icon_key])
+        return os.path.abspath(icon_path)
+
 class AbstractTableHandler(object):
     """This class provides an abstract class for specific reimplementation for
         each tabular filetype"""
