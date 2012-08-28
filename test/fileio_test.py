@@ -1,6 +1,7 @@
 """This test file contains unittests for invest_natcap.iui.fileio."""
 
 import unittest
+import os
 
 from invest_natcap.iui import fileio
 
@@ -104,7 +105,6 @@ class JSONHandlerTest(unittest.TestCase):
         """Get_attributes should return a dictionary of attributes with some
         entries.."""
         attributes = self.handler.get_attributes()
-        print attributes
         self.assertNotEqual(len(attributes), 0)
 
         # If we give a filepath to a json file that does not exist, the
@@ -112,4 +112,14 @@ class JSONHandlerTest(unittest.TestCase):
         self.handler = fileio.JSONHandler('')
         attributes = self.handler.get_attributes()
         self.assertEqual(len(attributes), 0)
+
+class ResourceHandlerTest(unittest.TestCase):
+    def setUp(self):
+        self.uri = './data/iui/test_resources/'
+        self.handler = fileio.ResourceHandler(self.uri)
+
+    def test_get_icon(self):
+        icon_path = self.handler.icon('application')
+        icon_uri = os.sep.join(icon_path.split(os.sep)[-2:])
+        self.assertEqual(icon_uri, 'images/natcap_logo.png')
 
