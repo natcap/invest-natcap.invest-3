@@ -4,6 +4,7 @@ from distutils.core import setup
 from distutils.extension import Extension
 import platform
 import os
+import sys
 import datetime
 
 import numpy as np
@@ -19,6 +20,7 @@ CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
 console = []
 data_files = []
 py2exe_args = {}
+data_files = []
 
 
 #This makes a destination directory with the name invest_version_datetime.
@@ -45,7 +47,7 @@ if platform.system() == 'Windows':
                         'invest_natcap.invest_core',
                         'invest_natcap.iui',
                         'invest_natcap.iui.dbfpy',
-			            'invest_natcap.recreation',
+                        'invest_natcap.recreation',
                         'invest_natcap.sediment',
                         'invest_natcap.timber',
                         'invest_natcap.validator_core',
@@ -105,6 +107,21 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/dialog-warning.png',
                'invest_natcap/iui/dialog-information-2.png',
                'invest_natcap/iui/dialog-error.png'])]
+else:
+    # this is not running on windows
+    # We need to add certain IUI resources to the virtualenv site-packages
+    # folder for certain things (including certain tests) to work correctly.
+    python_version = 'python%s' % '.'.join([str(r) for r in
+        sys.version_info[:2]])
+    lib_path = os.path.join('lib', python_version, 'site-packages')
+
+    # Use the determined virtualenv site-packages path to add all files in the
+    # IUI resources directory to our setup.py data files.
+    directory = 'invest_natcap/iui/iui_resources'
+    for root_dir, sub_folders, file_list in os.walk(directory):
+        data_files.append((os.path.join(lib_path, root_dir), map(lambda x:
+            os.path.join(root_dir, x), file_list)))
+
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
@@ -128,6 +145,7 @@ setup(name='invest_natcap',
                 'invest_natcap.overlap_analysis'],
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
+      data_files=data_files,
       ext_modules=[Extension(name="invest_cython_core",
                              sources = CYTHON_SOURCE_FILES)],
       **py2exe_args)
