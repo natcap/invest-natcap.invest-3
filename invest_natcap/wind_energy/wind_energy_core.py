@@ -11,7 +11,15 @@ from invest_natcap import raster_utils
 LOGGER = logging.getLogger('wind_energy_core')
 
 def biophysical(args):
-    """This is where the doc string lives"""
+    """This is where the doc string lives
+    
+        args[workspace_dir] - uri for workspace directory
+        args[bathymetry] - a GDAL raster of elevation values
+        args[aoi] - an OGR polygon shapefile of the area of interest
+
+
+        returns - 
+    """
 
     # fill in skeleton below
 
