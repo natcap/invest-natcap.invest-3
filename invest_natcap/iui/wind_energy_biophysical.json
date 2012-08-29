@@ -13,14 +13,196 @@
             "elements":[
                 {
                     "id" : "workspace",
-                    "args_id" : "",
+                    "args_id" : "workspace_dir",
                     "type": "folder",
-                    "label": "",
+                    "label": "Workspace",
                     "defaultValue": "../Wind_Energy",
                     "required": true,
                     "validateAs": {"type": "folder"},
                     "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
-                }                     
+                },
+                {
+                    "id" : "aoi",
+                    "args_id" : "aoi",
+                    "type": "file",
+                    "label": "Area Of Interest (AOI)",
+                    "defaultValue": "../Wind_Energy/Input/aoi.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR"},
+                    "helpText": ""
+                },
+                {
+                    "id" : "bathymetry",
+                    "args_id" : "bathymetry",
+                    "type": "file",
+                    "label": "Bathymetry",
+                    "defaultValue": "../Wind_Energy/Input/bathymetry.adf",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"},
+                    "helpText": ""
+                },
+                {
+                    "id" : "bottom_types",
+                    "args_id" : "bottom_type",
+                    "type": "file",
+                    "label": "Bottome Types",
+                    "defaultValue": "",
+                    "required": false,
+                    "validateAs": {"type": "OGR"},
+                    "helpText": ""
+                }
+            ]
+        },
+        {
+            "id" : "turbine_group",
+            "type" : "container",
+            "label" : "Turbine Properties",
+            "elements" :[ 
+                {
+                    "id" : "turbine_list",
+                    "type" : "list",
+                    "elements" : [
+                            {
+                                "id" : "hub_height",
+                                "args_id" : "hub_height",
+                                "type": "dropdown",
+                                "label": "Hub Heights (meters)",
+                                "defaultValue": "",
+                                "options" : ["10", "20", "30", "40", "50", "60", "70", "80",
+                                             "90", "100", "110", "120", "130", "140", "150"],
+                                "required": true,
+                                "returns" : "strings",
+                                "helpText": ""
+                            },
+                            {
+                                "id" : "pwr_law_exponent",
+                                "args_id" : "pwr_law_exponent",
+                                "type": "text",
+                                "label": "Power Law Exponent",
+                                "defaultValue": "0.11",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": ""
+                            },
+                            {
+                                "id" : "cutin_wspd",
+                                "args_id" : "cut_in_wspd",
+                                "type": "text",
+                                "label": "Cut-in Wind Speed (ms^-1)",
+                                "defaultValue": "4.0",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": ""
+                            },
+                            {
+                                "id" : "rated_wspd",
+                                "args_id" : "rated_wspd",
+                                "type": "text",
+                                "label": "Rated Wind Speed (ms^-1)",
+                                "defaultValue": "14.0",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": ""
+                            },
+                            {
+                                "id" : "cutout_wspd",
+                                "args_id" : "cut_out_wspd",
+                                "type": "text",
+                                "label": "Cut-out Wind Speed (ms^-1)",
+                                "defaultValue": "25.0",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": ""
+                            },
+                            {
+                                "id" : "turbine_rated_pwr",
+                                "args_id" : "turbine_rated_pwr",
+                                "type": "text",
+                                "label": "Wind Turbine Rated Power (MW)",
+                                "defaultValue": "3.6",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": ""
+                            },
+                            {
+                                "id" : "exp_output_pwr_curve",
+                                "args_id" : "exp_output_pwr_curve",
+                                "type": "text",
+                                "label": "Exponent of Output Power Curve",
+                                "defaultValue": "2",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": ""
+                            }
+                        ]
+                    }
+                ]
+        },
+        {
+            "id" : "extra_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "days_harv_wind_energy",
+                    "args_id" : "days",
+                    "type": "text",
+                    "label": "Number of Days for Harvested Wind Energy Calculation (day)",
+                    "defaultValue": "365",
+                    "validText" : "^[0-9]*\\.?[0-9]+$",
+                    "validateAs" : {"type" : "number",
+                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                    "required": true,
+                    "helpText": ""
+                },
+                {
+                    "id" : "air_density",
+                    "args_id" : "air_density",
+                    "type": "text",
+                    "label": "Air Density (kgm^-3) of Standard Atmosphere",
+                    "defaultValue": "1.225",
+                    "validText" : "^[0-9]*\\.?[0-9]+$",
+                    "validateAs" : {"type" : "number",
+                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                    "required": true,
+                    "helpText": ""
+                },
+                {
+                    "id" : "min_depth",
+                    "args_id" : "min_depth",
+                    "type": "text",
+                    "label": "Minimum Depth for Offshore Wind Farm Installation (m)",
+                    "defaultValue": "20",
+                    "validText" : "^[0-9]*\\.?[0-9]+$",
+                    "validateAs" : {"type" : "number",
+                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                    "required": true,
+                    "helpText": ""
+                },
+                {
+                    "id" : "max_depth", 
+                    "args_id" : "max_depth",
+                    "type": "text",
+                    "label": "Maximum Depth for Offshore Wind Farm Installation (m)",
+                    "defaultValue": "50",
+                    "validText" : "^[0-9]*\\.?[0-9]+$",
+                    "validateAs" : {"type" : "number",
+                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                    "required": true,
+                    "helpText": ""
+                }
+                
             ]
         }
     ]
