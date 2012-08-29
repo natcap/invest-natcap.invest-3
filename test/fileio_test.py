@@ -131,8 +131,10 @@ class ResourceManager(unittest.TestCase):
         # Provide an overrides dir that doesn't exist, defaults should be used
         self.overrides_dir = ''
         self.manager = fileio.ResourceManager(self.overrides_dir)
-        self.assertRaises(KeyError, self.manager.icon, 'application')
+        icon_path = os.sep.join(self.manager.icon('application').split(os.sep)[-1:])
+        self.assertNotEquals(os.path.basename(icon_path), 'natcap_logo.png')
 
+    def test_overrides(self):
         self.overrides_dir = './data/iui/test_resources'
         self.manager = fileio.ResourceManager(self.overrides_dir)
         icon_path = os.sep.join(self.manager.icon('application').split(os.sep)[-1:])
