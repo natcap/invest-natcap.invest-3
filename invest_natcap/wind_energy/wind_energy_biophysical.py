@@ -68,7 +68,14 @@ def execute(args):
             os.makedirs(folder)
 
     # handle opening of relevant files
+    bathymetry = gdal.Open(args['bathymetry_uri'])
+    biophysical_args['bathymetry'] = bathymetry
+
+    aoi = ogr.Open(args['aoi_uri'])
+    biophysical_args['aoi'] = aoi 
 
     # handle any pre-processing that must be done
 
     # call on the core module
+
+    wind_energy_core.biophysical(biophysical_args)
