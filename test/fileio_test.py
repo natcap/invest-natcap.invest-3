@@ -128,13 +128,18 @@ class ResourceHandlerTest(unittest.TestCase):
 
 class ResourceManager(unittest.TestCase):
     def test_no_overrides(self):
+        """Assert defaults used when necessary."""
         # Provide an overrides dir that doesn't exist, defaults should be used
         self.overrides_dir = ''
         self.manager = fileio.ResourceManager(self.overrides_dir)
         icon_path = os.sep.join(self.manager.icon('application').split(os.sep)[-1:])
-        self.assertNotEquals(os.path.basename(icon_path), 'natcap_logo.png')
+        self.assertEquals(os.path.basename(icon_path), 'natcap_logo.png')
+
+        # Once we have more entries in the default resource file, this test
+        # should also verify that those entries are not overridden by the user.
 
     def test_overrides(self):
+        """Assert overrides used when necessary."""
         self.overrides_dir = './data/iui/test_resources'
         self.manager = fileio.ResourceManager(self.overrides_dir)
         icon_path = os.sep.join(self.manager.icon('application').split(os.sep)[-1:])
