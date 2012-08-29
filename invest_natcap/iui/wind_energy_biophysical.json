@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "",
-    "targetScript" : "invest_natcap.wind_energy_biophysical",
+    "targetScript" : "invest_natcap.wind_energy.wind_energy_biophysical",
     "modelName" : "wind_energy_biophysical",
     "localDocURI": "../documentation/wind_energy.html",
     "height": 500,
