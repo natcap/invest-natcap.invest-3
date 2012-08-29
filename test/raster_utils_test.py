@@ -16,6 +16,24 @@ import invest_test_core
 LOGGER = logging.getLogger('invest_core')
 
 class TestRasterUtils(unittest.TestCase):
+    def test_vectorize_points(self):
+        base_dir = 'data/test_out/raster_utils'
+
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        shape_uri = os.path.join('data', 'marine_water_quality_data', 'TideE_WGS1984_BCAlbers.shp')
+        shape = ogr.Open(shape_uri)
+
+        output_uri = os.path.join(base_dir, 'interp_points.tif')
+        out_raster = raster_utils.create_raster_from_vector_extents(30, 30, gdal.GDT_Float32, -1, output_uri, shape)
+        
+
+        raster_utils.vectorize_points(shape, 'kh_km2_day', out_raster)
+
+        subprocess.Popen(["qgis", shape_uri, output_uri])
+        
+
     def test_clip_datset(self):
         raise SkipTest
         base_dir = 'data/test_out/raster_utils'
