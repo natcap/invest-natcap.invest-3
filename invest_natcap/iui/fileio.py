@@ -71,7 +71,8 @@ class ResourceManager(object):
 
             Returns nothing."""
         super(ResourceManager, self).__init__()
-        iui_resource = os.path.abspath(os.path.join(__file__, 'iui_resources'))
+        iui_dir = os.path.dirname(__file__)
+        iui_resource = os.path.abspath(os.path.join(iui_dir, 'iui_resources'))
         self.defaults = ResourceHandler(iui_resource)
         self.user_resources = ResourceHandler(user_resource_dir)
 
