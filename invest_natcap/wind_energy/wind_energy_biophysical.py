@@ -74,6 +74,10 @@ def execute(args):
     aoi = ogr.Open(args['aoi_uri'])
     biophysical_args['aoi'] = aoi 
 
+    
+    biophysical_args['min_depth'] = float(args['min_depth']) 
+    biophysical_args['max_depth'] = float(args['max_depth'])
+
     # handle any pre-processing that must be done
 
     # call on the core module
