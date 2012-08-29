@@ -1,6 +1,7 @@
 """This test file contains unittests for invest_natcap.iui.fileio."""
 
 import unittest
+import os
 
 from invest_natcap.iui import fileio
 
@@ -94,4 +95,56 @@ class DBFHandlerTest(TableTestTemplate, unittest.TestCase):
     def setUp(self):
         self.input_file = './data/iui/Guild.dbf'
         self.handler = fileio.find_handler(self.input_file)
+
+class JSONHandlerTest(unittest.TestCase):
+    def setUp(self):
+        self.uri = './data/iui/test_resources/resources.json'
+        self.handler = fileio.JSONHandler(self.uri)
+
+    def test_get_attributes(self):
+        """Get_attributes should return a dictionary of attributes with some
+        entries.."""
+        attributes = self.handler.get_attributes()
+        self.assertNotEqual(len(attributes), 0)
+
+        # If we give a filepath to a json file that does not exist, the
+        # attributes dictionary should have no entries whatsoever.
+        self.handler = fileio.JSONHandler('')
+        attributes = self.handler.get_attributes()
+        self.assertEqual(len(attributes), 0)
+
+class ResourceHandlerTest(unittest.TestCase):
+    def setUp(self):
+        self.uri = './data/iui/test_resources/'
+        self.handler = fileio.ResourceHandler(self.uri)
+
+    def test_get_icon(self):
+        icon_path = self.handler.icon('application')
+        icon_uri = os.sep.join(icon_path.split(os.sep)[-1:])
+        self.assertEqual(icon_uri, 'test_image.png')
+
+        # Assert keyError raised when bogus key requested.
+        self.assertRaises(KeyError, self.handler.icon, 'not-present')
+
+class ResourceManager(unittest.TestCase):
+    def test_no_overrides(self):
+        """Assert defaults used when necessary."""
+        # Provide an overrides dir that doesn't exist, defaults should be used
+        self.overrides_dir = ''
+        self.manager = fileio.ResourceManager(self.overrides_dir)
+        icon_path = os.sep.join(self.manager.icon('application').split(os.sep)[-1:])
+        self.assertEquals(os.path.basename(icon_path), 'natcap_logo.png')
+
+        # Once we have more entries in the default resource file, this test
+        # should also verify that those entries are not overridden by the user.
+
+    def test_overrides(self):
+        """Assert overrides used when necessary."""
+        self.overrides_dir = './data/iui/test_resources'
+        self.manager = fileio.ResourceManager(self.overrides_dir)
+        icon_path = os.sep.join(self.manager.icon('application').split(os.sep)[-1:])
+        default_icon_path = 'test_image.png'
+        self.assertEqual(default_icon_path, icon_path)
+
+
 
