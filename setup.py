@@ -21,6 +21,7 @@ console = []
 data_files = []
 py2exe_args = {}
 data_files = []
+lib_path = ''
 
 
 #This makes a destination directory with the name invest_version_datetime.
@@ -115,12 +116,12 @@ else:
         sys.version_info[:2]])
     lib_path = os.path.join('lib', python_version, 'site-packages')
 
-    # Use the determined virtualenv site-packages path to add all files in the
-    # IUI resources directory to our setup.py data files.
-    directory = 'invest_natcap/iui/iui_resources'
-    for root_dir, sub_folders, file_list in os.walk(directory):
-        data_files.append((os.path.join(lib_path, root_dir), map(lambda x:
-            os.path.join(root_dir, x), file_list)))
+# Use the determined virtualenv site-packages path to add all files in the
+# IUI resources directory to our setup.py data files.
+directory = 'invest_natcap/iui/iui_resources'
+for root_dir, sub_folders, file_list in os.walk(directory):
+    data_files.append((os.path.join(lib_path, root_dir), map(lambda x:
+        os.path.join(root_dir, x), file_list)))
 
 #The standard distutils setup command
 setup(name='invest_natcap',
