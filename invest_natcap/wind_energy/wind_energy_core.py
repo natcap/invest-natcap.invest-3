@@ -16,10 +16,14 @@ def biophysical(args):
         args[workspace_dir] - uri for workspace directory
         args[bathymetry] - a GDAL raster of elevation values
         args[aoi] - an OGR polygon shapefile of the area of interest
-
+        args[min_depth] - a float of the minimum depth required for the turbines
+        args[max_depth] - a float of the maximum depth the turbines can be
+            placed
 
         returns - 
     """
+
+    
 
     # fill in skeleton below
 
