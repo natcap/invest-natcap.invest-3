@@ -703,7 +703,7 @@ def vectorize_points(shapefile, datasource_field, raster):
 
     LOGGER.info("Writing interpolating with griddata")
     raster_out_array = scipy.interpolate.griddata(point_array, 
-        value_array, (grid_y, grid_x), 'linear', nodata)
+        value_array, (grid_y, grid_x), 'nearest', nodata)
     LOGGER.info("Writing result to output array")
     band.WriteArray(raster_out_array,0,0)
 
