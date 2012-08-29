@@ -117,6 +117,22 @@ class ResourceHandler(JSONHandler):
         self.resource_dir = resource_dir
         resource_file = os.path.join(resource_dir, 'resources.json')
         super(ResourceHandler, self).__init__(resource_file)
+        self.check(self.dict)
+
+    def check(self, dictionary=None):
+        """Iterate through all nested key-value pairs in this resource file and
+        print an error message if the file cannot be found.  Returns nothing.
+        """
+        for key, value in dictionary.iteritems():
+            if isinstance(value, dict):
+                self.check(value)
+            else:
+                if isinstance(value, unicode) or isinstance(value, str):
+                    if not os.path.exists(value):
+                        print 'Resource \'%s\' was not found for key \'%s\''
+                            % (value, key)
+                else:
+                    print 'Resource \'%s\' should be a string.'
 
     def icon(self, icon_key):
         """Fetch the URI based on the icon_key.  If the key is not found, raises
