@@ -23,7 +23,7 @@
                 },
                 {
                     "id" : "aoi",
-                    "args_id" : "aoi",
+                    "args_id" : "aoi_uri",
                     "type": "file",
                     "label": "Area Of Interest (AOI)",
                     "defaultValue": "../Wind_Energy/Input/aoi.shp",
@@ -33,7 +33,7 @@
                 },
                 {
                     "id" : "bathymetry",
-                    "args_id" : "bathymetry",
+                    "args_id" : "bathymetry_uri",
                     "type": "file",
                     "label": "Bathymetry",
                     "defaultValue": "../Wind_Energy/Input/bathymetry.adf",
@@ -43,7 +43,7 @@
                 },
                 {
                     "id" : "bottom_types",
-                    "args_id" : "bottom_type",
+                    "args_id" : "bottom_type_uri",
                     "type": "file",
                     "label": "Bottome Types",
                     "defaultValue": "",
