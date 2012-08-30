@@ -23,6 +23,7 @@ def biophysical(args):
             to be away from the coastline (m)
         args[max_distance] - a float of the maximum distance the farms can 
             be placed away from the coastline (m)
+        args[land_polygon] - an OGR polygon shapefile of the land polygon
 
         returns - 
     """
@@ -60,7 +61,8 @@ def biophysical(args):
         # do some awesome coastline finding if distances are provided
         min_distance = args['min_distance']
         max_distance = args['max_distance']
-        
+        land_polygon = args['land_polygon']
+
         # create raster with 1's being land, 0's being ocean.
         def land_ocean_op(bath):
             if bath >= 0 and not out_nodata:
