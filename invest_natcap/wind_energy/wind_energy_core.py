@@ -39,22 +39,31 @@ def biophysical(args):
     
     # clip the size of the bathymetry raster to aoi
     def clip_bath_op(bath):
-        if bath >= max_depth and bath <= min_depth:
-            return bath
-        else:
-            return out_nodata
+        return bath
 
     out_nodata = bathymetry.GetRasterBand(1).GetNoDataValue()
     clipped_bath_uri = os.path.join(inter_dir, 'clipped_bath.tif')
     clipped_bath = \
         raster_utils.vectorize_rasters([bathymetry], clip_bath_op, aoi=aoi, \
             raster_out_uri = clipped_bath_uri, nodata = out_nodata)
+   
+    # mask out any values that are out of the range of the depth values
+    def depth_op(bath):
+        if bath >= max_depth and bath <= min_depth:
+            return bath
+        else:
+            return out_nodata
 
+    depth_mask_uri = os.path.join(inter_dir, 'depth_mask.tif')
+    depth_mask = \
+        raster_utils.vectorize_rasters([clipped_bath], depth_op, \
+            raster_out_uri = depth_mask_uri, nodata = out_nodata)
 
     # construct the coastline from the AOI and bathymetry using the min and max
     # distance values provided
     try:
         # do some awesome coastline finding if distances are provided
+        
     except KeyError:
         # looks like distances weren't provided, too bad!
         pass
