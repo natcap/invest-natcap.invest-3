@@ -38,7 +38,9 @@ def execute(args):
         args[air_density] - a float value for the air density constant
         args[min_depth] - a float value minimum depth of the device
         args[max_depth] - a float value maximum depth of the device
-    
+        args[min_distance] - 
+        args[max_distance] - 
+
         returns -  
     """
 
@@ -77,6 +79,12 @@ def execute(args):
     
     biophysical_args['min_depth'] = float(args['min_depth']) 
     biophysical_args['max_depth'] = float(args['max_depth'])
+    try:
+        biophysical_args['min_distance'] = float(args['min_distance']) 
+        biophysical_args['max_distance'] = float(args['max_distance'])
+    except KeyError:
+        LOGGER.debug("Distance information not selected")
+        pass
 
     # handle any pre-processing that must be done
 
