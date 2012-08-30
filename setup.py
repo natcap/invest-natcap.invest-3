@@ -21,7 +21,26 @@ console = []
 data_files = []
 py2exe_args = {}
 data_files = []
+lib_path = ''
 
+packages = ['invest_natcap',
+            'invest_natcap.carbon',
+            'invest_natcap.dbfpy',
+            'invest_natcap.hydropower',
+            'invest_natcap.invest_core',
+            'invest_natcap.iui',
+            'invest_natcap.iui.dbfpy',
+            'invest_natcap.recreation',
+            'invest_natcap.sediment',
+            'invest_natcap.timber',
+            'invest_natcap.validator_core',
+            'invest_natcap.wave_energy',
+            'invest_natcap.pollination',
+            'invest_natcap.finfish_aquaculture',
+            'invest_natcap.marine_water_quality',
+            'invest_natcap.biodiversity',
+            'invest_natcap.coastal_vulnerability',
+            'invest_natcap.overlap_analysis']
 
 #This makes a destination directory with the name invest_version_datetime.
 #Will make it easy to see the difference between different builds of the 
@@ -40,24 +59,7 @@ if platform.system() == 'Windows':
                          'invest_natcap',
                          'scipy.io.matlab.streams'],
             'dist_dir': DIST_DIR,
-            'packages': ['invest_natcap',
-                        'invest_natcap.carbon',
-                        'invest_natcap.dbfpy',
-                        'invest_natcap.hydropower',
-                        'invest_natcap.invest_core',
-                        'invest_natcap.iui',
-                        'invest_natcap.iui.dbfpy',
-                        'invest_natcap.recreation',
-                        'invest_natcap.sediment',
-                        'invest_natcap.timber',
-                        'invest_natcap.validator_core',
-                        'invest_natcap.wave_energy',
-                        'invest_natcap.pollination',
-                        'invest_natcap.finfish_aquaculture',
-                        'invest_natcap.marine_water_quality',
-                        'invest_natcap.biodiversity',
-                        'invest_natcap.coastal_vulnerability',
-                        'invest_natcap.overlap_analysis'],
+            'packages': packages,
             #http://www.py2exe.org/index.cgi/ListOfOptions
             'skip_archive': True
             }
@@ -115,34 +117,17 @@ else:
         sys.version_info[:2]])
     lib_path = os.path.join('lib', python_version, 'site-packages')
 
-    # Use the determined virtualenv site-packages path to add all files in the
-    # IUI resources directory to our setup.py data files.
-    directory = 'invest_natcap/iui/iui_resources'
-    for root_dir, sub_folders, file_list in os.walk(directory):
-        data_files.append((os.path.join(lib_path, root_dir), map(lambda x:
-            os.path.join(root_dir, x), file_list)))
+# Use the determined virtualenv site-packages path to add all files in the
+# IUI resources directory to our setup.py data files.
+directory = 'invest_natcap/iui/iui_resources'
+for root_dir, sub_folders, file_list in os.walk(directory):
+    data_files.append((os.path.join(lib_path, root_dir), map(lambda x:
+        os.path.join(root_dir, x), file_list)))
 
 #The standard distutils setup command
 setup(name='invest_natcap',
       version=VERSION,
-      packages=['invest_natcap',
-                'invest_natcap.carbon',
-                'invest_natcap.dbfpy',
-                'invest_natcap.hydropower',
-                'invest_natcap.invest_core',
-                'invest_natcap.iui',
-                'invest_natcap.iui.dbfpy',
-                'invest_natcap.recreation',
-                'invest_natcap.sediment',
-                'invest_natcap.timber',
-                'invest_natcap.validator_core',
-                'invest_natcap.wave_energy',
-                'invest_natcap.pollination',
-                'invest_natcap.finfish_aquaculture',
-                'invest_natcap.marine_water_quality',
-                'invest_natcap.biodiversity',
-                'invest_natcap.coastal_vulnerability',
-                'invest_natcap.overlap_analysis'],
+      packages=packages,
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       data_files=data_files,
