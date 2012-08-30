@@ -80,6 +80,8 @@ def execute(args):
     biophysical_args['min_depth'] = float(args['min_depth']) 
     biophysical_args['max_depth'] = float(args['max_depth'])
     try:
+        LOGGER.debug('Distances : %s:%s',
+                float(args['min_distance']), float(args['max_distance']))
         biophysical_args['min_distance'] = float(args['min_distance']) 
         biophysical_args['max_distance'] = float(args['max_distance'])
     except KeyError:
