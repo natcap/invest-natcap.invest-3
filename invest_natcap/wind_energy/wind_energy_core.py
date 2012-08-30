@@ -34,19 +34,14 @@ def biophysical(args):
     aoi = args['aoi']
     min_depth = args['min_depth'] * -1.0
     max_depth = args['max_depth'] * -1.0
-    min_distance = args['min_distance']
-    max_distance = args['max_distance']
     
-    # clip the size of the bathymetry raster to aoi
-    def clip_bath_op(bath):
-        return bath
-
     out_nodata = bathymetry.GetRasterBand(1).GetNoDataValue()
     clipped_bath_uri = os.path.join(inter_dir, 'clipped_bath.tif')
     clipped_bath = \
-        raster_utils.vectorize_rasters([bathymetry], clip_bath_op, aoi=aoi, \
-            raster_out_uri = clipped_bath_uri, nodata = out_nodata)
-   
+        raster_utils.clip_dataset(bathymetry, aoi, clipped_bath_uri)
+  
+    clipped_bath = None
+
     # mask out any values that are out of the range of the depth values
     def depth_op(bath):
         if bath >= max_depth and bath <= min_depth:
@@ -63,7 +58,24 @@ def biophysical(args):
     # distance values provided
     try:
         # do some awesome coastline finding if distances are provided
+        min_distance = args['min_distance']
+        max_distance = args['max_distance']
         
+        # create raster with 1's being land, 0's being ocean.
+        def land_ocean_op(bath):
+            if bath >= 0 and not out_nodata:
+                return 1.0
+            elif bath < 0 and not out_nodata:
+                return 0.0
+            else:
+                return out_nodata
+
+        land_or_ocean_uri = os.path.join(inter_dir, 'land_or_ocean.tif')
+        land_or_ocean = \
+            raster_utils.vectorize_rasters([clipped_bath], land_ocean_op, \
+                raster_out_uri = land_or_ocean_uri, nodata = out_nodata)
+
+
     except KeyError:
         # looks like distances weren't provided, too bad!
         pass
