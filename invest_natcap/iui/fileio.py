@@ -129,7 +129,7 @@ class ResourceHandler(JSONHandler):
             else:
                 if isinstance(value, unicode) or isinstance(value, str):
                     if not os.path.exists(value):
-                        print 'Resource \'%s\' was not found for key \'%s\''
+                        print 'Resource \'%s\' was not found for key \'%s\''\
                             % (value, key)
                 else:
                     print 'Resource \'%s\' should be a string.'
