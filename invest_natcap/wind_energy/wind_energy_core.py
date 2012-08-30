@@ -63,19 +63,6 @@ def biophysical(args):
         max_distance = args['max_distance']
         land_polygon = args['land_polygon']
 
-        # create raster with 1's being land, 0's being ocean.
-        def land_ocean_op(bath):
-            if bath >= 0 and not out_nodata:
-                return 1.0
-            elif bath < 0 and not out_nodata:
-                return 0.0
-            else:
-                return out_nodata
-
-        land_or_ocean_uri = os.path.join(inter_dir, 'land_or_ocean.tif')
-        land_or_ocean = \
-            raster_utils.vectorize_rasters([clipped_bath], land_ocean_op, \
-                raster_out_uri = land_or_ocean_uri, nodata = out_nodata)
 
 
     except KeyError:
