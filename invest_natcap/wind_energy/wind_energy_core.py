@@ -63,7 +63,23 @@ def biophysical(args):
         max_distance = args['max_distance']
         land_polygon = args['land_polygon']
 
+        # make raster from the AOI and then rasterize land polygon ontop of it
+        bath_prop = raster_utils.get_raster_properties(bathymetry)
+        land_ds_uri = os.path.join(inter_dir, 'land_ds.tif')
+        land_ds = \
+            raster_utils.create_raster_from_vector_extents(bath_prop['width'],
+                bath_prop['height'], gdal.GDT_Float32, out_nodata, land_ds_uri,
+                land_polygon)
 
+        # burn the whole area of interest onto the raster setting everything to
+        # 0 which will represent our ocean values.
+        gdal.RasterizeLayer(land_ds, [1], aoi, burn_values = [0])
+        # burn the land polygon ontop of the ocean values as 1 so that we now
+        # have an accurate mask of where the land, ocean, and nodata values
+        # should be
+        gdal.RasterizeLayer(land_ds, [1], land_polygon, burn_values = [1])
+
+        # do awesome convolution magic
 
     except KeyError:
         # looks like distances weren't provided, too bad!
