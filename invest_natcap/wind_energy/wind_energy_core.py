@@ -19,6 +19,10 @@ def biophysical(args):
         args[min_depth] - a float of the minimum depth required for the turbines
         args[max_depth] - a float of the maximum depth the turbines can be
             placed
+        args[min_distance] - a float of the minimum distance the farms have
+            to be away from the coastline (m)
+        args[max_distance] - a float of the maximum distance the farms can 
+            be placed away from the coastline (m)
 
         returns - 
     """
@@ -30,6 +34,8 @@ def biophysical(args):
     aoi = args['aoi']
     min_depth = args['min_depth'] * -1.0
     max_depth = args['max_depth'] * -1.0
+    min_distance = args['min_distance']
+    max_distance = args['max_distance']
     
     # clip the size of the bathymetry raster to aoi
     def clip_bath_op(bath):
@@ -43,7 +49,15 @@ def biophysical(args):
     clipped_bath = \
         raster_utils.vectorize_rasters([bathymetry], clip_bath_op, aoi=aoi, \
             raster_out_uri = clipped_bath_uri, nodata = out_nodata)
-    
+
+
+    # construct the coastline from the AOI and bathymetry using the min and max
+    # distance values provided
+    try:
+        # do some awesome coastline finding if distances are provided
+    except KeyError:
+        # looks like distances weren't provided, too bad!
+        pass
 
     # fill in skeleton below
 
