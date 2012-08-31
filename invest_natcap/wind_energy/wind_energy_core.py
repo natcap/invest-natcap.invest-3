@@ -41,8 +41,6 @@ def biophysical(args):
     clipped_bath = \
         raster_utils.clip_dataset(bathymetry, aoi, clipped_bath_uri)
   
-    clipped_bath = None
-
     # mask out any values that are out of the range of the depth values
     def depth_op(bath):
         if bath >= max_depth and bath <= min_depth:
@@ -69,7 +67,7 @@ def biophysical(args):
         land_ds = \
             raster_utils.create_raster_from_vector_extents(bath_prop['width'],
                 bath_prop['height'], gdal.GDT_Float32, out_nodata, land_ds_uri,
-                land_polygon)
+                aoi)
 
         # burn the whole area of interest onto the raster setting everything to
         # 0 which will represent our ocean values.
@@ -80,6 +78,12 @@ def biophysical(args):
         gdal.RasterizeLayer(land_ds, [1], land_polygon, burn_values = [1])
 
         # do awesome convolution magic
+        kernel = np.array([[-1, -1, -1],
+                           [-1,  8, -1],
+                           [-1, -1, -1]])
+
+
+
 
     except KeyError:
         # looks like distances weren't provided, too bad!
