@@ -83,7 +83,7 @@ def biophysical(args):
         # maybe there is a better way to handle this
         matrix = land_ds.GetRasterBand(1).ReadAsArray()
         # reset our nodata values
-        matrix[matrix == nodata_mask] = out_nodata
+        matrix[nodata_mask] = out_nodata
         # write back our matrix to the band
         land_ds.GetRasterBand(1).WriteArray(matrix)
         # create new raster that is 2 rows/columns bigger than before
@@ -96,12 +96,29 @@ def biophysical(args):
 
         boundary_ds.GetRasterBand(1).WriteArray(matrix, xoff=1, yoff=1)
 
+        boundary_matrix = boundary_ds.GetRasterBand(1).ReadAsArray()
+        
+        # create a nodata mask for the boundary_ds
+        boundary_nodata_mask = boundary_matrix == out_nodata
+
+        # boundary_ds should have nodata values replaced with 1.0 (land values)
+        # so that the special cases are handled properly
+        boundary_matrix[boundary_matrix == out_nodata] = 1
+                
         # do awesome convolution magic
         kernel = np.array([[-1, -1, -1],
                            [-1,  8, -1],
                            [-1, -1, -1]])
 
+        # run convolution on the boundary_ds with the above kernel where we want
+        # values that are greater than 0
+        shoreline = \
+                (signal.convolve2d(boundary_matrix, kernel, mode='same') >0)
 
+        # now mask out where the nodata values should be
+        shoreline[boundary_nodata_mask] = out_nodata
+
+        # set nodata values this way : borders[mask] = ount_nodata
 
 
     except KeyError:
