@@ -23,6 +23,7 @@ def biophysical(args):
             to be away from the coastline (m)
         args[max_distance] - a float of the maximum distance the farms can 
             be placed away from the coastline (m)
+        args[land_polygon] - an OGR polygon shapefile of the land polygon
 
         returns - 
     """
@@ -40,8 +41,6 @@ def biophysical(args):
     clipped_bath = \
         raster_utils.clip_dataset(bathymetry, aoi, clipped_bath_uri)
   
-    clipped_bath = None
-
     # mask out any values that are out of the range of the depth values
     def depth_op(bath):
         if bath >= max_depth and bath <= min_depth:
@@ -60,20 +59,30 @@ def biophysical(args):
         # do some awesome coastline finding if distances are provided
         min_distance = args['min_distance']
         max_distance = args['max_distance']
-        
-        # create raster with 1's being land, 0's being ocean.
-        def land_ocean_op(bath):
-            if bath >= 0 and not out_nodata:
-                return 1.0
-            elif bath < 0 and not out_nodata:
-                return 0.0
-            else:
-                return out_nodata
+        land_polygon = args['land_polygon']
 
-        land_or_ocean_uri = os.path.join(inter_dir, 'land_or_ocean.tif')
-        land_or_ocean = \
-            raster_utils.vectorize_rasters([clipped_bath], land_ocean_op, \
-                raster_out_uri = land_or_ocean_uri, nodata = out_nodata)
+        # make raster from the AOI and then rasterize land polygon ontop of it
+        bath_prop = raster_utils.get_raster_properties(bathymetry)
+        land_ds_uri = os.path.join(inter_dir, 'land_ds.tif')
+        land_ds = \
+            raster_utils.create_raster_from_vector_extents(bath_prop['width'],
+                bath_prop['height'], gdal.GDT_Float32, out_nodata, land_ds_uri,
+                aoi)
+
+        # burn the whole area of interest onto the raster setting everything to
+        # 0 which will represent our ocean values.
+        gdal.RasterizeLayer(land_ds, [1], aoi, burn_values = [0])
+        # burn the land polygon ontop of the ocean values as 1 so that we now
+        # have an accurate mask of where the land, ocean, and nodata values
+        # should be
+        gdal.RasterizeLayer(land_ds, [1], land_polygon, burn_values = [1])
+
+        # do awesome convolution magic
+        kernel = np.array([[-1, -1, -1],
+                           [-1,  8, -1],
+                           [-1, -1, -1]])
+
+
 
 
     except KeyError:
