@@ -76,7 +76,6 @@ def calculate_raster_stats(ds):
 
                 #Sum and square only valid elements
                 running_sum += np.sum(masked_row[~masked_row.mask])
-                running_sum_square += np.sum(masked_row[~masked_row.mask]**2)
 
                 #Need to use the masked_row count to count the valid
                 #elements for an accurate measure of stdev and mean
@@ -89,7 +88,24 @@ def calculate_raster_stats(ds):
 
         n_pixels = band.YSize * band.XSize
         mean = running_sum / float(n_pixels)
-        std_dev = np.sqrt(running_sum_square/float(n_pixels)-mean**2)
+
+        #Now do a pass for stdev
+        std_dev_sum = 0.0
+        for row in range(band.YSize):
+            #Read row number 'row'
+            row_array = band.ReadAsArray(0,row,band.XSize,1)
+            masked_row = np.ma.array(row_array, mask = row_array == nodata)
+
+            try:
+                std_dev_sum += np.sum((masked_row[~masked_row.mask]-mean)**2)
+            except ValueError:
+                #If we get here it means we encountered a fully masked array
+                #okay since it just means it's all nodata values.
+                pass
+
+        std_dev = np.sqrt(std_dev_sum/float(n_pixels-1))
+        LOGGER.debug("mean %s, std_dev %s, n_pixels %s, running_sum %s, band.XSize %s, band.YSize %s" %
+                     (mean, std_dev, n_pixels, running_sum, band.XSize, band.YSize))
         
         #Write stats back to the band.  The function SetStatistics needs 
         #all the arguments to be floats and crashes if they are ints thats
