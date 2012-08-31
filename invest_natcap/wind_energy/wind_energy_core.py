@@ -120,6 +120,26 @@ def biophysical(args):
 
         # set nodata values this way : borders[mask] = ount_nodata
 
+        # do some gaussian blurring with min and max distances to get the range
+        # of where we can place the wind farms
+        # for now I am going to use the sigma that I derived in biodiversity to
+        # use for the gaussian filter.
+        sigma = math.sqrt(dr_pixel / 2.0)
+
+
+        # clip_and_op(threat_band.ReadAsArray(), sigma, ndimage.gaussian_filter,
+        # matrix_type=float, in_matrix_nodata=threat_nodata,
+        # out_matrix_nodata=out_nodata)
+
+        # clip_and_op(in_matrix, arg1, op, matrix_type=float,
+        # in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
+        # matrix = in_matrix.astype(matrix_type)
+        # np.putmask(matrix, matrix == in_matrix_nodata, 0)
+        # filtered_matrix = op(matrix, arg1, **kwargs)
+        # np.putmask(filtered_matrix, in_matrix==in_matrix_nodata,
+        # out_matrix_nodata)
+        # return filtered_matrix
+
 
     except KeyError:
         # looks like distances weren't provided, too bad!
