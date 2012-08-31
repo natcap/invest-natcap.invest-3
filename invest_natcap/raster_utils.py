@@ -1229,8 +1229,6 @@ def create_rat(dataset, attr_dict, key_name, value_name):
     keys_sorted = np.sort(keys)
     
     for key in keys_sorted:
-        #LOGGER.debug('Row:Key, %s:%s', row_count, str(key))
-        #LOGGER.debug('Row:Val, %s:%s', row_count, str(attr_dict[key]))
         rat.SetValueAsString(row_count, col_count, str(key))
         rat.SetValueAsString(row_count, col_count + 1, str(attr_dict[key]))
         row_count += 1
