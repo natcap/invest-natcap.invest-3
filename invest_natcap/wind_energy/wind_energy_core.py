@@ -23,6 +23,7 @@ def biophysical(args):
             to be away from the coastline (m)
         args[max_distance] - a float of the maximum distance the farms can 
             be placed away from the coastline (m)
+        args[land_polygon] - an OGR polygon shapefile of the land polygon
 
         returns - 
     """
@@ -34,27 +35,112 @@ def biophysical(args):
     aoi = args['aoi']
     min_depth = args['min_depth'] * -1.0
     max_depth = args['max_depth'] * -1.0
-    min_distance = args['min_distance']
-    max_distance = args['max_distance']
     
-    # clip the size of the bathymetry raster to aoi
-    def clip_bath_op(bath):
+    out_nodata = bathymetry.GetRasterBand(1).GetNoDataValue()
+    clipped_bath_uri = os.path.join(inter_dir, 'clipped_bath.tif')
+    clipped_bath = \
+        raster_utils.clip_dataset(bathymetry, aoi, clipped_bath_uri)
+  
+    # mask out any values that are out of the range of the depth values
+    def depth_op(bath):
         if bath >= max_depth and bath <= min_depth:
             return bath
         else:
             return out_nodata
 
-    out_nodata = bathymetry.GetRasterBand(1).GetNoDataValue()
-    clipped_bath_uri = os.path.join(inter_dir, 'clipped_bath.tif')
-    clipped_bath = \
-        raster_utils.vectorize_rasters([bathymetry], clip_bath_op, aoi=aoi, \
-            raster_out_uri = clipped_bath_uri, nodata = out_nodata)
-
+    depth_mask_uri = os.path.join(inter_dir, 'depth_mask.tif')
+    depth_mask = \
+        raster_utils.vectorize_rasters([clipped_bath], depth_op, \
+            raster_out_uri = depth_mask_uri, nodata = out_nodata)
 
     # construct the coastline from the AOI and bathymetry using the min and max
     # distance values provided
     try:
         # do some awesome coastline finding if distances are provided
+        min_distance = args['min_distance']
+        max_distance = args['max_distance']
+        land_polygon = args['land_polygon']
+
+        # make raster from the AOI and then rasterize land polygon ontop of it
+        bath_prop = raster_utils.get_raster_properties(bathymetry)
+        land_ds_uri = os.path.join(inter_dir, 'land_ds.tif')
+        land_ds = \
+            raster_utils.create_raster_from_vector_extents(bath_prop['width'],
+                bath_prop['height'], gdal.GDT_Float32, out_nodata, land_ds_uri,
+                aoi)
+
+        # burn the whole area of interest onto the raster setting everything to
+        # 0 which will represent our ocean values.
+        gdal.RasterizeLayer(land_ds, [1], aoi, burn_values = [0])
+        # create a nodata mask
+        nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
+        # burn the land polygon ontop of the ocean values as 1 so that we now
+        # have an accurate mask of where the land, ocean, and nodata values
+        # should be
+        gdal.RasterizeLayer(land_ds, [1], land_polygon, burn_values = [1])
+        # read in the raster so we can set back the nodata values
+        # I don't think that reading back in the whole raster is a great idea
+        # maybe there is a better way to handle this
+        matrix = land_ds.GetRasterBand(1).ReadAsArray()
+        # reset our nodata values
+        matrix[nodata_mask] = out_nodata
+        # write back our matrix to the band
+        land_ds.GetRasterBand(1).WriteArray(matrix)
+        # create new raster that is 2 rows/columns bigger than before
+        land_prop = raster_utils.get_raster_properties(land_ds)
+        boundary_ds_uri = os.path.join(inter_dir, 'boundary.tif')
+        boundary_ds = raster_utils.new_raster(land_prop['x_size'] + 2,
+                land_prop['y_size'] + 2, land_ds.GetProjection(),
+                land_ds.GetGeoTransform(), 'GTiff', out_nodata,
+                gdal.GDT_Float32, 1, boundary_ds_uri)
+
+        boundary_ds.GetRasterBand(1).WriteArray(matrix, xoff=1, yoff=1)
+
+        boundary_matrix = boundary_ds.GetRasterBand(1).ReadAsArray()
+        
+        # create a nodata mask for the boundary_ds
+        boundary_nodata_mask = boundary_matrix == out_nodata
+
+        # boundary_ds should have nodata values replaced with 1.0 (land values)
+        # so that the special cases are handled properly
+        boundary_matrix[boundary_matrix == out_nodata] = 1
+                
+        # do awesome convolution magic
+        kernel = np.array([[-1, -1, -1],
+                           [-1,  8, -1],
+                           [-1, -1, -1]])
+
+        # run convolution on the boundary_ds with the above kernel where we want
+        # values that are greater than 0
+        shoreline = \
+                (signal.convolve2d(boundary_matrix, kernel, mode='same') >0)
+
+        # now mask out where the nodata values should be
+        shoreline[boundary_nodata_mask] = out_nodata
+
+        # set nodata values this way : borders[mask] = ount_nodata
+
+        # do some gaussian blurring with min and max distances to get the range
+        # of where we can place the wind farms
+        # for now I am going to use the sigma that I derived in biodiversity to
+        # use for the gaussian filter.
+        sigma = math.sqrt(dr_pixel / 2.0)
+
+
+        # clip_and_op(threat_band.ReadAsArray(), sigma, ndimage.gaussian_filter,
+        # matrix_type=float, in_matrix_nodata=threat_nodata,
+        # out_matrix_nodata=out_nodata)
+
+        # clip_and_op(in_matrix, arg1, op, matrix_type=float,
+        # in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
+        # matrix = in_matrix.astype(matrix_type)
+        # np.putmask(matrix, matrix == in_matrix_nodata, 0)
+        # filtered_matrix = op(matrix, arg1, **kwargs)
+        # np.putmask(filtered_matrix, in_matrix==in_matrix_nodata,
+        # out_matrix_nodata)
+        # return filtered_matrix
+
+
     except KeyError:
         # looks like distances weren't provided, too bad!
         pass

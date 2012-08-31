@@ -40,6 +40,7 @@ def execute(args):
         args[max_depth] - a float value maximum depth of the device
         args[min_distance] - 
         args[max_distance] - 
+        args[land_polygon_uri] -
 
         returns -  
     """
@@ -84,6 +85,7 @@ def execute(args):
                 float(args['min_distance']), float(args['max_distance']))
         biophysical_args['min_distance'] = float(args['min_distance']) 
         biophysical_args['max_distance'] = float(args['max_distance'])
+        biophysical_args['land_polygon'] = gdal.Open(args['land_polygon_uri'])
     except KeyError:
         LOGGER.debug("Distance information not selected")
         pass
