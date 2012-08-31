@@ -72,10 +72,29 @@ def biophysical(args):
         # burn the whole area of interest onto the raster setting everything to
         # 0 which will represent our ocean values.
         gdal.RasterizeLayer(land_ds, [1], aoi, burn_values = [0])
+        # create a nodata mask
+        nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
         # burn the land polygon ontop of the ocean values as 1 so that we now
         # have an accurate mask of where the land, ocean, and nodata values
         # should be
         gdal.RasterizeLayer(land_ds, [1], land_polygon, burn_values = [1])
+        # read in the raster so we can set back the nodata values
+        # I don't think that reading back in the whole raster is a great idea
+        # maybe there is a better way to handle this
+        matrix = land_ds.GetRasterBand(1).ReadAsArray()
+        # reset our nodata values
+        matrix[matrix == nodata_mask] = out_nodata
+        # write back our matrix to the band
+        land_ds.GetRasterBand(1).WriteArray(matrix)
+        # create new raster that is 2 rows/columns bigger than before
+        land_prop = raster_utils.get_raster_properties(land_ds)
+        boundary_ds_uri = os.path.join(inter_dir, 'boundary.tif')
+        boundary_ds = raster_utils.new_raster(land_prop['x_size'] + 2,
+                land_prop['y_size'] + 2, land_ds.GetProjection(),
+                land_ds.GetGeoTransform(), 'GTiff', out_nodata,
+                gdal.GDT_Float32, 1, boundary_ds_uri)
+
+        boundary_ds.GetRasterBand(1).WriteArray(matrix, xoff=1, yoff=1)
 
         # do awesome convolution magic
         kernel = np.array([[-1, -1, -1],
