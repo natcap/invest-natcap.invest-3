@@ -72,17 +72,73 @@ def biophysical(args):
         # burn the whole area of interest onto the raster setting everything to
         # 0 which will represent our ocean values.
         gdal.RasterizeLayer(land_ds, [1], aoi, burn_values = [0])
+        # create a nodata mask
+        nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
         # burn the land polygon ontop of the ocean values as 1 so that we now
         # have an accurate mask of where the land, ocean, and nodata values
         # should be
         gdal.RasterizeLayer(land_ds, [1], land_polygon, burn_values = [1])
+        # read in the raster so we can set back the nodata values
+        # I don't think that reading back in the whole raster is a great idea
+        # maybe there is a better way to handle this
+        matrix = land_ds.GetRasterBand(1).ReadAsArray()
+        # reset our nodata values
+        matrix[nodata_mask] = out_nodata
+        # write back our matrix to the band
+        land_ds.GetRasterBand(1).WriteArray(matrix)
+        # create new raster that is 2 rows/columns bigger than before
+        land_prop = raster_utils.get_raster_properties(land_ds)
+        boundary_ds_uri = os.path.join(inter_dir, 'boundary.tif')
+        boundary_ds = raster_utils.new_raster(land_prop['x_size'] + 2,
+                land_prop['y_size'] + 2, land_ds.GetProjection(),
+                land_ds.GetGeoTransform(), 'GTiff', out_nodata,
+                gdal.GDT_Float32, 1, boundary_ds_uri)
 
+        boundary_ds.GetRasterBand(1).WriteArray(matrix, xoff=1, yoff=1)
+
+        boundary_matrix = boundary_ds.GetRasterBand(1).ReadAsArray()
+        
+        # create a nodata mask for the boundary_ds
+        boundary_nodata_mask = boundary_matrix == out_nodata
+
+        # boundary_ds should have nodata values replaced with 1.0 (land values)
+        # so that the special cases are handled properly
+        boundary_matrix[boundary_matrix == out_nodata] = 1
+                
         # do awesome convolution magic
         kernel = np.array([[-1, -1, -1],
                            [-1,  8, -1],
                            [-1, -1, -1]])
 
+        # run convolution on the boundary_ds with the above kernel where we want
+        # values that are greater than 0
+        shoreline = \
+                (signal.convolve2d(boundary_matrix, kernel, mode='same') >0)
 
+        # now mask out where the nodata values should be
+        shoreline[boundary_nodata_mask] = out_nodata
+
+        # set nodata values this way : borders[mask] = ount_nodata
+
+        # do some gaussian blurring with min and max distances to get the range
+        # of where we can place the wind farms
+        # for now I am going to use the sigma that I derived in biodiversity to
+        # use for the gaussian filter.
+        sigma = math.sqrt(dr_pixel / 2.0)
+
+
+        # clip_and_op(threat_band.ReadAsArray(), sigma, ndimage.gaussian_filter,
+        # matrix_type=float, in_matrix_nodata=threat_nodata,
+        # out_matrix_nodata=out_nodata)
+
+        # clip_and_op(in_matrix, arg1, op, matrix_type=float,
+        # in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
+        # matrix = in_matrix.astype(matrix_type)
+        # np.putmask(matrix, matrix == in_matrix_nodata, 0)
+        # filtered_matrix = op(matrix, arg1, **kwargs)
+        # np.putmask(filtered_matrix, in_matrix==in_matrix_nodata,
+        # out_matrix_nodata)
+        # return filtered_matrix
 
 
     except KeyError:
