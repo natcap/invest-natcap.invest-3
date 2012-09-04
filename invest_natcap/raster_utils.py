@@ -1237,6 +1237,40 @@ def create_rat(dataset, attr_dict, key_name, value_name):
 
     return dataset
 
+def create_lulc_rat(dataset, attr_dict, column_name):
+    """Create a raster attribute table
+
+        dataset - a GDAL raster dataset to create the RAT for 
+        attr_dict - a dictionary with keys that point to a primitive type
+           {integer_id_1: value_1, ... integer_id_n: value_n}
+        column_name - a string for the column name that maps the values
+        
+        returns - a GDAL raster dataset with an updated RAT
+        """
+
+    band = dataset.GetRasterBand(1)
+
+    # If there was already a RAT associated with this dataset it will be blown
+    # away and replaced by a new one
+    LOGGER.warn('Blowing away any current raster attribute table')
+    rat = gdal.RasterAttributeTable()
+
+    rat.SetRowCount(len(attr_dict))
+    
+    # create columns
+    rat.CreateColumn('Value', gdal.GFT_Integer, gdal.GFU_MinMax)
+    rat.CreateColumn(column_name, gdal.GFT_String, gdal.GFU_Name)
+
+    row_count = 0
+    for key in sorted(attr_dict.keys()):
+        rat.SetValueAsInt(row_count, 0, int(key))
+        rat.SetValueAsString(row_count, 1, attr_dict[key])
+        row_count += 1
+    
+    band.SetDefaultRAT(rat)
+    return dataset
+
+
 def get_raster_properties(dataset):
     """Get the width, height, X size, and Y size of the dataset and return the
         values in a dictionary. 
