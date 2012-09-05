@@ -117,6 +117,9 @@ class ResourceHandler(JSONHandler):
         self.resource_dir = resource_dir
         resource_file = os.path.join(resource_dir, 'resources.json')
         super(ResourceHandler, self).__init__(resource_file)
+
+        resource_dir = os.sep.join(resource_dir.split(os.sep)[-2:])
+        print 'Verifying resource %s' % resource_dir
         self.check(self.dict)
 
     def check(self, dictionary=None):
