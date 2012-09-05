@@ -73,7 +73,7 @@ def biophysical(args):
         # 0 which will represent our ocean values.
         gdal.RasterizeLayer(land_ds, [1], aoi, burn_values = [0])
         # create a nodata mask
-        nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
+        aoi_nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
         # burn the land polygon ontop of the ocean values as 1 so that we now
         # have an accurate mask of where the land, ocean, and nodata values
         # should be
@@ -81,11 +81,11 @@ def biophysical(args):
         # read in the raster so we can set back the nodata values
         # I don't think that reading back in the whole raster is a great idea
         # maybe there is a better way to handle this
-        matrix = land_ds.GetRasterBand(1).ReadAsArray()
+        land_ds_array = land_ds.GetRasterBand(1).ReadAsArray()
         # reset our nodata values
-        matrix[nodata_mask] = out_nodata
+        land_ds_array[aoi_nodata_mask] = out_nodata
         # write back our matrix to the band
-        land_ds.GetRasterBand(1).WriteArray(matrix)
+        land_ds.GetRasterBand(1).WriteArray(land_ds_array)
         # create new raster that is 2 rows/columns bigger than before
         land_prop = raster_utils.get_raster_properties(land_ds)
         boundary_ds_uri = os.path.join(inter_dir, 'boundary.tif')
@@ -94,7 +94,7 @@ def biophysical(args):
                 land_ds.GetGeoTransform(), 'GTiff', out_nodata,
                 gdal.GDT_Float32, 1, boundary_ds_uri)
 
-        boundary_ds.GetRasterBand(1).WriteArray(matrix, xoff=1, yoff=1)
+        boundary_ds.GetRasterBand(1).WriteArray(land_ds_array, xoff=1, yoff=1)
 
         boundary_matrix = boundary_ds.GetRasterBand(1).ReadAsArray()
         
@@ -112,11 +112,11 @@ def biophysical(args):
 
         # run convolution on the boundary_ds with the above kernel where we want
         # values that are greater than 0
-        shoreline = \
+        shoreline_matrix = \
                 (signal.convolve2d(boundary_matrix, kernel, mode='same') >0)
 
         # now mask out where the nodata values should be
-        shoreline[boundary_nodata_mask] = out_nodata
+        shoreline_matrix[boundary_nodata_mask] = out_nodata
 
         # set nodata values this way : borders[mask] = ount_nodata
 
@@ -124,21 +124,22 @@ def biophysical(args):
         # of where we can place the wind farms
         # for now I am going to use the sigma that I derived in biodiversity to
         # use for the gaussian filter.
-        sigma = math.sqrt(dr_pixel / 2.0)
+        pixel_size = .03333 #PROBLEM : Raster is in degrees and not meters
+        min_dist_pixel = min_distance / pixel_size
+        sigma_min = math.sqrt(dr_pixel / 2.0)
 
-
-        # clip_and_op(threat_band.ReadAsArray(), sigma, ndimage.gaussian_filter,
-        # matrix_type=float, in_matrix_nodata=threat_nodata,
-        # out_matrix_nodata=out_nodata)
-
-        # clip_and_op(in_matrix, arg1, op, matrix_type=float,
-        # in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
-        # matrix = in_matrix.astype(matrix_type)
-        # np.putmask(matrix, matrix == in_matrix_nodata, 0)
-        # filtered_matrix = op(matrix, arg1, **kwargs)
-        # np.putmask(filtered_matrix, in_matrix==in_matrix_nodata,
-        # out_matrix_nodata)
-        # return filtered_matrix
+        # copy the shoreline matrix to set nodata values and do guassian
+        # filtering
+        blur_matrix = np.copy(shoreline_matrix)
+        # where the blur_matrix is equal to nodata put a 0. This is so when
+        # blurring we don't factor in nodata values
+        np.putmask(blur_matrix, blur_matrix == out_nodata, 0)
+        # run the gaussian filter
+        min_dist_matrix = ndimage.gaussian_filter(blur_matrix, sigma)
+        # set back the nodata values that were set to 0
+        np.putmask(min_dist_matrix, shoreline_matrix==out_nodata,
+            out_nodata)
+         
 
 
     except KeyError:

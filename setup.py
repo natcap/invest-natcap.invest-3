@@ -18,7 +18,6 @@ CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
 
 console = []
-data_files = []
 py2exe_args = {}
 data_files = []
 lib_path = ''
@@ -83,8 +82,8 @@ if platform.system() == 'Windows':
 
     #Need to manually bring along the json configuration files to
     #the current build directory
-    py2exe_args['data_files'] = \
-        [('.',['invest_natcap/iui/carbon_biophysical.json',
+    data_files.append(
+        ('.',['invest_natcap/iui/carbon_biophysical.json',
                'invest_natcap/iui/carbon_valuation.json',
                'invest_natcap/iui/timber.json',
                'invest_natcap/iui/wave_energy_biophysical.json',
@@ -96,7 +95,8 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/pollination_valuation.json',
                'invest_natcap/iui/finfish_aquaculture.json',
                'invest_natcap/iui/marine_water_quality_biophysical.json',
-               'invest_natcap/iui/sediment_biophysical.json']),
+               'invest_natcap/iui/sediment_biophysical.json']))
+    data_files.append(
         ('invest_natcap/iui',
               ['invest_natcap/iui/dialog-close.png',
                'invest_natcap/iui/dialog-ok.png',
@@ -108,7 +108,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/validate-fail.png',
                'invest_natcap/iui/dialog-warning.png',
                'invest_natcap/iui/dialog-information-2.png',
-               'invest_natcap/iui/dialog-error.png'])]
+               'invest_natcap/iui/dialog-error.png']))
 else:
     # this is not running on windows
     # We need to add certain IUI resources to the virtualenv site-packages
