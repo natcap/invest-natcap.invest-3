@@ -1195,19 +1195,17 @@ def calculate_value_not_in_array(array):
     except:
         return sorted_array[-1]+1
 
-def create_rat(dataset, attr_dict, key_name, value_name):
-    """Create a raster attribute table from a provided dictionary that maps the
-        keys to the first column and values to the second column. WARNING: this
-        will blow away any raster attribute table that is set to this dataset
+def create_rat(dataset, attr_dict, column_name):
+    """Create a raster attribute table
 
         dataset - a GDAL raster dataset to create the RAT for 
         attr_dict - a dictionary with keys that point to a primitive type
            {integer_id_1: value_1, ... integer_id_n: value_n}
-        key_name - a string for the column name that maps the keys
-        value_name - a string for the column name that maps the values
+        column_name - a string for the column name that maps the values
         
         returns - a GDAL raster dataset with an updated RAT
         """
+
     band = dataset.GetRasterBand(1)
 
     # If there was already a RAT associated with this dataset it will be blown
@@ -1215,27 +1213,21 @@ def create_rat(dataset, attr_dict, key_name, value_name):
     LOGGER.warn('Blowing away any current raster attribute table')
     rat = gdal.RasterAttributeTable()
 
-    # the number of keys represents the number of rows we intend to write
-    keys = np.array(attr_dict.keys())
-    
-    col_count = rat.GetColumnCount()
-    LOGGER.debug('Column Count : %s', col_count)
+    rat.SetRowCount(len(attr_dict))
     
     # create columns
-    rat.CreateColumn(key_name, gdal.GFT_String, gdal.GFU_Generic)
-    rat.CreateColumn(value_name, gdal.GFT_String, gdal.GFU_Generic)
+    rat.CreateColumn('Value', gdal.GFT_Integer, gdal.GFU_MinMax)
+    rat.CreateColumn(column_name, gdal.GFT_String, gdal.GFU_Name)
 
     row_count = 0
-    keys_sorted = np.sort(keys)
-    
-    for key in keys_sorted:
-        rat.SetValueAsString(row_count, col_count, str(key))
-        rat.SetValueAsString(row_count, col_count + 1, str(attr_dict[key]))
+    for key in sorted(attr_dict.keys()):
+        rat.SetValueAsInt(row_count, 0, int(key))
+        rat.SetValueAsString(row_count, 1, attr_dict[key])
         row_count += 1
     
     band.SetDefaultRAT(rat)
-
     return dataset
+
 
 def get_raster_properties(dataset):
     """Get the width, height, X size, and Y size of the dataset and return the
