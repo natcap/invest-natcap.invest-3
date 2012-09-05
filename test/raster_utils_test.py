@@ -122,8 +122,7 @@ class TestRasterUtils(unittest.TestCase):
         band = None
 
         tmp_dict = {11:'farm', 23:'swamp', 13:'marsh', 22:'forest', 3:'river'}
-        field_1 = 'LULC'
-        field_2 = 'DESC'
+        field_1 = 'DESC'
        
         known_results = np.array([[3, 'river'],
                                   [11, 'farm'],
@@ -131,7 +130,7 @@ class TestRasterUtils(unittest.TestCase):
                                   [22, 'forest'],
                                   [23, 'swamp']])
 
-        ds_rat = raster_utils.create_rat(ds, tmp_dict, field_1, field_2)
+        ds_rat = raster_utils.create_rat(ds, tmp_dict, field_1)
 
         band = ds_rat.GetRasterBand(1)
         rat = band.GetDefaultRAT()
