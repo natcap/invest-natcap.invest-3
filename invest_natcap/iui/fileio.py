@@ -128,6 +128,9 @@ class ResourceHandler(JSONHandler):
                 self.check(value)
             else:
                 if isinstance(value, unicode) or isinstance(value, str):
+                    # make the resource path found in json relative to the
+                    # resource directory.
+                    value = os.path.join(self.resource_dir, value)
                     if not os.path.exists(value):
                         print 'Resource \'%s\' was not found for key \'%s\''\
                             % (value, key)
