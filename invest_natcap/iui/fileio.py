@@ -114,7 +114,7 @@ class ResourceHandler(JSONHandler):
 
         Returns an instance of ResourceHandler for the resources dir specified."""
 
-        self.resource_dir = resource_dir
+        self.resource_dir = os.path.abspath(resource_dir)
         resource_file = os.path.join(resource_dir, 'resources.json')
         super(ResourceHandler, self).__init__(resource_file)
 
@@ -149,8 +149,7 @@ class ResourceHandler(JSONHandler):
 
         Returns an absolute path to the resource."""
 
-        icon_path = os.path.join(self.resource_dir, self.dict['icons'][icon_key])
-        return os.path.abspath(icon_path)
+        return os.path.join(self.resource_dir, self.dict['icons'][icon_key])
 
 class AbstractTableHandler(object):
     """This class provides an abstract class for specific reimplementation for
