@@ -1314,3 +1314,56 @@ def gdal_cast(value, gdal_type):
         value = np.float(value)
 
     return value
+
+
+def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri):
+    """A function to reproject and resample a GDAL dataset given an output pixel size
+        and output reference and uri.
+
+       original_dataset - a gdal Dataset to reproject
+       pixel_spacing - output dataset pixel size in projected linear units (probably meters)
+       output_wkt - output project in Well Known Text (the result of ds.GetProjection())
+       output_uri - location on disk to dump the reprojected dataset
+    
+       return projected dataset"""
+
+    original_sr = osr.SpatialReference()
+    original_sr.ImportFromWkt(original_dataset.GetProjection())
+
+    output_sr = osr.SpatialReference()
+    output_sr.ImportFromWkt(output_wkt)
+
+    tx = osr.CoordinateTransformation(original_sr, output_sr)
+
+    # Get the Geotransform vector
+    geo_t = original_dataset.GetGeoTransform()
+    x_size = original_dataset.RasterXSize # Raster xsize
+    y_size = original_dataset.RasterYSize # Raster ysize
+    # Work out the boundaries of the new dataset in the target projection
+    (ulx, uly, _) = tx.TransformPoint(geo_t[0], geo_t[3])
+    (lrx, lry, _) = tx.TransformPoint(geo_t[0] + geo_t[1]*x_size,
+                                      geo_t[3] + geo_t[5]*y_size)
+
+    gdal_driver = gdal.GetDriverByName('GTiff')
+    # The size of the raster is given the new projection and pixel spacing
+    # Using the values we calculated above. Also, setting it to store one band
+    # and to use Float32 data type.
+
+    LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s" % (ulx, uly, lrx, lry))
+
+    output_dataset = gdal_driver.Create(output_uri, int((lrx - ulx)/pixel_spacing), 
+                              int((uly - lry)/pixel_spacing), 1, gdal.GDT_Float32)
+    # Calculate the new geotransform
+    output_geo = (ulx, pixel_spacing, geo_t[2],
+               uly, geo_t[4], -pixel_spacing)
+
+    # Set the geotransform
+    output_dataset.SetGeoTransform(output_geo)
+    output_dataset.SetProjection (output_sr.ExportToWkt())
+
+    # Perform the projection/resampling 
+    gdal.ReprojectImage(original_dataset, output_dataset,
+                        original_sr.ExportToWkt(), output_sr.ExportToWkt(),
+                        gdal.GRA_Bilinear)
+
+    return output_dataset
