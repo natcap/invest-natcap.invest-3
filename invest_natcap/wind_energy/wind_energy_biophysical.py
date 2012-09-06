@@ -95,3 +95,36 @@ def execute(args):
     # call on the core module
 
     wind_energy_core.biophysical(biophysical_args)
+
+def read_wind_data(wind_data_uri):
+    """Unpack the wind data into a dictionary
+
+        wind_data_uri - a uri for the wind data text file
+
+        returns - a dictionary where the keys is the row number and the values
+            are dictionaries mapping column headers to values """
+
+    wind_file = open(wind_data_uri)
+    columns_line = wind_file.readline().split(',')
+    wind_dict = {}
+    
+    for line in wind_file.readlines():
+        line_array = line.split(',')
+        key = line_array[0]
+        wind_dict[key] = {}
+        for index in range(1, len(line_array) - 1):
+            wind_dict[key][columns_line[index]] = float(line_array[index])
+
+    wind_file.close()
+
+    LOGGER.debug(
+        'wind_dict keys : %s', np.sort(np.array(wind_dict.keys()).astype(int)))
+    
+    return wind_dict
+
+
+
+
+
+
+
