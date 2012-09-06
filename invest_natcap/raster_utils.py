@@ -9,6 +9,7 @@ import time
 
 from osgeo import gdal
 from osgeo import osr
+from osgeo import ogr
 import numpy as np
 import scipy.interpolate
 import scipy.sparse
@@ -1325,3 +1326,87 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri):
                         gdal.GRA_Bilinear)
 
     return output_dataset
+    
+def reproject_datasource(original_datasource, output_wkt, output_uri):
+    """Changes the projection of an ogr datasource by creating a new 
+        shapefile based on the output_wkt passed in.  The new shapefile 
+        then copies all the features and fields of the original_datasource 
+        as its own.
+    
+        original_datasource - a ogr datasource
+        output_wkt - the desired projection as Well Known Text 
+            (by layer.GetSpatialRef().ExportToWkt())
+        output_uri - The path to where the new shapefile should be written to disk.
+    
+        returns - The reprojected shapefile.
+    """
+    # if this file already exists, then remove it
+    if os.path.isfile(output_uri):
+        os.remove(output_uri)
+    
+    output_sr = osr.SpatialReference()
+    output_sr.ImportFromWkt(output_wkt)
+    
+    # create a new shapefile from the orginal_datasource 
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_datasource = output_driver.CreateDataSource(output_uri)
+    
+    # loop through all the layers in the orginal_datasource
+    for original_layer in original_datasource:
+        
+        #Get the original_layer definition which holds needed attribute values
+        original_layer_dfn = original_layer.GetLayerDefn()
+        
+        #Create the new layer for output_datasource using same name and geometry
+        #type from original_datasource, but different projection
+        output_layer = output_datasource.CreateLayer(
+                original_layer_dfn.GetName(), output_sr, 
+                original_layer_dfn.GetGeomType())
+        
+        #Get the number of fields in original_layer
+        original_field_count = original_layer_dfn.GetFieldCount()
+        
+        #For every field, create a duplicate field and add it to the new 
+        #shapefiles layer
+        for fld_index in range(original_field_count):
+            original_field = original_layer_dfn.GetFieldDefn(fld_index)
+            output_field = ogr.FieldDefn(original_field.GetName(), original_field.GetType())
+            output_field.SetWidth(original_field.GetWidth())
+            output_field.SetPrecision(original_field.GetPrecision())
+            output_layer.CreateField(output_field)
+
+        original_layer.ResetReading()
+        
+        #Get the spatial reference of the original_layer to use in transforming
+        original_sr = original_layer.GetSpatialRef()
+
+        #Create a coordinate transformation
+        coord_trans = osr.CoordinateTransformation(original_sr, output_sr)
+
+        #Copy all of the features in original_layer to the new shapefile
+        for original_feature in original_layer:
+            geom = original_feature.GetGeometryRef()
+            
+            #Transform the geometry into a format desired for the new projection
+            geom.Transform(coord_trans)
+            
+            #Copy original_datasource's feature and set as new shapes feature
+            output_feature = ogr.Feature(feature_def=output_layer.GetLayerDefn())
+            output_feature.SetFrom(original_feature)
+            output_feature.SetGeometry(geom)
+
+            #For all the fields in the feature set the field values from the 
+            #source field
+            for fld_index2 in range(output_feature.GetFieldCount()):
+                original_field_value = original_feature.GetField(fld_index2)
+                output_feature.SetField(fld_index2, original_field_value)
+
+            output_layer.CreateFeature(output_feature)
+            output_feature = None
+
+            original_feature = None
+
+        original_layer = None
+
+    return output_datasource
+
