@@ -1202,6 +1202,7 @@ class FileButton(QtGui.QPushButton):
         self.URIfield = URIfield
         self.filetype = filetype
         self.filters = {"all": ["All files (* *.*)"],
+                        "EXISTS": ["All files (* *.*)"],
                         "CSV": ["Comma separated value file (*.csv *.CSV)"],
                         "GDAL": ["[GDAL] Arc/Info Binary Grid (hdr.adf HDR.ADF hdr.ADF)",
                                  "[GDAL] Arc/Info ASCII Grid (*.asc *.ASC)",
