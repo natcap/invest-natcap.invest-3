@@ -8,6 +8,7 @@ from osgeo import ogr
 from osgeo import osr
 
 from invest_natcap.wind_energy import wind_energy_core
+import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -77,18 +78,38 @@ def execute(args):
     aoi = ogr.Open(args['aoi_uri'])
     biophysical_args['aoi'] = aoi 
 
-    
+    wind_point_shape_uri = os.path.join(inter_dir, 'wind_points_shape.shp')
+    wind_data = read_wind_data(args['wind_data_uri'])
+    wind_data_points = wind_data_to_point_shape(
+            wind_data, 'wind_data', wind_point_shape_uri)
+
     biophysical_args['min_depth'] = float(args['min_depth']) 
     biophysical_args['max_depth'] = float(args['max_depth'])
-    try:
+   
+   try:
         LOGGER.debug('Distances : %s:%s',
                 float(args['min_distance']), float(args['max_distance']))
         biophysical_args['min_distance'] = float(args['min_distance']) 
         biophysical_args['max_distance'] = float(args['max_distance'])
+        
+        land_polygon = gdal.Open(args['land_polygon_uri'])
+        projected_sr = land_polygon.GetLayer().GetSpatialRef()
+        projected_sr.ExportToWkt()
+        wind_shape_reprojected_uri = os.path.join(
+                inter_dir, 'wind_points_reprojected.shp'
+        wind_data_points = raster_utils.reproject_datasource(
+            wind_data_points, projected_sr, wind_shape_reprojected_uri)
+
         biophysical_args['land_polygon'] = gdal.Open(args['land_polygon_uri'])
+
     except KeyError:
         LOGGER.debug("Distance information not selected")
         pass
+
+    
+    
+    biophysical_args['wind_point_shape'] = wind_data_points
+    
 
     # handle any pre-processing that must be done
 
