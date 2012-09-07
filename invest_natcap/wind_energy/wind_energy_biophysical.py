@@ -2,6 +2,7 @@
 import os.path
 import logging
 import csv
+import os
 
 from osgeo import gdal
 from osgeo import ogr
@@ -154,6 +155,10 @@ def wind_data_to_point_shape(dict_data, layer_name,  output_uri):
 
         return - a OGR Datasource 
         """
+    
+    if os.path.isfile(output_uri):
+        os.remove(output_uri)
+    
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
 
