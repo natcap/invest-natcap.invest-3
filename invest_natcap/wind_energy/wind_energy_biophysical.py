@@ -115,7 +115,6 @@ def execute(args):
     # handle any pre-processing that must be done
 
     # call on the core module
-
     wind_energy_core.biophysical(biophysical_args)
 
 def read_wind_data(wind_data_uri):
