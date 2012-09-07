@@ -123,6 +123,50 @@ def read_wind_data(wind_data_uri):
     return wind_dict
 
 
+def wind_data_to_point_shape(dict_data, layer_name,  output_uri):
+    """Given a dictionary of the wind data create a point shapefile that
+        represents this data
+        
+        dict_data - a python dictionary with the wind data
+        layer_name - the name of the layer
+        output_uri - a uri for the output destination of the shapefile
+
+        return - a OGR Datasource 
+        """
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_datasource = output_driver.CreateDataSource(output_uri)
+
+    source_sr = osr.SpatialReference()
+    source_sr.SetWellKnownGeogCS("WGS84")
+    
+    output_layer = output_datasource.CreateLayer(
+            layer_name, source_sr, ogr.wkbPoint)
+
+    field_list = dict_data[dict_data.keys()[0]].keys()
+
+    for field in field_list:
+        output_field = ogr.FieldDefn(field, ogr.OFTReal)   
+        output_layer.CreateField(output_field)
+
+    for point_dict in dict_data.itervalues():
+        latitude = point_dict['LATI']
+        longitude = point_dict['LONG']
+
+        geom = ogr.Geometry(ogr.wkbPoint)
+        geom.AddPoint_2D(longitude, latitude)
+
+        output_feature = ogr.Feature(output_layer.GetLayerDefn())
+        output_layer.CreateFeature(output_feature)
+        
+        for field_name in point_dict:
+            field_index = output_feature.GetFieldIndex(field_name)
+            output_feature.SetField(field_index, point_dict[field_name])
+        
+        output_feature.SetGeometryDirectly(geom)
+        output_layer.SetFeature(output_feature)
+        output_feature = None
+
+    return output_datasource
 
 
 
