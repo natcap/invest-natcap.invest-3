@@ -1127,7 +1127,10 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
 
     band, nodata = extract_band_and_nodata(source_dataset)
 
-    LOGGER.warn(nodata)
+    if nodata is None:
+        nodata = calculate_value_not_in_dataset(source_dataset)
+
+    LOGGER.info("clip_dataset nodata value is %s" % nodata)
 
     def op(x):
         return x
