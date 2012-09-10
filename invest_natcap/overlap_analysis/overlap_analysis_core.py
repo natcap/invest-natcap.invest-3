@@ -53,6 +53,7 @@ def execute(args):
         args['decay']- Float which should be used to calculate the weight
             attributed to each pixel in the weighted raster, as given by
             distance to the hubs in 'hubs_file'.
+    
     Intermediate:
         A set of rasterized shapefiles of the form 
         args['workspace_dir']/Intermediate/<filename>. For each shapefile that we
@@ -112,11 +113,20 @@ def execute(args):
 
     #Need to set up dummy var for when inter or intra are available without the
     #other so that all parameters can be filled in.
-    if (args['do_inter'] or args['do_intra']):
+    #Adding dummy vars for the two hubs vars as well
+    if (args['do_inter'] or args['do_intra'] or args['do_hubs']):
         
         layer_dict = args['over_layer_dict'] if args['do_inter'] else None
         intra_name = args['intra_name'] if args['do_intra'] else None
         
+        #The same as above assignations, but expanded for two vars
+        if args['do_hubs']:
+            hubs_file = args['hubs_file']
+            decay = args['decay']
+        else:
+            hubs_file = None
+            decay = None
+
         #Want some place to put weighted rasters so we aren't blasting over the
         #unweighted rasters
         weighted_dir = os.path.join(inter_dir, 'Weighted')
@@ -129,7 +139,8 @@ def execute(args):
         create_weighted_raster(output_dir, weighted_dir, aoi_raster, 
                                layer_dict, args['overlap_files'], 
                                intra_name, args['do_inter'], 
-                               args['do_intra'], raster_files, raster_names)
+                               args['do_intra'], args['do_hubs'],
+                               hubs_file, decay, raster_files, raster_names)
 
 def create_unweighted_raster(output_dir, aoi_raster, raster_files):
     '''This will create the set of unweighted rasters- both the AOI and
