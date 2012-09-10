@@ -92,6 +92,12 @@ def execute(args):
     if args['do_intra']:
         oa_args['intra_name'] = args['intra_name']
 
+    oa_args['do_hubs'] = args['do_hubs']
+
+    if args['do_hubs']:
+        oa_args['hubs_file'] = ogr.Open(args['hubs_uri'])
+        oa_args['decay'] = float(args['decay_amt'])
+
     overlap_analysis_core.execute(oa_args)
 
 def format_over_table(over_tbl):
