@@ -77,6 +77,10 @@ def execute(args):
     biophysical_args['bathymetry'] = bathymetry
 
     aoi = ogr.Open(args['aoi_uri'])
+    
+    if not check_datasource_projections([aoi]):
+        raise Exception('The AOI is not projected properly')
+
     biophysical_args['aoi'] = aoi 
 
     wind_point_shape_uri = os.path.join(inter_dir, 'wind_points_shape.shp')
@@ -84,6 +88,23 @@ def execute(args):
     wind_data_points = wind_data_to_point_shape(
             wind_data, 'wind_data', wind_point_shape_uri)
 
+    # clip and reproject the bathymetry dataset from the AOI
+    
+    AOI_wkt = aoi.GetLayer().GetSpatialRef().ExportToWkt()
+   
+    dset_out_uri = os.path.join(inter_dir, 'clipped_projected_bathymetry.tif')
+
+    clip_and_proj_bath = clip_and_project_dataset_from_datasource(
+        bathymetry, aoi, dset_out_uri, inter_dir)
+
+    wind_shape_reprojected_uri = os.path.join(
+            inter_dir, 'wind_points_reprojected.shp')
+   
+    wind_data_points = raster_utils.reproject_datasource(
+        wind_data_points, AOI_wkt, wind_shape_reprojected_uri)
+    
+    biophysical_args['wind_data_points'] = wind_data_points
+    biophysical_args['bathymetry'] = clip_and_proj_bath
     biophysical_args['min_depth'] = float(args['min_depth']) 
     biophysical_args['max_depth'] = float(args['max_depth'])
    
@@ -94,29 +115,31 @@ def execute(args):
         biophysical_args['max_distance'] = float(args['max_distance'])
         
         land_polygon = gdal.Open(args['land_polygon_uri'])
-        projected_sr = land_polygon.GetLayer().GetSpatialRef()
-        projected_sr.ExportToWkt()
-        wind_shape_reprojected_uri = os.path.join(
-                inter_dir, 'wind_points_reprojected.shp'
-        wind_data_points = raster_utils.reproject_datasource(
-            wind_data_points, projected_sr, wind_shape_reprojected_uri)
+        projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')  
+       
+        projected_land = raster_utils.reproject_datasource(
+                land_polygon, AOI_wkt, projected_land_uri) 
 
-        biophysical_args['land_polygon'] = gdal.Open(args['land_polygon_uri'])
+        biophysical_args['land_polygon'] = projected_land
 
     except KeyError:
         LOGGER.debug("Distance information not selected")
         pass
-
     
-    
-    biophysical_args['wind_point_shape'] = wind_data_points
-    
-
-    # handle any pre-processing that must be done
-
     # call on the core module
     wind_energy_core.biophysical(biophysical_args)
 
+def check_datasource_projections(dsource_list):
+
+    for dsource in dsource_list:
+        srs = dsource.GetLayer().GetSpatialRef()
+        if not srs.IsProjected():
+            return False
+        if srs.GetLinearUnits() != 1.0:
+            return False
+
+    return True
+    
 def read_wind_data(wind_data_uri):
     """Unpack the wind data into a dictionary
 
