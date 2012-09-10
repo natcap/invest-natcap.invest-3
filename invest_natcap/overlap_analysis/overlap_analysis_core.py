@@ -34,15 +34,25 @@ def execute(args):
             of the various shapefiles included in the 'overlap_files' dictionary.
             The dictionary key is the string name of the shapefile it represents,
             minus the .shp extension. This ID maps to a double representing that
-            layer's inter-activity weight.
+            layer's inter-activity weight. This only exists if 'do_inter' is
+            true.
+        args['do_inter']- Boolean to indicate if intra-activity weighting is 
+            desired. This tells us if the overlap table exists.
+        args['do_intra']- Boolean which indicates whether or not intra-activity
+            weighting is desired. This will will pull the attributes with the 
+            label given by 'intra_name from shapefiles passed in in 
+            'zone_layer_file'.
+        args['do_hubs']- Boolean to indicate if human interest hubs are a
+            desired input for the weighted raster file output.
         args['intra_name']- A string which corresponds to a field within the
            layers being passed in within overlap analysis directory. This is
-           the intra-activity importance for each activity.
-            weighting is desired. This tells us if the overlap table exists.
-        args['do_intra']- Boolean which indicates whether or not intra-activity
-            weighting is desired. This will will pull attributes from shapefiles
-            passed in in 'zone_layer_file'.
-
+           the intra-activity importance for each activity. This input only
+           exists if 'do_intra' is true.
+        args['hubs_file']- An open shapefile containing points. Each point is a
+            single human use hub, and should be weighted using 'decay'.
+        args['decay']- Float which should be used to calculate the weight
+            attributed to each pixel in the weighted raster, as given by
+            distance to the hubs in 'hubs_file'.
     Intermediate:
         A set of rasterized shapefiles of the form 
         args['workspace_dir']/Intermediate/<filename>. For each shapefile that we
