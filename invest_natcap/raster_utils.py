@@ -9,6 +9,7 @@ import time
 
 from osgeo import gdal
 from osgeo import osr
+from osgeo import ogr
 import numpy as np
 import scipy.interpolate
 import scipy.sparse
@@ -76,7 +77,6 @@ def calculate_raster_stats(ds):
 
                 #Sum and square only valid elements
                 running_sum += np.sum(masked_row[~masked_row.mask])
-                running_sum_square += np.sum(masked_row[~masked_row.mask]**2)
 
                 #Need to use the masked_row count to count the valid
                 #elements for an accurate measure of stdev and mean
@@ -89,7 +89,24 @@ def calculate_raster_stats(ds):
 
         n_pixels = band.YSize * band.XSize
         mean = running_sum / float(n_pixels)
-        std_dev = np.sqrt(running_sum_square/float(n_pixels)-mean**2)
+
+        #Now do a pass for stdev
+        std_dev_sum = 0.0
+        for row in range(band.YSize):
+            #Read row number 'row'
+            row_array = band.ReadAsArray(0,row,band.XSize,1)
+            masked_row = np.ma.array(row_array, mask = row_array == nodata)
+
+            try:
+                std_dev_sum += np.sum((masked_row[~masked_row.mask]-mean)**2)
+            except ValueError:
+                #If we get here it means we encountered a fully masked array
+                #okay since it just means it's all nodata values.
+                pass
+
+        std_dev = np.sqrt(std_dev_sum/float(n_pixels-1))
+        LOGGER.debug("mean %s, std_dev %s, n_pixels %s, running_sum %s, band.XSize %s, band.YSize %s" %
+                     (mean, std_dev, n_pixels, running_sum, band.XSize, band.YSize))
         
         #Write stats back to the band.  The function SetStatistics needs 
         #all the arguments to be floats and crashes if they are ints thats
@@ -703,7 +720,7 @@ def vectorize_points(shapefile, datasource_field, raster):
 
     LOGGER.info("Writing interpolating with griddata")
     raster_out_array = scipy.interpolate.griddata(point_array, 
-        value_array, (grid_y, grid_x), 'linear', nodata)
+        value_array, (grid_y, grid_x), 'nearest', nodata)
     LOGGER.info("Writing result to output array")
     band.WriteArray(raster_out_array,0,0)
 
@@ -1110,7 +1127,10 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
 
     band, nodata = extract_band_and_nodata(source_dataset)
 
-    LOGGER.warn(nodata)
+    if nodata is None:
+        nodata = calculate_value_not_in_dataset(source_dataset)
+
+    LOGGER.info("clip_dataset nodata value is %s" % nodata)
 
     def op(x):
         return x
@@ -1179,19 +1199,17 @@ def calculate_value_not_in_array(array):
     except:
         return sorted_array[-1]+1
 
-def create_rat(dataset, attr_dict, key_name, value_name):
-    """Create a raster attribute table from a provided dictionary that maps the
-        keys to the first column and values to the second column. WARNING: this
-        will blow away any raster attribute table that is set to this dataset
+def create_rat(dataset, attr_dict, column_name):
+    """Create a raster attribute table
 
         dataset - a GDAL raster dataset to create the RAT for 
         attr_dict - a dictionary with keys that point to a primitive type
            {integer_id_1: value_1, ... integer_id_n: value_n}
-        key_name - a string for the column name that maps the keys
-        value_name - a string for the column name that maps the values
+        column_name - a string for the column name that maps the values
         
         returns - a GDAL raster dataset with an updated RAT
         """
+
     band = dataset.GetRasterBand(1)
 
     # If there was already a RAT associated with this dataset it will be blown
@@ -1199,29 +1217,21 @@ def create_rat(dataset, attr_dict, key_name, value_name):
     LOGGER.warn('Blowing away any current raster attribute table')
     rat = gdal.RasterAttributeTable()
 
-    # the number of keys represents the number of rows we intend to write
-    keys = np.array(attr_dict.keys())
-    
-    col_count = rat.GetColumnCount()
-    LOGGER.debug('Column Count : %s', col_count)
+    rat.SetRowCount(len(attr_dict))
     
     # create columns
-    rat.CreateColumn(key_name, gdal.GFT_String, gdal.GFU_Generic)
-    rat.CreateColumn(value_name, gdal.GFT_String, gdal.GFU_Generic)
+    rat.CreateColumn('Value', gdal.GFT_Integer, gdal.GFU_MinMax)
+    rat.CreateColumn(column_name, gdal.GFT_String, gdal.GFU_Name)
 
     row_count = 0
-    keys_sorted = np.sort(keys)
-    
-    for key in keys_sorted:
-        #LOGGER.debug('Row:Key, %s:%s', row_count, str(key))
-        #LOGGER.debug('Row:Val, %s:%s', row_count, str(attr_dict[key]))
-        rat.SetValueAsString(row_count, col_count, str(key))
-        rat.SetValueAsString(row_count, col_count + 1, str(attr_dict[key]))
+    for key in sorted(attr_dict.keys()):
+        rat.SetValueAsInt(row_count, 0, int(key))
+        rat.SetValueAsString(row_count, 1, attr_dict[key])
         row_count += 1
     
     band.SetDefaultRAT(rat)
-
     return dataset
+
 
 def get_raster_properties(dataset):
     """Get the width, height, X size, and Y size of the dataset and return the
@@ -1266,3 +1276,140 @@ def gdal_cast(value, gdal_type):
         value = np.float(value)
 
     return value
+
+
+def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri):
+    """A function to reproject and resample a GDAL dataset given an output pixel size
+        and output reference and uri.
+
+       original_dataset - a gdal Dataset to reproject
+       pixel_spacing - output dataset pixel size in projected linear units (probably meters)
+       output_wkt - output project in Well Known Text (the result of ds.GetProjection())
+       output_uri - location on disk to dump the reprojected dataset
+    
+       return projected dataset"""
+
+    original_sr = osr.SpatialReference()
+    original_sr.ImportFromWkt(original_dataset.GetProjection())
+
+    output_sr = osr.SpatialReference()
+    output_sr.ImportFromWkt(output_wkt)
+
+    tx = osr.CoordinateTransformation(original_sr, output_sr)
+
+    # Get the Geotransform vector
+    geo_t = original_dataset.GetGeoTransform()
+    x_size = original_dataset.RasterXSize # Raster xsize
+    y_size = original_dataset.RasterYSize # Raster ysize
+    # Work out the boundaries of the new dataset in the target projection
+    (ulx, uly, _) = tx.TransformPoint(geo_t[0], geo_t[3])
+    (lrx, lry, _) = tx.TransformPoint(geo_t[0] + geo_t[1]*x_size,
+                                      geo_t[3] + geo_t[5]*y_size)
+
+    gdal_driver = gdal.GetDriverByName('GTiff')
+    # The size of the raster is given the new projection and pixel spacing
+    # Using the values we calculated above. Also, setting it to store one band
+    # and to use Float32 data type.
+
+    LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s" % (ulx, uly, lrx, lry))
+
+    output_dataset = gdal_driver.Create(output_uri, int((lrx - ulx)/pixel_spacing), 
+                              int((uly - lry)/pixel_spacing), 1, gdal.GDT_Float32)
+    # Calculate the new geotransform
+    output_geo = (ulx, pixel_spacing, geo_t[2],
+               uly, geo_t[4], -pixel_spacing)
+
+    # Set the geotransform
+    output_dataset.SetGeoTransform(output_geo)
+    output_dataset.SetProjection (output_sr.ExportToWkt())
+
+    # Perform the projection/resampling 
+    gdal.ReprojectImage(original_dataset, output_dataset,
+                        original_sr.ExportToWkt(), output_sr.ExportToWkt(),
+                        gdal.GRA_Bilinear)
+
+    return output_dataset
+    
+def reproject_datasource(original_datasource, output_wkt, output_uri):
+    """Changes the projection of an ogr datasource by creating a new 
+        shapefile based on the output_wkt passed in.  The new shapefile 
+        then copies all the features and fields of the original_datasource 
+        as its own.
+    
+        original_datasource - a ogr datasource
+        output_wkt - the desired projection as Well Known Text 
+            (by layer.GetSpatialRef().ExportToWkt())
+        output_uri - The path to where the new shapefile should be written to disk.
+    
+        returns - The reprojected shapefile.
+    """
+    # if this file already exists, then remove it
+    if os.path.isfile(output_uri):
+        os.remove(output_uri)
+    
+    output_sr = osr.SpatialReference()
+    output_sr.ImportFromWkt(output_wkt)
+    
+    # create a new shapefile from the orginal_datasource 
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_datasource = output_driver.CreateDataSource(output_uri)
+    
+    # loop through all the layers in the orginal_datasource
+    for original_layer in original_datasource:
+        
+        #Get the original_layer definition which holds needed attribute values
+        original_layer_dfn = original_layer.GetLayerDefn()
+        
+        #Create the new layer for output_datasource using same name and geometry
+        #type from original_datasource, but different projection
+        output_layer = output_datasource.CreateLayer(
+                original_layer_dfn.GetName(), output_sr, 
+                original_layer_dfn.GetGeomType())
+        
+        #Get the number of fields in original_layer
+        original_field_count = original_layer_dfn.GetFieldCount()
+        
+        #For every field, create a duplicate field and add it to the new 
+        #shapefiles layer
+        for fld_index in range(original_field_count):
+            original_field = original_layer_dfn.GetFieldDefn(fld_index)
+            output_field = ogr.FieldDefn(original_field.GetName(), original_field.GetType())
+            output_field.SetWidth(original_field.GetWidth())
+            output_field.SetPrecision(original_field.GetPrecision())
+            output_layer.CreateField(output_field)
+
+        original_layer.ResetReading()
+        
+        #Get the spatial reference of the original_layer to use in transforming
+        original_sr = original_layer.GetSpatialRef()
+
+        #Create a coordinate transformation
+        coord_trans = osr.CoordinateTransformation(original_sr, output_sr)
+
+        #Copy all of the features in original_layer to the new shapefile
+        for original_feature in original_layer:
+            geom = original_feature.GetGeometryRef()
+            
+            #Transform the geometry into a format desired for the new projection
+            geom.Transform(coord_trans)
+            
+            #Copy original_datasource's feature and set as new shapes feature
+            output_feature = ogr.Feature(feature_def=output_layer.GetLayerDefn())
+            output_feature.SetFrom(original_feature)
+            output_feature.SetGeometry(geom)
+
+            #For all the fields in the feature set the field values from the 
+            #source field
+            for fld_index2 in range(output_feature.GetFieldCount()):
+                original_field_value = original_feature.GetField(fld_index2)
+                output_feature.SetField(fld_index2, original_field_value)
+
+            output_layer.CreateFeature(output_feature)
+            output_feature = None
+
+            original_feature = None
+
+        original_layer = None
+
+    return output_datasource
+

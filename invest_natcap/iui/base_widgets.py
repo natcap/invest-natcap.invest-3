@@ -1202,6 +1202,7 @@ class FileButton(QtGui.QPushButton):
         self.URIfield = URIfield
         self.filetype = filetype
         self.filters = {"all": ["All files (* *.*)"],
+                        "EXISTS": ["All files (* *.*)"],
                         "CSV": ["Comma separated value file (*.csv *.CSV)"],
                         "GDAL": ["[GDAL] Arc/Info Binary Grid (hdr.adf HDR.ADF hdr.ADF)",
                                  "[GDAL] Arc/Info ASCII Grid (*.asc *.ASC)",
@@ -1546,8 +1547,6 @@ class OperationDialog(QtGui.QDialog):
         self.setWindowTitle("Running the model")
         self.resize(700, 400)
         center_window(self)
-        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
-            'natcap_logo.png')))
 
         self.cancel = False
 
@@ -1799,7 +1798,7 @@ class Root(DynamicElement):
         self.obj_registrar = object_registrar
 
         self.find_and_replace(attributes)
-        
+
         DynamicElement.__init__(self, attributes)
         self.type_registrar = registrar.DatatypeRegistrar()
         self.setLayout(layout)
@@ -2137,6 +2136,13 @@ class ExecRoot(Root):
         self.messageArea.setError(False)
         Root.__init__(self, uri, layout, object_registrar)
 
+        if 'resources' not in self.attributes:
+            self.attributes['resources'] = ''
+        self.resource_manager = fileio.ResourceManager(
+            self.attributes['resources'])
+        self.main_window.setWindowIcon(QtGui.QIcon(
+            self.resource_manager.icon('application')))
+
         # Check to see if we should load the last run.  Defaults to false if the
         # user has not specified.
         try:
@@ -2265,9 +2271,6 @@ class ExecRoot(Root):
 
         self.main_window.resize(width, height)
         center_window(self.main_window)
-
-        self.main_window.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR,
-            'natcap_logo.png')))
 
     def resetParametersToDefaults(self):
         Root.resetParametersToDefaults(self)
@@ -2423,7 +2426,6 @@ class InfoDialog(QtGui.QDialog):
         self.messages = []
         self.resize(400, 200)
         self.setWindowTitle('Errors exist!')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(IUI_DIR, 'natcap_logo.png')))
         self.setLayout(QtGui.QVBoxLayout())
         self.icon = QtGui.QLabel()
         self.icon.setStyleSheet('QLabel { padding: 10px }')

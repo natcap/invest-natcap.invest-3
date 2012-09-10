@@ -16,6 +16,24 @@ import invest_test_core
 LOGGER = logging.getLogger('invest_core')
 
 class TestRasterUtils(unittest.TestCase):
+    def test_vectorize_points(self):
+        base_dir = 'data/test_out/raster_utils'
+
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        shape_uri = os.path.join('data', 'marine_water_quality_data', 'TideE_WGS1984_BCAlbers.shp')
+        shape = ogr.Open(shape_uri)
+
+        output_uri = os.path.join(base_dir, 'interp_points.tif')
+        out_raster = raster_utils.create_raster_from_vector_extents(30, 30, gdal.GDT_Float32, -1, output_uri, shape)
+        
+
+        raster_utils.vectorize_points(shape, 'kh_km2_day', out_raster)
+
+        subprocess.Popen(["qgis", shape_uri, output_uri])
+        
+
     def test_clip_datset(self):
         raise SkipTest
         base_dir = 'data/test_out/raster_utils'
@@ -104,8 +122,7 @@ class TestRasterUtils(unittest.TestCase):
         band = None
 
         tmp_dict = {11:'farm', 23:'swamp', 13:'marsh', 22:'forest', 3:'river'}
-        field_1 = 'LULC'
-        field_2 = 'DESC'
+        field_1 = 'DESC'
        
         known_results = np.array([[3, 'river'],
                                   [11, 'farm'],
@@ -113,7 +130,7 @@ class TestRasterUtils(unittest.TestCase):
                                   [22, 'forest'],
                                   [23, 'swamp']])
 
-        ds_rat = raster_utils.create_rat(ds, tmp_dict, field_1, field_2)
+        ds_rat = raster_utils.create_rat(ds, tmp_dict, field_1)
 
         band = ds_rat.GetRasterBand(1)
         rat = band.GetDefaultRAT()
