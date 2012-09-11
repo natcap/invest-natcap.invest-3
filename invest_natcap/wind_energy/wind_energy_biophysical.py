@@ -238,8 +238,26 @@ def clip_and_project_dataset_from_datasource(
     clipped_dset = raster_utils.clip_dataset(
             orig_dset, back_projected_dsource, clipped_dset_uri)
 
+    gt = clipped_dsetGetGeoTransform()
+    x_size, y_size = gt[1], gt[5]
+    point_one = (gt[0], gt[3])
+    point_two = (gt[0] + xsize, gt[3] + y_size)
+   
+    LOGGER.debug('Lat/Long Points : %s , %s' : point_one, point_two)
+   
+    coord_trans = osr.CoordinateTransformation(
+            osr.ImportFromWkt(dset_wkt), osr.ImportFromWkt(out_wkt))
+
+    proj_point_one = coord_trans.TransformPoint(point_one)
+    proj_point_two = coord_trans.TransformPoint(point_two)
+
+    LOGGER.debug('Proj Points : %s , %s', proj_point_one, proj_point_two)
+   
+    width = abs(proj_point_two[0] - proj_point_one[0])
+    height = abs(proj_point_two[1] - proj_point_one[1])
+
     clipped_projected_dset = raster_utils.reproject_dataset(
-            clipped_dset, out_wkt, pixel_size, dset_out_uri)
+            clipped_dset, out_wkt, width, dset_out_uri)
 
     return clipped_projected_dset
 
