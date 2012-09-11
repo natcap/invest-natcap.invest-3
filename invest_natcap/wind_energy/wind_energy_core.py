@@ -61,6 +61,12 @@ def biophysical(args):
         max_distance = args['max_distance']
         land_polygon = args['land_polygon']
 
+        # reproject the bathymetry dataset
+        bath_proj = bathymetry.GetProjection()
+        land_sr = land_polygon
+        bathymetry_reprojected = raster_utils.reproject_dataset(
+                bathymetry, pixel_spacing, output_wkt, output_uri)
+        
         # make raster from the AOI and then rasterize land polygon ontop of it
         bath_prop = raster_utils.get_raster_properties(bathymetry)
         land_ds_uri = os.path.join(inter_dir, 'land_ds.tif')
@@ -124,7 +130,7 @@ def biophysical(args):
         # of where we can place the wind farms
         # for now I am going to use the sigma that I derived in biodiversity to
         # use for the gaussian filter.
-        pixel_size = .03333 #PROBLEM : Raster is in degrees and not meters
+        pixel_size = 
         min_dist_pixel = min_distance / pixel_size
         sigma_min = math.sqrt(dr_pixel / 2.0)
 

@@ -306,7 +306,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     out_right_coord = out_left_coord + out_gt[1] * out_band.XSize
 
     #These are the output coordinates for the interpolator
-    out_col_coordinates = np.arange(out_n_cols)
+    out_col_coordinates = np.arange(out_n_cols, dtype=np.float)
     out_col_coordinates *= out_gt[1]
     out_col_coordinates += out_gt[0]
 
@@ -419,7 +419,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             #Equivalent of
             #    np.array([current_left_coordinate + index * current_gt[1] \
             #         for index in range(current_col_steps)])
-            current_col_coordinates = np.arange(current_col_steps)
+            current_col_coordinates = np.arange(current_col_steps, dtype=np.float)
             current_col_coordinates *= current_gt[1]
             current_col_coordinates += current_left_coordinate
             
@@ -427,7 +427,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
             #Equivalent of
             #    np.array([current_top_coordinate + index * current_gt[5] \
             #         for index in range(current_row_steps)])
-            current_row_coordinates = np.arange(current_row_steps)
+            current_row_coordinates = np.arange(current_row_steps, dtype=np.float)
             current_row_coordinates *= current_gt[5]
             current_row_coordinates += current_top_coordinate
 
@@ -1127,7 +1127,10 @@ def clip_dataset(source_dataset, aoi_datasource, out_dataset_uri):
 
     band, nodata = extract_band_and_nodata(source_dataset)
 
-    LOGGER.warn(nodata)
+    if nodata is None:
+        nodata = calculate_value_not_in_dataset(source_dataset)
+
+    LOGGER.info("clip_dataset nodata value is %s" % nodata)
 
     def op(x):
         return x

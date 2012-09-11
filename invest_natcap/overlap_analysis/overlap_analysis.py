@@ -45,7 +45,11 @@ def execute(args):
         args['intra_name']- string which corresponds to a field within the
             layers being passed in within overlap analysis directory. This is
             the intra-activity importance for each activity.
-            
+        args['hubs_uri']- The location of the shapefile containing points for
+            human use hub calculations.
+        args['decay_amt']- A double representing the decay rate of value from
+            the human use hubs.
+
     Output:
         oa_args- The dictionary of all arguments that are needed by the
             overlap_analysis_core.py class. This is the dictionary that will be
