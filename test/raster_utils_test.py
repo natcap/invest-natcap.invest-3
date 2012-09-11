@@ -17,6 +17,7 @@ LOGGER = logging.getLogger('invest_core')
 
 class TestRasterUtils(unittest.TestCase):
     def test_vectorize_points(self):
+        raise SkipTest
         base_dir = 'data/test_out/raster_utils'
 
         if not os.path.exists(base_dir):
@@ -35,22 +36,20 @@ class TestRasterUtils(unittest.TestCase):
         
 
     def test_clip_datset(self):
-        raise SkipTest
         base_dir = 'data/test_out/raster_utils'
 
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
         data_dir = 'data/sediment_test_data'
-        dem_uri = os.path.join(data_dir,'dem')
+        dem_uri = '../../invest-data/Base_Data/Marine/DEMs/global_dem'
+        aoi_uri = 'data/wind_energy_data/wind_energy_aoi.shp'
         dem = gdal.Open(dem_uri)
-        aoi_uri = os.path.join(data_dir,'subwatersheds.shp')
         aoi = ogr.Open(aoi_uri)
         
         clip_dataset = os.path.join(base_dir,'clipped.tif')
         raster_utils.clip_dataset(dem, aoi, clip_dataset)
-
-#        subprocess.Popen(["qgis", dem_uri, aoi_uri, clip_dataset])
+        subprocess.Popen(["qgis", dem_uri, aoi_uri, clip_dataset])
 
 
     def test_calculate_slope(self):

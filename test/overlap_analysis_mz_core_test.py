@@ -26,14 +26,26 @@ class TestMZCore(unittest.TestCase):
         args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_mz.shp')
         
         files_loc = './data/test_out/Overlap/Input/Test_Activity'
-
         files_dict = overlap_core.get_files_dict(files_loc)
-        
-
         args['over_layer_dict'] = files_dict
 
         self.args = args
     
     def test_reg_overall(self):
-
+        
+        #Redefining args to check against what we already have
+        self.args['workspace_dir'] = '.data/overlap_analysis'
+        self.args['zone_layer_file'] = './data/overlap_analysis/ManagementZones_WCVI.shp'
+        
+        
+        files_loc = './data/overlap_analysis/FisheriesLayers_RI'
+        files_dict = overlap_core.get_files_dict(files_loc)
+        self.args['over_layer_dict'] = files_dict
+        
         overlap_analysis_mz_core.execute(self.args)
+        
+        out_file = os.path.join(self.args['workspace_dir'], 'Output', 'mz_frequency.shp')
+
+        reg_mz_out = './data/overlap_analysis_regression_data/mz_frequency.shp'
+
+        invest_test_core.assertTwoShapesEqualURI(self, out_file, reg_mz_out)
