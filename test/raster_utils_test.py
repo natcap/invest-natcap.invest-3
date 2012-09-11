@@ -17,7 +17,6 @@ LOGGER = logging.getLogger('invest_core')
 
 class TestRasterUtils(unittest.TestCase):
     def test_vectorize_points(self):
-        raise SkipTest
         base_dir = 'data/test_out/raster_utils'
 
         if not os.path.exists(base_dir):
@@ -28,12 +27,11 @@ class TestRasterUtils(unittest.TestCase):
 
         output_uri = os.path.join(base_dir, 'interp_points.tif')
         out_raster = raster_utils.create_raster_from_vector_extents(30, 30, gdal.GDT_Float32, -1, output_uri, shape)
-        
-
         raster_utils.vectorize_points(shape, 'kh_km2_day', out_raster)
+        out_raster = None
+        regression_uri = 'data/vectorize_points_regression_data/interp_points.tif'
 
-        subprocess.Popen(["qgis", shape_uri, output_uri])
-        
+        invest_test_core.assertTwoDatasetEqualURI(self, output_uri, regression_uri)
 
     def test_clip_datset(self):
         base_dir = 'data/test_out/raster_utils'
@@ -41,19 +39,17 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        data_dir = 'data/sediment_test_data'
+        global_clip_regression_dataset = 'data/clip_data/global_clipped.tif'
         dem_uri = '../../invest-data/Base_Data/Marine/DEMs/global_dem'
         aoi_uri = 'data/wind_energy_data/wind_energy_aoi.shp'
         dem = gdal.Open(dem_uri)
         aoi = ogr.Open(aoi_uri)
         
-        clip_dataset = os.path.join(base_dir,'clipped.tif')
-        raster_utils.clip_dataset(dem, aoi, clip_dataset)
-        subprocess.Popen(["qgis", dem_uri, aoi_uri, clip_dataset])
-
+        global_clip_dataset = os.path.join(base_dir, 'global_clipped.tif')
+        raster_utils.clip_dataset(dem, aoi, global_clip_dataset)
+        invest_test_core.assertTwoDatasetEqualURI(self, global_clip_dataset, global_clip_regression_dataset)
 
     def test_calculate_slope(self):
-        raise SkipTest
         dem_points = {
             (0.0,0.0): 50,
             (0.0,1.0): 100,
@@ -68,13 +64,14 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        dem_uri = os.path.join(base_dir,'raster_dem.tif')
-        dem_dataset = invest_test_core.make_sample_dem(n,n,dem_points, 5.0, -1, dem_uri)
-
+        dem_uri = 'data/raster_slope_regression_data/raster_dem.tif'
+        dem_dataset = gdal.Open(dem_uri)
+        
         slope_uri = os.path.join(base_dir,'raster_slope.tif')
         raster_utils.calculate_slope(dem_dataset, slope_uri)
 
-        subprocess.Popen(["qgis", dem_uri, slope_uri])
+        slope_regression_uri = 'data/raster_slope_regression_data/raster_slope.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, slope_uri, slope_regression_uri)
 
     def test_calculate_value_not_in_array(self):
         array = np.array([-1,2,5,-8,-9])
