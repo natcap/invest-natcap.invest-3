@@ -37,7 +37,7 @@ def biophysical(args):
     max_depth = args['max_depth'] * -1.0
     
     out_nodata = bathymetry.GetRasterBand(1).GetNoDataValue()
-  
+    
     # mask out any values that are out of the range of the depth values
     def depth_op(bath):
         if bath >= max_depth and bath <= min_depth:
