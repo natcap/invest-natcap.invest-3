@@ -140,7 +140,7 @@ def execute(args):
                                layer_dict, args['overlap_files'], 
                                intra_name, args['do_inter'], 
                                args['do_intra'], args['do_hubs'],
-                               hubs_file, decay, raster_files, raster_names)
+                               hubs_rast, decay, raster_files, raster_names)
 
 def create_unweighted_raster(output_dir, aoi_raster, raster_files):
     '''This will create the set of unweighted rasters- both the AOI and
@@ -211,7 +211,8 @@ def create_unweighted_raster(output_dir, aoi_raster, raster_files):
 
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
                            layers_dict, intra_name, do_inter, do_intra, 
-                           raster_files, raster_names):
+                           do_hubs, hubs_raster, decay, raster_files, 
+                           raster_names):
     '''This function will create an output raster that takes into account both
     inter-activity weighting and intra-activity weighting. This will produce a
     map that looks both at where activities are occurring, and how much people 
