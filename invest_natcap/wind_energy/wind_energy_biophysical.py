@@ -74,8 +74,6 @@ def execute(args):
 
     # handle opening of relevant files
     bathymetry = gdal.Open(args['bathymetry_uri'])
-    biophysical_args['bathymetry'] = bathymetry
-
     aoi = ogr.Open(args['aoi_uri'])
     
     if not check_datasource_projections([aoi]):
@@ -109,8 +107,6 @@ def execute(args):
     biophysical_args['max_depth'] = float(args['max_depth'])
    
    try:
-        LOGGER.debug('Distances : %s:%s',
-                float(args['min_distance']), float(args['max_distance']))
         biophysical_args['min_distance'] = float(args['min_distance']) 
         biophysical_args['max_distance'] = float(args['max_distance'])
         
@@ -247,31 +243,31 @@ def clip_and_project_dataset_from_datasource(
 
     return clipped_projected_dset
 
-def clip_and_project_dataset_from_datasource(
-        orig_dset, clip_dsource, project_dsource, dset_out_uri, inter_dir):
-    """Clips and reprojects a gdal Dataset to the size and projection of the ogr
-        datasources given. One of the datasources is used for the clipping while
-        the other is used for the reprojecting
+#def clip_and_project_dataset_from_datasource(
+#       orig_dset, clip_dsource, project_dsource, dset_out_uri, inter_dir):
+#   """Clips and reprojects a gdal Dataset to the size and projection of the ogr
+#       datasources given. One of the datasources is used for the clipping while
+#       the other is used for the reprojecting
 
-        orig_dset - a GDAL dataset
-        clip_dsource - an OGR datasource to clip from
-        projected_dsource - an OGR datasource to reproject from
-        dset_out_uri - a python string for the output uri
-        inter_dir - a directory path to save intermediate files to
+#       orig_dset - a GDAL dataset
+#       clip_dsource - an OGR datasource to clip from
+#       projected_dsource - an OGR datasource to reproject from
+#       dset_out_uri - a python string for the output uri
+#       inter_dir - a directory path to save intermediate files to
 
-        return - a GDAL dataset    
-    """
-    
-    clipped_dset_uri = os.path.join(inter_dir, 'clipped_dset.tif')
-    
-    out_wkt = project_dsource.GetLayer().GetSpatialRef().ExportToWkt()
+#       return - a GDAL dataset    
+#   """
+#   
+#   clipped_dset_uri = os.path.join(inter_dir, 'clipped_dset.tif')
+#   
+#   out_wkt = project_dsource.GetLayer().GetSpatialRef().ExportToWkt()
 
-    clipped_dset = raster_utils.clip_dataset(
-            orig_dset, clip_dsource, clipped_dset_uri)
+#   clipped_dset = raster_utils.clip_dataset(
+#           orig_dset, clip_dsource, clipped_dset_uri)
 
-    clipped_projected_dset = raster_utils.reproject_dataset(
-            clipped_dset, out_wkt, pixel_size, dset_out_uri)
+#   clipped_projected_dset = raster_utils.reproject_dataset(
+#           clipped_dset, out_wkt, pixel_size, dset_out_uri)
 
-    return clipped_projected_dset
+#   return clipped_projected_dset
 
 
