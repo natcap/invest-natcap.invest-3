@@ -64,13 +64,14 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        dem_uri = os.path.join(base_dir,'raster_dem.tif')
-        dem_dataset = invest_test_core.make_sample_dem(n,n,dem_points, 5.0, -1, dem_uri)
-
+        dem_uri = 'data/raster_slope_regression_data/raster_dem.tif'
+        dem_dataset = gdal.Open(dem_uri)
+        
         slope_uri = os.path.join(base_dir,'raster_slope.tif')
         raster_utils.calculate_slope(dem_dataset, slope_uri)
 
-        subprocess.Popen(["qgis", dem_uri, slope_uri])
+        slope_regression_uri = 'data/raster_slope_regression_data/raster_slope.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, slope_uri, slope_regression_uri)
 
     def test_calculate_value_not_in_array(self):
         array = np.array([-1,2,5,-8,-9])
