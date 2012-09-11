@@ -1315,6 +1315,11 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri):
 
     output_dataset = gdal_driver.Create(output_uri, int((lrx - ulx)/pixel_spacing), 
                               int((uly - lry)/pixel_spacing), 1, gdal.GDT_Float32)
+
+    # Set the nodata value
+    out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()
+    output_dataset.GetRasterBand(1).SetNoDataValue(out_nodata)
+
     # Calculate the new geotransform
     output_geo = (ulx, pixel_spacing, geo_t[2],
                uly, geo_t[4], -pixel_spacing)
