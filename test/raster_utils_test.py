@@ -27,12 +27,11 @@ class TestRasterUtils(unittest.TestCase):
 
         output_uri = os.path.join(base_dir, 'interp_points.tif')
         out_raster = raster_utils.create_raster_from_vector_extents(30, 30, gdal.GDT_Float32, -1, output_uri, shape)
-        
-
         raster_utils.vectorize_points(shape, 'kh_km2_day', out_raster)
+        out_raster = None
+        regression_uri = 'data/vectorize_points_regression_data/interp_points.tif'
 
-        subprocess.Popen(["qgis", shape_uri, output_uri])
-        
+        invest_test_core.assertTwoDatasetEqualURI(self, output_uri, regression_uri)
 
     def test_clip_datset(self):
         base_dir = 'data/test_out/raster_utils'
