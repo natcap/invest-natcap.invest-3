@@ -7,9 +7,10 @@ import os
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+import numpy as np
 
 from invest_natcap.wind_energy import wind_energy_core
-import raster_utils
+from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -106,11 +107,11 @@ def execute(args):
     biophysical_args['min_depth'] = float(args['min_depth']) 
     biophysical_args['max_depth'] = float(args['max_depth'])
    
-   try:
+    try:
         biophysical_args['min_distance'] = float(args['min_distance']) 
         biophysical_args['max_distance'] = float(args['max_distance'])
         
-        land_polygon = gdal.Open(args['land_polygon_uri'])
+        land_polygon = ogr.Open(args['land_polygon_uri'])
         projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')  
        
         projected_land = raster_utils.reproject_datasource(
@@ -238,26 +239,25 @@ def clip_and_project_dataset_from_datasource(
     clipped_dset = raster_utils.clip_dataset(
             orig_dset, back_projected_dsource, clipped_dset_uri)
 
-    gt = clipped_dsetGetGeoTransform()
+    gt = clipped_dset.GetGeoTransform()
     x_size, y_size = gt[1], gt[5]
     point_one = (gt[0], gt[3])
-    point_two = (gt[0] + xsize, gt[3] + y_size)
+    point_two = (gt[0] + x_size, gt[3] + y_size)
    
-    LOGGER.debug('Lat/Long Points : %s , %s' : point_one, point_two)
-   
-    coord_trans = osr.CoordinateTransformation(
-            osr.ImportFromWkt(dset_wkt), osr.ImportFromWkt(out_wkt))
+    srs_in = osr.SpatialReference()
+    srs_in.ImportFromWkt(dset_wkt)
+    srs_out = osr.SpatialReference()
+    srs_out.ImportFromWkt(out_wkt)
+    coord_trans = osr.CoordinateTransformation(srs_in, srs_out)
 
-    proj_point_one = coord_trans.TransformPoint(point_one)
-    proj_point_two = coord_trans.TransformPoint(point_two)
+    proj_point_one = coord_trans.TransformPoint(point_one[0], point_one[1])
+    proj_point_two = coord_trans.TransformPoint(point_two[0], point_two[1])
 
-    LOGGER.debug('Proj Points : %s , %s', proj_point_one, proj_point_two)
-   
     width = abs(proj_point_two[0] - proj_point_one[0])
     height = abs(proj_point_two[1] - proj_point_one[1])
-
+    
     clipped_projected_dset = raster_utils.reproject_dataset(
-            clipped_dset, out_wkt, width, dset_out_uri)
+            clipped_dset, width, out_wkt, dset_out_uri)
 
     return clipped_projected_dset
 
