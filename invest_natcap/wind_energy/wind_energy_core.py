@@ -37,9 +37,6 @@ def biophysical(args):
     max_depth = args['max_depth'] * -1.0
     
     out_nodata = bathymetry.GetRasterBand(1).GetNoDataValue()
-    clipped_bath_uri = os.path.join(inter_dir, 'clipped_bath.tif')
-    clipped_bath = \
-        raster_utils.clip_dataset(bathymetry, aoi, clipped_bath_uri)
   
     # mask out any values that are out of the range of the depth values
     def depth_op(bath):
@@ -50,7 +47,7 @@ def biophysical(args):
 
     depth_mask_uri = os.path.join(inter_dir, 'depth_mask.tif')
     depth_mask = \
-        raster_utils.vectorize_rasters([clipped_bath], depth_op, \
+        raster_utils.vectorize_rasters([bathymetry], depth_op, \
             raster_out_uri = depth_mask_uri, nodata = out_nodata)
 
     # construct the coastline from the AOI and bathymetry using the min and max
@@ -61,12 +58,6 @@ def biophysical(args):
         max_distance = args['max_distance']
         land_polygon = args['land_polygon']
 
-        # reproject the bathymetry dataset
-        bath_proj = bathymetry.GetProjection()
-        land_sr = land_polygon
-        bathymetry_reprojected = raster_utils.reproject_dataset(
-                bathymetry, pixel_spacing, output_wkt, output_uri)
-        
         # make raster from the AOI and then rasterize land polygon ontop of it
         bath_prop = raster_utils.get_raster_properties(bathymetry)
         land_ds_uri = os.path.join(inter_dir, 'land_ds.tif')
@@ -130,7 +121,7 @@ def biophysical(args):
         # of where we can place the wind farms
         # for now I am going to use the sigma that I derived in biodiversity to
         # use for the gaussian filter.
-        pixel_size = 
+        pixel_size = bath_prop['width'] 
         min_dist_pixel = min_distance / pixel_size
         sigma_min = math.sqrt(dr_pixel / 2.0)
 
