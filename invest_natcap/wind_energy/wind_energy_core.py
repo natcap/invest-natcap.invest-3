@@ -68,13 +68,14 @@ def biophysical(args):
 
         # burn the whole area of interest onto the raster setting everything to
         # 0 which will represent our ocean values.
-        gdal.RasterizeLayer(land_ds, [1], aoi.GetLayer(), burn_values = [0])
+        gdal.RasterizeLayer(land_ds, [1], aoi.GetLayer(), burn_values = [1])
         # create a nodata mask
         aoi_nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
         # burn the land polygon ontop of the ocean values as 1 so that we now
         # have an accurate mask of where the land, ocean, and nodata values
         # should be
-        gdal.RasterizeLayer(land_ds, [1], land_polygon.GetLayer(), burn_values = [1])
+        gdal.RasterizeLayer(
+                land_ds, [1], land_polygon.GetLayer(), burn_values = [0])
         # read in the raster so we can set back the nodata values
         # I don't think that reading back in the whole raster is a great idea
         # maybe there is a better way to handle this
@@ -137,7 +138,20 @@ def biophysical(args):
         np.putmask(min_dist_matrix, shoreline_matrix==out_nodata,
             out_nodata)
          
+        # calculate distances using new method
+        dist_matrix = np.copy(land_ds_array)
+        np.putmask(dist_matrix, dist_matrix == out_nodata, 1)
+        
+        dist_matrix = \
+                ndimage.distance_transform_edt(dist_matrix) * pixel_size
+        
+        dist_copy = np.copy(dist_matrix)
 
+        dist_matrix = np.where(
+                dist_matrix >= min_distance and dist_matrix <= max_distance,
+                out_nodata, dist_matrix)
+        
+        np.putmask(dist_matrix, land_ds_array == out_nodata, out_nodata)
 
     except KeyError:
         # looks like distances weren't provided, too bad!
