@@ -77,36 +77,43 @@ def execute(args):
     bathymetry = gdal.Open(args['bathymetry_uri'])
     aoi = ogr.Open(args['aoi_uri'])
     
+    # check to make sure that the AOI is projected and in meters
     if not check_datasource_projections([aoi]):
         raise Exception('The AOI is not projected properly')
 
     biophysical_args['aoi'] = aoi 
 
+    # read the wind points from a text file into a dictionary and create a
+    # point shapefile from that dictionary
     wind_point_shape_uri = os.path.join(inter_dir, 'wind_points_shape.shp')
     wind_data = read_wind_data(args['wind_data_uri'])
     wind_data_points = wind_data_to_point_shape(
             wind_data, 'wind_data', wind_point_shape_uri)
 
-    # clip and reproject the bathymetry dataset from the AOI
-    
+    # get the AOI spatial reference as a string in Well Known Text 
     AOI_wkt = aoi.GetLayer().GetSpatialRef().ExportToWkt()
    
     dset_out_uri = os.path.join(inter_dir, 'clipped_projected_bathymetry.tif')
 
+    # clip the bathymetry dataset from the AOI and then project the clipped
+    # bathymetry dataset to the AOI projection
     clip_and_proj_bath = clip_and_project_dataset_from_datasource(
         bathymetry, aoi, dset_out_uri, inter_dir)
 
     wind_shape_reprojected_uri = os.path.join(
             inter_dir, 'wind_points_reprojected.shp')
-   
+
+    # reproject the data points shapefile to that of the AOI   
     wind_data_points = raster_utils.reproject_datasource(
         wind_data_points, AOI_wkt, wind_shape_reprojected_uri)
     
+    # add biophysical inputs to dictionary
     biophysical_args['wind_data_points'] = wind_data_points
     biophysical_args['bathymetry'] = clip_and_proj_bath
     biophysical_args['min_depth'] = float(args['min_depth']) 
     biophysical_args['max_depth'] = float(args['max_depth'])
    
+    # try to handle the distance inputs and datasource if they are present
     try:
         biophysical_args['min_distance'] = float(args['min_distance']) 
         biophysical_args['max_distance'] = float(args['max_distance'])
@@ -114,6 +121,7 @@ def execute(args):
         land_polygon = ogr.Open(args['land_polygon_uri'])
         projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')  
        
+        # reproject the land polygon to the AOI projection
         projected_land = raster_utils.reproject_datasource(
                 land_polygon, AOI_wkt, projected_land_uri) 
 
