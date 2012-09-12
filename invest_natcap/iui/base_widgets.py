@@ -905,6 +905,7 @@ class Container(QtGui.QGroupBox, DynamicGroup):
             else:
                 element.setVisible(True)
 
+        self.setMinimumSize(self.sizeHint())
         self.setState(state, includeSelf=False, recursive=True)
 
     def resetValue(self):
