@@ -164,53 +164,59 @@ def read_wind_data(wind_data_uri):
             are dictionaries mapping column headers to values """
 
     wind_file = open(wind_data_uri)
+    # read the first line and get the column header names by splitting on the
+    # commas
     columns_line = wind_file.readline().split(',')
     wind_dict = {}
     
     for line in wind_file.readlines():
         line_array = line.split(',')
+        # the key for the dictionary will be the first element on the line
         key = line_array[0]
         wind_dict[key] = {}
+        # add each value to a sub dictionary of 'key'
         for index in range(1, len(line_array) - 1):
             wind_dict[key][columns_line[index]] = float(line_array[index])
 
     wind_file.close()
 
-    LOGGER.debug(
-        'wind_dict keys : %s', np.sort(np.array(wind_dict.keys()).astype(int)))
-    
     return wind_dict
-
 
 def wind_data_to_point_shape(dict_data, layer_name,  output_uri):
     """Given a dictionary of the wind data create a point shapefile that
         represents this data
         
-        dict_data - a python dictionary with the wind data
+        dict_data - a python dictionary with the wind data:
+            0 : {'Lat':97, 'Long':43,...}
+            1
+            2
         layer_name - the name of the layer
         output_uri - a uri for the output destination of the shapefile
 
         return - a OGR Datasource 
         """
-    
+    # if the output_uri exists delete it    
     if os.path.isfile(output_uri):
         os.remove(output_uri)
     
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
-
+    
+    # set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
     
     output_layer = output_datasource.CreateLayer(
             layer_name, source_sr, ogr.wkbPoint)
 
+    # construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[dict_data.keys()[0]].keys()
 
     for field in field_list:
         output_field = ogr.FieldDefn(field, ogr.OFTReal)   
         output_layer.CreateField(output_field)
 
+    # for each inner dictionary (basically for each point) create a point
     for point_dict in dict_data.itervalues():
         latitude = point_dict['LATI']
         longitude = point_dict['LONG']
@@ -251,12 +257,19 @@ def clip_and_project_dataset_from_datasource(
     dset_wkt = orig_dset.GetProjection()
     out_wkt = orig_dsource.GetLayer().GetSpatialRef().ExportToWkt()
 
+    # reproject the datasource to the projection of the dataset, this is so we
+    # can clip before reprojecting the dataset
     back_projected_dsource = raster_utils.reproject_datasource(
             orig_dsource, dset_wkt, back_projected_dsource_uri)
 
+    # clip the dataset from the datasource
     clipped_dset = raster_utils.clip_dataset(
             orig_dset, back_projected_dsource, clipped_dset_uri)
 
+    # at the moment this is all done to determine the pixel size. It is found
+    # by taking a point from the dataset, creating another point by adding the
+    # cell size and then transforming those points to the new projection. The
+    # two x and y values are then subtracted to get the new pixel size
     gt = clipped_dset.GetGeoTransform()
     x_size, y_size = gt[1], gt[5]
     point_one = (gt[0], gt[3])
@@ -274,6 +287,7 @@ def clip_and_project_dataset_from_datasource(
     width = abs(proj_point_two[0] - proj_point_one[0])
     height = abs(proj_point_two[1] - proj_point_one[1])
     
+    # reproject the dataset from the datasource
     clipped_projected_dset = raster_utils.reproject_dataset(
             clipped_dset, width, out_wkt, dset_out_uri)
 
