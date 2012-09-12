@@ -6,6 +6,7 @@ import logging
 from osgeo import gdal
 import numpy as np
 import scipy.ndimage as ndimage
+from scipy import signal
 
 from invest_natcap import raster_utils
 LOGGER = logging.getLogger('wind_energy_core')
@@ -37,10 +38,7 @@ def biophysical(args):
     max_depth = args['max_depth'] * -1.0
     
     out_nodata = bathymetry.GetRasterBand(1).GetNoDataValue()
-    clipped_bath_uri = os.path.join(inter_dir, 'clipped_bath.tif')
-    clipped_bath = \
-        raster_utils.clip_dataset(bathymetry, aoi, clipped_bath_uri)
-  
+    
     # mask out any values that are out of the range of the depth values
     def depth_op(bath):
         if bath >= max_depth and bath <= min_depth:
@@ -50,7 +48,7 @@ def biophysical(args):
 
     depth_mask_uri = os.path.join(inter_dir, 'depth_mask.tif')
     depth_mask = \
-        raster_utils.vectorize_rasters([clipped_bath], depth_op, \
+        raster_utils.vectorize_rasters([bathymetry], depth_op, \
             raster_out_uri = depth_mask_uri, nodata = out_nodata)
 
     # construct the coastline from the AOI and bathymetry using the min and max
@@ -61,29 +59,23 @@ def biophysical(args):
         max_distance = args['max_distance']
         land_polygon = args['land_polygon']
 
-        # reproject the bathymetry dataset
-        bath_proj = bathymetry.GetProjection()
-        land_sr = land_polygon
-        bathymetry_reprojected = raster_utils.reproject_dataset(
-                bathymetry, pixel_spacing, output_wkt, output_uri)
-        
         # make raster from the AOI and then rasterize land polygon ontop of it
         bath_prop = raster_utils.get_raster_properties(bathymetry)
         land_ds_uri = os.path.join(inter_dir, 'land_ds.tif')
-        land_ds = \
-            raster_utils.create_raster_from_vector_extents(bath_prop['width'],
-                bath_prop['height'], gdal.GDT_Float32, out_nodata, land_ds_uri,
-                aoi)
+        land_ds = raster_utils.create_raster_from_vector_extents(
+                bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
+                out_nodata, land_ds_uri, aoi)
 
         # burn the whole area of interest onto the raster setting everything to
         # 0 which will represent our ocean values.
-        gdal.RasterizeLayer(land_ds, [1], aoi, burn_values = [0])
+        gdal.RasterizeLayer(land_ds, [1], aoi.GetLayer(), burn_values = [1])
         # create a nodata mask
         aoi_nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
         # burn the land polygon ontop of the ocean values as 1 so that we now
         # have an accurate mask of where the land, ocean, and nodata values
         # should be
-        gdal.RasterizeLayer(land_ds, [1], land_polygon, burn_values = [1])
+        gdal.RasterizeLayer(
+                land_ds, [1], land_polygon.GetLayer(), burn_values = [0])
         # read in the raster so we can set back the nodata values
         # I don't think that reading back in the whole raster is a great idea
         # maybe there is a better way to handle this
@@ -130,9 +122,9 @@ def biophysical(args):
         # of where we can place the wind farms
         # for now I am going to use the sigma that I derived in biodiversity to
         # use for the gaussian filter.
-        pixel_size = 
+        pixel_size = bath_prop['width'] 
         min_dist_pixel = min_distance / pixel_size
-        sigma_min = math.sqrt(dr_pixel / 2.0)
+        sigma_min = math.sqrt(min_dist_pixel / 2.0)
 
         # copy the shoreline matrix to set nodata values and do guassian
         # filtering
@@ -141,12 +133,25 @@ def biophysical(args):
         # blurring we don't factor in nodata values
         np.putmask(blur_matrix, blur_matrix == out_nodata, 0)
         # run the gaussian filter
-        min_dist_matrix = ndimage.gaussian_filter(blur_matrix, sigma)
+        min_dist_matrix = ndimage.gaussian_filter(blur_matrix, sigma_min)
         # set back the nodata values that were set to 0
         np.putmask(min_dist_matrix, shoreline_matrix==out_nodata,
             out_nodata)
          
+        # calculate distances using new method
+        dist_matrix = np.copy(land_ds_array)
+        np.putmask(dist_matrix, dist_matrix == out_nodata, 1)
+        
+        dist_matrix = \
+                ndimage.distance_transform_edt(dist_matrix) * pixel_size
+        
+        dist_copy = np.copy(dist_matrix)
 
+        dist_matrix = np.where(
+                dist_matrix >= min_distance and dist_matrix <= max_distance,
+                out_nodata, dist_matrix)
+        
+        np.putmask(dist_matrix, land_ds_array == out_nodata, out_nodata)
 
     except KeyError:
         # looks like distances weren't provided, too bad!

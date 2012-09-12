@@ -34,15 +34,26 @@ def execute(args):
             of the various shapefiles included in the 'overlap_files' dictionary.
             The dictionary key is the string name of the shapefile it represents,
             minus the .shp extension. This ID maps to a double representing that
-            layer's inter-activity weight.
+            layer's inter-activity weight. This only exists if 'do_inter' is
+            true.
+        args['do_inter']- Boolean to indicate if intra-activity weighting is 
+            desired. This tells us if the overlap table exists.
+        args['do_intra']- Boolean which indicates whether or not intra-activity
+            weighting is desired. This will will pull the attributes with the 
+            label given by 'intra_name from shapefiles passed in in 
+            'zone_layer_file'.
+        args['do_hubs']- Boolean to indicate if human interest hubs are a
+            desired input for the weighted raster file output.
         args['intra_name']- A string which corresponds to a field within the
            layers being passed in within overlap analysis directory. This is
-           the intra-activity importance for each activity.
-            weighting is desired. This tells us if the overlap table exists.
-        args['do_intra']- Boolean which indicates whether or not intra-activity
-            weighting is desired. This will will pull attributes from shapefiles
-            passed in in 'zone_layer_file'.
-
+           the intra-activity importance for each activity. This input only
+           exists if 'do_intra' is true.
+        args['hubs_file']- An open shapefile containing points. Each point is a
+            single human use hub, and should be weighted using 'decay'.
+        args['decay']- Float which should be used to calculate the weight
+            attributed to each pixel in the weighted raster, as given by
+            distance to the hubs in 'hubs_file'.
+    
     Intermediate:
         A set of rasterized shapefiles of the form 
         args['workspace_dir']/Intermediate/<filename>. For each shapefile that we
@@ -102,11 +113,20 @@ def execute(args):
 
     #Need to set up dummy var for when inter or intra are available without the
     #other so that all parameters can be filled in.
-    if (args['do_inter'] or args['do_intra']):
+    #Adding dummy vars for the two hubs vars as well
+    if (args['do_inter'] or args['do_intra'] or args['do_hubs']):
         
         layer_dict = args['over_layer_dict'] if args['do_inter'] else None
         intra_name = args['intra_name'] if args['do_intra'] else None
         
+        #The same as above assignations, but expanded for two vars
+        if args['do_hubs']:
+            hubs_file = args['hubs_file']
+            decay = args['decay']
+        else:
+            hubs_file = None
+            decay = None
+
         #Want some place to put weighted rasters so we aren't blasting over the
         #unweighted rasters
         weighted_dir = os.path.join(inter_dir, 'Weighted')
@@ -119,7 +139,8 @@ def execute(args):
         create_weighted_raster(output_dir, weighted_dir, aoi_raster, 
                                layer_dict, args['overlap_files'], 
                                intra_name, args['do_inter'], 
-                               args['do_intra'], raster_files, raster_names)
+                               args['do_intra'], args['do_hubs'],
+                               hubs_rast, decay, raster_files, raster_names)
 
 def create_unweighted_raster(output_dir, aoi_raster, raster_files):
     '''This will create the set of unweighted rasters- both the AOI and
@@ -190,7 +211,8 @@ def create_unweighted_raster(output_dir, aoi_raster, raster_files):
 
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
                            layers_dict, intra_name, do_inter, do_intra, 
-                           raster_files, raster_names):
+                           do_hubs, hubs_raster, decay, raster_files, 
+                           raster_names):
     '''This function will create an output raster that takes into account both
     inter-activity weighting and intra-activity weighting. This will produce a
     map that looks both at where activities are occurring, and how much people 

@@ -63,12 +63,12 @@ def execute(args):
     output_dir = workspace + os.sep + 'Output'
     inter_dir = workspace + os.sep + 'Intermediate'
         
-    if not (os.path.exists(output_dir)):
-        os.makedirs(output_dir)
-        
-    if not (os.path.exists(inter_dir)):
-        os.makedirs(inter_dir)
-        
+    for folder in (inter_dir, output_dir):
+        if (os.path.exists(folder)):
+            os.rmdirs(folder)
+
+        os.makedirs(folder)
+
     oa_args['workspace_dir'] = args['workspace_dir']
 
     #We are passing in the AOI shapefile, as well as the dimension that we want
@@ -91,6 +91,12 @@ def execute(args):
 
     if args['do_intra']:
         oa_args['intra_name'] = args['intra_name']
+
+    oa_args['do_hubs'] = args['do_hubs']
+
+    if args['do_hubs']:
+        oa_args['hubs_file'] = ogr.Open(args['hubs_uri'])
+        oa_args['decay'] = float(args['decay_amt'])
 
     overlap_analysis_core.execute(oa_args)
 
