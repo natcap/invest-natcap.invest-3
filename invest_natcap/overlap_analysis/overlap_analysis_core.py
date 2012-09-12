@@ -112,22 +112,20 @@ def execute(args):
 
     create_unweighted_raster(output_dir, aoi_raster, raster_files)
 
+    #Want to make sure we're passing the open hubs raster to the combining
+    #weighted raster file
+    if args['do_hubs']:
+        hubs_out_uri = os.path.join(inter_dir, "hubs_raster.tif")
+        make_hubs_raster(args['hubs_file'], args['decay'], aoi_raster, hubs_out_uri)
+        hubs_rast = gdal.Open(hubs_out_uri)
+
     #Need to set up dummy var for when inter or intra are available without the
     #other so that all parameters can be filled in.
-    #Adding dummy vars for the two hubs vars as well
     if (args['do_inter'] or args['do_intra'] or args['do_hubs']):
         
         layer_dict = args['over_layer_dict'] if args['do_inter'] else None
         intra_name = args['intra_name'] if args['do_intra'] else None
         
-        #The same as above assignations, but expanded for two vars
-        if args['do_hubs']:
-            hubs_file = args['hubs_file']
-            decay = args['decay']
-        else:
-            hubs_file = None
-            decay = None
-
         #Want some place to put weighted rasters so we aren't blasting over the
         #unweighted rasters
         weighted_dir = os.path.join(inter_dir, 'Weighted')
@@ -142,6 +140,25 @@ def execute(args):
                                intra_name, args['do_inter'], 
                                args['do_intra'], args['do_hubs'],
                                hubs_rast, raster_files, raster_names)
+
+def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri):
+'''This will create a rasterized version of the hubs shapefile where each pixel
+on the raster will be set accourding to the decay function from the point
+values themselves. We will rasterize the shapefile so that all land is 0, and
+nodata is the distance from the closest point.
+    
+    Input:
+        hubs_shape- Open point shapefile containing the hub locations as points.
+        decay- Double representing the rate at which the hub importance 
+            depreciates relative to the distance from the location.
+        aoi_raster- The area of interest raster on which we want to base our new
+            hubs raster.
+        hubs_out_uri- The URI location at which the new hubs raster should be
+            placed.
+
+
+'''
+
 
 def create_unweighted_raster(output_dir, aoi_raster, raster_files):
     '''This will create the set of unweighted rasters- both the AOI and
