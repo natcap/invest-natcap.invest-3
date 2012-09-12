@@ -127,11 +127,21 @@ def execute(args):
     wind_energy_core.biophysical(biophysical_args)
 
 def check_datasource_projections(dsource_list):
+    """Checks if a list of OGR Datasources are projected and projected
+        in the linear units of 1.0 which is meters
+        
+        dsource_list = a list of OGR Datasources
 
+        returns - True if all Datasources are projected and projected in
+            meters, otherwise returns False """
+
+    # loop through all the datasources and check the projection
     for dsource in dsource_list:
         srs = dsource.GetLayer().GetSpatialRef()
         if not srs.IsProjected():
             return False
+        # compare linear units against 1.0 because that identifies units are in
+        # meters
         if srs.GetLinearUnits() != 1.0:
             return False
 
