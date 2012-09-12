@@ -1,6 +1,7 @@
 '''inVEST core module to handle processing of overlap analysis data.'''
 import os
 import logging
+import shutil
 
 from osgeo import ogr
 from osgeo import gdal
@@ -140,7 +141,7 @@ def execute(args):
                                layer_dict, args['overlap_files'], 
                                intra_name, args['do_inter'], 
                                args['do_intra'], args['do_hubs'],
-                               hubs_rast, decay, raster_files, raster_names)
+                               hubs_rast, raster_files, raster_names)
 
 def create_unweighted_raster(output_dir, aoi_raster, raster_files):
     '''This will create the set of unweighted rasters- both the AOI and
@@ -211,7 +212,7 @@ def create_unweighted_raster(output_dir, aoi_raster, raster_files):
 
 def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict, 
                            layers_dict, intra_name, do_inter, do_intra, 
-                           do_hubs, hubs_raster, decay, raster_files, 
+                           do_hubs, hubs_raster, raster_files, 
                            raster_names):
     '''This function will create an output raster that takes into account both
     inter-activity weighting and intra-activity weighting. This will produce a
@@ -398,7 +399,40 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         raster_utils.vectorize_rasters(raster_files, combine_weighted_pixels,
                    aoi = None, raster_out_uri = outgoing_uri,
                    datatype = gdal.GDT_Float32, nodata = aoi_nodata)
-  
+ 
+    #Now want to check if hu_impscore exists. If it does, use that as the
+    #multiplier against the hubs raster. If not, use the hu_freq raster and
+    #multiply against that.
+    def combine_hubs_raster(*pixel_list):
+        
+        #We know that we are only ever multiplying these two, and that these
+        #will be the only two in the list of pixels.
+        hubs_layer = pixel_list[0]
+        base_layer = pixel_list[1]
+
+        return hubs_layer * base_layer
+
+    #This is where the weighted raster file exists (if do_inter or do_intra)
+    if os.path.isfile(outgoing_uri):
+        #Make a copy of the file so that we can use it to re-create the hub
+        #weighted raster file.
+        temp_uri = os.path.join(out_file, "temp_rast.tif")
+        shutil.copyfile(outgoing_file, temp_uri)
+
+        base_raster = gdal.Open(temp_uri)
+    
+    #Otherwise, if we don't have a weighted raster file, use the unweighted
+    #frequency file.
+    else:
+       
+        freq_out = os.path.join(out_dir, "hu_freq.tif")
+        base_raster = gdal.Open(freq_out)
+
+    raster_utils.vectorize_rasters((hubs_raster, base raster) , combine_hubs_raster,
+                   aoi = None, raster_out_uri = outgoing_uri,
+                   datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+
+
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts 
     some of the work for getting the intra-activity weights per pixel to a 
