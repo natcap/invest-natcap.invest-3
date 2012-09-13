@@ -77,45 +77,63 @@ def execute(args):
     bathymetry = gdal.Open(args['bathymetry_uri'])
     aoi = ogr.Open(args['aoi_uri'])
     
+    # check to make sure that the AOI is projected and in meters
     if not check_datasource_projections([aoi]):
         raise Exception('The AOI is not projected properly')
 
     biophysical_args['aoi'] = aoi 
-
+    
+    # read the wind points from a text file into a dictionary and create a point
+    # shapefile from that dictionary
     wind_point_shape_uri = os.path.join(inter_dir, 'wind_points_shape.shp')
     wind_data = read_wind_data(args['wind_data_uri'])
     wind_data_points = wind_data_to_point_shape(
             wind_data, 'wind_data', wind_point_shape_uri)
 
-    # clip and reproject the bathymetry dataset from the AOI
-    
+    # get the AOI spatial reference as a string in Well Known Text
     AOI_wkt = aoi.GetLayer().GetSpatialRef().ExportToWkt()
    
     dset_out_uri = os.path.join(inter_dir, 'clipped_projected_bathymetry.tif')
 
+    # clip the bathymetry dataset from the AOI and then project the clipped
+    # bathymetry dataset to the AOI projection
     clip_and_proj_bath = clip_and_project_dataset_from_datasource(
         bathymetry, aoi, dset_out_uri, inter_dir)
 
     wind_shape_reprojected_uri = os.path.join(
             inter_dir, 'wind_points_reprojected.shp')
-   
+  
+    # reproject the data points shapefile to that of the AOI
     wind_data_points = raster_utils.reproject_datasource(
         wind_data_points, AOI_wkt, wind_shape_reprojected_uri)
-    
+   
+    # add biophysical inputs to the dictionary
     biophysical_args['wind_data_points'] = wind_data_points
     biophysical_args['bathymetry'] = clip_and_proj_bath
     biophysical_args['min_depth'] = float(args['min_depth']) 
     biophysical_args['max_depth'] = float(args['max_depth'])
    
+    # try to handle the distance inputs and datasource if they are present
     try:
         biophysical_args['min_distance'] = float(args['min_distance']) 
         biophysical_args['max_distance'] = float(args['max_distance'])
         
         land_polygon = ogr.Open(args['land_polygon_uri'])
         projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')  
-       
+    
+        # back project AOI so that the land polygon can be clipped properly
+        back_proj_aoi_uri = os.path.join(inter_dir, 'back_proj_aoi.shp')
+        land_wkt = land_polygon.GetLayer().GetSpatialRef().ExportToWkt()
+        back_proj_aoi = raster_utils.reproject_datasource(aoi, land_wkt,
+                back_proj_aoi_uri)
+        # clip the land polygon to the AOI
+        clipped_land_uri = os.path.join(inter_dir, 'clipped_land.shp')
+        clipped_land = clip_datasource(
+                back_proj_aoi, land_polygon, clipped_land_uri)
+
+        # reproject the land polygon to the AOI projection
         projected_land = raster_utils.reproject_datasource(
-                land_polygon, AOI_wkt, projected_land_uri) 
+                clipped_land, AOI_wkt, projected_land_uri) 
 
         biophysical_args['land_polygon'] = projected_land
 
@@ -127,11 +145,21 @@ def execute(args):
     wind_energy_core.biophysical(biophysical_args)
 
 def check_datasource_projections(dsource_list):
+    """Checks if a list of OGR Datasources are projected and projected in the
+        linear units of 1.0 which is meters
 
+        dsource_list - a list of OGR Datasources
+
+        returns - True if all Datasources are projected and projected in meters,
+            otherwise returns False"""
+
+    # loop through all the datasources and check the projection
     for dsource in dsource_list:
         srs = dsource.GetLayer().GetSpatialRef()
         if not srs.IsProjected():
             return False
+        # compare linear units against 1.0 because that identifies units are in
+        # meters
         if srs.GetLinearUnits() != 1.0:
             return False
 
@@ -146,13 +174,17 @@ def read_wind_data(wind_data_uri):
             are dictionaries mapping column headers to values """
 
     wind_file = open(wind_data_uri)
+    # read the first line and get the column header names by splitting on the
+    # commas
     columns_line = wind_file.readline().split(',')
     wind_dict = {}
     
     for line in wind_file.readlines():
         line_array = line.split(',')
+        # the key for the dictionary will be the first element on the line
         key = line_array[0]
         wind_dict[key] = {}
+        # add each value to a sub dictionary of 'key'
         for index in range(1, len(line_array) - 1):
             wind_dict[key][columns_line[index]] = float(line_array[index])
 
@@ -168,31 +200,37 @@ def wind_data_to_point_shape(dict_data, layer_name,  output_uri):
     """Given a dictionary of the wind data create a point shapefile that
         represents this data
         
-        dict_data - a python dictionary with the wind data
+        dict_data - a python dictionary with the wind data:
+            0 : {'Lat':97, 'Long':43, ...},
+            1 : {'Lat':97, 'Long':43, ...},
+            2 : {'Lat':97, 'Long':43, ...}
         layer_name - the name of the layer
         output_uri - a uri for the output destination of the shapefile
 
         return - a OGR Datasource 
         """
-    
+    # if the output_uri exists delete it
     if os.path.isfile(output_uri):
         os.remove(output_uri)
     
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
 
+    # set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
     
     output_layer = output_datasource.CreateLayer(
             layer_name, source_sr, ogr.wkbPoint)
 
+    # construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[dict_data.keys()[0]].keys()
 
     for field in field_list:
         output_field = ogr.FieldDefn(field, ogr.OFTReal)   
         output_layer.CreateField(output_field)
 
+    # for each inner dictionary (for each point) create a point
     for point_dict in dict_data.itervalues():
         latitude = point_dict['LATI']
         longitude = point_dict['LONG']
@@ -233,12 +271,19 @@ def clip_and_project_dataset_from_datasource(
     dset_wkt = orig_dset.GetProjection()
     out_wkt = orig_dsource.GetLayer().GetSpatialRef().ExportToWkt()
 
+    # reproject the datasource to the projection of the dataset, this is so we
+    # can clip before reprojecting the dataset
     back_projected_dsource = raster_utils.reproject_datasource(
             orig_dsource, dset_wkt, back_projected_dsource_uri)
 
+    # clip the dataset from the datasource
     clipped_dset = raster_utils.clip_dataset(
             orig_dset, back_projected_dsource, clipped_dset_uri)
 
+    # at the moment this is all done to determine the pixel size. It is found by
+    # taking a point from the dataset, creating another poing by adding the cell
+    # size and then transforming those points to the new projection. The two x
+    # and y values are then subtracted to get the new pixel size
     gt = clipped_dset.GetGeoTransform()
     x_size, y_size = gt[1], gt[5]
     point_one = (gt[0], gt[3])
@@ -256,39 +301,13 @@ def clip_and_project_dataset_from_datasource(
     width = abs(proj_point_two[0] - proj_point_one[0])
     height = abs(proj_point_two[1] - proj_point_one[1])
     
+    # reproject the dataset from the datasource
     clipped_projected_dset = raster_utils.reproject_dataset(
             clipped_dset, width, out_wkt, dset_out_uri)
 
     return clipped_projected_dset
 
-#def clip_and_project_dataset_from_datasource(
-#       orig_dset, clip_dsource, project_dsource, dset_out_uri, inter_dir):
-#   """Clips and reprojects a gdal Dataset to the size and projection of the ogr
-#       datasources given. One of the datasources is used for the clipping while
-#       the other is used for the reprojecting
-
-#       orig_dset - a GDAL dataset
-#       clip_dsource - an OGR datasource to clip from
-#       projected_dsource - an OGR datasource to reproject from
-#       dset_out_uri - a python string for the output uri
-#       inter_dir - a directory path to save intermediate files to
-
-#       return - a GDAL dataset    
-#   """
-#   
-#   clipped_dset_uri = os.path.join(inter_dir, 'clipped_dset.tif')
-#   
-#   out_wkt = project_dsource.GetLayer().GetSpatialRef().ExportToWkt()
-
-#   clipped_dset = raster_utils.clip_dataset(
-#           orig_dset, clip_dsource, clipped_dset_uri)
-
-#   clipped_projected_dset = raster_utils.reproject_dataset(
-#           clipped_dset, out_wkt, pixel_size, dset_out_uri)
-
-#   return clipped_projected_dset
-
-clip_datasource(aoi_ds, orig_ds, output_uri):
+def clip_datasource(aoi_ds, orig_ds, output_uri):
     """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
         geometry type polygon. The aoi_ds should be a shapefile with a layer
         that has only one polygon feature
@@ -300,7 +319,7 @@ clip_datasource(aoi_ds, orig_ds, output_uri):
         returns - a clipped OGR Datasource """
     
     orig_layer = orig_ds.GetLayer()
-    aoi_layer = aoi.GetLayer()
+    aoi_layer = aoi_ds.GetLayer()
 
     # if the file already exists remove it
     if os.path.isfile(output_uri):
