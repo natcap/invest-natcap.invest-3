@@ -119,7 +119,7 @@ def execute(args):
     if args['do_hubs']:
         hubs_out_uri = os.path.join(inter_dir, "hubs_raster.tif")
         create_hubs_raster(args['hubs_file'], args['decay'], aoi_raster,
-                                hubs_out_uri, args['grid_size'])
+                                hubs_out_uri, float(args['grid_size']))
         hubs_rast = gdal.Open(hubs_out_uri)
 
     #Need to set up dummy var for when inter or intra are available without the
@@ -458,8 +458,8 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
     if os.path.isfile(outgoing_uri):
         #Make a copy of the file so that we can use it to re-create the hub
         #weighted raster file.
-        temp_uri = os.path.join(out_file, "temp_rast.tif")
-        shutil.copyfile(outgoing_file, temp_uri)
+        temp_uri = os.path.join(out_dir, "temp_rast.tif")
+        shutil.copyfile(outgoing_uri, temp_uri)
 
         base_raster = gdal.Open(temp_uri)
     
