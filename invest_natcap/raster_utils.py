@@ -1428,17 +1428,26 @@ def build_contour_raster(dem_dataset, contour_value, out_uri):
 
         returns the new contour dataset"""
 
-    contour_dataset = new_raster_from_base(dem_dataset, out_uri, 'GTiff', 2**31-1, gdal.GDT_Int32)
+    contour_dataset = new_raster_from_base(
+        dem_dataset, out_uri, 'GTiff', 255, gdal.GDT_Byte)
 
-    nodata, band, dem_array = extract_band_and_nodata(dem_dataset, get_array = True)
+    _, _, dem_array = extract_band_and_nodata(dem_dataset, get_array = True)
+
+    #Mask the values in the array to either be less than the contour value or 
+    #greater than the contour value.  The result will be a 0 or 1 pixel
     dem_array = (dem_array - contour_value) < 0
 
-    godel_kernel = np.array([[-1, -1, -1],
-                             [-1, 8, -1],
-                             [-1, -1, -1]])
+    #difference filter to subtract neighboring values from the center
+    difference_kernel = np.array([[-1, -1, -1],
+                                  [-1, 8, -1],
+                                  [-1, -1, -1]])
+    contour_array = scipy.signal.convolve(
+        dem_array, difference_kernel, mode='same')
 
-    contour_array = scipy.signal.convolve(dem_array, godel_kernel, mode='same')
-
+    #We care about positive pixels with neighboring negative pixels, that's 
+    #our definition of a contour
     contour_array = (contour_array > 0) * (contour_array < 8)
-    contour_band, nodata = extract_band_and_nodata(contour_dataset)
+
+    #Write out the result
+    contour_band = contour_dataset.GetRasterBand(1)
     contour_band.WriteArray(contour_array)
