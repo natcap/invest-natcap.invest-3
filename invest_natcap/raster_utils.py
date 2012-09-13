@@ -1418,3 +1418,14 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
 
     return output_datasource
 
+def build_contour_raster(dem_dataset, contour_value, out_uri):
+    """Builds a raster contour given a DEM and contour value.  The new
+        raster has pixels on if the contour would pass through that pixel.
+
+        dem_dataset - gdal height dem
+        contour_value - the contour height
+        out_uri - a uri to the output file
+
+        returns the new contour dataset"""
+
+    pass
