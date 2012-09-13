@@ -159,6 +159,12 @@ nodata is the distance from the closest point.
         hubs_out_uri- The URI location at which the new hubs raster should be
             placed.
         cell_size- The size in meters of each of the raster pixels in the AOI.
+
+    Output:
+        This creates a raster within hubs_out_uri whose data will be a function
+        of the decay around points provided from hubs shape.
+
+    Returns nothing.
 '''
         layer = hubs_shape.GetLayer()
         
