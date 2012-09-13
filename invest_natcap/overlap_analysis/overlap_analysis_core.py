@@ -2,9 +2,11 @@
 import os
 import logging
 import shutil
+import numpy
 
 from osgeo import ogr
 from osgeo import gdal
+from scipy import ndimage
 
 from invest_natcap import raster_utils
 
@@ -155,9 +157,23 @@ nodata is the distance from the closest point.
             hubs raster.
         hubs_out_uri- The URI location at which the new hubs raster should be
             placed.
-
-
 '''
+        layer = hubs_shape.GetLayer()
+        
+        #In this case, want to change the nodata value to 1, and the points
+        #themselves to 0, since this is what the distance tranform function expects.
+        dataset = raster_utils.new_raster_from_base(aoi_raster, outgoing_uri, 
+                                'GTiff', 1, gdal.GDT_Float32)
+        band, nodata = raster_utils.extract_band_and_nodata(dataset)
+        
+        band.Fill(nodata)
+        
+        gdal.RasterizeLayer(dataset, [1], layer, 0)
+        
+        #this should do something about flushing the buffer
+        dataset.FlushCache()
+
+        matrix = band.ReadAsArray()
 
 
 def create_unweighted_raster(output_dir, aoi_raster, raster_files):
