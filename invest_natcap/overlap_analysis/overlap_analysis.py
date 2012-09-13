@@ -3,6 +3,7 @@
 import os
 import csv
 import logging
+import shutil
 
 from osgeo import ogr
 from invest_natcap.overlap_analysis import overlap_analysis_core
