@@ -1428,4 +1428,17 @@ def build_contour_raster(dem_dataset, contour_value, out_uri):
 
         returns the new contour dataset"""
 
-    pass
+    contour_dataset = new_raster_from_base(dem_dataset, out_uri, 'GTiff', 2**31-1, gdal.GDT_Int32)
+
+    nodata, band, dem_array = extract_band_and_nodata(dem_dataset, get_array = True)
+    dem_array = (dem_array - contour_value) < 0
+
+    godel_kernel = np.array([[-1, -1, -1],
+                             [-1, 8, -1],
+                             [-1, -1, -1]])
+
+    contour_array = scipy.signal.convolve(dem_array, godel_kernel, mode='same')
+
+    contour_array = (contour_array > 0) * (contour_array < 8)
+    contour_band, nodata = extract_band_and_nodata(contour_dataset)
+    contour_band.WriteArray(contour_array)
