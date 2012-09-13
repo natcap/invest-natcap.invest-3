@@ -120,10 +120,20 @@ def execute(args):
         
         land_polygon = ogr.Open(args['land_polygon_uri'])
         projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')  
-      
+    
+        # back project AOI so that the land polygon can be clipped properly
+        back_proj_aoi_uri = os.path.join(inter_dir, 'back_proj_aoi.shp')
+        land_wkt = land_polygon.GetLayer().GetSpatialRef().ExportToWkt()
+        back_proj_aoi = raster_utils.reproject_datasource(aoi, land_wkt,
+                back_proj_aoi_uri)
+        # clip the land polygon to the AOI
+        clipped_land_uri = os.path.join(inter_dir, 'clipped_land.shp')
+        clipped_land = clip_datasource(
+                back_proj_aoi, land_polygon, clipped_land_uri)
+
         # reproject the land polygon to the AOI projection
         projected_land = raster_utils.reproject_datasource(
-                land_polygon, AOI_wkt, projected_land_uri) 
+                clipped_land, AOI_wkt, projected_land_uri) 
 
         biophysical_args['land_polygon'] = projected_land
 
@@ -309,7 +319,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
         returns - a clipped OGR Datasource """
     
     orig_layer = orig_ds.GetLayer()
-    aoi_layer = aoi.GetLayer()
+    aoi_layer = aoi_ds.GetLayer()
 
     # if the file already exists remove it
     if os.path.isfile(output_uri):
