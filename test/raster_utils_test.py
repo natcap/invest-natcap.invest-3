@@ -16,6 +16,19 @@ import invest_test_core
 LOGGER = logging.getLogger('invest_core')
 
 class TestRasterUtils(unittest.TestCase):
+    def test_contour_raster(self):
+        base_dir = 'data/test_out/contour_raster'
+
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        dem_uri = 'data/sediment_test_data/dem'
+        dem_dataset = gdal.Open(dem_uri)
+        output_uri = os.path.join(base_dir, 'contour_raster.tif')
+        raster_utils.build_contour_raster(dem_dataset, 500, output_uri)
+        regression_uri = 'data/raster_utils_data/contour_raster.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, regression_uri, output_uri)
+
     def test_vectorize_points(self):
         base_dir = 'data/test_out/raster_utils'
 
