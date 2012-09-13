@@ -65,7 +65,7 @@ def execute(args):
         
     for folder in (inter_dir, output_dir):
         if (os.path.exists(folder)):
-            os.rmdirs(folder)
+            os.removedirs(folder)
 
         os.makedirs(folder)
 
