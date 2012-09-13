@@ -174,7 +174,7 @@ def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri, cell_size):
     band, nodata = raster_utils.extract_band_and_nodata(dataset)
     band.Fill(nodata)
     
-    gdal.RasterizeLayer(dataset, [1], layer, 0)
+    gdal.RasterizeLayer(dataset, [1], layer, burn_values=[0])
     #this should do something about flushing the buffer
     dataset.FlushCache()
 
