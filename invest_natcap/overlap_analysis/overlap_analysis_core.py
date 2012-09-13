@@ -476,6 +476,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
                    aoi = None, raster_out_uri = outgoing_uri,
                    datatype = gdal.GDT_Float32, nodata = aoi_nodata)
 
+   os.remove(temp_uri) 
 
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts 
