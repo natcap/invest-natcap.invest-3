@@ -174,20 +174,28 @@ def read_wind_data(wind_data_uri):
         returns - a dictionary where the keys is the row number and the values
             are dictionaries mapping column headers to values """
 
-    wind_file = open(wind_data_uri)
+    wind_file = open(wind_data_uri, 'rU')
     # read the first line and get the column header names by splitting on the
     # commas
     columns_line = wind_file.readline().split(',')
+    columns_line[len(columns_line) - 1] = columns_line[len(columns_line) - 1].rstrip('\n')
+    LOGGER.debug('COLUMN Line : %s', columns_line)
     wind_dict = {}
     
     for line in wind_file.readlines():
         line_array = line.split(',')
+        line_array[len(line_array) - 1] = \
+                line_array[len(line_array) - 1].rstrip('\n')
+
         # the key for the dictionary will be the first element on the line
-        key = line_array[0]
+        key = float(line_array[0])
         wind_dict[key] = {}
         # add each value to a sub dictionary of 'key'
-        for index in range(1, len(line_array) - 1):
+        for index in range(1, len(line_array)):
             wind_dict[key][columns_line[index]] = float(line_array[index])
+
+    LOGGER.debug('SHAPEFILE Key : %s', key)
+    LOGGER.debug('line_arra : %s', line_array)
 
     wind_file.close()
 
@@ -226,6 +234,7 @@ def wind_data_to_point_shape(dict_data, layer_name,  output_uri):
 
     # construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[dict_data.keys()[0]].keys()
+    LOGGER.debug('field_list : %s', field_list)
 
     for field in field_list:
         output_field = ogr.FieldDefn(field, ogr.OFTReal)   

@@ -8,6 +8,7 @@ from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
 from scipy import signal
+from scipy import integrate
 
 from invest_natcap import raster_utils
 LOGGER = logging.getLogger('wind_energy_core')
@@ -125,7 +126,8 @@ def biophysical(args):
 
     # based on the hub height input construct a String to represent the field
     # name in the point shapefile to get the scale value for that height
-    scale_key = 'Ram-' + str(hub_height) + 'm'
+    scale_key = 'Ram-0' + str(int(hub_height)) + 'm'
+    LOGGER.debug('SCALE_key : %s', scale_key)
 
     # the String name for the shape field
     shape_key = 'K-010m'
@@ -159,7 +161,7 @@ def biophysical(args):
     feature = wind_points_layer.GetFeature(0)
     scale_index = feature.GetFieldIndex(scale_key)
     shape_index = feature.GetFieldIndex(shape_key)
-
+    LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
     wind_points_layer.ResetReading()
 
     # for all the locations compute the wind power density and save in a field
@@ -170,7 +172,7 @@ def biophysical(args):
         shape_value = feat.GetField(shape_index)
 
         # integrate over the weibull probability function
-        density_results = scipy.integrate.quad(wiebull_probability, 1, 50,
+        density_results = integrate.quad(wiebull_probability, 1, 50,
                 (shape_value, scale_value))
         # compute the final wind power density value
         density_results = 0.5 * air_density * density_results[0]
