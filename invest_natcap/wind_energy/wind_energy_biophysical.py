@@ -54,7 +54,8 @@ def execute(args):
     # functionality
     biophysical_args = {}
     biophysical_args['workspace_dir'] = workspace
-
+    biophysical_args['hub_height'] = float(args['hub_height'])
+            
     # if the user has not provided a results suffix, assume it to be an empty
     # string.
     try:

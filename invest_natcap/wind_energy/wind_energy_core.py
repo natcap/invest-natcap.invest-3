@@ -4,6 +4,7 @@ import os.path
 import logging
 
 from osgeo import gdal
+from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
 from scipy import signal
@@ -96,6 +97,8 @@ def biophysical(args):
         dist_matrix = np.copy(land_ds_array)
         np.putmask(dist_matrix, dist_matrix == out_nodata, 1)
         
+        pixel_size = raster_utils.pixel_size(land_ds)
+        
         dist_matrix = \
                 ndimage.distance_transform_edt(dist_matrix) * pixel_size
                 
@@ -116,6 +119,67 @@ def biophysical(args):
         pass
 
     # fill in skeleton below
+
+    # compute wind density
+    hub_height = args['hub_height']
+
+    # based on the hub height input construct a String to represent the field
+    # name in the point shapefile to get the scale value for that height
+    scale_key = 'Ram-' + str(hub_height) + 'm'
+
+    # the String name for the shape field
+    shape_key = 'K-010m'
+
+    # weibull densitiy probability function to integrate over
+    def weibull_probability(v_speed, k_shape, l_scale):
+        """Calculate the probability density function of a weibull variable
+            v_speed
+            
+            v_speed - a number representing wind speed
+            k_shape - a float for the shape parameter
+            l_scale - a float for the scale parameter of the distribution
+
+            returns - a float
+            """
+        return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
+            (e**-(v_speed/l_scale)**k_shape))
+
+    # compute the mean air density
+    air_density = 1.225 - (1.194*10**-4) * hub_height
+
+    # get the wind points shapefile and layer
+    wind_points = args['wind_data_points']
+    wind_points_layer = wind_points.GetLayer(0)
+    
+    # create a new field for all the locations for the density value
+    density_field = ogr.FieldDefn('Density', ogr.OFTReal)
+    wind_points_layer.CreateField(density_field)
+    
+    # get the indexes for the scale and shape parameters
+    feature = wind_points_layer.GetFeature(0)
+    scale_index = feature.GetFieldIndex(scale_key)
+    shape_index = feature.GetFieldIndex(shape_key)
+
+    wind_points_layer.ResetReading()
+
+    # for all the locations compute the wind power density and save in a field
+    # of the feature
+    for feat in wind_points_layer:
+        # get the scale and shape values
+        scale_value = feat.GetField(scale_index)
+        shape_value = feat.GetField(shape_index)
+
+        # integrate over the weibull probability function
+        density_results = scipy.integrate.quad(wiebull_probability, 1, 50,
+                (shape_value, scale_value))
+        # compute the final wind power density value
+        density_results = 0.5 * air_density * density_results[0]
+
+        # save the value to the Density field 
+        out_index = feat.GetFieldIndex('Density')
+        feat.SetField(out_index, density_result)
+
+        feat = None
 
 def valuation(args):
     """This is where the doc string lives"""
