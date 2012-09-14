@@ -121,6 +121,8 @@ def execute(args):
         create_hubs_raster(args['hubs_file'], args['decay'], aoi_raster,
                                 hubs_out_uri)
         hubs_rast = gdal.Open(hubs_out_uri)
+    else:
+        hubs_rast = None
 
     #Need to set up dummy var for when inter or intra are available without the
     #other so that all parameters can be filled in.
