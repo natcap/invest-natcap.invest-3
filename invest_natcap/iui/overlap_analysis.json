@@ -116,7 +116,7 @@
                     "args_id" : "decay_amt",
                     "type": "text",
                     "label": "Distance Decay Rate",
-                    "defaultValue": "0.025",
+                    "defaultValue": "0.0001",
                     "validateAs": {"type": "number"},
                     "required": false,
                     "requiredIf": ["HU_Hubs"],

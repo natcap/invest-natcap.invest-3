@@ -180,7 +180,7 @@ def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri, cell_size):
 
     matrix = band.ReadAsArray()
 
-    decay_matrix = numpy.exp(decay *  
+    decay_matrix = numpy.exp(-decay *  
                     ndimage.distance_transform_edt(matrix, sampling=cell_size))
 
     band.WriteArray(decay_matrix)
@@ -451,6 +451,8 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         #will be the only two in the list of pixels.
         hubs_layer = pixel_list[0]
         base_layer = pixel_list[1]
+
+        print ("Hubs Layer=" + str(hubs_layer) + ", Base Layer=" + str(base_layer))
 
         return hubs_layer * base_layer
 
