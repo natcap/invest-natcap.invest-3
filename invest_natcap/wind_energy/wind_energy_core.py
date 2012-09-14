@@ -84,62 +84,8 @@ def biophysical(args):
         land_ds_array[aoi_nodata_mask] = out_nodata
         # write back our matrix to the band
         land_ds.GetRasterBand(1).WriteArray(land_ds_array)
-        # create new raster that is 2 rows/columns bigger than before
-        land_prop = raster_utils.get_raster_properties(land_ds)
-        boundary_ds_uri = os.path.join(inter_dir, 'boundary.tif')
-        boundary_ds = raster_utils.new_raster(land_prop['x_size'] + 2,
-                land_prop['y_size'] + 2, land_ds.GetProjection(),
-                land_ds.GetGeoTransform(), 'GTiff', out_nodata,
-                gdal.GDT_Float32, 1, boundary_ds_uri)
-
-        boundary_ds.GetRasterBand(1).WriteArray(land_ds_array, xoff=1, yoff=1)
-
-        boundary_matrix = boundary_ds.GetRasterBand(1).ReadAsArray()
         
-        # create a nodata mask for the boundary_ds
-        boundary_nodata_mask = boundary_matrix == out_nodata
-
-        # boundary_ds should have nodata values replaced with 1.0 (land values)
-        # so that the special cases are handled properly
-        boundary_matrix[boundary_matrix == out_nodata] = 1
-                
-        # do awesome convolution magic
-        kernel = np.array([[-1, -1, -1],
-                           [-1,  8, -1],
-                           [-1, -1, -1]])
-
-        # run convolution on the boundary_ds with the above kernel where we want
-        # values that are greater than 0
-        shoreline_matrix = \
-                (signal.convolve2d(boundary_matrix, kernel, mode='same') >0)
-
-        # now mask out where the nodata values should be
-        shoreline_matrix[boundary_nodata_mask] = out_nodata
-
-        # set nodata values this way : borders[mask] = ount_nodata
-
-        # do some gaussian blurring with min and max distances to get the range
-        # of where we can place the wind farms
-        # for now I am going to use the sigma that I derived in biodiversity to
-        # use for the gaussian filter.
-        pixel_size = bath_prop['width'] 
-        min_dist_pixel = min_distance / pixel_size
-        sigma_min = math.sqrt(min_dist_pixel / 2.0)
-        LOGGER.debug('pixel_size : %s', pixel_size)
-
-        # copy the shoreline matrix to set nodata values and do guassian
-        # filtering
-        blur_matrix = np.copy(shoreline_matrix)
-        # where the blur_matrix is equal to nodata put a 0. This is so when
-        # blurring we don't factor in nodata values
-        np.putmask(blur_matrix, blur_matrix == out_nodata, 0)
-        # run the gaussian filter
-        min_dist_matrix = ndimage.gaussian_filter(blur_matrix, sigma_min)
-        # set back the nodata values that were set to 0
-        np.putmask(min_dist_matrix, shoreline_matrix==out_nodata,
-            out_nodata)
-         
-        # calculate distances using new method
+        # calculate distances using distance transform
         
         distance_calc_uri = os.path.join(inter_dir, 'distance_factored.tif')
         dist_raster = raster_utils.new_raster_from_base(land_ds,
