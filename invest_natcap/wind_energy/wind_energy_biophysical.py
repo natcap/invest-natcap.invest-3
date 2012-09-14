@@ -300,7 +300,8 @@ def clip_and_project_dataset_from_datasource(
 
     width = abs(proj_point_two[0] - proj_point_one[0])
     height = abs(proj_point_two[1] - proj_point_one[1])
-    
+   
+    LOGGER.debug('raster pixel sizes : %s, %s', width, height)
     # reproject the dataset from the datasource
     clipped_projected_dset = raster_utils.reproject_dataset(
             clipped_dset, width, out_wkt, dset_out_uri)

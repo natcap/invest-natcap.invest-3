@@ -58,7 +58,7 @@ def biophysical(args):
         min_distance = args['min_distance']
         max_distance = args['max_distance']
         land_polygon = args['land_polygon']
-
+        
         # make raster from the AOI and then rasterize land polygon ontop of it
         bath_prop = raster_utils.get_raster_properties(bathymetry)
         land_ds_uri = os.path.join(inter_dir, 'land_ds.tif')
@@ -125,6 +125,7 @@ def biophysical(args):
         pixel_size = bath_prop['width'] 
         min_dist_pixel = min_distance / pixel_size
         sigma_min = math.sqrt(min_dist_pixel / 2.0)
+        LOGGER.debug('pixel_size : %s', pixel_size)
 
         # copy the shoreline matrix to set nodata values and do guassian
         # filtering
@@ -139,19 +140,30 @@ def biophysical(args):
             out_nodata)
          
         # calculate distances using new method
+        
+        distance_calc_uri = os.path.join(inter_dir, 'distance_factored.tif')
+        dist_raster = raster_utils.new_raster_from_base(land_ds,
+                distance_calc_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+       
+        dist_band = dist_raster.GetRasterBand(1)
+
         dist_matrix = np.copy(land_ds_array)
         np.putmask(dist_matrix, dist_matrix == out_nodata, 1)
         
         dist_matrix = \
                 ndimage.distance_transform_edt(dist_matrix) * pixel_size
-        
+                
+        LOGGER.debug('minimum distance : %s', dist_matrix.min()) 
+        LOGGER.debug('maximum distance : %s', dist_matrix.max()) 
         dist_copy = np.copy(dist_matrix)
 
-        dist_matrix = np.where(
-                dist_matrix >= min_distance and dist_matrix <= max_distance,
-                out_nodata, dist_matrix)
-        
-        np.putmask(dist_matrix, land_ds_array == out_nodata, out_nodata)
+        mask_min = dist_matrix <= min_distance
+        mask_max = dist_matrix >= max_distance
+        mask_dist = np.ma.mask_or(mask_min, mask_max)
+        LOGGER.debug('any distances work? : %s', mask_dist.all())
+        np.putmask(dist_matrix, mask_dist, out_nodata)
+
+        dist_band.WriteArray(dist_matrix)
 
     except KeyError:
         # looks like distances weren't provided, too bad!
