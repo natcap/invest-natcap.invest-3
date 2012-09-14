@@ -119,7 +119,7 @@ def execute(args):
     if args['do_hubs']:
         hubs_out_uri = os.path.join(inter_dir, "hubs_raster.tif")
         create_hubs_raster(args['hubs_file'], args['decay'], aoi_raster,
-                                hubs_out_uri, float(args['grid_size']))
+                                hubs_out_uri)
         hubs_rast = gdal.Open(hubs_out_uri)
 
     #Need to set up dummy var for when inter or intra are available without the
