@@ -35,7 +35,7 @@
                     "id" : "grid_size",
                     "args_id" : "grid_size",
                     "type": "text",
-                    "label": "Analysis Cell Size",
+                    "label": "Analysis Cell Size (meters)",
                     "defaultValue": "1000",
                     "validateAs": {"type": "number"},
                     "required": true,
