@@ -44,6 +44,9 @@ class TestOverlapAnalysisCore(unittest.TestCase):
         self.args['do_inter'] = True
         self.args['do_intra'] = True
         self.args['intra_name'] = 'RI'    
+        self.args['do_hubs'] = True
+        self.args['decay_amt'] = 0.025
+        self.args['hubs_uri'] = './data/test_out/Overlap/Input/PopulatedPlaces_WCVI.shp'
 
         files_loc = './data/test_out/Overlap/Input/Test_Activity'
 

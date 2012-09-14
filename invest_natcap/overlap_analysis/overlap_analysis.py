@@ -3,6 +3,7 @@
 import os
 import csv
 import logging
+import shutil
 
 from osgeo import ogr
 from invest_natcap.overlap_analysis import overlap_analysis_core
@@ -65,7 +66,7 @@ def execute(args):
         
     for folder in (inter_dir, output_dir):
         if (os.path.exists(folder)):
-            os.rmdirs(folder)
+            shutil.rmtree(folder) 
 
         os.makedirs(folder)
 
