@@ -74,6 +74,7 @@ def execute(args):
 
     LOGGER.info("Processing predictors.")
     predictors = []
+    userCategorization = []
     if not data_dir == "":
         for f in os.listdir(data_dir):
             fileName, fileExtension = os.path.splitext(f)
@@ -85,13 +86,19 @@ def execute(args):
                     predictors.append(fileName)
                 else:
                     LOGGER.error("Predictor %s is missing file(s)." % (fileName))
+            elif fileExtension == ".tsv":
+                LOGGER.info("Found %s categorization." % fileName)
+                userCategorization.append(fileName)
 
     attachments={}                
-    for i,predictor in enumerate(predictors):
+    for predictor in predictors:
         attachments[predictor+".shp"]= open(data_dir+predictor+".shp","rb")
         attachments[predictor+".shx"]= open(data_dir+predictor+".shx","rb")
         attachments[predictor+".dbf"]= open(data_dir+predictor+".dbf","rb")
         attachments[predictor+".prj"]= open(data_dir+predictor+".prj","rb")
+
+    for tsv in userCategorization:
+        attachments[tsv+".tsv"]= open(data_dir+tsv+".tsv","rb")
         
     LOGGER.debug("Uploading predictors.")
     datagen, headers = multipart_encode(attachments)
