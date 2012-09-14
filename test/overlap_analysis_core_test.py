@@ -78,7 +78,6 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
         overlap_analysis_core.execute(self.args)
 
-
     def test_only_intra(self):
 
         self.args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_aoi.shp')
@@ -116,4 +115,21 @@ class TestOverlapAnalysisCore(unittest.TestCase):
 
         overlap_analysis_core.execute(self.args)
     
+    def test_only_hubs(self):
 
+        self.args['zone_layer_file'] = ogr.Open('./data/test_out/Overlap/Input/test_aoi.shp')
+        self.args['do_inter'] = False 
+        self.args['do_intra'] = False
+        self.args['do_hubs'] = True
+        self.args['decay_amt'] = 0.0005
+        self.args['hubs_uri'] = './data/test_out/Overlap/Input/PopulatedPlaces_WCVI.shp'
+        
+        files_loc = './data/test_out/Overlap/Input/Test_Activity'
+
+        files_dict = overlap_core.get_files_dict(files_loc)
+
+        self.args['overlap_files'] = files_dict
+     
+        output_dir = os.path.join(self.args['workspace_dir'], 'Output')
+
+        overlap_analysis_core.execute(self.args)
