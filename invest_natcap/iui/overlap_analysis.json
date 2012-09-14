@@ -121,7 +121,7 @@
                     "required": false,
                     "requiredIf": ["HU_Hubs"],
                     "enabledBy": "HU_Hubs",
-                    "helpText": "This number is the rate of interest decay from each of the human use hubs for use in the final weighted raster."
+                    "helpText": "This number is the rate (r) of interest decay from each of the human use hubs for use in the final weighted raster for the function exp(-r*d) where d is the distance from the closest hub."
                 }
             ]
         }
