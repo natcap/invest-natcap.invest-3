@@ -144,7 +144,7 @@ def execute(args):
                                args['do_intra'], args['do_hubs'],
                                hubs_rast, raster_files, raster_names)
 
-def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri, cell_size):
+def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri):
     '''This will create a rasterized version of the hubs shapefile where each pixel
     on the raster will be set accourding to the decay function from the point
     values themselves. We will rasterize the shapefile so that all land is 0, and
@@ -179,6 +179,8 @@ def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri, cell_size):
     dataset.FlushCache()
 
     matrix = band.ReadAsArray()
+
+    cell_size = raster_utils.pixel_size(aoi_raster)
 
     decay_matrix = numpy.exp(-decay *  
                     ndimage.distance_transform_edt(matrix, sampling=cell_size))
