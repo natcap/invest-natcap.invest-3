@@ -144,7 +144,7 @@ def biophysical(args):
             returns - a float
             """
         return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
-            (e**-(v_speed/l_scale)**k_shape))
+            (math.exp(-1 * (v_speed/l_scale)**k_shape)))
 
     # compute the mean air density
     air_density = 1.225 - (1.194*10**-4) * hub_height
@@ -172,14 +172,14 @@ def biophysical(args):
         shape_value = feat.GetField(shape_index)
 
         # integrate over the weibull probability function
-        density_results = integrate.quad(wiebull_probability, 1, 50,
+        density_results = integrate.quad(weibull_probability, 1, 50,
                 (shape_value, scale_value))
         # compute the final wind power density value
         density_results = 0.5 * air_density * density_results[0]
 
         # save the value to the Density field 
         out_index = feat.GetFieldIndex('Density')
-        feat.SetField(out_index, density_result)
+        feat.SetField(out_index, density_results)
 
         feat = None
 
