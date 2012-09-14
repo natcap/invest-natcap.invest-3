@@ -158,7 +158,6 @@ def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri):
                 hubs raster.
             hubs_out_uri- The URI location at which the new hubs raster should be
                 placed.
-            cell_size- The size in meters of each of the raster pixels in the AOI.
 
         Output:
             This creates a raster within hubs_out_uri whose data will be a function
@@ -170,7 +169,7 @@ def create_hubs_raster(hubs_shape, decay, aoi_raster, hubs_out_uri):
     #In this case, want to change the nodata value to 1, and the points
     #themselves to 0, since this is what the distance tranform function expects.
     dataset = raster_utils.new_raster_from_base(aoi_raster, hubs_out_uri, 
-                            'GTiff', 1, gdal.GDT_Float32)
+                            'GTiff', -1, gdal.GDT_Float32)
     band, nodata = raster_utils.extract_band_and_nodata(dataset)
     band.Fill(nodata)
     
