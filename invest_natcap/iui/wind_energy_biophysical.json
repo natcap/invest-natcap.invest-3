@@ -144,14 +144,14 @@
                                 "helpText": ""
                             },
                             {
-                                "id" : "exp_output_pwr_curve",
-                                "args_id" : "exp_output_pwr_curve",
+                                "id" : "exp_out_pwr_curve",
+                                "args_id" : "exp_out_pwr_curve",
                                 "type": "text",
                                 "label": "Exponent of Output Power Curve",
                                 "defaultValue": "2",
-                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validText" : "^[0-9]+$",
                                 "validateAs" : {"type" : "number",
-                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                                "allowedValues" : {"pattern" : "^[0-9]+$"}},
                                 "required": true,
                                 "helpText": ""
                             }
@@ -165,7 +165,7 @@
             "elements":[
                 {
                     "id" : "days_harv_wind_energy",
-                    "args_id" : "days",
+                    "args_id" : "num_days",
                     "type": "text",
                     "label": "Number of Days for Harvested Wind Energy Calculation (day)",
                     "defaultValue": "365",
