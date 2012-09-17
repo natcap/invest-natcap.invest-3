@@ -34,6 +34,8 @@ def execute(args):
     comments = args["comments"]
 
     data_dir = args["data_dir"]
+    if data_dir[-1]!=os.sep:
+        data_dir = data_dir + os.sep
     
     predictorKeys = ["landscan",
                      "osm_point",
