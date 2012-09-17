@@ -189,21 +189,21 @@ def biophysical(args):
 
 
     # create a new field for all the locations for the harvest wind energy
-    harvest_field_name = 'Harv_Energy'
+    harvest_field_name = 'HarvEnergy'
     harv_energy_field = ogr.FieldDefn(harvest_field_name, ogr.OFTReal)
     wind_points_layer.CreateField(harv_energy_field)
 
     # compute wind harvested energy 
-    exp_pwr_curve = args['exp_out_power_curve']
+    exp_pwr_curve = args['exp_out_pwr_curve']
     num_days = args['num_days']
-    rated_power = args['turbine_rated_power']
+    rated_power = args['turbine_rated_pwr']
     air_density_standard = args['air_density']
     v_rate = args['rated_wspd']
     v_out = args['cut_out_wspd']
 
-    v_in = args['cut_in_wspd'] * exp_out_power_curve
+    v_in = args['cut_in_wspd'] * exp_pwr_curve
 
-    def harvested_wind_energy(v_speed, k_shape, l_scale):
+    def harvested_wind_energy_fun(v_speed, k_shape, l_scale):
         fract = (v_speed**exp_pwr_curve - v_in) / (v_rate**exp_pwr_curve - v_in)
         return fract * weibull_probability(v_speed, k_shape, l_scale)
 
@@ -227,7 +227,7 @@ def biophysical(args):
 
         # integrate over the harvested wind energy function
         harv_results = integrate.quad(
-                harvested_wind_energy, v_out, v_rate, 
+                harvested_wind_energy_fun, v_out, v_rate, 
                 (shape_value, scale_value))
         # integrate over the weibull probability function
         weibull_results = integrate.quad(weibull_probability, v_rate, v_out,
