@@ -4,9 +4,11 @@ import os.path
 import logging
 
 from osgeo import gdal
+from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
 from scipy import signal
+from scipy import integrate
 
 from invest_natcap import raster_utils
 LOGGER = logging.getLogger('wind_energy_core')
@@ -84,62 +86,8 @@ def biophysical(args):
         land_ds_array[aoi_nodata_mask] = out_nodata
         # write back our matrix to the band
         land_ds.GetRasterBand(1).WriteArray(land_ds_array)
-        # create new raster that is 2 rows/columns bigger than before
-        land_prop = raster_utils.get_raster_properties(land_ds)
-        boundary_ds_uri = os.path.join(inter_dir, 'boundary.tif')
-        boundary_ds = raster_utils.new_raster(land_prop['x_size'] + 2,
-                land_prop['y_size'] + 2, land_ds.GetProjection(),
-                land_ds.GetGeoTransform(), 'GTiff', out_nodata,
-                gdal.GDT_Float32, 1, boundary_ds_uri)
-
-        boundary_ds.GetRasterBand(1).WriteArray(land_ds_array, xoff=1, yoff=1)
-
-        boundary_matrix = boundary_ds.GetRasterBand(1).ReadAsArray()
         
-        # create a nodata mask for the boundary_ds
-        boundary_nodata_mask = boundary_matrix == out_nodata
-
-        # boundary_ds should have nodata values replaced with 1.0 (land values)
-        # so that the special cases are handled properly
-        boundary_matrix[boundary_matrix == out_nodata] = 1
-                
-        # do awesome convolution magic
-        kernel = np.array([[-1, -1, -1],
-                           [-1,  8, -1],
-                           [-1, -1, -1]])
-
-        # run convolution on the boundary_ds with the above kernel where we want
-        # values that are greater than 0
-        shoreline_matrix = \
-                (signal.convolve2d(boundary_matrix, kernel, mode='same') >0)
-
-        # now mask out where the nodata values should be
-        shoreline_matrix[boundary_nodata_mask] = out_nodata
-
-        # set nodata values this way : borders[mask] = ount_nodata
-
-        # do some gaussian blurring with min and max distances to get the range
-        # of where we can place the wind farms
-        # for now I am going to use the sigma that I derived in biodiversity to
-        # use for the gaussian filter.
-        pixel_size = bath_prop['width'] 
-        min_dist_pixel = min_distance / pixel_size
-        sigma_min = math.sqrt(min_dist_pixel / 2.0)
-        LOGGER.debug('pixel_size : %s', pixel_size)
-
-        # copy the shoreline matrix to set nodata values and do guassian
-        # filtering
-        blur_matrix = np.copy(shoreline_matrix)
-        # where the blur_matrix is equal to nodata put a 0. This is so when
-        # blurring we don't factor in nodata values
-        np.putmask(blur_matrix, blur_matrix == out_nodata, 0)
-        # run the gaussian filter
-        min_dist_matrix = ndimage.gaussian_filter(blur_matrix, sigma_min)
-        # set back the nodata values that were set to 0
-        np.putmask(min_dist_matrix, shoreline_matrix==out_nodata,
-            out_nodata)
-         
-        # calculate distances using new method
+        # calculate distances using distance transform
         
         distance_calc_uri = os.path.join(inter_dir, 'distance_factored.tif')
         dist_raster = raster_utils.new_raster_from_base(land_ds,
@@ -149,6 +97,8 @@ def biophysical(args):
 
         dist_matrix = np.copy(land_ds_array)
         np.putmask(dist_matrix, dist_matrix == out_nodata, 1)
+        
+        pixel_size = raster_utils.pixel_size(land_ds)
         
         dist_matrix = \
                 ndimage.distance_transform_edt(dist_matrix) * pixel_size
@@ -170,6 +120,69 @@ def biophysical(args):
         pass
 
     # fill in skeleton below
+
+    # compute wind density
+    hub_height = args['hub_height']
+
+    # based on the hub height input construct a String to represent the field
+    # name in the point shapefile to get the scale value for that height
+    scale_key = 'Ram-0' + str(int(hub_height)) + 'm'
+    LOGGER.debug('SCALE_key : %s', scale_key)
+
+    # the String name for the shape field
+    shape_key = 'K-010m'
+
+    # weibull densitiy probability function to integrate over
+    def weibull_probability(v_speed, k_shape, l_scale):
+        """Calculate the probability density function of a weibull variable
+            v_speed
+            
+            v_speed - a number representing wind speed
+            k_shape - a float for the shape parameter
+            l_scale - a float for the scale parameter of the distribution
+
+            returns - a float
+            """
+        return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
+            (math.exp(-1 * (v_speed/l_scale)**k_shape)))
+
+    # compute the mean air density
+    air_density = 1.225 - (1.194*10**-4) * hub_height
+
+    # get the wind points shapefile and layer
+    wind_points = args['wind_data_points']
+    wind_points_layer = wind_points.GetLayer(0)
+    
+    # create a new field for all the locations for the density value
+    density_field = ogr.FieldDefn('Density', ogr.OFTReal)
+    wind_points_layer.CreateField(density_field)
+    
+    # get the indexes for the scale and shape parameters
+    feature = wind_points_layer.GetFeature(0)
+    scale_index = feature.GetFieldIndex(scale_key)
+    shape_index = feature.GetFieldIndex(shape_key)
+    LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
+    wind_points_layer.ResetReading()
+
+    # for all the locations compute the wind power density and save in a field
+    # of the feature
+    for feat in wind_points_layer:
+        # get the scale and shape values
+        scale_value = feat.GetField(scale_index)
+        shape_value = feat.GetField(shape_index)
+
+        # integrate over the weibull probability function
+        density_results = integrate.quad(weibull_probability, 1, 50,
+                (shape_value, scale_value))
+        # compute the final wind power density value
+        density_results = 0.5 * air_density * density_results[0]
+
+        # save the value to the Density field 
+        out_index = feat.GetFieldIndex('Density')
+        feat.SetField(out_index, density_results)
+        # save the feature and set to None to clean up
+        wind_points_layer.SetFeature(feat)
+        feat = None
 
 def valuation(args):
     """This is where the doc string lives"""
