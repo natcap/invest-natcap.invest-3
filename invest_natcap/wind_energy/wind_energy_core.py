@@ -146,70 +146,48 @@ def biophysical(args):
         return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
             (math.exp(-1 * (v_speed/l_scale)**k_shape)))
 
+    # harvested wind energy function to integrate over
+    def harvested_wind_energy_fun(v_speed, k_shape, l_scale):
+        """Calculate the harvested wind energy
+            v_speed - a number representing wind speed
+            k_shape - a float for the shape parameter
+            l_scale - a float for the scale parameter of the distribution
+
+            returns - a float
+        """
+        fract = (v_speed**exp_pwr_curve - v_in) / (v_rate**exp_pwr_curve - v_in)
+        return fract * weibull_probability(v_speed, k_shape, l_scale)
+    
     # compute the mean air density
     air_density_mean = 1.225 - (1.194*10**-4) * hub_height
 
     # get the wind points shapefile and layer
     wind_points = args['wind_data_points']
     wind_points_layer = wind_points.GetLayer(0)
-    
-    # create a new field for all the locations for the density value
+   
     density_field_name = 'Density'
-    density_field = ogr.FieldDefn(density_field_name, ogr.OFTReal)
-    wind_points_layer.CreateField(density_field)
-    
-    # get the indexes for the scale and shape parameters
-    feature = wind_points_layer.GetFeature(0)
-    scale_index = feature.GetFieldIndex(scale_key)
-    shape_index = feature.GetFieldIndex(shape_key)
-    LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
-    wind_points_layer.ResetReading()
-
-    # for all the locations compute the wind power density and save in a field
-    # of the feature
-    for feat in wind_points_layer:
-        # get the scale and shape values
-        scale_value = feat.GetField(scale_index)
-        shape_value = feat.GetField(shape_index)
-
-        # integrate over the weibull probability function
-        density_results = integrate.quad(weibull_probability, 1, 50,
-                (shape_value, scale_value))
-        # compute the final wind power density value
-        density_results = 0.5 * air_density_mean * density_results[0]
-
-        # save the value to the Density field 
-        out_index = feat.GetFieldIndex(density_field_name)
-        feat.SetField(out_index, density_results)
-        # save the feature and set to None to clean up
-        wind_points_layer.SetFeature(feat)
-        feat = None
-
-    wind_points_layer.ResetReading
-
-
-    # create a new field for all the locations for the harvest wind energy
     harvest_field_name = 'HarvEnergy'
-    harv_energy_field = ogr.FieldDefn(harvest_field_name, ogr.OFTReal)
-    wind_points_layer.CreateField(harv_energy_field)
 
-    # compute wind harvested energy 
+    # create new fields for the density and harvested values
+    for new_field_name in [density_field_name, harvest_field_name]:
+        new_field = ogr.FieldDefn(new_field_name, ogr.OFTReal)
+        wind_points_layer.CreateField(new_field)
+    
+    # get the inputs needed to compute harvested wind energy
     exp_pwr_curve = args['exp_out_pwr_curve']
     num_days = args['num_days']
     rated_power = args['turbine_rated_pwr']
     air_density_standard = args['air_density']
     v_rate = args['rated_wspd']
     v_out = args['cut_out_wspd']
-
     v_in = args['cut_in_wspd'] * exp_pwr_curve
 
-    def harvested_wind_energy_fun(v_speed, k_shape, l_scale):
-        fract = (v_speed**exp_pwr_curve - v_in) / (v_rate**exp_pwr_curve - v_in)
-        return fract * weibull_probability(v_speed, k_shape, l_scale)
-
-    fact = rated_power * (air_density_mean / air_density_standard)
-
-    scalar = num_days * 24 * fact
+    # fractional coefficient that lives outside the intregation for computing
+    # the harvested wind energy
+    fract_coef = rated_power * (air_density_mean / air_density_standard)
+    # the coefficient that is multiplied by the integration portion of the
+    # harvested wind energy equation
+    scalar = num_days * 24 * fract_coef
 
     # get the indexes for the scale and shape parameters
     feature = wind_points_layer.GetFeature(0)
@@ -218,26 +196,38 @@ def biophysical(args):
     LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
     wind_points_layer.ResetReading()
 
-    # for all the locations compute the harvested wind energy and save in a
-    # field of the feature
+    # for all the locations compute the weibull density and 
+    # harvested wind energy. save in a field of the feature
     for feat in wind_points_layer:
         # get the scale and shape values
         scale_value = feat.GetField(scale_index)
         shape_value = feat.GetField(shape_index)
+        
+        # integrate over the weibull probability function
+        density_results = integrate.quad(weibull_probability, 1, 50,
+                (shape_value, scale_value))
+
+        # compute the final wind power density value
+        density_results = 0.5 * air_density_mean * density_results[0]
 
         # integrate over the harvested wind energy function
         harv_results = integrate.quad(
                 harvested_wind_energy_fun, v_out, v_rate, 
                 (shape_value, scale_value))
+        
         # integrate over the weibull probability function
         weibull_results = integrate.quad(weibull_probability, v_rate, v_out,
                 (shape_value, scale_value))
+        
         # compute the final harvested wind energy value
         harvested_wind_energy = scalar * (harv_results[0] + weibull_results[0])
         
-        # save the value to the harvested wind energy field 
-        out_index = feat.GetFieldIndex(harvest_field_name)
-        feat.SetField(out_index, harvested_wind_energy)
+        # save the results to their respective fields 
+        for field_name, result_value in [(density_field_name, density_results),
+                (harvest_field_name, harvested_wind_energy)]:
+            out_index = feat.GetFieldIndex(field_name)
+            feat.SetField(out_index, result_value)
+
         # save the feature and set to None to clean up
         wind_points_layer.SetFeature(feat)
         feat = None
