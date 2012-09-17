@@ -248,8 +248,40 @@ def biophysical(args):
             out_nodata, harvested_ds_uri, wind_points)
 
     # interpolate points onto raster for density values and harvested values:
-    raster_utils.vectorize_points(wind_points, density_field_name, density_ds)
-    raster_utils.vectorize_points(wind_points, harvested_field_name, harvested_ds)
+    #rasteri_utils.vectorize_points(wind_points, density_field_name, density_ds)
+    #raster_utils.vectorize_points(wind_points, harvested_field_name, harvested_ds)
+
+    # mask out any areas where distance or depth has determined that wind farms
+    # cannot be located
+
+    def mask_out_depth_dist(out_ds, depth_ds, dist_ds):
+        """Returns the value of 'out_ds' if and only if all three rasters are
+            not a nodata value
+            
+            out_ds - 
+            depth_ds - 
+            dist_ds -
+
+            returns - a float of either out_nodata or out_ds
+            """
+        if (out_ds == out_nodata) or (depth_ds == out_nodata) or (dist_ds ==
+            out_nodata):
+            return out_nodata
+        else:
+            return out_ds
+
+    density_masked_uri = os.path.join(inter_dir, 'density_masked.tif')
+    harvested_masked_uri = os.path.join(inter_dir, 'harvested_masked.tif')
+
+    _ = raster_utils.vectorize_rasters(
+            [density_ds, depth_mask, dist_raster], mask_out_depth_dist, 
+            raster_out_uri = density_masked_uri, nodata = out_nodata)
+
+    _ = raster_utils.vectorize_rasters(
+            [harvested_ds, depth_mask, dist_raster], mask_out_depth_dist, 
+            raster_out_uri = harvested_masked_uri, nodata = out_nodata)
+
+
 
 def valuation(args):
     """This is where the doc string lives"""
