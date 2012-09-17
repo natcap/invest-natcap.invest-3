@@ -232,6 +232,25 @@ def biophysical(args):
         wind_points_layer.SetFeature(feat)
         feat = None
 
+    wind_points_layer.ResetReading()
+
+    # create rasters for density and harvested values
+    bath_prop = raster_utils.get_raster_properties(bathymetry)
+    density_ds_uri = os.path.join(inter_dir, 'density_ds.tif')
+    harvested_ds_uri = os.path.join(inter_dir, 'harvested_ds.tif')
+    
+    density_ds = raster_utils.create_raster_from_vector_extents(
+            bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
+            out_nodata, density_ds_uri, wind_points)
+    
+    harvested_ds = raster_utils.create_raster_from_vector_extents(
+            bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
+            out_nodata, harvested_ds_uri, wind_points)
+
+    # interpolate points onto raster for density values and harvested values:
+    raster_utils.vectorize_points(wind_points, density_field_name, density_ds)
+    raster_utils.vectorize_points(wind_points, harvested_field_name, harvested_ds)
+
 def valuation(args):
     """This is where the doc string lives"""
 
