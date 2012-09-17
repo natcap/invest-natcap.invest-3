@@ -180,7 +180,8 @@ def biophysical(args):
         # save the value to the Density field 
         out_index = feat.GetFieldIndex('Density')
         feat.SetField(out_index, density_results)
-
+        # save the feature and set to None to clean up
+        wind_points_layer.SetFeature(feat)
         feat = None
 
 def valuation(args):
