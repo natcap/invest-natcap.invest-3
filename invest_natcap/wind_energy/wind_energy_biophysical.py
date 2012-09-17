@@ -100,7 +100,12 @@ def execute(args):
 
     # get the AOI spatial reference as a string in Well Known Text
     AOI_wkt = aoi.GetLayer().GetSpatialRef().ExportToWkt()
-   
+    wind_pts_wkt = wind_data_points.GetLayer().GetSpatialRef().ExportToWkt()
+
+    aoi_prj_to_wind_pts_uri = os.path.join(inter_dir, 'aoi_prj_to_wind_pts.shp')
+    aoi_prj_to_wind_pts = raster_utils.reproject_datasource(aoi, wind_pts_wkt,
+             aoi_prj_to_wind_pts_uri)
+    
     dset_out_uri = os.path.join(inter_dir, 'clipped_projected_bathymetry.tif')
 
     # clip the bathymetry dataset from the AOI and then project the clipped
@@ -108,15 +113,22 @@ def execute(args):
     clip_and_proj_bath = clip_and_project_dataset_from_datasource(
         bathymetry, aoi, dset_out_uri, inter_dir)
 
+    wind_shape_clipped_uri = os.path.join(
+            inter_dir, 'wind_points_clipped.shp')
+  
+    # reproject the data points shapefile to that of the AOI
+    wind_pts_clipped = clip_datasource(
+        aoi_prj_to_wind_pts, wind_data_points, wind_shape_clipped_uri)
+
     wind_shape_reprojected_uri = os.path.join(
             inter_dir, 'wind_points_reprojected.shp')
   
     # reproject the data points shapefile to that of the AOI
-    wind_data_points = raster_utils.reproject_datasource(
-        wind_data_points, AOI_wkt, wind_shape_reprojected_uri)
+    wind_pts_prj = raster_utils.reproject_datasource(
+        wind_pts_clipped, AOI_wkt, wind_shape_reprojected_uri)
    
     # add biophysical inputs to the dictionary
-    biophysical_args['wind_data_points'] = wind_data_points
+    biophysical_args['wind_data_points'] = wind_pts_prj
     biophysical_args['bathymetry'] = clip_and_proj_bath
     biophysical_args['min_depth'] = float(args['min_depth']) 
     biophysical_args['max_depth'] = float(args['max_depth'])
