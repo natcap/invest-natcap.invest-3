@@ -194,22 +194,22 @@ def biophysical(args):
     wind_points_layer.CreateField(harv_energy_field)
 
     # compute wind harvested energy 
+    exp_pwr_curve = args['exp_out_power_curve']
     num_days = args['num_days']
-    rated_power = args['rated_power']
-    air_density_standard = 1.225
-    v_rate = args['v_rate']
-    v_out = args['v_out']
-    exp_out_power_curve = args['exp_power_curve']
-    v_in = args['v_in']
+    rated_power = args['turbine_rated_power']
+    air_density_standard = args['air_density']
+    v_rate = args['rated_wspd']
+    v_out = args['cut_out_wspd']
+
+    v_in = args['cut_in_wspd'] * exp_out_power_curve
 
     def harvested_wind_energy(v_speed, k_shape, l_scale):
-        fract = (v_speed**m - v_in**m) / (v_rate**m - v_in**m)
+        fract = (v_speed**exp_pwr_curve - v_in) / (v_rate**exp_pwr_curve - v_in)
         return fract * weibull_probability(v_speed, k_shape, l_scale)
 
     fact = rated_power * (air_density_mean / air_density_standard)
 
     scalar = num_days * 24 * fact
-
 
     # get the indexes for the scale and shape parameters
     feature = wind_points_layer.GetFeature(0)

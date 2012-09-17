@@ -36,8 +36,8 @@ def execute(args):
         args[cut_out_wspd] - a float value for the cut out wind speed of the
             turbine
         args[turbine_rated_pwr] - a float value for the turbine rated power
-        args[exp_output_pwr_curve] - a float value exponent output power curve
-        args[days] - a float value for the number of days
+        args[exp_out_pwr_curve] - a float value exponent output power curve
+        args[num_days] - a float value for the number of days
         args[air_density] - a float value for the air density constant
         args[min_depth] - a float value minimum depth of the device
         args[max_depth] - a float value maximum depth of the device
@@ -55,6 +55,13 @@ def execute(args):
     biophysical_args = {}
     biophysical_args['workspace_dir'] = workspace
     biophysical_args['hub_height'] = float(args['hub_height'])
+    biophysical_args['cut_in_wspd'] = float(args['cut_in_wspd'])
+    biophysical_args['cut_out_wspd'] = float(args['cut_out_wspd'])
+    biophysical_args['exp_out_pwr_curve'] = float(args['exp_out_pwr_curve'])
+    biophysical_args['num_days'] = float(args['num_days'])
+    biophysical_args['air_density'] = float(args['air_density'])
+    biophysical_args['rated_wspd'] = float(args['rated_wspd'])
+    biophysical_args['turbine_rated_pwr'] = float(args['turbine_rated_pwr'])
             
     # if the user has not provided a results suffix, assume it to be an empty
     # string.
