@@ -64,29 +64,18 @@ def execute(args):
 
     workspace = args['workspace_dir']
     
-    # create dictionary to hold values that will be passed to the core
+    # Create dictionary to hold values that will be passed to the core
     # functionality
     biophysical_args = {}
-    biophysical_args['workspace_dir'] = workspace
-    biophysical_args['hub_height'] = float(args['hub_height'])
-    biophysical_args['cut_in_wspd'] = float(args['cut_in_wspd'])
-    biophysical_args['cut_out_wspd'] = float(args['cut_out_wspd'])
-    biophysical_args['exp_out_pwr_curve'] = float(args['exp_out_pwr_curve'])
-    biophysical_args['num_days'] = float(args['num_days'])
-    biophysical_args['air_density'] = float(args['air_density'])
-    biophysical_args['rated_wspd'] = float(args['rated_wspd'])
-    biophysical_args['turbine_rated_pwr'] = float(args['turbine_rated_pwr'])
             
-    # if the user has not provided a results suffix, assume it to be an empty
+    # If the user has not provided a results suffix, assume it to be an empty
     # string.
     try:
         suffix = '_' + args['suffix']
     except:
         suffix = ''
 
-    biophysical_args['suffix'] = suffix
-
-    # Check to see if each of the workspace folders exists.  If not, create the
+    # Check to see if each of the workspace folders exists. If not, create the
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
@@ -95,87 +84,102 @@ def execute(args):
         if not os.path.isdir(folder):
             os.makedirs(folder)
 
-    # handle opening of relevant files
     bathymetry = gdal.Open(args['bathymetry_uri'])
     aoi = ogr.Open(args['aoi_uri'])
     
-    # check to make sure that the AOI is projected and in meters
+    # Check to make sure that the AOI is projected and in meters
     if not check_datasource_projections([aoi]):
-        raise Exception('The AOI is not projected properly')
+        # Creating a unique exception on the fly to provide better feedback to
+        # the user
+        class ProjectionError(Exception):
+            """A self defined Exception for a bad projection"""
+            pass
 
-    biophysical_args['aoi'] = aoi 
-    
-    # read the wind points from a text file into a dictionary and create a point
+        raise ProjectionError('The AOI is not projected properly')
+
+    # Read the wind points from a text file into a dictionary and create a point
     # shapefile from that dictionary
     wind_point_shape_uri = os.path.join(inter_dir, 'wind_points_shape.shp')
     wind_data = read_wind_data(args['wind_data_uri'])
     wind_data_points = wind_data_to_point_shape(
             wind_data, 'wind_data', wind_point_shape_uri)
 
-    # get the AOI spatial reference as a string in Well Known Text
+    # Get the AOI and wind points spatial references as strings in 
+    # Well Known Text
     AOI_wkt = aoi.GetLayer().GetSpatialRef().ExportToWkt()
     wind_pts_wkt = wind_data_points.GetLayer().GetSpatialRef().ExportToWkt()
 
+    # Reproject the AOI to the spatial reference of the wind points so that the
+    # AOI can be used to clip the wind points
     aoi_prj_to_wind_pts_uri = os.path.join(inter_dir, 'aoi_prj_to_wind_pts.shp')
-    aoi_prj_to_wind_pts = raster_utils.reproject_datasource(aoi, wind_pts_wkt,
-             aoi_prj_to_wind_pts_uri)
+    aoi_prj_to_wind_pts = raster_utils.reproject_datasource(
+            aoi, wind_pts_wkt, aoi_prj_to_wind_pts_uri)
     
-    dset_out_uri = os.path.join(inter_dir, 'clipped_projected_bathymetry.tif')
-
-    # clip the bathymetry dataset from the AOI and then project the clipped
-    # bathymetry dataset to the AOI projection
-    clip_and_proj_bath = clip_and_project_dataset_from_datasource(
-        bathymetry, aoi, dset_out_uri, inter_dir)
-
     wind_shape_clipped_uri = os.path.join(
             inter_dir, 'wind_points_clipped.shp')
-  
-    # reproject the data points shapefile to that of the AOI
+    
+    # Clip the data points to the AOI
     wind_pts_clipped = clip_datasource(
         aoi_prj_to_wind_pts, wind_data_points, wind_shape_clipped_uri)
 
     wind_shape_reprojected_uri = os.path.join(
             inter_dir, 'wind_points_reprojected.shp')
   
-    # reproject the data points shapefile to that of the AOI
+    # Reproject the clipped data points shapefile to that of the AOI
     wind_pts_prj = raster_utils.reproject_datasource(
         wind_pts_clipped, AOI_wkt, wind_shape_reprojected_uri)
+    
+    dset_out_uri = os.path.join(inter_dir, 'clipped_projected_bathymetry.tif')
+
+    # Clip the bathymetry dataset from the AOI and then project the clipped
+    # bathymetry dataset to the AOI projection
+    clip_and_proj_bath = clip_and_project_dataset_from_datasource(
+        bathymetry, aoi, dset_out_uri, inter_dir)
    
-    # add biophysical inputs to the dictionary
-    biophysical_args['wind_data_points'] = wind_pts_prj
-    biophysical_args['bathymetry'] = clip_and_proj_bath
-    biophysical_args['min_depth'] = float(args['min_depth']) 
-    biophysical_args['max_depth'] = float(args['max_depth'])
-   
-    # try to handle the distance inputs and datasource if they are present
+    # Try to handle the distance inputs and land datasource if they are present
     try:
-        biophysical_args['min_distance'] = float(args['min_distance']) 
-        biophysical_args['max_distance'] = float(args['max_distance'])
-        
         land_polygon = ogr.Open(args['land_polygon_uri'])
         projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')  
     
-        # back project AOI so that the land polygon can be clipped properly
+        # Back project AOI so that the land polygon can be clipped properly
         back_proj_aoi_uri = os.path.join(inter_dir, 'back_proj_aoi.shp')
         land_wkt = land_polygon.GetLayer().GetSpatialRef().ExportToWkt()
-        back_proj_aoi = raster_utils.reproject_datasource(aoi, land_wkt,
-                back_proj_aoi_uri)
-        # clip the land polygon to the AOI
+        back_proj_aoi = raster_utils.reproject_datasource(
+                aoi, land_wkt, back_proj_aoi_uri)
+        # Clip the land polygon to the AOI
         clipped_land_uri = os.path.join(inter_dir, 'clipped_land.shp')
         clipped_land = clip_datasource(
                 back_proj_aoi, land_polygon, clipped_land_uri)
 
-        # reproject the land polygon to the AOI projection
+        # Reproject the land polygon to the AOI projection
         projected_land = raster_utils.reproject_datasource(
                 clipped_land, AOI_wkt, projected_land_uri) 
 
         biophysical_args['land_polygon'] = projected_land
-
+        biophysical_args['min_distance'] = float(args['min_distance']) 
+        biophysical_args['max_distance'] = float(args['max_distance'])
     except KeyError:
         LOGGER.debug("Distance information not selected")
         pass
     
-    # call on the core module
+    # Add biophysical inputs to the dictionary
+    biophysical_args['workspace_dir'] = workspace
+    biophysical_args['hub_height'] = float(args['hub_height'])
+    biophysical_args['cut_in_wspd'] = float(args['cut_in_wspd'])
+    biophysical_args['cut_out_wspd'] = float(args['cut_out_wspd'])
+    biophysical_args['exp_out_pwr_curve'] = float(args['exp_out_pwr_curve'])
+    biophysical_args['num_days'] = int(args['num_days'])
+    biophysical_args['air_density'] = float(args['air_density'])
+    biophysical_args['rated_wspd'] = float(args['rated_wspd'])
+    biophysical_args['turbine_rated_pwr'] = float(args['turbine_rated_pwr'])
+    biophysical_args['wind_data_points'] = wind_pts_prj
+    biophysical_args['bathymetry'] = clip_and_proj_bath
+    biophysical_args['min_depth'] = float(args['min_depth']) 
+    biophysical_args['max_depth'] = float(args['max_depth'])
+    biophysical_args['aoi'] = aoi 
+    biophysical_args['suffix'] = suffix
+   
+    # Call on the core module
     wind_energy_core.biophysical(biophysical_args)
 
 def check_datasource_projections(dsource_list):
