@@ -282,7 +282,6 @@ def biophysical(args):
             raster_out_uri = harvested_masked_uri, nodata = out_nodata)
 
 
-
 def valuation(args):
     """This is where the doc string lives"""
 
