@@ -31,3 +31,23 @@ def calculate_exposure_value(iterable):
     E = sum_top / sum_bottom
 
     return E
+
+def calculate_consequence_value(iterable):
+    '''Structure of this equation will be the same as the exposure values.
+    However, the iterable passed in should contain criteria specific to the
+    consequences of that particular H-S interraction.'''
+
+    sum_top, sum_bottom = 0.0
+
+    for criteria in iterable:
+        
+        #For this imaginary data structure, imagine that each criteria maps
+        #to a tuple of (value, data quality, weight)
+        c_i, d_i, w_i = iterable[criteria]
+        
+        sum_top += c_i / (d_i * w_i)
+        sum_bottom += 1 / (d_i * w_i)
+
+    C = sum_top / sum_bottom
+
+    return C 
