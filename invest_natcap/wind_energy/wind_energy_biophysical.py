@@ -342,28 +342,28 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     orig_layer = orig_ds.GetLayer()
     aoi_layer = aoi_ds.GetLayer()
 
-    # if the file already exists remove it
+    # If the file already exists remove it
     if os.path.isfile(output_uri):
         os.remove(output_uri)
 
-    # create a new shapefile from the orginal_datasource 
+    # Create a new shapefile from the orginal_datasource 
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
 
-    #Get the original_layer definition which holds needed attribute values
+    # Get the original_layer definition which holds needed attribute values
     original_layer_dfn = orig_layer.GetLayerDefn()
 
-    #Create the new layer for output_datasource using same name and geometry
-    #type from original_datasource as well as spatial reference
+    # Create the new layer for output_datasource using same name and geometry
+    # type from original_datasource as well as spatial reference
     output_layer = output_datasource.CreateLayer(
             original_layer_dfn.GetName(), orig_layer.GetSpatialRef(), 
             original_layer_dfn.GetGeomType())
 
-    #Get the number of fields in original_layer
+    # Get the number of fields in original_layer
     original_field_count = original_layer_dfn.GetFieldCount()
 
-    #For every field, create a duplicate field and add it to the new 
-    #shapefiles layer
+    # For every field, create a duplicate field and add it to the new 
+    # shapefiles layer
     for fld_index in range(original_field_count):
         original_field = original_layer_dfn.GetFieldDefn(fld_index)
         output_field = ogr.FieldDefn(original_field.GetName(), original_field.GetType())
@@ -371,26 +371,26 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
         output_field.SetPrecision(original_field.GetPrecision())
         output_layer.CreateField(output_field)
 
-    # get the feature and geometry of the aoi
+    # Get the feature and geometry of the aoi
     aoi_feat = aoi_layer.GetFeature(0)
     aoi_geom = aoi_feat.GetGeometryRef()
 
-    # iterate over each feature in original layer
+    # Iterate over each feature in original layer
     for orig_feat in orig_layer:
-        # get the geometry for the feature
+        # Get the geometry for the feature
         orig_geom = orig_feat.GetGeometryRef()
-        # check to see if the feature and the aoi intersect. this will return a
+        # Check to see if the feature and the aoi intersect. This will return a
         # new geometry if there is an intersection. If there is not an
         # intersection it will return an empty geometry or it will return None
         # and print an error to standard out
         intersect_geom = aoi_geom.Intersection(orig_geom)
        
         if not intersect_geom == None and not intersect_geom.IsEmpty():
-            # copy original_datasource's feature and set as new shapes feature
+            # Copy original_datasource's feature and set as new shapes feature
             output_feature = ogr.Feature(feature_def=output_layer.GetLayerDefn())
             output_feature.SetGeometry(intersect_geom)
-            # since the original feature is of interest add it's fields and
-            # values to the new feature from the intersecting geometries
+            # Since the original feature is of interest add it's fields and
+            # Values to the new feature from the intersecting geometries
             for fld_index2 in range(output_feature.GetFieldCount()):
                 orig_field_value = orig_feat.GetField(fld_index2)
                 output_feature.SetField(fld_index2, orig_field_value)
