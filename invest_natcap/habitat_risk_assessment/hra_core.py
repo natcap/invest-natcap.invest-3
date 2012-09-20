@@ -2,7 +2,7 @@
 calcs, and return the appropriate outputs.
 '''
 
-def calculate_exposure_value(SOME VARS):
+def calculate_exposure_value(iterable):
     '''This is the weighted average exposure value for all criteria for a given
     H-S combination as determined on a run by run basis. The equation is 
     as follows:
@@ -17,3 +17,17 @@ def calculate_exposure_value(SOME VARS):
         w = The importance weighting for that criteria relative to other
             criteria being evaluated.
     '''
+    sum_top, sum_bottom = 0.0
+
+    for criteria in iterable:
+        
+        #For this imaginary data structure, imagine that each criteria maps
+        #to a tuple of (value, data quality, weight)
+        e_i, d_i, w_i = iterable[criteria]
+        
+        sum_top += e_i / (d_i * w_i)
+        sum_bottom += 1 / (d_i * w_i)
+
+    E = sum_top / sum_bottom
+
+    return E
