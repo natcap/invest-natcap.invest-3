@@ -59,25 +59,38 @@ def biophysical(args):
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
 
-    # Get a mask for the min and max depths allowed for the turbines
     bathymetry = args['bathymetry']
     aoi = args['aoi']
     min_depth = args['min_depth']
     max_depth = args['max_depth']
     
-    out_nodata = bathymetry.GetRasterBand(1).GetNoDataValue()
+    bathymetry_band, out_nodata = raster_utils.extract_band_and_nodata(
+            bathymetry)
     
-    # mask out any values that are out of the range of the depth values
     def depth_op(bath):
+        """A vectorized function that takes one argument and uses a range to
+            determine if that value falls within the range
+            
+            bath - an integer value of either positive or negative
+            min_depth - a float value specifying the lower limit of the range.
+                this value is set above
+            max_depth - a float value specifying the upper limit of the range
+                this value is set above
+            out_nodata - a int or float for the nodata value described above
+
+            returns - out_nodata if 'bath' does not fall within the range, or
+                'bath' if it does"""
         if bath >= max_depth and bath <= min_depth:
             return bath
         else:
             return out_nodata
 
     depth_mask_uri = os.path.join(intermediate_dir, 'depth_mask.tif')
-    depth_mask = \
-        raster_utils.vectorize_rasters([bathymetry], depth_op, \
-            raster_out_uri = depth_mask_uri, nodata = out_nodata)
+    
+    # Mask out any values that are out of the range of the depth values
+    depth_mask = raster_utils.vectorize_rasters(
+            [bathymetry], depth_op, raster_out_uri = depth_mask_uri, 
+            nodata = out_nodata)
 
     # construct the coastline from the AOI and bathymetry using the min and max
     # distance values provided
