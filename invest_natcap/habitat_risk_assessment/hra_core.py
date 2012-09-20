@@ -3,10 +3,11 @@ calcs, and return the appropriate outputs.
 '''
 
 def calculate_exposure_value(SOME VARS):
-    '''This is the exposure value for a single criteria (i) as determined on a
-    run by run basis. The equation is as follows:
+    '''This is the weighted average exposure value for all criteria for a given
+    H-S combination as determined on a run by run basis. The equation is 
+    as follows:
 
-    E = SUM{i=1, N} ((e{i}/(d{i}*w{i})/(1/(d{i}*w{i}))
+    E = SUM{i=1, N} (e{i}/(d{i}*w{i}) / SUM{i=1, N} 1/(d{i}*w{i})
         
         i = The current criteria that we are evaluating.
         e = Exposure value for criteria i.
