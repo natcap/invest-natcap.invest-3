@@ -1,13 +1,10 @@
 """InVEST Wind Energy model file handler module"""
-import os.path
 import logging
-import csv
 import os
 
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import numpy as np
 
 from invest_natcap.wind_energy import wind_energy_core
 from invest_natcap import raster_utils
@@ -18,53 +15,64 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('wind_energy_biophysical')
 
 def execute(args):
-    """This is where the doc string lives
+    """Takes care of all file handling for the biophysical part of the wind
+        energy model
     
         args[workspace_dir] - a python string which is the uri path to where the
-            outputs will be saved
-        args[aoi_uri] - a uri to an OGR shapefile that specifies the area of
-            interest for the wind data points
-        args[bathymetry_uri] - a uri to a GDAL raster dataset that has the depth
-            values of the area of interest
-        args[bottom_type_uri] - a uri to an OGR shapefile that depicts the
-            subsurface geology type
-        args[hub_height] - a float value that is the hub height
-        args[pwr_law_exponent] - a float value for the power law exponent
+            outputs will be saved (required)
+        args[aoi_uri] - a uri to an OGR datasource that is of type polygon and 
+            projected in linear units of meters. The polygon specifies the 
+            area of interest for the wind data points. If limiting the wind 
+            farm bins by distance, then the aoi should also cover a portion 
+            of the land polygon that is of interest (required)
+        args[bathymetry_uri] - a uri to a GDAL dataset that has the depth
+            values of the area of interest (required)
+        args[bottom_type_uri] - a uri to an OGR datasource of type polygon
+            that depicts the subsurface geology type (optional)
+        args[hub_height] - a float value for the hub height of the turbines
+            (meters) (required)
         args[cut_in_wspd] - a float value for the cut in wind speed of the
-            turbine
-        args[rated_wspd] - a float value for the rated wind speed
+            (meters / second) turbine (required)
         args[cut_out_wspd] - a float value for the cut out wind speed of the
-            turbine
+            (meteres / second) turbine (required)
+        args[rated_wspd] - a float value for the rated wind speed of the 
+            (meters / second) turbine (required)
         args[turbine_rated_pwr] - a float value for the turbine rated power
-        args[exp_output_pwr_curve] - a float value exponent output power curve
-        args[days] - a float value for the number of days
-        args[air_density] - a float value for the air density constant
-        args[min_depth] - a float value minimum depth of the device
-        args[max_depth] - a float value maximum depth of the device
-        args[min_distance] - 
-        args[max_distance] - 
-        args[land_polygon_uri] -
+            (MW) (required)
+        args[exp_out_pwr_curve] - a float value for the exponent output power
+            curve (required)
+        args[num_days] - an integer value for the number of days for harvested
+            wind energy calculation (days) (required)
+        args[air_density] - a float value for the air density of standard 
+            atmosphere (kilograms / cubic meter) (required)
+        args[min_depth] - a float value for the minimum depth for offshore wind
+            farm installation (meters) (required)
+        args[max_depth] - a float value for the maximum depth for offshore wind
+            farm installation (meters) (required)
+        args[land_polygon_uri] - a uri to an OGR datasource of type polygon that
+            provides a coastline for determining distances from wind farm bins
+            (optional)
+        args[min_distance] - a float value for the minimum distance from shore
+            for offshore wind farm installation (meters) (optional)
+        args[max_distance] - a float value for the maximum distance from shore
+            for offshore wind farm installation (meters) (optional)
 
-        returns -  
-    """
+        returns - nothing"""
 
     workspace = args['workspace_dir']
     
-    # create dictionary to hold values that will be passed to the core
+    # Create dictionary to hold values that will be passed to the core
     # functionality
     biophysical_args = {}
-    biophysical_args['workspace_dir'] = workspace
-
-    # if the user has not provided a results suffix, assume it to be an empty
+            
+    # If the user has not provided a results suffix, assume it to be an empty
     # string.
     try:
         suffix = '_' + args['suffix']
-    except:
+    except KeyError:
         suffix = ''
 
-    biophysical_args['suffix'] = suffix
-
-    # Check to see if each of the workspace folders exists.  If not, create the
+    # Check to see if each of the workspace folders exists. If not, create the
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
@@ -73,75 +81,132 @@ def execute(args):
         if not os.path.isdir(folder):
             os.makedirs(folder)
 
-    # handle opening of relevant files
     bathymetry = gdal.Open(args['bathymetry_uri'])
     aoi = ogr.Open(args['aoi_uri'])
     
-    # check to make sure that the AOI is projected and in meters
+    # Check to make sure that the AOI is projected and in meters
     if not check_datasource_projections([aoi]):
-        raise Exception('The AOI is not projected properly')
+        # Creating a unique exception on the fly to provide better feedback to
+        # the user
+        class ProjectionError(Exception):
+            """A self defined Exception for a bad projection"""
+            pass
 
-    biophysical_args['aoi'] = aoi 
-    
-    # read the wind points from a text file into a dictionary and create a point
+        raise ProjectionError('The AOI is not projected properly')
+
+    # Read the wind points from a text file into a dictionary and create a point
     # shapefile from that dictionary
     wind_point_shape_uri = os.path.join(inter_dir, 'wind_points_shape.shp')
     wind_data = read_wind_data(args['wind_data_uri'])
     wind_data_points = wind_data_to_point_shape(
             wind_data, 'wind_data', wind_point_shape_uri)
 
-    # get the AOI spatial reference as a string in Well Known Text
-    AOI_wkt = aoi.GetLayer().GetSpatialRef().ExportToWkt()
-   
-    dset_out_uri = os.path.join(inter_dir, 'clipped_projected_bathymetry.tif')
+    # Get the AOI and wind points spatial references as strings in 
+    # Well Known Text
+    aoi_sr = aoi.GetLayer().GetSpatialRef()
+    aoi_wkt = aoi_sr.ExportToWkt()
+    wind_pts_wkt = wind_data_points.GetLayer().GetSpatialRef().ExportToWkt()
 
-    # clip the bathymetry dataset from the AOI and then project the clipped
-    # bathymetry dataset to the AOI projection
-    clip_and_proj_bath = clip_and_project_dataset_from_datasource(
-        bathymetry, aoi, dset_out_uri, inter_dir)
+    # Reproject the AOI to the spatial reference of the wind points so that the
+    # AOI can be used to clip the wind points
+    aoi_prj_to_wind_pts_uri = os.path.join(inter_dir, 'aoi_prj_to_wind_pts.shp')
+    aoi_prj_to_wind_pts = raster_utils.reproject_datasource(
+            aoi, wind_pts_wkt, aoi_prj_to_wind_pts_uri)
+    
+    wind_shape_clipped_uri = os.path.join(
+            inter_dir, 'wind_points_clipped.shp')
+    
+    # Clip the data points to the AOI
+    wind_pts_clipped = clip_datasource(
+        aoi_prj_to_wind_pts, wind_data_points, wind_shape_clipped_uri)
 
     wind_shape_reprojected_uri = os.path.join(
             inter_dir, 'wind_points_reprojected.shp')
   
-    # reproject the data points shapefile to that of the AOI
-    wind_data_points = raster_utils.reproject_datasource(
-        wind_data_points, AOI_wkt, wind_shape_reprojected_uri)
-   
-    # add biophysical inputs to the dictionary
-    biophysical_args['wind_data_points'] = wind_data_points
-    biophysical_args['bathymetry'] = clip_and_proj_bath
-    biophysical_args['min_depth'] = float(args['min_depth']) 
-    biophysical_args['max_depth'] = float(args['max_depth'])
-   
-    # try to handle the distance inputs and datasource if they are present
-    try:
-        biophysical_args['min_distance'] = float(args['min_distance']) 
-        biophysical_args['max_distance'] = float(args['max_distance'])
-        
-        land_polygon = ogr.Open(args['land_polygon_uri'])
-        projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')  
+    # Reproject the clipped data points shapefile to that of the AOI
+    wind_pts_prj = raster_utils.reproject_datasource(
+        wind_pts_clipped, aoi_wkt, wind_shape_reprojected_uri)
     
-        # back project AOI so that the land polygon can be clipped properly
+    # Get the bathymetry pojection as WKT
+    bathymetry_wkt = bathymetry.GetProjection()
+    
+    aoi_proj_to_bathymetry_uri = os.path.join(
+            inter_dir, 'aoi_proj_to_bathymetry.shp')
+    
+    # Reproject the AOI to the projection of the bathymetry, so that the
+    # bathymetry dataset can be clipped
+    aoi_proj_to_bathymetry = raster_utils.reproject_datasource(
+            aoi, bathymetry_wkt, aoi_proj_to_bathymetry_uri)
+    
+    clipped_bathymetry_uri = os.path.join(inter_dir, 'clipped_bathymetry.tif')
+
+    # Clip the bathymetry dataset from the reprojected AOI
+    clipped_bathymetry = raster_utils.clip_dataset(
+            bathymetry, aoi_proj_to_bathymetry, clipped_bathymetry_uri)
+
+    # Get a point from the clipped_bathymetry 
+    bathymetry_gt = clipped_bathymetry.GetGeoTransform()
+    point_one = (bathymetry_gt[0], bathymetry_gt[3])
+   
+    # Create a Spatial Reference from the bathymetry's WKT
+    bathymetry_sr = osr.SpatialReference()
+    bathymetry_sr.ImportFromWkt(bathymetry_wkt)
+
+    coord_trans = osr.CoordinateTransformation(bathymetry_sr, aoi_sr)
+  
+    pixel_size = raster_utils.pixel_size_based_on_coordinate_transform(
+            clipped_bathymetry, coord_trans, point_one)
+
+    bathymetry_prj_uri = os.path.join(
+            inter_dir, 'clipped_projected_bathymetry.tif')
+
+    # Reproject the bathymetry dataset to the projection of the AOI
+    clip_and_proj_bath = raster_utils.reproject_dataset(
+            clipped_bathymetry, pixel_size[0], aoi_wkt, bathymetry_prj_uri)
+
+    # Try to handle the distance inputs and land datasource if they are present
+    try:
+        land_polygon = ogr.Open(args['land_polygon_uri'])
+        projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')
+    
+        # Back project AOI so that the land polygon can be clipped properly
         back_proj_aoi_uri = os.path.join(inter_dir, 'back_proj_aoi.shp')
         land_wkt = land_polygon.GetLayer().GetSpatialRef().ExportToWkt()
-        back_proj_aoi = raster_utils.reproject_datasource(aoi, land_wkt,
-                back_proj_aoi_uri)
-        # clip the land polygon to the AOI
+        back_proj_aoi = raster_utils.reproject_datasource(
+                aoi, land_wkt, back_proj_aoi_uri)
+        # Clip the land polygon to the AOI
         clipped_land_uri = os.path.join(inter_dir, 'clipped_land.shp')
         clipped_land = clip_datasource(
                 back_proj_aoi, land_polygon, clipped_land_uri)
 
-        # reproject the land polygon to the AOI projection
+        # Reproject the land polygon to the AOI projection
         projected_land = raster_utils.reproject_datasource(
-                clipped_land, AOI_wkt, projected_land_uri) 
+                clipped_land, aoi_wkt, projected_land_uri) 
 
         biophysical_args['land_polygon'] = projected_land
-
+        biophysical_args['min_distance'] = float(args['min_distance']) 
+        biophysical_args['max_distance'] = float(args['max_distance'])
     except KeyError:
         LOGGER.debug("Distance information not selected")
-        pass
     
-    # call on the core module
+    # Add biophysical inputs to the dictionary
+    biophysical_args['workspace_dir'] = workspace
+    biophysical_args['hub_height'] = float(args['hub_height'])
+    biophysical_args['cut_in_wspd'] = float(args['cut_in_wspd'])
+    biophysical_args['cut_out_wspd'] = float(args['cut_out_wspd'])
+    biophysical_args['exp_out_pwr_curve'] = float(args['exp_out_pwr_curve'])
+    biophysical_args['num_days'] = int(args['num_days'])
+    biophysical_args['air_density'] = float(args['air_density'])
+    biophysical_args['rated_wspd'] = float(args['rated_wspd'])
+    biophysical_args['turbine_rated_pwr'] = float(args['turbine_rated_pwr'])
+    biophysical_args['wind_data_points'] = wind_pts_prj
+    biophysical_args['bathymetry'] = clip_and_proj_bath
+    biophysical_args['min_depth'] = float(args['min_depth']) 
+    biophysical_args['max_depth'] = float(args['max_depth'])
+    biophysical_args['aoi'] = aoi 
+    biophysical_args['suffix'] = suffix
+   
+    # Call on the core module
     wind_energy_core.biophysical(biophysical_args)
 
 def check_datasource_projections(dsource_list):
@@ -153,12 +218,12 @@ def check_datasource_projections(dsource_list):
         returns - True if all Datasources are projected and projected in meters,
             otherwise returns False"""
 
-    # loop through all the datasources and check the projection
+    # Loop through all the datasources and check the projection
     for dsource in dsource_list:
         srs = dsource.GetLayer().GetSpatialRef()
         if not srs.IsProjected():
             return False
-        # compare linear units against 1.0 because that identifies units are in
+        # Compare linear units against 1.0 because that identifies units are in
         # meters
         if srs.GetLinearUnits() != 1.0:
             return False
@@ -170,67 +235,76 @@ def read_wind_data(wind_data_uri):
 
         wind_data_uri - a uri for the wind data text file
 
-        returns - a dictionary where the keys is the row number and the values
+        returns - a dictionary where the keys are the row numbers and the values
             are dictionaries mapping column headers to values """
 
-    wind_file = open(wind_data_uri)
-    # read the first line and get the column header names by splitting on the
+    wind_file = open(wind_data_uri, 'rU')
+
+    # Read the first line and get the column header names by splitting on the
     # commas
     columns_line = wind_file.readline().split(',')
+    
+    # Remove the newline character that is attached to the last element
+    columns_line[len(columns_line) - 1] = \
+            columns_line[len(columns_line) - 1].rstrip('\n')
+    LOGGER.debug('COLUMN Line : %s', columns_line)
+    
     wind_dict = {}
     
     for line in wind_file.readlines():
         line_array = line.split(',')
-        # the key for the dictionary will be the first element on the line
-        key = line_array[0]
+
+        # Remove the newline character that is attached to the last element
+        line_array[len(line_array) - 1] = \
+                line_array[len(line_array) - 1].rstrip('\n')
+
+        # The key for the dictionary will be the first element on the line
+        key = float(line_array[0])
         wind_dict[key] = {}
-        # add each value to a sub dictionary of 'key'
-        for index in range(1, len(line_array) - 1):
+        
+        # Add each value to a sub dictionary of 'key'
+        for index in range(1, len(line_array)):
             wind_dict[key][columns_line[index]] = float(line_array[index])
 
     wind_file.close()
 
-    LOGGER.debug(
-        'wind_dict keys : %s', np.sort(np.array(wind_dict.keys()).astype(int)))
-    
     return wind_dict
-
 
 def wind_data_to_point_shape(dict_data, layer_name,  output_uri):
     """Given a dictionary of the wind data create a point shapefile that
         represents this data
         
         dict_data - a python dictionary with the wind data:
-            0 : {'Lat':97, 'Long':43, ...},
-            1 : {'Lat':97, 'Long':43, ...},
-            2 : {'Lat':97, 'Long':43, ...}
-        layer_name - the name of the layer
+            0 : {'LATI':97, 'LONG':43, ... 'Ram-030m':6.3, ... 'K-010m':2.7},
+            1 : {'LATI':55, 'LONG':51, ... 'Ram-030m':6.2, ... 'K-010m':2.4},
+            2 : {'LATI':73, 'LONG':47, ... 'Ram-030m':6.5, ... 'K-010m':2.3},
+        layer_name - a python string for the name of the layer
         output_uri - a uri for the output destination of the shapefile
 
-        return - a OGR Datasource 
-        """
-    # if the output_uri exists delete it
+        return - a OGR Datasource"""
+    # If the output_uri exists delete it
     if os.path.isfile(output_uri):
         os.remove(output_uri)
     
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
 
-    # set the spatial reference to WGS84 (lat/long)
+    # Set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
     
     output_layer = output_datasource.CreateLayer(
             layer_name, source_sr, ogr.wkbPoint)
 
-    # construct a list of fields to add from the keys of the inner dictionary
+    # Construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[dict_data.keys()[0]].keys()
+    LOGGER.debug('field_list : %s', field_list)
 
     for field in field_list:
         output_field = ogr.FieldDefn(field, ogr.OFTReal)   
         output_layer.CreateField(output_field)
 
-    # for each inner dictionary (for each point) create a point
+    # For each inner dictionary (for each point) create a point
     for point_dict in dict_data.itervalues():
         latitude = point_dict['LATI']
         longitude = point_dict['LONG']
@@ -251,63 +325,6 @@ def wind_data_to_point_shape(dict_data, layer_name,  output_uri):
 
     return output_datasource
 
-def clip_and_project_dataset_from_datasource(
-        orig_dset, orig_dsource, dset_out_uri, inter_dir):
-    """Clips and reprojects a gdal Dataset to the size and projection of the ogr
-        datasource
-
-        orig_dset - a GDAL dataset
-        orig_dsource - an OGR datasource
-        dset_out_uri - a python string for the output uri
-        inter_dir - a directory path to save intermediate files to
-
-        return - a GDAL dataset    
-    """
-    back_projected_dsource_uri = os.path.join(
-            inter_dir, 'back_projected_dsource.shp')
-    
-    clipped_dset_uri = os.path.join(inter_dir, 'clipped_dset.tif')
-    
-    dset_wkt = orig_dset.GetProjection()
-    out_wkt = orig_dsource.GetLayer().GetSpatialRef().ExportToWkt()
-
-    # reproject the datasource to the projection of the dataset, this is so we
-    # can clip before reprojecting the dataset
-    back_projected_dsource = raster_utils.reproject_datasource(
-            orig_dsource, dset_wkt, back_projected_dsource_uri)
-
-    # clip the dataset from the datasource
-    clipped_dset = raster_utils.clip_dataset(
-            orig_dset, back_projected_dsource, clipped_dset_uri)
-
-    # at the moment this is all done to determine the pixel size. It is found by
-    # taking a point from the dataset, creating another poing by adding the cell
-    # size and then transforming those points to the new projection. The two x
-    # and y values are then subtracted to get the new pixel size
-    gt = clipped_dset.GetGeoTransform()
-    x_size, y_size = gt[1], gt[5]
-    point_one = (gt[0], gt[3])
-    point_two = (gt[0] + x_size, gt[3] + y_size)
-   
-    srs_in = osr.SpatialReference()
-    srs_in.ImportFromWkt(dset_wkt)
-    srs_out = osr.SpatialReference()
-    srs_out.ImportFromWkt(out_wkt)
-    coord_trans = osr.CoordinateTransformation(srs_in, srs_out)
-
-    proj_point_one = coord_trans.TransformPoint(point_one[0], point_one[1])
-    proj_point_two = coord_trans.TransformPoint(point_two[0], point_two[1])
-
-    width = abs(proj_point_two[0] - proj_point_one[0])
-    height = abs(proj_point_two[1] - proj_point_one[1])
-   
-    LOGGER.debug('raster pixel sizes : %s, %s', width, height)
-    # reproject the dataset from the datasource
-    clipped_projected_dset = raster_utils.reproject_dataset(
-            clipped_dset, width, out_wkt, dset_out_uri)
-
-    return clipped_projected_dset
-
 def clip_datasource(aoi_ds, orig_ds, output_uri):
     """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
         geometry type polygon. The aoi_ds should be a shapefile with a layer
@@ -322,55 +339,57 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     orig_layer = orig_ds.GetLayer()
     aoi_layer = aoi_ds.GetLayer()
 
-    # if the file already exists remove it
+    # If the file already exists remove it
     if os.path.isfile(output_uri):
         os.remove(output_uri)
 
-    # create a new shapefile from the orginal_datasource 
+    # Create a new shapefile from the orginal_datasource 
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     output_datasource = output_driver.CreateDataSource(output_uri)
 
-    #Get the original_layer definition which holds needed attribute values
+    # Get the original_layer definition which holds needed attribute values
     original_layer_dfn = orig_layer.GetLayerDefn()
 
-    #Create the new layer for output_datasource using same name and geometry
-    #type from original_datasource as well as spatial reference
+    # Create the new layer for output_datasource using same name and geometry
+    # type from original_datasource as well as spatial reference
     output_layer = output_datasource.CreateLayer(
             original_layer_dfn.GetName(), orig_layer.GetSpatialRef(), 
             original_layer_dfn.GetGeomType())
 
-    #Get the number of fields in original_layer
+    # Get the number of fields in original_layer
     original_field_count = original_layer_dfn.GetFieldCount()
 
-    #For every field, create a duplicate field and add it to the new 
-    #shapefiles layer
+    # For every field, create a duplicate field and add it to the new 
+    # shapefiles layer
     for fld_index in range(original_field_count):
         original_field = original_layer_dfn.GetFieldDefn(fld_index)
-        output_field = ogr.FieldDefn(original_field.GetName(), original_field.GetType())
+        output_field = ogr.FieldDefn(
+                original_field.GetName(), original_field.GetType())
         output_field.SetWidth(original_field.GetWidth())
         output_field.SetPrecision(original_field.GetPrecision())
         output_layer.CreateField(output_field)
 
-    # get the feature and geometry of the aoi
+    # Get the feature and geometry of the aoi
     aoi_feat = aoi_layer.GetFeature(0)
     aoi_geom = aoi_feat.GetGeometryRef()
 
-    # iterate over each feature in original layer
+    # Iterate over each feature in original layer
     for orig_feat in orig_layer:
-        # get the geometry for the feature
+        # Get the geometry for the feature
         orig_geom = orig_feat.GetGeometryRef()
-        # check to see if the feature and the aoi intersect. this will return a
+        # Check to see if the feature and the aoi intersect. This will return a
         # new geometry if there is an intersection. If there is not an
         # intersection it will return an empty geometry or it will return None
         # and print an error to standard out
         intersect_geom = aoi_geom.Intersection(orig_geom)
        
         if not intersect_geom == None and not intersect_geom.IsEmpty():
-            # copy original_datasource's feature and set as new shapes feature
-            output_feature = ogr.Feature(feature_def=output_layer.GetLayerDefn())
+            # Copy original_datasource's feature and set as new shapes feature
+            output_feature = ogr.Feature(
+                    feature_def=output_layer.GetLayerDefn())
             output_feature.SetGeometry(intersect_geom)
-            # since the original feature is of interest add it's fields and
-            # values to the new feature from the intersecting geometries
+            # Since the original feature is of interest add it's fields and
+            # Values to the new feature from the intersecting geometries
             for fld_index2 in range(output_feature.GetFieldCount()):
                 orig_field_value = orig_feat.GetField(fld_index2)
                 output_feature.SetField(fld_index2, orig_field_value)
