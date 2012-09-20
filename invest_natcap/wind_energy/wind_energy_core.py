@@ -53,7 +53,7 @@ def biophysical(args):
         args[max_distance] - a float value for the maximum distance from shore
             for offshore wind farm installation (meters) (optional)
         
-        returns - nothing"""i
+        returns - nothing"""
 
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate')
@@ -92,86 +92,90 @@ def biophysical(args):
             [bathymetry], depth_op, raster_out_uri = depth_mask_uri, 
             nodata = out_nodata)
 
-    # construct the coastline from the AOI and bathymetry using the min and max
-    # distance values provided
+    # If the distance inputs are present try and create a mask for the output
+    # area that restricts where the wind energy farms can be based on distance
     try:
-        # do some awesome coastline finding if distances are provided
         min_distance = args['min_distance']
         max_distance = args['max_distance']
         land_polygon = args['land_polygon']
         
-        # make raster from the AOI and then rasterize land polygon ontop of it
         bath_prop = raster_utils.get_raster_properties(bathymetry)
         land_ds_uri = os.path.join(intermediate_dir, 'land_ds.tif')
+        
+        # Make a raster from the AOI and then rasterize land polygon ontop of it
         land_ds = raster_utils.create_raster_from_vector_extents(
                 bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
                 out_nodata, land_ds_uri, aoi)
 
-        # burn the whole area of interest onto the raster setting everything to
+        # Burn the whole area of interest onto the raster setting everything to
         # 0 which will represent our ocean values.
         gdal.RasterizeLayer(land_ds, [1], aoi.GetLayer(), burn_values = [1])
-        # create a nodata mask
+
+        # Create a nodata mask so nodata values can be set back later
         aoi_nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
-        # burn the land polygon ontop of the ocean values as 1 so that we now
+        
+        # Burn the land polygon ontop of the ocean values as 1 so that we now
         # have an accurate mask of where the land, ocean, and nodata values
         # should be
         gdal.RasterizeLayer(
                 land_ds, [1], land_polygon.GetLayer(), burn_values = [0])
-        # read in the raster so we can set back the nodata values
+        
+        # Read in the raster so we can set back the nodata values
         # I don't think that reading back in the whole raster is a great idea
         # maybe there is a better way to handle this
         land_ds_array = land_ds.GetRasterBand(1).ReadAsArray()
-        # reset our nodata values
+        
+        # Reset our nodata values
         land_ds_array[aoi_nodata_mask] = out_nodata
-        # write back our matrix to the band
+        aoi_nodata_mask = None
+
+        # Write back our matrix to the band
         land_ds.GetRasterBand(1).WriteArray(land_ds_array)
         
-        # calculate distances using distance transform
+        distance_mask_uri = os.path.join(intermediate_dir, 'distance_mask.tif')
         
-        distance_calc_uri = os.path.join(intermediate_dir, 'distance_factored.tif')
-        dist_raster = raster_utils.new_raster_from_base(land_ds,
-                distance_calc_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+        distance_mask = raster_utils.new_raster_from_base(
+                land_ds, distance_mask_uri, 'GTiff', out_nodata, 
+                gdal.GDT_Float32)
        
-        dist_band = dist_raster.GetRasterBand(1)
+        dist_band = distance_mask.GetRasterBand(1)
 
         dist_matrix = np.copy(land_ds_array)
+        land_ds_array = None
+        
         np.putmask(dist_matrix, dist_matrix == out_nodata, 1)
         
         pixel_size = raster_utils.pixel_size(land_ds)
         
+        # Calculate distances using distance transform and multiply by the pixel
+        # size to get the proper distances in meters
         dist_matrix = \
                 ndimage.distance_transform_edt(dist_matrix) * pixel_size
                 
-        LOGGER.debug('minimum distance : %s', dist_matrix.min()) 
-        LOGGER.debug('maximum distance : %s', dist_matrix.max()) 
-        dist_copy = np.copy(dist_matrix)
-
+        # Create a mask for min and max distances 
         mask_min = dist_matrix <= min_distance
         mask_max = dist_matrix >= max_distance
         mask_dist = np.ma.mask_or(mask_min, mask_max)
-        LOGGER.debug('any distances work? : %s', mask_dist.all())
         np.putmask(dist_matrix, mask_dist, out_nodata)
 
         dist_band.WriteArray(dist_matrix)
+        dist_matrix = None
 
     except KeyError:
-        # looks like distances weren't provided, too bad!
+        # Looks like distances weren't provided, too bad!
         pass
 
-    # fill in skeleton below
-
-    # compute wind density
     hub_height = args['hub_height']
 
-    # based on the hub height input construct a String to represent the field
+    # Based on the hub height input construct a String to represent the field
     # name in the point shapefile to get the scale value for that height
     scale_key = 'Ram-0' + str(int(hub_height)) + 'm'
     LOGGER.debug('SCALE_key : %s', scale_key)
 
-    # the String name for the shape field
+    # The String name for the shape field
     shape_key = 'K-010m'
 
-    # weibull densitiy probability function to integrate over
+    # Weibull densitiy probability function to integrate over
     def weibull_probability(v_speed, k_shape, l_scale):
         """Calculate the probability density function of a weibull variable
             v_speed
@@ -185,7 +189,7 @@ def biophysical(args):
         return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
             (math.exp(-1 * (v_speed/l_scale)**k_shape)))
 
-    # harvested wind energy function to integrate over
+    # Harvested wind energy function to integrate over
     def harvested_wind_energy_fun(v_speed, k_shape, l_scale):
         """Calculate the harvested wind energy
             v_speed - a number representing wind speed
@@ -197,22 +201,22 @@ def biophysical(args):
         fract = (v_speed**exp_pwr_curve - v_in) / (v_rate**exp_pwr_curve - v_in)
         return fract * weibull_probability(v_speed, k_shape, l_scale)
     
-    # compute the mean air density
+    # Compute the mean air density
     air_density_mean = 1.225 - (1.194*10**-4) * hub_height
 
-    # get the wind points shapefile and layer
+    # Get the wind points shapefile and layer
     wind_points = args['wind_data_points']
     wind_points_layer = wind_points.GetLayer(0)
    
     density_field_name = 'Density'
     harvest_field_name = 'HarvEnergy'
 
-    # create new fields for the density and harvested values
+    # Create new fields for the density and harvested values
     for new_field_name in [density_field_name, harvest_field_name]:
         new_field = ogr.FieldDefn(new_field_name, ogr.OFTReal)
         wind_points_layer.CreateField(new_field)
     
-    # get the inputs needed to compute harvested wind energy
+    # Get the inputs needed to compute harvested wind energy
     exp_pwr_curve = args['exp_out_pwr_curve']
     num_days = args['num_days']
     rated_power = args['turbine_rated_pwr']
@@ -221,59 +225,60 @@ def biophysical(args):
     v_out = args['cut_out_wspd']
     v_in = args['cut_in_wspd'] * exp_pwr_curve
 
-    # fractional coefficient that lives outside the intregation for computing
+    # Fractional coefficient that lives outside the intregation for computing
     # the harvested wind energy
     fract_coef = rated_power * (air_density_mean / air_density_standard)
-    # the coefficient that is multiplied by the integration portion of the
+    
+    # The coefficient that is multiplied by the integration portion of the
     # harvested wind energy equation
     scalar = num_days * 24 * fract_coef
 
-    # get the indexes for the scale and shape parameters
+    # Get the indexes for the scale and shape parameters
     feature = wind_points_layer.GetFeature(0)
     scale_index = feature.GetFieldIndex(scale_key)
     shape_index = feature.GetFieldIndex(shape_key)
     LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
     wind_points_layer.ResetReading()
 
-    # for all the locations compute the weibull density and 
+    # For all the locations compute the weibull density and 
     # harvested wind energy. save in a field of the feature
     for feat in wind_points_layer:
-        # get the scale and shape values
+        # Get the scale and shape values
         scale_value = feat.GetField(scale_index)
         shape_value = feat.GetField(shape_index)
         
-        # integrate over the weibull probability function
+        # Integrate over the weibull probability function
         density_results = integrate.quad(weibull_probability, 1, 50,
                 (shape_value, scale_value))
 
-        # compute the final wind power density value
+        # Compute the final wind power density value
         density_results = 0.5 * air_density_mean * density_results[0]
 
-        # integrate over the harvested wind energy function
+        # Integrate over the harvested wind energy function
         harv_results = integrate.quad(
                 harvested_wind_energy_fun, v_out, v_rate, 
                 (shape_value, scale_value))
         
-        # integrate over the weibull probability function
+        # Integrate over the weibull probability function
         weibull_results = integrate.quad(weibull_probability, v_rate, v_out,
                 (shape_value, scale_value))
         
-        # compute the final harvested wind energy value
+        # Compute the final harvested wind energy value
         harvested_wind_energy = scalar * (harv_results[0] + weibull_results[0])
         
-        # save the results to their respective fields 
+        # Save the results to their respective fields 
         for field_name, result_value in [(density_field_name, density_results),
                 (harvest_field_name, harvested_wind_energy)]:
             out_index = feat.GetFieldIndex(field_name)
             feat.SetField(out_index, result_value)
 
-        # save the feature and set to None to clean up
+        # Save the feature and set to None to clean up
         wind_points_layer.SetFeature(feat)
         feat = None
 
     wind_points_layer.ResetReading()
 
-    # create rasters for density and harvested values
+    # Create rasters for density and harvested values
     bath_prop = raster_utils.get_raster_properties(bathymetry)
     density_ds_uri = os.path.join(intermediate_dir, 'density_ds.tif')
     harvested_ds_uri = os.path.join(intermediate_dir, 'harvested_ds.tif')
@@ -286,11 +291,11 @@ def biophysical(args):
             bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
             out_nodata, harvested_ds_uri, wind_points)
 
-    # interpolate points onto raster for density values and harvested values:
+    # Interpolate points onto raster for density values and harvested values:
     #rasteri_utils.vectorize_points(wind_points, density_field_name, density_ds)
     #raster_utils.vectorize_points(wind_points, harvested_field_name, harvested_ds)
 
-    # mask out any areas where distance or depth has determined that wind farms
+    # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
 
     def mask_out_depth_dist(out_ds, depth_ds, dist_ds):
@@ -313,11 +318,11 @@ def biophysical(args):
     harvested_masked_uri = os.path.join(intermediate_dir, 'harvested_masked.tif')
 
     _ = raster_utils.vectorize_rasters(
-            [density_ds, depth_mask, dist_raster], mask_out_depth_dist, 
+            [density_ds, depth_mask, distance_mask], mask_out_depth_dist, 
             raster_out_uri = density_masked_uri, nodata = out_nodata)
 
     _ = raster_utils.vectorize_rasters(
-            [harvested_ds, depth_mask, dist_raster], mask_out_depth_dist, 
+            [harvested_ds, depth_mask, distance_mask], mask_out_depth_dist, 
             raster_out_uri = harvested_masked_uri, nodata = out_nodata)
 
 
