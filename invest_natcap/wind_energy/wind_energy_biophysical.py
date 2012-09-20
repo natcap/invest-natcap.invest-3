@@ -201,8 +201,10 @@ def execute(args):
     biophysical_args['turbine_rated_pwr'] = float(args['turbine_rated_pwr'])
     biophysical_args['wind_data_points'] = wind_pts_prj
     biophysical_args['bathymetry'] = clip_and_proj_bath
-    biophysical_args['min_depth'] = float(args['min_depth']) 
-    biophysical_args['max_depth'] = float(args['max_depth'])
+    # Pass in the depth values as negative, since it should be a negative
+    # elevation
+    biophysical_args['min_depth'] = abs(float(args['min_depth'])) * -1.0
+    biophysical_args['max_depth'] = abs(float(args['max_depth'])) * -1.0
     biophysical_args['aoi'] = aoi 
     biophysical_args['suffix'] = suffix
    
