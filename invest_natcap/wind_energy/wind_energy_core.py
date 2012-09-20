@@ -62,8 +62,8 @@ def biophysical(args):
     # Get a mask for the min and max depths allowed for the turbines
     bathymetry = args['bathymetry']
     aoi = args['aoi']
-    min_depth = args['min_depth'] * -1.0
-    max_depth = args['max_depth'] * -1.0
+    min_depth = args['min_depth']
+    max_depth = args['max_depth']
     
     out_nodata = bathymetry.GetRasterBand(1).GetNoDataValue()
     
