@@ -56,9 +56,10 @@ def biophysical(args):
         returns - nothing"""i
 
     workspace = args['workspace_dir']
-    inter_dir = os.path.join(workspace, 'intermediate')
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(workspace, 'output')
 
-    # get a mask for the min and max depths allowed for the turbines
+    # Get a mask for the min and max depths allowed for the turbines
     bathymetry = args['bathymetry']
     aoi = args['aoi']
     min_depth = args['min_depth'] * -1.0
@@ -73,7 +74,7 @@ def biophysical(args):
         else:
             return out_nodata
 
-    depth_mask_uri = os.path.join(inter_dir, 'depth_mask.tif')
+    depth_mask_uri = os.path.join(intermediate_dir, 'depth_mask.tif')
     depth_mask = \
         raster_utils.vectorize_rasters([bathymetry], depth_op, \
             raster_out_uri = depth_mask_uri, nodata = out_nodata)
@@ -88,7 +89,7 @@ def biophysical(args):
         
         # make raster from the AOI and then rasterize land polygon ontop of it
         bath_prop = raster_utils.get_raster_properties(bathymetry)
-        land_ds_uri = os.path.join(inter_dir, 'land_ds.tif')
+        land_ds_uri = os.path.join(intermediate_dir, 'land_ds.tif')
         land_ds = raster_utils.create_raster_from_vector_extents(
                 bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
                 out_nodata, land_ds_uri, aoi)
@@ -114,7 +115,7 @@ def biophysical(args):
         
         # calculate distances using distance transform
         
-        distance_calc_uri = os.path.join(inter_dir, 'distance_factored.tif')
+        distance_calc_uri = os.path.join(intermediate_dir, 'distance_factored.tif')
         dist_raster = raster_utils.new_raster_from_base(land_ds,
                 distance_calc_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
        
@@ -261,8 +262,8 @@ def biophysical(args):
 
     # create rasters for density and harvested values
     bath_prop = raster_utils.get_raster_properties(bathymetry)
-    density_ds_uri = os.path.join(inter_dir, 'density_ds.tif')
-    harvested_ds_uri = os.path.join(inter_dir, 'harvested_ds.tif')
+    density_ds_uri = os.path.join(intermediate_dir, 'density_ds.tif')
+    harvested_ds_uri = os.path.join(intermediate_dir, 'harvested_ds.tif')
     
     density_ds = raster_utils.create_raster_from_vector_extents(
             bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
@@ -295,8 +296,8 @@ def biophysical(args):
         else:
             return out_ds
 
-    density_masked_uri = os.path.join(inter_dir, 'density_masked.tif')
-    harvested_masked_uri = os.path.join(inter_dir, 'harvested_masked.tif')
+    density_masked_uri = os.path.join(intermediate_dir, 'density_masked.tif')
+    harvested_masked_uri = os.path.join(intermediate_dir, 'harvested_masked.tif')
 
     _ = raster_utils.vectorize_rasters(
             [density_ds, depth_mask, dist_raster], mask_out_depth_dist, 
