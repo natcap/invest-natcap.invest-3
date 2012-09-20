@@ -1,13 +1,10 @@
 """InVEST Wind Energy model file handler module"""
-import os.path
 import logging
-import csv
 import os
 
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import numpy as np
 
 from invest_natcap.wind_energy import wind_energy_core
 from invest_natcap import raster_utils
@@ -72,7 +69,7 @@ def execute(args):
     # string.
     try:
         suffix = '_' + args['suffix']
-    except:
+    except KeyError:
         suffix = ''
 
     # Check to see if each of the workspace folders exists. If not, create the
@@ -106,8 +103,8 @@ def execute(args):
 
     # Get the AOI and wind points spatial references as strings in 
     # Well Known Text
-    AOI_sr = aoi.GetLayer().GetSpatialRef()
-    AOI_wkt = AOI_sr.ExportToWkt()
+    aoi_sr = aoi.GetLayer().GetSpatialRef()
+    aoi_wkt = aoi_sr.ExportToWkt()
     wind_pts_wkt = wind_data_points.GetLayer().GetSpatialRef().ExportToWkt()
 
     # Reproject the AOI to the spatial reference of the wind points so that the
@@ -128,7 +125,7 @@ def execute(args):
   
     # Reproject the clipped data points shapefile to that of the AOI
     wind_pts_prj = raster_utils.reproject_datasource(
-        wind_pts_clipped, AOI_wkt, wind_shape_reprojected_uri)
+        wind_pts_clipped, aoi_wkt, wind_shape_reprojected_uri)
     
     # Get the bathymetry pojection as WKT
     bathymetry_wkt = bathymetry.GetProjection()
@@ -155,7 +152,7 @@ def execute(args):
     bathymetry_sr = osr.SpatialReference()
     bathymetry_sr.ImportFromWkt(bathymetry_wkt)
 
-    coord_trans = osr.CoordinateTransformation(bathymetry_sr, AOI_sr)
+    coord_trans = osr.CoordinateTransformation(bathymetry_sr, aoi_sr)
   
     pixel_size = raster_utils.pixel_size_based_on_coordinate_transform(
             clipped_bathymetry, coord_trans, point_one)
@@ -165,12 +162,12 @@ def execute(args):
 
     # Reproject the bathymetry dataset to the projection of the AOI
     clip_and_proj_bath = raster_utils.reproject_dataset(
-            clipped_bathymetry, pixel_size[0], AOI_wkt, bathymetry_prj_uri)
+            clipped_bathymetry, pixel_size[0], aoi_wkt, bathymetry_prj_uri)
 
     # Try to handle the distance inputs and land datasource if they are present
     try:
         land_polygon = ogr.Open(args['land_polygon_uri'])
-        projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')  
+        projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')
     
         # Back project AOI so that the land polygon can be clipped properly
         back_proj_aoi_uri = os.path.join(inter_dir, 'back_proj_aoi.shp')
@@ -184,14 +181,13 @@ def execute(args):
 
         # Reproject the land polygon to the AOI projection
         projected_land = raster_utils.reproject_datasource(
-                clipped_land, AOI_wkt, projected_land_uri) 
+                clipped_land, aoi_wkt, projected_land_uri) 
 
         biophysical_args['land_polygon'] = projected_land
         biophysical_args['min_distance'] = float(args['min_distance']) 
         biophysical_args['max_distance'] = float(args['max_distance'])
     except KeyError:
         LOGGER.debug("Distance information not selected")
-        pass
     
     # Add biophysical inputs to the dictionary
     biophysical_args['workspace_dir'] = workspace
@@ -249,7 +245,8 @@ def read_wind_data(wind_data_uri):
     columns_line = wind_file.readline().split(',')
     
     # Remove the newline character that is attached to the last element
-    columns_line[len(columns_line) - 1] = columns_line[len(columns_line) - 1].rstrip('\n')
+    columns_line[len(columns_line) - 1] = \
+            columns_line[len(columns_line) - 1].rstrip('\n')
     LOGGER.debug('COLUMN Line : %s', columns_line)
     
     wind_dict = {}
@@ -366,7 +363,8 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
     # shapefiles layer
     for fld_index in range(original_field_count):
         original_field = original_layer_dfn.GetFieldDefn(fld_index)
-        output_field = ogr.FieldDefn(original_field.GetName(), original_field.GetType())
+        output_field = ogr.FieldDefn(
+                original_field.GetName(), original_field.GetType())
         output_field.SetWidth(original_field.GetWidth())
         output_field.SetPrecision(original_field.GetPrecision())
         output_layer.CreateField(output_field)
@@ -387,7 +385,8 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
        
         if not intersect_geom == None and not intersect_geom.IsEmpty():
             # Copy original_datasource's feature and set as new shapes feature
-            output_feature = ogr.Feature(feature_def=output_layer.GetLayerDefn())
+            output_feature = ogr.Feature(
+                    feature_def=output_layer.GetLayerDefn())
             output_feature.SetGeometry(intersect_geom)
             # Since the original feature is of interest add it's fields and
             # Values to the new feature from the intersecting geometries
