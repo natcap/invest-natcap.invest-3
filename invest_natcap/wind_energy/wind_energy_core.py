@@ -14,22 +14,47 @@ from invest_natcap import raster_utils
 LOGGER = logging.getLogger('wind_energy_core')
 
 def biophysical(args):
-    """This is where the doc string lives
+    """Handles the core functionality for the biophysical part of the wind
+        energy model
     
-        args[workspace_dir] - uri for workspace directory
-        args[bathymetry] - a GDAL raster of elevation values
-        args[aoi] - an OGR polygon shapefile of the area of interest
-        args[min_depth] - a float of the minimum depth required for the turbines
-        args[max_depth] - a float of the maximum depth the turbines can be
-            placed
-        args[min_distance] - a float of the minimum distance the farms have
-            to be away from the coastline (m)
-        args[max_distance] - a float of the maximum distance the farms can 
-            be placed away from the coastline (m)
-        args[land_polygon] - an OGR polygon shapefile of the land polygon
+        args[workspace_dir] - a python string which is the uri path to where the
+            outputs will be saved (required)
+        args[aoi] - an OGR datasource of type polygon of the area of interest
+            (required)
+        args[bathymetry] - a GDAL dataset of elevation values that encompasses
+            the area of interest (required)
+        args[bottom_type] - an OGR datasource of type polygon that depicts the 
+            subsurface geology type (optional)
+        args[hub_height] - a float value for the hub height of the turbines
+            (meters) (required)
+        args[cut_in_wspd] - a float value for the cut in wind speed of the
+            (meters / second) turbine (required)
+        args[cut_out_wspd] - a float value for the cut out wind speed of the
+            (meteres / second) turbine (required)
+        args[rated_wspd] - a float value for the rated wind speed of the 
+            (meters / second) turbine (required)
+        args[turbine_rated_pwr] - a float value for the turbine rated power
+            (MW) (required)
+        args[exp_out_pwr_curve] - a float value for the exponent output power
+            curve (required)
+        args[num_days] - an integer value for the number of days for harvested
+            wind energy calculation (days) (required)
+        args[air_density] - a float value for the air density of standard 
+            atmosphere (kilograms / cubic meter) (required)
+        args[min_depth] - a float value for the minimum depth for offshore wind
+            farm installation (meters) (required)
+        args[max_depth] - a float value for the maximum depth for offshore wind
+            farm installation (meters) (required)
+        args[land_polygon_uri] - an OGR datasource of type polygon that
+            provides a coastline for determining distances from wind farm bins
+            (optional)
+        args[min_distance] - a float value for the minimum distance from shore
+            for offshore wind farm installation (meters) (optional)
+        args[max_distance] - a float value for the maximum distance from shore
+            for offshore wind farm installation (meters) (optional)
+        
+        returns - nothing"""i
 
-        returns - 
-    """
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
 
