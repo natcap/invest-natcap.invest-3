@@ -16,6 +16,11 @@ import invest_test_core
 LOGGER = logging.getLogger('invest_core')
 
 class TestRasterUtils(unittest.TestCase):
+    def test_unique_values(self):
+        dataset = gdal.Open('data/base_data/terrestrial/lulc_samp_cur')
+        unique_vals = raster_utils.unique_raster_values(dataset)
+        LOGGER.debug(unique_vals)
+
     def test_contour_raster(self):
         base_dir = 'data/test_out/contour_raster'
 
