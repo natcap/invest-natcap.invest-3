@@ -712,6 +712,9 @@ def vectorize_points(shapefile, datasource_field, raster):
 
     #Create grid points for interpolation outputs later
     #top-bottom:y_stepsize, left-right:x_stepsize
+    
+    #Remake as an integer grid then divide subtract by bounding box parts
+
     grid_y, grid_x = np.mgrid[bounding_box[1]:bounding_box[3]:gt[5],
                               bounding_box[0]:bounding_box[2]:gt[1]]
 
@@ -1459,14 +1462,15 @@ def unique_raster_values(dataset):
 
         returns a list of dataset's unique non-nodata values"""
 
-    band, nodata = raster_utils.extract_band_and_nodata(dataset)
+    band, nodata = extract_band_and_nodata(dataset)
     n_rows = band.YSize
-    unique_values = numpy.array([])
+    unique_values = np.array([])
     for row_index in xrange(n_rows):
-        array = band.ReadAsArray(0, row_index, 1, band.YSize)[0]
+        array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
         array = np.append(array, unique_values)
         unique_values = np.unique(array)
 
     unique_list = list(unique_values)
-    unique_list.remove(nodata)
+    if nodata in unique_list:
+        unique_list.remove(nodata)
     return unique_list
