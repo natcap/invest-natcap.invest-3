@@ -1,3 +1,5 @@
+import math
+
 '''This is the core module for HRA functionality. This will perform all HRA
 calcs, and return the appropriate outputs.
 '''
@@ -50,4 +52,24 @@ def calculate_consequence_value(iterable):
 
     C = sum_top / sum_bottom
 
-    return C 
+    return C
+
+#For this, I am assuming that something is running the risk values as a loop,
+#and passing in the E and C values that it wants us to use.
+def calculate_risk_value(exposure, consequence):
+    '''Takes an individual exposure value and consequence value (we assume they are
+    from the same H-S space, and finds their euclidean distance from the origin of
+    the exposure-consequence space.
+
+        Input:
+            exposure- Avg. of exposure values within a H-S space.
+            consequence- Avg. of consequence values within a H-S space.
+
+        Returns:
+            R - The risk value for the given E and C.
+    '''
+
+    R = math.sqrt((exposure - 1)**2 + (consequence - 1)**2)
+
+    return R
+
