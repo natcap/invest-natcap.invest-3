@@ -1451,3 +1451,22 @@ def build_contour_raster(dem_dataset, contour_value, out_uri):
     #Write out the result
     contour_band = contour_dataset.GetRasterBand(1)
     contour_band.WriteArray(contour_array)
+
+def unique_raster_values(dataset):
+    """Returns a list of the unique integer values on the given dataset
+
+        dataset - a gdal dataset of some integer type
+
+        returns a list of dataset's unique non-nodata values"""
+
+    band, nodata = raster_utils.extract_band_and_nodata(dataset)
+    n_rows = band.YSize
+    unique_values = numpy.array([])
+    for row_index in xrange(n_rows):
+        array = band.ReadAsArray(0, row_index, 1, band.YSize)[0]
+        array = np.append(array, unique_values)
+        unique_values = np.unique(array)
+
+    unique_list = list(unique_values)
+    unique_list.remove(nodata)
+    return unique_list
