@@ -293,7 +293,7 @@ def biophysical(args):
 
     # Interpolate points onto raster for density values and harvested values:
     raster_utils.vectorize_points(wind_points, density_field_name, density_ds)
-    raster_utils.vectorize_points(wind_points, harvested_field_name, harvested_ds)
+    raster_utils.vectorize_points(wind_points, harvest_field_name, harvested_ds)
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
