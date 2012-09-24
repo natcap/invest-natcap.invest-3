@@ -713,10 +713,12 @@ def vectorize_points(shapefile, datasource_field, raster):
     #Create grid points for interpolation outputs later
     #top-bottom:y_stepsize, left-right:x_stepsize
     
-    #Remake as an integer grid then divide subtract by bounding box parts
-
-    grid_y, grid_x = np.mgrid[bounding_box[1]:bounding_box[3]:gt[5],
-                              bounding_box[0]:bounding_box[2]:gt[1]]
+    #Make as an integer grid then divide subtract by bounding box parts
+    #so we don't get a roundoff error and get off by one pixel one way or 
+    #the other
+    grid_y, grid_x = np.mgrid[0:band.YSize, 0:band.XSize]
+    grid_y = grid_y * gt[5] + bounding_box[1]
+    grid_x = grid_x * gt[1] + bounding_box[0]
 
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
