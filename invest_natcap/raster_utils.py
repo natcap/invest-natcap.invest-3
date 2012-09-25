@@ -1485,4 +1485,21 @@ def get_rat_as_dictionary(dataset):
 
         returns a 2D dictionary where the first key is the column name and 
             second is the row number"""
-    pass
+
+    band = dataset.GetRasterBand(1)
+    rat = band.GetDefaultRAT()
+    n_columns = rat.GetColumnCount()
+    n_rows = rat.GetRowCount()
+    rat_dictionary = {}
+
+    for col_index in xrange(n_columns):
+        #Initialize an empty list to store row data
+        col_name = rat.GetNameOfCol(col_index)
+        rat_dictionary[col_name] = []
+        
+        #Now burn through all the rows to populate the column
+        for row_index in xrange(n_rows):
+            rat_dictionary[col_name].append(
+                rat.GetValueAsString(row_index, col_index))
+
+    return rat_dictionary
