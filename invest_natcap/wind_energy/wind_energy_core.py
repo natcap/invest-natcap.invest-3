@@ -175,19 +175,24 @@ def biophysical(args):
     # The String name for the shape field
     shape_key = 'K-010m'
 
-    # Weibull densitiy probability function to integrate over
-    def weibull_probability(v_speed, k_shape, l_scale):
+    # Weibull probability function to integrate over
+    def weibull_probability(v_speed, k_shape, l_scale, is_density):
         """Calculate the probability density function of a weibull variable
             v_speed
             
             v_speed - a number representing wind speed
             k_shape - a float for the shape parameter
             l_scale - a float for the scale parameter of the distribution
-
+            is_density - a boolean value determining which equation to return
+  
             returns - a float
             """
-        return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
-            (math.exp(-1 * (v_speed/l_scale)**k_shape)))
+        if is_density:
+            return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
+                    (math.exp(-1 * (v_speed/l_scale)**k_shape))) * v_speed**3
+        else:
+            return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
+                    (math.exp(-1 * (v_speed/l_scale)**k_shape)))
 
     # Harvested wind energy function to integrate over
     def harvested_wind_energy_fun(v_speed, k_shape, l_scale):
@@ -198,9 +203,12 @@ def biophysical(args):
 
             returns - a float
         """
-        fract = (v_speed**exp_pwr_curve - v_in) / (v_rate**exp_pwr_curve - v_in)
-        return fract * weibull_probability(v_speed, k_shape, l_scale)
-    
+        fract = ((v_speed**exp_pwr_curve - v_in**exp_pwr_curve) /
+            (v_rate**exp_pwr_curve - v_in**exp_pwr_curve))
+   
+        return fract * weibull_probability(v_speed, k_shape, l_scale, False) 
+   
+
     # Compute the mean air density
     air_density_mean = 1.225 - (1.194*10**-4) * hub_height
 
@@ -223,7 +231,7 @@ def biophysical(args):
     air_density_standard = args['air_density']
     v_rate = args['rated_wspd']
     v_out = args['cut_out_wspd']
-    v_in = args['cut_in_wspd'] * exp_pwr_curve
+    v_in = args['cut_in_wspd']
 
     # Fractional coefficient that lives outside the intregation for computing
     # the harvested wind energy
@@ -249,19 +257,19 @@ def biophysical(args):
         
         # Integrate over the weibull probability function
         density_results = integrate.quad(weibull_probability, 1, 50,
-                (shape_value, scale_value))
+                (shape_value, scale_value, True))
 
         # Compute the final wind power density value
         density_results = 0.5 * air_density_mean * density_results[0]
 
         # Integrate over the harvested wind energy function
         harv_results = integrate.quad(
-                harvested_wind_energy_fun, v_out, v_rate, 
+                harvested_wind_energy_fun, v_in, v_rate, 
                 (shape_value, scale_value))
         
         # Integrate over the weibull probability function
         weibull_results = integrate.quad(weibull_probability, v_rate, v_out,
-                (shape_value, scale_value))
+                (shape_value, scale_value, False))
         
         # Compute the final harvested wind energy value
         harvested_wind_energy = scalar * (harv_results[0] + weibull_results[0])
@@ -293,7 +301,7 @@ def biophysical(args):
 
     # Interpolate points onto raster for density values and harvested values:
     raster_utils.vectorize_points(wind_points, density_field_name, density_ds)
-    raster_utils.vectorize_points(wind_points, harvested_field_name, harvested_ds)
+    raster_utils.vectorize_points(wind_points, harvest_field_name, harvested_ds)
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located

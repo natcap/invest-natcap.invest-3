@@ -10,7 +10,7 @@ try:
 except ImportError:
     from invest_natcap.carbon import carbon_core
 from invest_natcap.dbfpy import dbf
-import invest_cython_core
+import invest_natcap.raster_utils as raster_utils
 
 import logging
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -70,8 +70,8 @@ def execute(args):
     for x in ['hwp_cur_shape', 'hwp_fut_shape']:
         uriName = x + '_uri'
         if uriName in args:
-            logger.debug('loading %s', args[uriName])
-            biophysicalArgs[x] = ogr.Open(args[uriName].encode(fsencoding))
+            logger.debug('loading %s', str(args[uriName]))
+            biophysicalArgs[x] = ogr.Open(str(args[uriName]).encode(fsencoding))
 
     #Always need carbon pools, if uncertainty calculation they also need
     #to have range columns in them, but no need to check at this level.
@@ -124,7 +124,7 @@ def execute(args):
     for rasterName, rasterPath in outputURIs.iteritems():
         logger.debug('creating output raster %s', rasterPath)
         biophysicalArgs[rasterName] = \
-            invest_cython_core.newRasterFromBase(biophysicalArgs['lulc_cur'],
+            raster_utils.new_raster_from_base(biophysicalArgs['lulc_cur'],
                               rasterPath, 'GTiff', -5.0, gdal.GDT_Float32)
 
     #run the biophysical part of the carbon model.

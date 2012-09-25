@@ -126,7 +126,8 @@
                     "enabledBy": "calc_sequestration",
                     "validateAs": {"type": "OGR",
                                    "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
-                                   "fieldsExist": ["Cut_cur", "Start_date", "Freq_cur", "Decay_cur", "C_den_cur", "BCEF_cur"]}
+                                   "fieldsExist": ["Cut_cur", "Start_date", "Freq_cur", "Decay_cur", "C_den_cur", "BCEF_cur"]},
+                    "returns": {"ifEmpty": "pass"}
                 },
                 {
                     "id" : "fut_harvest_map",
@@ -138,7 +139,8 @@
                     "enabledBy": "calc_sequestration",
                     "validateAs": {"type": "OGR",
                                    "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
-                                   "fieldsExist": ["Cut_fut", "Freq_fut", "Decay_fut", "C_den_fut", "BCEF_fut"]}
+                                   "fieldsExist": ["Cut_fut", "Freq_fut", "Decay_fut", "C_den_fut", "BCEF_fut"]},
+                    "returns": {"ifEmpty": "pass"}
                 }
             ]
         }
