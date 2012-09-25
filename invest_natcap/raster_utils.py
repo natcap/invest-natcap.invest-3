@@ -1476,3 +1476,13 @@ def unique_raster_values(dataset):
     if nodata in unique_list:
         unique_list.remove(nodata)
     return unique_list
+
+def get_rat_as_dictionary(dataset):
+    """Returns the RAT of the first band of dataset as a dictionary.
+
+        dataset - a GDAL dataset that has a RAT associated with the first
+            band
+
+        returns a 2D dictionary where the first key is the column name and 
+            second is the row number"""
+    pass
