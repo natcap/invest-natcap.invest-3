@@ -121,7 +121,7 @@
 				    "id" : "reefs",
 				    "args_id" : "reefs",
 				    "type": "checkbox",
-				    "label": "Reefs",
+				    "label": "Coral Reefs",
 				    "defaultValue": true,
 				    "required": false
 				},
@@ -129,7 +129,7 @@
 				    "id" : "grass",
 				    "args_id" : "grass",
 				    "type": "checkbox",
-				    "label": "Sea Grass",
+				    "label": "Seagrasses",
 				    "defaultValue": true,
 				    "required": false
 				}				
