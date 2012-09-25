@@ -170,7 +170,7 @@ def execute(args):
         projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')
     
         # Back project AOI so that the land polygon can be clipped properly
-        back_proj_aoi_uri = os.path.join(inter_dir, 'back_proj_aoi.shp')
+        back_proj_aoi_uri = os.path.join(inter_dir, 'aoi_prj_to_land.shp')
         land_wkt = land_polygon.GetLayer().GetSpatialRef().ExportToWkt()
         back_proj_aoi = raster_utils.reproject_datasource(
                 aoi, land_wkt, back_proj_aoi_uri)
