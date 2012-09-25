@@ -1507,10 +1507,11 @@ def get_rat_as_dictionary(dataset):
                 value = rat.GetValueAsInt(row_index, col_index)
             elif col_type == gdal.GFT_Real:
                 value = rat.GetValueAsDouble(row_index, col_index)
-            elif col_type == gdal.GFT_String:
+            else: 
+                #If the type is not int or real, default to a string, 
+                #I think this is better than testing for a string and raising
+                #an exception if not
                 value = rat.GetValueAsString(row_index, col_index)
-            else:
-                raise Exception("Found an unknown RAT type %s" % col_type)
 
             rat_dictionary[col_name].append(value)
 
