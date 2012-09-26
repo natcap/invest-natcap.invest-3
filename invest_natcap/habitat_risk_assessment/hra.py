@@ -37,4 +37,13 @@ def execute(args):
                                        .
                                        .
                                        . }
+    Output:
+        hra_args- Dictionary containing everything that hra_core will need to
+            complete the rest of the model run.
+
+    Returns nothing.
     '''
+
+
+
+
