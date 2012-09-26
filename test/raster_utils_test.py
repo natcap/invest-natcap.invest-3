@@ -16,6 +16,23 @@ import invest_test_core
 LOGGER = logging.getLogger('invest_core')
 
 class TestRasterUtils(unittest.TestCase):
+    def test_get_rat_as_dictionary(self):
+        ds = gdal.Open('data/get_rat_as_dict/activity_transition_map.tif')
+        rat_dict = raster_utils.get_rat_as_dictionary(ds)
+
+        unit_dict = {
+            'Max Transition': ['agricultural_vegetation_managment', 
+                               'fertilizer_management', 
+                               'keep_native_vegetation', 
+                               'increase_native_vegetation_assisted', 
+                               'ditching', 
+                               'pasture_management', 
+                               'irrigation_management', 
+                               'increase_native_vegetation_unassisted'], 
+            'Value': [0, 1, 2, 3, 4, 5, 6, 7]}
+
+        self.assertEqual(unit_dict, rat_dict)
+
     def test_unique_values(self):
         dataset = gdal.Open('data/base_data/terrestrial/lulc_samp_cur')
         unique_vals = raster_utils.unique_raster_values(dataset)
