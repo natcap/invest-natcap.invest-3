@@ -46,29 +46,50 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
 #       wind_energy_biophysical.execute(args)
 
-#   def test_wind_energy_biophysical_check_datasource_projections(self):
-#       
-#       # load a properly projected datasource and check that it passes
-#       datasource_uri = './data/wind_energy_data/reprojected_distance_aoi.shp'
-#       datasource = ogr.Open(datasource_uri)
+    def test_wind_energy_biophysical_check_datasource_projections(self):
+        """Load a properly projected datasource and check that it passes"""
+        
+        datasource_uri = './data/wind_energy_data/reprojected_distance_aoi.shp'
+        
+        datasource = ogr.Open(datasource_uri)
 
-#       result = \
-#               wind_energy_biophysical.check_datasource_projections([datasource])
+        result = \
+            wind_energy_biophysical.check_datasource_projections([datasource])
 
-#       self.assertTrue(result)
-#   
-#   def test_wind_energy_biophysical_check_datasource_projections_fail(self):
-#       
-#       # load a couple datasources and check that one fails
-#       ds_one_uri = './data/wind_energy_data/reprojected_distance_aoi.shp'
-#       ds_two_uri = './data/wind_energy_data/wind_energy_distance_aoi.shp'
-#       ds_one = ogr.Open(ds_one_uri)
-#       ds_two = ogr.Open(ds_two_uri)
+        self.assertTrue(result)
+    
+    def test_wind_energy_biophysical_check_datasource_projections_mult(self):
+        """Load multiple properly projected datasource and check that they
+            pass"""
+        
+        datasource_uri = './data/wind_energy_data/reprojected_distance_aoi.shp'
+        datasource_uri_2 = \
+            './data/wind_energy_regression_data/wind_points_reprojected.shp'
+        datasource_uri_3 = \
+            './data/wind_energy_regression_data/projected_land_poly.shp'
+        
+        datasource_list = []
+        for uri in [datasource_uri, datasource_uri_2, datasource_uri_3]:
+            datasource_list.append(ogr.Open(uri))
 
-#       result = wind_energy_biophysical.check_datasource_projections(
-#               [ds_one, ds_two])
+        result = wind_energy_biophysical.check_datasource_projections(
+                datasource_list)
 
-#       self.assertTrue(not result)
+        self.assertTrue(result)
+
+    def test_wind_energy_biophysical_check_datasource_projections_fail(self):
+        """Load a couple datasources and check that one fails"""
+        
+        ds_one_uri = './data/wind_energy_data/reprojected_distance_aoi.shp'
+        ds_two_uri = './data/wind_energy_data/wind_energy_distance_aoi.shp'
+       
+        ds_one = ogr.Open(ds_one_uri)
+        ds_two = ogr.Open(ds_two_uri)
+
+        result = wind_energy_biophysical.check_datasource_projections(
+                [ds_one, ds_two])
+
+        self.assertTrue(not result)
 
 #   def test_wind_energy_biophysical_read_wind_data(self):
 
