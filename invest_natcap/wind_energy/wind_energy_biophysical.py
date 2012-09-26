@@ -272,7 +272,7 @@ def read_wind_data(wind_data_uri):
 
     return wind_dict
 
-def wind_data_to_point_shape(dict_data, layer_name,  output_uri):
+def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     """Given a dictionary of the wind data create a point shapefile that
         represents this data
         
