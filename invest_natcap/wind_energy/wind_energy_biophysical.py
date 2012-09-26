@@ -20,6 +20,8 @@ def execute(args):
     
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
+        args[wind_data_uri] - a text file where each row is a location with at
+            least the Longitude, Latitude, Scale and Shape parameters (required)
         args[aoi_uri] - a uri to an OGR datasource that is of type polygon and 
             projected in linear units of meters. The polygon specifies the 
             area of interest for the wind data points. If limiting the wind 
