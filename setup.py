@@ -6,6 +6,7 @@ import platform
 import os
 import sys
 import datetime
+import glob
 
 import numpy as np
 from Cython.Distutils import build_ext
@@ -116,6 +117,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/dialog-warning.png',
                'invest_natcap/iui/dialog-information-2.png',
                'invest_natcap/iui/dialog-error.png']))
+    data_files.append(('installer', glob.glob('installer/*')))
 else:
     # this is not running on windows
     # We need to add certain IUI resources to the virtualenv site-packages
