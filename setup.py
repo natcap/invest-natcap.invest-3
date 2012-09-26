@@ -99,6 +99,9 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/pollination_valuation.json',
                'invest_natcap/iui/finfish_aquaculture.json',
                'invest_natcap/iui/marine_water_quality_biophysical.json',
+               'invest_natcap/iui/biodiversity_biophysical.json',
+               'invest_natcap/iui/overlap_analysis.json',
+               'invest_natcap/iui/overlap_analysis_mz.json',
                'invest_natcap/iui/sediment_biophysical.json']))
     data_files.append(
         ('invest_natcap/iui',
