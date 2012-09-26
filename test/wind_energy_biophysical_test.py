@@ -112,9 +112,10 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         self.assertEqual(expected_dict, results)
 
     def test_wind_energy_biophysical_wind_data_to_point_shape(self):
-        """ """        
+        """Compare the output shapefile created from a known dictionary agaisnt
+            a regression shape file that has been verified correct"""        
         regression_shape_uri = \
-            './data/wind_energy_regression_data/wind_points_shape.shp'
+            './data/wind_energy_regression_data/wind_data_to_points.shp'
 
         output_dir = './data/test_out/wind_energy/wind_data_to_point_shape/'
         
@@ -134,10 +135,12 @@ class TestWindEnergyBiophysical(unittest.TestCase):
                               'Ram-040m':7.458108, 'Ram-050m':7.643438, 
                               'K-010m':2.732726}
 
-        _ = wind_energy_biophysical.wind_data_to_point_shape(
+        points = wind_energy_biophysical.wind_data_to_point_shape(
                 expected_dict, 'wind_data', out_uri)        
 
-#        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_uri, out_uri)
+        points = None
+
+        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_uri, out_uri)
 
     def test_wind_energy_biophysical_clip_datasource(self):
         """Regression test for clipping a shapefile from another shapefile"""
