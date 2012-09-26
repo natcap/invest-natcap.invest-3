@@ -79,7 +79,7 @@ if platform.system() == 'Windows':
          'invest_pollination_biophysical.py',
          'invest_pollination_valuation.py',
          'invest_finfish_aquaculture.py',
-         'invest_biodiversity_biophysical.py,
+         'invest_biodiversity_biophysical.py',
          'invest_overlap_analysis.py',
          'invest_overlap_analysis_mz.py',
          'invest_sediment_biophysical.py']
