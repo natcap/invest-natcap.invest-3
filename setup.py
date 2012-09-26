@@ -6,6 +6,7 @@ import platform
 import os
 import sys
 import datetime
+import glob
 
 import numpy as np
 from Cython.Distutils import build_ext
@@ -99,6 +100,9 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/pollination_valuation.json',
                'invest_natcap/iui/finfish_aquaculture.json',
                'invest_natcap/iui/marine_water_quality_biophysical.json',
+               'invest_natcap/iui/biodiversity_biophysical.json',
+               'invest_natcap/iui/overlap_analysis.json',
+               'invest_natcap/iui/overlap_analysis_mz.json',
                'invest_natcap/iui/sediment_biophysical.json']))
     data_files.append(
         ('invest_natcap/iui',
@@ -113,6 +117,7 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/dialog-warning.png',
                'invest_natcap/iui/dialog-information-2.png',
                'invest_natcap/iui/dialog-error.png']))
+    data_files.append(('installer', glob.glob('installer/*')))
 else:
     # this is not running on windows
     # We need to add certain IUI resources to the virtualenv site-packages
