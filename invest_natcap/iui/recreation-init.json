@@ -1,8 +1,8 @@
 {
     "id" : "window",
     "label": "Recreation Model - Initial Run",
-    "targetScript" : "invest_natcap.recreation.recreation_client",
-    "modelName" : "recreation",
+    "targetScript" : "invest_natcap.recreation.recreation_init",
+    "modelName" : "recreation_init",
     "localDocURI": "",
     "height": 600,
     "width" : 700,
@@ -121,7 +121,7 @@
 				    "id" : "reefs",
 				    "args_id" : "reefs",
 				    "type": "checkbox",
-				    "label": "Reefs",
+				    "label": "Coral Reefs",
 				    "defaultValue": true,
 				    "required": false
 				},
@@ -129,7 +129,7 @@
 				    "id" : "grass",
 				    "args_id" : "grass",
 				    "type": "checkbox",
-				    "label": "Sea Grass",
+				    "label": "Seagrasses",
 				    "defaultValue": true,
 				    "required": false
 				}				

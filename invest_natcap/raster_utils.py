@@ -712,8 +712,13 @@ def vectorize_points(shapefile, datasource_field, raster):
 
     #Create grid points for interpolation outputs later
     #top-bottom:y_stepsize, left-right:x_stepsize
-    grid_y, grid_x = np.mgrid[bounding_box[1]:bounding_box[3]:gt[5],
-                              bounding_box[0]:bounding_box[2]:gt[1]]
+    
+    #Make as an integer grid then divide subtract by bounding box parts
+    #so we don't get a roundoff error and get off by one pixel one way or 
+    #the other
+    grid_y, grid_x = np.mgrid[0:band.YSize, 0:band.XSize]
+    grid_y = grid_y * gt[5] + bounding_box[1]
+    grid_x = grid_x * gt[1] + bounding_box[0]
 
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
@@ -1451,3 +1456,63 @@ def build_contour_raster(dem_dataset, contour_value, out_uri):
     #Write out the result
     contour_band = contour_dataset.GetRasterBand(1)
     contour_band.WriteArray(contour_array)
+
+def unique_raster_values(dataset):
+    """Returns a list of the unique integer values on the given dataset
+
+        dataset - a gdal dataset of some integer type
+
+        returns a list of dataset's unique non-nodata values"""
+
+    band, nodata = extract_band_and_nodata(dataset)
+    n_rows = band.YSize
+    unique_values = np.array([])
+    for row_index in xrange(n_rows):
+        array = band.ReadAsArray(0, row_index, band.XSize, 1)[0]
+        array = np.append(array, unique_values)
+        unique_values = np.unique(array)
+
+    unique_list = list(unique_values)
+    if nodata in unique_list:
+        unique_list.remove(nodata)
+    return unique_list
+
+def get_rat_as_dictionary(dataset):
+    """Returns the RAT of the first band of dataset as a dictionary.
+
+        dataset - a GDAL dataset that has a RAT associated with the first
+            band
+
+        returns a 2D dictionary where the first key is the column name and 
+            second is the row number"""
+
+    band = dataset.GetRasterBand(1)
+    rat = band.GetDefaultRAT()
+    n_columns = rat.GetColumnCount()
+    n_rows = rat.GetRowCount()
+    rat_dictionary = {}
+
+    for col_index in xrange(n_columns):
+        #Initialize an empty list to store row data and figure out the type
+        #of data stored in that column.
+        col_type = rat.GetTypeOfCol(col_index)
+        col_name = rat.GetNameOfCol(col_index)
+        rat_dictionary[col_name] = []
+
+        #Now burn through all the rows to populate the column
+        for row_index in xrange(n_rows):
+            #This bit of python ugliness handles the known 3 types of gdal 
+            #RAT fields.
+            if col_type == gdal.GFT_Integer:
+                value = rat.GetValueAsInt(row_index, col_index)
+            elif col_type == gdal.GFT_Real:
+                value = rat.GetValueAsDouble(row_index, col_index)
+            else: 
+                #If the type is not int or real, default to a string, 
+                #I think this is better than testing for a string and raising
+                #an exception if not
+                value = rat.GetValueAsString(row_index, col_index)
+
+            rat_dictionary[col_name].append(value)
+
+    return rat_dictionary

@@ -20,6 +20,8 @@ def execute(args):
     
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
+        args[wind_data_uri] - a text file where each row is a location with at
+            least the Longitude, Latitude, Scale and Shape parameters (required)
         args[aoi_uri] - a uri to an OGR datasource that is of type polygon and 
             projected in linear units of meters. The polygon specifies the 
             area of interest for the wind data points. If limiting the wind 
@@ -170,7 +172,7 @@ def execute(args):
         projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')
     
         # Back project AOI so that the land polygon can be clipped properly
-        back_proj_aoi_uri = os.path.join(inter_dir, 'back_proj_aoi.shp')
+        back_proj_aoi_uri = os.path.join(inter_dir, 'aoi_prj_to_land.shp')
         land_wkt = land_polygon.GetLayer().GetSpatialRef().ExportToWkt()
         back_proj_aoi = raster_utils.reproject_datasource(
                 aoi, land_wkt, back_proj_aoi_uri)
@@ -272,7 +274,7 @@ def read_wind_data(wind_data_uri):
 
     return wind_dict
 
-def wind_data_to_point_shape(dict_data, layer_name,  output_uri):
+def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     """Given a dictionary of the wind data create a point shapefile that
         represents this data
         
