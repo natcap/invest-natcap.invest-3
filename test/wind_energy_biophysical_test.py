@@ -91,52 +91,53 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         self.assertTrue(not result)
 
-#   def test_wind_energy_biophysical_read_wind_data(self):
+    def test_wind_energy_biophysical_read_wind_data(self):
+        """Unit test for turning a text file into a dictionary"""
 
-#       wind_data_uri = './data/wind_energy_data/small_wind_data_sample.txt'
+        wind_data_uri = './data/wind_energy_data/small_wind_data_sample.txt'
 
-#       expected_dict = {}
+        expected_dict = {}
 
-#       expected_dict['1'] = {'LONG': -97.333330, 'LATI':26.800060,
-#                             'Ram-020m':6.800060, 'Ram-030m':7.196512,
-#                             'Ram-040m':7.427887, 'Ram-050m':7.612466, 
-#                             'K-010m':2.733090}
-#       expected_dict['2'] = {'LONG': -97.333330, 'LATI':26.866730,
-#                             'Ram-020m':6.910594, 'Ram-030m':7.225791,
-#                             'Ram-040m':7.458108, 'Ram-050m':7.643438, 
-#                             'K-010m':2.732726}
+        expected_dict[1.0] = {'LONG': -97.33333, 'LATI':26.80006,
+                              'Ram-020m':6.80006, 'Ram-030m':7.196512,
+                              'Ram-040m':7.427887, 'Ram-050m':7.612466, 
+                              'K-010m':2.73309}
+        expected_dict[2.0] = {'LONG': -97.33333, 'LATI':26.86673,
+                              'Ram-020m':6.910594, 'Ram-030m':7.225791,
+                              'Ram-040m':7.458108, 'Ram-050m':7.643438, 
+                              'K-010m':2.732726}
 
-#       results = wind_energy_biophysical.read_wind_data(wind_data_uri)
+        results = wind_energy_biophysical.read_wind_data(wind_data_uri)
 
-#       self.assertEqual(expected_dict, results)
+        self.assertEqual(expected_dict, results)
 
-#   def test_wind_energy_biophysical_wind_data_to_point_shape(self):
-#       
-#       regression_shape_uri = \
-#           './data/wind_energy_regression_data/wind_data_to_point_shape.shp'
+    def test_wind_energy_biophysical_wind_data_to_point_shape(self):
+        
+        regression_shape_uri = \
+            './data/wind_energy_regression_data/wind_points_shape.shp'
 
-#       output_dir = './data/test_out/wind_energy/wind_data_to_point_shape/'
-#       
-#       if not os.path.isdir(output_dir):
-#           os.mkdir(output_dir)
+        output_dir = './data/test_out/wind_energy/wind_data_to_point_shape/'
+        
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
 
-#       out_uri = os.path.join(output_dir, 'wind_data_shape.shp'
+        out_uri = os.path.join(output_dir, 'wind_data_shape.shp'
 
-#       expected_dict = {}
+        expected_dict = {}
 
-#       expected_dict['1'] = {'LONG': -97.333330, 'LATI':26.800060,
-#                             'Ram-020m':6.800060, 'Ram-030m':7.196512,
-#                             'Ram-040m':7.427887, 'Ram-050m':7.612466, 
-#                             'K-010m':2.733090}
-#       expected_dict['2'] = {'LONG': -97.333330, 'LATI':26.866730,
-#                             'Ram-020m':6.910594, 'Ram-030m':7.225791,
-#                             'Ram-040m':7.458108, 'Ram-050m':7.643438, 
-#                             'K-010m':2.732726}
+        expected_dict['1'] = {'LONG': -97.333330, 'LATI':26.800060,
+                              'Ram-020m':6.800060, 'Ram-030m':7.196512,
+                              'Ram-040m':7.427887, 'Ram-050m':7.612466, 
+                              'K-010m':2.733090}
+        expected_dict['2'] = {'LONG': -97.333330, 'LATI':26.866730,
+                              'Ram-020m':6.910594, 'Ram-030m':7.225791,
+                              'Ram-040m':7.458108, 'Ram-050m':7.643438, 
+                              'K-010m':2.732726}
 
-#       _ = wind_energy_biophysical.wind_data_to_point_shape(
-#               expected_dict, 'wind_points', out_uri)        
+        _ = wind_energy_biophysical.wind_data_to_point_shape(
+                expected_dict, 'wind_points', out_uri)        
 
-#       invest_test_core.assertTwoShapesEqualURI(self, regression_shape_uri, out_uri)
+        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_uri, out_uri)
 
 
     def test_wind_energy_biophysical_clip_datasource(self):
