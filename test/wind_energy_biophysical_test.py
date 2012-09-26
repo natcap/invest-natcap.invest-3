@@ -14,12 +14,11 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         """Regression test for the main biophsyical outputs"""
 
         input_dir = './data/wind_energy_data/'
+        regression_dir = './data/wind_energy_regression_data/'
         
-        bathymetry_uri = \
-            '../../invest-data/Base_Data/Marine/DEMs/global_dem/hdr.adf'
-        
-        global_land_uri = \
-                '../../invest-data/Base_Data/Marine/Land/global_polygon.shp'
+        bathymetry_uri = os.path.join(regression_dir, 'global_dem_clip.tif')
+
+        global_land_uri = os.path.join(regression_dir, 'global_poly_clip.shp')
         
         output_dir = './data/test_out/wind_energy/biophysical/'
 
@@ -50,7 +49,6 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         wind_energy_biophysical.execute(args)
 
-        regression_dir = './data/wind_energy_regression_data/'
 
         reg_wind_points = os.path.join(
                 regression_dir, 'wind_points_reprojected.shp')
