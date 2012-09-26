@@ -43,7 +43,18 @@ def execute(args):
 
     Returns nothing.
     '''
+    hra_args = {}
 
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
 
+    #Create intermediate and output folders. Delete old ones, if they exist.
+    for folder in (inter_dir, output_dir):
+        if (os.path.exists(folder)):
+            shutil.rmtree(folder) 
+
+        os.makedirs(folder)
+
+    hra_args['workspace_dir'] = args['workspace_dir']
 
 
