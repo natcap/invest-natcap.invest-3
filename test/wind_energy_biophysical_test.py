@@ -10,41 +10,70 @@ from invest_natcap.wind_energy import wind_energy_biophysical
 import invest_test_core
 
 class TestWindEnergyBiophysical(unittest.TestCase):
-#   def test_wind_energy_biophysical(self):
-#       """Doc String"""
+    def test_wind_energy_biophysical(self):
+        """Regression test for the main biophsyical outputs"""
 
-#       # start making up some tests
-#       input_dir = './data/wind_energy_data/'
-#       bathymetry_uri = \
-#           '../../invest-data/Base_Data/Marine/DEMs/global_dem/hdr.adf'
-#       global_land_uri = \
-#               '../../invest-data/Base_Data/Marine/Land/global_polygon.shp'
-#       output_dir = './data/test_out/wind_energy/'
+        input_dir = './data/wind_energy_data/'
+        
+        bathymetry_uri = \
+            '../../invest-data/Base_Data/Marine/DEMs/global_dem/hdr.adf'
+        
+        global_land_uri = \
+                '../../invest-data/Base_Data/Marine/Land/global_polygon.shp'
+        
+        output_dir = './data/test_out/wind_energy/biophysical/'
 
-#       if not os.path.isdir(output_dir):
-#           os.path.makedirs(output_dir)
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir)
 
-#       args = {}
-#       args['workspace_dir'] = output_dir
-#       args['aoi_uri'] = os.path.join(input_dir, 'reprojected_distance_aoi.shp')
-#       args['bathymetry_uri'] = bathymetry_uri
-#       #args['bottom_type_uri'] = os.path.join(input_dir, 'reprojected_distance_aoi.shp')
-#       args['hub_height']  = 50 
-#       args['pwr_law_exponent'] = 0.11
-#       args['cut_in_wspd'] = 4.0
-#       args['rated_wspd'] = 14.0
-#       args['cut_out_wspd'] = 25.0
-#       args['turbine_rated_pwr'] = 3.6
-#       args['exp_out_pwr_curve'] = 2 
-#       args['num_days'] = 365
-#       args['air_density'] = 1.225 
-#       args['min_depth'] = 20
-#       args['max_depth'] = 80
-#       args['min_distance'] = 7000
-#       args['max_distance'] = 10000
-#       args['land_polygon_uri'] = global_land_uri
+        args = {}
+        args['workspace_dir'] = output_dir
+        args['wind_data_uri'] = os.path.join(
+                input_dir, 'ECNA_EEZ_WEBPAR_Aug27_2012.txt')
+        args['aoi_uri'] = os.path.join(input_dir, 'reprojected_distance_aoi.shp')
+        args['bathymetry_uri'] = bathymetry_uri
+        #args['bottom_type_uri'] = os.path.join(input_dir, 'reprojected_distance_aoi.shp')
+        args['hub_height']  = 50 
+        args['pwr_law_exponent'] = 0.11
+        args['cut_in_wspd'] = 4.0
+        args['rated_wspd'] = 14.0
+        args['cut_out_wspd'] = 25.0
+        args['turbine_rated_pwr'] = 3.6
+        args['exp_out_pwr_curve'] = 2 
+        args['num_days'] = 365
+        args['air_density'] = 1.225 
+        args['min_depth'] = 25
+        args['max_depth'] = 200
+        args['min_distance'] = 9000
+        args['max_distance'] = 50000
+        args['land_polygon_uri'] = global_land_uri
 
-#       wind_energy_biophysical.execute(args)
+        wind_energy_biophysical.execute(args)
+
+        regression_dir = './data/wind_energy_regression_data/'
+
+        reg_wind_points = os.path.join(
+                regression_dir, 'wind_points_reprojected.shp')
+        reg_harv_energy = os.path.join(
+                regression_dir, 'harvested_masked.tif')
+        reg_density = os.path.join(
+                regression_dir, 'density_masked.tif')
+
+        wind_points = os.path.join(
+                output_dir, 'intermediate/wind_points_reprojected.shp')
+        harv_energy = os.path.join(
+                output_dir, 'intermediate/harvested_masked.tif')
+        density = os.path.join(
+                output_dir, 'intermediate/density_masked.tif')
+
+        invest_test_core.assertTwoShapesEqualURI(
+                self, reg_wind_points, wind_points)
+
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_harv_energy, harv_energy)
+
+        invest_test_core.assertTwoDatasetEqualURI(
+                self, reg_density, density)
 
     def test_wind_energy_biophysical_check_datasource_projections(self):
         """Load a properly projected datasource and check that it passes"""
