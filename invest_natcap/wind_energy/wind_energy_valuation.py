@@ -30,15 +30,44 @@ def execute(args):
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required)
-   
+        args[suffix] - a string for the suffix to be appended to the output
+            names (optional) 
+    
         returns - nothing
     """
 
     # create output folders
+    workspace = args['workspace_dir']
+    inter_dir = os.path.join(workspace, 'intermediate')
+    out_dir = os.path.join(workspace, 'output')
+
+    for folder in [inter_dir, out_dir]:
+        if not os.path.isdir(folder):
+            os.makedirs(folder)
 
     # handle suffix
+    try:
+        suffix = '_' + args['suffix']
+    except KeyError:
+        suffix = ''
 
     # handle opening of relevant files
+    turbine_dict = {}
+    turbine_file = open(args['turbine_info_uri'])
+    reader = csv.DictReader(turbine_file)
+
+    # Making a shallow copy of the attribute 'fieldnames' explicitly to edit to
+    # all the fields to lowercase because it is more readable and easier than
+    # editing the attribute itself
+    field_names = reader.fieldnames
+
+    for index in range(len(field_names)):
+        field_names[index] = field_names[index].lower()
+
+    for row in reader:
+        turbine_dict[row['type']] = row
+    turbine_file.close()
+    LOGGER.debug('Turbine Dictionary: %s', turbine_dict)
 
     # handle any pre-processing that must be done
 

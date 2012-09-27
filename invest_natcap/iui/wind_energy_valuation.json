@@ -1,7 +1,7 @@
 {
     "id" : "window",
     "label": "",
-    "targetScript" : "invest_natcap.wind_energy_valuation",
+    "targetScript" : "invest_natcap.wind_energy.wind_energy_valuation",
     "modelName" : "wind_energy_valuation",
     "localDocURI": "../documentation/wind_energy.html",
     "height": 500,
@@ -42,29 +42,14 @@
                     "required": true,
                     "returns" : "strings",
                     "helpText": "",
-                    "validateAs": { "type": "CSV",
-                                    "fieldsExist": ["ID", "TYPE", "LATI", "LONG"],
-                                     "restrictions": [{"field": "ID",
-                                                        "validateAs": {"type": "number",
-                                                        "allowedValues": {"pattern":"^[0-9]+"}}},
-                                                        {"field": "TYPE",
-                                                        "validateAs": {"type": "string",
-                                                        "allowedValues":{"pattern":"LAND|GRID", "flag":"ignoreCase"}}},
-                                                        {"field": "LATI",
-                                                        "validateAs": {"type": "number",
-                                                        "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}},
-                                                        {"field": "LONG",
-                                                        "validateAs": {"type": "number",
-                                                        "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
-                                                       ]
-                    }
+                    "validateAs": { "type": "CSV"}
                 },
 				{        
                     "id" : "grid_points",
                     "args_id" : "grid_points_uri",
                     "type": "file",
                     "label": "Grid Points",
-                    "required": true,
+                    "required": false,
                     "validateAs": { "type": "CSV",
                     				"fieldsExist": ["ID", "TYPE", "LATI", "LONG"],
                     				"restrictions": [{"field": "ID",
