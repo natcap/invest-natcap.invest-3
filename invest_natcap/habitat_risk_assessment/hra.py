@@ -78,10 +78,18 @@ def execute(args):
 
     #INSERT WAY OF BUFFERING STRESSORS HERE
     
-    #Now, want to make all potential combinations of the rasters.
-    combine_hs_rasters(inter_dir, h_rast, s_rast)
+    #Now, want to make all potential combinations of the rasters, and add it to
+    #the structure containg data about the H-S combination.
+    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['ratings'])
 
-def combine_hs_rasters(dir, h_rast, s_rast):
+    hra_args['ratings'] = ratings_with_rast
+
+def combine_hs_rasters(dir, h_rast, s_rast, ratings):
+    '''
+    
+    Returns an edited version of 'ratings' that contains an open raster
+    datasource correspondoing to the appropriate H-S key for the dictionary.
+    '''
 
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
@@ -113,6 +121,14 @@ def combine_hs_rasters(dir, h_rast, s_rast):
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
                             combine_hs_pixels, raster_out_uri = out_uri,
                             datatype = gdal.GDT_Int32, nodata=[0])
+            
+            #Now place the datasource into the corresponding dictionary entry
+            #in 'ratings'. We will make the open datasource the third item in
+            #the tuple. The first two are the exposure and consequence ratings
+            #that were gleaned from the IUI.
+            ratings[(h_name, s_name)][2] = gdal.Open(out_uri)
+
+    return ratings
 
 def make_rasters(dir, file_names, grid_size):
     '''Takes a shapefile and make s rasterized version which will be used to
