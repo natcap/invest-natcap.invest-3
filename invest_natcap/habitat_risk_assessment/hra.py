@@ -68,9 +68,9 @@ def execute(args):
     file_names = glob.glob(args['habitat_dir'])
     h_rast = os.path.join(inter_dir, 'Habitat_Rasters')
 
-    make_rasters(file_names, h_rast)
+    make_rasters(file_names, h_rast, args['grid_size'])
     
     file_names = glob.glob(args['stressors_dir'])
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
 
-    make_rasters(file_names, s_rast)
+    make_rasters(file_names, s_rast, args['grid_size'])
