@@ -8,6 +8,7 @@ import glob
 
 from osgeo import gdal, ogr
 from invest_natcap.habitat_risk_assessment import hra_core
+from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('HRA')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -78,4 +79,25 @@ def execute(args):
 
 def make_rasters(dir, file_names, grid_size):
 
-    
+    for file_uri in file_names:
+        
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        name = os.path.splitext(os.path.split(file)[1])[0]
+        out_uri = os.path.join(dir, name, '.tif')
+
+        datasource = ogr.Open(file_uri)
+        layer = datasource.GetLayer()
+        
+        #Making the nodata value 0 so that it's easier to combine the layers later.
+        r_dataset = \
+            raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
+                    gdal.GDT_Int32, 0, out_uri, datasource)
+
+        band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+        band.Fill(nodata)
+
+        gdal.RasterizeLayer(r_dataset, [1], burn_values=[1])
+
