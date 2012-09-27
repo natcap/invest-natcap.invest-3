@@ -8,6 +8,7 @@ import glob
 
 from osgeo import gdal, ogr
 from invest_natcap.habitat_risk_assessment import hra_core
+from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('HRA')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -65,17 +66,90 @@ def execute(args):
     
     #Glob.glob gets all of the files that fall into the form .shp, and makes
     #them into a list.
-    file_names = glob.glob(args['habitat_dir'])
+    file_names = glob.glob(os.path.join(args['habitat_dir'], '*.shp'))
     h_rast = os.path.join(inter_dir, 'Habitat_Rasters')
 
     make_rasters(file_names, h_rast, args['grid_size'])
     
-    file_names = glob.glob(args['stressors_dir'])
+    file_names = glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
 
     make_rasters(file_names, s_rast, args['grid_size'])
 
+    #INSERT WAY OF BUFFERING STRESSORS HERE
+    
+    #Now, want to make all potential combinations of the rasters.
+    combine_hs_rasters(inter_dir, h_rast, s_rast)
+
+def combine_hs_rasters(dir, h_rast, s_rast):
+
+    #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
+    h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
+    s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
+ 
+    #Create vectorize_raster's function to call when combining the h-s rasters
+    def combine_hs_pixels(pixel_h, pixel_s):
+        
+        #For all pixels in the two rasters, return this new pixel value
+        pix_sum = pixel_h + pixel_s
+        
+        return pix_sum
+        
+    for h in h_rast_files:
+        for s in s_rast_files:
+            
+            #The return of os.path.split is a tuple where everything after the final
+            #slash is returned as the 'tail' in the second element of the tuple
+            #path.splitext returns a tuple such that the first element is what comes
+            #before the file extension, and the second is the extension itself 
+            h_name = os.path.splitext(os.path.split(h)[1])[0]
+            s_name = os.path.splitext(os.path.split(s)[1])[0]
+            out_uri = os.path.join(dir, 'H[' + h_name + ']_S[' + s_name + \
+                        '].tif')
+            
+            h_dataset = gdal.Open(h)
+            s_dataset = gdal.Open(s)
+    
+            raster_utils.vectorize_rasters([h_dataset, s_dataset], 
+                            combine_hs_pixels, raster_out_uri = out_uri,
+                            datatype = gdal.GDT_Int32, nodata=[0])
 
 def make_rasters(dir, file_names, grid_size):
+    '''Takes a shapefile and make s rasterized version which will be used to
+    make the combined H-S rasters afterwards.
 
-    
+    Input:
+        dir- The directory into which the finished raster files should be placed.
+        file_names- A list containing the filepaths to all shapefiles that
+            need to be rasterized.
+        grid_size- The desired raster pixel resolution
+
+    Output:
+        out_uri- The filepath of the newly created raster file based on the
+            incoming file name located within file_names.
+
+    Returns nothing.
+    '''
+
+    for file_uri in file_names:
+        
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        name = os.path.splitext(os.path.split(file)[1])[0]
+        out_uri = os.path.join(dir, name, '.tif')
+
+        datasource = ogr.Open(file_uri)
+        layer = datasource.GetLayer()
+        
+        #Making the nodata value 0 so that it's easier to combine the layers later.
+        r_dataset = \
+            raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
+                    gdal.GDT_Int32, 0, out_uri, datasource)
+
+        band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
+        band.Fill(nodata)
+
+        gdal.RasterizeLayer(r_dataset, [1], burn_values=[1])
+
