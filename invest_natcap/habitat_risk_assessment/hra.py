@@ -4,6 +4,7 @@ and pre-processed data from the UI and pass it to the hra_core module.'''
 import os
 import shutil
 import logging
+import glob
 
 from osgeo import gdal, ogr
 from invest_natcap.habitat_risk_assessment import hra_core
@@ -27,6 +28,8 @@ def execute(args):
         args['stressors_dir']- The string describing a directory location of
             all stressor shapefiles. Will be parsed through and rasterized
             to be passed on to hra_core.'
+        args['grid_size']- Int representing the desired pixel dimensions of
+            both intermediate and ouput rasters. 
         args['ratings']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
@@ -57,4 +60,17 @@ def execute(args):
 
     hra_args['workspace_dir'] = args['workspace_dir']
 
+    #Take all shapefiles in both the habitats and the stressors folders and
+    #make them into rasters of grid_size by grid_size resolution.
+    
+    #Glob.glob gets all of the files that fall into the form .shp, and makes
+    #them into a list.
+    file_names = glob.glob(args['habitat_dir'])
+    h_rast = os.path.join(inter_dir, 'Habitat_Rasters')
 
+    make_rasters(file_names, h_rast)
+    
+    file_names = glob.glob(args['stressors_dir'])
+    s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
+
+    make_rasters(file_names, s_rast)
