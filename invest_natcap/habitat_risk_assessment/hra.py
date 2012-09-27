@@ -82,7 +82,8 @@ def execute(args):
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
     s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
-  
+ 
+    #Create vectorize_raster's function to call when combining the h-s rasters
     def add_hs_pixels(pixel_h, pixel_s):
         
         #For all pixels in the two rasters, return this new pixel value
@@ -90,7 +91,6 @@ def execute(args):
         
         return pix_sum
         
-
     for h in h_rast_files:
         for s in s_rast_files:
             
@@ -111,6 +111,22 @@ def execute(args):
                             datatype = gdal.GDT_Int32, nodata=[0])
 
 def make_rasters(dir, file_names, grid_size):
+    '''Takes a shapefile and make s rasterized version which will be used to
+    make the combined H-S rasters afterwards.
+
+    Input:
+        dir- The directory into which the finished raster files should be placed.
+        file_names- A list containing the filepaths to all shapefiles that
+            need to be rasterized.
+        grid_size- The desired raster pixel resolution
+
+    Output:
+        out_uri- The filepath of the newly created raster file based on the
+            incoming file name located within file_names.
+
+    Returns nothing.
+    '''
+
 
     for file_uri in file_names:
         
