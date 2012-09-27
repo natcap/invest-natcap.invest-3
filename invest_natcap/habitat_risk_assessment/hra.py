@@ -77,14 +77,18 @@ def execute(args):
     make_rasters(file_names, s_rast, args['grid_size'])
 
     #INSERT WAY OF BUFFERING STRESSORS HERE
-
+    
     #Now, want to make all potential combinations of the rasters.
+    combine_hs_rasters(inter_dir, h_rast, s_rast)
+
+def combine_hs_rasters(dir, h_rast, s_rast):
+
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
     s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
  
     #Create vectorize_raster's function to call when combining the h-s rasters
-    def add_hs_pixels(pixel_h, pixel_s):
+    def combine_hs_pixels(pixel_h, pixel_s):
         
         #For all pixels in the two rasters, return this new pixel value
         pix_sum = pixel_h + pixel_s
@@ -100,14 +104,14 @@ def execute(args):
             #before the file extension, and the second is the extension itself 
             h_name = os.path.splitext(os.path.split(h)[1])[0]
             s_name = os.path.splitext(os.path.split(s)[1])[0]
-            out_uri = os.path.join(inter_dir, 'H[' + h_name + ']_S[' + s_name + \
+            out_uri = os.path.join(dir, 'H[' + h_name + ']_S[' + s_name + \
                         '].tif')
             
             h_dataset = gdal.Open(h)
             s_dataset = gdal.Open(s)
     
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
-                            add_hs_pixels, raster_out_uri = out_uri,
+                            combine_hs_pixels, raster_out_uri = out_uri,
                             datatype = gdal.GDT_Int32, nodata=[0])
 
 def make_rasters(dir, file_names, grid_size):
@@ -126,7 +130,6 @@ def make_rasters(dir, file_names, grid_size):
 
     Returns nothing.
     '''
-
 
     for file_uri in file_names:
         
