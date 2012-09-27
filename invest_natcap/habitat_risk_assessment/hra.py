@@ -74,3 +74,8 @@ def execute(args):
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
 
     make_rasters(file_names, s_rast, args['grid_size'])
+
+
+def make_rasters(dir, file_names, grid_size):
+
+    
