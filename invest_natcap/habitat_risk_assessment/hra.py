@@ -85,7 +85,21 @@ def execute(args):
     hra_args['ratings'] = ratings_with_rast
 
 def combine_hs_rasters(dir, h_rast, s_rast, ratings):
-    '''
+    '''Takes in a habitat and a stressor, and combines the two raster files,
+    then places that in the corresponding entry within the ratings dictionary.
+
+    Input:
+        dir- The directory into which the completed raster files should be placed.
+        h_rast- The folder holding all habitat raster files.
+        s_rast- The folder holding all stressor raster files.
+        ratings- A dictionary which comes from the IUI which contains all
+            ratings and weightings of each Habitat-Stressor pair.
+
+     Output:
+        out_uri- A raster file which shows the overlap between the given
+            habitat and stressor. There will be number of habitat x number of
+            stressor versions of this file, all individualled named according
+            to their corresponding parts.
     
     Returns an edited version of 'ratings' that contains an open raster
     datasource correspondoing to the appropriate H-S key for the dictionary.
