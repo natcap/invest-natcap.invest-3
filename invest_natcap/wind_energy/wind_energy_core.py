@@ -363,3 +363,15 @@ def valuation(args):
     """
 
     # fill in skeleton below
+
+
+    # Get constants from turbine_dict
+
+    # Construct as many parts of the NPV equation as possible without needing to
+    # vectorize over harvested energy and distance
+
+    # Create vectorize operation that takes distance and harvested energy
+    # raster, outputting another raster with the NPV
+
+    
+
