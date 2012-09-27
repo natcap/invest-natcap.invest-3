@@ -20,6 +20,12 @@ def execute(args):
     
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
+        args[harvested_energy_uri] - a uri to a GDAL dataset from the
+            biophysical run of the wind energy model that has the per pixel
+            harvested wind energy(required)
+        args[distance_uri] - a uri to a GDAL dataset from the biophysical run of
+            the wind energy model that depicts the distances of pixels 
+            from shore (required)
         args[biophysical_data_uri] - a uri to an OGR datasource of type point
             from the output of the biophysical model run (required) 
         args[turbine_info_uri] - a uri to a CSV file that has the parameters
