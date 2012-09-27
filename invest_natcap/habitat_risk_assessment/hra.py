@@ -66,16 +66,41 @@ def execute(args):
     
     #Glob.glob gets all of the files that fall into the form .shp, and makes
     #them into a list.
-    file_names = glob.glob(args['habitat_dir'])
+    file_names = glob.glob(os.path.join(args['habitat_dir'], '*.shp'))
     h_rast = os.path.join(inter_dir, 'Habitat_Rasters')
 
     make_rasters(file_names, h_rast, args['grid_size'])
     
-    file_names = glob.glob(args['stressors_dir'])
+    file_names = glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
 
     make_rasters(file_names, s_rast, args['grid_size'])
 
+    #INSERT WAY OF BUFFERING STRESSORS HERE
+
+    #Now, want to make all potential combinations of the rasters.
+    #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
+    h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
+    s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
+   
+    for h in h_rast_files:
+        for s in s_rast_files:
+            
+            #The return of os.path.split is a tuple where everything after the final
+            #slash is returned as the 'tail' in the second element of the tuple
+            #path.splitext returns a tuple such that the first element is what comes
+            #before the file extension, and the second is the extension itself 
+            h_name = os.path.splitext(os.path.split(h)[1])[0]
+            s_name = os.path.splitext(os.path.split(s)[1])[0]
+            out_uri = os.path.join(inter_dir, 'H[' + h_name + ']_S[' + s_name + \
+                        '].tif')
+            
+            h_dataset = gdal.Open(h)
+            s_dataset = gdal.Open(s)
+    
+            raster_utils.vectorize_rasters([h_dataset, s_dataset], 
+                            add_hs_pixels, raster_out_uri = out_uri,
+                            datatype = gdal.GDT_Int32, nodata=[0])
 
 def make_rasters(dir, file_names, grid_size):
 
