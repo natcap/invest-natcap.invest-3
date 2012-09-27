@@ -82,7 +82,15 @@ def execute(args):
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
     s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
-   
+  
+    def add_hs_pixels(pixel_h, pixel_s):
+        
+        #For all pixels in the two rasters, return this new pixel value
+        pix_sum = pixel_h + pixel_s
+        
+        return pix_sum
+        
+
     for h in h_rast_files:
         for s in s_rast_files:
             
