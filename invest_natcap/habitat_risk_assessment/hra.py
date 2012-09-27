@@ -89,6 +89,8 @@ def execute(args):
 
     hra_args['ratings'] = ratings_with_rast
 
+    hra_core.execute(hra_args)
+
 def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     '''Takes in a habitat and a stressor, and combines the two raster files,
     then places that in the corresponding entry within the ratings dictionary.
