@@ -4,6 +4,47 @@ import math
 calcs, and return the appropriate outputs.
 '''
 
+def execute(args):
+    '''The overarching function that will call all parts of the HRA model.
+
+    Inputs:
+        args- Dictionary containing everything that hra_core will need to
+            complete the rest of the model run. It will contain the following.
+        args['workspace_dir']- Directory in which all data resides. Output
+            and intermediate folders will be supfolders of this one.
+        args['ratings']- A structure which holds all exposure and consequence
+            rating for each combination of habitat and stressor. The inner
+            structure is a dictionary whose key is a tuple which points to a
+            tuple of lists which contain tuples.
+
+            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
+                                       [(C1Rating, C1DataQuality, C1Weight), ...],
+                                       <Open A-1 Raster Dataset>)
+                                       .
+                                       .
+                                       . }
+
+    Outputs:
+        --Intermediate--
+            /intermediate/S[stressorname]_buff.tif- A version of the named
+                stressor file with the user speficied buffer applied.
+            /intermediate/H[habitatname]_S[stressorname].tif- A raster file of
+                the overlap between the named habitat and the named stressor.
+        --Output--
+            /output/maps/recov_potent.tif- Raster layer depicting the recovery
+                potential of the predominant habitat for a given cell.
+            /output/maps/cum_risk_H[habitatname]- Raster layer depicting the
+                cumulative risk for all stressors in a cell for the given 
+                habitat.
+            /output/maps/ecosys_risk- Raster layer that depicts the sum of all 
+                cumulative risk scores of all habitats for that cell.
+    
+    Returns nothing.
+    '''
+    
+
+
+
 def calculate_exposure_value(iterable):
     '''This is the weighted average exposure value for all criteria for a given
     H-S combination as determined on a run by run basis. The equation is 
