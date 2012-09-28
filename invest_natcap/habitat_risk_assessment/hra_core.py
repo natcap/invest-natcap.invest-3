@@ -46,7 +46,9 @@ def execute(args):
                 value for each habitat.
             /output/html_plots/plot_risk.html- Risk value for each habitat
                 plotted on a per-stressor graph.
-
+            
+            /output/Parameters_[TIME].txt- Lists the parameters that the model
+                was run with.
     Returns nothing.
     '''
     
