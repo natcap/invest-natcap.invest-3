@@ -335,6 +335,43 @@ def biophysical(args):
 
 
 def valuation(args):
-    """This is where the doc string lives"""
+    """Handles the core functionality for the valuation part of twind energy
+        model
+
+        args[workspace_dir] - a python string which is the uri path to where the
+            outputs will be saved (required)
+        args[harvested_energy] - a GDAL dataset from the biophysical run of 
+            the wind energy model that has the per pixel harvested wind energy
+            (required)
+        args[distance] - a GDAL dataset from the biophysical run of
+            the wind energy model that depicts the distances of pixels 
+            from shore (required)
+        args[biophysical_data] - an OGR datasource of type point
+            from the output of the biophysical model run (required) 
+        args[turbine_dict] - a dictionary that has the parameters
+            for the type of turbine (required)
+        args[grid_dict] - a dictionary that specifies the landing
+            and grid point locations (optional)
+        args[number_of_machines] - an integer value for the number of machines
+            for the wind farm (required)
+        args[dollar_per_kWh] - a float value for the amount of dollars per
+            kilowatt hour (kWh) (required)
+        args[suffix] - a string for the suffix to be appended to the output
+            names (optional) 
+
+        returns - Nothing
+    """
 
     # fill in skeleton below
+
+
+    # Get constants from turbine_dict
+
+    # Construct as many parts of the NPV equation as possible without needing to
+    # vectorize over harvested energy and distance
+
+    # Create vectorize operation that takes distance and harvested energy
+    # raster, outputting another raster with the NPV
+
+    
+
