@@ -38,7 +38,15 @@ def execute(args):
                 habitat.
             /output/maps/ecosys_risk- Raster layer that depicts the sum of all 
                 cumulative risk scores of all habitats for that cell.
-    
+   
+            /output/html_plots/output.html- HTML page containing a matlab plot
+                has cumulative exposure value for each habitat, as well as risk
+                of each habitat plotted per stressor.
+            /output/html_plots/plot_ecosys_risk.html- Plots the ecosystem risk
+                value for each habitat.
+            /output/html_plots/plot_risk.html- Risk value for each habitat
+                plotted on a per-stressor graph.
+
     Returns nothing.
     '''
     
