@@ -366,12 +366,38 @@ def valuation(args):
 
 
     # Get constants from turbine_dict
+    turbine_dict = args['turbine_dict']
+
+    infield_length = float(turbine_dict['infield_length'])
+    infield_cost = float(turbine_dict['infield_cost'])
+    foundation_cost = float(turbine_dict['foundation_cost'])
+    unit_cost = float(turbine_dict['unit_cost'])
+    install_cost = float(turbine_dict['install_cost']) / 100.00
+    misc_capex_cost = float(turbine_dict['misc_capex']) / 100.00
+    op_maint_cost = float(turbine_dict['op_maint']) / 100.00
+    discount_rate = float(turbine_dict['discount_rate']) / 100.00
+    decom = float(turbine_dict['decom']) / 100.00
+    turbine_name = float(turbine_dict['type'])
+    mega_watt = float(turbine_dict['mw'])
+    avg_land_cable_dist = float(turbine_dict['avg_land_cable_dist'])
+    mean_land_dist = float(turbine_dict['mean_land_dist'])
+    time = float(turbine_dict['time'])
+
+    number_turbines = args['number_of_machines']
 
     # Construct as many parts of the NPV equation as possible without needing to
     # vectorize over harvested energy and distance
 
+    cap_less_dist = ((infield_length * infield_cost * number_turbines) + 
+            ((foundation_cost + unit_cost) * number_turbines))
+
+
+    disc_const = discount_rate + 1.0
+    disc_time = disc_const**time
+
+    
     # Create vectorize operation that takes distance and harvested energy
     # raster, outputting another raster with the NPV
 
-    
 
+    capex = cap / (1.0 - install_rate - misc_capex_cost)
