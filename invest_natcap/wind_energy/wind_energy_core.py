@@ -109,7 +109,9 @@ def biophysical(args):
 
         # Burn the whole area of interest onto the raster setting everything to
         # 0 which will represent our ocean values.
-        gdal.RasterizeLayer(land_ds, [1], aoi.GetLayer(), burn_values = [1])
+        gdal.RasterizeLayer(
+                land_ds, [1], aoi.GetLayer(), burn_values = [1], 
+                options = ['ALL_TOUCHED=TRUE'])
 
         # Create a nodata mask so nodata values can be set back later
         aoi_nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
@@ -118,7 +120,8 @@ def biophysical(args):
         # have an accurate mask of where the land, ocean, and nodata values
         # should be
         gdal.RasterizeLayer(
-                land_ds, [1], land_polygon.GetLayer(), burn_values = [0])
+                land_ds, [1], land_polygon.GetLayer(), burn_values = [0],
+                options = ['ALL_TOUCHED=TRUE'])
         
         # Read in the raster so we can set back the nodata values
         # I don't think that reading back in the whole raster is a great idea
