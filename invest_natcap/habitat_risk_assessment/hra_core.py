@@ -1,8 +1,69 @@
-import math
-
 '''This is the core module for HRA functionality. This will perform all HRA
 calcs, and return the appropriate outputs.
 '''
+
+import math
+import datetime
+import logging
+import os
+
+from osgeo import gdal, ogr
+from invest_natcap import raster_utils
+
+LOGGER = logging.getLogger('HRA_CORE')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+def execute(args):
+    '''The overarching function that will call all parts of the HRA model.
+
+    Inputs:
+        args- Dictionary containing everything that hra_core will need to
+            complete the rest of the model run. It will contain the following.
+        args['workspace_dir']- Directory in which all data resides. Output
+            and intermediate folders will be supfolders of this one.
+        args['ratings']- A structure which holds all exposure and consequence
+            rating for each combination of habitat and stressor. The inner
+            structure is a dictionary whose key is a tuple which points to a
+            tuple of lists which contain tuples.
+
+            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
+                                       [(C1Rating, C1DataQuality, C1Weight), ...],
+                                       <Open A-1 Raster Dataset>)
+                                       .
+                                       .
+                                       . }
+
+    Outputs:
+        --Intermediate--
+            /intermediate/S[stressorname]_buff.tif- A version of the named
+                stressor file with the user speficied buffer applied.
+            /intermediate/H[habitatname]_S[stressorname].tif- A raster file of
+                the overlap between the named habitat and the named stressor.
+        --Output--
+            /output/maps/recov_potent.tif- Raster layer depicting the recovery
+                potential of the predominant habitat for a given cell.
+            /output/maps/cum_risk_H[habitatname]- Raster layer depicting the
+                cumulative risk for all stressors in a cell for the given 
+                habitat.
+            /output/maps/ecosys_risk- Raster layer that depicts the sum of all 
+                cumulative risk scores of all habitats for that cell.
+   
+            /output/html_plots/output.html- HTML page containing a matlab plot
+                has cumulative exposure value for each habitat, as well as risk
+                of each habitat plotted per stressor.
+            /output/html_plots/plot_ecosys_risk.html- Plots the ecosystem risk
+                value for each habitat.
+            /output/html_plots/plot_risk.html- Risk value for each habitat
+                plotted on a per-stressor graph.
+            
+            /output/Parameters_[TIME].txt- Lists the parameters that the model
+                was run with.
+    Returns nothing.
+    '''
+    
+    
+
 
 def calculate_exposure_value(iterable):
     '''This is the weighted average exposure value for all criteria for a given
