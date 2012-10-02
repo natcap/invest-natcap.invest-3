@@ -404,3 +404,32 @@ def valuation(args):
 
 
     capex = cap / (1.0 - install_rate - misc_capex_cost)
+
+    # 
+
+
+def get_points_geometries(shape):
+    """This function takes a shapefile and for each feature retrieves
+    the X and Y value from it's geometry. The X and Y value are stored in
+    a numpy array as a point [x_location,y_location], which is returned 
+    when all the features have been iterated through.
+    
+    shape - An OGR shapefile datasource
+    
+    returns - A numpy array of points, which represent the shape's feature's
+              geometries.
+    """
+    layer = shape.GetLayer(0)
+    layer.ResetReading()
+    feat_count = layer.GetFeatureCount() 
+    points = np.zeros(feat_count)
+    index = 0
+
+    for feat in layer:    
+        geom = feat.GetGeometryRef()
+        x_location = (geom.GetX())
+        y_location = (geom.GetY())
+        points[index] = [x_location, y_location]
+        index = index + 1
+
+    return np.array(points)
