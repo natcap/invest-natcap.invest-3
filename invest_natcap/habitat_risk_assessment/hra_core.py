@@ -101,6 +101,9 @@ def burn_risk_values(ratings):
 
         R = calculate_risk_value(E, C)
 
+        dataset = pair[2]
+        gdal.RasterizeLayer(dataset, [1], burn_values=[R]) 
+
 def calculate_exposure_value(iterable):
     '''This is the weighted average exposure value for all criteria for a given
     H-S combination as determined on a run by run basis. The equation is 
