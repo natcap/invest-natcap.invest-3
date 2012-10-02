@@ -59,7 +59,36 @@ def execute(args):
     Returns nothing.
     '''
     
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+
+    #This will pre-calculate the risk value for each of the stressor layers
+    #and re-burn the raster. Should be noted that the H-S overlap raster for
+    #each pair already exists within the inter_dir file, but can be accessed
+    #by using the ratings structure, since there is an open version of the
+    #raster dataset there.
+    burn_risk_values(args['ratings'])
+
+def burn_risk_values(ratings):
+    '''This will re-burn the intermediate files of the H-S intersection with
+    the risk value for that given layer. This will be calculated based on the
+    ratings withing the 'ratings' structure.
+
+    Input:
+        ratings- A multi-level structure which contains E/C ratings for each of
+            the criteria applicable to the given H-S overlap. It also contains
+            the open dataset that shows the raster overlap between the habitat
+            and the stressor. The ratings structue is laid out as follows:
+
+            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
+                                       [(C1Rating, C1DataQuality, C1Weight), ...],
+                                       <Open A-1 Raster Dataset>)
+                                       .
+                                       .
+                                       . }
+    '''
     
+    #Want to run this for each of the H-S layers
 
 
 def calculate_exposure_value(iterable):
