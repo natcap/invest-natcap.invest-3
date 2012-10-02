@@ -424,6 +424,27 @@ def valuation(args):
     # Transform the points into lat / long
     new_points = transform_array_of_points(points_array, proj_srs, wgs84_srs)
 
+
+    try:
+        grid_dict = args['grid_dict']
+        
+        land_dict = {}
+        land_index = 0 
+        grid_index = 0
+
+        for key, val in grid_dict.iteritems():
+            if val['type'].tolower() == 'land':
+                land_dict[land_index] = val
+                land_index = land_index + 1
+            else:
+                grid_dict[grid_index] = val
+                grid_index = grid_index + 1
+
+
+    except KeyError:
+        pass
+
+
 def lat_long_to_cartesian(points):
     """Convert a numpy array of points that are in radians to cartesian
         coordinates
