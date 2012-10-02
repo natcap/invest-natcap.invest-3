@@ -99,12 +99,27 @@ def burn_risk_values(ratings):
         #one loop for calculating all ratings within E. E is the first element
         #in the H-S value tuple.
         for criteria in pair[0]:
-            
+            e_i, d_i, w_i = criteria
+
+            t_tot = e_i / (d_i *w_i)
+            b_tot = 1 / d_i * w_i
+
+            total = t_tot / b_tot
+
+            E += total
 
         #second loop for calculating all ratings within C. C is the second
         #element in the H-S value tuple.
         for criteria in pair[1]
 
+           c_i, d_i, w_i = criteria
+
+            t_tot = c_i / (d_i *w_i)
+            b_tot = 1 / d_i * w_i
+
+            total = t_tot / b_tot
+
+            C += total
 
 def calculate_exposure_value(iterable):
     '''This is the weighted average exposure value for all criteria for a given
