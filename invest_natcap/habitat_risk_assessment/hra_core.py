@@ -69,6 +69,42 @@ def execute(args):
     #raster dataset there.
     burn_risk_values(args['ratings'])
 
+    #this will take the new raster datasets that are still conatined within the
+    #ratings structure, and combine them for all rasters whose first key is the
+    #same habitat.
+    maps_dir = os.path.join(output_dir, 'maps')
+    make_cum_risk_raster(maps_dir, args['ratings'])
+
+def make_cum_risk_raster(dir, ratings):
+    '''This will create the outputs for the cumulative habitat risk of the
+    given habitat.
+
+    Input:
+        dir- The dirctory into which the completed raster files should be
+            placed. Note: they should be of the form 
+            /dir/cum_risk_H[habitatname].tif
+        ratings- A multi-level structure which contains E/C ratings for each of
+            the criteria applicable to the given H-S overlap. It also contains
+            the open dataset that shows the raster overlap between the habitat
+            and the stressor with the risk value for that H-S combination as
+            the burn value. The ratings structue is laid out as follows:
+
+            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
+                                       [(C1Rating, C1DataQuality, C1Weight), ...],
+                                       <Open A-1 Raster Dataset>)
+                                       .
+                                       .
+                                       . }
+    Output:
+        /dir/cum_risk_H[habitatname].tif- A raster file that represents the
+            cumulative risk of all stressors within the gievn habitat across
+            all shown pixels.
+
+    Returns nothing.
+    '''
+
+
+
 def burn_risk_values(ratings):
     '''This will re-burn the intermediate files of the H-S intersection with
     the risk value for that given layer. This will be calculated based on the
@@ -90,6 +126,8 @@ def burn_risk_values(ratings):
     Output:
         Updated versions of the H-S datasets with the risk value burned to the
             overlap area of the given habitat and stressor.
+
+    Returns nothing.
     '''
     
     #Want to run this for each of the H-S layers
