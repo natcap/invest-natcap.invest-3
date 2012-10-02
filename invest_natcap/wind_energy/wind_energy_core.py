@@ -405,8 +405,40 @@ def valuation(args):
 
     capex = cap / (1.0 - install_rate - misc_capex_cost)
 
-    # 
+      
+    wind_energy_points = args['biophysical_data']
 
+    # Using 'WGS84' as our well known lat/long projection
+    wgs84_srs = osr.SpatialReference()
+    wgs84_srs.SetWellKnownGeogCS("WGS84")
+    
+    proj_srs = wind_energy_points.GetLayer().GetSpatialRef()
+    
+    # Create coordinate transformation to get point geometries from meters to
+    # lat / long
+    coord_transform = osr.CoordinateTransformation(proj_srs, wgs84_srs)
+    
+    # Get a numpy array of the wind energy points
+    points_array = get_points_geometries(wind_energy_points)
+
+    # Transform the points into lat / long
+    new_points = transform_array_of_points(points_array, proj_srs, wgs84_srs)
+
+def transform_array_of_points(points, source_srs, target_srs):
+    """Transform an array of points into another spatial reference
+
+        points - a numpy array of points. ex : [[1,1], [1,5]...]
+        source_srs - the current Spatial Reference
+        target_srs - the desired Spatial Reference
+
+        returns - a numpy array of points tranformed to the target_srs
+        """
+
+    coord_transform = osr.CoordinateTransformation(source_srs, target_srs)
+
+    points_copy = np.copy(points)
+
+    return coord_transform.TransformPoints(points_copy)
 
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
@@ -419,16 +451,16 @@ def get_points_geometries(shape):
     returns - A numpy array of points, which represent the shape's feature's
               geometries.
     """
-    layer = shape.GetLayer(0)
+    layer = shape.GetLayer()
     layer.ResetReading()
     feat_count = layer.GetFeatureCount() 
-    points = np.zeros(feat_count)
+    points = np.zeros((feat_count, 2))
     index = 0
 
     for feat in layer:    
         geom = feat.GetGeometryRef()
-        x_location = (geom.GetX())
-        y_location = (geom.GetY())
+        x_location = geom.GetX()
+        y_location = geom.GetY()
         points[index] = [x_location, y_location]
         index = index + 1
 
