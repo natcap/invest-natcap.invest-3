@@ -36,10 +36,7 @@ def execute(args):
 
     Outputs:
         --Intermediate--
-            /intermediate/S[stressorname]_buff.tif- A version of the named
-                stressor file with the user speficied buffer applied.
-            /intermediate/H[habitatname]_S[stressorname].tif- A raster file of
-                the overlap between the named habitat and the named stressor.
+            These should be the temp risk add files for the final output calcs.
         --Output--
             /output/maps/recov_potent.tif- Raster layer depicting the recovery
                 potential of the predominant habitat for a given cell.
