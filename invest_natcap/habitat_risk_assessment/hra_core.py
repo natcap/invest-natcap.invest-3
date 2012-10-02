@@ -91,35 +91,15 @@ def burn_risk_values(ratings):
     #Want to run this for each of the H-S layers
     for pair in ratings:
 
-        #Want to get the R value for each pair, then burn that to the open
-        #dataset
-        E = 0
-        C = 0
-
         #one loop for calculating all ratings within E. E is the first element
         #in the H-S value tuple.
-        for criteria in pair[0]:
-            e_i, d_i, w_i = criteria
-
-            t_tot = e_i / (d_i *w_i)
-            b_tot = 1 / d_i * w_i
-
-            total = t_tot / b_tot
-
-            E += total
+        E = calculate_exposure_value(pair[0])
 
         #second loop for calculating all ratings within C. C is the second
         #element in the H-S value tuple.
-        for criteria in pair[1]
+        C = calculate_consequence_value(pair[1])
 
-           c_i, d_i, w_i = criteria
-
-            t_tot = c_i / (d_i *w_i)
-            b_tot = 1 / d_i * w_i
-
-            total = t_tot / b_tot
-
-            C += total
+        R = calculate_risk_value(E, C)
 
 def calculate_exposure_value(iterable):
     '''This is the weighted average exposure value for all criteria for a given
