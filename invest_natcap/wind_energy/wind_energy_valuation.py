@@ -111,8 +111,8 @@ def execute(args):
 
     # handle any pre-processing that must be done
 
-    #biophysical_points = ogr.Open(args['biophysical_data_uri'])
-    #valuation_args['biophysical_points'] = biophysical_points
+    biophysical_points = ogr.Open(args['biophysical_data_uri'])
+    valuation_args['biophysical_points'] = biophysical_points
     
     valuation_args['harvested_energy'] = gdal.Open(args['harvested_energy_uri'])
     valuation_args['distance'] = gdal.Open(args['distance_uri'])

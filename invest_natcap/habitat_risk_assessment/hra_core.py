@@ -36,10 +36,7 @@ def execute(args):
 
     Outputs:
         --Intermediate--
-            /intermediate/S[stressorname]_buff.tif- A version of the named
-                stressor file with the user speficied buffer applied.
-            /intermediate/H[habitatname]_S[stressorname].tif- A raster file of
-                the overlap between the named habitat and the named stressor.
+            These should be the temp risk add files for the final output calcs.
         --Output--
             /output/maps/recov_potent.tif- Raster layer depicting the recovery
                 potential of the predominant habitat for a given cell.
@@ -62,8 +59,67 @@ def execute(args):
     Returns nothing.
     '''
     
-    
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
 
+    #This will pre-calculate the risk value for each of the stressor layers
+    #and re-burn the raster. Should be noted that the H-S overlap raster for
+    #each pair already exists within the inter_dir file, but can be accessed
+    #by using the ratings structure, since there is an open version of the
+    #raster dataset there.
+    burn_risk_values(args['ratings'])
+
+def burn_risk_values(ratings):
+    '''This will re-burn the intermediate files of the H-S intersection with
+    the risk value for that given layer. This will be calculated based on the
+    ratings withing the 'ratings' structure.
+
+    Input:
+        ratings- A multi-level structure which contains E/C ratings for each of
+            the criteria applicable to the given H-S overlap. It also contains
+            the open dataset that shows the raster overlap between the habitat
+            and the stressor. The ratings structue is laid out as follows:
+
+            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
+                                       [(C1Rating, C1DataQuality, C1Weight), ...],
+                                       <Open A-1 Raster Dataset>)
+                                       .
+                                       .
+                                       . }
+    '''
+    
+    #Want to run this for each of the H-S layers
+    for pair in ratings:
+
+        #Want to get the R value for each pair, then burn that to the open
+        #dataset
+        E = 0
+        C = 0
+
+        #one loop for calculating all ratings within E. E is the first element
+        #in the H-S value tuple.
+        for criteria in pair[0]:
+            e_i, d_i, w_i = criteria
+
+            t_tot = e_i / (d_i *w_i)
+            b_tot = 1 / d_i * w_i
+
+            total = t_tot / b_tot
+
+            E += total
+
+        #second loop for calculating all ratings within C. C is the second
+        #element in the H-S value tuple.
+        for criteria in pair[1]
+
+           c_i, d_i, w_i = criteria
+
+            t_tot = c_i / (d_i *w_i)
+            b_tot = 1 / d_i * w_i
+
+            total = t_tot / b_tot
+
+            C += total
 
 def calculate_exposure_value(iterable):
     '''This is the weighted average exposure value for all criteria for a given
