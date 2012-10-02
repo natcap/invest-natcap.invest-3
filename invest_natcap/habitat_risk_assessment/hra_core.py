@@ -86,6 +86,10 @@ def burn_risk_values(ratings):
                                        .
                                        .
                                        . }
+
+    Output:
+        Updated versions of the H-S datasets with the risk value burned to the
+            overlap area of the given habitat and stressor.
     '''
     
     #Want to run this for each of the H-S layers
