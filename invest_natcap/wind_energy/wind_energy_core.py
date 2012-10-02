@@ -424,6 +424,52 @@ def valuation(args):
     # Transform the points into lat / long
     new_points = transform_array_of_points(points_array, proj_srs, wgs84_srs)
 
+def lat_long_to_cartesian(points):
+    """Convert a numpy array of points that are in radians to cartesian
+        coordinates
+
+        points - a numpy array of points in radians
+
+        returns - a numpy array of points in cartesian coordinates"""
+
+    radius = 6378.1 # km
+
+    cartesian_points = np.zeros(points.shape)
+    index = 0
+
+    for point in points:
+        x = radius * math.cos(point[0]) * math.sin(point[1])
+        y = radius * math.sin(point[0]) * math.sin(point[1])
+        z = radius * math.cos(point[1])
+        cartesian_points[index] = [x, y, z]
+    
+        index = index + 1
+
+    return cartesian_points
+
+def convert_degrees_to_radians(points):
+    """Convert a numpy array of points that are in degrees to radians
+
+        points - a numpy array of points that are in degrees
+
+        returns - a numpy array of points that are in radians
+        """
+
+    radian_points = np.zeros(points.shape)
+    
+    def vop(deg):
+        return math.pi * deg / 180.0
+
+    vectorized_op = np.vectorize(vop)
+    
+    index = 0
+
+    for point in points:
+        radian_points[index] = vectorized_op(point)
+        index = index + 1
+
+    return radian_points
+
 def transform_array_of_points(points, source_srs, target_srs):
     """Transform an array of points into another spatial reference
 
