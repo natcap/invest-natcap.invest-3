@@ -426,21 +426,31 @@ def valuation(args):
 
 
     try:
-        grid_dict = args['grid_dict']
+        grid_land_points_dict = args['grid_dict']
         
         land_dict = {}
+        land_array = []
+        grid_dict = {}
+        grid_array = []
+        
+        # These indexes will be the keys in the individual dictionaries.
+        # Starting from zero allows us to relate these keys to indexes in an
+        # array
         land_index = 0 
         grid_index = 0
 
         for key, val in grid_dict.iteritems():
             if val['type'].tolower() == 'land':
                 land_dict[land_index] = val
+                land_array.append([float(val['LONG']), float(val['LATI'])])
                 land_index = land_index + 1
             else:
                 grid_dict[grid_index] = val
+                grid_array.append([float(val['LONG']), float(val['LATI'])])
                 grid_index = grid_index + 1
 
-
+        land_cartesian = lat_long_to_cartesian(land_array)
+        
     except KeyError:
         pass
 
