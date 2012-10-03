@@ -1,11 +1,11 @@
 '''This is the core module for HRA functionality. This will perform all HRA
 calcs, and return the appropriate outputs.
 '''
-
 import math
 import datetime
 import logging
 import os
+import numpy as np
 
 from osgeo import gdal, ogr
 from invest_natcap import raster_utils
@@ -102,7 +102,35 @@ def make_cum_risk_raster(dir, ratings):
 
     Returns nothing.
     '''
+    #THIS WILL BE THE COMBINE FUNCTION
+    def add_risk_pixels(*pixels):
 
+    #This will give us two np lists where we have only the unique habitats and
+    #stressors for the system. 
+    habitats = map(lambda pair: pair[0], ratings)   
+    habitats = np.array(habitats)
+    habitats = np.unique(habitats)
+
+    stressors = maps(lambda pair: pair[1], ratings)
+    stressors = np.array(stressors)
+    stressors = np.unique(stressors)
+
+    #Now we can run through all potential pairings and make lists for the ones
+    #that have the same habitat.
+    for h in habitats:
+
+        ds_list = []
+        for s in stressors:
+            #[3] in the value is where the datasource is held
+            ds_list.append(ratings[(h,s)][3])
+
+        #When we have a complete list of the stressors, let's pass the habitat
+        #name and our list off to another function and have it create and
+        #combine the file.
+        out_uri = os.path.join(dir, 'cum_risk_H[' + h + '].tif')
+        
+        raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
+                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
 
 def burn_risk_values(ratings):
