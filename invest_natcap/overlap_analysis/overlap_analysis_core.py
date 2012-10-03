@@ -479,12 +479,13 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 
         h_rast_list = [hubs_raster, base_raster]
 
-        raster_utils.vectorize_rasters(h_rast_list, combine_hubs_raster,
+        r_band = raster_utils.vectorize_rasters(h_rast_list, combine_hubs_raster,
                       aoi = None, raster_out_uri = outgoing_uri,
                       datatype = gdal.GDT_Float32, nodata = aoi_nodata)
         #This removes the reference to the base_raster file. In order to make
         #sure it's not in use.
         base_raster = None
+        r_band = None
         os.remove(temp_uri) 
 
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
