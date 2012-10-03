@@ -464,7 +464,7 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         if os.path.isfile(outgoing_uri):
             #Make a copy of the file so that we can use it to re-create the hub
             #weighted raster file.
-            temp_uri = os.path.join(out_dir, "temp_rast.tif")
+            temp_uri = os.path.join(inter_dir, "temp_rast.tif")
             shutil.copyfile(outgoing_uri, temp_uri)
 
             base_raster = gdal.Open(temp_uri)
@@ -479,14 +479,9 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
 
         h_rast_list = [hubs_raster, base_raster]
 
-        r_band = raster_utils.vectorize_rasters(h_rast_list, combine_hubs_raster,
+        raster_utils.vectorize_rasters(h_rast_list, combine_hubs_raster,
                       aoi = None, raster_out_uri = outgoing_uri,
                       datatype = gdal.GDT_Float32, nodata = aoi_nodata)
-        #This removes the reference to the base_raster file. In order to make
-        #sure it's not in use.
-        base_raster = None
-        r_band = None
-        os.remove(temp_uri) 
 
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts 
