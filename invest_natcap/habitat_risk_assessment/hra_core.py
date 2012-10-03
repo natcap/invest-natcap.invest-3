@@ -105,6 +105,13 @@ def make_cum_risk_raster(dir, ratings):
     #THIS WILL BE THE COMBINE FUNCTION
     def add_risk_pixels(*pixels):
 
+        pixel_sum = 0.0
+
+        for p in pixels:
+            pixel_sum += p
+
+        return pixel_sum
+
     #This will give us two np lists where we have only the unique habitats and
     #stressors for the system. 
     habitats = map(lambda pair: pair[0], ratings)   
