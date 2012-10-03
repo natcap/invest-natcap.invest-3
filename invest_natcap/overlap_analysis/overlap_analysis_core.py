@@ -482,6 +482,13 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         raster_utils.vectorize_rasters(h_rast_list, combine_hubs_raster,
                       aoi = None, raster_out_uri = outgoing_uri,
                       datatype = gdal.GDT_Float32, nodata = aoi_nodata)
+        
+        try:
+            os.remove(temp_uri)
+
+        except WindowsError as e:
+            LOGGER.warn("in create_weighted_raster %s on file %s" % (e, 
+                temp_uri))
 
 def make_indiv_weight_rasters(dir, aoi_raster, layers_dict, intra_name):
     ''' This is a helper function for create_weighted_raster, which abstracts 
