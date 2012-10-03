@@ -10,7 +10,7 @@ import scipy.interpolate
 import scipy.signal
 from osgeo import gdal, osr
 
-import invest_cython_core
+import invest_natcap.raster_utils as raster_utils
 
 logger = logging.getLogger('invest_core')
 
@@ -171,7 +171,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     #north is up if that's not the case for us, we'll have a few bugs to deal 
     #with aoibox is left, top, right, bottom
     logger.debug('calculating the overlapping rectangles')
-    aoiBox = invest_cython_core.calculateIntersectionRectangle(rasterList)
+    aoiBox = raster_utils.calculateIntersectionRectangle(rasterList)
     logger.debug('the aoi box: %s' % aoiBox)
     #determine the minimum pixel size
     gt = rasterList[0].GetGeoTransform()
@@ -203,7 +203,7 @@ def vectorizeRasters(rasterList, op, rasterName=None,
     if rasterName != None:
         outputURI = rasterName
         format = 'GTiff'
-    outRaster = invest_cython_core.newRaster(outCols, outRows, projection,
+    outRaster = raster_utils.newRaster(outCols, outRows, projection,
         outGt, format, nodata, datatype, 1, outputURI)
     outBand = outRaster.GetRasterBand(1)
     outBand.Fill(0)
