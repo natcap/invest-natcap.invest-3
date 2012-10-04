@@ -92,6 +92,8 @@ def make_ecosys_risk_raster(dir):
 
 
 
+
+
 def make_cum_risk_raster(dir, ratings):
     '''This will create the outputs for the cumulative habitat risk of the
     given habitat.
