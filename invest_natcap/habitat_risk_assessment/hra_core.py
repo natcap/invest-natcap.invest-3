@@ -99,7 +99,18 @@ def make_ecosys_risk_raster(dir, h_risks):
     '''
     out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
+    def add_e_pixels(*pixels):
 
+        pixel_sum = 0.0
+
+        for p in pixels:
+
+            pixel_sum += p
+
+        return pixel_sum
+
+    raster_utils.vectorize_rasters(h_risks, add_e_pixels, aoi = None,
+                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
 
 def make_cum_risk_raster(dir, ratings):
