@@ -97,7 +97,7 @@ def make_ecosys_risk_raster(dir, h_risks):
 
     Returns nothing.
     '''
-
+    out_uri = os.path.join(dir, 'ecosys_risk.tif')
 
 
 
