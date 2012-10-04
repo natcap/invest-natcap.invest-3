@@ -371,20 +371,20 @@ def valuation(args):
     # Get constants from turbine_dict
     turbine_dict = args['turbine_dict']
 
-    infield_length = float(turbine_dict['infield_length'])
-    infield_cost = float(turbine_dict['infield_cost'])
-    foundation_cost = float(turbine_dict['foundation_cost'])
-    unit_cost = float(turbine_dict['unit_cost'])
-    install_cost = float(turbine_dict['install_cost']) / 100.00
-    misc_capex_cost = float(turbine_dict['misc_capex']) / 100.00
-    op_maint_cost = float(turbine_dict['op_maint']) / 100.00
-    discount_rate = float(turbine_dict['discount_rate']) / 100.00
-    decom = float(turbine_dict['decom']) / 100.00
-    turbine_name = float(turbine_dict['type'])
-    mega_watt = float(turbine_dict['mw'])
-    avg_land_cable_dist = float(turbine_dict['avg_land_cable_dist'])
-    mean_land_dist = float(turbine_dict['mean_land_dist'])
-    time = float(turbine_dict['time'])
+    infield_length = float(turbine_dict['Siemens']['infield_length'])
+    infield_cost = float(turbine_dict['Siemens']['infield_cost'])
+    foundation_cost = float(turbine_dict['Siemens']['foundation_cost'])
+    unit_cost = float(turbine_dict['Siemens']['unit_cost'])
+    install_cost = float(turbine_dict['Siemens']['install_cost']) / 100.00
+    misc_capex_cost = float(turbine_dict['Siemens']['misc_capex']) / 100.00
+    op_maint_cost = float(turbine_dict['Siemens']['op_maint']) / 100.00
+    discount_rate = float(turbine_dict['Siemens']['discount_rate']) / 100.00
+    decom = float(turbine_dict['Siemens']['decom']) / 100.00
+    turbine_name = turbine_dict['Siemens']['type']
+    mega_watt = float(turbine_dict['Siemens']['mw'])
+    avg_land_cable_dist = float(turbine_dict['Siemens']['avg_land_cable_dist'])
+    mean_land_dist = float(turbine_dict['Siemens']['mean_land_dist'])
+    time = float(turbine_dict['Siemens']['time'])
 
     number_turbines = args['number_of_machines']
 
