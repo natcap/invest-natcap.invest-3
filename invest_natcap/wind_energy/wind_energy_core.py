@@ -454,6 +454,33 @@ def valuation(args):
         land_cartesian = lat_long_to_cartesian(land_array)
         land_tree = scipy.spatial.KDTree(land_cartesian)
         dist, closest_index = land_tree.query(radian_points)
+    
+    
+        wind_layer = wind_energy_points.GetLayer()
+        wind_layer.ResetReading()
+        
+        new_field_list = ['O2L_Dist', 'Land_Id']
+        
+        for field_name in new_field_list:
+            new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
+            wind_layer.CreateField(new_field)
+
+        dist_index = 0
+        id_index = 0
+
+        for feat in wind_layer:
+            ocean_to_land_dist = dist[dist_index]
+            land_id = land_dict[str(closest_index[id_index])]['id']
+            
+            value_list = [ocean_to_land_dist, land_id]
+            
+            for field_name, field_value in zip(new_field_list, value_list):
+                field_index = feat.GetFieldIndex(field_name)
+                feat.SetField(field_index, field_value)
+
+            dist_index = dist_index + 1
+            id_index = id_index + 1
+                
     except KeyError:
         pass
 
