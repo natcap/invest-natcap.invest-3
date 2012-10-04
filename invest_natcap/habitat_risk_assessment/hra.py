@@ -43,7 +43,12 @@ def execute(args):
                                        . }
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
-            complete the rest of the model run.
+            complete the rest of the model run. It will contain the following.
+        hra_args['workspace_dir']- Directory in which all data resides. Output
+            and intermediate folders will be supfolders of this one.
+        hra_args['ratings']- Dictionary with a similar structure to the above,
+            but with an additional item in the value tuple containing an open
+            raster dataset of the overlap of key H-S.
 
     Returns nothing.
     '''
@@ -83,6 +88,8 @@ def execute(args):
     ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['ratings'])
 
     hra_args['ratings'] = ratings_with_rast
+
+    hra_core.execute(hra_args)
 
 def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     '''Takes in a habitat and a stressor, and combines the two raster files,
