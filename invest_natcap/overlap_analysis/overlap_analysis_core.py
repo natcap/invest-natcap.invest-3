@@ -455,8 +455,6 @@ def create_weighted_raster(out_dir, inter_dir, aoi_raster, inter_weights_dict,
         hubs_layer = pixel_list[0]
         base_layer = pixel_list[1]
 
-        print ("Hubs Layer=" + str(hubs_layer) + ", Base Layer=" + str(base_layer))
-
         return hubs_layer * base_layer
 
     if do_hubs:
