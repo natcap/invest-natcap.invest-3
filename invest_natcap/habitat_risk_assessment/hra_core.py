@@ -78,16 +78,24 @@ def execute(args):
     #In this case, may be easier to get the files that were already rasterized
     #to disk, and combine them that way, rather than trying to select the
     #correct combination of open datasets
-    make_ecosys_risk_raster(maps_dir)
+    make_ecosys_risk_raster(maps_dir, h_risk_list)
 
-def make_ecosys_risk_raster(dir):
+def make_ecosys_risk_raster(dir, h_risks):
     '''This function will output a raster which combines all of the habitat
     risk rasters.
 
     Input:
-        dir- The folder into which the completed file should be placed, as
-            well as the folder in which the current habitat files reside.
+        dir- The folder into which the completed file should be placed.
+        h_risks- A list containing the open raster datasets of cumulative
+            habitat risk.
 
+    Output:
+        A file of the form '/dir/ecosys_risk.tif' that is a combined grid of
+            risks across all habitats being viewed within this model. Each
+            grid cell will be the sum of the habitat risks contained within
+            that cell.
+
+    Returns nothing.
     '''
 
 
