@@ -85,7 +85,7 @@
                     "validateAs": {"type": "OGR", 
                     			   "layers": [{"name": {"inheritFrom": "file"}, 
                     			               "type": "polygons", 
-                    			               "projection" : {"name": "Transverse_Mercator"},
+                    			               "projection" : {"units": "meters", "exists":true},
                     			               "datum" : "WGS_1984"}]
                     			   },
                     "returns": {"ifEmpty": "pass"}

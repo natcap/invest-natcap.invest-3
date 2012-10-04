@@ -76,12 +76,13 @@
                     "args_id": "wave_data_shape_path",
                     "type": "file",
                     "label": "Wave Data Shapefile ",
-                    "helpText": "This shapefile should be projected in Meters so that distances can be calculated correctly.\n To ensure this an AOI projected in Meters should be provided during the Biophysical run.",
+                    "helpText": "This files comes from the output of the Biophysical run when the biophysical run is provided with an AOI that is projected in Meters. This ensures that distances can properly be calculated.",
                     "defaultValue": "../WaveEnergy/Intermediate/WEM_InputOutput_Pts.shp",
                     "required": true,
                     "validateAs": {"type":"OGR",
                     			   "layers": [{"name": {"inheritFrom": "file"},
-                                               "type": "polygons"}],
+                                               "type": "polygons",
+                                               "projection": {"units": "meters", "exists":true}}],
                                    "fieldsExist": ["DEPTH_M", "CAPWE_MWHY"]}
                 },
                 {
