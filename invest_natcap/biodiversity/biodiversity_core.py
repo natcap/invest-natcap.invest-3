@@ -161,14 +161,16 @@ def biophysical(args):
             # use a gaussian_filter to compute the effect that a threat has
             # over a distance, on a given pixel. 
             LOGGER.debug('Starting Gaussian Blur')
-            filtered_out_matrix = \
-                clip_and_op(threat_band.ReadAsArray(), sigma, \
-                            ndimage.gaussian_filter, matrix_type=float, \
-                            in_matrix_nodata=threat_nodata, \
-                            out_matrix_nodata=out_nodata)
+            threat_matrix = threat_band.ReadAsArray()
+            filtered_out_matrix = clip_and_op(
+                threat_matrix, sigma, ndimage.gaussian_filter, 
+                matrix_type=float, in_matrix_nodata=threat_nodata,
+                out_matrix_nodata=out_nodata)
+            threat_matrix = None
             
             filtered_band = filtered_raster.GetRasterBand(1)
             filtered_band.WriteArray(filtered_out_matrix)
+            filtered_out_matrix = None
             filtered_raster.FlushCache()
             LOGGER.debug('Finished Gaussian Blur')
 
