@@ -73,7 +73,7 @@ def execute(args):
     #ratings structure, and combine them for all rasters whose first key is the
     #same habitat.
     maps_dir = os.path.join(output_dir, 'maps')
-    make_cum_risk_raster(maps_dir, args['ratings'])
+    h_risk_list = make_cum_risk_raster(maps_dir, args['ratings'])
 
     #In this case, may be easier to get the files that were already rasterized
     #to disk, and combine them that way, rather than trying to select the
@@ -119,7 +119,8 @@ def make_cum_risk_raster(dir, ratings):
             cumulative risk of all stressors within the gievn habitat across
             all shown pixels.
 
-    Returns nothing.
+    Returns a list containing the open cumulative habitat raster datasets so
+        they can be passed along to the overall ecosystem risk.
     '''
     #THIS WILL BE THE COMBINE FUNCTION
     def add_risk_pixels(*pixels):
@@ -140,6 +141,10 @@ def make_cum_risk_raster(dir, ratings):
     stressors = maps(lambda pair: pair[1], ratings)
     stressors = np.array(stressors)
     stressors = np.unique(stressors)
+    
+    #Need somewhere to hold the finished cumulative rasters. This will be used
+    #to calculate overall ecosystem risk
+    h_rasters = []
 
     #Now we can run through all potential pairings and make lists for the ones
     #that have the same habitat.
@@ -155,10 +160,12 @@ def make_cum_risk_raster(dir, ratings):
         #combine the file.
         out_uri = os.path.join(dir, 'cum_risk_H[' + h + '].tif')
         
-        raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
+        h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
+        h_rasters.append(h_raster)
 
+    return cum_rasters
 def burn_risk_values(ratings):
     '''This will re-burn the intermediate files of the H-S intersection with
     the risk value for that given layer. This will be calculated based on the
