@@ -81,7 +81,7 @@
                     "type": "file",
                     "label": "Area of Interest (AOI)",
                     "defaultValue": "../WaveEnergy/input/AOI_WCVI.shp",
-                    "required": true,
+                    "required": false,
                     "validateAs": {"type": "OGR", 
                     			   "layers": [{"name": {"inheritFrom": "file"}, 
                     			               "type": "polygons", 
