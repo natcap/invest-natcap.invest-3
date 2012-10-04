@@ -346,7 +346,7 @@ def biophysical(args):
                         """
                     if base == base_nodata or cover_x == lulc_nodata:
                         return out_nodata
-                    return cover_x
+                    return cover_x 
                 
                 LOGGER.debug('Create new cover for %s', lulc_cover)
                 
@@ -392,10 +392,9 @@ def biophysical(args):
                         return - rarity_nodata if code is not in the dictionary,
                             otherwise return the rarity index pertaining to that
                             code"""
-                    try:
+                    if cover in code_index:
                         return code_index[cover]
-                    except IndexError:
-                        return rarity_nodata
+                    return rarity_nodata
                 
                 rarity_uri = \
                     os.path.join(output_dir, 'rarity' + lulc_cover + suffix)
@@ -541,9 +540,7 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
     # in the vectorized operation of casting
     int_attr_dict = {}
     for key in attr_dict:
-        #casting to float because the final vectorize_raster call will make
-        #a float dataset so we're pre-casting.
-        int_attr_dict[int(key)] = float(attr_dict[key][field])
+        int_attr_dict[int(key)] = attr_dict[key][field]
     
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
