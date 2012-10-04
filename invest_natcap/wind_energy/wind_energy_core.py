@@ -424,23 +424,36 @@ def valuation(args):
     # Transform the points into lat / long
     new_points = transform_array_of_points(points_array, proj_srs, wgs84_srs)
 
+    # Conver points from degrees to radians
+    radian_points = convert_degrees_to_radians(new_points)
 
     try:
-        grid_dict = args['grid_dict']
+        grid_land_points_dict = args['grid_dict']
         
         land_dict = {}
+        land_array = []
+        grid_dict = {}
+        grid_array = []
+        
+        # These indexes will be the keys in the individual dictionaries.
+        # Starting from zero allows us to relate these keys to indexes in an
+        # array
         land_index = 0 
         grid_index = 0
 
         for key, val in grid_dict.iteritems():
             if val['type'].tolower() == 'land':
                 land_dict[land_index] = val
+                land_array.append([float(val['LONG']), float(val['LATI'])])
                 land_index = land_index + 1
             else:
                 grid_dict[grid_index] = val
+                grid_array.append([float(val['LONG']), float(val['LATI'])])
                 grid_index = grid_index + 1
 
-
+        land_cartesian = lat_long_to_cartesian(land_array)
+        land_tree = scipy.spatial.KDTree(land_cartesian)
+        dist, closest_index = land_tree.query(radian_points)
     except KeyError:
         pass
 
