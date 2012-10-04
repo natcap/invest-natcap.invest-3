@@ -75,6 +75,23 @@ def execute(args):
     maps_dir = os.path.join(output_dir, 'maps')
     make_cum_risk_raster(maps_dir, args['ratings'])
 
+    #In this case, may be easier to get the files that were already rasterized
+    #to disk, and combine them that way, rather than trying to select the
+    #correct combination of open datasets
+    make_ecosys_risk_raster(maps_dir)
+
+def make_ecosys_risk_raster(dir):
+    '''This function will output a raster which combines all of the habitat
+    risk rasters.
+
+    Input:
+        dir- The folder into which the completed file should be placed, as
+            well as the folder in which the current habitat files reside.
+
+    '''
+
+
+
 def make_cum_risk_raster(dir, ratings):
     '''This will create the outputs for the cumulative habitat risk of the
     given habitat.
