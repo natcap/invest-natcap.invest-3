@@ -455,6 +455,7 @@ def valuation(args):
                 grid_array.append([float(val['long']), float(val['lati']), 0])
                 grid_index = grid_index + 1
 
+        LOGGER.debug('Land Dict : %s', land_dict)
         land_nparray = np.array(land_array)
         land_radians = convert_degrees_to_radians(land_nparray)
         land_cartesian = lat_long_to_cartesian(land_radians)
@@ -476,6 +477,7 @@ def valuation(args):
         id_index = 0
         wind_layer.ResetReading()
         for feat in wind_layer:
+            LOGGER.debug('Entering loop over features')
             ocean_to_land_dist = dist[dist_index]
             land_id = land_dict[str(closest_index[id_index])]['id']
             
@@ -491,7 +493,8 @@ def valuation(args):
             wind_layer.SetFeature(feat)
             dist_index = dist_index + 1
             id_index = id_index + 1
-                
+
+        wind_energy_points = None
     except KeyError:
         pass
 
