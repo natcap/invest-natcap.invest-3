@@ -3,12 +3,14 @@ import math
 import os.path
 import logging
 
+from osgeo import osr
 from osgeo import gdal
 from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
 from scipy import signal
 from scipy import integrate
+from scipy import spatial
 
 from invest_natcap import raster_utils
 LOGGER = logging.getLogger('wind_energy_core')
@@ -403,7 +405,7 @@ def valuation(args):
     # raster, outputting another raster with the NPV
 
 
-    capex = cap / (1.0 - install_rate - misc_capex_cost)
+    #capex = cap / (1.0 - install_rate - misc_capex_cost)
 
       
     wind_energy_points = args['biophysical_data']
@@ -427,6 +429,8 @@ def valuation(args):
     # Conver points from degrees to radians
     radian_points = convert_degrees_to_radians(new_points)
 
+    ocean_cartesian = lat_long_to_cartesian(radian_points)
+
     try:
         grid_land_points_dict = args['grid_dict']
         
@@ -441,20 +445,23 @@ def valuation(args):
         land_index = 0 
         grid_index = 0
 
-        for key, val in grid_dict.iteritems():
-            if val['type'].tolower() == 'land':
+        for key, val in grid_land_points_dict.iteritems():
+            if val['type'].lower() == 'land':
                 land_dict[land_index] = val
-                land_array.append([float(val['LONG']), float(val['LATI'])])
+                land_array.append([float(val['long']), float(val['lati']), 0])
                 land_index = land_index + 1
             else:
                 grid_dict[grid_index] = val
-                grid_array.append([float(val['LONG']), float(val['LATI'])])
+                grid_array.append([float(val['long']), float(val['lati']), 0])
                 grid_index = grid_index + 1
 
-        land_cartesian = lat_long_to_cartesian(land_array)
-        land_tree = scipy.spatial.KDTree(land_cartesian)
-        dist, closest_index = land_tree.query(radian_points)
-    
+        land_nparray = np.array(land_array)
+        land_radians = convert_degrees_to_radians(land_nparray)
+        land_cartesian = lat_long_to_cartesian(land_radians)
+        LOGGER.debug('land_cartesian : %s', land_cartesian)
+        land_tree = spatial.KDTree(land_cartesian)
+        dist, closest_index = land_tree.query(ocean_cartesian)
+        LOGGER.debug('Distances : %s ', dist) 
     
         wind_layer = wind_energy_points.GetLayer()
         wind_layer.ResetReading()
@@ -467,17 +474,21 @@ def valuation(args):
 
         dist_index = 0
         id_index = 0
-
+        wind_layer.ResetReading()
         for feat in wind_layer:
             ocean_to_land_dist = dist[dist_index]
             land_id = land_dict[str(closest_index[id_index])]['id']
             
             value_list = [ocean_to_land_dist, land_id]
-            
+            LOGGER.debug('value list: %s', value_list)            
             for field_name, field_value in zip(new_field_list, value_list):
+                LOGGER.debug('field name : %s', field_name)
+                LOGGER.debug('field value : %s', field_value)
+                
                 field_index = feat.GetFieldIndex(field_name)
                 feat.SetField(field_index, field_value)
 
+            wind_layer.SetFeature(feat)
             dist_index = dist_index + 1
             id_index = id_index + 1
                 
@@ -545,7 +556,7 @@ def transform_array_of_points(points, source_srs, target_srs):
 
     points_copy = np.copy(points)
 
-    return coord_transform.TransformPoints(points_copy)
+    return np.array(coord_transform.TransformPoints(points_copy))
 
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
