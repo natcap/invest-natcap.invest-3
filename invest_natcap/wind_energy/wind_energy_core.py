@@ -404,3 +404,144 @@ def valuation(args):
 
 
     capex = cap / (1.0 - install_rate - misc_capex_cost)
+
+      
+    wind_energy_points = args['biophysical_data']
+
+    # Using 'WGS84' as our well known lat/long projection
+    wgs84_srs = osr.SpatialReference()
+    wgs84_srs.SetWellKnownGeogCS("WGS84")
+    
+    proj_srs = wind_energy_points.GetLayer().GetSpatialRef()
+    
+    # Create coordinate transformation to get point geometries from meters to
+    # lat / long
+    coord_transform = osr.CoordinateTransformation(proj_srs, wgs84_srs)
+    
+    # Get a numpy array of the wind energy points
+    points_array = get_points_geometries(wind_energy_points)
+
+    # Transform the points into lat / long
+    new_points = transform_array_of_points(points_array, proj_srs, wgs84_srs)
+
+    # Conver points from degrees to radians
+    radian_points = convert_degrees_to_radians(new_points)
+
+    try:
+        grid_land_points_dict = args['grid_dict']
+        
+        land_dict = {}
+        land_array = []
+        grid_dict = {}
+        grid_array = []
+        
+        # These indexes will be the keys in the individual dictionaries.
+        # Starting from zero allows us to relate these keys to indexes in an
+        # array
+        land_index = 0 
+        grid_index = 0
+
+        for key, val in grid_dict.iteritems():
+            if val['type'].tolower() == 'land':
+                land_dict[land_index] = val
+                land_array.append([float(val['LONG']), float(val['LATI'])])
+                land_index = land_index + 1
+            else:
+                grid_dict[grid_index] = val
+                grid_array.append([float(val['LONG']), float(val['LATI'])])
+                grid_index = grid_index + 1
+
+        land_cartesian = lat_long_to_cartesian(land_array)
+        land_tree = scipy.spatial.KDTree(land_cartesian)
+        dist, closest_index = land_tree.query(radian_points)
+    except KeyError:
+        pass
+
+
+def lat_long_to_cartesian(points):
+    """Convert a numpy array of points that are in radians to cartesian
+        coordinates
+
+        points - a numpy array of points in radians
+
+        returns - a numpy array of points in cartesian coordinates"""
+
+    radius = 6378.1 # km
+
+    cartesian_points = np.zeros(points.shape)
+    index = 0
+
+    for point in points:
+        x = radius * math.cos(point[0]) * math.sin(point[1])
+        y = radius * math.sin(point[0]) * math.sin(point[1])
+        z = radius * math.cos(point[1])
+        cartesian_points[index] = [x, y, z]
+    
+        index = index + 1
+
+    return cartesian_points
+
+def convert_degrees_to_radians(points):
+    """Convert a numpy array of points that are in degrees to radians
+
+        points - a numpy array of points that are in degrees
+
+        returns - a numpy array of points that are in radians
+        """
+
+    radian_points = np.zeros(points.shape)
+    
+    def vop(deg):
+        return math.pi * deg / 180.0
+
+    vectorized_op = np.vectorize(vop)
+    
+    index = 0
+
+    for point in points:
+        radian_points[index] = vectorized_op(point)
+        index = index + 1
+
+    return radian_points
+
+def transform_array_of_points(points, source_srs, target_srs):
+    """Transform an array of points into another spatial reference
+
+        points - a numpy array of points. ex : [[1,1], [1,5]...]
+        source_srs - the current Spatial Reference
+        target_srs - the desired Spatial Reference
+
+        returns - a numpy array of points tranformed to the target_srs
+        """
+
+    coord_transform = osr.CoordinateTransformation(source_srs, target_srs)
+
+    points_copy = np.copy(points)
+
+    return coord_transform.TransformPoints(points_copy)
+
+def get_points_geometries(shape):
+    """This function takes a shapefile and for each feature retrieves
+    the X and Y value from it's geometry. The X and Y value are stored in
+    a numpy array as a point [x_location,y_location], which is returned 
+    when all the features have been iterated through.
+    
+    shape - An OGR shapefile datasource
+    
+    returns - A numpy array of points, which represent the shape's feature's
+              geometries.
+    """
+    layer = shape.GetLayer()
+    layer.ResetReading()
+    feat_count = layer.GetFeatureCount() 
+    points = np.zeros((feat_count, 2))
+    index = 0
+
+    for feat in layer:    
+        geom = feat.GetGeometryRef()
+        x_location = geom.GetX()
+        y_location = geom.GetY()
+        points[index] = [x_location, y_location]
+        index = index + 1
+
+    return np.array(points)
