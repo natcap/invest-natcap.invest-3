@@ -86,7 +86,8 @@ def execute(args):
     reader = None
     turbine_file.close()
     LOGGER.debug('Turbine Dictionary: %s', turbine_dict)
-    
+    valuation_args['turbine_dict'] = turbine_dict
+
     # Handle Grid Points
     try:
         grid_dict = {}
@@ -118,3 +119,4 @@ def execute(args):
     valuation_args['distance'] = gdal.Open(args['distance_uri'])
     
     # call on the core module
+    wind_energy_core.valuation(valuation_args)
