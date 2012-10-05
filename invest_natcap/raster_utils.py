@@ -1283,7 +1283,8 @@ def gdal_cast(value, gdal_type):
     return value
 
 
-def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri):
+def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri,
+                      output_type = gdal.GDT_Float32):
     """A function to reproject and resample a GDAL dataset given an output pixel size
         and output reference and uri.
 
@@ -1291,7 +1292,8 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri):
        pixel_spacing - output dataset pixel size in projected linear units (probably meters)
        output_wkt - output project in Well Known Text (the result of ds.GetProjection())
        output_uri - location on disk to dump the reprojected dataset
-    
+       output_type - gdal type of the output    
+
        return projected dataset"""
 
     original_sr = osr.SpatialReference()
@@ -1319,7 +1321,7 @@ def reproject_dataset(original_dataset, pixel_spacing, output_wkt, output_uri):
     LOGGER.debug("ulx %s, uly %s, lrx %s, lry %s" % (ulx, uly, lrx, lry))
 
     output_dataset = gdal_driver.Create(output_uri, int((lrx - ulx)/pixel_spacing), 
-                              int((uly - lry)/pixel_spacing), 1, gdal.GDT_Float32)
+                              int((uly - lry)/pixel_spacing), 1, output_type)
 
     # Set the nodata value
     out_nodata = original_dataset.GetRasterBand(1).GetNoDataValue()

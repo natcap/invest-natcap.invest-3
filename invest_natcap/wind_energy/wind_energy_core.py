@@ -426,9 +426,10 @@ def valuation(args):
     # Transform the points into lat / long
     new_points = transform_array_of_points(points_array, proj_srs, wgs84_srs)
 
-    # Conver points from degrees to radians
+    # Convert points from degrees to radians
     radian_points = convert_degrees_to_radians(new_points)
-
+    
+    # Convert points from radians to cartesian
     ocean_cartesian = lat_long_to_cartesian(radian_points)
 
     try:
@@ -445,53 +446,69 @@ def valuation(args):
         land_index = 0 
         grid_index = 0
 
+        # Build up individual dictionaries and array of points for grid
+        # connection locations and landing locations
         for key, val in grid_land_points_dict.iteritems():
             if val['type'].lower() == 'land':
                 land_dict[land_index] = val
+                # Build up the landing points in an array
                 land_array.append([float(val['long']), float(val['lati']), 0])
                 land_index = land_index + 1
             else:
                 grid_dict[grid_index] = val
+                # Build up the grid points in an array
                 grid_array.append([float(val['long']), float(val['lati']), 0])
                 grid_index = grid_index + 1
 
-        land_nparray = np.array(land_array)
+        LOGGER.debug('Land Dict : %s', land_dict)
+        
+        # Cast the landing points list to a numpy array
+        land_array = np.array(land_array)
+        # Convert the landing points into radians
         land_radians = convert_degrees_to_radians(land_nparray)
+        # Converty the landing points into cartesian coordinates
         land_cartesian = lat_long_to_cartesian(land_radians)
-        LOGGER.debug('land_cartesian : %s', land_cartesian)
+        # From the landing points build a k-d tree structure
         land_tree = spatial.KDTree(land_cartesian)
+        # Calculate the shortest distances from the ocean points to the landing
+        # points
         dist, closest_index = land_tree.query(ocean_cartesian)
         LOGGER.debug('Distances : %s ', dist) 
     
+        # Get the wind points layer and reset the feature head in anticipation
+        # of adding the distances and landing id to the points
         wind_layer = wind_energy_points.GetLayer()
         wind_layer.ResetReading()
         
         new_field_list = ['O2L_Dist', 'Land_Id']
         
+        # Create new fields for ocean to land distance and the landing point id
+        # to add to the shapefile
         for field_name in new_field_list:
             new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
             wind_layer.CreateField(new_field)
 
         dist_index = 0
         id_index = 0
-        wind_layer.ResetReading()
+        
         for feat in wind_layer:
             ocean_to_land_dist = dist[dist_index]
-            land_id = land_dict[str(closest_index[id_index])]['id']
+            # Grab the landing point id by indexing into the dictionary using
+            # the value from the closest_index
+            land_id = land_dict[closest_index[id_index]]['id']
             
             value_list = [ocean_to_land_dist, land_id]
-            LOGGER.debug('value list: %s', value_list)            
+            
             for field_name, field_value in zip(new_field_list, value_list):
-                LOGGER.debug('field name : %s', field_name)
-                LOGGER.debug('field value : %s', field_value)
-                
                 field_index = feat.GetFieldIndex(field_name)
                 feat.SetField(field_index, field_value)
 
             wind_layer.SetFeature(feat)
             dist_index = dist_index + 1
             id_index = id_index + 1
-                
+
+        wind_energy_points = None
+
     except KeyError:
         pass
 
