@@ -475,18 +475,14 @@ def valuation(args):
 
         dist_index = 0
         id_index = 0
-        wind_layer.ResetReading()
+        
         for feat in wind_layer:
-            LOGGER.debug('Entering loop over features')
             ocean_to_land_dist = dist[dist_index]
-            land_id = land_dict[str(closest_index[id_index])]['id']
+            land_id = land_dict[closest_index[id_index]]['id']
             
             value_list = [ocean_to_land_dist, land_id]
-            LOGGER.debug('value list: %s', value_list)            
+            
             for field_name, field_value in zip(new_field_list, value_list):
-                LOGGER.debug('field name : %s', field_name)
-                LOGGER.debug('field value : %s', field_value)
-                
                 field_index = feat.GetFieldIndex(field_name)
                 feat.SetField(field_index, field_value)
 
