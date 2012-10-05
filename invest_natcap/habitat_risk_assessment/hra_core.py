@@ -127,10 +127,10 @@ def make_cum_risk_raster(dir, ratings):
             the open dataset that shows the raster overlap between the habitat
             and the stressor with the risk value for that H-S combination as
             the burn value. The ratings structue is laid out as follows:
-
-            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
-                                       [(C1Rating, C1DataQuality, C1Weight), ...],
-                                       <Open A-1 Raster Dataset>)
+            
+            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
+                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
+                                      'DS':  <Open A-1 Raster Dataset>
                                        .
                                        .
                                        . }
@@ -172,8 +172,9 @@ def make_cum_risk_raster(dir, ratings):
 
         ds_list = []
         for s in stressors:
-            #[3] in the value is where the datasource is held
-            ds_list.append(ratings[(h,s)][3])
+            #Datasource can be retrieved by indexing into the value dictionary
+            #using 'DS'
+            ds_list.append(ratings[(h,s)]['DS'])
 
         #When we have a complete list of the stressors, let's pass the habitat
         #name and our list off to another function and have it create and
@@ -197,9 +198,9 @@ def burn_risk_values(ratings):
             the open dataset that shows the raster overlap between the habitat
             and the stressor. The ratings structue is laid out as follows:
 
-            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
-                                       [(C1Rating, C1DataQuality, C1Weight), ...],
-                                       <Open A-1 Raster Dataset>)
+            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
+                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
+                                      'DS':  <Open A-1 Raster Dataset>
                                        .
                                        .
                                        . }
