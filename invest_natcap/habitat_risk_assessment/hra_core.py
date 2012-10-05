@@ -25,11 +25,12 @@ def execute(args):
         args['ratings']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
-            tuple of lists which contain tuples.
+            dictionary where the keys are string descriptions of the values,
+            and the values are two lists and a open raster dataset.
 
-            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
-                                       [(C1Rating, C1DataQuality, C1Weight), ...],
-                                       <Open A-1 Raster Dataset>)
+            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
+                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
+                                      'DS':  <Open A-1 Raster Dataset>
                                        .
                                        .
                                        . }
