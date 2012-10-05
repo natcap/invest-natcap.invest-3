@@ -2372,8 +2372,7 @@ class ExecRoot(Root):
         dialog.setWindowTitle('Are you sure you want to quit?')
         dialog.set_title('Really quit?')
         dialog.set_icon('dialog-information-2.png')
-        dialog.body.setText('You will lose any unsaved changes to your ' +
-            'parameters.  Your existing RIOS workspaces will not be affected.')
+        dialog.body.setText('You will lose any changes to your parameter fields.')
         dialog.ok_button.setText('Quit')
 
         exit_code = dialog.exec_()

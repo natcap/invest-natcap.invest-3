@@ -86,7 +86,8 @@ def execute(args):
     reader = None
     turbine_file.close()
     LOGGER.debug('Turbine Dictionary: %s', turbine_dict)
-    
+    valuation_args['turbine_dict'] = turbine_dict
+
     # Handle Grid Points
     try:
         grid_dict = {}
@@ -105,16 +106,26 @@ def execute(args):
             grid_dict[row['id']] = row
         grid_file.close()
         LOGGER.debug('Grid_Points_Dict : %s', grid_dict)
-        valuation_args['grid_points'] = grid_dict
+        valuation_args['grid_dict'] = grid_dict
     except KeyError:
         pass
 
     # handle any pre-processing that must be done
 
     biophysical_points = ogr.Open(args['biophysical_data_uri'])
-    valuation_args['biophysical_points'] = biophysical_points
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    points_copy_uri = os.path.join(inter_dir, 'copy_biophysical_points.shp')
+    
+    if os.path.isfile(points_copy_uri):
+        os.remove(points_copy_uri)
+    
+    biophysical_points_copy = driver.CopyDataSource(
+            biophysical_points, str(points_copy_uri))
+    LOGGER.debug('biophysical_points_copy : %s', biophysical_points_copy)
+    valuation_args['biophysical_data'] = biophysical_points_copy
     
     valuation_args['harvested_energy'] = gdal.Open(args['harvested_energy_uri'])
     valuation_args['distance'] = gdal.Open(args['distance_uri'])
     
     # call on the core module
+    wind_energy_core.valuation(valuation_args)

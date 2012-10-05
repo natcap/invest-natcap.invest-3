@@ -349,7 +349,7 @@ class URIChecker(Checker):
         self.uri = valid_dict['value']
 
         if os.path.exists(self.uri) == False:
-            return str('File not found')
+            return str('File not found: %s' % self.uri)
 
 class FolderChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a folder."""

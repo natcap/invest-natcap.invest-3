@@ -171,6 +171,7 @@ def load_binary_wave_data(wave_file_uri):
 
     #get the periods and heights
     line = wave_file.read(col*4)
+
     wave_periods = list(struct.unpack('f'*col,line))
     line = wave_file.read(row*4)
     wave_heights = list(struct.unpack('f'*row,line))
@@ -180,11 +181,11 @@ def load_binary_wave_data(wave_file_uri):
         line = wave_file.read(8)
         if len(line) == 0:
             #end of file
-            wave_dict['bin_matrix'][key] = wave_array
+            wave_dict['bin_matrix'][key] = np.array(wave_array)
             break
 
         if key != None:
-            wave_dict['bin_matrix'][key] = wave_array
+            wave_dict['bin_matrix'][key] = np.array(wave_array)
 
         #Clear out array
         wave_array = []

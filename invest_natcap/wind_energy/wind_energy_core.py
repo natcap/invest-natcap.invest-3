@@ -3,12 +3,14 @@ import math
 import os.path
 import logging
 
+from osgeo import osr
 from osgeo import gdal
 from osgeo import ogr
 import numpy as np
 import scipy.ndimage as ndimage
 from scipy import signal
 from scipy import integrate
+from scipy import spatial
 
 from invest_natcap import raster_utils
 LOGGER = logging.getLogger('wind_energy_core')
@@ -371,20 +373,20 @@ def valuation(args):
     # Get constants from turbine_dict
     turbine_dict = args['turbine_dict']
 
-    infield_length = float(turbine_dict['infield_length'])
-    infield_cost = float(turbine_dict['infield_cost'])
-    foundation_cost = float(turbine_dict['foundation_cost'])
-    unit_cost = float(turbine_dict['unit_cost'])
-    install_cost = float(turbine_dict['install_cost']) / 100.00
-    misc_capex_cost = float(turbine_dict['misc_capex']) / 100.00
-    op_maint_cost = float(turbine_dict['op_maint']) / 100.00
-    discount_rate = float(turbine_dict['discount_rate']) / 100.00
-    decom = float(turbine_dict['decom']) / 100.00
-    turbine_name = float(turbine_dict['type'])
-    mega_watt = float(turbine_dict['mw'])
-    avg_land_cable_dist = float(turbine_dict['avg_land_cable_dist'])
-    mean_land_dist = float(turbine_dict['mean_land_dist'])
-    time = float(turbine_dict['time'])
+    infield_length = float(turbine_dict['Siemens']['infield_length'])
+    infield_cost = float(turbine_dict['Siemens']['infield_cost'])
+    foundation_cost = float(turbine_dict['Siemens']['foundation_cost'])
+    unit_cost = float(turbine_dict['Siemens']['unit_cost'])
+    install_cost = float(turbine_dict['Siemens']['install_cost']) / 100.00
+    misc_capex_cost = float(turbine_dict['Siemens']['misc_capex']) / 100.00
+    op_maint_cost = float(turbine_dict['Siemens']['op_maint']) / 100.00
+    discount_rate = float(turbine_dict['Siemens']['discount_rate']) / 100.00
+    decom = float(turbine_dict['Siemens']['decom']) / 100.00
+    turbine_name = turbine_dict['Siemens']['type']
+    mega_watt = float(turbine_dict['Siemens']['mw'])
+    avg_land_cable_dist = float(turbine_dict['Siemens']['avg_land_cable_dist'])
+    mean_land_dist = float(turbine_dict['Siemens']['mean_land_dist'])
+    time = float(turbine_dict['Siemens']['time'])
 
     number_turbines = args['number_of_machines']
 
@@ -403,7 +405,7 @@ def valuation(args):
     # raster, outputting another raster with the NPV
 
 
-    capex = cap / (1.0 - install_rate - misc_capex_cost)
+    #capex = cap / (1.0 - install_rate - misc_capex_cost)
 
       
     wind_energy_points = args['biophysical_data']
@@ -424,8 +426,11 @@ def valuation(args):
     # Transform the points into lat / long
     new_points = transform_array_of_points(points_array, proj_srs, wgs84_srs)
 
-    # Conver points from degrees to radians
+    # Convert points from degrees to radians
     radian_points = convert_degrees_to_radians(new_points)
+    
+    # Convert points from radians to cartesian
+    ocean_cartesian = lat_long_to_cartesian(radian_points)
 
     try:
         grid_land_points_dict = args['grid_dict']
@@ -441,19 +446,69 @@ def valuation(args):
         land_index = 0 
         grid_index = 0
 
-        for key, val in grid_dict.iteritems():
-            if val['type'].tolower() == 'land':
+        # Build up individual dictionaries and array of points for grid
+        # connection locations and landing locations
+        for key, val in grid_land_points_dict.iteritems():
+            if val['type'].lower() == 'land':
                 land_dict[land_index] = val
-                land_array.append([float(val['LONG']), float(val['LATI'])])
+                # Build up the landing points in an array
+                land_array.append([float(val['long']), float(val['lati']), 0])
                 land_index = land_index + 1
             else:
                 grid_dict[grid_index] = val
-                grid_array.append([float(val['LONG']), float(val['LATI'])])
+                # Build up the grid points in an array
+                grid_array.append([float(val['long']), float(val['lati']), 0])
                 grid_index = grid_index + 1
 
-        land_cartesian = lat_long_to_cartesian(land_array)
-        land_tree = scipy.spatial.KDTree(land_cartesian)
-        dist, closest_index = land_tree.query(radian_points)
+        LOGGER.debug('Land Dict : %s', land_dict)
+        
+        # Cast the landing points list to a numpy array
+        land_array = np.array(land_array)
+        # Convert the landing points into radians
+        land_radians = convert_degrees_to_radians(land_nparray)
+        # Converty the landing points into cartesian coordinates
+        land_cartesian = lat_long_to_cartesian(land_radians)
+        # From the landing points build a k-d tree structure
+        land_tree = spatial.KDTree(land_cartesian)
+        # Calculate the shortest distances from the ocean points to the landing
+        # points
+        dist, closest_index = land_tree.query(ocean_cartesian)
+        LOGGER.debug('Distances : %s ', dist) 
+    
+        # Get the wind points layer and reset the feature head in anticipation
+        # of adding the distances and landing id to the points
+        wind_layer = wind_energy_points.GetLayer()
+        wind_layer.ResetReading()
+        
+        new_field_list = ['O2L_Dist', 'Land_Id']
+        
+        # Create new fields for ocean to land distance and the landing point id
+        # to add to the shapefile
+        for field_name in new_field_list:
+            new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
+            wind_layer.CreateField(new_field)
+
+        dist_index = 0
+        id_index = 0
+        
+        for feat in wind_layer:
+            ocean_to_land_dist = dist[dist_index]
+            # Grab the landing point id by indexing into the dictionary using
+            # the value from the closest_index
+            land_id = land_dict[closest_index[id_index]]['id']
+            
+            value_list = [ocean_to_land_dist, land_id]
+            
+            for field_name, field_value in zip(new_field_list, value_list):
+                field_index = feat.GetFieldIndex(field_name)
+                feat.SetField(field_index, field_value)
+
+            wind_layer.SetFeature(feat)
+            dist_index = dist_index + 1
+            id_index = id_index + 1
+
+        wind_energy_points = None
+
     except KeyError:
         pass
 
@@ -518,7 +573,7 @@ def transform_array_of_points(points, source_srs, target_srs):
 
     points_copy = np.copy(points)
 
-    return coord_transform.TransformPoints(points_copy)
+    return np.array(coord_transform.TransformPoints(points_copy))
 
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves

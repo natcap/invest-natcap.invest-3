@@ -190,10 +190,13 @@ def biophysical(args):
         feature.Destroy()
         feature = clipped_wave_layer.GetNextFeature()
 
+    dem_matrix = None
+
     LOGGER.debug('Finished adding depth field to shapefile from DEM raster')
 
     #Generate an interpolate object for wave_energy_capacity
     LOGGER.debug('Interpolating machine performance table')
+
     energy_interp = wave_energy_interp(args['wave_base_data'], \
                                        args['machine_perf'])
 
@@ -201,8 +204,8 @@ def biophysical(args):
     LOGGER.debug('Summing the wave energy capacity at each wave farm')
     LOGGER.info('Calculating Captured Wave Energy.')
     energy_cap = \
-        compute_wave_energy_capacity(args['wave_base_data'], \
-                                     energy_interp, args['machine_param'])
+        compute_wave_energy_capacity(
+        args['wave_base_data'], energy_interp, args['machine_param'])
 
     #Add the sum as a field to the shapefile for the corresponding points
     LOGGER.debug('Adding the wave energy sums to the WaveData shapefile')
@@ -234,19 +237,12 @@ def biophysical(args):
             pixel_ysize, datatype, nodata, wave_power_unclipped_path, \
             aoi_shape)
 
-    #Get the corresponding points and values from the shapefile to be used 
-    #for interpolation
-    LOGGER.debug('Getting the points and values of wave power and wave energy')
-    energy_sum_array = get_points_values(clipped_wave_shape, 'CAPWE_MWHY')
-    wave_power_array = get_points_values(clipped_wave_shape, 'WE_kWM')
-
     #Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.debug('Interpolate wave power and wave energy capacity onto rasters')
-    LOGGER.info('Generating Wave Power and Captured Wave Energy rasters.')
-    interp_points_over_raster(energy_sum_array[0], energy_sum_array[1], \
-                              wave_energy_raster, nodata)
-    interp_points_over_raster(wave_power_array[0], wave_power_array[1], \
-                              wave_power_raster, nodata)
+    raster_utils.vectorize_points(
+            clipped_wave_shape, 'CAPWE_MWHY', wave_energy_raster)
+    raster_utils.vectorize_points(
+            clipped_wave_shape, 'WE_kWM', wave_power_raster)
 
     #Clip the wave energy and wave power rasters so that they are confined 
     #to the AOI
@@ -945,17 +941,16 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
         if height_max_index != -1:
             mult_matrix[height_max_index:, :] = 0
 
-        #Divide the matrix by 5 to get the yearly values
-        #valid_array = np.divide(mult_matrix, 5.0)
-
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero. So here
         #we drive any negative values to zero.
-        valid_array = np.where(mult_matrix < 0, 0, mult_matrix)
+        mult_matrix[mult_matrix < 0] = 0
+        #valid_array = np.where(mult_matrix < 0, 0, mult_matrix)
 
         #Sum all of the values from the matrix to get the total 
         #captured wave energy and convert into mega watts
-        sum_we = (valid_array.sum() / 1000)
+        sum_we = (mult_matrix.sum() / 1000)
+        #sum_we = (valid_array.sum() / 1000)
         energy_cap[key] = sum_we
 
     return energy_cap
