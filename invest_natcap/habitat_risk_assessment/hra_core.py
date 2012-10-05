@@ -28,8 +28,9 @@ def execute(args):
             dictionary where the keys are string descriptions of the values,
             and the values are two lists and a open raster dataset.
 
-            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
-                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
+            {(Habitat A, Stressor 1): 
+                    {'E': {E1Rating, E1DataQuality, E1Weight), ...],
+                    {'C': [(C1Rating, C1DataQuality, C1Weight), ...],
                                       'DS':  <Open A-1 Raster Dataset>
                                        .
                                        .
@@ -215,12 +216,11 @@ def burn_risk_values(ratings):
     #Want to run this for each of the H-S layers
     for pair in ratings:
 
-        #one loop for calculating all ratings within E. E is the first element
-        #in the H-S value tuple.
-        E = calculate_exposure_value(pair[0])
-
-        #second loop for calculating all ratings within C. C is the second
-        #element in the H-S value tuple.
+        #Want the 'E' value within the ratings[pair] entry of the ratings
+        #dictionary. This is a list of the exposure ratings.
+        E = calculate_exposure_value(ratings[pair]['E'])
+        
+        #The 'C' makes to a list of the consequence values.
         C = calculate_consequence_value(pair[1])
 
         R = calculate_risk_value(E, C)
