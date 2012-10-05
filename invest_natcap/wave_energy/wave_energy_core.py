@@ -941,9 +941,6 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
         if height_max_index != -1:
             mult_matrix[height_max_index:, :] = 0
 
-        #Divide the matrix by 5 to get the yearly values
-        #valid_array = np.divide(mult_matrix, 5.0)
-
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero. So here
         #we drive any negative values to zero.
