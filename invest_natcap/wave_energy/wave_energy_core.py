@@ -196,6 +196,7 @@ def biophysical(args):
 
     #Generate an interpolate object for wave_energy_capacity
     LOGGER.debug('Interpolating machine performance table')
+
     energy_interp = wave_energy_interp(args['wave_base_data'], \
                                        args['machine_perf'])
 
@@ -203,8 +204,8 @@ def biophysical(args):
     LOGGER.debug('Summing the wave energy capacity at each wave farm')
     LOGGER.info('Calculating Captured Wave Energy.')
     energy_cap = \
-        compute_wave_energy_capacity(args['wave_base_data'], \
-                                     energy_interp, args['machine_param'])
+        compute_wave_energy_capacity(
+        args['wave_base_data'], energy_interp, args['machine_param'])
 
     #Add the sum as a field to the shapefile for the corresponding points
     LOGGER.debug('Adding the wave energy sums to the WaveData shapefile')
@@ -946,11 +947,13 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
         #Since we are doing a cubic interpolation there is a possibility we
         #will have negative values where they should be zero. So here
         #we drive any negative values to zero.
-        valid_array = np.where(mult_matrix < 0, 0, mult_matrix)
+        mult_matrix[mult_matrix < 0] = 0
+        #valid_array = np.where(mult_matrix < 0, 0, mult_matrix)
 
         #Sum all of the values from the matrix to get the total 
         #captured wave energy and convert into mega watts
-        sum_we = (valid_array.sum() / 1000)
+        sum_we = (mult_matrix.sum() / 1000)
+        #sum_we = (valid_array.sum() / 1000)
         energy_cap[key] = sum_we
 
     return energy_cap
