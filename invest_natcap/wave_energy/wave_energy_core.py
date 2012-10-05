@@ -190,6 +190,8 @@ def biophysical(args):
         feature.Destroy()
         feature = clipped_wave_layer.GetNextFeature()
 
+    dem_matrix = None
+
     LOGGER.debug('Finished adding depth field to shapefile from DEM raster')
 
     #Generate an interpolate object for wave_energy_capacity
@@ -234,19 +236,12 @@ def biophysical(args):
             pixel_ysize, datatype, nodata, wave_power_unclipped_path, \
             aoi_shape)
 
-    #Get the corresponding points and values from the shapefile to be used 
-    #for interpolation
-    LOGGER.debug('Getting the points and values of wave power and wave energy')
-    energy_sum_array = get_points_values(clipped_wave_shape, 'CAPWE_MWHY')
-    wave_power_array = get_points_values(clipped_wave_shape, 'WE_kWM')
-
     #Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.debug('Interpolate wave power and wave energy capacity onto rasters')
-    LOGGER.info('Generating Wave Power and Captured Wave Energy rasters.')
-    interp_points_over_raster(energy_sum_array[0], energy_sum_array[1], \
-                              wave_energy_raster, nodata)
-    interp_points_over_raster(wave_power_array[0], wave_power_array[1], \
-                              wave_power_raster, nodata)
+    raster_utils.vectorize_points(
+            clipped_wave_shape, 'CAPWE_MWHY', wave_energy_raster)
+    raster_utils.vectorize_points(
+            clipped_wave_shape, 'WE_kWM', wave_power_raster)
 
     #Clip the wave energy and wave power rasters so that they are confined 
     #to the AOI
