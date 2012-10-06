@@ -25,11 +25,13 @@ def execute(args):
         args['ratings']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
-            tuple of lists which contain tuples.
+            dictionary where the keys are string descriptions of the values,
+            and the values are two lists and a open raster dataset.
 
-            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
-                                       [(C1Rating, C1DataQuality, C1Weight), ...],
-                                       <Open A-1 Raster Dataset>)
+            {(Habitat A, Stressor 1): 
+                    {'E': {E1Rating, E1DataQuality, E1Weight), ...],
+                    {'C': [(C1Rating, C1DataQuality, C1Weight), ...],
+                                      'DS':  <Open A-1 Raster Dataset>
                                        .
                                        .
                                        . }
@@ -126,10 +128,10 @@ def make_cum_risk_raster(dir, ratings):
             the open dataset that shows the raster overlap between the habitat
             and the stressor with the risk value for that H-S combination as
             the burn value. The ratings structue is laid out as follows:
-
-            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
-                                       [(C1Rating, C1DataQuality, C1Weight), ...],
-                                       <Open A-1 Raster Dataset>)
+            
+            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
+                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
+                                      'DS':  <Open A-1 Raster Dataset>
                                        .
                                        .
                                        . }
@@ -171,8 +173,9 @@ def make_cum_risk_raster(dir, ratings):
 
         ds_list = []
         for s in stressors:
-            #[3] in the value is where the datasource is held
-            ds_list.append(ratings[(h,s)][3])
+            #Datasource can be retrieved by indexing into the value dictionary
+            #using 'DS'
+            ds_list.append(ratings[(h,s)]['DS'])
 
         #When we have a complete list of the stressors, let's pass the habitat
         #name and our list off to another function and have it create and
@@ -196,9 +199,9 @@ def burn_risk_values(ratings):
             the open dataset that shows the raster overlap between the habitat
             and the stressor. The ratings structue is laid out as follows:
 
-            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
-                                       [(C1Rating, C1DataQuality, C1Weight), ...],
-                                       <Open A-1 Raster Dataset>)
+            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
+                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
+                                      'DS':  <Open A-1 Raster Dataset>
                                        .
                                        .
                                        . }
@@ -213,12 +216,11 @@ def burn_risk_values(ratings):
     #Want to run this for each of the H-S layers
     for pair in ratings:
 
-        #one loop for calculating all ratings within E. E is the first element
-        #in the H-S value tuple.
-        E = calculate_exposure_value(pair[0])
-
-        #second loop for calculating all ratings within C. C is the second
-        #element in the H-S value tuple.
+        #Want the 'E' value within the ratings[pair] entry of the ratings
+        #dictionary. This is a list of the exposure ratings.
+        E = calculate_exposure_value(ratings[pair]['E'])
+        
+        #The 'C' makes to a list of the consequence values.
         C = calculate_consequence_value(pair[1])
 
         R = calculate_risk_value(E, C)
