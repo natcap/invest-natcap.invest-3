@@ -29,12 +29,14 @@ def execute(args):
             and the values are two lists and a open raster dataset.
 
             {(Habitat A, Stressor 1): 
-                    {'E': {E1Rating, E1DataQuality, E1Weight), ...],
-                    {'C': [(C1Rating, C1DataQuality, C1Weight), ...],
-                                      'DS':  <Open A-1 Raster Dataset>
-                                       .
-                                       .
-                                       . }
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
 
     Outputs:
         --Intermediate--
@@ -129,12 +131,15 @@ def make_cum_risk_raster(dir, ratings):
             and the stressor with the risk value for that H-S combination as
             the burn value. The ratings structue is laid out as follows:
             
-            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
-                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
-                                      'DS':  <Open A-1 Raster Dataset>
-                                       .
-                                       .
-                                       . }
+            {(Habitat A, Stressor 1): 
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
     Output:
         /dir/cum_risk_H[habitatname].tif- A raster file that represents the
             cumulative risk of all stressors within the gievn habitat across
@@ -199,12 +204,15 @@ def burn_risk_values(ratings):
             the open dataset that shows the raster overlap between the habitat
             and the stressor. The ratings structue is laid out as follows:
 
-            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
-                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
-                                      'DS':  <Open A-1 Raster Dataset>
-                                       .
-                                       .
-                                       . }
+            {(Habitat A, Stressor 1): 
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
 
     Output:
         Updated versions of the H-S datasets with the risk value burned to the
@@ -228,7 +236,8 @@ def burn_risk_values(ratings):
         dataset = pair[2]
         gdal.RasterizeLayer(dataset, [1], burn_values=[R]) 
 
-def calculate_exposure_value(iterable):
+def calculate_exposure_value(dictionary):
+
     '''This is the weighted average exposure value for all criteria for a given
     H-S combination as determined on a run by run basis. The equation is 
     as follows:
@@ -242,14 +251,37 @@ def calculate_exposure_value(iterable):
         d = Data quality rating for criteria i.
         w = The importance weighting for that criteria relative to other
             criteria being evaluated.
+
+    Input:
+        dictionary- A sub-piece of the args['ratings'] dictionary that is,
+        itself, a dictionary with a structure as follows. The outer keys are
+        string descriptions of the exposure criteria for final determination of
+        the exposure value, and the values are themselves dictionaries
+        containing rating information for that particular criteria. The inner
+        dictionary has keys which are descriptions of the rating vales (rating,
+        weight, and data quality), and values which are doubles reflecting
+        the ratings for that given criteria.
+
+        {'Spatial Overlap' :
+            {'rating': 3.0, 'dq': 2.0, 'weight':1.0},
+                    .
+                    .
+                    .
+        }
+    Returns:
+        E- The weighted average of the exposure values for all criteria
+            applicable for a certain H-S interraction.
     '''
     sum_top, sum_bottom = 0.0
 
-    for criteria in iterable:
-        
-        #For this imaginary data structure, imagine that each criteria maps
-        #to a tuple of (value, data quality, weight)
-        e_i, d_i, w_i = iterable[criteria]
+    for criteria in dictionary:
+       
+        #We know that dictionary[criteria] itself is a dictionary, which will
+        #have 'rating', 'weight' and 'dq' (data quality) keys, and double
+        #values.
+        e_i = dictionary[criteria]['rating']
+        w_i = dictionary[criteria]['weight']
+        d_i = dictionary[criteria]['dq']
         
         sum_top += e_i / (d_i * w_i)
         sum_bottom += 1 / (d_i * w_i)
@@ -260,16 +292,38 @@ def calculate_exposure_value(iterable):
 
 def calculate_consequence_value(iterable):
     '''Structure of this equation will be the same as the exposure values.
-    However, the iterable passed in should contain criteria specific to the
-    consequences of that particular H-S interraction.'''
+    However, the dictionary passed in should contain criteria specific to the
+    consequences of that particular H-S interraction.
+    Input:
+        dictionary- A sub-piece of the args['ratings'] dictionary that is,
+        itself, a dictionary with a structure as follows. The outer keys are
+        string descriptions of the consequence criteria for final determination of
+        the cnsequence value, and the values are themselves dictionaries
+        containing rating information for that particular criteria. The inner
+        dictionary has keys which are descriptions of the rating vales (rating,
+        weight, and data quality), and values which are doubles reflecting
+        the ratings for that given criteria.
 
+        {'Area Change' :
+            {'rating': 3.0, 'dq': 2.0, 'weight':1.0},
+                    .
+                    .
+                    .
+        }
+    Returns:
+        C- The weighted average of the consequence values for all criteria
+            applicable for a certain H-S interraction.
+    '''
     sum_top, sum_bottom = 0.0
 
-    for criteria in iterable:
-        
-        #For this imaginary data structure, imagine that each criteria maps
-        #to a tuple of (value, data quality, weight)
-        c_i, d_i, w_i = iterable[criteria]
+    for criteria in dictionary:
+       
+        #We know that dictionary[criteria] itself is a dictionary, which will
+        #have 'rating', 'weight' and 'dq' (data quality) keys, and double
+        #values.
+        c_i = dictionary[criteria]['rating']
+        w_i = dictionary[criteria]['weight']
+        d_i = dictionary[criteria]['dq']
         
         sum_top += c_i / (d_i * w_i)
         sum_bottom += 1 / (d_i * w_i)
