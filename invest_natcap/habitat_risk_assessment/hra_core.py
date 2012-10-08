@@ -33,12 +33,8 @@ def execute(args):
                         {'Spatital Overlap': 
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
                         },
-
                     'C': {C's Criteria Dictionaries},
                     'DS':  <Open A-1 Raster Dataset>
-                                       .
-                                       .
-                                       . 
                     }
             }
 
@@ -135,12 +131,15 @@ def make_cum_risk_raster(dir, ratings):
             and the stressor with the risk value for that H-S combination as
             the burn value. The ratings structue is laid out as follows:
             
-            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
-                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
-                                      'DS':  <Open A-1 Raster Dataset>
-                                       .
-                                       .
-                                       . }
+            {(Habitat A, Stressor 1): 
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
     Output:
         /dir/cum_risk_H[habitatname].tif- A raster file that represents the
             cumulative risk of all stressors within the gievn habitat across
@@ -205,12 +204,15 @@ def burn_risk_values(ratings):
             the open dataset that shows the raster overlap between the habitat
             and the stressor. The ratings structue is laid out as follows:
 
-            {(Habitat A, Stressor 1): 'E': [(E1Rating, E1DataQuality, E1Weight), ...],
-                                      'C': [(C1Rating, C1DataQuality, C1Weight), ...],
-                                      'DS':  <Open A-1 Raster Dataset>
-                                       .
-                                       .
-                                       . }
+            {(Habitat A, Stressor 1): 
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
 
     Output:
         Updated versions of the H-S datasets with the risk value burned to the
