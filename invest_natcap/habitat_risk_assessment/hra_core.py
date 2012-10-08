@@ -277,7 +277,8 @@ def calculate_exposure_value(dictionary):
     for criteria in dictionary:
        
         #We know that dictionary[criteria] itself is a dictionary, which will
-        #have 'rating', 'weight' and 'dq' (data quality) keys.
+        #have 'rating', 'weight' and 'dq' (data quality) keys, and double
+        #values.
         e_i = dictionary[criteria]['rating']
         w_i = dictionary[criteria]['weight']
         d_i = dictionary[criteria]['dq']
@@ -292,15 +293,37 @@ def calculate_exposure_value(dictionary):
 def calculate_consequence_value(iterable):
     '''Structure of this equation will be the same as the exposure values.
     However, the dictionary passed in should contain criteria specific to the
-    consequences of that particular H-S interraction.'''
+    consequences of that particular H-S interraction.
+    Input:
+        dictionary- A sub-piece of the args['ratings'] dictionary that is,
+        itself, a dictionary with a structure as follows. The outer keys are
+        string descriptions of the consequence criteria for final determination of
+        the cnsequence value, and the values are themselves dictionaries
+        containing rating information for that particular criteria. The inner
+        dictionary has keys which are descriptions of the rating vales (rating,
+        weight, and data quality), and values which are doubles reflecting
+        the ratings for that given criteria.
 
+        {'Area Change' :
+            {'rating': 3.0, 'dq': 2.0, 'weight':1.0},
+                    .
+                    .
+                    .
+        }
+    Returns:
+        C- The weighted average of the consequence values for all criteria
+            applicable for a certain H-S interraction.
+    '''
     sum_top, sum_bottom = 0.0
 
-    for criteria in iterable:
-        
-        #For this imaginary data structure, imagine that each criteria maps
-        #to a tuple of (value, data quality, weight)
-        c_i, d_i, w_i = iterable[criteria]
+    for criteria in dictionary:
+       
+        #We know that dictionary[criteria] itself is a dictionary, which will
+        #have 'rating', 'weight' and 'dq' (data quality) keys, and double
+        #values.
+        c_i = dictionary[criteria]['rating']
+        w_i = dictionary[criteria]['weight']
+        d_i = dictionary[criteria]['dq']
         
         sum_top += c_i / (d_i * w_i)
         sum_bottom += 1 / (d_i * w_i)
