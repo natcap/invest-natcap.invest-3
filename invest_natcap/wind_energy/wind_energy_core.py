@@ -505,7 +505,7 @@ def build_subset_array(main_dict):
 
     for key in sorted_keys:
         val = main_dict[key]
-        subset_array.append([float(val['long']), float(val['lati']), 0)
+        subset_array.append(float(val['long']), float(val['lati']), 0)
 
     return subset_array
 
