@@ -435,44 +435,22 @@ def valuation(args):
     try:
         grid_land_points_dict = args['grid_dict']
         
-        land_dict = {}
-        land_array = []
-        grid_dict = {}
-        grid_array = []
+        land_dict = build_subset_dictionary(grid_land_points_dict, 'land')
+        land_array = build_subset_array(land_dict)
+        grid_dict = build_subset_dictionary(grid_land_points_dict, 'grid')
+        grid_array = build_subset_array(grid_dict)
         
-        # These indexes will be the keys in the individual dictionaries.
-        # Starting from zero allows us to relate these keys to indexes in an
-        # array
-        land_index = 0 
-        grid_index = 0
-
-        # Build up individual dictionaries and array of points for grid
-        # connection locations and landing locations
-        for key, val in grid_land_points_dict.iteritems():
-            if val['type'].lower() == 'land':
-                land_dict[land_index] = val
-                # Build up the landing points in an array
-                land_array.append([float(val['long']), float(val['lati']), 0])
-                land_index = land_index + 1
-            else:
-                grid_dict[grid_index] = val
-                # Build up the grid points in an array
-                grid_array.append([float(val['long']), float(val['lati']), 0])
-                grid_index = grid_index + 1
-
         LOGGER.debug('Land Dict : %s', land_dict)
-        
         # Cast the landing points list to a numpy array
         land_array = np.array(land_array)
         # Convert the landing points into radians
-        land_radians = convert_degrees_to_radians(land_nparray)
+        land_radians = convert_degrees_to_radians(land_array)
         # Converty the landing points into cartesian coordinates
         land_cartesian = lat_long_to_cartesian(land_radians)
-        # From the landing points build a k-d tree structure
-        land_tree = spatial.KDTree(land_cartesian)
-        # Calculate the shortest distances from the ocean points to the landing
-        # points
-        dist, closest_index = land_tree.query(ocean_cartesian)
+        
+        dist_index = distance_kd(land_cartesian, ocean_cartesian) 
+        
+        dist, closest_index = dist_index[0], dist_index[1] 
         LOGGER.debug('Distances : %s ', dist) 
     
         # Get the wind points layer and reset the feature head in anticipation
@@ -512,6 +490,37 @@ def valuation(args):
     except KeyError:
         pass
 
+def build_subset_dictionary(main_dict, key_field):
+    subset_dict = {}
+    index = 0
+    for key, val in main_dict.iteritems():
+        if val['type'].lower() == key_field:
+            subset_dict[index] = val
+            index = index + 1
+    return subset_dict
+
+def build_subset_array(main_dict):
+    subset_array = []
+    sorted_keys = main_dict.keys().sort()
+
+    for key in sorted_keys:
+        val = main_dict[key]
+        subset_array.append(float(val['long']), float(val['lati']), 0)
+
+    return subset_array
+
+def distance_kd(array_one, array_two):
+    tree = spatial.KDTree(array_one)
+    dist, closest_index = tree.query(array_two)
+    dist_and_index = np.zeros((dist.size[0], 2))
+
+    iterator = 0
+
+    for distance, index in zip(dist, closest_index):
+        dist_and_index[iterator] = np.array([distance, index])
+        iterator = iterator + 1
+
+    return dist_and_index
 
 def lat_long_to_cartesian(points):
     """Convert a numpy array of points that are in radians to cartesian
