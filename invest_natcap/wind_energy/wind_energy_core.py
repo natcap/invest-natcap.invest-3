@@ -469,13 +469,9 @@ def valuation(args):
         # Converty the landing points into cartesian coordinates
         land_cartesian = lat_long_to_cartesian(land_radians)
         
+        dist_index = distance_kd(land_cartesian, ocean_cartesian) 
         
-        
-        # From the landing points build a k-d tree structure
-        land_tree = spatial.KDTree(land_cartesian)
-        # Calculate the shortest distances from the ocean points to the landing
-        # points
-        dist, closest_index = land_tree.query(ocean_cartesian)
+        dist, closest_index = dist_index[0], dist_index[1] 
         LOGGER.debug('Distances : %s ', dist) 
     
         # Get the wind points layer and reset the feature head in anticipation
