@@ -267,15 +267,17 @@ def calculate_exposure_value(dictionary):
                     .
                     .
                     .
-        }            
+        }
+    Returns:
+        E- The weighted average of the exposure values for all criteria
+            applicable for a certain H-S interraction.
     '''
     sum_top, sum_bottom = 0.0
 
     for criteria in dictionary:
-        
-
-        #For this imaginary data structure, imagine that each criteria maps
-        #to a tuple of (value, data quality, weight)
+       
+        #We know that dictionary[criteria] itself is a dictionary, which will
+        #have 'rating', 'weight' and 'dq' (data quality) keys.
         e_i = dictionary[criteria]['rating']
         w_i = dictionary[criteria]['weight']
         d_i = dictionary[criteria]['dq']
@@ -289,7 +291,7 @@ def calculate_exposure_value(dictionary):
 
 def calculate_consequence_value(iterable):
     '''Structure of this equation will be the same as the exposure values.
-    However, the iterable passed in should contain criteria specific to the
+    However, the dictionary passed in should contain criteria specific to the
     consequences of that particular H-S interraction.'''
 
     sum_top, sum_bottom = 0.0
