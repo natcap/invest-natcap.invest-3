@@ -236,7 +236,8 @@ def burn_risk_values(ratings):
         dataset = pair[2]
         gdal.RasterizeLayer(dataset, [1], burn_values=[R]) 
 
-def calculate_exposure_value(iterable):
+def calculate_exposure_value(dictionary):
+
     '''This is the weighted average exposure value for all criteria for a given
     H-S combination as determined on a run by run basis. The equation is 
     as follows:
@@ -250,14 +251,34 @@ def calculate_exposure_value(iterable):
         d = Data quality rating for criteria i.
         w = The importance weighting for that criteria relative to other
             criteria being evaluated.
+
+    Input:
+        dictionary- A sub-piece of the args['ratings'] dictionary that is,
+        itself, a dictionary with a structure as follows. The outer keys are
+        string descriptions of the exposure criteria for final determination of
+        the exposure value, and the values are themselves dictionaries
+        containing rating information for that particular criteria. The inner
+        dictionary has keys which are descriptions of the rating vales (rating,
+        weight, and data quality), and values which are doubles reflecting
+        the ratings for that given criteria.
+
+        {'Spatial Overlap' :
+            {'rating': 3.0, 'dq': 2.0, 'weight':1.0},
+                    .
+                    .
+                    .
+        }            
     '''
     sum_top, sum_bottom = 0.0
 
-    for criteria in iterable:
+    for criteria in dictionary:
         
+
         #For this imaginary data structure, imagine that each criteria maps
         #to a tuple of (value, data quality, weight)
-        e_i, d_i, w_i = iterable[criteria]
+        e_i = dictionary[criteria]['rating']
+        w_i = dictionary[criteria]['weight']
+        d_i = dictionary[criteria]['dq']
         
         sum_top += e_i / (d_i * w_i)
         sum_bottom += 1 / (d_i * w_i)
