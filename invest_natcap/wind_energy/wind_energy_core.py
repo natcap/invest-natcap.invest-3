@@ -465,9 +465,12 @@ def valuation(args):
         # Cast the landing points list to a numpy array
         land_array = np.array(land_array)
         # Convert the landing points into radians
-        land_radians = convert_degrees_to_radians(land_nparray)
+        land_radians = convert_degrees_to_radians(land_array)
         # Converty the landing points into cartesian coordinates
         land_cartesian = lat_long_to_cartesian(land_radians)
+        
+        
+        
         # From the landing points build a k-d tree structure
         land_tree = spatial.KDTree(land_cartesian)
         # Calculate the shortest distances from the ocean points to the landing
@@ -512,6 +515,18 @@ def valuation(args):
     except KeyError:
         pass
 
+def distance_kd(array_one, array_two):
+    tree = spatial.KDTree(array_one)
+    dist, closest_index = tree.query(array_two)
+    dist_and_index = np.zeros((dist.size[0], 2))
+
+    iterator = 0
+
+    for distance, index in zip(dist, closest_index):
+        dist_and_index[iterator] = np.array([distance, index])
+        iterator = iterator + 1
+
+    return dist_and_index
 
 def lat_long_to_cartesian(points):
     """Convert a numpy array of points that are in radians to cartesian
