@@ -29,12 +29,18 @@ def execute(args):
             and the values are two lists and a open raster dataset.
 
             {(Habitat A, Stressor 1): 
-                    {'E': {E1Rating, E1DataQuality, E1Weight), ...],
-                    {'C': [(C1Rating, C1DataQuality, C1Weight), ...],
-                                      'DS':  <Open A-1 Raster Dataset>
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
                                        .
                                        .
-                                       . }
+                                       . 
+                    }
+            }
 
     Outputs:
         --Intermediate--
