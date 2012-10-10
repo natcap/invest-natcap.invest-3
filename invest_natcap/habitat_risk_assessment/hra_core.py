@@ -196,7 +196,7 @@ def make_cum_risk_raster(dir, ratings):
         h_rasters.append(h_raster)
 
     return cum_rasters
-def burn_risk_values(ratings):
+def burn_risk_values(ratings, risk_eq):
     '''This will re-burn the intermediate files of the H-S intersection with
     the risk value for that given layer. This will be calculated based on the
     ratings withing the 'ratings' structure.
@@ -236,7 +236,7 @@ def burn_risk_values(ratings):
         #structure.
         C = calculate_consequence_value(pair[1])
 
-        R = calculate_risk_value(E, C)
+        R = calc_risk_value_euc(E, C)
 
         dataset = pair[2]
         gdal.RasterizeLayer(dataset, [1], burn_values=[R]) 
@@ -339,7 +339,7 @@ def calculate_consequence_value(dictionary):
 
 #For this, I am assuming that something is running the risk values as a loop,
 #and passing in the E and C values that it wants us to use.
-def calculate_risk_value(exposure, consequence):
+def calc_risk_value_euc(exposure, consequence):
     '''Takes an individual exposure value and consequence value (we assume they are
     from the same H-S space, and finds their euclidean distance from the origin of
     the exposure-consequence space.
