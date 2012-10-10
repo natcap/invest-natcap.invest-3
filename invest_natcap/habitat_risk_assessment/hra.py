@@ -147,7 +147,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
             #in 'ratings'. We will make the open datasource the third item in
             #the tuple. The first two are the exposure and consequence ratings
             #that were gleaned from the IUI.
-            ratings[(h_name, s_name)][2] = gdal.Open(out_uri)
+            ratings[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
 
     return ratings
 
