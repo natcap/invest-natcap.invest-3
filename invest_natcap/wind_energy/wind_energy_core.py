@@ -435,21 +435,34 @@ def valuation(args):
     try:
         grid_land_points_dict = args['grid_dict']
         
+        # Create individual dictionaries for land and grid points
         land_dict = build_subset_dictionary(grid_land_points_dict, 'land')
-        land_array = build_subset_array(land_dict)
         grid_dict = build_subset_dictionary(grid_land_points_dict, 'grid')
-        grid_array = build_subset_array(grid_dict)
-        
         LOGGER.debug('Land Dict : %s', land_dict)
-        # Cast the landing points list to a numpy array
-        land_array = np.array(land_array)
-        # Convert the landing points into radians
+        # Create numpy arrays representing the points for land and
+        # grid locations
+        land_array = np.array(build_subset_array(land_dict))
+        grid_array = np.array(build_subset_array(grid_dict))
+        
+        grid_radians = convert_degrees_to_radians(grid_array)
+        grid_cartesian = lat_long_to_cartesian(grid_radians)
+
         land_radians = convert_degrees_to_radians(land_array)
-        # Converty the landing points into cartesian coordinates
         land_cartesian = lat_long_to_cartesian(land_radians)
         
+        grid_dist_index = distance_kd(grid_cartesian, land_cartesian)
         dist_index = distance_kd(land_cartesian, ocean_cartesian) 
         
+        grid_dist, closest_grid = grid_dist_index[0], grid_dist_index[1] 
+        LOGGER.debug('Grid Distance : %s', grid_dist)
+        LOGGER.debug('Grid Closest Index : %s', closest_grid)
+        
+        index_x = 0
+        for item in grid_dist:
+            land_dict[closest_grid[index_x]]['g2l'] = item
+            index_x = index_x + 1
+
+        LOGGER.debug('Land Dict : %s', land_dict)
         dist, closest_index = dist_index[0], dist_index[1] 
         LOGGER.debug('Distances : %s ', dist) 
     
@@ -458,7 +471,7 @@ def valuation(args):
         wind_layer = wind_energy_points.GetLayer()
         wind_layer.ResetReading()
         
-        new_field_list = ['O2L_Dist', 'Land_Id']
+        new_field_list = ['O2L_Dist', 'Land_Id', 'G2L_Dist']
         
         # Create new fields for ocean to land distance and the landing point id
         # to add to the shapefile
@@ -474,8 +487,9 @@ def valuation(args):
             # Grab the landing point id by indexing into the dictionary using
             # the value from the closest_index
             land_id = land_dict[closest_index[id_index]]['id']
-            
-            value_list = [ocean_to_land_dist, land_id]
+            g2l_dist = land_dict[closest_index[id_index]]['g2l']
+
+            value_list = [ocean_to_land_dist, land_id, g2l_dist]
             
             for field_name, field_value in zip(new_field_list, value_list):
                 field_index = feat.GetFieldIndex(field_name)
@@ -501,25 +515,21 @@ def build_subset_dictionary(main_dict, key_field):
 
 def build_subset_array(main_dict):
     subset_array = []
-    sorted_keys = main_dict.keys().sort()
+    sorted_keys = main_dict.keys()
+    sorted_keys.sort()
 
     for key in sorted_keys:
         val = main_dict[key]
-        subset_array.append(float(val['long']), float(val['lati']), 0)
+        subset_array.append([float(val['long']), float(val['lati']), 0])
 
     return subset_array
 
 def distance_kd(array_one, array_two):
     tree = spatial.KDTree(array_one)
     dist, closest_index = tree.query(array_two)
-    dist_and_index = np.zeros((dist.size[0], 2))
-
-    iterator = 0
-
-    for distance, index in zip(dist, closest_index):
-        dist_and_index[iterator] = np.array([distance, index])
-        iterator = iterator + 1
-
+    LOGGER.debug('KD Distance: %s', dist)
+    LOGGER.debug('KD Closest Index: %s', closest_index)
+    dist_and_index = [ dist, closest_index ]
     return dist_and_index
 
 def lat_long_to_cartesian(points):
