@@ -22,6 +22,9 @@ def execute(args):
             complete the rest of the model run. It will contain the following.
         args['workspace_dir']- Directory in which all data resides. Output
             and intermediate folders will be supfolders of this one.
+        args['risk_eq']-  A string representing the equation to be used for
+            risk calculation. We should check for possibilities, and send to a 
+            different function when deciding R dependent on this.
         args['ratings']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
@@ -71,7 +74,7 @@ def execute(args):
     #each pair already exists within the inter_dir file, but can be accessed
     #by using the ratings structure, since there is an open version of the
     #raster dataset there.
-    burn_risk_values(args['ratings'])
+    burn_risk_values(args['ratings'], args['risk_eq'])
 
     #this will take the new raster datasets that are still conatined within the
     #ratings structure, and combine them for all rasters whose first key is the
