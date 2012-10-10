@@ -435,26 +435,23 @@ def valuation(args):
     try:
         grid_land_points_dict = args['grid_dict']
         
+        # Create individual dictionaries for land and grid points
         land_dict = build_subset_dictionary(grid_land_points_dict, 'land')
-        land_array = np.array(build_subset_array(land_dict))
         grid_dict = build_subset_dictionary(grid_land_points_dict, 'grid')
+        LOGGER.debug('Land Dict : %s', land_dict)
+        # Create numpy arrays representing the points for land and
+        # grid locations
+        land_array = np.array(build_subset_array(land_dict))
         grid_array = np.array(build_subset_array(grid_dict))
-       
+        
         grid_radians = convert_degrees_to_radians(grid_array)
         grid_cartesian = lat_long_to_cartesian(grid_radians)
 
-        LOGGER.debug('Land Dict : %s', land_dict)
-        # Convert the landing points into radians
         land_radians = convert_degrees_to_radians(land_array)
-        LOGGER.debug('1111111111')
-        # Converty the landing points into cartesian coordinates
         land_cartesian = lat_long_to_cartesian(land_radians)
-        LOGGER.debug('2222222222')
         
         grid_dist_index = distance_kd(grid_cartesian, land_cartesian)
-        LOGGER.debug('3333333333')
         dist_index = distance_kd(land_cartesian, ocean_cartesian) 
-        LOGGER.debug('4444444444')
         
         grid_dist, closest_grid = grid_dist_index[0], grid_dist_index[1] 
         LOGGER.debug('Grid Distance : %s', grid_dist)
