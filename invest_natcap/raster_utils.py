@@ -364,7 +364,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
         return out_dataset
 
     #Otherwise they're misaligned and we need to do lots of interpolation
-    LOGGER.info("Input rasters are misaligned/different sizes and needs some expensive interpolation")
+    LOGGER.info("Input rasters do not align perfectly.  Interpolating the pixel stack.  This is normal behavior.")
 
     #Loop over each row in out_band
     for out_row_index in range(out_band.YSize):
