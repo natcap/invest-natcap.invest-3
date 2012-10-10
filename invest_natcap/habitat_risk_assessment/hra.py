@@ -35,6 +35,8 @@ def execute(args):
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
             tuple of lists which contain tuples.
+        args['risk_eq']- A string identifying the equation that should be used
+            in calculating risk scores for each H-S overlap cell.
 
             {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
                                        [(C1Rating, C1DataQuality, C1Weight), ...])
@@ -49,6 +51,10 @@ def execute(args):
         hra_args['ratings']- Dictionary with a similar structure to the above,
             but with an additional item in the value tuple containing an open
             raster dataset of the overlap of key H-S.
+        hra_args['risk_eq']- String which identifies the equation to be used
+            for calculating risk.  The core module should check for 
+            possibilities, and send to a different function when deciding R 
+            dependent on this.
 
     Returns nothing.
     '''
@@ -65,6 +71,8 @@ def execute(args):
         os.makedirs(folder)
 
     hra_args['workspace_dir'] = args['workspace_dir']
+
+    hra_args['risk_eq'] = args['risk_eq']
 
     #Take all shapefiles in both the habitats and the stressors folders and
     #make them into rasters of grid_size by grid_size resolution.
