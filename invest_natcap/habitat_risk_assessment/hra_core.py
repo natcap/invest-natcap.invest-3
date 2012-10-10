@@ -236,10 +236,29 @@ def burn_risk_values(ratings, risk_eq):
         #structure.
         C = calculate_consequence_value(pair[1])
 
-        R = calc_risk_value_euc(E, C)
+        if (risk_eq == 'Euclidean'):
+            R = calc_risk_value_euc(E, C)
+        else if (risk_eq == 'Multiplicative'):
+            R = calc_risk_value_mult(E, C) 
 
         dataset = pair[2]
         gdal.RasterizeLayer(dataset, [1], burn_values=[R]) 
+
+def calc_risk_value_mult(E, C):
+    '''This is the risk value for a given cell based on the average exposure
+    and consequence values. It will be calculated multiplicatively.
+
+    Input:
+        E- A double that represents the weighted average of the exposure values
+            for a given stressor-habitat combination.
+        C- Double representing the weighted average of the consequence values 
+            for a given stressor-habitat combination.
+
+    Returns R, the product of E and C.
+    '''
+
+    return E * C
+    
 
 def calculate_exposure_value(dictionary):
 
