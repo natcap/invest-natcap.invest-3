@@ -228,7 +228,9 @@ def burn_risk_values(ratings):
         #dictionary. This is a list of the exposure ratings.
         E = calculate_exposure_value(ratings[pair]['E'])
         
-        #The 'C' makes to a list of the consequence values.
+        #The 'C' makes to a list of the consequence values. Pair[1] and pair[2]
+        #refer to the items in the pair tuple, which is the key for the ratings
+        #structure.
         C = calculate_consequence_value(pair[1])
 
         R = calculate_risk_value(E, C)
@@ -290,7 +292,7 @@ def calculate_exposure_value(dictionary):
 
     return E
 
-def calculate_consequence_value(iterable):
+def calculate_consequence_value(dictionary):
     '''Structure of this equation will be the same as the exposure values.
     However, the dictionary passed in should contain criteria specific to the
     consequences of that particular H-S interraction.
