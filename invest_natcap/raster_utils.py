@@ -87,6 +87,12 @@ def calculate_raster_stats(ds):
                 #okay since it just means it's all nodata values.
                 pass
 
+        #Some people don't like it when their "0"s are 0.12e-16, so this 
+        #makes minimum values very very close to zero actually be zero.
+        eps = 1e-15
+        min_val, max_val = map(lambda x: 0.0 if abs(x) < eps else x, 
+                               [min_val, max_val])
+
         n_pixels = band.YSize * band.XSize
         mean = running_sum / float(n_pixels)
 
