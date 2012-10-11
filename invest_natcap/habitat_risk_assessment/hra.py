@@ -90,7 +90,8 @@ def execute(args):
     make_rasters(file_names, s_rast, args['grid_size'])
 
     #INSERT WAY OF BUFFERING STRESSORS HERE
-    
+    buffer_s_rasters(s_rast, file_names, buffer_dict)
+
     #Now, want to make all potential combinations of the rasters, and add it to
     #the structure containg data about the H-S combination.
     ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['ratings'])
@@ -98,6 +99,40 @@ def execute(args):
     hra_args['ratings'] = ratings_with_rast
 
     hra_core.execute(hra_args)
+
+def buffer_s_rasters(dir, buffer_dict):
+    '''If there is buffering desired, this will take each file and buffer the
+    given raster shape by the distance of the buffer from the landmass.
+
+    Input:
+        dir- The directory in which the current raster files reside, and into
+            which the re-rasterized files should be placed.
+        buffer_dict- Dictionary which maps the name of the stressor to the
+            desired buffer distance. This is separate from the ratings
+            dictionary to avoid having to pass it to core. The key will be a
+            string, and the value a double.
+
+    Output:
+        Re-buffered rasters of the same name as those contained within 'dir'
+            which have the size of the original rasterized shapefile plus a
+            buffer distance given in 'buffer_dict'
+
+    Returns nothing.
+    '''
+    #This will get the names of all rasters in the rasterized stressor
+    #dictionary. We will pull the names themselves in order to compare them
+    #against those in the buffer dictionary.
+    file_names = glob.glob(os.path.join(dir, '*.tif'))
+
+    for file in file_names:
+        
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        name = os.path.splitext(os.path.split(file)[1])[0]
+        buff = buffer_dict[name]
+        
 
 def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     '''Takes in a habitat and a stressor, and combines the two raster files,
