@@ -368,6 +368,9 @@ def valuation(args):
     """
 
     # fill in skeleton below
+    workspace = args['workspace_dir']
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(workspace, 'output')
 
 
     # Get constants from turbine_dict
@@ -436,13 +439,13 @@ def valuation(args):
         grid_land_points_dict = args['grid_dict']
         
         # Create individual dictionaries for land and grid points
-        land_dict = build_subset_dictionary(grid_land_points_dict, 'land')
-        grid_dict = build_subset_dictionary(grid_land_points_dict, 'grid')
+        land_dict = build_subset_dictionary(grid_land_points_dict, 'type', 'land')
+        grid_dict = build_subset_dictionary(grid_land_points_dict, 'type', 'grid')
         LOGGER.debug('Land Dict : %s', land_dict)
         # Create numpy arrays representing the points for land and
         # grid locations
-        land_array = np.array(build_subset_array(land_dict))
-        grid_array = np.array(build_subset_array(grid_dict))
+        land_array = np.array(build_list_points_from_dict(land_dict))
+        grid_array = np.array(build_list_points_from_dict(grid_dict))
         
         grid_radians = convert_degrees_to_radians(grid_array)
         grid_cartesian = lat_long_to_cartesian(grid_radians)
@@ -504,8 +507,26 @@ def valuation(args):
             dist_index = dist_index + 1
             id_index = id_index + 1
 
-        wind_energy_points = None
+        #wind_energy_points = None
 
+        out_nodata = -1.0
+        
+        o2l_uri = os.path.join(intermediate_dir, 'o2l.tif')
+        l2g_uri = os.path.join(intermediate_dir, 'l2g.tif')
+        
+        ocean_land_ds = raster_utils.create_raster_from_vector_extents(
+                30, 30, gdal.GDT_Float32,
+                out_nodata, o2l_uri, wind_energy_points)
+        
+        land_grid_ds = raster_utils.create_raster_from_vector_extents(
+                30, 30, gdal.GDT_Float32,
+                out_nodata, l2g_uri, wind_energy_points)
+
+        # Interpolate points onto raster for density values and harvested values:
+        raster_utils.vectorize_points(
+                wind_energy_points, 'O2L_Dist', ocean_land_ds)
+        raster_utils.vectorize_points(
+                wind_energy_points, 'G2L_Dist', land_grid_ds)
     except KeyError:
         pass
 
