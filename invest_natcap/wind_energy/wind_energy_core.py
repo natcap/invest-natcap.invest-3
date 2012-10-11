@@ -368,6 +368,9 @@ def valuation(args):
     """
 
     # fill in skeleton below
+    workspace = args['workspace_dir']
+    intermediate_dir = os.path.join(workspace, 'intermediate')
+    output_dir = os.path.join(workspace, 'output')
 
 
     # Get constants from turbine_dict
@@ -436,33 +439,38 @@ def valuation(args):
         grid_land_points_dict = args['grid_dict']
         
         # Create individual dictionaries for land and grid points
-        land_dict = build_subset_dictionary(grid_land_points_dict, 'land')
-        grid_dict = build_subset_dictionary(grid_land_points_dict, 'grid')
+        land_dict = build_subset_dictionary(grid_land_points_dict, 'type', 'land')
+        grid_dict = build_subset_dictionary(grid_land_points_dict, 'type', 'grid')
         LOGGER.debug('Land Dict : %s', land_dict)
         # Create numpy arrays representing the points for land and
         # grid locations
-        land_array = np.array(build_subset_array(land_dict))
-        grid_array = np.array(build_subset_array(grid_dict))
+        land_array = np.array(build_list_points_from_dict(land_dict))
+        grid_array = np.array(build_list_points_from_dict(grid_dict))
         
         grid_radians = convert_degrees_to_radians(grid_array)
         grid_cartesian = lat_long_to_cartesian(grid_radians)
 
         land_radians = convert_degrees_to_radians(land_array)
         land_cartesian = lat_long_to_cartesian(land_radians)
-        
+
+        # Compute the distance between grid and land cartesian points 
         grid_dist_index = distance_kd(grid_cartesian, land_cartesian)
-        dist_index = distance_kd(land_cartesian, ocean_cartesian) 
         
+        # Separate out the tuple
         grid_dist, closest_grid = grid_dist_index[0], grid_dist_index[1] 
         LOGGER.debug('Grid Distance : %s', grid_dist)
         LOGGER.debug('Grid Closest Index : %s', closest_grid)
         
+        # Add the distance from each landing point to its closest grid point as
+        # a property in the land_dict
         index_x = 0
         for item in grid_dist:
             land_dict[closest_grid[index_x]]['g2l'] = item
             index_x = index_x + 1
 
         LOGGER.debug('Land Dict : %s', land_dict)
+        
+        dist_index = distance_kd(land_cartesian, ocean_cartesian) 
         dist, closest_index = dist_index[0], dist_index[1] 
         LOGGER.debug('Distances : %s ', dist) 
     
@@ -499,32 +507,75 @@ def valuation(args):
             dist_index = dist_index + 1
             id_index = id_index + 1
 
-        wind_energy_points = None
+        #wind_energy_points = None
 
+        out_nodata = -1.0
+        
+        o2l_uri = os.path.join(intermediate_dir, 'o2l.tif')
+        l2g_uri = os.path.join(intermediate_dir, 'l2g.tif')
+        
+        ocean_land_ds = raster_utils.create_raster_from_vector_extents(
+                30, 30, gdal.GDT_Float32,
+                out_nodata, o2l_uri, wind_energy_points)
+        
+        land_grid_ds = raster_utils.create_raster_from_vector_extents(
+                30, 30, gdal.GDT_Float32,
+                out_nodata, l2g_uri, wind_energy_points)
+
+        # Interpolate points onto raster for density values and harvested values:
+        raster_utils.vectorize_points(
+                wind_energy_points, 'O2L_Dist', ocean_land_ds)
+        raster_utils.vectorize_points(
+                wind_energy_points, 'G2L_Dist', land_grid_ds)
     except KeyError:
         pass
 
-def build_subset_dictionary(main_dict, key_field):
+def build_subset_dictionary(main_dict, key_field, value_field):
+    """Take the main dictionary and build a subset dictionary depending on the
+        key of the inner dictionary and corresponding value 
+        
+        main_dict - a dictionary that has keys which point to dictionaries
+        key_field - the key of the inner dictionaries which are of interest
+        value_field - the value that corresponds to the key_field
+
+        returns - a dictionary"""
+
     subset_dict = {}
     index = 0
     for key, val in main_dict.iteritems():
-        if val['type'].lower() == key_field:
+        if val[key_field].lower() == value_field:
             subset_dict[index] = val
             index = index + 1
     return subset_dict
 
-def build_subset_array(main_dict):
-    subset_array = []
+def build_list_points_from_dict(main_dict):
+    """Builds a list of latitude and longitude points from a dictionary
+    
+        main_dict - a dictionary where keys point to a dictionary that have a
+            'long' and 'lati' key:value pair
+
+        returns - a list of points"""
+
+    points_list = []
     sorted_keys = main_dict.keys()
     sorted_keys.sort()
 
     for key in sorted_keys:
         val = main_dict[key]
-        subset_array.append([float(val['long']), float(val['lati']), 0])
+        points_list.append([float(val['long']), float(val['lati']), 0])
 
-    return subset_array
+    return points_list
 
 def distance_kd(array_one, array_two):
+    """Computes the closest distance between to arrays of points using a k-d
+        tree data structure.
+    
+        array_one - a numpy array of the points to build the k-d tree from
+        array_two - a numpy array of points
+
+        returns - a numpy array of distances and a numpy array of the closest
+            indices"""
+
     tree = spatial.KDTree(array_one)
     dist, closest_index = tree.query(array_two)
     LOGGER.debug('KD Distance: %s', dist)

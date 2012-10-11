@@ -87,6 +87,15 @@ def execute(args):
     #correct combination of open datasets
     make_ecosys_risk_raster(maps_dir, h_risk_list)
 
+    make_recov_potent_rast(output_dir, args['ratings'])
+
+def make_recov_potent_rast(dir, ratings):
+    '''For now, we will just explicitly call the given consequences from the
+    ratings structure, since there is no good way to do it more dynamically.
+
+    Run the whole thing under a try/catch, since we run the chance that the
+    correct consequences do not exist for the given habitat.'''
+
 def make_ecosys_risk_raster(dir, h_risks):
     '''This function will output a raster which combines all of the habitat
     risk rasters.
