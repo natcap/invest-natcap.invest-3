@@ -22,6 +22,9 @@ def execute(args):
             complete the rest of the model run. It will contain the following.
         args['workspace_dir']- Directory in which all data resides. Output
             and intermediate folders will be supfolders of this one.
+        args['risk_eq']-  A string representing the equation to be used for
+            risk calculation. We should check for possibilities, and send to a 
+            different function when deciding R dependent on this.
         args['ratings']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
@@ -71,7 +74,7 @@ def execute(args):
     #each pair already exists within the inter_dir file, but can be accessed
     #by using the ratings structure, since there is an open version of the
     #raster dataset there.
-    burn_risk_values(args['ratings'])
+    burn_risk_values(args['ratings'], args['risk_eq'])
 
     #this will take the new raster datasets that are still conatined within the
     #ratings structure, and combine them for all rasters whose first key is the
@@ -83,6 +86,15 @@ def execute(args):
     #to disk, and combine them that way, rather than trying to select the
     #correct combination of open datasets
     make_ecosys_risk_raster(maps_dir, h_risk_list)
+
+    make_recov_potent_rast(output_dir, args['ratings'])
+
+def make_recov_potent_rast(dir, ratings):
+    '''For now, we will just explicitly call the given consequences from the
+    ratings structure, since there is no good way to do it more dynamically.
+
+    Run the whole thing under a try/catch, since we run the chance that the
+    correct consequences do not exist for the given habitat.'''
 
 def make_ecosys_risk_raster(dir, h_risks):
     '''This function will output a raster which combines all of the habitat
@@ -193,7 +205,7 @@ def make_cum_risk_raster(dir, ratings):
         h_rasters.append(h_raster)
 
     return cum_rasters
-def burn_risk_values(ratings):
+def burn_risk_values(ratings, risk_eq):
     '''This will re-burn the intermediate files of the H-S intersection with
     the risk value for that given layer. This will be calculated based on the
     ratings withing the 'ratings' structure.
@@ -228,13 +240,34 @@ def burn_risk_values(ratings):
         #dictionary. This is a list of the exposure ratings.
         E = calculate_exposure_value(ratings[pair]['E'])
         
-        #The 'C' makes to a list of the consequence values.
+        #The 'C' makes to a list of the consequence values. Pair[1] and pair[2]
+        #refer to the items in the pair tuple, which is the key for the ratings
+        #structure.
         C = calculate_consequence_value(pair[1])
 
-        R = calculate_risk_value(E, C)
+        if (risk_eq == 'Euclidean'):
+            R = calc_risk_value_euc(E, C)
+        else if (risk_eq == 'Multiplicative'):
+            R = calc_risk_value_mult(E, C) 
 
         dataset = pair[2]
         gdal.RasterizeLayer(dataset, [1], burn_values=[R]) 
+
+def calc_risk_value_mult(E, C):
+    '''This is the risk value for a given cell based on the average exposure
+    and consequence values. It will be calculated multiplicatively.
+
+    Input:
+        E- A double that represents the weighted average of the exposure values
+            for a given stressor-habitat combination.
+        C- Double representing the weighted average of the consequence values 
+            for a given stressor-habitat combination.
+
+    Returns R, the product of E and C.
+    '''
+
+    return E * C
+    
 
 def calculate_exposure_value(dictionary):
 
@@ -290,7 +323,7 @@ def calculate_exposure_value(dictionary):
 
     return E
 
-def calculate_consequence_value(iterable):
+def calculate_consequence_value(dictionary):
     '''Structure of this equation will be the same as the exposure values.
     However, the dictionary passed in should contain criteria specific to the
     consequences of that particular H-S interraction.
@@ -334,7 +367,7 @@ def calculate_consequence_value(iterable):
 
 #For this, I am assuming that something is running the risk values as a loop,
 #and passing in the E and C values that it wants us to use.
-def calculate_risk_value(exposure, consequence):
+def calc_risk_value_euc(exposure, consequence):
     '''Takes an individual exposure value and consequence value (we assume they are
     from the same H-S space, and finds their euclidean distance from the origin of
     the exposure-consequence space.
