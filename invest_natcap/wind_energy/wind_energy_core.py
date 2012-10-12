@@ -389,10 +389,11 @@ def valuation(args):
     mega_watt = float(turbine_dict['Siemens']['mw'])
     avg_land_cable_dist = float(turbine_dict['Siemens']['avg_land_cable_dist'])
     mean_land_dist = float(turbine_dict['Siemens']['mean_land_dist'])
-    time = float(turbine_dict['Siemens']['time'])
+    time = int(turbine_dict['Siemens']['time'])
 
     number_turbines = args['number_of_machines']
-
+    mega_watt = mega_watt * number_turbines
+    dollar_per_kwh = args['dollar_per_kWh']
     # Construct as many parts of the NPV equation as possible without needing to
     # vectorize over harvested energy and distance
 
@@ -513,6 +514,7 @@ def valuation(args):
         
         o2l_uri = os.path.join(intermediate_dir, 'o2l.tif')
         l2g_uri = os.path.join(intermediate_dir, 'l2g.tif')
+        energy_uri = os.path.join(intermediate_dir, 'val_energy.tif')
         
         ocean_land_ds = raster_utils.create_raster_from_vector_extents(
                 30, 30, gdal.GDT_Float32,
@@ -522,11 +524,46 @@ def valuation(args):
                 30, 30, gdal.GDT_Float32,
                 out_nodata, l2g_uri, wind_energy_points)
 
+        energy_ds = raster_utils.create_raster_from_vector_extents(
+                30, 30, gdal.GDT_Float32,
+                out_nodata, energy_uri, wind_energy_points)
+        
         # Interpolate points onto raster for density values and harvested values:
         raster_utils.vectorize_points(
                 wind_energy_points, 'O2L_Dist', ocean_land_ds)
         raster_utils.vectorize_points(
                 wind_energy_points, 'G2L_Dist', land_grid_ds)
+        raster_utils.vectorize_points(
+                wind_energy_points, 'HarvEnergy', energy_ds)
+
+        def npv_op(dist_ocean, dist_land, energy):
+            total_cable_dist = dist_ocean + dist_land
+            cable_cost = 0
+            if total_cable_dist <= 60:
+                cable_cost = (.81 * mega_watt) + (1.36 * total_cable_dist)
+            else:
+                cable_cost = (1.09 * mega_watt) + (.89 * total_cable_dist)
+
+            cap = cap_less_dist + cable_cost
+
+            capex = cap / (1.0 - install_cost - misc_capex_cost) 
+    
+            npv = 0
+
+            for t in range(1, time + 1):
+                rev = energy * dollar_per_kwh 
+                comp_one = (rev - op_maint_cost * capex) / disc_const**t
+                comp_two = decom * capex / disc_time
+                npv = npv + (comp_one - comp_two - capex)
+   
+            return npv
+
+        npv_uri = os.path.join(intermediate_dir, 'npv.tif')
+        
+        _ = raster_utils.vectorize_rasters(
+                [ocean_land_ds, land_grid_ds, energy_ds], npv_op, 
+                raster_out_uri = npv_uri, nodata = -1.0)
+
     except KeyError:
         pass
 
