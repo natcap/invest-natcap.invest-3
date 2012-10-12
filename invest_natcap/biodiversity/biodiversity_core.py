@@ -161,11 +161,30 @@ def biophysical(args):
             # use a gaussian_filter to compute the effect that a threat has
             # over a distance, on a given pixel. 
             LOGGER.debug('Starting Gaussian Blur')
-            threat_matrix = threat_band.ReadAsArray()
+            
+            # To do a guassian_filter we need to get the entire raster read
+            # into a numpy array and that proves to cause memoryerrors. Thus we
+            # will read the raster in once, and write it to disk and then use
+            # memory mapping to access and work with it
+            numpy_out_uri = os.path.join(intermediate_dir, 'threat_dump.dat')
+            threat_matrix = threat_band.ReadAsArray().astype(np.float32)
+            threat_dtype = threat_matrix.dtype
+            threat_shape = threat_matrix.shape
+            threat_matrix.tofile(numpy_out_uri)
+            
+            # This will clean up all the memory from this numpy array now that
+            # we have it on disk
+            del threat_matrix
+
+            # Load the matrix / data from disk
+            threat_matrix = np.memmap(
+                    numpy_out_uri, threat_dtype, 'r+', shape=threat_shape)
+                    
             filtered_out_matrix = clip_and_op(
                 threat_matrix, sigma, ndimage.gaussian_filter, 
                 matrix_type=float, in_matrix_nodata=threat_nodata,
                 out_matrix_nodata=out_nodata)
+            
             threat_matrix = None
             
             filtered_band = filtered_raster.GetRasterBand(1)
@@ -444,7 +463,7 @@ def raster_pixel_count(dataset):
 
 
 def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, 
-                out_matrix_nodata=-1, kwargs={}):
+                out_matrix_nodata=-1):
     """Apply an operatoin to a matrix after the matrix is adjusted for nodata
         values. After the operation is complete, the matrix will have pixels
         culled based on the input matrix's original values that were less than 0
@@ -457,8 +476,6 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
         matrix_type - a python type, default is float
         in_matrix_nodata - a python int or float
         out_matrix_nodata - a python int or float
-        kwargs={} - a python dictionary of keyword arguments to be passed in to
-            op when it is called.
 
         returns a numpy matrix."""
     LOGGER.debug('Entering clip_op')
@@ -469,8 +486,11 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
     # Convert nodata values to 0
     np.putmask(matrix, matrix == in_matrix_nodata, 0)
 
+    # Create the numpy array to hold the smoothed output by the gaussian_filter
+    filtered_matrix = np.zeros(in_matrix.shape)
+    
     # Apply the operation specified by the user
-    filtered_matrix = op(matrix, arg1, **kwargs)
+    op(matrix, arg1, output = filtered_matrix)
 
     # Restore nodata values to their proper places.
     np.putmask(filtered_matrix, in_matrix==in_matrix_nodata, out_matrix_nodata)
@@ -542,12 +562,12 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
     # in the vectorized operation of casting
     int_attr_dict = {}
     for key in attr_dict:
-        int_attr_dict[int(key)] = attr_dict[key][field]
+        int_attr_dict[int(key)] = float(attr_dict[key][field])
     
     #Add the nodata value as a field to the dictionary so that the vectorized
     #operation can just look it up instead of having an if,else statement
     int_attr_dict[int(key_raster_nodata)] = float(out_nodata)
-
+    
     def vop(key):
         """Operation passed to numpy function vectorize that uses 'key' as the 
             key to the local dictionary 'int_attr_dict'. Returns the value in 
