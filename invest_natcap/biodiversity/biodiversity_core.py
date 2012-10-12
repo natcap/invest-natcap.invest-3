@@ -481,10 +481,10 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
     LOGGER.debug('Entering clip_op')
 
     # Making a copy of the in_matrix so as to avoid side effects from putmask
-    matrix = in_matrix.astype(matrix_type)
+    #matrix = in_matrix.astype(matrix_type)
 
     # Convert nodata values to 0
-    np.putmask(in_matrix, in_matrix == in_matrix_nodata, 0)
+    #np.putmask(in_matrix, in_matrix == in_matrix_nodata, 0)
 
     # Create the numpy array to hold the smoothed output by the gaussian_filter
     filtered_matrix = np.zeros(in_matrix.shape)
@@ -493,7 +493,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
     op(in_matrix, arg1, output = filtered_matrix)
 
     # Restore nodata values to their proper places.
-    np.putmask(filtered_matrix, matrix==in_matrix_nodata, out_matrix_nodata)
+    #np.putmask(filtered_matrix, matrix==in_matrix_nodata, out_matrix_nodata)
 
     LOGGER.debug('Leaving clip_op')
     return filtered_matrix
