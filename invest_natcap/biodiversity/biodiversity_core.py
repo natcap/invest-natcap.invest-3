@@ -182,8 +182,8 @@ def biophysical(args):
                     
             filtered_out_matrix = clip_and_op(
                 threat_matrix, sigma, ndimage.gaussian_filter, 
-                matrix_type=float, in_matrix_nodata=threat_nodata,
-                out_matrix_nodata=out_nodata)
+                intermediate_dir, matrix_type=float, 
+                in_matrix_nodata=threat_nodata, out_matrix_nodata=out_nodata)
             
             threat_matrix = None
             
@@ -462,7 +462,7 @@ def raster_pixel_count(dataset):
     return counts
 
 
-def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1, 
+def clip_and_op(in_matrix, arg1, op, int_dir, matrix_type=float, in_matrix_nodata=-1, 
                 out_matrix_nodata=-1):
     """Apply an operatoin to a matrix after the matrix is adjusted for nodata
         values. After the operation is complete, the matrix will have pixels
@@ -473,6 +473,7 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
         arg1 - an argument of whatever type is necessary for the second argument
             of op
         op - a python callable object with two arguments: in_matrix and arg1
+        int_dir - a string to an intermediate directory to write numpy data to
         matrix_type - a python type, default is float
         in_matrix_nodata - a python int or float
         out_matrix_nodata - a python int or float
@@ -481,19 +482,38 @@ def clip_and_op(in_matrix, arg1, op, matrix_type=float, in_matrix_nodata=-1,
     LOGGER.debug('Entering clip_op')
 
     # Making a copy of the in_matrix so as to avoid side effects from putmask
-    #matrix = in_matrix.astype(matrix_type)
+    numpy_out_uri = os.path.join(int_dir, 'clip_and_op_dump.dat')
+    matrix = in_matrix.astype(matrix_type)
+    matrix_dtype = matrix.dtype
+    matrix_shape = matrix.shape
+    matrix.tofile(numpy_out_uri)
+    
+    del matrix
+    
+    LOGGER.debug('Clip_and_Op : loading copy with memmap')
+    
+    matrix = np.memmap(
+            numpy_out_uri, matrix_dtype, 'r+', shape=matrix_shape)
 
+    LOGGER.debug('Clip_and_Op : About to putmask')
+    
     # Convert nodata values to 0
-    #np.putmask(in_matrix, in_matrix == in_matrix_nodata, 0)
+    np.putmask(matrix, in_matrix == in_matrix_nodata, 0)
+    
+    LOGGER.debug('Clip_and_Op : Build new array for output values, np.zeros')
 
     # Create the numpy array to hold the smoothed output by the gaussian_filter
     filtered_matrix = np.zeros(in_matrix.shape)
+
+    LOGGER.debug('Clip_and_Op : Do gaussian op')
     
     # Apply the operation specified by the user
-    op(in_matrix, arg1, output = filtered_matrix)
+    op(matrix, arg1, output = filtered_matrix)
 
+    LOGGER.debug('Clip_and_Op : Putmask : put nodata values back')
+    
     # Restore nodata values to their proper places.
-    #np.putmask(filtered_matrix, matrix==in_matrix_nodata, out_matrix_nodata)
+    np.putmask(filtered_matrix, in_matrix==in_matrix_nodata, out_matrix_nodata)
 
     LOGGER.debug('Leaving clip_op')
     return filtered_matrix
