@@ -1453,7 +1453,16 @@ def get_rat_as_dictionary(dataset):
 
 def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
     """A memory efficient gaussian blur function that operates on 
-       the dataset level and creates a new dataset that's blurred."""
+       the dataset level and creates a new dataset that's blurred.
+       It will treat any nodata value in dataset as 0, and re-nodata
+       that area after the filter.
+
+       dataset - a gdal dataset
+       sigma - the sigma value of a gaussian filter
+       out_uri - the uri output of the filtered dataset
+       out_nodata - the nodata value of dataset
+
+       returns nothing"""
 
     LOGGER.info('setting up fiels in gaussian_blur_dataset')
     temp_dir = tempfile.mkdtemp()
@@ -1492,7 +1501,7 @@ def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
 
     LOGGER.info('gaussian filter')
     scipy.ndimage.filters.gaussian_filter(
-        source_array, sigma = 2.0, output = dest_array)
+        source_array, sigma = sigma, output = dest_array)
 
     LOGGER.info('mask the result back to nodata where originally nodata')
     dest_array[mask_array] = out_nodata
