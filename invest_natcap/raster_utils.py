@@ -48,86 +48,8 @@ def calculate_raster_stats(ds):
         returns nothing"""
 
     for band_number in range(ds.RasterCount):
-        band = ds.GetRasterBand(band_number+1)
-        nodata = band.GetNoDataValue()
-        min_val = None
-        max_val = None
-        running_sum = 0.0
-        running_sum_square = 0.0
-        valid_elements = 0
-
-        for row in range(band.YSize):
-            #Read row number 'row'
-            row_array = band.ReadAsArray(0,row,band.XSize,1)
-            masked_row = np.ma.array(row_array, mask = row_array == nodata)
-            
-            try:
-                #Here we're using the x[~x.mask] notation to cause
-                #an exception to be thrown if the entire array is masked
-                min_row = np.min(masked_row[~masked_row.mask])
-                max_row = np.max(masked_row[~masked_row.mask])
-
-                #This handles the initial case where min and max aren't
-                #yet set.  And it's hard to initialize because the first
-                #value in the dataset might be nodata.
-                if min_val == None and max_val == None:
-                    min_val = min_row
-                    max_val = max_row
-
-                #By this point min and max_val are valid
-                min_val = min(min_val, np.min(min_row))
-                max_val = max(max_val, np.max(max_row))
-
-                #Sum and square only valid elements
-                running_sum += np.sum(masked_row[~masked_row.mask])
-
-                #Need to use the masked_row count to count the valid
-                #elements for an accurate measure of stdev and mean
-                valid_elements += masked_row.count()
-
-            except ValueError:
-                #If we get here it means we encountered a fully masked array
-                #okay since it just means it's all nodata values.
-                pass
-
-        #Some people don't like it when their "0"s are 0.12e-16, so this 
-        #makes minimum values very very close to zero actually be zero.
-        eps = 1e-15
-        min_val, max_val = map(lambda x: 0.0 if abs(x) < eps else x, 
-                               [min_val, max_val])
-
-        n_pixels = band.YSize * band.XSize
-        mean = running_sum / float(n_pixels)
-
-        #Now do a pass for stdev
-        std_dev_sum = 0.0
-        for row in range(band.YSize):
-            #Read row number 'row'
-            row_array = band.ReadAsArray(0,row,band.XSize,1)
-            masked_row = np.ma.array(row_array, mask = row_array == nodata)
-
-            try:
-                std_dev_sum += np.sum((masked_row[~masked_row.mask]-mean)**2)
-            except ValueError:
-                #If we get here it means we encountered a fully masked array
-                #okay since it just means it's all nodata values.
-                pass
-
-        std_dev = np.sqrt(std_dev_sum/float(n_pixels-1))
-        LOGGER.debug("mean %s, std_dev %s, n_pixels %s, running_sum %s, band.XSize %s, band.YSize %s" %
-                     (mean, std_dev, n_pixels, running_sum, band.XSize, band.YSize))
-        
-        #Write stats back to the band.  The function SetStatistics needs 
-        #all the arguments to be floats and crashes if they are ints thats
-        #what this map float deal is.
-        try:
-            band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
-        except TypeError:
-            #This can occur if the band passed in is filled with nodata values
-            #in that case min_val, max_val, ...etc are None, and thus can't
-            #cast to floats.  This is okay, just don't calculate stats
-            LOGGER.warn("No non-nodata values were found so can't set " + \
-                            "statistics")
+        band = ds.GetRasterBand(band_number + 1)
+        band.ComputeStatistics(0)
 
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
