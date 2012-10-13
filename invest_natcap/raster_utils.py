@@ -1457,6 +1457,7 @@ def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
     LOGGER.info('setting up fiels in gaussian_blur_dataset')
     temp_dir = tempfile.mkdtemp()
     source_filename = os.path.join(temp_dir, 'source.dat')
+    mask_filename = os.path.join(temp_dir, 'mask.dat')
     dest_filename = os.path.join(temp_dir, 'dest.dat')
 
     source_band, source_nodata = extract_band_and_nodata(dataset)
@@ -1465,14 +1466,14 @@ def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
         dataset, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
     out_band, out_nodata = extract_band_and_nodata(out_dataset)
 
-
     shape = (source_band.YSize, source_band.XSize)
     LOGGER.info('shape %s' % str(shape))
 
     LOGGER.info('make the source memmap at %s' % source_filename)
     source_array = np.memmap(
         source_filename, dtype='float32', mode='w+', shape = shape)
-
+    mask_array = np.memmap(
+        mask_filename, dtype='bool', mode='w+', shape = shape)
     dest_array = np.memmap(
         dest_filename, dtype='float32', mode='w+', shape = shape)
 
@@ -1480,7 +1481,9 @@ def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
     for row_index in xrange(source_band.YSize):
         row_array = source_band.ReadAsArray(
             0, row_index, source_band.XSize, 1)
-        row_array[row_array == source_nodata] = 0.0
+        mask_row = row_array == source_nodata
+        mask_array[row_index,:] = mask_row
+        row_array[mask_row] = 0.0
         source_array[row_index,:] = row_array
 
     LOGGER.info('source array: %s' % source_array)
