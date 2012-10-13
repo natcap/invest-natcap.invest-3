@@ -6,6 +6,8 @@ import random
 import string
 import os
 import time
+import tempfile
+import shutil
 
 from osgeo import gdal
 from osgeo import osr
@@ -15,6 +17,7 @@ import scipy.interpolate
 import scipy.sparse
 import scipy.signal
 from scipy.sparse.linalg import spsolve
+import scipy.ndimage
 import pyamg
 
 
@@ -1528,4 +1531,40 @@ def get_rat_as_dictionary(dataset):
 def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
     """A memory efficient gaussian blur function that operates on 
        the dataset level and creates a new dataset that's blurred."""
-    pass
+
+    LOGGER.info('setting up fiels in gaussian_blur_dataset')
+    temp_dir = tempfile.mkdtemp()
+    source_filename = os.path.join(temp_dir, 'source.dat')
+    dest_filename = os.path.join(temp_dir, 'dest.dat')
+
+    source_band, source_nodata = extract_band_and_nodata(dataset)
+
+    out_dataset = new_raster_from_base(
+        dataset, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+    out_band, out_nodata = extract_band_and_nodata(out_dataset)
+
+
+    shape = (source_band.YSize, source_band.XSize)
+    LOGGER.info('shape %s' % str(shape))
+
+    LOGGER.info('make the source memmap at %s' % source_filename)
+    source_array = np.memmap(
+        source_filename, dtype='float32', mode='w+', shape = shape)
+    dest_array = np.memmap(
+        dest_filename, dtype='float32', mode='w+', shape = shape)
+
+    LOGGER.info('load dataset into source array')
+    source_band.ReadAsArray(buf_obj = source_array)
+    np.putmask(source_array, source_array == source_nodata, 0.0)
+
+    print source_array
+
+    LOGGER.info('gaussian filter')
+    scipy.ndimage.filters.gaussian_filter(
+        source_array, sigma = 10.0, output = dest_array)
+
+    LOGGER.info('write to gdal object')
+    out_band.WriteArray(dest_array)
+
+    LOGGER.info('deleting %s' % temp_dir)
+    shutil.rmtree(temp_dir)
