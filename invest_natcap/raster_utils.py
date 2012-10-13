@@ -48,6 +48,7 @@ def calculate_raster_stats(ds):
         returns nothing"""
 
     for band_number in range(ds.RasterCount):
+        LOGGER.info('calculate raster stats for band %s' % (band_number+1))
         band = ds.GetRasterBand(band_number + 1)
         band.ComputeStatistics(0)
 
@@ -1479,23 +1480,26 @@ def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
 
     LOGGER.info('load dataset into source array')
     for row_index in xrange(source_band.YSize):
-        row_array = source_band.ReadAsArray(
-            0, row_index, source_band.XSize, 1)
+        #Load a row so we can mask
+        row_array = source_band.ReadAsArray(0, row_index, source_band.XSize, 1)
+        #Just the mask for this row
         mask_row = row_array == source_nodata
-        mask_array[row_index,:] = mask_row
         row_array[mask_row] = 0.0
         source_array[row_index,:] = row_array
 
-    LOGGER.info('source array: %s' % source_array)
+        #remember the mask in the memory mapped array
+        mask_array[row_index,:] = mask_row
 
     LOGGER.info('gaussian filter')
     scipy.ndimage.filters.gaussian_filter(
         source_array, sigma = 2.0, output = dest_array)
 
+    LOGGER.info('mask the result back to nodata where originally nodata')
+    dest_array[mask_array] = out_nodata
+
     LOGGER.info('write to gdal object')
     out_band.WriteArray(dest_array)
 
-    LOGGER.info('calculate raster stats')
     calculate_raster_stats(out_dataset)
 
     LOGGER.info('deleting %s' % temp_dir)
