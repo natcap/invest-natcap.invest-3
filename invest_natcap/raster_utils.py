@@ -1550,21 +1550,28 @@ def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
     LOGGER.info('make the source memmap at %s' % source_filename)
     source_array = np.memmap(
         source_filename, dtype='float32', mode='w+', shape = shape)
+
     dest_array = np.memmap(
         dest_filename, dtype='float32', mode='w+', shape = shape)
 
     LOGGER.info('load dataset into source array')
-    source_band.ReadAsArray(buf_obj = source_array)
-    np.putmask(source_array, source_array == source_nodata, 0.0)
+    for row_index in xrange(source_band.YSize):
+        row_array = source_band.ReadAsArray(
+            0, row_index, source_band.XSize, 1)
+        row_array[row_array == source_nodata] = 0.0
+        source_array[row_index,:] = row_array
 
-    print source_array
+    LOGGER.info('source array: %s' % source_array)
 
     LOGGER.info('gaussian filter')
     scipy.ndimage.filters.gaussian_filter(
-        source_array, sigma = 10.0, output = dest_array)
+        source_array, sigma = 2.0, output = dest_array)
 
     LOGGER.info('write to gdal object')
     out_band.WriteArray(dest_array)
+
+    LOGGER.info('calculate raster stats')
+    calculate_raster_stats(out_dataset)
 
     LOGGER.info('deleting %s' % temp_dir)
     shutil.rmtree(temp_dir)
