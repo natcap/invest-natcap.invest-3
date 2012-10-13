@@ -1524,3 +1524,8 @@ def get_rat_as_dictionary(dataset):
             rat_dictionary[col_name].append(value)
 
     return rat_dictionary
+
+def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
+    """A memory efficient gaussian blur function that operates on 
+       the dataset level and creates a new dataset that's blurred."""
+    pass
