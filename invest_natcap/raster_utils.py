@@ -6,6 +6,8 @@ import random
 import string
 import os
 import time
+import tempfile
+import shutil
 
 from osgeo import gdal
 from osgeo import osr
@@ -15,6 +17,7 @@ import scipy.interpolate
 import scipy.sparse
 import scipy.signal
 from scipy.sparse.linalg import spsolve
+import scipy.ndimage
 import pyamg
 
 
@@ -45,80 +48,9 @@ def calculate_raster_stats(ds):
         returns nothing"""
 
     for band_number in range(ds.RasterCount):
-        band = ds.GetRasterBand(band_number+1)
-        nodata = band.GetNoDataValue()
-        min_val = None
-        max_val = None
-        running_sum = 0.0
-        running_sum_square = 0.0
-        valid_elements = 0
-
-        for row in range(band.YSize):
-            #Read row number 'row'
-            row_array = band.ReadAsArray(0,row,band.XSize,1)
-            masked_row = np.ma.array(row_array, mask = row_array == nodata)
-            
-            try:
-                #Here we're using the x[~x.mask] notation to cause
-                #an exception to be thrown if the entire array is masked
-                min_row = np.min(masked_row[~masked_row.mask])
-                max_row = np.max(masked_row[~masked_row.mask])
-
-                #This handles the initial case where min and max aren't
-                #yet set.  And it's hard to initialize because the first
-                #value in the dataset might be nodata.
-                if min_val == None and max_val == None:
-                    min_val = min_row
-                    max_val = max_row
-
-                #By this point min and max_val are valid
-                min_val = min(min_val, np.min(min_row))
-                max_val = max(max_val, np.max(max_row))
-
-                #Sum and square only valid elements
-                running_sum += np.sum(masked_row[~masked_row.mask])
-
-                #Need to use the masked_row count to count the valid
-                #elements for an accurate measure of stdev and mean
-                valid_elements += masked_row.count()
-
-            except ValueError:
-                #If we get here it means we encountered a fully masked array
-                #okay since it just means it's all nodata values.
-                pass
-
-        n_pixels = band.YSize * band.XSize
-        mean = running_sum / float(n_pixels)
-
-        #Now do a pass for stdev
-        std_dev_sum = 0.0
-        for row in range(band.YSize):
-            #Read row number 'row'
-            row_array = band.ReadAsArray(0,row,band.XSize,1)
-            masked_row = np.ma.array(row_array, mask = row_array == nodata)
-
-            try:
-                std_dev_sum += np.sum((masked_row[~masked_row.mask]-mean)**2)
-            except ValueError:
-                #If we get here it means we encountered a fully masked array
-                #okay since it just means it's all nodata values.
-                pass
-
-        std_dev = np.sqrt(std_dev_sum/float(n_pixels-1))
-        LOGGER.debug("mean %s, std_dev %s, n_pixels %s, running_sum %s, band.XSize %s, band.YSize %s" %
-                     (mean, std_dev, n_pixels, running_sum, band.XSize, band.YSize))
-        
-        #Write stats back to the band.  The function SetStatistics needs 
-        #all the arguments to be floats and crashes if they are ints thats
-        #what this map float deal is.
-        try:
-            band.SetStatistics(*map(float,[min_val, max_val, mean, std_dev]))
-        except TypeError:
-            #This can occur if the band passed in is filled with nodata values
-            #in that case min_val, max_val, ...etc are None, and thus can't
-            #cast to floats.  This is okay, just don't calculate stats
-            LOGGER.warn("No non-nodata values were found so can't set " + \
-                            "statistics")
+        LOGGER.info('calculate raster stats for band %s' % (band_number+1))
+        band = ds.GetRasterBand(band_number + 1)
+        band.ComputeStatistics(0)
 
 def pixel_area(dataset):
     """Calculates the pixel area of the given dataset in m^2
@@ -1518,3 +1450,66 @@ def get_rat_as_dictionary(dataset):
             rat_dictionary[col_name].append(value)
 
     return rat_dictionary
+
+def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
+    """A memory efficient gaussian blur function that operates on 
+       the dataset level and creates a new dataset that's blurred.
+       It will treat any nodata value in dataset as 0, and re-nodata
+       that area after the filter.
+
+       dataset - a gdal dataset
+       sigma - the sigma value of a gaussian filter
+       out_uri - the uri output of the filtered dataset
+       out_nodata - the nodata value of dataset
+
+       returns nothing"""
+
+    LOGGER.info('setting up fiels in gaussian_blur_dataset')
+    temp_dir = tempfile.mkdtemp()
+    source_filename = os.path.join(temp_dir, 'source.dat')
+    mask_filename = os.path.join(temp_dir, 'mask.dat')
+    dest_filename = os.path.join(temp_dir, 'dest.dat')
+
+    source_band, source_nodata = extract_band_and_nodata(dataset)
+
+    out_dataset = new_raster_from_base(
+        dataset, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+    out_band, out_nodata = extract_band_and_nodata(out_dataset)
+
+    shape = (source_band.YSize, source_band.XSize)
+    LOGGER.info('shape %s' % str(shape))
+
+    LOGGER.info('make the source memmap at %s' % source_filename)
+    source_array = np.memmap(
+        source_filename, dtype='float32', mode='w+', shape = shape)
+    mask_array = np.memmap(
+        mask_filename, dtype='bool', mode='w+', shape = shape)
+    dest_array = np.memmap(
+        dest_filename, dtype='float32', mode='w+', shape = shape)
+
+    LOGGER.info('load dataset into source array')
+    for row_index in xrange(source_band.YSize):
+        #Load a row so we can mask
+        row_array = source_band.ReadAsArray(0, row_index, source_band.XSize, 1)
+        #Just the mask for this row
+        mask_row = row_array == source_nodata
+        row_array[mask_row] = 0.0
+        source_array[row_index,:] = row_array
+
+        #remember the mask in the memory mapped array
+        mask_array[row_index,:] = mask_row
+
+    LOGGER.info('gaussian filter')
+    scipy.ndimage.filters.gaussian_filter(
+        source_array, sigma = sigma, output = dest_array)
+
+    LOGGER.info('mask the result back to nodata where originally nodata')
+    dest_array[mask_array] = out_nodata
+
+    LOGGER.info('write to gdal object')
+    out_band.WriteArray(dest_array)
+
+    calculate_raster_stats(out_dataset)
+
+    LOGGER.info('deleting %s' % temp_dir)
+    shutil.rmtree(temp_dir)
