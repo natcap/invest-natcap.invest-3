@@ -1513,10 +1513,12 @@ def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
     calculate_raster_stats(out_dataset)
 
     LOGGER.info('deleting %s' % temp_dir)
+    dest_array = None
+    mask_array = None
+    source_array = None
+    out_band = None
     shutil.rmtree(temp_dir)
 
-    dest_array = None
-    out_band = None
 
     out_dataset.FlushCache()
     return out_dataset
