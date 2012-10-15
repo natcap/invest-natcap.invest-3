@@ -129,16 +129,6 @@ def biophysical(args):
                 exit_landcover = True
                 break 
 
-            threat_band = threat_raster.GetRasterBand(1)
-            threat_nodata = float(threat_band.GetNoDataValue())
-            filtered_threat_uri = \
-               os.path.join(intermediate_dir, threat + '_filtered' + suffix)
-            
-            # create a new raster to output distance adjustments to
-            #filtered_raster = \
-            #    raster_utils.new_raster_from_base(threat_raster, \
-            #        filtered_threat_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
-
             # get the mean cell size, using absolute value because we could
             # get a negative for height or width
             mean_cell_size = \
@@ -157,44 +147,14 @@ def biophysical(args):
             sigma = \
                 math.sqrt(dr_pixel / (2.99573 * 2.0))
             LOGGER.debug('Sigma for gaussian : %s', sigma)
-
-            # use a gaussian_filter to compute the effect that a threat has
-            # over a distance, on a given pixel. 
-            LOGGER.debug('Starting Gaussian Blur')
+           
+            filtered_threat_uri = \
+               os.path.join(intermediate_dir, threat + '_filtered' + suffix)
             
-            # To do a guassian_filter we need to get the entire raster read
-            # into a numpy array and that proves to cause memoryerrors. Thus we
-            # will read the raster in once, and write it to disk and then use
-            # memory mapping to access and work with it
-            #numpy_out_uri = os.path.join(intermediate_dir, 'threat_dump.dat')
-            #threat_matrix = threat_band.ReadAsArray().astype(np.float32)
-            #threat_dtype = threat_matrix.dtype
-            #threat_shape = threat_matrix.shape
-            #threat_matrix.tofile(numpy_out_uri)
-            
-            # This will clean up all the memory from this numpy array now that
-            # we have it on disk
-            #del threat_matrix
-
-            # Load the matrix / data from disk
-            #threat_matrix = np.memmap(
-            #        numpy_out_uri, threat_dtype, 'r+', shape=threat_shape)
-                    
-            #filtered_out_matrix = clip_and_op(
-            #    threat_matrix, sigma, ndimage.gaussian_filter, 
-            #    intermediate_dir, matrix_type=float, 
-            #    in_matrix_nodata=threat_nodata, out_matrix_nodata=out_nodata)
-            
-            #threat_matrix = None
-            ##############
+            # blur the threat raster based on the effect of the threat over
+            # distance
             filtered_raster = raster_utils.gaussian_filter_dataset(
                     threat_raster, sigma, filtered_threat_uri, out_nodata)
-            #############
-            #filtered_band = filtered_raster.GetRasterBand(1)
-            #filtered_band.WriteArray(filtered_out_matrix)
-            #filtered_out_matrix = None
-            #filtered_raster.FlushCache()
-            LOGGER.debug('Finished Gaussian Blur')
 
             # create sensitivity raster based on threat
             sens_uri = \
@@ -463,63 +423,6 @@ def raster_pixel_count(dataset):
 
     LOGGER.debug('Leaving raster_pixel_count')
     return counts
-
-
-def clip_and_op(in_matrix, arg1, op, int_dir, matrix_type=float, in_matrix_nodata=-1, 
-                out_matrix_nodata=-1):
-    """Apply an operatoin to a matrix after the matrix is adjusted for nodata
-        values. After the operation is complete, the matrix will have pixels
-        culled based on the input matrix's original values that were less than 0
-        (which assumes a nodata value of below zero).
-
-        in_matrix - a numpy matrix for use as the first argument to op
-        arg1 - an argument of whatever type is necessary for the second argument
-            of op
-        op - a python callable object with two arguments: in_matrix and arg1
-        int_dir - a string to an intermediate directory to write numpy data to
-        matrix_type - a python type, default is float
-        in_matrix_nodata - a python int or float
-        out_matrix_nodata - a python int or float
-
-        returns a numpy matrix."""
-    LOGGER.debug('Entering clip_op')
-
-    # Making a copy of the in_matrix so as to avoid side effects from putmask
-    numpy_out_uri = os.path.join(int_dir, 'clip_and_op_dump.dat')
-    matrix = in_matrix.astype(matrix_type)
-    matrix_dtype = matrix.dtype
-    matrix_shape = matrix.shape
-    matrix.tofile(numpy_out_uri)
-    
-    del matrix
-    
-    LOGGER.debug('Clip_and_Op : loading copy with memmap')
-    
-    matrix = np.memmap(
-            numpy_out_uri, matrix_dtype, 'r+', shape=matrix_shape)
-
-    LOGGER.debug('Clip_and_Op : About to putmask')
-    
-    # Convert nodata values to 0
-    np.putmask(matrix, in_matrix == in_matrix_nodata, 0)
-    
-    LOGGER.debug('Clip_and_Op : Build new array for output values, np.zeros')
-
-    # Create the numpy array to hold the smoothed output by the gaussian_filter
-    filtered_matrix = np.zeros(in_matrix.shape)
-
-    LOGGER.debug('Clip_and_Op : Do gaussian op')
-    
-    # Apply the operation specified by the user
-    op(matrix, arg1, output = filtered_matrix)
-
-    LOGGER.debug('Clip_and_Op : Putmask : put nodata values back')
-    
-    # Restore nodata values to their proper places.
-    np.putmask(filtered_matrix, in_matrix==in_matrix_nodata, out_matrix_nodata)
-
-    LOGGER.debug('Leaving clip_op')
-    return filtered_matrix
 
 def make_raster_from_shape(base_raster, shape, attr):
     """Burn an attribute value from a polygon shapefile onto an
