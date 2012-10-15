@@ -1516,4 +1516,6 @@ def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
 
     dest_array = None
     out_band = None
+
+    out_dataset.FlushCache()
     return out_dataset
