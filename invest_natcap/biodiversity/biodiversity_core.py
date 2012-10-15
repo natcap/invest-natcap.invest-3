@@ -135,9 +135,9 @@ def biophysical(args):
                os.path.join(intermediate_dir, threat + '_filtered' + suffix)
             
             # create a new raster to output distance adjustments to
-            filtered_raster = \
-                raster_utils.new_raster_from_base(threat_raster, \
-                    filtered_threat_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+            #filtered_raster = \
+            #    raster_utils.new_raster_from_base(threat_raster, \
+            #        filtered_threat_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
 
             # get the mean cell size, using absolute value because we could
             # get a negative for height or width
@@ -166,31 +166,34 @@ def biophysical(args):
             # into a numpy array and that proves to cause memoryerrors. Thus we
             # will read the raster in once, and write it to disk and then use
             # memory mapping to access and work with it
-            numpy_out_uri = os.path.join(intermediate_dir, 'threat_dump.dat')
-            threat_matrix = threat_band.ReadAsArray().astype(np.float32)
-            threat_dtype = threat_matrix.dtype
-            threat_shape = threat_matrix.shape
-            threat_matrix.tofile(numpy_out_uri)
+            #numpy_out_uri = os.path.join(intermediate_dir, 'threat_dump.dat')
+            #threat_matrix = threat_band.ReadAsArray().astype(np.float32)
+            #threat_dtype = threat_matrix.dtype
+            #threat_shape = threat_matrix.shape
+            #threat_matrix.tofile(numpy_out_uri)
             
             # This will clean up all the memory from this numpy array now that
             # we have it on disk
-            del threat_matrix
+            #del threat_matrix
 
             # Load the matrix / data from disk
-            threat_matrix = np.memmap(
-                    numpy_out_uri, threat_dtype, 'r+', shape=threat_shape)
+            #threat_matrix = np.memmap(
+            #        numpy_out_uri, threat_dtype, 'r+', shape=threat_shape)
                     
-            filtered_out_matrix = clip_and_op(
-                threat_matrix, sigma, ndimage.gaussian_filter, 
-                intermediate_dir, matrix_type=float, 
-                in_matrix_nodata=threat_nodata, out_matrix_nodata=out_nodata)
+            #filtered_out_matrix = clip_and_op(
+            #    threat_matrix, sigma, ndimage.gaussian_filter, 
+            #    intermediate_dir, matrix_type=float, 
+            #    in_matrix_nodata=threat_nodata, out_matrix_nodata=out_nodata)
             
-            threat_matrix = None
-            
-            filtered_band = filtered_raster.GetRasterBand(1)
-            filtered_band.WriteArray(filtered_out_matrix)
-            filtered_out_matrix = None
-            filtered_raster.FlushCache()
+            #threat_matrix = None
+            ##############
+            filtered_raster = raster_utils.gaussian_filter_dataset(
+                    threat_raster, sigma, filtered_threat_uri, out_nodata)
+            #############
+            #filtered_band = filtered_raster.GetRasterBand(1)
+            #filtered_band.WriteArray(filtered_out_matrix)
+            #filtered_out_matrix = None
+            #filtered_raster.FlushCache()
             LOGGER.debug('Finished Gaussian Blur')
 
             # create sensitivity raster based on threat
