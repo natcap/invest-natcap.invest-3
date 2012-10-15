@@ -399,6 +399,7 @@ def vectorize_rasters(dataset_list, op, aoi=None, raster_out_uri=None,
     #Calculate the min/max/avg/stdev on the out raster
     calculate_raster_stats(out_dataset)
 
+    out_dataset.FlushCache()
     #return the new current_dataset
     return out_dataset
 
