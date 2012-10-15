@@ -1451,9 +1451,9 @@ def get_rat_as_dictionary(dataset):
 
     return rat_dictionary
 
-def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
-    """A memory efficient gaussian blur function that operates on 
-       the dataset level and creates a new dataset that's blurred.
+def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
+    """A memory efficient gaussian filter function that operates on 
+       the dataset level and creates a new dataset that's filtered.
        It will treat any nodata value in dataset as 0, and re-nodata
        that area after the filter.
 
@@ -1462,9 +1462,9 @@ def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
        out_uri - the uri output of the filtered dataset
        out_nodata - the nodata value of dataset
 
-       returns nothing"""
+       returns the filtered dataset created at out_uri"""
 
-    LOGGER.info('setting up fiels in gaussian_blur_dataset')
+    LOGGER.info('setting up fiels in gaussian_filter_dataset')
     temp_dir = tempfile.mkdtemp()
     source_filename = os.path.join(temp_dir, 'source.dat')
     mask_filename = os.path.join(temp_dir, 'mask.dat')
@@ -1513,3 +1513,7 @@ def gaussian_blur_dataset(dataset, sigma, out_uri, out_nodata):
 
     LOGGER.info('deleting %s' % temp_dir)
     shutil.rmtree(temp_dir)
+
+    dest_array = None
+    out_band = None
+    return out_dataset
