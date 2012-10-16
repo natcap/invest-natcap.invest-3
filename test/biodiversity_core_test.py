@@ -232,57 +232,6 @@ class TestInvestBiodiversityCore(unittest.TestCase):
 
         invest_test_core.assertTwoDatasetsEqual(self, regression_ds, new_raster)
 
-    def test_biodiversity_core_clip_and_op(self):
-        """A unit test for clip_and_op that tests the function by passing in the
-            numpy.multiply operation and checking the results against hand
-            calculated values"""
-        #raise SkipTest
-        
-        out_dir = './data/test_out/biodiversity/clip_and_op/'
-        out_uri = os.path.join(out_dir, 'clip_and_op.tif')
-
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
-
-        driver = gdal.GetDriverByName('MEM')
-        dataset_type = gdal.GDT_Int32
-
-        dataset = driver.Create('', 5, 5, 1, dataset_type)
-
-        srs = osr.SpatialReference()
-        srs.SetUTM( 11, 1 )
-        srs.SetWellKnownGeogCS( 'NAD27' )
-        dataset.SetProjection( srs.ExportToWkt() )
-
-        dataset.SetGeoTransform( [444720, 30, 0, 3751320, 0, -30 ] )
-
-        raster = np.array([[256,1,1,1,256],
-                           [256,3,3,3,256],
-                           [2,2,2,2,256],
-                           [256,1,1,2,2],
-                           [256,256,3,256,256]])
-
-        dataset.GetRasterBand(1).SetNoDataValue(256)
-        dataset.GetRasterBand(1).WriteArray(raster)
-    
-        expected = np.array([[-1,5,5,5,-1],
-                             [-1,15,15,15,-1],
-                             [10,10,10,10,-1],
-                             [-1,5,5,10,10],
-                             [-1,-1,15,-1,-1]])
-
-        ds_out = raster_utils.new_raster_from_base(dataset, out_uri, 'GTiff',
-                -1, gdal.GDT_Int32)
-
-        in_matrix = dataset.GetRasterBand(1).ReadAsArray()
-        out_matrix = ds_out.GetRasterBand(1).ReadAsArray()
-        arg1 = 5
-        matrix_out = \
-            biodiversity_core.clip_and_op(in_matrix, arg1, np.multiply,\
-                matrix_type=int, in_matrix_nodata=256, out_matrix_nodata=-1) 
-
-        self.assertTrue((matrix_out==expected).all())
-
     def test_biodiversity_biophysical_regression(self):
         """A regression test for the biodiversity model with all possible inputs"""
         #raise SkipTest
