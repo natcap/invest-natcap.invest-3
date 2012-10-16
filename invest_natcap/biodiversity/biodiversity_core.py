@@ -475,6 +475,17 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
 
     LOGGER.debug('Starting map_raster_to_dict_values')
 
+    ##########################DOUG I ADDED THIS
+    int_attr_dict = {}
+    for key in attr_dict:
+        int_attr_dict[int(key)] = float(attr_dict[key][field])
+
+    reclassified_dataset = raster_utils.reclassify_dataset(
+        key_raster, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata)
+
+    return reclassified_dataset
+    ##########################333333
+
     # a self defined exception to use if an exception is raised below. This is
     # for a very specific error to provide the best feedback to the user
     class LulcCodeError(Exception):
