@@ -1522,3 +1522,21 @@ def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
 
     out_dataset.FlushCache()
     return out_dataset
+
+def reclassify_dataset(
+    dataset, value_map, raster_out_uri, out_datatype, out_nodata):
+
+    """An efficient function to reclassify values in a positive int dataset type
+        to any output type
+
+        dataset - a gdal dataset of some int type
+        value_map - a dictionary of values of {source_value: dest_value, ...}
+            where source_value's type is a postive integer type and dest_value 
+            is of type out_datatype.
+        raster_out_uri - the uri for the output raster
+        out_datatype - the type for the output dataset
+        out_nodata - the nodata value for the output raster.  Must be the same
+            type as out_datatype
+
+        returns the new reclassified dataset"""
+    pass
