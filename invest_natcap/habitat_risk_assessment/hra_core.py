@@ -211,6 +211,8 @@ def burn_risk_values(ratings, risk_eq):
     ratings withing the 'ratings' structure.
 
     Input:
+        risk_eq- This is a string description of the desired equation to use
+            when performing risk calculation.
         ratings- A multi-level structure which contains E/C ratings for each of
             the criteria applicable to the given H-S overlap. It also contains
             the open dataset that shows the raster overlap between the habitat

@@ -1,20 +1,34 @@
+"""URI level tests for the sediment biophysical module"""
+
+import unittest
+import os
+import subprocess
+import logging
+
 from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
+from nose.plugins.skip import SkipTest
+import numpy as np
+from invest_natcap import raster_utils
+import invest_test_core
 
-import invest_natcap.raster_utils
+LOGGER = logging.getLogger('invest_core')
 
-dataset = gdal.Open('./data/hydropower_regression_data/sub_shed_mask.tif')
-rules = {1: 50.2, 2: -1838, 3: 0.1}
-output_uri = './data/test_out/reclassified_raster.tif'
+class TestRasterUtils(unittest.TestCase):
+    def test_reclassify_dataset(self):
+        base_dir = 'data/test_out/reclassify_dataset'
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
 
-nodata = -1.0e-30
-datatype = gdal.GDT_Float32
+        output_uri = os.path.join(base_dir, 'reclassified.tif')
+        base_uri = 'data/base_data/terrestrial/lulc_samp_cur'
+        dataset = gdal.Open(base_uri)
+        value_map = {1: 0.1, 2: 0.2, 3: 0.3, 4: 0.4, 5: 0.5}
 
-invest_natcap.raster_utils.reclassify_by_dictionary(dataset,rules,output_uri,'MEM', nodata,datatype)
+        reclassified_ds = raster_utils.reclassify_dataset(
+            dataset, value_map, output_uri, gdal.GDT_Float32, -1.0)
 
-rules = {1: 10, 2: 20, 3: 30}
-output_uri = './data/test_out/reclassified_raster_byte.tif'
-
-nodata = 0
-datatype = gdal.GDT_Byte
-
-invest_natcap.raster_utils.reclassify_by_dictionary(dataset,rules,output_uri,'GTiff',nodata,datatype)
+#        subprocess.Popen(["qgis", output_uri, base_uri])
+        regression_uri = 'data/reclassify_regression/reclassified.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, regression_uri, output_uri)

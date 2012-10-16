@@ -31,18 +31,22 @@ def execute(args):
             to be passed on to hra_core.'
         args['grid_size']- Int representing the desired pixel dimensions of
             both intermediate and ouput rasters. 
+        args['risk_eq']- A string identifying the equation that should be used
+            in calculating risk scores for each H-S overlap cell.
         args['ratings']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
             tuple of lists which contain tuples.
-        args['risk_eq']- A string identifying the equation that should be used
-            in calculating risk scores for each H-S overlap cell.
 
-            {(Habitat A, Stressor 1): ([(E1Rating, E1DataQuality, E1Weight), ...],
-                                       [(C1Rating, C1DataQuality, C1Weight), ...])
-                                       .
-                                       .
-                                       . }
+            {(Habitat A, Stressor 1): 
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries}
+                    }
+            }
+
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
             complete the rest of the model run. It will contain the following.
