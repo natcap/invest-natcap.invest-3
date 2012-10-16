@@ -1539,4 +1539,13 @@ def reclassify_dataset(
             type as out_datatype
 
         returns the new reclassified dataset"""
-    pass
+
+    out_dataset = new_raster_from_base(
+        dataset, out_datatype, 'GTiff', out_nodata, out_datatype)
+    out_band = out_dataset.GetRasterBand(1)
+
+    for row_index in xrange(band.YSize):
+        row_array = out_band.ReadAsArray(0, row_index, band.XSize, 1)
+
+    out_dataset.FlushCache()
+    return out_dataset
