@@ -47,6 +47,24 @@ class TestHRA(unittest.TestCase):
 
         self.args =args
 
-    def test_ALL(self)
+    def test_dict(self)
 
+        #Need to make a copy so that we have something to pass when we check
+        #out the raster dictionary creation by itself. However, we have to run
+        #the whole thing first so that the rasterized versions of the shapefiles
+        #exist in the first place.
+        dict_orig = copy.deepcopy(self.args['ratings'])
+
+        #This is just checking whether or not it is erroring anywhere in HRA
         hra.execute(self.args)
+        
+        #This should pull out the ratings dictionary, and check it against our
+        #pre-populated one with the open raster datasets. Need to do a 
+        #dictionary check and a raster compare.
+        inter_dir = os.path.join(self.args['workspace_dir'], 'Intermediate')
+        h_dir = os.path.join(inter_dir, 'Habitat_Rasters')
+        s_dir = os.path.join(inter_dir, 'Stressor_Rasters')
+        
+        model_raster_dict = hra.combine_hs_rasters(inter_dir, h_dir, s_dir, dict_orig)
+
+        #test_raster_dict = INSERT PRE-CREATED DICTIONARY HERE 
