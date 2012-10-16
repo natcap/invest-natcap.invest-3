@@ -1541,11 +1541,18 @@ def reclassify_dataset(
         returns the new reclassified dataset"""
 
     out_dataset = new_raster_from_base(
-        dataset, out_datatype, 'GTiff', out_nodata, out_datatype)
+        dataset, raster_out_uri, 'GTiff', out_nodata, out_datatype)
     out_band = out_dataset.GetRasterBand(1)
 
-    for row_index in xrange(band.YSize):
-        row_array = out_band.ReadAsArray(0, row_index, band.XSize, 1)
+    #Make an array the same size as the max entry in the dictionary of the same
+    #type as the output type
+    map_array = np.empty(max(value_map.keys()), dtype = type(out_nodata))
+    map_array[:] = out_nodata
+
+    in_band = dataset.GetRasterBand(1)
+    for row_index in xrange(in_band.YSize):
+        row_array = in_band.ReadAsArray(0, row_index, in_band.XSize, 1)
+        out_band.WriteArray(row_array, 0, row_index)
 
     out_dataset.FlushCache()
     return out_dataset
