@@ -102,7 +102,7 @@ def execute(args):
 
     hra_args['ratings'] = ratings_with_rast
 
-    hra_core.execute(hra_args)
+#    hra_core.execute(hra_args)
 
 def buffer_s_rasters(dir, buffer_dict, grid_size):
     '''If there is buffering desired, this will take each file and buffer the
