@@ -235,7 +235,7 @@ def make_rasters(dir, file_names, grid_size):
         #slash is returned as the 'tail' in the second element of the tuple
         #path.splitext returns a tuple such that the first element is what comes
         #before the file extension, and the second is the extension itself 
-        name = os.path.splitext(os.path.split(file)[1])[0]
+        name = os.path.splitext(os.path.split(file_uri)[1])[0]
         out_uri = os.path.join(dir, name, '.tif')
 
         datasource = ogr.Open(file_uri)
