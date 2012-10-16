@@ -212,12 +212,13 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
 
     return ratings
 
-def make_rasters(dir, file_names, grid_size):
+def make_rasters(dir_path, file_names, grid_size):
+
     '''Takes a shapefile and make s rasterized version which will be used to
     make the combined H-S rasters afterwards.
 
     Input:
-        dir- The directory into which the finished raster files should be placed.
+        dir_path- The directory into which the finished raster files should be placed.
         file_names- A list containing the filepaths to all shapefiles that
             need to be rasterized.
         grid_size- The desired raster pixel resolution
@@ -236,7 +237,7 @@ def make_rasters(dir, file_names, grid_size):
         #path.splitext returns a tuple such that the first element is what comes
         #before the file extension, and the second is the extension itself 
         name = os.path.splitext(os.path.split(file_uri)[1])[0]
-        out_uri = os.path.join(dir, name, '.tif')
+        out_uri = os.path.join(dir_loc, name, '.tif')
 
         datasource = ogr.Open(file_uri)
         layer = datasource.GetLayer()
