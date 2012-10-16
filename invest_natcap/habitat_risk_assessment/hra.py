@@ -237,7 +237,7 @@ def make_rasters(dir_path, file_names, grid_size):
         #path.splitext returns a tuple such that the first element is what comes
         #before the file extension, and the second is the extension itself 
         name = os.path.splitext(os.path.split(file_uri)[1])[0]
-        out_uri = os.path.join(dir_loc, name, '.tif')
+        out_uri = os.path.join(dir_path name, '.tif')
 
         datasource = ogr.Open(file_uri)
         layer = datasource.GetLayer()
