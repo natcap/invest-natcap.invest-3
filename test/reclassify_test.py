@@ -21,7 +21,7 @@ class TestRasterUtils(unittest.TestCase):
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
-        output_uri = os.path.join(base_dir, 'gaussian_filter.tif')
+        output_uri = os.path.join(base_dir, 'reclassified.tif')
         base_uri = 'data/base_data/terrestrial/lulc_samp_cur'
         dataset = gdal.Open(base_uri)
         value_map = {1: 0.1, 2: 0.2, 3: 0.3, 4: 0.4, 5: 0.5}
@@ -29,5 +29,6 @@ class TestRasterUtils(unittest.TestCase):
         reclassified_ds = raster_utils.reclassify_dataset(
             dataset, value_map, output_uri, gdal.GDT_Float32, -1.0)
 
+        subprocess.Popen(["qgis", output_uri, base_uri])
         #regression_uri = 'data/gaussian_regression/gaussian_filter.tif'
         #invest_test_core.assertTwoDatasetEqualURI(self, regression_uri, output_uri)
