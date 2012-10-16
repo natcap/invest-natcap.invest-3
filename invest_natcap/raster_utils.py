@@ -1544,14 +1544,24 @@ def reclassify_dataset(
         dataset, raster_out_uri, 'GTiff', out_nodata, out_datatype)
     out_band = out_dataset.GetRasterBand(1)
 
-    #Make an array the same size as the max entry in the dictionary of the same
-    #type as the output type
-    map_array = np.empty(max(value_map.keys()), dtype = type(out_nodata))
-    map_array[:] = out_nodata
+    in_band, in_nodata = extract_band_and_nodata(dataset)
 
-    in_band = dataset.GetRasterBand(1)
+    #Make an array the same size as the max entry in the dictionary of the same
+    #type as the output type.  The +2 adds an extra entry for the nodata values
+    map_array_size = max(value_map.keys()) + 2
+    print map_array_size
+    map_array = np.empty((1,map_array_size), dtype = type(out_nodata))
+    print map_array
+    map_array[:] = out_nodata
+    for key, value in value_map.iteritems():
+        map_array[0,key] = value
+
     for row_index in xrange(in_band.YSize):
         row_array = in_band.ReadAsArray(0, row_index, in_band.XSize, 1)
+        #Remaps pesky nodata values to something to the last index in map_array
+        row_array[row_array == in_nodata] = map_array_size
+        print row_array
+        row_array = map_array[np.ix_([0],row_array[0])]
         out_band.WriteArray(row_array, 0, row_index)
 
     out_dataset.FlushCache()
