@@ -41,7 +41,8 @@ packages = ['invest_natcap',
             'invest_natcap.biodiversity',
             'invest_natcap.coastal_vulnerability',
             'invest_natcap.overlap_analysis',
-            'invest_natcap.wind_energy']
+            'invest_natcap.wind_energy',
+            'invest_natcap.habitat_risk_assessment']
 
 #This makes a destination directory with the name invest_version_datetime.
 #Will make it easy to see the difference between different builds of the 
@@ -83,7 +84,8 @@ if platform.system() == 'Windows':
          'invest_biodiversity_biophysical.py',
          'invest_overlap_analysis.py',
          'invest_overlap_analysis_mz.py',
-         'invest_sediment_biophysical.py']
+         'invest_sediment_biophysical.py',
+         'invest_habitat_risk_assesment.py']
 
     #Need to manually bring along the json configuration files to
     #the current build directory

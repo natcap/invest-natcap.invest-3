@@ -45,9 +45,13 @@ class TestHRA(unittest.TestCase):
                 }
            }
 
-        self.args =args
+        self.args = args
+    
+    def test_run(self):
+        
+        hra.execute(self.args)
 
-    def test_dict(self)
+'''    def test_dict(self):
 
         #Need to make a copy so that we have something to pass when we check
         #out the raster dictionary creation by itself. However, we have to run
@@ -67,4 +71,4 @@ class TestHRA(unittest.TestCase):
         
         model_raster_dict = hra.combine_hs_rasters(inter_dir, h_dir, s_dir, dict_orig)
 
-        #test_raster_dict = INSERT PRE-CREATED DICTIONARY HERE 
+        #test_raster_dict = INSERT PRE-CREATED DICTIONARY HERE '''
