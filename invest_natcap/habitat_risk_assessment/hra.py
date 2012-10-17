@@ -204,7 +204,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
         #and until we change something, will be using 1 as the data value. This
         #is variable once we figure out decay.
         if pixel_h == 0 or pixel_s == 0:
-            return h_nodata
+            return 0
         else:
             return 1
 
