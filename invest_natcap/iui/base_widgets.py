@@ -1142,9 +1142,12 @@ class FileEntry(DynamicText):
         """Reimplemented event handler taking the place of
             QLineEdit.mousePressEvent.  Checks to see if there's a file in the
             textfield.  If so, we do nothing.  Otherwise (if the uri is blank),
-            we should open up the file dialog for the user."""
+            we should open up the file dialog for the user.  If the user
+            right-clicks in the text field, pass the event on to the normal
+            handler."""
 
-        if len(self.textField.text()) == 0:
+        if len(self.textField.text()) == 0 and\
+            event.button() == QtCore.Qt.LeftButton:
             self.button.getFileName()
         else:
             QtGui.QLineEdit.mousePressEvent(self.textField, event)
