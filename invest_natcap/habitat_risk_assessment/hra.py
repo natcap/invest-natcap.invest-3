@@ -85,11 +85,23 @@ def execute(args):
     #them into a list.
     file_names = glob.glob(os.path.join(args['habitat_dir'], '*.shp'))
     h_rast = os.path.join(inter_dir, 'Habitat_Rasters')
+    
+    #Make folders in which to store the habitat and intermediate rasters.
+    if (os.path.exists(h_rast)):
+        shutil.rmtree(h_rast) 
+
+    os.makedirs(h_rast)
 
     make_rasters(file_names, h_rast, args['grid_size'])
     
     file_names = glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
+
+    #Make folder for the stressors.
+    if (os.path.exists(s_rast)):
+        shutil.rmtree(s_rast) 
+
+    os.makedirs(s_rast)
 
     make_rasters(file_names, s_rast, args['grid_size'])
 
@@ -237,8 +249,8 @@ def make_rasters(file_names, dir_path, grid_size):
         #before the file extension, and the second is the extension itself
         name = os.path.splitext(os.path.split(file_uri)[1])[0]
 
-        out_uri = os.path.join(dir_path, name, '.tif')
-
+        out_uri = os.path.join(dir_path, name + '.tif')
+        LOGGER.debug("out_uri" + str(out_uri) + "\n")
         datasource = ogr.Open(file_uri)
         layer = datasource.GetLayer()
         
