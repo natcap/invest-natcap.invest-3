@@ -109,7 +109,7 @@ def execute(args):
     make_rasters(file_names, s_rast, args['grid_size'])
 
     #INSERT WAY OF BUFFERING STRESSORS HERE
-    buffer_s_rasters(s_rast, buffer_dict, args['grid_size'])
+    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
 
     #Now, want to make all potential combinations of the rasters, and add it to
     #the structure containg data about the H-S combination.

@@ -20,8 +20,8 @@ class TestHRA(unittest.TestCase):
 
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
-        args['habitat_dir'] = '../../HabitatRiskAssess/Input/HabitatLayers'
-        args['stressors_dir'] = '../../HabitatRiskAssess/Input'
+        args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        args['stressors_dir'] = './data/test_out/HRA/Input/Stressors'
 
         args['grid_size'] = 500
         args['risk_eq'] = 'Euclidean'
@@ -44,6 +44,7 @@ class TestHRA(unittest.TestCase):
                     }
                 }
            }
+        args['buffer_dict'] = {'FinfishAquacultureComm': 200}
 
         self.args = args
     
