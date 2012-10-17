@@ -33,6 +33,9 @@ def execute(args):
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
             in calculating risk scores for each H-S overlap cell.
+        args['buffer_dict']- A dictionary that links the string name of each
+            stressor shapefile to the desired buffering for that shape when
+            rasterized.
         args['ratings']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
@@ -250,7 +253,7 @@ def make_rasters(file_names, dir_path, grid_size):
         name = os.path.splitext(os.path.split(file_uri)[1])[0]
 
         out_uri = os.path.join(dir_path, name + '.tif')
-        LOGGER.debug("out_uri" + str(out_uri) + "\n")
+        
         datasource = ogr.Open(file_uri)
         layer = datasource.GetLayer()
         
@@ -262,5 +265,5 @@ def make_rasters(file_names, dir_path, grid_size):
         band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
         band.Fill(nodata)
 
-        gdal.RasterizeLayer(r_dataset, [1], burn_values=[1])
+        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1])
 
