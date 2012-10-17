@@ -5,8 +5,10 @@ import os
 import shutil
 import logging
 import glob
+import numpy as np
 
 from osgeo import gdal, ogr
+from scipy import ndimage
 from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap import raster_utils
 
@@ -33,6 +35,9 @@ def execute(args):
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
             in calculating risk scores for each H-S overlap cell.
+        args['buffer_dict']- A dictionary that links the string name of each
+            stressor shapefile to the desired buffering for that shape when
+            rasterized.
         args['ratings']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
@@ -85,16 +90,28 @@ def execute(args):
     #them into a list.
     file_names = glob.glob(os.path.join(args['habitat_dir'], '*.shp'))
     h_rast = os.path.join(inter_dir, 'Habitat_Rasters')
+    
+    #Make folders in which to store the habitat and intermediate rasters.
+    if (os.path.exists(h_rast)):
+        shutil.rmtree(h_rast) 
+
+    os.makedirs(h_rast)
 
     make_rasters(file_names, h_rast, args['grid_size'])
     
     file_names = glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
 
+    #Make folder for the stressors.
+    if (os.path.exists(s_rast)):
+        shutil.rmtree(s_rast) 
+
+    os.makedirs(s_rast)
+
     make_rasters(file_names, s_rast, args['grid_size'])
 
     #INSERT WAY OF BUFFERING STRESSORS HERE
-    buffer_s_rasters(s_rast, buffer_dict, args['grid_size'])
+    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
 
     #Now, want to make all potential combinations of the rasters, and add it to
     #the structure containg data about the H-S combination.
@@ -102,7 +119,7 @@ def execute(args):
 
     hra_args['ratings'] = ratings_with_rast
 
-    hra_core.execute(hra_args)
+#    hra_core.execute(hra_args)
 
 def buffer_s_rasters(dir, buffer_dict, grid_size):
     '''If there is buffering desired, this will take each file and buffer the
@@ -137,20 +154,22 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         #before the file extension, and the second is the extension itself 
         name = os.path.splitext(os.path.split(r_file)[1])[0]
         buff = buffer_dict[name]
-        
-        raster = gdal.Open(r_file)
+       
+        #This allows us to read/write to the dataset.
+        raster = gdal.Open(r_file, gdal.GA_Update)
         band, nodata = raster_utils.extract_band_and_nodata(raster)
-        array = numpy.array(band.ReadAsArray())
+        array = band.ReadAsArray()
+        swp_array = (array + 1) % 2
 
         #The array with each value being the distance from its own cell to land
-        dist_array = ndimage.distance_transform_edt(array, sampling=buff)
-
+        dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
+        LOGGER.debug(dist_array)
         #Setting anything within the buffer zone to 1, and anything outside
         #that distance to nodata.
         dist_array[dist_array <= buff] = 1
         dist_array[dist_array > buff] = nodata  
-       
-        band.WriteArray(dist_matrix)
+        LOGGER.debug(dist_array) 
+        band.WriteArray(dist_array)
 
 def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     '''Takes in a habitat and a stressor, and combines the two raster files,
@@ -163,7 +182,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
         ratings- A dictionary which comes from the IUI which contains all
             ratings and weightings of each Habitat-Stressor pair.
 
-     Output:
+    Output:
         out_uri- A raster file which shows the overlap between the given
             habitat and stressor. There will be number of habitat x number of
             stressor versions of this file, all individualled named according
@@ -172,7 +191,6 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     Returns an edited version of 'ratings' that contains an open raster
     datasource correspondoing to the appropriate H-S key for the dictionary.
     '''
-
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
     s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
@@ -181,10 +199,16 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     def combine_hs_pixels(pixel_h, pixel_s):
         
         #For all pixels in the two rasters, return this new pixel value
-        pix_sum = pixel_h + pixel_s
         
-        return pix_sum
-        
+        #I think we just want to return data if they are both present, else
+        #return nodata. We know ahead of time that 0 will be the nodata value,
+        #and until we change something, will be using 1 as the data value. This
+        #is variable once we figure out decay.
+        if pixel_h == 0 or pixel_s == 0:
+            return 0
+        else:
+            return 1
+
     for h in h_rast_files:
         for s in s_rast_files:
             
@@ -202,7 +226,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
                             combine_hs_pixels, raster_out_uri = out_uri,
-                            datatype = gdal.GDT_Int32, nodata=[0])
+                            datatype = gdal.GDT_Int32, nodata=0)
             
             #Now place the datasource into the corresponding dictionary entry
             #in 'ratings'. We will make the open datasource the third item in
@@ -212,12 +236,13 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
 
     return ratings
 
-def make_rasters(dir, file_names, grid_size):
+def make_rasters(file_names, dir_path, grid_size):
+
     '''Takes a shapefile and make s rasterized version which will be used to
     make the combined H-S rasters afterwards.
 
     Input:
-        dir- The directory into which the finished raster files should be placed.
+        dir_path- The directory into which the finished raster files should be placed.
         file_names- A list containing the filepaths to all shapefiles that
             need to be rasterized.
         grid_size- The desired raster pixel resolution
@@ -228,16 +253,16 @@ def make_rasters(dir, file_names, grid_size):
 
     Returns nothing.
     '''
-
     for file_uri in file_names:
         
         #The return of os.path.split is a tuple where everything after the final
         #slash is returned as the 'tail' in the second element of the tuple
         #path.splitext returns a tuple such that the first element is what comes
-        #before the file extension, and the second is the extension itself 
-        name = os.path.splitext(os.path.split(file)[1])[0]
-        out_uri = os.path.join(dir, name, '.tif')
+        #before the file extension, and the second is the extension itself
+        name = os.path.splitext(os.path.split(file_uri)[1])[0]
 
+        out_uri = os.path.join(dir_path, name + '.tif')
+        
         datasource = ogr.Open(file_uri)
         layer = datasource.GetLayer()
         
@@ -249,5 +274,5 @@ def make_rasters(dir, file_names, grid_size):
         band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
         band.Fill(nodata)
 
-        gdal.RasterizeLayer(r_dataset, [1], burn_values=[1])
+        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1])
 

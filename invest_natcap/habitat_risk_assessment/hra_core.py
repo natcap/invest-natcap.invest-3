@@ -249,7 +249,7 @@ def burn_risk_values(ratings, risk_eq):
 
         if (risk_eq == 'Euclidean'):
             R = calc_risk_value_euc(E, C)
-        else if (risk_eq == 'Multiplicative'):
+        elif (risk_eq == 'Multiplicative'):
             R = calc_risk_value_mult(E, C) 
 
         dataset = pair[2]

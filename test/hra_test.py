@@ -7,8 +7,8 @@ import logging
 
 import invest_test_core
 
-from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap.habitat_risk_assessment import hra
+from invest_natcap.habitat_risk_assessment import hra_core
 
 LOGGER = logging.getLogger('hra_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -20,8 +20,8 @@ class TestHRA(unittest.TestCase):
 
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
-        args['habitat_dir'] = '../../HabitatRiskAssess/Input/HabitatLayers'
-        args['stressors_dir'] = '../../HabitatRiskAssess/Input'
+        args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        args['stressors_dir'] = './data/test_out/HRA/Input/Stressors'
 
         args['grid_size'] = 500
         args['risk_eq'] = 'Euclidean'
@@ -44,6 +44,7 @@ class TestHRA(unittest.TestCase):
                     }
                 }
            }
+        args['buffer_dict'] = {'FinfishAquacultureComm': 5000}
 
         self.args = args
     
