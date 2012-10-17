@@ -189,7 +189,6 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     Returns an edited version of 'ratings' that contains an open raster
     datasource correspondoing to the appropriate H-S key for the dictionary.
     '''
-
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
     s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
@@ -207,7 +206,6 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
             return 0
         else:
             return 1
-
 
     for h in h_rast_files:
         for s in s_rast_files:
