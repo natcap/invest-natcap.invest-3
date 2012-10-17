@@ -198,10 +198,17 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     def combine_hs_pixels(pixel_h, pixel_s):
         
         #For all pixels in the two rasters, return this new pixel value
-        pix_sum = pixel_h + pixel_s
         
-        return pix_sum
-        
+        #I think we just want to return data if they are both present, else
+        #return nodata. We know ahead of time that 0 will be the nodata value,
+        #and until we change something, will be using 1 as the data value. This
+        #is variable once we figure out decay.
+        if pixel_h == 0 or pixel_s == 0:
+            return h_nodata
+        else:
+            return 1
+
+
     for h in h_rast_files:
         for s in s_rast_files:
             
