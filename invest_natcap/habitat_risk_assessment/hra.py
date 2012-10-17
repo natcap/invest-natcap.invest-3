@@ -160,7 +160,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         array = np.array(band.ReadAsArray())
 
         #The array with each value being the distance from its own cell to land
-        dist_array = ndimage.distance_transform_edt(array, sampling=buff)
+        dist_array = ndimage.distance_transform_edt(array, sampling=grid_size)
 
         #Setting anything within the buffer zone to 1, and anything outside
         #that distance to nodata.
