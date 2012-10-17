@@ -154,19 +154,21 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         #before the file extension, and the second is the extension itself 
         name = os.path.splitext(os.path.split(r_file)[1])[0]
         buff = buffer_dict[name]
-        
-        raster = gdal.Open(r_file)
+       
+        #This allows us to read/write to the dataset.
+        raster = gdal.Open(r_file, gdal.GA_Update)
         band, nodata = raster_utils.extract_band_and_nodata(raster)
-        array = np.array(band.ReadAsArray())
+        array = band.ReadAsArray()
+        swp_array = (array + 1) % 2
 
         #The array with each value being the distance from its own cell to land
-        dist_array = ndimage.distance_transform_edt(array, sampling=grid_size)
-
+        dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
+        LOGGER.debug(dist_array)
         #Setting anything within the buffer zone to 1, and anything outside
         #that distance to nodata.
         dist_array[dist_array <= buff] = 1
         dist_array[dist_array > buff] = nodata  
-       
+        LOGGER.debug(dist_array) 
         band.WriteArray(dist_array)
 
 def combine_hs_rasters(dir, h_rast, s_rast, ratings):
@@ -180,7 +182,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
         ratings- A dictionary which comes from the IUI which contains all
             ratings and weightings of each Habitat-Stressor pair.
 
-     Output:
+    Output:
         out_uri- A raster file which shows the overlap between the given
             habitat and stressor. There will be number of habitat x number of
             stressor versions of this file, all individualled named according

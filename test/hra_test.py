@@ -44,7 +44,7 @@ class TestHRA(unittest.TestCase):
                     }
                 }
            }
-        args['buffer_dict'] = {'FinfishAquacultureComm': 2000}
+        args['buffer_dict'] = {'FinfishAquacultureComm': 5000}
 
         self.args = args
     
