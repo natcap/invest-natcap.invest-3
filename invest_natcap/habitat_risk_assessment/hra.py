@@ -158,17 +158,22 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         #This allows us to read/write to the dataset.
         raster = gdal.Open(r_file, gdal.GA_Update)
         band, nodata = raster_utils.extract_band_and_nodata(raster)
+        LOGGER.debug("nodata: " + str(nodata) +"\n")
+        
         array = band.ReadAsArray()
+        
+        #Swaps 0's and 1's for use with the distance transform function.
         swp_array = (array + 1) % 2
 
         #The array with each value being the distance from its own cell to land
         dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
-        LOGGER.debug(dist_array)
+        LOGGER.debug(dist_array) 
         #Setting anything within the buffer zone to 1, and anything outside
         #that distance to nodata.
-        dist_array[dist_array <= buff] = 1
-        dist_array[dist_array > buff] = nodata  
-        LOGGER.debug(dist_array) 
+        inner_zone_index = dist_array <= buff
+        dist_array[inner_zone_index] = 1
+        dist_array[~inner_zone_index] = nodata  
+        
         band.WriteArray(dist_array)
 
 def combine_hs_rasters(dir, h_rast, s_rast, ratings):
