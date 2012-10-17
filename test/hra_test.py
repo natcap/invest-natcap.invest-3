@@ -7,8 +7,8 @@ import logging
 
 import invest_test_core
 
-from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap.habitat_risk_assessment import hra
+from invest_natcap.habitat_risk_assessment import hra_core
 
 LOGGER = logging.getLogger('hra_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -20,8 +20,8 @@ class TestHRA(unittest.TestCase):
 
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
-        args['habitat_dir'] = '../../HabitatRiskAssess/Input/HabitatLayers'
-        args['stressors_dir'] = '../../HabitatRiskAssess/Input'
+        args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
+        args['stressors_dir'] = './data/test_out/HRA/Input/Stressors'
 
         args['grid_size'] = 500
         args['risk_eq'] = 'Euclidean'
@@ -44,10 +44,15 @@ class TestHRA(unittest.TestCase):
                     }
                 }
            }
+        args['buffer_dict'] = {'FinfishAquacultureComm': 200}
 
-        self.args =args
+        self.args = args
+    
+    def test_run(self):
+        
+        hra.execute(self.args)
 
-    def test_dict(self)
+'''    def test_dict(self):
 
         #Need to make a copy so that we have something to pass when we check
         #out the raster dictionary creation by itself. However, we have to run
@@ -67,4 +72,4 @@ class TestHRA(unittest.TestCase):
         
         model_raster_dict = hra.combine_hs_rasters(inter_dir, h_dir, s_dir, dict_orig)
 
-        #test_raster_dict = INSERT PRE-CREATED DICTIONARY HERE 
+        #test_raster_dict = INSERT PRE-CREATED DICTIONARY HERE '''
