@@ -5,8 +5,10 @@ import os
 import shutil
 import logging
 import glob
+import numpy as np
 
 from osgeo import gdal, ogr
+from scipy import ndimage
 from invest_natcap.habitat_risk_assessment import hra_core
 from invest_natcap import raster_utils
 
@@ -155,7 +157,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         
         raster = gdal.Open(r_file)
         band, nodata = raster_utils.extract_band_and_nodata(raster)
-        array = numpy.array(band.ReadAsArray())
+        array = np.array(band.ReadAsArray())
 
         #The array with each value being the distance from its own cell to land
         dist_array = ndimage.distance_transform_edt(array, sampling=buff)
@@ -165,7 +167,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         dist_array[dist_array <= buff] = 1
         dist_array[dist_array > buff] = nodata  
        
-        band.WriteArray(dist_matrix)
+        band.WriteArray(dist_array)
 
 def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     '''Takes in a habitat and a stressor, and combines the two raster files,
