@@ -212,7 +212,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
 
     return ratings
 
-def make_rasters(dir_path, file_names, grid_size):
+def make_rasters(file_names, dir_path, grid_size):
 
     '''Takes a shapefile and make s rasterized version which will be used to
     make the combined H-S rasters afterwards.
@@ -229,15 +229,15 @@ def make_rasters(dir_path, file_names, grid_size):
 
     Returns nothing.
     '''
-
     for file_uri in file_names:
         
         #The return of os.path.split is a tuple where everything after the final
         #slash is returned as the 'tail' in the second element of the tuple
         #path.splitext returns a tuple such that the first element is what comes
-        #before the file extension, and the second is the extension itself 
+        #before the file extension, and the second is the extension itself
         name = os.path.splitext(os.path.split(file_uri)[1])[0]
-        out_uri = os.path.join(dir_path name, '.tif')
+
+        out_uri = os.path.join(dir_path, name, '.tif')
 
         datasource = ogr.Open(file_uri)
         layer = datasource.GetLayer()
