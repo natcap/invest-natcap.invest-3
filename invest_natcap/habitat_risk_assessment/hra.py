@@ -219,7 +219,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
     
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
                             combine_hs_pixels, raster_out_uri = out_uri,
-                            datatype = gdal.GDT_Int32, nodata=[0])
+                            datatype = gdal.GDT_Int32, nodata=0)
             
             #Now place the datasource into the corresponding dictionary entry
             #in 'ratings'. We will make the open datasource the third item in
