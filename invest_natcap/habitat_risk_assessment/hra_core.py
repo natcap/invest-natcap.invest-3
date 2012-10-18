@@ -310,7 +310,8 @@ def calculate_exposure_value(dictionary):
         E- The weighted average of the exposure values for all criteria
             applicable for a certain H-S interraction.
     '''
-    sum_top, sum_bottom = 0.0
+    sum_top = 0.0
+    sum_bottom = 0.0
 
     for criteria in dictionary:
        

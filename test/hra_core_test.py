@@ -23,7 +23,8 @@ class TestHRACore(unittest.TestCase):
         ds_uri = './data/test_out/HRA/Intermediate/H[kelp]_S[FinfishAquacultureComm.tif'
         
         args['ratings'] = \
-        {('kelp', 'FinfishAquacultureComm'): {'E':
+            {('kelp', 'FinfishAquacultureComm'): 
+                {'E':
                     {'Spatial Overlap': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
                     'Overlap Time': {'Rating': 1.0, 'DQ': 3.0, 'Weight': 2.0},
                     #This 0.0 in the weight should remove it from the equation
@@ -38,3 +39,7 @@ class TestHRACore(unittest.TestCase):
            }
 
         self.args = args
+
+    def test_execute(self):
+        
+        hra_core.execute(self.args) 
