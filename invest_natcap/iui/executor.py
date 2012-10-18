@@ -254,6 +254,20 @@ class Executor(threading.Thread):
         else:
             self.operations.insert(index, opDict)
 
+    def print_args(self, args_dict):
+        """Write args_dict to a formatted string to the self.write() function.
+            args_dict - a dictionary.
+
+        returns noting"""
+
+        self.write("Arguments:\n")
+        format_str = "%-20s %s\n"
+        sorted_args = sorted(args_dict.iteritems(), key=lambda x: x[0])
+        for name, value in sorted_args:
+            self.write(format_str % (name, value))
+        self.write("\n\n")
+
+
     def run(self):
         sys.stdout = self
         sys.stderr = self
@@ -338,6 +352,9 @@ class Executor(threading.Thread):
             log_file_uri = os.path.abspath(os.path.join(settings_folder,
                 filename))
             self.log_file = open(log_file_uri, 'w')
+
+            # Now that the log file is open, write the arguments to it.
+            self.print_args(args)
 
             LOGGER.debug('Loaded the model from %s', module)
             LOGGER.info('Executing the loaded model')
