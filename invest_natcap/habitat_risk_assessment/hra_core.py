@@ -45,8 +45,8 @@ def execute(args):
         --Intermediate--
             These should be the temp risk add files for the final output calcs.
         --Output--
-            /output/maps/recov_potent.tif- Raster layer depicting the recovery
-                potential of the predominant habitat for a given cell.
+            /output/maps/recov_potent_H[habitatname].tif- Raster layer depicting
+                the recovery potential of each individual habitat. 
             /output/maps/cum_risk_H[habitatname]- Raster layer depicting the
                 cumulative risk for all stressors in a cell for the given 
                 habitat.
@@ -61,8 +61,6 @@ def execute(args):
             /output/html_plots/plot_risk.html- Risk value for each habitat
                 plotted on a per-stressor graph.
             
-            /output/Parameters_[TIME].txt- Lists the parameters that the model
-                was run with.
     Returns nothing.
     '''
     
@@ -94,7 +92,12 @@ def make_recov_potent_rast(dir, ratings):
     ratings structure, since there is no good way to do it more dynamically.
 
     Run the whole thing under a try/catch, since we run the chance that the
-    correct consequences do not exist for the given habitat.'''
+    correct consequences do not exist for the given habitat.
+    
+    This should create a raster which combines natural mortality rating, 
+    recruitment rating, age at maturity/recovery time, and connectivity rating.
+    
+    '''
 
 def make_ecosys_risk_raster(dir, h_risks):
     '''This function will output a raster which combines all of the habitat
