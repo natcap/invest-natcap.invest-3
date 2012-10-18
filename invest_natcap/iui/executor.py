@@ -12,12 +12,16 @@ import datetime
 import shutil
 
 import invest_natcap
+from invest_natcap.invest_core import fileio as fileio
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
     stream=open(os.devnull, 'w'))
 
 LOGGER = logging.getLogger()
+
+# This class is to be used if certain WindowsErrors or IOErrors are encountered.
+class InsufficientDiskSpace(Exception): pass
 
 def locate_module(module_list, path=None):
     """Search for and return an executable module object as long as the target
@@ -365,10 +369,20 @@ class Executor(threading.Thread):
             except AttributeError:
                 model_version = None
 
+            LOGGER.info('Disk space free: %s GB', fileio.get_free_space(unit='GB'))
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
             model.execute(args)
         except Exception as e:
+            LOGGER.info('Disk space free: %s GB', fileio.get_free_space(unit='GB'))
             LOGGER.error('Error: a problem occurred while running the model')
+
+            # If the exception indicates that we ran out of disk space, convert
+            # e to a more informative exception.
+            if (isinstance(e, WindowsError) and e.errno == 8) or\
+               (isinstance(e, IOError) and (e.errno == 28 or e.errno == 112)):
+                e = InsufficientDiskSpace('You do not have sufficient disk '
+                    'space available for this model to finish running.')
+
             self.printTraceback()
             self.setThreadFailed(True, e)
             self.move_log_file(args['workspace_dir'])
@@ -398,5 +412,6 @@ class Executor(threading.Thread):
             LOGGER.error('Cannot find default file browser. Platform: %s |' +
                 ' folder: %s', platform.system(), args['workspace_dir'])
 
+        LOGGER.info('Disk space free: %s GB', fileio.get_free_space(unit='GB'))
         LOGGER.info('Finished.')
         self.move_log_file(args['workspace_dir'])
