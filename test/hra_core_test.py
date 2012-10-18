@@ -36,3 +36,5 @@ class TestHRACore(unittest.TestCase):
                 'DS': gdal.Open(ds_uri)
                 }
            }
+
+        self.args = args
