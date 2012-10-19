@@ -70,7 +70,7 @@ def execute(args):
     for folder_name in ['Output', 'Service', 'Intermediate']:
         folder_path = workspace_dir + os.sep + folder_name
         if not os.path.isdir(folder_path):
-            os.mkdir(folder_path)
+            os.makedirs(folder_path)
     
     #Open gdal raster files and pass to the arguments
     val_args['cyield_vol'] = gdal.Open(args['cyield_uri'])
