@@ -378,12 +378,13 @@ class Executor(threading.Thread):
 
             # If the exception indicates that we ran out of disk space, convert
             # e to a more informative exception.
-            LOGGER.debug('error %s number %s', e.__class__, e.errno)
-            if (isinstance(e, WindowsError) and (e.errno == 8 or e.errno == 28\
-                or e.errno == 28)) or\
-               (isinstance(e, IOError) and (e.errno == 28)):
-                e = InsufficientDiskSpace('You do not have sufficient disk '
-                    'space available for this model to finish running.')
+            if hasattr(e,'__class__') and hasattr(e, 'errno'):
+                LOGGER.debug('error %s number %s', e.__class__, e.errno)
+                if (isinstance(e, WindowsError) and (e.errno == 8 or e.errno == 28\
+                                                         or e.errno == 28)) or\
+                                                         (isinstance(e, IOError) and (e.errno == 28)):
+                    e = InsufficientDiskSpace('You do not have sufficient disk '
+                                              'space available for this model to finish running.')
 
             self.printTraceback()
             self.setThreadFailed(True, e)
