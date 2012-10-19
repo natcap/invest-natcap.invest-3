@@ -484,10 +484,10 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
 
     poolsDict = {int(inNoData): outNoData}
     for i in range(dbf.recordCount):
-        sum = 0
+        total_carbon_pools = 0
         for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
-            sum += dbf[i][field]
-        poolsDict[dbf[i]['LULC']] = sum * area
+            total_carbon_pools += dbf[i][field]
+        poolsDict[dbf[i]['LULC']] = total_carbon_pools * area
     return poolsDict
 
 def uncertainty(args):
