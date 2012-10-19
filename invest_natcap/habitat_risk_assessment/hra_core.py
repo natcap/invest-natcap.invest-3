@@ -254,7 +254,10 @@ def burn_risk_values(ratings, risk_eq):
             R = calc_risk_value_mult(E, C) 
 
         dataset = ratings[pair]['DS']
-        gdal.RasterizeLayer(dataset, [1], burn_values=[R]) 
+        LOGGER.debug(type(dataset))
+        layer = dataset.GetLayer()
+
+        gdal.RasterizeLayer(dataset, [1], R, layer) 
 
 def calc_risk_value_mult(E, C):
     '''This is the risk value for a given cell based on the average exposure
