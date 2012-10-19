@@ -487,7 +487,8 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
     for i in range(dbf.recordCount):
         total_carbon_pools = 0
         for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
-            total_carbon_pools += dbf[i][field]
+            #casting to a float here in case dbf stored as a textual float
+            total_carbon_pools += float(dbf[i][field])
         poolsDict[dbf[i]['LULC']] = total_carbon_pools * area
     return poolsDict
 
