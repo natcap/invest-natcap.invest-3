@@ -253,7 +253,7 @@ def burn_risk_values(ratings, risk_eq):
         elif (risk_eq == 'Multiplicative'):
             R = calc_risk_value_mult(E, C) 
 
-        dataset = ratings[pair][2]
+        dataset = ratings[pair]['DS']
         gdal.RasterizeLayer(dataset, [1], burn_values=[R]) 
 
 def calc_risk_value_mult(E, C):
