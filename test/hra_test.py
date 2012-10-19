@@ -52,6 +52,12 @@ class TestHRA(unittest.TestCase):
         
         hra.execute(self.args)
 
+    def test_run_zero_buffer(self):
+
+        self.args['buffer_dict'] = {'FinfishAquacultureComm': 0}
+
+        hra.execute(self.args)
+
 '''    def test_dict(self):
 
         #Need to make a copy so that we have something to pass when we check
