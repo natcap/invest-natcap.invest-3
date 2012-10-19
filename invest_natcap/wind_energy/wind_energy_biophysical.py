@@ -26,7 +26,7 @@ def execute(args):
             projected in linear units of meters. The polygon specifies the 
             area of interest for the wind data points. If limiting the wind 
             farm bins by distance, then the aoi should also cover a portion 
-            of the land polygon that is of interest (required)
+            of the land polygon that is of interest (optional)
         args[bathymetry_uri] - a uri to a GDAL dataset that has the depth
             values of the area of interest (required)
         args[bottom_type_uri] - a uri to an OGR datasource of type polygon
@@ -52,12 +52,14 @@ def execute(args):
         args[max_depth] - a float value for the maximum depth for offshore wind
             farm installation (meters) (required)
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon that
-            provides a coastline for determining distances from wind farm bins
-            (optional)
+            provides a coastline for determining distances from wind farm bins.
+            AOI must be selected for this input to be active (optional)
         args[min_distance] - a float value for the minimum distance from shore
-            for offshore wind farm installation (meters) (optional)
+            for offshore wind farm installation (meters) The AOI must be
+            selected for this input to be active (optional)
         args[max_distance] - a float value for the maximum distance from shore
-            for offshore wind farm installation (meters) (optional)
+            for offshore wind farm installation (meters) The AOI must be
+            selected for this input to be active (optional)
 
         returns - nothing"""
 
