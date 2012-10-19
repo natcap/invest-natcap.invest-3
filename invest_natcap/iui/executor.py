@@ -380,12 +380,11 @@ class Executor(threading.Thread):
             # e to a more informative exception.
             if hasattr(e,'__class__') and hasattr(e, 'errno'):
                 LOGGER.debug('error %s number %s', e.__class__, e.errno)
-                if (isinstance(e, WindowsError) and (e.errno == 8 or e.errno == 28\
-                                                         or e.errno == 28)) or\
-                                                         (isinstance(e, IOError) and (e.errno == 28)):
+                if (isinstance(e, WindowsError) and (e.errno in [8, 28])) or\
+                        (isinstance(e, IOError) and (e.errno == 28)):
                     e = InsufficientDiskSpace('You do not have sufficient disk '
                                               'space available for this model to finish running.')
-
+                    
             self.printTraceback()
             self.setThreadFailed(True, e)
             self.move_log_file(args['workspace_dir'])
