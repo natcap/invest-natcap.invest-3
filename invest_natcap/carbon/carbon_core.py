@@ -64,15 +64,16 @@ def biophysical(args):
             
         returns nothing"""
 
-    #Calculate the per pixel carbon storage due to lulc pools
-    cellArea = raster_utils.pixel_area(args['lulc_cur'])
+    #Calculate the per pixel carbon storage due to lulc pools, convert
+    #area to hectares by dividing by 10000
+    cell_area_ha = raster_utils.pixel_area(args['lulc_cur']) / 10000.0
 
     #Create carbon pool dictionary with appropriate values to handle
     #nodata in the input and nodata in the output
     logger.debug("building carbon pools")
     inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
     outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
-    pools = build_pools_dict(args['carbon_pools'], cellArea, inNoData,
+    pools = build_pools_dict(args['carbon_pools'], cell_area_ha, inNoData,
                              outNoData)
     logger.debug("built carbon pools")
 
@@ -89,7 +90,7 @@ landscape')
         logger.info('calculating HWP storage for the current landscape')
         calculateHWPStorageCur(args['hwp_cur_shape'], args['c_hwp_cur'],
                             args['bio_hwp_cur'], args['vol_hwp_cur'],
-                            cellArea, args['lulc_cur_year'])
+                            cell_area_ha, args['lulc_cur_year'])
         logger.info('calculating raster stats for bio_hwp_cur')
         invest_core.calculateRasterStats(args['bio_hwp_cur'].GetRasterBand(1))
         logger.info('calculating raster stats for vol_hwp_cur')
@@ -126,7 +127,7 @@ landscape')
         if 'c_hwp_fut' in args:
             logger.info('calculating HWP storage for future landscape')
             calculateHWPStorageFut(harvestMaps, args['c_hwp_fut'],
-                args['bio_hwp_fut'], args['vol_hwp_fut'], cellArea,
+                args['bio_hwp_fut'], args['vol_hwp_fut'], cell_area_ha,
                 args['lulc_cur_year'], args['lulc_fut_year'])
             logger.info('calculating raster stats for bio_hwp_fut')
             invest_core.calculateRasterStats(args['bio_hwp_fut'].
@@ -484,10 +485,10 @@ def build_pools_dict(dbf, area, inNoData, outNoData):
 
     poolsDict = {int(inNoData): outNoData}
     for i in range(dbf.recordCount):
-        sum = 0
+        total_carbon_pools = 0
         for field in ('C_ABOVE', 'C_BELOW', 'C_SOIL', 'C_DEAD'):
-            sum += dbf[i][field]
-        poolsDict[dbf[i]['LULC']] = sum * area
+            total_carbon_pools += dbf[i][field]
+        poolsDict[dbf[i]['LULC']] = total_carbon_pools * area
     return poolsDict
 
 def uncertainty(args):

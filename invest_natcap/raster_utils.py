@@ -828,6 +828,9 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatyp
         
     output_band = None
     output_dataset.FlushCache()
+    
+    calculate_raster_stats(output_dataset)
+
     return output_dataset
 
 def flow_accumulation_dinf(flow_direction, dem, flow_accumulation_uri):
