@@ -208,6 +208,7 @@ def make_cum_risk_raster(dir, ratings):
         h_rasters.append(h_raster)
 
     return cum_rasters
+
 def burn_risk_values(ratings, risk_eq):
     '''This will re-burn the intermediate files of the H-S intersection with
     the risk value for that given layer. This will be calculated based on the
@@ -243,12 +244,9 @@ def burn_risk_values(ratings, risk_eq):
 
         #Want the 'E' value within the ratings[pair] entry of the ratings
         #dictionary. This is a list of the exposure ratings.
-        E = calculate_exposure_value(ratings[pair]['E'])
+        E = calculate_score_value(ratings[pair]['E'])
         
-        #The 'C' makes to a list of the consequence values. Pair[1] and pair[2]
-        #refer to the items in the pair tuple, which is the key for the ratings
-        #structure.
-        C = calculate_consequence_value(pair[1])
+        C = calculate_score_value(ratings[pair]['C'])
 
         if (risk_eq == 'Euclidean'):
             R = calc_risk_value_euc(E, C)
@@ -274,16 +272,16 @@ def calc_risk_value_mult(E, C):
     return E * C
     
 
-def calculate_exposure_value(dictionary):
+def calculate_score_value(dictionary):
 
-    '''This is the weighted average exposure value for all criteria for a given
-    H-S combination as determined on a run by run basis. The equation is 
-    as follows:
+    '''This is the weighted average of criteria for either exposure or
+    consequence data for a given H-S combination as determined on a run by run 
+    basis. The equation is as follows:
 
-    E = SUM{i=1, N} (e{i}/(d{i}*w{i}) / SUM{i=1, N} 1/(d{i}*w{i})
+    Value = SUM{i=1, N} (r{i}/(d{i}*w{i}) / SUM{i=1, N} 1/(d{i}*w{i})
         
         i = The current criteria that we are evaluating.
-        e = Exposure value for criteria i.
+        r = Rating value for criteria i.
         N = Total number of criteria being evaluated for the combination of
             habitat and stressor.
         d = Data quality rating for criteria i.
@@ -293,22 +291,22 @@ def calculate_exposure_value(dictionary):
     Input:
         dictionary- A sub-piece of the args['ratings'] dictionary that is,
         itself, a dictionary with a structure as follows. The outer keys are
-        string descriptions of the exposure criteria for final determination of
-        the exposure value, and the values are themselves dictionaries
-        containing rating information for that particular criteria. The inner
-        dictionary has keys which are descriptions of the rating vales (rating,
-        weight, and data quality), and values which are doubles reflecting
-        the ratings for that given criteria.
+        string descriptions of the criteria for final determination of the
+        exposure or consequence value, and the values are themselves 
+        dictionaries containing rating information for that particular 
+        criteria. The inner dictionary has keys which are descriptions of the 
+        rating vales (rating, weight, and data quality), and values which are 
+        doubles reflecting the ratings for that given criteria.
 
         {'Spatial Overlap' :
-            {'rating': 3.0, 'dq': 2.0, 'weight':1.0},
+            {'Rating': 3.0, 'DQ': 2.0, 'Weight':1.0},
                     .
                     .
                     .
         }
     Returns:
-        E- The weighted average of the exposure values for all criteria
-            applicable for a certain H-S interraction.
+        V - The weighted average of the exposure or consequence values for all 
+            criteria applicable for a certain H-S interraction.
     '''
     sum_top = 0.0
     sum_bottom = 0.0
@@ -318,61 +316,28 @@ def calculate_exposure_value(dictionary):
         #We know that dictionary[criteria] itself is a dictionary, which will
         #have 'rating', 'weight' and 'dq' (data quality) keys, and double
         #values.
-        e_i = dictionary[criteria]['rating']
-        w_i = dictionary[criteria]['weight']
-        d_i = dictionary[criteria]['dq']
+
+        #Ratings can be from 0-3, DQ can be from 0-3, and weights can be
+        #from 1-3.
+        e_i = dictionary[criteria]['Rating']
+        w_i = dictionary[criteria]['Weight']
+        d_i = dictionary[criteria]['DQ']
         
-        sum_top += e_i / (d_i * w_i)
-        sum_bottom += 1 / (d_i * w_i)
+        #If DQ or Rating = 0, then the whole thing should be adding 0 to the E.
+         
+        if d_i == 0.0 or e_i == 0.0:
+            sum_top += 0
+            sum_bottom += 0
+        else:
+            sum_top += e_i / (d_i * w_i)
+            sum_bottom += 1 / (d_i * w_i)
+    
+    #Would there ever be a situation where sum_top and sum_bottom are both 0,
+    #and should we somehow account for that?
+    V = sum_top / sum_bottom
 
-    E = sum_top / sum_bottom
+    return V
 
-    return E
-
-def calculate_consequence_value(dictionary):
-    '''Structure of this equation will be the same as the exposure values.
-    However, the dictionary passed in should contain criteria specific to the
-    consequences of that particular H-S interraction.
-    Input:
-        dictionary- A sub-piece of the args['ratings'] dictionary that is,
-        itself, a dictionary with a structure as follows. The outer keys are
-        string descriptions of the consequence criteria for final determination of
-        the cnsequence value, and the values are themselves dictionaries
-        containing rating information for that particular criteria. The inner
-        dictionary has keys which are descriptions of the rating vales (rating,
-        weight, and data quality), and values which are doubles reflecting
-        the ratings for that given criteria.
-
-        {'Area Change' :
-            {'rating': 3.0, 'dq': 2.0, 'weight':1.0},
-                    .
-                    .
-                    .
-        }
-    Returns:
-        C- The weighted average of the consequence values for all criteria
-            applicable for a certain H-S interraction.
-    '''
-    sum_top, sum_bottom = 0.0
-
-    for criteria in dictionary:
-       
-        #We know that dictionary[criteria] itself is a dictionary, which will
-        #have 'rating', 'weight' and 'dq' (data quality) keys, and double
-        #values.
-        c_i = dictionary[criteria]['rating']
-        w_i = dictionary[criteria]['weight']
-        d_i = dictionary[criteria]['dq']
-        
-        sum_top += c_i / (d_i * w_i)
-        sum_bottom += 1 / (d_i * w_i)
-
-    C = sum_top / sum_bottom
-
-    return C
-
-#For this, I am assuming that something is running the risk values as a loop,
-#and passing in the E and C values that it wants us to use.
 def calc_risk_value_euc(exposure, consequence):
     '''Takes an individual exposure value and consequence value (we assume they are
     from the same H-S space, and finds their euclidean distance from the origin of
