@@ -1162,7 +1162,7 @@ class FileEntry(DynamicText):
 
         # Expand a '~' in the parameter text if it is present.  Otherwise, this
         # returns the path as it was passed in.
-        text = os.path.abspath(os.path.expanduser(text))
+        text = os.path.expanduser(text)
 
         if os.path.isabs(text):
             self.textField.setText(text)
@@ -1170,7 +1170,7 @@ class FileEntry(DynamicText):
             # If the path was saved as blank, we should set the current text
             # field to be blank.  Otherwise, the path should be considered to be
             # relative to the InVEST root.
-            if text == '':
+            if len(text) == 0:
                 self.textField.setText('')
             else:
                 self.textField.setText(os.path.abspath(INVEST_ROOT + text))
