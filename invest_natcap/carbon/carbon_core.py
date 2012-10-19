@@ -739,3 +739,25 @@ def valuation(args):
     logger.info('calculating raster stats for value_seq')
     invest_core.calculateRasterStats(args['value_seq'].GetRasterBand(1))
     logger.info('finished valuation of each pixel')
+
+def calculate_summary(args):
+    """Dumps information about total carbon summaries from the past run
+        in the form
+
+        Total current carbon: xxx Mg
+        Total scenario carbon: yyy Mg
+        Total sequestered carbon: zzz Mg
+
+        args - a dictionary of arguments defined as follows:
+
+        args['tot_C_cur'] - a gdal dataset that contains pixels with
+            total Mg of carbon per cell on current landscape (required)
+        args['tot_C_fut'] - a gdal dataset that contains pixels with
+            total Mg of carbon per cell on future landscape (optional)
+        args['sequest'] - a gdal dataset that contains pixels with
+            total Mg of carbon sequestered per cell (optional)
+
+        returns nothing
+        """
+
+    pass
