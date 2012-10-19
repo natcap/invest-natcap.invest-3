@@ -12,12 +12,16 @@ import datetime
 import shutil
 
 import invest_natcap
+from invest_natcap.invest_core import fileio as fileio
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
     stream=open(os.devnull, 'w'))
 
 LOGGER = logging.getLogger()
+
+# This class is to be used if certain WindowsErrors or IOErrors are encountered.
+class InsufficientDiskSpace(Exception): pass
 
 def locate_module(module_list, path=None):
     """Search for and return an executable module object as long as the target
@@ -254,6 +258,20 @@ class Executor(threading.Thread):
         else:
             self.operations.insert(index, opDict)
 
+    def print_args(self, args_dict):
+        """Write args_dict to a formatted string to the self.write() function.
+            args_dict - a dictionary.
+
+        returns noting"""
+
+        self.write("Arguments:\n")
+        format_str = "%-20s %s\n"
+        sorted_args = sorted(args_dict.iteritems(), key=lambda x: x[0])
+        for name, value in sorted_args:
+            self.write(format_str % (name, value))
+        self.write("\n\n")
+
+
     def run(self):
         sys.stdout = self
         sys.stderr = self
@@ -339,6 +357,9 @@ class Executor(threading.Thread):
                 filename))
             self.log_file = open(log_file_uri, 'w')
 
+            # Now that the log file is open, write the arguments to it.
+            self.print_args(args)
+
             LOGGER.debug('Loaded the model from %s', module)
             LOGGER.info('Executing the loaded model')
 
@@ -348,10 +369,22 @@ class Executor(threading.Thread):
             except AttributeError:
                 model_version = None
 
+            LOGGER.info('Disk space free: %s GB', fileio.get_free_space(unit='GB'))
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
             model.execute(args)
         except Exception as e:
+            LOGGER.info('Disk space free: %s GB', fileio.get_free_space(unit='GB'))
             LOGGER.error('Error: a problem occurred while running the model')
+
+            # If the exception indicates that we ran out of disk space, convert
+            # e to a more informative exception.
+            LOGGER.debug('error %s number %s', e.__class__, e.errno)
+            if (isinstance(e, WindowsError) and (e.errno == 8 or e.errno == 28\
+                or e.errno == 28)) or\
+               (isinstance(e, IOError) and (e.errno == 28)):
+                e = InsufficientDiskSpace('You do not have sufficient disk '
+                    'space available for this model to finish running.')
+
             self.printTraceback()
             self.setThreadFailed(True, e)
             self.move_log_file(args['workspace_dir'])
@@ -381,5 +414,6 @@ class Executor(threading.Thread):
             LOGGER.error('Cannot find default file browser. Platform: %s |' +
                 ' folder: %s', platform.system(), args['workspace_dir'])
 
+        LOGGER.info('Disk space free: %s GB', fileio.get_free_space(unit='GB'))
         LOGGER.info('Finished.')
         self.move_log_file(args['workspace_dir'])

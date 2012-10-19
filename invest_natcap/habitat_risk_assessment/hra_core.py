@@ -21,7 +21,7 @@ def execute(args):
         args- Dictionary containing everything that hra_core will need to
             complete the rest of the model run. It will contain the following.
         args['workspace_dir']- Directory in which all data resides. Output
-            and intermediate folders will be supfolders of this one.
+            and intermediate folders will be subfolders of this one.
         args['risk_eq']-  A string representing the equation to be used for
             risk calculation. We should check for possibilities, and send to a 
             different function when deciding R dependent on this.
