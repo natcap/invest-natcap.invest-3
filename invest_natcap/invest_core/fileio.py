@@ -2,6 +2,40 @@ import csv
 import invest_natcap.dbfpy
 import os
 import re
+import platform
+import ctypes
+
+
+def get_free_space(folder='/', unit='MB'):
+    """Get the free space on the drive/folder marked by folder.  Returns a float
+        of unit unit.
+
+        folder - (optional) a string uri to a folder or drive on disk. Defaults
+            to '/' ('C:' on Windows')
+        unit - (optional) a string, either 'MB' or 'GB'.  Defaults to 'MB
+
+        returns a float marking the space free.  This number is of the units
+        provided.  Number is rounded to two decimal places.'"""
+
+    units = {'MB': 1024**2.0,
+             'GB': 1024**3.0}
+
+    factor = units[unit]
+
+    if platform.system() == 'Windows':
+        if folder == '/':
+            folder = 'C:'
+
+        free_bytes = ctypes.c_ulonglong(0)
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(folder),
+            None, None, ctypes.pointer(free_bytes))
+        free_space = free_bytes.value/(factor)
+    else:
+        space = os.statvfs(folder)
+        free_space = (space.f_bsize * space.f_bavail)/(factor)
+
+    return round(free_space, 2)
+
 
 class TableDriverTemplate(object):
     """ The TableDriverTemplate classes provide a uniform, simple way to
