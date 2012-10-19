@@ -131,7 +131,8 @@ def execute(args):
     logger.info('starting carbon biophysical model')
     carbon_core.biophysical(biophysicalArgs)
     logger.info('finished carbon biophysical model')
-
+    
+    #Dump some info about total carbon stats
     carbon_core.calculate_summary(biophysicalArgs)
 
 #This part is for command line invocation and allows json objects to be passed
