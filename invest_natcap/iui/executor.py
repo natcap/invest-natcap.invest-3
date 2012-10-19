@@ -245,6 +245,7 @@ class Executor(threading.Thread):
         return self.threadFailed
 
     def printTraceback(self):
+        LOGGER.debug('Printing traceback')
         print(str(traceback.print_exc()) + '\n')
 
     def addOperation(self, op, args=None, uri=None, index=None):
@@ -331,6 +332,14 @@ class Executor(threading.Thread):
 
     def runModel(self, module, args):
         try:
+            workspace = args['workspace_dir']
+        except KeyError:
+            # KeyError thrown when the key 'workspace_dir' is not used in the
+            # args dictionary, print an inconsequential error.
+            LOGGER.error('Cannot find args id \'workspace_dir\'.')
+            workspace = None
+
+        try:
             # Create the log filename from the current time and save that in the
             # root of the user's workspace.  The file is actually written to
             # whenever self.write() is called.
@@ -348,7 +357,6 @@ class Executor(threading.Thread):
                 model = locate_module(module_list)
                 model_name = module_list[-1]  # model name is last entry in list
             filename = '%s-log-%s.txt' % (model_name, timestamp)
-            LOGGER.info('Logging will be saved to %s', filename)
 
             # we want to save this file to the current directory until the model
             # finishes, when we copy the log into the model's workspace
@@ -359,6 +367,7 @@ class Executor(threading.Thread):
 
             # Now that the log file is open, write the arguments to it.
             self.print_args(args)
+            LOGGER.info('Logging will be saved to %s', filename)
 
             LOGGER.debug('Loaded the model from %s', module)
             LOGGER.info('Executing the loaded model')
@@ -369,12 +378,15 @@ class Executor(threading.Thread):
             except AttributeError:
                 model_version = None
 
-            LOGGER.info('Disk space free: %s GB', fileio.get_free_space(unit='GB'))
+            LOGGER.info('Disk space remaining for workspace: %s GB',
+                        fileio.get_free_space(workspace, unit='GB'))
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
             model.execute(args)
         except Exception as e:
-            LOGGER.info('Disk space free: %s GB', fileio.get_free_space(unit='GB'))
+            LOGGER.info('Disk space free: %s MB',
+                        fileio.get_free_space(workspace, unit='MB'))
             LOGGER.error('Error: a problem occurred while running the model')
+            self.printTraceback()
 
             # If the exception indicates that we ran out of disk space, convert
             # e to a more informative exception.
@@ -387,33 +399,31 @@ class Executor(threading.Thread):
                     
             self.printTraceback()
             self.setThreadFailed(True, e)
-            self.move_log_file(args['workspace_dir'])
+            self.move_log_file(workspace)
             #Quit the rest of the function
             return
 
-        #Try opening up a file explorer to see the results.
-        try:
-            LOGGER.info('Opening file explorer to workspace directory')
-            if platform.system() == 'Windows':
-                # Try to launch a windows file explorer to visit the workspace
-                # directory now that the operation has finished executing.
-                LOGGER.info('Using windows explorer to view files')
-                subprocess.Popen(r'explorer "%s"' % args['workspace_dir'])
-            else:
-                # Assume we're on linux.  No biggie, just use xdg-open to use the
-                # default file opening scheme.
-                LOGGER.info('Not on windows, using default file browser')
-                subprocess.Popen(['xdg-open', args['workspace_dir']])
-        except KeyError:
-            # KeyError thrown when the key 'workspace_dir' is not used in the
-            # args dictionary, print an inconsequential error.
-            LOGGER.error('Cannot find args id \'workspace_dir\'.')
-        except OSError:
-            # OSError is thrown if the given file browser program (whether
-            # explorer or xdg-open) cannot be found.  No biggie, just pass.
-            LOGGER.error('Cannot find default file browser. Platform: %s |' +
-                ' folder: %s', platform.system(), args['workspace_dir'])
+        if workspace != None:
+            #Try opening up a file explorer to see the results.
+            try:
+                LOGGER.info('Opening file explorer to workspace directory')
+                if platform.system() == 'Windows':
+                    # Try to launch a windows file explorer to visit the workspace
+                    # directory now that the operation has finished executing.
+                    LOGGER.info('Using windows explorer to view files')
+                    subprocess.Popen(r'explorer "%s"' % workspace)
+                else:
+                    # Assume we're on linux.  No biggie, just use xdg-open to use the
+                    # default file opening scheme.
+                    LOGGER.info('Not on windows, using default file browser')
+                    subprocess.Popen(['xdg-open', workspace])
+            except OSError:
+                # OSError is thrown if the given file browser program (whether
+                # explorer or xdg-open) cannot be found.  No biggie, just pass.
+                LOGGER.error('Cannot find default file browser. Platform: %s |' +
+                    ' folder: %s', platform.system(), workspace)
 
-        LOGGER.info('Disk space free: %s GB', fileio.get_free_space(unit='GB'))
+        LOGGER.info('Disk space free: %s GB',
+                    fileio.get_free_space(workspace,unit='GB'))
         LOGGER.info('Finished.')
-        self.move_log_file(args['workspace_dir'])
+        self.move_log_file(workspace)
