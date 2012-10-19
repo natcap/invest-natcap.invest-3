@@ -1520,8 +1520,9 @@ def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
     mask_array = None
     source_array = None
     out_band = None
-    shutil.rmtree(temp_dir)
-
+    #Turning on ignore_errors = True in case we can't remove the 
+    #the temporary directory
+    shutil.rmtree(temp_dir, ignore_errors = True)
 
     out_dataset.FlushCache()
     return out_dataset
