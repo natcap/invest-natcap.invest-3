@@ -12,7 +12,7 @@ import invest_natcap.raster_utils as raster_utils
 from invest_natcap.dbfpy import dbf
 from invest_natcap.invest_core import invest_core
 
-logger = logging.getLogger('carbon_core')
+LOGGER = logging.getLogger('carbon_core')
 
 def biophysical(args):
     """Executes the basic carbon model that maps a carbon pool dataset to a
@@ -70,49 +70,49 @@ def biophysical(args):
 
     #Create carbon pool dictionary with appropriate values to handle
     #nodata in the input and nodata in the output
-    logger.debug("building carbon pools")
+    LOGGER.debug("building carbon pools")
     inNoData = args['lulc_cur'].GetRasterBand(1).GetNoDataValue()
     outNoData = args['tot_C_cur'].GetRasterBand(1).GetNoDataValue()
     pools = build_pools_dict(args['carbon_pools'], cell_area_ha, inNoData,
                              outNoData)
-    logger.debug("built carbon pools")
+    LOGGER.debug("built carbon pools")
 
 
     #calculate carbon storage for the current landscape
-    logger.info('calculating carbon storage for the current landscape')
+    LOGGER.info('calculating carbon storage for the current landscape')
     calculateCarbonStorage(pools, args['lulc_cur'].GetRasterBand(1),
                            args['tot_C_cur'].GetRasterBand(1))
-    logger.info('finished calculating carbon storage for the current \
+    LOGGER.info('finished calculating carbon storage for the current \
 landscape')
 
     #Calculate HWP pools if a HWP shape is present
     if 'hwp_cur_shape' in args:
-        logger.info('calculating HWP storage for the current landscape')
+        LOGGER.info('calculating HWP storage for the current landscape')
         calculateHWPStorageCur(args['hwp_cur_shape'], args['c_hwp_cur'],
                             args['bio_hwp_cur'], args['vol_hwp_cur'],
                             cell_area_ha, args['lulc_cur_year'])
-        logger.info('calculating raster stats for bio_hwp_cur')
+        LOGGER.info('calculating raster stats for bio_hwp_cur')
         invest_core.calculateRasterStats(args['bio_hwp_cur'].GetRasterBand(1))
-        logger.info('calculating raster stats for vol_hwp_cur')
+        LOGGER.info('calculating raster stats for vol_hwp_cur')
         invest_core.calculateRasterStats(args['vol_hwp_cur'].GetRasterBand(1))
-        logger.info('calculating raster stats for c_hwp_cur')
+        LOGGER.info('calculating raster stats for c_hwp_cur')
         invest_core.calculateRasterStats(args['c_hwp_cur'].GetRasterBand(1))
 
         #Add the current hwp carbon storage to tot_C_cur
         invest_core.rasterAdd(args['tot_C_cur'].GetRasterBand(1),
                               args['c_hwp_cur'].GetRasterBand(1),
                               args['tot_C_cur'].GetRasterBand(1))
-        logger.info('finished HWP storage for the current landscape')
+        LOGGER.info('finished HWP storage for the current landscape')
 
-    logger.info('calculating raster stats for tot_C_cur')
+    LOGGER.info('calculating raster stats for tot_C_cur')
     invest_core.calculateRasterStats(args['tot_C_cur'].GetRasterBand(1))
 
     if 'lulc_fut' in args:
         #calculate carbon storage for the future landscape if it exists
-        logger.info('calculating carbon storage for future landscape')
+        LOGGER.info('calculating carbon storage for future landscape')
         calculateCarbonStorage(pools, args['lulc_fut'].GetRasterBand(1),
                                args['tot_C_fut'].GetRasterBand(1))
-        logger.info('finished calculating carbon storage for future \
+        LOGGER.info('finished calculating carbon storage for future \
 landscape')
 
         #Calculate a future HWP pool if a future landcover map is present, 
@@ -125,17 +125,17 @@ landscape')
         if 'hwp_fut_shape' in args:
             harvestMaps['fut'] = args['hwp_fut_shape']
         if 'c_hwp_fut' in args:
-            logger.info('calculating HWP storage for future landscape')
+            LOGGER.info('calculating HWP storage for future landscape')
             calculateHWPStorageFut(harvestMaps, args['c_hwp_fut'],
                 args['bio_hwp_fut'], args['vol_hwp_fut'], cell_area_ha,
                 args['lulc_cur_year'], args['lulc_fut_year'])
-            logger.info('calculating raster stats for bio_hwp_fut')
+            LOGGER.info('calculating raster stats for bio_hwp_fut')
             invest_core.calculateRasterStats(args['bio_hwp_fut'].
                                             GetRasterBand(1))
-            logger.info('calculating raster stats for vol_hwp_fut')
+            LOGGER.info('calculating raster stats for vol_hwp_fut')
             invest_core.calculateRasterStats(args['vol_hwp_fut'].
                                              GetRasterBand(1))
-            logger.info('calculating raster stats for c_hwp_fut')
+            LOGGER.info('calculating raster stats for c_hwp_fut')
             invest_core.calculateRasterStats(args['c_hwp_fut'].
                                              GetRasterBand(1))
 
@@ -143,21 +143,21 @@ landscape')
             invest_core.rasterAdd(args['tot_C_fut'].GetRasterBand(1),
                               args['c_hwp_fut'].GetRasterBand(1),
                               args['tot_C_fut'].GetRasterBand(1))
-            logger.info('finished calculating HWP storage for future landscape')
+            LOGGER.info('finished calculating HWP storage for future landscape')
 
-        logger.info('calculating raster stats for tot_C_fut')
+        LOGGER.info('calculating raster stats for tot_C_fut')
         invest_core.calculateRasterStats(args['tot_C_fut'].GetRasterBand(1))
 
         #calculate seq. only after HWP has been added to the storage rasters
-        logger.info('calculating carbon sequestration')
+        LOGGER.info('calculating carbon sequestration')
         invest_core.rasterDiff(args['tot_C_fut'].GetRasterBand(1),
                                args['tot_C_cur'].GetRasterBand(1),
                                args['sequest'].GetRasterBand(1))
 
-        logger.info('calculating raster stats for sequest')
+        LOGGER.info('calculating raster stats for sequest')
         invest_core.calculateRasterStats(args['sequest'].GetRasterBand(1))
 
-        logger.info('finished calculating carbon sequestration')
+        LOGGER.info('finished calculating carbon sequestration')
 
 def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
                            yr_cur, yr_fut):
@@ -716,7 +716,7 @@ def valuation(args):
         
         returns nothing"""
 
-    logger.debug('constructing valuation formula')
+    LOGGER.debug('constructing valuation formula')
     n = args['yr_fut'] - args['yr_cur'] - 1
     ratio = 1.0 / ((1 + args['r'] / 100.0) * (1 + args['c'] / 100.0))
     valuationConstant = args['V'] / (args['yr_fut'] - args['yr_cur']) * \
@@ -731,14 +731,14 @@ def valuation(args):
         else:
             return noDataOut
 
-    logger.debug('finished constructing valuation formula')
+    LOGGER.debug('finished constructing valuation formula')
 
-    logger.info('starting valuation of each pixel')
+    LOGGER.info('starting valuation of each pixel')
     invest_core.vectorize1ArgOp(args['sequest'].GetRasterBand(1), valueOp,
                                 args['value_seq'].GetRasterBand(1))
-    logger.info('calculating raster stats for value_seq')
+    LOGGER.info('calculating raster stats for value_seq')
     invest_core.calculateRasterStats(args['value_seq'].GetRasterBand(1))
-    logger.info('finished valuation of each pixel')
+    LOGGER.info('finished valuation of each pixel')
 
 def calculate_summary(args):
     """Dumps information about total carbon summaries from the past run
@@ -759,5 +759,21 @@ def calculate_summary(args):
 
         returns nothing
         """
+    LOGGER.debug('calculate summary')
+    raster_key_messages = [('tot_C_cur', 'Total current carbon: '),
+                           ('tot_C_fut', 'Total scenario carbon: '),
+                           ('sequest', 'Total sequestered carbon: ')]
 
-    pass
+    for raster_key, message in raster_key_messages:
+        #Make sure we passed in the dictionary, and gracefully continue
+        #if we didn't.
+        if raster_key not in args:
+            continue
+        dataset = args[raster_key]
+        band, nodata = raster_utils.extract_band_and_nodata(dataset)
+        total_sum = 0.0
+        #Loop over each row in out_band
+        for row_index in range(band.YSize):
+            row_array = band.ReadAsArray(0, row_index, band.XSize, 1)
+            total_sum += np.sum(row_array[row_array != nodata])
+        LOGGER.info("%s %s Mg" % (message, total_sum))
