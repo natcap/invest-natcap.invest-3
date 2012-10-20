@@ -87,7 +87,7 @@ def execute(args):
 
     make_recov_potent_rast(output_dir, args['ratings'])
 
-def make_recov_potent_rast(dir, ratings):
+def make_recov_potent_rast(o_dir, ratings):
     '''For now, we will just explicitly call the given consequences from the
     ratings structure, since there is no good way to do it more dynamically.
 
@@ -97,7 +97,24 @@ def make_recov_potent_rast(dir, ratings):
     This should create a raster which combines natural mortality rating, 
     recruitment rating, age at maturity/recovery time, and connectivity rating.
     
+    Input:
+        o_dir- The directory into which all completed files should be placed.
+        ratings- A dictionary which contains DQ/W/and Ratings for each of the
+            criteria which apply to this particular run of the model.
+
+    Output:
+        A series of raster files of the form 
+            'recovery_potential_H[habitatname].tif' which use only the 4 above
+            criteria to get an average.
+
+    Returns nothing.
     '''
+    
+    #Should be noted that for now I am only going to take an average of the 
+    #ratings scores for each of the applicable criteria. However, we can
+    #certainly edit it later to use a more complex equation in the calculation
+    #of recovery potential.
+
 
 def make_ecosys_risk_raster(dir, h_risks):
     '''This function will output a raster which combines all of the habitat
