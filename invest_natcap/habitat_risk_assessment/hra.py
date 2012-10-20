@@ -110,7 +110,7 @@ def execute(args):
 
     make_rasters(file_names, s_rast, args['grid_size'])
 
-    #INSERT WAY OF BUFFERING STRESSORS HERE
+    #Checks the stressor buffer, and re-rasterizes if necessary.
     buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
 
     #Now, want to make all potential combinations of the rasters, and add it to
@@ -119,7 +119,7 @@ def execute(args):
 
     hra_args['ratings'] = ratings_with_rast
 
-#    hra_core.execute(hra_args)
+    hra_core.execute(hra_args)
 
 def buffer_s_rasters(dir, buffer_dict, grid_size):
     '''If there is buffering desired, this will take each file and buffer the
