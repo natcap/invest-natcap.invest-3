@@ -136,6 +136,7 @@ def make_recov_potent_rast(o_dir, ratings):
     stressors = np.array(stressors)
     stressors = np.unique(stressors)
 
+    #THIS IS ALL WRONG
     for h in habitats:
 
         sum_ratings = 0.0
@@ -149,6 +150,7 @@ def make_recov_potent_rast(o_dir, ratings):
             sum_ratings += ratings[(h, s)]['C']['Age at Maturity']['Rating']
             sum_ratings += ratings[(h, s)]['C']['Connectivity Rating']['Rating']
 
+        
 
 def make_ecosys_risk_raster(dir, h_risks):
     '''This function will output a raster which combines all of the habitat
