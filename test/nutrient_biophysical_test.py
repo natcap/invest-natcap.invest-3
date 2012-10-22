@@ -6,3 +6,7 @@ class NutrientBiophysicalTest(unittest.TestCase):
     def setUp(self):
         pass
 
+    def test_smoke(self):
+        """Smoke test for nutrient retention: biophysical"""
+        pass
+
