@@ -37,6 +37,7 @@
                     "label": "Area Of Interest (AOI)",
                     "defaultValue": "../Wind_Energy/Input/aoi.shp",
                     "required": false,
+                    "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
                     "helpText": ""
                 },
@@ -56,6 +57,7 @@
                     "type": "file",
                     "label": "Bottome Types",
                     "required": false,
+                    "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
                     "helpText": ""
                 }
