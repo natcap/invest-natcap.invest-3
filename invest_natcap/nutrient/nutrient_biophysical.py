@@ -20,7 +20,7 @@ def execute(args):
             'threshold_uri' - a string uri to a supported table on disk
                 containing water purification details.
             'nutrient_type' - a string, either 'nitrogen' or 'phosphorus'
-            'threshold_table_uri' - a string uri to a supported table on disk.
+            'accum_threshold' - a number representing the flow accumulation.
 
         returns nothing.
     """
