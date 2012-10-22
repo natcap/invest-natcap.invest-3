@@ -34,7 +34,7 @@ def execute(args):
     comments = args["comments"]
 
     data_dir = args["data_dir"]
-    if data_dir[-1]!=os.sep:
+    if data_dir != "" and data_dir[-1]!=os.sep:
         data_dir = data_dir + os.sep
     
     predictorKeys = ["landscan",
@@ -65,12 +65,19 @@ def execute(args):
     LOGGER.info("Validating AOI.")
     dirname=os.path.dirname(aoiFileName)+os.sep
     fileName, fileExtension = os.path.splitext(aoiFileName)
-    aoiFileNameSHP = fileName+".shp"
-    aoiFileNameSHX = fileName+".shx"
-    aoiFileNameDBF = fileName+".dbf"
-    aoiFileNamePRJ = fileName+".prj"
+    if fileExtension == ".shp":
+        aoiFileNameSHP = fileName+".shp"
+        aoiFileNameSHX = fileName+".shx"
+        aoiFileNameDBF = fileName+".dbf"
+        aoiFileNamePRJ = fileName+".prj"
+    else:
+        aoiFileNameSHP = fileName+".SHP"
+        aoiFileNameSHX = fileName+".SHX"
+        aoiFileNameDBF = fileName+".DBF"
+        aoiFileNamePRJ = fileName+".PRJ"
     
     if not os.path.exists(aoiFileNamePRJ):
+        LOGGER.debug("File %s is missing." % aoiFileNamePRJ)
         LOGGER.error("The shapefile must have a PRJ file.")
         raise IOError, "Missing PRJ file."
 
@@ -199,7 +206,7 @@ def execute(args):
         
 if __name__ == "__main__":
     args = {}
-    if len(sys.argv)>1:
+    if len(sys.argv)==16:
         LOGGER.info("Running model with user provided parameters.")
         aoiFileName = sys.argv[1]
         cellSize = float(sys.argv[2])
@@ -209,7 +216,7 @@ if __name__ == "__main__":
         data_dir = sys.argv[6]
         mask = map(bool,sys.argv[7:16])
 
-    else:
+    elif len(sys.argv)==1:
         LOGGER.info("Runnning model with test parameters.")
         dirname=os.sep.join(os.path.abspath(os.path.dirname(sys.argv[0])).split(os.sep)[:-2])+"/test/data/"
         aoiFileName = dirname+"recreation_data/"+"FIPS-11001.shp"
@@ -219,6 +226,8 @@ if __name__ == "__main__":
         comments = "Runnning model with test parameters."
         data_dir = dirname+"recreation_data/FIPS-11001/"
         mask = [True, True, True, True, True, True, False, False, False]
+    else:
+        raise ValueError, "The number of paramters does not match a known profile."
 
     LOGGER.debug("Constructing args dictionary.")
     args["aoiFileName"] = aoiFileName

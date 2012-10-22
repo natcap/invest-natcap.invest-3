@@ -187,24 +187,19 @@ def water_yield(args):
         #Compute Budyko Dryness index
         #Converting to a percent because 'etk' is stored in the table 
         #as int(percent * 1000)
-        tmp_di = (etk * eto) / (precip * 1000)
+        phi = (etk * eto) / (precip * 1000)
         
         #Calculate plant available water content (mm) using the minimum
         #of soil depth and root depth
         awc = (np.minimum(root, soil) * pawc)  
         
         #Calculate dimensionless ratio of plant accessible water
-        #storage to expected precipitation during the year      
-        tmp_w = (awc / (precip + 1)) * seasonality_constant
+        #storage to expected precipitation during the year
         
-        tmp_max_aet = np.copy(tmp_di)
-        
-        #Replace any value greater than 1 with 1
-        np.putmask(tmp_max_aet, tmp_max_aet > 1, 1)
+        w_x = (awc / precip) * seasonality_constant
         
         #Compute evapotranspiration partition of the water balance
-        tmp_calc = \
-            ((tmp_w * tmp_di + 1) / (( 1 / tmp_di) + (tmp_w * tmp_di + 1)))
+        aet_p = (1+ w_x * phi) / (1 + w_x * phi + 1 / phi)
         
         #Currently as of release 2.2.2 the following operation is not
         #documented in the users guide. We take the minimum of the
@@ -212,10 +207,9 @@ def water_yield(args):
         #partition of the water balance (see users guide for variable
         #and equation references). This was confirmed by Yonas Ghile on
         #5/10/12
-        
-        fractp = np.minimum(tmp_max_aet, tmp_calc)
-        
-        return fractp
+        #Folow up, Guy verfied this again on 10/22/2012 (see issue 1323)
+       
+        return np.minimum(phi, aet_p)
     
     fractp_vec = np.vectorize(fractp_op)
     
