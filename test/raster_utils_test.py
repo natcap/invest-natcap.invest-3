@@ -29,9 +29,13 @@ class TestRasterUtils(unittest.TestCase):
         reclassified_ds = raster_utils.reclassify_dataset(
             dataset, value_map, output_uri, gdal.GDT_Float32, -1.0)
 
-#        subprocess.Popen(["qgis", output_uri, base_uri])
         regression_uri = 'data/reclassify_regression/reclassified.tif'
         invest_test_core.assertTwoDatasetEqualURI(self, regression_uri, output_uri)
+
+        #If we turn on the exception flag, we should get an exception
+        self.assertRaises(raster_utils.UndefinedValue,
+            raster_utils.reclassify_dataset, dataset, value_map, output_uri, 
+            gdal.GDT_Float32, -1.0, exception_flag = 'values_required')
 
     def test_gaussian_filter(self):
         base_dir = 'data/test_out/gaussian_filter'
