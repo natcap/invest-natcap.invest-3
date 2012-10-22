@@ -187,7 +187,7 @@ def water_yield(args):
         #Compute Budyko Dryness index
         #Converting to a percent because 'etk' is stored in the table 
         #as int(percent * 1000)
-        tmp_di = (etk * eto) / (precip * 1000)
+        phi = (etk * eto) / (precip * 1000)
         
         #Calculate plant available water content (mm) using the minimum
         #of soil depth and root depth
@@ -198,14 +198,14 @@ def water_yield(args):
         
         tmp_w = (awc / precip) * seasonality_constant
         
-        tmp_max_aet = np.copy(tmp_di)
+        tmp_max_aet = np.copy(phi)
         
         #Replace any value greater than 1 with 1
         np.putmask(tmp_max_aet, tmp_max_aet > 1, 1)
         
         #Compute evapotranspiration partition of the water balance
         tmp_calc = \
-            ((tmp_w * tmp_di + 1) / (( 1 / tmp_di) + (tmp_w * tmp_di + 1)))
+            ((tmp_w * phi + 1) / (( 1 / phi) + (tmp_w * phi + 1)))
         
         #Currently as of release 2.2.2 the following operation is not
         #documented in the users guide. We take the minimum of the
