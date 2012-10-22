@@ -194,8 +194,9 @@ def water_yield(args):
         awc = (np.minimum(root, soil) * pawc)  
         
         #Calculate dimensionless ratio of plant accessible water
-        #storage to expected precipitation during the year      
-        tmp_w = (awc / (precip + 1)) * seasonality_constant
+        #storage to expected precipitation during the year
+        
+        tmp_w = (awc / precip) * seasonality_constant
         
         tmp_max_aet = np.copy(tmp_di)
         
@@ -211,8 +212,8 @@ def water_yield(args):
         #following values (Rxj, (AETxj/Pxj) to determine the evapotranspiration
         #partition of the water balance (see users guide for variable
         #and equation references). This was confirmed by Yonas Ghile on
-        #5/10/12
-        
+        #5/10/12 
+       
         fractp = np.minimum(tmp_max_aet, tmp_calc)
         
         return fractp
