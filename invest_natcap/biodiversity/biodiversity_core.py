@@ -481,7 +481,8 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
         int_attr_dict[int(key)] = float(attr_dict[key][field])
 
     reclassified_dataset = raster_utils.reclassify_dataset(
-        key_raster, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata)
+        key_raster, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
+        'values_required')
 
     return reclassified_dataset
     ##########################333333

@@ -1528,7 +1528,8 @@ def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
     return out_dataset
 
 def reclassify_dataset(
-    dataset, value_map, raster_out_uri, out_datatype, out_nodata):
+    dataset, value_map, raster_out_uri, out_datatype, out_nodata,
+    exception_flag='none'):
 
     """An efficient function to reclassify values in a positive int dataset type
         to any output type.  If there are values in the dataset that are not in
@@ -1542,8 +1543,13 @@ def reclassify_dataset(
         out_datatype - the type for the output dataset
         out_nodata - the nodata value for the output raster.  Must be the same
             type as out_datatype
+        exception_flag - either 'none' or 'values_required'.  if 'values_required'
+            raise an exception if there is a value in the raster that is not
+            found in value_map
 
-        returns the new reclassified dataset"""
+       returns the new reclassified dataset GDAL raster, or raises an Exception 
+           if exception_flag == 'values_required' and the value from 
+           'key_raster' is not a key in 'attr_dict'"""
 
     LOGGER.info('Reclassifying')
     out_dataset = new_raster_from_base(
