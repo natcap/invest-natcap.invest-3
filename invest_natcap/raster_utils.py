@@ -1564,17 +1564,33 @@ def reclassify_dataset(
     #type as the output type.  The +2 adds an extra entry for the nodata values
     #The dataset max ensures that there are enough values in the array
     LOGGER.info('Creating lookup numpy array')
-    map_array_size = max(dataset_max, max(value_map.keys())) + 2
+    valid_set = set(value_map.keys())
+    map_array_size = max(dataset_max, max(valid_set)) + 2
+    valid_set.add(map_array_size - 1) #add the index for nodata
     map_array = np.empty((1,map_array_size), dtype = type(out_nodata))
     map_array[:] = out_nodata
     for key, value in value_map.iteritems():
         map_array[0,key] = value
 
     LOGGER.info('Looping through rows in the input data')
+    
+    #Doing two loops here for performance purposes, this saves us from
     for row_index in xrange(in_band.YSize):
         row_array = in_band.ReadAsArray(0, row_index, in_band.XSize, 1)
-        #Remaps pesky nodata values to something to the last index in map_array
+        #Remaps pesky nodata values to something to the last index in 
+        #map_array
         row_array[row_array == in_nodata] = map_array_size - 1
+
+        if exception_flag == 'values_required':
+            unique_set = set(row_array)
+            if not unique_set.issubset(valid_set):
+                undefined_set = unique_set.difference(valid_set)
+                class UndefinedValue(Exception):
+                    pass
+                raise UndefinedValue(
+                    "The following values were in the raster but not in the "
+                    "value_map %s" % (undefined_set))
+
         row_array = map_array[np.ix_([0],row_array[0])]
         out_band.WriteArray(row_array, 0, row_index)
 
