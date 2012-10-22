@@ -1,4 +1,4 @@
-'''This is the core module for HRA functionality. This will perform all HRA
+'''This is #the core module for HRA functionality. This will perform all HRA
 calcs, and return the appropriate outputs.
 '''
 import math
@@ -100,7 +100,18 @@ def make_recov_potent_rast(o_dir, ratings):
     Input:
         o_dir- The directory into which all completed files should be placed.
         ratings- A dictionary which contains DQ/W/and Ratings for each of the
-            criteria which apply to this particular run of the model.
+            criteria which apply to this particular run of the model. Structure
+            resembles the following:
+
+            {(Habitat A, Stressor 1): 
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
 
     Output:
         A series of raster files of the form 
@@ -114,6 +125,29 @@ def make_recov_potent_rast(o_dir, ratings):
     #ratings scores for each of the applicable criteria. However, we can
     #certainly edit it later to use a more complex equation in the calculation
     #of recovery potential.
+    
+    #This will give us a list containing the unique values within each so that
+    #they can be itterated though to get the full habitat recovery potential
+    habitats = map(lambda pair: pair[0], ratings)   
+    habitats = np.array(habitats)
+    habitats = np.unique(habitats)
+
+    stressors = maps(lambda pair: pair[1], ratings)
+    stressors = np.array(stressors)
+    stressors = np.unique(stressors)
+
+    for h in habitats:
+
+        sum_ratings = 0.0
+
+        for s in stressors:
+
+            #These indicies can be subject to change dependinging on how the
+            #user will be inputting them.
+            sum_ratings += ratings[(h, s)]['C']['Natural Mortality Rating']['Rating']
+            sum_ratings += ratings[(h, s)]['C']['Recruitment Rating']['Rating']
+            sum_ratings += ratings[(h, s)]['C']['Age at Maturity']['Rating']
+            sum_ratings += ratings[(h, s)]['C']['Connectivity Rating']['Rating']
 
 
 def make_ecosys_risk_raster(dir, h_risks):
