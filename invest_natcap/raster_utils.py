@@ -25,6 +25,9 @@ import pyamg
 #in regions that should
 class SpatialExtentOverlapException(Exception): pass
 
+#Used to indicate values that are not defined in dictionary structures
+class UndefinedValue(Exception): pass
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -1582,11 +1585,9 @@ def reclassify_dataset(
         row_array[row_array == in_nodata] = map_array_size - 1
 
         if exception_flag == 'values_required':
-            unique_set = set(row_array)
+            unique_set = set(row_array[0])
             if not unique_set.issubset(valid_set):
                 undefined_set = unique_set.difference(valid_set)
-                class UndefinedValue(Exception):
-                    pass
                 raise UndefinedValue(
                     "The following values were in the raster but not in the "
                     "value_map %s" % (undefined_set))
