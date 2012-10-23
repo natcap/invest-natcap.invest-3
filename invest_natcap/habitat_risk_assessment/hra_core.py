@@ -15,7 +15,9 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def execute(args):
-'''
+    '''This provides the main functionaility of the hra_core program. This
+    will call all parts necessary for calculation of final outputs.
+
     Inputs:
         args- Dictionary containing everything that hra_core will need to
             complete the rest of the model run. It will contain the following.
@@ -76,4 +78,17 @@ def execute(args):
                 plotted on a per-stressor graph.
             
     Returns nothing.
-'''
+    '''
+
+    inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
+    output_dir = os.path.join(args['workspace_dir'], 'Output')
+
+    make_risk_rasters(inter_dir, args['h-s'], args['habitats'], 
+                args['stressors'], args['risk_eq'])
+
+
+def make_risk_rasters(inter_dir, h_s, habitats, stressors, risk_eq)
+
+    #We will call one of the risk creation equations based on the string
+    #passed in by 'risk_eq'. This will return a dataset, and we will then
+    #write that out to a file within 'inter_dir'
