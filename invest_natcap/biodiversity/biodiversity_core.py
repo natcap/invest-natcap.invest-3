@@ -474,58 +474,12 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
     """
 
     LOGGER.debug('Starting map_raster_to_dict_values')
-
-    ##########################DOUG I ADDED THIS
     int_attr_dict = {}
     for key in attr_dict:
         int_attr_dict[int(key)] = float(attr_dict[key][field])
 
     reclassified_dataset = raster_utils.reclassify_dataset(
-        key_raster, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata)
+        key_raster, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
+        exception_flag = 'values_required')
 
     return reclassified_dataset
-    ##########################333333
-
-    # a self defined exception to use if an exception is raised below. This is
-    # for a very specific error to provide the best feedback to the user
-    class LulcCodeError(Exception):
-        """A self defined Exception for a missing lulc code"""
-        pass
-    
-    key_raster_nodata = key_raster.GetRasterBand(1).GetNoDataValue()
-
-    # create a more concise dictionary where the keys are converted to integers
-    # which pair directly with the value we are interested in. This saves times
-    # in the vectorized operation of casting
-    int_attr_dict = {}
-    for key in attr_dict:
-        int_attr_dict[int(key)] = float(attr_dict[key][field])
-    
-    #Add the nodata value as a field to the dictionary so that the vectorized
-    #operation can just look it up instead of having an if,else statement
-    int_attr_dict[int(key_raster_nodata)] = float(out_nodata)
-    
-    def vop(key):
-        """Operation passed to numpy function vectorize that uses 'key' as the 
-            key to the local dictionary 'int_attr_dict'. Returns the value in 
-            place of the key for the new raster
-           
-            key - an int from the local raster 'key_raster' that is used to 
-                look up a value in the dictionary 'int_attr_dict'
-
-           returns - the value paired to the 'key'. If 'key' is
-               not found then it raises an exception if raise_error is true or
-               simply returns out_nodata if raise_error is false
-        """
-        try:
-            return int_attr_dict[key]
-        except KeyError:
-            if raise_error:
-                raise LulcCodeError(error_message + str(key))
-            return out_nodata
-
-    out_raster = raster_utils.vectorize_rasters([key_raster], vop,
-           raster_out_uri=out_uri, nodata=out_nodata)
-
-    LOGGER.debug('Leaving map_raster_to_dict_values')
-    return out_raster

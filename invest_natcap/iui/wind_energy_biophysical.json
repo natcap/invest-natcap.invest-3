@@ -36,7 +36,8 @@
                     "type": "file",
                     "label": "Area Of Interest (AOI)",
                     "defaultValue": "../Wind_Energy/Input/aoi.shp",
-                    "required": true,
+                    "required": false,
+                    "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
                     "helpText": ""
                 },
@@ -55,8 +56,8 @@
                     "args_id" : "bottom_type_uri",
                     "type": "file",
                     "label": "Bottome Types",
-                    "defaultValue": "",
                     "required": false,
+                    "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
                     "helpText": ""
                 }
@@ -219,6 +220,7 @@
             "type" : "container",
             "label" : "Use Distances to Determine Wind Farm Locations",
             "collapsible" : true,
+            "enabledBy": "aoi",
             "defaultValue" : false,
             "elements" : [
                 {
