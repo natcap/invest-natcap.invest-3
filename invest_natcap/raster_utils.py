@@ -1124,7 +1124,7 @@ def calculate_value_not_in_array(array):
             ideally calculated in the middle of the maximum delta between any two
             consecutive numbers in the array"""
 
-    sorted_array = np.sort(array.flatten())
+    sorted_array = np.sort(np.unique(array.flatten()))
     array_type = type(sorted_array[0])
     diff_array = np.array([-1,1])
     deltas = scipy.signal.correlate(sorted_array, diff_array, mode='valid')
@@ -1133,7 +1133,7 @@ def calculate_value_not_in_array(array):
 
     #Try to return the average of the maximum delta
     if deltas[max_delta_index] > 0:
-        return array_type((sorted_array[max_delta_index+1]-
+        return array_type((sorted_array[max_delta_index+1] +
                            sorted_array[max_delta_index])/2.0)
 
     #Else, all deltas are too small so go one smaller or one larger than the 
@@ -1570,8 +1570,9 @@ def reclassify_dataset(
     valid_set = set(value_map.keys())
     map_array_size = max(dataset_max, max(valid_set)) + 2
     valid_set.add(map_array_size - 1) #add the index for nodata
-    map_array = np.empty((1,map_array_size), dtype = type(out_nodata))
+    map_array = np.empty((1,map_array_size), dtype = type(value_map.values()[0]))
     map_array[:] = out_nodata
+
     for key, value in value_map.iteritems():
         map_array[0,key] = value
 
