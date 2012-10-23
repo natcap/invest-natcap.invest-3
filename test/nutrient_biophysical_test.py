@@ -1,6 +1,8 @@
 import unittest
 import os
 
+from invest_natcap.nutrient import nutrient_biophysical
+
 BASE_DATA = os.path.join('data', 'base_data', 'terrestrial')
 NUTR_INPUT = os.path.join('data', 'nutrient', 'input')
 
@@ -32,5 +34,5 @@ class NutrientBiophysicalTest(unittest.TestCase):
 
     def test_smoke(self):
         """Smoke test for nutrient retention: biophysical"""
-        pass
+        nutrient_biophysical.execute(self.args)
 

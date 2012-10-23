@@ -1,6 +1,8 @@
 """Module for the execution of the biophysical component of the InVEST Nutrient
 Retention model."""
 
+from invest_natcap.nutrient import nutrient_core
+
 def execute(args):
     """File opening layer for the InVEST nutrient retention model.
 
@@ -24,5 +26,4 @@ def execute(args):
 
         returns nothing.
     """
-
-    pass
+    print args
