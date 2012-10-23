@@ -1125,16 +1125,19 @@ def calculate_value_not_in_array(array):
             consecutive numbers in the array"""
 
     sorted_array = np.sort(np.unique(array.flatten()))
-    array_type = type(sorted_array[0])
-    diff_array = np.array([-1,1])
-    deltas = scipy.signal.correlate(sorted_array, diff_array, mode='valid')
+    #Make sure we don't have a single unique value, if we do just go + or - 
+    #1 at the end
+    if len(sorted_array) > 1:
+        array_type = type(sorted_array[0])
+        diff_array = np.array([-1,1])
+        deltas = scipy.signal.correlate(sorted_array, diff_array, mode='valid')
     
-    max_delta_index = np.argmax(deltas)
+        max_delta_index = np.argmax(deltas)
 
-    #Try to return the average of the maximum delta
-    if deltas[max_delta_index] > 0:
-        return array_type((sorted_array[max_delta_index+1] +
-                           sorted_array[max_delta_index])/2.0)
+        #Try to return the average of the maximum delta
+        if deltas[max_delta_index] > 0:
+            return array_type((sorted_array[max_delta_index+1] +
+                               sorted_array[max_delta_index])/2.0)
 
     #Else, all deltas are too small so go one smaller or one larger than the 
     #min or max.  Catching an exception in case there's an overflow.
