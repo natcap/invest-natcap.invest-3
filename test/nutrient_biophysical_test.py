@@ -1,4 +1,5 @@
 import unittest
+import os
 
 BASE_DATA = os.path.join('data', 'base_data', 'terrestrial')
 NUTR_INPUT = os.path.join('data', 'nutrient', 'input')
@@ -16,7 +17,7 @@ class NutrientBiophysicalTest(unittest.TestCase):
             'pixel_yield_uri': \
                 os.path.join(NUTR_INPUT, 'wyield.tif'),
             'landuse_uri': \
-                os.path.join(NUTR_INPUT, 'landuse_90')
+                os.path.join(NUTR_INPUT, 'landuse_90'),
             'watersheds_uri': \
                 os.path.join(NUTR_INPUT, 'watersheds.shp'),
             'subwatersheds_uri': \
