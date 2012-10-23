@@ -108,100 +108,35 @@ def biophysical(args):
             bath_prop = raster_utils.get_raster_properties(bathymetry)
             
             aoi_raster_uri = os.path.join(intermediate_dir, 'aoi_raster.tif')
-            #land_raster_uri = os.path.join(intermediate_dir, 'land_raster.tif')
 
             # Make a raster from the AOI 
             aoi_raster = raster_utils.create_raster_from_vector_extents(
                     bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
                     out_nodata, aoi_raster_uri, aoi)
             
-            # Make a raster from the land polygon
-            #land_raster = raster_utils.create_raster_from_vector_extents(
-            #        bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
-            #        out_nodata, land_raster_uri, aoi)
-
-            # Burn the whole area of interest onto the raster 
+            # Burn the area of interest onto the raster 
             gdal.RasterizeLayer(
                     aoi_raster, [1], aoi.GetLayer(), burn_values = [1], 
                     options = ['ALL_TOUCHED=TRUE'])
 
-            # Burn the land polygon onto the raster 
+            # Burn the land polygon onto the raster, covering up the AOI values
+            # where they overlap
             gdal.RasterizeLayer(
                     aoi_raster, [1], land_polygon.GetLayer(), burn_values = [0],
                     options = ['ALL_TOUCHED=TRUE'])
-            
-            # Burn the land polygon onto the raster 
-            #gdal.RasterizeLayer(
-            #        land_raster, [1], land_polygon.GetLayer(), burn_values = [0],
-            #        options = ['ALL_TOUCHED=TRUE'])
-           
-            #def land_over_aoi(land_pix, aoi_pix):
-            #    if land_pix == out_nodata:
-            #        if aoi_pix == out_nodata:
-            #            return 1.0
-            #        else:
-            #            return aoi_pix
-            #    else:
-            #        return land_pix
 
-            #dist_raster_uri = os.path.join(
-            #        intermediate_dir, 'distance_mask.tif')
-            
-            #distance_raster = raster_utils.vectorize_rasters(
-            #        [land_raster, aoi_raster], land_over_aoi, 
-            #        raster_out_uri = dist_raster_uri, nodata = out_nodata)
-
-            # Read in the raster so we can set back the nodata values
-            # I don't think that reading back in the whole raster is a great idea
-            # maybe there is a better way to handle this
-            #land_ds_array = land_ds.GetRasterBand(1).ReadAsArray()
-            
-            # Reset our nodata values
-            #land_ds_array[aoi_nodata_mask] = out_nodata
-            #aoi_nodata_mask = None
-
-            # Write back our matrix to the band
-            #land_ds.GetRasterBand(1).WriteArray(land_ds_array)
-            
-         #   distance_mask_uri = os.path.join(intermediate_dir, 'distance_mask.tif')
-            
-        #    distance_mask = raster_utils.new_raster_from_base(
-       #             land_ds, distance_mask_uri, 'GTiff', out_nodata, 
-      #              gdal.GDT_Float32)
-           
-           # dist_band = distance_mask.GetRasterBand(1)
-
-          #  dist_matrix = np.copy(land_ds_array)
-         #   land_ds_array = None
-            
-          #  np.putmask(dist_matrix, dist_matrix == out_nodata, 1)
-            
-            #pixel_size = raster_utils.pixel_size(land_ds)
-            pixel_size = raster_utils.pixel_size(aoi_raster)
             dist_mask_uri = os.path.join(intermediate_dir, 'distance_mask.tif')
             
+            # Create a distance mask
             distance_mask = distance_transform_dataset(
                     aoi_raster, pixel_size, min_distance, max_distance, 
                     out_nodata, dist_mask_uri)
-            
-            # Calculate distances using distance transform and multiply by the pixel
-            # size to get the proper distances in meters
-           # dist_matrix = \
-         #           ndimage.distance_transform_edt(dist_matrix) * pixel_size
-                    
-            # Create a mask for min and max distances 
-        #    mask_min = dist_matrix <= min_distance
-       #     mask_max = dist_matrix >= max_distance
-      #      mask_dist = np.ma.mask_or(mask_min, mask_max)
-     #       np.putmask(dist_matrix, mask_dist, out_nodata)
-
-    #        dist_band.WriteArray(dist_matrix)
-    #        dist_matrix = None
-    
 
         except KeyError:
             # Looks like distances weren't provided, too bad!
+            LOGGER.info('Distance parameters not provided')
             pass
+
     except KeyError:
         LOGGER.info('AOI not provided')
         pass
@@ -384,14 +319,27 @@ def biophysical(args):
             raster_out_uri = harvested_masked_uri, nodata = out_nodata)
 
 def distance_transform_dataset(
-        dataset, pixel_size, min_dist, max_dist, out_nodata, out_uri):
-    """ """
+        dataset, min_dist, max_dist, out_nodata, out_uri):
+    """A memory efficient distance transform function that operates on 
+       the dataset level and creates a new dataset that's transformed.
+       It will treat any nodata value in dataset as 0, and re-nodata
+       that area after the filter.
+
+       dataset - a gdal dataset
+       min_dist - an integer of the minimum distance allowed in meters
+       max_dist - an integer of the maximum distance allowed in meters
+       out_uri - the uri output of the transformed dataset
+       out_nodata - the nodata value of dataset
+
+       returns the transformed dataset created at out_uri"""
+    
     temp_dir = tempfile.mkdtemp()
     source_filename = os.path.join(temp_dir, 'source.dat')
     mask_filename = os.path.join(temp_dir, 'mask.dat')
     dest_filename = os.path.join(temp_dir, 'dest.dat')
 
     source_band, source_nodata = raster_utils.extract_band_and_nodata(dataset)
+    pixel_size = raster_utils.pixel_size(dataset)
 
     out_dataset = raster_utils.new_raster_from_base(
         dataset, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
