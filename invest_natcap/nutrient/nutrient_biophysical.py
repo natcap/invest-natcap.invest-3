@@ -3,6 +3,7 @@ Retention model."""
 
 import re
 import logging
+import os
 
 from osgeo import gdal
 
