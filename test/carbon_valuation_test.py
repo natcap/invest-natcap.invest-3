@@ -35,7 +35,7 @@ class TestCarbonBiophysical(unittest.TestCase):
         args['c'] = 0.0
         args['yr_cur'] = 2000
         args['yr_fut'] = 2030
-
+        args['carbon_price_units'] = 'Carbon Dioxide (CO2)'
         carbon_valuation.execute(args)
 
         #assert that the output raster is equivalent to the regression
