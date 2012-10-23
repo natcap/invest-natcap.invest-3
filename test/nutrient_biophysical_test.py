@@ -13,7 +13,7 @@ class NutrientBiophysicalTest(unittest.TestCase):
     (biophysical component)."""
     def setUp(self):
         self.args = {
-            'workspace_uri': WORKSPACE,
+            'workspace_dir': WORKSPACE,
             'dem_uri': \
                 os.path.join(NUTR_INPUT, 'dem'),
             'pixel_yield_uri': \
