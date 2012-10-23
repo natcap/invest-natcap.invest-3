@@ -2,6 +2,8 @@
 import math
 import os.path
 import logging
+import tempfile
+import shutil
 
 from osgeo import osr
 from osgeo import gdal
@@ -22,7 +24,7 @@ def biophysical(args):
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
         args[aoi] - an OGR datasource of type polygon of the area of interest
-            (required)
+            (optional)
         args[bathymetry] - a GDAL dataset of elevation values that encompasses
             the area of interest (required)
         args[bottom_type] - an OGR datasource of type polygon that depicts the 
@@ -57,12 +59,12 @@ def biophysical(args):
         
         returns - nothing"""
 
+    LOGGER.info('Entering core calculations for Biophysical')
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
 
     bathymetry = args['bathymetry']
-    aoi = args['aoi']
     min_depth = args['min_depth']
     max_depth = args['max_depth']
     
@@ -89,85 +91,67 @@ def biophysical(args):
 
     depth_mask_uri = os.path.join(intermediate_dir, 'depth_mask.tif')
     
-    # Mask out any values that are out of the range of the depth values
+    LOGGER.info('Vectorize Depth Mask')
+    # Create a mask for any values that are out of the range of the depth values
     depth_mask = raster_utils.vectorize_rasters(
             [bathymetry], depth_op, raster_out_uri = depth_mask_uri, 
             nodata = out_nodata)
 
-    # If the distance inputs are present try and create a mask for the output
-    # area that restricts where the wind energy farms can be based on distance
     try:
-        min_distance = args['min_distance']
-        max_distance = args['max_distance']
-        land_polygon = args['land_polygon']
-        
-        bath_prop = raster_utils.get_raster_properties(bathymetry)
-        land_ds_uri = os.path.join(intermediate_dir, 'land_ds.tif')
-        
-        # Make a raster from the AOI and then rasterize land polygon ontop of it
-        land_ds = raster_utils.create_raster_from_vector_extents(
-                bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
-                out_nodata, land_ds_uri, aoi)
+        aoi = args['aoi']
 
-        # Burn the whole area of interest onto the raster setting everything to
-        # 0 which will represent our ocean values.
-        gdal.RasterizeLayer(
-                land_ds, [1], aoi.GetLayer(), burn_values = [1], 
-                options = ['ALL_TOUCHED=TRUE'])
+        LOGGER.info('AOI provided')
 
-        # Create a nodata mask so nodata values can be set back later
-        aoi_nodata_mask = land_ds.GetRasterBand(1).ReadAsArray() == out_nodata
-        
-        # Burn the land polygon ontop of the ocean values as 1 so that we now
-        # have an accurate mask of where the land, ocean, and nodata values
-        # should be
-        gdal.RasterizeLayer(
-                land_ds, [1], land_polygon.GetLayer(), burn_values = [0],
-                options = ['ALL_TOUCHED=TRUE'])
-        
-        # Read in the raster so we can set back the nodata values
-        # I don't think that reading back in the whole raster is a great idea
-        # maybe there is a better way to handle this
-        land_ds_array = land_ds.GetRasterBand(1).ReadAsArray()
-        
-        # Reset our nodata values
-        land_ds_array[aoi_nodata_mask] = out_nodata
-        aoi_nodata_mask = None
+        # If the distance inputs are present create a mask for the output
+        # area that restricts where the wind energy farms can be based on distance
+        try:
+            min_distance = args['min_distance']
+            max_distance = args['max_distance']
+            land_polygon = args['land_polygon']
+            
+            LOGGER.info('Distance Parameters Provided')
+            bath_prop = raster_utils.get_raster_properties(bathymetry)
+            
+            aoi_raster_uri = os.path.join(intermediate_dir, 'aoi_raster.tif')
 
-        # Write back our matrix to the band
-        land_ds.GetRasterBand(1).WriteArray(land_ds_array)
-        
-        distance_mask_uri = os.path.join(intermediate_dir, 'distance_mask.tif')
-        
-        distance_mask = raster_utils.new_raster_from_base(
-                land_ds, distance_mask_uri, 'GTiff', out_nodata, 
-                gdal.GDT_Float32)
-       
-        dist_band = distance_mask.GetRasterBand(1)
+            LOGGER.info('Create Raster From AOI')
+            # Make a raster from the AOI 
+            aoi_raster = raster_utils.create_raster_from_vector_extents(
+                    bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
+                    out_nodata, aoi_raster_uri, aoi)
+            
+            LOGGER.info('Rasterize AOI onto raster')
+            # Burn the area of interest onto the raster 
+            gdal.RasterizeLayer(
+                    aoi_raster, [1], aoi.GetLayer(), burn_values = [1], 
+                    options = ['ALL_TOUCHED=TRUE'])
 
-        dist_matrix = np.copy(land_ds_array)
-        land_ds_array = None
-        
-        np.putmask(dist_matrix, dist_matrix == out_nodata, 1)
-        
-        pixel_size = raster_utils.pixel_size(land_ds)
-        
-        # Calculate distances using distance transform and multiply by the pixel
-        # size to get the proper distances in meters
-        dist_matrix = \
-                ndimage.distance_transform_edt(dist_matrix) * pixel_size
-                
-        # Create a mask for min and max distances 
-        mask_min = dist_matrix <= min_distance
-        mask_max = dist_matrix >= max_distance
-        mask_dist = np.ma.mask_or(mask_min, mask_max)
-        np.putmask(dist_matrix, mask_dist, out_nodata)
+            LOGGER.info('Rasterize Land Polygon onto raster')
+            # Burn the land polygon onto the raster, covering up the AOI values
+            # where they overlap
+            gdal.RasterizeLayer(
+                    aoi_raster, [1], land_polygon.GetLayer(), burn_values = [0],
+                    options = ['ALL_TOUCHED=TRUE'])
 
-        dist_band.WriteArray(dist_matrix)
-        dist_matrix = None
+            aoi_raster.FlushCache()
+
+            dist_mask_uri = os.path.join(intermediate_dir, 'distance_mask.tif')
+            
+            LOGGER.info('Generate Distance Mask')
+            # Create a distance mask
+            distance_mask = distance_transform_dataset(
+                    aoi_raster, min_distance, max_distance, 
+                    out_nodata, dist_mask_uri)
+
+            distance_mask.FlushCache()
+
+        except KeyError:
+            # Looks like distances weren't provided, too bad!
+            LOGGER.info('Distance parameters not provided')
+            pass
 
     except KeyError:
-        # Looks like distances weren't provided, too bad!
+        LOGGER.info('AOI not provided')
         pass
 
     hub_height = args['hub_height']
@@ -216,6 +200,7 @@ def biophysical(args):
 
     # Compute the mean air density
     air_density_mean = 1.225 - (1.194*10**-4) * hub_height
+    LOGGER.info('air_density_mean : %s', air_density_mean)
 
     # Get the wind points shapefile and layer
     wind_points = args['wind_data_points']
@@ -224,6 +209,7 @@ def biophysical(args):
     density_field_name = 'Density'
     harvest_field_name = 'HarvEnergy'
 
+    LOGGER.info('Creating Harvest and Density Fields')
     # Create new fields for the density and harvested values
     for new_field_name in [density_field_name, harvest_field_name]:
         new_field = ogr.FieldDefn(new_field_name, ogr.OFTReal)
@@ -253,6 +239,7 @@ def biophysical(args):
     LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
     wind_points_layer.ResetReading()
 
+    LOGGER.info('Entering Density and Harvest Calculations for each point')
     # For all the locations compute the weibull density and 
     # harvested wind energy. save in a field of the feature
     for feat in wind_points_layer:
@@ -296,22 +283,27 @@ def biophysical(args):
     density_ds_uri = os.path.join(intermediate_dir, 'density_ds.tif')
     harvested_ds_uri = os.path.join(intermediate_dir, 'harvested_ds.tif')
     
+    LOGGER.info('Create Density Raster')
     density_ds = raster_utils.create_raster_from_vector_extents(
             bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
             out_nodata, density_ds_uri, wind_points)
     
+    LOGGER.info('Create Harvested Raster')
     harvested_ds = raster_utils.create_raster_from_vector_extents(
             bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
             out_nodata, harvested_ds_uri, wind_points)
 
     # Interpolate points onto raster for density values and harvested values:
+    LOGGER.info('Vectorize Density Points')
     raster_utils.vectorize_points(wind_points, density_field_name, density_ds)
+    
+    LOGGER.info('Vectorize Harvested Points')
     raster_utils.vectorize_points(wind_points, harvest_field_name, harvested_ds)
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
 
-    def mask_out_depth_dist(out_ds, depth_ds, dist_ds):
+    def mask_out_depth_dist(*rasters):
         """Returns the value of 'out_ds' if and only if all three rasters are
             not a nodata value
             
@@ -321,23 +313,119 @@ def biophysical(args):
 
             returns - a float of either out_nodata or out_ds
             """
-        if (out_ds == out_nodata) or (depth_ds == out_nodata) or (dist_ds ==
-            out_nodata):
-            return out_nodata
-        else:
-            return out_ds
+        for mask in rasters:
+            if mask == out_nodata:
+                return out_nodata
+       
+        return rasters[0] 
 
     density_masked_uri = os.path.join(intermediate_dir, 'density_masked.tif')
     harvested_masked_uri = os.path.join(intermediate_dir, 'harvested_masked.tif')
 
+    density_mask_list = [density_ds, depth_mask]
+    harvest_mask_list = [harvested_ds, depth_mask]
+
+    try:
+        density_mask_list.append(distance_mask)
+        harvest_mask_list.append(distance_mask)
+    except:
+        LOGGER.info('NO Distance Mask')
+        pass
+
+    LOGGER.info('Vectorize Rasters on Density using depth and distance mask')
     _ = raster_utils.vectorize_rasters(
-            [density_ds, depth_mask, distance_mask], mask_out_depth_dist, 
+            density_mask_list, mask_out_depth_dist, 
             raster_out_uri = density_masked_uri, nodata = out_nodata)
 
+    LOGGER.info('Vectorize Rasters on Harvested using depth and distance mask')
     _ = raster_utils.vectorize_rasters(
-            [harvested_ds, depth_mask, distance_mask], mask_out_depth_dist, 
+            harvest_mask_list, mask_out_depth_dist, 
             raster_out_uri = harvested_masked_uri, nodata = out_nodata)
 
+def distance_transform_dataset(
+        dataset, min_dist, max_dist, out_nodata, out_uri):
+    """A memory efficient distance transform function that operates on 
+       the dataset level and creates a new dataset that's transformed.
+       It will treat any nodata value in dataset as 0, and re-nodata
+       that area after the filter.
+
+       dataset - a gdal dataset
+       min_dist - an integer of the minimum distance allowed in meters
+       max_dist - an integer of the maximum distance allowed in meters
+       out_uri - the uri output of the transformed dataset
+       out_nodata - the nodata value of dataset
+
+       returns the transformed dataset created at out_uri"""
+    
+    temp_dir = tempfile.mkdtemp()
+    source_filename = os.path.join(temp_dir, 'source.dat')
+    mask_filename = os.path.join(temp_dir, 'mask.dat')
+    dest_filename = os.path.join(temp_dir, 'dest.dat')
+
+    source_band, source_nodata = raster_utils.extract_band_and_nodata(dataset)
+    pixel_size = raster_utils.pixel_size(dataset)
+    LOGGER.debug('Pixel Size : %s', pixel_size)
+
+    out_dataset = raster_utils.new_raster_from_base(
+        dataset, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+    out_band, out_nodata = raster_utils.extract_band_and_nodata(out_dataset)
+
+    shape = (source_band.YSize, source_band.XSize)
+    LOGGER.info('shape %s' % str(shape))
+
+    LOGGER.info('make the source memmap at %s' % source_filename)
+    source_array = np.memmap(
+        source_filename, dtype='float32', mode='w+', shape = shape)
+    mask_array = np.memmap(
+        mask_filename, dtype='bool', mode='w+', shape = shape)
+    dest_array = np.memmap(
+        dest_filename, dtype='float32', mode='w+', shape = shape)
+
+    LOGGER.info('load dataset into source array')
+    for row_index in xrange(source_band.YSize):
+        #Load a row so we can mask
+        row_array = source_band.ReadAsArray(0, row_index, source_band.XSize, 1)
+        #Just the mask for this row
+        mask_row = row_array == source_nodata
+        row_array[mask_row] = 0.0
+        source_array[row_index,:] = row_array
+
+        #remember the mask in the memory mapped array
+        mask_array[row_index,:] = mask_row
+    LOGGER.debug('any masked nodata? : %s', mask_array.any())
+    LOGGER.debug('OUT nodata? : %s', out_nodata)
+    LOGGER.info('distance transform operation')
+    # Calculate distances using distance transform and multiply by the pixel
+    # size to get the proper distances in meters
+    dest_array = ndimage.distance_transform_edt(source_array) * pixel_size
+    
+    ##### This Defeats purpose of memory efficiency : FIX
+    dest_mask = np.ma.mask_or(
+            dest_array <= min_dist, dest_array >= max_dist)
+    dest_array[dest_mask] = out_nodata
+    #####
+
+    LOGGER.info('mask the result back to nodata where originally nodata')
+    LOGGER.debug('dest_array shape : %s', dest_array.shape)
+    LOGGER.debug('mask_array shape : %s', mask_array.shape)
+    dest_array[mask_array] = out_nodata
+    LOGGER.debug('ANY NODATA VALUES? : %s', (dest_array == out_nodata).any())
+    LOGGER.info('write to gdal object')
+    out_band.WriteArray(dest_array)
+    out_dataset.FlushCache()
+    raster_utils.calculate_raster_stats(out_dataset)
+
+    LOGGER.info('deleting %s' % temp_dir)
+    dest_array = None
+    mask_array = None
+    source_array = None
+    out_band = None
+    #Turning on ignore_errors = True in case we can't remove the 
+    #the temporary directory
+    shutil.rmtree(temp_dir, ignore_errors = True)
+
+    out_dataset.FlushCache()
+    return out_dataset
 
 def valuation(args):
     """Handles the core functionality for the valuation part of twind energy
