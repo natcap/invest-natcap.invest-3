@@ -31,7 +31,18 @@ def get_free_space(folder='/', unit='MB'):
             None, None, ctypes.pointer(free_bytes))
         free_space = free_bytes.value/(factor)
     else:
-        space = os.statvfs(folder)
+        try:
+            space = os.statvfs(folder)
+        except OSError:
+            # Thrown when folder does not yet exist
+            # In this case, we need to take the path to the desired folder and
+            # walk backwards along its directory tree until we find the mount
+            # point.  This mount point is then used for statvfs.
+            abspath = os.path.abspath(folder)
+            while not os.path.ismount(abspath):
+                abspath = os.path.dirname(abspath)
+            space = os.statvfs(abspath)
+
         free_space = (space.f_bsize * space.f_bavail)/(factor)
 
     return round(free_space, 2)
