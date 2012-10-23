@@ -713,7 +713,7 @@ def valuation(args):
         args['yr_cur'] - the year at which the sequestration measurement 
             started
         args['yr_fut'] - the year at which the sequestration measurement ended
-        args['value_seq'] - a single band output GDAL   
+        args['value_seq_uri'] - a single band output GDAL uri
         
         returns nothing"""
 
@@ -724,21 +724,20 @@ def valuation(args):
         (1.0 - ratio ** (n + 1)) / (1.0 - ratio)
 
     noDataIn = args['sequest'].GetRasterBand(1).GetNoDataValue()
-    noDataOut = args['value_seq'].GetRasterBand(1).GetNoDataValue()
+    nodata_out = -1e10
 
     def valueOp(sequest):
         if sequest != noDataIn:
             return sequest * valuationConstant
         else:
-            return noDataOut
+            return nodata_out
 
     LOGGER.debug('finished constructing valuation formula')
 
     LOGGER.info('starting valuation of each pixel')
-    invest_core.vectorize1ArgOp(args['sequest'].GetRasterBand(1), valueOp,
-                                args['value_seq'].GetRasterBand(1))
-    LOGGER.info('calculating raster stats for value_seq')
-    invest_core.calculateRasterStats(args['value_seq'].GetRasterBand(1))
+    raster_utils.vectorize_rasters(
+        [args['sequest']], valueOp, raster_out_uri = args['value_seq_uri'],
+        datatype = gdal.GDT_Float32, nodata = nodata_out)
     LOGGER.info('finished valuation of each pixel')
 
 def calculate_summary(args):
