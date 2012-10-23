@@ -38,6 +38,9 @@ def execute(args):
     print args
 
     workspace = args['workspace_dir']
+    output_dir = os.path.join(workspace, 'output')
+    service_dir = os.path.join(workspace, 'service')
+    intermediate_dir = os.path.join(workspace, 'intermediate')
     biophysical_args = {}
 
     # Open rasters provided in the args dictionary.
@@ -47,4 +50,5 @@ def execute(args):
         LOGGER.debug('Old key: %s ... new key: %s', raster_key, new_key)
         LOGGER.debug('Opening %s raster at %s', new_key, str(args[raster_key]))
         biophysical_args[new_key] = gdal.Open(str(args[raster_key]))
+
 
