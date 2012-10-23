@@ -70,6 +70,7 @@ def biophysical(args):
     
     bathymetry_band, out_nodata = raster_utils.extract_band_and_nodata(
             bathymetry)
+    bath_prop = raster_utils.get_raster_properties(bathymetry)
     
     def depth_op(bath):
         """A vectorized function that takes one argument and uses a range to
@@ -110,7 +111,6 @@ def biophysical(args):
             land_polygon = args['land_polygon']
             
             LOGGER.info('Distance Parameters Provided')
-            bath_prop = raster_utils.get_raster_properties(bathymetry)
             
             aoi_raster_uri = os.path.join(intermediate_dir, 'aoi_raster.tif')
 
@@ -132,8 +132,6 @@ def biophysical(args):
             gdal.RasterizeLayer(
                     aoi_raster, [1], land_polygon.GetLayer(), burn_values = [0],
                     options = ['ALL_TOUCHED=TRUE'])
-
-            aoi_raster.FlushCache()
 
             dist_mask_uri = os.path.join(intermediate_dir, 'distance_mask.tif')
             
@@ -161,7 +159,8 @@ def biophysical(args):
     scale_key = 'Ram-0' + str(int(hub_height)) + 'm'
     LOGGER.debug('SCALE_key : %s', scale_key)
 
-    # The String name for the shape field
+    # The String name for the shape field. So far this is a default from the
+    # text file given by CK. I guess we could search for the 'K' if needed.
     shape_key = 'K-010m'
 
     # Weibull probability function to integrate over
@@ -196,11 +195,6 @@ def biophysical(args):
             (v_rate**exp_pwr_curve - v_in**exp_pwr_curve))
    
         return fract * weibull_probability(v_speed, k_shape, l_scale, False) 
-   
-
-    # Compute the mean air density
-    air_density_mean = 1.225 - (1.194*10**-4) * hub_height
-    LOGGER.info('air_density_mean : %s', air_density_mean)
 
     # Get the wind points shapefile and layer
     wind_points = args['wind_data_points']
@@ -224,9 +218,13 @@ def biophysical(args):
     v_out = args['cut_out_wspd']
     v_in = args['cut_in_wspd']
 
+    # Compute the mean air density, given by CKs formulas
+    mean_air_density = air_density_standard - (1.194*10**-4) * hub_height
+    LOGGER.info('mean_air_density : %s', mean_air_density)
+
     # Fractional coefficient that lives outside the intregation for computing
     # the harvested wind energy
-    fract_coef = rated_power * (air_density_mean / air_density_standard)
+    fract_coef = rated_power * (mean_air_density / air_density_standard)
     
     # The coefficient that is multiplied by the integration portion of the
     # harvested wind energy equation
@@ -247,12 +245,13 @@ def biophysical(args):
         scale_value = feat.GetField(scale_index)
         shape_value = feat.GetField(shape_index)
         
-        # Integrate over the weibull probability function
+        # Integrate over the weibull probability function. 1 and 50 are hard
+        # coded values set in CKs documentation
         density_results = integrate.quad(weibull_probability, 1, 50,
                 (shape_value, scale_value, True))
 
         # Compute the final wind power density value
-        density_results = 0.5 * air_density_mean * density_results[0]
+        density_results = 0.5 * mean_air_density * density_results[0]
 
         # Integrate over the harvested wind energy function
         harv_results = integrate.quad(
@@ -279,7 +278,6 @@ def biophysical(args):
     wind_points_layer.ResetReading()
 
     # Create rasters for density and harvested values
-    bath_prop = raster_utils.get_raster_properties(bathymetry)
     density_ds_uri = os.path.join(intermediate_dir, 'density_ds.tif')
     harvested_ds_uri = os.path.join(intermediate_dir, 'harvested_ds.tif')
     
@@ -300,24 +298,21 @@ def biophysical(args):
     LOGGER.info('Vectorize Harvested Points')
     raster_utils.vectorize_points(wind_points, harvest_field_name, harvested_ds)
 
-    # Mask out any areas where distance or depth has determined that wind farms
-    # cannot be located
-
     def mask_out_depth_dist(*rasters):
-        """Returns the value of 'out_ds' if and only if all three rasters are
-            not a nodata value
+        """Returns the value of the first item in the list if and only if all 
+            other values are not a nodata value. 
             
-            out_ds - 
-            depth_ds - 
-            dist_ds -
+            *rasters - a list of values as follows:
+                rasters[0] - the desired output value (required)
+                rasters[1] - the depth mask value (required)
+                rasters[2] - the distance mask value (optional)
 
-            returns - a float of either out_nodata or out_ds
-            """
-        for mask in rasters:
-            if mask == out_nodata:
-                return out_nodata
-       
-        return rasters[0] 
+            returns - a float of either out_nodata or rasters[0]"""
+        
+        if out_nodata in rasters:
+            return out_nodata
+        else:
+            return rasters[0] 
 
     density_masked_uri = os.path.join(intermediate_dir, 'density_masked.tif')
     harvested_masked_uri = os.path.join(intermediate_dir, 'harvested_masked.tif')
@@ -332,6 +327,8 @@ def biophysical(args):
         LOGGER.info('NO Distance Mask')
         pass
 
+    # Mask out any areas where distance or depth has determined that wind farms
+    # cannot be located
     LOGGER.info('Vectorize Rasters on Density using depth and distance mask')
     _ = raster_utils.vectorize_rasters(
             density_mask_list, mask_out_depth_dist, 
