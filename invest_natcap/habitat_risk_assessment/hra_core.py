@@ -83,6 +83,11 @@ def execute(args):
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
+    #NEED TO FIND A WAY OF CALCULATING SPATIAL OVERLAP AUTOMAGICALLY AND THEN
+    #INSERT IT INTO THE PROPER H-S DICTIONARY ENTRY. THIS MAY BE BETER OFF IN
+    #THE NON-CORE FUNCTION, SO THAT IT ALREADY EXISTS BY THIS POINT, SINCE WE
+    #ARE ONLY SEEING H-S BY NOW INSTEAD OF EACH SEPARATE RASTER.
+
     make_risk_rasters(inter_dir, args['h-s'], args['habitats'], 
                 args['stressors'], args['risk_eq'])
 
@@ -145,27 +150,118 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
 
         #Need to remember that E should be applied to the decayed raster values,
         #then the decayed value per pixel can be used for the risk value. These
-        #functions should return a modified dataset which will be written to a
-        #new file.
+        #functions should return a modified array which can be burned back to
+        #the raster band.
+        
+        #We know, in this case, that there is only one band.
+        r_band = h_s[pair]['DS'].GetRasterBand(1)
+        r_array = r_band.ReadAsArray()
+        
         if risk_eq == 'Euclidean':
-            ds = make_risk_ds_euc(h_s[pair]['DS'], E, C) 
-        elif risk_eq == 'Multiplicative':
-            ds = make_risk_ds_mult(h_s[pair]['DS'], E, C)
+            mod_array = make_risk_euc(r_array E, C) 
 
+        elif risk_eq == 'Multiplicative':
+            mod_array = make_risk_mult(r_array, E, C)
 
         #Now want to take this dataset and write it back to the raster file
         #conatining the H-S overlap.
+        r_band.WriteArray(mod_array)
 
 def calc_score_value(h_s_sub, hab_sub, stress_sub):
     '''This will take in 3 sub-dictionaries and use the criteria that they
     contain to calculate an overall score based on the following equation.
     
+    Value = SUM{i=1, N} (r{i}/(d{i}*w{i}) / SUM{i=1, N} 1/(d{i}*w{i})
+        
+        i = The current criteria that we are evaluating.
+        r = Rating value for criteria i.
+        N = Total number of criteria being evaluated for the combination of
+            habitat and stressor.
+        d = Data quality rating for criteria i.
+        w = The importance weighting for that criteria relative to other
+            criteria being evaluated.
     Inputs:
         Three sub-dictionaries, each of which will have the following form:
             
             {'Criteria Name 1' : {'Rating': 2.0, 'Weight': 1.0, 'DQ': 2.0},
              'Criteria Name 2' : { . . .}
             }
+   
+    Returns:
+        A score value that represents E or C based on the above equation.
     '''
+    
+    #Want to make into a tuple so I can easily iterate through them and apply
+    #the 'no divide by zero' rule to everything at once.
+    crit_dicts = (h_s_sub, hab_sub, stress_sub)
 
+    sum_top = 0.0
+    sum_bottom = 0.0
 
+    for dictionary in crit_dicts:
+
+        for criteria in dicttionary:
+            
+            r = h_s_sub[criteria]['Rating']
+            d = h_s_sub[criteria]['DQ']
+            w = h_s_sub[criteria]['Weight']
+
+            if d == 0 or w == 0:
+                sum_top += 0
+                sum_bottom += 0
+            else:
+                sum_top += (r / d * w)
+                sum_bottom += (1 / d * w)
+
+    S = sum_top / sum_bottom
+        
+    return S
+
+def make_risk_mult(array, E, C):
+    '''This will create a risk raster array using a multiplicative function to
+    calculate a risk value for each given pixel.
+
+    Input:
+        array- A numpy array containing pixel values for every pixel in the
+            raster dataset of a given habitat-stressor overlap.
+        E- The calculated overall exposure value for the given h-s criteria.
+        C- The calculated overall consequence value for the given h-s criteria. 
+
+    Returns:
+        A numpy array of risk values for the given habitat-stressor overlap 
+            based on a multiplicative risk function.
+    '''
+    
+    R = array * E * C
+    
+    return R
+
+def make_risk_euc(array, E, C):
+    '''This will create a risk raster array using a euclidean distance function
+    to calculate a risk value for every h-s pixel. It should be noted that
+    with this equation, the potentially decayed array being passed in will first
+    have E applied to it, then then new decayed E's can be used for final
+    risk calcs.
+
+    Input:
+        array- A numpy array containing pixel values for every pixel in the
+            raster dataset of a given habitat-stressor overlap.
+        E- The calculated overall exposure value for the given h-s criteria.
+        C- The calculated overall consequence value for the given h-s criteria. 
+
+    Returns:
+        A numpy array of risk values for the gievn habitat-stressor overlap
+            based on a euclidean risk function.
+    '''
+   
+    #Want to get an array that has potential decay applied to E, so that the E
+    #could be different for any pixel in the risk array.
+    e_array = array * E
+
+    sub_e = (e_array - 1) ** 2
+    sub_c = (C - 1) ** 2
+
+    under_sq = sub_e + sub_c
+
+    #Raising to the 1/2 is the same as taking the sqrt
+    R = under_s ** .5
