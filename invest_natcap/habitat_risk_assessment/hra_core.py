@@ -91,6 +91,11 @@ def execute(args):
     make_risk_rasters(inter_dir, args['h-s'], args['habitats'], 
                 args['stressors'], args['risk_eq'])
 
+    #We know at this point that the non-core module has already recreated the
+    #output directory. So we can go ahead and create the maps directory without
+    #worrying about it already existing.
+    maps = os.path.join(output_dir, 'maps')
+    os.mkdir(maps)
 
 def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
     '''This will re-burn the intermediate files of the H-S intersection with
