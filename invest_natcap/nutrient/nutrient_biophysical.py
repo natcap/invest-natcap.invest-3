@@ -68,18 +68,18 @@ def execute(args):
     # Use raster_utils.create_raster_from_vector_extents
     # Structure: (args_dict_key, uri)
     new_rasters = [
-        ('adj_load_mean', ['output', 'adjil_mn.tif']),
-        ('adj_load_sum', ['output', 'adjil_sm.tif']),
-        ('n_retained_sum', ['service', 'nret_sm.tif']),
-        ('n_retained_mean', ['service', 'nret_mn.tif']),
-        ('n_exported_mean', ['output', 'nexp_mn.tif']),
-        ('n_exported_sum', ['output', 'nexp_sm.tif'])
+        ('adj_load_mean', [output_dir, 'adjil_mn.tif']),
+        ('adj_load_sum', [output_dir, 'adjil_sm.tif']),
+        ('n_retained_sum', [service_dir, 'nret_sm.tif']),
+        ('n_retained_mean', [service_dir, 'nret_mn.tif']),
+        ('n_exported_mean', [output_dir, 'nexp_mn.tif']),
+        ('n_exported_sum', [output_dir, 'nexp_sm.tif'])
     ]
     landuse_gt = biophysical_args['landuse'].GetGeoTransform()
     pixel_width = int(abs(landuse_gt[1]))
     pixel_height = int(abs(landuse_gt[5]))
     for dict_key, uri_parts in new_rasters:
-        uri = os.path.join(workspace, *uri_parts)
+        uri = os.path.join(*uri_parts)
         LOGGER.debug('Using %s for new raster', uri)
         biophysical_args[dict_key] =\
             raster_utils.create_raster_from_vector_extents(
