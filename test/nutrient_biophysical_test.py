@@ -1,4 +1,7 @@
 import unittest
+import os
+
+from invest_natcap.nutrient import nutrient_biophysical
 
 BASE_DATA = os.path.join('data', 'base_data', 'terrestrial')
 NUTR_INPUT = os.path.join('data', 'nutrient', 'input')
@@ -10,13 +13,13 @@ class NutrientBiophysicalTest(unittest.TestCase):
     (biophysical component)."""
     def setUp(self):
         self.args = {
-            'workspace_uri': WORKSPACE,
+            'workspace_dir': WORKSPACE,
             'dem_uri': \
                 os.path.join(NUTR_INPUT, 'dem'),
             'pixel_yield_uri': \
                 os.path.join(NUTR_INPUT, 'wyield.tif'),
             'landuse_uri': \
-                os.path.join(NUTR_INPUT, 'landuse_90')
+                os.path.join(NUTR_INPUT, 'landuse_90'),
             'watersheds_uri': \
                 os.path.join(NUTR_INPUT, 'watersheds.shp'),
             'subwatersheds_uri': \
@@ -31,5 +34,5 @@ class NutrientBiophysicalTest(unittest.TestCase):
 
     def test_smoke(self):
         """Smoke test for nutrient retention: biophysical"""
-        pass
+        nutrient_biophysical.execute(self.args)
 
