@@ -6,7 +6,9 @@ import logging
 import os
 
 from osgeo import gdal
+from osgeo import ogr
 
+from invest_natcap import raster_utils
 from invest_natcap.nutrient import nutrient_core
 
 LOGGER = logging.getLogger('nutrient_biophysical')
@@ -42,6 +44,14 @@ def execute(args):
     output_dir = os.path.join(workspace, 'output')
     service_dir = os.path.join(workspace, 'service')
     intermediate_dir = os.path.join(workspace, 'intermediate')
+
+    for folder in [workspace, output_dir, service_dir, intermediate_dir]:
+        try:
+            os.makedirs(folder)
+        except OSError:
+            # Thrown when folder already exists
+            pass
+
     biophysical_args = {}
 
     # Open rasters provided in the args dictionary.
@@ -52,4 +62,27 @@ def execute(args):
         LOGGER.debug('Opening %s raster at %s', new_key, str(args[raster_key]))
         biophysical_args[new_key] = gdal.Open(str(args[raster_key]))
 
+    # Create outputs based on the bounding box of the watersheds to be
+    # considered that are provided by the user.
+
+    # Use raster_utils.create_raster_from_vector_extents
+    # Structure: (args_dict_key, uri)
+    new_rasters = [
+        ('adj_load_mean', [output_dir, 'adjil_mn.tif']),
+        ('adj_load_sum', [output_dir, 'adjil_sm.tif']),
+        ('n_retained_sum', [service_dir, 'nret_sm.tif']),
+        ('n_retained_mean', [service_dir, 'nret_mn.tif']),
+        ('n_exported_mean', [output_dir, 'nexp_mn.tif']),
+        ('n_exported_sum', [output_dir, 'nexp_sm.tif'])
+    ]
+    landuse_gt = biophysical_args['landuse'].GetGeoTransform()
+    pixel_width = int(abs(landuse_gt[1]))
+    pixel_height = int(abs(landuse_gt[5]))
+    for dict_key, uri_parts in new_rasters:
+        uri = os.path.join(*uri_parts)
+        LOGGER.debug('Using %s for new raster', uri)
+        biophysical_args[dict_key] =\
+            raster_utils.create_raster_from_vector_extents(
+            pixel_width, pixel_height, gdal.GDT_Float32, -1.0, uri,
+            ogr.Open(args['watersheds_uri']))
 
