@@ -155,3 +155,14 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
 
         #Now want to take this dataset and write it out to a new raster file
         #within the 'direct' folder.
+
+def calc_score_value(h_s_sub, hab_sub, stress_sub):
+    '''This will take in 3 sub-dictionaries and use the criteria that they
+    contain to calculate an overall score based on the following equation.
+    
+    Inputs:
+        Three sub-dictionaries, each of which will have the following form:
+
+    '''
+
+
