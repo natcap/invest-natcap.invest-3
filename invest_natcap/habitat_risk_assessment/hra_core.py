@@ -92,7 +92,7 @@ def execute(args):
                 args['stressors'], args['risk_eq'])
 
 
-def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
+def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
     '''This will re-burn the intermediate files of the H-S intersection with
     the risk value for that given layer. This will be calculated based on the
     three ratings dictionaries.
@@ -158,7 +158,7 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
         r_array = r_band.ReadAsArray()
         
         if risk_eq == 'Euclidean':
-            mod_array = make_risk_euc(r_array E, C) 
+            mod_array = make_risk_euc(r_array, E, C) 
 
         elif risk_eq == 'Multiplicative':
             mod_array = make_risk_mult(r_array, E, C)
