@@ -10,6 +10,7 @@ from osgeo import ogr
 
 from invest_natcap import raster_utils
 from invest_natcap.nutrient import nutrient_core
+from invest_natcap.invest_core import fileio as fileio
 
 LOGGER = logging.getLogger('nutrient_biophysical')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -85,4 +86,15 @@ def execute(args):
             raster_utils.create_raster_from_vector_extents(
             pixel_width, pixel_height, gdal.GDT_Float32, -1.0, uri,
             ogr.Open(args['watersheds_uri']))
+# These couple lines allow me to easily verify the extents of the new raster.
+#        matrix = biophysical_args[dict_key].GetRasterBand(1).ReadAsArray()
+#        matrix.fill(1)
+#        biophysical_args[dict_key].GetRasterBand(1).WriteArray(matrix)
+
+    biophysical_args['bio_table'] = fileio.TableHandler(args['bio_table_uri'])
+    biophysical_args['threshold_table'] =\
+        fileio.TableHandler(args['threshold_table_uri'])
+
+
+
 
