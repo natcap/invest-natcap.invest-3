@@ -114,3 +114,7 @@ def execute(args):
     biophysical_args['threshold_table'] =\
         fileio.TableHandler(args['threshold_table_uri'])
 
+    LOGGER.info('Copying other values for internal use')
+    biophysical_args['nutrient_type'] = args['nutrient_type']
+    biophysical_args['accum_threshold'] = args['accum_threshold']
+
