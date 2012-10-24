@@ -145,9 +145,10 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
 
         #Need to remember that E should be applied to the decayed raster values,
         #then the decayed value per pixel can be used for the risk value. These
-        #functions should return a modified dataset which will be written to a
-        #new file.
+        #functions should return a modified array which can be burned back to
+        #the raster band.
         if risk_eq == 'Euclidean':
+            r_band = h_s[pair]['DS']
             ds = make_risk_ds_euc(h_s[pair]['DS'], E, C) 
         elif risk_eq == 'Multiplicative':
             ds = make_risk_ds_mult(h_s[pair]['DS'], E, C)
@@ -179,38 +180,29 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
     Returns:
         A score value that represents E or C based on the above equation.
     '''
-        
+    
+    #Want to make into a tuple so I can easily iterate through them and apply
+    #the 'no divide by zero' rule to everything at once.
+    crit_dicts = (h_s_sub, hab_sub, stress_sub)
+
     sum_top = 0.0
     sum_bottom = 0.0
 
-    for criteria in h_s_sub:
-        
-        r = h_s_sub[criteria]['Rating']
-        d = h_s_sub[criteria]['DQ']
-        w = h_s_sub[criteria]['Weight']
+    for dictionary in crit_dicts:
 
-        sum_top += (r / d * w)
-        sum_bottom += (1 / d * w)
+        for criteria in dicttionary:
+            
+            r = h_s_sub[criteria]['Rating']
+            d = h_s_sub[criteria]['DQ']
+            w = h_s_sub[criteria]['Weight']
 
-    for criteria in hab_sub:
+            if d == 0 or w == 0:
+                sum_top += 0
+                sum_bottom += 0
+            else:
+                sum_top += (r / d * w)
+                sum_bottom += (1 / d * w)
 
-        r = hab_sub[criteria]['Rating']
-        d = hab_sub[criteria]['DQ']
-        w = hab_sub[criteria]['Weight']
-
-        sum_top += (r / d * w)
-        sum_bottom += (1 / d * w)
-
-    for criteria in stress_sub:
-
-        r = stress_sub[criteria]['Rating']
-        d = stress_sub[criteria]['DQ']
-        w = stress_sub[criteria]['Weight']
-
-        sum_top += (r / d * w)
-        sum_bottom += (1 / d * w)
-
-    
     S = sum_top / sum_bottom
         
     return S
