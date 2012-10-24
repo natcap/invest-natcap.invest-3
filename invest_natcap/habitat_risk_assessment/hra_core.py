@@ -147,15 +147,20 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
         #then the decayed value per pixel can be used for the risk value. These
         #functions should return a modified array which can be burned back to
         #the raster band.
+        
+        #We know, in this case, that there is only one band.
+        r_band = h_s[pair]['DS'].GetRasterBand(1)
+        r_array = r_band.ReadAsArray()
+        
         if risk_eq == 'Euclidean':
-            r_band = h_s[pair]['DS']
-            ds = make_risk_ds_euc(h_s[pair]['DS'], E, C) 
-        elif risk_eq == 'Multiplicative':
-            ds = make_risk_ds_mult(h_s[pair]['DS'], E, C)
+            mod_array = make_risk_euc(r_array E, C) 
 
+        elif risk_eq == 'Multiplicative':
+            mod_array = make_risk_mult(r_array, E, C)
 
         #Now want to take this dataset and write it back to the raster file
         #conatining the H-S overlap.
+        r_band.WriteArray(mod_array)
 
 def calc_score_value(h_s_sub, hab_sub, stress_sub):
     '''This will take in 3 sub-dictionaries and use the criteria that they
