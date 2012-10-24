@@ -356,8 +356,13 @@ def distance_transform_dataset(
     
     temp_dir = tempfile.mkdtemp()
     source_filename = os.path.join(temp_dir, 'source.dat')
-    mask_filename = os.path.join(temp_dir, 'mask.dat')
+    nodata_mask_filename = os.path.join(temp_dir, 'nodata_mask.dat')
     dest_filename = os.path.join(temp_dir, 'dest.dat')
+
+    mask_leq_min_dist_filename = os.path.join(temp_dir, 'mask_leq_min_dist.dat')
+    mask_geq_max_dist_filename = os.path.join(temp_dir, 'mask_geq_max_dist.dat')
+    dest_mask_filename = os.path.join(temp_dir, 'dest_mask.dat')
+
 
     source_band, source_nodata = raster_utils.extract_band_and_nodata(dataset)
     pixel_size = raster_utils.pixel_size(dataset)
@@ -373,10 +378,16 @@ def distance_transform_dataset(
     LOGGER.info('make the source memmap at %s' % source_filename)
     source_array = np.memmap(
         source_filename, dtype='float32', mode='w+', shape = shape)
-    mask_array = np.memmap(
-        mask_filename, dtype='bool', mode='w+', shape = shape)
+    nodata_mask_array = np.memmap(
+        nodata_mask_filename, dtype='bool', mode='w+', shape = shape)
     dest_array = np.memmap(
         dest_filename, dtype='float32', mode='w+', shape = shape)
+    mask_leq_min_dist_array = np.memmap(
+        mask_leq_min_dist_filename, dtype='bool', mode='w+', shape = shape)
+    mask_geq_max_dist_array = np.memmap(
+        mask_geq_max_dist_filename, dtype='bool', mode='w+', shape = shape)
+    dest_mask_array = np.memmap(
+        dest_mask_filename, dtype='bool', mode='w+', shape = shape)
 
     LOGGER.info('load dataset into source array')
     for row_index in xrange(source_band.YSize):
@@ -388,25 +399,18 @@ def distance_transform_dataset(
         source_array[row_index,:] = row_array
 
         #remember the mask in the memory mapped array
-        mask_array[row_index,:] = mask_row
-    LOGGER.debug('any masked nodata? : %s', mask_array.any())
-    LOGGER.debug('OUT nodata? : %s', out_nodata)
+        nodata_mask_array[row_index,:] = mask_row
     LOGGER.info('distance transform operation')
     # Calculate distances using distance transform and multiply by the pixel
     # size to get the proper distances in meters
     dest_array = ndimage.distance_transform_edt(source_array) * pixel_size
-    
-    ##### This Defeats purpose of memory efficiency : FIX
-    dest_mask = np.ma.mask_or(
-            dest_array <= min_dist, dest_array >= max_dist)
-    dest_array[dest_mask] = out_nodata
-    #####
+    np.less_equal(dest_array, min_dist, out = mask_leq_min_dist_array)
+    np.greater_equal(dest_array, max_dist, out = mask_geq_max_dist_array)
+    np.logical_or(mask_leq_min_dist_array, mask_geq_max_dist_array, out = dest_mask_array)
+    dest_array[dest_mask_array] = out_nodata
 
     LOGGER.info('mask the result back to nodata where originally nodata')
-    LOGGER.debug('dest_array shape : %s', dest_array.shape)
-    LOGGER.debug('mask_array shape : %s', mask_array.shape)
-    dest_array[mask_array] = out_nodata
-    LOGGER.debug('ANY NODATA VALUES? : %s', (dest_array == out_nodata).any())
+    dest_array[nodata_mask_array] = out_nodata
     LOGGER.info('write to gdal object')
     out_band.WriteArray(dest_array)
     out_dataset.FlushCache()
@@ -414,9 +418,12 @@ def distance_transform_dataset(
 
     LOGGER.info('deleting %s' % temp_dir)
     dest_array = None
-    mask_array = None
+    nodata_mask_array = None
     source_array = None
     out_band = None
+    mask_leq_min_dist_array = None
+    mask_geq_max_dist_array = None
+    dest_mask_array = None
     #Turning on ignore_errors = True in case we can't remove the 
     #the temporary directory
     shutil.rmtree(temp_dir, ignore_errors = True)

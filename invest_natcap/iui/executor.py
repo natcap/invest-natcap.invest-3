@@ -386,17 +386,30 @@ class Executor(threading.Thread):
             LOGGER.info('Disk space free: %s MB',
                         fileio.get_free_space(workspace, unit='MB'))
             LOGGER.error('Error: a problem occurred while running the model')
-            self.printTraceback()
 
             # If the exception indicates that we ran out of disk space, convert
             # e to a more informative exception.
             if hasattr(e,'__class__') and hasattr(e, 'errno'):
                 LOGGER.debug('error %s number %s', e.__class__, e.errno)
+
+                if platform.system() != 'Windows':
+                    # If we're not on windows, python doesn't know what a
+                    # WindowsError is.  Since WindowsError is a subclass of
+                    # OSError, just point WindowsError to OSError.
+                    LOGGER.debug('Not on Linux, substituting WindowsError '
+                        'with OSError for exception checking')
+                    WindowsError = OSError
+
+                # Actually check the error code for the exception and use a new
+                # custom exception with more information.
                 if (isinstance(e, WindowsError) and (e.errno in [8, 28])) or\
                         (isinstance(e, IOError) and (e.errno == 28)):
+                    LOGGER.debug('Insufficient disk space detected')
                     e = InsufficientDiskSpace('You do not have sufficient disk '
                                               'space available for this model to finish running.')
-                    
+                else:
+                    LOGGER.debug('Error not determined to be disk-space related')
+
             self.printTraceback()
             self.setThreadFailed(True, e)
             self.move_log_file(workspace)
