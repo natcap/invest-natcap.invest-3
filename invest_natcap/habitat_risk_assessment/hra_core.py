@@ -218,7 +218,7 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
     return S
 
 def make_risk_mult(array, E, C):
-    '''This will create a risk raster using the multiplicative function to
+    '''This will create a risk raster array using a multiplicative function to
     calculate a risk value for each given pixel.
 
     Input:
@@ -228,7 +228,8 @@ def make_risk_mult(array, E, C):
         C- The calculated overall consequence value for the given h-s criteria. 
 
     Returns:
-        A numpy array of risk values based on a multiplicative risk function.
+        A numpy array of risk values for the given habitat-stressor overlap 
+            based on a multiplicative risk function.
     '''
     
     R = array * E * C
@@ -236,3 +237,18 @@ def make_risk_mult(array, E, C):
     return R
 
 def make_risk_euc(array, E, C):
+    '''This will create a risk raster array using a euclidean distance function
+    to calculate a risk value for every h-s pixel. It should be noted that
+    with this equation, the potentially decayed array being passed in will first
+    have E applied to it, then then new decayed E's can be used for final
+    risk calcs.
+
+    Input:
+        array- A numpy array containing pixel values for every pixel in the
+            raster dataset of a given habitat-stressor overlap.
+        E- The calculated overall exposure value for the given h-s criteria.
+        C- The calculated overall consequence value for the given h-s criteria. 
+
+    Returns:
+        A numpy array of risk values for the gievn habitat-stressor overlap
+            based on a euclidean risk function.
