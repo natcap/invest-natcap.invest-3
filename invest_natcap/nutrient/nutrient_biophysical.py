@@ -56,18 +56,28 @@ def execute(args):
     biophysical_args = {}
 
     # Open rasters provided in the args dictionary.
+    LOGGER.info('Opening user-defined rasters')
     raster_list = ['dem_uri', 'pixel_yield_uri', 'landuse_uri']
     for raster_key in raster_list:
         new_key = re.sub('_uri$', '', raster_key)
-        LOGGER.debug('Old key: %s ... new key: %s', raster_key, new_key)
-        LOGGER.debug('Opening %s raster at %s', new_key, str(args[raster_key]))
+        LOGGER.debug('Opening "%s" raster at %s', new_key, str(args[raster_key]))
         biophysical_args[new_key] = gdal.Open(str(args[raster_key]))
+
+    # Open shapefiles provided in the args dictionary
+    LOGGER.info('Opening user-defined shapefiles')
+    shapefile_list = ['watersheds_uri', 'subwatersheds_uri']
+    for shape_key in shapefile_list:
+        new_key = re.sub('_uri$', '', shape_key)
+        LOGGER.debug('Opening "%s" shapefile at %s', new_key, str(args[shape_key]))
+        biophysical_args[new_key] = ogr.Open(str(args[shape_key]))
+
 
     # Create outputs based on the bounding box of the watersheds to be
     # considered that are provided by the user.
 
     # Use raster_utils.create_raster_from_vector_extents
     # Structure: (args_dict_key, uri)
+    LOGGER.info('Creating new rasters for use by the model')
     new_rasters = [
         ('adj_load_mean', [output_dir, 'adjil_mn.tif']),
         ('adj_load_sum', [output_dir, 'adjil_sm.tif']),
@@ -91,10 +101,8 @@ def execute(args):
 #        matrix.fill(1)
 #        biophysical_args[dict_key].GetRasterBand(1).WriteArray(matrix)
 
+    LOGGER.info('Opening tables')
     biophysical_args['bio_table'] = fileio.TableHandler(args['bio_table_uri'])
     biophysical_args['threshold_table'] =\
         fileio.TableHandler(args['threshold_table_uri'])
-
-
-
 
