@@ -69,9 +69,7 @@ def execute(args):
     outputURI = outputDirectoryPrefix + "value_seq.tif"
 
     logger.debug('creating value_seq output raster')
-    valuationArgs['value_seq'] = \
-        invest_cython_core.newRasterFromBase(valuationArgs['sequest'],
-              outputURI, 'GTiff', -1e10, gdal.GDT_Float32)
+    valuationArgs['value_seq_uri'] = outputURI
 
     #run the valuation part of the carbon model.
     logger.info('starting sequestration valuation')
