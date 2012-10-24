@@ -160,12 +160,57 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
     '''This will take in 3 sub-dictionaries and use the criteria that they
     contain to calculate an overall score based on the following equation.
     
+    Value = SUM{i=1, N} (r{i}/(d{i}*w{i}) / SUM{i=1, N} 1/(d{i}*w{i})
+        
+        i = The current criteria that we are evaluating.
+        r = Rating value for criteria i.
+        N = Total number of criteria being evaluated for the combination of
+            habitat and stressor.
+        d = Data quality rating for criteria i.
+        w = The importance weighting for that criteria relative to other
+            criteria being evaluated.
     Inputs:
         Three sub-dictionaries, each of which will have the following form:
             
             {'Criteria Name 1' : {'Rating': 2.0, 'Weight': 1.0, 'DQ': 2.0},
              'Criteria Name 2' : { . . .}
             }
+   
+    Returns:
+        A score value that represents E or C based on the above equation.
     '''
+        
+    sum_top = 0.0
+    sum_bottom = 0.0
 
+    for criteria in h_s_sub:
+        
+        r = h_s_sub[criteria]['Rating']
+        d = h_s_sub[criteria]['DQ']
+        w = h_s_sub[criteria]['Weight']
 
+        sum_top += (r / d * w)
+        sum_bottom += (1 / d * w)
+
+    for criteria in hab_sub:
+
+        r = hab_sub[criteria]['Rating']
+        d = hab_sub[criteria]['DQ']
+        w = hab_sub[criteria]['Weight']
+
+        sum_top += (r / d * w)
+        sum_bottom += (1 / d * w)
+
+    for criteria in stress_sub:
+
+        r = stress_sub[criteria]['Rating']
+        d = stress_sub[criteria]['DQ']
+        w = stress_sub[criteria]['Weight']
+
+        sum_top += (r / d * w)
+        sum_bottom += (1 / d * w)
+
+    
+    S = sum_top / sum_bottom
+        
+    return S
