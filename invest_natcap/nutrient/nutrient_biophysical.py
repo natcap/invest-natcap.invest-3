@@ -4,12 +4,14 @@ Retention model."""
 import re
 import logging
 import os
+import sys
 
 from osgeo import gdal
 from osgeo import ogr
 
 from invest_natcap import raster_utils
 from invest_natcap.nutrient import nutrient_core
+from invest_natcap.invest_core import fileio as fileio
 
 LOGGER = logging.getLogger('nutrient_biophysical')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -55,18 +57,35 @@ def execute(args):
     biophysical_args = {}
 
     # Open rasters provided in the args dictionary.
+    LOGGER.info('Opening user-defined rasters')
     raster_list = ['dem_uri', 'pixel_yield_uri', 'landuse_uri']
     for raster_key in raster_list:
         new_key = re.sub('_uri$', '', raster_key)
-        LOGGER.debug('Old key: %s ... new key: %s', raster_key, new_key)
-        LOGGER.debug('Opening %s raster at %s', new_key, str(args[raster_key]))
+        LOGGER.debug('Opening "%s" raster at %s', new_key, str(args[raster_key]))
         biophysical_args[new_key] = gdal.Open(str(args[raster_key]))
+
+    # Open shapefiles provided in the args dictionary
+    LOGGER.info('Opening user-defined shapefiles')
+    encoding = sys.getfilesystemencoding()
+    ogr_driver = ogr.GetDriverByName('ESRI Shapefile')
+    shapefile_list = ['watersheds_uri', 'subwatersheds_uri']
+    for shape_key in shapefile_list:
+        new_key = re.sub('_uri$', '', shape_key)
+        LOGGER.debug('Opening "%s" shapefile at %s', new_key, str(args[shape_key]))
+
+        sample_shape = ogr.Open(args[shape_key].encode(encoding), 1)
+        copy_uri = os.path.join(output_dir, new_key + '.shp')
+        copy = ogr_driver.CopyDataSource(sample_shape, copy_uri)
+        LOGGER.debug('Saving shapefile copy to %s', copy_uri)
+
+        biophysical_args[new_key] = copy
 
     # Create outputs based on the bounding box of the watersheds to be
     # considered that are provided by the user.
 
     # Use raster_utils.create_raster_from_vector_extents
     # Structure: (args_dict_key, uri)
+    LOGGER.info('Creating new rasters for use by the model')
     new_rasters = [
         ('adj_load_mean', [output_dir, 'adjil_mn.tif']),
         ('adj_load_sum', [output_dir, 'adjil_sm.tif']),
@@ -85,4 +104,17 @@ def execute(args):
             raster_utils.create_raster_from_vector_extents(
             pixel_width, pixel_height, gdal.GDT_Float32, -1.0, uri,
             ogr.Open(args['watersheds_uri']))
+# These couple lines allow me to easily verify the extents of the new raster.
+#        matrix = biophysical_args[dict_key].GetRasterBand(1).ReadAsArray()
+#        matrix.fill(1)
+#        biophysical_args[dict_key].GetRasterBand(1).WriteArray(matrix)
+
+    LOGGER.info('Opening tables')
+    biophysical_args['bio_table'] = fileio.TableHandler(args['bio_table_uri'])
+    biophysical_args['threshold_table'] =\
+        fileio.TableHandler(args['threshold_table_uri'])
+
+    LOGGER.info('Copying other values for internal use')
+    biophysical_args['nutrient_type'] = args['nutrient_type']
+    biophysical_args['accum_threshold'] = args['accum_threshold']
 
