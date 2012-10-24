@@ -4,6 +4,7 @@ Retention model."""
 import re
 import logging
 import os
+import sys
 
 from osgeo import gdal
 from osgeo import ogr
@@ -65,12 +66,19 @@ def execute(args):
 
     # Open shapefiles provided in the args dictionary
     LOGGER.info('Opening user-defined shapefiles')
+    encoding = sys.getfilesystemencoding()
+    ogr_driver = ogr.GetDriverByName('ESRI Shapefile')
     shapefile_list = ['watersheds_uri', 'subwatersheds_uri']
     for shape_key in shapefile_list:
         new_key = re.sub('_uri$', '', shape_key)
         LOGGER.debug('Opening "%s" shapefile at %s', new_key, str(args[shape_key]))
-        biophysical_args[new_key] = ogr.Open(str(args[shape_key]))
 
+        sample_shape = ogr.Open(args[shape_key].encode(encoding), 1)
+        copy_uri = os.path.join(output_dir, new_key + '.shp')
+        copy = ogr_driver.CopyDataSource(sample_shape, copy_uri)
+        LOGGER.debug('Saving shapefile copy to %s', copy_uri)
+
+        biophysical_args[new_key] = copy
 
     # Create outputs based on the bounding box of the watersheds to be
     # considered that are provided by the user.
