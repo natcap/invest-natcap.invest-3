@@ -82,6 +82,12 @@ class ModelUI(base_widgets.ExecRoot):
     def addLinks(self):
         links = []
         try:
+            import invest_natcap
+            links.append('InVEST Version %s' % invest_natcap.__version__)
+        except AttributeError:
+            links.append('InVEST Version UNKNOWN')
+
+        try:
             doc_uri = 'file:///' + os.path.abspath(self.attributes['localDocURI'])
             links.append('<a href=\"%s\">Model documentation</a>' % doc_uri)
         except KeyError:
