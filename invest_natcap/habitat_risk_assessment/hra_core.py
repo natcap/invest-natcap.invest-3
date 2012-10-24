@@ -83,6 +83,11 @@ def execute(args):
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
     output_dir = os.path.join(args['workspace_dir'], 'Output')
 
+    #NEED TO FIND A WAY OF CALCULATING SPATIAL OVERLAP AUTOMAGICALLY AND THEN
+    #INSERT IT INTO THE PROPER H-S DICTIONARY ENTRY. THIS MAY BE BETER OFF IN
+    #THE NON-CORE FUNCTION, SO THAT IT ALREADY EXISTS BY THIS POINT, SINCE WE
+    #ARE ONLY SEEING H-S BY NOW INSTEAD OF EACH SEPARATE RASTER.
+
     make_risk_rasters(inter_dir, args['h-s'], args['habitats'], 
                 args['stressors'], args['risk_eq'])
 
@@ -211,3 +216,23 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
     S = sum_top / sum_bottom
         
     return S
+
+def make_risk_mult(array, E, C):
+    '''This will create a risk raster using the multiplicative function to
+    calculate a risk value for each given pixel.
+
+    Input:
+        array- A numpy array containing pixel values for every pixel in the
+            raster dataset of a given habitat-stressor overlap.
+        E- The calculated overall exposure value for the given h-s criteria.
+        C- The calculated overall consequence value for the given h-s criteria. 
+
+    Returns:
+        A numpy array of risk values based on a multiplicative risk function.
+    '''
+    
+    R = array * E * C
+    
+    return R
+
+def make_risk_euc(array, E, C):
