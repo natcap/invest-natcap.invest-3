@@ -5,7 +5,7 @@ import os
 import csv
 import logging
 
-import simplejson as json
+import json
 from osgeo import gdal
 from osgeo import ogr
 
