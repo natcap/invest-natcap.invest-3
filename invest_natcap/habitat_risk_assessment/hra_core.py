@@ -153,8 +153,8 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
             ds = make_risk_ds_mult(h_s[pair]['DS'], E, C)
 
 
-        #Now want to take this dataset and write it out to a new raster file
-        #within the 'direct' folder.
+        #Now want to take this dataset and write it back to the raster file
+        #conatining the H-S overlap.
 
 def calc_score_value(h_s_sub, hab_sub, stress_sub):
     '''This will take in 3 sub-dictionaries and use the criteria that they
@@ -162,7 +162,10 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
     
     Inputs:
         Three sub-dictionaries, each of which will have the following form:
-
+            
+            {'Criteria Name 1' : {'Rating': 2.0, 'Weight': 1.0, 'DQ': 2.0},
+             'Criteria Name 2' : { . . .}
+            }
     '''
 
 
