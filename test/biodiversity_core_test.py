@@ -99,7 +99,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
 
         out_raster = \
             biodiversity_core.map_raster_to_dict_values(dataset, out_uri, \
-                    sensitivity_dict, field, out_nodata, True)
+                    sensitivity_dict, field, out_nodata, 'values_required')
 
         regression_dir = \
             './data/biodiversity_regression_data/regression_outputs/'
@@ -149,7 +149,7 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         out_nodata = -1.0
         out_raster = \
             biodiversity_core.map_raster_to_dict_values(dataset, out_uri, \
-                test_dict, field, out_nodata, False)
+                test_dict, field, out_nodata, 'none')
 
         expected_array =  np.array([[-1.0,0.75,0.75,0.75,-1.0],
                                     [-1.0,1.0,1.0,1.0,-1.0],
@@ -201,8 +201,8 @@ class TestInvestBiodiversityCore(unittest.TestCase):
         field = 'sensitivity'
         out_nodata = -1.0
         self.assertRaises(Exception, biodiversity_core.map_raster_to_dict_values,
-                dataset, out_uri, test_dict, field, out_nodata, True, \
-                error_message='missing key')
+                dataset, out_uri, test_dict, field, out_nodata,
+                'values_required', error_message='missing key')
 
     def test_biodiversity_core_make_raster_from_shape(self):
         """A regression test for make_raster_from_shape """

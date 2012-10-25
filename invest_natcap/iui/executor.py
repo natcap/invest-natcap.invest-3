@@ -389,6 +389,7 @@ class Executor(threading.Thread):
             except AttributeError:
                 model_version = None
 
+            LOGGER.info('Running InVEST version "%s"', invest_natcap.__version__)
             LOGGER.info('Disk space remaining for workspace: %s GB',
                         fileio.get_free_space(workspace, unit='GB'))
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
