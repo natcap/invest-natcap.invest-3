@@ -14,7 +14,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         """Regression test for the main biophsyical outputs"""
 
         input_dir = './data/wind_energy_data/'
-        regression_dir = './data/wind_energy_regression_data/global/'
+        regression_dir = './data/wind_energy_regression_data/'
         
         bathymetry_uri = os.path.join(regression_dir, 'global_dem_clip.tif')
 
@@ -53,7 +53,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         for file_name in shape_file_names:
             reg_file = os.path.join(
-                    regression_dir, file_name)
+                    regression_dir, 'global/' + file_name)
             out_file = os.path.join(
                     output_dir, 'intermediate/' + file_name)
             invest_test_core.assertTwoShapesEqualURI(
@@ -61,7 +61,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         
         for file_name in raster_file_intermediate_names:
             reg_file = os.path.join(
-                    regression_dir, file_name)
+                    regression_dir, 'global/' + file_name)
             out_file = os.path.join(
                     output_dir, 'intermediate/' + file_name)
             invest_test_core.assertTwoDatasetEqualURI(
@@ -69,7 +69,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         for file_name in raster_file_output_names:
             reg_file = os.path.join(
-                    regression_dir, file_name)
+                    regression_dir, 'global/' + file_name)
             out_file = os.path.join(
                     output_dir, 'output/' + file_name)
             invest_test_core.assertTwoDatasetEqualURI(
@@ -79,7 +79,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         """Regression test for the main biophsyical outputs"""
 
         input_dir = './data/wind_energy_data/'
-        regression_dir = './data/wind_energy_regression_data/aoi_no_dist/'
+        regression_dir = './data/wind_energy_regression_data/'
         
         bathymetry_uri = os.path.join(regression_dir, 'global_dem_clip.tif')
 
@@ -123,7 +123,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         for file_name in shape_file_names:
             reg_file = os.path.join(
-                    regression_dir, file_name)
+                    regression_dir, 'aoi_no_dist/' + file_name)
             out_file = os.path.join(
                     output_dir, 'intermediate/' + file_name)
             invest_test_core.assertTwoShapesEqualURI(
@@ -131,7 +131,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         
         for file_name in raster_file_intermediate_names:
             reg_file = os.path.join(
-                    regression_dir, file_name)
+                    regression_dir, 'aoi_no_dist/' + file_name)
             out_file = os.path.join(
                     output_dir, 'intermediate/' + file_name)
             invest_test_core.assertTwoDatasetEqualURI(
@@ -139,7 +139,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         for file_name in raster_file_output_names:
             reg_file = os.path.join(
-                    regression_dir, file_name)
+                    regression_dir, 'aoi_no_dist/' + file_name)
             out_file = os.path.join(
                     output_dir, 'output/' + file_name)
             invest_test_core.assertTwoDatasetEqualURI(
@@ -149,7 +149,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         """Regression test for the main biophsyical outputs"""
 
         input_dir = './data/wind_energy_data/'
-        regression_dir = './data/wind_energy_regression_data/aoi_dist/'
+        regression_dir = './data/wind_energy_regression_data/'
         
         bathymetry_uri = os.path.join(regression_dir, 'global_dem_clip.tif')
 
@@ -198,7 +198,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         for file_name in shape_file_names:
             reg_file = os.path.join(
-                    regression_dir, file_name)
+                    regression_dir, 'aoi_dist/' + file_name)
             out_file = os.path.join(
                     output_dir, 'intermediate/' + file_name)
             invest_test_core.assertTwoShapesEqualURI(
@@ -206,7 +206,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         
         for file_name in raster_file_intermediate_names:
             reg_file = os.path.join(
-                    regression_dir, file_name)
+                    regression_dir, 'aoi_dist/' + file_name)
             out_file = os.path.join(
                     output_dir, 'intermediate/' + file_name)
             invest_test_core.assertTwoDatasetEqualURI(
@@ -214,7 +214,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         for file_name in raster_file_output_names:
             reg_file = os.path.join(
-                    regression_dir, file_name)
+                    regression_dir, 'aoi_dist/' + file_name)
             out_file = os.path.join(
                     output_dir, 'output/' + file_name)
             invest_test_core.assertTwoDatasetEqualURI(
@@ -314,7 +314,8 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
         points = None
 
-        invest_test_core.assertTwoShapesEqualURI(self, regression_shape_uri, out_uri)
+        invest_test_core.assertTwoShapesEqualURI(
+                self, regression_shape_uri, out_uri)
 
     def test_wind_energy_biophysical_clip_datasource(self):
         """Regression test for clipping a shapefile from another shapefile"""
