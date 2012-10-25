@@ -80,35 +80,6 @@ def execute(args):
 
         biophysical_args[new_key] = copy
 
-    # Create outputs based on the bounding box of the watersheds to be
-    # considered that are provided by the user.
-
-    # Use raster_utils.create_raster_from_vector_extents
-    # Structure: (args_dict_key, uri)
-    LOGGER.info('Creating new rasters for use by the model')
-    new_rasters = [
-        ('adj_load_mean', [output_dir, 'adjil_mn.tif']),
-        ('adj_load_sum', [output_dir, 'adjil_sm.tif']),
-        ('n_retained_sum', [service_dir, 'nret_sm.tif']),
-        ('n_retained_mean', [service_dir, 'nret_mn.tif']),
-        ('n_exported_mean', [output_dir, 'nexp_mn.tif']),
-        ('n_exported_sum', [output_dir, 'nexp_sm.tif'])
-    ]
-    landuse_gt = biophysical_args['landuse'].GetGeoTransform()
-    pixel_width = int(abs(landuse_gt[1]))
-    pixel_height = int(abs(landuse_gt[5]))
-    for dict_key, uri_parts in new_rasters:
-        uri = os.path.join(*uri_parts)
-        LOGGER.debug('Using %s for new raster', uri)
-        biophysical_args[dict_key] =\
-            raster_utils.create_raster_from_vector_extents(
-            pixel_width, pixel_height, gdal.GDT_Float32, -1.0, uri,
-            ogr.Open(args['watersheds_uri']))
-# These couple lines allow me to easily verify the extents of the new raster.
-#        matrix = biophysical_args[dict_key].GetRasterBand(1).ReadAsArray()
-#        matrix.fill(1)
-#        biophysical_args[dict_key].GetRasterBand(1).WriteArray(matrix)
-
     LOGGER.info('Opening tables')
     biophysical_args['bio_table'] = fileio.TableHandler(args['bio_table_uri'])
     biophysical_args['threshold_table'] =\
