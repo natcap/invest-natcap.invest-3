@@ -50,9 +50,10 @@ def execute(args):
     for folder in [workspace, output_dir, service_dir, intermediate_dir]:
         try:
             os.makedirs(folder)
+            LOGGER.debug('Making the folder %s', folder)
         except OSError:
             # Thrown when folder already exists
-            pass
+            LOGGER.debug('Folder %s already exists', folder)
 
     biophysical_args = {}
 
@@ -77,6 +78,7 @@ def execute(args):
         copy_uri = os.path.join(output_dir, new_key + '.shp')
         copy = ogr_driver.CopyDataSource(sample_shape, copy_uri)
         LOGGER.debug('Saving shapefile copy to %s', copy_uri)
+        LOGGER.debug('Copied shape: %s', copy)
 
         biophysical_args[new_key] = copy
 
