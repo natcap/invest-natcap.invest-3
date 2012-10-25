@@ -80,6 +80,12 @@ def execute(args):
         LOGGER.debug('Saving shapefile copy to %s', copy_uri)
         LOGGER.debug('Copied shape: %s', copy)
 
+        # Create the known new fields for this shapefile.
+        for column_name in ['nut_export', 'nut_retain']:
+            LOGGER.debug('Creating new field %s in %s', column_name, copy_uri)
+            new_field = ogr.FieldDefn(column_name, ogr.OFTReal)
+            copy.GetLayer(0).CreateField(new_field)
+
         biophysical_args[new_key] = copy
 
     LOGGER.info('Opening tables')
