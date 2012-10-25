@@ -284,25 +284,25 @@ def biophysical(args):
     wind_points_layer.ResetReading()
 
     # Create rasters for density and harvested values
-    density_ds_uri = os.path.join(intermediate_dir, 'density_ds.tif')
-    harvested_ds_uri = os.path.join(intermediate_dir, 'harvested_ds.tif')
+    density_temp_uri = os.path.join(intermediate_dir, 'density_temp.tif')
+    harvested_temp_uri = os.path.join(intermediate_dir, 'harvested_temp.tif')
     
     LOGGER.info('Create Density Raster')
-    density_ds = raster_utils.create_raster_from_vector_extents(
+    density_temp = raster_utils.create_raster_from_vector_extents(
             bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
-            out_nodata, density_ds_uri, wind_points)
+            out_nodata, density_temp_uri, wind_points)
     
     LOGGER.info('Create Harvested Raster')
-    harvested_ds = raster_utils.create_raster_from_vector_extents(
+    harvested_temp = raster_utils.create_raster_from_vector_extents(
             bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
-            out_nodata, harvested_ds_uri, wind_points)
+            out_nodata, harvested_temp_uri, wind_points)
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Vectorize Density Points')
-    raster_utils.vectorize_points(wind_points, density_field_name, density_ds)
+    raster_utils.vectorize_points(wind_points, density_field_name, density_temp)
     
     LOGGER.info('Vectorize Harvested Points')
-    raster_utils.vectorize_points(wind_points, harvest_field_name, harvested_ds)
+    raster_utils.vectorize_points(wind_points, harvest_field_name, harvested_temp)
 
     def mask_out_depth_dist(*rasters):
         """Returns the value of the first item in the list if and only if all 
@@ -323,8 +323,8 @@ def biophysical(args):
     density_masked_uri = os.path.join(output_dir, 'density.tif')
     harvested_masked_uri = os.path.join(output_dir, 'harvested_energy.tif')
 
-    density_mask_list = [density_ds, depth_mask]
-    harvest_mask_list = [harvested_ds, depth_mask]
+    density_mask_list = [density_temp, depth_mask]
+    harvest_mask_list = [harvested_temp, depth_mask]
 
     # If a distance mask was created then add it to the raster list to pass in
     # for masking out the output datasets
@@ -403,7 +403,7 @@ def distance_transform_dataset(
         row_array = source_band.ReadAsArray(0, row_index, source_band.XSize, 1)
         #Just the mask for this row
         mask_row = row_array == source_nodata
-        row_array[mask_row] = 0.0
+        row_array[mask_row] = 1.0
         source_array[row_index,:] = row_array
 
         #remember the mask in the memory mapped array
