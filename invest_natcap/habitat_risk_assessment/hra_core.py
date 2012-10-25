@@ -105,6 +105,49 @@ def execute(args):
     #Will now combine all habitat rasters insto one overall ecosystem raster
     #using the datasources that we collected from the previous function.
     make_ecosys_risk_raster(maps_dir, h_risk_list)
+    
+    #Since recovery potential is only related to habitats specifically, we
+    #don't need to pass the whole h-s dictionary.
+    make_recov_potent_raster(maps_dir, args['habitats'])
+
+def make_recov_potent_raster(direct, habitats):
+    '''This will take the scores from the habitat-specific criteria and combine
+    them into a recovery potential raster using the following equation.
+
+    (r_NM/ dq_NM) + (r_RR /dq_RR) + (r_RT/ dq_RT) + (r_CR/ dq_CR) 
+                _______________________________________
+           (1/ dq_NM) + (1 /dq_RR) + (1/ dq_RT) + (1/ dq_CR) 
+   
+        r = rating score
+        dq = data quality score
+        NM = Natural Mortality Rate
+        RR = Recruitment Rate
+        RT = Recovery Time
+        CR = Connectivity Rate
+
+        Input:
+            direct- The folder into which the recovery potential rasters should
+                be placed.
+            habitats- A multi-level dictionary structure which holds all scores
+                for habitat-specific criteria. This will be used to generate
+                the rasters for recovery potential. The form of the structure
+                is as follows:
+                
+                {'Habitat Name': 
+                        {'E': 
+                            {E's Criteria Dictionaries}, 
+                        'C': {'Natural Mortality':
+                                {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}                         
+                            }
+                        }
+                }
+        Output:
+            Raster files which represent each habitat's recovery potential.
+                These filenames will be of the form 
+                'direct'/recov_potent_H[habitatname].tif.
+        
+        Returns nothing.
+    '''
 
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
