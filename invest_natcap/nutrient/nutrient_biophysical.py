@@ -97,3 +97,5 @@ def execute(args):
     biophysical_args['nutrient_type'] = args['nutrient_type']
     biophysical_args['accum_threshold'] = args['accum_threshold']
 
+    # Run the nutrient model with the biophysical args dictionary.
+    nutrient_core.biophysical(biophysical_args)
