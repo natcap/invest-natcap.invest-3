@@ -102,6 +102,40 @@ def execute(args):
     #can be passed on to the ecosystem raster's vectorize_raster
     h_risk_list = make_cum_risk_raster(maps_dir, args['h-s'])
 
+    #Will now combine all habitat rasters insto one overall ecosystem raster
+    #using the datasources that we collected from the previous function.
+    make_ecosys_risk_raster(maps_dir, h_risk_list)
+
+def make_ecosys_risk_raster(direct, h_ds):
+    '''This function will combine all habitat rasters into one overarching
+    ecosystem risk raster.
+    
+    Input:
+        direct- The folder into which the completed files should be placed.
+        h_ds- Open raster datasources of the completed habitat risk rasters.
+            We will combine all of these into one larger ecosystem raster.
+
+    Output:
+        A raster file of the form 'direct'/ecosys_risk.tif which displays the
+            risk score by pixel for all habitats within the ecosystem.
+
+    Returns nothing.
+    '''
+    out_uri = os.path.join(direct, 'ecosys_risk.tif')
+
+    def add_e_pixels(*pixels):
+
+        pixel_sum = 0.0
+
+        for p in pixels:
+
+            pixel_sum += p
+
+        return pixel_sum
+
+    raster_utils.vectorize_rasters(h_risks, add_e_pixels, aoi = None,
+                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
+
 def make_cum_risk_raster(direct, h_s):
     '''This will take all h-s rasters of a given habitat, and combine them to
     visualize a cumulative risk raster for each habitat.
