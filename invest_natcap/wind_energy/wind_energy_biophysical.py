@@ -117,105 +117,23 @@ def execute(args):
         clip_and_proj_bath = clip_and_reproject_maps(
                 bathymetry, aoi, bathymetry_uris)
 
-#       # Get the AOI and wind points spatial references as strings in 
-#       # Well Known Text
-#       aoi_sr = aoi.GetLayer().GetSpatialRef()
-#       aoi_wkt = aoi_sr.ExportToWkt()
-#       wind_pts_layer = wind_data_points.GetLayer()
-#       wind_pts_sr = wind_pts_layer.GetSpatialRef()
-#       wind_pts_wkt = wind_pts_sr.ExportToWkt()
-
-#       # Reproject the AOI to the spatial reference of the wind points so that the
-#       # AOI can be used to clip the wind points
-#       aoi_prj_to_wind_pts_uri = os.path.join(inter_dir, 'aoi_prj_to_wind_pts.shp')
-#       aoi_prj_to_wind_pts = raster_utils.reproject_datasource(
-#               aoi, wind_pts_wkt, aoi_prj_to_wind_pts_uri)
-#       
-#       wind_shape_clipped_uri = os.path.join(
-#               inter_dir, 'wind_points_clipped.shp')
-#       
-#       # Clip the data points to the AOI
-#       wind_pts_clipped = clip_datasource(
-#           aoi_prj_to_wind_pts, wind_data_points, wind_shape_clipped_uri)
-
-#       wind_shape_reprojected_uri = os.path.join(
-#               inter_dir, 'wind_points_reprojected.shp')
-#     
-#       # Reproject the clipped data points shapefile to that of the AOI
-#       wind_pts_prj = raster_utils.reproject_datasource(
-#           wind_pts_clipped, aoi_wkt, wind_shape_reprojected_uri)
-#       
-#       # Get the bathymetry pojection as WKT
-#       bathymetry_wkt = bathymetry.GetProjection()
-#       
-#       aoi_proj_to_bathymetry_uri = os.path.join(
-#               inter_dir, 'aoi_proj_to_bathymetry.shp')
-#       
-#       # Reproject the AOI to the projection of the bathymetry, so that the
-#       # bathymetry dataset can be clipped
-#       aoi_proj_to_bathymetry = raster_utils.reproject_datasource(
-#               aoi, bathymetry_wkt, aoi_proj_to_bathymetry_uri)
-#       
-#       clipped_bathymetry_uri = os.path.join(inter_dir, 'clipped_bathymetry.tif')
-
-#       # Clip the bathymetry dataset from the reprojected AOI
-#       clipped_bathymetry = raster_utils.clip_dataset(
-#               bathymetry, aoi_proj_to_bathymetry, clipped_bathymetry_uri)
-
-#       # Get a point from the clipped_bathymetry 
-#       bathymetry_gt = clipped_bathymetry.GetGeoTransform()
-#       point_one = (bathymetry_gt[0], bathymetry_gt[3])
-#      
-#       # Create a Spatial Reference from the bathymetry's WKT
-#       bathymetry_sr = osr.SpatialReference()
-#       bathymetry_sr.ImportFromWkt(bathymetry_wkt)
-
-#       coord_trans = osr.CoordinateTransformation(bathymetry_sr, aoi_sr)
-#     
-#       pixel_size = raster_utils.pixel_size_based_on_coordinate_transform(
-#               clipped_bathymetry, coord_trans, point_one)
-
-#       bathymetry_prj_uri = os.path.join(
-#               inter_dir, 'clipped_projected_bathymetry.tif')
-
-#       # Reproject the bathymetry dataset to the projection of the AOI
-#       clip_and_proj_bath = raster_utils.reproject_dataset(
-#               clipped_bathymetry, pixel_size[0], aoi_wkt, bathymetry_prj_uri)
-    
-        
         biophysical_args['bathymetry'] = clip_and_proj_bath
         biophysical_args['wind_data_points'] = wind_pts_prj
         biophysical_args['aoi'] = aoi 
         
-        
         # Try to handle the distance inputs and land datasource if they are present
         try:
             land_polygon = ogr.Open(args['land_polygon_uri'])
-#           projected_land_uri = os.path.join(inter_dir, 'projected_land_poly.shp')
-#       
-#           # Back project AOI so that the land polygon can be clipped properly
-#           back_proj_aoi_uri = os.path.join(inter_dir, 'aoi_prj_to_land.shp')
-#           land_wkt = land_polygon.GetLayer().GetSpatialRef().ExportToWkt()
-#           back_proj_aoi = raster_utils.reproject_datasource(
-#                   aoi, land_wkt, back_proj_aoi_uri)
-#           # Clip the land polygon to the AOI
-#           clipped_land_uri = os.path.join(inter_dir, 'clipped_land.shp')
-#           clipped_land = clip_datasource(
-#                   back_proj_aoi, land_polygon, clipped_land_uri)
-
-#           # Reproject the land polygon to the AOI projection
-#           projected_land = raster_utils.reproject_datasource(
-#                   clipped_land, aoi_wkt, projected_land_uri) 
 
             land_poly_uris = os.path.join(inter_dir, 'land_poly')
 
             projected_land = clip_and_reproject_maps(
                     land_polygon, aoi, land_poly_uris)
 
-
             biophysical_args['land_polygon'] = projected_land
             biophysical_args['min_distance'] = float(args['min_distance']) 
             biophysical_args['max_distance'] = float(args['max_distance'])
+
         except KeyError:
             LOGGER.debug("Distance information not selected")
 
