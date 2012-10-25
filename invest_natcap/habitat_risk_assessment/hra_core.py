@@ -148,6 +148,19 @@ def make_recov_potent_raster(direct, habitats):
         
         Returns nothing.
     '''
+    for h in habitats:
+        
+        sum_top = 0.0
+        sum_bottom = 0.0
+
+        #Depending on how the criteria are entered, we may need to change the
+        #strings to retrieve their data within this fuction.
+        NM = habitats[h]['C']['Natural Mortality']
+        RR = habitats[h]['C']['Recruitment Rate']
+        RT = habitats[h]['C']['Recovery Time']
+        CR = habitats[h]['C']['Connectivity Rate']
+ 
+        
 
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
