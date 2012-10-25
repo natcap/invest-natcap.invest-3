@@ -320,12 +320,14 @@ def biophysical(args):
         else:
             return rasters[0] 
 
-    density_masked_uri = os.path.join(intermediate_dir, 'density_masked.tif')
-    harvested_masked_uri = os.path.join(intermediate_dir, 'harvested_masked.tif')
+    density_masked_uri = os.path.join(output_dir, 'density.tif')
+    harvested_masked_uri = os.path.join(output_dir, 'harvested_energy.tif')
 
     density_mask_list = [density_ds, depth_mask]
     harvest_mask_list = [harvested_ds, depth_mask]
 
+    # If a distance mask was created then add it to the raster list to pass in
+    # for masking out the output datasets
     try:
         density_mask_list.append(distance_mask)
         harvest_mask_list.append(distance_mask)
