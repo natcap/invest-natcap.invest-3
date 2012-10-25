@@ -164,37 +164,43 @@ def biophysical(args):
     shape_key = 'K-010m'
 
     # Weibull probability function to integrate over
-    def weibull_probability(v_speed, k_shape, l_scale, is_density):
+    def weibull_probability(v_speed, k_shape, l_scale):
+        """Calculate the weibull probability function of variable v_speed
+            
+            v_speed - a number representing wind speed
+            k_shape - a float for the shape parameter
+            l_scale - a float for the scale parameter of the distribution
+  
+            returns - a float"""
+        return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
+                (math.exp(-1 * (v_speed/l_scale)**k_shape)))
+
+    # Density wind energy function to integrate over
+    def density_wind_energy_fun(v_speed, k_shape, l_scale):
         """Calculate the probability density function of a weibull variable
             v_speed
             
             v_speed - a number representing wind speed
             k_shape - a float for the shape parameter
             l_scale - a float for the scale parameter of the distribution
-            is_density - a boolean value determining which equation to return
   
-            returns - a float
-            """
-        if is_density:
-            return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
-                    (math.exp(-1 * (v_speed/l_scale)**k_shape))) * v_speed**3
-        else:
-            return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
-                    (math.exp(-1 * (v_speed/l_scale)**k_shape)))
-
+            returns - a float"""
+        return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
+                (math.exp(-1 * (v_speed/l_scale)**k_shape))) * v_speed**3
+    
     # Harvested wind energy function to integrate over
     def harvested_wind_energy_fun(v_speed, k_shape, l_scale):
         """Calculate the harvested wind energy
+
             v_speed - a number representing wind speed
             k_shape - a float for the shape parameter
             l_scale - a float for the scale parameter of the distribution
 
-            returns - a float
-        """
+            returns - a float"""
         fract = ((v_speed**exp_pwr_curve - v_in**exp_pwr_curve) /
             (v_rate**exp_pwr_curve - v_in**exp_pwr_curve))
    
-        return fract * weibull_probability(v_speed, k_shape, l_scale, False) 
+        return fract * weibull_probability(v_speed, k_shape, l_scale) 
 
     # Get the wind points shapefile and layer
     wind_points = args['wind_data_points']
@@ -245,10 +251,10 @@ def biophysical(args):
         scale_value = feat.GetField(scale_index)
         shape_value = feat.GetField(shape_index)
         
-        # Integrate over the weibull probability function. 1 and 50 are hard
+        # Integrate over the probability density function. 0 and 50 are hard
         # coded values set in CKs documentation
-        density_results = integrate.quad(weibull_probability, 1, 50,
-                (shape_value, scale_value, True))
+        density_results = integrate.quad(
+                density_wind_energy_fun, 0, 50, (shape_value, scale_value))
 
         # Compute the final wind power density value
         density_results = 0.5 * mean_air_density * density_results[0]
@@ -260,7 +266,7 @@ def biophysical(args):
         
         # Integrate over the weibull probability function
         weibull_results = integrate.quad(weibull_probability, v_rate, v_out,
-                (shape_value, scale_value, False))
+                (shape_value, scale_value))
         
         # Compute the final harvested wind energy value
         harvested_wind_energy = scalar * (harv_results[0] + weibull_results[0])
@@ -278,25 +284,25 @@ def biophysical(args):
     wind_points_layer.ResetReading()
 
     # Create rasters for density and harvested values
-    density_ds_uri = os.path.join(intermediate_dir, 'density_ds.tif')
-    harvested_ds_uri = os.path.join(intermediate_dir, 'harvested_ds.tif')
+    density_temp_uri = os.path.join(intermediate_dir, 'density_temp.tif')
+    harvested_temp_uri = os.path.join(intermediate_dir, 'harvested_temp.tif')
     
     LOGGER.info('Create Density Raster')
-    density_ds = raster_utils.create_raster_from_vector_extents(
+    density_temp = raster_utils.create_raster_from_vector_extents(
             bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
-            out_nodata, density_ds_uri, wind_points)
+            out_nodata, density_temp_uri, wind_points)
     
     LOGGER.info('Create Harvested Raster')
-    harvested_ds = raster_utils.create_raster_from_vector_extents(
+    harvested_temp = raster_utils.create_raster_from_vector_extents(
             bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
-            out_nodata, harvested_ds_uri, wind_points)
+            out_nodata, harvested_temp_uri, wind_points)
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Vectorize Density Points')
-    raster_utils.vectorize_points(wind_points, density_field_name, density_ds)
+    raster_utils.vectorize_points(wind_points, density_field_name, density_temp)
     
     LOGGER.info('Vectorize Harvested Points')
-    raster_utils.vectorize_points(wind_points, harvest_field_name, harvested_ds)
+    raster_utils.vectorize_points(wind_points, harvest_field_name, harvested_temp)
 
     def mask_out_depth_dist(*rasters):
         """Returns the value of the first item in the list if and only if all 
@@ -314,12 +320,14 @@ def biophysical(args):
         else:
             return rasters[0] 
 
-    density_masked_uri = os.path.join(intermediate_dir, 'density_masked.tif')
-    harvested_masked_uri = os.path.join(intermediate_dir, 'harvested_masked.tif')
+    density_masked_uri = os.path.join(output_dir, 'density.tif')
+    harvested_masked_uri = os.path.join(output_dir, 'harvested_energy.tif')
 
-    density_mask_list = [density_ds, depth_mask]
-    harvest_mask_list = [harvested_ds, depth_mask]
+    density_mask_list = [density_temp, depth_mask]
+    harvest_mask_list = [harvested_temp, depth_mask]
 
+    # If a distance mask was created then add it to the raster list to pass in
+    # for masking out the output datasets
     try:
         density_mask_list.append(distance_mask)
         harvest_mask_list.append(distance_mask)
@@ -395,7 +403,7 @@ def distance_transform_dataset(
         row_array = source_band.ReadAsArray(0, row_index, source_band.XSize, 1)
         #Just the mask for this row
         mask_row = row_array == source_nodata
-        row_array[mask_row] = 0.0
+        row_array[mask_row] = 1.0
         source_array[row_index,:] = row_array
 
         #remember the mask in the memory mapped array

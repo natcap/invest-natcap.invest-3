@@ -20,6 +20,12 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 
 LOGGER = logging.getLogger()
 
+# If we're not on windows, python doesn't know what a
+# WindowsError is.  Using shutil to import an empty WindowsError
+if platform.system() != 'Windows':
+    LOGGER.debug('Not on Linux, importing shutil\'s WindowsError')
+    from shutil import WindowsError
+
 # This class is to be used if certain WindowsErrors or IOErrors are encountered.
 class InsufficientDiskSpace(Exception): pass
 
@@ -324,12 +330,17 @@ class Executor(threading.Thread):
         LOGGER.info('Parameters saved to disk')
 
     def move_log_file(self, workspace):
-        self.log_file.close()
-        shutil.move(self.log_file.name, workspace)
-        log_file_name = os.path.basename(self.log_file.name)
-        log_file_uri = os.path.join(workspace, log_file_name)
-        LOGGER.info('Saving log file to %s', log_file_uri)
-
+        try:
+            self.log_file.flush()
+            os.fsync(self.log_file)
+            self.log_file.close()
+            shutil.move(self.log_file.name, workspace)
+            log_file_name = os.path.basename(self.log_file.name)
+            log_file_uri = os.path.join(workspace, log_file_name)
+            LOGGER.info('Saving log file to %s', log_file_uri)
+        except WindowsError as e:
+            LOGGER.warn(e)
+            
     def runModel(self, module, args):
         try:
             workspace = args['workspace_dir']
@@ -384,6 +395,8 @@ class Executor(threading.Thread):
             invest_natcap.log_model(model_name, model_version)  # log model usage to ncp-dev
             model.execute(args)
         except Exception as e:
+            #We are explicitly handling all exceptions and below we have a special
+            #case for out of disk space
             LOGGER.info('Disk space free: %s MB',
                         fileio.get_free_space(workspace, unit='MB'))
             LOGGER.error('Error: a problem occurred while running the model')
@@ -392,15 +405,6 @@ class Executor(threading.Thread):
             # e to a more informative exception.
             if hasattr(e,'__class__') and hasattr(e, 'errno'):
                 LOGGER.debug('error %s number %s', e.__class__, e.errno)
-
-                if platform.system() != 'Windows':
-                    # If we're not on windows, python doesn't know what a
-                    # WindowsError is.  Since WindowsError is a subclass of
-                    # OSError, just point WindowsError to OSError.
-                    LOGGER.debug('Not on Linux, substituting WindowsError '
-                        'with OSError for exception checking')
-                    WindowsError = OSError
-
                 # Actually check the error code for the exception and use a new
                 # custom exception with more information.
                 if (isinstance(e, WindowsError) and (e.errno in [8, 28])) or\
@@ -411,6 +415,7 @@ class Executor(threading.Thread):
                 else:
                     LOGGER.debug('Error not determined to be disk-space related')
 
+            #This intentionally handles all exceptions
             self.printTraceback()
             self.setThreadFailed(True, e)
             self.move_log_file(workspace)

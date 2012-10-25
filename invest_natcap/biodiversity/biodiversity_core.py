@@ -63,7 +63,7 @@ def biophysical(args):
     
     habitat_raster = \
        map_raster_to_dict_values(cur_landuse, habitat_uri, sensitivity_dict, \
-                         'HABITAT', out_nodata, False)
+                         'HABITAT', out_nodata, 'none')
     
     # If access_lyr: convert to raster, if value is null set to 1, 
     # else set to value
@@ -161,9 +161,9 @@ def biophysical(args):
                 os.path.join(intermediate_dir, 
                         'sens_' + threat + lulc_key + suffix )
             
-            sensitivity_raster = \
-                map_raster_to_dict_values(lulc_ds, sens_uri,\
-                    sensitivity_dict, 'L_'+threat, out_nodata, True,\
+            sensitivity_raster = map_raster_to_dict_values(
+                    lulc_ds, sens_uri, sensitivity_dict, 
+                    'L_' + threat, out_nodata, 'values_required',
                     error_message='A lulc type in the land cover with ' + \
                     'postfix, ' + lulc_key + ', was not found in the ' + \
                     'sensitivity table. The erroring value was : ')        
@@ -462,9 +462,9 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
        field - a string of which field in the table or key in the dictionary 
                to use as the new raster pixel values
        out_nodata - a floating point value that is the nodata value.
-       raise_error - a boolean that decides how to handle the case where the
+       raise_error - a string that decides how to handle the case where the
            value from 'key_raster' is not found in 'attr_dict'. If 'raise_error'
-           is True, raise Exception, if False, return 'out_nodata'
+           is 'values_required', raise Exception, if 'none', return 'out_nodata'
        error_message - a string that is printed out with the raised Exception if
            'raise_error' is set to True
 
@@ -480,6 +480,6 @@ def map_raster_to_dict_values(key_raster, out_uri, attr_dict, field, \
 
     reclassified_dataset = raster_utils.reclassify_dataset(
         key_raster, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
-        exception_flag = 'values_required')
+        exception_flag = raise_error)
 
     return reclassified_dataset
