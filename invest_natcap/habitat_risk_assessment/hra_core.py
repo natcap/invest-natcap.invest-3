@@ -91,8 +91,51 @@ def execute(args):
     make_risk_rasters(inter_dir, args['h-s'], args['habitats'], 
                 args['stressors'], args['risk_eq'])
 
+    #We know at this point that the non-core module has already recreated the
+    #output directory. So we can go ahead and create the maps directory without
+    #worrying about it already existing.
+    maps_dir = os.path.join(output_dir, 'maps')
+    os.mkdir(maps_dir)
 
-def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
+    #We will combine all h-s rasters of the same habitat into a cumulative
+    #habitat risk raster, and return a list of the datasets of each so that it
+    #can be passed on to the ecosystem raster's vectorize_raster
+    h_risk_list = make_cum_risk_raster(maps_dir, args['h-s'])
+
+def make_cum_risk_raster(direct, h_s):
+    '''This will take all h-s rasters of a given habitat, and combine them to
+    visualize a cumulative risk raster for each habitat.
+
+    Input:
+        direct- The directory into which the completed habitat risk rasters
+            should be placed.
+        h_s- A structure which holds all ratings, weights, and data quality
+            numbers for each habitat-stressor overlap. Additionally, each h-s
+            tuple key points to a dictionary containing a raster dataset of the
+            risk scores for all h-s pixels. The structure resembles the
+            following:
+
+            {(Habitat A, Stressor 1): 
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
+
+    Output:
+        A set of raster files representing the cumulative risk scores for each
+            habitat. These files will combine all habitat-stressor risk rasters,
+            and will be of the form 'direct'/cum_risk_H[habitatname].tif.
+
+    Returns:
+        ds_list- A list of open raster datasets corresponding to the completed
+            cumulative raster files for each habitat.
+    '''
+
+def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
     '''This will re-burn the intermediate files of the H-S intersection with
     the risk value for that given layer. This will be calculated based on the
     three ratings dictionaries.
@@ -158,7 +201,7 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
         r_array = r_band.ReadAsArray()
         
         if risk_eq == 'Euclidean':
-            mod_array = make_risk_euc(r_array E, C) 
+            mod_array = make_risk_euc(r_array, E, C) 
 
         elif risk_eq == 'Multiplicative':
             mod_array = make_risk_mult(r_array, E, C)
