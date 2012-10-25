@@ -131,9 +131,54 @@ def make_cum_risk_raster(direct, h_s):
             and will be of the form 'direct'/cum_risk_H[habitatname].tif.
 
     Returns:
-        ds_list- A list of open raster datasets corresponding to the completed
+        h_rasters- A list of open raster datasets corresponding to the completed
             cumulative raster files for each habitat.
     '''
+    #THIS WILL BE THE COMBINE FUNCTION
+    def add_risk_pixels(*pixels):
+
+        pixel_sum = 0.0
+
+        for p in pixels:
+            pixel_sum += p
+
+        return pixel_sum
+
+    #This will give us two np lists where we have only the unique habitats and
+    #stressors for the system. 
+    habitats = map(lambda pair: pair[0], h_s)   
+    habitats = np.array(habitats)
+    habitats = np.unique(habitats)
+
+    stressors = maps(lambda pair: pair[1], h_s)
+    stressors = np.array(stressors)
+    stressors = np.unique(stressors)
+    
+    #Need somewhere to hold the finished cumulative rasters. This will be used
+    #to calculate overall ecosystem risk
+    h_rasters = []
+
+    #Now we can run through all potential pairings and make lists for the ones
+    #that have the same habitat.
+    for h in habitats:
+
+        ds_list = []
+        for s in stressors:
+            #Datasource can be retrieved by indexing into the value dictionary
+            #using 'DS'
+            ds_list.append(h_s[(h,s)]['DS'])
+
+        #When we have a complete list of the stressors, let's pass the habitat
+        #name and our list off to another function and have it create and
+        #combine the file.
+        out_uri = os.path.join(direct, 'cum_risk_H[' + h + '].tif')
+        
+        h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
+                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
+
+        h_rasters.append(h_raster)
+
+    return h_rasters
 
 def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
     '''This will re-burn the intermediate files of the H-S intersection with
