@@ -38,7 +38,7 @@ def execute(args):
         args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.
-        args['ratings']- A structure which holds all exposure and consequence
+        args['h-s']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
             tuple of lists which contain tuples.
@@ -51,15 +51,33 @@ def execute(args):
                     'C': {C's Criteria Dictionaries}
                     }
             }
+        args['habitats']- A structure with the same layout as 'h-s', but which
+            contains only criteria which are specific to habitats.
+        args['stressors']- A structure wih the same layout as 'h-s', but which
+            contains only criteria which are specific to stressors.
 
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
             complete the rest of the model run. It will contain the following.
         hra_args['workspace_dir']- Directory in which all data resides. Output
             and intermediate folders will be supfolders of this one.
-        hra_args['ratings']- Dictionary with a similar structure to the above,
+        hra_args['h-s']- Dictionary with a similar structure to the above,
             but with an additional item in the value tuple containing an open
-            raster dataset of the overlap of key H-S.
+            raster dataset of th overlap of key H-S.
+            {(Habitat A, Stressor 1): 
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
+        hra['habitats']- Dictionary with the same structure as the original
+            args['habitats'], but which also contains a rasterized version of
+            each shapefile input.
+        hra['stressors']- Dictionary structure identical to the orignal
+            args['stressors'] that was passed in from the UI.
         hra_args['risk_eq']- String which identifies the equation to be used
             for calculating risk.  The core module should check for 
             possibilities, and send to a different function when deciding R 
