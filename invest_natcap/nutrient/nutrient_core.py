@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from invest_natcap import raster_utils
+
 def biophysical(args):
     """This function executes the biophysical Nutrient Retention model.
 
@@ -19,3 +21,8 @@ def get_mean_pixel_value(array, nodata):
         returns a python number that is the mean value of the matrix."""
     masked_array = np.ma.masked_array(array, array == nodata)
     return np.mean(masked_array)
+
+def get_mean_raster_value(dataset):
+    raster_utils.calculate_raster_stats(dataset)
+    min, max, mean, stdev = dataset.GetRasterBand(1).GetStatistics(0,1)
+    return mean
