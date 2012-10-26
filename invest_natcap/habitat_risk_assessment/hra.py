@@ -185,7 +185,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         dir- The directory in which the current raster files reside, and into
             which the re-rasterized files should be placed.
         buffer_dict- Dictionary which maps the name of the stressor to the
-            desired buffer distance. This is separate from the ratings
+            desired buffer distance. This is separate from the h-s
             dictionary to avoid having to pass it to core. The key will be a
             string, and the value a double.
         grid_size- The current size of the raster cells.
@@ -231,15 +231,15 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         
         band.WriteArray(dist_array)
 
-def combine_hs_rasters(dir, h_rast, s_rast, ratings):
+def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''Takes in a habitat and a stressor, and combines the two raster files,
-    then places that in the corresponding entry within the ratings dictionary.
+    then places that in the corresponding entry within the h-s dictionary.
 
     Input:
         dir- The directory into which the completed raster files should be placed.
         h_rast- The folder holding all habitat raster files.
         s_rast- The folder holding all stressor raster files.
-        ratings- A dictionary which comes from the IUI which contains all
+        h_s- A dictionary which comes from the IUI which contains all
             ratings and weightings of each Habitat-Stressor pair.
 
     Output:
@@ -248,7 +248,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
             stressor versions of this file, all individualled named according
             to their corresponding parts.
     
-    Returns an edited version of 'ratings' that contains an open raster
+    Returns an edited version of 'h-s' that contains an open raster
     datasource correspondoing to the appropriate H-S key for the dictionary.
     '''
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
@@ -289,12 +289,12 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
                             datatype = gdal.GDT_Int32, nodata=0)
             
             #Now place the datasource into the corresponding dictionary entry
-            #in 'ratings'. We will make the open datasource the third item in
-            #the tuple. The first two are the exposure and consequence ratings
+            #in 'h-s'. We will make the open datasource the third item in
+            #the tuple. The first two are the exposure and consequence ratings 
             #that were gleaned from the IUI.
-            ratings[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
+            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
 
-    return ratings
+    return h_s
 
 def make_rasters(file_names, dir_path, grid_size):
 
