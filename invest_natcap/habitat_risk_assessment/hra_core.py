@@ -50,7 +50,8 @@ def execute(args):
             }
         args['habitats']- A structure which will hold exposure and consequence
             criteria data for criteria which are habitat specific. The
-            dictionary will not contain an open raster dataset, but will
+            dictionary will contain an open raster dataset to the rasterized
+            versions of the habitats.
             otherwise be the same structure as the args['h-s'] dictionary.
         args['stressors'] A structure which will hold exposure and consequence
             criteria data for criteria which are stressor specific. The
@@ -160,7 +161,19 @@ def make_recov_potent_raster(direct, habitats):
         RT = habitats[h]['C']['Recovery Time']
         CR = habitats[h]['C']['Connectivity Rate']
  
-        
+        sum_top += NM['Rating'] / NM['DQ']
+        sum_bottom += 1 / NM['DQ']
+
+        sum_top += RR['Rating'] / RR['DQ']
+        sum_bottom += 1 / RR['DQ']
+
+        sum_top += RT['Rating'] / RT['DQ']
+        sum_bottom += 1 / RT['DQ']
+
+        sum_top += CR['Rating'] / CR['DQ']
+        sum_bottom += 1 / CR['DQ']
+
+    r_potent = 
 
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
