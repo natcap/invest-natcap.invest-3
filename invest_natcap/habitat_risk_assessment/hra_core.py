@@ -102,6 +102,96 @@ def execute(args):
     #can be passed on to the ecosystem raster's vectorize_raster
     h_risk_list = make_cum_risk_raster(maps_dir, args['h-s'])
 
+    #Will now combine all habitat rasters insto one overall ecosystem raster
+    #using the datasources that we collected from the previous function.
+    make_ecosys_risk_raster(maps_dir, h_risk_list)
+    
+    #Since recovery potential is only related to habitats specifically, we
+    #don't need to pass the whole h-s dictionary.
+    make_recov_potent_raster(maps_dir, args['habitats'])
+
+def make_recov_potent_raster(direct, habitats):
+    '''This will take the scores from the habitat-specific criteria and combine
+    them into a recovery potential raster using the following equation.
+
+    (r_NM/ dq_NM) + (r_RR /dq_RR) + (r_RT/ dq_RT) + (r_CR/ dq_CR) 
+                _______________________________________
+           (1/ dq_NM) + (1 /dq_RR) + (1/ dq_RT) + (1/ dq_CR) 
+   
+        r = rating score
+        dq = data quality score
+        NM = Natural Mortality Rate
+        RR = Recruitment Rate
+        RT = Recovery Time
+        CR = Connectivity Rate
+
+        Input:
+            direct- The folder into which the recovery potential rasters should
+                be placed.
+            habitats- A multi-level dictionary structure which holds all scores
+                for habitat-specific criteria. This will be used to generate
+                the rasters for recovery potential. The form of the structure
+                is as follows:
+                
+                {'Habitat Name': 
+                        {'E': 
+                            {E's Criteria Dictionaries}, 
+                        'C': {'Natural Mortality':
+                                {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}                         
+                            }
+                        }
+                }
+        Output:
+            Raster files which represent each habitat's recovery potential.
+                These filenames will be of the form 
+                'direct'/recov_potent_H[habitatname].tif.
+        
+        Returns nothing.
+    '''
+    for h in habitats:
+        
+        sum_top = 0.0
+        sum_bottom = 0.0
+
+        #Depending on how the criteria are entered, we may need to change the
+        #strings to retrieve their data within this fuction.
+        NM = habitats[h]['C']['Natural Mortality']
+        RR = habitats[h]['C']['Recruitment Rate']
+        RT = habitats[h]['C']['Recovery Time']
+        CR = habitats[h]['C']['Connectivity Rate']
+ 
+        
+
+def make_ecosys_risk_raster(direct, h_ds):
+    '''This function will combine all habitat rasters into one overarching
+    ecosystem risk raster.
+    
+    Input:
+        direct- The folder into which the completed files should be placed.
+        h_ds- Open raster datasources of the completed habitat risk rasters.
+            We will combine all of these into one larger ecosystem raster.
+
+    Output:
+        A raster file of the form 'direct'/ecosys_risk.tif which displays the
+            risk score by pixel for all habitats within the ecosystem.
+
+    Returns nothing.
+    '''
+    out_uri = os.path.join(direct, 'ecosys_risk.tif')
+
+    def add_e_pixels(*pixels):
+
+        pixel_sum = 0.0
+
+        for p in pixels:
+
+            pixel_sum += p
+
+        return pixel_sum
+
+    raster_utils.vectorize_rasters(h_risks, add_e_pixels, aoi = None,
+                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
+
 def make_cum_risk_raster(direct, h_s):
     '''This will take all h-s rasters of a given habitat, and combine them to
     visualize a cumulative risk raster for each habitat.
@@ -131,11 +221,56 @@ def make_cum_risk_raster(direct, h_s):
             and will be of the form 'direct'/cum_risk_H[habitatname].tif.
 
     Returns:
-        ds_list- A list of open raster datasets corresponding to the completed
+        h_rasters- A list of open raster datasets corresponding to the completed
             cumulative raster files for each habitat.
     '''
+    #THIS WILL BE THE COMBINE FUNCTION
+    def add_risk_pixels(*pixels):
 
-def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
+        pixel_sum = 0.0
+
+        for p in pixels:
+            pixel_sum += p
+
+        return pixel_sum
+
+    #This will give us two np lists where we have only the unique habitats and
+    #stressors for the system. 
+    habitats = map(lambda pair: pair[0], h_s)   
+    habitats = np.array(habitats)
+    habitats = np.unique(habitats)
+
+    stressors = maps(lambda pair: pair[1], h_s)
+    stressors = np.array(stressors)
+    stressors = np.unique(stressors)
+    
+    #Need somewhere to hold the finished cumulative rasters. This will be used
+    #to calculate overall ecosystem risk
+    h_rasters = []
+
+    #Now we can run through all potential pairings and make lists for the ones
+    #that have the same habitat.
+    for h in habitats:
+
+        ds_list = []
+        for s in stressors:
+            #Datasource can be retrieved by indexing into the value dictionary
+            #using 'DS'
+            ds_list.append(h_s[(h,s)]['DS'])
+
+        #When we have a complete list of the stressors, let's pass the habitat
+        #name and our list off to another function and have it create and
+        #combine the file.
+        out_uri = os.path.join(direct, 'cum_risk_H[' + h + '].tif')
+        
+        h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
+                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
+
+        h_rasters.append(h_raster)
+
+    return h_rasters
+
+def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
     '''This will re-burn the intermediate files of the H-S intersection with
     the risk value for that given layer. This will be calculated based on the
     three ratings dictionaries.
@@ -201,7 +336,7 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         r_array = r_band.ReadAsArray()
         
         if risk_eq == 'Euclidean':
-            mod_array = make_risk_euc(r_array, E, C) 
+            mod_array = make_risk_euc(r_array E, C) 
 
         elif risk_eq == 'Multiplicative':
             mod_array = make_risk_mult(r_array, E, C)
@@ -308,3 +443,5 @@ def make_risk_euc(array, E, C):
 
     #Raising to the 1/2 is the same as taking the sqrt
     R = under_s ** .5
+
+    return R
