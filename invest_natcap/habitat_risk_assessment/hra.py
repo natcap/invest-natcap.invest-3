@@ -116,7 +116,10 @@ def execute(args):
     os.makedirs(h_rast)
 
     make_rasters(file_names, h_rast, args['grid_size'])
-    
+    mod_habitats = add_rast_to_dict(h_rast, args['habitats']
+    hra_args['habitats'] = mod_habitats
+
+
     file_names = glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
 
@@ -126,18 +129,53 @@ def execute(args):
 
     os.makedirs(s_rast)
 
+    #Make rasters based on the stressor shapefiles
     make_rasters(file_names, s_rast, args['grid_size'])
 
     #Checks the stressor buffer, and re-rasterizes if necessary.
     buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
 
+    hra_args['stressors'] = args['stressors']
+
     #Now, want to make all potential combinations of the rasters, and add it to
     #the structure containg data about the H-S combination.
-    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['ratings'])
+    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['h-s'])
 
-    hra_args['ratings'] = ratings_with_rast
+    hra_args['h-s'] = ratings_with_rast
 
     hra_core.execute(hra_args)
+
+add_rast_to_dict(direct, dictionary):
+    '''Allows us to add an open dataset to the already existing dictionary.
+
+    Input:
+        direct- The directory from which we will be getting our .tif raster
+            files.
+        dictionary- The structure into which the completed open raster datasets
+            should be placed. In this case, we want to put them within
+            dictionary[name]['DS'] for retrieval later.
+
+    Returns:
+        A modified dictionary containing a reference to an open dataset. This
+            dataset is accessable by the key 'DS' within the outer
+            dictionary[name] value.
+    '''
+
+    #Glob.glob gets all of the files that fall into the form .tif, and makes
+    #them into a list.
+    file_names = glob.glob(os.path.join(direct, '*.tif'))
+
+    for r_file in file_names:
+        
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        name = os.path.splitext(os.path.split(r_file)[1])[0]
+
+        dictionary[name]['DS'] = gdal.Open(file_name)
+
+    return dictionary
 
 def buffer_s_rasters(dir, buffer_dict, grid_size):
     '''If there is buffering desired, this will take each file and buffer the
