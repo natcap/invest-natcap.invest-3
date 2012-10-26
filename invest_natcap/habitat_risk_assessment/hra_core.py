@@ -174,7 +174,8 @@ def make_recov_potent_raster(direct, habitats):
 
     r_potent = sum_top / sum_bottom
 
-    return r_potent
+    #YOU IDIOT. YOU ACTUALLY NEED TO BURN THESE VALUES TO THE HABITAT RASTERS.
+    #USE THE DS WITHIN THE 'HABITATS' DICTIONARY.
 
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
