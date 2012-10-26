@@ -52,7 +52,6 @@ def execute(args):
             criteria data for criteria which are habitat specific. The
             dictionary will contain an open raster dataset to the rasterized
             versions of the habitats.
-            otherwise be the same structure as the args['h-s'] dictionary.
         args['stressors'] A structure which will hold exposure and consequence
             criteria data for criteria which are stressor specific. The
             dictionary will not contain an open raster dataset, but will
@@ -173,7 +172,9 @@ def make_recov_potent_raster(direct, habitats):
         sum_top += CR['Rating'] / CR['DQ']
         sum_bottom += 1 / CR['DQ']
 
-    r_potent = 
+    r_potent = sum_top / sum_bottom
+
+    return r_potent
 
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
