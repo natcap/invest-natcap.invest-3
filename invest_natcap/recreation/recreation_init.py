@@ -3,6 +3,7 @@ from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 import urllib2
 import time
+from invest_natcap.iui import fileio
 
 import logging
 
@@ -31,6 +32,9 @@ def execute(args):
     cellSize = args["cellSize"]
     cellUnit = float(args["cellUnit"])
     workspace_dir = args["workspace_dir"]
+    if workspace_dir[-1]!=os.sep:
+        workspace_dir = workspace_dir + os.sep
+    
     comments = args["comments"]
 
     data_dir = args["data_dir"]
@@ -115,8 +119,22 @@ def execute(args):
     request = urllib2.Request(url, datagen, headers)
     sessid = urllib2.urlopen(request).read().strip()
     LOGGER.debug("Server session %s." % (sessid))
+
+    lrun = fileio.LastRunHandler("recreation_init").get_attributes()
+    lrun["sessid"]=sessid
+    configPath = workspace_dir + "config.json"
+    outFile = open(configPath,'w')
+    outFile.write(str(lrun))
+    outFile.close()
     
+    if os.path.exists(configPath):
+        LOGGER.debug("The parameters were saved to %s." % configPath)
+    else:
+        raise ValueError, "The configuration file was not saved."
+    LOGGER.debug("The parameters were as follows: %s." % str(lrun))
+
     attachments = {"sessid": sessid,
+                   "JSON" : open(configPath,"rb"),
                    "aoiSHP": open(aoiFileNameSHP, "rb"),
                    "aoiSHX": open(aoiFileNameSHX, "rb"),
                    "aoiDBF": open(aoiFileNameDBF, "rb"),
@@ -196,7 +214,7 @@ def execute(args):
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
-    with open(workspace_dir+os.sep+resultsZip, 'wb') as fp:
+    with open(workspace_dir+resultsZip, 'wb') as fp:
       while True:
         chunk = req.read(CHUNK)
         if not chunk: break
