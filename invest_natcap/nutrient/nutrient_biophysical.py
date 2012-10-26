@@ -50,9 +50,10 @@ def execute(args):
     for folder in [workspace, output_dir, service_dir, intermediate_dir]:
         try:
             os.makedirs(folder)
+            LOGGER.debug('Making the folder %s', folder)
         except OSError:
             # Thrown when folder already exists
-            pass
+            LOGGER.debug('Folder %s already exists', folder)
 
     biophysical_args = {}
 
@@ -77,37 +78,15 @@ def execute(args):
         copy_uri = os.path.join(output_dir, new_key + '.shp')
         copy = ogr_driver.CopyDataSource(sample_shape, copy_uri)
         LOGGER.debug('Saving shapefile copy to %s', copy_uri)
+        LOGGER.debug('Copied shape: %s', copy)
+
+        # Create the known new fields for this shapefile.
+        for column_name in ['nut_export', 'nut_retain']:
+            LOGGER.debug('Creating new field %s in %s', column_name, copy_uri)
+            new_field = ogr.FieldDefn(column_name, ogr.OFTReal)
+            copy.GetLayer(0).CreateField(new_field)
 
         biophysical_args[new_key] = copy
-
-    # Create outputs based on the bounding box of the watersheds to be
-    # considered that are provided by the user.
-
-    # Use raster_utils.create_raster_from_vector_extents
-    # Structure: (args_dict_key, uri)
-    LOGGER.info('Creating new rasters for use by the model')
-    new_rasters = [
-        ('adj_load_mean', [output_dir, 'adjil_mn.tif']),
-        ('adj_load_sum', [output_dir, 'adjil_sm.tif']),
-        ('n_retained_sum', [service_dir, 'nret_sm.tif']),
-        ('n_retained_mean', [service_dir, 'nret_mn.tif']),
-        ('n_exported_mean', [output_dir, 'nexp_mn.tif']),
-        ('n_exported_sum', [output_dir, 'nexp_sm.tif'])
-    ]
-    landuse_gt = biophysical_args['landuse'].GetGeoTransform()
-    pixel_width = int(abs(landuse_gt[1]))
-    pixel_height = int(abs(landuse_gt[5]))
-    for dict_key, uri_parts in new_rasters:
-        uri = os.path.join(*uri_parts)
-        LOGGER.debug('Using %s for new raster', uri)
-        biophysical_args[dict_key] =\
-            raster_utils.create_raster_from_vector_extents(
-            pixel_width, pixel_height, gdal.GDT_Float32, -1.0, uri,
-            ogr.Open(args['watersheds_uri']))
-# These couple lines allow me to easily verify the extents of the new raster.
-#        matrix = biophysical_args[dict_key].GetRasterBand(1).ReadAsArray()
-#        matrix.fill(1)
-#        biophysical_args[dict_key].GetRasterBand(1).WriteArray(matrix)
 
     LOGGER.info('Opening tables')
     biophysical_args['bio_table'] = fileio.TableHandler(args['bio_table_uri'])
@@ -118,3 +97,5 @@ def execute(args):
     biophysical_args['nutrient_type'] = args['nutrient_type']
     biophysical_args['accum_threshold'] = args['accum_threshold']
 
+    # Run the nutrient model with the biophysical args dictionary.
+    nutrient_core.biophysical(biophysical_args)
