@@ -50,25 +50,4 @@ class NutrientCoreTest(unittest.TestCase):
 
         self.assertEqual(mean, 3.08)
 
-#    def test_compare_raster_mean(self):
-#        """Compare the wall-clock running times of mean on numpy + gdal."""
-#        # This demonstrates that the gdal approach runs 1.737 times faster than
-#        # the numpy approach (5.007s vs. 8.7002s)
-#
-#        ds = gdal.Open(os.path.join(NUTR_INPUT, 'dem'))
-#        nodata = ds.GetRasterBand(1).GetNoDataValue()
-#        print ''
-#        def do_numpy():
-#            array = ds.GetRasterBand(1).ReadAsArray()
-#            mean = nutrient_core.get_mean_pixel_value(array, nodata)
-#
-#        numpy_time = 'numpy ' + str(timeit.timeit(do_numpy, number=1000))
-#
-#        def do_gdal():
-#            mean = nutrient_core.get_mean_raster_value(ds)
-#
-#        gdal_time = 'gdal ' + str(timeit.timeit(do_gdal, number=1000))
-#
-#        print numpy_time
-#        print gdal_time
 
