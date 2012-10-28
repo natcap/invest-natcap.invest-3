@@ -6,6 +6,7 @@ import datetime
 import logging
 import os
 import numpy as np
+import shutil
 
 from osgeo import gdal, ogr
 from invest_natcap import raster_utils
@@ -172,10 +173,11 @@ def make_recov_potent_raster(direct, habitats):
         sum_top += CR['Rating'] / CR['DQ']
         sum_bottom += 1 / CR['DQ']
 
-    r_potent = sum_top / sum_bottom
+        r_potent = sum_top / sum_bottom
 
-    #YOU IDIOT. YOU ACTUALLY NEED TO BURN THESE VALUES TO THE HABITAT RASTERS.
-    #USE THE DS WITHIN THE 'HABITATS' DICTIONARY.
+        #YOU IDIOT. YOU ACTUALLY NEED TO BURN THESE VALUES TO THE HABITAT RASTERS.
+        #USE THE DS WITHIN THE 'HABITATS' DICTIONARY.
+        os.path.join(direct, 'recov_potent_H[' + h + '].tif'
 
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
