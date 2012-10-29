@@ -272,7 +272,7 @@ def make_cum_risk_raster(direct, h_s):
     habitats = np.array(habitats)
     habitats = np.unique(habitats)
 
-    stressors = maps(lambda pair: pair[1], h_s)
+    stressors = map(lambda pair: pair[1], h_s)
     stressors = np.array(stressors)
     stressors = np.unique(stressors)
     
@@ -412,8 +412,6 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
 
         for criteria in dictionary:
            
-            LOGGER.debug(dictionary)
-            
             r = dictionary[criteria]['Rating']
             d = dictionary[criteria]['DQ']
             w = dictionary[criteria]['Weight']
