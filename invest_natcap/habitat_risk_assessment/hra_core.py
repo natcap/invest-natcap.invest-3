@@ -410,7 +410,7 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
 
     for dictionary in crit_dicts:
 
-        for criteria in dicttionary:
+        for criteria in dictionary:
             
             r = h_s_sub[criteria]['Rating']
             d = h_s_sub[criteria]['DQ']
