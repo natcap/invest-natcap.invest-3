@@ -86,7 +86,7 @@ def execute(args):
     Returns nothing.'''
    
     #Create the unweighted rasters, since that will be one of the outputs
-    #regardless. However, after they are created, tehre will be two calls-
+    #regardless. However, after they are created, there will be two calls-
     #one to the combine unweighted function, and then the option call for the
     #weighted raster combination that uses the unweighted pre-created rasters.
 
