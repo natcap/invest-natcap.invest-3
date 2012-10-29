@@ -476,6 +476,6 @@ def make_risk_euc(array, E, C):
     under_sq = sub_e + sub_c
 
     #Raising to the 1/2 is the same as taking the sqrt
-    R = under_s ** .5
+    R = under_sq ** .5
 
     return R
