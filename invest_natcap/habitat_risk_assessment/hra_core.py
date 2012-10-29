@@ -303,7 +303,7 @@ def make_cum_risk_raster(direct, h_s):
 
     return h_rasters
 
-def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq)
+def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
     '''This will re-burn the intermediate files of the H-S intersection with
     the risk value for that given layer. This will be calculated based on the
     three ratings dictionaries.

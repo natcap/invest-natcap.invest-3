@@ -10,6 +10,7 @@ import glob
 
 import numpy as np
 from Cython.Distutils import build_ext
+from Cython.Build import cythonize
 import invest_natcap
 
 # __version__ is set in invest_natcap/__init__.py, in accordance with PEP
@@ -132,11 +133,11 @@ setup(name='invest_natcap',
       cmdclass={'build_ext': build_ext},
       include_dirs = [np.get_include()],
       data_files=data_files,
-      ext_modules=[Extension(name="invest_cython_core",
+      ext_modules=cythonize([Extension(name="invest_cython_core",
                              sources = CYTHON_SOURCE_FILES),
                    Extension(name="hydropower_cython_core",
                              sources = ['invest_natcap/hydropower/hydropower_cython_core.pyx']),
                    Extension(name="raster_cython_utils",
                              sources = ['invest_natcap/raster_cython_utils.pyx'],
-                             language="c++")],
+                             language="c++")]),
       **py2exe_args)
