@@ -133,5 +133,7 @@ setup(name='invest_natcap',
       include_dirs = [np.get_include()],
       data_files=data_files,
       ext_modules=[Extension(name="invest_cython_core",
-                             sources = CYTHON_SOURCE_FILES)],
+                             sources = CYTHON_SOURCE_FILES),
+                   Extension(name="hydropower_cython_core",
+                             sources = ['invest_natcap/hydropower/hydropower_cython_core.pyx'])],
       **py2exe_args)
