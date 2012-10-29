@@ -11,9 +11,12 @@ from urllib2 import urlopen
 #from osgeo import gdal
 #gdal.UseExceptions()
 
-# This should be left as 'development' unless programmatically set when building
-# a release.  DO NOT ALTER THIS VERSION BY HAND.
-__version__ = 'development'
+# This should be left as 'dev' unless BUILDING A RELEASE.
+__version__ = 'dev'
+if __version__ == 'dev':
+    import datetime
+    __version__ = 'dev_r'+datetime.datetime.now().isoformat('_')
+
 
 def log_model(model_name, model_version=None):
     """Submit a POST request to the defined URL with the modelname passed in as
