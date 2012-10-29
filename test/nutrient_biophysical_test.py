@@ -1,8 +1,11 @@
 import unittest
 import os
+import timeit
 
 import numpy as np
+from osgeo import gdal
 
+from invest_natcap import raster_utils
 from invest_natcap.nutrient import nutrient_biophysical
 from invest_natcap.nutrient import nutrient_core
 
@@ -46,3 +49,5 @@ class NutrientCoreTest(unittest.TestCase):
         mean = nutrient_core.get_mean_pixel_value(array, 2)
 
         self.assertEqual(mean, 3.08)
+
+

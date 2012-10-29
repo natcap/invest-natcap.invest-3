@@ -6,6 +6,7 @@ import datetime
 import logging
 import os
 import numpy as np
+import shutil
 
 from osgeo import gdal, ogr
 from invest_natcap import raster_utils
@@ -50,8 +51,8 @@ def execute(args):
             }
         args['habitats']- A structure which will hold exposure and consequence
             criteria data for criteria which are habitat specific. The
-            dictionary will not contain an open raster dataset, but will
-            otherwise be the same structure as the args['h-s'] dictionary.
+            dictionary will contain an open raster dataset to the rasterized
+            versions of the habitats.
         args['stressors'] A structure which will hold exposure and consequence
             criteria data for criteria which are stressor specific. The
             dictionary will not contain an open raster dataset, but will
@@ -160,7 +161,23 @@ def make_recov_potent_raster(direct, habitats):
         RT = habitats[h]['C']['Recovery Time']
         CR = habitats[h]['C']['Connectivity Rate']
  
-        
+        sum_top += NM['Rating'] / NM['DQ']
+        sum_bottom += 1 / NM['DQ']
+
+        sum_top += RR['Rating'] / RR['DQ']
+        sum_bottom += 1 / RR['DQ']
+
+        sum_top += RT['Rating'] / RT['DQ']
+        sum_bottom += 1 / RT['DQ']
+
+        sum_top += CR['Rating'] / CR['DQ']
+        sum_bottom += 1 / CR['DQ']
+
+        r_potent = sum_top / sum_bottom
+
+        #YOU IDIOT. YOU ACTUALLY NEED TO BURN THESE VALUES TO THE HABITAT RASTERS.
+        #USE THE DS WITHIN THE 'HABITATS' DICTIONARY.
+        os.path.join(direct, 'recov_potent_H[' + h + '].tif'
 
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching

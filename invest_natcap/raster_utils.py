@@ -20,6 +20,7 @@ from scipy.sparse.linalg import spsolve
 import scipy.ndimage
 import pyamg
 
+import raster_cython_utils
 
 #Used to raise an exception if rasters, shapefiles, or both don't overlap
 #in regions that should
@@ -792,7 +793,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
     return result_dict
 
-def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatype): 
+def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatype):
     """Convert all the non-nodata values in dataset to the values mapped to 
         by rules.  If there is no rule for an input value it is replaced by
         the nodata output value.
@@ -809,29 +810,11 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatyp
 
         return the mapped raster as a GDAL dataset"""
 
-
-    dataset_band = dataset.GetRasterBand(1)
     output_dataset = new_raster_from_base(dataset, output_uri, format, nodata, 
                                           datatype)
+    raster_cython_utils.reclassify_by_dictionary(
+        dataset, rules, output_uri, format, nodata, datatype, output_dataset)
 
-    def op(x):
-        try:
-            return rules[x]
-        except:
-            return nodata
-
-    vop = np.vectorize(op)
-
-    output_band = output_dataset.GetRasterBand(1)
-    
-    for row in range(output_band.YSize):
-        dataset_array = dataset_band.ReadAsArray(0,row,output_band.XSize,1)
-        output_array = vop(dataset_array)
-        output_band.WriteArray(output_array, 0, row)
-        
-    output_band = None
-    output_dataset.FlushCache()
-    
     calculate_raster_stats(output_dataset)
 
     return output_dataset
