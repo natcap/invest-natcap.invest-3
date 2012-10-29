@@ -27,16 +27,15 @@ class TestHRACore(unittest.TestCase):
             {('kelp', 'FinfishAquacultureComm'): 
                 {'E':
                     {'Spatial Overlap': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                    'Overlap Time': {'Rating': 1.0, 'DQ': 3.0, 'Weight': 2.0},
-                        #This 0.0 in the weight should remove it from the equation
+                    'Overlap Time': {'Rating': 1.0, 'DQ': 3.0, 'Weight': 2.0}
+                    },
                 'C': {'Change in Area':  {'Rating': 3.0, 'DQ': 0.0, 'Weight' : 2.0},
                     'Change in Structure': {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
                     'Frequency of Disturbance':{'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
                     },
                 'DS': gdal.Open(ds_uri)
+                    }
                 }
-           }
-
         args['habitats'] = \
             {'kelp': {'C':
                         {'Natural Mortality': {'Rating': 1.0, 'DQ':2.0, 'Weight':1.0},
@@ -44,7 +43,10 @@ class TestHRACore(unittest.TestCase):
                         'Recovery Time': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0},
                         'Connectivity Rate': {'Rating': 0.0, 'DQ':1.0, 'Weight':1.0}
                         },
-                     'DS': gdal.Open(h_ds_uri)
+                    'E':
+                        {'Dummy Issue': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0}
+                        },
+                    'DS': gdal.Open(h_ds_uri)
                      }
              }
 
@@ -53,6 +55,9 @@ class TestHRACore(unittest.TestCase):
                 {'E':
                     { 'Intensity': {'Rating': 3.0, 'DQ': 2.0, 'Weight' : 1.0},
                     'Management Effectiveness':  {'Rating': 1.0, 'DQ': 2.0, 'Weight' : 1.0}
+                    },
+                'C':
+                    {'Dummy Issue': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0}
                     }
                 }
             }             
