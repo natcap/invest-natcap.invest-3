@@ -411,10 +411,12 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
     for dictionary in crit_dicts:
 
         for criteria in dictionary:
+           
+            LOGGER.debug(dictionary)
             
-            r = h_s_sub[criteria]['Rating']
-            d = h_s_sub[criteria]['DQ']
-            w = h_s_sub[criteria]['Weight']
+            r = dictionary[criteria]['Rating']
+            d = dictionary[criteria]['DQ']
+            w = dictionary[criteria]['Weight']
 
             if d == 0 or w == 0:
                 sum_top += 0
