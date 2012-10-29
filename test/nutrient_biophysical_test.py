@@ -42,3 +42,8 @@ class NutrientBiophysicalTest(unittest.TestCase):
         """Smoke test for nutrient retention: biophysical"""
         nutrient_biophysical.execute(self.args)
 
+class NutrientCoreTest(unittest.TestCase):
+    def test_get_flow_accumulation(self):
+        dem = gdal.Open(os.path.join(NUTR_INPUT, 'dem'))
+        nutrient_core.get_flow_accumulation(dem)
+
