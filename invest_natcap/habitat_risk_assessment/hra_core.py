@@ -298,7 +298,7 @@ def make_cum_risk_raster(direct, h_s):
         h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
-        h_rasters.append(h_raster)
+        h_rasters.append(h_rast)
 
     return h_rasters
 
