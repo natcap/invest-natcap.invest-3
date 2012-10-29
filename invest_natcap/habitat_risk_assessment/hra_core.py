@@ -175,9 +175,25 @@ def make_recov_potent_raster(direct, habitats):
 
         r_potent = sum_top / sum_bottom
 
-        #YOU IDIOT. YOU ACTUALLY NEED TO BURN THESE VALUES TO THE HABITAT RASTERS.
-        #USE THE DS WITHIN THE 'HABITATS' DICTIONARY.
-        os.path.join(direct, 'recov_potent_H[' + h + '].tif'
+        orig_dataset = habitats[h]['DS']
+        orig_band = orig_dataset.GetRasterBand(1)
+        #Create new raster based on the original habitat rasters, then extract
+        #the array from the band, and multiply everything by the recovery
+        #potential output
+        new_uri = os.path.join(direct, 'recov_potent_H[' + h + '].tif')
+
+        new_dataset = raster_utils.new_raster_from_base(orig_dataset, new_uri,
+                            'GTiff', 0, gdal.GDT_Float32)
+        band, nodata = raster_utils.extract_band_and_nodata(new_dataset)
+        band.Fill(nodata)
+
+        #Multiply the whole thing by r_potent. Nodata is 0, so should continue
+        #to asct as nodata
+        orig_array = orig_band.ReadAsArray()
+        new_array = orig_array * r_potent
+
+        band.WriteArray(new_array)
+
 
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
