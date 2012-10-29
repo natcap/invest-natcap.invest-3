@@ -194,7 +194,6 @@ def make_recov_potent_raster(direct, habitats):
 
         band.WriteArray(new_array)
 
-
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
     ecosystem risk raster.
