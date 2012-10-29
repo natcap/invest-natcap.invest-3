@@ -21,8 +21,9 @@ class TestHRACore(unittest.TestCase):
         args['risk_eq'] = 'Euclidean'
     
         ds_uri = './data/test_out/HRA/Intermediate/H[kelp]_S[FinfishAquacultureComm].tif'
-        
-        args['ratings'] = \
+        h_ds_uri = './data/test_out/HRA/Intermediate/Habitat_Rasters/kelp.tif'
+
+        args['h-s'] = \
             {('kelp', 'FinfishAquacultureComm'): 
                 {'E':
                     {'Spatial Overlap': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
@@ -37,6 +38,20 @@ class TestHRACore(unittest.TestCase):
                 'DS': gdal.Open(ds_uri)
                 }
            }
+
+        args['habitats'] = \
+            {'kelp': {'C':
+                        {'Natural Mortality': {'Rating': 1.0, 'DQ':2.0, 'Weight':1.0},
+                        'Recruitment Rate': {'Rating': 1.0, 'DQ':2.0, 'Weight':2.0},
+                        'Recovery Time': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0},
+                        'Connectivity Rate': {'Rating': 0.0, 'DQ':1.0, 'Weight':1.0}
+                        },
+                     'DS': gdal.Open(h_ds_uri)
+                     }
+             }
+
+       # args['stressors'] = \
+            
 
         self.args = args
 

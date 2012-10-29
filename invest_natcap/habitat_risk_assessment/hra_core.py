@@ -194,7 +194,6 @@ def make_recov_potent_raster(direct, habitats):
 
         band.WriteArray(new_array)
 
-
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
     ecosystem risk raster.
@@ -369,7 +368,7 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         r_array = r_band.ReadAsArray()
         
         if risk_eq == 'Euclidean':
-            mod_array = make_risk_euc(r_array E, C) 
+            mod_array = make_risk_euc(r_array, E, C) 
 
         elif risk_eq == 'Multiplicative':
             mod_array = make_risk_mult(r_array, E, C)
