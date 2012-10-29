@@ -29,6 +29,7 @@ def execute(args):
     #parameters
     LOGGER.debug("Processing parameters.")
     aoiFileName = args["aoiFileName"]
+    gridType = args["gridType"]
     cellSize = args["cellSize"]
     cellUnit = float(args["cellUnit"])
     workspace_dir = args["workspace_dir"]
@@ -139,6 +140,7 @@ def execute(args):
                    "aoiSHX": open(aoiFileNameSHX, "rb"),
                    "aoiDBF": open(aoiFileNameDBF, "rb"),
                    "aoiPRJ": open(aoiFileNamePRJ, "rb"),
+                   "gridType": gridType,
                    "cellSize": cellSize*cellUnit,
                    "comments": comments,
                    "landscan": landscan,
