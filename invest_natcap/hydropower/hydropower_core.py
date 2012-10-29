@@ -180,17 +180,9 @@ def water_yield(args):
     LOGGER.debug('Performing wyield operation')
     
     def wyield_op(fractp, precip):
-        """Function that calculates the water yeild raster
-        
-           fractp - numpy array with the fractp raster values
-           precip - numpy array with the precipitation raster values (mm)
-           
-           returns - water yield value (mm)"""
-        
-        if fractp == out_nodata or precip == precip_nodata:
-            return out_nodata
-        else:
-            return (1.0 - fractp) * precip
+        """Python closure for cython version of wyield_op"""
+        return hydropower_cython_core.wyield_op(
+            out_nodata, precip_nodata, fractp, precip)
     
     #Create the water yield raster 
     wyield_raster = \
@@ -231,38 +223,19 @@ def water_yield(args):
     LOGGER.debug('Performing volume operation')
     
     def volume_op(wyield_mn, wyield_area):
-        """Function to compute the water yield volume raster
-        
-            wyield_mn - numpy array with the water yield mean raster values (mm)
-            wyield_area - numpy array with the water yield area raster 
-                          values (square meters)
-            
-            returns - water yield volume value (cubic meters)"""
-        #Divide by 1000 because wyield is in mm, so convert to meters
-        if wyield_mn != out_nodata and wyield_area != out_nodata:
-            return (wyield_mn * wyield_area / 1000.0)
-        else:
-            return out_nodata
-        
+        """Python closure for hydropower cython core version of volume op"""
+        return hydropower_cython_core.volume_op(
+            out_nodata, wyield_mn, wyield_area)
+
     wyield_vol_raster = \
         raster_utils.vectorize_rasters([wyield_mean, wyield_area], volume_op, 
                                        raster_out_uri = wyield_volume_path, 
                                        nodata=out_nodata)
 
     def ha_vol(wyield_vol, wyield_area):
-        """Function to compute water yield volume in units of ha
-        
-            wyield_vol - numpy array with the water yield volume raster values
-                         (cubic meters)
-            wyield_area - numpy array with the water yield area raster values
-                          (squared meters)
-                          
-            returns - water yield volume in ha value"""
-        #Converting area from square meters to hectares 1 meter = .0001 hectare
-        if wyield_vol != out_nodata and wyield_area != out_nodata:
-            return wyield_vol / (0.0001 * wyield_area)
-        else:
-            return out_nodata
+        """Python closure for hydropower cython core version of ha_vol"""
+        return hydropower_cython_core.ha_vol(
+            out_nodata, wyield_vol, wyield_area)
     
     LOGGER.debug('Performing volume (ha) operation')
         
@@ -273,22 +246,10 @@ def water_yield(args):
                                        nodata=out_nodata)
     
     def aet_op(fractp, precip):
-        """Function to compute the actual evapotranspiration values
-        
-            fractp - numpy array with the fractp raster values
-            precip - numpy array with the precipitation raster values (mm)
-            
-            returns - actual evapotranspiration values (mm)"""
-        
-        #checking if fractp >= 0 because it's a value that's between 0 and 1
-        #and the nodata value is -1.  It's possible that vectorize rasters will
-        #attempt to interpoalte the nodata value thus yielding intermiedate
-        #values <0 but not == -1, thus we only accept values >= 0
-        if fractp >= 0 and precip != precip_nodata:
-            return fractp * precip
-        else:
-            return out_nodata
-    
+        """Python closure for aet_op to hydropower cython core"""
+        return hydropower_cython_core.aet_op(
+            precip_nodata, out_nodata, fractp, precip)
+
     LOGGER.debug('Performing aet operation')
     
     aet_raster = \
@@ -533,20 +494,10 @@ def water_scarcity(args):
     wyield_vol_nodata = wyield_vol_raster.GetRasterBand(1).GetNoDataValue()
     
     def cyield_vol_op(wyield_vol, calib_val):
-        """Function that computes the calibrated water yield volume
-           per sub-watershed
-        
-           wyield_vol - a numpy array of water yield volume values
-           calib_val - a numpy array of calibrated values
-                                
-           returns - the calibrated water yield volume value (cubic meters)
-        """
-        
-        if wyield_vol != wyield_vol_nodata and calib_val != out_nodata:
-            return wyield_vol * calib_val
-        else:
-            return out_nodata
-        
+        """Python closeure for hydropower cython core cyield_vol_op"""
+        return hydropower_cython_core.cyield_vol_op(
+            out_nodata, wyield_vol_nodata, wyield_vol, calib_val)
+
     LOGGER.info('Creating cyield raster')
     #Multiply calibration with wyield_vol raster to get cyield_vol
     wyield_calib = \
@@ -588,20 +539,12 @@ def water_scarcity(args):
     rsupply_out_nodata = 0.0
     
     def rsupply_vol_op(wyield_calib, consump_vol):
-        """Function that computes the realized water supply volume
-        
-           wyield_calib - a numpy array with the calibrated water yield values
-                          (cubic meters)
-           consump_vol - a numpy array with the total water consumptive use
-                         values (cubic meters)
-           
-           returns - the realized water supply volume value (cubic meters)
-        """
-        if wyield_calib != nodata_calib and consump_vol != nodata_consump:
-            return wyield_calib - consump_vol
-        else:
-            return rsupply_out_nodata
-        
+        """Python closure for hydropower_cython_core version of 
+        rsupply_vol_op"""
+        return hydropower_cython_core.rsupply_vol_op(
+            nodata_calib, nodata_consump, rsupply_out_nodata,
+            wyield_calib, consump_vol)
+
     rsupply_vol_vec = np.vectorize(rsupply_vol_op)
     LOGGER.info('Creating rsupply_vol raster')
     #Make rsupply_vol by wyield_calib minus consump_vol
@@ -613,22 +556,12 @@ def water_scarcity(args):
     mn_raster_nodata = mean_raster.GetRasterBand(1).GetNoDataValue()
     
     rsupply_mean_out_nodata = 0.0
-   
+
     def rsupply_mean_op(wyield_mean, consump_mean):
-        """Function that computes the mean realized water supply
-        
-           wyield_mean - a numpy array with the mean calibrated water yield 
-                         values (mm)
-           consump_mean - a numpy array with the mean water consumptive use
-                         values (cubic meters)
-           
-           returns - the mean realized water supply value
-        """
-        #THIS MAY BE WRONG. DOING OPERATION ON (mm) and (cubic m)#
-        if wyield_mean != wyield_mn_nodata and consump_mean != mn_raster_nodata:
-            return wyield_mean - consump_mean
-        else:
-            return rsupply_mean_out_nodata
+        """Python closure for russply mean op to hydropower_cython_core"""
+        return hydropower_cython_core.rsupply_mean_op(
+            wyield_mn_nodata, mn_raster_nodata, rsupply_mean_out_nodata,
+            wyield_mean, consump_mean)
         
     rsupply_mn_vec = np.vectorize(rsupply_mean_op)
     LOGGER.info('Creating rsupply_mn raster')
