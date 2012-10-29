@@ -65,5 +65,16 @@ class TestHRACore(unittest.TestCase):
         self.args = args
 
     def test_execute(self):
-        
+       
+        #For purposes of running test independently of HRA non-core, need to
+        #delete current intermediate and output folders
+        inter_dir = os.path.join(self.args['workspace_dir'], 'Intermediate')
+        out_dir = os.path.join(self.args['workspace_dir'], 'Output')
+
+        for folder in (inter_dir, out_dir):
+            if (os.path.exists(folder)):
+                shutil.rmtree(folder) 
+
+        os.makedirs(folder)
+
         hra_core.execute(self.args) 
