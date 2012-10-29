@@ -1,6 +1,9 @@
-import numpy 
+cimport numpy 
+import numpy
+cimport cython
 from libcpp.map cimport map
 
+@cython.boundscheck(False)
 def reclassify_by_dictionary(dataset, rules, output_uri, format, float nodata, datatype,
     output_dataset): 
     """Convert all the non-nodata values in dataset to the values mapped to 
@@ -21,23 +24,26 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, float nodata, d
 
     dataset_band = dataset.GetRasterBand(1)
 
-    def op(x):
-        try:
-            return rules[x]
-        except:
-            return nodata
-
-    vop = numpy.vectorize(op)
+    cdef map[float,float] lookup
+    for key in rules.keys():
+        lookup[float(key)] = rules[key]
 
     output_band = output_dataset.GetRasterBand(1)
     
-    cdef int row = 0
-    cdef int n_rows = output_band.YSize 
+    cdef int n_rows = output_band.YSize
+    cdef int n_cols = output_band.XSize
+    cdef numpy.ndarray[numpy.float_t, ndim=2] dataset_array = numpy.empty((1, n_cols))
+    cdef float value = 0.0
 
     for row in range(n_rows):
-        dataset_array = dataset_band.ReadAsArray(0,row,output_band.XSize,1)
-        output_array = vop(dataset_array)
-        output_band.WriteArray(output_array, 0, row)
+        dataset_band.ReadAsArray(0,row,output_band.XSize,1, buf_obj = dataset_array)
+        for col in range(n_cols):
+            value = dataset_array[0,col]
+            if lookup.count(value) == 1:
+                dataset_array[0,col] = lookup[value]
+            else:
+                dataset_array[0,col] = nodata
+        output_band.WriteArray(dataset_array, 0, row)
         
     output_band = None
     output_dataset.FlushCache()
