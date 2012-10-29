@@ -28,9 +28,7 @@ class TestHRACore(unittest.TestCase):
                 {'E':
                     {'Spatial Overlap': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
                     'Overlap Time': {'Rating': 1.0, 'DQ': 3.0, 'Weight': 2.0},
-                    #This 0.0 in the weight should remove it from the equation
-                    'Intensity': {'Rating': 3.0, 'DQ': 2.0, 'Weight' : 1.0},
-                    'Management Effectiveness':  {'Rating': 1.0, 'DQ': 2.0, 'Weight' : 1.0}},
+                        #This 0.0 in the weight should remove it from the equation
                 'C': {'Change in Area':  {'Rating': 3.0, 'DQ': 0.0, 'Weight' : 2.0},
                     'Change in Structure': {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
                     'Frequency of Disturbance':{'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
@@ -50,8 +48,14 @@ class TestHRACore(unittest.TestCase):
                      }
              }
 
-       # args['stressors'] = \
-            
+        args['stressors'] = \
+            {'FinfishAquacultureComm': 
+                {'E':
+                    { 'Intensity': {'Rating': 3.0, 'DQ': 2.0, 'Weight' : 1.0},
+                    'Management Effectiveness':  {'Rating': 1.0, 'DQ': 2.0, 'Weight' : 1.0}
+                    }
+                }
+            }             
 
         self.args = args
 
