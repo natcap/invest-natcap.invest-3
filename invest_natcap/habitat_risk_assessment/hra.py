@@ -38,7 +38,7 @@ def execute(args):
         args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.
-        args['ratings']- A structure which holds all exposure and consequence
+        args['h-s']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
             tuple of lists which contain tuples.
@@ -51,15 +51,33 @@ def execute(args):
                     'C': {C's Criteria Dictionaries}
                     }
             }
+        args['habitats']- A structure with the same layout as 'h-s', but which
+            contains only criteria which are specific to habitats.
+        args['stressors']- A structure wih the same layout as 'h-s', but which
+            contains only criteria which are specific to stressors.
 
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
             complete the rest of the model run. It will contain the following.
         hra_args['workspace_dir']- Directory in which all data resides. Output
             and intermediate folders will be supfolders of this one.
-        hra_args['ratings']- Dictionary with a similar structure to the above,
+        hra_args['h-s']- Dictionary with a similar structure to the above,
             but with an additional item in the value tuple containing an open
-            raster dataset of the overlap of key H-S.
+            raster dataset of th overlap of key H-S.
+            {(Habitat A, Stressor 1): 
+                    {'E': 
+                        {'Spatital Overlap': 
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        },
+                    'C': {C's Criteria Dictionaries},
+                    'DS':  <Open A-1 Raster Dataset>
+                    }
+            }
+        hra['habitats']- Dictionary with the same structure as the original
+            args['habitats'], but which also contains a rasterized version of
+            each shapefile input.
+        hra['stressors']- Dictionary structure identical to the orignal
+            args['stressors'] that was passed in from the UI.
         hra_args['risk_eq']- String which identifies the equation to be used
             for calculating risk.  The core module should check for 
             possibilities, and send to a different function when deciding R 
@@ -98,7 +116,10 @@ def execute(args):
     os.makedirs(h_rast)
 
     make_rasters(file_names, h_rast, args['grid_size'])
-    
+    mod_habitats = add_rast_to_dict(h_rast, args['habitats']
+    hra_args['habitats'] = mod_habitats
+
+
     file_names = glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
 
@@ -108,18 +129,53 @@ def execute(args):
 
     os.makedirs(s_rast)
 
+    #Make rasters based on the stressor shapefiles
     make_rasters(file_names, s_rast, args['grid_size'])
 
     #Checks the stressor buffer, and re-rasterizes if necessary.
     buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
 
+    hra_args['stressors'] = args['stressors']
+
     #Now, want to make all potential combinations of the rasters, and add it to
     #the structure containg data about the H-S combination.
-    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['ratings'])
+    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['h-s'])
 
-    hra_args['ratings'] = ratings_with_rast
+    hra_args['h-s'] = ratings_with_rast
 
     hra_core.execute(hra_args)
+
+add_rast_to_dict(direct, dictionary):
+    '''Allows us to add an open dataset to the already existing dictionary.
+
+    Input:
+        direct- The directory from which we will be getting our .tif raster
+            files.
+        dictionary- The structure into which the completed open raster datasets
+            should be placed. In this case, we want to put them within
+            dictionary[name]['DS'] for retrieval later.
+
+    Returns:
+        A modified dictionary containing a reference to an open dataset. This
+            dataset is accessable by the key 'DS' within the outer
+            dictionary[name] value.
+    '''
+
+    #Glob.glob gets all of the files that fall into the form .tif, and makes
+    #them into a list.
+    file_names = glob.glob(os.path.join(direct, '*.tif'))
+
+    for r_file in file_names:
+        
+        #The return of os.path.split is a tuple where everything after the final
+        #slash is returned as the 'tail' in the second element of the tuple
+        #path.splitext returns a tuple such that the first element is what comes
+        #before the file extension, and the second is the extension itself 
+        name = os.path.splitext(os.path.split(r_file)[1])[0]
+
+        dictionary[name]['DS'] = gdal.Open(file_name)
+
+    return dictionary
 
 def buffer_s_rasters(dir, buffer_dict, grid_size):
     '''If there is buffering desired, this will take each file and buffer the
@@ -129,7 +185,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         dir- The directory in which the current raster files reside, and into
             which the re-rasterized files should be placed.
         buffer_dict- Dictionary which maps the name of the stressor to the
-            desired buffer distance. This is separate from the ratings
+            desired buffer distance. This is separate from the h-s
             dictionary to avoid having to pass it to core. The key will be a
             string, and the value a double.
         grid_size- The current size of the raster cells.
@@ -175,15 +231,15 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         
         band.WriteArray(dist_array)
 
-def combine_hs_rasters(dir, h_rast, s_rast, ratings):
+def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''Takes in a habitat and a stressor, and combines the two raster files,
-    then places that in the corresponding entry within the ratings dictionary.
+    then places that in the corresponding entry within the h-s dictionary.
 
     Input:
         dir- The directory into which the completed raster files should be placed.
         h_rast- The folder holding all habitat raster files.
         s_rast- The folder holding all stressor raster files.
-        ratings- A dictionary which comes from the IUI which contains all
+        h_s- A dictionary which comes from the IUI which contains all
             ratings and weightings of each Habitat-Stressor pair.
 
     Output:
@@ -192,7 +248,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
             stressor versions of this file, all individualled named according
             to their corresponding parts.
     
-    Returns an edited version of 'ratings' that contains an open raster
+    Returns an edited version of 'h-s' that contains an open raster
     datasource correspondoing to the appropriate H-S key for the dictionary.
     '''
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
@@ -233,12 +289,12 @@ def combine_hs_rasters(dir, h_rast, s_rast, ratings):
                             datatype = gdal.GDT_Int32, nodata=0)
             
             #Now place the datasource into the corresponding dictionary entry
-            #in 'ratings'. We will make the open datasource the third item in
-            #the tuple. The first two are the exposure and consequence ratings
+            #in 'h-s'. We will make the open datasource the third item in
+            #the tuple. The first two are the exposure and consequence ratings 
             #that were gleaned from the IUI.
-            ratings[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
+            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
 
-    return ratings
+    return h_s
 
 def make_rasters(file_names, dir_path, grid_size):
 
