@@ -116,7 +116,7 @@ def execute(args):
     os.makedirs(h_rast)
 
     make_rasters(file_names, h_rast, args['grid_size'])
-    mod_habitats = add_rast_to_dict(h_rast, args['habitats']
+    mod_habitats = add_rast_to_dict(h_rast, args['habitats'])
     hra_args['habitats'] = mod_habitats
 
 
@@ -145,7 +145,7 @@ def execute(args):
 
     hra_core.execute(hra_args)
 
-add_rast_to_dict(direct, dictionary):
+def add_rast_to_dict(direct, dictionary):
     '''Allows us to add an open dataset to the already existing dictionary.
 
     Input:
