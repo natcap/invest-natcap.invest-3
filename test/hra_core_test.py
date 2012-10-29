@@ -3,6 +3,7 @@
 import os
 import logging
 import unittest
+import shutil
 
 from invest_natcap.habitat_risk_assessment import hra_core
 from osgeo import gdal, ogr
