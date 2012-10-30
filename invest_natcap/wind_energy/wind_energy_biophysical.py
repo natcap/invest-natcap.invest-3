@@ -99,8 +99,8 @@ def execute(args):
     
         # Check to make sure that the AOI is projected and in meters
         if not check_datasource_projections([aoi]):
-            # Creating a unique exception on the fly to provide better feedback to
-            # the user
+            # Creating a unique exception on the fly to provide better feedback
+            # to the user
             class ProjectionError(Exception):
                 """A self defined Exception for a bad projection"""
                 pass
@@ -121,7 +121,8 @@ def execute(args):
         biophysical_args['wind_data_points'] = wind_pts_prj
         biophysical_args['aoi'] = aoi 
         
-        # Try to handle the distance inputs and land datasource if they are present
+        # Try to handle the distance inputs and land datasource if they 
+        # are present
         try:
             land_polygon = ogr.Open(args['land_polygon_uri'])
 
@@ -279,87 +280,87 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     return output_datasource
 
 def clip_and_reproject_maps(data_obj, aoi, output_uri):
-        """Clip and project a Dataset/DataSource to an area of interest
+    """Clip and project a Dataset/DataSource to an area of interest
 
-            data_obj - a gdal Dataset or ogr Datasource
-            aoi - an ogr DataSource of geometry type polygon
-            output_uri - a string of the desired base output name without the
-                suffix
+        data_obj - a gdal Dataset or ogr Datasource
+        aoi - an ogr DataSource of geometry type polygon
+        output_uri - a string of the desired base output name without the
+            suffix
 
-            returns - a Dataset or DataSource clipped and projected to an area
-                of interest"""
+        returns - a Dataset or DataSource clipped and projected to an area
+            of interest"""
 
-        # Get the AOIs spatial reference as strings in Well Known Text
-        aoi_sr = aoi.GetLayer().GetSpatialRef()
-        aoi_wkt = aoi_sr.ExportToWkt()
+    # Get the AOIs spatial reference as strings in Well Known Text
+    aoi_sr = aoi.GetLayer().GetSpatialRef()
+    aoi_wkt = aoi_sr.ExportToWkt()
 
-        data_obj_wkt = None
-        suffix = None
-        basename = os.path.basename(output_uri)
-        dirname = os.path.dirname(output_uri)
+    data_obj_wkt = None
+    suffix = None
+    basename = os.path.basename(output_uri)
+    dirname = os.path.dirname(output_uri)
 
-        # Get the Well Known Text of the data object and set the appropriate
-        # suffix for future uri's
-        if isinstance(data_obj, ogr.DataSource):
-            data_obj_layer = data_obj.GetLayer()
-            data_obj_sr = data_obj_layer.GetSpatialRef()
-            data_obj_wkt = data_obj_sr.ExportToWkt()
+    # Get the Well Known Text of the data object and set the appropriate
+    # suffix for future uri's
+    if isinstance(data_obj, ogr.DataSource):
+        data_obj_layer = data_obj.GetLayer()
+        data_obj_sr = data_obj_layer.GetSpatialRef()
+        data_obj_wkt = data_obj_sr.ExportToWkt()
+    
+        suffix = '.shp'
+    else:
+        data_obj_wkt = data_obj.GetProjection()
         
-            suffix = '.shp'
-        else:
-            data_obj_wkt = data_obj.GetProjection()
-            
-            suffix = '.tif'
+        suffix = '.tif'
 
-        # Reproject the AOI to the spatial reference of the data_obj so that the
-        # AOI can be used to clip the data_obj properly
+    # Reproject the AOI to the spatial reference of the data_obj so that the
+    # AOI can be used to clip the data_obj properly
+    
+    aoi_prj_to_obj_uri = os.path.join(
+            dirname, 'aoi_prj_to_' + basename + '.shp')
+    
+    aoi_prj_to_obj = raster_utils.reproject_datasource(
+            aoi, data_obj_wkt, aoi_prj_to_obj_uri)
+    
+    data_obj_clipped_uri = output_uri + '_clipped' + suffix
+    data_obj_reprojected_uri = output_uri + '_reprojected' + suffix
+
+    data_obj_prj = None
+    
+    if isinstance(data_obj, ogr.DataSource):
+        # Clip the data_obj to the AOI
+        data_obj_clipped = clip_datasource(
+                aoi_prj_to_obj, data_obj, data_obj_clipped_uri)
+
+        # Reproject the clipped data obj to that of the AOI
+        data_obj_prj = raster_utils.reproject_datasource(
+            data_obj_clipped, aoi_wkt, data_obj_reprojected_uri)
+    else:
+        # Clip the data obj to the AOI
+        data_obj_clipped = raster_utils.clip_dataset(
+                data_obj, aoi_prj_to_obj, data_obj_clipped_uri)
+
+        # Get a point from the clipped data object to use later in helping
+        # determine proper pixel size
+        data_obj_gt = data_obj_clipped.GetGeoTransform()
+        point_one = (data_obj_gt[0], data_obj_gt[3])
+       
+        # Create a Spatial Reference from the data objects WKT
+        data_obj_sr = osr.SpatialReference()
+        data_obj_sr.ImportFromWkt(data_obj_wkt)
         
-        aoi_prj_to_obj_uri = os.path.join(
-                dirname, 'aoi_prj_to_' + basename + '.shp')
-        
-        aoi_prj_to_obj = raster_utils.reproject_datasource(
-                aoi, data_obj_wkt, aoi_prj_to_obj_uri)
-        
-        data_obj_clipped_uri = output_uri + '_clipped' + suffix
-        data_obj_reprojected_uri = output_uri + '_reprojected' + suffix
+        # A coordinate transformation to help get the proper pixel size of
+        # the reprojected data object
+        coord_trans = osr.CoordinateTransformation(data_obj_sr, aoi_sr)
+      
+        pixel_size = raster_utils.pixel_size_based_on_coordinate_transform(
+                data_obj_clipped, coord_trans, point_one)
 
-        data_obj_prj = None
-        
-        if isinstance(data_obj, ogr.DataSource):
-            # Clip the data_obj to the AOI
-            data_obj_clipped = clip_datasource(
-                    aoi_prj_to_obj, data_obj, data_obj_clipped_uri)
+        # Reproject the data object to the projection of the AOI
+        data_obj_prj = raster_utils.reproject_dataset(
+                data_obj_clipped, pixel_size[0], aoi_wkt,
+                data_obj_reprojected_uri)
 
-            # Reproject the clipped data obj to that of the AOI
-            data_obj_prj = raster_utils.reproject_datasource(
-                data_obj_clipped, aoi_wkt, data_obj_reprojected_uri)
-        else:
-            # Clip the data obj to the AOI
-            data_obj_clipped = raster_utils.clip_dataset(
-                    data_obj, aoi_prj_to_obj, data_obj_clipped_uri)
-
-            # Get a point from the clipped data object to use later in helping
-            # determine proper pixel size
-            data_obj_gt = data_obj_clipped.GetGeoTransform()
-            point_one = (data_obj_gt[0], data_obj_gt[3])
-           
-            # Create a Spatial Reference from the data objects WKT
-            data_obj_sr = osr.SpatialReference()
-            data_obj_sr.ImportFromWkt(data_obj_wkt)
-            
-            # A coordinate transformation to help get the proper pixel size of
-            # the reprojected data object
-            coord_trans = osr.CoordinateTransformation(data_obj_sr, aoi_sr)
-          
-            pixel_size = raster_utils.pixel_size_based_on_coordinate_transform(
-                    data_obj_clipped, coord_trans, point_one)
-
-            # Reproject the data object to the projection of the AOI
-            data_obj_prj = raster_utils.reproject_dataset(
-                    data_obj_clipped, pixel_size[0], aoi_wkt,
-                    data_obj_reprojected_uri)
-
-        return data_obj_prj
+    return data_obj_prj
 
 def clip_datasource(aoi_ds, orig_ds, output_uri):
     """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
