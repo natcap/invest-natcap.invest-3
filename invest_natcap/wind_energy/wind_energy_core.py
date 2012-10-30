@@ -755,24 +755,7 @@ def convert_degrees_to_radians(points):
         returns - a numpy array of points that are in radians
         """
 
-    radian_points = np.zeros(points.shape)
-    
-    def vop(deg):
-        """Vectorized operation to convert points from degrees to radians
-
-            deg - a list of floating point numbers representing the particular
-                point
-
-            returns - a list representing the point in radians"""
-        return math.pi * deg / 180.0
-
-    vectorized_op = np.vectorize(vop)
-    
-    index = 0
-
-    for point in points:
-        radian_points[index] = vectorized_op(point)
-        index = index + 1
+    radian_points = math.pi * points / 180.0
 
     return radian_points
 
