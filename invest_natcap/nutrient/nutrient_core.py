@@ -56,6 +56,47 @@ def mean_runoff_index(runoff_index, watersheds):
 
         Returns an OGR shapefile where the 'mean_runoff' field contains the
         calculated runoff index."""
-    pass
+
+#    # Create a temp raster based on the 
+#    gdal_driver = gdal.GetDriverByName('MEM')
+#    raster = driver.CreateCopy('/tmp/mem_mask_watersheds', runoff_index)
+#    band, nodata = raster_utils.extract_band_and_nodata(raster)
+#    band.fill(nodata)
+
+    ogr_driver = ogr.GetDriverByName('Memory')
+    raster_geotransform = runoff_index.GetGeoTransform()
+    pixel_width = abs(raster_geotransform[1])
+    pixel_height = abs(raster_geotransform[5])
+
+    for layer in watersheds:
+        for watershed in layer:
+            temp_shapefile = ogr_driver.CreateDataSource('/tmp/temp_shapefile')
+            temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
+                watersheds.GetLayer(0).GetSpatialRef(), geom_type=ogr.wkbPolygon)
+            temp_layer_defn = temp_layer.GetLayerDefn()
+
+            feature_geom = watershed.GetGeometryRef()
+            temp_feature = ogr.Feature(temp_layer_defn)
+            temp_layer.CreateFeature(temp_feature)
+            temp_feature.SetGeometry(feature_geom)
+            temp_feature.SetFrom(watershed)
+
+            temp_layer.SetFeature(temp_feature)
+            temp_feature.Destroy()
+            temp_layer.SyncToDisk()
+
+            temp_nodata = -1
+            temp_raster = raster_utils.create_raster_from_vector_extents(
+                pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
+                '/tmp/mask_raster', temp_layer)
+
+            gdal.RasterizeLayer(temp_raster, [1], temp_layer, burn_values=[1])
+
+            watershed_pixels = raster_utils.vectorize_rasters([temp_raster,
+                runoff_index], lambda x, y: x if y == 1 else temp_nodata,
+                nodata=-1.0)
+
+            r_min, r_max, r_mean, r_stdev = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
+
 
 
