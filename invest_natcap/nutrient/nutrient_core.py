@@ -23,3 +23,8 @@ def get_flow_accumulation(dem):
     flow_direction = raster_utils.new_raster_from_base(dem,
         '/tmp/flow_direction', 'GTiff', -1.0, gdal.GDT_Float32)
     invest_cython_core.flow_direction_inf(dem, bounding_box, flow_direction)
+
+    # INSERT FLOW ACCUMULATION/RETENION RASTER CALCULATION HERE
+    # do the flow_accumulation
+    flow_accumulation = raster_utils.flow_accumulation_dinf(flow_direction, dem,
+        '/tmp/flow_accumulation.tif')
