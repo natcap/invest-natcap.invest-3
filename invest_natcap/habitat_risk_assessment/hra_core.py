@@ -221,7 +221,7 @@ def make_ecosys_risk_raster(direct, h_ds):
 
         return pixel_sum
 
-    raster_utils.vectorize_rasters(h_risks, add_e_pixels, aoi = None,
+    raster_utils.vectorize_rasters(h_ds, add_e_pixels, aoi = None,
                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
 def make_cum_risk_raster(direct, h_s):
