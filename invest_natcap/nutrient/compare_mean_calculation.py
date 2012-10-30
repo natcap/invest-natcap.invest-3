@@ -17,14 +17,21 @@ def do_numpy():
     masked_array = np.ma.masked_array(array, array == nodata)
     mean = np.mean(masked_array)
 
+array = ds.GetRasterBand(1).ReadAsArray()
+def do_numpy_no_array():
+    masked_array = np.ma.masked_array(array, array == nodata)
+    mean = np.mean(masked_array)
+
 def do_gdal():
     ds.GetRasterBand(1).ComputeStatistics(0)
     min, max, mean, stdev = ds.GetRasterBand(1).GetStatistics(0,1)
 
 numpy_time = 'numpy ' + str(timeit.timeit(do_numpy, number=1000))
+numpy_no_array_time = 'numpy (no array loading) ' + str(timeit.timeit(do_numpy, number=1000))
 
 gdal_time = 'gdal ' + str(timeit.timeit(do_gdal, number=1000))
 
 print numpy_time
+print numpy_no_array_time
 print gdal_time
 

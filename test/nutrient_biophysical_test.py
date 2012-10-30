@@ -42,12 +42,8 @@ class NutrientBiophysicalTest(unittest.TestCase):
         """Smoke test for nutrient retention: biophysical"""
         nutrient_biophysical.execute(self.args)
 
-class NutrientCoreTest(unittest.TestCase):
-    def test_get_mean_pixel_value(self):
-        """Test for the mean pixel value of a matrix given a nodata value."""
-        array = np.array([ 1, 2, 4, 2, 1, 6, 3.4, 2, 2, 2 ])
-        mean = nutrient_core.get_mean_pixel_value(array, 2)
-
-        self.assertEqual(mean, 3.08)
-
-
+#class NutrientCoreTest(unittest.TestCase):
+#    def test_get_flow_accumulation(self):
+#        dem = gdal.Open(os.path.join(NUTR_INPUT, 'dem'))
+#        nutrient_core.get_flow_accumulation(dem)
+#
