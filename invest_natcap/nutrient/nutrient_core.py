@@ -52,9 +52,9 @@ def mean_runoff_index(runoff_index, watersheds):
     """Calculate the mean runoff index per watershed.
 
         runoff_index - a GDAL raster of the runoff index per pixel.
-        watersheds - a list of OGR shapefiles.
+        watersheds - an OGR shapefile that is open for writing.
 
-        Returns a list of shapefiles where the 'mean_runoff' field contains the
+        Returns an OGR shapefile where the 'mean_runoff' field contains the
         calculated runoff index."""
     pass
 
