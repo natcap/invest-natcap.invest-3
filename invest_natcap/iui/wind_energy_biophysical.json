@@ -28,7 +28,7 @@
                     "label": "Wind Data Points",
                     "defaultValue": "../Wind_Energy/Input/wind_data.txt",
                     "required": true,
-                    "helpText": "Select the text file that represents the wind energy points. This text file should have a first line that acts like column headers. The first line should have the text separated by commas : ID,LONG,LATI,Ram010m,K .</b>."
+                    "helpText": "A text file that represents the wind energy data points. The text file should be set up with the first line having the following comma separated fields:<br/> N (Unique ID), LONG (the longitude coordinate), LATI (the latitude coordinate), Ram-010m (a range of the scale parameter which varies at different heights: Ram-020m,Ram-030m,...,Ram-140m,Ram-150m), K-010m (the shape parameter which does not vary by height). The following lines should be individual and unique wind data bins with information corresponding to the fields from the first line."
                 },
                 {
                     "id" : "aoi",
@@ -39,27 +39,51 @@
                     "required": false,
                     "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
-                    "helpText": ""
+                    "helpText": "An optional polygon shapefile that defines the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly." 
                 },
                 {
                     "id" : "bathymetry",
                     "args_id" : "bathymetry_uri",
                     "type": "file",
-                    "label": "Bathymetry",
+                    "label": "Bathymetry (DEM)",
                     "defaultValue": "../Wind_Energy/Input/bathymetry.adf",
                     "required": true,
                     "validateAs": {"type": "GDAL"},
-                    "helpText": ""
+                    "helpText": "A raster dataset for the eleveation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
                 },
                 {
                     "id" : "bottom_types",
                     "args_id" : "bottom_type_uri",
                     "type": "file",
-                    "label": "Bottome Types",
+                    "label": "Bottom Types",
                     "required": false,
                     "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
-                    "helpText": ""
+                    "helpText": "CURRENTLY NOT IMPLEMENTED: A optional polygon shapefile that defines different geological bottom types. This is important in determining what types of turbines can be used and if their will be any additional costs associated with it."
+                },
+                {
+                    "id" : "days_harv_wind_energy",
+                    "args_id" : "num_days",
+                    "type": "text",
+                    "label": "Number of Days for Harvested Wind Energy Calculation (days)",
+                    "defaultValue": "365",
+                    "validText" : "^[0-9]*\\.?[0-9]+$",
+                    "validateAs" : {"type" : "number",
+                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                    "required": true,
+                    "helpText": "An integer value for the number of days for harvested wind energy. 365 days corresponds to yearly calculations and it is suggested to use 30 days for monthly energy outputs."
+                },
+                {
+                    "id" : "air_density",
+                    "args_id" : "air_density",
+                    "type": "text",
+                    "label": "Air Density (kgm^-3) of Standard Atmosphere",
+                    "defaultValue": "1.225",
+                    "validText" : "^[0-9]*\\.?[0-9]+$",
+                    "validateAs" : {"type" : "number",
+                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                    "required": true,
+                    "helpText": "A floating point value for the air density of standard atmosphere (kgm ^ -3). The U.S. standard atmosphere air density at sea leavel is 1.225. At the International Union of Pure and Applied Chemistry (IUPAC) standard temperature and pressure (0 degrees celcius and 100 kPa), dry air has a density of 1.2754 kg/m^3)."
                 }
             ]
         },
@@ -82,7 +106,7 @@
                                              "90", "100", "110", "120", "130", "140", "150"],
                                 "required": true,
                                 "returns" : "strings",
-                                "helpText": ""
+                                "helpText": "An integer value for the hub height of the turbines."
                             },
                             {
                                 "id" : "pwr_law_exponent",
@@ -94,7 +118,7 @@
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "A floating point value for the power law exponent. See User's Guide"
                             },
                             {
                                 "id" : "cutin_wspd",
@@ -155,64 +179,34 @@
                                                 "allowedValues" : {"pattern" : "^[0-9]+$"}},
                                 "required": true,
                                 "helpText": ""
+                            },
+                            {
+                                "id" : "min_depth",
+                                "args_id" : "min_depth",
+                                "type": "text",
+                                "label": "Minimum Depth for Offshore Wind Farm Installation (m)",
+                                "defaultValue": "20",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": ""
+                            },
+                            {
+                                "id" : "max_depth", 
+                                "args_id" : "max_depth",
+                                "type": "text",
+                                "label": "Maximum Depth for Offshore Wind Farm Installation (m)",
+                                "defaultValue": "50",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": ""
                             }
                         ]
                     }
                 ]
-        },
-        {
-            "id" : "extra_list",
-            "type": "list",
-            "elements":[
-                {
-                    "id" : "days_harv_wind_energy",
-                    "args_id" : "num_days",
-                    "type": "text",
-                    "label": "Number of Days for Harvested Wind Energy Calculation (day)",
-                    "defaultValue": "365",
-                    "validText" : "^[0-9]*\\.?[0-9]+$",
-                    "validateAs" : {"type" : "number",
-                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                    "required": true,
-                    "helpText": ""
-                },
-                {
-                    "id" : "air_density",
-                    "args_id" : "air_density",
-                    "type": "text",
-                    "label": "Air Density (kgm^-3) of Standard Atmosphere",
-                    "defaultValue": "1.225",
-                    "validText" : "^[0-9]*\\.?[0-9]+$",
-                    "validateAs" : {"type" : "number",
-                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                    "required": true,
-                    "helpText": ""
-                },
-                {
-                    "id" : "min_depth",
-                    "args_id" : "min_depth",
-                    "type": "text",
-                    "label": "Minimum Depth for Offshore Wind Farm Installation (m)",
-                    "defaultValue": "20",
-                    "validText" : "^[0-9]*\\.?[0-9]+$",
-                    "validateAs" : {"type" : "number",
-                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                    "required": true,
-                    "helpText": ""
-                },
-                {
-                    "id" : "max_depth", 
-                    "args_id" : "max_depth",
-                    "type": "text",
-                    "label": "Maximum Depth for Offshore Wind Farm Installation (m)",
-                    "defaultValue": "50",
-                    "validText" : "^[0-9]*\\.?[0-9]+$",
-                    "validateAs" : {"type" : "number",
-                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                    "required": true,
-                    "helpText": ""
-                }
-            ]
         },
         {
             "id" : "distance_container",
