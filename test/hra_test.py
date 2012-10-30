@@ -73,11 +73,11 @@ class TestHRA(unittest.TestCase):
         
         hra.execute(self.args)
 
-    def test_run_zero_buffer(self):
+#    def test_run_zero_buffer(self):
 
-        self.args['buffer_dict'] = {'FinfishAquacultureComm': 0}
+ #       self.args['buffer_dict'] = {'FinfishAquacultureComm': 0}
 
-        hra.execute(self.args)
+  #      hra.execute(self.args)
 
 '''    def test_dict(self):
 

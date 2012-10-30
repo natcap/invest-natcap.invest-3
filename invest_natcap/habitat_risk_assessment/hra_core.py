@@ -15,6 +15,8 @@ LOGGER = logging.getLogger('HRA_CORE')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+#gdal.UseExceptions()
+
 def execute(args):
     '''This provides the main functionaility of the hra_core program. This
     will call all parts necessary for calculation of final outputs.
@@ -193,6 +195,7 @@ def make_recov_potent_raster(direct, habitats):
         new_array = orig_array * r_potent
 
         band.WriteArray(new_array)
+        new_dataset.FlushCache()
 
 def make_ecosys_risk_raster(direct, h_ds):
     '''This function will combine all habitat rasters into one overarching
@@ -376,7 +379,8 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         #Now want to take this dataset and write it back to the raster file
         #conatining the H-S overlap.
         r_band.WriteArray(mod_array)
-
+        h_s[pair]['DS'].FlushCache()        
+    
 def calc_score_value(h_s_sub, hab_sub, stress_sub):
     '''This will take in 3 sub-dictionaries and use the criteria that they
     contain to calculate an overall score based on the following equation.
