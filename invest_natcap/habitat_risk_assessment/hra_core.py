@@ -272,7 +272,7 @@ def make_cum_risk_raster(direct, h_s):
     habitats = np.array(habitats)
     habitats = np.unique(habitats)
 
-    stressors = maps(lambda pair: pair[1], h_s)
+    stressors = map(lambda pair: pair[1], h_s)
     stressors = np.array(stressors)
     stressors = np.unique(stressors)
     
@@ -298,7 +298,7 @@ def make_cum_risk_raster(direct, h_s):
         h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
-        h_rasters.append(h_raster)
+        h_rasters.append(h_rast)
 
     return h_rasters
 
@@ -410,11 +410,11 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
 
     for dictionary in crit_dicts:
 
-        for criteria in dicttionary:
-            
-            r = h_s_sub[criteria]['Rating']
-            d = h_s_sub[criteria]['DQ']
-            w = h_s_sub[criteria]['Weight']
+        for criteria in dictionary:
+           
+            r = dictionary[criteria]['Rating']
+            d = dictionary[criteria]['DQ']
+            w = dictionary[criteria]['Weight']
 
             if d == 0 or w == 0:
                 sum_top += 0
@@ -474,6 +474,6 @@ def make_risk_euc(array, E, C):
     under_sq = sub_e + sub_c
 
     #Raising to the 1/2 is the same as taking the sqrt
-    R = under_s ** .5
+    R = under_sq ** .5
 
     return R
