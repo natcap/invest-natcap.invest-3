@@ -28,3 +28,17 @@ def get_flow_accumulation(dem):
     # do the flow_accumulation
     flow_accumulation = raster_utils.flow_accumulation_dinf(flow_direction, dem,
         '/tmp/flow_accumulation.tif')
+
+def adjusted_loading_value(export_raster, wyield_raster, watersheds):
+    """Calculate the adjusted loading value (ALV_x).
+
+        export_raster - a gdal raster where pixel values represent the nutrient
+            export for that pixel.  This is likely to be a reclassified LULC
+            raster.
+        wyield_raster - a gdal raster of water yield per pixel.
+        watersheds - a list of OGR shapefiles representing watersheds and/or
+            subwatersheds
+
+        returns a GDAL rasterband representing the ALV."""
+
+        pass
