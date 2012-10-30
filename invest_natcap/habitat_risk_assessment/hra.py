@@ -283,7 +283,8 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             
             h_dataset = gdal.Open(h)
             s_dataset = gdal.Open(s)
-    
+   
+            LOGGER.info("combine_hs_rasters")
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
                             combine_hs_pixels, raster_out_uri = out_uri,
                             datatype = gdal.GDT_Int32, nodata=0)
@@ -292,7 +293,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             #in 'h-s'. We will make the open datasource the third item in
             #the tuple. The first two are the exposure and consequence ratings 
             #that were gleaned from the IUI.
-            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
+            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri, gdal.GA_Update)
 
     return h_s
 

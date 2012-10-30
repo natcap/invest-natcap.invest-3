@@ -224,6 +224,7 @@ def make_ecosys_risk_raster(direct, h_ds):
 
         return pixel_sum
 
+    LOGGER.info("make_ecosys_raster")
     raster_utils.vectorize_rasters(h_ds, add_e_pixels, aoi = None,
                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
@@ -297,7 +298,7 @@ def make_cum_risk_raster(direct, h_s):
         #name and our list off to another function and have it create and
         #combine the file.
         out_uri = os.path.join(direct, 'cum_risk_H[' + h + '].tif')
-        
+        LOGGER.info("make_cum_risk_raster")    
         h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
