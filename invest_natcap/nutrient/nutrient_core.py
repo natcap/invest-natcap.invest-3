@@ -48,6 +48,14 @@ def adjusted_loading_value(export_raster, wyield_raster, watersheds):
         runoff_idx = raster_utils.vectorize_rasters([wyield_raster],
             lambda x: math.log(x, 2))
 
-        
+def mean_runoff_index(runoff_index, watersheds):
+    """Calculate the mean runoff index per watershed.
+
+        runoff_index - a GDAL raster of the runoff index per pixel.
+        watersheds - a list of OGR shapefiles.
+
+        Returns a list of shapefiles where the 'mean_runoff' field contains the
+        calculated runoff index."""
+    pass
 
 
