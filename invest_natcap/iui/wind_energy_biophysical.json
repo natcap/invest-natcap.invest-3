@@ -109,52 +109,40 @@
                                 "helpText": "An integer value for the hub height of the turbines."
                             },
                             {
-                                "id" : "pwr_law_exponent",
-                                "args_id" : "pwr_law_exponent",
-                                "type": "text",
-                                "label": "Power Law Exponent",
-                                "defaultValue": "0.11",
-                                "validText" : "^[0-9]*\\.?[0-9]+$",
-                                "validateAs" : {"type" : "number",
-                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                                "required": true,
-                                "helpText": "A floating point value for the power law exponent. See User's Guide"
-                            },
-                            {
                                 "id" : "cutin_wspd",
                                 "args_id" : "cut_in_wspd",
                                 "type": "text",
-                                "label": "Cut-in Wind Speed (ms^-1)",
+                                "label": "Cut-in Wind Speed (m/s)",
                                 "defaultValue": "4.0",
                                 "validText" : "^[0-9]*\\.?[0-9]+$",
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "A floating point value for the cut-in wind speed. Default is set to 4 m/s"
                             },
                             {
                                 "id" : "rated_wspd",
                                 "args_id" : "rated_wspd",
                                 "type": "text",
-                                "label": "Rated Wind Speed (ms^-1)",
+                                "label": "Rated Wind Speed (m/s)",
                                 "defaultValue": "14.0",
                                 "validText" : "^[0-9]*\\.?[0-9]+$",
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "A floating point value for the rated wind speed. Default is set to 14 m/s"
                             },
                             {
                                 "id" : "cutout_wspd",
                                 "args_id" : "cut_out_wspd",
                                 "type": "text",
-                                "label": "Cut-out Wind Speed (ms^-1)",
+                                "label": "Cut-out Wind Speed (m/s)",
                                 "defaultValue": "25.0",
                                 "validText" : "^[0-9]*\\.?[0-9]+$",
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "A floating point value for the cut-out wind speed. Default is set to 25 m/s"
                             },
                             {
                                 "id" : "turbine_rated_pwr",
@@ -166,7 +154,7 @@
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "A floating point value for the wind turbine rated power. Default is set to 3.6 MW"
                             },
                             {
                                 "id" : "exp_out_pwr_curve",
@@ -178,7 +166,7 @@
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]+$"}},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "An integer value for the exponent of output power curve. The default is set to 2. Please see the User's Guide for more information."
                             },
                             {
                                 "id" : "min_depth",
@@ -190,7 +178,7 @@
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "A floating point value for the minimum depth of the offshore wind farm installation (m)."
                             },
                             {
                                 "id" : "max_depth", 
@@ -202,7 +190,7 @@
                                 "validateAs" : {"type" : "number",
                                                 "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                                 "required": true,
-                                "helpText": ""
+                                "helpText": "A floating point value for the maximum depth of the offshore wind farm installation (m)."
                             }
                         ]
                     }
@@ -229,7 +217,7 @@
                         "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
                         "required": true,
                         "validateAs": {"type": "OGR"},
-                        "helpText": ""
+                        "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
                     },
                     {
                         "id" : "min_distance",
@@ -241,7 +229,7 @@
                         "validateAs" : {"type" : "number",
                                         "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                         "required" : true,
-                        "helpText" : "Important Information"
+                        "helpText" : "A floating point value in meters that represents the minimum distance from shore for offshore wind farm installation."
                     },
                     {
                         "id" : "max_distance",
@@ -253,7 +241,7 @@
                         "validateAs" : {"type" : "number",
                                         "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                         "required" : true,
-                        "helpText" : "Important Information"
+                        "helpText" : "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation."
                     }
                   ]
                 }
