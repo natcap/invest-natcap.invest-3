@@ -103,7 +103,7 @@ def execute(args):
     #We will combine all h-s rasters of the same habitat into a cumulative
     #habitat risk raster, and return a list of the datasets of each so that it
     #can be passed on to the ecosystem raster's vectorize_raster
-    h_risk_list = make_cum_risk_raster(maps_dir, args['h-s'])
+    h_risk_list = make_cum_risk_raster(maps_dir, risk_dict)
 
     #Will now combine all habitat rasters insto one overall ecosystem raster
     #using the datasources that we collected from the previous function.
