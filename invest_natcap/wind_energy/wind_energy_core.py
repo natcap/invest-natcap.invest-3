@@ -23,6 +23,8 @@ def biophysical(args):
     
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
+        args[wind_data_points] - an OGR point geometry shapefile of the wind
+            energy points of interest (required)
         args[aoi] - an OGR datasource of type polygon of the area of interest
             (optional)
         args[bathymetry] - a GDAL dataset of elevation values that encompasses
