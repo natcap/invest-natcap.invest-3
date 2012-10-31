@@ -1,6 +1,6 @@
 import unittest
 import os
-import timeit
+import shutil
 
 import numpy as np
 from osgeo import gdal
@@ -37,6 +37,9 @@ class NutrientBiophysicalTest(unittest.TestCase):
             'nutrient_type': 'nitrogen',
             'accum_threshold': 1000
         }
+
+    def tearDown(self):
+        shutil.rmtree(WORKSPACE)
 
     def test_smoke(self):
         """Smoke test for nutrient retention: biophysical"""

@@ -15,7 +15,9 @@ from urllib2 import urlopen
 __version__ = 'dev'
 if __version__ == 'dev':
     import datetime
-    __version__ = 'dev_r'+datetime.datetime.now().isoformat('_')
+    #Name the version based on the time it was built.
+    #get rid of the colons in the time
+    __version__ = 'dev_r'+datetime.datetime.now().isoformat('_').replace(':','_')
 
 
 def log_model(model_name, model_version=None):

@@ -1,4 +1,4 @@
-cimport numpy 
+cimport numpy
 import numpy
 cimport cython
 from libcpp.map cimport map
