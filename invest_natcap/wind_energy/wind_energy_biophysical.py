@@ -91,7 +91,8 @@ def execute(args):
     
     # Read the wind points from a text file into a dictionary and create a point
     # shapefile from that dictionary
-    wind_point_shape_uri = os.path.join(inter_dir, 'wind_points_shape.shp')
+    wind_point_shape_uri = os.path.join(
+            inter_dir, 'wind_points_shape' + suffix + '.shp')
     wind_data = read_wind_data(args['wind_data_uri'])
     wind_data_points = wind_data_to_point_shape(
             wind_data, 'wind_data', wind_point_shape_uri)
@@ -110,8 +111,8 @@ def execute(args):
             raise ProjectionError('The AOI is not projected properly. Please '
                    'refer to the user guide or help icon on the user interface')
 
-        wind_pts_uris = os.path.join(inter_dir, 'wind_points')
-        bathymetry_uris = os.path.join(inter_dir, 'bathymetry')
+        wind_pts_uris = os.path.join(inter_dir, 'wind_points' + suffix)
+        bathymetry_uris = os.path.join(inter_dir, 'bathymetry' + suffix)
 
         wind_pts_prj = clip_and_reproject_maps(
                 wind_data_points, aoi, wind_pts_uris) 
