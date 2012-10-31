@@ -49,6 +49,7 @@ def biophysical(args):
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
             farm installation (meters) (required)
+        args[suffix] - a String to append to the end of the filenames (required)
         args[land_polygon_uri] - an OGR datasource of type polygon that
             provides a coastline for determining distances from wind farm bins
             (optional)
@@ -63,6 +64,8 @@ def biophysical(args):
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
+
+    tif_suffix = suffix + '.tif'
 
     bathymetry = args['bathymetry']
     min_depth = args['min_depth']
@@ -90,7 +93,7 @@ def biophysical(args):
         else:
             return out_nodata
 
-    depth_mask_uri = os.path.join(intermediate_dir, 'depth_mask.tif')
+    depth_mask_uri = os.path.join(intermediate_dir, 'depth_mask' + tif_suffix)
     
     LOGGER.info('Vectorize Depth Mask')
     # Create a mask for any values that are out of the range of the depth values
@@ -113,7 +116,8 @@ def biophysical(args):
             
             LOGGER.info('Distance Parameters Provided')
             
-            aoi_raster_uri = os.path.join(intermediate_dir, 'aoi_raster.tif')
+            aoi_raster_uri = os.path.join(
+                    intermediate_dir, 'aoi_raster' + tif_suffix)
 
             LOGGER.info('Create Raster From AOI')
             # Make a raster from the AOI 
@@ -134,7 +138,8 @@ def biophysical(args):
                     aoi_raster, [1], land_polygon.GetLayer(), burn_values = [0],
                     options = ['ALL_TOUCHED=TRUE'])
 
-            dist_mask_uri = os.path.join(intermediate_dir, 'distance_mask.tif')
+            dist_mask_uri = os.path.join(
+                    intermediate_dir, 'distance_mask' + tif_suffix)
             
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
@@ -283,8 +288,10 @@ def biophysical(args):
     wind_points_layer.ResetReading()
 
     # Create rasters for density and harvested values
-    density_temp_uri = os.path.join(intermediate_dir, 'density_temp.tif')
-    harvested_temp_uri = os.path.join(intermediate_dir, 'harvested_temp.tif')
+    density_temp_uri = os.path.join(
+            intermediate_dir, 'density_temp' + tif_suffix)
+    harvested_temp_uri = os.path.join(
+            intermediate_dir, 'harvested_temp' + tif_suffix)
     
     LOGGER.info('Create Density Raster')
     density_temp = raster_utils.create_raster_from_vector_extents(
@@ -320,8 +327,9 @@ def biophysical(args):
         else:
             return rasters[0] 
 
-    density_masked_uri = os.path.join(output_dir, 'density.tif')
-    harvested_masked_uri = os.path.join(output_dir, 'harvested_energy.tif')
+    density_masked_uri = os.path.join(output_dir, 'density' + tif_suffix)
+    harvested_masked_uri = os.path.join(
+            output_dir, 'harvested_energy' + tif_suffix)
 
     density_mask_list = [density_temp, depth_mask]
     harvest_mask_list = [harvested_temp, depth_mask]

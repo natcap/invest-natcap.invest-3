@@ -51,6 +51,8 @@ def execute(args):
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
             farm installation (meters) (required)
+        args[suffix] - a String to append to the end of the output files
+            (optional)
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon that
             provides a coastline for determining distances from wind farm bins.
             AOI must be selected for this input to be active (optional)

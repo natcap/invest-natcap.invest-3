@@ -84,7 +84,19 @@
                                     "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                     "required": true,
                     "helpText": "A floating point value for the air density of standard atmosphere (kgm ^ -3). The U.S. standard atmosphere air density at sea leavel is 1.225. At the International Union of Pure and Applied Chemistry (IUPAC) standard temperature and pressure (0 degrees celcius and 100 kPa), dry air has a density of 1.2754 kg/m^3)."
-                }
+                },
+                {
+                    "id" : "results_suffix",
+                    "args_id" : "suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "required": false,
+                    "helpText":"A String that will be added to the end of the output uris."
+
+                }                         
             ]
         },
         {
