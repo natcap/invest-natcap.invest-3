@@ -173,7 +173,7 @@ def add_rast_to_dict(direct, dictionary):
         #before the file extension, and the second is the extension itself 
         name = os.path.splitext(os.path.split(r_file)[1])[0]
 
-        dictionary[name]['DS'] = gdal.Open(file_name)
+        dictionary[name]['DS'] = gdal.Open(r_file)
 
     return dictionary
 

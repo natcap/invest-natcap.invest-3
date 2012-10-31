@@ -104,7 +104,8 @@ def biophysical(args):
         LOGGER.info('AOI provided')
 
         # If the distance inputs are present create a mask for the output
-        # area that restricts where the wind energy farms can be based on distance
+        # area that restricts where the wind energy farms can be based
+        # on distance
         try:
             min_distance = args['min_distance']
             max_distance = args['max_distance']
@@ -117,8 +118,8 @@ def biophysical(args):
             LOGGER.info('Create Raster From AOI')
             # Make a raster from the AOI 
             aoi_raster = raster_utils.create_raster_from_vector_extents(
-                    bath_prop['width'], abs(bath_prop['height']), gdal.GDT_Float32,
-                    out_nodata, aoi_raster_uri, aoi)
+                    bath_prop['width'], abs(bath_prop['height']), 
+                    gdal.GDT_Float32, out_nodata, aoi_raster_uri, aoi)
             
             LOGGER.info('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster 
@@ -146,11 +147,9 @@ def biophysical(args):
         except KeyError:
             # Looks like distances weren't provided, too bad!
             LOGGER.info('Distance parameters not provided')
-            pass
 
     except KeyError:
         LOGGER.info('AOI not provided')
-        pass
 
     hub_height = args['hub_height']
 
@@ -302,7 +301,8 @@ def biophysical(args):
     raster_utils.vectorize_points(wind_points, density_field_name, density_temp)
     
     LOGGER.info('Vectorize Harvested Points')
-    raster_utils.vectorize_points(wind_points, harvest_field_name, harvested_temp)
+    raster_utils.vectorize_points(
+            wind_points, harvest_field_name, harvested_temp)
 
     def mask_out_depth_dist(*rasters):
         """Returns the value of the first item in the list if and only if all 
@@ -331,9 +331,8 @@ def biophysical(args):
     try:
         density_mask_list.append(distance_mask)
         harvest_mask_list.append(distance_mask)
-    except:
+    except NameError:
         LOGGER.info('NO Distance Mask')
-        pass
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
@@ -404,17 +403,19 @@ def distance_transform_dataset(
         #Just the mask for this row
         mask_row = row_array == source_nodata
         row_array[mask_row] = 1.0
-        source_array[row_index,:] = row_array
+        source_array[row_index, :] = row_array
 
         #remember the mask in the memory mapped array
-        nodata_mask_array[row_index,:] = mask_row
+        nodata_mask_array[row_index, :] = mask_row
     LOGGER.info('distance transform operation')
     # Calculate distances using distance transform and multiply by the pixel
     # size to get the proper distances in meters
     dest_array = ndimage.distance_transform_edt(source_array) * pixel_size
     np.less_equal(dest_array, min_dist, out = mask_leq_min_dist_array)
     np.greater_equal(dest_array, max_dist, out = mask_geq_max_dist_array)
-    np.logical_or(mask_leq_min_dist_array, mask_geq_max_dist_array, out = dest_mask_array)
+    np.logical_or(
+            mask_leq_min_dist_array, mask_geq_max_dist_array,
+            out = dest_mask_array)
     dest_array[dest_mask_array] = out_nodata
 
     LOGGER.info('mask the result back to nodata where originally nodata')
@@ -540,8 +541,10 @@ def valuation(args):
         grid_land_points_dict = args['grid_dict']
         
         # Create individual dictionaries for land and grid points
-        land_dict = build_subset_dictionary(grid_land_points_dict, 'type', 'land')
-        grid_dict = build_subset_dictionary(grid_land_points_dict, 'type', 'grid')
+        land_dict = build_subset_dictionary(
+                grid_land_points_dict, 'type', 'land')
+        grid_dict = build_subset_dictionary(
+                grid_land_points_dict, 'type', 'grid')
         LOGGER.debug('Land Dict : %s', land_dict)
         # Create numpy arrays representing the points for land and
         # grid locations
@@ -628,7 +631,8 @@ def valuation(args):
                 30, 30, gdal.GDT_Float32,
                 out_nodata, energy_uri, wind_energy_points)
         
-        # Interpolate points onto raster for density values and harvested values:
+        # Interpolate points onto raster for density values and
+        # harvested values:
         raster_utils.vectorize_points(
                 wind_energy_points, 'O2L_Dist', ocean_land_ds)
         raster_utils.vectorize_points(
@@ -751,18 +755,7 @@ def convert_degrees_to_radians(points):
         returns - a numpy array of points that are in radians
         """
 
-    radian_points = np.zeros(points.shape)
-    
-    def vop(deg):
-        return math.pi * deg / 180.0
-
-    vectorized_op = np.vectorize(vop)
-    
-    index = 0
-
-    for point in points:
-        radian_points[index] = vectorized_op(point)
-        index = index + 1
+    radian_points = math.pi * points / 180.0
 
     return radian_points
 
