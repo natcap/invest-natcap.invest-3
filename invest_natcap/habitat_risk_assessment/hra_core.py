@@ -228,29 +228,17 @@ def make_ecosys_risk_raster(direct, h_ds):
     raster_utils.vectorize_rasters(h_ds, add_e_pixels, aoi = None,
                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
-def make_cum_risk_raster(direct, h_s):
+def make_cum_risk_raster(direct, risk_dict):
     '''This will take all h-s rasters of a given habitat, and combine them to
     visualize a cumulative risk raster for each habitat.
 
     Input:
         direct- The directory into which the completed habitat risk rasters
             should be placed.
-        h_s- A structure which holds all ratings, weights, and data quality
-            numbers for each habitat-stressor overlap. Additionally, each h-s
-            tuple key points to a dictionary containing a raster dataset of the
-            risk scores for all h-s pixels. The structure resembles the
-            following:
-
-            {(Habitat A, Stressor 1): 
-                    {'E': 
-                        {'Spatital Overlap': 
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        },
-                    'C': {C's Criteria Dictionaries},
-                    'DS':  <Open A-1 Raster Dataset>
-                    }
-            }
-
+        risk_dict- Dictionary containing the risk-burned rasters of the h-s
+            overlap for each pairing of habitat and stressor. The key is a
+            tuple of (habitat, stressor), and the value is the open raster
+            dataset.
     Output:
         A set of raster files representing the cumulative risk scores for each
             habitat. These files will combine all habitat-stressor risk rasters,
@@ -272,11 +260,11 @@ def make_cum_risk_raster(direct, h_s):
 
     #This will give us two np lists where we have only the unique habitats and
     #stressors for the system. 
-    habitats = map(lambda pair: pair[0], h_s)   
+    habitats = map(lambda pair: pair[0], risk_dict)   
     habitats = np.array(habitats)
     habitats = np.unique(habitats)
 
-    stressors = map(lambda pair: pair[1], h_s)
+    stressors = map(lambda pair: pair[1], risk_dict)
     stressors = np.array(stressors)
     stressors = np.unique(stressors)
     
@@ -292,13 +280,13 @@ def make_cum_risk_raster(direct, h_s):
         for s in stressors:
             #Datasource can be retrieved by indexing into the value dictionary
             #using 'DS'
-            ds_list.append(h_s[(h,s)]['DS'])
+            ds_list.append(risk_dict[(h,s)])
 
         #When we have a complete list of the stressors, let's pass the habitat
         #name and our list off to another function and have it create and
         #combine the file.
         out_uri = os.path.join(direct, 'cum_risk_H[' + h + '].tif')
-        LOGGER.info("make_cum_risk_raster")    
+        
         h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
