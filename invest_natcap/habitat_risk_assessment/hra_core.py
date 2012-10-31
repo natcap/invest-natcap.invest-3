@@ -335,15 +335,17 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         stressors- A multi-level dictionary with the same structure as h_s, but
             which only contains reatings applicable to stressors. 
 
-    Output:
-        Updated versions of the H-S datasets with the risk value burned to the
-            overlap area of the given habitat and stressor.
-
-    Returns nothing.
+    Returns:
+        A dictionary which maps h,s pairs to an open raster dataset depicting
+            the risk values for that layer.
     '''
     #We will call one of the risk creation equations based on the string
     #passed in by 'risk_eq'. This will return a dataset, and we will then
     #write that out to a file within 'direct'
+
+    #Create dictionary that we can pass back to the execute call and pass on to
+    #create habitat rasters
+    risk_rasters = {}
 
     #We are going to us the h_s dictionary as our way of running through all H-S
     #possibilities, and then run through individual criteria from H/S separately.
@@ -368,7 +370,8 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         #the raster band.
         
         #We know, in this case, that there is only one band.
-        r_band = h_s[pair]['DS'].GetRasterBand(1)
+        r_ds = h_s[pair]['DS']
+        r_band = r_ds.GetRasterBand(1)
         r_array = r_band.ReadAsArray()
         
         if risk_eq == 'Euclidean':
@@ -377,11 +380,22 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         elif risk_eq == 'Multiplicative':
             mod_array = make_risk_mult(r_array, E, C)
 
-        #Now want to take this dataset and write it back to the raster file
-        #conatining the H-S overlap.
-        r_band.WriteArray(mod_array)
-        h_s[pair]['DS'].FlushCache()        
-    
+        risk_uri = os.path.join(direct, "H[" + h + "]_S[" + s + "]_Risk.tif")
+
+        new_dataset = raster_utils.new_raster_from_base(r_ds, risk_uri,
+                            'GTiff', 0, gdal.GDT_Float32)
+        band, nodata = raster_utils.extract_band_and_nodata(new_dataset)
+        band.Fill(nodata)
+
+        #Now want to take this dataset and write it back to a new raster file
+        #containing the H-S overlap. We will also add it to the dictionary so
+        #that it can be saved for later.
+        band.WriteArray(mod_array)
+        
+        risk_rasters[(h, s)] = new_dataset
+
+    return risk_rasters
+
 def calc_score_value(h_s_sub, hab_sub, stress_sub):
     '''This will take in 3 sub-dictionaries and use the criteria that they
     contain to calculate an overall score based on the following equation.
