@@ -40,8 +40,6 @@ def execute(args):
 
         returns nothing.
     """
-    print args
-
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
     service_dir = os.path.join(workspace, 'service')
@@ -72,7 +70,8 @@ def execute(args):
     shapefile_list = ['watersheds_uri', 'subwatersheds_uri']
     for shape_key in shapefile_list:
         new_key = re.sub('_uri$', '', shape_key)
-        LOGGER.debug('Opening "%s" shapefile at %s', new_key, str(args[shape_key]))
+        new_uri = os.path.splitext(str(args[shape_key]))[0]
+        LOGGER.debug('Opening "%s" shapefile at %s', new_key, new_uri)
 
         sample_shape = ogr.Open(args[shape_key].encode(encoding), 1)
         copy_uri = os.path.join(output_dir, new_key + '.shp')
