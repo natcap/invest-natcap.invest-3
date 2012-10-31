@@ -91,7 +91,7 @@ def execute(args):
     #THE NON-CORE FUNCTION, SO THAT IT ALREADY EXISTS BY THIS POINT, SINCE WE
     #ARE ONLY SEEING H-S BY NOW INSTEAD OF EACH SEPARATE RASTER.
 
-    make_risk_rasters(inter_dir, args['h-s'], args['habitats'], 
+    risk_dict = make_risk_rasters(inter_dir, args['h-s'], args['habitats'], 
                 args['stressors'], args['risk_eq'])
 
     #We know at this point that the non-core module has already recreated the
