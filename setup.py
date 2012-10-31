@@ -49,7 +49,7 @@ packages = ['invest_natcap',
 #This makes a destination directory with the name invest_version_datetime.
 #Will make it easy to see the difference between different builds of the 
 #same version.
-DIST_DIR = 'invest_'+VERSION.replace('.','_').replace(':','_')
+DIST_DIR = 'invest_'+VERSION.replace('.','_')
 
 #If it's windows assume we're going the py2exe route.
 if platform.system() == 'Windows':

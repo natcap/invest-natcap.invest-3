@@ -28,22 +28,43 @@ class TestHRA(unittest.TestCase):
 
         #Want to have some pairs that don't include some stressors to make sure
         #that the model can handle some things not being included all of the time.
-        args['ratings'] = {
-            ('kelp', 'FinfishAquacultureComm'): {'E':
+        args['h-s'] = \
+            {('kelp', 'FinfishAquacultureComm'): 
+                {'E':
                     {'Spatial Overlap': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                    'Overlap Time': {'Rating': 1.0, 'DQ': 3.0, 'Weight': 2.0},
-                    #This 0.0 in the weight should remove it from the equation
-                    'Intensity': {'Rating': 3.0, 'DQ': 2.0, 'Weight' : 0.0},
-                    'Management Effectiveness':  {'Rating': 1.0, 'DQ': 2.0, 'Weight' : 1.0}},
-                'C': {'Change in Area':  {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 2.0},
-                    'Change in Structure': {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Overlap Time': {'Rating': 1.0, 'DQ': 3.0, 'Weight': 2.0}
+                    },
+                'C': {'Change in Area':  {'Rating': 3.0, 'DQ': 0.0, 'Weight' : 2.0},
+                    'Change in Structure': {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
                     'Frequency of Disturbance':{'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
-                    #Here would be the biotic stressors. But need to figure out
-                    #how to know difference between biotic and abiotic. Could
-                    #just put the impetus on the user.
                     }
                 }
-           }
+            }
+        args['habitats'] = \
+            {'kelp': {'C':
+                        {'Natural Mortality': {'Rating': 1.0, 'DQ':2.0, 'Weight':1.0},
+                        'Recruitment Rate': {'Rating': 1.0, 'DQ':2.0, 'Weight':2.0},
+                        'Recovery Time': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0},
+                        'Connectivity Rate': {'Rating': 0.0, 'DQ':1.0, 'Weight':1.0}
+                        },
+                    'E':
+                        {'Dummy Issue': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0}
+                        }
+                     }
+             }
+
+        args['stressors'] = \
+            {'FinfishAquacultureComm': 
+                {'E':
+                    { 'Intensity': {'Rating': 3.0, 'DQ': 2.0, 'Weight' : 1.0},
+                    'Management Effectiveness':  {'Rating': 1.0, 'DQ': 2.0, 'Weight' : 1.0}
+                    },
+                'C':
+                    {'Dummy Issue': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0}
+                    }
+                }
+            }             
+        
         args['buffer_dict'] = {'FinfishAquacultureComm': 5000}
 
         self.args = args
@@ -52,11 +73,11 @@ class TestHRA(unittest.TestCase):
         
         hra.execute(self.args)
 
-    def test_run_zero_buffer(self):
+#    def test_run_zero_buffer(self):
 
-        self.args['buffer_dict'] = {'FinfishAquacultureComm': 0}
+ #       self.args['buffer_dict'] = {'FinfishAquacultureComm': 0}
 
-        hra.execute(self.args)
+  #      hra.execute(self.args)
 
 '''    def test_dict(self):
 
