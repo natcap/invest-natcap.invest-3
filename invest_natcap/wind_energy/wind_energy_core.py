@@ -67,7 +67,7 @@ def biophysical(args):
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
 
-    tif_suffix = suffix + '.tif'
+    tif_suffix = args['suffix'] + '.tif'
 
     bathymetry = args['bathymetry']
     min_depth = args['min_depth']
