@@ -93,6 +93,7 @@
                     "validText": "[a-zA-Z0-9]*",
                     "label": "Results Suffix (optional)",
                     "defaultValue": "",
+                    "returns": {"ifEmpty": "pass"},
                     "required": false,
                     "helpText":"A String that will be added to the end of the output uris."
 
