@@ -17,6 +17,14 @@ LOGGER = logging.getLogger('nutrient_biophysical')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+def make_folder(folder):
+    try:
+        os.makedirs(folder)
+        LOGGER.debug('Making the folder %s', folder)
+    except OSError:
+        # Thrown when folder already exists
+        LOGGER.debug('Folder %s already exists', folder)
+
 def execute(args):
     """File opening layer for the InVEST nutrient retention model.
 
@@ -46,12 +54,7 @@ def execute(args):
     intermediate_dir = os.path.join(workspace, 'intermediate')
 
     for folder in [workspace, output_dir, service_dir, intermediate_dir]:
-        try:
-            os.makedirs(folder)
-            LOGGER.debug('Making the folder %s', folder)
-        except OSError:
-            # Thrown when folder already exists
-            LOGGER.debug('Folder %s already exists', folder)
+        make_folder(folder)
 
     biophysical_args = {}
 
@@ -74,7 +77,10 @@ def execute(args):
         LOGGER.debug('Opening "%s" shapefile at %s', new_key, new_uri)
 
         sample_shape = ogr.Open(args[shape_key].encode(encoding), 1)
-        copy_uri = os.path.join(output_dir, new_key + '.shp')
+        shapefile_folder = os.path.join(output_dir, new_key)
+        make_folder(shapefile_folder)
+
+        copy_uri = os.path.join(output_dir, new_key)
         copy = ogr_driver.CopyDataSource(sample_shape, copy_uri)
         LOGGER.debug('Saving shapefile copy to %s', copy_uri)
         LOGGER.debug('Copied shape: %s', copy)
