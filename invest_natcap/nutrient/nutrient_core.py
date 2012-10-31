@@ -41,12 +41,12 @@ def adjusted_loading_value(export_raster, wyield_raster, watersheds):
 
         returns a GDAL rasterband representing the ALV."""
 
-        # Substituting the actual runoff index here by just taking the
-        # per-element natural log of the water yield raster. [wyield_raster]
-        # should eventually be replaced with the water_yield_upstream_sum
-        # raster (the sigma Y_u in the nutrient retention documentation)
-        runoff_idx = raster_utils.vectorize_rasters([wyield_raster],
-            lambda x: math.log(x, 2))
+    # Substituting the actual runoff index here by just taking the
+    # per-element natural log of the water yield raster. [wyield_raster]
+    # should eventually be replaced with the water_yield_upstream_sum
+    # raster (the sigma Y_u in the nutrient retention documentation)
+    runoff_idx = raster_utils.vectorize_rasters([wyield_raster],
+        lambda x: math.log(x, 2))
 
 def mean_runoff_index(runoff_index, watersheds):
     """Calculate the mean runoff index per watershed.
