@@ -3,6 +3,7 @@
 import math
 
 from osgeo import gdal
+from osgeo import ogr
 import numpy as np
 
 import invest_cython_core
@@ -66,6 +67,9 @@ def adjusted_loading_value(export_raster, wyield_raster, watersheds):
         wyield_nodata)
     runoff_idx = raster_utils.vectorize_rasters([wyield_raster], v_op)
 
+    # Calculate the mean runoff index per watershed.
+    watersheds = mean_runoff_index(runoff_idx, watersheds)
+
 def mean_runoff_index(runoff_index, watersheds):
     """Calculate the mean runoff index per watershed.
 
@@ -95,18 +99,17 @@ def mean_runoff_index(runoff_index, watersheds):
 
             feature_geom = watershed.GetGeometryRef()
             temp_feature = ogr.Feature(temp_layer_defn)
-            temp_layer.CreateFeature(temp_feature)
             temp_feature.SetGeometry(feature_geom)
             temp_feature.SetFrom(watershed)
+            temp_layer.CreateFeature(temp_feature)
 
-            temp_layer.SetFeature(temp_feature)
             temp_feature.Destroy()
             temp_layer.SyncToDisk()
 
             temp_nodata = -1
             temp_raster = raster_utils.create_raster_from_vector_extents(
                 pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
-                '/tmp/mask_raster', temp_layer)
+                '/tmp/mask_raster', temp_shapefile)
 
             gdal.RasterizeLayer(temp_raster, [1], temp_layer, burn_values=[1])
 
@@ -116,7 +119,8 @@ def mean_runoff_index(runoff_index, watersheds):
 
             r_min, r_max, r_mean, r_stdev = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
 
-            field_index = temp_watershed.GetFieldIndex('mean_runoff')
+            field_index = watershed.GetFieldIndex('mean_runoff')
+            print(field_index, r_min, r_max, r_mean)
             watershed.SetField(field_index, r_mean)
             layer.SetFeature(watershed)
 
