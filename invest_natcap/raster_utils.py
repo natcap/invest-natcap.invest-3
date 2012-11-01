@@ -1310,9 +1310,8 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
         #shapefiles layer
         for fld_index in range(original_field_count):
             original_field = original_layer_dfn.GetFieldDefn(fld_index)
-            output_field = ogr.FieldDefn(original_field.GetName(), original_field.GetType())
-            output_field.SetWidth(original_field.GetWidth())
-            output_field.SetPrecision(original_field.GetPrecision())
+            output_field = ogr.FieldDefn(original_field.GetName(),
+                    original_field.GetType())
             output_layer.CreateField(output_field)
 
         original_layer.ResetReading()

@@ -2,6 +2,7 @@
 and pre-processed data from the UI and pass it to the hra_core module.'''
 
 import os
+import re
 import shutil
 import logging
 import glob
@@ -132,7 +133,8 @@ def execute(args):
     #Make rasters based on the stressor shapefiles
     make_rasters(file_names, s_rast, args['grid_size'])
 
-    #Checks the stressor buffer, and re-rasterizes if necessary.
+    #Checks the stressor buffer, and makes a new "buffered" raster. If the
+    #buffer is 0, this will be identical to the original rasterized shapefile.
     buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
 
     hra_args['stressors'] = args['stressors']
@@ -228,8 +230,15 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         inner_zone_index = dist_array <= buff
         dist_array[inner_zone_index] = 1
         dist_array[~inner_zone_index] = nodata  
+       
+        #Create a new file to which we should write our buffered rasters.
+        new_buff_uri = os.path.join(dir, name + '_buff.tif')
+        new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
+                            'GTiff', 0, gdal.GDT_Float32)
+        n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
+        n_band.Fill(n_nodata)
         
-        band.WriteArray(dist_array)
+        n_band.WriteArray(dist_array)
 
 def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''Takes in a habitat and a stressor, and combines the two raster files,
@@ -238,7 +247,9 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     Input:
         dir- The directory into which the completed raster files should be placed.
         h_rast- The folder holding all habitat raster files.
-        s_rast- The folder holding all stressor raster files.
+        s_rast- The folder holding all stressor raster files. We want to look
+            for the "buffered" files, since those have already taken into
+            account any where there are 0 buffer sizes.
         h_s- A dictionary which comes from the IUI which contains all
             ratings and weightings of each Habitat-Stressor pair.
 
@@ -253,7 +264,8 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
-    s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
+    #We only want to get the "buffered" version of the files.
+    s_rast_files = glob.glob(os.path.join(s_rast, '*_buff.tif'))
  
     #Create vectorize_raster's function to call when combining the h-s rasters
     def combine_hs_pixels(pixel_h, pixel_s):
@@ -277,7 +289,11 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             #path.splitext returns a tuple such that the first element is what comes
             #before the file extension, and the second is the extension itself 
             h_name = os.path.splitext(os.path.split(h)[1])[0]
-            s_name = os.path.splitext(os.path.split(s)[1])[0]
+            s_name_buff = os.path.splitext(os.path.split(s)[1])[0]
+            #We know the file will be the buffered version, so when creating the
+            #new filename, need to pull out the 'buffered' portion of it.
+            s_name = re.split('\_buff', s_name_buff)[0]
+
             out_uri = os.path.join(dir, 'H[' + h_name + ']_S[' + s_name + \
                         '].tif')
             

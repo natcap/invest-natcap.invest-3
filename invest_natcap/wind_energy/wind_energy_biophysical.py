@@ -64,6 +64,8 @@ def execute(args):
             selected for this input to be active (optional)
 
         returns - nothing"""
+    
+    LOGGER.info('Beginning Wind Energy Biophysical')
 
     workspace = args['workspace_dir']
     
@@ -83,6 +85,8 @@ def execute(args):
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
 
+    LOGGER.info('Creating workspace directories')
+    
     for folder in [inter_dir, out_dir]:
         if not os.path.isdir(folder):
             os.makedirs(folder)
@@ -93,7 +97,11 @@ def execute(args):
     # shapefile from that dictionary
     wind_point_shape_uri = os.path.join(
             inter_dir, 'wind_points_shape' + suffix + '.shp')
+    
+    LOGGER.info('Read wind data from text file')
     wind_data = read_wind_data(args['wind_data_uri'])
+    
+    LOGGER.info('Create point shapefile from wind data')
     wind_data_points = wind_data_to_point_shape(
             wind_data, 'wind_data', wind_point_shape_uri)
 
@@ -113,10 +121,12 @@ def execute(args):
 
         wind_pts_uris = os.path.join(inter_dir, 'wind_points' + suffix)
         bathymetry_uris = os.path.join(inter_dir, 'bathymetry' + suffix)
-
+        
+        LOGGER.info('Clip and project wind points to AOI')
         wind_pts_prj = clip_and_reproject_maps(
                 wind_data_points, aoi, wind_pts_uris) 
-        
+    
+        LOGGER.info('Clip and project bathymetry to AOI')
         clip_and_proj_bath = clip_and_reproject_maps(
                 bathymetry, aoi, bathymetry_uris)
 
@@ -129,8 +139,9 @@ def execute(args):
         try:
             land_polygon = ogr.Open(args['land_polygon_uri'])
 
-            land_poly_uris = os.path.join(inter_dir, 'land_poly')
-
+            land_poly_uris = os.path.join(inter_dir, 'land_poly' + suffix)
+        
+            LOGGER.info('Clip and project land poly to AOI')
             projected_land = clip_and_reproject_maps(
                     land_polygon, aoi, land_poly_uris)
 
@@ -333,7 +344,7 @@ def clip_and_reproject_maps(data_obj, aoi, output_uri):
         # Clip the data_obj to the AOI
         data_obj_clipped = clip_datasource(
                 aoi_prj_to_obj, data_obj, data_obj_clipped_uri)
-
+        
         # Reproject the clipped data obj to that of the AOI
         data_obj_prj = raster_utils.reproject_datasource(
             data_obj_clipped, aoi_wkt, data_obj_reprojected_uri)
@@ -375,7 +386,9 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
         out_uri - output uri path for the clipped datasource
 
         returns - a clipped OGR Datasource """
-    
+   
+    LOGGER.info('Entering clip_datasource')
+
     orig_layer = orig_ds.GetLayer()
     aoi_layer = aoi_ds.GetLayer()
 
@@ -405,36 +418,37 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
         original_field = original_layer_dfn.GetFieldDefn(fld_index)
         output_field = ogr.FieldDefn(
                 original_field.GetName(), original_field.GetType())
-        output_field.SetWidth(original_field.GetWidth())
-        output_field.SetPrecision(original_field.GetPrecision())
         output_layer.CreateField(output_field)
 
     # Get the feature and geometry of the aoi
     aoi_feat = aoi_layer.GetFeature(0)
     aoi_geom = aoi_feat.GetGeometryRef()
-
+    
     # Iterate over each feature in original layer
     for orig_feat in orig_layer:
         # Get the geometry for the feature
         orig_geom = orig_feat.GetGeometryRef()
+    
         # Check to see if the feature and the aoi intersect. This will return a
         # new geometry if there is an intersection. If there is not an
         # intersection it will return an empty geometry or it will return None
         # and print an error to standard out
         intersect_geom = aoi_geom.Intersection(orig_geom)
-       
+        
         if not intersect_geom == None and not intersect_geom.IsEmpty():
             # Copy original_datasource's feature and set as new shapes feature
             output_feature = ogr.Feature(
                     feature_def=output_layer.GetLayerDefn())
-            output_feature.SetGeometry(intersect_geom)
+            output_layer.CreateFeature(output_feature)
+        
             # Since the original feature is of interest add it's fields and
             # Values to the new feature from the intersecting geometries
             for fld_index2 in range(output_feature.GetFieldCount()):
                 orig_field_value = orig_feat.GetField(fld_index2)
                 output_feature.SetField(fld_index2, orig_field_value)
-
-            output_layer.CreateFeature(output_feature)
+    
+            output_feature.SetGeometry(intersect_geom)
+            output_layer.SetFeature(output_feature)
             output_feature = None
 
     return output_datasource
