@@ -278,7 +278,7 @@ class TableHandler(object):
         """Return the table list object."""
         return self.table
 
-    def set_field_mask(self, regexp=None, trim=0):
+    def set_field_mask(self, regexp=None, trim=0, trim_place='front'):
         """Set a mask for the table's self.fieldnames.  Any fieldnames that
             match regexp will have trim number of characters stripped off the
             front.
@@ -287,11 +287,14 @@ class TableHandler(object):
                 will be a regular expression.  If None, this represents no
                 regular expression.
             trim - a python int.
+            trim_place - a string, either 'front' or 'back'.  Indicates where
+                the trim should take place.
 
             Returns nothing."""
 
         self.mask['regexp'] = regexp
         self.mask['trim'] = trim
+        self.mask['location'] = trim_place
         self._build_fieldnames()
 
     def _build_fieldnames(self):
@@ -303,12 +306,21 @@ class TableHandler(object):
 
         # If a mask is set, reprocess the fieldnames accordingly 
         if self.mask['regexp'] != None:
+            # Set a trim length based on whether to trim off the front or off
+            # the back of the fieldname.
+            if self.mask['location'] == 'front':
+                front_len = self.mask['trim']
+                back_len = None
+            else:
+                # Multiply by -1 to trim n characters off the end.
+                front_len = None
+                back_len = -1 * self.mask['trim']
             # If the user has set a mask for the fieldnames, create a dictionary
             # mapping the masked fieldnames to the original fieldnames and
             # create a new (masked) list of fieldnames according to the user's
             # mask.  Eventually, this will need to accommodate multiple forms of
             # masking ... maybe a function call inside of the comprehension?
-            self.fieldnames = [f[self.mask['trim']:] if re.match(self.mask['regexp'],
+            self.fieldnames = [f[front_len:back_len] if re.match(self.mask['regexp'],
                 f) else f for f in self.fieldnames]
 
         self.orig_fieldnames = dict((k, v) for (k, v) in zip(current_fieldnames,

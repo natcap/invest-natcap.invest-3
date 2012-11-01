@@ -93,8 +93,8 @@ def mean_runoff_index(runoff_index, watersheds):
             gdal.RasterizeLayer(temp_raster, [1], temp_layer, burn_values=[1])
 
             watershed_pixels = raster_utils.vectorize_rasters([temp_raster,
-                runoff_index], lambda x, y: x if y == 1 else temp_nodata,
-                nodata=-1.0)
+                runoff_index], lambda x, y: y if x == 1 else temp_nodata,
+                nodata=temp_nodata)
 
             r_min, r_max, r_mean, r_stdev = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
 
