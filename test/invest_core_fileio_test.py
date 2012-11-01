@@ -62,13 +62,22 @@ class TableHandlerTest(unittest.TestCase):
                       'ns_cavity': '1', 'ns_ground': '0', 'species': 'Bombus'}]
         self.assertEqual(self.handler.get_table(), reg_table)
 
-    def test_set_field_mask(self):
-        """Assert the functionality of set_field_mask()"""
+    def test_set_field_mask_front(self):
+        """Assert the functionality of set_field_mask() (front trim)"""
         reg_table = [{'summer': '0.5', 'spring': '0.5', 'alpha': '500',
                       'ns_cavity': '1', 'ns_ground': '1', 'species': 'Apis'},
                      {'summer': '0.6', 'spring': '0.4', 'alpha': '1500',
                       'ns_cavity': '1', 'ns_ground': '0', 'species': 'Bombus'}]
         self.handler.set_field_mask('^fs_', 3)
+        self.assertEqual(self.handler.get_table(), reg_table)
+
+    def test_set_field_mask_back(self):
+        """Assert the functionality of set_field_mask() (back trim)"""
+        reg_table = [{'fs_summer': '0.5', 'fs_spring': '0.5', 'alpha': '500',
+                      'ns_cavity': '1', 'ns': '1', 'species': 'Apis'},
+                     {'fs_summer': '0.6', 'fs_spring': '0.4', 'alpha': '1500',
+                      'ns_cavity': '1', 'ns': '0', 'species': 'Bombus'}]
+        self.handler.set_field_mask('ns_ground', 7, 'back')
         self.assertEqual(self.handler.get_table(), reg_table)
 
     def test_get_fieldnames_orig(self):
