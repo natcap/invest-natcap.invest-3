@@ -132,14 +132,15 @@ def execute(args):
     #Make rasters based on the stressor shapefiles
     make_rasters(file_names, s_rast, args['grid_size'])
 
-    #Checks the stressor buffer, and re-rasterizes if necessary.
-    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
+    #Checks the stressor buffer, and makes a new "buffered" raster. If the
+    #buffer is 0, this will be identical to the original rasterized shapefile.
+    stress_dict = buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
 
     hra_args['stressors'] = args['stressors']
 
     #Now, want to make all potential combinations of the rasters, and add it to
     #the structure containg data about the H-S combination.
-    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['h-s'])
+    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, stress_dict, args['h-s'])
 
     hra_args['h-s'] = ratings_with_rast
 
