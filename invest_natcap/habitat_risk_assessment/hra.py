@@ -229,8 +229,15 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         inner_zone_index = dist_array <= buff
         dist_array[inner_zone_index] = 1
         dist_array[~inner_zone_index] = nodata  
+       
+        #Create a new file to which we should write our buffered rasters.
+        new_buff_uri = os.path.join(dir, name + '_buff.tif')
+        new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
+                            'GTiff', 0, gdal.GDT_Float32)
+        n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
+        n_band.Fill(n_nodata)
         
-        band.WriteArray(dist_array)
+        n_band.WriteArray(dist_array)
 
 def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''Takes in a habitat and a stressor, and combines the two raster files,
