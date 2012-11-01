@@ -1,5 +1,7 @@
 """File for core operations of the InVEST Nutrient Retention model."""
 
+import math
+
 from osgeo import gdal
 import numpy as np
 
@@ -9,8 +11,18 @@ from invest_natcap import raster_utils as raster_utils
 def biophysical(args):
     """This function executes the biophysical Nutrient Retention model.
 
-        args - a python dictionary with the following entries:"""
+        args - a python dictionary with the following entries:
+            'nutrient_export' - a GDAL dataset of nutrient export (a
+                reclassified landuse/landcover raster)
+            'pixel_yield' - a GDAL dataset of per-pixel water yield.
+            'watersheds' - an OGR shapefile
+
+        Returns nothing."""
     print args
+
+    alv = adjusted_loading_value(args['nutrient_export'], args['pixel_yield'],
+        args['watersheds'])
+
     pass
 
 def get_flow_accumulation(dem):
@@ -45,8 +57,14 @@ def adjusted_loading_value(export_raster, wyield_raster, watersheds):
     # per-element natural log of the water yield raster. [wyield_raster]
     # should eventually be replaced with the water_yield_upstream_sum
     # raster (the sigma Y_u in the nutrient retention documentation)
-    runoff_idx = raster_utils.vectorize_rasters([wyield_raster],
-        lambda x: math.log(x, 2))
+    #
+    # Also, the lambda notation here necessarily checks for the nodata value and
+    # just returns the nodata if it is found.  If the value of x is less than 0,
+    # a ValueError is thrown.
+    wyield_nodata = wyield_raster.GetRasterBand(1).GetNoDataValue()
+    v_op = np.vectorize(lambda x: math.log(x) if x != wyield_nodata else
+        wyield_nodata)
+    runoff_idx = raster_utils.vectorize_rasters([wyield_raster], v_op)
 
 def mean_runoff_index(runoff_index, watersheds):
     """Calculate the mean runoff index per watershed.
