@@ -134,13 +134,13 @@ def execute(args):
 
     #Checks the stressor buffer, and makes a new "buffered" raster. If the
     #buffer is 0, this will be identical to the original rasterized shapefile.
-    stress_dict = buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
+    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
 
     hra_args['stressors'] = args['stressors']
 
     #Now, want to make all potential combinations of the rasters, and add it to
     #the structure containg data about the H-S combination.
-    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, stress_dict, args['h-s'])
+    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['h-s'])
 
     hra_args['h-s'] = ratings_with_rast
 
@@ -239,7 +239,9 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     Input:
         dir- The directory into which the completed raster files should be placed.
         h_rast- The folder holding all habitat raster files.
-        s_rast- The folder holding all stressor raster files.
+        s_rast- The folder holding all stressor raster files. We want to look
+            for the "buffered" files, since those have already taken into
+            account any where there are 0 buffer sizes.
         h_s- A dictionary which comes from the IUI which contains all
             ratings and weightings of each Habitat-Stressor pair.
 
@@ -254,7 +256,8 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
-    s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
+    #We only want to get the "buffered" version of the files.
+    s_rast_files = glob.glob(os.path.join(s_rast, '*_buff.tif'))
  
     #Create vectorize_raster's function to call when combining the h-s rasters
     def combine_hs_pixels(pixel_h, pixel_s):
@@ -278,7 +281,11 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             #path.splitext returns a tuple such that the first element is what comes
             #before the file extension, and the second is the extension itself 
             h_name = os.path.splitext(os.path.split(h)[1])[0]
-            s_name = os.path.splitext(os.path.split(s)[1])[0]
+            s_name_buff = os.path.splitext(os.path.split(s)[1])[0]
+            #We know the file will be the buffered version, so when creating the
+            #new filename, need to pull out the 'buffered' portion of it.
+            s_name = re.split('\_buff', s_name_buff)[0]
+
             out_uri = os.path.join(dir, 'H[' + h_name + ']_S[' + s_name + \
                         '].tif')
             
