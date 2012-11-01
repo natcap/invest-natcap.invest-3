@@ -35,6 +35,7 @@ def execute(args):
     workspace_dir = args["workspace_dir"]
     if workspace_dir[-1]!=os.sep:
         workspace_dir = workspace_dir + os.sep
+    dataDownload = args["download"]
     
     comments = args["comments"]
 
@@ -143,6 +144,7 @@ def execute(args):
                    "gridType": gridType,
                    "cellSize": cellSize*cellUnit,
                    "comments": comments,
+                   "download": dataDownload,
                    "landscan": landscan,
                    "osm_point": osm_point,
                    "osm_line": osm_line,

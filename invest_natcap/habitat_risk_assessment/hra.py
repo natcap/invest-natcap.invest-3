@@ -116,7 +116,7 @@ def execute(args):
     os.makedirs(h_rast)
 
     make_rasters(file_names, h_rast, args['grid_size'])
-    mod_habitats = add_rast_to_dict(h_rast, args['habitats']
+    mod_habitats = add_rast_to_dict(h_rast, args['habitats'])
     hra_args['habitats'] = mod_habitats
 
 
@@ -145,7 +145,7 @@ def execute(args):
 
     hra_core.execute(hra_args)
 
-add_rast_to_dict(direct, dictionary):
+def add_rast_to_dict(direct, dictionary):
     '''Allows us to add an open dataset to the already existing dictionary.
 
     Input:
@@ -173,7 +173,7 @@ add_rast_to_dict(direct, dictionary):
         #before the file extension, and the second is the extension itself 
         name = os.path.splitext(os.path.split(r_file)[1])[0]
 
-        dictionary[name]['DS'] = gdal.Open(file_name)
+        dictionary[name]['DS'] = gdal.Open(r_file)
 
     return dictionary
 
@@ -283,7 +283,8 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             
             h_dataset = gdal.Open(h)
             s_dataset = gdal.Open(s)
-    
+   
+            LOGGER.info("combine_hs_rasters")
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
                             combine_hs_pixels, raster_out_uri = out_uri,
                             datatype = gdal.GDT_Int32, nodata=0)
@@ -292,7 +293,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             #in 'h-s'. We will make the open datasource the third item in
             #the tuple. The first two are the exposure and consequence ratings 
             #that were gleaned from the IUI.
-            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
+            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri, gdal.GA_Update)
 
     return h_s
 

@@ -283,6 +283,9 @@ class Executor(threading.Thread):
         sys.stdout = self
         sys.stderr = self
 
+        # Get the current time so that we can time the overall operations
+        overall_start = time.time()
+
         #determine what type of function needs to be run
         for operation in self.operations:
             self.setThreadFailed(False)
@@ -297,6 +300,9 @@ class Executor(threading.Thread):
             if self.isThreadFailed():
                 LOGGER.error('Exiting due to failures')
                 break
+
+        # Log the elapsed time.
+        LOGGER.info('Elapsed time: %ss', round(time.time() - overall_start, 2))
 
         if not self.isThreadFailed():
             LOGGER.info('Operations completed successfully')

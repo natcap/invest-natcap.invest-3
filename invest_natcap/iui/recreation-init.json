@@ -72,6 +72,14 @@
                                     "required": false
                                 },
 				{
+				    "id" : "download",
+				    "args_id" : "download",
+				    "type": "checkbox",
+				    "label": "Download Data",
+				    "defaultValue": true,
+				    "required": false
+				},                                
+				{
 				    "id" : "landscan",
 				    "args_id" : "landscan",
 				    "type": "checkbox",
