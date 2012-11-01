@@ -119,7 +119,7 @@ def mean_runoff_index(runoff_index, watersheds):
 
             r_min, r_max, r_mean, r_stdev = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
 
-            field_index = watershed.GetFieldIndex('mean_runoff')
+            field_index = watershed.GetFieldIndex('mn_runoff')
             print(field_index, r_min, r_max, r_mean)
             watershed.SetField(field_index, r_mean)
             layer.SetFeature(watershed)

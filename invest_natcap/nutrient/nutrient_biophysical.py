@@ -86,7 +86,7 @@ def execute(args):
         LOGGER.debug('Copied shape: %s', copy)
 
         # Create the known new fields for this shapefile.
-        for column_name in ['nut_export', 'nut_retain']:
+        for column_name in ['nut_export', 'nut_retain', 'mn_runoff']:
             LOGGER.debug('Creating new field %s in %s', column_name, copy_uri)
             new_field = ogr.FieldDefn(column_name, ogr.OFTReal)
             copy.GetLayer(0).CreateField(new_field)
