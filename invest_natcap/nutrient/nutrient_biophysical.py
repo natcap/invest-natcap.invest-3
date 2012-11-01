@@ -99,6 +99,9 @@ def execute(args):
     biophysical_args['threshold_table'] =\
         fileio.TableHandler(args['threshold_table_uri'])
 
+    # Reclassifying the LULC raster to be the nutrient_export raster.
+    # This is done here in the URI layer so that lower layers don't need to be
+    # aware of the paths to the workspace, intermediate, output, etc. folders.
     export_uri = os.path.join(intermediate_dir, 'nutrient_export.tif')
     lu_map = biophysical_args['bio_table'].get_map('lucode', 'load')
     lu_map = dict((float(k), float(v)) for (k, v) in lu_map.iteritems())
