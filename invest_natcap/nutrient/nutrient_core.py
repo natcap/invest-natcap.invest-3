@@ -1,5 +1,6 @@
 """File for core operations of the InVEST Nutrient Retention model."""
 
+import logging
 import math
 
 from osgeo import gdal
@@ -8,6 +9,10 @@ import numpy as np
 
 import invest_cython_core
 from invest_natcap import raster_utils as raster_utils
+
+LOGGER = logging.getLogger('nutrient_core')
+logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 def biophysical(args):
     """This function executes the biophysical Nutrient Retention model.
@@ -120,6 +125,8 @@ def mean_runoff_index(runoff_index, watersheds):
             r_min, r_max, r_mean, r_stdev = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
 
             field_index = watershed.GetFieldIndex('mn_runoff')
+            LOGGER.debug('Field index: %s, Min: %s, Max: %s, Mean: %s',
+                         field_index, r_min, r_max, r_mean)
             print(field_index, r_min, r_max, r_mean)
             watershed.SetField(field_index, r_mean)
             layer.SetFeature(watershed)
