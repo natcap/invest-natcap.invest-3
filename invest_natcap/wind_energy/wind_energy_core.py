@@ -97,7 +97,7 @@ def biophysical(args):
 
     depth_mask_uri = os.path.join(intermediate_dir, 'depth_mask' + tif_suffix)
     
-    LOGGER.info('Vectorize Depth Mask')
+    LOGGER.info('Creating Depth Mask')
     # Create a mask for any values that are out of the range of the depth values
     depth_mask = raster_utils.vectorize_rasters(
             [bathymetry], depth_op, raster_out_uri = depth_mask_uri, 
@@ -232,7 +232,7 @@ def biophysical(args):
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - (1.194*10**-4) * hub_height
-    LOGGER.info('mean_air_density : %s', mean_air_density)
+    LOGGER.debug('mean_air_density : %s', mean_air_density)
 
     # Fractional coefficient that lives outside the intregation for computing
     # the harvested wind energy
