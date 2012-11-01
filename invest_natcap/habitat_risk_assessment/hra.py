@@ -2,6 +2,7 @@
 and pre-processed data from the UI and pass it to the hra_core module.'''
 
 import os
+import re
 import shutil
 import logging
 import glob
