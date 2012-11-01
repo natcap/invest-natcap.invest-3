@@ -95,8 +95,17 @@ def execute(args):
 
     LOGGER.info('Opening tables')
     biophysical_args['bio_table'] = fileio.TableHandler(args['bio_table_uri'])
+    biophysical_args['bio_table'].set_field_mask('load_n', 2, 'back')
     biophysical_args['threshold_table'] =\
         fileio.TableHandler(args['threshold_table_uri'])
+
+    export_uri = os.path.join(intermediate_dir, 'nutrient_export.tif')
+    lu_map = biophysical_args['bio_table'].get_map('lucode', 'load')
+    lu_map = dict((float(k), float(v)) for (k, v) in lu_map.iteritems())
+    export_raster = raster_utils.reclassify_by_dictionary(
+        biophysical_args['landuse'], lu_map, export_uri, 'GTiff', -1.0,
+        gdal.GDT_Float32)
+    biophysical_args['nutrient_export'] = export_raster
 
     LOGGER.info('Copying other values for internal use')
     biophysical_args['nutrient_type'] = args['nutrient_type']
