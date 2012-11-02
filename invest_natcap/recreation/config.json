@@ -1,0 +1,24 @@
+{
+    "server": "http://ncp-skookum.stanford.edu/~mlacayo/",
+    "paths": {
+        "absolute": {
+            "repository": "/home/mlacayo/recreation/",
+            "user": "/usr/local/public_html/",
+            "web": "/home/mlacayo/public_html/"
+        },
+        "relative": {
+            "data": "data/",
+            "predictors": "pred/",
+            "core": "invest_natcap/recreation/"
+        }
+    },
+    "files": {
+        "predictor": "predictors.php",
+        "recreation": "recreation.php",
+        "regression": "regression.php",
+        "server": "recreation_server.py",
+        "log": "log.txt",
+        "comments": "comments.txt",
+        "results": "results.zip"
+    }
+}
