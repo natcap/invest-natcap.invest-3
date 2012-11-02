@@ -4,6 +4,7 @@ import shutil
 
 import numpy as np
 from osgeo import gdal
+from osgeo import ogr
 
 from invest_natcap import raster_utils
 from invest_natcap.nutrient import nutrient_biophysical
@@ -35,7 +36,12 @@ class NutrientBiophysicalTest(unittest.TestCase):
             'threshold_table_uri': \
                 os.path.join(NUTR_INPUT, 'water_purification_threshold.csv'),
             'nutrient_type': 'nitrogen',
-            'accum_threshold': 1000
+            'accum_threshold': 1000,
+            'folders': {
+                'workspace': WORKSPACE,
+                'intermediate': os.path.join(WORKSPACE, 'intermediate'),
+                'output': os.path.join(WORKSPACE, 'output')
+            }
         }
 
     def tearDown(self):
@@ -45,8 +51,23 @@ class NutrientBiophysicalTest(unittest.TestCase):
         """Smoke test for nutrient retention: biophysical"""
         nutrient_biophysical.execute(self.args)
 
-#class NutrientCoreTest(unittest.TestCase):
-#    def test_get_flow_accumulation(self):
-#        dem = gdal.Open(os.path.join(NUTR_INPUT, 'dem'))
-#        nutrient_core.get_flow_accumulation(dem)
-#
+
+class NutrientCoreTest(unittest.TestCase):
+    def tearDown(self):
+        shutil.rmtree(WORKSPACE)
+
+    def test_get_raster_stats_under_polygon(self):
+        sample_raster = gdal.Open(os.path.join(NUTR_INPUT, 'wyield.tif'))
+        shapefile = ogr.Open(os.path.join(NUTR_INPUT, 'watersheds.shp'))
+        sample_layer = shapefile.GetLayer(0)
+        sample_feature = sample_layer.GetFeature(1)
+        output_path = os.path.join(WORKSPACE, 'test_stats_feature.tif')
+        os.makedirs(WORKSPACE)
+
+        stats = nutrient_core.get_raster_stat_under_polygon(sample_raster,
+            sample_feature, sample_layer, output_path)
+
+        reg_stats = [732.85412597656, 2237.7661132812, 1133.0612776513, 236.55612231802]
+        for test_stat, reg_stat in zip(stats, reg_stats):
+            self.assertAlmostEqual(test_stat, reg_stat)
+
