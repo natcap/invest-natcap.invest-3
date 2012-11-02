@@ -36,6 +36,8 @@ def execute(args):
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
             in calculating risk scores for each H-S overlap cell.
+        args['decay_eq']- A string identifying the equation that should be used
+            in calculating the decay of stressor buffer influence.
         args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.
@@ -135,7 +137,7 @@ def execute(args):
 
     #Checks the stressor buffer, and makes a new "buffered" raster. If the
     #buffer is 0, this will be identical to the original rasterized shapefile.
-    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
+    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'], args['decay_eq'])
 
     hra_args['stressors'] = args['stressors']
 
