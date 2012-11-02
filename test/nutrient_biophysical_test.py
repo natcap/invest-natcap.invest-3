@@ -35,7 +35,12 @@ class NutrientBiophysicalTest(unittest.TestCase):
             'threshold_table_uri': \
                 os.path.join(NUTR_INPUT, 'water_purification_threshold.csv'),
             'nutrient_type': 'nitrogen',
-            'accum_threshold': 1000
+            'accum_threshold': 1000,
+            'folders': {
+                'workspace': WORKSPACE,
+                'intermediate': os.path.join(WORKSPACE, 'intermediate'),
+                'output': os.path.join(WORKSPACE, 'output')
+            }
         }
 
 #    def tearDown(self):
