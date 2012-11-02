@@ -113,7 +113,11 @@ def execute(args):
     LOGGER.info('Copying other values for internal use')
     biophysical_args['nutrient_type'] = args['nutrient_type']
     biophysical_args['accum_threshold'] = args['accum_threshold']
-    biophysical_args['workspace'] = workspace
+    biophysical_args['folders'] = {
+        'workspace': workspace,
+        'intermediate': intermediate,
+        'output': output
+    }
 
     # Run the nutrient model with the biophysical args dictionary.
     nutrient_core.biophysical(biophysical_args)
