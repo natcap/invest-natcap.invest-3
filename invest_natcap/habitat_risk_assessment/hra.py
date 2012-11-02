@@ -36,6 +36,8 @@ def execute(args):
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
             in calculating risk scores for each H-S overlap cell.
+        args['decay_eq']- A string identifying the equation that should be used
+            in calculating the decay of stressor buffer influence.
         args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.
@@ -135,7 +137,7 @@ def execute(args):
 
     #Checks the stressor buffer, and makes a new "buffered" raster. If the
     #buffer is 0, this will be identical to the original rasterized shapefile.
-    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
+    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'], args['decay_eq'])
 
     hra_args['stressors'] = args['stressors']
 
@@ -179,7 +181,7 @@ def add_rast_to_dict(direct, dictionary):
 
     return dictionary
 
-def buffer_s_rasters(dir, buffer_dict, grid_size):
+def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
     '''If there is buffering desired, this will take each file and buffer the
     given raster shape by the distance of the buffer from the landmass.
 
@@ -191,6 +193,8 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
             dictionary to avoid having to pass it to core. The key will be a
             string, and the value a double.
         grid_size- The current size of the raster cells.
+        decay_eq- String representing the equation that shuld be used to decay
+            the stressor importance from the original points.
 
     Output:
         Re-buffered rasters of the same name as those contained within 'dir'
@@ -225,11 +229,10 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         #The array with each value being the distance from its own cell to land
         dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
         
-        #Setting anything within the buffer zone to 1, and anything outside
-        #that distance to nodata.
-        inner_zone_index = dist_array <= buff
-        dist_array[inner_zone_index] = 1
-        dist_array[~inner_zone_index] = nodata  
+        if decay_eq == 'None':
+            decay_array = make_no_decay_array(dist_array, buff)
+        elif decay_eq == 'Exponential':
+            decay_array = make_exp_decay_array(dist_array, buff
        
         #Create a new file to which we should write our buffered rasters.
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
@@ -238,7 +241,17 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
         n_band.Fill(n_nodata)
         
-        n_band.WriteArray(dist_array)
+        n_band.WriteArray(decay_array)
+
+def make_no_decay_array(dist_array, buff):
+        
+    #Setting anything within the buffer zone to 1, and anything outside
+    #that distance to nodata.
+    inner_zone_index = dist_array <= buff
+    dist_array[inner_zone_index] = 1
+    dist_array[~inner_zone_index] = nodata  
+    
+    return dist_array 
 
 def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''Takes in a habitat and a stressor, and combines the two raster files,
@@ -271,11 +284,6 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     def combine_hs_pixels(pixel_h, pixel_s):
         
         #For all pixels in the two rasters, return this new pixel value
-        
-        #I think we just want to return data if they are both present, else
-        #return nodata. We know ahead of time that 0 will be the nodata value,
-        #and until we change something, will be using 1 as the data value. This
-        #is variable once we figure out decay.
         if pixel_h == 0 or pixel_s == 0:
             return 0
         else:

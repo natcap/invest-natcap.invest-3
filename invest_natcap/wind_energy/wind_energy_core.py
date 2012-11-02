@@ -103,6 +103,7 @@ def biophysical(args):
             [bathymetry], depth_op, raster_out_uri = depth_mask_uri, 
             nodata = out_nodata)
 
+    # Handle the AOI if it was passed in with the dictionary
     try:
         aoi = args['aoi']
 
@@ -371,6 +372,7 @@ def distance_transform_dataset(
 
        returns the transformed dataset created at out_uri"""
     
+    # Define URI paths for the numpy arrays on disk
     temp_dir = tempfile.mkdtemp()
     source_filename = os.path.join(temp_dir, 'source.dat')
     nodata_mask_filename = os.path.join(temp_dir, 'nodata_mask.dat')
@@ -379,7 +381,6 @@ def distance_transform_dataset(
     mask_leq_min_dist_filename = os.path.join(temp_dir, 'mask_leq_min_dist.dat')
     mask_geq_max_dist_filename = os.path.join(temp_dir, 'mask_geq_max_dist.dat')
     dest_mask_filename = os.path.join(temp_dir, 'dest_mask.dat')
-
 
     source_band, source_nodata = raster_utils.extract_band_and_nodata(dataset)
     pixel_size = raster_utils.pixel_size(dataset)
@@ -390,9 +391,10 @@ def distance_transform_dataset(
     out_band, out_nodata = raster_utils.extract_band_and_nodata(out_dataset)
 
     shape = (source_band.YSize, source_band.XSize)
-    LOGGER.info('shape %s' % str(shape))
+    LOGGER.debug('shape %s' % str(shape))
 
-    LOGGER.info('make the source memmap at %s' % source_filename)
+    LOGGER.debug('make the source memmap at %s' % source_filename)
+    # Create the numpy memory maps
     source_array = np.memmap(
         source_filename, dtype='float32', mode='w+', shape = shape)
     nodata_mask_array = np.memmap(
@@ -406,7 +408,8 @@ def distance_transform_dataset(
     dest_mask_array = np.memmap(
         dest_mask_filename, dtype='bool', mode='w+', shape = shape)
 
-    LOGGER.info('load dataset into source array')
+    LOGGER.debug('load dataset into source array')
+    # Load the dataset into the first memory map
     for row_index in xrange(source_band.YSize):
         #Load a row so we can mask
         row_array = source_band.ReadAsArray(0, row_index, source_band.XSize, 1)
@@ -417,25 +420,33 @@ def distance_transform_dataset(
 
         #remember the mask in the memory mapped array
         nodata_mask_array[row_index, :] = mask_row
+    
     LOGGER.info('distance transform operation')
     # Calculate distances using distance transform and multiply by the pixel
     # size to get the proper distances in meters
     dest_array = ndimage.distance_transform_edt(source_array) * pixel_size
+    
+    # Use conditional operations to properly get masks based on distance values
     np.less_equal(dest_array, min_dist, out = mask_leq_min_dist_array)
     np.greater_equal(dest_array, max_dist, out = mask_geq_max_dist_array)
+    
+    # Take the logical OR of the above masks to get the proper values that fall
+    # between the min and max distances
     np.logical_or(
             mask_leq_min_dist_array, mask_geq_max_dist_array,
             out = dest_mask_array)
+    
     dest_array[dest_mask_array] = out_nodata
 
-    LOGGER.info('mask the result back to nodata where originally nodata')
+    LOGGER.debug('mask the result back to nodata where originally nodata')
     dest_array[nodata_mask_array] = out_nodata
-    LOGGER.info('write to gdal object')
+    
+    LOGGER.debug('write to gdal object')
     out_band.WriteArray(dest_array)
     out_dataset.FlushCache()
     raster_utils.calculate_raster_stats(out_dataset)
 
-    LOGGER.info('deleting %s' % temp_dir)
+    LOGGER.debug('deleting %s' % temp_dir)
     dest_array = None
     nodata_mask_array = None
     source_array = None
@@ -443,6 +454,7 @@ def distance_transform_dataset(
     mask_leq_min_dist_array = None
     mask_geq_max_dist_array = None
     dest_mask_array = None
+    
     #Turning on ignore_errors = True in case we can't remove the 
     #the temporary directory
     shutil.rmtree(temp_dir, ignore_errors = True)
