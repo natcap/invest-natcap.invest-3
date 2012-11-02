@@ -7,6 +7,7 @@ import logging
 import os
 import numpy as np
 import shutil
+import pickle
 
 from osgeo import gdal, ogr
 from invest_natcap import raster_utils
@@ -475,12 +476,18 @@ def make_risk_euc(array, E, C):
     #could be different for any pixel in the risk array.
     e_array = array * E
 
-    sub_e = (e_array - 1) ** 2
-    sub_c = (C - 1) ** 2
+    #Only want to perform calculations if we have a cell with data in it. (Can
+    #see based on the non-zero values.
 
-    under_sq = sub_e + sub_c
+    e_array[e_array!=0] -= 1
+    e_array ** 2
+
+    sub_c = (C - 1) ** 2
+    
+    #We only want to add E and C if there is a non-zero value in the pixel.
+    e_array[e_array != 0] += sub_c
 
     #Raising to the 1/2 is the same as taking the sqrt
-    R = under_sq ** .5
+    R = e_array ** .5
 
     return R
