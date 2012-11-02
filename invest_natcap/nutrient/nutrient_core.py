@@ -2,6 +2,7 @@
 
 import logging
 import math
+import os.path
 
 from osgeo import gdal
 from osgeo import ogr
@@ -27,7 +28,7 @@ def biophysical(args):
     print args
 
     alv = adjusted_loading_value(args['nutrient_export'], args['pixel_yield'],
-        args['watersheds'])
+        args['watersheds'], args['workspace'])
 
     pass
 
@@ -47,7 +48,7 @@ def get_flow_accumulation(dem):
     flow_accumulation = raster_utils.flow_accumulation_dinf(flow_direction, dem,
         '/tmp/flow_accumulation.tif')
 
-def adjusted_loading_value(export_raster, wyield_raster, watersheds):
+def adjusted_loading_value(export_raster, wyield_raster, watersheds, workspace):
     """Calculate the adjusted loading value (ALV_x).
 
         export_raster - a gdal raster where pixel values represent the nutrient
@@ -73,9 +74,9 @@ def adjusted_loading_value(export_raster, wyield_raster, watersheds):
     runoff_idx = raster_utils.vectorize_rasters([wyield_raster], v_op)
 
     # Calculate the mean runoff index per watershed.
-    watersheds = mean_runoff_index(runoff_idx, watersheds)
+    watersheds = mean_runoff_index(runoff_idx, watersheds, workspace)
 
-def mean_runoff_index(runoff_index, watersheds):
+def mean_runoff_index(runoff_index, watersheds, output_folder):
     """Calculate the mean runoff index per watershed.
 
         runoff_index - a GDAL raster of the runoff index per pixel.
@@ -96,7 +97,7 @@ def mean_runoff_index(runoff_index, watersheds):
     pixel_height = abs(raster_geotransform[5])
 
     for layer in watersheds:
-        for watershed in layer:
+        for shape_index, watershed in enumerate(layer):
             temp_shapefile = ogr_driver.CreateDataSource('/tmp/temp_shapefile')
             temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
                 watersheds.GetLayer(0).GetSpatialRef(), geom_type=ogr.wkbPolygon)
@@ -111,16 +112,18 @@ def mean_runoff_index(runoff_index, watersheds):
             temp_feature.Destroy()
             temp_layer.SyncToDisk()
 
-            temp_nodata = -1
+            temp_nodata = -1.0
             temp_raster = raster_utils.create_raster_from_vector_extents(
                 pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
-                '/tmp/mask_raster', temp_shapefile)
+                '/tmp/watershed_raster.tif', temp_shapefile)
 
             gdal.RasterizeLayer(temp_raster, [1], temp_layer, burn_values=[1])
 
+            temp_filename = 'watershed_raster_%s.tif' % str(shape_index)
             watershed_pixels = raster_utils.vectorize_rasters([temp_raster,
                 runoff_index], lambda x, y: y if x == 1 else temp_nodata,
-                nodata=temp_nodata)
+                nodata=temp_nodata, raster_out_uri = os.path.join(output_folder,
+                temp_filename))
 
             r_min, r_max, r_mean, r_stdev = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
 

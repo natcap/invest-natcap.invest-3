@@ -38,8 +38,8 @@ class NutrientBiophysicalTest(unittest.TestCase):
             'accum_threshold': 1000
         }
 
-    def tearDown(self):
-        shutil.rmtree(WORKSPACE)
+#    def tearDown(self):
+#        shutil.rmtree(WORKSPACE)
 
     def test_smoke(self):
         """Smoke test for nutrient retention: biophysical"""
