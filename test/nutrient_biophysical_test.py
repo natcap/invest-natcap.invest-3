@@ -53,6 +53,9 @@ class NutrientBiophysicalTest(unittest.TestCase):
 
 
 class NutrientCoreTest(unittest.TestCase):
+    def setUp(self):
+        os.makedirs(WORKSPACE)
+
     def tearDown(self):
         shutil.rmtree(WORKSPACE)
 
@@ -62,7 +65,6 @@ class NutrientCoreTest(unittest.TestCase):
         sample_layer = shapefile.GetLayer(0)
         sample_feature = sample_layer.GetFeature(1)
         output_path = os.path.join(WORKSPACE, 'test_stats_feature.tif')
-        os.makedirs(WORKSPACE)
 
         stats = nutrient_core.get_raster_stat_under_polygon(sample_raster,
             sample_feature, sample_layer, output_path)
