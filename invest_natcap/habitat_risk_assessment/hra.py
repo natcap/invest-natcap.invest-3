@@ -231,7 +231,8 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         
         if decay_eq == 'None':
             decay_array = make_no_decay_array(dist_array, buff)
-
+        elif decay_eq == 'Exponential':
+            decay_array = make_exp_decay_array(dist_array, buff
        
         #Create a new file to which we should write our buffered rasters.
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
