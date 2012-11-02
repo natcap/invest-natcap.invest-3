@@ -115,8 +115,8 @@ def execute(args):
     biophysical_args['accum_threshold'] = args['accum_threshold']
     biophysical_args['folders'] = {
         'workspace': workspace,
-        'intermediate': intermediate,
-        'output': output
+        'intermediate': intermediate_dir,
+        'output': output_dir
     }
 
     # Run the nutrient model with the biophysical args dictionary.
