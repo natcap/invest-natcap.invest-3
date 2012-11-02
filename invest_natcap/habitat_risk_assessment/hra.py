@@ -230,7 +230,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
         
         if decay_eq == 'None':
-            decay_array = make_no_decay_array(dist_array)
+            decay_array = make_no_decay_array(dist_array, buff)
 
        
         #Create a new file to which we should write our buffered rasters.
@@ -242,7 +242,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         
         n_band.WriteArray(decay_array)
 
-def make_no_decay_array(dist_array):
+def make_no_decay_array(dist_array, buff):
         
     #Setting anything within the buffer zone to 1, and anything outside
     #that distance to nodata.
