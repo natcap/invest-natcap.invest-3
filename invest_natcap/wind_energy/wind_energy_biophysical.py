@@ -418,7 +418,6 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
         original_field = original_layer_dfn.GetFieldDefn(fld_index)
         output_field = ogr.FieldDefn(
                 original_field.GetName(), original_field.GetType())
-        output_field.SetWidth(original_field.GetWidth())
         output_layer.CreateField(output_field)
 
     # Get the feature and geometry of the aoi
@@ -440,7 +439,7 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
             # Copy original_datasource's feature and set as new shapes feature
             output_feature = ogr.Feature(
                     feature_def=output_layer.GetLayerDefn())
-            output_feature.SetGeometry(intersect_geom)
+            output_layer.CreateFeature(output_feature)
         
             # Since the original feature is of interest add it's fields and
             # Values to the new feature from the intersecting geometries
@@ -448,7 +447,8 @@ def clip_datasource(aoi_ds, orig_ds, output_uri):
                 orig_field_value = orig_feat.GetField(fld_index2)
                 output_feature.SetField(fld_index2, orig_field_value)
     
-            output_layer.CreateFeature(output_feature)
+            output_feature.SetGeometry(intersect_geom)
+            output_layer.SetFeature(output_feature)
             output_feature = None
 
     return output_datasource
