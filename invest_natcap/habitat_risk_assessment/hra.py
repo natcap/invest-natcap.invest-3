@@ -279,7 +279,9 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
         if pixel_h == 0 or pixel_s == 0:
             return 0
         else:
-            return 1
+            #Want to return the decayed value- even if it's actually 1 for this
+            #particular pixel.
+            return s
 
     for h in h_rast_files:
         for s in s_rast_files:

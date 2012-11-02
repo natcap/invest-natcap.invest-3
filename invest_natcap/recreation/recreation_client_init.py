@@ -79,7 +79,7 @@ def execute(args):
     #upload predictors        
     LOGGER.debug("Uploading predictors.")
     datagen, headers = multipart_encode(attachments)
-    url = config["server"]+"/"+config["files"]["predictor"]
+    url = config["server"]+"/"+config["files"]["PHP"]["predictor"]
     request = urllib2.Request(url, datagen, headers)
 
     #save session id
@@ -88,7 +88,7 @@ def execute(args):
 
     
     #upload aoi and model parameters
-    attachments = {"json" : args,
+    attachments = {"json" : json.dumps(args, indent=4),
                    "aoiSHP": open(aoiFileNameSHP, "rb"),
                    "aoiSHX": open(aoiFileNameSHX, "rb"),
                    "aoiDBF": open(aoiFileNameDBF, "rb"),
@@ -97,7 +97,7 @@ def execute(args):
     datagen, headers = multipart_encode(attachments)
     
     #initiate server side recreation python script
-    url = config["server"]+"/"+config["files"]["recreation"]
+    url = config["server"]+"/"+config["files"]["PHP"]["recreation"]
     request = urllib2.Request(url, datagen, headers)
     
     LOGGER.info("Sending request to server.")
@@ -144,7 +144,7 @@ def execute(args):
 
     #initiate server side regression R script                
     LOGGER.info("Running regression.")
-    url = config["server"]+"/"+config["files"]["regression"]
+    url = config["server"]+"/"+config["files"]["PHP"]["regression"]
     datagen, headers = multipart_encode({"args["sessid"]": args["sessid"]})
     request = urllib2.Request(url, datagen, headers)
     urllib2.urlopen(request).read()
