@@ -118,11 +118,11 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None)
         Returns a 4-element tuple with:
             (minimum, maximum, mean, standard_deviation)"""
 
-    ogr_driver = ogr.GetDriverByName('Memory')
     raster_geotransform = raster.GetGeoTransform()
     pixel_width = abs(raster_geotransform[1])
     pixel_height = abs(raster_geotransform[5])
 
+    ogr_driver = ogr.GetDriverByName('Memory')
     temp_shapefile = ogr_driver.CreateDataSource('/tmp/temp_shapefile')
     temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
         sample_layer.GetSpatialRef(), geom_type=ogr.wkbPolygon)
