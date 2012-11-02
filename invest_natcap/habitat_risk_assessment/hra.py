@@ -181,7 +181,7 @@ def add_rast_to_dict(direct, dictionary):
 
     return dictionary
 
-def buffer_s_rasters(dir, buffer_dict, grid_size):
+def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
     '''If there is buffering desired, this will take each file and buffer the
     given raster shape by the distance of the buffer from the landmass.
 
@@ -193,6 +193,8 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
             dictionary to avoid having to pass it to core. The key will be a
             string, and the value a double.
         grid_size- The current size of the raster cells.
+        decay_eq- String representing the equation that shuld be used to decay
+            the stressor importance from the original points.
 
     Output:
         Re-buffered rasters of the same name as those contained within 'dir'
@@ -227,11 +229,9 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         #The array with each value being the distance from its own cell to land
         dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
         
-        #Setting anything within the buffer zone to 1, and anything outside
-        #that distance to nodata.
-        inner_zone_index = dist_array <= buff
-        dist_array[inner_zone_index] = 1
-        dist_array[~inner_zone_index] = nodata  
+        if decay_eq == 'None':
+            decay_array = make_no_decay_array(dist_array)
+
        
         #Create a new file to which we should write our buffered rasters.
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
@@ -240,7 +240,17 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
         n_band.Fill(n_nodata)
         
-        n_band.WriteArray(dist_array)
+        n_band.WriteArray(decay_array)
+
+def make_no_decay_array(dist_array):
+        
+    #Setting anything within the buffer zone to 1, and anything outside
+    #that distance to nodata.
+    inner_zone_index = dist_array <= buff
+    dist_array[inner_zone_index] = 1
+    dist_array[~inner_zone_index] = nodata  
+    
+    return dist_array 
 
 def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''Takes in a habitat and a stressor, and combines the two raster files,
