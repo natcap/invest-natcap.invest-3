@@ -1,8 +1,8 @@
 {
     "id" : "window",
     "label": "Recreation Model - Scenario Run",
-    "targetScript" : "invest_natcap.recreation.recreation_scenario",
-    "modelName" : "recreation_scenario",
+    "targetScript" : "invest_natcap.recreation.recreation_client_scenario",
+    "modelName" : "recreation_client_scenario",
     "localDocURI": "",
     "height": 600,
     "width" : 700,
