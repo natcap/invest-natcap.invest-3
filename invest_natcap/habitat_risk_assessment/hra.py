@@ -230,7 +230,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
         
         if decay_eq == 'None':
-            decay_array = make_no_decay_array(dist_array, buff)
+            decay_array = make_no_decay_array(dist_array, buff, nodata)
         elif decay_eq == 'Exponential':
             decay_array = make_exp_decay_array(dist_array, buff)
        
@@ -246,7 +246,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
 def make_exp_decay_array(dist_array, buff):
     pass
 
-def make_no_decay_array(dist_array, buff):
+def make_no_decay_array(dist_array, buff, nodata):
         
     #Setting anything within the buffer zone to 1, and anything outside
     #that distance to nodata.
