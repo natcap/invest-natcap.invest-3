@@ -98,7 +98,7 @@ def execute(args):
             'not match the columns in the sensitivity table')
 
     biophysical_args['half_saturation'] = \
-            int(args['half_saturation_constant'])    
+           float(args['half_saturation_constant'])    
 
     # if the access shapefile was provided add it to the dictionary
     try:

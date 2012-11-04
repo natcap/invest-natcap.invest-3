@@ -22,24 +22,14 @@
                     "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
                 },                     
                 {
-                    "id" : "harvested_wind_energy",
-                    "args_id" : "harvested_energy_uri",
+                    "id" : "aoi",
+                    "args_id" : "aoi_uri",
                     "type": "file",
-                    "label": "Harvested Wind Energy Dataset",
-                    "defaultValue": "../Wind_Energy/output/harvested_wind_energy.tif",
+                    "label": "Area Of Interest (AOI)",
+                    "defaultValue": "../Wind_Energy/Input/aoi.shp",
                     "required": true,
-                    "validateAs": {"type":"GDAL"},
-                    "helpText": ""
-                },
-                {
-                    "id" : "distance_dataset",
-                    "args_id" : "distance_uri",
-                    "type": "file",
-                    "label": "Distance Dataset",
-                    "defaultValue": "../Wind_Energy/output/distance.tif",
-                    "required": true,
-                    "validateAs": {"type":"GDAL"},
-                    "helpText": ""
+                    "validateAs": {"type": "OGR"},
+                    "helpText": "A polygon shapefile that defines the area of interest. The AOI must be projected with linear units equal to meters." 
                 },
                 {
                     "id" : "biophysical_data",
@@ -47,7 +37,7 @@
                     "type": "file",
                     "label": "Biophysical Data",
                     "defaultValue": "../Wind_Energy/output/biophysical_data.shp",
-                    "required": false,
+                    "required": true,
                     "validateAs": {"type":"OGR",
                     			   "layers": [{"name": {"inheritFrom": "file"},
                                                "type": "points"}],
@@ -60,34 +50,9 @@
                     "type": "file",
                     "label": "Turbine Information",
                     "required": true,
-                    "returns" : "strings",
                     "helpText": "",
                     "validateAs": { "type": "CSV"}
                 },
-				{        
-                    "id" : "grid_points",
-                    "args_id" : "grid_points_uri",
-                    "type": "file",
-                    "label": "Grid Points",
-                    "defaultValue": "",
-                    "required": false,
-                    "validateAs": { "type": "CSV",
-                    				"fieldsExist": ["ID", "TYPE", "LATI", "LONG"],
-                    				"restrictions": [{"field": "ID",
-                                    				"validateAs": {"type": "number",
-                                                   				   "allowedValues": {"pattern":"^[0-9]+"}}},
-                                     				{"field": "TYPE",
-                                      				"validateAs": {"type": "string",
-                                                    "allowedValues":{"pattern":"LAND|GRID", "flag":"ignoreCase"}}},
-                                                    {"field": "LATI",
-                                      				"validateAs": {"type": "number",
-                                                    "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}},
-                                                    {"field": "LONG",
-                                      				"validateAs": {"type": "number",
-                                                    "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
-                                        ]}                                    
-                                    
-                },    
                 {
                     "id" : "number_of_machines",
                     "args_id": "number_of_machines",
@@ -108,6 +73,41 @@
                                     "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
                     "required": true,
                     "helpText": ""
+                },
+				{        
+                    "id" : "grid_points",
+                    "args_id" : "grid_points_uri",
+                    "type": "file",
+                    "label": "Grid Points",
+                    "defaultValue": "",
+                    "required": false,
+                    "returns": {"ifEmpty": "pass"},
+                    "validateAs": { "type": "CSV",
+                    				"fieldsExist": ["ID", "TYPE", "LATI", "LONG"],
+                    				"restrictions": [{"field": "ID",
+                                    				"validateAs": {"type": "number",
+                                                   				   "allowedValues": {"pattern":"^[0-9]+"}}},
+                                     				{"field": "TYPE",
+                                      				"validateAs": {"type": "string",
+                                                    "allowedValues":{"pattern":"LAND|GRID", "flag":"ignoreCase"}}},
+                                                    {"field": "LATI",
+                                      				"validateAs": {"type": "number",
+                                                    "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}},
+                                                    {"field": "LONG",
+                                      				"validateAs": {"type": "number",
+                                                    "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
+                                        ]}                                    
+                                    
+                },
+                {
+                    "id" : "land_polygon",
+                    "args_id" : "land_polygon_uri",
+                    "type": "file",
+                    "label": "Land Polygon to Calculate Distance From",
+                    "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR"},
+                    "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
                 }
             ]
         }

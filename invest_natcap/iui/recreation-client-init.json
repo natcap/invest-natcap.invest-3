@@ -1,8 +1,8 @@
 {
     "id" : "window",
     "label": "Recreation Model - Initial Run",
-    "targetScript" : "invest_natcap.recreation.recreation_init",
-    "modelName" : "recreation_init",
+    "targetScript" : "invest_natcap.recreation.recreation_client_init",
+    "modelName" : "recreation_client_init",
     "localDocURI": "",
     "height": 600,
     "width" : 700,
