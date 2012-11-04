@@ -118,16 +118,21 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None)
         Returns a 4-element tuple with:
             (minimum, maximum, mean, standard_deviation)"""
 
-    ogr_driver = ogr.GetDriverByName('Memory')
+    # Get the input raster's geotransform information so we can determine the
+    # pixel height and width for creating a new raster later.
     raster_geotransform = raster.GetGeoTransform()
     pixel_width = abs(raster_geotransform[1])
     pixel_height = abs(raster_geotransform[5])
 
+    # Create a memory-bound shapefile for rasterizing later.
+    ogr_driver = ogr.GetDriverByName('Memory')
     temp_shapefile = ogr_driver.CreateDataSource('/tmp/temp_shapefile')
     temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
         sample_layer.GetSpatialRef(), geom_type=ogr.wkbPolygon)
     temp_layer_defn = temp_layer.GetLayerDefn()
 
+    # Make a copy of the feature passed in by the user and save it to the temp
+    # shapefile.
     feature_geom = shape.GetGeometryRef()
     temp_feature = ogr.Feature(temp_layer_defn)
     temp_feature.SetGeometry(feature_geom)
@@ -137,13 +142,24 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None)
     temp_feature.Destroy()
     temp_layer.SyncToDisk()
 
+    # Create a raster from the extents of the shapefile.  I do this here so that
+    # we can calculate stats using GDAL, which is about 15x faster than doing
+    # the same set of statistics on a numpy matrix with numpy operations.  See
+    # invest_natcap.nutrient.compare_mean_calculation for an example.
     temp_nodata = -1.0
     temp_raster = raster_utils.create_raster_from_vector_extents(
         pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
         '/tmp/watershed_raster.tif', temp_shapefile)
 
+    # Rasterize the temp shapefile layer onto the temp raster.  Burn values are
+    # all set to 1 so we can use this as a mask in the subsequent call to
+    # vectorize_rasters().
     gdal.RasterizeLayer(temp_raster, [1], temp_layer, burn_values=[1])
 
+    # Now that we have a mask of which pixels are in the shape of interest, make
+    # an output raster where the pixels have the value of the input raster's
+    # pixel only if the pixel is in the watershed of interest.  Otherwise, the
+    # pixel will have the nodata value.
     watershed_pixels = raster_utils.vectorize_rasters([temp_raster,
         raster], lambda x, y: y if x == 1 else temp_nodata,
         nodata=temp_nodata, raster_out_uri=raster_path)
