@@ -2,6 +2,7 @@
 and pre-processed data from the UI and pass it to the hra_core module.'''
 
 import os
+import re
 import shutil
 import logging
 import glob
@@ -35,6 +36,8 @@ def execute(args):
             both intermediate and ouput rasters. 
         args['risk_eq']- A string identifying the equation that should be used
             in calculating risk scores for each H-S overlap cell.
+        args['decay_eq']- A string identifying the equation that should be used
+            in calculating the decay of stressor buffer influence.
         args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.
@@ -132,8 +135,9 @@ def execute(args):
     #Make rasters based on the stressor shapefiles
     make_rasters(file_names, s_rast, args['grid_size'])
 
-    #Checks the stressor buffer, and re-rasterizes if necessary.
-    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'])
+    #Checks the stressor buffer, and makes a new "buffered" raster. If the
+    #buffer is 0, this will be identical to the original rasterized shapefile.
+    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'], args['decay_eq'])
 
     hra_args['stressors'] = args['stressors']
 
@@ -177,7 +181,7 @@ def add_rast_to_dict(direct, dictionary):
 
     return dictionary
 
-def buffer_s_rasters(dir, buffer_dict, grid_size):
+def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
     '''If there is buffering desired, this will take each file and buffer the
     given raster shape by the distance of the buffer from the landmass.
 
@@ -189,6 +193,8 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
             dictionary to avoid having to pass it to core. The key will be a
             string, and the value a double.
         grid_size- The current size of the raster cells.
+        decay_eq- String representing the equation that shuld be used to decay
+            the stressor importance from the original points.
 
     Output:
         Re-buffered rasters of the same name as those contained within 'dir'
@@ -223,13 +229,29 @@ def buffer_s_rasters(dir, buffer_dict, grid_size):
         #The array with each value being the distance from its own cell to land
         dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
         
-        #Setting anything within the buffer zone to 1, and anything outside
-        #that distance to nodata.
-        inner_zone_index = dist_array <= buff
-        dist_array[inner_zone_index] = 1
-        dist_array[~inner_zone_index] = nodata  
+        if decay_eq == 'None':
+            decay_array = make_no_decay_array(dist_array, buff)
+        elif decay_eq == 'Exponential':
+            decay_array = make_exp_decay_array(dist_array, buff
+       
+        #Create a new file to which we should write our buffered rasters.
+        new_buff_uri = os.path.join(dir, name + '_buff.tif')
+        new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
+                            'GTiff', 0, gdal.GDT_Float32)
+        n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
+        n_band.Fill(n_nodata)
         
-        band.WriteArray(dist_array)
+        n_band.WriteArray(decay_array)
+
+def make_no_decay_array(dist_array, buff):
+        
+    #Setting anything within the buffer zone to 1, and anything outside
+    #that distance to nodata.
+    inner_zone_index = dist_array <= buff
+    dist_array[inner_zone_index] = 1
+    dist_array[~inner_zone_index] = nodata  
+    
+    return dist_array 
 
 def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''Takes in a habitat and a stressor, and combines the two raster files,
@@ -238,7 +260,9 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     Input:
         dir- The directory into which the completed raster files should be placed.
         h_rast- The folder holding all habitat raster files.
-        s_rast- The folder holding all stressor raster files.
+        s_rast- The folder holding all stressor raster files. We want to look
+            for the "buffered" files, since those have already taken into
+            account any where there are 0 buffer sizes.
         h_s- A dictionary which comes from the IUI which contains all
             ratings and weightings of each Habitat-Stressor pair.
 
@@ -253,21 +277,19 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     '''
     #They will be output with the form 'H[habitat_name]_S[stressor_name].tif'
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
-    s_rast_files = glob.glob(os.path.join(s_rast, '*.tif'))
+    #We only want to get the "buffered" version of the files.
+    s_rast_files = glob.glob(os.path.join(s_rast, '*_buff.tif'))
  
     #Create vectorize_raster's function to call when combining the h-s rasters
     def combine_hs_pixels(pixel_h, pixel_s):
         
         #For all pixels in the two rasters, return this new pixel value
-        
-        #I think we just want to return data if they are both present, else
-        #return nodata. We know ahead of time that 0 will be the nodata value,
-        #and until we change something, will be using 1 as the data value. This
-        #is variable once we figure out decay.
         if pixel_h == 0 or pixel_s == 0:
             return 0
         else:
-            return 1
+            #Want to return the decayed value- even if it's actually 1 for this
+            #particular pixel.
+            return s
 
     for h in h_rast_files:
         for s in s_rast_files:
@@ -277,13 +299,18 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             #path.splitext returns a tuple such that the first element is what comes
             #before the file extension, and the second is the extension itself 
             h_name = os.path.splitext(os.path.split(h)[1])[0]
-            s_name = os.path.splitext(os.path.split(s)[1])[0]
+            s_name_buff = os.path.splitext(os.path.split(s)[1])[0]
+            #We know the file will be the buffered version, so when creating the
+            #new filename, need to pull out the 'buffered' portion of it.
+            s_name = re.split('\_buff', s_name_buff)[0]
+
             out_uri = os.path.join(dir, 'H[' + h_name + ']_S[' + s_name + \
                         '].tif')
             
             h_dataset = gdal.Open(h)
             s_dataset = gdal.Open(s)
-    
+   
+            LOGGER.info("combine_hs_rasters")
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
                             combine_hs_pixels, raster_out_uri = out_uri,
                             datatype = gdal.GDT_Int32, nodata=0)
@@ -292,7 +319,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             #in 'h-s'. We will make the open datasource the third item in
             #the tuple. The first two are the exposure and consequence ratings 
             #that were gleaned from the IUI.
-            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
+            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri, gdal.GA_Update)
 
     return h_s
 

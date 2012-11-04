@@ -7,6 +7,7 @@ import logging
 import os
 import numpy as np
 import shutil
+import pickle
 
 from osgeo import gdal, ogr
 from invest_natcap import raster_utils
@@ -91,7 +92,7 @@ def execute(args):
     #THE NON-CORE FUNCTION, SO THAT IT ALREADY EXISTS BY THIS POINT, SINCE WE
     #ARE ONLY SEEING H-S BY NOW INSTEAD OF EACH SEPARATE RASTER.
 
-    make_risk_rasters(inter_dir, args['h-s'], args['habitats'], 
+    risk_dict = make_risk_rasters(inter_dir, args['h-s'], args['habitats'], 
                 args['stressors'], args['risk_eq'])
 
     #We know at this point that the non-core module has already recreated the
@@ -103,7 +104,7 @@ def execute(args):
     #We will combine all h-s rasters of the same habitat into a cumulative
     #habitat risk raster, and return a list of the datasets of each so that it
     #can be passed on to the ecosystem raster's vectorize_raster
-    h_risk_list = make_cum_risk_raster(maps_dir, args['h-s'])
+    h_risk_list = make_cum_risk_raster(maps_dir, risk_dict)
 
     #Will now combine all habitat rasters insto one overall ecosystem raster
     #using the datasources that we collected from the previous function.
@@ -224,32 +225,21 @@ def make_ecosys_risk_raster(direct, h_ds):
 
         return pixel_sum
 
+    LOGGER.info("make_ecosys_raster")
     raster_utils.vectorize_rasters(h_ds, add_e_pixels, aoi = None,
                     raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
 
-def make_cum_risk_raster(direct, h_s):
+def make_cum_risk_raster(direct, risk_dict):
     '''This will take all h-s rasters of a given habitat, and combine them to
     visualize a cumulative risk raster for each habitat.
 
     Input:
         direct- The directory into which the completed habitat risk rasters
             should be placed.
-        h_s- A structure which holds all ratings, weights, and data quality
-            numbers for each habitat-stressor overlap. Additionally, each h-s
-            tuple key points to a dictionary containing a raster dataset of the
-            risk scores for all h-s pixels. The structure resembles the
-            following:
-
-            {(Habitat A, Stressor 1): 
-                    {'E': 
-                        {'Spatital Overlap': 
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        },
-                    'C': {C's Criteria Dictionaries},
-                    'DS':  <Open A-1 Raster Dataset>
-                    }
-            }
-
+        risk_dict- Dictionary containing the risk-burned rasters of the h-s
+            overlap for each pairing of habitat and stressor. The key is a
+            tuple of (habitat, stressor), and the value is the open raster
+            dataset.
     Output:
         A set of raster files representing the cumulative risk scores for each
             habitat. These files will combine all habitat-stressor risk rasters,
@@ -271,11 +261,11 @@ def make_cum_risk_raster(direct, h_s):
 
     #This will give us two np lists where we have only the unique habitats and
     #stressors for the system. 
-    habitats = map(lambda pair: pair[0], h_s)   
+    habitats = map(lambda pair: pair[0], risk_dict)   
     habitats = np.array(habitats)
     habitats = np.unique(habitats)
 
-    stressors = map(lambda pair: pair[1], h_s)
+    stressors = map(lambda pair: pair[1], risk_dict)
     stressors = np.array(stressors)
     stressors = np.unique(stressors)
     
@@ -291,7 +281,7 @@ def make_cum_risk_raster(direct, h_s):
         for s in stressors:
             #Datasource can be retrieved by indexing into the value dictionary
             #using 'DS'
-            ds_list.append(h_s[(h,s)]['DS'])
+            ds_list.append(risk_dict[(h,s)])
 
         #When we have a complete list of the stressors, let's pass the habitat
         #name and our list off to another function and have it create and
@@ -334,15 +324,17 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         stressors- A multi-level dictionary with the same structure as h_s, but
             which only contains reatings applicable to stressors. 
 
-    Output:
-        Updated versions of the H-S datasets with the risk value burned to the
-            overlap area of the given habitat and stressor.
-
-    Returns nothing.
+    Returns:
+        A dictionary which maps h,s pairs to an open raster dataset depicting
+            the risk values for that layer.
     '''
     #We will call one of the risk creation equations based on the string
     #passed in by 'risk_eq'. This will return a dataset, and we will then
     #write that out to a file within 'direct'
+
+    #Create dictionary that we can pass back to the execute call and pass on to
+    #create habitat rasters
+    risk_rasters = {}
 
     #We are going to us the h_s dictionary as our way of running through all H-S
     #possibilities, and then run through individual criteria from H/S separately.
@@ -367,7 +359,8 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         #the raster band.
         
         #We know, in this case, that there is only one band.
-        r_band = h_s[pair]['DS'].GetRasterBand(1)
+        r_ds = h_s[pair]['DS']
+        r_band = r_ds.GetRasterBand(1)
         r_array = r_band.ReadAsArray()
         
         if risk_eq == 'Euclidean':
@@ -376,11 +369,22 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         elif risk_eq == 'Multiplicative':
             mod_array = make_risk_mult(r_array, E, C)
 
-        #Now want to take this dataset and write it back to the raster file
-        #conatining the H-S overlap.
-        r_band.WriteArray(mod_array)
-        h_s[pair]['DS'].FlushCache()        
-    
+        risk_uri = os.path.join(direct, "H[" + h + "]_S[" + s + "]_Risk.tif")
+
+        new_dataset = raster_utils.new_raster_from_base(r_ds, risk_uri,
+                            'GTiff', 0, gdal.GDT_Float32)
+        band, nodata = raster_utils.extract_band_and_nodata(new_dataset)
+        band.Fill(nodata)
+
+        #Now want to take this dataset and write it back to a new raster file
+        #containing the H-S overlap. We will also add it to the dictionary so
+        #that it can be saved for later.
+        band.WriteArray(mod_array)
+        
+        risk_rasters[(h, s)] = new_dataset
+
+    return risk_rasters
+
 def calc_score_value(h_s_sub, hab_sub, stress_sub):
     '''This will take in 3 sub-dictionaries and use the criteria that they
     contain to calculate an overall score based on the following equation.
@@ -472,12 +476,18 @@ def make_risk_euc(array, E, C):
     #could be different for any pixel in the risk array.
     e_array = array * E
 
-    sub_e = (e_array - 1) ** 2
-    sub_c = (C - 1) ** 2
+    #Only want to perform calculations if we have a cell with data in it. (Can
+    #see based on the non-zero values.
 
-    under_sq = sub_e + sub_c
+    e_array[e_array!=0] -= 1
+    e_array ** 2
+
+    sub_c = (C - 1) ** 2
+    
+    #We only want to add E and C if there is a non-zero value in the pixel.
+    e_array[e_array != 0] += sub_c
 
     #Raising to the 1/2 is the same as taking the sqrt
-    R = under_sq ** .5
+    R = e_array ** .5
 
     return R

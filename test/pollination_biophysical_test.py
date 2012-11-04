@@ -88,7 +88,7 @@ class PollinationBiophysicalTest(PollinationTest):
     def test_regression(self):
         """Regression test for pollination_biophysical."""
         pollination_biophysical.execute(self.args)
-        assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
+        self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
             'biophysical_output','no_ag_classes'))
 
     def test_ag_classes(self):

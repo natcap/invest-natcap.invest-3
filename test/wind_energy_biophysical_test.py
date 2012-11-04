@@ -12,7 +12,7 @@ import invest_test_core
 class TestWindEnergyBiophysical(unittest.TestCase):
     def test_wind_energy_biophysical_global(self):
         """Regression test for the main biophsyical outputs"""
-
+        #raise SkipTest
         input_dir = './data/wind_energy_data/'
         regression_dir = './data/wind_energy_regression_data/'
         
@@ -77,6 +77,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
     def test_wind_energy_biophysical_aoi_no_dist(self):
         """Regression test for the main biophsyical outputs"""
+        #raise SkipTest
 
         input_dir = './data/wind_energy_data/'
         regression_dir = './data/wind_energy_regression_data/'
@@ -147,6 +148,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
         
     def test_wind_energy_biophysical_aoi_dist(self):
         """Regression test for the main biophsyical outputs"""
+        #raise SkipTest
 
         input_dir = './data/wind_energy_data/'
         regression_dir = './data/wind_energy_regression_data/'
@@ -222,6 +224,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
     
     def test_wind_energy_biophysical_check_datasource_projections(self):
         """Load a properly projected datasource and check that it passes"""
+        #raise SkipTest
         
         datasource_uri = './data/wind_energy_data/reprojected_distance_aoi.shp'
         
@@ -235,6 +238,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
     def test_wind_energy_biophysical_check_datasource_projections_mult(self):
         """Load multiple properly projected datasource and check that they
             pass"""
+        #raise SkipTest
         
         datasource_uri = './data/wind_energy_data/reprojected_distance_aoi.shp'
         datasource_uri_2 = \
@@ -253,6 +257,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
     def test_wind_energy_biophysical_check_datasource_projections_fail(self):
         """Load a couple datasources and check that one fails"""
+        #raise SkipTest
         
         ds_one_uri = './data/wind_energy_data/reprojected_distance_aoi.shp'
         ds_two_uri = './data/wind_energy_data/wind_energy_distance_aoi.shp'
@@ -267,6 +272,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
     def test_wind_energy_biophysical_read_wind_data(self):
         """Unit test for turning a text file into a dictionary"""
+        #raise SkipTest
 
         wind_data_uri = './data/wind_energy_data/small_wind_data_sample.txt'
 
@@ -288,6 +294,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
     def test_wind_energy_biophysical_wind_data_to_point_shape(self):
         """Compare the output shapefile created from a known dictionary agaisnt
             a regression shape file that has been verified correct"""        
+        #raise SkipTest
         regression_shape_uri = \
             './data/wind_energy_regression_data/wind_data_to_points.shp'
 
@@ -319,6 +326,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
 
     def test_wind_energy_biophysical_clip_datasource(self):
         """Regression test for clipping a shapefile from another shapefile"""
+        #raise SkipTest
 
         original_shape_uri = \
             './data/wind_energy_regression_data/wind_points_shape.shp'
@@ -352,6 +360,7 @@ class TestWindEnergyBiophysical(unittest.TestCase):
     
     def test_wind_energy_biophysical_clip_datasource2(self):
         """Regression test for clipping a shapefile from another shapefile"""
+        #raise SkipTest
 
         original_shape_uri = \
             './data/wind_energy_regression_data/clip_dsource_orig.shp'
