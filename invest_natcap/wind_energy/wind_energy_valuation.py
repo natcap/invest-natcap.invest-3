@@ -90,7 +90,7 @@ def execute(args):
     bio_points_clipped_uri = os.path.join(
             inter_dir, 'val_biophysical_points_clipped.shp'
    
-    # Clip and project the points
+    # Clip the wind energy points 
     LOGGER.info('Clipping the wind energy points to the AOI')
     biophysical_points_clipped = wind_energy_biophsyical.clip_datasource(
             aoi, biophysical_points_copy, bio_points_clipped_uri)
@@ -98,6 +98,7 @@ def execute(args):
     bio_points_proj_duri = os.path.join(
             inter_dir, 'val_biophysical_points_projected.shp'
 
+    # Project the wind energy points
     LOGGER.info('Projecting the wind energy points to the AOI')
     biophysical_points_proj = raster_utils.reproject_datasource(
         biophysical_points_clipped, aoi_wkt, bio_points_proj_uri)
@@ -110,7 +111,7 @@ def execute(args):
     valuation_args['dollar_per_kWh'] = float(args['dollar_per_kWh'])
 
     LOGGER.info('Read in turbine information from CSV')
-    # handle opening of relevant files
+    # Open the turbine CSV file 
     turbine_dict = {}
     turbine_file = open(args['turbine_info_uri'])
     reader = csv.DictReader(turbine_file)
@@ -127,16 +128,41 @@ def execute(args):
         turbine_dict[row['type']] = row
     reader = None
     turbine_file.close()
+    
     LOGGER.debug('Turbine Dictionary: %s', turbine_dict)
     valuation_args['turbine_dict'] = turbine_dict
 
     # Handle Grid Points
     try:
-        grid_dict = {}
         grid_file = open(args['grid_points_uri'])
+    except KeyError:
+        LOGGER.info('Grid points not provided')
+        LOGGER.info('Reading in land polygon')
+        land_poly = ogr.Open(args['land_polygon_uri'])
+
+        land_poly_clipped_uri = os.path.join(
+                inter_dir, 'val_land_poly_clipped.shp'
+       
+        # Clip the land polygon
+        LOGGER.info('Clipping the land polygon to the AOI')
+        land_poly_clipped = wind_energy_biophsyical.clip_datasource(
+                aoi, land_poly, land_poly_clipped_uri)
+
+        land_poly_proj_uri = os.path.join(
+                inter_dir, 'val_land_poly_projected.shp'
+        
+        # Project the land polygon
+        LOGGER.info('Projecting the land polygon to the AOI')
+        land_poly_proj = raster_utils.reproject_datasource(
+            land_poly_clipped, aoi_wkt, land_poly_proj_uri)
+
+        valuation_args['land_polygon'] = land_poly_proj
+    else:
         LOGGER.info('Reading in the grid points')
         reader = csv.DictReader(grid_file)
 
+        grid_dict = {}
+        
         # Making a shallow copy of the attribute 'fieldnames' explicitly to edit to
         # all the fields to lowercase because it is more readable and easier than
         # editing the attribute itself
@@ -149,20 +175,8 @@ def execute(args):
             grid_dict[row['id']] = row
         grid_file.close()
         LOGGER.debug('Grid_Points_Dict : %s', grid_dict)
+
         valuation_args['grid_dict'] = grid_dict
-    except KeyError:
-        LOGGER.info('Grid points not provided')
-        LOGGER.info('Reading in land polygon')
-        try:
-            land_poly = ogr.Open(args['land_polygon_uri'])
-        except KeyError:
-            raise KeyError('Something has gone horribly wrong')
-
-    # handle any pre-processing that must be done
-
-    
-    valuation_args['harvested_energy'] = gdal.Open(args['harvested_energy_uri'])
-    valuation_args['distance'] = gdal.Open(args['distance_uri'])
     
     # call on the core module
     wind_energy_core.valuation(valuation_args)
