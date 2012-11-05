@@ -3,22 +3,32 @@
     "paths": {
         "absolute": {
             "repository": "/home/mlacayo/recreation/",
-            "user": "/usr/local/public_html/",
-            "web": "/home/mlacayo/public_html/"
+            "userroot": "/usr/local/public_html/",
+            "webroot": "/home/mlacayo/public_html/"
         },
         "relative": {
             "data": "data/",
             "predictors": "pred/",
-            "core": "invest_natcap/recreation/"
+            "core": "invest_natcap/recreation/",
+            "computation": "computation/"
         }
     },
     "files": {
-        "predictor": "predictors.php",
-        "recreation": "recreation.php",
-        "regression": "regression.php",
-        "server": "recreation_server.py",
+        "PHP": {
+            "predictor": "predictors.php",
+            "recreation": "recreation.php",
+            "regression": "regression.php"
+        },
+        "regression" : "regression.r",
+        "model": "model.json",
+        "init": "recreation_server_init.py",
+        "scenario": "recreation_server_scenario.py",
+        "aoi": "aoi.shp",
+        "grid" : "grid.shp",
+        "flickr" : "flickr.csv",
         "log": "log.txt",
         "comments": "comments.txt",
+        "Rlog" : "r.out",
         "results": "results.zip"
     }
 }

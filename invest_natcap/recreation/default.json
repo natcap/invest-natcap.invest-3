@@ -1,1 +1,19 @@
-{u'gridType': '1', u'reefs': False, u'osm_line': True, u'osm_poly': True, u'mangroves': False, u'aoiFileName': '/home/mlacayo/workspace/invest3/test/data/recreation_data/FIPS-11001.shp', u'comments': 'DC', u'cellSize': 3.0, u'landscan': True, u'workspace_dir': '/home/mlacayo/workspace/invest3/test/data/test_out', u'protected': True, u'osm_point': True, u'download': True, u'data_dir': '/home/mlacayo/workspace/invest3/test/data/recreation_data/FIPS-11001', u'lulc': True, u'grass': False, u'cellUnit': '1000'}
+{
+    "gridType": "1", 
+    "reefs": false, 
+    "osm_line": true, 
+    "osm_poly": true, 
+    "mangroves": false, 
+    "data_dir": "/home/mlacayo/workspace/invest3/test/data/recreation_data/FIPS-11001", 
+    "aoiFileName": "/home/mlacayo/workspace/invest3/test/data/recreation_data/FIPS-11001.shp", 
+    "comments": "DC", 
+    "cellSize": 3.0, 
+    "landscan": true, 
+    "workspace_dir": "/home/mlacayo/workspace/invest3/test/data/test_out", 
+    "protected": true, 
+    "download": true, 
+    "osm_point": true, 
+    "lulc": true, 
+    "grass": false, 
+    "cellUnit": "1000"
+}
