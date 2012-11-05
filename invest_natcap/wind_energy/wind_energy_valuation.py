@@ -20,18 +20,17 @@ def execute(args):
     
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
-        args[harvested_energy_uri] - a uri to a GDAL dataset from the
-            biophysical run of the wind energy model that has the per pixel
-            harvested wind energy(required)
-        args[distance_uri] - a uri to a GDAL dataset from the biophysical run of
-            the wind energy model that depicts the distances of pixels 
-            from shore (required)
+        args[aoi_uri] - a uri to an OGR datasource of type polygon covering the
+            area of interest. Must be projected in meters (required)
         args[biophysical_data_uri] - a uri to an OGR datasource of type point
             from the output of the biophysical model run (required) 
         args[turbine_info_uri] - a uri to a CSV file that has the parameters
             for the type of turbine (required)
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
             and grid point locations (optional)
+        args[land_polygon_uri] - a uri to an OGR datasource of type polygon to
+            use for distance calculations if grid points were not provided 
+            (required if grid_points_uri is not provided)
         args[number_of_machines] - an integer value for the number of machines
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
@@ -39,8 +38,7 @@ def execute(args):
         args[suffix] - a string for the suffix to be appended to the output
             names (optional) 
     
-        returns - nothing
-    """
+        returns - nothing"""
 
     valuation_args = {}
     

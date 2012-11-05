@@ -3,8 +3,8 @@ from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 import urllib2
 import time
-from invest_natcap.iui import fileio
 
+import json
 import logging
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
@@ -34,8 +34,8 @@ def execute(args):
 
     #validating shapefile    
     LOGGER.info("Validating AOI.")
-    dirname=os.path.dirname(aoiFileName)+os.sep
-    fileName, fileExtension = os.path.splitext(aoiFileName)
+    dirname=os.path.dirname(args["aoiFileName"])+os.sep
+    fileName, fileExtension = os.path.splitext(args["aoiFileName"])
     aoiFileNameSHP = fileName+".shp"
     aoiFileNameSHX = fileName+".shx"
     aoiFileNameDBF = fileName+".dbf"
@@ -79,13 +79,13 @@ def execute(args):
     #upload predictors        
     LOGGER.debug("Uploading predictors.")
     datagen, headers = multipart_encode(attachments)
-    url = config["server"]+"/"+config["files"]["PHP"]["predictor"]
+    url = config["server"]+config["files"]["PHP"]["predictor"]
+    LOGGER.info("URL: %s." % url)
     request = urllib2.Request(url, datagen, headers)
 
     #save session id
     args["sessid"] = urllib2.urlopen(request).read().strip()
     LOGGER.debug("Server session %s." % (args["sessid"]))
-
     
     #upload aoi and model parameters
     attachments = {"json" : json.dumps(args, indent=4),
@@ -97,7 +97,8 @@ def execute(args):
     datagen, headers = multipart_encode(attachments)
     
     #initiate server side recreation python script
-    url = config["server"]+"/"+config["files"]["PHP"]["recreation"]
+    url = config["server"]+config["files"]["PHP"]["recreation"]
+    LOGGER.info("URL: %s." % url)
     request = urllib2.Request(url, datagen, headers)
     
     LOGGER.info("Sending request to server.")
@@ -145,12 +146,13 @@ def execute(args):
     #initiate server side regression R script                
     LOGGER.info("Running regression.")
     url = config["server"]+"/"+config["files"]["PHP"]["regression"]
-    datagen, headers = multipart_encode({"args["sessid"]": args["sessid"]})
+    datagen, headers = multipart_encode({"sessid": args["sessid"]})
     request = urllib2.Request(url, datagen, headers)
     urllib2.urlopen(request).read()
 
     #download results
     url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["results"]
+    LOGGER.info("URL: %s." % url)
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
@@ -166,7 +168,7 @@ if __name__ == "__main__":
     if len(sys.argv)>1:
         modelRunFileName=sys.argv[1]
     else:
-        modeRunFileName=os.path.abspath(os.path.dirname(sys.argv[0]))+os.sep+"config.json"
+        modelRunFileName=os.path.abspath(os.path.dirname(sys.argv[0]))+os.sep+"default.json"
 
     #load model run parameters
     modelRunFile=open(modelRunFileName,'r')
