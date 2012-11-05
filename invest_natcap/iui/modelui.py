@@ -5,6 +5,7 @@ import platform
 import time
 import json
 from optparse import OptionParser
+import logging
 
 from PyQt4 import QtGui, QtCore
 
@@ -13,6 +14,31 @@ import executor
 import iui_validator
 
 CMD_FOLDER = '.'
+
+# Set up logging for the modelUI
+# I haven't been able to figure out why, but for some reason I have to add a new
+# StreamHandler to the LOGGER object for information to be printed to stdout.  I
+# can't figure out why this is necessary here and not necessary in our other
+# models, where calling `logging.basicConfig` is sufficient.
+
+# Format string and the date format are shared by the basic configuration as
+# well as the added streamhandler.
+format_string = '%(asctime)s %(name)-18s %(levelname)-8s %(message)s'
+date_format = '%m/%d/%Y %H:%M:%S '
+
+# Do the basic configuration of logging here.  This is required in addition to
+# adding the streamHandler below.
+logging.basicConfig(format=format_string, level=logging.DEBUG, 
+        datefmt=date_format)
+
+# Create a formatter and streamhandler to format and print messages to stdout.
+formatter = logging.Formatter(format_string, date_format)
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+
+#Get the logging object for this level and add the handler we just created.
+LOGGER = logging.getLogger('modelUI')
+LOGGER.addHandler(handler)
 
 class ModelUIRegistrar(base_widgets.ElementRegistrar):
     def __init__(self, root_ptr):
@@ -175,7 +201,16 @@ if __name__ == '__main__':
     #is version 2.5.
     parser = OptionParser()
     parser.add_option('-t', '--test', action='store_false', default=True, dest='test')
+    parser.add_option('-d', '--debug', action='store_true', default=False, dest='debug')
     (options, uri) = parser.parse_args(sys.argv)
     print uri
+
+    if options.debug == True:
+        level = logging.NOTSET
+    else:
+        level = logging.WARNING
+    LOGGER.setLevel(level)
+    LOGGER.debug('Level set to %s, option_passed = %s', level, options.debug)
+
     main(uri[1], options.test)
 
