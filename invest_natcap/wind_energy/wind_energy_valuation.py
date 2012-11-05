@@ -71,22 +71,6 @@ def execute(args):
 
     biophysical_points = ogr.Open(args['biophysical_data_uri'])
     
-    points_copy_uri = os.path.join(inter_dir, 'copy_biophysical_points.shp')
-    
-    # If the above URI exists, remove it, this avoids problems when trying to
-    # create a new file to an URI that already exists    
-    if os.path.isfile(points_copy_uri):
-        os.remove(points_copy_uri)
-
-    # New driver for copying the biophysical points datasource
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    
-    LOGGER.info('Copying the biophysical points')
-    # Copy the biophysical points so that any new editing that is done does not
-    # effect the original file
-    biophysical_points_copy = driver.CopyDataSource(
-            biophysical_points, points_copy_uri)
-    
     bio_points_clipped_uri = os.path.join(
             inter_dir, 'val_biophysical_points_clipped.shp'
    
