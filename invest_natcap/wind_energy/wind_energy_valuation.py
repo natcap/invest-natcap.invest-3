@@ -7,8 +7,9 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from invest_natcap.wind_energy imoprt wind_energy_biophysical
+from invest_natcap.wind_energy import wind_energy_biophysical
 from invest_natcap.wind_energy import wind_energy_core
+from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -72,15 +73,15 @@ def execute(args):
     biophysical_points = ogr.Open(args['biophysical_data_uri'])
     
     bio_points_clipped_uri = os.path.join(
-            inter_dir, 'val_biophysical_points_clipped.shp'
+            inter_dir, 'val_biophysical_points_clipped.shp')
    
     # Clip the wind energy points 
     LOGGER.info('Clipping the wind energy points to the AOI')
-    biophysical_points_clipped = wind_energy_biophsyical.clip_datasource(
-            aoi, biophysical_points_copy, bio_points_clipped_uri)
+    biophysical_points_clipped = wind_energy_biophysical.clip_datasource(
+            aoi, biophysical_points, bio_points_clipped_uri)
 
-    bio_points_proj_duri = os.path.join(
-            inter_dir, 'val_biophysical_points_projected.shp'
+    bio_points_proj_uri = os.path.join(
+            inter_dir, 'val_biophysical_points_projected.shp')
 
     # Project the wind energy points
     LOGGER.info('Projecting the wind energy points to the AOI')
@@ -125,15 +126,15 @@ def execute(args):
         land_poly = ogr.Open(args['land_polygon_uri'])
 
         land_poly_clipped_uri = os.path.join(
-                inter_dir, 'val_land_poly_clipped.shp'
+                inter_dir, 'val_land_poly_clipped.shp')
        
         # Clip the land polygon
         LOGGER.info('Clipping the land polygon to the AOI')
-        land_poly_clipped = wind_energy_biophsyical.clip_datasource(
+        land_poly_clipped = wind_energy_biophysical.clip_datasource(
                 aoi, land_poly, land_poly_clipped_uri)
 
         land_poly_proj_uri = os.path.join(
-                inter_dir, 'val_land_poly_projected.shp'
+                inter_dir, 'val_land_poly_projected.shp')
         
         # Project the land polygon
         LOGGER.info('Projecting the land polygon to the AOI')
@@ -163,4 +164,4 @@ def execute(args):
         valuation_args['grid_dict'] = grid_dict
     
     # call on the core module
-    wind_energy_core.valuation(valuation_args)
+    #wind_energy_core.valuation(valuation_args)
