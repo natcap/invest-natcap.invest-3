@@ -40,10 +40,10 @@ def execute(args):
     args['water_temp_dict']- A dictionary which links a specific date to the farm numbers,
                         and their temperature values on that day. (Note: in this case, the
                         outer keys 1 and 2 are calendar days out of 365, starting 
-                        with January 1, and the inner 1, 2, and 3 are farm numbers.)
+                        with January 1 (day 0), and the inner 1, 2, and 3 are farm numbers.)
                            
-                        Format: {'1': '{'1': '8.447, '2': '8.447', '3':'8.947', ...}' ,
-                                 '2': '{'1': '8.406, '2': '8.406', '3':'8.906', ...}' ,
+                        Format: {'0': '{'1': '8.447, '2': '8.447', '3':'8.947', ...}' ,
+                                 '1': '{'1': '8.406, '2': '8.406', '3':'8.906', ...}' ,
                                 .                        .                    .
                                 .                        .                    .
                                 .                        .                    .       }
