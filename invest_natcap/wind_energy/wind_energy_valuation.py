@@ -40,9 +40,11 @@ def execute(args):
     
         returns - nothing"""
 
+    LOGGER.info('Entering Wind Energy Valuation')
+
     valuation_args = {}
     
-    # create output folders
+    # Create output folders
     workspace = args['workspace_dir']
     valuation_args['workspace_dir'] = workspace
 
@@ -66,6 +68,7 @@ def execute(args):
     # Dollar per kiloWatt hour
     valuation_args['dollar_per_kWh'] = float(args['dollar_per_kWh'])
 
+    LOGGER.info('Read in turbine information from CSV')
     # handle opening of relevant files
     turbine_dict = {}
     turbine_file = open(args['turbine_info_uri'])
@@ -90,6 +93,7 @@ def execute(args):
     try:
         grid_dict = {}
         grid_file = open(args['grid_points_uri'])
+        LOGGER.info('Reading in the grid points')
         reader = csv.DictReader(grid_file)
 
         # Making a shallow copy of the attribute 'fieldnames' explicitly to edit to
@@ -106,10 +110,16 @@ def execute(args):
         LOGGER.debug('Grid_Points_Dict : %s', grid_dict)
         valuation_args['grid_dict'] = grid_dict
     except KeyError:
-        pass
+        LOGGER.info('Grid points not provided')
+        LOGGER.info('Reading in land polygon')
+        try:
+            land_poly = ogr.Open(args['land_polygon_uri'])
+        except KeyError:
+            raise KeyError('Something has gone horribly wrong')
 
     # handle any pre-processing that must be done
 
+    LOGGER.info('Clipping and handling wind energy points')
     biophysical_points = ogr.Open(args['biophysical_data_uri'])
     driver = ogr.GetDriverByName('ESRI Shapefile')
     points_copy_uri = os.path.join(inter_dir, 'copy_biophysical_points.shp')
