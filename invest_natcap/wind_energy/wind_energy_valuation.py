@@ -7,6 +7,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+from invest_natcap.wind_energy imoprt wind_energy_biophysical
 from invest_natcap.wind_energy import wind_energy_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -63,6 +64,46 @@ def execute(args):
 
     valuation_args['suffix'] = suffix
 
+    # Open the AOI and get its Projection as Well Known Text
+    aoi = ogr.Open(args['aoi_uri'])
+    aoi_sr = aoi.GetLayer().GetSpatialRef()
+    aoi_wkt = aoi_sr.ExportToWkt()
+
+    biophysical_points = ogr.Open(args['biophysical_data_uri'])
+    
+    points_copy_uri = os.path.join(inter_dir, 'copy_biophysical_points.shp')
+    
+    # If the above URI exists, remove it, this avoids problems when trying to
+    # create a new file to an URI that already exists    
+    if os.path.isfile(points_copy_uri):
+        os.remove(points_copy_uri)
+
+    # New driver for copying the biophysical points datasource
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    
+    LOGGER.info('Copying the biophysical points')
+    # Copy the biophysical points so that any new editing that is done does not
+    # effect the original file
+    biophysical_points_copy = driver.CopyDataSource(
+            biophysical_points, points_copy_uri)
+    
+    bio_points_clipped_uri = os.path.join(
+            inter_dir, 'val_biophysical_points_clipped.shp'
+   
+    # Clip and project the points
+    LOGGER.info('Clipping the wind energy points to the AOI')
+    biophysical_points_clipped = wind_energy_biophsyical.clip_datasource(
+            aoi, biophysical_points_copy, bio_points_clipped_uri)
+
+    bio_points_proj_duri = os.path.join(
+            inter_dir, 'val_biophysical_points_projected.shp'
+
+    LOGGER.info('Projecting the wind energy points to the AOI')
+    biophysical_points_proj = raster_utils.reproject_datasource(
+        biophysical_points_clipped, aoi_wkt, bio_points_proj_uri)
+    
+    valuation_args['biophysical_data'] = biophysical_points_proj
+    
     # Number of machines
     valuation_args['number_of_machines'] = int(args['number_of_machines'])
     # Dollar per kiloWatt hour
@@ -119,18 +160,6 @@ def execute(args):
 
     # handle any pre-processing that must be done
 
-    LOGGER.info('Clipping and handling wind energy points')
-    biophysical_points = ogr.Open(args['biophysical_data_uri'])
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    points_copy_uri = os.path.join(inter_dir, 'copy_biophysical_points.shp')
-    
-    if os.path.isfile(points_copy_uri):
-        os.remove(points_copy_uri)
-    
-    biophysical_points_copy = driver.CopyDataSource(
-            biophysical_points, str(points_copy_uri))
-    LOGGER.debug('biophysical_points_copy : %s', biophysical_points_copy)
-    valuation_args['biophysical_data'] = biophysical_points_copy
     
     valuation_args['harvested_energy'] = gdal.Open(args['harvested_energy_uri'])
     valuation_args['distance'] = gdal.Open(args['distance_uri'])
