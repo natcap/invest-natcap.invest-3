@@ -104,7 +104,8 @@ def execute(args):
     # aware of the paths to the workspace, intermediate, output, etc. folders.
     export_uri = os.path.join(intermediate_dir, 'nutrient_export.tif')
     lu_map = biophysical_args['bio_table'].get_map('lucode', 'load')
-    lu_map = dict((float(k), (float(v)/1000.)) for (k, v) in lu_map.iteritems())
+    lu_map = dict((float(k), (float(v)/1000. if float(v) > 1 else float(v)))
+                  for (k, v) in lu_map.iteritems())
     export_raster = raster_utils.reclassify_by_dictionary(
         biophysical_args['landuse'], lu_map, export_uri, 'GTiff', -1.0,
         gdal.GDT_Float32)
