@@ -87,7 +87,8 @@ def adjusted_loading_value(export_raster, wyield_raster, watersheds, workspace):
 
     # Now that we have the rasterized runoff mean, vectorize a single operation
     # that takes in one step calcualtes HSS*pol_x.
-    alv_op = np.vectorize(lambda x, y, z: (x/y)*z)
+    alv_op = np.vectorize(lambda x, y, z: (x/y)*z if y != wyield_nodata else
+        wyield_nodata)
     alv_uri = os.path.join(workspace, 'alv.tif')
     alv_raster = raster_utils.vectorize_rasters([runoff_idx, runoff_mean,
             export_raster], alv_op, raster_out_uri=alv_uri, nodata=-1.0)
