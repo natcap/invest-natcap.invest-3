@@ -230,10 +230,12 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
         
         if decay_eq == 'None':
-            decay_array = make_no_decay_array(dist_array, buff)
+            decay_array = make_no_decay_array(dist_array, buff, nodata)
         elif decay_eq == 'Exponential':
-            decay_array = make_exp_decay_array(dist_array, buff
-       
+            decay_array = make_exp_decay_array(dist_array, buff, nodata)
+        elif decay_eq == 'Linear':
+            decay_array = make_lin_decay_array(dist_array, buff, nodata)
+
         #Create a new file to which we should write our buffered rasters.
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
         new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
@@ -243,7 +245,13 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         
         n_band.WriteArray(decay_array)
 
-def make_no_decay_array(dist_array, buff):
+def make_lin_decay_array(dist_array, buff, nodata):
+    pass
+
+def make_exp_decay_array(dist_array, buff, nodata):
+    pass
+
+def make_no_decay_array(dist_array, buff, nodata):
         
     #Setting anything within the buffer zone to 1, and anything outside
     #that distance to nodata.

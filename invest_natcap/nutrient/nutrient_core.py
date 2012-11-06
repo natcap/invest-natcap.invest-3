@@ -74,7 +74,27 @@ def adjusted_loading_value(export_raster, wyield_raster, watersheds, workspace):
     runoff_idx = raster_utils.vectorize_rasters([wyield_raster], v_op)
 
     # Calculate the mean runoff index per watershed.
-    watersheds = mean_runoff_index(runoff_idx, watersheds, workspace)
+    mean_runoff_index(runoff_idx, watersheds, workspace)
+
+    # Take the mean runoff index field calculated and rasterize it onto a new
+    # raster the same dimensions of the runoff_index raster.
+    runoff_mean_uri = os.path.join(workspace, 'runoff_mean.tif')
+    runoff_mean = raster_utils.new_raster_from_base(runoff_idx, runoff_mean_uri, 'GTiff',
+        wyield_nodata, gdal.GDT_Float32)
+    gdal.RasterizeLayer(runoff_mean, [1], watersheds.GetLayer(0),
+                        options=['ATTRIBUTE=mn_runoff'])
+    runoff_mean.FlushCache()
+
+    # Now that we have the rasterized runoff mean, vectorize a single operation
+    # that takes in one step calcualtes HSS*pol_x.
+    alv_op = np.vectorize(lambda x, y, z: (x/y)*z if y != wyield_nodata else
+        wyield_nodata)
+    alv_uri = os.path.join(workspace, 'alv.tif')
+    alv_raster = raster_utils.vectorize_rasters([runoff_idx, runoff_mean,
+            export_raster], alv_op, raster_out_uri=alv_uri, nodata=-1.0)
+
+    return alv_raster
+
 
 def mean_runoff_index(runoff_index, watersheds, output_folder):
     """Calculate the mean runoff index per watershed.

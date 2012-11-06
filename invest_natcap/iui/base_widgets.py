@@ -4,6 +4,7 @@ import os
 import time
 import traceback
 import platform
+import logging
 
 from PyQt4 import QtGui, QtCore
 
@@ -16,6 +17,9 @@ import fileio
 CMD_FOLDER = '.'
 INVEST_ROOT = './'
 IUI_DIR = os.path.dirname(os.path.abspath(__file__))
+
+import invest_natcap.iui
+LOGGER = invest_natcap.iui.get_ui_logger('base_widgets')
 
 class DynamicElement(QtGui.QWidget):
     """Create an object containing the skeleton of most functionality in the
@@ -2426,6 +2430,7 @@ class ExecRoot(Root):
 class InfoDialog(QtGui.QDialog):
     def __init__(self):
         QtGui.QDialog.__init__(self)
+#        LOGGER.debug('Initializing information dialog %s', self)
         self.messages = []
         self.resize(400, 200)
         self.setWindowTitle('Errors exist!')
@@ -2537,7 +2542,6 @@ def center_window(window_ptr):
                 QDialog.
 
         returns nothing."""
-
     geometry = window_ptr.frameGeometry()
     center = QtGui.QDesktopWidget().availableGeometry().center()
     geometry.moveCenter(center)

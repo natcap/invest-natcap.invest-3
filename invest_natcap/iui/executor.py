@@ -14,11 +14,7 @@ import shutil
 import invest_natcap
 from invest_natcap.invest_core import fileio as fileio
 
-logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ',
-    stream=open(os.devnull, 'w'))
-
-LOGGER = logging.getLogger()
+LOGGER = invest_natcap.iui.get_ui_logger(None)
 
 # If we're not on windows, python doesn't know what a
 # WindowsError is.  Using shutil to import an empty WindowsError

@@ -53,7 +53,7 @@ class JSONHandler(object):
 
 class LastRunHandler(JSONHandler):
     def __init__(self, modelname):
-        uri = modelname + '_lastrun_' + platform.node() + '.json'
+        uri = modelname + '_lastrun.json'
         JSONHandler.__init__(self, os.path.join(settings_folder(), uri))
 
 class ResourceManager(object):
