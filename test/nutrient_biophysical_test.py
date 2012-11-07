@@ -88,3 +88,7 @@ class NutrientCoreTest(unittest.TestCase):
         num_pixels = nutrient_core.get_raster_stat_under_polygon(sample_raster,
             sample_feature, sample_layer, output_path, 'numpy_count')
         self.assertEqual(num_pixels, reg_pixel_count)
+
+        with self.assertRaises(nutrient_core.OptionNotRecognized):
+            null = nutrient_core.get_raster_stat_under_polygon(sample_raster,
+                sample_feature, sample_layer, output_path, 'does_not_exist')
