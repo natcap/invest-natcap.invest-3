@@ -2430,7 +2430,7 @@ class ExecRoot(Root):
 class InfoDialog(QtGui.QDialog):
     def __init__(self):
         QtGui.QDialog.__init__(self)
-        LOGGER.debug('Initializing information dialog %s', self)
+#        LOGGER.debug('Initializing information dialog %s', self)
         self.messages = []
         self.resize(400, 200)
         self.setWindowTitle('Errors exist!')

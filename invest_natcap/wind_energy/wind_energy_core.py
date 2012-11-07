@@ -468,12 +468,8 @@ def valuation(args):
 
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
-        args[harvested_energy] - a GDAL dataset from the biophysical run of 
-            the wind energy model that has the per pixel harvested wind energy
-            (required)
-        args[distance] - a GDAL dataset from the biophysical run of
-            the wind energy model that depicts the distances of pixels 
-            from shore (required)
+        args[aoi] - an OGR datasource of type polygon that is projected in
+            meters (required)
         args[biophysical_data] - an OGR datasource of type point
             from the output of the biophysical model run (required) 
         args[turbine_dict] - a dictionary that has the parameters
@@ -487,53 +483,58 @@ def valuation(args):
         args[suffix] - a string for the suffix to be appended to the output
             names (optional) 
 
-        returns - Nothing
-    """
+        returns - Nothing """
 
-    # fill in skeleton below
     workspace = args['workspace_dir']
     intermediate_dir = os.path.join(workspace, 'intermediate')
     output_dir = os.path.join(workspace, 'output')
 
-
     # Get constants from turbine_dict
     turbine_dict = args['turbine_dict']
-
-    infield_length = float(turbine_dict['Siemens']['infield_length'])
-    infield_cost = float(turbine_dict['Siemens']['infield_cost'])
-    foundation_cost = float(turbine_dict['Siemens']['foundation_cost'])
-    unit_cost = float(turbine_dict['Siemens']['unit_cost'])
-    install_cost = float(turbine_dict['Siemens']['install_cost']) / 100.00
-    misc_capex_cost = float(turbine_dict['Siemens']['misc_capex']) / 100.00
-    op_maint_cost = float(turbine_dict['Siemens']['op_maint']) / 100.00
-    discount_rate = float(turbine_dict['Siemens']['discount_rate']) / 100.00
-    decom = float(turbine_dict['Siemens']['decom']) / 100.00
-    turbine_name = turbine_dict['Siemens']['type']
-    mega_watt = float(turbine_dict['Siemens']['mw'])
-    avg_land_cable_dist = float(turbine_dict['Siemens']['avg_land_cable_dist'])
-    mean_land_dist = float(turbine_dict['Siemens']['mean_land_dist'])
-    time = int(turbine_dict['Siemens']['time'])
+    turbine_name = 'Siemens'
+    infield_length = float(turbine_dict[turbine_name]['infield_length'])
+    infield_cost = float(turbine_dict[turbine_name]['infield_cost'])
+    foundation_cost = float(turbine_dict[turbine_name]['foundation_cost'])
+    unit_cost = float(turbine_dict[turbine_name]['unit_cost'])
+    install_cost = float(turbine_dict[turbine_name]['install_cost']) / 100.00
+    misc_capex_cost = float(turbine_dict[turbine_name]['misc_capex']) / 100.00
+    op_maint_cost = float(turbine_dict[turbine_name]['op_maint']) / 100.00
+    discount_rate = float(turbine_dict[turbine_name]['discount_rate']) / 100.00
+    decom = float(turbine_dict[turbine_name]['decom']) / 100.00
+    turbine_name = turbine_dict[turbine_name]['type']
+    mega_watt = float(turbine_dict[turbine_name]['mw'])
+    avg_land_cable_dist = float(
+            turbine_dict[turbine_name]['avg_land_cable_dist'])
+    mean_land_dist = float(turbine_dict[turbine_name]['mean_land_dist'])
+    time = int(turbine_dict[turbine_name]['time'])
 
     number_turbines = args['number_of_machines']
     mega_watt = mega_watt * number_turbines
     dollar_per_kwh = args['dollar_per_kWh']
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     # Construct as many parts of the NPV equation as possible without needing to
     # vectorize over harvested energy and distance
 
     cap_less_dist = ((infield_length * infield_cost * number_turbines) + 
             ((foundation_cost + unit_cost) * number_turbines))
 
-
     disc_const = discount_rate + 1.0
     disc_time = disc_const**time
-
     
     # Create vectorize operation that takes distance and harvested energy
     # raster, outputting another raster with the NPV
 
-
     #capex = cap / (1.0 - install_rate - misc_capex_cost)
-
       
     wind_energy_points = args['biophysical_data']
 
@@ -560,8 +561,13 @@ def valuation(args):
     ocean_cartesian = lat_long_to_cartesian(radian_points)
 
     try:
+        # Try and use the land grid points for getting distances
         grid_land_points_dict = args['grid_dict']
-        
+    except KeyError:
+        # Use land polygon for getting distances
+        # Use shapely to get distance between point and polygon
+        pass
+    else:
         # Create individual dictionaries for land and grid points
         land_dict = build_subset_dictionary(
                 grid_land_points_dict, 'type', 'land')
@@ -690,8 +696,6 @@ def valuation(args):
                 [ocean_land_ds, land_grid_ds, energy_ds], npv_op, 
                 raster_out_uri = npv_uri, nodata = -1.0)
 
-    except KeyError:
-        pass
 
 def build_subset_dictionary(main_dict, key_field, value_field):
     """Take the main dictionary and build a subset dictionary depending on the

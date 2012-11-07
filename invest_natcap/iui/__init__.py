@@ -24,6 +24,6 @@ handler.setFormatter(formatter)
 def get_ui_logger(name):
     #Get the logging object for this level and add the handler we just created.
     logger = logging.getLogger(name)
-    logger.addHandler(handler)
+#    logger.addHandler(handler)
     return logger
 
