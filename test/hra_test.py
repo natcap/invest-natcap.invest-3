@@ -25,6 +25,7 @@ class TestHRA(unittest.TestCase):
 
         args['grid_size'] = 500
         args['risk_eq'] = 'Euclidean'
+        args['decay_eq'] = 'Exponential'
 
         #Want to have some pairs that don't include some stressors to make sure
         #that the model can handle some things not being included all of the time.

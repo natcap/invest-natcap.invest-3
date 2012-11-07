@@ -22,7 +22,7 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class TestInvestWindEnergyCore(unittest.TestCase):
     def test_wind_energy_core_distance_transform_dataset(self):
         """A regression test for the distance_transform_dataset function"""
-        
+        raise SkipTest        
         regression_dir = './data/wind_energy_regression_data/biophysical_core_tests/'
 
         reg_transformed_dataset_uri = os.path.join(
@@ -53,6 +53,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
 
     def test_wind_energy_core_distance_transform_dataset_unit(self):
         """A unit test for the distance_transform_dataset function"""
+        raise SkipTest        
         
         output_dir = './data/test_out/wind_energy_biophysical/distance_transform_dataset/'
 
@@ -105,7 +106,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
     def test_wind_energy_core_biophysical(self):
         """Test the main biophysical function assuming we were provided with an
             AOI and Land Polygon"""
-        #raise SkipTest
+        raise SkipTest
         input_dir = './data/wind_energy_data/'
         regression_dir = './data/wind_energy_regression_data/wind_energy_core/'
         regression_results_dir = './data/wind_energy_regression_data/' 
@@ -194,3 +195,51 @@ class TestInvestWindEnergyCore(unittest.TestCase):
                     output_dir, 'output/' + file_name)
             invest_test_core.assertTwoDatasetEqualURI(
                     self, reg_file, out_file)
+
+    def test_wind_energy_core_valuation_point_to_polygon_distance(self):
+        """"""
+        raise SkipTest
+
+        regression_dir = './data/wind_energy_regression_data/'
+        polygon_ds_uri = os.path.join(regression_dir, 'projected_land_poly.shp')
+        point_ds_uri = os.path.join(
+                regression_dir, 'wind_points_reprojected.shp')
+       
+        polygon_ds = ogr.Open(polygon_ds_uri)
+        point_ds = ogr.Open(point_ds_uri)
+
+        distances = wind_energy_core.point_to_polygon_distance(
+                polygon_ds, point_ds)
+
+        LOGGER.debug('Distances: %s', distances)
+
+
+    def test_wind_energy_core_valuation_add_field_to_shape_given_list(self):
+        """ """
+        #raise SkipTest
+        regression_dir = './data/wind_energy_regression_data/'
+        polygon_ds_uri = os.path.join(regression_dir, 'projected_land_poly.shp')
+        point_ds_uri = os.path.join(
+                regression_dir, 'wind_points_reprojected.shp')
+      
+
+        out_dir = './data/test_out/wind_energy/valuation/add_field_to_shape/'
+        copy_uri = os.path.join(out_dir, 'wind_points_new_field.shp')
+
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        if os.path.isfile(copy_uri):
+            os.remove(copy_uri)
+
+        polygon_ds = ogr.Open(polygon_ds_uri)
+        point_ds = ogr.Open(point_ds_uri)
+
+        copy_drv = ogr.GetDriverByName('ESRI Shapefile')
+        copy_ds = copy_drv.CopyDataSource(point_ds, copy_uri)
+
+        distances = wind_energy_core.point_to_polygon_distance(
+                polygon_ds, copy_ds)
+
+        _ = wind_energy_core.add_field_to_shape_given_list(
+                copy_ds, distances, 'O2L')
