@@ -154,11 +154,15 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
             information.
         raster_path=None - the URI that the temp raster should be saved to.  If
             this value is None, the raster will not be saved to disk.
-        stat='all' - either 'all' or 'count'.  If count, the int number of
-            pixels under this shape will be returned
+        stat='all' - One of these options:
+            'all' - causes this function to return a 4-element list of [minimum,
+                    maximum, mean, standard_deviation]
+            'count' - Causes this function to return an int of the number of
+                pixels in raster that are under shape.
+            'count_numpy' - same as 'count', only implemented in numpy.
 
-        Returns a 4-element tuple with:
-            (minimum, maximum, mean, standard_deviation)"""
+        Return value and type is determined by what is passed in to the stat
+        argument.  Raises OptionNotRecognized if an invalid option is given."""
 
     LOGGER.debug('Starting to calculate stats under a shape.  Target stat=%s',
         stat)
