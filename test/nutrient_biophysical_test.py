@@ -109,4 +109,9 @@ class NutrientCoreTest(unittest.TestCase):
             sample_feature, sample_layer, output_path, 'op', test_op)
         self.assertEqual(user_def_output, 9.43)
 
+        # Verify that if the user specifies the 'op' stat type but does not
+        # provide a function, that a TypeError is raised.
+        with self.assertRaises(TypeError):
+            null = nutrient_core.get_raster_stat_under_polygon(sample_raster,
+                sample_feature, sample_layer, output_path, 'op')
 

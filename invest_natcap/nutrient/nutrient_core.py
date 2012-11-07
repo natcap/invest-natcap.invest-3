@@ -173,7 +173,9 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
             return type is up to the user.
 
         Return value and type is determined by what is passed in to the stat
-        argument.  Raises OptionNotRecognized if an invalid option is given."""
+        argument.  Raises OptionNotRecognized if an invalid option is given.
+        Raises TypeError if 'op' is specified for the stat, but no function is
+        given."""
 
     LOGGER.debug('Starting to calculate stats under a shape.  Target stat=%s',
         stat)
