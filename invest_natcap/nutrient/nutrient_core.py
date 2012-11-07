@@ -15,6 +15,8 @@ LOGGER = logging.getLogger('nutrient_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+class OptionNotRecognized(Exception): pass
+
 def biophysical(args):
     """This function executes the biophysical Nutrient Retention model.
 
@@ -143,7 +145,8 @@ def mean_runoff_index(runoff_index, watersheds, output_folder):
             watershed.SetField(field_index, r_mean)
             layer.SetFeature(watershed)
 
-def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None):
+def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
+        stat='all'):
     """Calculate statistics for the input raster under the input polygon.
 
         raster - a GDAL raster dataset of which statistics should be calculated
@@ -151,9 +154,60 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None)
             information.
         raster_path=None - the URI that the temp raster should be saved to.  If
             this value is None, the raster will not be saved to disk.
+        stat='all' - either 'all' or 'count'.  If count, the int number of
+            pixels under this shape will be returned
 
         Returns a 4-element tuple with:
             (minimum, maximum, mean, standard_deviation)"""
+
+    LOGGER.debug('Starting to calculate stats under a shape.  Target stat=%s',
+        stat)
+    mask_fill = None
+    temp_nodata = -1.0
+
+    if stat == 'all':
+        temp_nodata = raster.GetRasterBand(1).GetNoDataValue()
+
+        def get_stats(mask_raster):
+            # Now that we have a mask of which pixels are in the shape of interest, make
+            # an output raster where the pixels have the value of the input raster's
+            # pixel only if the pixel is in the watershed of interest.  Otherwise, the
+            # pixel will have the nodata value.
+            watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
+                raster], lambda x, y: y if x == 1 else temp_nodata,
+                nodata=temp_nodata, raster_out_uri=raster_path)
+
+            stats = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
+            return stats
+
+    elif stat == 'count':
+        mask_fill = 0.0
+
+        def get_stats(mask_raster):
+            LOGGER.debug('Calculating pixel count under the mask with MATH!')
+            stats = mask_raster.GetRasterBand(1).GetStatistics(0, 1)
+
+            columns = mask_raster.RasterXSize
+            rows = mask_raster.RasterYSize
+            mean = stats[2]  # third element in the stats list
+            LOGGER.debug('Mask stats: Rows=%s, cols=%s, mean=%s', rows, columns,
+                mean)
+
+            pixels_in_raster = float(columns * rows)
+            pixels_under_shape = mean * pixels_in_raster
+            LOGGER.debug('In mask raster: %s, under shape: %s',
+                pixels_in_raster, pixels_under_shape)
+
+            return math.ceil(pixels_under_shape)
+
+    elif stat == 'numpy_count':
+        mask_fill = 0.0
+        def get_stats(mask_raster):
+            matrix = mask_raster.GetRasterBand(1).ReadAsArray()
+            count = np.count_nonzero(matrix)
+            return count
+    else:
+        raise OptionNotRecognized('Option %s not recognized' % stat)
 
     # Get the input raster's geotransform information so we can determine the
     # pixel height and width for creating a new raster later.
@@ -183,23 +237,22 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None)
     # we can calculate stats using GDAL, which is about 15x faster than doing
     # the same set of statistics on a numpy matrix with numpy operations.  See
     # invest_natcap.nutrient.compare_mean_calculation for an example.
-    temp_nodata = -1.0
     temp_raster = raster_utils.create_raster_from_vector_extents(
         pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
         '/tmp/watershed_raster.tif', temp_shapefile)
+
+    LOGGER.debug('Temp raster created with rows=%s, cols=%s',
+        temp_raster.RasterXSize, temp_raster.RasterYSize)
+
+
+    if mask_fill != None:
+        LOGGER.debug('Filling temp raster with %s', mask_fill)
+        temp_raster.GetRasterBand(1).Fill(mask_fill)
 
     # Rasterize the temp shapefile layer onto the temp raster.  Burn values are
     # all set to 1 so we can use this as a mask in the subsequent call to
     # vectorize_rasters().
     gdal.RasterizeLayer(temp_raster, [1], temp_layer, burn_values=[1])
 
-    # Now that we have a mask of which pixels are in the shape of interest, make
-    # an output raster where the pixels have the value of the input raster's
-    # pixel only if the pixel is in the watershed of interest.  Otherwise, the
-    # pixel will have the nodata value.
-    watershed_pixels = raster_utils.vectorize_rasters([temp_raster,
-        raster], lambda x, y: y if x == 1 else temp_nodata,
-        nodata=temp_nodata, raster_out_uri=raster_path)
-
-    return watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
+    return get_stats(temp_raster)
 
