@@ -167,21 +167,25 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
 
     if stat == 'all':
         temp_nodata = raster.GetRasterBand(1).GetNoDataValue()
+        LOGGER.debug('Setting temp_nodata to %s from input raster', temp_nodata)
 
         def get_stats(mask_raster):
             # Now that we have a mask of which pixels are in the shape of interest, make
             # an output raster where the pixels have the value of the input raster's
             # pixel only if the pixel is in the watershed of interest.  Otherwise, the
             # pixel will have the nodata value.
+            LOGGER.debug('Getting the pixels under the mask')
             watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
                 raster], lambda x, y: y if x == 1 else temp_nodata,
                 nodata=temp_nodata, raster_out_uri=raster_path)
 
+            LOGGER.debug('Extracting statistics from raster')
             stats = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
             return stats
 
     elif stat == 'count':
         mask_fill = 0.0
+        LOGGER.debug('Setting fill value to %s', mask_fill)
 
         def get_stats(mask_raster):
             LOGGER.debug('Calculating pixel count under the mask with MATH!')
@@ -202,6 +206,8 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
 
     elif stat == 'numpy_count':
         mask_fill = 0.0
+        LOGGER.debug('Setting mask_fill to %s', mask_fill)
+
         def get_stats(mask_raster):
             matrix = mask_raster.GetRasterBand(1).ReadAsArray()
             count = np.count_nonzero(matrix)
@@ -214,8 +220,10 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
     raster_geotransform = raster.GetGeoTransform()
     pixel_width = abs(raster_geotransform[1])
     pixel_height = abs(raster_geotransform[5])
+    LOGGER.debug('Pixel width=%s, height=%s', pixel_width, pixel_height)
 
     # Create a memory-bound shapefile for rasterizing later.
+    LOGGER.debug('Creating a temp shapefile and layer for rasterizing')
     ogr_driver = ogr.GetDriverByName('Memory')
     temp_shapefile = ogr_driver.CreateDataSource('/tmp/temp_shapefile')
     temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
@@ -224,6 +232,7 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
 
     # Make a copy of the feature passed in by the user and save it to the temp
     # shapefile.
+    LOGGER.debug('Making a copy of the input feature for rasterizing')
     feature_geom = shape.GetGeometryRef()
     temp_feature = ogr.Feature(temp_layer_defn)
     temp_feature.SetGeometry(feature_geom)
@@ -240,7 +249,6 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
     temp_raster = raster_utils.create_raster_from_vector_extents(
         pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
         '/tmp/watershed_raster.tif', temp_shapefile)
-
     LOGGER.debug('Temp raster created with rows=%s, cols=%s',
         temp_raster.RasterXSize, temp_raster.RasterYSize)
 
@@ -252,6 +260,7 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
     # Rasterize the temp shapefile layer onto the temp raster.  Burn values are
     # all set to 1 so we can use this as a mask in the subsequent call to
     # vectorize_rasters().
+    LOGGER.debug('Rasterizing the temp layer onto the temp raster')
     gdal.RasterizeLayer(temp_raster, [1], temp_layer, burn_values=[1])
 
     return get_stats(temp_raster)
