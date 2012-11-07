@@ -137,8 +137,8 @@ def execute(args):
         #And add it into the shape file
         layer.ResetReading()
         
-        hrv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
-        layer.CreateField(hrv_field)
+        npv_field = ogr.FieldDefn('NVP_USD_1k', ogr.OFTReal)
+        layer.CreateField(npv_field)
         
         for feature in layer:
     
@@ -178,7 +178,7 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
              growth for each cycle completed on that farm. These entries are formatted
              as follows...
              
-            Farm->List of Type (day of outplanting,day of harvest, harvest weight (grams))
+            Farm->List of Type (day of outplanting,day of harvest, fish weight (grams))
     '''
     
     cycle_history = {}
