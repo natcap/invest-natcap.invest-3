@@ -1325,6 +1325,7 @@ def reproject_datasource(original_datasource, output_wkt, output_uri):
         #Copy all of the features in original_layer to the new shapefile
         for original_feature in original_layer:
             geom = original_feature.GetGeometryRef()
+            print('original_feature', original_feature, geom)
             
             #Transform the geometry into a format desired for the new projection
             geom.Transform(coord_trans)
