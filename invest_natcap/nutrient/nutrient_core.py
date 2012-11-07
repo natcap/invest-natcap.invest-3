@@ -170,6 +170,14 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
         LOGGER.debug('Setting temp_nodata to %s from input raster', temp_nodata)
 
         def get_stats(mask_raster):
+            """Calculate the min, max, mean and standard deviation of the pixels
+                in raster where the pixels of mask_raster are 1.
+
+                mask_raster - a GDAL dataset where values are 1.0 or 0.0 (and
+                        the nodata value must be some other value).
+
+                Returns a list with [min. max, mean, stddev]."""
+
             # Now that we have a mask of which pixels are in the shape of interest, make
             # an output raster where the pixels have the value of the input raster's
             # pixel only if the pixel is in the watershed of interest.  Otherwise, the
@@ -224,6 +232,15 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
         LOGGER.debug('Setting mask_fill to %s', mask_fill)
 
         def get_stats(mask_raster):
+            """Calculate the number of nonzero pixels in the input mask raster.
+            This calculation is done by loading the mask raster into a numpy
+            matrix before calling numpy.count_nonzero().
+
+            mask_raster - a GDAL dataset where values are 1.0 or 0.0 (and the
+                nodata value must be some other value).
+
+            returns an int of the number of pixels masked in the mask_raster."""
+
             matrix = mask_raster.GetRasterBand(1).ReadAsArray()
             count = np.count_nonzero(matrix)
             return count
