@@ -11,9 +11,9 @@ def settings_folder():
     """Return the file location of the user's settings folder.  This folder
     location is OS-dependent."""
     if platform.system() == 'Windows':
-        config_folder = '~/AppData/Local/NatCap'
+        config_folder = os.path.join('~', 'AppData', 'Local', 'NatCap')
     else:
-        config_folder = '~/.natcap/'
+        config_folder = os.path.join('~', '.natcap')
     return os.path.expanduser(config_folder)
 
 
