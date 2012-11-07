@@ -241,8 +241,11 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
 
             returns an int of the number of pixels masked in the mask_raster."""
 
+            LOGGER.debug('Calculating pixel count under the mask with numpy.')
             matrix = mask_raster.GetRasterBand(1).ReadAsArray()
             count = np.count_nonzero(matrix)
+            LOGGER.debug('In mask matrix: %s, under shape: %s', matrix.size,
+                count)
             return count
     else:
         raise OptionNotRecognized('Option %s not recognized' % stat)
