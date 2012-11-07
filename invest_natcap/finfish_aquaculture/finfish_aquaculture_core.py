@@ -109,7 +109,7 @@ def execute(args):
     #outgoing shapefile- abstracting the calculation of this to a separate function,
     #but it will return a dictionary with a int->float mapping for 
     #farm_ID->processed weight
-    sum_proc_weight, proc_weight = calc_proc_weight(args['farm_op_dict'], 
+    sum_hrv_weight, hrv_weight = calc_hrv_weight(args['farm_op_dict'], 
                             args['frac_post_process'], args['mort_rate_daily'], 
                             cycle_history)
     
@@ -124,7 +124,7 @@ def execute(args):
 
         accessor = args['farm_ID']
         feature_ID = feature.items()[accessor]
-        feature.SetField('Hrvwght_kg', sum_proc_weight[feature_ID])
+        feature.SetField('Hrvwght_kg', sum_hrv_weight[feature_ID])
         
         layer.SetFeature(feature)
 
@@ -132,7 +132,7 @@ def execute(args):
     #model, dependent on whether or not valuation is desired.
     if (args['do_valuation'] == True):
         value_history, farms_npv = valuation(args['p_per_kg'], args['frac_p'], args['discount'],
-                proc_weight, cycle_history)
+                hrv_weight, cycle_history)
    
         #And add it into the shape file
         layer.ResetReading()
@@ -153,7 +153,7 @@ def execute(args):
         
     #Now, want to build the HTML table of everything we have calculated to this point
     create_HTML_table(output_dir, args['farm_op_dict'], 
-                      cycle_history, sum_proc_weight, proc_weight, 
+                      cycle_history, sum_hrv_weight, hrv_weight, 
                       args['do_valuation'], farms_npv, value_history)
     
     #Last output is a text file of the parameters that the model was run with
@@ -244,7 +244,7 @@ def calc_farm_cycles(outplant_buffer, a, b, water_temp_dict, farm_op_dict, dur):
 
     return cycle_history
 
-def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
+def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
     '''   
     Input:
         farm_op_dict: 2D dictionary which contains individual operating parameters for
@@ -307,7 +307,7 @@ def calc_proc_weight(farm_op_dict, frac, mort, cycle_history):
 
     return (curr_cycle_totals, indiv_tpw_totals)
 
-def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_history):
+def valuation (price_per_kg, frac_mrkt_price, discount, hrv_weight, cycle_history):
     
     '''This performs the valuation calculations, and returns tuple containing a 
     dictionary with a farm-> float mapping, where each float is the net processed 
@@ -323,7 +323,7 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
         discount: Float that is the daily market discount rate.
         cycle_hisory: Farm->List of Type (day of outplanting, 
                                           day of harvest, harvest weight (grams))
-        proc_weight: Farm->List of TPW for each cycle (kilograms)
+        hrv_weight: Farm->List of TPW for each cycle (kilograms)
         
         
                 
@@ -346,7 +346,7 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
         #since the list that each farm ID is mapped to starts at index 0
         for c in range (0, len(cycle_history[f])):
             
-            tpw = proc_weight[f][c]
+            tpw = hrv_weight[f][c]
 
             #the 1 refers to the placement of day of harvest in the tuple for each cycle
             t = cycle_history[f][c][1]
@@ -361,16 +361,16 @@ def valuation (price_per_kg, frac_mrkt_price, discount, proc_weight, cycle_histo
 
     return val_history, valuations
 
-def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight, 
-                       proc_weight, do_valuation, farms_npv, value_history):
+def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight, 
+                       hrv_weight, do_valuation, farms_npv, value_history):
     '''Inputs:
         output_dir: The directory in which we will be creating our .html file output.
         cycle_history: dictionary mapping farm ID->list of tuples, each of which 
                 contains 3 things- (day of outplanting, day of harvest, harvest weight of 
                 a single fish in grams)
-        sum_proc_weight: dictionary which holds a mapping from farm ID->total processed 
+        sum_hrv_weight: dictionary which holds a mapping from farm ID->total processed 
                 weight of each farm 
-        proc_weight: dictionary which holds a farm->list mapping, where the list holds 
+        hrv_weight: dictionary which holds a farm->list mapping, where the list holds 
                 the individual tpw for all cycles that the farm completed
         do_valuation: boolean variable that says whether or not valuation is desired
         farms_npv: dictionary with a farm-> float mapping, where each float is the 
@@ -559,7 +559,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_proc_weight,
             npv = round(farms_npv[id], 4)
             
         num_cy_complete = len(cycle_history[id])
-        total_harvested = round(sum_proc_weight[id], 4)
+        total_harvested = round(sum_hrv_weight[id], 4)
         
         vars = [npv, num_cy_complete, total_harvested]
         
