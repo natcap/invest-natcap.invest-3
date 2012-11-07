@@ -184,10 +184,23 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
             return stats
 
     elif stat == 'count':
+        # Need to set the mask fill to 0 (while keeping the nodata value at
+        # -1.0 so that the mean will consider values of 0 as well as 1.  Because
+        # we know exactly how many pixels are in the raster we can use MATH to
+        # get the number of pixels in the watershed from the mean.
         mask_fill = 0.0
         LOGGER.debug('Setting fill value to %s', mask_fill)
 
         def get_stats(mask_raster):
+            """Calculate the number of masked pixels (which have a value of 1 in
+                mask_raster).
+
+                mask_raster - a GDAL dataset where values are 1.0 or 0.0 (and
+                    the nodata value must be some other value).
+
+                Returns an int of how many values in mask_raster have a value of
+                1.0."""
+
             LOGGER.debug('Calculating pixel count under the mask with MATH!')
             stats = mask_raster.GetRasterBand(1).GetStatistics(0, 1)
 
@@ -202,7 +215,9 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
             LOGGER.debug('In mask raster: %s, under shape: %s',
                 pixels_in_raster, pixels_under_shape)
 
-            return math.ceil(pixels_under_shape)
+            # In case the stored GDAL mean is not entirely precise, take the
+            # ceiling of the pixels under the shape calculated.
+            return int(math.ceil(pixels_under_shape))
 
     elif stat == 'numpy_count':
         mask_fill = 0.0
