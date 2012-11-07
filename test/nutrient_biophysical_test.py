@@ -80,3 +80,11 @@ class NutrientCoreTest(unittest.TestCase):
         for test_stat, reg_stat in zip(stats, reg_stats):
             self.assertAlmostEqual(test_stat, reg_stat)
 
+        reg_pixel_count = 93339
+        num_pixels = nutrient_core.get_raster_stat_under_polygon(sample_raster,
+            sample_feature, sample_layer, output_path, 'count')
+        self.assertEqual(num_pixels, reg_pixel_count)
+
+        num_pixels = nutrient_core.get_raster_stat_under_polygon(sample_raster,
+            sample_feature, sample_layer, output_path, 'numpy_count')
+        self.assertEqual(num_pixels, reg_pixel_count)
