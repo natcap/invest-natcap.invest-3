@@ -566,8 +566,8 @@ def valuation(args):
     except KeyError:
         # Use land polygon for getting distances
         # Use shapely to get distance between point and polygon
+        pass
     else:
-
         # Create individual dictionaries for land and grid points
         land_dict = build_subset_dictionary(
                 grid_land_points_dict, 'type', 'land')
