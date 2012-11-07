@@ -62,27 +62,29 @@ for fld_index in range(original_field_count):
 aoi_geom_list = []
 for aoi_feat in aoi_layer:
     aoi_geom = aoi_feat.GetGeometryRef()
-    aoi_geom_list.append(aoi_geom)
+    aoi_geom_list.append(aoi_geom.Clone())
     #aoi_feat = None
 print len(aoi_geom_list)
-print aoi_geom_list
+#print aoi_geom_list
 #LOGGER.info('Starting iteration over geometries')
 # Iterate over each feature in original layer
+count = 1
 for orig_feat in orig_layer:
+    if count % 100 is 0:
+        print count
+    count = count + 1
     for aoi_geom in aoi_geom_list:
         # Get the geometry for the feature
         orig_geom = orig_feat.GetGeometryRef()
-        #print orig_geom
-        #print aoi_geom
         # Check to see if the feature and the aoi intersect. This will return a
         # new geometry if there is an intersection. If there is not an
         # intersection it will return an empty geometry or it will return None
         # and print an error to standard out
         #print 'Getting intersection'
-        intersect_geom = aoi_geom.Intersects(orig_geom)
+        intersect_geom = aoi_geom.Intersection(orig_geom)
         #print 'Got intersection' 
-        #if not intersect_geom == None and not intersect_geom.IsEmpty():
-        if intersect_geom:
+        #if intersect_geom:
+        if not intersect_geom == None and not intersect_geom.IsEmpty():
             # Copy original_datasource's feature and set as new shapes feature
             output_feature = ogr.Feature(
                     feature_def=output_layer.GetLayerDefn())
@@ -94,7 +96,7 @@ for orig_feat in orig_layer:
             #    orig_field_value = orig_feat.GetField(fld_index2)
             #    output_feature.SetField(fld_index2, orig_field_value)
             output_feature.SetFrom(orig_feat, False)
-            #output_feature.SetGeometry(intersect_geom)
+            output_feature.SetGeometry(intersect_geom)
             output_layer.CreateFeature(output_feature)
             #output_layer.SetFeature(output_feature)
             output_feature = None

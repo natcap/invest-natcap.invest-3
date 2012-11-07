@@ -80,7 +80,12 @@ aoi_geom_collection = unary_union(aoi_datasource_geoms)
 
 #LOGGER.info('Starting iteration over geometries')
 # Iterate over each feature in original layer
+count = 1
 for orig_feat in orig_layer:
+    if count % 100 is 0:
+        print count
+
+    count = count + 1
     # Get the geometry for the feature
     orig_geom_wkb = orig_feat.GetGeometryRef().ExportToWkb()
     orig_geom_shapely = loads(orig_geom_wkb) 
@@ -91,10 +96,14 @@ for orig_feat in orig_layer:
         # Copy original_datasource's feature and set as new shapes feature
         output_feature = ogr.Feature(
                 feature_def=output_layer.GetLayerDefn())
-        output_layer.CreateFeature(output_feature)
-    
+        
+        geom_to_wkb = dumps(intersect_geom)
+        geom_to_ogr = ogr.CreateGeometryFromWkb(geom_to_wkb)
+
         output_feature.SetFrom(orig_feat, False)
-        output_layer.SetFeature(output_feature)
+        output_feature.SetGeometry(geom_to_ogr)
+        #output_layer.SetFeature(output_feature)
+        output_layer.CreateFeature(output_feature)
         output_feature = None
 
 #LOGGER.info('Leaving clip_datasource_new')
