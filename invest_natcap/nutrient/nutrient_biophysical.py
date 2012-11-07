@@ -95,8 +95,7 @@ def execute(args):
 
     LOGGER.info('Opening tables')
     biophysical_args['bio_table'] = fileio.TableHandler(args['bio_table_uri'])
-    biophysical_args['bio_table'].set_field_mask('load_n', 2, 'back')
-    biophysical_args['bio_table'].set_field_mask('eff_n', 2, 'back')
+    biophysical_args['bio_table'].set_field_mask('load_n|eff_n', 2, 'back')
     biophysical_args['threshold_table'] =\
         fileio.TableHandler(args['threshold_table_uri'])
 
@@ -104,9 +103,9 @@ def execute(args):
     # This is done here in the URI layer so that lower layers don't need to be
     # aware of the paths to the workspace, intermediate, output, etc. folders.
     biophysical_args['nutrient_export'] = get_lulc_map(biophysical_args['landuse'],
-        biophysical_args['bio_table'], 'load')
+        biophysical_args['bio_table'], 'load', intermediate_dir)
     biophysical_args['nutrient_retained'] = get_lulc_map(biophysical_args['landuse'],
-        biophysical_args['bio_table'], 'eff')
+        biophysical_args['bio_table'], 'eff', intermediate_dir)
 
     LOGGER.info('Copying other values for internal use')
     biophysical_args['nutrient_type'] = args['nutrient_type']
@@ -120,13 +119,14 @@ def execute(args):
     # Run the nutrient model with the biophysical args dictionary.
     nutrient_core.biophysical(biophysical_args)
 
-def get_lulc_map(landcover, table, field):
+def get_lulc_map(landcover, table, field, folder):
     lu_map = table.get_map('lucode', field)
     lu_map = dict((float(k), (float(v)/1000. if float(v) > 1 else float(v)))
                   for (k, v) in lu_map.iteritems())
-    export_uri = os.path.join(intermediate_dir, field + '_export.tif')
-    export_raster = raster_utils.reclassify_by_dictionary(
-        landcover, lu_map, export_uri, 'GTiff', -1.0,
+    uri = os.path.join(folder, field + '_export.tif')
+    raster = raster_utils.reclassify_by_dictionary(
+        landcover, lu_map, uri, 'GTiff', -1.0,
         gdal.GDT_Float32)
 
+    return raster
 
