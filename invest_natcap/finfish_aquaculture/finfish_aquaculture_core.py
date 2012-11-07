@@ -490,12 +490,11 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
             
             curr_cycle = cycle_history[id][cycle]
             outplant_date, harvest_date, harvest_weight = curr_cycle
-            
-            #harvest weight is the weight in grams on an individual fish at harvest. 
-            #Need to multiply by the number of fish, then divide by 1000 to get kg
-            #of fish total
-            total_harvest_weight = num_fishies*harvest_weight/1000
-            
+    
+            #Want to get the processed weight on a farm for a given cycle. All
+            #of the PW for all cycles should add to the third table's TPW.
+            harvest_weight = proc_weight[id][cycle]
+
             out_day = outplant_date % 365
             out_year = outplant_date // 365 + 1
             
