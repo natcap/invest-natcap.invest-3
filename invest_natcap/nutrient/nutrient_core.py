@@ -29,12 +29,38 @@ def biophysical(args):
         Returns nothing."""
     print args
 
+    # Reclassifying the LULC raster to be the nutrient_export raster.
+    # This is done here in the URI layer so that lower layers don't need to be
+    # aware of the paths to the workspace, intermediate, output, etc. folders.
+    nutrient_export = get_lulc_map(args['landuse'], args['bio_table'],
+        'load', args['folders']['intermediate'])
+    nutrient_retained = get_lulc_map(args['landuse'], args['bio_table'],
+        'eff', args['folders']['intermediate'])
+
     alv = adjusted_loading_value(args['nutrient_export'], args['pixel_yield'],
         args['watersheds'], args['folders']['intermediate'])
 
     flow_path = get_flow_path(args['dem'])
+
     retention_raster = get_retention(args['nutrient_retained'], alv,
         flow_path)
+
+    net_service = service(retention_raster, nutrient_threshold,
+        args['watersheds'])
+
+def service(retention, threshold, watersheds):
+    pass
+
+def get_lulc_map(landcover, table, field, folder):
+    lu_map = table.get_map('lucode', field)
+    lu_map = dict((float(k), (float(v)/1000. if float(v) > 1 else float(v)))
+                  for (k, v) in lu_map.iteritems())
+    uri = os.path.join(folder, field + '_export.tif')
+    raster = raster_utils.reclassify_by_dictionary(
+        landcover, lu_map, uri, 'GTiff', -1.0,
+        gdal.GDT_Float32)
+
+    return raster
 
 def get_retention(absorption, alv, flow_path):
     """Calculate the quantity of nutrient retained by the landscape.  This is
