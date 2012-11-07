@@ -246,7 +246,12 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         n_band.WriteArray(decay_array)
 
 def make_lin_decay_array(dist_array, buff, nodata):
-    pass
+    
+    #Need to have a value representing the decay rate for the exponential decay
+    lin_decay_array = -dist_array/buff + 1.0
+    lin_decay_array[lin_decay_array < 0] = nodata
+
+    return lin_decay_array
 
 def make_exp_decay_array(dist_array, buff, nodata):
     pass
