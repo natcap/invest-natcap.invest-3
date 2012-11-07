@@ -505,14 +505,14 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                 indiv_rev, indiv_npv = value_history[id][cycle]
     
                 #revenue and net present value should be in thousands of dollars
-                vars = [id, cycle_num, harvest_date, total_harvest_weight, 
+                vars = [id, cycle_num, harvest_date, cycle_date, harvest_weight, 
                         indiv_rev / 1000, indiv_npv/1000, out_day, out_year]
             else:
                 
                 indiv_rev = ""
                 indiv_npv = ""
                 
-                vars = [id, cycle_num, harvest_date, total_harvest_weight, 
+                vars = [id, cycle_num, harvest_date, cycle_length, harvest_weight, 
                         indiv_rev, indiv_npv, out_day, out_year]
             
             for element in vars:
