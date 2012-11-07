@@ -98,6 +98,7 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
         feat = layer.GetNextFeature()
         feat_regression = layer_regression.GetNextFeature()
         while feat is not None:
+            unitTest.assertTrue(feat.Equal(feat_regression))
             layer_def = layer.GetLayerDefn()
             layer_def_regression = layer_regression.GetLayerDefn()
             field_count = layer_def.GetFieldCount()
