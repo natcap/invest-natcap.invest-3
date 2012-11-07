@@ -31,7 +31,7 @@ def biophysical(args):
         args['watersheds'], args['folders']['intermediate'])
 
     flow_path = get_flow_path(args['dem'])
-    retention_raster = get_retention(args['nutrient_retention'], alv,
+    retention_raster = get_retention(args['nutrient_retained'], alv,
         flow_path)
 
 def get_retention(absorption, alv, flow_path):
@@ -50,9 +50,9 @@ def get_retention(absorption, alv, flow_path):
 
         Returns a GDAL dataset."""
 
-        # THIS FUNCTION DOES NOTHING RIGHT NOW BECAUSE WE DON'T YET HAVE THE
-        # COMPUTATIONAL FRAMEWORK TO CALCULATE THE RETENTION RASTER.
-        return absorption
+    # THIS FUNCTION DOES NOTHING RIGHT NOW BECAUSE WE DON'T YET HAVE THE
+    # COMPUTATIONAL FRAMEWORK TO CALCULATE THE RETENTION RASTER.
+    return absorption
 
 def get_flow_path(dem):
     # According to the OSGEO python bindings, [0, 0, None, None] should extract
