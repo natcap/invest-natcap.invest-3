@@ -250,7 +250,7 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
         frac: A float representing the fraction of the fish that remains after processing.
         mort: A float referring to the daily mortality rate of fishes on an aquaculture farm.
         cycle_history: Farm->List of Type (day of outplanting, 
-                                      day of harvest, harvest weight (grams))                            
+                                      day of harvest, fish weight (grams))                            
     
     Returns a tuple (curr_cycle_totals,indiv_tpw_totals) where:
         curr_cycle_totals_: dictionary which will hold a mapping from every farm
@@ -285,7 +285,7 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
             #the information will be inside the tuple as:
             # (day of outplanting, day of harvest, harvest weight)
             current_cycle_info = farm_history[c]
-            outplant_date, harvest_date, harvest_weight = current_cycle_info
+            outplant_date, harvest_date, fish_weight = current_cycle_info
          
             #Now do the computation for each cycle individually, then add it to the total
             #within the dictionary
@@ -295,7 +295,7 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
             
             #This equation comes from total weight of fish produced per farm 
             #from the user's guide
-            curr_cy_tpw = (harvest_weight / 1000) * frac * f_num_fish * \
+            curr_cy_tpw = (fish_weight / 1000) * frac * f_num_fish * \
                             math.exp(e_exponent)
             curr_cy_tpw = curr_cy_tpw
             
@@ -319,7 +319,7 @@ def valuation (price_per_kg, frac_mrkt_price, discount, hrv_weight, cycle_histor
                 is attributable to costs.
         discount: Float that is the daily market discount rate.
         cycle_hisory: Farm->List of Type (day of outplanting, 
-                                          day of harvest, harvest weight (grams))
+                                          day of harvest, fish weight (grams))
         hrv_weight: Farm->List of TPW for each cycle (kilograms)
         
         
