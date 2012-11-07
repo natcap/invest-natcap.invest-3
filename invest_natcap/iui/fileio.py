@@ -4,6 +4,7 @@ import platform
 import csv
 import os
 import re
+import sys
 
 from dbfpy import dbf
 
@@ -14,8 +15,16 @@ def settings_folder():
         config_folder = os.path.join('~', 'AppData', 'Local', 'NatCap')
     else:
         config_folder = os.path.join('~', '.natcap')
-    return os.path.expanduser(config_folder)
 
+    # Try to get the expanded path and then decode the string according to
+    # whatever the system's encoding happens to be.  On Windows, this may
+    # frequently be 'latin-1' or else 'mbcs', on mac, it might be 'utf-8'.
+    # See http://code.google.com/p/invest-natcap/issues/detail?id=1373 for the
+    # issue history on why this is necessary.
+    expanded_path = os.path.expanduser(config_folder)
+    decoded_path = expanded_path.decode(sys.getfilesystemencoding())
+
+    return decoded_path
 
 class JSONHandler(object):
     def __init__(self, uri):
