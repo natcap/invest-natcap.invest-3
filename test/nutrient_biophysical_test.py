@@ -92,3 +92,11 @@ class NutrientCoreTest(unittest.TestCase):
         with self.assertRaises(nutrient_core.OptionNotRecognized):
             null = nutrient_core.get_raster_stat_under_polygon(sample_raster,
                 sample_feature, sample_layer, output_path, 'does_not_exist')
+
+        def test_op(mask_raster):
+            """A simple function to assert that the expected return value is
+            returned."""
+            return 9.43
+        user_def_output = nutrient_core.get_raster_stat_under_polygon(sample_raster,
+            sample_feature, sample_layer, output_path, 'op', test_op)
+        self.assertEqual(user_def_output, 9.43)

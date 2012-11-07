@@ -146,7 +146,7 @@ def mean_runoff_index(runoff_index, watersheds, output_folder):
             layer.SetFeature(watershed)
 
 def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
-        stat='all'):
+        stat='all', op=None):
     """Calculate statistics for the input raster under the input polygon.
 
         raster - a GDAL raster dataset of which statistics should be calculated
@@ -160,6 +160,17 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
             'count' - Causes this function to return an int of the number of
                 pixels in raster that are under shape.
             'count_numpy' - same as 'count', only implemented in numpy.
+            'op' - use the user-defined operation function.  Return type is up
+                to the user.
+        op=None - a python function that takes a GDAL dataset as it's single
+            argument.  This function may use closures to access other
+            information such as GDAL datasets.  Op will only be used if
+            stat='op'.
+
+            The raster passed in to op will be filled with -1.0 and will have
+            values of 1 where shape overlaps it.  The raster's size will equal
+            that of shape and will have a pixel size equal to raster.  The
+            return type is up to the user.
 
         Return value and type is determined by what is passed in to the stat
         argument.  Raises OptionNotRecognized if an invalid option is given."""
@@ -251,6 +262,11 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
             LOGGER.debug('In mask matrix: %s, under shape: %s', matrix.size,
                 count)
             return count
+    elif stat == 'op':
+        LOGGER.debug('Using the user-defined operation from arguments')
+        def get_stats(mask_raster):
+            LOGGER.debug('Starting user-defined operation')
+            return op(mask_raster)
     else:
         raise OptionNotRecognized('Option %s not recognized' % stat)
 
