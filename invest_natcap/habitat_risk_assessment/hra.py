@@ -7,6 +7,7 @@ import shutil
 import logging
 import glob
 import numpy as np
+import math
 
 from osgeo import gdal, ogr
 from scipy import ndimage
