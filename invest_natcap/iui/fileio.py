@@ -4,6 +4,7 @@ import platform
 import csv
 import os
 import re
+import sys
 
 from dbfpy import dbf
 
@@ -11,11 +12,19 @@ def settings_folder():
     """Return the file location of the user's settings folder.  This folder
     location is OS-dependent."""
     if platform.system() == 'Windows':
-        config_folder = '~/AppData/Local/NatCap'
+        config_folder = os.path.join('~', 'AppData', 'Local', 'NatCap')
     else:
-        config_folder = '~/.natcap/'
-    return os.path.expanduser(config_folder)
+        config_folder = os.path.join('~', '.natcap')
 
+    # Try to get the expanded path and then decode the string according to
+    # whatever the system's encoding happens to be.  On Windows, this may
+    # frequently be 'latin-1' or else 'mbcs', on mac, it might be 'utf-8'.
+    # See http://code.google.com/p/invest-natcap/issues/detail?id=1373 for the
+    # issue history on why this is necessary.
+    expanded_path = os.path.expanduser(config_folder)
+    decoded_path = expanded_path.decode(sys.getfilesystemencoding())
+
+    return decoded_path
 
 class JSONHandler(object):
     def __init__(self, uri):
@@ -53,7 +62,7 @@ class JSONHandler(object):
 
 class LastRunHandler(JSONHandler):
     def __init__(self, modelname):
-        uri = modelname + '_lastrun_' + platform.node() + '.json'
+        uri = modelname + '_lastrun.json'
         JSONHandler.__init__(self, os.path.join(settings_folder(), uri))
 
 class ResourceManager(object):

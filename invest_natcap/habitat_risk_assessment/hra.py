@@ -7,6 +7,7 @@ import shutil
 import logging
 import glob
 import numpy as np
+import math
 
 from osgeo import gdal, ogr
 from scipy import ndimage
@@ -230,10 +231,12 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
         
         if decay_eq == 'None':
-            decay_array = make_no_decay_array(dist_array, buff)
+            decay_array = make_no_decay_array(dist_array, buff, nodata)
         elif decay_eq == 'Exponential':
-            decay_array = make_exp_decay_array(dist_array, buff
-       
+            decay_array = make_exp_decay_array(dist_array, buff, nodata)
+        elif decay_eq == 'Linear':
+            decay_array = make_lin_decay_array(dist_array, buff, nodata)
+
         #Create a new file to which we should write our buffered rasters.
         new_buff_uri = os.path.join(dir, name + '_buff.tif')
         new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
@@ -243,7 +246,30 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         
         n_band.WriteArray(decay_array)
 
-def make_no_decay_array(dist_array, buff):
+def make_lin_decay_array(dist_array, buff, nodata):
+   
+    #The decay rate should be approximately -1/distance we want 0 to be at.
+    #We add one to have a proper y-intercept.
+    lin_decay_array = -dist_array/buff + 1.0
+    lin_decay_array[lin_decay_array < 0] = nodata
+
+    return lin_decay_array
+
+def make_exp_decay_array(dist_array, buff, nodata):
+    
+    #Want a cutoff for the decay amount after which we will say things are
+    #equivalent to nodata, since we don't want to have values in every square.
+    cutoff = 0.01
+
+    #Need to have a value representing the decay rate for the exponential decay
+    rate = math.log(cutoff)/ buff
+
+    exp_decay_array = np.exp(-rate * dist_array)
+    exp_decay_array[exp_decay_array < cutoff] = nodata
+
+    return exp_decay_array
+
+def make_no_decay_array(dist_array, buff, nodata):
         
     #Setting anything within the buffer zone to 1, and anything outside
     #that distance to nodata.

@@ -51,6 +51,13 @@ class NutrientBiophysicalTest(unittest.TestCase):
         """Smoke test for nutrient retention: biophysical"""
         nutrient_biophysical.execute(self.args)
 
+        dest = '/tmp/Nutrient_workspace'
+        try:
+            shutil.rmtree(dest)
+        except:
+            pass
+        shutil.copytree(WORKSPACE, dest)
+
 
 class NutrientCoreTest(unittest.TestCase):
     def setUp(self):

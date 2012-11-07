@@ -30,9 +30,31 @@ def biophysical(args):
     alv = adjusted_loading_value(args['nutrient_export'], args['pixel_yield'],
         args['watersheds'], args['folders']['intermediate'])
 
-    pass
+    flow_path = get_flow_path(args['dem'])
+    retention_raster = get_retention(args['nutrient_retained'], alv,
+        flow_path)
 
-def get_flow_accumulation(dem):
+def get_retention(absorption, alv, flow_path):
+    """Calculate the quantity of nutrient retained by the landscape.  This is
+    calculated by a linear system of equations.
+
+        absorption - a GDAL raster, usually a reclassified land cover raster.
+            Example: land cover raster reclassed with the 'eff_n'/'eff_p' field
+            in the biophysical input table.
+        alv - a GDAL raster representing the nutrient export from this pixel.
+            Example: The Adjusted Loading Value raster calculated by calling
+            nutrient_core.adjusted_loading_value().
+        flow_path - a GDAL raster representing the flow direction.  Values are in
+            radians representing the flow direction and are based on the
+            DEM.
+
+        Returns a GDAL dataset."""
+
+    # THIS FUNCTION DOES NOTHING RIGHT NOW BECAUSE WE DON'T YET HAVE THE
+    # COMPUTATIONAL FRAMEWORK TO CALCULATE THE RETENTION RASTER.
+    return absorption
+
+def get_flow_path(dem):
     # According to the OSGEO python bindings, [0, 0, None, None] should extract
     # the entire matrix.
     # trac.osgeo.org/gdal/browser/trunk/gdal/swig/python/osgeo/gdal.py#L767
@@ -42,11 +64,6 @@ def get_flow_accumulation(dem):
     flow_direction = raster_utils.new_raster_from_base(dem,
         '/tmp/flow_direction', 'GTiff', -1.0, gdal.GDT_Float32)
     invest_cython_core.flow_direction_inf(dem, bounding_box, flow_direction)
-
-    # INSERT FLOW ACCUMULATION/RETENION RASTER CALCULATION HERE
-    # do the flow_accumulation
-    flow_accumulation = raster_utils.flow_accumulation_dinf(flow_direction, dem,
-        '/tmp/flow_accumulation.tif')
 
 def adjusted_loading_value(export_raster, wyield_raster, watersheds, workspace):
     """Calculate the adjusted loading value (ALV_x).
@@ -74,7 +91,27 @@ def adjusted_loading_value(export_raster, wyield_raster, watersheds, workspace):
     runoff_idx = raster_utils.vectorize_rasters([wyield_raster], v_op)
 
     # Calculate the mean runoff index per watershed.
-    watersheds = mean_runoff_index(runoff_idx, watersheds, workspace)
+    mean_runoff_index(runoff_idx, watersheds, workspace)
+
+    # Take the mean runoff index field calculated and rasterize it onto a new
+    # raster the same dimensions of the runoff_index raster.
+    runoff_mean_uri = os.path.join(workspace, 'runoff_mean.tif')
+    runoff_mean = raster_utils.new_raster_from_base(runoff_idx, runoff_mean_uri, 'GTiff',
+        wyield_nodata, gdal.GDT_Float32)
+    gdal.RasterizeLayer(runoff_mean, [1], watersheds.GetLayer(0),
+                        options=['ATTRIBUTE=mn_runoff'])
+    runoff_mean.FlushCache()
+
+    # Now that we have the rasterized runoff mean, vectorize a single operation
+    # that takes in one step calcualtes HSS*pol_x.
+    alv_op = np.vectorize(lambda x, y, z: (x/y)*z if y != wyield_nodata else
+        wyield_nodata)
+    alv_uri = os.path.join(workspace, 'alv.tif')
+    alv_raster = raster_utils.vectorize_rasters([runoff_idx, runoff_mean,
+            export_raster], alv_op, raster_out_uri=alv_uri, nodata=-1.0)
+
+    return alv_raster
+
 
 def mean_runoff_index(runoff_index, watersheds, output_folder):
     """Calculate the mean runoff index per watershed.
