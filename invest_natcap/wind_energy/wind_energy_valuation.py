@@ -65,28 +65,11 @@ def execute(args):
 
     valuation_args['suffix'] = suffix
 
-    # Open the AOI and get its Projection as Well Known Text
     aoi = ogr.Open(args['aoi_uri'])
-    aoi_sr = aoi.GetLayer().GetSpatialRef()
-    aoi_wkt = aoi_sr.ExportToWkt()
-
     biophysical_points = ogr.Open(args['biophysical_data_uri'])
     
-    bio_points_clipped_uri = os.path.join(
-            inter_dir, 'val_biophysical_points_clipped.shp')
-   
-    # Clip the wind energy points 
-    LOGGER.info('Clipping the wind energy points to the AOI')
-    biophysical_points_clipped = wind_energy_biophysical.clip_datasource(
-            aoi, biophysical_points, bio_points_clipped_uri)
-
-    bio_points_proj_uri = os.path.join(
-            inter_dir, 'val_biophysical_points_projected.shp')
-
-    # Project the wind energy points
-    LOGGER.info('Projecting the wind energy points to the AOI')
-    biophysical_points_proj = raster_utils.reproject_datasource(
-        biophysical_points_clipped, aoi_wkt, bio_points_proj_uri)
+    biophysical_points_proj = clip_and_project_datasource(
+            biophysical_points, aoi, os.path.join(inter_dir, 'val_bio_points'))
     
     valuation_args['biophysical_data'] = biophysical_points_proj
     
@@ -123,23 +106,11 @@ def execute(args):
     except KeyError:
         LOGGER.info('Grid points not provided')
         LOGGER.info('Reading in land polygon')
+
         land_poly = ogr.Open(args['land_polygon_uri'])
-
-        land_poly_clipped_uri = os.path.join(
-                inter_dir, 'val_land_poly_clipped.shp')
-       
-        # Clip the land polygon
-        LOGGER.info('Clipping the land polygon to the AOI')
-        land_poly_clipped = wind_energy_biophysical.clip_datasource(
-                aoi, land_poly, land_poly_clipped_uri)
-
-        land_poly_proj_uri = os.path.join(
-                inter_dir, 'val_land_poly_projected.shp')
         
-        # Project the land polygon
-        LOGGER.info('Projecting the land polygon to the AOI')
-        land_poly_proj = raster_utils.reproject_datasource(
-            land_poly_clipped, aoi_wkt, land_poly_proj_uri)
+        land_poly_proj = clip_and_project_datasource(
+                land_poly, aoi, os.path.join(inter_dir, 'val_land_poly'))
 
         valuation_args['land_polygon'] = land_poly_proj
     else:
@@ -165,16 +136,63 @@ def execute(args):
         LOGGER.debug('Grid_Points_Dict : %s', grid_dict)
         LOGGER.debug('Land_Points_Dict : %s', land_dict)
 
-        grid_ds_uri = os.path.join(inter_dir, 'grid_points.shp')
-        land_ds_uri = os.path.join(inter_dir, 'land_points.shp')
+        grid_ds_uri = os.path.join(inter_dir, 'val_grid_points.shp')
+        land_ds_uri = os.path.join(inter_dir, 'val_land_points.shp')
 
         grid_point_ds = dictionary_to_shapefile(
                 grid_dict, 'grid_points', grid_ds_uri) 
         land_point_ds = dictionary_to_shapefile(
                 land_dict, 'land_points', land_ds_uri) 
-    
+
+        grid_point_prj = clip_and_project_datasource(
+                grid_point_ds, aoi, os.path.join(inter_dir, 'val_grid_point'))
+        land_point_prj = clip_and_project_datasource(
+                land_point_ds, aoi, os.path.join(inter_dir, 'val_land_point'))
+
+        valuation_args['grid_points'] = grid_point_prj
+        valuation_args['land_points'] = land_point_prj
     # call on the core module
     #wind_energy_core.valuation(valuation_args)
+
+def clip_and_project_datasource(shape_a, shape_b, out_uri):
+    """Clips and reprojects one OGR datasource to another
+        
+        shape_a - an OGR datasource to clip and reproject
+        shape_b - an OGR datasource to use as the bounds for clipping and
+            reprojecting
+        out_uri - a string for the full path of the output, including the
+            directory tree. However, no extension should be provided
+
+        returns - shape_a clipped and reprojected to shape_b, an OGR datasource
+    """
+    # Get the basename and directory name of the uri to help create future uri's
+    basename = os.path.basename(out_uri)
+    dir_name = os.path.dirname(out_uri)
+    
+    shape_a_sr = shape_a.GetLayer().GetSpatialRef()
+    shape_a_wkt = shape_a_sr.ExportToWkt()
+    shape_b_sr = shape_b.GetLayer().GetSpatialRef()
+    shape_b_wkt = shape_b_sr.ExportToWkt()
+
+    shape_b_proj_to_shape_a_uri = os.path.join(
+            dir_name, basename + 'b_to_a.shp')
+    
+    shape_b_proj_to_shape_a = raster_utils.reproject_datasource(
+            shape_b, shape_a_wkt, shape_b_proj_to_shape_a_uri)
+
+    shape_a_clipped_uri = os.path.join(
+            dir_name, basename + '_clipped.shp')
+   
+    shape_a_clipped = wind_energy_biophysical.clip_datasource(
+            shape_b_proj_to_shape_a, shape_a, shape_a_clipped_uri)
+
+    shape_a_proj_uri = os.path.join(
+            dir_name, basename + '_projected.shp')
+
+    shape_a_proj = raster_utils.reproject_datasource(
+        shape_a_clipped, shape_a_wkt, shape_a_proj_uri)
+
+    return shape_a_proj
 
 def dictionary_to_shapefile(dict_data, layer_name, output_uri):
     """Creates a point shapefile from a dictionary
