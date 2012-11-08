@@ -250,3 +250,33 @@ class TestRasterUtils(unittest.TestCase):
         expected_dict = {'width':30, 'height':-30, 'x_size':112, 'y_size':142}
 
         self.assertEqual(result_dict, expected_dict)
+
+    def test_reproject_datasource(self):
+        """A regression test using some of Nicks sample data that didn't work on
+            his machine"""
+        
+        data_dir = './data/raster_utils_data'
+        barkclay_uri = os.path.join(data_dir, 'AOI_BarkClay.shp')
+        lat_long_uri = os.path.join(data_dir, 'lat_long_file.shp')
+
+        barkclay = ogr.Open(barkclay_uri)
+        lat_long = ogr.Open(lat_long_uri)
+        lat_long_srs = lat_long.GetLayer().GetSpatialRef()
+        lat_long_wkt = lat_long_srs.ExportToWkt()
+
+        out_dir = './data/test_out/raster_utils/reproject_datasource'
+        
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        out_uri = os.path.join(out_dir, 'reprojected_aoi_barkclay.shp')
+        regression_uri = os.path.join(data_dir, 'reprojected_aoi_barkclay.shp')
+
+        result_ds = raster_utils.reproject_datasource(
+                barkclay, lat_long_wkt, out_uri)
+
+        result_ds = None
+
+        invest_test_core.assertTwoShapesEqualURI(
+                self, out_uri, regression_uri)
+

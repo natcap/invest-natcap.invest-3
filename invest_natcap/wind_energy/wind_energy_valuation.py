@@ -147,7 +147,7 @@ def execute(args):
         reader = csv.DictReader(grid_file)
 
         grid_dict = {}
-        
+        land_dict = {}
         # Making a shallow copy of the attribute 'fieldnames' explicitly to edit to
         # all the fields to lowercase because it is more readable and easier than
         # editing the attribute itself
@@ -157,11 +157,86 @@ def execute(args):
             field_names[index] = field_names[index].lower()
 
         for row in reader:
-            grid_dict[row['id']] = row
+            if row['type'].lower() == 'grid':
+                grid_dict[row['id']] = row
+            else:
+                land_dict[row['id']] = row
         grid_file.close()
         LOGGER.debug('Grid_Points_Dict : %s', grid_dict)
+        LOGGER.debug('Land_Points_Dict : %s', land_dict)
 
-        valuation_args['grid_dict'] = grid_dict
+        grid_ds_uri = os.path.join(inter_dir, 'grid_points.shp')
+        land_ds_uri = os.path.join(inter_dir, 'land_points.shp')
+
+        grid_point_ds = dictionary_to_shapefile(
+                grid_dict, 'grid_points', grid_ds_uri) 
+        land_point_ds = dictionary_to_shapefile(
+                land_dict, 'land_points', land_ds_uri) 
     
     # call on the core module
     #wind_energy_core.valuation(valuation_args)
+
+def dictionary_to_shapefile(dict_data, layer_name, output_uri):
+    """Creates a point shapefile from a dictionary
+        
+        dict_data - a python dictionary with keys being unique id's that point
+            sub-dictionary that has key-value pairs which will represent the
+            field-value pair for the point features. At least two fields are
+            required in the sub-dictionaries, 'lati' and 'long'. These fields
+            determine the geometry of the point
+            0 : {'lati':97, 'long':43, 'field_a':6.3, 'field_n':21},
+            1 : {'lati':55, 'long':51, 'field_a':6.2, 'field_n':32},
+            2 : {'lati':73, 'long':47, 'field_a':6.5, 'field_n':13}
+        layer_name - a python string for the name of the layer
+        output_uri - a uri for the output destination of the shapefile
+
+        return - a OGR Datasource"""
+    LOGGER.info('Entering dictionary_to_shapefile')
+    
+    # If the output_uri exists delete it
+    if os.path.isfile(output_uri):
+        os.remove(output_uri)
+   
+    LOGGER.info('Creating new datasource')
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_datasource = output_driver.CreateDataSource(output_uri)
+
+    # Set the spatial reference to WGS84 (lat/long)
+    source_sr = osr.SpatialReference()
+    source_sr.SetWellKnownGeogCS("WGS84")
+    
+    output_layer = output_datasource.CreateLayer(
+            layer_name, source_sr, ogr.wkbPoint)
+
+    # Construct a list of fields to add from the keys of the inner dictionary
+    field_list = dict_data[dict_data.keys()[0]].keys()
+    LOGGER.debug('field_list : %s', field_list)
+
+    LOGGER.info('Creating fields for the datasource')
+    for field in field_list:
+        output_field = ogr.FieldDefn(field, ogr.OFTReal)   
+        output_layer.CreateField(output_field)
+
+    LOGGER.info('Entering iteration to create and set the features')
+    # For each inner dictionary (for each point) create a point
+    for point_dict in dict_data.itervalues():
+        latitude = point_dict['lati']
+        longitude = point_dict['long']
+
+        geom = ogr.Geometry(ogr.wkbPoint)
+        geom.AddPoint_2D(longitude, latitude)
+
+        output_feature = ogr.Feature(output_layer.GetLayerDefn())
+        
+        for field_name in point_dict:
+            field_index = output_feature.GetFieldIndex(field_name)
+            output_feature.SetField(field_index, point_dict[field_name])
+        
+        output_feature.SetGeometryDirectly(geom)
+        output_layer.CreateFeature(output_feature)
+        output_feature = None
+
+    output_layer.SyncToDisk()
+    LOGGER.info('Leaving wind_data_to_point_shape')
+    return output_datasource
+

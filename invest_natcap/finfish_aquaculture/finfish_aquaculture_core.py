@@ -8,7 +8,6 @@ import logging
 import webbrowser
 
 from osgeo import ogr
-from decimal import *
 
 LOGGER = logging.getLogger('finfish_aquaculture_test')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -478,10 +477,6 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
     
     for id in cycle_history:
         
-        #Explicitly getting the number of fish that the farm has, because we will need
-        #it later when we write to the table
-        num_fishies = int(farm_op_dict[str(id)]['number of fish in farm'])
-        
         vars = []
         for cycle in range(0, len(cycle_history[id])):
         
@@ -494,7 +489,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
 
             #Want to get the processed weight on a farm for a given cycle. All
             #of the PW for all cycles should add to the third table's TPW.
-            harvest_weight = proc_weight[id][cycle]
+            harvest_weight = hrv_weight[id][cycle]
 
             out_day = outplant_date % 365
             out_year = outplant_date // 365 + 1
@@ -505,7 +500,7 @@ def create_HTML_table (output_dir, farm_op_dict, cycle_history, sum_hrv_weight,
                 indiv_rev, indiv_npv = value_history[id][cycle]
     
                 #revenue and net present value should be in thousands of dollars
-                vars = [id, cycle_num, harvest_date, cycle_date, harvest_weight, 
+                vars = [id, cycle_num, harvest_date, cycle_length, harvest_weight, 
                         indiv_rev / 1000, indiv_npv/1000, out_day, out_year]
             else:
                 

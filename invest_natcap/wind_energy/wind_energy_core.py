@@ -13,9 +13,13 @@ import scipy.ndimage as ndimage
 from scipy import signal
 from scipy import integrate
 from scipy import spatial
+import shapely.wkt
+import shapely.ops
+from shapely import speedups
 
 from invest_natcap import raster_utils
 LOGGER = logging.getLogger('wind_energy_core')
+speedups.enable()
 
 def biophysical(args):
     """Handles the core functionality for the biophysical part of the wind
@@ -696,6 +700,78 @@ def valuation(args):
                 [ocean_land_ds, land_grid_ds, energy_ds], npv_op, 
                 raster_out_uri = npv_uri, nodata = -1.0)
 
+def point_to_polygon_distance(poly_ds, point_ds):
+    """Calculates the distances from points in a point geometry shapefile to the
+        nearest polygon from a polygon shapefile. Both datasources must be
+        projected in meters
+    
+        poly_ds - an OGR polygon geometry datasource projected in meters
+        point_ds - an OGR point geometry datasource projected in meters
+
+        returns - a list of the distances from each point"""
+
+    LOGGER.info('Loading the polygons into Shapely')
+    poly_layer = poly_ds.GetLayer()
+    poly_list = []
+    for poly_feat in poly_layer:
+        poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
+        shapely_polygon = shapely.wkt.loads(poly_wkt)
+        poly_list.append(shapely_polygon.simplify(0.01, preserve_topology=False))
+
+    LOGGER.info('Get the collection of polygon geometries by taking the union')
+    polygon_collection = shapely.ops.unary_union(poly_list)
+
+    LOGGER.info('Loading the points into shapely')
+    point_layer = point_ds.GetLayer()
+    point_list = []
+    for point_feat in point_layer:
+        point_wkt = point_feat.GetGeometryRef().ExportToWkt()
+        shapely_point = shapely.wkt.loads(point_wkt)
+        point_list.append(shapely_point)
+
+    LOGGER.info('find distances')
+    distances = []
+    for point in point_list:
+        point_dist = point.distance(polygon_collection)
+        distances.append(point_dist)
+
+    point_layer.ResetReading()
+    poly_layer.ResetReading()
+
+    return distances
+
+def add_field_to_shape_given_list(shape_ds, value_list, field_name):
+    """Addes a field and a value to a given shapefile from a list of values. The
+        list of values must be the same size as the number of features in the 
+        shape
+
+        shape_ds - an OGR datasource 
+        value_list - a list of values that is the same length as there are
+            features in 'shape_ds'
+        field_name - a String for the name of the new field
+
+        returns - the datasource 'shape_ds' with a new field and values"""
+    LOGGER.info('Entering add_field_to_shape_given_list')
+    layer = shape_ds.GetLayer()
+
+    LOGGER.info('Creating new field')
+    new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
+    layer.CreateField(new_field)
+
+    value_iterator = 0
+
+    LOGGER.info('Adding values to new field for each point')
+    for feat in layer:
+        field_index = feat.GetFieldIndex(field_name)
+        feat.SetField(field_index, value_list[value_iterator])
+        layer.SetFeature(feat)
+        value_iterator = value_iterator + 1
+    
+    LOGGER.debug('value iterator : %s', value_iterator)
+    layer.ResetReading()
+    layer.SyncToDisk()
+     
+    return shape_ds
 
 def build_subset_dictionary(main_dict, key_field, value_field):
     """Take the main dictionary and build a subset dictionary depending on the
