@@ -365,7 +365,7 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         
         if risk_eq == 'Euclidean':
             mod_array = make_risk_euc(r_array, E, C) 
-
+        
         elif risk_eq == 'Multiplicative':
             mod_array = make_risk_mult(r_array, E, C)
 
@@ -471,7 +471,8 @@ def make_risk_euc(array, E, C):
         A numpy array of risk values for the gievn habitat-stressor overlap
             based on a euclidean risk function.
     '''
-   
+    a_file = open('./data/test_out/HRA/Intermediate/a_file.txt', 'w')
+    array.tofile(a_file)
     #Want to get an array that has potential decay applied to E, so that the E
     #could be different for any pixel in the risk array.
     e_array = array * E

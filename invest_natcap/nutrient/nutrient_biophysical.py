@@ -86,7 +86,9 @@ def execute(args):
         LOGGER.debug('Copied shape: %s', copy)
 
         # Create the known new fields for this shapefile.
-        for column_name in ['nut_export', 'nut_retain', 'mn_runoff']:
+        # thresh_c is the per-pixel contributed threshold.  Used in calculating
+        # the service raster, it's the result of (thresh/contrib)
+        for column_name in ['nut_export', 'nut_retain', 'mn_runoff', 'thresh_c']:
             LOGGER.debug('Creating new field %s in %s', column_name, copy_uri)
             new_field = ogr.FieldDefn(column_name, ogr.OFTReal)
             copy.GetLayer(0).CreateField(new_field)
@@ -98,14 +100,34 @@ def execute(args):
     biophysical_args['bio_table'].set_field_mask('load_n|eff_n', 2, 'back')
     biophysical_args['threshold_table'] =\
         fileio.TableHandler(args['threshold_table_uri'])
+    biophysical_args['threshold_table'].set_field_mask('thresh_n', 2, 'back')
 
-    # Reclassifying the LULC raster to be the nutrient_export raster.
-    # This is done here in the URI layer so that lower layers don't need to be
-    # aware of the paths to the workspace, intermediate, output, etc. folders.
-    biophysical_args['nutrient_export'] = get_lulc_map(biophysical_args['landuse'],
-        biophysical_args['bio_table'], 'load', intermediate_dir)
-    biophysical_args['nutrient_retained'] = get_lulc_map(biophysical_args['landuse'],
-        biophysical_args['bio_table'], 'eff', intermediate_dir)
+    # Extract the threshold data in the threshold table and save it to the new
+    # watersheds shapefile.
+    watersheds_layer = biophysical_args['watersheds'].GetLayer(0)
+    threshold_fields = biophysical_args['threshold_table'].fieldnames
+    new_fieldnames = [f for f in threshold_fields if f not in ['ws_id', 'id']]
+    LOGGER.debug('New fields to be created in watersheds:%s', new_fieldnames)
+
+    # Create the new fieldnames in the watersheds layer
+    for field_name in new_fieldnames:
+        LOGGER.debug('Creating new fieldname %s', field_name)
+        new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
+        watersheds_layer.CreateField(new_field)
+
+    # Extract the data to be saved to the new fields from the threshold table
+    # and set the field values.
+    for row in biophysical_args['threshold_table']:
+        watershed = watersheds_layer.GetFeature(int(row['ws_id']))
+        LOGGER.debug('Creating feature %s for row %s', watershed, row)
+        for field_name in new_fieldnames:
+            LOGGER.debug('Setting field %s to table value %s', field_name,
+                         row[field_name])
+            field_index = watershed.GetFieldIndex(field_name)
+            LOGGER.debug('field %s index %s', field_name, field_index)
+            watershed.SetField(field_index, str(row[field_name]))
+        watersheds_layer.SetFeature(watershed)
+        watershed.Destroy()
 
     LOGGER.info('Copying other values for internal use')
     biophysical_args['nutrient_type'] = args['nutrient_type']
@@ -118,15 +140,4 @@ def execute(args):
 
     # Run the nutrient model with the biophysical args dictionary.
     nutrient_core.biophysical(biophysical_args)
-
-def get_lulc_map(landcover, table, field, folder):
-    lu_map = table.get_map('lucode', field)
-    lu_map = dict((float(k), (float(v)/1000. if float(v) > 1 else float(v)))
-                  for (k, v) in lu_map.iteritems())
-    uri = os.path.join(folder, field + '_export.tif')
-    raster = raster_utils.reclassify_by_dictionary(
-        landcover, lu_map, uri, 'GTiff', -1.0,
-        gdal.GDT_Float32)
-
-    return raster
 
