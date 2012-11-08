@@ -16,6 +16,7 @@
                     "type": "folder",
                     "label": "Workspace",
                     "required": true,
+                    "validateAs": {"type": "folder"},
                     "args_id": "workspace_dir",
                     "defaultValue": "../timber"
                 },
@@ -24,6 +25,7 @@
                     "args_id": "timber_shape_uri",
                     "type": "file",
                     "label": "Managed area map",
+                    "validateAs": {"type": "OGR"},
                     "required": true,
                     "defaultValue": "../timber/input/plantation.shp"
                 },
@@ -32,6 +34,7 @@
                     "args_id": "attr_table_uri",
                     "type": "file",
                     "label": "Plantation production table",
+                    "validateAs": {"type": "DBF"},
                     "required": true,
                     "defaultValue": "../timber/input/plant_table.dbf"
                 },    
