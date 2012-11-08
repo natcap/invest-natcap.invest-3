@@ -311,7 +311,9 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
         
         #For all pixels in the two rasters, return this new pixel value
         if pixel_h == 0 or pixel_s == 0:
-            return 0
+            #Need to return a float in order to have floats for all other
+            #pixels.
+            return 0.0
         else:
             #Want to return the decayed value- even if it's actually 1 for this
             #particular pixel.
@@ -345,7 +347,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             #in 'h-s'. We will make the open datasource the third item in
             #the tuple. The first two are the exposure and consequence ratings 
             #that were gleaned from the IUI.
-            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri, gdal.GA_Update)
+            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
 
     return h_s
 

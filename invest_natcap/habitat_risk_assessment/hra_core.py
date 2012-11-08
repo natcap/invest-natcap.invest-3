@@ -471,7 +471,8 @@ def make_risk_euc(array, E, C):
         A numpy array of risk values for the gievn habitat-stressor overlap
             based on a euclidean risk function.
     '''
-   
+    a_file = open('./data/test_out/HRA/Intermediate/a_file.txt', 'w')
+    array.tofile(a_file)
     #Want to get an array that has potential decay applied to E, so that the E
     #could be different for any pixel in the risk array.
     e_array = array * E
