@@ -98,6 +98,7 @@ def execute(args):
     biophysical_args['bio_table'].set_field_mask('load_n|eff_n', 2, 'back')
     biophysical_args['threshold_table'] =\
         fileio.TableHandler(args['threshold_table_uri'])
+    biophysical_args['threshold_table'].set_field_mask('thresh_n', 2, 'back')
 
     # Extract the threshold data in the threshold table and save it to the new
     # watersheds shapefile.
