@@ -45,10 +45,19 @@ def biophysical(args):
     retention_raster = get_retention(nutrient_retained, alv,
         flow_path)
 
-#    net_service = service(retention_raster, nutrient_threshold,
-#        args['watersheds'])
+    threshold_raster_path = os.path.join(args['folders']['intermediate'],
+        'threshold.tif')
+    net_service = service(retention_raster, args['watersheds'], threshold_path)
 
-def service(retention, threshold, watersheds):
+def service(retention, watersheds, threshold_path=None):
+    output_type = 'GTiff'
+    if threshold_path == None:
+        output_type = 'MEM'
+
+    nutrient_threshold = invest_core.raster_utils.new_raster_from_base(
+        retention, threshold_path, output_type, -1.0, gdal.GDT_Float32)
+    gdal.RasterizeLayer(nutrient_threshold, watersheds.GetLayer(0),
+        options=['ATTRIBUTE=thresh'])
     pass
 
 def get_lulc_map(landcover, table, field, folder):
