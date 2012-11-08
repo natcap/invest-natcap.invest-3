@@ -71,6 +71,9 @@ def service(retention, watersheds, threshold_uri=None, service_uri=None):
 
         Returns a GDAL dataset of the service raster."""
 
+    # Loop through the provided watersheds, calculate how many pixels are under
+    # the feature and then calculate the per-pixel threshold, setting it to the
+    # 'thresh_c' column.
     for layer in watersheds:
         for watershed in layer:
             pixel_count = get_raster_stat_under_polygon(retention, watershed,
@@ -79,10 +82,13 @@ def service(retention, watersheds, threshold_uri=None, service_uri=None):
             threshold = watershed.GetFieldAsDouble(threshold_index)
 
             ratio = threshold/float(pixel_count)
+            LOGGER.debug('Calculated thresholdi ratio: %s', ratio)
             ratio_index = watershed.GetFieldIndex('thresh_c')
             watershed.SetField(ratio_index, threshold_index)
             layer.SetFeature(watershed)
 
+    # If the user has not provided a threshold URI, make the output type MEM.
+    # Otherwise, assume GTiff.
     output_type = 'GTiff'
     if threshold_uri == None:
         output_type = 'MEM'
@@ -92,6 +98,8 @@ def service(retention, watersheds, threshold_uri=None, service_uri=None):
     gdal.RasterizeLayer(threshold_raster, [1], watersheds.GetLayer(0),
         options=['ATTRIBUTE=thresh_c'])
 
+    # Subtract the threshold ratio from the retention raster, as denoted in the
+    # service (net_x) function in the documentation.
     nodata = retention.GetRasterBand(1).GetNoDataValue()
     service_op = np.vectorize(lambda x, y: x - y if y != nodata else
         nodata)
