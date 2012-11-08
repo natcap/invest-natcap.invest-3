@@ -52,7 +52,7 @@ def biophysical(args):
     net_service = service(retention_raster, args['watersheds'],
         threshold_raster_path, service_raster_path)
 
-def service(retention, watersheds, threshold_path=None, service_uri=None):
+def service(retention, watersheds, threshold_uri=None, service_uri=None):
     """Calculate the biophysical service of the nutrient retention on a
     landscape over the input watersheds.  This calculation is done on a
     per-pixel basis, but only in watershed areas.
@@ -61,7 +61,7 @@ def service(retention, watersheds, threshold_path=None, service_uri=None):
         watersheds - an OGR shapefile of watersheds on this landscape.  This
             shapefile must have the following fields: 'thresh', 'thresh_c',
             which should be of the type OGR.OFT_Real.
-        threshold_path=None - a string URI to where the threshold raster should
+        threshold_uri=None - a string URI to where the threshold raster should
             be stored on disk.  If None, the raster will be stored temporarily
             in memory and will not be saved to disk.
         service_uri=None - a string URI to where the service raster should be
@@ -70,10 +70,6 @@ def service(retention, watersheds, threshold_path=None, service_uri=None):
             function.
 
         Returns a GDAL dataset of the service raster."""
-
-    output_type = 'GTiff'
-    if threshold_path == None:
-        output_type = 'MEM'
 
     for layer in watersheds:
         for watershed in layer:
@@ -87,8 +83,12 @@ def service(retention, watersheds, threshold_path=None, service_uri=None):
             watershed.SetField(ratio_index, threshold_index)
             layer.SetFeature(watershed)
 
+    output_type = 'GTiff'
+    if threshold_uri == None:
+        output_type = 'MEM'
+
     threshold_raster = raster_utils.new_raster_from_base(retention,
-        threshold_path, output_type, -1.0, gdal.GDT_Float32)
+        threshold_uri, output_type, -1.0, gdal.GDT_Float32)
     gdal.RasterizeLayer(threshold_raster, [1], watersheds.GetLayer(0),
         options=['ATTRIBUTE=thresh_c'])
 
