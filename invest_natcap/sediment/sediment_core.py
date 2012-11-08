@@ -123,6 +123,7 @@ def biophysical(args):
         return float(args['biophysical_table'] \
                      [str(lulc_code)]['sedret_eff']) / 100.0
 
+    LOGGER.info("Mapping lulc to sed retention values")
     retention_uri = os.path.join(args['intermediate_uri'],'retention.tif')
     raster_utils.vectorize_rasters([args['landuse']], lulc_to_retention, 
                                    raster_out_uri = retention_uri, 
@@ -153,10 +154,12 @@ def biophysical(args):
 
     c_factor_uri = os.path.join(args['intermediate_uri'],'c_factor.tif')
     p_factor_uri = os.path.join(args['intermediate_uri'],'p_factor.tif')
+    LOGGER.info("Mapping lulc to sed c values")
     c_dataset = raster_utils.vectorize_rasters([args['landuse']], 
                                    lambda x: lulc_to_c_or_p('usle_c',x), 
                                    raster_out_uri = c_factor_uri, 
                                    datatype=gdal.GDT_Float32, nodata=-1.0)
+    LOGGER.info("Mapping lulc to sed p values")
     p_dataset = raster_utils.vectorize_rasters([args['landuse']], 
                                    lambda x: lulc_to_c_or_p('usle_p',x), 
                                    raster_out_uri = p_factor_uri, 
@@ -172,27 +175,32 @@ def biophysical(args):
 
     retention_efficiency_uri = \
         os.path.join(args['intermediate_uri'],'sed_ret_eff.tif')
+    LOGGER.info("Calculating mapping sediment retention values to landscape")
     retention_efficiency_dataset = \
         raster_utils.vectorize_rasters([args['landuse']], lulc_to_retention, 
             raster_out_uri = retention_efficiency_uri, 
             datatype = gdal.GDT_Float32, nodata = -1.0)
 
+    LOGGER.info("Calculating effective retention by routing")
     effective_retention_dataset = \
         calculate_effective_retention(args['flow_direction'], \
             retention_efficiency_dataset, stream_dataset, 
             effective_retention_uri)
 
+    LOGGER.info("Calculating per pixel export")
     pixel_export_uri = os.path.join(args['output_uri'], 'pixel_export.tif')
     calculate_per_pixel_export(usle_export_dataset,
         effective_retention_dataset, pixel_export_uri)
 
     pixel_sediment_flow_uri = \
         os.path.join(args['intermediate_uri'], 'pixel_sed_flow.tif')
+    LOGGER.info("Calculating per pixel sediment flow to stream")
     pixel_sediment_core_dataset = \
         pixel_sediment_flow(usle_export_dataset, \
             args['flow_direction'], effective_retention_dataset, 
             pixel_sediment_flow_uri)
 
+    LOGGER.info("Calculating per pixel sediment retention")
     sediment_retained_uri = \
         os.path.join(args['output_uri'], 'pixel_retained.tif')
     calculate_pixel_retained(pixel_sediment_core_dataset,
@@ -656,6 +664,7 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
             #set local flow accumulation to 0
             local_flow_angle = flow_direction_array[cell_index]
             local_retention = retention_efficiency_array[cell_index]
+            LOGGER.info("row col %s %s %s" % (row_index, col_index, cell_index))
             local_sediment_loss = usle_loss_array[cell_index]
 
             if local_sediment_loss == usle_loss_nodata or \
