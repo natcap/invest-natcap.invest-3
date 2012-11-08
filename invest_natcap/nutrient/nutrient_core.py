@@ -37,16 +37,16 @@ def biophysical(args):
     nutrient_retained = get_lulc_map(args['landuse'], args['bio_table'],
         'eff', args['folders']['intermediate'])
 
-    alv = adjusted_loading_value(args['nutrient_export'], args['pixel_yield'],
+    alv = adjusted_loading_value(nutrient_export, args['pixel_yield'],
         args['watersheds'], args['folders']['intermediate'])
 
     flow_path = get_flow_path(args['dem'])
 
-    retention_raster = get_retention(args['nutrient_retained'], alv,
+    retention_raster = get_retention(nutrient_retained, alv,
         flow_path)
 
-    net_service = service(retention_raster, nutrient_threshold,
-        args['watersheds'])
+#    net_service = service(retention_raster, nutrient_threshold,
+#        args['watersheds'])
 
 def service(retention, threshold, watersheds):
     pass
