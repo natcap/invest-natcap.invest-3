@@ -478,8 +478,13 @@ def valuation(args):
             from the output of the biophysical model run (required) 
         args[turbine_dict] - a dictionary that has the parameters
             for the type of turbine (required)
-        args[grid_dict] - a dictionary that specifies the landing
-            and grid point locations (optional)
+        args[grid_points] - an OGR datasource of type point, representing where
+            the grid connections are (optional)
+        args[land_points] - an OGR datasource of type point, representing where
+            the land connections are (optional)
+        args[land_polygon] - an OGR datasource of type polygon, to get the wind
+            energy bin distances from if grid points and land points are not
+            provided (required if grid_points and land_points are not provided)
         args[number_of_machines] - an integer value for the number of machines
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
