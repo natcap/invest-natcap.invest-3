@@ -53,6 +53,24 @@ def biophysical(args):
         threshold_raster_path, service_raster_path)
 
 def service(retention, watersheds, threshold_path=None, service_uri=None):
+    """Calculate the biophysical service of the nutrient retention on a
+    landscape over the input watersheds.  This calculation is done on a
+    per-pixel basis, but only in watershed areas.
+
+        retention - a GDAL raster of nutrient retention and export.
+        watersheds - an OGR shapefile of watersheds on this landscape.  This
+            shapefile must have the following fields: 'thresh', 'thresh_c',
+            which should be of the type OGR.OFT_Real.
+        threshold_path=None - a string URI to where the threshold raster should
+            be stored on disk.  If None, the raster will be stored temporarily
+            in memory and will not be saved to disk.
+        service_uri=None - a string URI to where the service raster should be
+            stored on disk.  If Nonw, the service raster will be stored
+            temporarily in memory and will not be saved to disk in this
+            function.
+
+        Returns a GDAL dataset of the service raster."""
+
     output_type = 'GTiff'
     if threshold_path == None:
         output_type = 'MEM'
