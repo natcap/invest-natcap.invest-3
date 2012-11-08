@@ -365,7 +365,7 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         
         if risk_eq == 'Euclidean':
             mod_array = make_risk_euc(r_array, E, C) 
-
+        
         elif risk_eq == 'Multiplicative':
             mod_array = make_risk_mult(r_array, E, C)
 

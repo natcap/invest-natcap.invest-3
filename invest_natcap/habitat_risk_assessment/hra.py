@@ -262,7 +262,7 @@ def make_exp_decay_array(dist_array, buff, nodata):
     cutoff = 0.01
 
     #Need to have a value representing the decay rate for the exponential decay
-    rate = math.log(cutoff)/ buff
+    rate = -math.log(cutoff)/ buff
 
     exp_decay_array = np.exp(-rate * dist_array)
     exp_decay_array[exp_decay_array < cutoff] = nodata
@@ -315,7 +315,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
         else:
             #Want to return the decayed value- even if it's actually 1 for this
             #particular pixel.
-            return s
+            return pixel_s
 
     for h in h_rast_files:
         for s in s_rast_files:
@@ -339,7 +339,7 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             LOGGER.info("combine_hs_rasters")
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
                             combine_hs_pixels, raster_out_uri = out_uri,
-                            datatype = gdal.GDT_Int32, nodata=0)
+                            datatype = gdal.GDT_Float32, nodata=0)
             
             #Now place the datasource into the corresponding dictionary entry
             #in 'h-s'. We will make the open datasource the third item in
