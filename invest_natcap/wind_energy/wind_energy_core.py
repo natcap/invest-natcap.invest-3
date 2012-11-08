@@ -523,9 +523,17 @@ def valuation(args):
     
     
     
-    
-    
-    
+    try:
+        grid_points_ds = args['grid_points']
+        land_points_ds = args['land_points']
+    except KeyError:
+        land_poly_ds = args['land_polygon']
+    else:
+        grid_to_land_dist = point_to_polygon_distance(
+                grid_points_ds, land_points_ds)
+        land_to_ocean_dist = poin_to_polygon_distance(
+                land_points_ds, wind_energy_points)
+
     
     
     
