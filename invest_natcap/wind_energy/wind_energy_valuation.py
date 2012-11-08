@@ -220,8 +220,8 @@ def dictionary_to_shapefile(dict_data, layer_name, output_uri):
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
     for point_dict in dict_data.itervalues():
-        latitude = point_dict['lati']
-        longitude = point_dict['long']
+        latitude = float(point_dict['lati'])
+        longitude = float(point_dict['long'])
 
         geom = ogr.Geometry(ogr.wkbPoint)
         geom.AddPoint_2D(longitude, latitude)
