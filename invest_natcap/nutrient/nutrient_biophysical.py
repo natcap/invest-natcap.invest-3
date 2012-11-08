@@ -86,7 +86,9 @@ def execute(args):
         LOGGER.debug('Copied shape: %s', copy)
 
         # Create the known new fields for this shapefile.
-        for column_name in ['nut_export', 'nut_retain', 'mn_runoff']:
+        # thresh_c is the per-pixel contributed threshold.  Used in calculating
+        # the service raster, it's the result of (thresh/contrib)
+        for column_name in ['nut_export', 'nut_retain', 'mn_runoff', 'thresh_c']:
             LOGGER.debug('Creating new field %s in %s', column_name, copy_uri)
             new_field = ogr.FieldDefn(column_name, ogr.OFTReal)
             copy.GetLayer(0).CreateField(new_field)

@@ -47,18 +47,38 @@ def biophysical(args):
 
     threshold_raster_path = os.path.join(args['folders']['intermediate'],
         'threshold.tif')
-    net_service = service(retention_raster, args['watersheds'], threshold_path)
+    service_raster_path = os.path.join(args['folders']['intermediate'],
+        'service.tif')
+    net_service = service(retention_raster, args['watersheds'],
+        threshold_raster_path, service_raster_path)
 
-def service(retention, watersheds, threshold_path=None):
+def service(retention, watersheds, threshold_path=None, service_uri=None):
     output_type = 'GTiff'
     if threshold_path == None:
         output_type = 'MEM'
 
-    nutrient_threshold = invest_core.raster_utils.new_raster_from_base(
-        retention, threshold_path, output_type, -1.0, gdal.GDT_Float32)
-    gdal.RasterizeLayer(nutrient_threshold, watersheds.GetLayer(0),
-        options=['ATTRIBUTE=thresh'])
-    pass
+    for layer in watersheds:
+        for watershed in layer:
+            pixel_count = get_raster_stat_under_polygon(retention, watershed,
+                layer, stat='count')
+            threshold_index = watershed.GetFieldIndex('thresh')
+            threshold = watershed.GetFieldAsDouble(threshold_index)
+
+            ratio = threshold/float(pixel_count)
+            ratio_index = watershed.GetFieldIndex('thresh_c')
+            watershed.SetField(ratio_index, threshold_index)
+            layer.SetFeature(watershed)
+
+    threshold_raster = raster_utils.new_raster_from_base(retention,
+        threshold_path, output_type, -1.0, gdal.GDT_Float32)
+    gdal.RasterizeLayer(threshold_raster, [1], watersheds.GetLayer(0),
+        options=['ATTRIBUTE=thresh_c'])
+
+    nodata = retention.GetRasterBand(1).GetNoDataValue()
+    service_op = np.vectorize(lambda x, y: x - y if y != nodata else
+        nodata)
+    return raster_utils.vectorize_rasters([retention, threshold_raster],
+        service_op, raster_out_uri=service_uri, nodata=nodata)
 
 def get_lulc_map(landcover, table, field, folder):
     lu_map = table.get_map('lucode', field)
