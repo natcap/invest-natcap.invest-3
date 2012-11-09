@@ -130,9 +130,23 @@ class NutrientCoreTest(unittest.TestCase):
             layer.ResetReading()
 
         for reg_feature, split_shapefile in zip(features_to_test, shapes):
-            reg_geometry = reg_feature.GetGeometryRef()
+            reg_geom = reg_feature.GetGeometryRef()
 
             # Assert split_shapefile only has one layer
             self.assertEqual(split_shapefile.GetLayerCount(), 1)
 
-        print shapes
+            # Assert that there's only one feature in the layer
+            self.assertEqual(split_shapefile.GetLayer(0).GetFeatureCount(), 1)
+
+            # Assert the geometry equality of the two features.
+            # Do this by calculating the intersection of the two features and
+            # then asserting that the area is what we expect from the original
+            # shape.
+            split_feature = split_shapefile.GetLayer(0).GetFeature(0)
+            split_geom = split_feature.GetGeometryRef()
+            split_geom_dict = split_geom.ExportToJson()
+
+            intersection = reg_geom.Intersection(split_geom)
+            difference_area = intersection.GetArea()
+            reg_area = reg_geom.GetArea()
+            self.assertEqual(difference_area, reg_area)
