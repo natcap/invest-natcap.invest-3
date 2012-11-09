@@ -1594,5 +1594,13 @@ def align_datasets(datasets, dataset_uris):
 
         returns a list of the aligned datasets in the same order they are 
             passed in"""
-    pass
-        
+
+    dataset_list = [None] * len(datasets)
+    for index in range(len(datasets)):
+        def op(*x):
+            return x[index]
+        LOGGER.debug("aligning raster %s" % (dataset_uris[index]))
+        band, nodata = extract_band_and_nodata(datasets[index])
+        dataset_list[index] = vectorize_rasters(
+            datasets, op, raster_out_uri=dataset_uris[index],
+            datatype=band.DataType, nodata=nodata)
