@@ -521,23 +521,64 @@ def valuation(args):
     mega_watt = mega_watt * number_turbines
     dollar_per_kwh = args['dollar_per_kWh']
     
-    
+    wind_energy_points = args['biophysical_data']
     
     try:
         grid_points_ds = args['grid_points']
         land_points_ds = args['land_points']
     except KeyError:
+        LOGGER.info('No grid points, calculating distances using land polygon')
         land_poly_ds = args['land_polygon']
+        
+        land_to_ocean_dist = point_to_polygon_distance(
+                land_poly_ds, wind_energy_points)
+        
+        field_name = 'O2L'
+        
+        wind_energy_points = add_field_to_shape_given_list(
+                wind_energy_points, land_to_ocean_dist, field_name)
     else:
+        LOGGER.info('Calculating distances using grid points')
         grid_to_land_dist = point_to_polygon_distance(
                 grid_points_ds, land_points_ds)
-        land_to_ocean_dist = poin_to_polygon_distance(
+        land_to_ocean_dist = point_to_polygon_distance(
                 land_points_ds, wind_energy_points)
 
-    
-    
-    
-    
+        ocean_to_land_field = 'O2L'
+        land_to_grid_field = 'L2G'
+        
+        wind_energy_points = add_field_to_shape_given_list(
+                wind_energy_points, land_to_ocean_dist, ocean_to_land_field)
+         
+        land_points_ds = add_field_to_shape_given_list(
+                land_points_ds, grid_to_land_dist, land_to_grid_field)
+   
+        land_geoms = get_points_geometries(land_points_ds)
+        land_dict = get_dictionary_from_shape(land_points_ds)
+        
+        LOGGER.debug('land_dict : %s', land_dict)
+        
+        kd_tree = spatial.KDTree(land_geoms)
+        L2G_dist = 0
+        l2g_list = []
+        wind_energy_layer = wind_energy_points.GetLayer()
+        for feat in wind_energy_layer:
+            geom = feat.GetGeometryRef()
+            x_loc = geom.GetX()
+            y_loc = geom.GetY()
+            point = np.array([x_loc, y_loc])
+            dist, closest_index = kd_tree.query(point)
+            L2G_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
+            l2g_list.append(L2G_dist)
+            # Now have access to total distance and can even add it
+        LOGGER.debug('L2G DIST : %s', L2G_dist)
+       
+        wind_energy_layer.ResetReading()
+        wind_energy_layer = None
+
+        wind_energy_points = add_field_to_shape_given_list(
+                wind_energy_points, l2g_list, land_to_grid_field)
+        
     
     # Construct as many parts of the NPV equation as possible without needing to
     # vectorize over harvested energy and distance
@@ -552,166 +593,54 @@ def valuation(args):
     # raster, outputting another raster with the NPV
 
     #capex = cap / (1.0 - install_rate - misc_capex_cost)
-      
-    wind_energy_points = args['biophysical_data']
+    wind_energy_layer = wind_energy_points.GetLayer() 
+    LOGGER.info('Creating new field')
+    new_field = ogr.FieldDefn('NPV', ogr.OFTReal)
+    wind_energy_layer.CreateField(new_field)
 
-    # Using 'WGS84' as our well known lat/long projection
-    wgs84_srs = osr.SpatialReference()
-    wgs84_srs.SetWellKnownGeogCS("WGS84")
-    
-    proj_srs = wind_energy_points.GetLayer().GetSpatialRef()
-    
-    # Create coordinate transformation to get point geometries from meters to
-    # lat / long
-    coord_transform = osr.CoordinateTransformation(proj_srs, wgs84_srs)
-    
-    # Get a numpy array of the wind energy points
-    points_array = get_points_geometries(wind_energy_points)
-
-    # Transform the points into lat / long
-    new_points = transform_array_of_points(points_array, proj_srs, wgs84_srs)
-
-    # Convert points from degrees to radians
-    radian_points = convert_degrees_to_radians(new_points)
-    
-    # Convert points from radians to cartesian
-    ocean_cartesian = lat_long_to_cartesian(radian_points)
-
-    try:
-        # Try and use the land grid points for getting distances
-        grid_land_points_dict = args['grid_dict']
-    except KeyError:
-        # Use land polygon for getting distances
-        # Use shapely to get distance between point and polygon
-        pass
-    else:
-        # Create individual dictionaries for land and grid points
-        land_dict = build_subset_dictionary(
-                grid_land_points_dict, 'type', 'land')
-        grid_dict = build_subset_dictionary(
-                grid_land_points_dict, 'type', 'grid')
-        LOGGER.debug('Land Dict : %s', land_dict)
-        # Create numpy arrays representing the points for land and
-        # grid locations
-        land_array = np.array(build_list_points_from_dict(land_dict))
-        grid_array = np.array(build_list_points_from_dict(grid_dict))
+    for feat in wind_energy_layer:
+        npv_index = feat.GetFieldIndex('NPV')
+        energy_index = feat.GetFieldIndex('HarvEnergy')
+        O2L_index = feat.GetFieldIndex('O2L')
+        L2G_index = feat.GetFieldIndex('L2G')
         
-        grid_radians = convert_degrees_to_radians(grid_array)
-        grid_cartesian = lat_long_to_cartesian(grid_radians)
+        energy_val = feat.GetField(energy_index)
+        O2L_val = feat.GetField(O2L_index)
+        L2G_val = feat.GetField(L2G_index)
 
-        land_radians = convert_degrees_to_radians(land_array)
-        land_cartesian = lat_long_to_cartesian(land_radians)
+        total_cable_dist = O2L_val + L2G_val
+        cable_cost = 0
 
-        # Compute the distance between grid and land cartesian points 
-        grid_dist_index = distance_kd(grid_cartesian, land_cartesian)
+        if total_cable_dist <= 60:
+            cable_cost = (.81 * mega_watt) + (1.36 * total_cable_dist)
+        else:
+            cable_cost = (1.09 * mega_watt) + (.89 * total_cable_dist)
+
+        cap = cap_less_dist + cable_cost
+
+        capex = cap / (1.0 - install_cost - misc_capex_cost) 
+
+        npv = 0
+
+        for year in range(1, time + 1):
+            rev = energy_val * dollar_per_kwh 
+            comp_one = (rev - op_maint_cost * capex) / disc_const**year
+            comp_two = decom * capex / disc_time
+            npv = npv + (comp_one - comp_two - capex)
         
-        # Separate out the tuple
-        grid_dist, closest_grid = grid_dist_index[0], grid_dist_index[1] 
-        LOGGER.debug('Grid Distance : %s', grid_dist)
-        LOGGER.debug('Grid Closest Index : %s', closest_grid)
-        
-        # Add the distance from each landing point to its closest grid point as
-        # a property in the land_dict
-        index_x = 0
-        for item in grid_dist:
-            land_dict[closest_grid[index_x]]['g2l'] = item
-            index_x = index_x + 1
+        feat.SetField(npv_index, npv)
+        wind_energy_layer.SetFeature(feat)
 
-        LOGGER.debug('Land Dict : %s', land_dict)
-        
-        dist_index = distance_kd(land_cartesian, ocean_cartesian) 
-        dist, closest_index = dist_index[0], dist_index[1] 
-        LOGGER.debug('Distances : %s ', dist) 
-    
-        # Get the wind points layer and reset the feature head in anticipation
-        # of adding the distances and landing id to the points
-        wind_layer = wind_energy_points.GetLayer()
-        wind_layer.ResetReading()
-        
-        new_field_list = ['O2L_Dist', 'Land_Id', 'G2L_Dist']
-        
-        # Create new fields for ocean to land distance and the landing point id
-        # to add to the shapefile
-        for field_name in new_field_list:
-            new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
-            wind_layer.CreateField(new_field)
+    wind_energy_layer.SyncToDisk()
 
-        dist_index = 0
-        id_index = 0
-        
-        for feat in wind_layer:
-            ocean_to_land_dist = dist[dist_index]
-            # Grab the landing point id by indexing into the dictionary using
-            # the value from the closest_index
-            land_id = land_dict[closest_index[id_index]]['id']
-            g2l_dist = land_dict[closest_index[id_index]]['g2l']
+    npv_uri = os.path.join(output_dir, 'npv.tif')
+    out_nodata = 0.0
 
-            value_list = [ocean_to_land_dist, land_id, g2l_dist]
-            
-            for field_name, field_value in zip(new_field_list, value_list):
-                field_index = feat.GetFieldIndex(field_name)
-                feat.SetField(field_index, field_value)
-
-            wind_layer.SetFeature(feat)
-            dist_index = dist_index + 1
-            id_index = id_index + 1
-
-        #wind_energy_points = None
-
-        out_nodata = -1.0
-        
-        o2l_uri = os.path.join(intermediate_dir, 'o2l.tif')
-        l2g_uri = os.path.join(intermediate_dir, 'l2g.tif')
-        energy_uri = os.path.join(intermediate_dir, 'val_energy.tif')
-        
-        ocean_land_ds = raster_utils.create_raster_from_vector_extents(
-                30, 30, gdal.GDT_Float32,
-                out_nodata, o2l_uri, wind_energy_points)
-        
-        land_grid_ds = raster_utils.create_raster_from_vector_extents(
-                30, 30, gdal.GDT_Float32,
-                out_nodata, l2g_uri, wind_energy_points)
-
-        energy_ds = raster_utils.create_raster_from_vector_extents(
-                30, 30, gdal.GDT_Float32,
-                out_nodata, energy_uri, wind_energy_points)
-        
-        # Interpolate points onto raster for density values and
-        # harvested values:
-        raster_utils.vectorize_points(
-                wind_energy_points, 'O2L_Dist', ocean_land_ds)
-        raster_utils.vectorize_points(
-                wind_energy_points, 'G2L_Dist', land_grid_ds)
-        raster_utils.vectorize_points(
-                wind_energy_points, 'HarvEnergy', energy_ds)
-
-        def npv_op(dist_ocean, dist_land, energy):
-            total_cable_dist = dist_ocean + dist_land
-            cable_cost = 0
-            if total_cable_dist <= 60:
-                cable_cost = (.81 * mega_watt) + (1.36 * total_cable_dist)
-            else:
-                cable_cost = (1.09 * mega_watt) + (.89 * total_cable_dist)
-
-            cap = cap_less_dist + cable_cost
-
-            capex = cap / (1.0 - install_cost - misc_capex_cost) 
-    
-            npv = 0
-
-            for t in range(1, time + 1):
-                rev = energy * dollar_per_kwh 
-                comp_one = (rev - op_maint_cost * capex) / disc_const**t
-                comp_two = decom * capex / disc_time
-                npv = npv + (comp_one - comp_two - capex)
+    npv_ds = raster_utils.create_raster_from_vector_extents(
+            30, 30, gdal.GDT_Float32, out_nodata, npv_uri, wind_energy_points)
    
-            return npv
-
-        npv_uri = os.path.join(intermediate_dir, 'npv.tif')
-        
-        _ = raster_utils.vectorize_rasters(
-                [ocean_land_ds, land_grid_ds, energy_ds], npv_op, 
-                raster_out_uri = npv_uri, nodata = -1.0)
+    raster_utils.vectorize_points(
+            wind_energy_points, 'NPV', npv_ds)
 
 def point_to_polygon_distance(poly_ds, point_ds):
     """Calculates the distances from points in a point geometry shapefile to the
@@ -748,6 +677,7 @@ def point_to_polygon_distance(poly_ds, point_ds):
         point_dist = point.distance(polygon_collection)
         distances.append(point_dist)
 
+    LOGGER.debug('Distance List Length : %s', len(distances))
     point_layer.ResetReading()
     poly_layer.ResetReading()
 
@@ -772,7 +702,8 @@ def add_field_to_shape_given_list(shape_ds, value_list, field_name):
     layer.CreateField(new_field)
 
     value_iterator = 0
-
+    LOGGER.debug('Length of value_list : %s', len(value_list))
+    LOGGER.debug('Feature Count : %s', layer.GetFeatureCount())
     LOGGER.info('Adding values to new field for each point')
     for feat in layer:
         field_index = feat.GetFieldIndex(field_name)
@@ -915,3 +846,32 @@ def get_points_geometries(shape):
         index = index + 1
 
     return np.array(points)
+
+def get_dictionary_from_shape(shape):
+    """This function takes a shapefile and for each feature retrieves
+    the X and Y value from it's geometry. The X and Y value are stored in
+    a numpy array as a point [x_location,y_location], which is returned 
+    when all the features have been iterated through.
+    
+    shape - An OGR shapefile datasource
+    
+    returns - A numpy array of points, which represent the shape's feature's
+              geometries.
+    """
+    layer = shape.GetLayer()
+    layer.ResetReading()
+    feat_count = layer.GetFeatureCount() 
+    feat_dict = {}
+
+    for feat in layer:    
+        geom = feat.GetGeometryRef()
+        x_location = geom.GetX()
+        y_location = geom.GetY()
+        feat_dict[(x_location, y_location)] = {}
+        for field_index in range(feat.GetFieldCount()):
+            field_defn = feat.GetFieldDefnRef(field_index)
+            field_name = field_defn.GetNameRef()
+            feat_dict[(x_location, y_location)][field_name] = feat.GetField(
+                    field_index)
+
+    return feat_dict 
