@@ -533,10 +533,20 @@ def valuation(args):
         land_to_ocean_dist = point_to_polygon_distance(
                 land_poly_ds, wind_energy_points)
         
-        field_name = 'O2L'
+        ocean_to_land_field = 'O2L'
         
         wind_energy_points = add_field_to_shape_given_list(
-                wind_energy_points, land_to_ocean_dist, field_name)
+                wind_energy_points, land_to_ocean_dist, ocean_to_land_field)
+    
+        land_to_grid_field = 'L2G'
+        wind_energy_layer = wind_energy_points.GetLayer()
+        feat_count = wind_energy_layer.GetFeatureCount()
+        grid_to_land_dist = np.ones(feat_count)
+        grid_to_land_dist = grid_to_land_dist * mean_land_dist
+        wind_energy_layer = None     
+        wind_energy_points = add_field_to_shape_given_list(
+                wind_energy_points, grid_to_land_dist, land_to_grid_field)
+    
     else:
         LOGGER.info('Calculating distances using grid points')
         grid_to_land_dist = point_to_polygon_distance(
