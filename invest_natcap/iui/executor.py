@@ -372,7 +372,7 @@ class Executor(threading.Thread):
                 module_list = module.split('.')
                 model = locate_module(module_list)
                 model_name = module_list[-1]  # model name is last entry in list
-                LOGGER.debug('Loading %s from PATH'
+                LOGGER.debug('Loading %s from PATH')
             filename = '%s-log-%s.txt' % (model_name, timestamp)
 
             # we want to save this file to the current directory until the model
@@ -409,19 +409,26 @@ class Executor(threading.Thread):
 
             # If the exception indicates that we ran out of disk space, convert
             # e to a more informative exception.
-            if hasattr(e,'__class__') and hasattr(e, 'errno'):
+            # EnvironmentError exception contains the errno and __class__
+            # attributes
+            if issubclass(e.__class__, EnvironmentError):
                 LOGGER.debug('error %s number %s', e.__class__, e.errno)
                 LOGGER.debug('Error message: %s', str(e))
 
                 # Actually check the error code for the exception and use a new
                 # custom exception with more information.
-                if (isinstance(e, WindowsError) and (e.errno in [8, 28])) or\
-                        (isinstance(e, IOError) and (e.errno == 28)):
+                # The exception.__class__  is necessary as the second argument.
+                # If not included, will throw an exception, which will cause the
+                # thread to silently crash.
+                if (isinstance(e, WindowsError.__class__) and (e.errno in [8, 28])) or\
+                        (isinstance(e, IOError.__class__) and (e.errno == 28)):
                     LOGGER.debug('Insufficient disk space detected')
                     e = InsufficientDiskSpace('You do not have sufficient disk '
                                               'space available for this model to finish running.')
                 else:
-                    LOGGER.debug('Error not determined to be disk-space related')
+                    LOGGER.debug('Exception not disk-space related')
+            else:
+                LOGGER.debug('Exception not environment-related')
 
             #This intentionally handles all exceptions
             self.printTraceback()
