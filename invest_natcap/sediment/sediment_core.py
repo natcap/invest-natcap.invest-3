@@ -4,6 +4,7 @@
 import logging
 import bisect
 import os
+import tempfile
 
 import scipy.sparse
 import scipy.sparse.linalg
@@ -196,8 +197,8 @@ def biophysical(args):
         os.path.join(args['intermediate_uri'], 'pixel_sed_flow.tif')
     LOGGER.info("Calculating per pixel sediment flow to stream")
     pixel_sediment_core_dataset = \
-        pixel_sediment_flow(usle_export_dataset, \
-            args['flow_direction'], effective_retention_dataset, 
+        pixel_sediment_flow(usle_export_dataset,
+            args['flow_direction'], effective_retention_dataset,
             pixel_sediment_flow_uri)
 
     LOGGER.info("Calculating per pixel sediment retention")
@@ -587,7 +588,7 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
                         retention_efficiency_dataset, pixel_sediment_flow_uri):
     """Creates a raster of total sediment outflow from each pixel.
     
-        usle_loss_dataset - a gdal dataset with per pixel 
+        usle_loss_dataset - (output) a gdal dataset with per pixel 
             potential export in units of tons per pixel
         flow_direction_dataset - (input) A raster showing direction of flow out 
             of each cell with directional values given in radians.
@@ -621,8 +622,20 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
     pixel_sediment_flow_band = pixel_sediment_flow_dataset.GetRasterBand(1)
     pixel_sediment_flow_band.Fill(pixel_sediment_flow_nodata)
 
-    n_rows = pixel_sediment_flow_dataset.RasterYSize
-    n_cols = pixel_sediment_flow_dataset.RasterXSize
+    #It's possible for the datasets to very slightly misalign, this is a
+    #patch to make sure everything lines up for the moment
+    datasets = [usle_loss_dataset, flow_direction_dataset, 
+                retention_efficiency_dataset, pixel_sediment_flow_dataset]
+
+    aligned_dataset_uris = [tempfile.mkstemp(suffix='.tif')[1] for x in datasets]
+    LOGGER.info(aligned_dataset_uris)
+    aligned_datasets = raster_utils.align_datasets(
+        datasets, aligned_dataset_uris)
+    usle_loss_dataset, flow_direction_dataset, retention_efficiency_dataset, \
+        pixel_sediment_flow_dataset = aligned_datasets
+
+    n_rows = usle_loss_dataset.RasterYSize
+    n_cols = usle_loss_dataset.RasterXSize
 
     def calc_index(i, j):
         """used to abstract the 2D to 1D index calculation below"""
@@ -664,7 +677,7 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
             #set local flow accumulation to 0
             local_flow_angle = flow_direction_array[cell_index]
             local_retention = retention_efficiency_array[cell_index]
-            LOGGER.info("row col %s %s %s" % (row_index, col_index, cell_index))
+#            LOGGER.info("row col %s %s %s" % (row_index, col_index, cell_index))
             local_sediment_loss = usle_loss_array[cell_index]
 
             if local_sediment_loss == usle_loss_nodata or \
@@ -733,6 +746,18 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
     result.resize(n_rows, n_cols)
 
     pixel_sediment_flow_band.WriteArray(result)
+
+    #Close the datasets
+    aligned_datasets = None
+    usle_loss_dataset = None
+    flow_direction_dataset = None
+    retention_efficiency_dataset = None
+
+    for uri in aligned_dataset_uris:
+        try:
+            os.remove(uri)
+        except Exception:
+            LOGGER.warn("Couldn't remove file %s" % uri)
 
     return pixel_sediment_flow_dataset
 
