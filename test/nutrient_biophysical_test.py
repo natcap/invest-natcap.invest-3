@@ -115,3 +115,45 @@ class NutrientCoreTest(unittest.TestCase):
             null = nutrient_core.get_raster_stat_under_polygon(sample_raster,
                 sample_feature, sample_layer, output_path, 'op')
 
+    def test_split_datasource(self):
+        shapefile = ogr.Open(os.path.join(NUTR_INPUT, 'watersheds.shp'))
+
+        # Get the memory-bound version of these shapefiles
+        shapes_in_mem = nutrient_core.split_datasource(shapefile)
+
+        # Get the number of features across all layers.
+        feature_count = sum([l.GetFeatureCount() for l in shapefile])
+
+        features_to_test = []
+        for layer in shapefile:
+            for shape in layer:
+                features_to_test.append(shape)
+            layer.ResetReading()
+
+        uris = [r + str(i) for (i, r) in
+                enumerate([WORKSPACE + '/shapefiles'] * feature_count)]
+        shapes_on_disk = nutrient_core.split_datasource(shapefile, uris)
+
+        for shapes_list_to_test in [shapes_in_mem, shapes_on_disk]:
+            self.assertEqual(feature_count, len(shapes_list_to_test))
+            for reg_feature, split_shapefile in zip(features_to_test, shapes_list_to_test):
+                reg_geom = reg_feature.GetGeometryRef()
+
+                # Assert split_shapefile only has one layer
+                self.assertEqual(split_shapefile.GetLayerCount(), 1)
+
+                # Assert that there's only one feature in the layer
+                self.assertEqual(split_shapefile.GetLayer(0).GetFeatureCount(), 1)
+
+                # Assert the geometry equality of the two features.
+                # Do this by calculating the intersection of the two features and
+                # then asserting that the area is what we expect from the original
+                # shape.
+                split_feature = split_shapefile.GetLayer(0).GetFeature(0)
+                split_geom = split_feature.GetGeometryRef()
+                split_geom_dict = split_geom.ExportToJson()
+
+                intersection = reg_geom.Intersection(split_geom)
+                difference_area = intersection.GetArea()
+                reg_area = reg_geom.GetArea()
+                self.assertEqual(difference_area, reg_area)

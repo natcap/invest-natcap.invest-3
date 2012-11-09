@@ -152,7 +152,7 @@ def execute(args):
         valuation_args['grid_points'] = grid_point_prj
         valuation_args['land_points'] = land_point_prj
     # call on the core module
-    #wind_energy_core.valuation(valuation_args)
+    wind_energy_core.valuation(valuation_args)
 
 def clip_and_project_datasource(shape_a, shape_b, out_uri):
     """Clips and reprojects one OGR datasource to another
@@ -190,7 +190,7 @@ def clip_and_project_datasource(shape_a, shape_b, out_uri):
             dir_name, basename + '_projected.shp')
 
     shape_a_proj = raster_utils.reproject_datasource(
-        shape_a_clipped, shape_a_wkt, shape_a_proj_uri)
+        shape_a_clipped, shape_b_wkt, shape_a_proj_uri)
 
     return shape_a_proj
 

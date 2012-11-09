@@ -349,9 +349,19 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         #sub dictionary based on that pair from h_s, one sub dictionary from
         #habitats based on that particular habitat, and one sub dictionary
         #from stressors based on that particular stressor.
-        E = calc_score_value(h_s[pair]['E'], habitats[h]['E'], stressors[s]['E'])
+        h_s_e = h_s[pair]['E'] if h_s[pair]['E'] is not None else None
+        h_e = habitats[h]['E'] if habitats[h]['E'] is not None else None
+        s_e = stressors[s]['E'] if stressors[s]['E'] is not None else None
 
-        C = calc_score_value(h_s[pair]['C'], habitats[h]['C'], stressors[s]['C'])
+        h_s_c = h_s[pair]['C'] if h_s[pair]['C'] is not None else None
+        h_c = habitats[h]['C'] if habitats[h]['C'] is not None else None
+        s_c = stressors[s]['C'] if stressors[s]['C'] is not None else None
+
+        #Pass what should be 3 dictionaries, but might possibly be none values
+        #if nothing exists within that type of criteria. We are unsure what
+        #types of things user's will pass through.
+        E = calc_score_value(h_s_e, h_e, s_e)
+        C = calc_score_value(h_s_c, h_c, s_c)
 
         #Need to remember that E should be applied to the decayed raster values,
         #then the decayed value per pixel can be used for the risk value. These
@@ -417,6 +427,11 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
     sum_bottom = 0.0
 
     for dictionary in crit_dicts:
+        
+        #If there are no criteria within that particular subdictionary, don't
+        #want to try including in our E/C calculation.
+        if dictionary == None:
+            continue
 
         for criteria in dictionary:
            
@@ -471,8 +486,6 @@ def make_risk_euc(array, E, C):
         A numpy array of risk values for the gievn habitat-stressor overlap
             based on a euclidean risk function.
     '''
-    a_file = open('./data/test_out/HRA/Intermediate/a_file.txt', 'w')
-    array.tofile(a_file)
     #Want to get an array that has potential decay applied to E, so that the E
     #could be different for any pixel in the risk array.
     e_array = array * E
