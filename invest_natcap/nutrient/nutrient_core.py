@@ -403,3 +403,13 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
 
     return get_stats(temp_raster)
 
+def split_datasource(ds):
+    """Split the input OGR datasource into a list of datasources, each with a
+    single layer containing a single feature.
+
+        ds - an OGR datasource.
+
+    Returns a list of OGR datasources."""
+
+    pass
+
