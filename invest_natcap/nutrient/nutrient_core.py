@@ -411,5 +411,25 @@ def split_datasource(ds):
 
     Returns a list of OGR datasources."""
 
-    pass
+    ogr_driver = ogr.GetDriverByName('Memory')
+    output_shapefiles = []
+    for layer in ds:
+        for feature in layer:
+            temp_shapefile = ogr_driver.CreateDataSource('/tmp/temp_shapefile')
+            temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
+                layer.GetSpatialRef(), geom_type=ogr.wkbPolygon)
+            temp_layer_defn = temp_layer.GetLayerDefn()
+
+            LOGGER.debug('Making a copy of the input feature for rasterizing')
+            feature_geom = feature.GetGeometryRef()
+            temp_feature = ogr.Feature(temp_layer_defn)
+            temp_feature.SetGeometry(feature_geom)
+            temp_feature.SetFrom(feature)
+            temp_layer.CreateFeature(temp_feature)
+
+            temp_feature.Destroy()
+            temp_layer.SyncToDisk()
+            output_shapefiles.append(temp_shapefile)
+
+    return output_shapefiles
 

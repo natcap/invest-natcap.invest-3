@@ -118,3 +118,4 @@ class NutrientCoreTest(unittest.TestCase):
     def test_split_datasource(self):
         shapefile = ogr.Open(os.path.join(NUTR_INPUT, 'watersheds.shp'))
         shapes = nutrient_core.split_datasource(shapefile)
+        print shapes
