@@ -403,21 +403,32 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
 
     return get_stats(temp_raster)
 
-def split_datasource(ds):
+def split_datasource(ds, uris=None):
     """Split the input OGR datasource into a list of datasources, each with a
     single layer containing a single feature.
 
         ds - an OGR datasource.
+        uris - a list of uris to where the new datasources should be saved on
+            disk.  Must have a URI for each feature in ds (even if features are
+            split across multiple layers).
 
     Returns a list of OGR datasources."""
 
+    num_features = sum([l.GetFeatureCount() for l in ds])
+    if uris == None:
+        driver_string = 'Memory'
+        uris = ['/tmp/temp_shapefile'] * num_features
+    else:
+        driver_string = 'ESRI Shapefile'
+
     LOGGER.debug('Splitting datasource into separate shapefiles')
-    ogr_driver = ogr.GetDriverByName('Memory')
+    ogr_driver = ogr.GetDriverByName(driver_string)
     output_shapefiles = []
     for layer in ds:
         for feature in layer:
             LOGGER.debug('Creating new shapefile')
-            temp_shapefile = ogr_driver.CreateDataSource('/tmp/temp_shapefile')
+            uri_index = len(output_shapefiles)
+            temp_shapefile = ogr_driver.CreateDataSource(uris[uri_index])
             temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
                 layer.GetSpatialRef(), geom_type=ogr.wkbPolygon)
             temp_layer_defn = temp_layer.GetLayerDefn()
