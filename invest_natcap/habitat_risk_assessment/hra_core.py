@@ -427,6 +427,11 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
     sum_bottom = 0.0
 
     for dictionary in crit_dicts:
+        
+        #If there are no criteria within that particular subdictionary, don't
+        #want to try including in our E/C calculation.
+        if dictionary == None:
+            continue
 
         for criteria in dictionary:
            
