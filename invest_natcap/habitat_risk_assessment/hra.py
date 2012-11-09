@@ -305,7 +305,11 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
     #We only want to get the "buffered" version of the files.
     s_rast_files = glob.glob(os.path.join(s_rast, '*_buff.tif'))
- 
+
+    #Need a pixel count to get a spatial overlap percentage.
+    all_pix_ct = 0.
+    overlap_pix_ct = 0.
+    
     #Create vectorize_raster's function to call when combining the h-s rasters
     def combine_hs_pixels(pixel_h, pixel_s):
         
@@ -313,10 +317,13 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
         if pixel_h == 0 or pixel_s == 0:
             #Need to return a float in order to have floats for all other
             #pixels.
+            all_pix_ct += 1
             return 0.0
         else:
             #Want to return the decayed value- even if it's actually 1 for this
             #particular pixel.
+            all_pix_ct +=1
+            overlap_pix_ct += 1
             return pixel_s
 
     for h in h_rast_files:
@@ -349,6 +356,31 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             #that were gleaned from the IUI.
             h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
 
+            #Additionally, want to add spatial overlap as a criteria into the
+            #dictionary based on our discovery of the percentage overlap of
+            #pixels.
+            '''Spatial Overlap Rating:
+                    HIGH (3): >30% of of the habitat type overlaps with the
+                        stressor
+                    MEDIUM (2): 10% - 30% of the habitat type overlaps with
+                        the stressor
+                    LOW (1): 0% - 10% of the habitat type overlaps with the
+                        stressor
+            '''
+            s_over_pct = (ovelap_pix_ct / all_pix_ct) * 100
+            
+            #Should be noted that I am making up the W/DQ here since I don't
+            #know what the "default" for non-user-entered values should be
+            if s_over_pct > 30:
+                h_s[(h_name, s_name)]['E']['Spatial Overlap'] = \
+                    {'Rating': 3, 'Weight': 2, 'DQ': 3}
+            elif s_over_pct <= 30 and S_over_pct > 10:
+                h_s[(h_name, s_name)]['E']['Spatial Overlap'] = \
+                    {'Rating': 2, 'Weight': 2, 'DQ': 3}
+            elif s_over_pct < 10:
+                h_s[(h_name, s_name)]['E']['Spatial Overlap'] = \
+                    {'Rating': 1, 'Weight': 2, 'DQ': 3}
+                
     return h_s
 
 def make_rasters(file_names, dir_path, grid_size):
