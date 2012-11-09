@@ -305,7 +305,11 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     h_rast_files = glob.glob(os.path.join(h_rast, '*.tif'))
     #We only want to get the "buffered" version of the files.
     s_rast_files = glob.glob(os.path.join(s_rast, '*_buff.tif'))
- 
+
+    #Need a pixel count to get a spatial overlap percentage.
+    all_pix_ct = 0.
+    overlap_pix_ct = 0.
+    
     #Create vectorize_raster's function to call when combining the h-s rasters
     def combine_hs_pixels(pixel_h, pixel_s):
         
@@ -313,10 +317,13 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
         if pixel_h == 0 or pixel_s == 0:
             #Need to return a float in order to have floats for all other
             #pixels.
+            all_pix_ct += 1
             return 0.0
         else:
             #Want to return the decayed value- even if it's actually 1 for this
             #particular pixel.
+            all_pix_ct +=1
+            overlap_pix_ct += 1
             return pixel_s
 
     for h in h_rast_files:
