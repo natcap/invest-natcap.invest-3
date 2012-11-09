@@ -31,7 +31,7 @@ class TestWindEnergyValuation(unittest.TestCase):
         args['grid_points_uri'] = os.path.join(
                 input_dir, 'land_grid_points.csv')
         #args['land_polygon_uri'] = os.path.join(
-        #        regression_dir, 'global_poly_clip')
+        #        regression_dir, 'global_poly_clip.shp')
         args['number_of_machines'] = 30
         args['dollar_per_kWh'] = 1.81
         args['suffix'] = ''
