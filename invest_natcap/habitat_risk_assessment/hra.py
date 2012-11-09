@@ -262,7 +262,7 @@ def make_exp_decay_array(dist_array, buff, nodata):
     cutoff = 0.01
 
     #Need to have a value representing the decay rate for the exponential decay
-    rate = math.log(cutoff)/ buff
+    rate = -math.log(cutoff)/ buff
 
     exp_decay_array = np.exp(-rate * dist_array)
     exp_decay_array[exp_decay_array < cutoff] = nodata
@@ -311,11 +311,13 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
         
         #For all pixels in the two rasters, return this new pixel value
         if pixel_h == 0 or pixel_s == 0:
-            return 0
+            #Need to return a float in order to have floats for all other
+            #pixels.
+            return 0.0
         else:
             #Want to return the decayed value- even if it's actually 1 for this
             #particular pixel.
-            return s
+            return pixel_s
 
     for h in h_rast_files:
         for s in s_rast_files:
@@ -339,13 +341,13 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
             LOGGER.info("combine_hs_rasters")
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
                             combine_hs_pixels, raster_out_uri = out_uri,
-                            datatype = gdal.GDT_Int32, nodata=0)
+                            datatype = gdal.GDT_Float32, nodata=0)
             
             #Now place the datasource into the corresponding dictionary entry
             #in 'h-s'. We will make the open datasource the third item in
             #the tuple. The first two are the exposure and consequence ratings 
             #that were gleaned from the IUI.
-            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri, gdal.GA_Update)
+            h_s[(h_name, s_name)]['DS'] = gdal.Open(out_uri)
 
     return h_s
 

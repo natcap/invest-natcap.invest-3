@@ -37,19 +37,74 @@ def biophysical(args):
     nutrient_retained = get_lulc_map(args['landuse'], args['bio_table'],
         'eff', args['folders']['intermediate'])
 
-    alv = adjusted_loading_value(args['nutrient_export'], args['pixel_yield'],
+    alv = adjusted_loading_value(nutrient_export, args['pixel_yield'],
         args['watersheds'], args['folders']['intermediate'])
 
     flow_path = get_flow_path(args['dem'])
 
-    retention_raster = get_retention(args['nutrient_retained'], alv,
+    retention_raster = get_retention(nutrient_retained, alv,
         flow_path)
 
-    net_service = service(retention_raster, nutrient_threshold,
-        args['watersheds'])
+    threshold_raster_path = os.path.join(args['folders']['intermediate'],
+        'threshold.tif')
+    service_raster_path = os.path.join(args['folders']['intermediate'],
+        'service.tif')
+    net_service = service(retention_raster, args['watersheds'],
+        threshold_raster_path, service_raster_path)
 
-def service(retention, threshold, watersheds):
-    pass
+def service(retention, watersheds, threshold_uri=None, service_uri=None):
+    """Calculate the biophysical service of the nutrient retention on a
+    landscape over the input watersheds.  This calculation is done on a
+    per-pixel basis, but only in watershed areas.
+
+        retention - a GDAL raster of nutrient retention and export.
+        watersheds - an OGR shapefile of watersheds on this landscape.  This
+            shapefile must have the following fields: 'thresh', 'thresh_c',
+            which should be of the type OGR.OFT_Real.
+        threshold_uri=None - a string URI to where the threshold raster should
+            be stored on disk.  If None, the raster will be stored temporarily
+            in memory and will not be saved to disk.
+        service_uri=None - a string URI to where the service raster should be
+            stored on disk.  If Nonw, the service raster will be stored
+            temporarily in memory and will not be saved to disk in this
+            function.
+
+        Returns a GDAL dataset of the service raster."""
+
+    # Loop through the provided watersheds, calculate how many pixels are under
+    # the feature and then calculate the per-pixel threshold, setting it to the
+    # 'thresh_c' column.
+    for layer in watersheds:
+        for watershed in layer:
+            pixel_count = get_raster_stat_under_polygon(retention, watershed,
+                layer, stat='count')
+            threshold_index = watershed.GetFieldIndex('thresh')
+            threshold = watershed.GetFieldAsDouble(threshold_index)
+
+            ratio = threshold/float(pixel_count)
+            LOGGER.debug('Calculated thresholdi ratio: %s', ratio)
+            ratio_index = watershed.GetFieldIndex('thresh_c')
+            watershed.SetField(ratio_index, threshold_index)
+            layer.SetFeature(watershed)
+
+    # If the user has not provided a threshold URI, make the output type MEM.
+    # Otherwise, assume GTiff.
+    output_type = 'GTiff'
+    if threshold_uri == None:
+        output_type = 'MEM'
+
+    threshold_raster = raster_utils.new_raster_from_base(retention,
+        threshold_uri, output_type, -1.0, gdal.GDT_Float32)
+    gdal.RasterizeLayer(threshold_raster, [1], watersheds.GetLayer(0),
+        options=['ATTRIBUTE=thresh_c'])
+
+    # Subtract the threshold ratio from the retention raster, as denoted in the
+    # service (net_x) function in the documentation.
+    nodata = retention.GetRasterBand(1).GetNoDataValue()
+    service_op = np.vectorize(lambda x, y: x - y if y != nodata else
+        nodata)
+    return raster_utils.vectorize_rasters([retention, threshold_raster],
+        service_op, raster_out_uri=service_uri, nodata=nodata)
 
 def get_lulc_map(landcover, table, field, folder):
     lu_map = table.get_map('lucode', field)
