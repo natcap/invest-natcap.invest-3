@@ -226,7 +226,7 @@ def mean_runoff_index(runoff_index, watersheds, output_folder):
             watershed.SetField(field_index, r_mean)
             layer.SetFeature(watershed)
 
-def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
+def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
         stat='all', op=None):
     """Calculate statistics for the input raster under the input polygon.
 
@@ -360,33 +360,13 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
     pixel_height = abs(raster_geotransform[5])
     LOGGER.debug('Pixel width=%s, height=%s', pixel_width, pixel_height)
 
-    # Create a memory-bound shapefile for rasterizing later.
-    LOGGER.debug('Creating a temp shapefile and layer for rasterizing')
-    ogr_driver = ogr.GetDriverByName('Memory')
-    temp_shapefile = ogr_driver.CreateDataSource('/tmp/temp_shapefile')
-    temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
-        sample_layer.GetSpatialRef(), geom_type=ogr.wkbPolygon)
-    temp_layer_defn = temp_layer.GetLayerDefn()
-
-    # Make a copy of the feature passed in by the user and save it to the temp
-    # shapefile.
-    LOGGER.debug('Making a copy of the input feature for rasterizing')
-    feature_geom = shape.GetGeometryRef()
-    temp_feature = ogr.Feature(temp_layer_defn)
-    temp_feature.SetGeometry(feature_geom)
-    temp_feature.SetFrom(shape)
-    temp_layer.CreateFeature(temp_feature)
-
-    temp_feature.Destroy()
-    temp_layer.SyncToDisk()
-
     # Create a raster from the extents of the shapefile.  I do this here so that
     # we can calculate stats using GDAL, which is about 15x faster than doing
     # the same set of statistics on a numpy matrix with numpy operations.  See
     # invest_natcap.nutrient.compare_mean_calculation for an example.
     temp_raster = raster_utils.create_raster_from_vector_extents(
         pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
-        '/tmp/watershed_raster.tif', temp_shapefile)
+        '/tmp/watershed_raster.tif', shapefile)
     LOGGER.debug('Temp raster created with rows=%s, cols=%s',
         temp_raster.RasterXSize, temp_raster.RasterYSize)
 
@@ -399,7 +379,7 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
     # all set to 1 so we can use this as a mask in the subsequent call to
     # vectorize_rasters().
     LOGGER.debug('Rasterizing the temp layer onto the temp raster')
-    gdal.RasterizeLayer(temp_raster, [1], temp_layer, burn_values=[1])
+    gdal.RasterizeLayer(temp_raster, [1], shapefile.GetLayer(0), burn_values=[1])
 
     return get_stats(temp_raster)
 

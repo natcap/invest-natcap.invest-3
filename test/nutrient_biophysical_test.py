@@ -73,9 +73,11 @@ class NutrientCoreTest(unittest.TestCase):
         sample_feature = sample_layer.GetFeature(1)
         output_path = os.path.join(WORKSPACE, 'test_stats_feature.tif')
 
+        sample_feature_shapefile = nutrient_core.split_datasource(shapefile)[1]
+
         # Test to get default GDAL raster stats.
         stats = nutrient_core.get_raster_stat_under_polygon(sample_raster,
-            sample_feature, sample_layer, output_path)
+            sample_feature_shapefile, output_path)
 
         reg_stats = [732.85412597656, 2237.7661132812, 1133.0612776513, 236.55612231802]
         for test_stat, reg_stat in zip(stats, reg_stats):
@@ -85,19 +87,19 @@ class NutrientCoreTest(unittest.TestCase):
         # and math.
         reg_pixel_count = 93339
         num_pixels = nutrient_core.get_raster_stat_under_polygon(sample_raster,
-            sample_feature, sample_layer, output_path, 'count')
+            sample_feature_shapefile, output_path, 'count')
         self.assertEqual(num_pixels, reg_pixel_count)
 
         # Test for calculating the number of pixels under the shape using numpy.
         num_pixels = nutrient_core.get_raster_stat_under_polygon(sample_raster,
-            sample_feature, sample_layer, output_path, 'numpy_count')
+            sample_feature_shapefile, output_path, 'numpy_count')
         self.assertEqual(num_pixels, reg_pixel_count)
 
         # Verify that the correct exception is raised when an invalid option is
         # passed.
         with self.assertRaises(nutrient_core.OptionNotRecognized):
             null = nutrient_core.get_raster_stat_under_polygon(sample_raster,
-                sample_feature, sample_layer, output_path, 'does_not_exist')
+                sample_feature_shapefile, output_path, 'does_not_exist')
 
         # Verify that a user-defined function works as well when passed in to
         # the op argument.
@@ -106,14 +108,14 @@ class NutrientCoreTest(unittest.TestCase):
             returned."""
             return 9.43
         user_def_output = nutrient_core.get_raster_stat_under_polygon(sample_raster,
-            sample_feature, sample_layer, output_path, 'op', test_op)
+            sample_feature_shapefile, output_path, 'op', test_op)
         self.assertEqual(user_def_output, 9.43)
 
         # Verify that if the user specifies the 'op' stat type but does not
         # provide a function, that a TypeError is raised.
         with self.assertRaises(TypeError):
             null = nutrient_core.get_raster_stat_under_polygon(sample_raster,
-                sample_feature, sample_layer, output_path, 'op')
+                sample_feature_shapefile, output_path, 'op')
 
     def test_split_datasource(self):
         shapefile = ogr.Open(os.path.join(NUTR_INPUT, 'watersheds.shp'))
