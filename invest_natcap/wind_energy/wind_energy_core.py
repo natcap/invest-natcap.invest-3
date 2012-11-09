@@ -593,7 +593,45 @@ def valuation(args):
     # raster, outputting another raster with the NPV
 
     #capex = cap / (1.0 - install_rate - misc_capex_cost)
-      
+    wind_energy_layer = wind_energy_points.GetLayer() 
+    LOGGER.info('Creating new field')
+    new_field = ogr.FieldDefn('NPV', ogr.OFTReal)
+    wind_energy_layer.CreateField(new_field)
+
+    for feat in wind_energy_layer:
+        npv_index = feat.GetFieldIndex('NPV')
+        energy_index = feat.GetFieldIndex('HarvEnergy')
+        O2L_index = feat.GetFieldIndex('O2L')
+        L2G_index = feat.GetFieldIndex('L2G')
+        
+        energy_val = feat.GetField(energy_index)
+        O2L_val = feat.GetField(O2L_index)
+        L2G_val = feat.GetField(L2G_index)
+
+        total_cable_dist = O2L_val + L2G_val
+        cable_cost = 0
+
+        if total_cable_dist <= 60:
+            cable_cost = (.81 * mega_watt) + (1.36 * total_cable_dist)
+        else:
+            cable_cost = (1.09 * mega_watt) + (.89 * total_cable_dist)
+
+        cap = cap_less_dist + cable_cost
+
+        capex = cap / (1.0 - install_cost - misc_capex_cost) 
+
+        npv = 0
+
+        for year in range(1, time + 1):
+            rev = energy_val * dollar_per_kwh 
+            comp_one = (rev - op_maint_cost * capex) / disc_const**year
+            comp_two = decom * capex / disc_time
+            npv = npv + (comp_one - comp_two - capex)
+        
+        feat.SetField(npv_index, npv)
+        wind_energy_layer.SetFeature(feat)
+
+    wind_energy_layer.SyncToDisk()
 
 #   # Using 'WGS84' as our well known lat/long projection
 #   wgs84_srs = osr.SpatialReference()
