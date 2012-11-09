@@ -118,4 +118,21 @@ class NutrientCoreTest(unittest.TestCase):
     def test_split_datasource(self):
         shapefile = ogr.Open(os.path.join(NUTR_INPUT, 'watersheds.shp'))
         shapes = nutrient_core.split_datasource(shapefile)
+
+        # Get and assert the number of features across all layers.
+        feature_count = sum([l.GetFeatureCount() for l in shapefile])
+        self.assertEqual(feature_count, len(shapes))
+
+        features_to_test = []
+        for layer in shapefile:
+            for shape in layer:
+                features_to_test.append(shape)
+            layer.ResetReading()
+
+        for reg_feature, split_shapefile in zip(features_to_test, shapes):
+            reg_geometry = reg_feature.GetGeometryRef()
+
+            # Assert split_shapefile only has one layer
+            self.assertEqual(split_shapefile.GetLayerCount(), 1)
+
         print shapes
