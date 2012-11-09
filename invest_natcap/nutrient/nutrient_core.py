@@ -430,6 +430,7 @@ def split_datasource(ds):
             temp_feature.Destroy()
             temp_layer.SyncToDisk()
             output_shapefiles.append(temp_shapefile)
+        layer.ResetReading()
 
     return output_shapefiles
 
