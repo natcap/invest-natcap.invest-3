@@ -227,7 +227,7 @@ def mean_runoff_index(runoff_index, watersheds, output_folder):
             layer.SetFeature(watershed)
 
 def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
-        stat='all', op=None):
+        stat='all', op=None, method='per_feature'):
     """Calculate statistics for the input raster under the input polygon.
 
         raster - a GDAL raster dataset of which statistics should be calculated
@@ -247,6 +247,11 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
             argument.  This function may use closures to access other
             information such as GDAL datasets.  Op will only be used if
             stat='op'.
+        method='per_feature' - one of:
+            'all' - causes statistic to be collected over all features in
+                shapefile.
+            'per_feature' - causes statistics to be collected per feature in
+                shapefile.
 
             The raster passed in to op will be filled with -1.0 and will have
             values of 1 where shape overlaps it.  The raster's size will equal
@@ -254,7 +259,10 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
             return type is up to the user.
 
         Return value and type is determined by what is passed in to the stat
-        argument.  Raises OptionNotRecognized if an invalid option is given.
+        argument and what method is selected.  If method='per_feature', a list
+        of values returned from op will be returned.  If method='all', the
+        output of op will be returned, as it is calculated for all features in
+        the shapefile.  Raises OptionNotRecognized if an invalid option is given.
         Raises TypeError if 'op' is specified for the stat, but no function is
         given."""
 
@@ -360,28 +368,46 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
     pixel_height = abs(raster_geotransform[5])
     LOGGER.debug('Pixel width=%s, height=%s', pixel_width, pixel_height)
 
-    # Create a raster from the extents of the shapefile.  I do this here so that
-    # we can calculate stats using GDAL, which is about 15x faster than doing
-    # the same set of statistics on a numpy matrix with numpy operations.  See
-    # invest_natcap.nutrient.compare_mean_calculation for an example.
-    temp_raster = raster_utils.create_raster_from_vector_extents(
-        pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
-        '/tmp/watershed_raster.tif', shapefile)
-    LOGGER.debug('Temp raster created with rows=%s, cols=%s',
-        temp_raster.RasterXSize, temp_raster.RasterYSize)
+    # Check the method of processing desired by the user, but default to assess
+    # stats across the entire shapefile.
+    shapefiles_to_use = [shapefile]
+    if method == 'all':
+        LOGGER.debug('Statistic will be calculated over all features')
+    elif method == 'per_feature':
+        LOGGER.debug('Statistic will be calculated per feature')
+        shapefiles_to_use = split_datasource(shapefile)
+    else:
+        LOGGER.warn('Method %s not recognized.  Defaulting to all features.',
+            method)
+
+    return_stats = []
+    for feature_ds in shapefiles_to_use:
+        # Create a raster from the extents of the shapefile.  I do this here so that
+        # we can calculate stats using GDAL, which is about 15x faster than doing
+        # the same set of statistics on a numpy matrix with numpy operations.  See
+        # invest_natcap.nutrient.compare_mean_calculation for an example.
+        temp_raster = raster_utils.create_raster_from_vector_extents(
+            pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
+            '/tmp/watershed_raster.tif', shapefile)
+        LOGGER.debug('Temp raster created with rows=%s, cols=%s',
+            temp_raster.RasterXSize, temp_raster.RasterYSize)
 
 
-    if mask_fill != None:
-        LOGGER.debug('Filling temp raster with %s', mask_fill)
-        temp_raster.GetRasterBand(1).Fill(mask_fill)
+        if mask_fill != None:
+            LOGGER.debug('Filling temp raster with %s', mask_fill)
+            temp_raster.GetRasterBand(1).Fill(mask_fill)
 
-    # Rasterize the temp shapefile layer onto the temp raster.  Burn values are
-    # all set to 1 so we can use this as a mask in the subsequent call to
-    # vectorize_rasters().
-    LOGGER.debug('Rasterizing the temp layer onto the temp raster')
-    gdal.RasterizeLayer(temp_raster, [1], shapefile.GetLayer(0), burn_values=[1])
+        # Rasterize the temp shapefile layer onto the temp raster.  Burn values are
+        # all set to 1 so we can use this as a mask in the subsequent call to
+        # vectorize_rasters().
+        LOGGER.debug('Rasterizing the temp layer onto the temp raster')
+        gdal.RasterizeLayer(temp_raster, [1], shapefile.GetLayer(0), burn_values=[1])
 
-    return get_stats(temp_raster)
+        return_stats.append(get_stats(temp_raster))
+
+    if len(return_stats) == 1:
+        return return_stats[0]
+    return return_stats
 
 def split_datasource(ds, uris=None):
     """Split the input OGR datasource into a list of datasources, each with a

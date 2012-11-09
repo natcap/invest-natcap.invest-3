@@ -117,6 +117,12 @@ class NutrientCoreTest(unittest.TestCase):
             null = nutrient_core.get_raster_stat_under_polygon(sample_raster,
                 sample_feature_shapefile, output_path, 'op')
 
+        # Verify that if the original shapefile is used, that the output list
+        # has three entries and all are what we expect.
+        stats_list = nutrient_core.get_raster_stat_under_polygon(sample_raster,
+            shapefile, output_path, 'op', test_op)
+        self.assertEqual(stats_list, [test_op('')] * 3)
+
     def test_split_datasource(self):
         shapefile = ogr.Open(os.path.join(NUTR_INPUT, 'watersheds.shp'))
 
