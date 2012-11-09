@@ -1584,3 +1584,15 @@ def reclassify_dataset(
     LOGGER.info('Flushing the cache and exiting reclassification')
     out_dataset.FlushCache()
     return out_dataset
+
+def align_datasets(datasets, dataset_uris):
+    """Takes a list of datasets and writes interpolated aligned versions of
+        them in the corresponding dataset_uris list
+
+        datasets - a list of GDAL datasets
+        dataset_uris - a list of output dataset uris
+
+        returns a list of the aligned datasets in the same order they are 
+            passed in"""
+    pass
+        
