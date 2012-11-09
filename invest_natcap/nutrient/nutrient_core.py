@@ -71,13 +71,16 @@ def service(retention, watersheds, threshold_uri=None, service_uri=None):
 
         Returns a GDAL dataset of the service raster."""
 
+    watersheds_list = split_datasource(watersheds)
+
     # Loop through the provided watersheds, calculate how many pixels are under
     # the feature and then calculate the per-pixel threshold, setting it to the
     # 'thresh_c' column.
+    watershed_index = 0
     for layer in watersheds:
         for watershed in layer:
-            pixel_count = get_raster_stat_under_polygon(retention, watershed,
-                layer, stat='count')
+            pixel_count = get_raster_stat_under_polygon(retention,
+                watersheds_list[watershed_index], stat='count')
             threshold_index = watershed.GetFieldIndex('thresh')
             threshold = watershed.GetFieldAsDouble(threshold_index)
 
@@ -86,6 +89,9 @@ def service(retention, watersheds, threshold_uri=None, service_uri=None):
             ratio_index = watershed.GetFieldIndex('thresh_c')
             watershed.SetField(ratio_index, threshold_index)
             layer.SetFeature(watershed)
+            watershed_index += 1
+        watershed_index += 1
+        layer.ResetReading()
 
     # If the user has not provided a threshold URI, make the output type MEM.
     # Otherwise, assume GTiff.
@@ -211,13 +217,15 @@ def mean_runoff_index(runoff_index, watersheds, output_folder):
 #    band, nodata = raster_utils.extract_band_and_nodata(raster)
 #    band.fill(nodata)
 
+    watersheds_list = split_datasource(watersheds)
 
+    watersheds_index = 0
     for layer in watersheds:
         for shape_index, watershed in enumerate(layer):
             temp_filename = 'watershed_raster_%s.tif' % str(shape_index)
 
             r_min, r_max, r_mean, r_stddev = get_raster_stat_under_polygon(
-                runoff_index, watershed, layer, temp_filename)
+                runoff_index, watersheds_list[watersheds_index], temp_filename)
 
             field_index = watershed.GetFieldIndex('mn_runoff')
             LOGGER.debug('Field index: %s, Min: %s, Max: %s, Mean: %s',
@@ -225,6 +233,9 @@ def mean_runoff_index(runoff_index, watersheds, output_folder):
             print(field_index, r_min, r_max, r_mean)
             watershed.SetField(field_index, r_mean)
             layer.SetFeature(watershed)
+            watersheds_index += 1
+        watersheds_index += 1
+        layer.ResetReading()
 
 def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
         stat='all', op=None, method='per_feature'):
