@@ -781,6 +781,17 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
         returns a dataset that has an amount of sediment in tons outflowing
             from each pixel"""
 
+    #It's possible for the datasets to very slightly misalign, this is a
+    #patch to make sure everything lines up for the moment
+    datasets = [pixel_sediment_flow_dataset, retention_efficiency_dataset,
+                flow_direction_dataset]
+
+    aligned_dataset_uris = [tempfile.mkstemp(suffix='.tif')[1] for x in datasets]
+    LOGGER.info(aligned_dataset_uris)
+    aligned_datasets = raster_utils.align_datasets(
+        datasets, aligned_dataset_uris)
+    pixel_sediment_flow_dataset, retention_efficiency_dataset, flow_direction_dataset = \
+        aligned_datasets
 
     pixel_sediment_flow_band, pixel_sediment_flow_nodata = \
         raster_utils.extract_band_and_nodata(pixel_sediment_flow_dataset)
@@ -893,6 +904,16 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
                     #This will occur if we visit a neighbor out of bounds
                     #it's okay, just skip it
                     pass
+
+    pixel_sediment_flow_dataset = None
+    retention_efficiency_dataset = None
+    flow_direction_dataset = None
+
+    for uri in aligned_dataset_uris:
+        try:
+            os.remove(uri)
+        except Exception:
+            LOGGER.warn("Couldn't remove file %s" % uri)
 
     pixel_retained_band.WriteArray(result.reshape((n_rows, n_cols)))
     return pixel_retained_dataset
