@@ -599,6 +599,27 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
         returns a dataset that has an amount of sediment in tons outflowing
             from each pixel"""
 
+    #It's possible for the datasets to very slightly misalign, this is a
+    #patch to make sure everything lines up for the moment
+    datasets = [usle_loss_dataset, flow_direction_dataset, 
+                retention_efficiency_dataset]
+
+    aligned_dataset_uris = [tempfile.mkstemp(suffix='.tif')[1] for x in datasets]
+    LOGGER.info(aligned_dataset_uris)
+    aligned_datasets = raster_utils.align_datasets(
+        datasets, aligned_dataset_uris)
+    usle_loss_dataset, flow_direction_dataset, retention_efficiency_dataset = \
+        aligned_datasets
+
+    pixel_sediment_flow_nodata = -1.0
+    pixel_sediment_flow_dataset = \
+        raster_utils.new_raster_from_base(flow_direction_dataset, 
+            pixel_sediment_flow_uri, 'GTiff', pixel_sediment_flow_nodata, 
+            gdal.GDT_Float32)
+
+    pixel_sediment_flow_band = pixel_sediment_flow_dataset.GetRasterBand(1)
+    pixel_sediment_flow_band.Fill(pixel_sediment_flow_nodata)
+
     usle_loss_band, usle_loss_nodata = \
         raster_utils.extract_band_and_nodata(usle_loss_dataset)
     usle_loss_array = \
@@ -613,26 +634,8 @@ def pixel_sediment_flow(usle_loss_dataset, flow_direction_dataset,
     retention_efficiency_array = \
         retention_efficiency_band.ReadAsArray().flatten()
 
-    pixel_sediment_flow_nodata = -1.0
-    pixel_sediment_flow_dataset = \
-        raster_utils.new_raster_from_base(flow_direction_dataset, 
-            pixel_sediment_flow_uri, 'GTiff', pixel_sediment_flow_nodata, 
-            gdal.GDT_Float32)
 
-    pixel_sediment_flow_band = pixel_sediment_flow_dataset.GetRasterBand(1)
-    pixel_sediment_flow_band.Fill(pixel_sediment_flow_nodata)
 
-    #It's possible for the datasets to very slightly misalign, this is a
-    #patch to make sure everything lines up for the moment
-    datasets = [usle_loss_dataset, flow_direction_dataset, 
-                retention_efficiency_dataset, pixel_sediment_flow_dataset]
-
-    aligned_dataset_uris = [tempfile.mkstemp(suffix='.tif')[1] for x in datasets]
-    LOGGER.info(aligned_dataset_uris)
-    aligned_datasets = raster_utils.align_datasets(
-        datasets, aligned_dataset_uris)
-    usle_loss_dataset, flow_direction_dataset, retention_efficiency_dataset, \
-        pixel_sediment_flow_dataset = aligned_datasets
 
     n_rows = usle_loss_dataset.RasterYSize
     n_cols = usle_loss_dataset.RasterXSize
