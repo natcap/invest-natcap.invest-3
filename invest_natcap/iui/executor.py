@@ -18,8 +18,10 @@ LOGGER = invest_natcap.iui.get_ui_logger(None)
 
 # If we're not on windows, python doesn't know what a
 # WindowsError is.  Using shutil to import an empty WindowsError
-if platform.system() != 'Windows':
-    LOGGER.debug('Not on Linux, importing shutil\'s WindowsError')
+current_os = platform.system()
+if current_os != 'Windows':
+    LOGGER.debug('Not on Windows (on %s), importing shutil\'s WindowsError',
+                 current_os)
     from shutil import WindowsError
 
 # This class is to be used if certain WindowsErrors or IOErrors are encountered.
@@ -365,10 +367,12 @@ class Executor(threading.Thread):
                 model = imp.load_source('model', module)
                # Model name is name of module file, minus the extension
                 model_name = os.path.splitext(os.path.basename(module))[0]
+                LOGGER.debug('Loading %s from %s', model_name, model)
             else:
                 module_list = module.split('.')
                 model = locate_module(module_list)
                 model_name = module_list[-1]  # model name is last entry in list
+                LOGGER.debug('Loading %s from PATH'
             filename = '%s-log-%s.txt' % (model_name, timestamp)
 
             # we want to save this file to the current directory until the model
@@ -407,6 +411,8 @@ class Executor(threading.Thread):
             # e to a more informative exception.
             if hasattr(e,'__class__') and hasattr(e, 'errno'):
                 LOGGER.debug('error %s number %s', e.__class__, e.errno)
+                LOGGER.debug('Error message: %s', str(e))
+
                 # Actually check the error code for the exception and use a new
                 # custom exception with more information.
                 if (isinstance(e, WindowsError) and (e.errno in [8, 28])) or\
