@@ -18,7 +18,9 @@ def execute(args):
     register_openers()
 
     #load configuration
-    configFile=open(os.path.abspath(os.path.dirname(sys.argv[0]))+os.sep+"config.json",'r')
+    configFileName=os.path.dirname(os.path.abspath(__file__))+os.sep+"config.json"
+    LOGGER.debug("Loading server configuration from %s." % configFileName)
+    configFile=open(configFileName,'r')
     config=json.loads(configFile.read())
     configFile.close()
    
