@@ -1386,6 +1386,8 @@ class Dropdown(LabeledElement):
             elif 'mapValues' in self.attributes['returns']:
                 text = str(self.dropdown.currentText())
                 try:
+                    #mapped_value = self.attributes['returns']['mapValues'][text]
+                    #print(mapped_value, mapped_value.__class__.__name__)
                     return self.attributes['returns']['mapValues'][text]
                 except KeyError:
                     return text
