@@ -118,11 +118,8 @@ def biophysical(args):
         #strings thanks to the csv table conversion.
         if str(lulc_code) not in args['biophysical_table']:
             return usle_nodata
-        #We need to divide the retention efficiency by 100  because they're 
-        #stored in the table as sedret_eff * 100.  See the user's guide:
-        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
         return float(args['biophysical_table'] \
-                     [str(lulc_code)]['sedret_eff']) / 100.0
+                     [str(lulc_code)]['sedret_eff'])
 
     LOGGER.info("Mapping lulc to sed retention values")
     retention_uri = os.path.join(args['intermediate_uri'],'retention.tif')
@@ -147,11 +144,7 @@ def biophysical(args):
         #strings thanks to the csv table conversion.
         if str(lulc_code) not in args['biophysical_table']:
             return usle_nodata
-        #We need to divide the c and p factors by 1000
-        #because they're stored in the table as C * 1000 and P * 1000.  See 
-        #the user's guide:
-        #http://ncp-dev.stanford.edu/~dataportal/invest-releases/documentation/2_2_0/sediment_retention.html
-        return float(args['biophysical_table'][str(lulc_code)][key]) / 1000.0
+        return float(args['biophysical_table'][str(lulc_code)][key])
 
     c_factor_uri = os.path.join(args['intermediate_uri'],'c_factor.tif')
     p_factor_uri = os.path.join(args['intermediate_uri'],'p_factor.tif')
