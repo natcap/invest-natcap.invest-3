@@ -21,7 +21,7 @@ def settings_folder():
     # frequently be 'latin-1' or else 'mbcs', on mac, it might be 'utf-8'.
     # See http://code.google.com/p/invest-natcap/issues/detail?id=1373 for the
     # issue history on why this is necessary.
-    expanded_path = os.path.expanduser(config_folder)
+    expanded_path = os.path.expanduser(unicode(config_folder))
     decoded_path = expanded_path.decode(sys.getfilesystemencoding())
 
     return decoded_path
