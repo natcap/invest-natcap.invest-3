@@ -45,7 +45,12 @@ def execute(args):
         args['h-s']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
-            tuple of lists which contain tuples.
+            tuple of lists which contain tuples. h-s['C'] should explicitly 
+            contain the following criteria names: (Natural Mortality, 
+            Recruitment Rate, Recovery Time, Connectivity Rate). These criteria
+            must exist, and must contain 'Rating' and 'DQ' entries within them.
+            These can be 0 values if they are not a desired criteria, but must
+            exist.
 
             {(Habitat A, Stressor 1): 
                     {'E': 
@@ -56,9 +61,11 @@ def execute(args):
                     }
             }
         args['habitats']- A structure with the same layout as 'h-s', but which
-            contains only criteria which are specific to habitats.
+            contains only criteria specific to habitats. The outer keys, in 
+            turn, will be habitat names.
         args['stressors']- A structure wih the same layout as 'h-s', but which
-            contains only criteria which are specific to stressors.
+            contains only criteria specific to stressors. The outer keys will be
+            stressor names.
 
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
@@ -67,7 +74,7 @@ def execute(args):
             and intermediate folders will be supfolders of this one.
         hra_args['h-s']- Dictionary with a similar structure to the above,
             but with an additional item in the value tuple containing an open
-            raster dataset of th overlap of key H-S.
+            raster dataset of the overlap of key H-S.
             {(Habitat A, Stressor 1): 
                     {'E': 
                         {'Spatital Overlap': 

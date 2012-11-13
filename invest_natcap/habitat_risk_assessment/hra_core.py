@@ -163,18 +163,16 @@ def make_recov_potent_raster(direct, habitats):
         RR = habitats[h]['C']['Recruitment Rate']
         RT = habitats[h]['C']['Recovery Time']
         CR = habitats[h]['C']['Connectivity Rate']
- 
-        sum_top += NM['Rating'] / NM['DQ']
-        sum_bottom += 1 / NM['DQ']
+        
+        r_crit = [NM, RR, RT, CR]
 
-        sum_top += RR['Rating'] / RR['DQ']
-        sum_bottom += 1 / RR['DQ']
+        for crit in r_crit:
 
-        sum_top += RT['Rating'] / RT['DQ']
-        sum_bottom += 1 / RT['DQ']
-
-        sum_top += CR['Rating'] / CR['DQ']
-        sum_bottom += 1 / CR['DQ']
+            if crit['Rating'] == 0 or crit['DQ'] == 0:
+                continue
+            
+            sum_top += crit['Rating'] / crit['DQ']
+            sum_bottom += 1. / crit['DQ']
 
         r_potent = sum_top / sum_bottom
 
@@ -363,8 +361,7 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         E = calc_score_value(h_s_e, h_e, s_e)
         C = calc_score_value(h_s_c, h_c, s_c)
 
-        #Need to remember that E should be applied to the decayed raster values,
-        #then the decayed value per pixel can be used for the risk value. These
+        #These
         #functions should return a modified array which can be burned back to
         #the raster band.
         
@@ -374,6 +371,8 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         r_array = r_band.ReadAsArray()
         
         if risk_eq == 'Euclidean':
+            #Need to remember that E should be applied to the decayed raster values,
+            #then the decayed value per pixel can be used for the risk value.
             mod_array = make_risk_euc(r_array, E, C) 
         
         elif risk_eq == 'Multiplicative':
@@ -439,10 +438,7 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
             d = dictionary[criteria]['DQ']
             w = dictionary[criteria]['Weight']
 
-            if d == 0 or w == 0:
-                sum_top += 0
-                sum_bottom += 0
-            else:
+            if 0 not in [r, d, w]:
                 sum_top += (r / d * w)
                 sum_bottom += (1 / d * w)
 
