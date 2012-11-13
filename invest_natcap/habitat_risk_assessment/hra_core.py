@@ -163,18 +163,16 @@ def make_recov_potent_raster(direct, habitats):
         RR = habitats[h]['C']['Recruitment Rate']
         RT = habitats[h]['C']['Recovery Time']
         CR = habitats[h]['C']['Connectivity Rate']
- 
-        sum_top += NM['Rating'] / NM['DQ']
-        sum_bottom += 1 / NM['DQ']
+        
+        r_crit = [NM, RR, RT, CR]
 
-        sum_top += RR['Rating'] / RR['DQ']
-        sum_bottom += 1 / RR['DQ']
+        for crit in r_crit:
 
-        sum_top += RT['Rating'] / RT['DQ']
-        sum_bottom += 1 / RT['DQ']
-
-        sum_top += CR['Rating'] / CR['DQ']
-        sum_bottom += 1 / CR['DQ']
+            if crit['Rating'] == 0 or crit['DQ'] == 0:
+                continue
+            
+            sum_top += crit['Rating'] / crit['DQ']
+            sum_bottom += 1. / crit['DQ']
 
         r_potent = sum_top / sum_bottom
 
