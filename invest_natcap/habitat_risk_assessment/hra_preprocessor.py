@@ -1,6 +1,14 @@
 """Entry point for the Habitat Risk Assessment module"""
 
 import os
+import glob
+import logging
+
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('hra_preprocessor')
+
 
 def execute(args):
     """Read two directories for habitat and stressor layers and make
@@ -16,4 +24,14 @@ def execute(args):
     if not os.path.exists(args['workspace_dir']):
         os.makedirs(args['workspace_dir'])
 
-        
+    habitat_names = [
+        os.path.basename(f.split('.')[0]) for f in 
+        glob.glob(os.path.join(args['habitat_dir'], '*.shp'))]
+    
+    stressor_names = [
+        os.path.basename(f.split('.')[0]) for f in 
+        glob.glob(os.path.join(args['stressor_dir'], '*.shp'))]
+    
+
+    LOGGER.debug(habitat_names)
+    LOGGER.debug(stressor_names)
