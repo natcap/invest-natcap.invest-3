@@ -1,5 +1,6 @@
 """Entry point for the Habitat Risk Assessment module"""
 
+import csv
 import os
 import glob
 import logging
@@ -24,11 +25,21 @@ def execute(args):
     if not os.path.exists(args['workspace_dir']):
         os.makedirs(args['workspace_dir'])
 
+    #Pick up all the habitat and stressor names
     name_lookup = {}
-
     for layer_type in ['habitat', 'stressor']:
         name_lookup[layer_type] = [
             os.path.basename(f.split('.')[0]) for f in 
             glob.glob(os.path.join(args[layer_type + '_dir'], '*.shp'))]
 
+
+    #Create output csvs so that they are habitat centric
+    for habitat_name in name_lookup['habitat']:
+        csv_filename = os.path.join(
+            args['workspace_dir'], habitat_name + '.csv')
+        with open(csv_filename, 'wb') as habitat_csv_file:
+            habitat_csv_writer = csv.writer(habitat_csv_file)
+            #Write the habitat name
+            habitat_csv_writer.writerow([habitat_name])
+    
     LOGGER.debug(name_lookup)
