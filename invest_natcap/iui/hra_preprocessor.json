@@ -1,0 +1,44 @@
+{
+    "id": "window",
+    "label": "Habitat Risk Assessment Preprocessor",
+    "targetScript": "invest_natcap.habitat_risk_assessment.hra_preprocessor",
+    "modelName": "hra_preprocess",
+    "localDocURI": "../documentation/habitat_risk_assessment.html",
+    "height": 300,
+    "width": 700,
+    "elements": [
+        {
+            "id": "hra_preprocess_list",
+            "type": "list",
+            "elements": [
+                {
+                    "id":"output_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "required": true,
+                    "validateAs": {"type": "folder"},
+                    "args_id": "workspace_dir",
+                    "defaultValue": "../hra_preprocess"
+                },
+                {
+                    "id":"habitat_dir",
+                    "type": "folder",
+                    "label": "Directory to habitat layers",
+                    "required": true,
+                    "validateAs": {"type": "folder"},
+                    "args_id": "workspace_dir",
+                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers"
+                },
+                {
+                    "id":"stressor_dir",
+                    "type": "folder",
+                    "label": "Directory to stressor layers",
+                    "required": true,
+                    "validateAs": {"type": "folder"},
+                    "args_id": "workspace_dir",
+                    "defaultValue": "../HabitatRiskAssess/Input/StressorLayers"
+                }
+            ]
+        }    
+    ] 
+}
