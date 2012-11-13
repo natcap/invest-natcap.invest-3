@@ -518,7 +518,7 @@ def valuation(args):
     time = int(turbine_dict[turbine_name]['time'])
 
     number_turbines = args['number_of_machines']
-    mega_watt = mega_watt * number_turbines
+    total_mega_watt = mega_watt * number_turbines
     dollar_per_kwh = args['dollar_per_kWh']
     
     wind_energy_points = args['biophysical_data']
@@ -622,9 +622,9 @@ def valuation(args):
         cable_cost = 0
 
         if total_cable_dist <= 60:
-            cable_cost = (.81 * mega_watt) + (1.36 * total_cable_dist)
+            cable_cost = (.81 * total_mega_watt) + (1.36 * total_cable_dist)
         else:
-            cable_cost = (1.09 * mega_watt) + (.89 * total_cable_dist)
+            cable_cost = (1.09 * total_mega_watt) + (.89 * total_cable_dist)
 
         cap = cap_less_dist + cable_cost
 
