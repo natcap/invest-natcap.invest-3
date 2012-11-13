@@ -71,13 +71,16 @@ def service(retention, watersheds, threshold_uri=None, service_uri=None):
 
         Returns a GDAL dataset of the service raster."""
 
+    watersheds_list = split_datasource(watersheds)
+
     # Loop through the provided watersheds, calculate how many pixels are under
     # the feature and then calculate the per-pixel threshold, setting it to the
     # 'thresh_c' column.
+    watershed_index = 0
     for layer in watersheds:
         for watershed in layer:
-            pixel_count = get_raster_stat_under_polygon(retention, watershed,
-                layer, stat='count')
+            pixel_count = get_raster_stat_under_polygon(retention,
+                watersheds_list[watershed_index], stat='count')
             threshold_index = watershed.GetFieldIndex('thresh')
             threshold = watershed.GetFieldAsDouble(threshold_index)
 
@@ -86,6 +89,9 @@ def service(retention, watersheds, threshold_uri=None, service_uri=None):
             ratio_index = watershed.GetFieldIndex('thresh_c')
             watershed.SetField(ratio_index, threshold_index)
             layer.SetFeature(watershed)
+            watershed_index += 1
+        watershed_index += 1
+        layer.ResetReading()
 
     # If the user has not provided a threshold URI, make the output type MEM.
     # Otherwise, assume GTiff.
@@ -211,13 +217,15 @@ def mean_runoff_index(runoff_index, watersheds, output_folder):
 #    band, nodata = raster_utils.extract_band_and_nodata(raster)
 #    band.fill(nodata)
 
+    watersheds_list = split_datasource(watersheds)
 
+    watersheds_index = 0
     for layer in watersheds:
         for shape_index, watershed in enumerate(layer):
             temp_filename = 'watershed_raster_%s.tif' % str(shape_index)
 
             r_min, r_max, r_mean, r_stddev = get_raster_stat_under_polygon(
-                runoff_index, watershed, layer, temp_filename)
+                runoff_index, watersheds_list[watersheds_index], temp_filename)
 
             field_index = watershed.GetFieldIndex('mn_runoff')
             LOGGER.debug('Field index: %s, Min: %s, Max: %s, Mean: %s',
@@ -225,9 +233,12 @@ def mean_runoff_index(runoff_index, watersheds, output_folder):
             print(field_index, r_min, r_max, r_mean)
             watershed.SetField(field_index, r_mean)
             layer.SetFeature(watershed)
+            watersheds_index += 1
+        watersheds_index += 1
+        layer.ResetReading()
 
-def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
-        stat='all', op=None):
+def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
+        stat='all', op=None, method='per_feature'):
     """Calculate statistics for the input raster under the input polygon.
 
         raster - a GDAL raster dataset of which statistics should be calculated
@@ -247,6 +258,11 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
             argument.  This function may use closures to access other
             information such as GDAL datasets.  Op will only be used if
             stat='op'.
+        method='per_feature' - one of:
+            'all' - causes statistic to be collected over all features in
+                shapefile.
+            'per_feature' - causes statistics to be collected per feature in
+                shapefile.
 
             The raster passed in to op will be filled with -1.0 and will have
             values of 1 where shape overlaps it.  The raster's size will equal
@@ -254,7 +270,10 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
             return type is up to the user.
 
         Return value and type is determined by what is passed in to the stat
-        argument.  Raises OptionNotRecognized if an invalid option is given.
+        argument and what method is selected.  If method='per_feature', a list
+        of values returned from op will be returned.  If method='all', the
+        output of op will be returned, as it is calculated for all features in
+        the shapefile.  Raises OptionNotRecognized if an invalid option is given.
         Raises TypeError if 'op' is specified for the stat, but no function is
         given."""
 
@@ -360,46 +379,89 @@ def get_raster_stat_under_polygon(raster, shape, sample_layer, raster_path=None,
     pixel_height = abs(raster_geotransform[5])
     LOGGER.debug('Pixel width=%s, height=%s', pixel_width, pixel_height)
 
-    # Create a memory-bound shapefile for rasterizing later.
-    LOGGER.debug('Creating a temp shapefile and layer for rasterizing')
-    ogr_driver = ogr.GetDriverByName('Memory')
-    temp_shapefile = ogr_driver.CreateDataSource('/tmp/temp_shapefile')
-    temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
-        sample_layer.GetSpatialRef(), geom_type=ogr.wkbPolygon)
-    temp_layer_defn = temp_layer.GetLayerDefn()
+    # Check the method of processing desired by the user, but default to assess
+    # stats across the entire shapefile.
+    shapefiles_to_use = [shapefile]
+    if method == 'all':
+        LOGGER.debug('Statistic will be calculated over all features')
+    elif method == 'per_feature':
+        LOGGER.debug('Statistic will be calculated per feature')
+        shapefiles_to_use = split_datasource(shapefile)
+    else:
+        LOGGER.warn('Method %s not recognized.  Defaulting to all features.',
+            method)
 
-    # Make a copy of the feature passed in by the user and save it to the temp
-    # shapefile.
-    LOGGER.debug('Making a copy of the input feature for rasterizing')
-    feature_geom = shape.GetGeometryRef()
-    temp_feature = ogr.Feature(temp_layer_defn)
-    temp_feature.SetGeometry(feature_geom)
-    temp_feature.SetFrom(shape)
-    temp_layer.CreateFeature(temp_feature)
-
-    temp_feature.Destroy()
-    temp_layer.SyncToDisk()
-
-    # Create a raster from the extents of the shapefile.  I do this here so that
-    # we can calculate stats using GDAL, which is about 15x faster than doing
-    # the same set of statistics on a numpy matrix with numpy operations.  See
-    # invest_natcap.nutrient.compare_mean_calculation for an example.
-    temp_raster = raster_utils.create_raster_from_vector_extents(
-        pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
-        '/tmp/watershed_raster.tif', temp_shapefile)
-    LOGGER.debug('Temp raster created with rows=%s, cols=%s',
-        temp_raster.RasterXSize, temp_raster.RasterYSize)
+    return_stats = []
+    for feature_ds in shapefiles_to_use:
+        # Create a raster from the extents of the shapefile.  I do this here so that
+        # we can calculate stats using GDAL, which is about 15x faster than doing
+        # the same set of statistics on a numpy matrix with numpy operations.  See
+        # invest_natcap.nutrient.compare_mean_calculation for an example.
+        temp_raster = raster_utils.create_raster_from_vector_extents(
+            pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
+            '/tmp/watershed_raster.tif', shapefile)
+        LOGGER.debug('Temp raster created with rows=%s, cols=%s',
+            temp_raster.RasterXSize, temp_raster.RasterYSize)
 
 
-    if mask_fill != None:
-        LOGGER.debug('Filling temp raster with %s', mask_fill)
-        temp_raster.GetRasterBand(1).Fill(mask_fill)
+        if mask_fill != None:
+            LOGGER.debug('Filling temp raster with %s', mask_fill)
+            temp_raster.GetRasterBand(1).Fill(mask_fill)
 
-    # Rasterize the temp shapefile layer onto the temp raster.  Burn values are
-    # all set to 1 so we can use this as a mask in the subsequent call to
-    # vectorize_rasters().
-    LOGGER.debug('Rasterizing the temp layer onto the temp raster')
-    gdal.RasterizeLayer(temp_raster, [1], temp_layer, burn_values=[1])
+        # Rasterize the temp shapefile layer onto the temp raster.  Burn values are
+        # all set to 1 so we can use this as a mask in the subsequent call to
+        # vectorize_rasters().
+        LOGGER.debug('Rasterizing the temp layer onto the temp raster')
+        gdal.RasterizeLayer(temp_raster, [1], shapefile.GetLayer(0), burn_values=[1])
 
-    return get_stats(temp_raster)
+        return_stats.append(get_stats(temp_raster))
+
+    if len(return_stats) == 1:
+        return return_stats[0]
+    return return_stats
+
+def split_datasource(ds, uris=None):
+    """Split the input OGR datasource into a list of datasources, each with a
+    single layer containing a single feature.
+
+        ds - an OGR datasource.
+        uris - a list of uris to where the new datasources should be saved on
+            disk.  Must have a URI for each feature in ds (even if features are
+            split across multiple layers).
+
+    Returns a list of OGR datasources."""
+
+    num_features = sum([l.GetFeatureCount() for l in ds])
+    if uris == None:
+        driver_string = 'Memory'
+        uris = ['/tmp/temp_shapefile'] * num_features
+    else:
+        driver_string = 'ESRI Shapefile'
+
+    LOGGER.debug('Splitting datasource into separate shapefiles')
+    ogr_driver = ogr.GetDriverByName(driver_string)
+    output_shapefiles = []
+    for layer in ds:
+        for feature in layer:
+            LOGGER.debug('Creating new shapefile')
+            uri_index = len(output_shapefiles)
+            temp_shapefile = ogr_driver.CreateDataSource(uris[uri_index])
+            temp_layer = temp_shapefile.CreateLayer('temp_shapefile',
+                layer.GetSpatialRef(), geom_type=ogr.wkbPolygon)
+            temp_layer_defn = temp_layer.GetLayerDefn()
+
+            LOGGER.debug('Creating new feature with duplicate geometry')
+            feature_geom = feature.GetGeometryRef()
+            temp_feature = ogr.Feature(temp_layer_defn)
+            temp_feature.SetGeometry(feature_geom)
+            temp_feature.SetFrom(feature)
+            temp_layer.CreateFeature(temp_feature)
+
+            temp_feature.Destroy()
+            temp_layer.SyncToDisk()
+            output_shapefiles.append(temp_shapefile)
+        layer.ResetReading()
+
+    LOGGER.debug('Finished creating the new shapefiles %s', output_shapefiles)
+    return output_shapefiles
 

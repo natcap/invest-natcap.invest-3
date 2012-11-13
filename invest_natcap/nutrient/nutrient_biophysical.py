@@ -17,6 +17,8 @@ LOGGER = logging.getLogger('nutrient_biophysical')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
+class InvalidNutrient(Exception):pass
+
 def make_folder(folder):
     try:
         os.makedirs(folder)
@@ -96,11 +98,26 @@ def execute(args):
         biophysical_args[new_key] = copy
 
     LOGGER.info('Opening tables')
+    LOGGER.debug('Nutrient type: %s', args['nutrient_type'])
+    if args['nutrient_type'] == 'nitrogen':
+        suffix = '_n'
+    elif args['nutrient_type'] == 'phosphorus':
+        suffix = '_p'
+    else:
+        raise InvalidNutrient('Invalid Nutrient type %s found.' %
+                              args['nutrient_type'])
+
+    bio_table_regex = '|'.join([r + suffix for r in ['load', 'eff']])
+    LOGGER.debug('Bio table regexp: %s', bio_table_regex)
+
+    thresh_table_regex = 'thresh' + suffix
+    LOGGER.debug('Threshold table regexp: %s', thresh_table_regex)
+
     biophysical_args['bio_table'] = fileio.TableHandler(args['bio_table_uri'])
-    biophysical_args['bio_table'].set_field_mask('load_n|eff_n', 2, 'back')
+    biophysical_args['bio_table'].set_field_mask(bio_table_regex, 2, 'back')
     biophysical_args['threshold_table'] =\
         fileio.TableHandler(args['threshold_table_uri'])
-    biophysical_args['threshold_table'].set_field_mask('thresh_n', 2, 'back')
+    biophysical_args['threshold_table'].set_field_mask(thresh_table_regex, 2, 'back')
 
     # Extract the threshold data in the threshold table and save it to the new
     # watersheds shapefile.
@@ -130,7 +147,6 @@ def execute(args):
         watershed.Destroy()
 
     LOGGER.info('Copying other values for internal use')
-    biophysical_args['nutrient_type'] = args['nutrient_type']
     biophysical_args['accum_threshold'] = args['accum_threshold']
     biophysical_args['folders'] = {
         'workspace': workspace,
