@@ -40,6 +40,10 @@ def execute(args):
         with open(csv_filename, 'wb') as habitat_csv_file:
             habitat_csv_writer = csv.writer(habitat_csv_file)
             #Write the habitat name
-            habitat_csv_writer.writerow([habitat_name])
+            habitat_csv_writer.writerow(['HABITAT', habitat_name])
+            habitat_csv_writer.writerow([])
+            for stressor_name in name_lookup['stressor']:
+                habitat_csv_writer.writerow(['STRESSOR', stressor_name])
+                habitat_csv_writer.writerow([])
     
     LOGGER.debug(name_lookup)
