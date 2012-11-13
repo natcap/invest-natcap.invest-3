@@ -1,15 +1,11 @@
 '''This is #the core module for HRA functionality. This will perform all HRA
 calcs, and return the appropriate outputs.
 '''
-import math
-import datetime
 import logging
 import os
 import numpy as np
-import shutil
-import pickle
 
-from osgeo import gdal, ogr
+from osgeo import gdal
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('HRA_CORE')
@@ -214,6 +210,7 @@ def make_ecosys_risk_raster(direct, h_ds):
     out_uri = os.path.join(direct, 'ecosys_risk.tif')
 
     def add_e_pixels(*pixels):
+        '''Sum all habitat pixels for ecosystem raster.'''
 
         pixel_sum = 0.0
 
@@ -225,7 +222,8 @@ def make_ecosys_risk_raster(direct, h_ds):
 
     LOGGER.info("make_ecosys_raster")
     raster_utils.vectorize_rasters(h_ds, add_e_pixels, aoi = None,
-                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
+                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, 
+                    nodata = 0)
 
 def make_cum_risk_raster(direct, risk_dict):
     '''This will take all h-s rasters of a given habitat, and combine them to
@@ -247,9 +245,10 @@ def make_cum_risk_raster(direct, risk_dict):
         h_rasters- A list of open raster datasets corresponding to the completed
             cumulative raster files for each habitat.
     '''
-    #THIS WILL BE THE COMBINE FUNCTION
     def add_risk_pixels(*pixels):
-
+        '''Sum all risk pixels to make a single habitat raster out of all the 
+        h-s overlap rasters.'''
+        
         pixel_sum = 0.0
 
         for p in pixels:
@@ -279,15 +278,16 @@ def make_cum_risk_raster(direct, risk_dict):
         for s in stressors:
             #Datasource can be retrieved by indexing into the value dictionary
             #using 'DS'
-            ds_list.append(risk_dict[(h,s)])
+            ds_list.append(risk_dict[(h, s)])
 
         #When we have a complete list of the stressors, let's pass the habitat
         #name and our list off to another function and have it create and
         #combine the file.
         out_uri = os.path.join(direct, 'cum_risk_H[' + h + '].tif')
         
-        h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
-                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
+        h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, 
+                        aoi = None, raster_out_uri = out_uri, 
+                        datatype=gdal.GDT_Float32, nodata = 0)
 
         h_rasters.append(h_rast)
 
@@ -371,8 +371,9 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         r_array = r_band.ReadAsArray()
         
         if risk_eq == 'Euclidean':
-            #Need to remember that E should be applied to the decayed raster values,
-            #then the decayed value per pixel can be used for the risk value.
+            #Need to remember that E should be applied to the decayed raster 
+            #values, then the decayed value per pixel can be used for the 
+            #risk value.
             mod_array = make_risk_euc(r_array, E, C) 
         
         elif risk_eq == 'Multiplicative':
@@ -489,8 +490,8 @@ def make_risk_euc(array, E, C):
     #Only want to perform calculations if we have a cell with data in it. (Can
     #see based on the non-zero values.
 
-    e_array[e_array!=0] -= 1
-    e_array ** 2
+    e_array[e_array != 0] -= 1
+    e_array = e_array ** 2
 
     sub_c = (C - 1) ** 2
     
