@@ -34,6 +34,7 @@ def execute(args):
 
 
     #Create output csvs so that they are habitat centric
+    default_fill_in_message = '<fill in a number from 1 (low) 3 (high) or 0 (no data)>'
     for habitat_name in name_lookup['habitat']:
         csv_filename = os.path.join(
             args['workspace_dir'], habitat_name + '.csv')
@@ -41,6 +42,13 @@ def execute(args):
             habitat_csv_writer = csv.writer(habitat_csv_file)
             #Write the habitat name
             habitat_csv_writer.writerow(['HABITAT', habitat_name])
+            habitat_csv_writer.writerow(['Habitat Data Quality:', default_fill_in_message])
+
+            habitat_csv_writer.writerow([])
+            habitat_csv_writer.writerow(['','Rating', 'Data Quality'])
+            for habitat_property in ['Mortaility:', 'Recruitment:', 'Connectivity:', 'Regeneration:']:
+                habitat_csv_writer.writerow([habitat_property] + [default_fill_in_message]*2)
+
             habitat_csv_writer.writerow([])
             for stressor_name in name_lookup['stressor']:
                 habitat_csv_writer.writerow(['STRESSOR', stressor_name])
