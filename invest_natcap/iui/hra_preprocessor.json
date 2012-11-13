@@ -25,7 +25,8 @@
                     "type": "folder",
                     "label": "Directory to habitat layers",
                     "required": true,
-                    "validateAs": {"type": "folder"},
+                    "validateAs": {"type": "folder",
+		    		  "mustExist": true},
                     "args_id": "workspace_dir",
                     "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers"
                 },
@@ -34,7 +35,8 @@
                     "type": "folder",
                     "label": "Directory to stressor layers",
                     "required": true,
-                    "validateAs": {"type": "folder"},
+                    "validateAs": {"type": "folder",
+		    		  "mustExist": true},
                     "args_id": "workspace_dir",
                     "defaultValue": "../HabitatRiskAssess/Input/StressorLayers"
                 }
