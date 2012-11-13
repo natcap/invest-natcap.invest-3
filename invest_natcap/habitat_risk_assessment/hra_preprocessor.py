@@ -22,8 +22,9 @@ def execute(args):
         returns nothing"""
 
     #Make the workspace directory if it doesn't exist
-    if not os.path.exists(args['workspace_dir']):
-        os.makedirs(args['workspace_dir'])
+    output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     #Pick up all the habitat and stressor names
     name_lookup = {}
@@ -37,7 +38,7 @@ def execute(args):
     default_fill_in_message = '<enter 1 (low), 2 (med) 3 (high), or 0 (no data)>'
     for habitat_name in name_lookup['habitat']:
         csv_filename = os.path.join(
-            args['workspace_dir'], habitat_name + '.csv')
+            output_dir, habitat_name + '_ratings.csv')
         with open(csv_filename, 'wb') as habitat_csv_file:
             habitat_csv_writer = csv.writer(habitat_csv_file)
             #Write the habitat name
