@@ -46,20 +46,20 @@ def execute(args):
             habitat_csv_writer.writerow(['HABITAT ONLY PROPERTIES'])
             habitat_csv_writer.writerow(['Habitat Data Quality:', default_fill_in_message])
             habitat_csv_writer.writerow([])
-            habitat_csv_writer.writerow(['', 'Rating', 'Data Quality'])
+            habitat_csv_writer.writerow(['', 'Rating', 'Data Quality', 'Weight'])
             for habitat_property in ['Mortality:', 'Recruitment:', 'Connectivity:', 'Recovery Time:']:
-                habitat_csv_writer.writerow([habitat_property] + [default_fill_in_message]*2)
+                habitat_csv_writer.writerow([habitat_property] + [default_fill_in_message]*3)
 
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['HABITAT STRESSOR OVERLAP PROPERTIES'])
             for stressor_name in name_lookup['stressor']:
                 habitat_csv_writer.writerow([])
                 habitat_csv_writer.writerow([habitat_name + '/' + stressor_name + ' OVERLAP'])
-                habitat_csv_writer.writerow(['', 'Rating', 'Data Quality'])
+                habitat_csv_writer.writerow(['', 'Rating', 'Data Quality', 'Weight'])
                 for overlap_property in [
                     'Temporal Overlap:', 'Area Change:', 'Structure Change:',
                     'Disurbance Rating:']:
-                    habitat_csv_writer.writerow([overlap_property] + [default_fill_in_message]*2)
+                    habitat_csv_writer.writerow([overlap_property] + [default_fill_in_message]*3)
 
     #Make stressor specific tables
     for stressor_name in name_lookup['stressor']:
@@ -71,6 +71,6 @@ def execute(args):
             stressor_csv_writer.writerow(['Stressor Data Quality:', default_fill_in_message])
             stressor_csv_writer.writerow(['Stressor Buffer (m):', '<enter a buffer region in meters>'])
             stressor_csv_writer.writerow([])
-            stressor_csv_writer.writerow(['', 'Rating', 'Data Quality'])
+            stressor_csv_writer.writerow(['', 'Rating', 'Data Quality', 'Weight'])
             for stressor_property in ['Intensity:', 'Management:',]:
-                stressor_csv_writer.writerow([stressor_property] + [default_fill_in_message]*2)
+                stressor_csv_writer.writerow([stressor_property] + [default_fill_in_message]*3)
