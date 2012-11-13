@@ -656,13 +656,16 @@ def valuation(args):
     disc_time = disc_const**time
     
     wind_energy_layer = wind_energy_points.GetLayer() 
-    LOGGER.info('Creating new NPV field')
-    new_field = ogr.FieldDefn('NPV', ogr.OFTReal)
-    wind_energy_layer.CreateField(new_field)
+    LOGGER.info('Creating new NPV and Levelized Cost field')
+    for new_field in ['NPV', 'LevCost']:
+        field = ogr.FieldDefn(new_field, ogr.OFTReal)
+        wind_energy_layer.CreateField(field)
+    
     LOGGER.info('Calculating the NPV for each wind farm')
     # Iterate over each point calculating the NPV
     for feat in wind_energy_layer:
         npv_index = feat.GetFieldIndex('NPV')
+        levelized_index = feat.GetFieldIndex('LevCost')
         energy_index = feat.GetFieldIndex('HarvEnergy')
         O2L_index = feat.GetFieldIndex('O2L')
         L2G_index = feat.GetFieldIndex('L2G')
@@ -688,19 +691,29 @@ def valuation(args):
         # costs (capex)
         capex = cap / (1.0 - install_cost - misc_capex_cost) 
 
+        ongoing_capex = op_maint_cost * capex
+        decommish_capex = decom * capex / disc_time
         npv = 0
+        levelized_cost_num = 0
+        levelized_cost_denom = 0
         # Calculate the total NPV summation over the lifespan of the wind farm
         for year in range(1, time + 1):
             # The revenue in the current time period
             rev = energy_val * dollar_per_kwh
             # Calcuate the first component of the NPV equation
-            comp_one = (rev - op_maint_cost * capex) / disc_const**year
-            # Calculate the seoncd component of the NPV equation
-            comp_two = decom * capex / disc_time
+            comp_one = (rev - ongoing_capex) / disc_const**year
             # Add this years NPV value to the running total
-            npv = npv + (comp_one - comp_two - capex)
-        
+            npv = npv + (comp_one - decommish_capex - capex)
+            levelized_cost_num = levelized_cost_num + (
+                    (ongoing_capex / disc_const**year) + 
+                    decommish_capex + capex)
+            levelized_cost_denom = levelized_cost_denom + (energy_val /
+                    disc_const**year) 
+
+        levelized_cost = levelized_cost_num / levelized_cost_denom
+
         feat.SetField(npv_index, npv)
+        feat.SetField(levelized_index, levelized_cost)
         wind_energy_layer.SetFeature(feat)
 
     wind_energy_layer.SyncToDisk()
@@ -717,6 +730,17 @@ def valuation(args):
     raster_utils.vectorize_points(
             wind_energy_points, 'NPV', npv_ds)
 
+    levelized_uri = os.path.join(output_dir, 'levelized.tif')
+    out_nodata = 0.0
+    
+    # Create a raster for the points to be vectorized to
+    levelized_ds = raster_utils.create_raster_from_vector_extents(
+            30, 30, gdal.GDT_Float32, out_nodata, levelized_uri, wind_energy_points)
+    
+    # Interpolate and vectorize the points NPV value onto a gdal dataset
+    LOGGER.info('Creating Levelized Cost raster')
+    raster_utils.vectorize_points(
+            wind_energy_points, 'LevCost', levelized_ds)
     LOGGER.info('Leaving Wind Energy Valuation Core')
 
 
