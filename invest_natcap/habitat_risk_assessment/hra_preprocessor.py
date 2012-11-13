@@ -24,14 +24,11 @@ def execute(args):
     if not os.path.exists(args['workspace_dir']):
         os.makedirs(args['workspace_dir'])
 
-    habitat_names = [
-        os.path.basename(f.split('.')[0]) for f in 
-        glob.glob(os.path.join(args['habitat_dir'], '*.shp'))]
-    
-    stressor_names = [
-        os.path.basename(f.split('.')[0]) for f in 
-        glob.glob(os.path.join(args['stressor_dir'], '*.shp'))]
-    
+    name_lookup = {}
 
-    LOGGER.debug(habitat_names)
-    LOGGER.debug(stressor_names)
+    for layer_type in ['habitat', 'stressor']:
+        name_lookup[layer_type] = [
+            os.path.basename(f.split('.')[0]) for f in 
+            glob.glob(os.path.join(args[layer_type + '_dir'], '*.shp'))]
+
+    LOGGER.debug(name_lookup)
