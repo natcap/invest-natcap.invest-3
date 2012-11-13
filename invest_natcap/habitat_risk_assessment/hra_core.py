@@ -1,15 +1,11 @@
 '''This is #the core module for HRA functionality. This will perform all HRA
 calcs, and return the appropriate outputs.
 '''
-import math
-import datetime
 import logging
 import os
 import numpy as np
-import shutil
-import pickle
 
-from osgeo import gdal, ogr
+from osgeo import gdal
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('HRA_CORE')
@@ -214,6 +210,7 @@ def make_ecosys_risk_raster(direct, h_ds):
     out_uri = os.path.join(direct, 'ecosys_risk.tif')
 
     def add_e_pixels(*pixels):
+        '''Sum all habitat pixels for ecosystem raster.'''
 
         pixel_sum = 0.0
 
@@ -247,9 +244,10 @@ def make_cum_risk_raster(direct, risk_dict):
         h_rasters- A list of open raster datasets corresponding to the completed
             cumulative raster files for each habitat.
     '''
-    #THIS WILL BE THE COMBINE FUNCTION
     def add_risk_pixels(*pixels):
-
+        '''Sum all risk pixels to make a single habitat raster out of all the h-s
+        overlap rasters.'''
+        
         pixel_sum = 0.0
 
         for p in pixels:
@@ -279,7 +277,7 @@ def make_cum_risk_raster(direct, risk_dict):
         for s in stressors:
             #Datasource can be retrieved by indexing into the value dictionary
             #using 'DS'
-            ds_list.append(risk_dict[(h,s)])
+            ds_list.append(risk_dict[(h, s)])
 
         #When we have a complete list of the stressors, let's pass the habitat
         #name and our list off to another function and have it create and
@@ -489,8 +487,8 @@ def make_risk_euc(array, E, C):
     #Only want to perform calculations if we have a cell with data in it. (Can
     #see based on the non-zero values.
 
-    e_array[e_array!=0] -= 1
-    e_array ** 2
+    e_array[e_array != 0] -= 1
+    e_array = e_array ** 2
 
     sub_c = (C - 1) ** 2
     
