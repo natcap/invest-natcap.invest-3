@@ -34,24 +34,29 @@ def execute(args):
 
 
     #Create output csvs so that they are habitat centric
-    default_fill_in_message = '<fill in a number from 1 (low) 3 (high) or 0 (no data)>'
+    default_fill_in_message = '<enter 1 (low), 2 (med) 3 (high), or 0 (no data)>'
     for habitat_name in name_lookup['habitat']:
         csv_filename = os.path.join(
             args['workspace_dir'], habitat_name + '.csv')
         with open(csv_filename, 'wb') as habitat_csv_file:
             habitat_csv_writer = csv.writer(habitat_csv_file)
             #Write the habitat name
-            habitat_csv_writer.writerow(['HABITAT', habitat_name])
+            habitat_csv_writer.writerow(['HABITAT NAME', habitat_name])
             habitat_csv_writer.writerow(['Habitat Data Quality:', default_fill_in_message])
 
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['','Rating', 'Data Quality'])
-            for habitat_property in ['Mortaility:', 'Recruitment:', 'Connectivity:', 'Regeneration:']:
+            for habitat_property in ['Mortality:', 'Recruitment:', 'Connectivity:', 'Regeneration:']:
                 habitat_csv_writer.writerow([habitat_property] + [default_fill_in_message]*2)
 
             habitat_csv_writer.writerow([])
             for stressor_name in name_lookup['stressor']:
-                habitat_csv_writer.writerow(['STRESSOR', stressor_name])
+                habitat_csv_writer.writerow(['STRESSOR NAME', stressor_name])
+                habitat_csv_writer.writerow(['Stressor Buffer (m):', '<enter a buffer region in meters>'])
                 habitat_csv_writer.writerow([])
-    
+                habitat_csv_writer.writerow(['','Rating', 'Data Quality'])
+                for stressor_property in ['Intensity:', 'Management:',]:
+                    habitat_csv_writer.writerow([stressor_property] + [default_fill_in_message]*2)
+                habitat_csv_writer.writerow([])
+                
     LOGGER.debug(name_lookup)
