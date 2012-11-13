@@ -222,7 +222,8 @@ def make_ecosys_risk_raster(direct, h_ds):
 
     LOGGER.info("make_ecosys_raster")
     raster_utils.vectorize_rasters(h_ds, add_e_pixels, aoi = None,
-                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
+                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, 
+                    nodata = 0)
 
 def make_cum_risk_raster(direct, risk_dict):
     '''This will take all h-s rasters of a given habitat, and combine them to
@@ -245,8 +246,8 @@ def make_cum_risk_raster(direct, risk_dict):
             cumulative raster files for each habitat.
     '''
     def add_risk_pixels(*pixels):
-        '''Sum all risk pixels to make a single habitat raster out of all the h-s
-        overlap rasters.'''
+        '''Sum all risk pixels to make a single habitat raster out of all the 
+        h-s overlap rasters.'''
         
         pixel_sum = 0.0
 
@@ -284,8 +285,9 @@ def make_cum_risk_raster(direct, risk_dict):
         #combine the file.
         out_uri = os.path.join(direct, 'cum_risk_H[' + h + '].tif')
         
-        h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, aoi = None,
-                    raster_out_uri = out_uri, datatype=gdal.GDT_Float32, nodata = 0)
+        h_rast = raster_utils.vectorize_rasters(ds_list, add_risk_pixels, 
+                        aoi = None, raster_out_uri = out_uri, 
+                        datatype=gdal.GDT_Float32, nodata = 0)
 
         h_rasters.append(h_rast)
 
@@ -369,8 +371,9 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         r_array = r_band.ReadAsArray()
         
         if risk_eq == 'Euclidean':
-            #Need to remember that E should be applied to the decayed raster values,
-            #then the decayed value per pixel can be used for the risk value.
+            #Need to remember that E should be applied to the decayed raster 
+            #values, then the decayed value per pixel can be used for the 
+            #risk value.
             mod_array = make_risk_euc(r_array, E, C) 
         
         elif risk_eq == 'Multiplicative':
