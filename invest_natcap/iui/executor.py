@@ -10,6 +10,7 @@ import subprocess
 import platform
 import datetime
 import shutil
+import codecs
 
 import invest_natcap
 from invest_natcap.invest_core import fileio as fileio
@@ -205,6 +206,7 @@ class Executor(threading.Thread):
         self.printQueue.append(string)
         self.printQueueLock.release()
 
+        encoding = sys.getfilesystemencoding()
         if self.log_file != None:
             if not self.log_file.closed:
                 self.log_file.write(string)
@@ -378,9 +380,10 @@ class Executor(threading.Thread):
             # we want to save this file to the current directory until the model
             # finishes, when we copy the log into the model's workspace
             settings_folder = invest_natcap.iui.fileio.settings_folder()
+            settings_folder = settings_folder.decode(sys.getfilesystemencoding())
             log_file_uri = os.path.abspath(os.path.join(settings_folder,
                 filename))
-            self.log_file = open(log_file_uri, 'w')
+            self.log_file = codecs.open(log_file_uri, 'w', encoding='utf-8')
 
             # Now that the log file is open, write the arguments to it.
             self.print_args(args)
