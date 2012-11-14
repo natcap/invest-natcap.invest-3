@@ -21,6 +21,18 @@ def execute(args):
 
         returns nothing"""
 
+    habitats_stressors = {}
+    stressors = {}
+    habitats = {
+        'Natural Mortality Rate': '<enter (3) 0-20%, (2) 20-50%, (1) >80% mortality, or (0) no score>',
+        'Recruitment Rating': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, (1) every <1 yrs, or (0) no score>',
+        'Age at maturity': '<enter (3) >10 yrs, (2) 1-10 yrs, (1) <1 yr, or (0) no score>',
+        'Connectivity Rating': '<enter (3) <10km, (2) 10-100km, (1) >100km, or (0) no score>'
+        }
+
+    default_dq_message = '<enter (3) best, (2) adequate, (1) limited, or (0) unknown>'
+    default_weight_message = '<enter (3) more important, (2) equal importance, (1) less important>'
+
     #Make the workspace directory if it doesn't exist
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
     if not os.path.exists(output_dir):
@@ -47,8 +59,8 @@ def execute(args):
             habitat_csv_writer.writerow(['Habitat Data Quality:', default_fill_in_message])
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['', 'Rating', 'Data Quality', 'Weight'])
-            for habitat_property in ['Mortality:', 'Recruitment:', 'Connectivity:', 'Recovery Time:']:
-                habitat_csv_writer.writerow([habitat_property] + [default_fill_in_message]*3)
+            for habitat_property, default_message in habitats.iteritems():
+                habitat_csv_writer.writerow([habitat_property, default_message, default_dq_message, default_weight_message])
 
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['HABITAT STRESSOR OVERLAP PROPERTIES'])
