@@ -35,6 +35,8 @@ def execute(args):
 
     default_dq_message = '<enter (3) best, (2) adequate, (1) limited, or (0) unknown>'
     default_weight_message = '<enter (3) more important, (2) equal importance, (1) less important>'
+    default_table_headers = ['', 'Rating', 'Data Quality', 'Weight']
+    default_table_row = [default_dq_message, default_weight_message]
 
     #Make the workspace directory if it doesn't exist
     output_dir = os.path.join(args['workspace_dir'], 'habitat_stressor_ratings')
@@ -61,9 +63,9 @@ def execute(args):
             habitat_csv_writer.writerow(['HABITAT ONLY PROPERTIES'])
             habitat_csv_writer.writerow(['Habitat Data Quality:', default_fill_in_message])
             habitat_csv_writer.writerow([])
-            habitat_csv_writer.writerow(['', 'Rating', 'Data Quality', 'Weight'])
+            habitat_csv_writer.writerow(default_table_headers)
             for habitat_property, default_message in habitats.iteritems():
-                habitat_csv_writer.writerow([habitat_property, default_message, default_dq_message, default_weight_message])
+                habitat_csv_writer.writerow([habitat_property, default_message] + default_table_row)
 
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['HABITAT STRESSOR OVERLAP PROPERTIES'])
@@ -86,6 +88,6 @@ def execute(args):
             stressor_csv_writer.writerow(['Stressor Data Quality:', default_dq_message])
             stressor_csv_writer.writerow(['Stressor Buffer (m):', '<enter a buffer region in meters>'])
             stressor_csv_writer.writerow([])
-            stressor_csv_writer.writerow(['', 'Rating', 'Data Quality', 'Weight'])
+            stressor_csv_writer.writerow(default_table_headers)
             for stressor_property, default_message in stressors.iteritems():
-                stressor_csv_writer.writerow([stressor_property, default_message, default_dq_message, default_weight_message])
+                stressor_csv_writer.writerow([stressor_property, default_message] + default_table_row)
