@@ -34,11 +34,12 @@ def execute(args):
         'Management Effectiveness:': '<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>',
         }
 
+    #These keys come directly from hra.py's execute docstring.
     habitats = {
-        'Natural Mortality Rate': '<enter (3) 0-20%, (2) 20-50%, (1) >80% mortality, or (0) no score>',
-        'Recruitment Rating': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, (1) every <1 yrs, or (0) no score>',
-        'Age at maturity': '<enter (3) >10 yrs, (2) 1-10 yrs, (1) <1 yr, or (0) no score>',
-        'Connectivity Rating': '<enter (3) <10km, (2) 10-100km, (1) >100km, or (0) no score>'
+        'Natural Mortality': '<enter (3) 0-20%, (2) 20-50%, (1) >80% mortality, or (0) no score>',
+        'Recruitment Rate': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, (1) every <1 yrs, or (0) no score>',
+        'Recovery Time': '<enter (3) >10 yrs, (2) 1-10 yrs, (1) <1 yr, or (0) no score>',
+        'Connectivity Rate': '<enter (3) <10km, (2) 10-100km, (1) >100km, or (0) no score>'
         }
 
     default_dq_message = '<enter (3) best, (2) adequate, (1) limited, or (0) unknown>'
