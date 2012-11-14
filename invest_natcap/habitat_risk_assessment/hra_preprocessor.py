@@ -57,7 +57,6 @@ def execute(args):
 
 
     #Create output csvs so that they are habitat centric
-    default_fill_in_message = '<enter 1 (low), 2 (med) 3 (high), or 0 (no data)>'
     for habitat_name in name_lookup['habitat']:
         csv_filename = os.path.join(
             output_dir, habitat_name + '_overlap_ratings.csv')
@@ -66,7 +65,7 @@ def execute(args):
             #Write the habitat name
             habitat_csv_writer.writerow(['HABITAT NAME', habitat_name])
             habitat_csv_writer.writerow(['HABITAT ONLY PROPERTIES'])
-            habitat_csv_writer.writerow(['Habitat Data Quality:', default_fill_in_message])
+            habitat_csv_writer.writerow(['Habitat Data Quality:', default_dq_message])
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(default_table_headers)
             for habitat_property, default_message in habitats.iteritems():
