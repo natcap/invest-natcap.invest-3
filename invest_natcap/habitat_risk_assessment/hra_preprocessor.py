@@ -44,7 +44,7 @@ def execute(args):
 
     default_dq_message = '<enter (3) best, (2) adequate, (1) limited, or (0) unknown>'
     default_weight_message = '<enter (3) more important, (2) equal importance, (1) less important>'
-    default_table_headers = ['', 'Rating', 'Data Quality', 'Weight']
+    default_table_headers = ['', 'Rating', 'DQ', 'Weight']
     default_table_row = [default_dq_message, default_weight_message]
 
     #Make the workspace directory if it doesn't exist
