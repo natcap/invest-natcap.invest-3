@@ -343,6 +343,9 @@ class URIChecker(Checker):
         self.uri = None  # initialize to none
         self.add_check_function(self.check_exists)
 
+        updates = {'mustExist': self.check_exists}
+        self.update_map(updates)
+
     def check_exists(self, valid_dict):
         """Verify that the file at valid_dict['value'] exists."""
 
