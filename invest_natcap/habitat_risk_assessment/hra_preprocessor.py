@@ -21,7 +21,12 @@ def execute(args):
 
         returns nothing"""
 
-    habitats_stressors = {}
+    habitats_stressors = {
+        'Change in area rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
+        'Change in structure rating': '(3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
+        'Overlap Time Rating': '<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>',
+        'Frequency of disturbance': '<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>'
+        }
     stressors = {
         'Intensity Rating:': '<enter (3) high, (2) medium, (1) low, (0) no score>',
         'Management Effectiveness:': '<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>',
@@ -73,10 +78,8 @@ def execute(args):
                 habitat_csv_writer.writerow([])
                 habitat_csv_writer.writerow([habitat_name + '/' + stressor_name + ' OVERLAP'])
                 habitat_csv_writer.writerow(['', 'Rating', 'Data Quality', 'Weight'])
-                for overlap_property in [
-                    'Temporal Overlap:', 'Area Change:', 'Structure Change:',
-                    'Disurbance Rating:']:
-                    habitat_csv_writer.writerow([overlap_property] + [default_fill_in_message]*3)
+                for overlap_property, default_message in habitats_stressors.iteritems():
+                    habitat_csv_writer.writerow([overlap_property, default_message] + default_table_row)
 
     #Make stressor specific tables
     for stressor_name in name_lookup['stressor']:
