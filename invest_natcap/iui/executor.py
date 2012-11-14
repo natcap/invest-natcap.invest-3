@@ -207,6 +207,11 @@ class Executor(threading.Thread):
         self.printQueue.append(string)
         self.printQueueLock.release()
 
+        # Convert unix line endings to windows line endings if we are writing to
+        # a log file on windows.
+        if platform.system() == 'Windows':
+            string = string.replace('\n', '\r\n')
+
         encoding = sys.getfilesystemencoding()
         if self.log_file != None:
             if not self.log_file.closed:
@@ -357,7 +362,6 @@ class Executor(threading.Thread):
         try:
             workspace = args['workspace_dir']
         except KeyError:
-            print 'keyerror'
             # KeyError thrown when the key 'workspace_dir' is not used in the
             # args dictionary, print an inconsequential error.
             LOGGER.error('Cannot find args id \'workspace_dir\'.')
