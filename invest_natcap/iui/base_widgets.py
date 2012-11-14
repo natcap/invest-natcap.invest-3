@@ -1635,6 +1635,7 @@ class OperationDialog(QtGui.QDialog):
 
         self.timer.timeout.connect(self.check_messages)
         self.timer.start(100)
+        self.write('Initializing...\n')
 
     def check_messages(self):
         if not self.exec_controller.is_finished():
