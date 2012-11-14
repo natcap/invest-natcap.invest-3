@@ -402,7 +402,7 @@ class DynamicPrimitive(DynamicElement):
             return self.root.type_registrar.eval(self.attributes['dataType'],
                 self.value())
         except KeyError:
-            return str(self.value())
+            return unicode(self.value())
 
     def getOutputValue(self):
         """Return the output value of this element, applying any necessary
@@ -835,7 +835,7 @@ class DynamicText(LabeledElement):
         
             returns a string."""
         value = self.textField.text()
-        return str(value)
+        return unicode(value)
 
     def setValue(self, text):
         """Set the value of self.textField.
@@ -2317,7 +2317,7 @@ class ExecRoot(Root):
             #Check if workspace has an output directory, prompt the user that 
             #it will be overwritten
             try:
-                uri = str(self.allElements['workspace'].textField.text())
+                uri = unicode(self.allElements['workspace'].textField.text())
                 if os.path.isdir(os.path.join(uri,'output')) or \
                         os.path.isdir(os.path.join(uri,'Output')):
                     dialog = WarningDialog()
