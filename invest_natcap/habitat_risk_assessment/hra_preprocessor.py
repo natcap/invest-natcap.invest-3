@@ -22,7 +22,10 @@ def execute(args):
         returns nothing"""
 
     habitats_stressors = {}
-    stressors = {}
+    stressors = {
+        'Intensity Rating:': '<enter (3) high, (2) medium, (1) low, (0) no score>',
+        'Management Effectiveness:': '<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>',
+        }
     habitats = {
         'Natural Mortality Rate': '<enter (3) 0-20%, (2) 20-50%, (1) >80% mortality, or (0) no score>',
         'Recruitment Rating': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, (1) every <1 yrs, or (0) no score>',
@@ -80,9 +83,9 @@ def execute(args):
         with open(csv_filename, 'wb') as stressor_csv_file:
             stressor_csv_writer = csv.writer(stressor_csv_file)
             stressor_csv_writer.writerow(['STRESSOR NAME', stressor_name])
-            stressor_csv_writer.writerow(['Stressor Data Quality:', default_fill_in_message])
+            stressor_csv_writer.writerow(['Stressor Data Quality:', default_dq_message])
             stressor_csv_writer.writerow(['Stressor Buffer (m):', '<enter a buffer region in meters>'])
             stressor_csv_writer.writerow([])
             stressor_csv_writer.writerow(['', 'Rating', 'Data Quality', 'Weight'])
-            for stressor_property in ['Intensity:', 'Management:',]:
-                stressor_csv_writer.writerow([stressor_property] + [default_fill_in_message]*3)
+            for stressor_property, default_message in stressors.iteritems():
+                stressor_csv_writer.writerow([stressor_property, default_message, default_dq_message, default_weight_message])
