@@ -45,7 +45,12 @@ def execute(args):
         args['h-s']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
-            tuple of lists which contain tuples.
+            tuple of lists which contain tuples. h-s['C'] should explicitly 
+            contain the following criteria names: (Natural Mortality, 
+            Recruitment Rate, Recovery Time, Connectivity Rate). These criteria
+            must exist, and must contain 'Rating' and 'DQ' entries within them.
+            These can be 0 values if they are not a desired criteria, but must
+            exist.
 
             {(Habitat A, Stressor 1): 
                     {'E': 
@@ -56,9 +61,11 @@ def execute(args):
                     }
             }
         args['habitats']- A structure with the same layout as 'h-s', but which
-            contains only criteria which are specific to habitats.
+            contains only criteria specific to habitats. The outer keys, in 
+            turn, will be habitat names.
         args['stressors']- A structure wih the same layout as 'h-s', but which
-            contains only criteria which are specific to stressors.
+            contains only criteria specific to stressors. The outer keys will be
+            stressor names.
 
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
@@ -67,7 +74,7 @@ def execute(args):
             and intermediate folders will be supfolders of this one.
         hra_args['h-s']- Dictionary with a similar structure to the above,
             but with an additional item in the value tuple containing an open
-            raster dataset of th overlap of key H-S.
+            raster dataset of the overlap of key H-S.
             {(Habitat A, Stressor 1): 
                     {'E': 
                         {'Spatital Overlap': 
@@ -138,13 +145,15 @@ def execute(args):
 
     #Checks the stressor buffer, and makes a new "buffered" raster. If the
     #buffer is 0, this will be identical to the original rasterized shapefile.
-    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'], args['decay_eq'])
+    buffer_s_rasters(s_rast, args['buffer_dict'], args['grid_size'], 
+                    args['decay_eq'])
 
     hra_args['stressors'] = args['stressors']
 
     #Now, want to make all potential combinations of the rasters, and add it to
     #the structure containg data about the H-S combination.
-    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, args['h-s'])
+    ratings_with_rast = combine_hs_rasters(inter_dir, h_rast, s_rast, 
+                                            args['h-s'])
 
     hra_args['h-s'] = ratings_with_rast
 
@@ -182,12 +191,12 @@ def add_rast_to_dict(direct, dictionary):
 
     return dictionary
 
-def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
+def buffer_s_rasters(r_dir, buffer_dict, grid_size, decay_eq):
     '''If there is buffering desired, this will take each file and buffer the
     given raster shape by the distance of the buffer from the landmass.
 
     Input:
-        dir- The directory in which the current raster files reside, and into
+        r_dir- The directory in which the current raster files reside, and into
             which the re-rasterized files should be placed.
         buffer_dict- Dictionary which maps the name of the stressor to the
             desired buffer distance. This is separate from the h-s
@@ -198,7 +207,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
             the stressor importance from the original points.
 
     Output:
-        Re-buffered rasters of the same name as those contained within 'dir'
+        Re-buffered rasters of the same name as those contained within 'r_dir'
             which have the size of the original rasterized shapefile plus a
             buffer distance given in 'buffer_dict'
 
@@ -207,7 +216,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
     #This will get the names of all rasters in the rasterized stressor
     #dictionary. We will pull the names themselves in order to compare them
     #against those in the buffer dictionary.
-    file_names = glob.glob(os.path.join(dir, '*.tif'))
+    file_names = glob.glob(os.path.join(r_dir, '*.tif'))
 
     for r_file in file_names:
         
@@ -228,7 +237,8 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         swp_array = (array + 1) % 2
 
         #The array with each value being the distance from its own cell to land
-        dist_array = ndimage.distance_transform_edt(swp_array, sampling=grid_size)
+        dist_array = ndimage.distance_transform_edt(swp_array, 
+                                                    sampling=grid_size)
         
         if decay_eq == 'None':
             decay_array = make_no_decay_array(dist_array, buff, nodata)
@@ -238,7 +248,7 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
             decay_array = make_lin_decay_array(dist_array, buff, nodata)
 
         #Create a new file to which we should write our buffered rasters.
-        new_buff_uri = os.path.join(dir, name + '_buff.tif')
+        new_buff_uri = os.path.join(r_dir, name + '_buff.tif')
         new_dataset = raster_utils.new_raster_from_base(raster, new_buff_uri,
                             'GTiff', 0, gdal.GDT_Float32)
         n_band, n_nodata = raster_utils.extract_band_and_nodata(new_dataset)
@@ -247,7 +257,21 @@ def buffer_s_rasters(dir, buffer_dict, grid_size, decay_eq):
         n_band.WriteArray(decay_array)
 
 def make_lin_decay_array(dist_array, buff, nodata):
-   
+    '''Should create an array where the area around land is a function of 
+    linear decay from the values representing the land.
+
+    Input:
+        dist_array- A numpy array where each pixel value represents the
+            distance to the closest piece of land.
+        buff- The distance surrounding the land that the user desires to buffer
+            with linearly decaying values.
+        nodata- The value which should be placed into anything not land or
+            buffer area.
+    Returns:
+        A numpy array reprsenting land with 1's, and everything within the buffer
+        zone as linearly decayed values from 1.
+    '''
+
     #The decay rate should be approximately -1/distance we want 0 to be at.
     #We add one to have a proper y-intercept.
     lin_decay_array = -dist_array/buff + 1.0
@@ -256,9 +280,24 @@ def make_lin_decay_array(dist_array, buff, nodata):
     return lin_decay_array
 
 def make_exp_decay_array(dist_array, buff, nodata):
-    
+    '''Should create an array where the area around the land is a function of
+    exponential decay from the land values.
+
+    Input:
+        dist_array- Numpy array where each pixel value represents the distance
+            to the closest piece of land.
+        buff- The distance surrounding the land that the user desires to buffer
+            with exponentially decaying values.
+        nodata- The value which should be placed into anything not land or
+            buffer area.
+    Returns:
+        A numpy array representing land with 1's and eveything withing the buffer
+        zone as exponentially decayed values from 1.
+    '''
+
     #Want a cutoff for the decay amount after which we will say things are
-    #equivalent to nodata, since we don't want to have values in every square.
+    #equivalent to nodata, since we don't want to have values outside the buffer
+    #zone.
     cutoff = 0.01
 
     #Need to have a value representing the decay rate for the exponential decay
@@ -270,7 +309,22 @@ def make_exp_decay_array(dist_array, buff, nodata):
     return exp_decay_array
 
 def make_no_decay_array(dist_array, buff, nodata):
-        
+    '''Should create an array where the buffer zone surrounding the land is
+    buffered with the same values as the land, essentially creating an equally
+    weighted larger landmass.
+
+    Input:
+        dist_array- Numpy array where each pixel value represents the distance
+            to the closest piece of land.
+        buff- The distance surrounding the land that the user desires to buffer
+            with land data values.
+        nodata- The value which should be placed into anything not land or
+            buffer area.
+    Returns:
+        A numpy array representing both land and buffer zone with 1's, and \
+        everything outside that with nodata values.
+    '''
+
     #Setting anything within the buffer zone to 1, and anything outside
     #that distance to nodata.
     inner_zone_index = dist_array <= buff
@@ -279,12 +333,12 @@ def make_no_decay_array(dist_array, buff, nodata):
     
     return dist_array 
 
-def combine_hs_rasters(dir, h_rast, s_rast, h_s):
+def combine_hs_rasters(out_dir, h_rast, s_rast, h_s):
     '''Takes in a habitat and a stressor, and combines the two raster files,
     then places that in the corresponding entry within the h-s dictionary.
 
     Input:
-        dir- The directory into which the completed raster files should be placed.
+        out_dir- The directory into which the completed raster files should be placed.
         h_rast- The folder holding all habitat raster files.
         s_rast- The folder holding all stressor raster files. We want to look
             for the "buffered" files, since those have already taken into
@@ -306,45 +360,50 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
     #We only want to get the "buffered" version of the files.
     s_rast_files = glob.glob(os.path.join(s_rast, '*_buff.tif'))
 
-    #Need a pixel count to get a spatial overlap percentage.
-    all_pix_ct = 0.
-    overlap_pix_ct = 0.
-    
-    #Create vectorize_raster's function to call when combining the h-s rasters
-    def combine_hs_pixels(pixel_h, pixel_s):
-        
-        #For all pixels in the two rasters, return this new pixel value
-        if pixel_h == 0 or pixel_s == 0:
-            #Need to return a float in order to have floats for all other
-            #pixels.
-            all_pix_ct += 1
-            return 0.0
-        else:
-            #Want to return the decayed value- even if it's actually 1 for this
-            #particular pixel.
-            all_pix_ct +=1
-            overlap_pix_ct += 1
-            return pixel_s
 
     for h in h_rast_files:
         for s in s_rast_files:
             
-            #The return of os.path.split is a tuple where everything after the final
-            #slash is returned as the 'tail' in the second element of the tuple
-            #path.splitext returns a tuple such that the first element is what comes
-            #before the file extension, and the second is the extension itself 
+            #The return of os.path.split is a tuple where everything after the 
+            #final slash is returned as the 'tail' in the second element of the
+            #tuple path.splitext returns a tuple such that the first element is 
+            #what comes before the file extension, and the second is the 
+            #extension itself 
             h_name = os.path.splitext(os.path.split(h)[1])[0]
             s_name_buff = os.path.splitext(os.path.split(s)[1])[0]
             #We know the file will be the buffered version, so when creating the
             #new filename, need to pull out the 'buffered' portion of it.
             s_name = re.split('\_buff', s_name_buff)[0]
 
-            out_uri = os.path.join(dir, 'H[' + h_name + ']_S[' + s_name + \
+            out_uri = os.path.join(out_dir, 'H[' + h_name + ']_S[' + s_name + \
                         '].tif')
             
             h_dataset = gdal.Open(h)
             s_dataset = gdal.Open(s)
    
+            #Need a pixel count to get a spatial overlap percentage.
+            all_pix_ct = 0.
+            overlap_pix_ct = 0.
+            #Need to have this since vectorize_raster calls +1 times.
+            called = False
+            
+            #Create vectorize_raster's function to call when combining the 
+            #h-s rasters
+            def combine_hs_pixels(pixel_h, pixel_s):
+                '''Returns a pixel combination of the given habitat raster and 
+                stressor raster. If both exist, the value returned is the 
+                stressor pixel value, since it is potentially decayed.'''
+
+                if not called:
+                    called = True
+                    return 0.0
+                #Want to keep track of total pixels checked against one another
+                all_pix_ct += 1
+
+                #Return the int value of whether or not both are non-zero
+                overlap_pix_ct += int(bool(pixel_h * pixel_s))
+                return pixel_s
+            
             LOGGER.info("combine_hs_rasters")
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
                             combine_hs_pixels, raster_out_uri = out_uri,
@@ -367,14 +426,14 @@ def combine_hs_rasters(dir, h_rast, s_rast, h_s):
                     LOW (1): 0% - 10% of the habitat type overlaps with the
                         stressor
             '''
-            s_over_pct = (ovelap_pix_ct / all_pix_ct) * 100
+            s_over_pct = (overlap_pix_ct / all_pix_ct) * 100
             
             #Should be noted that I am making up the W/DQ here since I don't
             #know what the "default" for non-user-entered values should be
             if s_over_pct > 30:
                 h_s[(h_name, s_name)]['E']['Spatial Overlap'] = \
                     {'Rating': 3, 'Weight': 2, 'DQ': 3}
-            elif s_over_pct <= 30 and S_over_pct > 10:
+            elif s_over_pct <= 30 and s_over_pct > 10:
                 h_s[(h_name, s_name)]['E']['Spatial Overlap'] = \
                     {'Rating': 2, 'Weight': 2, 'DQ': 3}
             elif s_over_pct < 10:
@@ -413,7 +472,8 @@ def make_rasters(file_names, dir_path, grid_size):
         datasource = ogr.Open(file_uri)
         layer = datasource.GetLayer()
         
-        #Making the nodata value 0 so that it's easier to combine the layers later.
+        #Making the nodata value 0 so that it's easier to combine the 
+        #layers later.
         r_dataset = \
             raster_utils.create_raster_from_vector_extents(grid_size, grid_size,
                     gdal.GDT_Int32, 0, out_uri, datasource)

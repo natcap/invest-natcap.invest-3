@@ -1,6 +1,8 @@
 from urllib import urlencode
 from urllib2 import Request
 from urllib2 import urlopen
+import platform
+import sys
 
 #The following line of code hides some errors that seem important and doesn't
 #raise exceptions on them.  FOr example:
@@ -32,8 +34,16 @@ def log_model(model_name, model_version=None):
     returns nothing."""
 
     path = 'http://ncp-dev.stanford.edu/~invest-logger/log-modelname.php'
-    data = {'model_name': model_name,
-            'invest_release': __version__}
+    data = {
+        'model_name': model_name,
+        'invest_release': __version__,
+        'system': {
+            'os': platform.system(),
+            'release': platform.release(),
+            'full_platform_string': platform.platform(),
+            'fs_encoding': sys.getfilesystemencoding()
+        }
+    }
 
     if model_version == None:
         model_version = __version__
@@ -43,5 +53,6 @@ def log_model(model_name, model_version=None):
         urlopen(Request(path, urlencode(data)))
     except:
         # An exception was thrown, we don't care.
+        print 'an exception encountered when logging'
         pass
 
