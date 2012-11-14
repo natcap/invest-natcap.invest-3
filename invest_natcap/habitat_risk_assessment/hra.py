@@ -385,7 +385,7 @@ def combine_hs_rasters(out_dir, h_rast, s_rast, h_s):
             #dictionary to modify instead, because that apparently works.
             #Need a pixel count to get a spatial overlap percentage.
             #Need to have called var since vectorize_raster calls +1 times.
-            variables = {'all_pix_ct': 0., 'overlap_pix_ct': 0., 'called' = False}
+            variables = {'all_pix_ct': 0., 'overlap_pix_ct': 0., 'called': False}
             
             #Create vectorize_raster's function to call when combining the 
             #h-s rasters
@@ -401,8 +401,9 @@ def combine_hs_rasters(out_dir, h_rast, s_rast, h_s):
                 variables['all_pix_ct'] += 1
 
                 #Return the int value of whether or not both are non-zero
-                variables['overlap_pix_ct'] += int(bool(pixel_h * pixel_s))
-                return pixel_s
+                overlap = int(bool(pixel_h * pixel_s))
+                variables['overlap_pix_ct'] += overlap 
+                return pixel_s * overlap
             
             LOGGER.info("combine_hs_rasters")
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
