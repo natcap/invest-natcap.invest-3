@@ -22,15 +22,18 @@ def execute(args):
         returns nothing"""
 
     habitats_stressors = {
+        'Spatial Overlap': '<enter (3) >30% of hab overlaps stressor, (2) 10%-30% overlaps, (1) 0-10% overlaps, (0) no score>',
         'Change in area rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
         'Change in structure rating': '(3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
         'Overlap Time Rating': '<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>',
         'Frequency of disturbance': '<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>'
         }
+
     stressors = {
         'Intensity Rating:': '<enter (3) high, (2) medium, (1) low, (0) no score>',
         'Management Effectiveness:': '<enter (3) not effective, (2) somewhat effective, (1) very effective, (0) no score>',
         }
+
     habitats = {
         'Natural Mortality Rate': '<enter (3) 0-20%, (2) 20-50%, (1) >80% mortality, or (0) no score>',
         'Recruitment Rating': '<enter (3) every 2+ yrs, (2) every 1-2 yrs, (1) every <1 yrs, or (0) no score>',
@@ -67,16 +70,19 @@ def execute(args):
             habitat_csv_writer.writerow(['HABITAT ONLY PROPERTIES'])
             habitat_csv_writer.writerow(['Habitat Data Quality:', default_dq_message])
             habitat_csv_writer.writerow([])
+
+            #Build the habitat property table
             habitat_csv_writer.writerow(default_table_headers)
             for habitat_property, default_message in habitats.iteritems():
                 habitat_csv_writer.writerow([habitat_property, default_message] + default_table_row)
 
+            #Build the habitat stressor ratings table
             habitat_csv_writer.writerow([])
             habitat_csv_writer.writerow(['HABITAT STRESSOR OVERLAP PROPERTIES'])
             for stressor_name in name_lookup['stressor']:
                 habitat_csv_writer.writerow([])
                 habitat_csv_writer.writerow([habitat_name + '/' + stressor_name + ' OVERLAP'])
-                habitat_csv_writer.writerow(['', 'Rating', 'Data Quality', 'Weight'])
+                habitat_csv_writer.writerow(default_table_headers)
                 for overlap_property, default_message in habitats_stressors.iteritems():
                     habitat_csv_writer.writerow([overlap_property, default_message] + default_table_row)
 
