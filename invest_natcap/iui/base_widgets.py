@@ -716,7 +716,7 @@ class DynamicText(LabeledElement):
         #If the user has defined some default text for this text field, insert 
         #it into the text field.
         if "defaultValue" in attributes:
-            self.textField.insert(attributes['defaultValue'])
+            self.setValue(attributes['defaultValue'])
 
         #If the user has defined a string regular expression of text the user is
         #allowed to input, set that validator up with the setValidateField()
