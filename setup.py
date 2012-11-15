@@ -15,8 +15,6 @@ from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
 import invest_natcap
-from invest_natcap import build_utils
-build_utils.write_version_file('invest_natcap/invest_version.py')
 
 VERSION = invest_natcap.__version__
 CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
