@@ -32,41 +32,111 @@ class TestHRA(unittest.TestCase):
         args['h-s'] = \
             {('kelp', 'FinfishAquacultureComm'): 
                 {'E':
-                    {'Spatial Overlap': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                    'Overlap Time': {'Rating': 1.0, 'DQ': 3.0, 'Weight': 2.0}
-                    },
-                'C': {'Change in Area':  {'Rating': 3.0, 'DQ': 0.0, 'Weight' : 2.0},
-                    'Change in Structure': {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
-                    'Frequency of Disturbance':{'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    {'Overlap Time': {'Rating': 3.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 2.0},
+                    'Change in Structure': {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+            ('kelp', 'ShellfishAquacultureComm'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 3.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 2.0},
+                    'Change in Structure': {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('kelp', 'CommSalmonTroll'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('kelp', 'RecFishing'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('eelgrass', 'FinfishAquacultureComm'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 3.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
                     }
                 }
             }
+
         args['habitats'] = \
             {'kelp': {'C':
-                        {'Natural Mortality': {'Rating': 1.0, 'DQ':2.0, 'Weight':1.0},
-                        'Recruitment Rate': {'Rating': 1.0, 'DQ':2.0, 'Weight':2.0},
-                        'Recovery Time': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0},
+                        {'Natural Mortality': {'Rating': 1.0, 'DQ':1.0, 'Weight':1.0},
+                        'Recruitment Rate': {'Rating': 2.0, 'DQ':2.0, 'Weight':2.0},
+                        'Recovery Time': {'Rating': 1.0, 'DQ':1.0, 'Weight':2.0},
+                        'Connectivity Rate': {'Rating': 2.0, 'DQ':1.0, 'Weight':1.0}
+                        }
+                     },
+             'eelgrass': {'C':
+                        {'Natural Mortality': {'Rating': 1.0, 'DQ':1.0, 'Weight':1.0},
+                        'Recruitment Rate': {'Rating': 1.0, 'DQ':1.0, 'Weight':1.0},
+                        'Recovery Time': {'Rating': 1.0, 'DQ':1.0, 'Weight':2.0},
+                        'Connectivity Rate': {'Rating': 1.0, 'DQ':1.0, 'Weight':1.0}
+                        }
+                     },
+             'hardbottom': {'C':
+                        {'Natural Mortality': {'Rating': 0.0, 'DQ':1.0, 'Weight':1.0},
+                        'Recruitment Rate': {'Rating': 0.0, 'DQ':1.0, 'Weight':2.0},
+                        'Recovery Time': {'Rating': 3.0, 'DQ':1.0, 'Weight':2.0},
                         'Connectivity Rate': {'Rating': 0.0, 'DQ':1.0, 'Weight':1.0}
-                        },
-                    'E':
-                        {'Dummy Issue': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0}
+                        }
+                     },
+              'softbottom': {'C':
+                        {'Natural Mortality': {'Rating': 0.0, 'DQ':1.0, 'Weight':1.0},
+                        'Recruitment Rate': {'Rating': 0.0, 'DQ':1.0, 'Weight':2.0},
+                        'Recovery Time': {'Rating': 1.0, 'DQ':1.0, 'Weight':2.0},
+                        'Connectivity Rate': {'Rating': 0.0, 'DQ':1.0, 'Weight':1.0}
                         }
                      }
-             }
+            }
 
         args['stressors'] = \
             {'FinfishAquacultureComm': 
                 {'E':
-                    { 'Intensity': {'Rating': 3.0, 'DQ': 2.0, 'Weight' : 1.0},
-                    'Management Effectiveness':  {'Rating': 1.0, 'DQ': 2.0, 'Weight' : 1.0}
-                    },
-                'C':
-                    {'Dummy Issue': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0}
+                    { 'Intensity': {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Management Effectiveness':  {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+             'ShellfishAquacultureComm':
+                {'E':
+                    { 'Intensity': {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Management Effectiveness':  {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+             'CommSalmonTroll':
+                {'E':
+                    { 'Intensity': {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Management Effectiveness':  {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+             'RecFishing':
+                {'E':
+                    { 'Intensity': {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Management Effectiveness':  {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
                     }
                 }
             }             
         
-        args['buffer_dict'] = {'FinfishAquacultureComm': 5000}
+        args['buffer_dict'] = {'FinfishAquacultureComm': 300, 'ShellfishAquacultureComm': 250,
+                            'CommSalmonTroll': 150, 'RecFishing': 100}
 
         self.args = args
     
