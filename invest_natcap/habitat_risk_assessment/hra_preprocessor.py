@@ -1,5 +1,6 @@
 """Entry point for the Habitat Risk Assessment module"""
 
+import re
 import csv
 import os
 import glob
@@ -22,7 +23,7 @@ def execute(args):
 
     habitats_stressors = {
         'Change in area rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
-        'Change in structure rating': '(3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
+        'Change in structure rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
         'Overlap Time Rating': '<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>',
         'Frequency of disturbance': '<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>'
         }
@@ -165,4 +166,17 @@ def parse_hra_tables(uri_to_workspace):
                      'Stressor 2': ...
                      }
            }"""
-    pass
+    habitat_paths = os.path.join(uri_to_workspace, 'habitat_stressor_ratings', '*_overlap_ratings.csv')
+    stressor_paths = os.path.join(uri_to_workspace, 'habitat_stressor_ratings', '*_stressor_ratings.csv')
+
+    habitat_csvs = glob.glob(habitat_paths)
+    stressor_csvs = glob.glob(stressor_paths)
+
+    #Parse out stressor names
+    LOGGER.debug(stressor_paths)
+    stressor_names = [re.search('(.*)_stressor_ratings\.csv', os.path.basename(x)).group(1) for x in stressor_csvs]
+    #Parse out habitat names
+    habitat_names = [re.search('(.*)_overlap_ratings\.csv', os.path.basename(x)).group(1) for x in habitat_csvs]
+
+    LOGGER.debug(stressor_names)
+    LOGGER.debug(habitat_names)
