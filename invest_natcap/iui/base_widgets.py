@@ -454,6 +454,11 @@ class DynamicPrimitive(DynamicElement):
         return False
 
     def validate(self):
+        # If the root element has not yet been set, we should just return since
+        # validation will fail anyways.
+        if self.root == None:
+            return
+
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
         else:
@@ -716,7 +721,7 @@ class DynamicText(LabeledElement):
         #If the user has defined some default text for this text field, insert 
         #it into the text field.
         if "defaultValue" in attributes:
-            self.textField.insert(attributes['defaultValue'])
+            self.setValue(attributes['defaultValue'])
 
         #If the user has defined a string regular expression of text the user is
         #allowed to input, set that validator up with the setValidateField()
