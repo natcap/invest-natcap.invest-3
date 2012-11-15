@@ -1,7 +1,7 @@
 STRESSOR NAME,CommSalmonTroll_3,,
-Stressor Data Quality:,2,,
-Stressor Buffer (m):,1000,,
+Stressor Data Quality:,0,,
+Stressor Buffer (m):,10.5,,
 ,,,
 ,Rating,DQ,Weight
-Intensity Rating:,3,2,1
+Intensity Rating:,2,2,1
 Management Effectiveness:,1,2,3
