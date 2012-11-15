@@ -269,7 +269,7 @@ def parse_habitat_overlap(uri):
         #Drain the habitat dictionary
         habitat_dict['C'] = {}
         while line[0] != '':
-            habitat_dict['C'][line[0]] = dict(zip(headers, map(int,line[1:])))
+            habitat_dict['C'][line[0]] = dict(zip(headers, map(int,line[1:4])))
             line = csv_reader.next()
 
         #Drain the next two lines
@@ -281,13 +281,14 @@ def parse_habitat_overlap(uri):
                 line = csv_reader.next()
                 LOGGER.debug(line)
                 stressor = (line[0].split(hab_name+'/')[1]).split(' ')[0]
-                headers = csv_reader.next()[1:]
+                headers = csv_reader.next()[2:]
                 #Drain the overlap table
                 line = csv_reader.next()
-                #Drain the habitat dictionary
-                habitat_dict['C'][(hab_name,stressor)] = {}
+                #Drain the habitat dictionary is the first character of the type field
+                habitat_dict[(hab_name,stressor)] = {'C': {}, 'E': {}}
                 while line[0] != '':
-                    habitat_dict['C'][(hab_name,stressor)][line[0]] = dict(zip(headers, map(int,line[1:])))
+                    stressor_type = line[1][0]
+                    habitat_dict[(hab_name,stressor)][stressor_type][line[0]] = dict(zip(headers, map(int,line[2:5])))
                     line = csv_reader.next()
             except StopIteration:
                 break
