@@ -41,31 +41,82 @@ def execute(args):
             in calculating the decay of stressor buffer influence.
         args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
-            rasterized.
+            rasterized.  ex:
+
+            {'Stressor 1': 50,
+             'Stressor 2': ...,
+            }
+
         args['h-s']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
             tuple of lists which contain tuples. h-s['C'] should explicitly 
-            contain the following criteria names: (Natural Mortality, 
-            Recruitment Rate, Recovery Time, Connectivity Rate). These criteria
+            contain the following criteria names: These criteria
             must exist, and must contain 'Rating' and 'DQ' entries within them.
             These can be 0 values if they are not a desired criteria, but must
             exist.
 
-            {(Habitat A, Stressor 1): 
-                    {'E': 
-                        {'Spatital Overlap': 
+            {('Habitat A', 'Stressor 1'):
+               {
+                 'E':
+                     {
+                     'Overlap Time Rating':
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        },
-                    'C': {C's Criteria Dictionaries}
-                    }
+                     },
+                 'C':
+                     {
+                     'Change in area rating':,
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'Change in structure rating':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'Frequency of disturbance':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                     }
+                }
+              ('Habitat B', 'Stressor 1'): {}...
             }
         args['habitats']- A structure with the same layout as 'h-s', but which
             contains only criteria specific to habitats. The outer keys, in 
-            turn, will be habitat names.
+            turn, will be habitat names. (Natural Mortality, 
+            Recruitment Rate, Recovery Time, Connectivity Rate).  e.g.
+
+            {'Habitat A':
+                    {
+                    'DQ': 1.0,
+                    'C': 
+                        {
+                        'Natural Mortality':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                        'Recruitment Rate':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                        'Recovery Time':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                        'Connectivity Rate':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        }
+                    },
+             'Habitat B': ...
+             }
+
+
+
         args['stressors']- A structure wih the same layout as 'h-s', but which
             contains only criteria specific to stressors. The outer keys will be
             stressor names.
+
+            {'Stressor 1':
+                    {
+                    'DQ': 1.0,
+                    'E':
+                        {
+                          'Intensity Rating:':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                          'Management Effectiveness:':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        }
+                    },
+             'Stressor 2': ...
+             }
 
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
