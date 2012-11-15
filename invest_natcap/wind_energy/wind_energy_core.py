@@ -633,7 +633,7 @@ def valuation(args):
     # Discount rate plus one to get that constant
     disc_const = discount_rate + 1.0
     # Discount constant raised to the total time, a constant found in the NPV
-    # calculation
+    # calculation (1+i)^T
     disc_time = disc_const**time
     
     # Create 3 new fields based on the 3 outputs
@@ -662,6 +662,9 @@ def valuation(args):
         # Initialize cable cost variable
         cable_cost = 0
 
+        # These constants are based on the literature from Rob's users guide on
+        # valuation. The break at 60 indicates the difference in using AC and
+        # DC current systems
         if total_cable_dist <= 60:
             cable_cost = (.81 * total_mega_watt) + (1.36 * total_cable_dist)
         else:
@@ -687,12 +690,15 @@ def valuation(args):
             comp_one = (rev - ongoing_capex) / disc_const**year
             # Add this years NPV value to the running total
             npv = npv + (comp_one - decommish_capex - capex)
+            # Calculate the numerator value for levelized cost of energy
             levelized_cost_num = levelized_cost_num + (
                     (ongoing_capex / disc_const**year) + 
                     decommish_capex + capex)
+            # Calculate the denominator value for levelized cost of energy
             levelized_cost_denom = levelized_cost_denom + (energy_val /
                     disc_const**year) 
-
+        
+        # Calculate the levelized cost of energy
         levelized_cost = levelized_cost_num / levelized_cost_denom
         # The amount of CO2 not released into the atmosphere, with the constant
         # conversion factor provided in the users guide by Rob Griffin
@@ -712,7 +718,7 @@ def valuation(args):
    
     uri_list = [npv_uri, levelized_uri, carbon_uri]
     field_list = ['NPV', 'LevCost', 'CO2']
-    out_nodata = 0.0
+    out_nodata = float(np.finfo(np.float).tiny)
     
     for uri, field in zip(uri_list, field_list):
         # Create a raster for the points to be vectorized to 
