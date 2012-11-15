@@ -454,6 +454,11 @@ class DynamicPrimitive(DynamicElement):
         return False
 
     def validate(self):
+        # If the root element has not yet been set, we should just return since
+        # validation will fail anyways.
+        if self.root == None:
+            return
+
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
         else:
