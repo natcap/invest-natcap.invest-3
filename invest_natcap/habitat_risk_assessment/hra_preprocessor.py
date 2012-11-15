@@ -22,7 +22,6 @@ def execute(args):
         returns nothing"""
 
     habitats_stressors = {
-        'Spatial Overlap': '<enter (3) >30% of hab overlaps stressor, (2) 10%-30% overlaps, (1) 0-10% overlaps, (0) no score>',
         'Change in area rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
         'Change in structure rating': '(3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
         'Overlap Time Rating': '<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>',
