@@ -736,11 +736,12 @@ def valuation(args):
     
     for uri, field in zip(uri_list, field_list):
         # Create a raster for the points to be vectorized to 
+        LOGGER.info('Creating Output raster : %s', uri)
         output_ds = raster_utils.create_raster_from_vector_extents(
             30, 30, gdal.GDT_Float32, out_nodata, uri, wind_energy_points) 
 
         # Interpolate and vectorize the points field onto a gdal dataset
-        LOGGER.info('Creating Output raster : %s', uri)
+        LOGGER.info('Vectorizing the points from the %s field', field)
         raster_utils.vectorize_points(
                 wind_energy_points, field, output_ds)
         
