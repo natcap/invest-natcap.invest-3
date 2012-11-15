@@ -6,7 +6,9 @@ import platform
 import os
 import sys
 import datetime
+import time
 import glob
+import subprocess
 
 import numpy as np
 from Cython.Distutils import build_ext
@@ -37,7 +39,10 @@ def write_version_file(filepath):
     fp.close()
 
 def get_version():
-    return 'version!'
+    cmd = 'hg log -r . --config ui.report_untrusted=False --template "v{latesttag}-{latesttagdistance} [{node|short}]"'
+    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    return p.stdout.read()
 
 # __version__ is set in invest_natcap/__init__.py, in accordance with PEP
 # 396:http://www.python.org/dev/peps/pep-0396/. 
