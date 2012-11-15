@@ -41,31 +41,82 @@ def execute(args):
             in calculating the decay of stressor buffer influence.
         args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
-            rasterized.
+            rasterized.  ex:
+
+            {'Stressor 1': 50,
+             'Stressor 2': ...,
+            }
+
         args['h-s']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
             tuple of lists which contain tuples. h-s['C'] should explicitly 
-            contain the following criteria names: (Natural Mortality, 
-            Recruitment Rate, Recovery Time, Connectivity Rate). These criteria
+            contain the following criteria names: These criteria
             must exist, and must contain 'Rating' and 'DQ' entries within them.
             These can be 0 values if they are not a desired criteria, but must
             exist.
 
-            {(Habitat A, Stressor 1): 
-                    {'E': 
-                        {'Spatital Overlap': 
+            {('Habitat A', 'Stressor 1'):
+               {
+                 'E':
+                     {
+                     'Overlap Time Rating':
                             {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        },
-                    'C': {C's Criteria Dictionaries}
-                    }
+                     },
+                 'C':
+                     {
+                     'Change in area rating':,
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'Change in structure rating':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                     'Frequency of disturbance':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                     }
+                }
+              ('Habitat B', 'Stressor 1'): {}...
             }
         args['habitats']- A structure with the same layout as 'h-s', but which
             contains only criteria specific to habitats. The outer keys, in 
-            turn, will be habitat names.
+            turn, will be habitat names. (Natural Mortality, 
+            Recruitment Rate, Recovery Time, Connectivity Rate).  e.g.
+
+            {'Habitat A':
+                    {
+                    'DQ': 1.0,
+                    'C': 
+                        {
+                        'Natural Mortality':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                        'Recruitment Rate':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                        'Recovery Time':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                        'Connectivity Rate':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        }
+                    },
+             'Habitat B': ...
+             }
+
+
+
         args['stressors']- A structure wih the same layout as 'h-s', but which
             contains only criteria specific to stressors. The outer keys will be
             stressor names.
+
+            {'Stressor 1':
+                    {
+                    'DQ': 1.0,
+                    'E':
+                        {
+                          'Intensity Rating:':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                          'Management Effectiveness:':
+                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                        }
+                    },
+             'Stressor 2': ...
+             }
 
     Output:
         hra_args- Dictionary containing everything that hra_core will need to
@@ -380,12 +431,12 @@ def combine_hs_rasters(out_dir, h_rast, s_rast, h_s):
             
             h_dataset = gdal.Open(h)
             s_dataset = gdal.Open(s)
-   
+
+            #python doesn't let us edit out of scope vars, so we're creating a
+            #dictionary to modify instead, because that apparently works.
             #Need a pixel count to get a spatial overlap percentage.
-            all_pix_ct = 0.
-            overlap_pix_ct = 0.
-            #Need to have this since vectorize_raster calls +1 times.
-            called = False
+            #Need to have called var since vectorize_raster calls +1 times.
+            variables = {'all_pix_ct': 0., 'overlap_pix_ct': 0., 'called': False}
             
             #Create vectorize_raster's function to call when combining the 
             #h-s rasters
@@ -394,15 +445,16 @@ def combine_hs_rasters(out_dir, h_rast, s_rast, h_s):
                 stressor raster. If both exist, the value returned is the 
                 stressor pixel value, since it is potentially decayed.'''
 
-                if not called:
-                    called = True
+                if not variables['called']:
+                    variables['called'] = True
                     return 0.0
                 #Want to keep track of total pixels checked against one another
-                all_pix_ct += 1
+                variables['all_pix_ct'] += 1
 
                 #Return the int value of whether or not both are non-zero
-                overlap_pix_ct += int(bool(pixel_h * pixel_s))
-                return pixel_s
+                overlap = int(bool(pixel_h * pixel_s))
+                variables['overlap_pix_ct'] += overlap 
+                return pixel_s * overlap
             
             LOGGER.info("combine_hs_rasters")
             raster_utils.vectorize_rasters([h_dataset, s_dataset], 
@@ -426,7 +478,7 @@ def combine_hs_rasters(out_dir, h_rast, s_rast, h_s):
                     LOW (1): 0% - 10% of the habitat type overlaps with the
                         stressor
             '''
-            s_over_pct = (overlap_pix_ct / all_pix_ct) * 100
+            s_over_pct = (variables['overlap_pix_ct'] / variables['all_pix_ct']) * 100
             
             #Should be noted that I am making up the W/DQ here since I don't
             #know what the "default" for non-user-entered values should be
