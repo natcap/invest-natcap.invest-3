@@ -10,11 +10,13 @@ import subprocess
 import platform
 import datetime
 import shutil
+import codecs
 
 import invest_natcap
 from invest_natcap.invest_core import fileio as fileio
 
 LOGGER = invest_natcap.iui.get_ui_logger(None)
+ENCODING = sys.getfilesystemencoding()
 
 # If we're not on windows, python doesn't know what a
 # WindowsError is.  Using shutil to import an empty WindowsError
@@ -205,6 +207,12 @@ class Executor(threading.Thread):
         self.printQueue.append(string)
         self.printQueueLock.release()
 
+        # Convert unix line endings to windows line endings if we are writing to
+        # a log file on windows.
+        if platform.system() == 'Windows':
+            string = string.replace('\n', '\r\n')
+
+        encoding = sys.getfilesystemencoding()
         if self.log_file != None:
             if not self.log_file.closed:
                 self.log_file.write(string)
@@ -292,8 +300,12 @@ class Executor(threading.Thread):
                 LOGGER.debug('Remaining operations cancelled')
                 break
             else:
-                self.funcMap[operation['type']](operation['uri'],
-                                                operation['args'])
+                try:
+                    self.funcMap[operation['type']](operation['uri'],
+                                                    operation['args'])
+                except Exception as e:
+                    self.setThreadFailed(True)
+                    LOGGER.error('Exception %s, %s found', e.__class__, e)
 
             if self.isThreadFailed():
                 LOGGER.error('Exiting due to failures')
@@ -334,6 +346,7 @@ class Executor(threading.Thread):
         LOGGER.info('Parameters saved to disk')
 
     def move_log_file(self, workspace):
+        workspace = workspace.decode(ENCODING)
         try:
             self.log_file.flush()
             os.fsync(self.log_file)
@@ -344,7 +357,7 @@ class Executor(threading.Thread):
             LOGGER.info('Saving log file to %s', log_file_uri)
         except WindowsError as e:
             LOGGER.warn(e)
-            
+
     def runModel(self, module, args):
         try:
             workspace = args['workspace_dir']
@@ -355,14 +368,17 @@ class Executor(threading.Thread):
             workspace = None
 
         try:
-            # Create the log filename from the current time and save that in the
-            # root of the user's workspace.  The file is actually written to
-            # whenever self.write() is called.
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d--%H_%M_%S")
+            workspace = workspace.encode(ENCODING)
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            # UnicodeDecodeError is thrown if the workspace path cannot be
+            # correctly decoded according to the filesystem's encoding.
+            LOGGER.warn('Cannot decode workspace with the fs encoding. '
+                        'workspace=%s, Encoding=%s' % (workspace, ENCODING))
 
-            # the module name needs to be extracted differently if it's a python
-            # module or if it's a file on disk.  While we're at it, we can also
-            # locate the model to be loaded.
+        # the module name needs to be extracted differently if it's a python
+        # module or if it's a file on disk.  While we're at it, we can also
+        # locate the model to be loaded.
+        try:
             if os.path.isfile(module):
                 model = imp.load_source('model', module)
                # Model name is name of module file, minus the extension
@@ -373,28 +389,40 @@ class Executor(threading.Thread):
                 model = locate_module(module_list)
                 model_name = module_list[-1]  # model name is last entry in list
                 LOGGER.debug('Loading %s from PATH', model_name)
-            filename = '%s-log-%s.txt' % (model_name, timestamp)
+        except ImportError as e:
+            LOGGER.error('ImportError found when locating %s', module)
+            self.printTraceback()
+            self.setThreadFailed(True, e)
+            return
 
-            # we want to save this file to the current directory until the model
-            # finishes, when we copy the log into the model's workspace
-            settings_folder = invest_natcap.iui.fileio.settings_folder()
-            log_file_uri = os.path.abspath(os.path.join(settings_folder,
-                filename))
-            self.log_file = open(log_file_uri, 'w')
+        # Create the log filename from the current time and save that in the
+        # root of the user's workspace.  The file is actually written to
+        # whenever self.write() is called.
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d--%H_%M_%S")
+        filename = '%s-log-%s.txt' % (model_name, timestamp)
 
-            # Now that the log file is open, write the arguments to it.
-            self.print_args(args)
-            LOGGER.info('Logging will be saved to %s', filename)
+        # we want to save this file to the current directory until the model
+        # finishes, when we copy the log into the model's workspace
+        settings_folder = invest_natcap.iui.fileio.settings_folder()
+        settings_folder = settings_folder.decode(ENCODING)
+        log_file_uri = os.path.abspath(os.path.join(settings_folder,
+            filename))
+        self.log_file = codecs.open(log_file_uri, 'w', encoding='utf-8')
 
-            LOGGER.debug('Loaded the model from %s', module)
-            LOGGER.info('Executing the loaded model')
+        # Now that the log file is open, write the arguments to it.
+        self.print_args(args)
+        LOGGER.info('Logging will be saved to %s', filename)
 
-            try:
-                model_version = model.__version__
-                LOGGER.info('Running model version %s', model_version)
-            except AttributeError:
-                model_version = None
+        LOGGER.debug('Loaded the model from %s', module)
+        LOGGER.info('Executing the loaded model')
 
+        try:
+            model_version = model.__version__
+            LOGGER.info('Running model version %s', model_version)
+        except AttributeError:
+            model_version = None
+
+        try:
             LOGGER.info('Running InVEST version "%s"', invest_natcap.__version__)
             LOGGER.info('Disk space remaining for workspace: %s GB',
                         fileio.get_free_space(workspace, unit='GB'))
@@ -445,7 +473,7 @@ class Executor(threading.Thread):
                     # Try to launch a windows file explorer to visit the workspace
                     # directory now that the operation has finished executing.
                     LOGGER.info('Using windows explorer to view files')
-                    subprocess.Popen(r'explorer "%s"' % workspace)
+                    subprocess.Popen('explorer "%s"' % workspace)
                 else:
                     # Assume we're on linux.  No biggie, just use xdg-open to use the
                     # default file opening scheme.

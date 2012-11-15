@@ -458,7 +458,7 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
         returns a new GDAL raster with the parameters as described above"""
 
     driver = gdal.GetDriverByName(format)
-    new_raster = driver.Create(str(outputURI), cols, rows, bands, datatype)
+    new_raster = driver.Create(unicode(outputURI), cols, rows, bands, datatype)
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
@@ -514,7 +514,7 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
         #Left can't be greater than right or bottom greater than top
         if not valid_bounding_box(bounding_box):
             raise SpatialExtentOverlapException("These rasters %s don't overlap with this one %s" % \
-                                (str(dataset_files[0:-1]), dataset_files[-1]))
+                                (unicode(dataset_files[0:-1]), dataset_files[-1]))
 
     if aoi != None:
         aoi_layer = aoi.GetLayer(0)
@@ -525,7 +525,7 @@ def calculate_intersection_rectangle(dataset_list, aoi=None):
                        max(aoi_extent[2], bounding_box[3])]
         if not valid_bounding_box(bounding_box):
             raise SpatialExtentOverlapException("The aoi layer %s doesn't overlap with %s" % \
-                                (aoi, str(dataset_files)))
+                                (aoi, unicode(dataset_files)))
 
     return bounding_box
 
@@ -1599,7 +1599,7 @@ def align_datasets(datasets, dataset_uris):
     for index in range(len(datasets)):
         def op(*x):
             return x[index]
-        LOGGER.debug("aligning raster %s" % (str(dataset_uris[index])))
+        LOGGER.debug("aligning raster %s" % (unicode(dataset_uris[index])))
         band, nodata = extract_band_and_nodata(datasets[index])
         dataset_list[index] = vectorize_rasters(
             datasets, op, raster_out_uri=dataset_uris[index],
