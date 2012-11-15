@@ -3,6 +3,7 @@ import subprocess
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
 def invest_version():
+    # The revision tag distance will be 0 if we're at the tag.
     if get_tag_distance() == 0:
         return get_latest_tag()
     else:
@@ -42,6 +43,7 @@ def get_tag_distance():
 
 def get_latest_tag():
     cmd = HG_CALL + ' --template "{latesttag}"'
+    return run_command(cmd)
 
 def run_command(cmd):
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
