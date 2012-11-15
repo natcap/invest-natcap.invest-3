@@ -3,8 +3,16 @@ import subprocess
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
 def invest_version():
-    import invest_version
-    if invest_version.release == None:
+    try:
+        import invest_version
+    except ImportError:
+        # If we can't find the version file, it means that it hasn't been
+        # written for the current state of InVEST.  Create the version file and
+        # then try importing it again.
+        write_version_file('invest_natcap/invest_version.py')
+        import invest_version
+
+    if invest_version.release == 'None':
         return 'dev%s' % invest_version.build_id
     else:
         return invest_version.release
