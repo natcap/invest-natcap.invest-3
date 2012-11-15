@@ -185,8 +185,14 @@ def parse_hra_tables(uri_to_workspace):
         stressor_name = re.search('(.*)_stressor_ratings\.csv', os.path.basename(stressor_uri)).group(1)
         stressor_dict[stressor_name] = parse_stressor(stressor_uri)
 
+    habitat_dict = {}
+    for habitat_uri in habitat_csvs:
+        LOGGER.debug(habitat_uri)
+        habitat_name = re.search('(.*)_overlap_ratings\.csv', os.path.basename(habitat_uri)).group(1)
+        habitat_dict[habitat_name] = parse_habitat_overlap(habitat_uri)
 
     LOGGER.debug(stressor_dict)
+    LOGGER.debug(habitat_dict)
 
 def parse_stressor(uri):
     """Helper function to parse out a stressor csv file
@@ -234,4 +240,22 @@ def parse_habitat_overlap(uri):
 
         returns big ass dictionary"""
 
-    pass
+    habitat_dict = {}
+    with open(uri,'rU') as habitat_file:
+        csv_reader = csv.reader(habitat_file)
+        hab_name = csv_reader.next()[1]
+        #Ignore blank line
+        csv_reader.next()
+        data_quality = int(csv_reader.next()[1])
+        habitat_dict['DQ'] = data_quality
+        #Ignore blank line
+        csv_reader.next()
+        #Get the headers
+        headers = csv_reader.next()[1:]
+        line = csv_reader.next()
+        #Drain the habitat dictionary
+        habitat_dict['C'] = {}
+        while line[0] != '':
+            habitat_dict['C'][line[0]] = dict(zip(headers, map(int,line[1:])))
+            line = csv_reader.next()
+    return habitat_dict
