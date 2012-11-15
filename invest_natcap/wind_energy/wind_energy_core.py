@@ -657,7 +657,7 @@ def valuation(args):
     
     wind_energy_layer = wind_energy_points.GetLayer() 
     LOGGER.info('Creating new NPV and Levelized Cost field')
-    for new_field in ['NPV', 'LevCost']:
+    for new_field in ['NPV', 'LevCost', 'CO2']:
         field = ogr.FieldDefn(new_field, ogr.OFTReal)
         wind_energy_layer.CreateField(field)
     
@@ -666,6 +666,7 @@ def valuation(args):
     for feat in wind_energy_layer:
         npv_index = feat.GetFieldIndex('NPV')
         levelized_index = feat.GetFieldIndex('LevCost')
+        co2_index = feat.GetFieldIndex('CO2')
         energy_index = feat.GetFieldIndex('HarvEnergy')
         O2L_index = feat.GetFieldIndex('O2L')
         L2G_index = feat.GetFieldIndex('L2G')
@@ -711,9 +712,14 @@ def valuation(args):
                     disc_const**year) 
 
         levelized_cost = levelized_cost_num / levelized_cost_denom
-
+        # The amount of CO2 not released into the atmosphere, with the constant
+        # conversion factor provided in the users guide by Rob Griffin
+        carbon_emissions = 6.8956e-4 * energy_val
+        
         feat.SetField(npv_index, npv)
         feat.SetField(levelized_index, levelized_cost)
+        feat.SetField(co2_index, carbon_emissions)
+        
         wind_energy_layer.SetFeature(feat)
 
     wind_energy_layer.SyncToDisk()
@@ -737,12 +743,24 @@ def valuation(args):
     levelized_ds = raster_utils.create_raster_from_vector_extents(
             30, 30, gdal.GDT_Float32, out_nodata, levelized_uri, wind_energy_points)
     
-    # Interpolate and vectorize the points NPV value onto a gdal dataset
+    # Interpolate and vectorize the points Levelized Cost value onto a gdal dataset
     LOGGER.info('Creating Levelized Cost raster')
     raster_utils.vectorize_points(
             wind_energy_points, 'LevCost', levelized_ds)
+    
+    carbon_uri = os.path.join(output_dir, 'carbon_emissions.tif')
+    out_nodata = 0.0
+    
+    # Create a raster for the points to be vectorized to
+    carbon_ds = raster_utils.create_raster_from_vector_extents(
+            30, 30, gdal.GDT_Float32, out_nodata, carbon_uri, wind_energy_points)
+    
+    # Interpolate and vectorize the points CO2 value onto a gdal dataset
+    LOGGER.info('Creating carbon emissions raster')
+    raster_utils.vectorize_points(
+            wind_energy_points, 'CO2', carbon_ds)
+    
     LOGGER.info('Leaving Wind Energy Valuation Core')
-
 
 def point_to_polygon_distance(poly_ds, point_ds):
     """Calculates the distances from points in a point geometry shapefile to the
