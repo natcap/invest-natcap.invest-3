@@ -226,3 +226,12 @@ def parse_stressor(uri):
             stressor_dict['E'][key] = properties
 
     return stressor_dict
+
+def parse_habitat_overlap(uri):
+    """Helper function to parse out the habitat stressor table
+
+        uri - path to the habitat stressor overlap csv table
+
+        returns big ass dictionary"""
+
+    pass
