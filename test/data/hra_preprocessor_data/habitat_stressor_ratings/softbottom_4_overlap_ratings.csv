@@ -1,0 +1,39 @@
+HABITAT NAME,softbottom_4,,
+HABITAT ONLY PROPERTIES,,,
+Habitat Data Quality:,1,,
+,,,
+,Rating,DQ,Weight
+Recruitment Rate,3,2,1
+Natural Mortality,1,2,3
+Connectivity Rate,3,2,1
+Recovery Time,1,2,3
+,,,
+HABITAT STRESSOR OVERLAP PROPERTIES,,,
+,,,
+softbottom_4/ShellfishAquacultureComm_2 OVERLAP,,,
+,Rating,DQ,Weight
+Change in structure rating,3,2,1
+Overlap Time Rating,1,2,3
+Frequency of disturbance,3,2,1
+Change in area rating,1,2,3
+,,,
+softbottom_4/RecFishing_4 OVERLAP,,,
+,Rating,DQ,Weight
+Change in structure rating,3,2,1
+Overlap Time Rating,1,2,3
+Frequency of disturbance,3,2,1
+Change in area rating,1,2,3
+,,,
+softbottom_4/FinfishAquacultureComm_1 OVERLAP,,,
+,Rating,DQ,Weight
+Change in structure rating,3,2,1
+Overlap Time Rating,1,2,3
+Frequency of disturbance,3,2,1
+Change in area rating,1,2,3
+,,,
+softbottom_4/CommSalmonTroll_3 OVERLAP,,,
+,Rating,DQ,Weight
+Change in structure rating,0,2,1
+Overlap Time Rating,1,0,3
+Frequency of disturbance,3,2,0
+Change in area rating,1,2,0
