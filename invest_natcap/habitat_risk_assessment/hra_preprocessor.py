@@ -22,10 +22,10 @@ def execute(args):
         returns nothing"""
 
     habitats_stressors = {
-        'Change in area rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
-        'Change in structure rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>',
-        'Overlap Time Rating': '<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>',
-        'Frequency of disturbance': '<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>'
+        ('C','Change in area rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>'),
+        ('C','Change in structure rating': '<enter (3) 50-100% loss, (2) 20-50% loss, (1) 0-20% loss, (0) no score>'),
+        ('E','Overlap Time Rating': '<enter (3) co-occur 8-12 mo/year, (2) 4-8 mo/yr, (1) 0-4 mo/yr, (0) no score>'),
+        ('C','Frequency of disturbance': '<enter (3) Annually or less often, (2) Several times per year, (1) Weekly or more often, (0) no score>')
         }
 
     stressors = {
@@ -44,6 +44,7 @@ def execute(args):
     default_dq_message = '<enter (3) best, (2) adequate, (1) limited, or (0) unknown>'
     default_weight_message = '<enter (3) more important, (2) equal importance, (1) less important>'
     default_table_headers = ['', 'Rating', 'DQ', 'Weight']
+    default_overlap_table_headers = ['', 'Type','Rating', 'DQ', 'Weight']
     default_table_row = [default_dq_message, default_weight_message]
 
     #Make the workspace directory if it doesn't exist
@@ -82,9 +83,9 @@ def execute(args):
             for stressor_name in name_lookup['stressor']:
                 habitat_csv_writer.writerow([])
                 habitat_csv_writer.writerow([habitat_name + '/' + stressor_name + ' OVERLAP'])
-                habitat_csv_writer.writerow(default_table_headers)
+                habitat_csv_writer.writerow(default_overlap_table_headers)
                 for overlap_property, default_message in habitats_stressors.iteritems():
-                    habitat_csv_writer.writerow([overlap_property, default_message] + default_table_row)
+                    habitat_csv_writer.writerow([overlap_property] + default_message + default_table_row)
 
     #Make stressor specific tables
     for stressor_name in name_lookup['stressor']:
@@ -191,8 +192,20 @@ def parse_hra_tables(uri_to_workspace):
         habitat_name = re.search('(.*)_overlap_ratings\.csv', os.path.basename(habitat_uri)).group(1)
         habitat_dict[habitat_name] = parse_habitat_overlap(habitat_uri)
 
+    parse_dictionary = {}
+    parse_dictionary['h-s'] = habitat_dict
+    parse_dictionary['stressors'] = stressor_dict
+
+    stressor_buf_dict = {}
+    for stressor, stressor_properties in stressor_dict.iteritems():
+        stressor_buf_dict[stressor] = stressor_properties['buffer']
+        del(stressor_properties['buffer'])
+
     LOGGER.debug(stressor_dict)
     LOGGER.debug(habitat_dict)
+    LOGGER.debug(stressor_buf_dict)
+
+    return parse_dictionary
 
 def parse_stressor(uri):
     """Helper function to parse out a stressor csv file
