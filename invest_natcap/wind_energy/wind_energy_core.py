@@ -725,41 +725,25 @@ def valuation(args):
     wind_energy_layer.SyncToDisk()
 
     npv_uri = os.path.join(output_dir, 'npv.tif')
-    out_nodata = 0.0
-    
-    # Create a raster for the points to be vectorized to
-    npv_ds = raster_utils.create_raster_from_vector_extents(
-            30, 30, gdal.GDT_Float32, out_nodata, npv_uri, wind_energy_points)
-    
-    # Interpolate and vectorize the points NPV value onto a gdal dataset
-    LOGGER.info('Creating NPV raster')
-    raster_utils.vectorize_points(
-            wind_energy_points, 'NPV', npv_ds)
 
     levelized_uri = os.path.join(output_dir, 'levelized.tif')
-    out_nodata = 0.0
-    
-    # Create a raster for the points to be vectorized to
-    levelized_ds = raster_utils.create_raster_from_vector_extents(
-            30, 30, gdal.GDT_Float32, out_nodata, levelized_uri, wind_energy_points)
-    
-    # Interpolate and vectorize the points Levelized Cost value onto a gdal dataset
-    LOGGER.info('Creating Levelized Cost raster')
-    raster_utils.vectorize_points(
-            wind_energy_points, 'LevCost', levelized_ds)
     
     carbon_uri = os.path.join(output_dir, 'carbon_emissions.tif')
+   
+    uri_list = [npv_uri, levelized_uri, carbon_uri]
+    field_list = ['NPV', 'LevCost', 'CO2']
     out_nodata = 0.0
     
-    # Create a raster for the points to be vectorized to
-    carbon_ds = raster_utils.create_raster_from_vector_extents(
-            30, 30, gdal.GDT_Float32, out_nodata, carbon_uri, wind_energy_points)
-    
-    # Interpolate and vectorize the points CO2 value onto a gdal dataset
-    LOGGER.info('Creating carbon emissions raster')
-    raster_utils.vectorize_points(
-            wind_energy_points, 'CO2', carbon_ds)
-    
+    for uri, field in zip(uri_list, field_list):
+        # Create a raster for the points to be vectorized to 
+        output_ds = raster_utils.create_raster_from_vector_extents(
+            30, 30, gdal.GDT_Float32, out_nodata, uri, wind_energy_points) 
+
+        # Interpolate and vectorize the points field onto a gdal dataset
+        LOGGER.info('Creating Output raster : %s', uri)
+        raster_utils.vectorize_points(
+                wind_energy_points, field, output_ds)
+        
     LOGGER.info('Leaving Wind Energy Valuation Core')
 
 def point_to_polygon_distance(poly_ds, point_ds):
