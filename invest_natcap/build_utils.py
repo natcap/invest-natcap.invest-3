@@ -8,7 +8,7 @@ def invest_version():
         return get_latest_tag()
     else:
         import invest_version
-        return 'dev%s' % invest_version.version
+        return 'dev%s' % invest_version.build_id
 
 def write_version_file(filepath):
     """Write the version number to the file designated by filepath.  Returns
@@ -28,7 +28,7 @@ def write_version_file(filepath):
     # file as well.
     for comment in comments:
         fp.write('# %s\n' % comment)
-    fp.write('version = \'%s\'\n' % get_build_id())
+    fp.write('build_id = \'%s\'\n' % get_build_id())
 
     # Close the file.
     fp.close()
