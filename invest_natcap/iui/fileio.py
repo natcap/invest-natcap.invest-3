@@ -16,15 +16,8 @@ def settings_folder():
     else:
         config_folder = os.path.join('~', '.natcap')
 
-    # Try to get the expanded path and then decode the string according to
-    # whatever the system's encoding happens to be.  On Windows, this may
-    # frequently be 'latin-1' or else 'mbcs', on mac, it might be 'utf-8'.
-    # See http://code.google.com/p/invest-natcap/issues/detail?id=1373 for the
-    # issue history on why this is necessary.
-    expanded_path = os.path.expanduser(unicode(config_folder))
-    decoded_path = expanded_path.decode(sys.getfilesystemencoding())
-
-    return decoded_path
+    expanded_path = os.path.expanduser(config_folder)
+    return expanded_path
 
 class JSONHandler(object):
     def __init__(self, uri):
@@ -63,7 +56,9 @@ class JSONHandler(object):
 class LastRunHandler(JSONHandler):
     def __init__(self, modelname):
         uri = modelname + '_lastrun.json'
-        JSONHandler.__init__(self, os.path.join(settings_folder(), uri))
+        set_folder = settings_folder().decode(sys.getfilesystemencoding())
+        rendered_path = os.path.join(set_folder, uri)
+        JSONHandler.__init__(self, rendered_path)
 
 class ResourceManager(object):
     """ResourceManager reconciles overrides supplied by the user against the
