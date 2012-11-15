@@ -3,12 +3,11 @@ import subprocess
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
 def invest_version():
-    # The revision tag distance will be 0 if we're at the tag.
-    if get_tag_distance() == 0:
-        return get_latest_tag()
-    else:
-        import invest_version
+    import invest_version
+    if invest_version.release == None:
         return 'dev%s' % invest_version.build_id
+    else:
+        return invest_version.release
 
 def write_version_file(filepath):
     """Write the version number to the file designated by filepath.  Returns
@@ -28,6 +27,16 @@ def write_version_file(filepath):
     # file as well.
     for comment in comments:
         fp.write('# %s\n' % comment)
+
+    # Determine how to record the release version in the invest_version file.
+    if get_tag_distance() == 0:
+        release_version = get_latest_tag()
+    else:
+        release_version = None
+    fp.write('release = \'%s\'\n' % release_version)
+
+    # Even though we're also saving the release version, we also want to save
+    # the build_id, as it can be very informative.
     fp.write('build_id = \'%s\'\n' % get_build_id())
 
     # Close the file.
