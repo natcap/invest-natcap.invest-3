@@ -180,3 +180,20 @@ def parse_hra_tables(uri_to_workspace):
 
     LOGGER.debug(stressor_names)
     LOGGER.debug(habitat_names)
+
+def parse_stressor(uri):
+    """Helper function to parse out a stressor csv file
+
+        uri - path to the csv file
+
+        returns a dictionary with the stressor information in it as:
+           {
+            'DQ': 1.0,
+            'E':
+                {
+                  'Intensity Rating:':
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
+                  'Management Effectiveness:':
+                    {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                }
+           }"""
