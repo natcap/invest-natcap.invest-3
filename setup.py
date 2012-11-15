@@ -39,7 +39,7 @@ def write_version_file(filepath):
     fp.close()
 
 def get_version():
-    cmd = 'hg log -r . --config ui.report_untrusted=False --template "v{latesttag}-{latesttagdistance} [{node|short}]"'
+    cmd = 'hg log -r . --config ui.report_untrusted=False --template "{latesttagdistance}:{latesttag} [{node|short}]"'
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     return p.stdout.read()

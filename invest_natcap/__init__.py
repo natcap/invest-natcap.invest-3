@@ -22,7 +22,7 @@ if __version__ == 'dev':
 #    __version__ = 'dev_r'+datetime.datetime.now().isoformat('_').replace(':','_')
     try:
         import invest_version
-        __version__ = invest_version.version
+        __version__ = 'dev' + invest_version.version
     except ImportError:
         print '------------------NOPE'
 
