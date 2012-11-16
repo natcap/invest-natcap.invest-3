@@ -8,10 +8,12 @@ from osgeo import ogr
 
 from invest_natcap import raster_utils
 from invest_natcap.nutrient import nutrient_biophysical
+from invest_natcap.nutrient import nutrient_valuation
 from invest_natcap.nutrient import nutrient_core
 
 BASE_DATA = os.path.join('data', 'base_data', 'terrestrial')
 NUTR_INPUT = os.path.join('data', 'nutrient', 'input')
+VAL_INPUT = os.path.join('data', 'nutrient', 'valuation_input')
 
 WORKSPACE = os.path.join('data', 'test_out', 'nutrient')
 
@@ -58,6 +60,16 @@ class NutrientBiophysicalTest(unittest.TestCase):
             pass
         shutil.copytree(WORKSPACE, dest)
 
+class NutrientValuationTest(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+            'workspace_dir': WORKSPACE,
+            'watersheds': os.path.join(VAL_INPUT, 'watersheds.shp'),
+            'valuation_table': os.path.join(VAL_INPUT, 'valuation_table.csv')
+        }
+
+    def test_smoke(self):
+        nutrient_valuation.execute(self.args)
 
 class NutrientCoreTest(unittest.TestCase):
     def setUp(self):
