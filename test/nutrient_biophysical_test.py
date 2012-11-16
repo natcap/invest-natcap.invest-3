@@ -170,3 +170,6 @@ class NutrientCoreTest(unittest.TestCase):
         value = nutrient_core.watershed_value(24, 500, 3, 0.05)
 
         self.assertAlmostEqual(value, 34312.9251701)
+
+    def test_valuation(self):
+        pass

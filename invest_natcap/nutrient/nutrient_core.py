@@ -465,6 +465,9 @@ def split_datasource(ds, uris=None):
     LOGGER.debug('Finished creating the new shapefiles %s', output_shapefiles)
     return output_shapefiles
 
+def valuation(value_table, watersheds):
+    pass
+
 def watershed_value(ws_cost, amt_retained, timespan, discount_rate):
     yearly_discounts = map(lambda t: 1.0/((1.0 + discount_rate)**t), range(timespan))
     LOGGER.debug('Yearly discounts: %s' % yearly_discounts)
