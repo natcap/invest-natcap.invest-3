@@ -21,7 +21,7 @@ class TestHRA(unittest.TestCase):
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
         args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
-        args['stressors_dir'] = './data/test_out/HRA/Input/Stressors'
+        args['stressors_dir'] = './data/test_out/HRA/Input/StressorLayers'
 
         args['grid_size'] = 500
         args['risk_eq'] = 'Euclidean'
@@ -74,9 +74,107 @@ class TestHRA(unittest.TestCase):
                     'Change in Structure': {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 1.0},
                     'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
                     }
+                },
+           ('eelgrass', 'ShellfishAquacultureComm'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 3.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 3.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('eelgrass', 'CommSalmonTroll'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('eelgrass', 'RecFishing'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('hardbottom', 'FinfishAquacultureComm'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 3.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('hardbottom', 'ShellfishAquacultureComm'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 3.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('hardbottom', 'CommSalmonTroll'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('hardbottom', 'RecFishing'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('softbottom', 'FinfishAquacultureComm'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 3.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('softbottom', 'ShellfishAquacultureComm'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 3.0, 'DQ': 1.0, 'Weight': 1.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('softbottom', 'CommSalmonTroll'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 2.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
+                },
+           ('softbottom', 'RecFishing'): 
+                {'E':
+                    {'Overlap Time': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 2.0}
+                    }, 
+                'C': {'Change in Area':  {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Change in Structure': {'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
+                    'Frequency of Disturbance':{'Rating': 2.0, 'DQ': 1.0, 'Weight' : 1.0}
+                    }
                 }
             }
-
         args['habitats'] = \
             {'kelp': {'C':
                         {'Natural Mortality': {'Rating': 1.0, 'DQ':1.0, 'Weight':1.0},
