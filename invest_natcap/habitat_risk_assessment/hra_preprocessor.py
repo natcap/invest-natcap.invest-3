@@ -201,7 +201,7 @@ def parse_hra_tables(uri_to_workspace):
             h_s_dict[hab_stress_overlap] = habitat_parse_dictionary['overlap'][hab_stress_overlap]
 
     parse_dictionary = {}
-    parse_dictionary['habitat'] = habitat_dict
+    parse_dictionary['habitats'] = habitat_dict
     parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
 
