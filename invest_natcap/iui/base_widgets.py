@@ -17,6 +17,7 @@ import fileio
 CMD_FOLDER = '.'
 INVEST_ROOT = './'
 IUI_DIR = os.path.dirname(os.path.abspath(__file__))
+ENCODING = sys.getfilesystemencoding()
 
 import invest_natcap.iui
 LOGGER = invest_natcap.iui.get_ui_logger('base_widgets')
@@ -1171,7 +1172,7 @@ class FileEntry(DynamicText):
 
         # Expand a '~' in the parameter text if it is present.  Otherwise, this
         # returns the path as it was passed in.
-        text = os.path.expanduser(text)
+        text = os.path.expanduser(text.encode(ENCODING))
 
         if os.path.isabs(text):
             self.textField.setText(text)
