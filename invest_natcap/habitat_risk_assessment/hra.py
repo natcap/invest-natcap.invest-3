@@ -12,6 +12,7 @@ import math
 from osgeo import gdal, ogr
 from scipy import ndimage
 from invest_natcap.habitat_risk_assessment import hra_core
+from invest_natcap.habitat_risk_assessment import hra_preprocessor
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('HRA')
@@ -27,6 +28,8 @@ def execute(args):
             will contain the following data.
         args['workspace_dir']- String which points to the directory into which
             intermediate and output files should be placed.
+        args['csv_uri']- The location of the directory containing the CSV files
+            of habitat, stressor, and overlap ratings.         
         args['habitat_dir']- The string describing a directory location of all
             habitat shapefiles. These will be parsed though and rasterized to 
             be passed to hra_core module.
@@ -39,23 +42,23 @@ def execute(args):
             in calculating risk scores for each H-S overlap cell.
         args['decay_eq']- A string identifying the equation that should be used
             in calculating the decay of stressor buffer influence.
-        args['buffer_dict']- A dictionary that links the string name of each
+
+    Output:
+        hra_args- Dictionary containing everything that hra_core will need to
+            complete the rest of the model run. It will contain the following.
+        hra_args['workspace_dir']- Directory in which all data resides. Output
+            and intermediate folders will be supfolders of this one.
+        hra_args['buffer_dict']- A dictionary that links the string name of each
             stressor shapefile to the desired buffering for that shape when
             rasterized.  ex:
 
             {'Stressor 1': 50,
              'Stressor 2': ...,
             }
-
-        args['h-s']- A structure which holds all exposure and consequence
+        hra_args['h-s']- A structure which holds all exposure and consequence
             rating for each combination of habitat and stressor. The inner
             structure is a dictionary whose key is a tuple which points to a
-            tuple of lists which contain tuples. h-s['C'] should explicitly 
-            contain the following criteria names: These criteria
-            must exist, and must contain 'Rating' and 'DQ' entries within them.
-            These can be 0 values if they are not a desired criteria, but must
-            exist.
-
+            tuple of lists which contain tuples. 
             {('Habitat A', 'Stressor 1'):
                {
                  'E':
@@ -75,11 +78,14 @@ def execute(args):
                 }
               ('Habitat B', 'Stressor 1'): {}...
             }
-        args['habitats']- A structure with the same layout as 'h-s', but which
+        hra_args['habitats']- A structure with the same layout as 'h-s', but which
             contains only criteria specific to habitats. The outer keys, in 
-            turn, will be habitat names. (Natural Mortality, 
-            Recruitment Rate, Recovery Time, Connectivity Rate).  e.g.
-
+            turn, will be habitat names. habitats['C'] should explicitly 
+            contain the following criteria names: (Natural Mortality, 
+            Recruitment Rate, Recovery Time, Connectivity Rate). These criteria
+            must exist, and must contain 'Rating' and 'DQ' entries within them.
+            These can be 0 values if they are not a desired criteria, but must
+            exist.
             {'Habitat A':
                     {
                     'DQ': 1.0,
@@ -97,10 +103,7 @@ def execute(args):
                     },
              'Habitat B': ...
              }
-
-
-
-        args['stressors']- A structure wih the same layout as 'h-s', but which
+        hra_args['stressors']- A structure wih the same layout as 'h-s', but which
             contains only criteria specific to stressors. The outer keys will be
             stressor names.
 
@@ -117,29 +120,6 @@ def execute(args):
                     },
              'Stressor 2': ...
              }
-
-    Output:
-        hra_args- Dictionary containing everything that hra_core will need to
-            complete the rest of the model run. It will contain the following.
-        hra_args['workspace_dir']- Directory in which all data resides. Output
-            and intermediate folders will be supfolders of this one.
-        hra_args['h-s']- Dictionary with a similar structure to the above,
-            but with an additional item in the value tuple containing an open
-            raster dataset of the overlap of key H-S.
-            {(Habitat A, Stressor 1): 
-                    {'E': 
-                        {'Spatital Overlap': 
-                            {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0}
-                        },
-                    'C': {C's Criteria Dictionaries},
-                    'DS':  <Open A-1 Raster Dataset>
-                    }
-            }
-        hra['habitats']- Dictionary with the same structure as the original
-            args['habitats'], but which also contains a rasterized version of
-            each shapefile input.
-        hra['stressors']- Dictionary structure identical to the orignal
-            args['stressors'] that was passed in from the UI.
         hra_args['risk_eq']- String which identifies the equation to be used
             for calculating risk.  The core module should check for 
             possibilities, and send to a different function when deciding R 
@@ -147,6 +127,10 @@ def execute(args):
 
     Returns nothing.
     '''
+    #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
+    #to use the pre-process module to unpack them.
+    unpack_over_dict(args['csv_uri'], args)
+
     hra_args = {}
 
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
@@ -160,7 +144,7 @@ def execute(args):
         os.makedirs(folder)
 
     hra_args['workspace_dir'] = args['workspace_dir']
-
+    
     hra_args['risk_eq'] = args['risk_eq']
 
     #Take all shapefiles in both the habitats and the stressors folders and
@@ -171,7 +155,7 @@ def execute(args):
     file_names = glob.glob(os.path.join(args['habitat_dir'], '*.shp'))
     h_rast = os.path.join(inter_dir, 'Habitat_Rasters')
     
-    #Make folders in which to store the habitat and intermediate rasters.
+    #Make folders in which to store the habitat rasters.
     if (os.path.exists(h_rast)):
         shutil.rmtree(h_rast) 
 
@@ -180,7 +164,6 @@ def execute(args):
     make_rasters(file_names, h_rast, args['grid_size'])
     mod_habitats = add_rast_to_dict(h_rast, args['habitats'])
     hra_args['habitats'] = mod_habitats
-
 
     file_names = glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
@@ -209,6 +192,29 @@ def execute(args):
     hra_args['h-s'] = ratings_with_rast
 
     hra_core.execute(hra_args)
+
+def unpack_over_dict(csv_uri, args):
+    '''This throws the dictionary coming from the pre-processor into the
+    equivalent dictionaries in args so that they can be processed before being
+    passed into the core module.
+    
+    Input:
+        csv_uri- Reference to the folder location of the CSV tables containing
+            all habitat and stressor rating information.
+        args- The dictionary into which the individual ratings dictionaries
+            should be placed.
+    Output:
+        A modified args dictionary containing dictionary versions of the CSV
+        tables located in csv_uri.
+    Returns nothing.
+    '''
+    dicts = hra_preprocessor.parse_hra_tables(csv_uri)
+    LOGGER.debug("DICTIONARIES:")
+    LOGGER.debug(dicts.keys())
+
+
+    for dict_name in dicts:
+        args[dict_name] = dicts[dict_name]
 
 def add_rast_to_dict(direct, dictionary):
     '''Allows us to add an open dataset to the already existing dictionary.

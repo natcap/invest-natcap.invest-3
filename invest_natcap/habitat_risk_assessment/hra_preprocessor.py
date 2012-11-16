@@ -110,8 +110,11 @@ def parse_hra_tables(uri_to_workspace):
            that function
 
        returns a dictionary of the form:
-           {
-               'buffer_dict': {},
+               'buffer_dict': 
+                   {
+                    {'Stressor 1': 50,
+                     'Stressor 2': ...,
+                    },
                'h-s':
                    {('Habitat A', 'Stressor 1'):
                        {
@@ -187,13 +190,19 @@ def parse_hra_tables(uri_to_workspace):
         stressor_dict[stressor_name] = parse_stressor(stressor_uri)
 
     habitat_dict = {}
+    h_s_dict = {}
     for habitat_uri in habitat_csvs:
         LOGGER.debug(habitat_uri)
         habitat_name = re.search('(.*)_overlap_ratings\.csv', os.path.basename(habitat_uri)).group(1)
-        habitat_dict[habitat_name] = parse_habitat_overlap(habitat_uri)
+
+        habitat_parse_dictionary = parse_habitat_overlap(habitat_uri)
+        habitat_dict[habitat_name] = habitat_parse_dictionary['hab_only']
+        for hab_stress_overlap in habitat_parse_dictionary['overlap']:
+            h_s_dict[hab_stress_overlap] = habitat_parse_dictionary['overlap'][hab_stress_overlap]
 
     parse_dictionary = {}
-    parse_dictionary['h-s'] = habitat_dict
+    parse_dictionary['habitat'] = habitat_dict
+    parse_dictionary['h-s'] = h_s_dict
     parse_dictionary['stressors'] = stressor_dict
 
     stressor_buf_dict = {}
@@ -201,9 +210,7 @@ def parse_hra_tables(uri_to_workspace):
         stressor_buf_dict[stressor] = stressor_properties['buffer']
         del(stressor_properties['buffer'])
 
-    LOGGER.debug(stressor_dict)
-    LOGGER.debug(habitat_dict)
-    LOGGER.debug(stressor_buf_dict)
+    parse_dictionary['buffer_dict'] = stressor_buf_dict
 
     return parse_dictionary
 
@@ -253,6 +260,7 @@ def parse_habitat_overlap(uri):
 
         returns big ass dictionary"""
 
+    habitat_overlap_dict = {}
     habitat_dict = {}
     with open(uri,'rU') as habitat_file:
         csv_reader = csv.reader(habitat_file)
@@ -285,12 +293,15 @@ def parse_habitat_overlap(uri):
                 #Drain the overlap table
                 line = csv_reader.next()
                 #Drain the habitat dictionary is the first character of the type field
-                habitat_dict[(hab_name,stressor)] = {'C': {}, 'E': {}}
+                habitat_overlap_dict[(hab_name,stressor)] = {'C': {}, 'E': {}}
                 while line[0] != '':
                     stressor_type = line[1][0]
-                    habitat_dict[(hab_name,stressor)][stressor_type][line[0]] = dict(zip(headers, map(int,line[2:5])))
+                    habitat_overlap_dict[(hab_name,stressor)][stressor_type][line[0]] = dict(zip(headers, map(int,line[2:5])))
                     line = csv_reader.next()
             except StopIteration:
                 break
 
-    return habitat_dict
+    return {
+        'hab_only': habitat_dict,
+        'overlap': habitat_overlap_dict
+        }
