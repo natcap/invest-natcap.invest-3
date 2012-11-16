@@ -64,8 +64,8 @@ class NutrientValuationTest(unittest.TestCase):
     def setUp(self):
         self.args = {
             'workspace_dir': WORKSPACE,
-            'watersheds': os.path.join(VAL_INPUT, 'watersheds.shp'),
-            'valuation_table': os.path.join(VAL_INPUT, 'valuation_table.csv')
+            'watersheds_uri': os.path.join(VAL_INPUT, 'watersheds.shp'),
+            'valuation_table_uri': os.path.join(VAL_INPUT, 'valuation_table.csv')
         }
 
     def test_smoke(self):
