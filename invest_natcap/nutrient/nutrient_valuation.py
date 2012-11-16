@@ -1,6 +1,7 @@
 
 from osgeo import ogr
 
+from invest_natcap.nutrient import nutrient_core
 from invest_natcap.invest_core import fileio as fileio
 
 def execute(args):
