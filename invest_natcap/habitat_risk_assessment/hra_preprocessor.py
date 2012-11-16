@@ -110,8 +110,11 @@ def parse_hra_tables(uri_to_workspace):
            that function
 
        returns a dictionary of the form:
-           {
-               'buffer_dict': {},
+               'buffer_dict': 
+                   {
+                    {'Stressor 1': 50,
+                     'Stressor 2': ...,
+                    },
                'h-s':
                    {('Habitat A', 'Stressor 1'):
                        {
@@ -201,9 +204,7 @@ def parse_hra_tables(uri_to_workspace):
         stressor_buf_dict[stressor] = stressor_properties['buffer']
         del(stressor_properties['buffer'])
 
-    LOGGER.debug(stressor_dict)
-    LOGGER.debug(habitat_dict)
-    LOGGER.debug(stressor_buf_dict)
+    parse_dictionary['buffer_dict'] = stressor_buf_dict
 
     return parse_dictionary
 
