@@ -56,9 +56,9 @@ def execute(args):
     name_lookup = {}
     for layer_type in ['habitat', 'stressor']:
         name_lookup[layer_type] = [
-            os.path.basename(f.split('.')[0]) for f in 
+            os.path.splitext(os.path.basename(f))[0] for f in 
             glob.glob(os.path.join(args[layer_type + '_dir'], '*.shp'))]
-
+    LOGGER.debug(name_lookup)
 
     #Create output csvs so that they are habitat centric
     for habitat_name in name_lookup['habitat']:
@@ -281,7 +281,7 @@ def parse_habitat_overlap(uri):
             line = csv_reader.next()
 
         #Drain the next two lines
-        for i in range(2): csv_reader.next()
+        for _ in range(2): csv_reader.next()
         #Drain the overlap dictionaries
         #This is the overlap header
         while True:
@@ -296,7 +296,7 @@ def parse_habitat_overlap(uri):
                 habitat_overlap_dict[(hab_name,stressor)] = {'C': {}, 'E': {}}
                 while line[0] != '':
                     stressor_type = line[1][0]
-                    habitat_overlap_dict[(hab_name,stressor)][stressor_type][line[0]] = dict(zip(headers, map(int,line[2:5])))
+                    habitat_overlap_dict[(hab_name, stressor)][stressor_type][line[0]] = dict(zip(headers, map(int,line[2:5])))
                     line = csv_reader.next()
             except StopIteration:
                 break
