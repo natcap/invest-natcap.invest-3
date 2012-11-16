@@ -40,13 +40,15 @@ def biophysical(args):
     alv = adjusted_loading_value(nutrient_export, args['pixel_yield'],
         args['watersheds'], args['folders']['intermediate'])
 
-    aggregate_by_shape(alv, args['watersheds'], 'nut_export', 'sum')
-    aggregate_by_shape(alv, args['subwatersheds'], 'nut_export', 'sum')
-
     flow_path = get_flow_path(args['dem'])
 
     retention_raster = get_retention(nutrient_retained, alv,
         flow_path)
+
+    for shapefile in [args['watersheds'], args['subwatersheds']]:
+        for field, raster in [
+            ('nut_export', alv), ('nut_retain', retention_raster)]:
+                aggregate_by_shape(raster, shapefile, field, 'sum')
 
     threshold_raster_path = os.path.join(args['folders']['intermediate'],
         'threshold.tif')
