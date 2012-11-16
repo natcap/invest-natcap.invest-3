@@ -74,7 +74,7 @@ def execute(args):
     
     LOGGER.info('Beginning Wind Energy Biophysical')
 
-    workspace = args['workspace_dir']
+    workspace = str(args['workspace_dir'])
     
     # Create dictionary to hold values that will be passed to the core
     # functionality
@@ -83,7 +83,7 @@ def execute(args):
     # If the user has not provided a results suffix, assume it to be an empty
     # string.
     try:
-        suffix = '_' + args['suffix']
+        suffix = '_' + str(args['suffix'])
     except KeyError:
         suffix = ''
 
@@ -98,7 +98,7 @@ def execute(args):
         if not os.path.isdir(folder):
             os.makedirs(folder)
 
-    bathymetry = gdal.Open(args['bathymetry_uri'])
+    bathymetry = gdal.Open(str(args['bathymetry_uri']))
     
     # Read the wind points from a text file into a dictionary and create a point
     # shapefile from that dictionary
@@ -106,7 +106,7 @@ def execute(args):
             inter_dir, 'wind_points_shape' + suffix + '.shp')
     
     LOGGER.info('Read wind data from text file')
-    wind_data = read_wind_data(args['wind_data_uri'])
+    wind_data = read_wind_data(str(args['wind_data_uri']))
     
     LOGGER.info('Create point shapefile from wind data')
     wind_data_points = wind_data_to_point_shape(
@@ -114,7 +114,7 @@ def execute(args):
 
     try:
         LOGGER.info('Trying to open the AOI')
-        aoi = ogr.Open(args['aoi_uri'])
+        aoi = ogr.Open(str(args['aoi_uri']))
         
         LOGGER.info('Checking AOIs projection')
         # Check to make sure that the AOI is projected and in meters
@@ -147,7 +147,7 @@ def execute(args):
         # are present
         try:
             LOGGER.info('Trying to open the land polygon')
-            land_polygon = ogr.Open(args['land_polygon_uri'])
+            land_polygon = ogr.Open(str(args['land_polygon_uri']))
 
             land_poly_uris = os.path.join(inter_dir, 'land_poly' + suffix)
         

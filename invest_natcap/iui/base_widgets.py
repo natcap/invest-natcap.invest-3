@@ -17,6 +17,7 @@ import fileio
 CMD_FOLDER = '.'
 INVEST_ROOT = './'
 IUI_DIR = os.path.dirname(os.path.abspath(__file__))
+ENCODING = sys.getfilesystemencoding()
 
 import invest_natcap.iui
 LOGGER = invest_natcap.iui.get_ui_logger('base_widgets')
@@ -454,6 +455,11 @@ class DynamicPrimitive(DynamicElement):
         return False
 
     def validate(self):
+        # If the root element has not yet been set, we should just return since
+        # validation will fail anyways.
+        if self.root == None:
+            return
+
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
         else:
@@ -716,7 +722,7 @@ class DynamicText(LabeledElement):
         #If the user has defined some default text for this text field, insert 
         #it into the text field.
         if "defaultValue" in attributes:
-            self.textField.insert(attributes['defaultValue'])
+            self.setValue(attributes['defaultValue'])
 
         #If the user has defined a string regular expression of text the user is
         #allowed to input, set that validator up with the setValidateField()
@@ -1166,7 +1172,7 @@ class FileEntry(DynamicText):
 
         # Expand a '~' in the parameter text if it is present.  Otherwise, this
         # returns the path as it was passed in.
-        text = os.path.expanduser(text)
+        text = os.path.expanduser(text.encode(ENCODING))
 
         if os.path.isabs(text):
             self.textField.setText(text)
