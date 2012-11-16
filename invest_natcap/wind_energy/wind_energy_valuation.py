@@ -69,7 +69,7 @@ def execute(args):
     biophysical_points = ogr.Open(str(args['biophysical_data_uri']))
     
     biophysical_points_proj = clip_and_project_datasource(
-            biophysical_points, aoi, os.path.join(inter_dir, 'val_bio_points'))
+            biophysical_points, aoi, os.path.join(inter_dir, 'bio_points'))
     
     valuation_args['biophysical_data'] = biophysical_points_proj
     
@@ -110,7 +110,7 @@ def execute(args):
         land_poly = ogr.Open(str(args['land_polygon_uri']))
         
         land_poly_proj = clip_and_project_datasource(
-                land_poly, aoi, os.path.join(inter_dir, 'val_land_poly'))
+                land_poly, aoi, os.path.join(inter_dir, 'land_poly'))
 
         valuation_args['land_polygon'] = land_poly_proj
     else:
@@ -145,9 +145,9 @@ def execute(args):
                 land_dict, 'land_points', land_ds_uri) 
 
         grid_point_prj = clip_and_project_datasource(
-                grid_point_ds, aoi, os.path.join(inter_dir, 'val_grid_point'))
+                grid_point_ds, aoi, os.path.join(inter_dir, 'grid_point'))
         land_point_prj = clip_and_project_datasource(
-                land_point_ds, aoi, os.path.join(inter_dir, 'val_land_point'))
+                land_point_ds, aoi, os.path.join(inter_dir, 'land_point'))
 
         valuation_args['grid_points'] = grid_point_prj
         valuation_args['land_points'] = land_point_prj
