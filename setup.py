@@ -14,9 +14,8 @@ import numpy as np
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
-import invest_natcap
-
-VERSION = invest_natcap.__version__
+from invest_natcap import build_utils
+VERSION = build_utils.invest_version(write=True)
 CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
 
@@ -144,3 +143,10 @@ setup(name='invest_natcap',
                              sources = ['invest_natcap/raster_cython_utils.pyx'],
                              language="c++")]),
       **py2exe_args)
+
+# Since we wrote the invest version module to a file that needed to be taken
+# along with the other invest_version stuff, remove those files so we aren't
+# confused later on.
+for file_name in glob.glob('invest_natcap/invest_version.py*'):
+    print ('Removing %s' % file_name)
+    os.remove(file_name)
