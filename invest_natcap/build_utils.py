@@ -2,7 +2,7 @@ import subprocess
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
-def invest_version():
+def invest_version(write=False):
     """Get the version of InVEST by importing invest_natcap.invest_version and
     using the appropriate version string from that module.  If
     invest_natcap.invest_version cannot be found, it is programmatically
@@ -21,8 +21,14 @@ def invest_version():
         # If we can't find the version file, it means that it hasn't been
         # written for the current state of InVEST.  Create the version file and
         # then try importing it again.
-        write_version_file('invest_natcap/invest_version.py')
-        import invest_version
+        if write == True:
+            write_version_file('invest_natcap/invest_version.py')
+            import invest_version
+        else:
+            if get_tag_distance() == 0:
+                return get_latest_tag()
+            else:
+                return get_build_id()
 
     if invest_version.release == 'None':
         return 'dev%s' % invest_version.build_id
