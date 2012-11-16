@@ -154,45 +154,45 @@ def execute(args):
     # call on the core module
     wind_energy_core.valuation(valuation_args)
 
-def clip_and_project_datasource(shape_a, shape_b, out_uri):
+def clip_and_project_datasource(dsource, aoi, out_uri):
     """Clips and reprojects one OGR datasource to another
         
-        shape_a - an OGR datasource to clip and reproject
-        shape_b - an OGR datasource to use as the bounds for clipping and
+        dsource - an OGR datasource to clip and reproject
+        aoi - an OGR datasource to use as the bounds for clipping and
             reprojecting
         out_uri - a string for the full path of the output, including the
             directory tree. However, no extension should be provided
 
-        returns - shape_a clipped and reprojected to shape_b, an OGR datasource
+        returns - dsource clipped and reprojected to aoi, an OGR datasource
     """
     # Get the basename and directory name of the uri to help create future uri's
     basename = os.path.basename(out_uri)
     dir_name = os.path.dirname(out_uri)
     
-    shape_a_sr = shape_a.GetLayer().GetSpatialRef()
-    shape_a_wkt = shape_a_sr.ExportToWkt()
-    shape_b_sr = shape_b.GetLayer().GetSpatialRef()
-    shape_b_wkt = shape_b_sr.ExportToWkt()
+    dsource_sr = dsource.GetLayer().GetSpatialRef()
+    dsource_wkt = dsource_sr.ExportToWkt()
+    aoi_sr = aoi.GetLayer().GetSpatialRef()
+    aoi_wkt = aoi_sr.ExportToWkt()
 
-    shape_b_proj_to_shape_a_uri = os.path.join(
-            dir_name, basename + 'b_to_a.shp')
+    aoi_proj_to_dsource_uri = os.path.join(
+            dir_name, 'val_aoi_proj_to_' + basename + '.shp')
     
-    shape_b_proj_to_shape_a = raster_utils.reproject_datasource(
-            shape_b, shape_a_wkt, shape_b_proj_to_shape_a_uri)
+    aoi_proj_to_dsource = raster_utils.reproject_datasource(
+            aoi, dsource_wkt, aoi_proj_to_dsource_uri)
 
-    shape_a_clipped_uri = os.path.join(
-            dir_name, basename + '_clipped.shp')
+    dsource_clipped_uri = os.path.join(
+            dir_name, 'val_' + basename + '_clipped.shp')
    
-    shape_a_clipped = wind_energy_biophysical.clip_datasource(
-            shape_b_proj_to_shape_a, shape_a, shape_a_clipped_uri)
+    dsource_clipped = wind_energy_biophysical.clip_datasource(
+            aoi_proj_to_dsource, dsource, dsource_clipped_uri)
 
-    shape_a_proj_uri = os.path.join(
-            dir_name, basename + '_projected.shp')
+    dsource_proj_uri = os.path.join(
+            dir_name, 'val_' + basename + '_projected.shp')
 
-    shape_a_proj = raster_utils.reproject_datasource(
-        shape_a_clipped, shape_b_wkt, shape_a_proj_uri)
+    dsource_proj = raster_utils.reproject_datasource(
+        dsource_clipped, aoi_wkt, dsource_proj_uri)
 
-    return shape_a_proj
+    return dsource_proj
 
 def dictionary_to_shapefile(dict_data, layer_name, output_uri):
     """Creates a point shapefile from a dictionary
