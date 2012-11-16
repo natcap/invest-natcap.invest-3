@@ -12,6 +12,7 @@ import math
 from osgeo import gdal, ogr
 from scipy import ndimage
 from invest_natcap.habitat_risk_assessment import hra_core
+from invest_natcap.habitat_risk_assessment import hra_preprocessor
 from invest_natcap import raster_utils
 
 LOGGER = logging.getLogger('HRA')
@@ -147,6 +148,10 @@ def execute(args):
 
     Returns nothing.
     '''
+    #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
+    #to use the pre-process module to unpack them.
+    unpack_over_dict(args['dicts_uri'], args)
+
     hra_args = {}
 
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
@@ -160,7 +165,7 @@ def execute(args):
         os.makedirs(folder)
 
     hra_args['workspace_dir'] = args['workspace_dir']
-
+    
     hra_args['risk_eq'] = args['risk_eq']
 
     #Take all shapefiles in both the habitats and the stressors folders and
@@ -171,7 +176,7 @@ def execute(args):
     file_names = glob.glob(os.path.join(args['habitat_dir'], '*.shp'))
     h_rast = os.path.join(inter_dir, 'Habitat_Rasters')
     
-    #Make folders in which to store the habitat and intermediate rasters.
+    #Make folders in which to store the habitat rasters.
     if (os.path.exists(h_rast)):
         shutil.rmtree(h_rast) 
 
@@ -180,7 +185,6 @@ def execute(args):
     make_rasters(file_names, h_rast, args['grid_size'])
     mod_habitats = add_rast_to_dict(h_rast, args['habitats'])
     hra_args['habitats'] = mod_habitats
-
 
     file_names = glob.glob(os.path.join(args['stressors_dir'], '*.shp'))
     s_rast = os.path.join(inter_dir, 'Stressor_Rasters')
@@ -209,6 +213,27 @@ def execute(args):
     hra_args['h-s'] = ratings_with_rast
 
     hra_core.execute(hra_args)
+
+def unpack_over_dicts(csv_uri, args):
+    '''This throws the dictionary coming from the pre-processor into the
+    equivalent dictionaries in args so that they can be processed before being
+    passed into the core module.
+    
+    Input:
+        csv_uri- Reference to the folder location of the CSV tables containing
+            all habitat and stressor rating information.
+        args- The dictionary into which the individual ratings dictionaries
+            should be placed.
+    Output:
+        A modified args dictionary containing dictionary versions of the CSV
+        tables located in csv_uri.
+    Returns nothing.
+    '''
+
+    dicts = hra_preprocessor.parse_hra_tables(csv_uri)
+
+    for dict_name in dicts:
+        args[dict_name] = dicts[dict_name]
 
 def add_rast_to_dict(direct, dictionary):
     '''Allows us to add an open dataset to the already existing dictionary.
