@@ -170,8 +170,8 @@ def parse_hra_tables(uri_to_workspace):
                      'Stressor 2': ...
                      }
            }"""
-    habitat_paths = os.path.join(uri_to_workspace, 'habitat_stressor_ratings', '*_overlap_ratings.csv')
-    stressor_paths = os.path.join(uri_to_workspace, 'habitat_stressor_ratings', '*_stressor_ratings.csv')
+    habitat_paths = os.path.join(uri_to_workspace, '*_overlap_ratings.csv')
+    stressor_paths = os.path.join(uri_to_workspace, '*_stressor_ratings.csv')
 
     habitat_csvs = glob.glob(habitat_paths)
     stressor_csvs = glob.glob(stressor_paths)
