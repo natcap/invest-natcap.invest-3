@@ -165,3 +165,6 @@ class NutrientCoreTest(unittest.TestCase):
                 difference_area = intersection.GetArea()
                 reg_area = reg_geom.GetArea()
                 self.assertEqual(difference_area, reg_area)
+
+    def test_watershed_value(self):
+        nutrient_core.watershed_value(0, 0, 0, 0)

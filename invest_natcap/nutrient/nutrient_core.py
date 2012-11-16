@@ -465,3 +465,6 @@ def split_datasource(ds, uris=None):
     LOGGER.debug('Finished creating the new shapefiles %s', output_shapefiles)
     return output_shapefiles
 
+def watershed_value(ws_cost, amt_retained, timespan, discount_rate):
+    pass
+
