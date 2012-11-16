@@ -47,7 +47,7 @@ def execute(args):
     valuation_args = {}
     
     # Create output folders
-    workspace = args['workspace_dir']
+    workspace = str(args['workspace_dir'])
     valuation_args['workspace_dir'] = workspace
 
     inter_dir = os.path.join(workspace, 'intermediate')
@@ -59,14 +59,14 @@ def execute(args):
 
     # handle suffix
     try:
-        suffix = '_' + args['suffix']
+        suffix = '_' + str(args['suffix'])
     except KeyError:
         suffix = ''
 
     valuation_args['suffix'] = suffix
 
-    aoi = ogr.Open(args['aoi_uri'])
-    biophysical_points = ogr.Open(args['biophysical_data_uri'])
+    aoi = ogr.Open(str(args['aoi_uri']))
+    biophysical_points = ogr.Open(str(args['biophysical_data_uri']))
     
     biophysical_points_proj = clip_and_project_datasource(
             biophysical_points, aoi, os.path.join(inter_dir, 'val_bio_points'))
@@ -81,7 +81,7 @@ def execute(args):
     LOGGER.info('Read in turbine information from CSV')
     # Open the turbine CSV file 
     turbine_dict = {}
-    turbine_file = open(args['turbine_info_uri'])
+    turbine_file = open(str(args['turbine_info_uri']))
     reader = csv.DictReader(turbine_file)
 
     # Making a shallow copy of the attribute 'fieldnames' explicitly to edit to
@@ -102,12 +102,12 @@ def execute(args):
 
     # Handle Grid Points
     try:
-        grid_file = open(args['grid_points_uri'])
+        grid_file = open(str(args['grid_points_uri']))
     except KeyError:
         LOGGER.info('Grid points not provided')
         LOGGER.info('Reading in land polygon')
 
-        land_poly = ogr.Open(args['land_polygon_uri'])
+        land_poly = ogr.Open(str(args['land_polygon_uri']))
         
         land_poly_proj = clip_and_project_datasource(
                 land_poly, aoi, os.path.join(inter_dir, 'val_land_poly'))

@@ -1,0 +1,39 @@
+HABITAT NAME,hardbottom_3,,,
+HABITAT ONLY PROPERTIES,,,,
+Habitat Data Quality:,2,,,
+,,,,
+,Rating,DQ,Weight,
+Recruitment Rate,1,1,2,
+Natural Mortality,3,2,1,
+Connectivity Rate,2,1,3,
+Recovery Time,2,1,0,
+,,,,
+HABITAT STRESSOR OVERLAP PROPERTIES,,,,
+,,,,
+hardbottom_3/ShellfishAquacultureComm_2 OVERLAP,,,,
+,Type,Rating,DQ,Weight
+Change in structure rating,Consequence,1,2,3
+Overlap Time Rating,Exposure,0,1,2
+Frequency of disturbance,Consequence,2,1,2
+Change in area rating,Consequence,2,2,2
+,,,,
+hardbottom_3/RecFishing_4 OVERLAP,,,,
+,Type,Rating,DQ,Weight
+Change in structure rating,Consequence,1,2,3
+Overlap Time Rating,Exposure,0,1,2
+Frequency of disturbance,Consequence,2,1,2
+Change in area rating,Consequence,2,2,2
+,,,,
+hardbottom_3/FinfishAquacultureComm_1 OVERLAP,,,,
+,Type,Rating,DQ,Weight
+Change in structure rating,Consequence,1,2,3
+Overlap Time Rating,Exposure,0,1,2
+Frequency of disturbance,Consequence,2,1,2
+Change in area rating,Consequence,2,2,2
+,,,,
+hardbottom_3/CommSalmonTroll_3 OVERLAP,,,,
+,Type,Rating,DQ,Weight
+Change in structure rating,Consequence,1,2,3
+Overlap Time Rating,Exposure,0,1,2
+Frequency of disturbance,Consequence,2,1,2
+Change in area rating,Consequence,2,2,2

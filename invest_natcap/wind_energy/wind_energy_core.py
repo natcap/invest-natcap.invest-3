@@ -167,7 +167,12 @@ def biophysical(args):
 
     # Based on the hub height input construct a String to represent the field
     # name in the point shapefile to get the scale value for that height
-    scale_key = 'Ram-0' + str(int(hub_height)) + 'm'
+    scale_key = str(int(hub_height))
+    if len(scale_key) <= 2:
+        scale_key = 'Ram-0' + scale_key + 'm'
+    else:
+        scale_key = 'Ram-' + scale_key + 'm'
+    
     LOGGER.debug('SCALE_key : %s', scale_key)
 
     # The String name for the shape field. So far this is a default from the
