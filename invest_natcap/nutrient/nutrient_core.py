@@ -466,5 +466,14 @@ def split_datasource(ds, uris=None):
     return output_shapefiles
 
 def watershed_value(ws_cost, amt_retained, timespan, discount_rate):
-    pass
+    def discount(r, t):
+        return 1.0/((1.0 + r)**t)
 
+    time_discount = sum([discount(r, t) for (t, r) in
+                         enumerate([discount_rate]*timespan)])
+    LOGGER.debug('Time discount: %s', time_discount)
+
+    value = ws_cost * amt_retained * time_discount
+    LOGGER.debug('Value calculated: %s', value)
+
+    return value

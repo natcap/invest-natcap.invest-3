@@ -167,4 +167,6 @@ class NutrientCoreTest(unittest.TestCase):
                 self.assertEqual(difference_area, reg_area)
 
     def test_watershed_value(self):
-        nutrient_core.watershed_value(0, 0, 0, 0)
+        value = nutrient_core.watershed_value(24, 500, 3, 0.05)
+
+        self.assertAlmostEqual(value, 34312.9251701)
