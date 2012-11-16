@@ -193,7 +193,7 @@ def execute(args):
 
     hra_core.execute(hra_args)
 
-def unpack_over_dicts(csv_uri, args):
+def unpack_over_dict(csv_uri, args):
     '''This throws the dictionary coming from the pre-processor into the
     equivalent dictionaries in args so that they can be processed before being
     passed into the core module.
@@ -209,6 +209,9 @@ def unpack_over_dicts(csv_uri, args):
     Returns nothing.
     '''
     dicts = hra_preprocessor.parse_hra_tables(csv_uri)
+    LOGGER.debug("DICTIONARIES:")
+    LOGGER.debug(dicts.keys())
+
 
     for dict_name in dicts:
         args[dict_name] = dicts[dict_name]
