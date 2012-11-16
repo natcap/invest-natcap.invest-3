@@ -533,15 +533,15 @@ def valuation(args):
         for index, watershed in enumerate(layer):
             ws_data = value_table[index]
 
-            retained_index = watershed.GetFieldIndex('nut_retained')
-            retained = watershed.GetField(retained_index)
+            retained_index = watershed.GetFieldIndex('nut_retain')
+            retained = watershed.GetFieldAsDouble(retained_index)
 
-            value = watershed_value(ws_data['cost'], retained,
-                ws_data['time_span'], ws_data['discount'])
+            value = watershed_value(float(ws_data['cost']), retained,
+                int(ws_data['time_span']), float(ws_data['discount']))
 
             value_index = watershed.GetFieldIndex('nut_value')
             watershed.SetField(value_index, value)
-            watershed.SetFeature()
+            layer.SetFeature(watershed)
         layer.ResetReading()
 
 
@@ -552,6 +552,7 @@ def watershed_value(ws_cost, amt_retained, timespan, discount_rate):
     total_discount = sum(yearly_discounts)
     LOGGER.debug('Time discount: %s', total_discount)
 
+    LOGGER.debug('Cost:%s, Retained:%s', ws_cost, amt_retained)
     value = ws_cost * amt_retained * total_discount
     LOGGER.debug('Value calculated: %s', value)
 
