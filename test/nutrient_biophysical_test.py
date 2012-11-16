@@ -107,6 +107,13 @@ class NutrientCoreTest(unittest.TestCase):
             sample_feature_shapefile, output_path, 'numpy_count')
         self.assertEqual(num_pixels, reg_pixel_count)
 
+        # Test for calculating the sum of the pixels under the shape
+        reg_sum = 178996488.3982418
+        sum_pixels = nutrient_core.get_raster_stat_under_polygon(sample_raster,
+            sample_feature_shapefile, output_path, 'sum')
+        print sum_pixels
+        self.assertAlmostEqual(sum_pixels, reg_sum)
+
         # Verify that the correct exception is raised when an invalid option is
         # passed.
         with self.assertRaises(nutrient_core.OptionNotRecognized):
