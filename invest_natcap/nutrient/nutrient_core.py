@@ -527,7 +527,23 @@ def split_datasource(ds, uris=None):
     return output_shapefiles
 
 def valuation(args):
-    pass
+    value_table = args['valuation_table'].get_table_dictionary('ws_id', False)
+    value_table = dict((int(k), v) for (k, v) in value_table.iteritems())
+    for layer in args['watersheds']:
+        for index, watershed in enumerate(layer):
+            ws_data = value_table[index]
+
+            retained_index = watershed.GetFieldIndex('nut_retained')
+            retained = watershed.GetField(retained_index)
+
+            value = watershed_value(ws_data['cost'], retained,
+                ws_data['time_span'], ws_data['discount'])
+
+            value_index = watershed.GetFieldIndex('nut_value')
+            watershed.SetField(value_index, value)
+            watershed.SetFeature()
+        layer.ResetReading()
+
 
 def watershed_value(ws_cost, amt_retained, timespan, discount_rate):
     yearly_discounts = map(lambda t: 1.0/((1.0 + discount_rate)**t), range(timespan))
