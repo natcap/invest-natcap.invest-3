@@ -40,6 +40,9 @@ def biophysical(args):
     alv = adjusted_loading_value(nutrient_export, args['pixel_yield'],
         args['watersheds'], args['folders']['intermediate'])
 
+    aggregate_by_shape(alv, args['watersheds'], 'nut_export', 'sum')
+    aggregate_by_shape(alv, args['subwatersheds'], 'nut_export', 'sum')
+
     flow_path = get_flow_path(args['dem'])
 
     retention_raster = get_retention(nutrient_retained, alv,
@@ -51,6 +54,36 @@ def biophysical(args):
         'service.tif')
     net_service = service(retention_raster, args['watersheds'],
         threshold_raster_path, service_raster_path)
+
+def aggregate_by_shape(raster, shapefile, fieldname, statistic):
+    """Aggregate raste values under each feature in shapefile, saving the
+    resulting statistic to the shapefile fieldname fieldname.
+
+        raster - a GDAL dataset
+        shapefile - an OGR datasource
+        fieldname - a string denoting a field that exists in shapefile
+        statistic - a statistic to calculate, one of the stat arguments for
+            calculate_raster_value_under_shapefile().
+
+    Returns nothing."""
+
+    shape_list = split_datasource(shapefile)
+
+    # Loop through the provided watersheds, calculate how many pixels are under
+    # the feature and then calculate the per-pixel threshold, setting it to the
+    # 'thresh_c' column.
+    shape_index = 0
+    for layer in shapefile:
+        for shape in layer:
+            aggregate_value = get_raster_stat_under_polygon(raster,
+                shape_list[shape_index], stat=statistic)
+
+            index = shape.GetFieldIndex(fieldname)
+            shape.SetField(index, aggregate_value)
+            layer.SetFeature(shape)
+            shape_index += 1
+        shape_index += 1
+        layer.ResetReading()
 
 def service(retention, watersheds, threshold_uri=None, service_uri=None):
     """Calculate the biophysical service of the nutrient retention on a
