@@ -23,7 +23,7 @@ class TestHRA(unittest.TestCase):
         args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
         args['stressors_dir'] = './data/test_out/HRA/Input/StressorLayers'
         args['csv_uri'] = './data/test_out/HRA/habitat_stressor_ratings'
-        args['grid_size'] = 500
+        args['grid_size'] = 100
         args['risk_eq'] = 'Euclidean'
         args['decay_eq'] = 'Exponential'
 
