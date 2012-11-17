@@ -167,7 +167,12 @@ def biophysical(args):
 
     # Based on the hub height input construct a String to represent the field
     # name in the point shapefile to get the scale value for that height
-    scale_key = 'Ram-0' + str(int(hub_height)) + 'm'
+    scale_key = str(int(hub_height))
+    if len(scale_key) <= 2:
+        scale_key = 'Ram-0' + scale_key + 'm'
+    else:
+        scale_key = 'Ram-' + scale_key + 'm'
+    
     LOGGER.debug('SCALE_key : %s', scale_key)
 
     # The String name for the shape field. So far this is a default from the
@@ -528,23 +533,12 @@ def valuation(args):
     try:
         # Try using the grid points to calculate distances
         grid_points_ds = args['grid_points']
-        land_points_ds = args['land_points']
+        land_shape_ds = args['land_points']
     except KeyError:
         LOGGER.info('No grid points, calculating distances using land polygon')
         # Since the grid points were not provided use the land polygon to get
         # near shore distances
-        land_poly_ds = args['land_polygon']
-        
-        # Get the shortest distance for each ocean point to the provided land
-        # polygon
-        land_to_ocean_dist = point_to_polygon_distance(
-                land_poly_ds, wind_energy_points)
-        
-        # Add the ocean to land distances to each point as a new field
-        ocean_to_land_field = 'O2L'
-        LOGGER.info('Adding ocean to land distances')
-        wind_energy_points = add_field_to_shape_given_list(
-                wind_energy_points, land_to_ocean_dist, ocean_to_land_field)
+        land_shape_ds = args['land_polygon']
     
         # When using the land polygon to conduct distances there is a set
         # constant distance for land point to grid points. The following lines
@@ -562,37 +556,18 @@ def valuation(args):
         grid_to_land_dist = grid_to_land_dist * mean_land_dist
         
         wind_energy_layer = None     
-        
-        # Add a new field to each point with the constant distance from land
-        # point to grid points
-        land_to_grid_field = 'L2G'
-        LOGGER.info('Adding land to grid distances')
-        wind_energy_points = add_field_to_shape_given_list(
-                wind_energy_points, grid_to_land_dist, land_to_grid_field)
-    
     else:
         LOGGER.info('Calculating distances using grid points')
-        # Get the shortest distances from each land point to the grid points
-        land_to_ocean_dist = point_to_polygon_distance(
-                land_points_ds, wind_energy_points)
-        
-        # Get the shortest distances from each ocean point to the land points
-        grid_to_land_dist = point_to_polygon_distance(
-                grid_points_ds, land_points_ds)
-
-        # Add the distances for ocean points to land points as a new field on
-        # the wind energy points datasource
-        LOGGER.info('Adding ocean to land distances to wind energy points')
-        ocean_to_land_field = 'O2L'
-        wind_energy_points = add_field_to_shape_given_list(
-                wind_energy_points, land_to_ocean_dist, ocean_to_land_field)
+        # Get the shortest distances from each grid point to the land points
+        grid_to_land_dist_local = point_to_polygon_distance(
+                grid_points_ds, land_shape_ds)
          
         # Add the distances for land to grid points as a new field  onto the 
         # land points datasource
         LOGGER.info('Adding land to grid distances to land point datasource')
         land_to_grid_field = 'L2G'
-        land_points_ds = add_field_to_shape_given_list(
-                land_points_ds, grid_to_land_dist, land_to_grid_field)
+        land_shape_ds = add_field_to_shape_given_list(
+                land_shape_ds, grid_to_land_dist_local, land_to_grid_field)
   
         # In order to get the proper land to grid distances that each ocean
         # point corresponds to, we need to build up a KDTree from the land
@@ -602,11 +577,11 @@ def valuation(args):
         # energy point ocean points.
 
         # Get the land points geometries
-        land_geoms = get_points_geometries(land_points_ds)
+        land_geoms = get_points_geometries(land_shape_ds)
         
         # Build a dictionary from the land points datasource so that we can
         # have access to what land point has what land to grid distance
-        land_dict = get_dictionary_from_shape(land_points_ds)
+        land_dict = get_dictionary_from_shape(land_shape_ds)
         
         LOGGER.debug('land_dict : %s', land_dict)
         
@@ -615,7 +590,7 @@ def valuation(args):
         
         # Initialize a list to store all the proper grid to land distances to
         # add to the wind energy point datasource later
-        l2g_list = []
+        grid_to_land_dist = []
 
         wind_energy_layer = wind_energy_points.GetLayer()
         for feat in wind_energy_layer:
@@ -633,16 +608,27 @@ def valuation(args):
             # pull that lat/long key, and then use that to index into the
             # dictionary to get the proper distance
             L2G_dist = land_dict[tuple(land_geoms[closest_index])]['L2G'] 
-            l2g_list.append(L2G_dist)
-       
+            grid_to_land_dist.append(L2G_dist)
+
         wind_energy_layer.ResetReading()
         wind_energy_layer = None
-
-        # Add the land to grid distance to each ocean point as a new field
-        LOGGER.info('Adding land to grid distance to wind energy points')
-        wind_energy_points = add_field_to_shape_given_list(
-                wind_energy_points, l2g_list, land_to_grid_field)
     
+    # Get the shortest distances from each ocean point to the land points
+    land_to_ocean_dist = point_to_polygon_distance(
+            land_shape_ds, wind_energy_points)
+    
+    # Add the ocean to land distance value for each point as a new field
+    ocean_to_land_field = 'O2L'
+    LOGGER.info('Adding ocean to land distances')
+    wind_energy_points = add_field_to_shape_given_list(
+            wind_energy_points, land_to_ocean_dist, ocean_to_land_field)
+        
+    # Add the grid to land distance value for each point as a new field
+    land_to_grid_field = 'L2G'
+    LOGGER.info('Adding land to grid distances')
+    wind_energy_points = add_field_to_shape_given_list(
+            wind_energy_points, grid_to_land_dist, land_to_grid_field)
+   
     # Total infield cable cost
     infield_cable_cost = infield_length * infield_cost * number_turbines
     # Total foundation cost
@@ -652,12 +638,13 @@ def valuation(args):
     # Discount rate plus one to get that constant
     disc_const = discount_rate + 1.0
     # Discount constant raised to the total time, a constant found in the NPV
-    # calculation
+    # calculation (1+i)^T
     disc_time = disc_const**time
     
-    wind_energy_layer = wind_energy_points.GetLayer() 
-    LOGGER.info('Creating new NPV and Levelized Cost field')
-    for new_field in ['NPV', 'LevCost']:
+    # Create 3 new fields based on the 3 outputs
+    wind_energy_layer = wind_energy_points.GetLayer()
+    LOGGER.info('Creating new NPV, Levelized Cost and CO2 field')
+    for new_field in ['NPV', 'LevCost', 'CO2']:
         field = ogr.FieldDefn(new_field, ogr.OFTReal)
         wind_energy_layer.CreateField(field)
     
@@ -666,6 +653,7 @@ def valuation(args):
     for feat in wind_energy_layer:
         npv_index = feat.GetFieldIndex('NPV')
         levelized_index = feat.GetFieldIndex('LevCost')
+        co2_index = feat.GetFieldIndex('CO2')
         energy_index = feat.GetFieldIndex('HarvEnergy')
         O2L_index = feat.GetFieldIndex('O2L')
         L2G_index = feat.GetFieldIndex('L2G')
@@ -679,6 +667,9 @@ def valuation(args):
         # Initialize cable cost variable
         cable_cost = 0
 
+        # These constants are based on the literature from Rob's users guide on
+        # valuation. The break at 60 indicates the difference in using AC and
+        # DC current systems
         if total_cable_dist <= 60:
             cable_cost = (.81 * total_mega_watt) + (1.36 * total_cable_dist)
         else:
@@ -704,45 +695,48 @@ def valuation(args):
             comp_one = (rev - ongoing_capex) / disc_const**year
             # Add this years NPV value to the running total
             npv = npv + (comp_one - decommish_capex - capex)
+            # Calculate the numerator value for levelized cost of energy
             levelized_cost_num = levelized_cost_num + (
                     (ongoing_capex / disc_const**year) + 
                     decommish_capex + capex)
+            # Calculate the denominator value for levelized cost of energy
             levelized_cost_denom = levelized_cost_denom + (energy_val /
                     disc_const**year) 
-
+        
+        # Calculate the levelized cost of energy
         levelized_cost = levelized_cost_num / levelized_cost_denom
-
+        # The amount of CO2 not released into the atmosphere, with the constant
+        # conversion factor provided in the users guide by Rob Griffin
+        carbon_emissions = 6.8956e-4 * energy_val
+        
         feat.SetField(npv_index, npv)
         feat.SetField(levelized_index, levelized_cost)
+        feat.SetField(co2_index, carbon_emissions)
+        
         wind_energy_layer.SetFeature(feat)
 
     wind_energy_layer.SyncToDisk()
 
     npv_uri = os.path.join(output_dir, 'npv.tif')
-    out_nodata = 0.0
-    
-    # Create a raster for the points to be vectorized to
-    npv_ds = raster_utils.create_raster_from_vector_extents(
-            30, 30, gdal.GDT_Float32, out_nodata, npv_uri, wind_energy_points)
-    
-    # Interpolate and vectorize the points NPV value onto a gdal dataset
-    LOGGER.info('Creating NPV raster')
-    raster_utils.vectorize_points(
-            wind_energy_points, 'NPV', npv_ds)
-
     levelized_uri = os.path.join(output_dir, 'levelized.tif')
-    out_nodata = 0.0
+    carbon_uri = os.path.join(output_dir, 'carbon_emissions.tif')
+   
+    uri_list = [npv_uri, levelized_uri, carbon_uri]
+    field_list = ['NPV', 'LevCost', 'CO2']
+    out_nodata = float(np.finfo(np.float).tiny)
     
-    # Create a raster for the points to be vectorized to
-    levelized_ds = raster_utils.create_raster_from_vector_extents(
-            30, 30, gdal.GDT_Float32, out_nodata, levelized_uri, wind_energy_points)
-    
-    # Interpolate and vectorize the points NPV value onto a gdal dataset
-    LOGGER.info('Creating Levelized Cost raster')
-    raster_utils.vectorize_points(
-            wind_energy_points, 'LevCost', levelized_ds)
-    LOGGER.info('Leaving Wind Energy Valuation Core')
+    for uri, field in zip(uri_list, field_list):
+        # Create a raster for the points to be vectorized to 
+        LOGGER.info('Creating Output raster : %s', uri)
+        output_ds = raster_utils.create_raster_from_vector_extents(
+            30, 30, gdal.GDT_Float32, out_nodata, uri, wind_energy_points) 
 
+        # Interpolate and vectorize the points field onto a gdal dataset
+        LOGGER.info('Vectorizing the points from the %s field', field)
+        raster_utils.vectorize_points(
+                wind_energy_points, field, output_ds)
+        
+    LOGGER.info('Leaving Wind Energy Valuation Core')
 
 def point_to_polygon_distance(poly_ds, point_ds):
     """Calculates the distances from points in a point geometry shapefile to the

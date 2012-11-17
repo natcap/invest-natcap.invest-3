@@ -21,52 +21,14 @@ class TestHRA(unittest.TestCase):
         args = {}
         args['workspace_dir'] = './data/test_out/HRA' 
         args['habitat_dir'] = './data/test_out/HRA/Input/HabitatLayers'
-        args['stressors_dir'] = './data/test_out/HRA/Input/Stressors'
-
+        args['stressors_dir'] = './data/test_out/HRA/Input/StressorLayers'
+        args['csv_uri'] = './data/test_out/HRA/habitat_stressor_ratings'
         args['grid_size'] = 500
         args['risk_eq'] = 'Euclidean'
         args['decay_eq'] = 'Exponential'
 
         #Want to have some pairs that don't include some stressors to make sure
         #that the model can handle some things not being included all of the time.
-        args['h-s'] = \
-            {('kelp', 'FinfishAquacultureComm'): 
-                {'E':
-                    {'Spatial Overlap': {'Rating': 2.0, 'DQ': 1.0, 'Weight': 1.0},
-                    'Overlap Time': {'Rating': 1.0, 'DQ': 3.0, 'Weight': 2.0}
-                    },
-                'C': {'Change in Area':  {'Rating': 3.0, 'DQ': 0.0, 'Weight' : 2.0},
-                    'Change in Structure': {'Rating': 0.0, 'DQ': 1.0, 'Weight' : 1.0},
-                    'Frequency of Disturbance':{'Rating': 1.0, 'DQ': 1.0, 'Weight' : 1.0},
-                    }
-                }
-            }
-        args['habitats'] = \
-            {'kelp': {'C':
-                        {'Natural Mortality': {'Rating': 1.0, 'DQ':2.0, 'Weight':1.0},
-                        'Recruitment Rate': {'Rating': 1.0, 'DQ':2.0, 'Weight':2.0},
-                        'Recovery Time': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0},
-                        'Connectivity Rate': {'Rating': 0.0, 'DQ':1.0, 'Weight':1.0}
-                        },
-                    'E':
-                        {'Dummy Issue': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0}
-                        }
-                     }
-             }
-
-        args['stressors'] = \
-            {'FinfishAquacultureComm': 
-                {'E':
-                    { 'Intensity': {'Rating': 3.0, 'DQ': 2.0, 'Weight' : 1.0},
-                    'Management Effectiveness':  {'Rating': 1.0, 'DQ': 2.0, 'Weight' : 1.0}
-                    },
-                'C':
-                    {'Dummy Issue': {'Rating': 2.0, 'DQ':1.0, 'Weight':2.0}
-                    }
-                }
-            }             
-        
-        args['buffer_dict'] = {'FinfishAquacultureComm': 5000}
 
         self.args = args
     

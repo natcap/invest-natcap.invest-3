@@ -347,13 +347,13 @@ def make_risk_rasters(direct, h_s, habitats, stressors, risk_eq):
         #sub dictionary based on that pair from h_s, one sub dictionary from
         #habitats based on that particular habitat, and one sub dictionary
         #from stressors based on that particular stressor.
-        h_s_e = h_s[pair]['E'] if h_s[pair]['E'] is not None else None
-        h_e = habitats[h]['E'] if habitats[h]['E'] is not None else None
-        s_e = stressors[s]['E'] if stressors[s]['E'] is not None else None
+        h_s_e = h_s[pair]['E'] if 'E' in h_s[pair] else None
+        h_e = habitats[h]['E'] if 'E' in habitats[h] else None
+        s_e = stressors[s]['E'] if 'E' in stressors[s] else None
 
-        h_s_c = h_s[pair]['C'] if h_s[pair]['C'] is not None else None
-        h_c = habitats[h]['C'] if habitats[h]['C'] is not None else None
-        s_c = stressors[s]['C'] if stressors[s]['C'] is not None else None
+        h_s_c = h_s[pair]['C'] if 'C' in h_s[pair] else None
+        h_c = habitats[h]['C'] if 'C' in habitats[h] else None
+        s_c = stressors[s]['C'] if 'C' in stressors[s] else None
 
         #Pass what should be 3 dictionaries, but might possibly be none values
         #if nothing exists within that type of criteria. We are unsure what
@@ -440,8 +440,9 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
             w = dictionary[criteria]['Weight']
 
             if 0 not in [r, d, w]:
-                sum_top += (r / d * w)
-                sum_bottom += (1 / d * w)
+                #We are casting to a float here because d, w are ints.
+                sum_top += (r / float(d) * w)
+                sum_bottom += (1 / float(d) * w)
 
     S = sum_top / sum_bottom
         
@@ -480,7 +481,7 @@ def make_risk_euc(array, E, C):
         C- The calculated overall consequence value for the given h-s criteria. 
 
     Returns:
-        A numpy array of risk values for the gievn habitat-stressor overlap
+        A numpy array of risk values for the given habitat-stressor overlap
             based on a euclidean risk function.
     '''
     #Want to get an array that has potential decay applied to E, so that the E
