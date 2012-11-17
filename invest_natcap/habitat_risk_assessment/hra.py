@@ -541,5 +541,6 @@ def make_rasters(file_names, dir_path, grid_size):
         band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
         band.Fill(nodata)
 
-        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1])
+        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
+                                                options=['ALL_TOUCHED=TRUE'])
 
