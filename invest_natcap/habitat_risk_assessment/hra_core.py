@@ -440,8 +440,9 @@ def calc_score_value(h_s_sub, hab_sub, stress_sub):
             w = dictionary[criteria]['Weight']
 
             if 0 not in [r, d, w]:
-                sum_top += (r / d * w)
-                sum_bottom += (1 / d * w)
+                #We are casting to a float here because d, w are ints.
+                sum_top += (r / float(d) * w)
+                sum_bottom += (1 / float(d) * w)
 
     S = sum_top / sum_bottom
         
@@ -480,7 +481,7 @@ def make_risk_euc(array, E, C):
         C- The calculated overall consequence value for the given h-s criteria. 
 
     Returns:
-        A numpy array of risk values for the gievn habitat-stressor overlap
+        A numpy array of risk values for the given habitat-stressor overlap
             based on a euclidean risk function.
     '''
     #Want to get an array that has potential decay applied to E, so that the E
