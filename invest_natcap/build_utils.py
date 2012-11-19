@@ -1,8 +1,11 @@
 import subprocess
 import imp
 import os
+import logging
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
+
+LOGGER = logging.getLogger('build_utils')
 
 def invest_version(uri=None):
     """Get the version of InVEST by importing invest_natcap.invest_version and
