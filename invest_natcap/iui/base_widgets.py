@@ -841,7 +841,7 @@ class DynamicText(LabeledElement):
         
             returns a string."""
         value = self.textField.text()
-        return unicode(value)
+        return unicode(value, 'utf-8')
 
     def setValue(self, text):
         """Set the value of self.textField.
@@ -856,7 +856,6 @@ class DynamicText(LabeledElement):
     def resetValue(self):
         DynamicPrimitive.resetValue(self)
         self.setBGcolorSatisfied(True)
-
 
     def updateLinks(self, rootPointer):
         LabeledElement.updateLinks(self, rootPointer)
@@ -1184,6 +1183,7 @@ class FileEntry(DynamicText):
                 self.textField.setText('')
             else:
                 self.textField.setText(os.path.abspath(INVEST_ROOT + text))
+        self.toggle()
 
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.

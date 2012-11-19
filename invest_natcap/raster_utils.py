@@ -458,7 +458,7 @@ def new_raster(cols, rows, projection, geotransform, format, nodata, datatype,
         returns a new GDAL raster with the parameters as described above"""
 
     driver = gdal.GetDriverByName(format)
-    new_raster = driver.Create(unicode(outputURI).encode('utf-8'), cols, rows, bands, datatype)
+    new_raster = driver.Create(outputURI.encode('utf-8'), cols, rows, bands, datatype)
     new_raster.SetProjection(projection)
     new_raster.SetGeoTransform(geotransform)
     for i in range(bands):
