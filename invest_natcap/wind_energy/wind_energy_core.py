@@ -868,7 +868,7 @@ def build_list_points_from_dict(main_dict):
 
     for key in sorted_keys:
         val = main_dict[key]
-        points_list.append([float(val['long']), float(val['lati']), 0])
+        points_list.append([float(val['long']), float(val['lati'])])
 
     return points_list
 
