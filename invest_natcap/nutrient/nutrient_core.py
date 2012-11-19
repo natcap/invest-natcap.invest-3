@@ -45,12 +45,47 @@ def biophysical(args):
     retention_raster = get_retention(nutrient_retained, alv,
         flow_path)
 
+    for shapefile in [args['watersheds'], args['subwatersheds']]:
+        for field, raster in [
+            ('nut_export', alv), ('nut_retain', retention_raster)]:
+                aggregate_by_shape(raster, shapefile, field, 'sum')
+
     threshold_raster_path = os.path.join(args['folders']['intermediate'],
         'threshold.tif')
     service_raster_path = os.path.join(args['folders']['intermediate'],
         'service.tif')
     net_service = service(retention_raster, args['watersheds'],
         threshold_raster_path, service_raster_path)
+
+def aggregate_by_shape(raster, shapefile, fieldname, statistic):
+    """Aggregate raste values under each feature in shapefile, saving the
+    resulting statistic to the shapefile fieldname fieldname.
+
+        raster - a GDAL dataset
+        shapefile - an OGR datasource
+        fieldname - a string denoting a field that exists in shapefile
+        statistic - a statistic to calculate, one of the stat arguments for
+            calculate_raster_value_under_shapefile().
+
+    Returns nothing."""
+
+    shape_list = split_datasource(shapefile)
+
+    # Loop through the provided watersheds, calculate how many pixels are under
+    # the feature and then calculate the per-pixel threshold, setting it to the
+    # 'thresh_c' column.
+    shape_index = 0
+    for layer in shapefile:
+        for shape in layer:
+            aggregate_value = get_raster_stat_under_polygon(raster,
+                shape_list[shape_index], stat=statistic)
+
+            index = shape.GetFieldIndex(fieldname)
+            shape.SetField(index, aggregate_value)
+            layer.SetFeature(shape)
+            shape_index += 1
+        shape_index += 1
+        layer.ResetReading()
 
 def service(retention, watersheds, threshold_uri=None, service_uri=None):
     """Calculate the biophysical service of the nutrient retention on a
@@ -252,6 +287,7 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
             'count' - Causes this function to return an int of the number of
                 pixels in raster that are under shape.
             'count_numpy' - same as 'count', only implemented in numpy.
+            'sum' - calculcates the sum of the pixels under each feature.
             'op' - use the user-defined operation function.  Return type is up
                 to the user.
         op=None - a python function that takes a GDAL dataset as it's single
@@ -364,6 +400,31 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
             LOGGER.debug('In mask matrix: %s, under shape: %s', matrix.size,
                 count)
             return count
+    elif stat == 'sum':
+        mask_fill = 0.0
+        LOGGER.debug('Setting mask_fill to %s', mask_fill)
+
+        def get_stats(mask_raster):
+            """Calculate the sum of all the pixels under the mask.
+                Returns an int or a float."""
+            LOGGER.debug('Calculating pixel sum under the mask')
+
+            # Now that we have a mask of which pixels are in the shape of interest, make
+            # an output raster where the pixels have the value of the input raster's
+            # pixel only if the pixel is in the watershed of interest.  Otherwise, the
+            # pixel will have the nodata value.
+            LOGGER.debug('Getting the pixels under the mask')
+            watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
+                raster], lambda x, y: y if x == 1 else temp_nodata,
+                nodata=temp_nodata, raster_out_uri=raster_path)
+
+            stats = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
+            columns = watershed_pixels.RasterXSize
+            rows = watershed_pixels.RasterYSize
+            mean = stats[2]
+
+            pixels_in_raster = float(columns * rows)
+            return mean * pixels_in_raster
     elif stat == 'op':
         LOGGER.debug('Using the user-defined operation from arguments')
         def get_stats(mask_raster):
@@ -465,3 +526,34 @@ def split_datasource(ds, uris=None):
     LOGGER.debug('Finished creating the new shapefiles %s', output_shapefiles)
     return output_shapefiles
 
+def valuation(args):
+    value_table = args['valuation_table'].get_table_dictionary('ws_id', False)
+    value_table = dict((int(k), v) for (k, v) in value_table.iteritems())
+    for layer in args['watersheds']:
+        for index, watershed in enumerate(layer):
+            ws_data = value_table[index]
+
+            retained_index = watershed.GetFieldIndex('nut_retain')
+            retained = watershed.GetFieldAsDouble(retained_index)
+
+            value = watershed_value(float(ws_data['cost']), retained,
+                int(ws_data['time_span']), float(ws_data['discount']))
+
+            value_index = watershed.GetFieldIndex('nut_value')
+            watershed.SetField(value_index, value)
+            layer.SetFeature(watershed)
+        layer.ResetReading()
+
+
+def watershed_value(ws_cost, amt_retained, timespan, discount_rate):
+    yearly_discounts = map(lambda t: 1.0/((1.0 + discount_rate)**t), range(timespan))
+    LOGGER.debug('Yearly discounts: %s' % yearly_discounts)
+
+    total_discount = sum(yearly_discounts)
+    LOGGER.debug('Time discount: %s', total_discount)
+
+    LOGGER.debug('Cost:%s, Retained:%s', ws_cost, amt_retained)
+    value = ws_cost * amt_retained * total_discount
+    LOGGER.debug('Value calculated: %s', value)
+
+    return value

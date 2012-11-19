@@ -17,6 +17,7 @@ import fileio
 CMD_FOLDER = '.'
 INVEST_ROOT = './'
 IUI_DIR = os.path.dirname(os.path.abspath(__file__))
+ENCODING = sys.getfilesystemencoding()
 
 import invest_natcap.iui
 LOGGER = invest_natcap.iui.get_ui_logger('base_widgets')
@@ -402,7 +403,7 @@ class DynamicPrimitive(DynamicElement):
             return self.root.type_registrar.eval(self.attributes['dataType'],
                 self.value())
         except KeyError:
-            return str(self.value())
+            return unicode(self.value())
 
     def getOutputValue(self):
         """Return the output value of this element, applying any necessary
@@ -454,6 +455,11 @@ class DynamicPrimitive(DynamicElement):
         return False
 
     def validate(self):
+        # If the root element has not yet been set, we should just return since
+        # validation will fail anyways.
+        if self.root == None:
+            return
+
         if self.isRequired() and not self.requirementsMet():
             self.set_error('Element is required', 'error')
         else:
@@ -716,7 +722,7 @@ class DynamicText(LabeledElement):
         #If the user has defined some default text for this text field, insert 
         #it into the text field.
         if "defaultValue" in attributes:
-            self.textField.insert(attributes['defaultValue'])
+            self.setValue(attributes['defaultValue'])
 
         #If the user has defined a string regular expression of text the user is
         #allowed to input, set that validator up with the setValidateField()
@@ -835,7 +841,7 @@ class DynamicText(LabeledElement):
         
             returns a string."""
         value = self.textField.text()
-        return str(value)
+        return unicode(value)
 
     def setValue(self, text):
         """Set the value of self.textField.
@@ -1166,7 +1172,7 @@ class FileEntry(DynamicText):
 
         # Expand a '~' in the parameter text if it is present.  Otherwise, this
         # returns the path as it was passed in.
-        text = os.path.expanduser(text)
+        text = os.path.expanduser(text.encode(ENCODING))
 
         if os.path.isabs(text):
             self.textField.setText(text)
@@ -1635,6 +1641,7 @@ class OperationDialog(QtGui.QDialog):
 
         self.timer.timeout.connect(self.check_messages)
         self.timer.start(100)
+        self.write('Initializing...\n')
 
     def check_messages(self):
         if not self.exec_controller.is_finished():
@@ -2317,7 +2324,7 @@ class ExecRoot(Root):
             #Check if workspace has an output directory, prompt the user that 
             #it will be overwritten
             try:
-                uri = str(self.allElements['workspace'].textField.text())
+                uri = unicode(self.allElements['workspace'].textField.text())
                 if os.path.isdir(os.path.join(uri,'output')) or \
                         os.path.isdir(os.path.join(uri,'Output')):
                     dialog = WarningDialog()

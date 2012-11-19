@@ -4,6 +4,8 @@ from urllib2 import urlopen
 import platform
 import sys
 
+import build_utils
+
 #The following line of code hides some errors that seem important and doesn't
 #raise exceptions on them.  FOr example:
 #ERROR 5: Access window out of range in RasterIO().  Requested
@@ -13,14 +15,7 @@ import sys
 #from osgeo import gdal
 #gdal.UseExceptions()
 
-# This should be left as 'dev' unless BUILDING A RELEASE.
-__version__ = 'dev'
-if __version__ == 'dev':
-    import datetime
-    #Name the version based on the time it was built.
-    #get rid of the colons in the time
-    __version__ = 'dev_r'+datetime.datetime.now().isoformat('_').replace(':','_')
-
+__version__ = build_utils.invest_version()
 
 def log_model(model_name, model_version=None):
     """Submit a POST request to the defined URL with the modelname passed in as

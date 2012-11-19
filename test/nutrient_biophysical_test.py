@@ -8,10 +8,12 @@ from osgeo import ogr
 
 from invest_natcap import raster_utils
 from invest_natcap.nutrient import nutrient_biophysical
+from invest_natcap.nutrient import nutrient_valuation
 from invest_natcap.nutrient import nutrient_core
 
 BASE_DATA = os.path.join('data', 'base_data', 'terrestrial')
 NUTR_INPUT = os.path.join('data', 'nutrient', 'input')
+VAL_INPUT = os.path.join('data', 'nutrient', 'valuation_input')
 
 WORKSPACE = os.path.join('data', 'test_out', 'nutrient')
 
@@ -58,6 +60,16 @@ class NutrientBiophysicalTest(unittest.TestCase):
             pass
         shutil.copytree(WORKSPACE, dest)
 
+class NutrientValuationTest(unittest.TestCase):
+    def setUp(self):
+        self.args = {
+            'workspace_dir': WORKSPACE,
+            'watersheds_uri': os.path.join(VAL_INPUT, 'watersheds.shp'),
+            'valuation_table_uri': os.path.join(VAL_INPUT, 'valuation_table.csv')
+        }
+
+    def test_smoke(self):
+        nutrient_valuation.execute(self.args)
 
 class NutrientCoreTest(unittest.TestCase):
     def setUp(self):
@@ -94,6 +106,13 @@ class NutrientCoreTest(unittest.TestCase):
         num_pixels = nutrient_core.get_raster_stat_under_polygon(sample_raster,
             sample_feature_shapefile, output_path, 'numpy_count')
         self.assertEqual(num_pixels, reg_pixel_count)
+
+        # Test for calculating the sum of the pixels under the shape
+        reg_sum = 178996488.3982418
+        sum_pixels = nutrient_core.get_raster_stat_under_polygon(sample_raster,
+            sample_feature_shapefile, output_path, 'sum')
+        print sum_pixels
+        self.assertAlmostEqual(sum_pixels, reg_sum)
 
         # Verify that the correct exception is raised when an invalid option is
         # passed.
@@ -165,3 +184,11 @@ class NutrientCoreTest(unittest.TestCase):
                 difference_area = intersection.GetArea()
                 reg_area = reg_geom.GetArea()
                 self.assertEqual(difference_area, reg_area)
+
+    def test_watershed_value(self):
+        value = nutrient_core.watershed_value(24, 500, 3, 0.05)
+
+        self.assertAlmostEqual(value, 34312.9251701)
+
+    def test_valuation(self):
+        pass
