@@ -673,7 +673,9 @@ def valuation(args):
         O2L_index = feat.GetFieldIndex('O2L')
         L2G_index = feat.GetFieldIndex('L2G')
         
-        energy_val = feat.GetField(energy_index)
+        # The energy value converted from Wh (Watt hours as output from CK's
+        # biophysical model equations) to kWh
+        energy_val = feat.GetField(energy_index) / 1000.0
         O2L_val = feat.GetField(O2L_index)
         L2G_val = feat.GetField(L2G_index)
 
