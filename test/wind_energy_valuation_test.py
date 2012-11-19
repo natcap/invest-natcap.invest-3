@@ -13,7 +13,7 @@ class TestWindEnergyValuation(unittest.TestCase):
     def test_wind_energy_valuation_land(self):
         """A test for the valuation module using land polygon to get
             distances"""
-        #raise SkipTest
+        raise SkipTest
 
         out_dir = './data/test_out/wind_energy/valuation/full_land_poly/'
         input_dir = './data/wind_energy_data/'
@@ -144,4 +144,39 @@ class TestWindEnergyValuation(unittest.TestCase):
 
         invest_test_core.assertTwoShapesEqualURI(
                 self, regression_file_uri, test_uri)
+
+    def test_wind_energy_valuation_dictionary_to_shapefile(self):
+        """A regression test for making a point shapefile from a dictionary"""
+
+        #raise SkipTest
+        out_dir = './data/test_out/wind_energy/valuation/dictionary_to_shape/'
+        regression_dir = './data/wind_energy_regression_data/'
+
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
+
+        regression_file_uri = os.path.join(
+                regression_dir, 'dict_to_shape.shp')
+
+        out_uri = os.path.join(out_dir, 'dict_to_shape.shp')
+
+        dict_data = {0 : {'lati':42.689, 'long':-70.096, 'height':10,
+                          'K_shape':2.567},
+                     1 : {'lati':42.689, 'long':-69.796, 'height':10,
+                          'K_shape':2.567},
+                     2 : {'lati':42.496, 'long':-69.796, 'height':10,
+                          'K_shape':2.567},
+                     3 : {'lati':42.496, 'long':-70.096, 'height':10,
+                          'K_shape':2.567}}
+        
+        layer_name = 'layer_one'
+    
+        result = wind_energy_valuation.dictionary_to_shapefile(
+                dict_data, layer_name, out_uri)
+
+        result = None
+
+        invest_test_core.assertTwoShapesEqualURI(
+                self, regression_file_uri, out_uri)
+
 
