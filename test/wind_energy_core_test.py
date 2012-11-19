@@ -349,32 +349,17 @@ class TestInvestWindEnergyCore(unittest.TestCase):
             point shapefile """
         raise SkipTest
         regression_dir = './data/wind_energy_regression_data/'
-        polygon_ds_uri = os.path.join(regression_dir, 'projected_land_poly.shp')
-        point_ds_uri = os.path.join(
-                regression_dir, 'wind_points_reprojected.shp')
-      
+        datasource_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
 
-        out_dir = './data/test_out/wind_energy/valuation/add_field_to_shape/'
-        copy_uri = os.path.join(out_dir, 'wind_points_new_field.shp')
+        datasource = ogr.Open(datasource_uri)
 
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
+        expected_list = np.array([[-70.096,42.689],[-69.796,42.689],[-69.796,42.496],[-70.096,42.496]])
+        
+        result = wind_energy_core.get_points_geometries(datasource)
 
-        if os.path.isfile(copy_uri):
-            os.remove(copy_uri)
+        LOGGER.debug('geometry list : %s', result)
 
-        polygon_ds = ogr.Open(polygon_ds_uri)
-        point_ds = ogr.Open(point_ds_uri)
-
-        copy_drv = ogr.GetDriverByName('ESRI Shapefile')
-        copy_ds = copy_drv.CopyDataSource(point_ds, copy_uri)
-
-        distances = wind_energy_core.point_to_polygon_distance(
-                polygon_ds, copy_ds)
-
-        _ = wind_energy_core.add_field_to_shape_given_list(
-                copy_ds, distances, 'O2L')
-
+        self.assertTrue((expected_list == result).all())
 
     def test_wind_energy_core_valuation_get_dictionary_from_shape(self):
         """A unit test for building a dictionary from a shapefile"""
