@@ -785,7 +785,8 @@ def point_to_polygon_distance(poly_ds, point_ds):
     LOGGER.info('find distances')
     distances = []
     for point in point_list:
-        point_dist = point.distance(polygon_collection)
+        # Get the distance in meters and convert to km
+        point_dist = point.distance(polygon_collection) / 1000.0
         distances.append(point_dist)
 
     LOGGER.debug('Distance List Length : %s', len(distances))
