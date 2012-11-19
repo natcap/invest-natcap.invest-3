@@ -316,33 +316,21 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         """A unit test for getting the shortest distances between geometries
             (two shapefiles) """
         raise SkipTest
-        regression_dir = './data/wind_energy_regression_data/'
-        polygon_ds_uri = os.path.join(regression_dir, 'projected_land_poly.shp')
-        point_ds_uri = os.path.join(
-                regression_dir, 'wind_points_reprojected.shp')
-      
 
-        out_dir = './data/test_out/wind_energy/valuation/add_field_to_shape/'
-        copy_uri = os.path.join(out_dir, 'wind_points_new_field.shp')
+        array_one = np.array([[1,1], [2,4], [13,8], [11, 6]])
+        array_two = np.array([[0,0], [20,14], [9,8], [7, 16]])
 
-        if not os.path.isdir(out_dir):
-            os.makedirs(out_dir)
+        expected_distances = np.array([1.4142, 9.2195, 2.8284, 10])
+        expected_indexes = np.array([0, 2, 3, 2])
 
-        if os.path.isfile(copy_uri):
-            os.remove(copy_uri)
+        result = wind_energy_core.distance_kd(array_one, array_two)
 
-        polygon_ds = ogr.Open(polygon_ds_uri)
-        point_ds = ogr.Open(point_ds_uri)
+        LOGGER.debug('kd distances : %s', result)
 
-        copy_drv = ogr.GetDriverByName('ESRI Shapefile')
-        copy_ds = copy_drv.CopyDataSource(point_ds, copy_uri)
+        for exp, res in zip(expected_distances, result[0]):
+            self.assertAlmostEqual(exp, res, 4)
 
-        distances = wind_energy_core.point_to_polygon_distance(
-                polygon_ds, copy_ds)
-
-        _ = wind_energy_core.add_field_to_shape_given_list(
-                copy_ds, distances, 'O2L')
-
+        self.assertTrue((expected_indexes == result[1]).all()) 
 
     def test_wind_energy_core_valuation_get_points_geometries(self):
         """A unit test for properly reading coordinates into a list from a
