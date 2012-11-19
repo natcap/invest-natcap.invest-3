@@ -26,6 +26,13 @@ class JSONHandler(object):
         self.dict = None
         self._load_file()
 
+    def delete(self):
+        try:
+            os.remove(self.uri)
+            self.dict = {}
+        except:
+            print 'Could not remove nonexistent file %s' % self.uri
+            pass
 
     def _load_file(self):
         try:

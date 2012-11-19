@@ -197,7 +197,8 @@ class TestInvestWindEnergyCore(unittest.TestCase):
                     self, reg_file, out_file)
 
     def test_wind_energy_core_valuation_point_to_polygon_distance(self):
-        """"""
+        """A unit test for getting the shortest distance from a point geometry
+            to a polygon geometry"""
         raise SkipTest
 
         regression_dir = './data/wind_energy_regression_data/'
@@ -215,8 +216,9 @@ class TestInvestWindEnergyCore(unittest.TestCase):
 
 
     def test_wind_energy_core_valuation_add_field_to_shape_given_list(self):
-        """ """
-        #raise SkipTest
+        """A regression test for adding a field to a shapefile given a list of
+            data entries"""
+        raise SkipTest
         regression_dir = './data/wind_energy_regression_data/'
         polygon_ds_uri = os.path.join(regression_dir, 'projected_land_poly.shp')
         point_ds_uri = os.path.join(
@@ -243,3 +245,118 @@ class TestInvestWindEnergyCore(unittest.TestCase):
 
         _ = wind_energy_core.add_field_to_shape_given_list(
                 copy_ds, distances, 'O2L')
+
+
+
+    def test_wind_energy_core_valuation_build_subset_dictionary(self):
+        """A unit test for building a dictionary from another dictionary"""
+        raise SkipTest
+
+        main_dict = {0 : {'lati':42.689, 'long':-70.096, 'height':10,
+                          'K_shape':2.567},
+                     1 : {'lati':42.689, 'long':-69.796, 'height':10,
+                          'K_shape':3.102},
+                     2 : {'lati':42.496, 'long':-69.796, 'height':10,
+                          'K_shape':2.798},
+                     3 : {'lati':42.496, 'long':-70.096, 'height':10,
+                          'K_shape':1.989}}
+
+        expected_dict = {0:2.567, 1:3.102, 2:2.798, 3:1.989}
+
+        result = wind_energy_core.build_subset_dictionary(main_dict)
+
+        self.assertEqual(expected_list, result)
+
+
+    def test_wind_energy_core_valuation_build_list_points_from_dict(self):
+        """A unit test for building a list of points from a dictionary"""
+        raise SkipTest
+
+        main_dict = {0 : {'lati':42.689, 'long':-70.096, 'height':10,
+                          'K_shape':2.567},
+                     1 : {'lati':42.689, 'long':-69.796, 'height':10,
+                          'K_shape':2.567},
+                     2 : {'lati':42.496, 'long':-69.796, 'height':10,
+                          'K_shape':2.567},
+                     3 : {'lati':42.496, 'long':-70.096, 'height':10,
+                          'K_shape':2.567}}
+
+        expected_list = [[-70.096, 42.689],[-69.796, 42.689],
+                         [-69.796, 42.496],[-70.096, 42.496]]
+
+        result = wind_energy_core.build_list_points_from_dict(main_dict)
+
+        self.assertEqual(expected_list, result)
+
+    def test_wind_energy_core_valuation_distance_kd(self):
+        """A unit test for getting the shortest distances between geometries
+            (two shapefiles) """
+        raise SkipTest
+
+        array_one = np.array([[1,1], [2,4], [13,8], [11, 6]])
+        array_two = np.array([[0,0], [20,14], [9,8], [7, 16]])
+
+        expected_distances = np.array([1.4142, 9.2195, 2.8284, 10])
+        expected_indexes = np.array([0, 2, 3, 2])
+
+        result = wind_energy_core.distance_kd(array_one, array_two)
+
+        LOGGER.debug('kd distances : %s', result)
+
+        for exp, res in zip(expected_distances, result[0]):
+            self.assertAlmostEqual(exp, res, 4)
+
+        self.assertTrue((expected_indexes == result[1]).all()) 
+
+    def test_wind_energy_core_valuation_get_points_geometries(self):
+        """A unit test for properly reading coordinates into a list from a
+            point shapefile """
+        raise SkipTest
+        regression_dir = './data/wind_energy_regression_data/'
+        datasource_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
+
+        datasource = ogr.Open(datasource_uri)
+
+        expected_list = np.array([[-70.096,42.689],[-69.796,42.689],[-69.796,42.496],[-70.096,42.496]])
+        
+        result = wind_energy_core.get_points_geometries(datasource)
+
+        LOGGER.debug('geometry list : %s', result)
+
+        self.assertTrue((expected_list == result).all())
+
+    def test_wind_energy_core_valuation_get_dictionary_from_shape(self):
+        """A unit test for building a dictionary from a shapefile"""
+        raise SkipTest
+        regression_dir = './data/wind_energy_regression_data/'
+        datasource_uri = os.path.join(regression_dir, 'dict_to_shape.shp')
+      
+        datasource = ogr.Open(datasource_uri)
+
+        expected_dict = {(-69.796,42.689) : {'lati':42.689, 'long':-69.796, 'height':10,
+                                             'K_shape':2.567},
+                         (-69.796,42.496) : {'lati':42.496, 'long':-69.796, 'height':10,
+                                             'K_shape':2.567},
+                         (-70.096,42.496) : {'lati':42.496, 'long':-70.096, 'height':10,
+                                             'K_shape':2.567},
+                         (-70.096,42.689) : {'lati':42.689, 'long':-70.096, 'height':10,
+                                             'K_shape':2.567}}
+        
+        result = wind_energy_core.get_dictionary_from_shape(datasource)
+
+        LOGGER.debug('dictionary : %s', result)
+
+        self.assertEqual(expected_dict, result)
+
+
+
+
+
+
+
+
+
+
+
+
+
