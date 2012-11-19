@@ -857,7 +857,6 @@ class DynamicText(LabeledElement):
         DynamicPrimitive.resetValue(self)
         self.setBGcolorSatisfied(True)
 
-
     def updateLinks(self, rootPointer):
         LabeledElement.updateLinks(self, rootPointer)
         
@@ -1184,6 +1183,7 @@ class FileEntry(DynamicText):
                 self.textField.setText('')
             else:
                 self.textField.setText(os.path.abspath(INVEST_ROOT + text))
+        self.toggle()
 
 class YearEntry(DynamicText):
     """This represents all the components of a 'Year' line in the LULC box.
@@ -2135,12 +2135,14 @@ class MainWindow(QtGui.QMainWindow):
         self.file_menu = QtGui.QMenu('&File')
         self.load_file_action = self.file_menu.addAction('&Load parameters from file ...')
         self.save_file_action = self.file_menu.addAction('&Save parameters ...')
+        self.remove_lastrun = self.file_menu.addAction('&Clear cached runs ...')
         self.exit_action = self.file_menu.addAction('Exit')
         self.menuBar().addMenu(self.file_menu)
 
         self.exit_action.triggered.connect(self.ui.closeWindow)
         self.save_file_action.triggered.connect(self.ui.save_parameters_to_file)
         self.load_file_action.triggered.connect(self.ui.load_parameters_from_file)
+        self.remove_lastrun.triggered.connect(self.ui.remove_lastrun)
 
 class ExecRoot(Root):
     def __init__(self, uri, layout, object_registrar, main_window=None):
@@ -2258,6 +2260,21 @@ class ExecRoot(Root):
                     # Raised if we can't disconnect any signals
                     pass
                 self.messageArea.linkActivated.connect(self.resetParametersToDefaults)
+
+    def remove_lastrun(self):
+        dialog = WarningDialog()
+        dialog.setWindowTitle('Clear cached runs?')
+        dialog.set_title('Clear cached runs?')
+        dialog.body.setText('Are you sure you want to clear any automatically'
+            ' cached runs?  This will not affect any of your saved parameter'
+            ' sets.')
+        dialog.ok_button.setText('Yes')
+        exit_code = dialog.exec_()
+
+        if exit_code != 0:
+            self.last_run_handler.delete()
+            self.lastRun = {}
+            self.messageArea.setText('Cached runs have been cleared')
 
     def setWindowSize(self):
         #this groups all elements together at the top, leaving the
