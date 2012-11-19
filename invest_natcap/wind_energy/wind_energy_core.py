@@ -508,19 +508,34 @@ def valuation(args):
     # Get constants from turbine_dict
     turbine_dict = args['turbine_dict']
     turbine_name = 'Siemens'
+    # The length of infield cable in km
     infield_length = float(turbine_dict[turbine_name]['infield_length'])
+    # The cost of infield cable in millions of dollars per km
     infield_cost = float(turbine_dict[turbine_name]['infield_cost'])
+    # The cost of the foundation in millions of dollars 
     foundation_cost = float(turbine_dict[turbine_name]['foundation_cost'])
+    # The cost of each turbine unit in millions of dollars
     unit_cost = float(turbine_dict[turbine_name]['unit_cost'])
+    # The installation cost as a percentage of final capital costs converted to
+    # a decimal
     install_cost = float(turbine_dict[turbine_name]['install_cost']) / 100.00
+    # The miscellaneous costs as a percentage of CAPEX converted to a decimal
     misc_capex_cost = float(turbine_dict[turbine_name]['misc_capex']) / 100.00
+    # The operations and maintenance costs as a percentage of CAPEX converted
+    # to a decimal
     op_maint_cost = float(turbine_dict[turbine_name]['op_maint']) / 100.00
+    # The distcount rate as a percentage converted to a decimal
     discount_rate = float(turbine_dict[turbine_name]['discount_rate']) / 100.00
+    # The cost to decommission the farm as a percentage of CAPEX converted to a
+    # decimal
     decom = float(turbine_dict[turbine_name]['decom']) / 100.00
     turbine_name = turbine_dict[turbine_name]['type']
+    # The mega watt value for the turbines in MW
     mega_watt = float(turbine_dict[turbine_name]['mw'])
+    # The average land cable distance in km
     avg_land_cable_dist = float(
             turbine_dict[turbine_name]['avg_land_cable_dist'])
+    # The mean land distance to a grid connection point in km
     mean_land_dist = float(turbine_dict[turbine_name]['mean_land_dist'])
     time = int(turbine_dict[turbine_name]['time'])
 
