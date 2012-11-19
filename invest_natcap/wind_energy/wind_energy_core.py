@@ -646,15 +646,20 @@ def valuation(args):
    
     # Total infield cable cost
     infield_cable_cost = infield_length * infield_cost * number_turbines
+    LOGGER.debug('infield_cable_cost : %s', infield_cable_cost)
     # Total foundation cost
     total_foundation_cost = (foundation_cost + unit_cost) * number_turbines
+    LOGGER.debug('total_foundation_cost : %s', total_foundation_cost)
     # Nominal Capital Cost (CAP) minus the cost of cable which needs distances
     cap_less_dist = infield_cable_cost + total_foundation_cost
+    LOGGER.debug('cap_less_dist : %s', cap_less_dist)
     # Discount rate plus one to get that constant
     disc_const = discount_rate + 1.0
+    LOGGER.debug('discount_rate : %s', disc_const)
     # Discount constant raised to the total time, a constant found in the NPV
     # calculation (1+i)^T
     disc_time = disc_const**time
+    LOGGER.debug('disc_time : %s', disc_time)
     
     # Create 3 new fields based on the 3 outputs
     wind_energy_layer = wind_energy_points.GetLayer()
