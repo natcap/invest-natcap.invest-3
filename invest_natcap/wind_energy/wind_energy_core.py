@@ -757,7 +757,17 @@ def valuation(args):
         LOGGER.info('Vectorizing the points from the %s field', field)
         raster_utils.vectorize_points(
                 wind_energy_points, field, output_ds)
-        
+
+    land_shape_layer = land_shape_ds.GetLayer()
+    for uri in uri_list:
+        dataset = gdal.Open(uri, gdal.GA_Update)
+        # Mask out the output rasters to make them more presentable by taking
+        # any overlap from the land polygon and setting those pixel values to
+        # nodata
+        gdal.RasterizeLayer(
+                dataset, [1], land_shape_layer, burn_values=[out_nodata], 
+                options = ['ALL_TOUCHED=TRUE']) 
+
     LOGGER.info('Leaving Wind Energy Valuation Core')
 
 def point_to_polygon_distance(poly_ds, point_ds):
