@@ -18,6 +18,7 @@
         "PHP": {
             "predictor": "predictors.php",
             "recreation": "recreation.php",
+            "scenario": "scenario.php",
             "regression": "regression.php"
         },
         "regression": "regression.r",
@@ -30,7 +31,7 @@
         "log": "log.txt",
         "comments": "comments.txt",
         "PHPlog": "php.log",
-        "Rlog": "r.out",
+        "Rlog": "r",
         "params": "aoi_params.csv",
         "results": "results.zip"
     },

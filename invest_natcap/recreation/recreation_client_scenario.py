@@ -5,6 +5,7 @@ import urllib2
 import time
 
 import logging
+import json
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -15,27 +16,20 @@ LOGGER = logging.getLogger('recreation_client')
 def execute(args):
     # Register the streaming http handlers with urllib2
     register_openers()
+
+    #load configuration
+    configFileName=os.path.dirname(os.path.abspath(__file__))+os.sep+"config.json"
+    LOGGER.debug("Loading server configuration from %s." % configFileName)
+    configFile=open(configFileName,'r')
+    config=json.loads(configFile.read())
+    configFile.close()
     
-    #constants
-    severPath="http://ncp-skookum.stanford.edu/~mlacayo"
-    predictorScript="predictors.php"
-    scenarioScript="scenario.php"
-    regressionScript="regression.php"
-    dataFolder="data"
-    logName="log.txt"
-    resultsZip="results.zip"
-    
-    #parameters
-    LOGGER.debug("Processing parameters.")
-    gridFileName = args["gridFileName"]
-    paramsFileName = args["paramsFileName"]
-    data_dir = args["data_dir"]
-    workspace_dir = args["workspace_dir"]
-    comments = args["comments"]
-    
+    if args["data_dir"][-1] != os.sep:
+        args["data_dir"]=args["data_dir"]+os.sep
+
     LOGGER.info("Validating grid.")
-    dirname=os.path.dirname(gridFileName)+os.sep
-    fileName, fileExtension = os.path.splitext(gridFileName)
+    dirname=os.path.dirname(args["gridFileName"])+os.sep
+    fileName, fileExtension = os.path.splitext(args["gridFileName"])
     gridFileNameSHP = fileName+".shp"
     gridFileNameSHX = fileName+".shx"
     gridFileNameDBF = fileName+".dbf"
@@ -48,49 +42,57 @@ def execute(args):
     LOGGER.info("Processing predictors.")
     predictors = []
     userCategorization = []
-    if not data_dir == "":
-        for f in os.listdir(data_dir):
+    if not args["data_dir"] == "":
+        for f in os.listdir(args["data_dir"]):
             fileName, fileExtension = os.path.splitext(f)
             if fileExtension == ".shp":
-                if os.path.exists(data_dir+fileName+".shx") and \
-                os.path.exists(data_dir+fileName+".shp") and \
-                os.path.exists(data_dir+fileName+".prj"):
+                if os.path.exists(args["data_dir"]+fileName+".shx") and \
+                os.path.exists(args["data_dir"]+fileName+".dbf") and \
+                os.path.exists(args["data_dir"]+fileName+".prj"):
                     LOGGER.info("Found %s predictor." % (fileName))
                     predictors.append(fileName)
                 else:
                     LOGGER.error("Predictor %s is missing file(s)." % (fileName))
+                    if not os.path.exists(args["data_dir"]+fileName+".shx"):
+                        LOGGER.debug("Missing %s." % args["data_dir"]+fileName+".shx")
+                    if not os.path.exists(args["data_dir"]+fileName+".dbf"):
+                        LOGGER.debug("Missing %s." % args["data_dir"]+fileName+".dbf")
+                    if not os.path.exists(args["data_dir"]+fileName+".prj"):
+                        LOGGER.debug("Missing %s." % args["data_dir"]+fileName+".prj")
+                        
+                    
             elif fileExtension == ".tsv":
                 LOGGER.info("Found %s categorization." % fileName)
                 userCategorization.append(fileName)
 
     attachments={}                
     for predictor in predictors:
-        attachments[predictor+".shp"]= open(data_dir+predictor+".shp","rb")
-        attachments[predictor+".shx"]= open(data_dir+predictor+".shx","rb")
-        attachments[predictor+".dbf"]= open(data_dir+predictor+".dbf","rb")
-        attachments[predictor+".prj"]= open(data_dir+predictor+".prj","rb")
+        attachments[predictor+".shp"]= open(args["data_dir"]+predictor+".shp","rb")
+        attachments[predictor+".shx"]= open(args["data_dir"]+predictor+".shx","rb")
+        attachments[predictor+".dbf"]= open(args["data_dir"]+predictor+".dbf","rb")
+        attachments[predictor+".prj"]= open(args["data_dir"]+predictor+".prj","rb")
 
     for tsv in userCategorization:
-        attachments[tsv+".tsv"]= open(data_dir+tsv+".tsv","rb")
+        attachments[tsv+".tsv"]= open(args["data_dir"]+tsv+".tsv","rb")
         
     LOGGER.debug("Uploading predictors.")
     datagen, headers = multipart_encode(attachments)
-    url = severPath+"/"+predictorScript
+    url = config["server"]+config["files"]["PHP"]["predictor"]
     request = urllib2.Request(url, datagen, headers)
     sessid = urllib2.urlopen(request).read().strip()
+    args["sessid"] = sessid
     LOGGER.debug("Server session %s." % (sessid))
     
-    attachments = {"sessid": sessid,
+    attachments = {"json" : json.dumps(args, indent=4),
                    "gridSHP": open(gridFileNameSHP, "rb"),
                    "gridSHX": open(gridFileNameSHX, "rb"),
                    "gridDBF": open(gridFileNameDBF, "rb"),
-                   "gridPRJ": open(gridFileNamePRJ, "rb"),
-                   "comments": comments}
+                   "gridPRJ": open(gridFileNamePRJ, "rb")}
     
     datagen, headers = multipart_encode(attachments)
     
     # Create the Request object
-    url = severPath+"/"+scenarioScript
+    url = config["server"]+config["files"]["PHP"]["scenario"]
     request = urllib2.Request(url, datagen, headers)
     
     LOGGER.info("Sending request to server.")
@@ -101,7 +103,7 @@ def execute(args):
     
     LOGGER.info("Processing data.")
 
-    url = severPath+"/"+dataFolder+"/"+sessid+"/"+logName    
+    url = config["server"]+config["paths"]["relative"]["data"]+sessid+"/"+config["files"]["log"]    
     complete = False
     oldlog=""
     time.sleep(5)
@@ -138,7 +140,7 @@ def execute(args):
             time.sleep(15)                    
                 
     LOGGER.info("Running regression.")
-    url = severPath+"/"+regressionScript
+    url = config["server"]+config["files"]["PHP"]["regression"]
     datagen, headers = multipart_encode({"sessid": sessid})
     request = urllib2.Request(url, datagen, headers)
     sessid2 = urllib2.urlopen(request).read().strip()
@@ -146,11 +148,11 @@ def execute(args):
     if sessid2 != sessid:
         raise ValueError,"Something weird happened the sessid didn't match."
     
-    url = severPath+"/"+dataFolder+"/"+sessid+"/"+resultsZip
+    url = config["server"]+config["paths"]["relative"]["data"]+sessid+"/"+config["files"]["results"]
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
-    with open(workspace_dir+os.sep+resultsZip, 'wb') as fp:
+    with open(args["workspace_dir"]+os.sep+config["files"]["results"], 'wb') as fp:
       while True:
         chunk = req.read(CHUNK)
         if not chunk: break
@@ -159,23 +161,14 @@ def execute(args):
     LOGGER.info("Transaction complete")
         
 if __name__ == "__main__":
-    args = {}
-    if len(sys.argv)==6:
-        LOGGER.info("Running model with user provided parameters.")
-        gridFileName = sys.argv[1]
-        paramsFileName = sys.argv[2]
-        data_dir = sys.argv[3]        
-        workspace_dir = sys.argv[4]
-        comments = sys.argv[5]
-
+    if len(sys.argv)>1:
+        modelRunFileName=sys.argv[1]
     else:
-        raise ValueError, "There is no default scenario run."
+        modelRunFileName=os.path.abspath(os.path.dirname(sys.argv[0]))+os.sep+"default.json"
 
-    LOGGER.debug("Constructing args dictionary.")
-    args["grid"] = gridFileName
-    args["params"] = paramsFileName
-    args["data_dir"] = data_dir    
-    args["workspace_dir"] = workspace_dir
-    args["comments"] = comments
+    #load model run parameters
+    modelRunFile=open(modelRunFileName,'r')
+    args=json.loads(modelRunFile.read())
+    modelRunFile.close()
 
     execute(args)
