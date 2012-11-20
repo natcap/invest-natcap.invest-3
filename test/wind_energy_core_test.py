@@ -199,22 +199,47 @@ class TestInvestWindEnergyCore(unittest.TestCase):
     def test_wind_energy_core_valuation_point_to_polygon_distance(self):
         """A unit test for getting the shortest distance from a point geometry
             to a polygon geometry"""
-        raise SkipTest
+        #raise SkipTest
 
         regression_dir = './data/wind_energy_regression_data/'
         polygon_ds_uri = os.path.join(regression_dir, 'projected_land_poly.shp')
-        point_ds_uri = os.path.join(
-                regression_dir, 'wind_points_reprojected.shp')
+        point_ds_uri = os.path.join(regression_dir, 'test_points_projected.shp')
        
         polygon_ds = ogr.Open(polygon_ds_uri)
         point_ds = ogr.Open(point_ds_uri)
 
-        distances = wind_energy_core.point_to_polygon_distance(
+        expected_list = [6.78634, 21.84987, 12.75408, 46.35042]
+
+        result = wind_energy_core.point_to_polygon_distance(
                 polygon_ds, point_ds)
 
-        LOGGER.debug('Distances: %s', distances)
+        LOGGER.debug('result: %s', result)
 
+        for exp, res in zip(expected_list, result):
+            self.assertAlmostEqual(exp, res, 4)
 
+    def test_wind_energy_core_valuation_point_to_polygon_distance2(self):
+        """A unit test for getting the shortest distance from a point geometry
+            to another point geometry"""
+        #raise SkipTest
+
+        regression_dir = './data/wind_energy_regression_data/val_grid'
+        point_1_ds_uri = os.path.join(regression_dir, 'val_grid_point_projected.shp')
+        point_2_ds_uri = os.path.join(regression_dir, 'val_land_point_projected.shp')
+       
+        point_1_ds = ogr.Open(point_1_ds_uri)
+        point_2_ds = ogr.Open(point_2_ds_uri)
+
+        expected_list = [21.33411, 32.91942] 
+
+        result = wind_energy_core.point_to_polygon_distance(
+                point_1_ds, point_2_ds)
+
+        LOGGER.debug('result: %s', result)
+
+        for exp, res in zip(expected_list, result):
+            self.assertAlmostEqual(exp, res, 4)
+    
     def test_wind_energy_core_valuation_add_field_to_shape_given_list(self):
         """A regression test for adding a field to a shapefile given a list of
             data entries"""
@@ -246,8 +271,6 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         _ = wind_energy_core.add_field_to_shape_given_list(
                 copy_ds, distances, 'O2L')
 
-
-
     def test_wind_energy_core_valuation_build_subset_dictionary(self):
         """A unit test for building a dictionary from another dictionary"""
         raise SkipTest
@@ -266,7 +289,6 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         result = wind_energy_core.build_subset_dictionary(main_dict)
 
         self.assertEqual(expected_list, result)
-
 
     def test_wind_energy_core_valuation_build_list_points_from_dict(self):
         """A unit test for building a list of points from a dictionary"""
