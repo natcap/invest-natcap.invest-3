@@ -889,57 +889,6 @@ def distance_kd(array_one, array_two):
     dist_and_index = [ dist, closest_index ]
     return dist_and_index
 
-def lat_long_to_cartesian(points):
-    """Convert a numpy array of points that are in radians to cartesian
-        coordinates
-
-        points - a numpy array of points in radians
-
-        returns - a numpy array of points in cartesian coordinates"""
-
-    radius = 6378.1 # km
-
-    cartesian_points = np.zeros(points.shape)
-    index = 0
-
-    for point in points:
-        x = radius * math.cos(point[0]) * math.sin(point[1])
-        y = radius * math.sin(point[0]) * math.sin(point[1])
-        z = radius * math.cos(point[1])
-        cartesian_points[index] = [x, y, z]
-    
-        index = index + 1
-
-    return cartesian_points
-
-def convert_degrees_to_radians(points):
-    """Convert a numpy array of points that are in degrees to radians
-
-        points - a numpy array of points that are in degrees
-
-        returns - a numpy array of points that are in radians
-        """
-
-    radian_points = math.pi * points / 180.0
-
-    return radian_points
-
-def transform_array_of_points(points, source_srs, target_srs):
-    """Transform an array of points into another spatial reference
-
-        points - a numpy array of points. ex : [[1,1], [1,5]...]
-        source_srs - the current Spatial Reference
-        target_srs - the desired Spatial Reference
-
-        returns - a numpy array of points tranformed to the target_srs
-        """
-
-    coord_transform = osr.CoordinateTransformation(source_srs, target_srs)
-
-    points_copy = np.copy(points)
-
-    return np.array(coord_transform.TransformPoints(points_copy))
-
 def get_points_geometries(shape):
     """This function takes a shapefile and for each feature retrieves
     the X and Y value from it's geometry. The X and Y value are stored in
