@@ -153,7 +153,7 @@ def execute(args):
     urllib2.urlopen(request).read()
 
     #download results
-    url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["results"]
+    url = config["server"]+config["paths"]["relative"]["data"]+args["sessid"]+"/"+config["files"]["results"]
     LOGGER.info("URL: %s." % url)
 
     req = urllib2.urlopen(url)

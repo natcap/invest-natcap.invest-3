@@ -1,0 +1,153 @@
+{
+    "id" : "window",
+    "label": "Habitat Risk Assessment",
+    "targetScript" : "invest_natcap.habitat_risk_assessment.hra",
+    "modelName" : "habitat_risk_assessment",
+    "localDocURI": "./documentation/habitat_risk.html",
+    "height": 550,
+    "width" : 700,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "../HabitatRiskAssess",
+                    "required": true,
+                    "validateAs": {"type": "folder"},
+                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the shapefiles and textfiles produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                },
+                {
+                    "id" : "csv_loc",
+                    "args_id" : "csv_uri",
+                    "type": "folder",
+                    "label": "Rating CSV Folder",
+                    "defaultValue": "../HabitatRiskAssess/habitat_stressor_ratings",
+                    "required": true,
+                    "validateAs": {"type": "folder"},
+                    "helpText": "A folder containing multiple CSV files. Each file refers to the overlap between a habitat and a stressor pulled from habitat and stressor shapeiles during the run of the HRA Preprocessor.
+                    },
+                {
+                    "id" : "habitats_loc",
+                    "args_id" : "habitat_dir",
+                    "type": "folder",
+                    "label": "Habitats Shapefile Directory",
+                    "defaultValue": "../HabitatRiskAssess/Input/HabitatLayers",
+                    "required": true,
+                    "helpText": "The location of a folder which contains the shpefile representations of the habitats being used within the assessment."
+                },
+                {
+                    "id" : "stressors_loc",
+                    "args_id" : "stressor_dir",
+                    "type": "folder",
+                    "label": "Stressor Shapefile Directory",
+                    "defaultValue": "../HabitatRiskAssess/Input/StressorLayers",
+                    "required": true,
+                    "helpText": "The location of a folder which contains the shpefile representations of the stressors being used within the assessment."
+                },
+		{
+                    "id" : "grid_size",
+                    "args_id" : "grid_size",
+                    "type": "text",
+                    "label": "Raster Pixel Size",
+                    "defaultValue": "500",
+                    "required": true,
+                    "validateAs": {"type": "number"},
+                    "dataType": "int",
+                    "helpText": "The size that should be used to grid the given habitat and stressor shapefiles into rasters. This value will be the pixel size of the completed raster files."
+                },
+                {
+                    "id" : "risk_eq",
+                    "args_id" : "risk_eq",
+                    "type": "dropdown",
+                    "label": "Hub Heights (meters)",
+                    "defaultValue": "None",
+                    "options" : ["None", "Multiplicative", "Euclidean"],
+                    "required": true,
+                    "returns" : "strings",
+                    "helpText": "An integer value for the hub height of the turbines."
+                    "dataType": "float",
+                    "type": "file",
+                    "label": "Daily Water Temperature at Farm Table",
+                    "defaultValue": "../Aquaculture/Input/Temp_Daily.csv",
+                    "required": true,
+                    "validateAs": { "type": "CSV"},
+                    "helpText": "Users must provide a time series of daily water temperature (C) for each farm in the shapefile. When daily temperatures are not available, users can interpolate seasonal or monthly temperatures to a daily resolution. Water temperatures collected at existing aquaculture facilities are preferable, but if unavailable, users can consult online sources such as NOAAs 4 km AVHRR Pathfinder Data and Canadas Department of Fisheries and Oceans Oceanographic Database. The most appropriate temperatures to use are those from the upper portion of the water column, which are the temperatures experienced by the fish in the netpens."
+                },
+                {
+                    "id" : "farm_operations",
+                    "args_id" : "farm_op_tbl",
+                    "type": "file",
+                    "label": "Farm Operations Table",
+                    "defaultValue": "../Aquaculture/Input/Farm_Operations.csv",
+                    "required": true,
+                    "validateAs": {"type": "CSV"},
+                    "helpText": "A table of general and farm-specific operations parameters. Please refer to the sample data table for reference to ensure correct incorporation of data in the model. If you would like to use your own dataset, you can modify values for farm operations (applied to all farms) and/or add new farms (beginning with row 32). However, do not modify the location of cells in this template. If for example, you choose to run the model for three farms only, they should be listed in rows 10, 11 and 12 (farms 1, 2, and 3, respectively). Several default values that are applicable to Atlantic salmon farming in British Columbia are also included in the sample data table."
+                },
+                {
+                    "id" : "outplant_buffer",
+                    "args_id" : "outplant_buffer",
+                    "type": "text",
+                    "label": "Outplant Date Buffer",
+                    "defaultValue": "3",
+                    "required": true,
+                    "validateAs": {"type": "number"},
+                    "dataType": "int",
+                    "helpText": "This value will allow the outplant start day to start plus or minus the number of days specified here."
+                },
+                {
+                    "id": "valuation",
+                    "args_id" : "do_valuation",
+                    "type": "checkbox",
+                    "label": "Run Valuation? (optional)",
+                    "required": true,
+                    "defaultValue": false,
+                    "helpText": "By checking this box, you are requesting valuation analysis."
+                },
+                {
+                    "id" : "market_price",
+                    "type": "text",
+                    "label": "Market Price per Kilogram of Processed Fish",
+                    "args_id": "p_per_kg",
+                    "required": false,
+                    "enabledBy": "valuation",
+                    "defaultValue": "2.25",
+                    "requiredIf": ["valuation"],
+                    "dataType": "float",
+                    "validateAs": {"type": "number"},
+                    "helpText": "Default value comes from Urner-Berry monthly fresh sheet reports on price of farmed Atlantic salmon."
+				},
+				{
+                    "id" : "fraction_price",
+                    "type": "text",
+                    "label": "Fraction of Price that Accounts to Costs",
+                    "args_id": "frac_p",
+                    "required": false,
+                    "enabledBy": "valuation",
+                    "defaultValue": "0.3",
+                    "requiredIf": ["valuation"],
+                    "dataType": "float",
+                    "validateAs": {"type": "number"},
+                    "helpText": "Fraction of market price that accounts for costs rather than profit. Default value is 0.3 (30%)."
+				},
+				{
+                    "id" : "discount_rate",
+                    "type": "text",
+                    "label": "Daily Market Discount Rate",
+                    "args_id": "discount",
+                    "required": false,
+                    "enabledBy": "valuation",
+                    "defaultValue": "0.000192",
+                    "requiredIf": ["valuation"],
+                    "dataType": "float",
+                    "validateAs": {"type": "number"},
+                    "helpText": "We use a 7% annual discount rate, adjusted to a daily rate of 0.000192 for 0.0192% (7%/365 days)."
+				}
+            ]
+        }
+    ]
+}

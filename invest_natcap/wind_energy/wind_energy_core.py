@@ -508,19 +508,34 @@ def valuation(args):
     # Get constants from turbine_dict
     turbine_dict = args['turbine_dict']
     turbine_name = 'Siemens'
+    # The length of infield cable in km
     infield_length = float(turbine_dict[turbine_name]['infield_length'])
+    # The cost of infield cable in millions of dollars per km
     infield_cost = float(turbine_dict[turbine_name]['infield_cost'])
+    # The cost of the foundation in millions of dollars 
     foundation_cost = float(turbine_dict[turbine_name]['foundation_cost'])
+    # The cost of each turbine unit in millions of dollars
     unit_cost = float(turbine_dict[turbine_name]['unit_cost'])
+    # The installation cost as a percentage of final capital costs converted to
+    # a decimal
     install_cost = float(turbine_dict[turbine_name]['install_cost']) / 100.00
+    # The miscellaneous costs as a percentage of CAPEX converted to a decimal
     misc_capex_cost = float(turbine_dict[turbine_name]['misc_capex']) / 100.00
+    # The operations and maintenance costs as a percentage of CAPEX converted
+    # to a decimal
     op_maint_cost = float(turbine_dict[turbine_name]['op_maint']) / 100.00
+    # The distcount rate as a percentage converted to a decimal
     discount_rate = float(turbine_dict[turbine_name]['discount_rate']) / 100.00
+    # The cost to decommission the farm as a percentage of CAPEX converted to a
+    # decimal
     decom = float(turbine_dict[turbine_name]['decom']) / 100.00
     turbine_name = turbine_dict[turbine_name]['type']
+    # The mega watt value for the turbines in MW
     mega_watt = float(turbine_dict[turbine_name]['mw'])
+    # The average land cable distance in km
     avg_land_cable_dist = float(
             turbine_dict[turbine_name]['avg_land_cable_dist'])
+    # The mean land distance to a grid connection point in km
     mean_land_dist = float(turbine_dict[turbine_name]['mean_land_dist'])
     time = int(turbine_dict[turbine_name]['time'])
 
@@ -631,15 +646,20 @@ def valuation(args):
    
     # Total infield cable cost
     infield_cable_cost = infield_length * infield_cost * number_turbines
+    LOGGER.debug('infield_cable_cost : %s', infield_cable_cost)
     # Total foundation cost
     total_foundation_cost = (foundation_cost + unit_cost) * number_turbines
+    LOGGER.debug('total_foundation_cost : %s', total_foundation_cost)
     # Nominal Capital Cost (CAP) minus the cost of cable which needs distances
     cap_less_dist = infield_cable_cost + total_foundation_cost
+    LOGGER.debug('cap_less_dist : %s', cap_less_dist)
     # Discount rate plus one to get that constant
     disc_const = discount_rate + 1.0
+    LOGGER.debug('discount_rate : %s', disc_const)
     # Discount constant raised to the total time, a constant found in the NPV
     # calculation (1+i)^T
     disc_time = disc_const**time
+    LOGGER.debug('disc_time : %s', disc_time)
     
     # Create 3 new fields based on the 3 outputs
     wind_energy_layer = wind_energy_points.GetLayer()
@@ -658,7 +678,9 @@ def valuation(args):
         O2L_index = feat.GetFieldIndex('O2L')
         L2G_index = feat.GetFieldIndex('L2G')
         
-        energy_val = feat.GetField(energy_index)
+        # The energy value converted from Wh (Watt hours as output from CK's
+        # biophysical model equations) to kWh
+        energy_val = feat.GetField(energy_index) / 1000.0
         O2L_val = feat.GetField(O2L_index)
         L2G_val = feat.GetField(L2G_index)
 
@@ -770,7 +792,8 @@ def point_to_polygon_distance(poly_ds, point_ds):
     LOGGER.info('find distances')
     distances = []
     for point in point_list:
-        point_dist = point.distance(polygon_collection)
+        # Get the distance in meters and convert to km
+        point_dist = point.distance(polygon_collection) / 1000.0
         distances.append(point_dist)
 
     LOGGER.debug('Distance List Length : %s', len(distances))
@@ -845,7 +868,7 @@ def build_list_points_from_dict(main_dict):
 
     for key in sorted_keys:
         val = main_dict[key]
-        points_list.append([float(val['long']), float(val['lati']), 0])
+        points_list.append([float(val['long']), float(val['lati'])])
 
     return points_list
 

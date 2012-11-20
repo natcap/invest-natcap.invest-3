@@ -1,8 +1,11 @@
 import subprocess
 import imp
 import os
+import logging
 
 HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
+
+LOGGER = logging.getLogger('build_utils')
 
 def invest_version(uri=None):
     """Get the version of InVEST by importing invest_natcap.invest_version and
@@ -17,13 +20,18 @@ def invest_version(uri=None):
     Returns a python bytestring with the version identifier, as appropriate for
     the development version or the release version."""
 
+    LOGGER.debug('Getting the InVEST version for URI=%s' % uri)
     try:
         name = os.path.splitext(os.path.basename(uri))[0]
         version_info = imp.load_source(name, uri)
-    except (ImportError, IOError, AttributeError):
-        # If we can't find the version file, it means that it hasn't been
-        # written for the current state of InVEST.  Create the version file and
-        # then try importing it again.
+    except (ImportError, IOError, AttributeError, TypeError):
+        # ImportError thrown when we can't import the target source
+        # IOError thrown if the target source file does not exist on disk
+        # AttributeError thrown in some odd cases
+        # TypeError thrown when uri == None.
+        # In any of these cases, try creating the version file and import
+        # once again.
+        LOGGER.debug('Unable to import version.  Creating a new file')
         if uri != None:
             write_version_file(uri)
             version_info = imp.load_source(name, uri)

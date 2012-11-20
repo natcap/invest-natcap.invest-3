@@ -12,8 +12,8 @@
             "type": "list",	        
 		    "elements": [
 				{
-				    "id" : "grid",
-				    "args_id" : "grid",
+				    "id" : "gridFileName",
+				    "args_id" : "gridFileName",
 				    "type": "file",
 				    "label": "Grid",
 				    "validateAs": {"type": "OGR"},
@@ -28,8 +28,8 @@
 				    "required": true
 				},					        
 		        {
-		        	"id" : "scenario_dir",
-		        	"args_id" : "scenario_dir",
+		        	"id" : "data_dir",
+		        	"args_id" : "data_dir",
 					"type": "folder",
                 	"label": "Data Directory",
                 	"required": true

@@ -130,7 +130,7 @@ def execute(args):
     #Since we need to use the h-s, stressor, and habitat dicts elsewhere, want
     #to use the pre-process module to unpack them.
     unpack_over_dict(args['csv_uri'], args)
-
+    LOGGER.debug(args)
     hra_args = {}
 
     inter_dir = os.path.join(args['workspace_dir'], 'Intermediate')
@@ -209,8 +209,9 @@ def unpack_over_dict(csv_uri, args):
     Returns nothing.
     '''
     dicts = hra_preprocessor.parse_hra_tables(csv_uri)
+    LOGGER.debug(csv_uri)
     LOGGER.debug("DICTIONARIES:")
-    LOGGER.debug(dicts.keys())
+    LOGGER.debug(dicts)
 
 
     for dict_name in dicts:
@@ -235,7 +236,8 @@ def add_rast_to_dict(direct, dictionary):
     #Glob.glob gets all of the files that fall into the form .tif, and makes
     #them into a list.
     file_names = glob.glob(os.path.join(direct, '*.tif'))
-
+    LOGGER.debug("DICTIONARY:")
+    LOGGER.debug(dictionary.keys())
     for r_file in file_names:
         
         #The return of os.path.split is a tuple where everything after the final
@@ -539,5 +541,6 @@ def make_rasters(file_names, dir_path, grid_size):
         band, nodata = raster_utils.extract_band_and_nodata(r_dataset)
         band.Fill(nodata)
 
-        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1])
+        gdal.RasterizeLayer(r_dataset, [1], layer, burn_values=[1], 
+                                                options=['ALL_TOUCHED=TRUE'])
 
