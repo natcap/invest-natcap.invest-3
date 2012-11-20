@@ -199,7 +199,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
     def test_wind_energy_core_valuation_point_to_polygon_distance(self):
         """A unit test for getting the shortest distance from a point geometry
             to a polygon geometry"""
-        #raise SkipTest
+        raise SkipTest
 
         regression_dir = './data/wind_energy_regression_data/'
         polygon_ds_uri = os.path.join(regression_dir, 'projected_land_poly.shp')
