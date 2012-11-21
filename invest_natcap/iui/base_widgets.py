@@ -1051,6 +1051,8 @@ class MultiElement(Container):
         """Set the local input values to values.  values should be a python
             list of values to be set.  A new element will be created for each
             item in values.   Returns nothing."""
+
+        self.resetValue()
         for value in values:
             self.add_element(value)
 
