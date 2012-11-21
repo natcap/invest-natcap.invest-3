@@ -911,6 +911,22 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
     pixel_retained_band.WriteArray(result.reshape((n_rows, n_cols)))
     return pixel_retained_dataset
 
+def burn_into_dataset(
+    dataset, datasource, datasource_field, datasource_value, burn_value):
+    """Burns a constant value into a dataset given a datasource and a 
+        polygon in that datasource.
+
+        dataset - gdal dataset to burn value into
+        datasource - ogr dataset to use to mark the area to burn
+        datasource_field - the name of the field in the datasource to 
+           identify the feature we'll burn over
+        burn_value - the value to burn into dataset, should be of the 
+           same type as the dataset
+
+        returns nothing, but burns burn_value into dataset where 
+           datasource.datasource_filed == datasource_value"""
+    pass
+
 def sum_over_region(dataset, aoi, mask_path = None, mask_field_value = None):
     """A function to aggregate the sum of all the pixels in dataset that
         overlap the aoi .
