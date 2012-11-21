@@ -10,6 +10,7 @@ import numpy as np
 
 import invest_cython_core
 from invest_natcap import raster_utils as raster_utils
+from invest_natcap.raster_utils import SpatialExtentOverlapException
 
 LOGGER = logging.getLogger('nutrient_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -336,9 +337,14 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
             # pixel only if the pixel is in the watershed of interest.  Otherwise, the
             # pixel will have the nodata value.
             LOGGER.debug('Getting the pixels under the mask')
-            watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
-                raster], lambda x, y: y if x == 1 else temp_nodata,
-                nodata=temp_nodata, raster_out_uri=raster_path)
+            try:
+                watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
+                    raster], lambda x, y: y if x == 1 else temp_nodata,
+                    nodata=temp_nodata, raster_out_uri=raster_path)
+            except SpatialExtentOverlapException:
+                LOGGER.debug('Watershed does not overlap with the base raster. '
+                    'Returning 0\'s for statistics')
+                return (0., 0., 0., 0.)
 
             LOGGER.debug('Extracting statistics from raster')
             stats = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
@@ -414,9 +420,12 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
             # pixel only if the pixel is in the watershed of interest.  Otherwise, the
             # pixel will have the nodata value.
             LOGGER.debug('Getting the pixels under the mask')
-            watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
-                raster], lambda x, y: y if x == 1 else temp_nodata,
-                nodata=temp_nodata, raster_out_uri=raster_path)
+            try:
+                watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
+                    raster], lambda x, y: y if x == 1 else temp_nodata,
+                    nodata=temp_nodata, raster_out_uri=raster_path)
+            except SpatialExtentOverlapException:
+                return 0.0
 
             stats = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
             columns = watershed_pixels.RasterXSize
