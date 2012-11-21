@@ -1963,6 +1963,8 @@ class Root(DynamicElement):
                 element.resetValue()
             elif issubclass(element.__class__, Container):
                 element.resetValue()
+            elif issubclass(element.__class__, Root):
+                element.resetParametersToDefaults()
 
     def errors_exist(self):
         """Check to see if any elements in this UI have errors.
