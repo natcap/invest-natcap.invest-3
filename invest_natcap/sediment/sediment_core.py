@@ -912,7 +912,7 @@ def calculate_pixel_retained(pixel_sediment_flow_dataset,
     return pixel_retained_dataset
 
 def burn_into_dataset(
-    dataset, datasource, datasource_field, datasource_value, burn_value):
+    dataset, datasource, datasource_field, burn_value_dictionary, output_uri):
     """Burns a constant value into a dataset given a datasource and a 
         polygon in that datasource.
 
@@ -920,12 +920,20 @@ def burn_into_dataset(
         datasource - ogr dataset to use to mark the area to burn
         datasource_field - the name of the field in the datasource to 
            identify the feature we'll burn over
-        burn_value - the value to burn into dataset, should be of the 
-           same type as the dataset
+        burn_value_dictionary - 
+            { datasource_value: value_to_burn_on_that_dataset, ...}
 
         returns nothing, but burns burn_value into dataset where 
            datasource.datasource_filed == datasource_value"""
-    pass
+    rasterize_options = ["ATTRIBUTE=%s" % datasource_field]
+    layer = datasource.GetLayer()
+    gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1],
+                        options = rasterize_options)
+
+    raster_utils.reclassify_by_dictionary(
+        dataset, burn_value_dictionary, output_uri, 'GTiff', -1.0,
+        gdal.GDT_Float32)
+
 
 def sum_over_region(dataset, aoi, mask_path = None, mask_field_value = None):
     """A function to aggregate the sum of all the pixels in dataset that
@@ -1029,8 +1037,20 @@ def generate_report(sediment_export_dataset, sediment_retained_dataset,
     header_line += 'sed_exported,sed_retained\n'
     table_file.write(header_line)
 
+
+    #create a new raster to hold the watershed level export values
+    upret_sm_nodata = -1.0
+    upret_sm_dataset = raster_utils.new_raster_from_base(
+        sediment_export_dataset, '',
+        'MEM', upret_sm_nodata, gdal.GDT_Float32)
+    upret_sm_uri = os.path.join(os.path.dirname(output_table_uri), 'upret_sm.tif')
+    upret_sm_band = upret_sm_dataset.GetRasterBand(1)
+    upret_sm_band.Fill(upret_sm_nodata)
+
+
     #Now visit each feature to dump its feature values plus the calcualted
     #values from the sediment model
+    id_to_export = {}
     for feature_index in range(watershed_layer.GetFeatureCount()):
         feature = watershed_layer.GetFeature(feature_index)
         value_line = ''
@@ -1040,6 +1060,8 @@ def generate_report(sediment_export_dataset, sediment_retained_dataset,
             field_index = feature.GetFieldIndex(field_name)
             field_value = feature.GetField(field_index)
             value_line += str(field_value) + ','
+            if field_name == 'id':
+                watershed_id = field_value
         #Dump the calculated values to the output row
         #sediment export
         sed_export = \
@@ -1049,7 +1071,14 @@ def generate_report(sediment_export_dataset, sediment_retained_dataset,
             sum_over_region(sediment_retained_dataset, watershed_aoi, 
             mask_path = None, mask_field_value = (field_name, field_value))
 
+        id_to_export[watershed_id] = sed_export
+
         value_line += str(sed_export) + ','
         #sediment retained
         value_line += str(sed_retained) + '\n'
         table_file.write(value_line)
+
+    
+    burn_into_dataset(upret_sm_dataset, watershed_aoi, 'id', id_to_export, upret_sm_uri)
+
+#def burn_values_to_dataset_areas(dataset, aoi, field
