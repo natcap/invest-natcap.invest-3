@@ -5,6 +5,7 @@ import re
 import logging
 import os
 import sys
+import shutil
 
 from osgeo import gdal
 from osgeo import ogr
@@ -25,7 +26,9 @@ def make_folder(folder):
         LOGGER.debug('Making the folder %s', folder)
     except OSError:
         # Thrown when folder already exists
-        LOGGER.debug('Folder %s already exists', folder)
+        LOGGER.debug('Folder %s already exists, deleting and recreating', folder)
+        shutil.rmtree(folder)
+        os.makedirs(folder)
 
 def execute(args):
     """File opening layer for the InVEST nutrient retention model.
@@ -78,11 +81,14 @@ def execute(args):
         new_uri = os.path.splitext(str(args[shape_key]))[0]
         LOGGER.debug('Opening "%s" shapefile at %s', new_key, new_uri)
 
-        sample_shape = ogr.Open(args[shape_key].encode(encoding), 1)
+        base_shape_uri = args[shape_key].encode(encoding)
+        sample_shape = ogr.Open(base_shape_uri, 1)
         shapefile_folder = os.path.join(output_dir, new_key)
         make_folder(shapefile_folder)
 
-        copy_uri = os.path.join(output_dir, new_key)
+        #hard coding the output shapefile to be named nutrient_summary.shp
+        copy_uri = os.path.join(output_dir, new_key, 'nutrient_summary.shp')
+        
         copy = ogr_driver.CopyDataSource(sample_shape, copy_uri)
         LOGGER.debug('Saving shapefile copy to %s', copy_uri)
         LOGGER.debug('Copied shape: %s', copy)
