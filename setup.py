@@ -50,7 +50,7 @@ packages = ['invest_natcap',
 #This makes a destination directory with the name invest_version_datetime.
 #Will make it easy to see the difference between different builds of the 
 #same version.
-DIST_DIR = 'invest_'+VERSION.replace('.','_')
+DIST_DIR = 'invest_'+VERSION.replace('.','_').replace(':', '_')
 
 #If it's windows assume we're going the py2exe route.
 if platform.system() == 'Windows':
@@ -87,7 +87,8 @@ if platform.system() == 'Windows':
          'invest_overlap_analysis.py',
          'invest_overlap_analysis_mz.py',
          'invest_sediment_biophysical.py',
-         'invest_habitat_risk_assessment.py']
+         'invest_habitat_risk_assessment.py',
+         'invest_coastal_vulnerability.py']
 
     #Need to manually bring along the json configuration files to
     #the current build directory
@@ -107,7 +108,8 @@ if platform.system() == 'Windows':
                'invest_natcap/iui/biodiversity_biophysical.json',
                'invest_natcap/iui/overlap_analysis.json',
                'invest_natcap/iui/overlap_analysis_mz.json',
-               'invest_natcap/iui/sediment_biophysical.json']))
+               'invest_natcap/iui/sediment_biophysical.json',
+               'invest_natcap/iui/coastal_vulnerability.json']))
     data_files.append(
         ('invest_natcap/iui', glob.glob('invest_natcap/iui/*.png')))
     data_files.append(('installer', glob.glob('installer/*')))
