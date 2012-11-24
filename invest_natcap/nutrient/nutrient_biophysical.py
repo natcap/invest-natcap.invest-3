@@ -81,7 +81,8 @@ def execute(args):
         LOGGER.debug('Opening "%s" shapefile at %s', new_key, new_uri)
 
         base_shape_uri = args[shape_key].encode(encoding)
-        sample_shape = ogr.Open(base_shape_uri, 1)
+        LOGGER.debug('Opening with encoded %s' % base_shape_uri)
+        sample_shape = ogr.Open(base_shape_uri, 0)
         shapefile_folder = os.path.join(output_dir, new_key)
         make_folder(shapefile_folder)
 
