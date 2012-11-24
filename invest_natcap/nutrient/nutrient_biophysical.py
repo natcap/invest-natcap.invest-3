@@ -21,11 +21,10 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class InvalidNutrient(Exception):pass
 
 def make_folder(folder):
-    try:
-        os.makedirs(folder)
+    if not os.path.exists(folder):
         LOGGER.debug('Making the folder %s', folder)
-    except OSError:
-        # Thrown when folder already exists
+        os.makedirs(folder)
+    else:
         LOGGER.debug('Folder %s already exists, deleting and recreating', folder)
         shutil.rmtree(folder)
         os.makedirs(folder)
