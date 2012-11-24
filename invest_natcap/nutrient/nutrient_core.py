@@ -468,7 +468,7 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
         # invest_natcap.nutrient.compare_mean_calculation for an example.
         temp_raster = raster_utils.create_raster_from_vector_extents(
             pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
-            'watershed_raster.tif', shapefile)
+            None, shapefile)
         LOGGER.debug('Temp raster created with rows=%s, cols=%s',
             temp_raster.RasterXSize, temp_raster.RasterYSize)
 
