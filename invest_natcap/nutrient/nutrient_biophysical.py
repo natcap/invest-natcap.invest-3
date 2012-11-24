@@ -85,8 +85,7 @@ def execute(args):
         shapefile_folder = os.path.join(output_dir, new_key)
         make_folder(shapefile_folder)
 
-        #hard coding the output shapefile to be named nutrient_summary.shp
-        copy_uri = os.path.join(output_dir, new_key, 'nutrient_summary.shp')
+        copy_uri = os.path.join(output_dir, new_key)
         
         copy = ogr_driver.CopyDataSource(sample_shape, copy_uri)
         LOGGER.debug('Saving shapefile copy to %s', copy_uri)
