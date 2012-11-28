@@ -138,7 +138,8 @@ def execute(args):
                 LOGGER.warn("Unknown logging message type %s: %s" % (msgType,msg))
             
         oldlog=log
-        
+
+        #DO NOT CHANGE THIS LINE. The messsage is hard coded on the server.
         if msg=="Dropped intermediate tables.":
             complete = True            
         else:
