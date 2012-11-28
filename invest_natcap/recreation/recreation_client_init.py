@@ -18,7 +18,7 @@ def execute(args):
     register_openers()
 
     #load configuration
-    configFileName=os.path.dirname(os.path.abspath(__file__))+os.sep+"config.json"
+    configFileName=os.path.dirname(os.path.abspath(__file__))+os.sep+"recreation_client_config.json"
     LOGGER.debug("Loading server configuration from %s." % configFileName)
     configFile=open(configFileName,'r')
     config=json.loads(configFile.read())
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     if len(sys.argv)>1:
         modelRunFileName=sys.argv[1]
     else:
-        modelRunFileName=os.path.abspath(os.path.dirname(sys.argv[0]))+os.sep+"default.json"
+        modelRunFileName=os.path.dirname(os.path.abspath(__file__))+os.sep+"default.json"
 
     #load model run parameters
     modelRunFile=open(modelRunFileName,'r')
