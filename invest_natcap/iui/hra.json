@@ -64,89 +64,26 @@
                     "id" : "risk_eq",
                     "args_id" : "risk_eq",
                     "type": "dropdown",
-                    "label": "Hub Heights (meters)",
-                    "defaultValue": "None",
-                    "options" : ["None", "Multiplicative", "Euclidean"],
+                    "label": "Risk Equation",
+                    "defaultValue": "Euclidean",
+                    "options" : ["Multiplicative", "Euclidean"],
                     "required": true,
                     "returns" : "strings",
-                    "helpText": "An integer value for the hub height of the turbines."
-                    "dataType": "float",
-                    "type": "file",
-                    "label": "Daily Water Temperature at Farm Table",
-                    "defaultValue": "../Aquaculture/Input/Temp_Daily.csv",
-                    "required": true,
-                    "validateAs": { "type": "CSV"},
-                    "helpText": "Users must provide a time series of daily water temperature (C) for each farm in the shapefile. When daily temperatures are not available, users can interpolate seasonal or monthly temperatures to a daily resolution. Water temperatures collected at existing aquaculture facilities are preferable, but if unavailable, users can consult online sources such as NOAAs 4 km AVHRR Pathfinder Data and Canadas Department of Fisheries and Oceans Oceanographic Database. The most appropriate temperatures to use are those from the upper portion of the water column, which are the temperatures experienced by the fish in the netpens."
+                    "dataType": "string",
+                    "helpText": "Each of these represents an option of a risk calculation equation. This will determine the numeric output of risk for every habitat and stressor overlap area."
                 },
                 {
-                    "id" : "farm_operations",
-                    "args_id" : "farm_op_tbl",
-                    "type": "file",
-                    "label": "Farm Operations Table",
-                    "defaultValue": "../Aquaculture/Input/Farm_Operations.csv",
+                    "id" : "decay_eq",
+                    "args_id" : "decay_eq",
+                    "type": "dropdown",
+                    "label": "Decay Equation",
+                    "defaultValue": "None",
                     "required": true,
-                    "validateAs": {"type": "CSV"},
-                    "helpText": "A table of general and farm-specific operations parameters. Please refer to the sample data table for reference to ensure correct incorporation of data in the model. If you would like to use your own dataset, you can modify values for farm operations (applied to all farms) and/or add new farms (beginning with row 32). However, do not modify the location of cells in this template. If for example, you choose to run the model for three farms only, they should be listed in rows 10, 11 and 12 (farms 1, 2, and 3, respectively). Several default values that are applicable to Atlantic salmon farming in British Columbia are also included in the sample data table."
-                },
-                {
-                    "id" : "outplant_buffer",
-                    "args_id" : "outplant_buffer",
-                    "type": "text",
-                    "label": "Outplant Date Buffer",
-                    "defaultValue": "3",
-                    "required": true,
-                    "validateAs": {"type": "number"},
-                    "dataType": "int",
-                    "helpText": "This value will allow the outplant start day to start plus or minus the number of days specified here."
-                },
-                {
-                    "id": "valuation",
-                    "args_id" : "do_valuation",
-                    "type": "checkbox",
-                    "label": "Run Valuation? (optional)",
-                    "required": true,
-                    "defaultValue": false,
-                    "helpText": "By checking this box, you are requesting valuation analysis."
-                },
-                {
-                    "id" : "market_price",
-                    "type": "text",
-                    "label": "Market Price per Kilogram of Processed Fish",
-                    "args_id": "p_per_kg",
-                    "required": false,
-                    "enabledBy": "valuation",
-                    "defaultValue": "2.25",
-                    "requiredIf": ["valuation"],
-                    "dataType": "float",
-                    "validateAs": {"type": "number"},
-                    "helpText": "Default value comes from Urner-Berry monthly fresh sheet reports on price of farmed Atlantic salmon."
-				},
-				{
-                    "id" : "fraction_price",
-                    "type": "text",
-                    "label": "Fraction of Price that Accounts to Costs",
-                    "args_id": "frac_p",
-                    "required": false,
-                    "enabledBy": "valuation",
-                    "defaultValue": "0.3",
-                    "requiredIf": ["valuation"],
-                    "dataType": "float",
-                    "validateAs": {"type": "number"},
-                    "helpText": "Fraction of market price that accounts for costs rather than profit. Default value is 0.3 (30%)."
-				},
-				{
-                    "id" : "discount_rate",
-                    "type": "text",
-                    "label": "Daily Market Discount Rate",
-                    "args_id": "discount",
-                    "required": false,
-                    "enabledBy": "valuation",
-                    "defaultValue": "0.000192",
-                    "requiredIf": ["valuation"],
-                    "dataType": "float",
-                    "validateAs": {"type": "number"},
-                    "helpText": "We use a 7% annual discount rate, adjusted to a daily rate of 0.000192 for 0.0192% (7%/365 days)."
-				}
+                    "options" : ["None", "Multiplicative", "Euclidean"],
+                    "returns": "strings",
+                    "dataType": "string",
+                    "helpText": "Each of these represents an option for decay equations for the buffered stressors. If stressor buffering is desired, these equtions will determine the rate at which stressor data is reduced."
+                }
             ]
         }
     ]
