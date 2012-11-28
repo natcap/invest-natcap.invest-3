@@ -10,6 +10,7 @@ import numpy as np
 
 import invest_cython_core
 from invest_natcap import raster_utils as raster_utils
+from invest_natcap.raster_utils import SpatialExtentOverlapException
 
 LOGGER = logging.getLogger('nutrient_core')
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
@@ -186,7 +187,7 @@ def get_flow_path(dem):
 
     # Create a flow_direction raster for use in the flow_direction function.
     flow_direction = raster_utils.new_raster_from_base(dem,
-        '/tmp/flow_direction', 'GTiff', -1.0, gdal.GDT_Float32)
+        '', 'MEM', -1.0, gdal.GDT_Float32)
     invest_cython_core.flow_direction_inf(dem, bounding_box, flow_direction)
 
 def adjusted_loading_value(export_raster, wyield_raster, watersheds, workspace):
@@ -257,10 +258,9 @@ def mean_runoff_index(runoff_index, watersheds, output_folder):
     watersheds_index = 0
     for layer in watersheds:
         for shape_index, watershed in enumerate(layer):
-            temp_filename = 'watershed_raster_%s.tif' % str(shape_index)
 
             r_min, r_max, r_mean, r_stddev = get_raster_stat_under_polygon(
-                runoff_index, watersheds_list[watersheds_index], temp_filename)
+                runoff_index, watersheds_list[watersheds_index])
 
             field_index = watershed.GetFieldIndex('mn_runoff')
             LOGGER.debug('Field index: %s, Min: %s, Max: %s, Mean: %s',
@@ -336,9 +336,14 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
             # pixel only if the pixel is in the watershed of interest.  Otherwise, the
             # pixel will have the nodata value.
             LOGGER.debug('Getting the pixels under the mask')
-            watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
-                raster], lambda x, y: y if x == 1 else temp_nodata,
-                nodata=temp_nodata, raster_out_uri=raster_path)
+            try:
+                watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
+                    raster], lambda x, y: y if x == 1 else temp_nodata,
+                    nodata=temp_nodata, raster_out_uri=raster_path)
+            except SpatialExtentOverlapException:
+                LOGGER.debug('Watershed does not overlap with the base raster. '
+                    'Returning 0\'s for statistics')
+                return (0., 0., 0., 0.)
 
             LOGGER.debug('Extracting statistics from raster')
             stats = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
@@ -414,9 +419,12 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
             # pixel only if the pixel is in the watershed of interest.  Otherwise, the
             # pixel will have the nodata value.
             LOGGER.debug('Getting the pixels under the mask')
-            watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
-                raster], lambda x, y: y if x == 1 else temp_nodata,
-                nodata=temp_nodata, raster_out_uri=raster_path)
+            try:
+                watershed_pixels = raster_utils.vectorize_rasters([mask_raster,
+                    raster], lambda x, y: y if x == 1 else temp_nodata,
+                    nodata=temp_nodata, raster_out_uri=raster_path)
+            except SpatialExtentOverlapException:
+                return 0.0
 
             stats = watershed_pixels.GetRasterBand(1).GetStatistics(0, 1)
             columns = watershed_pixels.RasterXSize
@@ -460,7 +468,7 @@ def get_raster_stat_under_polygon(raster, shapefile, raster_path=None,
         # invest_natcap.nutrient.compare_mean_calculation for an example.
         temp_raster = raster_utils.create_raster_from_vector_extents(
             pixel_width, pixel_height, gdal.GDT_Float32, temp_nodata,
-            '/tmp/watershed_raster.tif', shapefile)
+            None, shapefile)
         LOGGER.debug('Temp raster created with rows=%s, cols=%s',
             temp_raster.RasterXSize, temp_raster.RasterYSize)
 
@@ -495,7 +503,7 @@ def split_datasource(ds, uris=None):
     num_features = sum([l.GetFeatureCount() for l in ds])
     if uris == None:
         driver_string = 'Memory'
-        uris = ['/tmp/temp_shapefile'] * num_features
+        uris = ['temp_shapefile'] * num_features
     else:
         driver_string = 'ESRI Shapefile'
 
