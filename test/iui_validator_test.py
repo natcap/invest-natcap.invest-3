@@ -79,6 +79,10 @@ class FolderCheckerTester(CheckerTester):
         self.validate_as['value'] += 'a'
         self.assertError()
 
+    def test_folder_contents(self):
+        self.validate_as['contains'] = ['a.txt', 'b.txt']
+        self.assertNoError()
+
 class GDALCheckerTester(CheckerTester):
     """Test the class iui_validate.GDALChecker"""
     def setUp(self):
