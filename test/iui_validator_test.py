@@ -2,6 +2,7 @@
 invest_natcap.iui.iui_validator."""
 
 import unittest
+import os
 
 from invest_natcap.iui import iui_validator
 
@@ -80,7 +81,8 @@ class FolderCheckerTester(CheckerTester):
         self.assertError()
 
     def test_folder_contents(self):
-        self.validate_as['contains'] = ['a.txt', 'b.txt']
+        self.validate_as['contains'] = ['Guild.dbf', 'Guild.csv']
+        self.validate_as['value'] = os.path.join(TEST_DATA, 'iui')
         self.assertNoError()
 
 class GDALCheckerTester(CheckerTester):

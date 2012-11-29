@@ -383,7 +383,7 @@ class FolderChecker(URIChecker):
     def check_contents(self, files):
         print('contents', files)
         for uri in files:
-            if not os.path.exists(uri):
+            if not os.path.exists(os.path.join(self.uri, uri)):
                 return 'File "%s" must exist in "%s"' % (uri, self.uri)
 
 class FileChecker(URIChecker):
