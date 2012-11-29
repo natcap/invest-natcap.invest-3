@@ -85,6 +85,11 @@ class FolderCheckerTester(CheckerTester):
         self.validate_as['value'] = os.path.join(TEST_DATA, 'iui')
         self.assertNoError()
 
+    def test_folder_contents_not_present(self):
+        self.validate_as['contains'] = ['not_there.csv']
+        self.validate_as['value'] = os.path.join(TEST_DATA, 'iui')
+        self.assertError()
+
 class GDALCheckerTester(CheckerTester):
     """Test the class iui_validate.GDALChecker"""
     def setUp(self):
