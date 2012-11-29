@@ -381,7 +381,17 @@ class FolderChecker(URIChecker):
                 return str(self.uri + ' already exists on disk')
 
     def check_contents(self, files):
-        print('contents', files)
+        """Verify that the files listed in `files` exist.  Paths in `files` must
+        be relative to the Folder path that we are validating.  This function
+        strictly validates the presence of these files.
+
+            files - a list of string file URIs, where each file is relative to
+                the Folder stored in self.uri.
+
+        Conforming with all Checker classes, this function returns a string
+        error if one of the files does not exist or None if all required files
+        are found."""
+
         for uri in files:
             if not os.path.exists(os.path.join(self.uri, uri)):
                 return 'File "%s" must exist in "%s"' % (uri, self.uri)
