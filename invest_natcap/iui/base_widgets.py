@@ -672,6 +672,7 @@ class Label(QtGui.QLabel, StaticReturn):
         QtGui.QLabel.__init__(self)
         StaticReturn.__init__(self, attributes)
         self.setText(attributes['label'])
+        self.setTextFormat(QtCore.Qt.RichText)
         self.setWordWrap(True)
         self.elements = [self.error_button, self, self.info_button]
 
@@ -1769,6 +1770,7 @@ class MessageArea(QtGui.QLabel):
     def __init__(self):
         QtGui.QLabel.__init__(self)
         self.setWordWrap(True)
+        self.setTextFormat(QtCore.Qt.RichText)
         self.messages = []
 
     def clear(self):
