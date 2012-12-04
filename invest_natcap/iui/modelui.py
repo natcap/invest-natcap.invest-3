@@ -99,8 +99,8 @@ class ModelUI(base_widgets.ExecRoot):
             # Thrown if attributes['localDocURI'] is not present
             print 'Attribute localDocURI not found for this model; skipping.'
 
-        feedback_uri = 'mailto:richsharp@stanford.edu?subject=InVEST Feedback'
-        links.append('<a href=\"%s\">Send feedback</a>' % feedback_uri)
+        feedback_uri = 'mailto:richsharp@stanford.edu?subject=InVEST Issue'
+        links.append('<a href=\"%s\">Report an issue</a>' % feedback_uri)
 
         self.feedbackBody = "Please include the following information:\
 \n\n1) InVEST model you're having difficulty with\n2) Explicit error message or \
@@ -115,7 +115,7 @@ improvement, or anything else you'd like to share."
         if str(uri) == self.feedbackURI:
             #open up a qdialog
             self.feedbackDialog = QtGui.QMessageBox()
-            self.feedbackDialog.setWindowTitle('Send feedback')
+            self.feedbackDialog.setWindowTitle('Report an issue')
             self.feedbackDialog.setText("If you'd like to report a problem with\
 this model, send an email to richsharp@stanford.edu." + self.feedbackBody)
             self.feedbackDialog.show()
