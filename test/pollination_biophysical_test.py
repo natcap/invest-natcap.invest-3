@@ -152,7 +152,8 @@ class PollinationValuationTest(PollinationTest):
     def test_regression(self):
         """Regression test for pollination_valuation."""
         pollination_valuation.execute(self.args)
-        self.assert_pollination_rasters(self.biophysical_sample_dir)
+        self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
+            'valuation_output', 'with_ag_classes'))
 
 class PollinationSmokeTest(PollinationBiophysicalTest):
     """To only run this test class at the command line, do this:
