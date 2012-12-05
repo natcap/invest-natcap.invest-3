@@ -4,6 +4,7 @@ pollination model."""
 import unittest
 import os
 import shutil
+import logging
 
 import invest_test_core
 import invest_natcap.pollination.pollination_biophysical as\
@@ -12,8 +13,12 @@ import invest_natcap.pollination.pollination_valuation as\
     pollination_valuation
 import invest_natcap.pollination.pollination_core as pollination_core
 
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
 TEST_DATA_DIR = 'data/pollination/samp_input'
 REGRESSION_FOLDER_BASE = 'data/pollination/'
+LOGGER = logging.getLogger('pollination_test')
 
 class PollinationTest(unittest.TestCase):
     """This class contains information specific to the Pollination models, but
@@ -60,9 +65,11 @@ class PollinationTest(unittest.TestCase):
                 for uri_mid in test_folder['uri_mid']:
                     test_raster_uri = pollination_core.build_uri(out_folder_name,
                         uri_base, [uri_mid, 'cur'])
-                    reg_raster_uri = pollination_core.build_uri(out_folder_name,
+                    reg_raster_uri = pollination_core.build_uri(test_folder_name,
                         uri_base, [uri_mid, 'cur'])
 
+                    LOGGER.debug('Asserting rasters.  Test=%s, Reg=%s',
+                                 test_raster_uri, reg_raster_uri)
                     invest_test_core.assertTwoDatasetEqualURI(self,
                         test_raster_uri, reg_raster_uri)
 
