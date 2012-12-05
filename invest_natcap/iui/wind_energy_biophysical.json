@@ -52,16 +52,6 @@
                     "helpText": "A raster dataset for the eleveation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
                 },
                 {
-                    "id" : "bottom_types",
-                    "args_id" : "bottom_type_uri",
-                    "type": "file",
-                    "label": "Bottom Types",
-                    "required": false,
-                    "returns": {"ifEmpty": "pass"},
-                    "validateAs": {"type": "OGR"},
-                    "helpText": "CURRENTLY NOT IMPLEMENTED: A optional polygon shapefile that defines different geological bottom types. This is important in determining what types of turbines can be used and if their will be any additional costs associated with it."
-                },
-                {
                     "id" : "days_harv_wind_energy",
                     "args_id" : "num_days",
                     "type": "text",
