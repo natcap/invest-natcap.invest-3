@@ -32,14 +32,21 @@ def invest_version(uri=None):
         # In any of these cases, try creating the version file and import
         # once again.
         LOGGER.debug('Unable to import version.  Creating a new file')
-        if uri != None:
-            write_version_file(uri)
-            version_info = imp.load_source(name, uri)
-        else:
-            if get_tag_distance() == 0:
-                return get_latest_tag()
+        try:
+            if uri != None:
+                write_version_file(uri)
+                version_info = imp.load_source(name, uri)
             else:
-                return 'dev%s' % get_build_id()
+                if get_tag_distance() == 0:
+                    return get_latest_tag()
+                else:
+                    return 'dev%s' % get_build_id()
+        except ValueError:
+            # Thrown when Mercurial is not found to be installed in the local
+            # directory.  This is a band-aid fix for when we import InVEST from
+            # within a distributed version of RIOS.
+            # When this happens, just return 'dev' for now.
+            return 'dev'
 
     if version_info.release == 'None':
         return 'dev%s' % version_info.build_id

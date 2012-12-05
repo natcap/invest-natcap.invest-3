@@ -195,7 +195,7 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
         hwp_shape_copy = \
             ogr.GetDriverByName('Memory').CopyDataSource(hwpShapes['cur'], '')
         hwp_shape_layer_copy = \
-            hwp_shape_copy.GetLayerByName('harv_samp_cur')
+            hwp_shape_copy.GetLayer()
 
         #Create fields in the layers to hold hardwood product pools, 
         #biomassPerPixel and volumePerPixel
@@ -258,7 +258,7 @@ def calculateHWPStorageFut(hwpShapes, c_hwp, bio_hwp, vol_hwp, pixelArea,
         hwp_shape_copy = \
             ogr.GetDriverByName('Memory').CopyDataSource(hwpShapes['fut'], '')
         hwp_shape_layer_copy = \
-            hwp_shape_copy.GetLayerByName('harv_samp_fut')
+            hwp_shape_copy.GetLayer()
 
         #Create fields in the layers to hold hardwood product pools, 
         #biomassPerPixel and volumePerPixel
@@ -350,7 +350,7 @@ def calculateHWPStorageCur(hwp_shape, c_hwp, bio_hwp, vol_hwp, pixelArea,
     hwp_shape_copy = \
         ogr.GetDriverByName('Memory').CopyDataSource(hwp_shape, '')
     hwp_shape_layer_copy = \
-        hwp_shape_copy.GetLayerByName('harv_samp_cur')
+        hwp_shape_copy.GetLayer()
 
     #Create fields in the layers to hold hardwood product pools, 
     #biomassPerPixel and volumePerPixel

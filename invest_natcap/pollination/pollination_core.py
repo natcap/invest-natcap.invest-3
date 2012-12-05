@@ -236,6 +236,10 @@ def valuation(args):
         # Vectorize the ps_vectorized function
         vOp = np.vectorize(ps_vectorized)
         service_value_matrix = vOp(species_supply_matrix, blurred_ratio_matrix)
+
+        # Set all agricultural pixels to 0.  This is according to issue 761.
+        ag_matrix = args['ag_map'].GetRasterBand(1).ReadAsArray()
+        np.putmask(service_value_matrix, ag_matrix == 0, 0.0)
         species_dict['service_value'].GetRasterBand(1).WriteArray(
             service_value_matrix)
 

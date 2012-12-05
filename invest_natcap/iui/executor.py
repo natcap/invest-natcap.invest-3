@@ -305,6 +305,7 @@ class Executor(threading.Thread):
                                                     operation['args'])
                 except Exception as e:
                     self.setThreadFailed(True)
+                    self.printTraceback()
                     LOGGER.error('Exception %s, %s found', e.__class__, e)
 
             if self.isThreadFailed():

@@ -672,6 +672,7 @@ class Label(QtGui.QLabel, StaticReturn):
         QtGui.QLabel.__init__(self)
         StaticReturn.__init__(self, attributes)
         self.setText(attributes['label'])
+        self.setTextFormat(QtCore.Qt.RichText)
         self.setWordWrap(True)
         self.elements = [self.error_button, self, self.info_button]
 
@@ -1051,6 +1052,8 @@ class MultiElement(Container):
         """Set the local input values to values.  values should be a python
             list of values to be set.  A new element will be created for each
             item in values.   Returns nothing."""
+
+        self.resetValue()
         for value in values:
             self.add_element(value)
 
@@ -1767,6 +1770,7 @@ class MessageArea(QtGui.QLabel):
     def __init__(self):
         QtGui.QLabel.__init__(self)
         self.setWordWrap(True)
+        self.setTextFormat(QtCore.Qt.RichText)
         self.messages = []
 
     def clear(self):
@@ -1961,6 +1965,8 @@ class Root(DynamicElement):
                 element.resetValue()
             elif issubclass(element.__class__, Container):
                 element.resetValue()
+            elif issubclass(element.__class__, Root):
+                element.resetParametersToDefaults()
 
     def errors_exist(self):
         """Check to see if any elements in this UI have errors.

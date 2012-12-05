@@ -16,7 +16,8 @@
                     "label": "Workspace",
                     "required": true,
                     "args_id": "workspace_dir",
-                    "defaultValue": "../Carbon/"
+                    "defaultValue": "../Carbon/",
+		    "helpText": "The folder that will contain the intermediate and ouput files related to carbon valuation."
                 },
                 {
                     "id":"sequest_uri",
@@ -25,7 +26,8 @@
                     "required": true,
                     "args_id": "sequest_uri",
                     "defaultValue": "../Carbon/Output/sequest.tif",
-                    "validateAs": {"type": "GDAL"}
+                  "validateAs": {"type": "GDAL"},
+		  "helpText": "The per-pixel sequestered carbon either from a run of the InVEST Carbon Biophysical model, or from a user defined source."
                 },
 		{
 		    "id": "carbon_price_units",
@@ -35,7 +37,8 @@
 		    "options": ["Carbon (C)",
 				"Carbon Dioxide (CO2)"],
 		    "defaultValue": 0,
-		    "required": true
+		    "required": true,
+		    "helpText": "The units for the price per unit of carbon type."
 		},
                 {
                     "id": "value",
@@ -47,7 +50,8 @@
                     "dataType": "float",
                     "validText": "[0-9]+(\\.[0-9][0-9])?",
                     "defaultValue": "43.00",
-                    "validateAs": {"type": "number"}
+                    "validateAs": {"type": "number"},
+		    "helpText": "The price per unit ton of carbon or C02 as defined in the carbon price units."
                 },
                 {
                     "id": "discount_rate",
@@ -59,8 +63,9 @@
                     "dataType": "int",
                     "validText": "-?([0-9]+)?\\.[0-9]+",
                     "defaultValue": "7",
-                    "validateAs": {"type": "number"}
-                },    
+                    "validateAs": {"type": "number"},
+		    "helpText": "The discount rate as an integer percent."
+                },
                 {
                     "id": "rate_change",
                     "args_id": "c",
@@ -71,7 +76,8 @@
                     "dataType": "float",
                     "validText": "-?([0-9]+)?\\.[0-9]+",
                     "defaultValue": "0",
-                    "validateAs": {"type": "number"}
+                    "validateAs": {"type": "number"},
+		    "helpText": "The integer percent increase of the price of carbon per year."
                 },
                 {
                     "id": "yr_cur",
@@ -83,8 +89,9 @@
                     "dataType": "int",
                     "validText": "-?[0-9]+",
                     "defaultValue": "2000",
-                    "validateAs": {"type": "number"}
-                },            
+                    "validateAs": {"type": "number"},
+		    "helpText": "The calendar year of the current scenario."
+                },
                 {
                     "id": "yr_fut",
                     "args_id": "yr_fut",
@@ -95,9 +102,10 @@
                     "dataType": "int",
                     "validText": "-?[0-9]+",
                     "defaultValue": "2030",
-                    "validateAs": {"type": "number"}
+                    "validateAs": {"type": "number"},
+		    "helpText": "The calendar year of the future scenario."
                 }
             ]
-        }    
-    ] 
+        }
+    ]
 }
