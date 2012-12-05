@@ -1,0 +1,348 @@
+{
+    "id" : "window",
+    "label": "",
+    "targetScript" : "invest_natcap.wind_energy.wind_energy_biophysical",
+    "modelName" : "wind_energy_biophysical",
+    "localDocURI": "../documentation/wind_energy.html",
+    "height": 900,
+    "width" : 800,
+    "elements": [
+        {
+            "id" : "workspace_list",
+            "type": "list",
+            "elements":[
+                {
+                    "id" : "workspace",
+                    "args_id" : "workspace_dir",
+                    "type": "folder",
+                    "label": "Workspace",
+                    "defaultValue": "../Wind_Energy",
+                    "required": true,
+                    "validateAs": {"type": "folder"},
+                    "helpText": "Select a folder to be used as your workspace.  If the folder you select does not exist, it will be created for you.<br/><br/>This folder will contain the rasters produced by this model.  <b>If datasets already exist in this folder, they will be overwritten</b>."
+                },
+                {
+                    "id" : "wind_data",
+                    "args_id" : "wind_data_uri",
+                    "type": "file",
+                    "label": "Wind Data Points",
+                    "defaultValue": "../Wind_Energy/Input/wind_data.txt",
+                    "required": true,
+                    "helpText": "A text file that represents the wind energy data points. The text file should be set up with the first line having the following comma separated fields:<br/> N (Unique ID), LONG (the longitude coordinate), LATI (the latitude coordinate), Ram-010m (a range of the scale parameter which varies at different heights: Ram-020m,Ram-030m,...,Ram-140m,Ram-150m), K-010m (the shape parameter which does not vary by height). The following lines should be individual and unique wind data bins with information corresponding to the fields from the first line."
+                },
+                {
+                    "id" : "aoi",
+                    "args_id" : "aoi_uri",
+                    "type": "file",
+                    "label": "Area Of Interest (AOI)",
+                    "defaultValue": "../Wind_Energy/Input/aoi.shp",
+                    "required": false,
+                    "returns": {"ifEmpty": "pass"},
+                    "validateAs": {"type": "OGR"},
+                    "helpText": "An optional polygon shapefile that defines the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly." 
+                },
+                {
+                    "id" : "bathymetry",
+                    "args_id" : "bathymetry_uri",
+                    "type": "file",
+                    "label": "Bathymetry (DEM)",
+                    "defaultValue": "../Wind_Energy/Input/bathymetry.adf",
+                    "required": true,
+                    "validateAs": {"type": "GDAL"},
+                    "helpText": "A raster dataset for the eleveation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
+                },
+                {
+                    "id" : "days_harv_wind_energy",
+                    "args_id" : "num_days",
+                    "type": "text",
+                    "label": "Number of Days for Harvested Wind Energy Calculation (days)",
+                    "defaultValue": "365",
+                    "validText" : "^[0-9]*\\.?[0-9]+$",
+                    "validateAs" : {"type" : "number",
+                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                    "required": true,
+                    "helpText": "An integer value for the number of days for harvested wind energy. 365 days corresponds to yearly calculations and it is suggested to use 30 days for monthly energy outputs."
+                },
+                {
+                    "id" : "air_density",
+                    "args_id" : "air_density",
+                    "type": "text",
+                    "label": "Air Density (kgm^-3) of Standard Atmosphere",
+                    "defaultValue": "1.225",
+                    "validText" : "^[0-9]*\\.?[0-9]+$",
+                    "validateAs" : {"type" : "number",
+                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                    "required": true,
+                    "helpText": "A floating point value for the air density of standard atmosphere (kgm ^ -3). The U.S. standard atmosphere air density at sea leavel is 1.225. At the International Union of Pure and Applied Chemistry (IUPAC) standard temperature and pressure (0 degrees celcius and 100 kPa), dry air has a density of 1.2754 kg/m^3)."
+                },
+                {
+                    "id" : "results_suffix",
+                    "args_id" : "suffix",
+                    "type": "text",
+                    "dataType": "string",
+                    "validText": "[a-zA-Z0-9]*",
+                    "label": "Results Suffix (optional)",
+                    "defaultValue": "",
+                    "returns": {"ifEmpty": "pass"},
+                    "required": false,
+                    "helpText":"A String that will be added to the end of the output uris."
+
+                }                         
+            ]
+        },
+        {
+            "id" : "turbine_group",
+            "type" : "container",
+            "label" : "Turbine Properties",
+            "elements" :[ 
+                {
+                    "id" : "turbine_list",
+                    "type" : "list",
+                    "elements" : [
+                            {
+                                "id" : "hub_height",
+                                "args_id" : "hub_height",
+                                "type": "dropdown",
+                                "label": "Hub Heights (meters)",
+                                "defaultValue": "",
+                                "options" : ["10", "20", "30", "40", "50", "60", "70", "80",
+                                             "90", "100", "110", "120", "130", "140", "150"],
+                                "required": true,
+                                "returns" : "strings",
+                                "helpText": "An integer value for the hub height of the turbines."
+                            },
+                            {
+                                "id" : "cutin_wspd",
+                                "args_id" : "cut_in_wspd",
+                                "type": "text",
+                                "label": "Cut-in Wind Speed (m/s)",
+                                "defaultValue": "4.0",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": "A floating point value for the cut-in wind speed. Default is set to 4 m/s"
+                            },
+                            {
+                                "id" : "rated_wspd",
+                                "args_id" : "rated_wspd",
+                                "type": "text",
+                                "label": "Rated Wind Speed (m/s)",
+                                "defaultValue": "14.0",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": "A floating point value for the rated wind speed. Default is set to 14 m/s"
+                            },
+                            {
+                                "id" : "cutout_wspd",
+                                "args_id" : "cut_out_wspd",
+                                "type": "text",
+                                "label": "Cut-out Wind Speed (m/s)",
+                                "defaultValue": "25.0",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": "A floating point value for the cut-out wind speed. Default is set to 25 m/s"
+                            },
+                            {
+                                "id" : "turbine_rated_pwr",
+                                "args_id" : "turbine_rated_pwr",
+                                "type": "text",
+                                "label": "Wind Turbine Rated Power (MW)",
+                                "defaultValue": "3.6",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": "A floating point value for the wind turbine rated power. Default is set to 3.6 MW"
+                            },
+                            {
+                                "id" : "exp_out_pwr_curve",
+                                "args_id" : "exp_out_pwr_curve",
+                                "type": "text",
+                                "label": "Exponent of Output Power Curve",
+                                "defaultValue": "2",
+                                "validText" : "^[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]+$"}},
+                                "required": true,
+                                "helpText": "An integer value for the exponent of output power curve. The default is set to 2. Please see the User's Guide for more information."
+                            },
+                            {
+                                "id" : "min_depth",
+                                "args_id" : "min_depth",
+                                "type": "text",
+                                "label": "Minimum Depth for Offshore Wind Farm Installation (m)",
+                                "defaultValue": "20",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": "A floating point value for the minimum depth of the offshore wind farm installation (m)."
+                            },
+                            {
+                                "id" : "max_depth", 
+                                "args_id" : "max_depth",
+                                "type": "text",
+                                "label": "Maximum Depth for Offshore Wind Farm Installation (m)",
+                                "defaultValue": "50",
+                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validateAs" : {"type" : "number",
+                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                "required": true,
+                                "helpText": "A floating point value for the maximum depth of the offshore wind farm installation (m)."
+                            }
+                        ]
+                    }
+                ]
+        },
+        {
+            "id" : "distance_container",
+            "args_id" : "distance_container",
+            "type" : "container",
+            "label" : "Use Distances to Determine Wind Farm Locations",
+            "collapsible" : true,
+            "enabledBy": "aoi",
+            "defaultValue" : false,
+            "elements" : [
+                {
+                    "id" : "distance_list",
+                    "type" : "list",
+                    "elements" : [
+                    {
+                        "id" : "land_polygon",
+                        "args_id" : "land_polygon_uri",
+                        "type": "file",
+                        "label": "Land Polygon to Calculate Distance From",
+                        "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
+                        "required": true,
+                        "validateAs": {"type": "OGR"},
+                        "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
+                    },
+                    {
+                        "id" : "min_distance",
+                        "args_id" : "min_distance",
+                        "type" : "text",
+                        "label" : "Minimum Distance (m)",
+                        "defaultValue" : "1000",
+                        "validText" : "^[0-9]*\\.?[0-9]+$",
+                        "validateAs" : {"type" : "number",
+                                        "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                        "required" : true,
+                        "helpText" : "A floating point value in meters that represents the minimum distance from shore for offshore wind farm installation."
+                    },
+                    {
+                        "id" : "max_distance",
+                        "args_id" : "max_distance",
+                        "type" : "text",
+                        "label" : "Maximum Distance (m)",
+                        "defaultValue" : "10000",
+                        "validText" : "^[0-9]*\\.?[0-9]+$",
+                        "validateAs" : {"type" : "number",
+                                        "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                        "required" : true,
+                        "helpText" : "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation."
+                    }
+                  ]
+                }
+            ]
+        },
+        {
+            "id" : "valuation_container",
+            "args_id" : "valuation_container",
+            "type" : "container",
+            "label" : "Valuation",
+            "collapsible" : true,
+            "defaultValue" : false,
+            "elements" : [
+                {
+                    "id" : "distance_list",
+                    "type" : "list",
+                    "elements" : [
+                        {
+                            "id" : "biophysical_data",
+                            "args_id" : "biophysical_data_uri",
+                            "type": "file",
+                            "label": "Biophysical Data",
+                            "defaultValue": "../Wind_Energy/output/biophysical_data.shp",
+                            "required": true,
+                            "validateAs": {"type":"OGR",
+                                           "layers": [{"name": {"inheritFrom": "file"},
+                                                       "type": "points"}],
+                                           "fieldsExist": ["Density", "HarvEnergy"]},
+                            "helpText": ""
+                        },
+                        {
+                            "id" : "turbine_info",
+                            "args_id" : "turbine_info_uri",
+                            "type": "file",
+                            "label": "Turbine Information",
+                            "required": true,
+                            "helpText": "",
+                            "validateAs": { "type": "CSV"}
+                        },
+                        {
+                            "id" : "number_of_machines",
+                            "args_id": "number_of_machines",
+                            "type": "text",
+                            "label": "Number Of Machines",
+                            "defaultValue": "30",
+                            "required": true,
+                            "validText": "[0-9]+"
+                        },
+                        {
+                            "id" : "dollar_per_kWh",
+                            "args_id" : "dollar_per_kWh",
+                            "type": "text",
+                            "label": "$ / kWh",
+                            "defaultValue": "0.187",
+                            "validText" : "^[0-9]*\\.?[0-9]+$",
+                            "validateAs" : {"type" : "number",
+                                            "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                            "required": true,
+                            "helpText": ""
+                        },
+                        {        
+                            "id" : "grid_points",
+                            "args_id" : "grid_points_uri",
+                            "type": "file",
+                            "label": "Grid Points",
+                            "defaultValue": "",
+                            "required": false,
+                            "returns": {"ifEmpty": "pass"},
+                            "validateAs": { "type": "CSV",
+                                            "fieldsExist": ["ID", "TYPE", "LATI", "LONG"],
+                                            "restrictions": [{"field": "ID",
+                                                            "validateAs": {"type": "number",
+                                                                           "allowedValues": {"pattern":"^[0-9]+"}}},
+                                                            {"field": "TYPE",
+                                                            "validateAs": {"type": "string",
+                                                            "allowedValues":{"pattern":"LAND|GRID", "flag":"ignoreCase"}}},
+                                                            {"field": "LATI",
+                                                            "validateAs": {"type": "number",
+                                                            "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}},
+                                                            {"field": "LONG",
+                                                            "validateAs": {"type": "number",
+                                                            "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
+                                                ]}                                    
+                                            
+                        },
+                        {
+                            "id" : "land_polygon",
+                            "args_id" : "land_polygon_uri",
+                            "type": "file",
+                            "label": "Land Polygon to Calculate Distance From",
+                            "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
+                            "required": true,
+                            "validateAs": {"type": "OGR"},
+                            "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
