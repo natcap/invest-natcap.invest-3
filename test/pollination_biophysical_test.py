@@ -42,6 +42,9 @@ class PollinationTest(unittest.TestCase):
                                'raster_uri_base': [],
                                'uri_mid': []}
 
+#    def tearDown(self):
+#        shutil.rmtree(self.workspace_dir)
+
     def assert_pollination_rasters(self, test_path):
         """Assert that all rasters produced by this component of the pollination
             model match their corresponding regression rasters.  This function
