@@ -48,15 +48,15 @@
                             "label": "Landcover attribute table",
                             "args_id": "landuse_attributes_uri",
                             "required": true,
-                            "defaultValue": "../Pollination/Input/LU.dbf",
-                            "validateAs": {"type": "DBF",
+                            "defaultValue": "../Pollination/Input/LU.csv",
+                            "validateAs": {"type": "CSV",
                                            "fieldsExist": ["LULC"],
                                            "restrictions": [{"field": "LULC",
                                                              "validateAs": {"type": "number",
                                                                             "allowedValues": {"pattern":"[0-9]*\\.[0-9]*$"}}
                                                             }]
                                           },
-                            "helpText": "Select your land use attribute table here.  It must be either a CSV or DBF."
+                            "helpText": "Select your land use attribute table here.  It must be a CSV."
                         },
                         {
                             "id" : "fut_lulc_raster",
@@ -80,10 +80,10 @@
                     "id" : "guilds",
                     "type": "file",
                     "label": "Guilds table",
-                    "defaultValue": "../Pollination/Input/Guild.dbf",
+                    "defaultValue": "../Pollination/Input/Guild.csv",
                     "args_id": "guilds_uri",
                     "required": true,
-                    "validateAs": {"type": "DBF",
+                    "validateAs": {"type": "CSV",
                                    "fieldsExist": ["SPECIES", "ALPHA"],
                                    "restrictions": [{"field": "ALPHA",
                                                      "validateAs": {"type": "number",
