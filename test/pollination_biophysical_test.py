@@ -28,7 +28,7 @@ class PollinationTest(unittest.TestCase):
         """Reimplemented from unittest.TestCase, this has information that is
             used by both the biophysical and valuation components. """
         self.workspace_dir = 'data/pollination/test_workspace'
-        self.guilds_uri = TEST_DATA_DIR + '/Guild.dbf'
+        self.guilds_uri = TEST_DATA_DIR + '/Guild.csv'
 
         # The structure of self.intermediate_rasters and self.output_rasters
         # should be maintained across subclasses, although their contents may be
@@ -83,7 +83,7 @@ class PollinationBiophysicalTest(PollinationTest):
         PollinationTest.setUp(self)
         self.args = {'workspace_dir': self.workspace_dir,
                      'landuse_cur_uri': TEST_DATA_DIR + '/landuse_cur_200m.tif',
-                     'landuse_attributes_uri': TEST_DATA_DIR + '/LU.dbf',
+                     'landuse_attributes_uri': TEST_DATA_DIR + '/LU.csv',
                      'guilds_uri': self.guilds_uri}
 
         self.intermediate_rasters = {'workspace_subfolder': 'intermediate',
