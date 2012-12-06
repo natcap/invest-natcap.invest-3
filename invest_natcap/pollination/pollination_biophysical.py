@@ -65,6 +65,11 @@ def execute(args):
     for scenario in landuse_scenarios:
         LOGGER.info('Starting pollination model for the %s scenario', scenario)
         biophysical_args = {}  # Re-initialize the biophysical args
+        biophysical_args['paths'] = {
+            'workspace': workspace,
+            'intermediate': inter_dir,
+            'output': out_dir
+        }
 
         # Open the landcover raster
         biophysical_args['landuse'] = gdal.Open(
