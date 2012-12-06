@@ -7,7 +7,7 @@ HG_CALL = 'hg log -r . --config ui.report_untrusted=False'
 
 LOGGER = logging.getLogger('build_utils')
 
-def invest_version(uri=None):
+def invest_version(uri=None, force_new=False):
     """Get the version of InVEST by importing invest_natcap.invest_version and
     using the appropriate version string from that module.  If
     invest_natcap.invest_version cannot be found, it is programmatically
@@ -32,6 +32,11 @@ def invest_version(uri=None):
         # In any of these cases, try creating the version file and import
         # once again.
         LOGGER.debug('Unable to import version.  Creating a new file')
+        force_new = True
+
+    # If we want to force a new file to be written, we extract the correct
+    # information and return it.
+    if force_new:
         try:
             if uri != None:
                 write_version_file(uri)
