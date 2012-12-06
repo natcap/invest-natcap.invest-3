@@ -38,6 +38,10 @@ def biophysical(args):
         args['floral fields'] - a python list of string floral fields
         args['foraging_average'] - a GDAL dataset
         args['abundance_total'] - a GDAL dataset
+        args['paths'] - a dictionary with the following entries:
+            'workspace' - the workspace path
+            'intermediate' - the intermediate folder path
+            'output' - the output folder path
 
         returns nothing."""
 
@@ -322,7 +326,7 @@ def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, 
 
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
-                  out_raster, list_op):
+                  out_uri, list_op):
     """Make an intermediate raster where values are mapped from the base raster
         according to the mapping specified by key_field and value_field.
 
@@ -331,7 +335,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
         guild_dict - a python dictionary representing the guild row for this
             species.
         resource_fields - a python list of string resource fields
-        out_raster - a GDAL dataset
+        out_uri - a uri for the output dataset
         list_op - a python callable that takes a list of numerical arguments
             and returns a python scalar.  Examples: sum; max
 
@@ -347,24 +351,36 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
 
     value_list = dict((r, guild_dict[r]) for r in resource_fields)
 
-    # Define a vectorized function to map values to the base raster
-    def map_values(lu_code):
-        """Take the input pixel value and return the appropriate value based
-            on the table's map.  If the value cannot be found, return the
-            output raster's nodata value."""
-        try:
-            if lu_code == base_nodata:
-                return out_nodata
-            # Max() is how InVEST 2.2 pollination does this, although I think
-            # that sum() should actually be used.
-            return list_op([value_list[r] * lu_table_dict[lu_code][r] for r in
-                resource_fields])
-        except KeyError:
-            return out_nodata
+    reclass_rules = {}
+    for lulc, landcover_dict in lu_table_dict.iteritems():
+        resource_values = [value_list[r] * lu_table_dict[lu_code][r] for r in
+            resource_fields]
+        reclass_rules[lulc] = list_op(resource_values)
 
-    # Vectorize this operation.
-    invest_core.vectorize1ArgOp(base_raster.GetRasterBand(1), map_values,
-        out_raster.GetRasterBand(1))
+    # Use the rules dictionary to reclassify the LULC accordingly.  This
+    # calls the cythonized functionality in raster_utils.
+    out_raster = raster_utils.reclassify_by_dictionary(base_raster,
+        reclass_rules, out_uri, 'GTiff', out_nodata, gdal.GDT_Float32)
+#
+#    # Define a vectorized function to map values to the base raster
+#    def map_values(lu_code):
+#        """Take the input pixel value and return the appropriate value based
+#            on the table's map.  If the value cannot be found, return the
+#            output raster's nodata value."""
+#        try:
+#            if lu_code == base_nodata:
+#                return out_nodata
+#            # Max() is how InVEST 2.2 pollination does this, although I think
+#            # that sum() should actually be used.
+#            return list_op([value_list[r] * lu_table_dict[lu_code][r] for r in
+#                resource_fields])
+#        except KeyError:
+#            return out_nodata
+#
+#    # Vectorize this operation.
+#    invest_core.vectorize1ArgOp(base_raster.GetRasterBand(1), map_values,
+#        out_raster.GetRasterBand(1))
+    return out_raster
 
 
 def make_ag_raster(landuse_raster, ag_classes, ag_raster):
