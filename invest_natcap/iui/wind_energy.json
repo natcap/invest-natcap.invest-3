@@ -263,19 +263,6 @@
                     "type" : "list",
                     "elements" : [
                         {
-                            "id" : "biophysical_data",
-                            "args_id" : "biophysical_data_uri",
-                            "type": "file",
-                            "label": "Biophysical Data",
-                            "defaultValue": "../Wind_Energy/output/biophysical_data.shp",
-                            "required": true,
-                            "validateAs": {"type":"OGR",
-                                           "layers": [{"name": {"inheritFrom": "file"},
-                                                       "type": "points"}],
-                                           "fieldsExist": ["Density", "HarvEnergy"]},
-                            "helpText": ""
-                        },
-                        {
                             "id" : "turbine_info",
                             "args_id" : "turbine_info_uri",
                             "type": "file",
