@@ -1,8 +1,8 @@
 {
     "id" : "window",
     "label": "",
-    "targetScript" : "invest_natcap.wind_energy.wind_energy_biophysical",
-    "modelName" : "wind_energy_biophysical",
+    "targetScript" : "invest_natcap.wind_energy.wind_energy_uri_handler",
+    "modelName" : "wind_energy",
     "localDocURI": "../documentation/wind_energy.html",
     "height": 900,
     "width" : 800,
@@ -247,6 +247,100 @@
                         "helpText" : "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation."
                     }
                   ]
+                }
+            ]
+        },
+        {
+            "id" : "valuation_container",
+            "args_id" : "valuation_container",
+            "type" : "container",
+            "label" : "Valuation",
+            "collapsible" : true,
+            "defaultValue" : false,
+            "elements" : [
+                {
+                    "id" : "distance_list",
+                    "type" : "list",
+                    "elements" : [
+                        {
+                            "id" : "biophysical_data",
+                            "args_id" : "biophysical_data_uri",
+                            "type": "file",
+                            "label": "Biophysical Data",
+                            "defaultValue": "../Wind_Energy/output/biophysical_data.shp",
+                            "required": true,
+                            "validateAs": {"type":"OGR",
+                                           "layers": [{"name": {"inheritFrom": "file"},
+                                                       "type": "points"}],
+                                           "fieldsExist": ["Density", "HarvEnergy"]},
+                            "helpText": ""
+                        },
+                        {
+                            "id" : "turbine_info",
+                            "args_id" : "turbine_info_uri",
+                            "type": "file",
+                            "label": "Turbine Information",
+                            "required": true,
+                            "helpText": "",
+                            "validateAs": { "type": "CSV"}
+                        },
+                        {
+                            "id" : "number_of_machines",
+                            "args_id": "number_of_machines",
+                            "type": "text",
+                            "label": "Number Of Machines",
+                            "defaultValue": "30",
+                            "required": true,
+                            "validText": "[0-9]+"
+                        },
+                        {
+                            "id" : "dollar_per_kWh",
+                            "args_id" : "dollar_per_kWh",
+                            "type": "text",
+                            "label": "$ / kWh",
+                            "defaultValue": "0.187",
+                            "validText" : "^[0-9]*\\.?[0-9]+$",
+                            "validateAs" : {"type" : "number",
+                                            "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                            "required": true,
+                            "helpText": ""
+                        },
+                        {        
+                            "id" : "grid_points",
+                            "args_id" : "grid_points_uri",
+                            "type": "file",
+                            "label": "Grid Points",
+                            "defaultValue": "",
+                            "required": false,
+                            "returns": {"ifEmpty": "pass"},
+                            "validateAs": { "type": "CSV",
+                                            "fieldsExist": ["ID", "TYPE", "LATI", "LONG"],
+                                            "restrictions": [{"field": "ID",
+                                                            "validateAs": {"type": "number",
+                                                                           "allowedValues": {"pattern":"^[0-9]+"}}},
+                                                            {"field": "TYPE",
+                                                            "validateAs": {"type": "string",
+                                                            "allowedValues":{"pattern":"LAND|GRID", "flag":"ignoreCase"}}},
+                                                            {"field": "LATI",
+                                                            "validateAs": {"type": "number",
+                                                            "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}},
+                                                            {"field": "LONG",
+                                                            "validateAs": {"type": "number",
+                                                            "allowedValues":{"pattern":"[-+]?[0-9]*\\.?[0-9]+$"}}}
+                                                ]}                                    
+                                            
+                        },
+                        {
+                            "id" : "land_polygon",
+                            "args_id" : "land_polygon_uri",
+                            "type": "file",
+                            "label": "Land Polygon to Calculate Distance From",
+                            "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
+                            "required": true,
+                            "validateAs": {"type": "OGR"},
+                            "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
+                        }
+                    ]
                 }
             ]
         }

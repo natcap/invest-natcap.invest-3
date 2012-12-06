@@ -446,7 +446,10 @@ Folder validation is limited to checking that the provided URI is a directory on
 the filesystem.  It is configured with the following syntax:
 
     "validateAs": {"type": "folder",
-                   "mustExist": false}
+                   "mustExist": false,
+                   "contains": ['file_1.tif', 'file_2.shp']}
+
+The contains attribute is not used if it is not provided.
 
 The mustExist attribute is assumed to be false unless you specify otherwise.  It
 must be a boolean.  NOTE: if you do not specify validation for a folder element,

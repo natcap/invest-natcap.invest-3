@@ -24,10 +24,11 @@
                     "type": "folder",
                     "label": "Workspace",
                     "defaultValue": "../Carbon",
-                    "required": true
+                  "required": true,
+		  "helpText": "A directory that will contain the intermediate and output files for this run."
                 }
             ]
-        },        
+        },
         {
             "id" : "cur_lulc_box",
             "type": "container",
@@ -45,7 +46,8 @@
                             "label": "Raster location",
                             "defaultValue": "../Base_Data/Terrestrial/lulc_samp_cur/hdr.adf",
                             "required": true,
-                            "validateAs": {"type": "GDAL"}
+                            "validateAs": {"type": "GDAL"},
+			    "helpText": "Location of the landcover map for the current scenario."
                         },
                         {
                             "id" : "cur_lulc_year",
@@ -58,7 +60,8 @@
                             "required": false,
                             "enabledBy": "calc_sequestration",
                             "defaultValue": "2000",
-                            "requiredIf": ["cur_harvest_map", "fut_harvest_map"]
+                            "requiredIf": ["cur_harvest_map", "fut_harvest_map"],
+			    "helpText": "The calendar year of the current scenario."
                         }
                     ]
                 }
@@ -70,7 +73,7 @@
             "collapsible": false,
             "label": "Future land use/land cover",
             "elements": [
-                { 
+                {
                     "id" : "fut_lulc_list",
                     "type" : "list",
                     "elements" : [
@@ -83,7 +86,8 @@
                             "enabledBy": "calc_sequestration",
                             "defaultValue": "../Base_Data/Terrestrial/lulc_samp_fut/hdr.adf",
                             "requiredIf": ["calc_sequestration"],
-                            "validateAs": {"type": "GDAL"}
+                            "validateAs": {"type": "GDAL"},
+			    "helpText": "Location of the landcover map for the current scenario."
                         },
                         {
                             "id" : "fut_lulc_year",
@@ -96,7 +100,8 @@
                             "required": false,
                             "defaultValue": "2030",
                             "enabledBy": "calc_sequestration",
-                            "requiredIf": ["fut_harvest_map"]
+                            "requiredIf": ["fut_harvest_map"],
+			    "helpText": "The calendar year of the future scenario."
                         }
                     ]
                 }
@@ -114,7 +119,8 @@
                     "args_id": "carbon_pools_uri",
                     "required": true,
                     "validateAs": {"type": "DBF",
-                                   "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]}
+                                   "fieldsExist": ["LULC", "C_above", "C_Below", "C_Soil", "C_Dead"]},
+		    "helpText": "A table that maps the land cover ids to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the user's guide.  The values in LULC must at least include the LULC ids in the land cover maps."
                 },
                 {
                     "id" : "cur_harvest_map",
@@ -127,7 +133,8 @@
                     "validateAs": {"type": "OGR",
                                    "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
                                    "fieldsExist": ["Cut_cur", "Start_date", "Freq_cur", "Decay_cur", "C_den_cur", "BCEF_cur"]},
-                    "returns": {"ifEmpty": "pass"}
+		    "returns": {"ifEmpty": "pass"},
+		    "helpText": "A shapefile to indicate harvested wood products for the current scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
                 },
                 {
                     "id" : "fut_harvest_map",
@@ -140,7 +147,8 @@
                     "validateAs": {"type": "OGR",
                                    "layers": [{"name": {"inheritFrom": "filename"}, "type": "polygons"}],
                                    "fieldsExist": ["Cut_fut", "Freq_fut", "Decay_fut", "C_den_fut", "BCEF_fut"]},
-                    "returns": {"ifEmpty": "pass"}
+		  "returns": {"ifEmpty": "pass"},
+		  "helpText": "A shapefile to indicate harvested wood products for the future scenario.  The field is optional.  If supplied the shapefile must have the fields 'Cut_cur', 'Start_date', 'Freq_cur', 'Decay_cur', 'C_den_cur', 'BCEF_cur'."
                 }
             ]
         }

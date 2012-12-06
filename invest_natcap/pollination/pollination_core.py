@@ -100,6 +100,11 @@ def biophysical(args):
             filtered_matrix, np.multiply, nesting_raster.GetNoDataValue())
         abundance_total_matrix = clip_and_op(abundance_total_matrix,
             supply_matrix, np.add, nesting_raster.GetNoDataValue())
+
+        # Take the pollinator abundance index and multiply it by the species
+        # weight in the guilds table.
+        abundance_total_matrix = clip_and_op(abundance_total_matrix,
+            guild_dict['species_weight'], np.multiply)
         args['species'][species]['species_abundance'].GetRasterBand(1).\
             WriteArray(supply_matrix)
 
@@ -236,6 +241,10 @@ def valuation(args):
         # Vectorize the ps_vectorized function
         vOp = np.vectorize(ps_vectorized)
         service_value_matrix = vOp(species_supply_matrix, blurred_ratio_matrix)
+
+        # Set all agricultural pixels to 0.  This is according to issue 761.
+        ag_matrix = args['ag_map'].GetRasterBand(1).ReadAsArray()
+        np.putmask(service_value_matrix, ag_matrix == 0, 0.0)
         species_dict['service_value'].GetRasterBand(1).WriteArray(
             service_value_matrix)
 

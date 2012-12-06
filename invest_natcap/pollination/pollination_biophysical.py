@@ -3,7 +3,7 @@
 from osgeo import gdal
 
 from invest_natcap.pollination import pollination_core
-from invest_natcap.iui import fileio
+from invest_natcap.invest_core import fileio
 import invest_cython_core
 
 import os.path
@@ -72,7 +72,7 @@ def execute(args):
 
         # Open a Table Handler for the land use attributes table and a different
         # table handler for the Guilds table.
-        att_table_handler = fileio.find_handler(args['landuse_attributes_uri'])
+        att_table_handler = fileio.TableHandler(args['landuse_attributes_uri'])
         att_table_fields = att_table_handler.get_fieldnames()
         nesting_fields = [f[2:] for f in att_table_fields if re.match('^n_', f)]
         floral_fields = [f[2:] for f in att_table_fields if re.match('^f_', f)]
@@ -80,7 +80,7 @@ def execute(args):
         biophysical_args['floral_fields'] = floral_fields
 
         att_table_handler.set_field_mask('(^n_)|(^f_)', trim=2)
-        guilds_handler = fileio.find_handler(args['guilds_uri'])
+        guilds_handler = fileio.TableHandler(args['guilds_uri'])
         guilds_handler.set_field_mask('(^ns_)|(^fs_)', trim=3)
 
         biophysical_args['landuse_attributes'] = att_table_handler

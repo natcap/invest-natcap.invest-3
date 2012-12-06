@@ -2,6 +2,7 @@
 invest_natcap.iui.iui_validator."""
 
 import unittest
+import os
 
 from invest_natcap.iui import iui_validator
 
@@ -77,6 +78,18 @@ class FolderCheckerTester(CheckerTester):
         """Assert that the FolderChecker fails if given a false URI."""
         self.validate_as['mustExist'] = True
         self.validate_as['value'] += 'a'
+        self.assertError()
+
+    def test_folder_contents(self):
+        """Assert FolderChecker verifies the presence of files"""
+        self.validate_as['contains'] = ['Guild.dbf', 'Guild.csv']
+        self.validate_as['value'] = os.path.join(TEST_DATA, 'iui')
+        self.assertNoError()
+
+    def test_folder_contents_not_present(self):
+        """Assert FolderChecker fails if given a file that does not exist."""
+        self.validate_as['contains'] = ['not_there.csv']
+        self.validate_as['value'] = os.path.join(TEST_DATA, 'iui')
         self.assertError()
 
 class GDALCheckerTester(CheckerTester):

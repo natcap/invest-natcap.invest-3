@@ -21,11 +21,10 @@ logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s \
 class InvalidNutrient(Exception):pass
 
 def make_folder(folder):
-    try:
-        os.makedirs(folder)
+    if not os.path.exists(folder):
         LOGGER.debug('Making the folder %s', folder)
-    except OSError:
-        # Thrown when folder already exists
+        os.makedirs(folder)
+    else:
         LOGGER.debug('Folder %s already exists, deleting and recreating', folder)
         shutil.rmtree(folder)
         os.makedirs(folder)
@@ -82,12 +81,12 @@ def execute(args):
         LOGGER.debug('Opening "%s" shapefile at %s', new_key, new_uri)
 
         base_shape_uri = args[shape_key].encode(encoding)
-        sample_shape = ogr.Open(base_shape_uri, 1)
+        LOGGER.debug('Opening with encoded %s' % base_shape_uri)
+        sample_shape = ogr.Open(base_shape_uri, 0)
         shapefile_folder = os.path.join(output_dir, new_key)
         make_folder(shapefile_folder)
 
-        #hard coding the output shapefile to be named nutrient_summary.shp
-        copy_uri = os.path.join(output_dir, new_key, 'nutrient_summary.shp')
+        copy_uri = os.path.join(output_dir, new_key)
         
         copy = ogr_driver.CopyDataSource(sample_shape, copy_uri)
         LOGGER.debug('Saving shapefile copy to %s', copy_uri)

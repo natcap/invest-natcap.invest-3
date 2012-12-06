@@ -3,7 +3,7 @@
 from osgeo import gdal
 
 from invest_natcap.pollination import pollination_core
-from invest_natcap.iui import fileio
+from invest_natcap.invest_core import fileio
 
 import os.path
 import logging
@@ -47,7 +47,7 @@ def execute(args):
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
 
-    guilds_table = fileio.find_handler(args['guilds_uri'])
+    guilds_table = fileio.TableHandler(args['guilds_uri'])
     valuation_args['guilds'] = guilds_table
 
     try:

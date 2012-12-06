@@ -359,6 +359,9 @@ class FolderChecker(URIChecker):
     def __init__(self):
         URIChecker.__init__(self)
 
+        updates = {'contains': self.check_contents}
+        self.update_map(updates)
+
     def check_exists(self, valid_dict):
         """Verify that the file at valid_dict['value'] exists.  Reimplemented
         from URIChecker class to provide more helpful, folder-oriented error
@@ -376,6 +379,22 @@ class FolderChecker(URIChecker):
         else:
             if os.path.isfile(self.uri):
                 return str(self.uri + ' already exists on disk')
+
+    def check_contents(self, files):
+        """Verify that the files listed in `files` exist.  Paths in `files` must
+        be relative to the Folder path that we are validating.  This function
+        strictly validates the presence of these files.
+
+            files - a list of string file URIs, where each file is relative to
+                the Folder stored in self.uri.
+
+        Conforming with all Checker classes, this function returns a string
+        error if one of the files does not exist or None if all required files
+        are found."""
+
+        for uri in files:
+            if not os.path.exists(os.path.join(self.uri, uri)):
+                return 'File "%s" must exist in "%s"' % (uri, self.uri)
 
 class FileChecker(URIChecker):
     """This subclass of URIChecker is tweaked to validate a file on disk.
