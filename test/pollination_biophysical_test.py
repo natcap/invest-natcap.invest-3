@@ -4,6 +4,7 @@ pollination model."""
 import unittest
 import os
 import shutil
+import logging
 
 import invest_test_core
 import invest_natcap.pollination.pollination_biophysical as\
@@ -12,8 +13,12 @@ import invest_natcap.pollination.pollination_valuation as\
     pollination_valuation
 import invest_natcap.pollination.pollination_core as pollination_core
 
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
 TEST_DATA_DIR = 'data/pollination/samp_input'
 REGRESSION_FOLDER_BASE = 'data/pollination/'
+LOGGER = logging.getLogger('pollination_test')
 
 class PollinationTest(unittest.TestCase):
     """This class contains information specific to the Pollination models, but
@@ -23,7 +28,7 @@ class PollinationTest(unittest.TestCase):
         """Reimplemented from unittest.TestCase, this has information that is
             used by both the biophysical and valuation components. """
         self.workspace_dir = 'data/pollination/test_workspace'
-        self.guilds_uri = TEST_DATA_DIR + '/Guild.dbf'
+        self.guilds_uri = TEST_DATA_DIR + '/Guild.csv'
 
         # The structure of self.intermediate_rasters and self.output_rasters
         # should be maintained across subclasses, although their contents may be
@@ -36,6 +41,9 @@ class PollinationTest(unittest.TestCase):
         self.output_rasters = {'workspace_subfolder': 'output',
                                'raster_uri_base': [],
                                'uri_mid': []}
+
+#    def tearDown(self):
+#        shutil.rmtree(self.workspace_dir)
 
     def assert_pollination_rasters(self, test_path):
         """Assert that all rasters produced by this component of the pollination
@@ -60,9 +68,11 @@ class PollinationTest(unittest.TestCase):
                 for uri_mid in test_folder['uri_mid']:
                     test_raster_uri = pollination_core.build_uri(out_folder_name,
                         uri_base, [uri_mid, 'cur'])
-                    reg_raster_uri = pollination_core.build_uri(out_folder_name,
+                    reg_raster_uri = pollination_core.build_uri(test_folder_name,
                         uri_base, [uri_mid, 'cur'])
 
+                    LOGGER.debug('Asserting rasters.  Test=%s, Reg=%s',
+                                 test_raster_uri, reg_raster_uri)
                     invest_test_core.assertTwoDatasetEqualURI(self,
                         test_raster_uri, reg_raster_uri)
 
@@ -73,7 +83,7 @@ class PollinationBiophysicalTest(PollinationTest):
         PollinationTest.setUp(self)
         self.args = {'workspace_dir': self.workspace_dir,
                      'landuse_cur_uri': TEST_DATA_DIR + '/landuse_cur_200m.tif',
-                     'landuse_attributes_uri': TEST_DATA_DIR + '/LU.dbf',
+                     'landuse_attributes_uri': TEST_DATA_DIR + '/LU.csv',
                      'guilds_uri': self.guilds_uri}
 
         self.intermediate_rasters = {'workspace_subfolder': 'intermediate',
@@ -142,7 +152,8 @@ class PollinationValuationTest(PollinationTest):
     def test_regression(self):
         """Regression test for pollination_valuation."""
         pollination_valuation.execute(self.args)
-        self.assert_pollination_rasters(self.biophysical_sample_dir)
+        self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
+            'valuation_output', 'with_ag_classes'))
 
 class PollinationSmokeTest(PollinationBiophysicalTest):
     """To only run this test class at the command line, do this:
