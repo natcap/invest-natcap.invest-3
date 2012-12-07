@@ -224,13 +224,13 @@ def biophysical(args):
     
     # Get the inputs needed to compute harvested wind energy
     bio_turbine_dict = args['biophysical_turbine_dict']
-    exp_pwr_curve = bio_turbine_dict['exp_out_pwr_curve']
+    exp_pwr_curve = int(bio_turbine_dict['exponent_power_curve'])
     num_days = args['num_days']
-    rated_power = bio_turbine_dict['turbine_rated_pwr']
-    air_density_standard = bio_turbine_dict['air_density']
-    v_rate = bio_turbine_dict['rated_wspd']
-    v_out = bio_turbine_dict['cut_out_wspd']
-    v_in = bio_turbine_dict['cut_in_wspd']
+    rated_power = float(bio_turbine_dict['turbine_rated_pwr'])
+    air_density_standard = float(bio_turbine_dict['air_density'])
+    v_rate = float(bio_turbine_dict['rated_wspd'])
+    v_out = float(bio_turbine_dict['cut_out_wspd'])
+    v_in = float(bio_turbine_dict['cut_in_wspd'])
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - (1.194*10**-4) * hub_height

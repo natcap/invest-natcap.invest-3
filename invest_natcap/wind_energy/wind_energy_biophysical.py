@@ -1,6 +1,8 @@
 """InVEST Wind Energy model file handler module"""
 import logging
 import os
+import csv
+import json
 
 from osgeo import gdal
 from osgeo import ogr
@@ -160,7 +162,7 @@ def execute(args):
     
     # Add biophysical inputs to the dictionary
     biophysical_args['workspace_dir'] = workspace
-    biophysical_args['hub_height'] = float(args['hub_height'])
+    biophysical_args['hub_height'] = int(args['hub_height'])
     biophysical_args['num_days'] = int(args['num_days'])
     
     # Create a list of the biophysical parameters we are looking for from the
@@ -187,6 +189,8 @@ def execute(args):
         if key.lower() in biophysical_params:
             bio_turbine_dict[key.lower()] = val
 
+    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
+    
     if len(bio_turbine_dict.keys()) != len(biophysical_params):
         class FieldError(Exception):
             pass
@@ -195,7 +199,6 @@ def execute(args):
         'Please make sure all the necessary fields are present and spelled '
         'correctly.')
 
-    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
     biophysical_args['biophysical_turbine_dict'] = bio_turbine_dict
     # Pass in the depth values as negative, since it should be a negative
     # elevation
