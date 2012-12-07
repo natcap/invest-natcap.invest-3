@@ -1,2 +1,13 @@
-Type,MW,Decom,Op_Maint,Misc_Capex,Install_Cost,Avg_Land_Cable_Dist,Foundation_Cost,Unit_Cost,Infield_Length,Infield_Cost,Mean_Land_Dist,Time,Discount_Rate
-Siemens,3.6,3.7,3.5,5.0,20,5.5,2,8,.91,.26,26.8,20,11.6
+MW,3.6
+Decom,3.7
+Op_Maint,3.5
+Misc_Capex,5.0
+Install_Cost,20
+Avg_Land_Cable_Dist,5.5
+Foundation_Cost,2
+Unit_Cost,8
+Infield_Length,0.91
+Infield_Cost,0.26
+Mean_Land_Dist,26.8
+Time,20
+Discount_Rate,11.6
