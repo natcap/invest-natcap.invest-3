@@ -2,6 +2,7 @@
 import os.path
 import logging
 import csv
+import json
 
 from osgeo import gdal
 from osgeo import ogr
@@ -26,7 +27,7 @@ def execute(args):
             area of interest. Must be projected in meters (required)
         args[biophysical_data_uri] - a uri to an OGR datasource of type point
             from the output of the biophysical model run (required) 
-        args[turbine_info_uri] - a uri to a CSV file that has the parameters
+        args[turbine_parameters_uri] - a uri to a CSV file that has the parameters
             for the type of turbine (required)
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
             and grid point locations (optional)

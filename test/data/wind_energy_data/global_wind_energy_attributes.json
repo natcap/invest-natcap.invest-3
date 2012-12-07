@@ -1,0 +1,12 @@
+{
+    "air_density":"1.225",
+    "exponent_power_curve":"2",
+    "decommission_cost":"3.7"
+    "operation_maintenance_cost":"3.5",
+    "miscellaneous_capex_cost":"5.0",
+    "installation_cost":"20",
+    "infield_cable_length":"0.91",
+    "infield_cable_cost":"0.26",
+    "time_period":"20",
+    "discount_rate":"11.6"
+}
