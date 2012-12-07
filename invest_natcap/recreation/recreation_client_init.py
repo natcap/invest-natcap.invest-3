@@ -48,17 +48,19 @@ def execute(args):
         LOGGER.error("The shapefile must have a PRJ file.")
         raise IOError, "Missing PRJ file."
     else:
-        WGS84=['GEOGCS["GCS_WGS_1984",DATUM["WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]',
-               'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]',
-               'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]']
-        aoiPRJ=open(aoiFileNamePRJ)
-        if aoiPRJ.read() in WGS84:
-            LOGGER.info("AOI is in WGS84.")
-            aoiPRJ.close()
-        else:
-            aoiPRJ.close()
-            LOGGER.error("AOI is NOT in WGS84.")
-            raise ValueError, ("AOI must be in WGS84!")
+        pass
+        #this code does not seem to be working anyway.
+##        WGS84=['GEOGCS["GCS_WGS_1984",DATUM["WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]',
+##               'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]',
+##               'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]']
+##        aoiPRJ=open(aoiFileNamePRJ)
+##        if aoiPRJ.read() in WGS84:
+##            LOGGER.info("AOI is in WGS84.")
+##            aoiPRJ.close()
+##        else:
+##            aoiPRJ.close()
+##            LOGGER.error("AOI is NOT in WGS84.")
+##            raise ValueError, ("AOI must be in WGS84!")
 
     #scanning data directory for shapefiles
     LOGGER.info("Processing predictors.")

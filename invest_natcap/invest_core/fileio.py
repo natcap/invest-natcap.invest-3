@@ -97,7 +97,7 @@ class CSVDriver(TableDriverTemplate):
     """The CSVDriver class is a subclass of TableDriverTemplate."""
     def get_file_object(self, uri=None):
         uri = max(uri, self.uri)
-        return csv.DictReader(open(uri, 'rU'))
+        return csv.DictReader(open(uri, 'rU'), quoting=csv.QUOTE_NONNUMERIC)
 
     def get_fieldnames(self):
         file_object = self.get_file_object(self.uri)
@@ -120,7 +120,8 @@ class CSVDriver(TableDriverTemplate):
         if fieldnames == None:
             fieldnames = self.get_fieldnames()
         file_handler = open(uri, 'wb')
-        writer = csv.DictWriter(file_handler, fieldnames)
+        writer = csv.DictWriter(file_handler, fieldnames,
+            quoting=csv.QUOTE_NONNUMERIC)
         try:
             writer.writeheader()
         except AttributeError:

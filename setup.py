@@ -15,7 +15,8 @@ from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
 from invest_natcap import build_utils
-VERSION = build_utils.invest_version(uri='invest_natcap/invest_version.py')
+VERSION = build_utils.invest_version(uri='invest_natcap/invest_version.py',
+    force_new=True)
 CYTHON_SOURCE_FILES = ['invest_natcap/cython_modules/invest_cython_core.pyx',
                        'invest_natcap/cython_modules/simplequeue.c']
 

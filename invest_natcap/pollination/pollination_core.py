@@ -100,6 +100,11 @@ def biophysical(args):
             filtered_matrix, np.multiply, nesting_raster.GetNoDataValue())
         abundance_total_matrix = clip_and_op(abundance_total_matrix,
             supply_matrix, np.add, nesting_raster.GetNoDataValue())
+
+        # Take the pollinator abundance index and multiply it by the species
+        # weight in the guilds table.
+        abundance_total_matrix = clip_and_op(abundance_total_matrix,
+            guild_dict['species_weight'], np.multiply)
         args['species'][species]['species_abundance'].GetRasterBand(1).\
             WriteArray(supply_matrix)
 
