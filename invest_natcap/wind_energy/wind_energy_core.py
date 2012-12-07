@@ -35,22 +35,13 @@ def biophysical(args):
             the area of interest (required)
         args[bottom_type] - an OGR datasource of type polygon that depicts the 
             subsurface geology type (optional)
-        args[hub_height] - a float value for the hub height of the turbines
-            (meters) (required)
-        args[cut_in_wspd] - a float value for the cut in wind speed of the
-            (meters / second) turbine (required)
-        args[cut_out_wspd] - a float value for the cut out wind speed of the
-            (meteres / second) turbine (required)
-        args[rated_wspd] - a float value for the rated wind speed of the 
-            (meters / second) turbine (required)
-        args[turbine_rated_pwr] - a float value for the turbine rated power
-            (MW) (required)
-        args[exp_out_pwr_curve] - a float value for the exponent output power
-            curve (required)
+        args[hub_height] - an integer value for the hub height of the turbines
+            as a factor of ten (meters) (required)
+        args[biophysical_turbine_dict] - a python dictionary containing the
+            following fields: cut_in_wspd, cut_out_wspd, rated_wspd,
+            turbine_rated_pwr, air_density, exponent_power_curve (required)
         args[num_days] - an integer value for the number of days for harvested
             wind energy calculation (days) (required)
-        args[air_density] - a float value for the air density of standard 
-            atmosphere (kilograms / cubic meter) (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
@@ -232,13 +223,14 @@ def biophysical(args):
         wind_points_layer.CreateField(new_field)
     
     # Get the inputs needed to compute harvested wind energy
-    exp_pwr_curve = args['exp_out_pwr_curve']
+    bio_turbine_dict = args['biophysical_turbine_dict']
+    exp_pwr_curve = bio_turbine_dict['exp_out_pwr_curve']
     num_days = args['num_days']
-    rated_power = args['turbine_rated_pwr']
-    air_density_standard = args['air_density']
-    v_rate = args['rated_wspd']
-    v_out = args['cut_out_wspd']
-    v_in = args['cut_in_wspd']
+    rated_power = bio_turbine_dict['turbine_rated_pwr']
+    air_density_standard = bio_turbine_dict['air_density']
+    v_rate = bio_turbine_dict['rated_wspd']
+    v_out = bio_turbine_dict['cut_out_wspd']
+    v_in = bio_turbine_dict['cut_in_wspd']
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - (1.194*10**-4) * hub_height
