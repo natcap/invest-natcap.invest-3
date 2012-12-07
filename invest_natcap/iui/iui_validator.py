@@ -537,22 +537,30 @@ class OGRChecker(TableChecker):
 
                 # Validate projection units if the user specifies it.
                 if 'units' in layer_dict['projection']:
-                    units_error = None
-                    linear_units = reference.GetLinearUnitsName()
-                    if layer_dict['projection']['units'] == 'meters':
-                        if linear_units != 'Meter':
-                            units_error = 'Meter'
-                    elif layer_dict['projection']['units'] == 'latLong':
-                        if linear_units != 'Degree':
-                            units_error = 'Degree'
-                    elif layer_dict['projection']['units'] == 'US Feet':
-                        if linear_units != 'Foot_US':
-                            units_error = 'Foot_US'
+                    linear_units = str(reference.GetLinearUnitsName())
 
-                    if units_error != None:
+                    # This dictionary maps IUI-defined projection strings to the
+                    # WKT unit name strings that OGR recognizes.
+                    known_units = {
+                        'meters': 'Meter',
+                        'latLong': 'Degree',
+                        'US Feet': 'Foot_US'
+                    }
+
+                    # Get the JSON-defined projection unit and validate that the
+                    # name extracted from the Spatial Reference matches what we
+                    # expect.
+                    required_unit = layer_dict['projection']['units']
+                    try:
+                        expected_unit = known_units[required_unit]
+                    except:
+                        return str('This shapefile is projected in \'%s\', '
+                            'but is expected to be projected in \'%s\'.' %
+                            (linear_units, required_unit))
+                    if expected_unit != linear_units:
                         return str('Shapefile layer %s must be projected '
-                            'in %s. \'%s\' found.' % (layer_name,
-                            layer_dict['projection']['units'], units_error))
+                            'in %s (%s). \'%s\' found.' % (layer_name,
+                            required_unit, expected_unit, linear_units))
 
                 # Validate whether the layer should be projected
                 projection = reference.GetAttrValue('PROJECTION')
