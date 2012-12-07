@@ -1,0 +1,6 @@
+hub_height,60
+cut_in_wspd,4.0
+rated_wspd,14.0
+cut_out_wspd,25.0
+rated_power,3.6
+turbine_cost,8.0
