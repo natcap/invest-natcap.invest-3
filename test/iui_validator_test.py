@@ -165,6 +165,14 @@ class OGRCheckerTester(CheckerTester):
         self.validate_as.update(updates)
         self.assertNoError()
 
+        # Verify that if the JSON definition requires a projection that we don't
+        # recognize in validation's known_units dictionary.
+        updates = {'layers': [{'name': 'mn',
+                               'projection': {'units': 'SOMETHING!'}}],
+                   'value': TEST_DATA + '/iui/validation/mn.shp'}
+        self.validate_as.update(updates)
+        self.assertError()
+
         # Check that the layer is projected.
         updates = {'layers': [{'name': 'harv_samp_cur',
                                'projection': {'exists': True}}],
