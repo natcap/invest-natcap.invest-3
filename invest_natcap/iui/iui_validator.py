@@ -550,13 +550,18 @@ class OGRChecker(TableChecker):
                     # Get the JSON-defined projection unit and validate that the
                     # name extracted from the Spatial Reference matches what we
                     # expect.
+                    # NOTE: If the JSON-defined linear unit (the expected unit)
+                    # is not in the known_units dictionary, this will
+                    # throw a keyError, which causes a validation error to be
+                    # printed.
                     required_unit = layer_dict['projection']['units']
                     try:
                         expected_unit = known_units[required_unit]
                     except:
-                        return str('This shapefile is projected in \'%s\', '
-                            'but is expected to be projected in \'%s\'.' %
-                            (linear_units, required_unit))
+                        return str('Expected projection units must be '
+                            'one of %s, not %s' % (known_units.keys(),
+                            required_unit))
+
                     if expected_unit != linear_units:
                         return str('Shapefile layer %s must be projected '
                             'in %s (%s). \'%s\' found.' % (layer_name,
