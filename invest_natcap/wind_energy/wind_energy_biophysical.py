@@ -187,6 +187,14 @@ def execute(args):
         if key.lower() in biophysical_params:
             bio_turbine_dict[key.lower()] = val
 
+    if len(bio_turbine_dict.keys()) != len(biophysical_params):
+        class FieldError(Exception):
+            pass
+        raise FieldError('An Error occured from reading in a field value from '
+        'either the turbine CSV file or the global parameters JSON file. ' 
+        'Please make sure all the necessary fields are present and spelled '
+        'correctly.')
+
     LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
     biophysical_args['biophysical_turbine_dict'] = bio_turbine_dict
     # Pass in the depth values as negative, since it should be a negative
