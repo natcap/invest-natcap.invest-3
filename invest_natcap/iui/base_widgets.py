@@ -925,6 +925,11 @@ class Container(QtGui.QGroupBox, DynamicGroup):
         self.setState(self.isEnabled() or self.isChecked(), includeSelf=False,
             recursive=True)
 
+    def requirementsMet(self):
+        """This function is used to return whether the container is enabled or
+        not.  Used for determining whether other elements should be triggered."""
+        return self.value()
+
     def value(self):
         return self.isChecked()
 
