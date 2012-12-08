@@ -1,5 +1,5 @@
 {
-    "server": "http://ncp-skookum.stanford.edu/~mlacayo/",
+    "server": "http://ncp-tenas.stanford.edu/~mlacayo/",
     "paths": {
         "relative": {
             "data": "data/",
