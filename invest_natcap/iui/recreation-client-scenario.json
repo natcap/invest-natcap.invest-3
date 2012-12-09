@@ -22,7 +22,7 @@
                             "id" : "json",
                             "args_id" : "json",
                             "type": "file",
-                            "label": "model.json",
+                            "label": "init.json",
                             "required": true
                         },					        
 		        {
