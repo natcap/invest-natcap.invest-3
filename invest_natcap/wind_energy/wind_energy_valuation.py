@@ -34,6 +34,8 @@ def execute(args):
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon to
             use for distance calculations if grid points were not provided 
             (required if grid_points_uri is not provided)
+        args[foundation_cost] - a float representing how much the foundation
+            will cost for the specific type of turbine (required)
         args[number_of_machines] - an integer value for the number of machines
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
@@ -98,6 +100,7 @@ def execute(args):
     reader = None
     turbine_file.close()
     
+    turbine_dict['turbine_cost'] = float(args['turbine_cost'])
     LOGGER.debug('Turbine Dictionary: %s', turbine_dict)
     valuation_args['turbine_dict'] = turbine_dict
 
