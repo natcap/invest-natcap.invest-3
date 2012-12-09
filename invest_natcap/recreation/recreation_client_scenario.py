@@ -83,7 +83,8 @@ def execute(args):
     args["sessid"] = sessid
     LOGGER.debug("Server session %s." % (sessid))
     
-    attachments = {"json" : open(args["json"],'rb'),
+    attachments = {"json" : json.dumps(args, indent=4),
+                   "init" : open(args["json"],'rb'),
                    "comments": args["comments"]}
     
     datagen, headers = multipart_encode(attachments)
