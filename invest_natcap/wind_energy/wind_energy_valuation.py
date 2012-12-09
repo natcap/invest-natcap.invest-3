@@ -34,6 +34,8 @@ def execute(args):
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon to
             use for distance calculations if grid points were not provided 
             (required if grid_points_uri is not provided)
+        args[foundation_cost] - a float representing how much the foundation
+            will cost for the specific type of turbine (required)
         args[number_of_machines] - an integer value for the number of machines
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
@@ -81,25 +83,44 @@ def execute(args):
 
     LOGGER.info('Read in turbine information from CSV')
     # Open the turbine CSV file 
-    turbine_dict = {}
-    turbine_file = open(str(args['turbine_info_uri']))
-    reader = csv.DictReader(turbine_file)
-
-    # Making a shallow copy of the attribute 'fieldnames' explicitly to edit to
-    # all the fields to lowercase because it is more readable and easier than
-    # editing the attribute itself
-    field_names = reader.fieldnames
-
-    for index in range(len(field_names)):
-        field_names[index] = field_names[index].lower()
-
-    for row in reader:
-        turbine_dict[row['type']] = row
-    reader = None
-    turbine_file.close()
     
-    LOGGER.debug('Turbine Dictionary: %s', turbine_dict)
-    valuation_args['turbine_dict'] = turbine_dict
+    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
+    valuation_global_params = [
+            'discount_rate', 'time_period', 'infield_cable_cost', 
+            'infield_cable_length', 'installation_cost',
+            'miscellaneous_capex_cost', 'operation_maintenance_cost',
+            'decommission_cost']
+    
+    val_turbine_param_file = open(args['turbine_parameters_uri'])
+    val_turbine_reader = csv.reader(val_turbine_param_file)
+    val_turbine_dict = {}
+
+    for field_value_row in val_turbine_reader:
+        if field_value_row[0].lower() in valuation_turbine_params:
+            val_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
+    
+    val_global_params_file = open(
+            os.path.join(workspace, 'input/global_wind_energy_attributes.json'))
+
+    val_global_params_dict = json.load(val_global_params_file)
+    for key, val in val_global_params_dict.iteritems():
+        if key.lower() in valuation_global_params:
+            val_turbine_dict[key.lower()] = val
+
+    LOGGER.debug('Valuation Turbine Parameters: %s', val_turbine_dict)
+    val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
+    if len(val_turbine_dict.keys()) != val_param_len:
+        class FieldError(Exception):
+            pass
+        raise FieldError('An Error occured from reading in a field value from '
+                'either the turbine CSV file or the global parameters JSON '
+                'file. Please make sure all the necessary fields are present '
+                'and spelled correctly.')
+    
+    val_turbine_dict['foundation_cost'] = float(args['foundation_cost'])
+    val_turbine_dict['avg_grid_distance'] = float(args['avg_grid_distance'])
+    LOGGER.debug('Turbine Dictionary: %s', val_turbine_dict)
+    valuation_args['turbine_dict'] = val_turbine_dict
 
     # Handle Grid Points
     try:
