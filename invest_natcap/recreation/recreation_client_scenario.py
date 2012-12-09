@@ -27,17 +27,17 @@ def execute(args):
     if args["data_dir"][-1] != os.sep:
         args["data_dir"]=args["data_dir"]+os.sep
 
-    LOGGER.info("Validating grid.")
-    dirname=os.path.dirname(args["gridFileName"])+os.sep
-    fileName, fileExtension = os.path.splitext(args["gridFileName"])
-    gridFileNameSHP = fileName+".shp"
-    gridFileNameSHX = fileName+".shx"
-    gridFileNameDBF = fileName+".dbf"
-    gridFileNamePRJ = fileName+".prj"
-    
-    if not os.path.exists(gridFileNamePRJ):
-        LOGGER.error("The shapefile must have a PRJ file.")
-        raise IOError, "Missing PRJ file."
+##    LOGGER.info("Validating grid.")
+##    dirname=os.path.dirname(args["gridFileName"])+os.sep
+##    fileName, fileExtension = os.path.splitext(args["gridFileName"])
+##    gridFileNameSHP = fileName+".shp"
+##    gridFileNameSHX = fileName+".shx"
+##    gridFileNameDBF = fileName+".dbf"
+##    gridFileNamePRJ = fileName+".prj"
+##    
+##    if not os.path.exists(gridFileNamePRJ):
+##        LOGGER.error("The shapefile must have a PRJ file.")
+##        raise IOError, "Missing PRJ file."
 
     LOGGER.info("Processing predictors.")
     predictors = []
@@ -83,11 +83,8 @@ def execute(args):
     args["sessid"] = sessid
     LOGGER.debug("Server session %s." % (sessid))
     
-    attachments = {"json" : json.dumps(args, indent=4),
-                   "gridSHP": open(gridFileNameSHP, "rb"),
-                   "gridSHX": open(gridFileNameSHX, "rb"),
-                   "gridDBF": open(gridFileNameDBF, "rb"),
-                   "gridPRJ": open(gridFileNamePRJ, "rb")}
+    attachments = {"json" : open(args["json"],'rb'),
+                   "comments": args["comments"]}
     
     datagen, headers = multipart_encode(attachments)
     
@@ -106,6 +103,7 @@ def execute(args):
     url = config["server"]+config["paths"]["relative"]["data"]+sessid+"/"+config["files"]["log"]    
     complete = False
     oldlog=""
+    msg=""
     time.sleep(5)
     while not complete:
         log = urllib2.urlopen(url).read()
