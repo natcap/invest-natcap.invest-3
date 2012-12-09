@@ -118,6 +118,7 @@ def execute(args):
                 'and spelled correctly.')
     
     val_turbine_dict['foundation_cost'] = float(args['foundation_cost'])
+    val_turbine_dict['avg_grid_distance'] = float(args['avg_grid_distance'])
     LOGGER.debug('Turbine Dictionary: %s', val_turbine_dict)
     valuation_args['turbine_dict'] = val_turbine_dict
 

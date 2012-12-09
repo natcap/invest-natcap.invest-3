@@ -522,13 +522,8 @@ def valuation(args):
     decom = float(turbine_dict['decommission_cost']) / 100.00
     # The mega watt value for the turbines in MW
     mega_watt = float(turbine_dict['turbine_rated_pwr'])
-    
     # The average land cable distance in km
-    avg_land_cable_dist = float(
-            turbine_dict[turbine_name]['avg_land_cable_dist'])
-    # The mean land distance to a grid connection point in km
-    mean_land_dist = float(turbine_dict[turbine_name]['mean_land_dist'])
-    
+    avg_grid_distance = float(turbine_dict['avg_grid_distance'])
     
     time = int(turbine_dict['time_period'])
 
@@ -561,7 +556,7 @@ def valuation(args):
         
         # Set each value in the array to the constant distance for land to grid
         # points
-        grid_to_land_dist = grid_to_land_dist * mean_land_dist
+        grid_to_land_dist = grid_to_land_dist * avg_grid_distance
         
         wind_energy_layer = None     
     else:
