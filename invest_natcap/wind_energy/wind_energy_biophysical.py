@@ -1,4 +1,4 @@
-"""InVEST Wind Energy model file handler module"""
+"""InVEST Wind Energy Biophysical model file handler"""
 import logging
 import os
 import csv
@@ -44,7 +44,7 @@ def execute(args):
             turbines biophysical parameters as well as valuation parameters 
             (required)
         args[hub_height] - an integer value for the hub height of the turbines
-            (meters) (required)
+            as a factor of ten (meters) (required)
         args[num_days] - an integer value for the number of days for harvested
             wind energy calculation (days) (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
@@ -166,7 +166,7 @@ def execute(args):
     biophysical_args['num_days'] = int(args['num_days'])
     
     # Create a list of the biophysical parameters we are looking for from the
-    # files
+    # input files
     biophysical_params = ['cut_in_wspd', 'cut_out_wspd', 'rated_wspd',
                           'turbine_rated_pwr', 'air_density',
                           'exponent_power_curve']
