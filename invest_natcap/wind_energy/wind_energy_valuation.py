@@ -25,8 +25,6 @@ def execute(args):
             outputs will be saved (required)
         args[aoi_uri] - a uri to an OGR datasource of type polygon covering the
             area of interest. Must be projected in meters (required)
-        args[biophysical_data_uri] - a uri to an OGR datasource of type point
-            from the output of the biophysical model run (required) 
         args[turbine_parameters_uri] - a uri to a CSV file that has the parameters
             for the type of turbine (required)
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
@@ -69,7 +67,10 @@ def execute(args):
     valuation_args['suffix'] = suffix
 
     aoi = ogr.Open(str(args['aoi_uri']))
-    biophysical_points = ogr.Open(str(args['biophysical_data_uri']))
+    
+    biophysical_points_uri = os.path.join(
+            inter_dir, 'wind_points_reprojected.shp')
+    biophysical_points = ogr.Open(biophysical_points_uri)
     
     biophysical_points_proj = clip_and_project_datasource(
             biophysical_points, aoi, os.path.join(inter_dir, 'bio_points'))

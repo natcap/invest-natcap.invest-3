@@ -200,15 +200,6 @@
                     "type" : "list",
                     "elements" : [
                         {
-                            "id" : "turbine_info",
-                            "args_id" : "turbine_info_uri",
-                            "type": "file",
-                            "label": "Turbine Information",
-                            "required": true,
-                            "helpText": "",
-                            "validateAs": { "type": "CSV"}
-                        },
-                        {
                             "id": "foundation_cost",
                             "args_id": "foundation_cost",
                             "type": "text",
@@ -278,7 +269,7 @@
                             "id" : "avg_grid_dist",
                             "args_id" : "avg_grid_dist",
                             "type": "text",
-                            "label": "Average Grid to Land Distance (meters)",
+                            "label": "Average Grid to Land Distance (km)",
                             "defaultValue": "",
                             "validText" : "^[0-9]*\\.?[0-9]+$",
                             "validateAs" : {"type" : "number",
