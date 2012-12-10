@@ -1,6 +1,8 @@
 """InVEST Wind Energy model file handler module"""
 import logging
 import os
+import csv
+import json
 
 from osgeo import gdal
 from osgeo import ogr
@@ -38,22 +40,13 @@ def execute(args):
             values of the area of interest (required)
         args[bottom_type_uri] - a uri to an OGR datasource of type polygon
             that depicts the subsurface geology type (optional)
-        args[hub_height] - a float value for the hub height of the turbines
+        args[turbine_parameters_uri] - a uri to a CSV file that holds the
+            turbines biophysical parameters as well as valuation parameters 
+            (required)
+        args[hub_height] - an integer value for the hub height of the turbines
             (meters) (required)
-        args[cut_in_wspd] - a float value for the cut in wind speed of the
-            (meters / second) turbine (required)
-        args[cut_out_wspd] - a float value for the cut out wind speed of the
-            (meteres / second) turbine (required)
-        args[rated_wspd] - a float value for the rated wind speed of the 
-            (meters / second) turbine (required)
-        args[turbine_rated_pwr] - a float value for the turbine rated power
-            (MW) (required)
-        args[exp_out_pwr_curve] - a float value for the exponent output power
-            curve (required)
         args[num_days] - an integer value for the number of days for harvested
             wind energy calculation (days) (required)
-        args[air_density] - a float value for the air density of standard 
-            atmosphere (kilograms / cubic meter) (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
             farm installation (meters) (required)
         args[max_depth] - a float value for the maximum depth for offshore wind
@@ -169,15 +162,44 @@ def execute(args):
     
     # Add biophysical inputs to the dictionary
     biophysical_args['workspace_dir'] = workspace
-    biophysical_args['hub_height'] = float(args['hub_height'])
-    biophysical_args['cut_in_wspd'] = float(args['cut_in_wspd'])
-    biophysical_args['cut_out_wspd'] = float(args['cut_out_wspd'])
-    biophysical_args['exp_out_pwr_curve'] = float(args['exp_out_pwr_curve'])
+    biophysical_args['hub_height'] = int(args['hub_height'])
     biophysical_args['num_days'] = int(args['num_days'])
-    biophysical_args['air_density'] = float(args['air_density'])
-    biophysical_args['rated_wspd'] = float(args['rated_wspd'])
-    biophysical_args['turbine_rated_pwr'] = float(args['turbine_rated_pwr'])
     
+    # Create a list of the biophysical parameters we are looking for from the
+    # files
+    biophysical_params = ['cut_in_wspd', 'cut_out_wspd', 'rated_wspd',
+                          'turbine_rated_pwr', 'air_density',
+                          'exponent_power_curve']
+    # Get the biophysical turbine parameters from the CSV file
+    bio_turbine_param_file = open(args['turbine_parameters_uri'])
+    bio_turbine_reader = csv.reader(bio_turbine_param_file)
+    bio_turbine_dict = {}
+    for field_value_row in bio_turbine_reader:
+        # Only get the biophysical parameters and leave out the valuation ones
+        if field_value_row[0].lower() in biophysical_params:
+            bio_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
+
+    # Get the global biophysical parameters from the JSON file
+    bio_global_params_file = open(
+           os.path.join(workspace, 'input/global_wind_energy_attributes.json'))
+
+    bio_global_params_dict = json.load(bio_global_params_file)
+    for key, val in bio_global_params_dict.iteritems():
+        # Only get the biophysical parameters and leave out the valuation ones
+        if key.lower() in biophysical_params:
+            bio_turbine_dict[key.lower()] = val
+
+    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
+    
+    if len(bio_turbine_dict.keys()) != len(biophysical_params):
+        class FieldError(Exception):
+            pass
+        raise FieldError('An Error occured from reading in a field value from '
+        'either the turbine CSV file or the global parameters JSON file. ' 
+        'Please make sure all the necessary fields are present and spelled '
+        'correctly.')
+
+    biophysical_args['biophysical_turbine_dict'] = bio_turbine_dict
     # Pass in the depth values as negative, since it should be a negative
     # elevation
     biophysical_args['min_depth'] = abs(float(args['min_depth'])) * -1.0

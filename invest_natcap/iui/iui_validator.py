@@ -576,7 +576,7 @@ class OGRChecker(TableChecker):
                             negate_string = 'not'
                         else:
                             negate_string = ''
-                        return str('Shapefile layer %s should %s be' +
+                        return str('Shapefile layer %s should %s be ' +
                                    'projected') % (layer_name, negate_string)
 
                 # Validate whether the layer's projection matches the

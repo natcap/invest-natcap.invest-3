@@ -64,18 +64,6 @@
                     "helpText": "An integer value for the number of days for harvested wind energy. 365 days corresponds to yearly calculations and it is suggested to use 30 days for monthly energy outputs."
                 },
                 {
-                    "id" : "air_density",
-                    "args_id" : "air_density",
-                    "type": "text",
-                    "label": "Air Density (kgm^-3) of Standard Atmosphere",
-                    "defaultValue": "1.225",
-                    "validText" : "^[0-9]*\\.?[0-9]+$",
-                    "validateAs" : {"type" : "number",
-                                    "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                    "required": true,
-                    "helpText": "A floating point value for the air density of standard atmosphere (kgm ^ -3). The U.S. standard atmosphere air density at sea leavel is 1.225. At the International Union of Pure and Applied Chemistry (IUPAC) standard temperature and pressure (0 degrees celcius and 100 kPa), dry air has a density of 1.2754 kg/m^3)."
-                },
-                {
                     "id" : "results_suffix",
                     "args_id" : "suffix",
                     "type": "text",
@@ -100,76 +88,25 @@
                     "type" : "list",
                     "elements" : [
                             {
+                                "id" : "turbine_parameters",
+                                "args_id" : "turbine_parameters_uri",
+                                "type": "file",
+                                "label": "Turbine Type",
+                                "required": true,
+                                "helpText": "",
+                                "validateAs": { "type": "CSV"}
+                            },
+                            {
                                 "id" : "hub_height",
                                 "args_id" : "hub_height",
-                                "type": "dropdown",
-                                "label": "Hub Heights (meters)",
+                                "type": "text",
+                                "label": "Hub Height (meters)",
                                 "defaultValue": "",
-                                "options" : ["10", "20", "30", "40", "50", "60", "70", "80",
-                                             "90", "100", "110", "120", "130", "140", "150"],
-                                "required": true,
-                                "returns" : "strings",
-                                "helpText": "An integer value for the hub height of the turbines."
-                            },
-                            {
-                                "id" : "cutin_wspd",
-                                "args_id" : "cut_in_wspd",
-                                "type": "text",
-                                "label": "Cut-in Wind Speed (m/s)",
-                                "defaultValue": "4.0",
-                                "validText" : "^[0-9]*\\.?[0-9]+$",
+                                "validText" : "^[0-9]+[0]+$",
                                 "validateAs" : {"type" : "number",
-                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                                                "allowedValues" : {"pattern" : "^[0-9]+[0]+$"}},
                                 "required": true,
-                                "helpText": "A floating point value for the cut-in wind speed. Default is set to 4 m/s"
-                            },
-                            {
-                                "id" : "rated_wspd",
-                                "args_id" : "rated_wspd",
-                                "type": "text",
-                                "label": "Rated Wind Speed (m/s)",
-                                "defaultValue": "14.0",
-                                "validText" : "^[0-9]*\\.?[0-9]+$",
-                                "validateAs" : {"type" : "number",
-                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                                "required": true,
-                                "helpText": "A floating point value for the rated wind speed. Default is set to 14 m/s"
-                            },
-                            {
-                                "id" : "cutout_wspd",
-                                "args_id" : "cut_out_wspd",
-                                "type": "text",
-                                "label": "Cut-out Wind Speed (m/s)",
-                                "defaultValue": "25.0",
-                                "validText" : "^[0-9]*\\.?[0-9]+$",
-                                "validateAs" : {"type" : "number",
-                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                                "required": true,
-                                "helpText": "A floating point value for the cut-out wind speed. Default is set to 25 m/s"
-                            },
-                            {
-                                "id" : "turbine_rated_pwr",
-                                "args_id" : "turbine_rated_pwr",
-                                "type": "text",
-                                "label": "Wind Turbine Rated Power (MW)",
-                                "defaultValue": "3.6",
-                                "validText" : "^[0-9]*\\.?[0-9]+$",
-                                "validateAs" : {"type" : "number",
-                                                "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                                "required": true,
-                                "helpText": "A floating point value for the wind turbine rated power. Default is set to 3.6 MW"
-                            },
-                            {
-                                "id" : "exp_out_pwr_curve",
-                                "args_id" : "exp_out_pwr_curve",
-                                "type": "text",
-                                "label": "Exponent of Output Power Curve",
-                                "defaultValue": "2",
-                                "validText" : "^[0-9]+$",
-                                "validateAs" : {"type" : "number",
-                                                "allowedValues" : {"pattern" : "^[0-9]+$"}},
-                                "required": true,
-                                "helpText": "An integer value for the exponent of output power curve. The default is set to 2. Please see the User's Guide for more information."
+                                "helpText": "An integer value for the hub height of the turbines, where the height is a multiple of ten. Ex: 40, 50, 60, ... , 110, 120."
                             },
                             {
                                 "id" : "min_depth",
@@ -263,26 +200,14 @@
                     "type" : "list",
                     "elements" : [
                         {
-                            "id" : "biophysical_data",
-                            "args_id" : "biophysical_data_uri",
-                            "type": "file",
-                            "label": "Biophysical Data",
-                            "defaultValue": "../Wind_Energy/output/biophysical_data.shp",
+                            "id": "foundation_cost",
+                            "args_id": "foundation_cost",
+                            "type": "text",
+                            "label": "Cost of the Foundation Type",
                             "required": true,
-                            "validateAs": {"type":"OGR",
-                                           "layers": [{"name": {"inheritFrom": "file"},
-                                                       "type": "points"}],
-                                           "fieldsExist": ["Density", "HarvEnergy"]},
-                            "helpText": ""
-                        },
-                        {
-                            "id" : "turbine_info",
-                            "args_id" : "turbine_info_uri",
-                            "type": "file",
-                            "label": "Turbine Information",
-                            "required": true,
-                            "helpText": "",
-                            "validateAs": { "type": "CSV"}
+                            "helpText": "lots of helpful comments",
+                            "validateAs": { "type" : "number",
+                                            "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}}
                         },
                         {
                             "id" : "number_of_machines",
@@ -339,6 +264,18 @@
                             "required": true,
                             "validateAs": {"type": "OGR"},
                             "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
+                        },
+                        {
+                            "id" : "avg_grid_dist",
+                            "args_id" : "avg_grid_distance",
+                            "type": "text",
+                            "label": "Average Grid to Land Distance (km)",
+                            "defaultValue": "",
+                            "validText" : "^[0-9]*\\.?[0-9]+$",
+                            "validateAs" : {"type" : "number",
+                                            "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
+                            "required": true,
+                            "helpText": "Lots of helpful information here"
                         }
                     ]
                 }
