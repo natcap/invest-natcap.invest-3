@@ -119,7 +119,9 @@ def biophysical(args):
         LOGGER.debug('Calculating %s abundance index', species)
         finished_rasters['supply'] = raster_utils.vectorize_rasters(
             [mapped_resource_rasters['nesting'], finished_rasters['floral']],
-            lambda x, y: x*y if x != -1.0 else -1.0, nodata=-1.0)
+            lambda x, y: x*y if x != -1.0 else -1.0,
+            raster_out_uri=args['species'][species]['species_abundance'],
+            nodata=-1.0)
 
 #        nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
 #        supply_matrix = clip_and_op(nesting_raster.ReadAsArray(),
@@ -128,10 +130,10 @@ def biophysical(args):
         # Take the pollinator abundance index and multiply it by the species
         # weight in the guilds table.
         species_weight = guild_dict['species_weight']
-        finished_rasters['abundance'] = raster_utils.vectorize_rasters(
+        abundance_total_raster = raster_utils.vectorize_rasters(
             [abundance_total_raster, finished_rasters['supply']],
-            lambda x, y: (x+y)*species_weight if x != -1.0 else -1.0,
-            raster_out_uri=args['species'][species]['species_abundance'],
+            lambda x, y: x + (y*species_weight) if x != -1.0 else -1.0,
+            raster_out_uri=args['abundance_total'],
             nodata=-1.0)
 
 #        abundance_total_matrix = clip_and_op(abundance_total_matrix,
