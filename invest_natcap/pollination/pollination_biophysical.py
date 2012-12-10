@@ -116,14 +116,18 @@ def execute(args):
             ag_map_uri)
 
         # Create a new raster for a mean of all foraging rasters.
+        frm_avg_uri = pollination_core.build_uri(out_dir, 'frm_tot.tif', [scenario, suffix])
+        biophysical_args['foraging_total'] = frm_avg_uri
         frm_avg_uri = pollination_core.build_uri(out_dir, 'frm_avg.tif', [scenario, suffix])
-        biophysical_args['foraging_average'] = pollination_core.\
-            make_raster_from_lulc(biophysical_args['landuse'], frm_avg_uri)
+        biophysical_args['foraging_average'] = frm_avg_uri
+#        biophysical_args['foraging_average'] = pollination_core.\
+#            make_raster_from_lulc(biophysical_args['landuse'], frm_avg_uri)
 
         # Create a new raster for the total of all pollinator supply rasters.
         sup_tot_uri = pollination_core.build_uri(out_dir, 'sup_tot.tif', [scenario, suffix])
-        biophysical_args['abundance_total'] = pollination_core.\
-            make_raster_from_lulc(biophysical_args['landuse'], sup_tot_uri)
+        biophysical_args['abundance_total'] = sup_tot_uri
+#        biophysical_args['abundance_total'] = pollination_core.\
+#            make_raster_from_lulc(biophysical_args['landuse'], sup_tot_uri)
 
         # Fetch a list of all species from the guilds table.
         species_list = [row['species'] for row in guilds_handler.table]
