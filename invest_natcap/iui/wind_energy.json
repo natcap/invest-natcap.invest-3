@@ -267,7 +267,7 @@
                         },
                         {
                             "id" : "avg_grid_dist",
-                            "args_id" : "avg_grid_dist",
+                            "args_id" : "avg_grid_distance",
                             "type": "text",
                             "label": "Average Grid to Land Distance (km)",
                             "defaultValue": "",
