@@ -54,16 +54,16 @@ def biophysical(args):
     # Open the average foraging matrix for use in the loop over all species,
     # but first we need to ensure that the matrix is filled with 0's.
 #    foraging_total_raster = args['foraging_average']
-#    nodata = args['landuse'].GetRasterBand(1).GetNoDataValue()
+    lu_nodata = args['landuse'].GetRasterBand(1).GetNoDataValue()
     nodata = -1.0
     foraging_total_raster = raster_utils.vectorize_rasters([args['landuse']],
-        lambda x: 0.0 if x != nodata else nodata,
+        lambda x: 0.0 if x != lu_nodata else nodata,
         raster_out_uri=args['foraging_average'], nodata=nodata)
 
     # Open the abundance total raster for use in the loop over all species and
     # ensure that it's filled entirely with 0's.
     abundance_total_raster = raster_utils.vectorize_rasters([args['landuse']],
-        lambda x: 0.0 if x != nodata else nodata,
+        lambda x: 0.0 if x != lu_nodata else nodata,
         raster_out_uri=args['abundance_total'], nodata=nodata)
 
 #    abundance_total_raster = args['abundance_total']
@@ -201,7 +201,7 @@ def biophysical(args):
     abundance_total_matrix = raster_utils.vectorize_rasters(
         [abundance_total_raster],
         lambda x: x / num_species if x != -1.0 else -1.0,
-        raster_out_uri= args['abundance_total'], nodata=-1.0)
+        raster_out_uri=args['abundance_total'], nodata=-1.0)
 #    np.putmask(foraging_total_matrix, foraging_total_matrix < 0, 0)
 #    abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
 #        divide, abundance_total_raster.GetNoDataValue())
