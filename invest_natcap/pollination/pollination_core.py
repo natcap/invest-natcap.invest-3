@@ -189,7 +189,7 @@ def biophysical(args):
     foraging_total_raster = raster_utils.vectorize_rasters(
         [foraging_total_raster],
         lambda x: x / num_species if x != -1.0 else -1.0,
-        raster_out_uri = args['foraging_total'], nodata=-1.0)
+        raster_out_uri = args['foraging_average'], nodata=-1.0)
 #    foraging_total_matrix = clip_and_op(foraging_total_matrix,
 #        num_species, divide, foraging_total_raster.GetNoDataValue())
 #    foraging_total_raster.WriteArray(foraging_total_matrix)
