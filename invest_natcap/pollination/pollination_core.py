@@ -47,15 +47,25 @@ def biophysical(args):
         returns nothing."""
 
     LOGGER.debug('Starting pollination biophysical calculations')
+    nodata = -1.0
+    lu_nodata = args['landuse'].GetRasterBand(1).GetNoDataValue()
 
     # mask agricultural classes to ag_map.
-    make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
+    #make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
+    if len(args['ag_classes']) > 0:
+        reclass = dict((r, 1) for r in args['ag_classes'])
+        args['ag_map'] = raster_utils.reclassify_by_dictionary(args['landuse'],
+            reclass, args['ag_map'], 'GTiff', nodata, gdal.GDT_Float32)
+    else:
+        args['ag_map'] = raster_utils.vectorize_rasters([args['landuse']],
+            lambda x: 1.0 if x != lu_nodata else nodata,
+            raster_out_uri=args['ag_map'], nodata=nodata)
+
+
 
     # Open the average foraging matrix for use in the loop over all species,
     # but first we need to ensure that the matrix is filled with 0's.
 #    foraging_total_raster = args['foraging_average']
-    lu_nodata = args['landuse'].GetRasterBand(1).GetNoDataValue()
-    nodata = -1.0
     foraging_total_raster = raster_utils.vectorize_rasters([args['landuse']],
         lambda x: 0.0 if x != lu_nodata else nodata,
         raster_out_uri=args['foraging_average'], nodata=nodata)
