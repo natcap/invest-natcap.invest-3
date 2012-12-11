@@ -803,6 +803,15 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
         by rules.  If there is no rule for an input value it is replaced by
         default_value.  If default_value is None, nodata is used.
 
+        If default_value is None, the default_value will only be used if a pixel
+        is not nodata and the pixel does not have a rule defined for its value.
+        If the user wishes to have nodata values also mapped to the default
+        value, this can be achieved by defining a rule such as:
+
+            rules[dataset_nodata] = default_value
+
+        Doing so will override the default nodata behaviour.
+
         dataset - GDAL raster dataset
         rules - a dictionary of the form: 
             {'dataset_value1' : 'output_value1', ... 
@@ -818,8 +827,17 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
 
     # If a default value is not set, assume that the default value is the
     # used-defined nodata value.
+    # If a default value is defined by the user, assume that nodata values
+    # should remain nodata.  This check is sensitive to different nodata values
+    # between input and output rasters.  This modification is made on a copy of
+    # the rules dictionary.
     if default_value == None:
         default_value = nodata
+    else:
+        rules = rules.copy()
+        if nodata not in rules:
+            in_nodata = dataset.GetRasterBand(1).GetNoDataValue()
+            rules[in_nodata] = nodata
 
     output_dataset = new_raster_from_base(dataset, output_uri, format, nodata, 
                                           datatype)
