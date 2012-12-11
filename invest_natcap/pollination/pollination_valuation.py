@@ -102,9 +102,9 @@ def execute(args):
             # base
             farm_value_uri = pollination_core.build_uri(inter_dir, 'frm_val.tif',
                 [species, scenario, suffix])
-            valuation_args['species'][species]['farm_value'] =\
-                pollination_core.make_raster_from_lulc(
-                valuation_args['foraging_average'], farm_value_uri)
+            valuation_args['species'][species]['farm_value'] = farm_value_uri
+#                pollination_core.make_raster_from_lulc(
+#                valuation_args['foraging_average'], farm_value_uri)
 
         farm_value_sum_uri = pollination_core.build_uri(inter_dir, 'frm_val.tif',
             ['sum', scenario, suffix])

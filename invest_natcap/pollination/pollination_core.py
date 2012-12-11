@@ -222,11 +222,14 @@ def valuation(args):
         LOGGER.info('Calculating crop yield due to %s', species)
         # Apply the half-saturation yield function from the documentation and
         # write it to its raster
-        calculate_yield(species_dict['farm_abundance'],
-            species_dict['farm_value'],args['half_saturation'],
-            args['wild_pollination_proportion'])
-        farm_value_matrix = species_dict['farm_value'].GetRasterBand(1).ReadAsArray()
-        species_dict['farm_value'].GetRasterBand(1).WriteArray(farm_value_matrix)
+#        calculate_yield(species_dict['farm_abundance'],
+#            species_dict['farm_value'],args['half_saturation'],
+#            args['wild_pollination_proportion'])
+        farm_value_raster = calculate_yield(species_dict['farm_abundance'],
+            species_dict['farm_value'], args['half_saturation'],
+            args['wild_pollination_proportion'], -1.0)
+#        farm_value_matrix = species_dict['farm_value'].GetRasterBand(1).ReadAsArray()
+#        species_dict['farm_value'].GetRasterBand(1).WriteArray(farm_value_matrix)
 
         # Add the new farm_value_matrix to the farm value sum matrix.
         farm_value_sum_matrix = clip_and_op(farm_value_sum_matrix,
@@ -285,16 +288,17 @@ def valuation(args):
     args['farm_value_sum'].GetRasterBand(1).WriteArray(farm_value_sum_matrix)
     LOGGER.debug('Finished calculating service value')
 
-def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
+def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     """Calculate the yield raster.
 
         in_raster - a GDAL dataset
-        out_raster -a GDAL dataset
+        out_uri -a uri for the output dataset
         half_sat - the half-saturation constant, a python int or float
         wild_poll - the proportion of crops that are pollinated by wild
             pollinators.  An int or float from 0 to 1.
+        out_nodata - the nodata value for the output raster
 
-        returns nothing"""
+        returns a GDAL dataset"""
 
     LOGGER.debug('Calculating yield')
 
@@ -302,7 +306,6 @@ def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
     k = float(half_sat)
     v = float(wild_poll)
     in_nodata = in_raster.GetRasterBand(1).GetNoDataValue()
-    out_nodata = out_raster.GetRasterBand(1).GetNoDataValue()
 
     # This function is a vectorize-compatible implementation of the yield
     # function from the documentation.
@@ -312,10 +315,11 @@ def calculate_yield(in_raster, out_raster, half_sat, wild_poll):
         return (1.0 - v) + (v * (frm_avg / (frm_avg + k)))
 
     # Apply the yield calculation to the foraging_average raster
-    invest_core.vectorize1ArgOp(in_raster.GetRasterBand(1), calc_yield,
-        out_raster.GetRasterBand(1))
+#    invest_core.vectorize1ArgOp(in_raster.GetRasterBand(1), calc_yield,
+#        out_raster.GetRasterBand(1))
+    return raster_utils.vectorize_rasters([in_raster], calc_yield,
+        raster_out_uri=out_uri, nodata=out_nodata)
 
-    LOGGER.debug('Finished calculating yield')
 
 def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
     """Apply an operation to a matrix after the matrix is adjusted for nodata
