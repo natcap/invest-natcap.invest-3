@@ -47,16 +47,23 @@ def biophysical(args):
         returns nothing."""
 
     LOGGER.debug('Starting pollination biophysical calculations')
+
     nodata = -1.0
+    LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
+
     lu_nodata = args['landuse'].GetRasterBand(1).GetNoDataValue()
+    LOGGER.debug('Landcover nodata=%s', lu_nodata)
 
     # mask agricultural classes to ag_map.
     #make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
     if len(args['ag_classes']) > 0:
+        LOGGER.debug('Agricultural classes: %s', args['ag_classes'])
         reclass = dict((r, 1) for r in args['ag_classes'])
+        LOGGER.debug('Reclassifying ag classes as 1.')
         args['ag_map'] = raster_utils.reclassify_by_dictionary(args['landuse'],
             reclass, args['ag_map'], 'GTiff', nodata, gdal.GDT_Float32)
     else:
+        LOGGER.debug('User did not define ag classes.')
         args['ag_map'] = raster_utils.vectorize_rasters([args['landuse']],
             lambda x: 1.0 if x != lu_nodata else nodata,
             raster_out_uri=args['ag_map'], nodata=nodata)
