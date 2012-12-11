@@ -454,66 +454,6 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
 #        out_raster.GetRasterBand(1))
     return out_raster
 
-
-def make_ag_raster(landuse_raster, ag_classes, ag_raster):
-    """Make an intermediate raster where values of ag_raster are 1 if the
-        landcover class is agricultural, 0 if not.
-
-        This function loops through all pixels of landuse_raster.  If the pixel
-        value is in ag_classes, the corresponding ag_raster pixel is set to 1.
-        Otherwise, the corresponding ag_raster pixel is set to 0.
-
-        landuse_raster - a GDAL dataset
-        ag_classes - a python list of ints
-        ag_raster - a GDAL dataset
-
-        returns nothing."""
-
-    LOGGER.debug('Making agricultural raster')
-    LOGGER.debug('Landuse: %s, Ag raster: %s. ag classes: %s', landuse_raster,
-            ag_raster, ag_classes)
-    # Fetch the landcover raster's nodata value
-    lu_nodata = landuse_raster.GetRasterBand(1).GetNoDataValue()
-
-    # Fetch the output raster's nodata valye
-    ag_nodata = ag_raster.GetRasterBand(1).GetNoDataValue()
-
-    # This case is triggered when the user provides agricultural classes.
-    if len(ag_classes) > 0:
-        LOGGER.debug('User has defined agricultural classes')
-        # Preprocess ag_classes into a dictionary to improve access times in
-        # the vectorized function.  Using a dictionary will, on average, make
-        # this a constant-time access instead of a linear time access.
-        ag_dict = dict((k, True) for k in ag_classes)
-        LOGGER.debug('Ag dictionary: %s', ag_dict)
-
-        def ag_func(lu_class):
-            """Check to see if the input pixel value is an agricultural pixel.
-                If so, return 1.  Otherwise, return 0.  If the pixel is a
-                nodata pixel, return nodata."""
-            if lu_class == lu_nodata:
-                return ag_nodata
-            if lu_class in ag_dict:
-                return 1
-            return 0
-    else:
-        # This case is triggered if the user does not provide any land cover
-        # classes.  In this case, we fill the raster with 1's to indicate that
-        # all pixels are to be considered agricultural.
-        def ag_func(lu_class):
-            """Indicate that we want all land cover classes considered as
-                agricultural.  Always return 1 unless it's a nodata pixel."""
-            if lu_class == lu_nodata:
-                return ag_nodata
-            return 1
-
-    # Vectorize all of this to the output (ag) raster.
-    invest_core.vectorize1ArgOp(landuse_raster.GetRasterBand(1), ag_func,
-        ag_raster.GetRasterBand(1))
-
-    ag_raster.FlushCache()
-    LOGGER.debug('Finished making agricultural raster')
-
 def make_raster_from_lulc(lulc_dataset, raster_uri):
     LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
     dataset = invest_cython_core.newRasterFromBase(\
