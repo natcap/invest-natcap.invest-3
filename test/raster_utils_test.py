@@ -280,3 +280,18 @@ class TestRasterUtils(unittest.TestCase):
         invest_test_core.assertTwoShapesEqualURI(
                 self, out_uri, regression_uri)
 
+    def test_reclassify_by_dictionary(self):
+        landcover_uri = 'data/pollination/samp_input/landuse_cur_200m.tif'
+        out_uri = 'data/test_out/raster_utils/reclassed_lulc.tif'
+        sample_ds = gdal.Open(landcover_uri)
+
+        reclass_rules = dict((n, n**2.0) for n in range(3, 60))
+
+        # This call will check the default case, where reclassify_by_dictionary
+        # uses the given nodata value as the value if a pixel value is not
+        # found in the reclass_rules dictionary.
+        raster_utils.reclassify_by_dictionary(sample_ds, reclass_rules,
+            out_uri, 'GTiff', -1.0, gdal.GDT_Float32)
+        reg_uri = 'data/raster_utils_data/reclassed_lulc.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, out_uri, reg_uri)
+
