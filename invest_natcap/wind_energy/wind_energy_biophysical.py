@@ -233,46 +233,87 @@ def check_datasource_projections(dsource_list):
     LOGGER.info('Leaving check_datasource_projections')
     return True
     
-def read_wind_data(wind_data_uri):
+#def read_wind_data(wind_data_uri):
+#   """Unpack the wind data into a dictionary
+
+#       wind_data_uri - a uri for the wind data text file
+
+#       returns - a dictionary where the keys are the row numbers and the values
+#           are dictionaries mapping column headers to values """
+
+#   LOGGER.debug('Entering read_wind_data')
+
+#   # The 'rU' flag is to mark ensure the file is open as read only and with
+#   # Universal newline support
+#   wind_file = open(wind_data_uri, 'rU')
+
+#   # Read the first line and get the column header names by splitting on the
+#   # commas
+#   columns_line = wind_file.readline().split(',')
+#   
+#   # Remove the newline character that is attached to the last element
+#   last_index = len(columns_line) - 1
+#   columns_line[last_index] = columns_line[last_index].rstrip('\n')
+#   LOGGER.debug('COLUMN Line : %s', columns_line)
+#   
+#   wind_dict = {}
+#  
+#   LOGGER.info('Iterating over each newline and building up dictionary')
+#   for line in wind_file.readlines():
+#       line_array = line.split(',')
+
+#       # Remove the newline character that is attached to the last element
+#       last_index = len(line_array) - 1
+#       line_array[last_index] = line_array[last_index].rstrip('\n')
+
+#       # The key for the dictionary will be the first element on the line
+#       key = float(line_array[0])
+#       wind_dict[key] = {}
+#       
+#       # Add each value to a sub dictionary of 'key'
+#       for index in range(1, len(line_array)):
+#           wind_dict[key][columns_line[index]] = float(line_array[index])
+
+#   wind_file.close()
+
+#   LOGGER.debug('Leaving read_wind_data')
+#   return wind_dict
+
+def read_wind_data(wind_data_uri, field_list):
     """Unpack the wind data into a dictionary
 
         wind_data_uri - a uri for the wind data text file
+        field_list - a list of strings referring to the column headers from
+            the text file that are to be included in the dictionary
 
-        returns - a dictionary where the keys are the row numbers and the values
-            are dictionaries mapping column headers to values """
+        returns - a dictionary where the keys are lat/long tuples which point
+            to dictionaries that hold wind data at that location"""
 
     LOGGER.debug('Entering read_wind_data')
-
+    
     # The 'rU' flag is to mark ensure the file is open as read only and with
     # Universal newline support
     wind_file = open(wind_data_uri, 'rU')
-
-    # Read the first line and get the column header names by splitting on the
-    # commas
-    columns_line = wind_file.readline().split(',')
     
-    # Remove the newline character that is attached to the last element
-    last_index = len(columns_line) - 1
-    columns_line[last_index] = columns_line[last_index].rstrip('\n')
-    LOGGER.debug('COLUMN Line : %s', columns_line)
+    # Read in the file as a CSV in dictionary format such that the first row of
+    # the file is treated as the list of keys for the respective values on the
+    # following rows
+    file_reader = csv.DictReader(wind_file)
     
     wind_dict = {}
-   
-    LOGGER.info('Iterating over each newline and building up dictionary')
-    for line in wind_file.readlines():
-        line_array = line.split(',')
-
-        # Remove the newline character that is attached to the last element
-        last_index = len(line_array) - 1
-        line_array[last_index] = line_array[last_index].rstrip('\n')
-
-        # The key for the dictionary will be the first element on the line
-        key = float(line_array[0])
+    
+    for row in file_reader:
+        # Create the key for the dictionary based on the unique lat/long
+        # coordinate
+        key = (row['LATI'], row['LONG'])
         wind_dict[key] = {}
         
-        # Add each value to a sub dictionary of 'key'
-        for index in range(1, len(line_array)):
-            wind_dict[key][columns_line[index]] = float(line_array[index])
+        for row_key in row:
+            # Only add the values specified in the list to the dictionary. This
+            # allows some flexibility in removing columns that are not cared
+            # about 
+            if row_key in field_list:
+                wind_dict[key][row_key] = row[row_key]
 
     wind_file.close()
 
