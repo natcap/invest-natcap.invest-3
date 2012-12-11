@@ -170,7 +170,7 @@ def biophysical(args):
         # raster
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
         foraging_total_raster = raster_utils.vectorize_rasters(
-            [finished_rasters['foraging'], foraging_total_raster],
+            [finished_rasters['farm_abundance_masked'], foraging_total_raster],
             lambda x, y: x + y if x != -1.0 else -1.0,
             raster_out_uri=args['foraging_total'], nodata=-1.0)
 #        foraging_total_matrix = clip_and_op(foraging_matrix,
