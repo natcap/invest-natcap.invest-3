@@ -55,7 +55,6 @@ def biophysical(args):
     LOGGER.debug('Landcover nodata=%s', lu_nodata)
 
     # mask agricultural classes to ag_map.
-    #make_ag_raster(args['landuse'], args['ag_classes'], args['ag_map'])
     if len(args['ag_classes']) > 0:
         LOGGER.debug('Agricultural classes: %s', args['ag_classes'])
         reclass = dict((r, 1) for r in args['ag_classes'])
@@ -72,7 +71,6 @@ def biophysical(args):
 
     # Open the average foraging matrix for use in the loop over all species,
     # but first we need to ensure that the matrix is filled with 0's.
-#    foraging_total_raster = args['foraging_average']
     foraging_total_raster = raster_utils.vectorize_rasters([args['landuse']],
         lambda x: 0.0 if x != lu_nodata else nodata,
         raster_out_uri=args['foraging_average'], nodata=nodata)
@@ -82,11 +80,6 @@ def biophysical(args):
     abundance_total_raster = raster_utils.vectorize_rasters([args['landuse']],
         lambda x: 0.0 if x != lu_nodata else nodata,
         raster_out_uri=args['abundance_total'], nodata=nodata)
-
-#    abundance_total_raster = args['abundance_total']
-#    abundance_total_raster.GetRasterBand(1).Fill(0.0)
-#    abundance_matrix_shape = abundance_total_raster.ReadAsArray().shape
-#    abundance_total_matrix = np.zeros(abundance_matrix_shape)
 
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
@@ -123,10 +116,6 @@ def biophysical(args):
         finished_rasters['floral'] = raster_utils.gaussian_filter_dataset(
                 mapped_resource_rasters['floral'], sigma,
                 args['species'][species]['floral'], nodata)
-#        filtered_matrix = clip_and_op(floral_raster.ReadAsArray(), sigma,
-#            ndimage.gaussian_filter, floral_raster.GetNoDataValue())
-#        args['species'][species]['floral'].GetRasterBand(1).WriteArray(
-#            filtered_matrix)
 
         # Calculate the pollinator abundance index (using Math! to simplify the
         # equation in the documentation.  We're still waiting on Taylor
@@ -140,10 +129,6 @@ def biophysical(args):
             raster_out_uri=args['species'][species]['species_abundance'],
             nodata=nodata)
 
-#        nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
-#        supply_matrix = clip_and_op(nesting_raster.ReadAsArray(),
-#            filtered_matrix, np.multiply, nesting_raster.GetNoDataValue())
-
         # Take the pollinator abundance index and multiply it by the species
         # weight in the guilds table.
         species_weight = guild_dict['species_weight']
@@ -152,14 +137,6 @@ def biophysical(args):
             lambda x, y: x + (y*species_weight) if x != nodata else nodata,
             raster_out_uri=args['abundance_total'],
             nodata=nodata)
-
-#        abundance_total_matrix = clip_and_op(abundance_total_matrix,
-#            supply_matrix, np.add, nesting_raster.GetNoDataValue())
-
-#        abundance_total_matrix = clip_and_op(abundance_total_matrix,
-#            guild_dict['species_weight'], np.multiply)
-#        args['species'][species]['species_abundance'].GetRasterBand(1).\
-#            WriteArray(supply_matrix)
 
         # Calculate the foraging ('farm abundance') index by applying a
         # gaussian filter to the foraging raster and then culling all pixels
@@ -175,14 +152,6 @@ def biophysical(args):
             raster_out_uri=args['species'][species]['farm_abundance'],
             nodata=nodata)
 
-#        foraging_raster = args['species'][species]['farm_abundance'].\
-#            GetRasterBand(1)
-#        foraging_matrix = clip_and_op(supply_matrix, sigma,
-#            ndimage.gaussian_filter, foraging_raster.GetNoDataValue())
-#        np.putmask(foraging_matrix, args['ag_map'].GetRasterBand(1).\
-#                   ReadAsArray() == 0, foraging_raster.GetNoDataValue())
-#        foraging_raster.WriteArray(foraging_matrix)
-
         # Add the current foraging raster to the existing 'foraging_total'
         # raster
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
@@ -190,17 +159,8 @@ def biophysical(args):
             [finished_rasters['farm_abundance_masked'], foraging_total_raster],
             lambda x, y: x + y if x != nodata else nodata,
             raster_out_uri=args['foraging_total'], nodata=nodata)
-#        foraging_total_matrix = clip_and_op(foraging_matrix,
-#            foraging_total_matrix, np.add, foraging_raster.GetNoDataValue())
 
     # Calculate the average foraging index based on the total
-    # This is a function that meets the criteria for the operation passed in to
-    # clip_and_op.
-    def divide(matrix, divisor):
-        """Divide matrix by divisor.  Matrix must be a numpy matrix.  Divisor
-            must be a scalar.  Returns a numpy matrix."""
-        return matrix / divisor
-
     # Divide the total pollination foraging index by the number of pollinators
     # to get the mean pollinator foraging index and save that to its raster.
     num_species = float(len(args['species'].values()))
@@ -209,9 +169,6 @@ def biophysical(args):
         [foraging_total_raster],
         lambda x: x / num_species if x != nodata else nodata,
         raster_out_uri = args['foraging_average'], nodata=nodata)
-#    foraging_total_matrix = clip_and_op(foraging_total_matrix,
-#        num_species, divide, foraging_total_raster.GetNoDataValue())
-#    foraging_total_raster.WriteArray(foraging_total_matrix)
 
     # Calculate the mean pollinator supply (pollinator abundance) by taking the
     # abundance_total_matrix and dividing it by the number of pollinators.
@@ -221,10 +178,6 @@ def biophysical(args):
         [abundance_total_raster],
         lambda x: x / num_species if x != nodata else nodata,
         raster_out_uri=args['abundance_total'], nodata=nodata)
-#    np.putmask(foraging_total_matrix, foraging_total_matrix < 0, 0)
-#    abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
-#        divide, abundance_total_raster.GetNoDataValue())
-#    abundance_total_raster.WriteArray(abundance_total_matrix)
 
     LOGGER.debug('Finished pollination biophysical calculations')
 
@@ -417,7 +370,6 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     base_nodata = base_raster.GetRasterBand(1).GetNoDataValue()
 
     # Get the output raster's nodata value
-#    out_nodata = out_raster.GetRasterBand(1).GetNoDataValue()
 
     lu_table_dict = attr_table.get_table_dictionary('lulc')
 
@@ -433,25 +385,6 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     # calls the cythonized functionality in raster_utils.
     out_raster = raster_utils.reclassify_by_dictionary(base_raster,
         reclass_rules, out_uri, raster_type, -1, gdal.GDT_Float32)
-#
-#    # Define a vectorized function to map values to the base raster
-#    def map_values(lu_code):
-#        """Take the input pixel value and return the appropriate value based
-#            on the table's map.  If the value cannot be found, return the
-#            output raster's nodata value."""
-#        try:
-#            if lu_code == base_nodata:
-#                return out_nodata
-#            # Max() is how InVEST 2.2 pollination does this, although I think
-#            # that sum() should actually be used.
-#            return list_op([value_list[r] * lu_table_dict[lu_code][r] for r in
-#                resource_fields])
-#        except KeyError:
-#            return out_nodata
-#
-#    # Vectorize this operation.
-#    invest_core.vectorize1ArgOp(base_raster.GetRasterBand(1), map_values,
-#        out_raster.GetRasterBand(1))
     return out_raster
 
 def make_raster_from_lulc(lulc_dataset, raster_uri):
