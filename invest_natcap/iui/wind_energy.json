@@ -37,6 +37,7 @@
                     "label": "Area Of Interest (AOI)",
                     "defaultValue": "../Wind_Energy/Input/aoi.shp",
                     "required": false,
+                    "requiredIf": ["valuation_container", "distance_container"],
                     "returns": {"ifEmpty": "pass"},
                     "validateAs": {"type": "OGR"},
                     "helpText": "An optional polygon shapefile that defines the area of interest. The AOI must be projected with linear units equal to meters. If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected. If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly." 
@@ -50,6 +51,16 @@
                     "required": true,
                     "validateAs": {"type": "GDAL"},
                     "helpText": "A raster dataset for the eleveation values of the area of interest. The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used."
+                },
+                {
+                    "id" : "land_polygon",
+                    "args_id" : "land_polygon_uri",
+                    "type": "file",
+                    "label": "Land Polygon to Calculate Distance From",
+                    "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
+                    "required": true,
+                    "validateAs": {"type": "OGR"},
+                    "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
                 },
                 {
                     "id" : "days_harv_wind_energy",
@@ -150,16 +161,6 @@
                     "type" : "list",
                     "elements" : [
                     {
-                        "id" : "land_polygon",
-                        "args_id" : "land_polygon_uri",
-                        "type": "file",
-                        "label": "Land Polygon to Calculate Distance From",
-                        "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
-                        "required": true,
-                        "validateAs": {"type": "OGR"},
-                        "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
-                    },
-                    {
                         "id" : "min_distance",
                         "args_id" : "min_distance",
                         "type" : "text",
@@ -256,16 +257,6 @@
                                             
                         },
                         {
-                            "id" : "land_polygon",
-                            "args_id" : "land_polygon_uri",
-                            "type": "file",
-                            "label": "Land Polygon to Calculate Distance From",
-                            "defaultValue": "../Wind_Energy/Input/land_polygon.shp",
-                            "required": true,
-                            "validateAs": {"type": "OGR"},
-                            "helpText": "An optional polygon shapefile that represents the land and coastline that is of interest. For this input to be selectable the AOI must be selected. The AOI should also cover a portion of this land polygon to properly calculate distances. This coastal polygon, and what is covered by the AOI, will be where the distances from shore to ocean are calculated from."
-                        },
-                        {
                             "id" : "avg_grid_dist",
                             "args_id" : "avg_grid_distance",
                             "type": "text",
@@ -274,7 +265,8 @@
                             "validText" : "^[0-9]*\\.?[0-9]+$",
                             "validateAs" : {"type" : "number",
                                             "allowedValues" : {"pattern" : "^[0-9]*\\.?[0-9]+$"}},
-                            "required": true,
+                            "required": false,
+                            "requiredIf": ["grid_points"],
                             "helpText": "Lots of helpful information here"
                         }
                     ]
