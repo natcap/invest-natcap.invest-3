@@ -453,7 +453,8 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
         returns nothing."""
 
     LOGGER.debug('Making agricultural raster')
-
+    LOGGER.debug('Landuse: %s, Ag raster: %s. ag classes: %s', landuse_raster,
+            ag_raster, ag_classes)
     # Fetch the landcover raster's nodata value
     lu_nodata = landuse_raster.GetRasterBand(1).GetNoDataValue()
 
@@ -462,10 +463,12 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
 
     # This case is triggered when the user provides agricultural classes.
     if len(ag_classes) > 0:
+        LOGGER.debug('User has defined agricultural classes')
         # Preprocess ag_classes into a dictionary to improve access times in
         # the vectorized function.  Using a dictionary will, on average, make
         # this a constant-time access instead of a linear time access.
         ag_dict = dict((k, True) for k in ag_classes)
+        LOGGER.debug('Ag dictionary: %s', ag_dict)
 
         def ag_func(lu_class):
             """Check to see if the input pixel value is an agricultural pixel.
@@ -491,6 +494,7 @@ def make_ag_raster(landuse_raster, ag_classes, ag_raster):
     invest_core.vectorize1ArgOp(landuse_raster.GetRasterBand(1), ag_func,
         ag_raster.GetRasterBand(1))
 
+    ag_raster.FlushCache()
     LOGGER.debug('Finished making agricultural raster')
 
 def make_raster_from_lulc(lulc_dataset, raster_uri):
