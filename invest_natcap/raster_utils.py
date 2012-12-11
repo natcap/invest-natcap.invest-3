@@ -797,10 +797,11 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
 
     return result_dict
 
-def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatype):
+def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata,
+    datatype, default_value=None):
     """Convert all the non-nodata values in dataset to the values mapped to 
         by rules.  If there is no rule for an input value it is replaced by
-        the nodata output value.
+        default_value.  If default_value is None, nodata is used.
 
         dataset - GDAL raster dataset
         rules - a dictionary of the form: 
@@ -811,13 +812,19 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, nodata, datatyp
         format - either 'MEM' or 'GTiff'
         nodata - output raster dataset nodata value
         datatype - a GDAL output type
+        default=None - the value to be used if a reclass rule is not defined.
 
         return the mapped raster as a GDAL dataset"""
+
+    # If a default value is not set, assume that the default value is the
+    # used-defined nodata value.
+    if default_value == None:
+        default_value = nodata
 
     output_dataset = new_raster_from_base(dataset, output_uri, format, nodata, 
                                           datatype)
     raster_cython_utils.reclassify_by_dictionary(
-        dataset, rules, output_uri, format, nodata, datatype, output_dataset)
+        dataset, rules, output_uri, format, default_value, datatype, output_dataset,)
 
     calculate_raster_stats(output_dataset)
 
