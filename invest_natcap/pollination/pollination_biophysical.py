@@ -65,6 +65,11 @@ def execute(args):
     for scenario in landuse_scenarios:
         LOGGER.info('Starting pollination model for the %s scenario', scenario)
         biophysical_args = {}  # Re-initialize the biophysical args
+        biophysical_args['paths'] = {
+            'workspace': workspace,
+            'intermediate': inter_dir,
+            'output': out_dir
+        }
 
         # Open the landcover raster
         biophysical_args['landuse'] = gdal.Open(
@@ -111,14 +116,18 @@ def execute(args):
             ag_map_uri)
 
         # Create a new raster for a mean of all foraging rasters.
+        frm_avg_uri = pollination_core.build_uri(out_dir, 'frm_tot.tif', [scenario, suffix])
+        biophysical_args['foraging_total'] = frm_avg_uri
         frm_avg_uri = pollination_core.build_uri(out_dir, 'frm_avg.tif', [scenario, suffix])
-        biophysical_args['foraging_average'] = pollination_core.\
-            make_raster_from_lulc(biophysical_args['landuse'], frm_avg_uri)
+        biophysical_args['foraging_average'] = frm_avg_uri
+#        biophysical_args['foraging_average'] = pollination_core.\
+#            make_raster_from_lulc(biophysical_args['landuse'], frm_avg_uri)
 
         # Create a new raster for the total of all pollinator supply rasters.
         sup_tot_uri = pollination_core.build_uri(out_dir, 'sup_tot.tif', [scenario, suffix])
-        biophysical_args['abundance_total'] = pollination_core.\
-            make_raster_from_lulc(biophysical_args['landuse'], sup_tot_uri)
+        biophysical_args['abundance_total'] = sup_tot_uri
+#        biophysical_args['abundance_total'] = pollination_core.\
+#            make_raster_from_lulc(biophysical_args['landuse'], sup_tot_uri)
 
         # Fetch a list of all species from the guilds table.
         species_list = [row['species'] for row in guilds_handler.table]
@@ -138,8 +147,6 @@ def execute(args):
                 raster_name = prefix + '_' + species + '.tif'
                 raster_uri = pollination_core.build_uri(inter_dir, raster_name,
                     [scenario, suffix])
-                dataset = pollination_core.make_raster_from_lulc(
-                    biophysical_args['landuse'], raster_uri)
-                biophysical_args['species'][species][group] = dataset
+                biophysical_args['species'][species][group] = raster_uri
 
         pollination_core.biophysical(biophysical_args)
