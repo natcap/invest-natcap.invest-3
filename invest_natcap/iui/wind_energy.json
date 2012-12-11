@@ -195,6 +195,7 @@
             "label" : "Valuation",
             "collapsible" : true,
             "defaultValue" : false,
+            "enabledBy": "aoi", 
             "elements" : [
                 {
                     "id" : "distance_list",
