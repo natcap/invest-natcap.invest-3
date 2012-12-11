@@ -295,3 +295,12 @@ class TestRasterUtils(unittest.TestCase):
         reg_uri = 'data/raster_utils_data/reclassed_lulc.tif'
         invest_test_core.assertTwoDatasetEqualURI(self, out_uri, reg_uri)
 
+        # This call checks the default_value functionality of the reclass
+        # function.  In this case, we should expect to see all pixels that don't
+        # have a default value to be reclassed as the user-defined default value
+        # (which in this case is 0.0).
+        out_uri = 'data/test_out/raster_utils/reclass_default_lulc.tif'
+        raster_utils.reclassify_by_dictionary(sample_ds, reclass_rules,
+            out_uri, 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+        reg_uri = 'data/raster_utils_data/reclassed_lulc_default.tif'
+        invest_test_core.assertTwoDatasetEqualURI(self, out_uri, reg_uri)
