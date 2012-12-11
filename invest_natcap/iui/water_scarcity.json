@@ -55,7 +55,8 @@
                     "required": true,
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
-                                               "type": "polygons"
+                                               "type": "polygons",
+					       "projection": {"exists": true}
                                              }],
                                    "fieldsExist": ["ws_id"]
                                    }
@@ -69,7 +70,8 @@
                     "required": true,
                     "validateAs": {"type": "OGR", 
                                    "layers": [{"name": {"inheritFrom": "file"}, 
-                                               "type": "polygons"
+                                               "type": "polygons",
+					       "projection": {"exists": true}
                                              }],
                                    "fieldsExist": ["subws_id"]
                                    }

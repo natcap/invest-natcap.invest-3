@@ -537,15 +537,35 @@ class OGRChecker(TableChecker):
 
                 # Validate projection units if the user specifies it.
                 if 'units' in layer_dict['projection']:
-                    linear_units = reference.GetLinearUnits()
-                    if layer_dict['projection']['units'] == 'meters':
-                        if linear_units != 1.0:
-                            return str('Shapefile layer %s must be projected' +
-                                ' in meters') % layer_name
-                    elif layer_dict['projection']['units'] == 'latLong':
-                        if linear_units == 1.0:
-                            return str('Shapefile layer %s must be projected' +
-                                ' in lat/long') % layer_name
+                    linear_units = str(reference.GetLinearUnitsName())
+
+                    # This dictionary maps IUI-defined projection strings to the
+                    # WKT unit name strings that OGR recognizes.
+                    known_units = {
+                        'meters': 'Meter',
+                        'latLong': 'Degree',
+                        'US Feet': 'Foot_US'
+                    }
+
+                    # Get the JSON-defined projection unit and validate that the
+                    # name extracted from the Spatial Reference matches what we
+                    # expect.
+                    # NOTE: If the JSON-defined linear unit (the expected unit)
+                    # is not in the known_units dictionary, this will
+                    # throw a keyError, which causes a validation error to be
+                    # printed.
+                    required_unit = layer_dict['projection']['units']
+                    try:
+                        expected_unit = known_units[required_unit]
+                    except:
+                        return str('Expected projection units must be '
+                            'one of %s, not %s' % (known_units.keys(),
+                            required_unit))
+
+                    if expected_unit != linear_units:
+                        return str('Shapefile layer %s must be projected '
+                            'in %s (%s). \'%s\' found.' % (layer_name,
+                            required_unit, expected_unit, linear_units))
 
                 # Validate whether the layer should be projected
                 projection = reference.GetAttrValue('PROJECTION')
@@ -556,7 +576,7 @@ class OGRChecker(TableChecker):
                             negate_string = 'not'
                         else:
                             negate_string = ''
-                        return str('Shapefile layer %s should %s be' +
+                        return str('Shapefile layer %s should %s be ' +
                                    'projected') % (layer_name, negate_string)
 
                 # Validate whether the layer's projection matches the
