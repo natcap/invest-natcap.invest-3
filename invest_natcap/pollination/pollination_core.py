@@ -57,17 +57,17 @@ def biophysical(args):
     # mask agricultural classes to ag_map.
     if len(args['ag_classes']) > 0:
         LOGGER.debug('Agricultural classes: %s', args['ag_classes'])
-        reclass = dict((r, 1) for r in args['ag_classes'])
-        LOGGER.debug('Reclassifying ag classes as 1.')
-        args['ag_map'] = raster_utils.reclassify_by_dictionary(args['landuse'],
-            reclass, args['ag_map'], 'GTiff', nodata, gdal.GDT_Float32)
+        reclass_rules = dict((r, 1) for r in args['ag_classes'])
+        default_value = 0.0
     else:
         LOGGER.debug('User did not define ag classes.')
-        args['ag_map'] = raster_utils.vectorize_rasters([args['landuse']],
-            lambda x: 1.0 if x != lu_nodata else nodata,
-            raster_out_uri=args['ag_map'], nodata=nodata)
+        reclass_rules = {}
+        default_value = 1.0
 
-
+    LOGGER.debug('Agricultural reclass map=%s', reclass_rules)
+    args['ag_map'] = raster_utils.reclassify_by_dictionary(args['landuse'],
+        reclass_rules, args['ag_map'], 'GTiff', nodata, gdal.GDT_Float32,
+        default_value=default_value)
 
     # Open the average foraging matrix for use in the loop over all species,
     # but first we need to ensure that the matrix is filled with 0's.
