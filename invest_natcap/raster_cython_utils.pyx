@@ -4,20 +4,21 @@ cimport cython
 from libcpp.map cimport map
 
 @cython.boundscheck(False)
-def reclassify_by_dictionary(dataset, rules, output_uri, format, float nodata, datatype,
-    output_dataset): 
-    """Convert all the non-nodata values in dataset to the values mapped to 
+def reclassify_by_dictionary(dataset, rules, output_uri, format,
+    float default_value, datatype, output_dataset):
+    """Convert all the non-default values in dataset to the values mapped to
         by rules.  If there is no rule for an input value it is replaced by
-        the nodata output value.
+        the default output value (which may or may not be the raster's nodata
+        value ... it could just be any default value).
 
         dataset - GDAL raster dataset
-        rules - a dictionary of the form: 
-            {'dataset_value1' : 'output_value1', ... 
+        rules - a dictionary of the form:
+            {'dataset_value1' : 'output_value1', ...
              'dataset_valuen' : 'output_valuen'}
              used to map dataset input types to output
         output_uri - The location to hold the output raster on disk
         format - either 'MEM' or 'GTiff'
-        nodata - output raster dataset nodata value
+        default_value - output raster dataset default value (may be nodata)
         datatype - a GDAL output type
 
         return the mapped raster as a GDAL dataset"""
@@ -42,7 +43,7 @@ def reclassify_by_dictionary(dataset, rules, output_uri, format, float nodata, d
             if lookup.count(value) == 1:
                 dataset_array[0,col] = lookup[value]
             else:
-                dataset_array[0,col] = nodata
+                dataset_array[0,col] = default_value
         output_band.WriteArray(dataset_array, 0, row)
         
     output_band = None
