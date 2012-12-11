@@ -122,7 +122,7 @@ def biophysical(args):
         floral_raster = mapped_resource_rasters['floral'].GetRasterBand(1)
         finished_rasters['floral'] = raster_utils.gaussian_filter_dataset(
                 mapped_resource_rasters['floral'], sigma,
-                args['species'][species]['floral'], -1.0)
+                args['species'][species]['floral'], nodata)
 #        filtered_matrix = clip_and_op(floral_raster.ReadAsArray(), sigma,
 #            ndimage.gaussian_filter, floral_raster.GetNoDataValue())
 #        args['species'][species]['floral'].GetRasterBand(1).WriteArray(
@@ -136,9 +136,9 @@ def biophysical(args):
         LOGGER.debug('Calculating %s abundance index', species)
         finished_rasters['supply'] = raster_utils.vectorize_rasters(
             [mapped_resource_rasters['nesting'], finished_rasters['floral']],
-            lambda x, y: x*y if x != -1.0 else -1.0,
+            lambda x, y: x*y if x != nodata else nodata,
             raster_out_uri=args['species'][species]['species_abundance'],
-            nodata=-1.0)
+            nodata=nodata)
 
 #        nesting_raster = args['species'][species]['nesting'].GetRasterBand(1)
 #        supply_matrix = clip_and_op(nesting_raster.ReadAsArray(),
@@ -149,9 +149,9 @@ def biophysical(args):
         species_weight = guild_dict['species_weight']
         abundance_total_raster = raster_utils.vectorize_rasters(
             [abundance_total_raster, finished_rasters['supply']],
-            lambda x, y: x + (y*species_weight) if x != -1.0 else -1.0,
+            lambda x, y: x + (y*species_weight) if x != nodata else nodata,
             raster_out_uri=args['abundance_total'],
-            nodata=-1.0)
+            nodata=nodata)
 
 #        abundance_total_matrix = clip_and_op(abundance_total_matrix,
 #            supply_matrix, np.add, nesting_raster.GetNoDataValue())
@@ -167,13 +167,13 @@ def biophysical(args):
         LOGGER.debug('Calculating %s foraging/farm abundance index', species)
         finished_rasters['foraging'] = raster_utils.gaussian_filter_dataset(
             finished_rasters['supply'], sigma,
-            args['species'][species]['farm_abundance'], -1.0)
+            args['species'][species]['farm_abundance'], nodata)
 
         finished_rasters['farm_abundance_masked'] = raster_utils.vectorize_rasters(
             [finished_rasters['foraging'], args['ag_map']],
-            lambda x, y: x if y == 1.0 else -1.0,
+            lambda x, y: x if y == 1.0 else nodata,
             raster_out_uri=args['species'][species]['farm_abundance'],
-            nodata=-1.0)
+            nodata=nodata)
 
 #        foraging_raster = args['species'][species]['farm_abundance'].\
 #            GetRasterBand(1)
@@ -188,8 +188,8 @@ def biophysical(args):
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
         foraging_total_raster = raster_utils.vectorize_rasters(
             [finished_rasters['farm_abundance_masked'], foraging_total_raster],
-            lambda x, y: x + y if x != -1.0 else -1.0,
-            raster_out_uri=args['foraging_total'], nodata=-1.0)
+            lambda x, y: x + y if x != nodata else nodata,
+            raster_out_uri=args['foraging_total'], nodata=nodata)
 #        foraging_total_matrix = clip_and_op(foraging_matrix,
 #            foraging_total_matrix, np.add, foraging_raster.GetNoDataValue())
 
@@ -207,8 +207,8 @@ def biophysical(args):
     LOGGER.debug('Number of species: %s', num_species)
     foraging_total_raster = raster_utils.vectorize_rasters(
         [foraging_total_raster],
-        lambda x: x / num_species if x != -1.0 else -1.0,
-        raster_out_uri = args['foraging_average'], nodata=-1.0)
+        lambda x: x / num_species if x != nodata else nodata,
+        raster_out_uri = args['foraging_average'], nodata=nodata)
 #    foraging_total_matrix = clip_and_op(foraging_total_matrix,
 #        num_species, divide, foraging_total_raster.GetNoDataValue())
 #    foraging_total_raster.WriteArray(foraging_total_matrix)
@@ -219,8 +219,8 @@ def biophysical(args):
     LOGGER.debug('Calculating mean pollinator supply')
     abundance_total_matrix = raster_utils.vectorize_rasters(
         [abundance_total_raster],
-        lambda x: x / num_species if x != -1.0 else -1.0,
-        raster_out_uri=args['abundance_total'], nodata=-1.0)
+        lambda x: x / num_species if x != nodata else nodata,
+        raster_out_uri=args['abundance_total'], nodata=nodata)
 #    np.putmask(foraging_total_matrix, foraging_total_matrix < 0, 0)
 #    abundance_total_matrix = clip_and_op(abundance_total_matrix, num_species,
 #        divide, abundance_total_raster.GetNoDataValue())
