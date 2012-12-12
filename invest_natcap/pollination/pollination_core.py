@@ -254,10 +254,6 @@ def valuation(args):
             ratio_raster, sigma, species_dict['value_abundance_ratio_blur'],
             -1.0)
 
-        # Open necessary matrices
-        species_supply_matrix = species_dict['species_abundance'].\
-            GetRasterBand(1).ReadAsArray()
-
         v_c = args['wild_pollination_proportion']
 
         def ps_vectorized(sup_s, blurred_ratio):
