@@ -205,9 +205,10 @@ def valuation(args):
     LOGGER.debug('Starting valuation')
 
     # Open matrices for use later.
-    farm_value_sum_matrix = args['farm_value_sum'].GetRasterBand(1).\
-        ReadAsArray()
-    farm_value_sum_matrix.fill(0)
+#    farm_value_sum_matrix = args['farm_value_sum'].GetRasterBand(1).\
+#        ReadAsArray()
+#    farm_value_sum_matrix.fill(0)
+    farm_value_sum = args['farm_value_sum']
     service_value_sum_matrix = args['service_value_sum'].GetRasterBand(1).\
         ReadAsArray()
     service_value_sum_matrix.fill(0)
@@ -232,8 +233,13 @@ def valuation(args):
 #        species_dict['farm_value'].GetRasterBand(1).WriteArray(farm_value_matrix)
 
         # Add the new farm_value_matrix to the farm value sum matrix.
-        farm_value_sum_matrix = clip_and_op(farm_value_sum_matrix,
-            farm_value_matrix, np.add, in_nodata, out_nodata)
+        # MISSING THE FARM_VALUE_SUM_URI
+        farm_value_sum = raster_utils.vectorize_rasters(
+            [farm_value_raster, farm_value_sum],
+            lambda x, y: x + y if x != -1.0 else -1.0,
+            nodata=-1.0)
+#        farm_value_sum_matrix = clip_and_op(farm_value_sum_matrix,
+#            farm_value_matrix, np.add, in_nodata, out_nodata)
 
         LOGGER.debug('Calculating service value for %s', species)
         # Open the species foraging matrix and then divide
