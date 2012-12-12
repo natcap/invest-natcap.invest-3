@@ -1,6 +1,7 @@
 ''' This will be temporary until I can integrate these into the HRA core. It
 will act as scratch space for a variety of functions.'''
 
+
 def make_recovery_rast(dir, hab):
 
     raster_list = []

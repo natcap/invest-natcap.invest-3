@@ -97,7 +97,9 @@ def execute(args):
             'discount_rate', 'time_period', 'infield_cable_cost', 
             'infield_cable_length', 'installation_cost',
             'miscellaneous_capex_cost', 'operation_maintenance_cost',
-            'decommission_cost']
+            'decommission_cost', 'ac_dc_distance_break', 'mw_ceof_ac',
+            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc']
+
     # Get the valuation turbine parameters from the CSV file
     LOGGER.info('Read in turbine information from CSV')
     val_turbine_param_file = open(args['turbine_parameters_uri'])
