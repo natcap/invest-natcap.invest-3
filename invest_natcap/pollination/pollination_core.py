@@ -1,11 +1,8 @@
 """InVEST Pollination model core function  module"""
 
 from invest_natcap import raster_utils
-from invest_natcap.invest_core import invest_core
 
 from osgeo import gdal
-import numpy as np
-import scipy.ndimage as ndimage
 
 import os.path
 import logging
@@ -80,7 +77,7 @@ def biophysical(args):
         lambda x: 0.0 if x != lu_nodata else nodata,
         raster_out_uri=args['abundance_total'], nodata=nodata)
 
-    for species, species_dict in args['species'].iteritems():
+    for species in args['species'].keys():
         guild_dict = args['guilds'].get_table_row('species', species)
 
         mapped_resource_rasters = {}
@@ -111,7 +108,6 @@ def biophysical(args):
         # dataset.
         LOGGER.debug('Applying neighborhood mappings to %s floral resources',
             species)
-        floral_raster = mapped_resource_rasters['floral'].GetRasterBand(1)
         finished_rasters['floral'] = raster_utils.gaussian_filter_dataset(
                 mapped_resource_rasters['floral'], sigma,
                 args['species'][species]['floral'], nodata)
@@ -145,7 +141,7 @@ def biophysical(args):
             finished_rasters['supply'], sigma,
             args['species'][species]['farm_abundance'], nodata)
 
-        finished_rasters['farm_abundance_masked'] = raster_utils.vectorize_rasters(
+        farm_abundance_masked = raster_utils.vectorize_rasters(
             [finished_rasters['foraging'], args['ag_map']],
             lambda x, y: x if y == 1.0 else nodata,
             raster_out_uri=args['species'][species]['farm_abundance'],
@@ -155,7 +151,7 @@ def biophysical(args):
         # raster
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
         foraging_total_raster = raster_utils.vectorize_rasters(
-            [finished_rasters['farm_abundance_masked'], foraging_total_raster],
+            [farm_abundance_masked, foraging_total_raster],
             lambda x, y: x + y if x != nodata else nodata,
             raster_out_uri=args['foraging_total'], nodata=nodata)
 
@@ -173,8 +169,7 @@ def biophysical(args):
     # abundance_total_matrix and dividing it by the number of pollinators.
     # Then, save the resulting matrix to its raster
     LOGGER.debug('Calculating mean pollinator supply')
-    abundance_total_matrix = raster_utils.vectorize_rasters(
-        [abundance_total_raster],
+    raster_utils.vectorize_rasters([abundance_total_raster],
         lambda x: x / num_species if x != nodata else nodata,
         raster_out_uri=args['abundance_total'], nodata=nodata)
 
@@ -344,7 +339,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     value_list = dict((r, guild_dict[r]) for r in resource_fields)
 
     reclass_rules = {base_nodata: -1}
-    for lulc, landcover_dict in lu_table_dict.iteritems():
+    for lulc in lu_table_dict.keys():
         resource_values = [value_list[r] * lu_table_dict[lulc][r] for r in
             resource_fields]
         reclass_rules[lulc] = list_op(resource_values)
