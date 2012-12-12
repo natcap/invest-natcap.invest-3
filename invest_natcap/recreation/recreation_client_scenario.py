@@ -18,7 +18,7 @@ def execute(args):
     register_openers()
 
     #load configuration
-    configFileName=os.path.dirname(os.path.abspath(__file__))+os.sep+"config.json"
+    configFileName=os.path.dirname(os.path.abspath(__file__))+os.sep+"recreation_client_config.json"
     LOGGER.debug("Loading server configuration from %s." % configFileName)
     configFile=open(configFileName,'r')
     config=json.loads(configFile.read())
@@ -50,7 +50,7 @@ def execute(args):
                 os.path.exists(args["data_dir"]+fileName+".dbf") and \
                 os.path.exists(args["data_dir"]+fileName+".prj"):
                     LOGGER.info("Found %s predictor." % (fileName))
-                    predictors.append(fileName)
+                    predictors.append(str(fileName))
                 else:
                     LOGGER.error("Predictor %s is missing file(s)." % (fileName))
                     if not os.path.exists(args["data_dir"]+fileName+".shx"):
@@ -76,6 +76,7 @@ def execute(args):
         attachments[tsv+".tsv"]= open(args["data_dir"]+tsv+".tsv","rb")
         
     LOGGER.debug("Uploading predictors.")
+    LOGGER.debug ("Attachments: %s" % str(attachments.keys()))
     datagen, headers = multipart_encode(attachments)
     url = config["server"]+config["files"]["PHP"]["predictor"]
     request = urllib2.Request(url, datagen, headers)
