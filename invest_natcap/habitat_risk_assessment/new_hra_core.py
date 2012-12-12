@@ -2,7 +2,6 @@
 will act as scratch space for a variety of functions.'''
 
 
-'''Adding comment to test new comp push.'''
 def make_recovery_rast(dir, hab):
 
     raster_list = []
