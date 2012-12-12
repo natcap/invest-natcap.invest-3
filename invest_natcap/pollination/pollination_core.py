@@ -80,9 +80,6 @@ def biophysical(args):
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
 
-        mapped_resource_rasters = {}
-        finished_rasters = {}
-
         floral_raster = map_attribute(args['landuse'],
             args['landuse_attributes'], guild_dict, args['floral_fields'],
             species_dict['floral'], sum)
