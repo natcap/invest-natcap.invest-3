@@ -73,9 +73,8 @@ def execute(args):
     LOGGER.debug('Stepping into Biophysical URI Handler')
     wind_energy_biophysical.execute(args)
     
-    # Check to see if one of the valuation arguments is active. If the checkbox
-    # was not selected then the following key will not be in the arguments.
-    if 'number_of_machines' in args:
+    # If valuation was checked in the UI then run valuation 
+    if args['valuation_container']:
         # Run the valuation uri module
         LOGGER.debug('Stepping into Valuation URI Handler')
         wind_energy_valuation.execute(args)
