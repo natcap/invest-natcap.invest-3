@@ -507,24 +507,29 @@ def valuation(args):
     foundation_cost = float(turbine_dict['foundation_cost'])
     # The cost of each turbine unit in millions of dollars
     unit_cost = float(turbine_dict['turbine_cost'])
-    # The installation cost as a percentage of final capital costs converted to
-    # a decimal
-    install_cost = float(turbine_dict['installation_cost']) / 100.00
-    # The miscellaneous costs as a percentage of CAPEX converted to a decimal
-    misc_capex_cost = float(turbine_dict['miscellaneous_capex_cost']) / 100.00
-    # The operations and maintenance costs as a percentage of CAPEX converted
-    # to a decimal
-    op_maint_cost = float(turbine_dict['operation_maintenance_cost']) / 100.00
-    # The distcount rate as a percentage converted to a decimal
-    discount_rate = float(turbine_dict['discount_rate']) / 100.00
-    # The cost to decommission the farm as a percentage of CAPEX converted to a
-    # decimal
-    decom = float(turbine_dict['decommission_cost']) / 100.00
+    # The installation cost as a decimal
+    install_cost = float(turbine_dict['installation_cost'])
+    # The miscellaneous costs as a decimal factore of CAPEX
+    misc_capex_cost = float(turbine_dict['miscellaneous_capex_cost'])
+    # The operations and maintenance costs as a decimal factor of CAPEX
+    op_maint_cost = float(turbine_dict['operation_maintenance_cost'])
+    # The distcount rate as a decimal
+    discount_rate = float(turbine_dict['discount_rate'])
+    # The cost to decommission the farm as a decmial factor of CAPEX
+    decom = float(turbine_dict['decommission_cost'])
     # The mega watt value for the turbines in MW
     mega_watt = float(turbine_dict['turbine_rated_pwr'])
     # The average land cable distance in km
     avg_grid_distance = float(turbine_dict['avg_grid_distance'])
-    
+    # The distance at which AC switches over to DC power
+    circuit_break = float(turbine_dict['ac_dc_distance_break'])
+    # The coefficients for the AC/DC megawatt and cable cost from the CAP
+    # function
+    mw_coef_ac = float(args['mw_coef_ac'])
+    mw_coef_dc = float(args['mw_coef_dc'])
+    cable_coef_ac = float(args['cable_coef_ac'])
+    cable_coef_dc = float(args['cable_coef_dc'])
+
     time = int(turbine_dict['time_period'])
 
     number_turbines = args['number_of_machines']
@@ -677,13 +682,12 @@ def valuation(args):
         # Initialize cable cost variable
         cable_cost = 0
 
-        # These constants are based on the literature from Rob's users guide on
-        # valuation. The break at 60 indicates the difference in using AC and
+        # The break at 'circuit_break' indicates the difference in using AC and
         # DC current systems
-        if total_cable_dist <= 60:
-            cable_cost = (.81 * total_mega_watt) + (1.36 * total_cable_dist)
+        if total_cable_dist <= circuit_break:
+            cable_cost = (mw_coef_ac * total_mega_watt) + (cable_coef_ac * total_cable_dist)
         else:
-            cable_cost = (1.09 * total_mega_watt) + (.89 * total_cable_dist)
+            cable_cost = (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist)
         
         # Compute the total CAP
         cap = cap_less_dist + cable_cost
