@@ -215,6 +215,7 @@ def valuation(args):
 
     service_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
         {}, args['service_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+
 #    service_value_sum_matrix = args['service_value_sum'].GetRasterBand(1).\
 #        ReadAsArray()
 #    service_value_sum_matrix.fill(0)
@@ -239,11 +240,10 @@ def valuation(args):
 #        species_dict['farm_value'].GetRasterBand(1).WriteArray(farm_value_matrix)
 
         # Add the new farm_value_matrix to the farm value sum matrix.
-        # MISSING THE FARM_VALUE_SUM_URI
         farm_value_sum = raster_utils.vectorize_rasters(
             [farm_value_raster, farm_value_sum],
             lambda x, y: x + y if x != -1.0 else -1.0,
-            nodata=-1.0)
+            raster_out_uri=args['farm_value_sum'], nodata=-1.0)
 #        farm_value_sum_matrix = clip_and_op(farm_value_sum_matrix,
 #            farm_value_matrix, np.add, in_nodata, out_nodata)
 
@@ -310,8 +310,9 @@ def valuation(args):
         # Add the new service value to the service value sum matrix
         service_value_sum = raster_utils.vectorize_rasters(
             [service_value_sum, service_value_raster],
-            lambda x, y: x + y if x != -1.0 else -1.0,
-            raster_out_uri=args['farm_value_sum'], nodata=-1.0)
+            lambda x, y: x + y if y != -1.0 else -1.0,
+            raster_out_uri=args['service_value_sum'], nodata=-1.0)
+
 #        service_value_sum_matrix = clip_and_op(service_value_sum_matrix,
 #            service_value_matrix, np.add, in_nodata, out_nodata)
 
