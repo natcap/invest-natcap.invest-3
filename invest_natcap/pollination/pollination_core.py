@@ -1,6 +1,5 @@
 """InVEST Pollination model core function  module"""
 
-import invest_cython_core
 from invest_natcap import raster_utils
 from invest_natcap.invest_core import invest_core
 
