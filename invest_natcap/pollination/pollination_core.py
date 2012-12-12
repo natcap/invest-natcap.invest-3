@@ -113,7 +113,7 @@ def biophysical(args):
         LOGGER.debug('Calculating %s abundance index', species)
         species_abundance = raster_utils.vectorize_rasters(
             [nesting_raster, floral_raster],
-            lambda x, y: x*y if x != nodata else nodata,
+            lambda x, y: x * y if x != nodata else nodata,
             raster_out_uri=species_dict['species_abundance'],
             nodata=nodata)
 
@@ -122,7 +122,7 @@ def biophysical(args):
         species_weight = guild_dict['species_weight']
         abundance_total_raster = raster_utils.vectorize_rasters(
             [abundance_total_raster, species_abundance],
-            lambda x, y: x + (y*species_weight) if x != nodata else nodata,
+            lambda x, y: x + (y * species_weight) if x != nodata else nodata,
             raster_out_uri=args['abundance_total'],
             nodata=nodata)
 
@@ -161,7 +161,7 @@ def biophysical(args):
     foraging_total_raster = raster_utils.vectorize_rasters(
         [foraging_total_raster],
         lambda x: x / num_species if x != nodata else nodata,
-        raster_out_uri = args['foraging_average'], nodata=nodata)
+        raster_out_uri=args['foraging_average'], nodata=nodata)
 
     # Calculate the mean pollinator supply (pollinator abundance) by taking the
     # abundance_total_matrix and dividing it by the number of pollinators.
@@ -267,7 +267,7 @@ def valuation(args):
         service_value_raster = raster_utils.vectorize_rasters(
             [args['ag_map'], service_value_raster],
             lambda x, y: 0.0 if x == 0 else y,
-            raster_out_uri = species_dict['service_value'], nodata=-1.0)
+            raster_out_uri=species_dict['service_value'], nodata=-1.0)
 
         # Add the new service value to the service value sum matrix
         service_value_sum = raster_utils.vectorize_rasters(
@@ -276,6 +276,7 @@ def valuation(args):
             raster_out_uri=args['service_value_sum'], nodata=-1.0)
 
     LOGGER.debug('Finished calculating service value')
+
 
 def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     """Calculate the yield raster.
@@ -346,6 +347,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     out_raster = raster_utils.reclassify_by_dictionary(base_raster,
         reclass_rules, out_uri, 'GTiff', -1, gdal.GDT_Float32)
     return out_raster
+
 
 def build_uri(directory, basename, suffix=[]):
     """Take the input directory and basename, inserting the provided suffixes
