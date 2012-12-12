@@ -213,9 +213,11 @@ def valuation(args):
     farm_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
         {}, args['farm_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
 
-    service_value_sum_matrix = args['service_value_sum'].GetRasterBand(1).\
-        ReadAsArray()
-    service_value_sum_matrix.fill(0)
+    service_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
+        {}, args['service_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+#    service_value_sum_matrix = args['service_value_sum'].GetRasterBand(1).\
+#        ReadAsArray()
+#    service_value_sum_matrix.fill(0)
 
     # Define necessary scalars based on inputs.
     in_nodata = args['foraging_average'].GetRasterBand(1).GetNoDataValue()
@@ -306,12 +308,16 @@ def valuation(args):
 #            service_value_matrix)
 
         # Add the new service value to the service value sum matrix
-        service_value_sum_matrix = clip_and_op(service_value_sum_matrix,
-            service_value_matrix, np.add, in_nodata, out_nodata)
+        service_value_sum = raster_utils.vectorize_rasters(
+            [service_value_sum, service_value_raster],
+            lambda x, y: x + y if x != -1.0 else -1.0,
+            raster_out_uri=args['farm_value_sum'], nodata=-1.0)
+#        service_value_sum_matrix = clip_and_op(service_value_sum_matrix,
+#            service_value_matrix, np.add, in_nodata, out_nodata)
 
     # Write the pollination service value to its raster
-    args['service_value_sum'].GetRasterBand(1).WriteArray(service_value_sum_matrix)
-    args['farm_value_sum'].GetRasterBand(1).WriteArray(farm_value_sum_matrix)
+#    args['service_value_sum'].GetRasterBand(1).WriteArray(service_value_sum_matrix)
+#    args['farm_value_sum'].GetRasterBand(1).WriteArray(farm_value_sum_matrix)
     LOGGER.debug('Finished calculating service value')
 
 def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):

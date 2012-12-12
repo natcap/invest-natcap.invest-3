@@ -126,9 +126,9 @@ def execute(args):
 
         farm_value_sum_uri = pollination_core.build_uri(out_dir, 'sup_val.tif',
             ['sum', scenario, suffix])
-        valuation_args['service_value_sum'] =\
-            pollination_core.make_raster_from_lulc(
-            valuation_args['foraging_average'], farm_value_sum_uri)
+        valuation_args['service_value_sum'] = farm_value_sum_uri
+#            pollination_core.make_raster_from_lulc(
+#            valuation_args['foraging_average'], farm_value_sum_uri)
 
         # Execute the model.
         pollination_core.valuation(valuation_args)
