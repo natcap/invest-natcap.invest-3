@@ -260,7 +260,7 @@ def valuation(args):
         # Calculate sigma for the gaussian blur.  Sigma is based on the species
         # alpha (from the guilds table) and twice the pixel size.
         guild_dict = args['guilds'].get_table_row('species', species)
-        pixel_size = abs(species_dict['farm_value'].GetGeoTransform()[1])
+        pixel_size = abs(farm_value_raster.GetGeoTransform()[1])
         sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
         LOGGER.debug('Pixel size: %s, sigma: %s')
 
