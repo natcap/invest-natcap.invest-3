@@ -195,6 +195,7 @@ def valuation(args):
         args['species'][<species_name>]['farm_value'] - a GDAL dataset
         args['species'][<species_name>]['service_value'] - a GDAL dataset
         args['species'][<species_name>]['value_abundance_ratio'] - a URI
+        args['species'][<species_name>]['value_abundance_ratio_blur'] - a URI
         args['service_value_sum'] - a GDAL dataset
         args['farm_value_sum'] - a URI
         args['foraging_average'] - a GDAL dataset
@@ -265,8 +266,11 @@ def valuation(args):
         LOGGER.debug('Pixel size: %s, sigma: %s')
 
         LOGGER.debug('Applying the blur to the ratio matrix.')
-        blurred_ratio_matrix = clip_and_op(ratio_matrix, sigma,
-            ndimage.gaussian_filter, in_nodata, out_nodata)
+        blurred_ratio_raster = raster_utils.gaussian_filter_dataset(
+            ratio_raster, sigma, species_dict['value_abundance_ratio_blur'],
+            -1.0)
+#        blurred_ratio_matrix = clip_and_op(ratio_matrix, sigma,
+#            ndimage.gaussian_filter, in_nodata, out_nodata)
 
         # Open necessary matrices
         species_supply_matrix = species_dict['species_abundance'].\

@@ -105,6 +105,11 @@ def execute(args):
             valuation_args['species'][species]['value_abundance_ratio'] =\
                 value_abundance_ratio_uri
 
+            value_abundance_ratio_blurred_uri = pollination_core.build_uri(inter_dir,
+                species + '_value_abundance_blur.tif', [scenario, suffix])
+            valuation_args['species'][species]['value_abundance_ratio_blur'] =\
+                value_abundance_ratio_blurred_uri
+
             # Create the total farm value raster using the foraging average raster as a
             # base
             farm_value_uri = pollination_core.build_uri(inter_dir, 'frm_val.tif',
