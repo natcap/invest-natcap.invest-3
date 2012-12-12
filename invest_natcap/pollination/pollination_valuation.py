@@ -94,9 +94,9 @@ def execute(args):
             # base
             service_value_uri = pollination_core.build_uri(out_dir, 'sup_val.tif',
                 [species, scenario, suffix])
-            valuation_args['species'][species]['service_value'] = \
-                pollination_core.make_raster_from_lulc(
-                valuation_args['foraging_average'], service_value_uri)
+            valuation_args['species'][species]['service_value'] = service_value_uri
+#                pollination_core.make_raster_from_lulc(
+#                valuation_args['foraging_average'], service_value_uri)
 
             # Create a raster to store the ratio of farm_value to species
             # abundance.

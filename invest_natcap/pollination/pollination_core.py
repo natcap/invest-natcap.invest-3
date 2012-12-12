@@ -288,8 +288,12 @@ def valuation(args):
             return v_c * sup_s * blurred_ratio
 
         # Vectorize the ps_vectorized function
-        vOp = np.vectorize(ps_vectorized)
-        service_value_matrix = vOp(species_supply_matrix, blurred_ratio_matrix)
+        service_value_raster = raster_utils.vectorize_rasters(
+            [species_dict['species_abundance'], blurred_ratio_raster],
+            ps_vectorized, raster_out_uri=species_dict['service_value'],
+            nodata=-1.0)
+#        vOp = np.vectorize(ps_vectorized)
+#        service_value_matrix = vOp(species_supply_matrix, blurred_ratio_matrix)
 
         # Set all agricultural pixels to 0.  This is according to issue 761.
         ag_matrix = args['ag_map'].GetRasterBand(1).ReadAsArray()
