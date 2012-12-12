@@ -11,42 +11,33 @@
             "id" : "workspace_list",
             "type": "list",	        
 		    "elements": [
-				{
-				    "id" : "gridFileName",
-				    "args_id" : "gridFileName",
-				    "type": "file",
-				    "label": "Grid",
-				    "validateAs": {"type": "OGR"},
-				    "required": true
-				},
-				{
-				    "id" : "params",
-				    "args_id" : "params",
-				    "type": "file",
-				    "label": "Params",
-				    "validateAs": {"type": "CSV"},
-				    "required": true
-				},					        
 		        {
-		        	"id" : "data_dir",
-		        	"args_id" : "data_dir",
-					"type": "folder",
-                	"label": "Data Directory",
-                	"required": true
+                            "id" : "workspace_dir",
+                            "args_id" : "workspace_dir",
+                            "type": "folder",
+                            "label": "Workspace Directory",
+                            "required": true
+		        },
+                        {
+                            "id" : "json",
+                            "args_id" : "json",
+                            "type": "file",
+                            "label": "init.json",
+                            "required": true
+                        },					        
+		        {
+                            "id" : "data_dir",
+                            "args_id" : "data_dir",
+                            "type": "folder",
+                            "label": "Data Directory",
+                            "required": true
 		        },
 		        {
-		        	"id" : "workspace_dir",
-		        	"args_id" : "workspace_dir",
-					"type": "folder",
-                	"label": "Workspace Directory",
-                	"required": true
-		        },
-		        {
-		        	"id" : "comments",
-		        	"args_id" : "comments",
-					"type": "text",
-                	"label": "Comments",
-                	"required": false
+                            "id" : "comments",
+                            "args_id" : "comments",
+                            "type": "text",
+                            "label": "Comments",
+                            "required": false
 		        }
 		   ]
 		   }

@@ -134,6 +134,7 @@ def execute(args):
     url = config["server"]+"/"+config["paths"]["relative"]["data"]+"/"+args["sessid"]+"/"+config["files"]["log"]    
     complete = False
     oldlog=""
+    msg=""
     time.sleep(5)
     while not complete:
         log = urllib2.urlopen(url).read()

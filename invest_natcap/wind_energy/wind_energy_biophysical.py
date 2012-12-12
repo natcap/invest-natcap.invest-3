@@ -1,6 +1,8 @@
-"""InVEST Wind Energy model file handler module"""
+"""InVEST Wind Energy Biophysical model file handler"""
 import logging
 import os
+import csv
+import json
 
 from osgeo import gdal
 from osgeo import ogr
@@ -42,7 +44,7 @@ def execute(args):
             turbines biophysical parameters as well as valuation parameters 
             (required)
         args[hub_height] - an integer value for the hub height of the turbines
-            (meters) (required)
+            as a factor of ten (meters) (required)
         args[num_days] - an integer value for the number of days for harvested
             wind energy calculation (days) (required)
         args[min_depth] - a float value for the minimum depth for offshore wind
@@ -90,14 +92,27 @@ def execute(args):
             os.makedirs(folder)
 
     bathymetry = gdal.Open(str(args['bathymetry_uri']))
-    
+  
+    # Using the hub height to generate the proper field name for the scale 
+    # value that is found in the wind data file
+    hub_height = args['hub_height']
+
+    scale_key = str(int(hub_height))
+    if len(scale_key) <= 2:
+        scale_key = 'Ram-0' + scale_key + 'm'
+    else:
+        scale_key = 'Ram-' + scale_key + 'm'
+   
+    # Define a list of the fields that of interest in the wind data file
+    wind_data_field_list = ['LATI', 'LONG', scale_key, 'K-010m']
+
     # Read the wind points from a text file into a dictionary and create a point
     # shapefile from that dictionary
     wind_point_shape_uri = os.path.join(
             inter_dir, 'wind_points_shape' + suffix + '.shp')
     
     LOGGER.info('Read wind data from text file')
-    wind_data = read_wind_data(str(args['wind_data_uri']))
+    wind_data = read_wind_data(str(args['wind_data_uri']), wind_data_field_list)
     
     LOGGER.info('Create point shapefile from wind data')
     wind_data_points = wind_data_to_point_shape(
@@ -160,11 +175,11 @@ def execute(args):
     
     # Add biophysical inputs to the dictionary
     biophysical_args['workspace_dir'] = workspace
-    biophysical_args['hub_height'] = float(args['hub_height'])
+    biophysical_args['hub_height'] = int(args['hub_height'])
     biophysical_args['num_days'] = int(args['num_days'])
     
     # Create a list of the biophysical parameters we are looking for from the
-    # files
+    # input files
     biophysical_params = ['cut_in_wspd', 'cut_out_wspd', 'rated_wspd',
                           'turbine_rated_pwr', 'air_density',
                           'exponent_power_curve']
@@ -187,6 +202,8 @@ def execute(args):
         if key.lower() in biophysical_params:
             bio_turbine_dict[key.lower()] = val
 
+    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
+    
     if len(bio_turbine_dict.keys()) != len(biophysical_params):
         class FieldError(Exception):
             pass
@@ -195,7 +212,6 @@ def execute(args):
         'Please make sure all the necessary fields are present and spelled '
         'correctly.')
 
-    LOGGER.debug('Biophysical Turbine Parameters: %s', bio_turbine_dict)
     biophysical_args['biophysical_turbine_dict'] = bio_turbine_dict
     # Pass in the depth values as negative, since it should be a negative
     # elevation
@@ -229,47 +245,42 @@ def check_datasource_projections(dsource_list):
 
     LOGGER.info('Leaving check_datasource_projections')
     return True
-    
-def read_wind_data(wind_data_uri):
+
+def read_wind_data(wind_data_uri, field_list):
     """Unpack the wind data into a dictionary
 
         wind_data_uri - a uri for the wind data text file
+        field_list - a list of strings referring to the column headers from
+            the text file that are to be included in the dictionary
 
-        returns - a dictionary where the keys are the row numbers and the values
-            are dictionaries mapping column headers to values """
+        returns - a dictionary where the keys are lat/long tuples which point
+            to dictionaries that hold wind data at that location"""
 
     LOGGER.debug('Entering read_wind_data')
-
+    
     # The 'rU' flag is to mark ensure the file is open as read only and with
     # Universal newline support
     wind_file = open(wind_data_uri, 'rU')
-
-    # Read the first line and get the column header names by splitting on the
-    # commas
-    columns_line = wind_file.readline().split(',')
     
-    # Remove the newline character that is attached to the last element
-    last_index = len(columns_line) - 1
-    columns_line[last_index] = columns_line[last_index].rstrip('\n')
-    LOGGER.debug('COLUMN Line : %s', columns_line)
+    # Read in the file as a CSV in dictionary format such that the first row of
+    # the file is treated as the list of keys for the respective values on the
+    # following rows
+    file_reader = csv.DictReader(wind_file)
     
     wind_dict = {}
-   
-    LOGGER.info('Iterating over each newline and building up dictionary')
-    for line in wind_file.readlines():
-        line_array = line.split(',')
-
-        # Remove the newline character that is attached to the last element
-        last_index = len(line_array) - 1
-        line_array[last_index] = line_array[last_index].rstrip('\n')
-
-        # The key for the dictionary will be the first element on the line
-        key = float(line_array[0])
+    
+    for row in file_reader:
+        # Create the key for the dictionary based on the unique lat/long
+        # coordinate
+        key = (row['LATI'], row['LONG'])
         wind_dict[key] = {}
         
-        # Add each value to a sub dictionary of 'key'
-        for index in range(1, len(line_array)):
-            wind_dict[key][columns_line[index]] = float(line_array[index])
+        for row_key in row:
+            # Only add the values specified in the list to the dictionary. This
+            # allows some flexibility in removing columns that are not cared
+            # about 
+            if row_key in field_list:
+                wind_dict[key][row_key] = row[row_key]
 
     wind_file.close()
 
@@ -280,10 +291,13 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     """Given a dictionary of the wind data create a point shapefile that
         represents this data
         
-        dict_data - a python dictionary with the wind data:
-            0 : {'LATI':97, 'LONG':43, ... 'Ram-030m':6.3, ... 'K-010m':2.7},
-            1 : {'LATI':55, 'LONG':51, ... 'Ram-030m':6.2, ... 'K-010m':2.4},
-            2 : {'LATI':73, 'LONG':47, ... 'Ram-030m':6.5, ... 'K-010m':2.3},
+        dict_data - a python dictionary with the wind data, where the keys are
+            tuples of the lat/long coordinates:
+            {
+            (97, 43) : {'LATI':97, 'LONG':43, 'Ram-030m':6.3, 'K-010m':2.7},
+            (55, 51) : {'LATI':55, 'LONG':51, 'Ram-030m':6.2, 'K-010m':2.4},
+            (73, 47) : {'LATI':73, 'LONG':47, 'Ram-030m':6.5, 'K-010m':2.3}
+            }
         layer_name - a python string for the name of the layer
         output_uri - a uri for the output destination of the shapefile
 
@@ -318,8 +332,8 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
     for point_dict in dict_data.itervalues():
-        latitude = point_dict['LATI']
-        longitude = point_dict['LONG']
+        latitude = float(point_dict['LATI'])
+        longitude = float(point_dict['LONG'])
 
         geom = ogr.Geometry(ogr.wkbPoint)
         geom.AddPoint_2D(longitude, latitude)

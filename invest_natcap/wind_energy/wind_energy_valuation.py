@@ -2,6 +2,7 @@
 import os.path
 import logging
 import csv
+import json
 
 from osgeo import gdal
 from osgeo import ogr
@@ -22,23 +23,31 @@ def execute(args):
     
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
-        args[aoi_uri] - a uri to an OGR datasource of type polygon covering the
-            area of interest. Must be projected in meters (required)
-        args[biophysical_data_uri] - a uri to an OGR datasource of type point
-            from the output of the biophysical model run (required) 
-        args[turbine_info_uri] - a uri to a CSV file that has the parameters
-            for the type of turbine (required)
+        args[aoi_uri] - a uri to an OGR datasource that is of type polygon and 
+            projected in linear units of meters. The polygon specifies the 
+            area of interest for the wind data points. The aoi should also 
+            cover a portion of the land polygon that is of interest for
+            calculating the near shore distances if the grid points input is not
+            provided (required)
+        args[turbine_parameters_uri] - a uri to a CSV file that holds the
+            turbines biophysical parameters as well as valuation parameters 
+            (required)
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
             and grid point locations (optional)
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon to
             use for distance calculations if grid points were not provided 
             (required if grid_points_uri is not provided)
+        args[foundation_cost] - a float representing how much the foundation
+            will cost for the specific type of turbine (required)
         args[number_of_machines] - an integer value for the number of machines
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required)
-        args[suffix] - a string for the suffix to be appended to the output
-            names (optional) 
+        args[avg_grid_distance] - a float for the average distance in kilometers
+            from a grid connection point to a land connection point 
+            (required if grid connection points are not provided)
+        args[suffix] - a String to append to the end of the output files
+            (optional)
     
         returns - nothing"""
 
@@ -66,7 +75,10 @@ def execute(args):
     valuation_args['suffix'] = suffix
 
     aoi = ogr.Open(str(args['aoi_uri']))
-    biophysical_points = ogr.Open(str(args['biophysical_data_uri']))
+    
+    biophysical_points_uri = os.path.join(
+            inter_dir, 'wind_points_reprojected.shp')
+    biophysical_points = ogr.Open(biophysical_points_uri)
     
     biophysical_points_proj = clip_and_project_datasource(
             biophysical_points, aoi, os.path.join(inter_dir, 'bio_points'))
@@ -78,27 +90,46 @@ def execute(args):
     # Dollar per kiloWatt hour
     valuation_args['dollar_per_kWh'] = float(args['dollar_per_kWh'])
 
+    # Create a list of the valuation parameters we are looking for from the
+    # input files 
+    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
+    valuation_global_params = [
+            'discount_rate', 'time_period', 'infield_cable_cost', 
+            'infield_cable_length', 'installation_cost',
+            'miscellaneous_capex_cost', 'operation_maintenance_cost',
+            'decommission_cost']
+    # Get the valuation turbine parameters from the CSV file
     LOGGER.info('Read in turbine information from CSV')
-    # Open the turbine CSV file 
-    turbine_dict = {}
-    turbine_file = open(str(args['turbine_info_uri']))
-    reader = csv.DictReader(turbine_file)
+    val_turbine_param_file = open(args['turbine_parameters_uri'])
+    val_turbine_reader = csv.reader(val_turbine_param_file)
+    val_turbine_dict = {}
 
-    # Making a shallow copy of the attribute 'fieldnames' explicitly to edit to
-    # all the fields to lowercase because it is more readable and easier than
-    # editing the attribute itself
-    field_names = reader.fieldnames
-
-    for index in range(len(field_names)):
-        field_names[index] = field_names[index].lower()
-
-    for row in reader:
-        turbine_dict[row['type']] = row
-    reader = None
-    turbine_file.close()
+    for field_value_row in val_turbine_reader:
+        if field_value_row[0].lower() in valuation_turbine_params:
+            val_turbine_dict[field_value_row[0].lower()] = field_value_row[1]
     
-    LOGGER.debug('Turbine Dictionary: %s', turbine_dict)
-    valuation_args['turbine_dict'] = turbine_dict
+    val_global_params_file = open(
+            os.path.join(workspace, 'input/global_wind_energy_attributes.json'))
+
+    val_global_params_dict = json.load(val_global_params_file)
+    for key, val in val_global_params_dict.iteritems():
+        if key.lower() in valuation_global_params:
+            val_turbine_dict[key.lower()] = val
+
+    LOGGER.debug('Valuation Turbine Parameters: %s', val_turbine_dict)
+    val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
+    if len(val_turbine_dict.keys()) != val_param_len:
+        class FieldError(Exception):
+            pass
+        raise FieldError('An Error occured from reading in a field value from '
+                'either the turbine CSV file or the global parameters JSON '
+                'file. Please make sure all the necessary fields are present '
+                'and spelled correctly.')
+    
+    val_turbine_dict['foundation_cost'] = float(args['foundation_cost'])
+    val_turbine_dict['avg_grid_distance'] = float(args['avg_grid_distance'])
+    LOGGER.debug('Turbine Dictionary: %s', val_turbine_dict)
+    valuation_args['turbine_dict'] = val_turbine_dict
 
     # Handle Grid Points
     try:

@@ -224,13 +224,13 @@ def biophysical(args):
     
     # Get the inputs needed to compute harvested wind energy
     bio_turbine_dict = args['biophysical_turbine_dict']
-    exp_pwr_curve = bio_turbine_dict['exp_out_pwr_curve']
+    exp_pwr_curve = int(bio_turbine_dict['exponent_power_curve'])
     num_days = args['num_days']
-    rated_power = bio_turbine_dict['turbine_rated_pwr']
-    air_density_standard = bio_turbine_dict['air_density']
-    v_rate = bio_turbine_dict['rated_wspd']
-    v_out = bio_turbine_dict['cut_out_wspd']
-    v_in = bio_turbine_dict['cut_in_wspd']
+    rated_power = float(bio_turbine_dict['turbine_rated_pwr'])
+    air_density_standard = float(bio_turbine_dict['air_density'])
+    v_rate = float(bio_turbine_dict['rated_wspd'])
+    v_out = float(bio_turbine_dict['cut_out_wspd'])
+    v_in = float(bio_turbine_dict['cut_in_wspd'])
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - (1.194*10**-4) * hub_height
@@ -499,37 +499,33 @@ def valuation(args):
 
     # Get constants from turbine_dict
     turbine_dict = args['turbine_dict']
-    turbine_name = 'Siemens'
     # The length of infield cable in km
-    infield_length = float(turbine_dict[turbine_name]['infield_length'])
+    infield_length = float(turbine_dict['infield_cable_length'])
     # The cost of infield cable in millions of dollars per km
-    infield_cost = float(turbine_dict[turbine_name]['infield_cost'])
+    infield_cost = float(turbine_dict['infield_cable_cost'])
     # The cost of the foundation in millions of dollars 
-    foundation_cost = float(turbine_dict[turbine_name]['foundation_cost'])
+    foundation_cost = float(turbine_dict['foundation_cost'])
     # The cost of each turbine unit in millions of dollars
-    unit_cost = float(turbine_dict[turbine_name]['unit_cost'])
+    unit_cost = float(turbine_dict['turbine_cost'])
     # The installation cost as a percentage of final capital costs converted to
     # a decimal
-    install_cost = float(turbine_dict[turbine_name]['install_cost']) / 100.00
+    install_cost = float(turbine_dict['installation_cost']) / 100.00
     # The miscellaneous costs as a percentage of CAPEX converted to a decimal
-    misc_capex_cost = float(turbine_dict[turbine_name]['misc_capex']) / 100.00
+    misc_capex_cost = float(turbine_dict['miscellaneous_capex_cost']) / 100.00
     # The operations and maintenance costs as a percentage of CAPEX converted
     # to a decimal
-    op_maint_cost = float(turbine_dict[turbine_name]['op_maint']) / 100.00
+    op_maint_cost = float(turbine_dict['operation_maintenance_cost']) / 100.00
     # The distcount rate as a percentage converted to a decimal
-    discount_rate = float(turbine_dict[turbine_name]['discount_rate']) / 100.00
+    discount_rate = float(turbine_dict['discount_rate']) / 100.00
     # The cost to decommission the farm as a percentage of CAPEX converted to a
     # decimal
-    decom = float(turbine_dict[turbine_name]['decom']) / 100.00
-    turbine_name = turbine_dict[turbine_name]['type']
+    decom = float(turbine_dict['decommission_cost']) / 100.00
     # The mega watt value for the turbines in MW
-    mega_watt = float(turbine_dict[turbine_name]['mw'])
+    mega_watt = float(turbine_dict['turbine_rated_pwr'])
     # The average land cable distance in km
-    avg_land_cable_dist = float(
-            turbine_dict[turbine_name]['avg_land_cable_dist'])
-    # The mean land distance to a grid connection point in km
-    mean_land_dist = float(turbine_dict[turbine_name]['mean_land_dist'])
-    time = int(turbine_dict[turbine_name]['time'])
+    avg_grid_distance = float(turbine_dict['avg_grid_distance'])
+    
+    time = int(turbine_dict['time_period'])
 
     number_turbines = args['number_of_machines']
     total_mega_watt = mega_watt * number_turbines
@@ -560,7 +556,7 @@ def valuation(args):
         
         # Set each value in the array to the constant distance for land to grid
         # points
-        grid_to_land_dist = grid_to_land_dist * mean_land_dist
+        grid_to_land_dist = grid_to_land_dist * avg_grid_distance
         
         wind_energy_layer = None     
     else:
