@@ -296,10 +296,14 @@ def valuation(args):
 #        service_value_matrix = vOp(species_supply_matrix, blurred_ratio_matrix)
 
         # Set all agricultural pixels to 0.  This is according to issue 761.
-        ag_matrix = args['ag_map'].GetRasterBand(1).ReadAsArray()
-        np.putmask(service_value_matrix, ag_matrix == 0, 0.0)
-        species_dict['service_value'].GetRasterBand(1).WriteArray(
-            service_value_matrix)
+        service_value_raster = raster_utils.vectorize_rasters(
+            [args['ag_map'], service_value_raster],
+            lambda x, y: 0.0 if x == 0 else y,
+            raster_out_uri = species_dict['service_value'], nodata=-1.0)
+#        ag_matrix = args['ag_map'].GetRasterBand(1).ReadAsArray()
+#        np.putmask(service_value_matrix, ag_matrix == 0, 0.0)
+#        species_dict['service_value'].GetRasterBand(1).WriteArray(
+#            service_value_matrix)
 
         # Add the new service value to the service value sum matrix
         service_value_sum_matrix = clip_and_op(service_value_sum_matrix,
