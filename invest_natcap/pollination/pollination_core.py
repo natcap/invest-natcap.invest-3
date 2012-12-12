@@ -195,7 +195,7 @@ def valuation(args):
         args['species'][<species_name>]['farm_value'] - a GDAL dataset
         args['species'][<species_name>]['service_value'] - a GDAL dataset
         args['service_value_sum'] - a GDAL dataset
-        args['farm_value_sum'] - a GDAL dataset
+        args['farm_value_sum'] - a URI
         args['foraging_average'] - a GDAL dataset
         args['guilds'] - a fileio tablehandler class
         args['ag_map'] - a GDAL dataset
@@ -208,7 +208,9 @@ def valuation(args):
 #    farm_value_sum_matrix = args['farm_value_sum'].GetRasterBand(1).\
 #        ReadAsArray()
 #    farm_value_sum_matrix.fill(0)
-    farm_value_sum = args['farm_value_sum']
+    farm_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
+        {}, args['farm_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+
     service_value_sum_matrix = args['service_value_sum'].GetRasterBand(1).\
         ReadAsArray()
     service_value_sum_matrix.fill(0)
