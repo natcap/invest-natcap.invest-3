@@ -90,16 +90,6 @@ def biophysical(args):
             args['landuse_attributes'], guild_dict, args['nesting_fields'],
             species_dict['nesting'], max)
 
-#        for resource, op in [('nesting', max), ('floral', sum)]:
-#            # Calculate the attribute's resources
-#            LOGGER.debug('Calculating %s resource raster', resource)
-#            mapped_resource_rasters[resource] = map_attribute(
-#                args['landuse'], args['landuse_attributes'],
-#                guild_dict, args[resource + '_fields'],
-#                args['species'][species][resource], op, 'GTiff')
-
-#        finished_rasters['nesting'] = mapped_resource_rasters['nesting']
-
         # Now that the per-pixel nesting and floral resources have been
         # calculated, the floral resources still need to factor in
         # neighborhoods.
@@ -144,9 +134,11 @@ def biophysical(args):
         # that are not agricultural before saving it to the output raster.
         LOGGER.debug('Calculating %s foraging/farm abundance index', species)
         farm_abundance = raster_utils.gaussian_filter_dataset(
-            species_abundance, sigma,
-            args['species'][species]['farm_abundance'], nodata)
+            species_abundance, sigma, species_dict['farm_abundance'], nodata)
 
+        # Mask the farm abundance raster according to whether the pixel is
+        # agricultural.  If the pixel is agricultural, the value is preserved.
+        # Otherwise, the value is set to nodata.
         farm_abundance_masked = raster_utils.vectorize_rasters(
             [farm_abundance, args['ag_map']],
             lambda x, y: x if y == 1.0 else nodata,
@@ -164,8 +156,11 @@ def biophysical(args):
     # Calculate the average foraging index based on the total
     # Divide the total pollination foraging index by the number of pollinators
     # to get the mean pollinator foraging index and save that to its raster.
+    LOGGER.debug('Calculating the mean foraging index across all species')
+
     num_species = float(len(args['species'].values()))
     LOGGER.debug('Number of species: %s', num_species)
+
     foraging_total_raster = raster_utils.vectorize_rasters(
         [foraging_total_raster],
         lambda x: x / num_species if x != nodata else nodata,
