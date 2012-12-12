@@ -194,6 +194,7 @@ def valuation(args):
         args['species'][<species_name>]['farm_abundance'] - a GDAL dataset
         args['species'][<species_name>]['farm_value'] - a GDAL dataset
         args['species'][<species_name>]['service_value'] - a GDAL dataset
+        args['species'][<species_name>]['value_abundance_ratio'] - a URI
         args['service_value_sum'] - a GDAL dataset
         args['farm_value_sum'] - a URI
         args['foraging_average'] - a GDAL dataset
@@ -246,10 +247,15 @@ def valuation(args):
         LOGGER.debug('Calculating service value for %s', species)
         # Open the species foraging matrix and then divide
         # the yield matrix by the foraging matrix for this pollinator.
-        species_farm_matrix = species_dict['farm_abundance'].GetRasterBand(1).\
-            ReadAsArray()
-        ratio_matrix = clip_and_op(farm_value_matrix, species_farm_matrix,
-            np.divide, in_nodata, out_nodata)
+        ratio_raster = raster_utils.vectorize_rasters(
+            [farm_value_raster, species_dict['farm_abundance']],
+            lambda x, y: x / y if x != -1.0 else -1.0,
+            raster_out_uri=species_dict['value_abundance_ratio'],
+            nodata=-1.0)
+#        species_farm_matrix = species_dict['farm_abundance'].GetRasterBand(1).\
+#            ReadAsArray()
+#        ratio_matrix = clip_and_op(farm_value_matrix, species_farm_matrix,
+#            np.divide, in_nodata, out_nodata)
 
         # Calculate sigma for the gaussian blur.  Sigma is based on the species
         # alpha (from the guilds table) and twice the pixel size.

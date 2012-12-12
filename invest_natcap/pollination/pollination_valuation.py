@@ -98,6 +98,13 @@ def execute(args):
                 pollination_core.make_raster_from_lulc(
                 valuation_args['foraging_average'], service_value_uri)
 
+            # Create a raster to store the ratio of farm_value to species
+            # abundance.
+            value_abundance_ratio_uri = pollination_core.build_uri(inter_dir,
+                species + '_value_abundance.tif', [scenario, suffix])
+            valuation_args['species'][species]['value_abundance_ratio'] =\
+                value_abundance_ratio_uri
+
             # Create the total farm value raster using the foraging average raster as a
             # base
             farm_value_uri = pollination_core.build_uri(inter_dir, 'frm_val.tif',
