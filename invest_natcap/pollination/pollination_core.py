@@ -50,20 +50,8 @@ def biophysical(args):
     lu_nodata = args['landuse'].GetRasterBand(1).GetNoDataValue()
     LOGGER.debug('Landcover nodata=%s', lu_nodata)
 
-    # mask agricultural classes to ag_map.
-    if len(args['ag_classes']) > 0:
-        LOGGER.debug('Agricultural classes: %s', args['ag_classes'])
-        reclass_rules = dict((r, 1) for r in args['ag_classes'])
-        default_value = 0.0
-    else:
-        LOGGER.debug('User did not define ag classes.')
-        reclass_rules = {}
-        default_value = 1.0
-
-    LOGGER.debug('Agricultural reclass map=%s', reclass_rules)
-    args['ag_map'] = raster_utils.reclassify_by_dictionary(args['landuse'],
-        reclass_rules, args['ag_map'], 'GTiff', nodata, gdal.GDT_Float32,
-        default_value=default_value)
+    args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
+        args['ag_classes'], nodata)
 
     # Open the average foraging matrix for use in the loop over all species,
     # but first we need to ensure that the matrix is filled with 0's.
@@ -170,6 +158,35 @@ def biophysical(args):
         raster_out_uri=args['abundance_total'], nodata=nodata)
 
     LOGGER.debug('Finished pollination biophysical calculations')
+
+
+def reclass_ag_raster(landuse, uri, ag_classes, nodata):
+    """Reclassify the landuse raster into a raster demarcating the agricultural
+        state of a given pixel.
+
+        landuse - a GDAL dataset.  The land use/land cover raster.
+        uri - the uri of the output, reclassified ag raster.
+        ag_classes - a list of landuse classes that are agricultural.  If an
+            empty list is provided, all landcover classes are considered to be
+            agricultural.
+        nodata - an int or float.
+
+        Returns a GDAL dataset of the ag raster."""
+
+    # mask agricultural classes to ag_map.
+    if len(ag_classes) > 0:
+        LOGGER.debug('Agricultural classes: %s', ag_classes)
+        reclass_rules = dict((r, 1) for r in ag_classes)
+        default_value = 0.0
+    else:
+        LOGGER.debug('User did not define ag classes.')
+        reclass_rules = {}
+        default_value = 1.0
+
+    LOGGER.debug('Agricultural reclass map=%s', reclass_rules)
+    return raster_utils.reclassify_by_dictionary(landuse,
+        reclass_rules, uri, 'GTiff', nodata, gdal.GDT_Float32,
+        default_value=default_value)
 
 
 def valuation(args):
