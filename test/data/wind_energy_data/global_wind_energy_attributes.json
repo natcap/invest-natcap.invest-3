@@ -13,5 +13,6 @@
     "cable_coef_dc":".89",
     "ac_dc_distance_break":"60",
     "time_period":"20",
-    "discount_rate":".116"
+    "discount_rate":".116",
+    "rotor_diameter_factor":"7"
 }
