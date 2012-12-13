@@ -75,11 +75,8 @@ def biophysical(args):
 
         # Take the pollinator abundance index and multiply it by the species
         # weight in the guilds table.
-        abundance_total_raster = raster_utils.vectorize_rasters(
-            [abundance_total_raster, species_abundance],
-            lambda x, y: x + y if x != nodata else nodata,
-            raster_out_uri=args['abundance_total'],
-            nodata=nodata)
+        abundance_total_raster = add_two_rasters(abundance_total_raster,
+            species_abundance, nodata, args['abundance_total'])
 
         # THIS IS TEMPORARY... REMOVE AFTER REFACTORING!
         pixel_size = abs(abundance_total_raster.GetGeoTransform()[1])
