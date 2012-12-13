@@ -278,10 +278,6 @@ def valuation(args):
     service_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
         {}, args['service_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
 
-    # Define necessary scalars based on inputs.
-    in_nodata = args['foraging_average'].GetRasterBand(1).GetNoDataValue()
-    out_nodata = in_nodata
-
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
 
