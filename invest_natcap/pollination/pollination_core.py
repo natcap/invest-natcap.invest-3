@@ -145,10 +145,8 @@ def biophysical(args):
         # Add the current foraging raster to the existing 'foraging_total'
         # raster
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
-        foraging_total_raster = raster_utils.vectorize_rasters(
-            [farm_abundance_masked, foraging_total_raster],
-            lambda x, y: x + y if x != nodata else nodata,
-            raster_out_uri=args['foraging_total'], nodata=nodata)
+        foraging_total_raster = add_two_rasters(farm_abundance_masked,
+            foraging_total_raster, nodata, args['foraging_total'])
 
     # Calculate the average foraging index based on the total
     # Divide the total pollination foraging index by the number of pollinators
