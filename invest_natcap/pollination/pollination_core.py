@@ -65,51 +65,26 @@ def biophysical(args):
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
 
-        floral_raster = map_attribute(args['landuse'],
-            args['landuse_attributes'], guild_dict, args['floral_fields'],
-            species_dict['floral'], sum)
-        nesting_raster = map_attribute(args['landuse'],
+        species_abundance = calculate_abundance(args['landuse'],
             args['landuse_attributes'], guild_dict, args['nesting_fields'],
-            species_dict['nesting'], max)
-
-        # Now that the per-pixel nesting and floral resources have been
-        # calculated, the floral resources still need to factor in
-        # neighborhoods.
-        # The sigma size is 2 times the pixel size, presumable since the
-        # raster's pixel width is a radius for the gaussian blur when we want
-        # the diameter of the blur.
-        pixel_size = abs(args['landuse'].GetGeoTransform()[1])
-        sigma = float(guild_dict['alpha'] / (2 * pixel_size))
-        LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
-
-        # Fetch the floral resources raster and matrix from the args dictionary
-        # apply a gaussian filter and save the floral resources raster to the
-        # dataset.
-        LOGGER.debug('Applying neighborhood mappings to %s floral resources',
-            species)
-        floral_raster = raster_utils.gaussian_filter_dataset(
-            floral_raster, sigma, species_dict['floral'], nodata)
-
-        # Calculate the pollinator abundance index (using Math! to simplify the
-        # equation in the documentation.  We're still waiting on Taylor
-        # Rickett's reply to see if this is correct.
-        # Once the pollination supply has been calculated, we add it to the
-        # total abundance matrix.
-        LOGGER.debug('Calculating %s abundance index', species)
-        species_abundance = raster_utils.vectorize_rasters(
-            [nesting_raster, floral_raster],
-            lambda x, y: x * y if x != nodata else nodata,
-            raster_out_uri=species_dict['species_abundance'],
-            nodata=nodata)
+            args['floral_fields'], uris={
+                'nesting': species_dict['nesting'],
+                'floral': species_dict['floral'],
+                'species_abundance': species_dict['species_abundance']
+            })
 
         # Take the pollinator abundance index and multiply it by the species
         # weight in the guilds table.
-        species_weight = guild_dict['species_weight']
         abundance_total_raster = raster_utils.vectorize_rasters(
             [abundance_total_raster, species_abundance],
-            lambda x, y: x + (y * species_weight) if x != nodata else nodata,
+            lambda x, y: x + y if x != nodata else nodata,
             raster_out_uri=args['abundance_total'],
             nodata=nodata)
+
+        # THIS IS TEMPORARY... REMOVE AFTER REFACTORING!
+        pixel_size = abs(abundance_total_raster.GetGeoTransform()[1])
+        sigma = float(guild_dict['alpha'] / (2 * pixel_size))
+        LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
 
         # Calculate the foraging ('farm abundance') index by applying a
         # gaussian filter to the foraging raster and then culling all pixels
@@ -157,10 +132,12 @@ def biophysical(args):
     LOGGER.debug('Finished pollination biophysical calculations')
 
 
-def calculate_abundance(landcover, guild, nesting_fields, floral_fields, uris):
+def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
+    floral_fields, uris):
     """Calculate pollinator abundance on the landscape.
 
-        landcover - a GDAL dataset of the LULC.
+        landuse - a GDAL dataset of the LULC.
+        lu_attr - a TableHandler
         guild - a dictionary containing information about the pollinator.  All
             entries are required:
             'alpha' - the typical foraging distance in m
@@ -186,7 +163,40 @@ def calculate_abundance(landcover, guild, nesting_fields, floral_fields, uris):
                 will be saved.
 
         Returns a GDAL dataset of the species abundance."""
-    pass
+    nodata = -1.0
+    floral_raster = map_attribute(landuse, lu_attr, guild, floral_fields,
+        uris['floral'], sum)
+    nesting_raster = map_attribute(landuse, lu_attr, guild, nesting_fields,
+        uris['nesting'], max)
+
+    # Now that the per-pixel nesting and floral resources have been
+    # calculated, the floral resources still need to factor in
+    # neighborhoods.
+    # The sigma size is 2 times the pixel size, presumable since the
+    # raster's pixel width is a radius for the gaussian blur when we want
+    # the diameter of the blur.
+    pixel_size = abs(landuse.GetGeoTransform()[1])
+    sigma = float(guild['alpha'] / (2 * pixel_size))
+    LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
+
+    # Fetch the floral resources raster and matrix from the args dictionary
+    # apply a gaussian filter and save the floral resources raster to the
+    # dataset.
+    LOGGER.debug('Applying neighborhood mappings to floral resources')
+    floral_raster = raster_utils.gaussian_filter_dataset(
+        floral_raster, sigma, uris['floral'], nodata)
+
+    # Calculate the pollinator abundance index (using Math! to simplify the
+    # equation in the documentation.  We're still waiting on Taylor
+    # Rickett's reply to see if this is correct.
+    # Once the pollination supply has been calculated, we add it to the
+    # total abundance matrix.
+    LOGGER.debug('Calculating abundance index')
+    species_weight = guild['species_weight']
+    return raster_utils.vectorize_rasters(
+        [nesting_raster, floral_raster],
+        lambda x, y: (x * y) * species_weight if x != nodata else nodata,
+        raster_out_uri=uris['species_abundance'], nodata=nodata)
 
 
 def reclass_ag_raster(landuse, uri, ag_classes, nodata):
