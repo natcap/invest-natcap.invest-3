@@ -76,7 +76,7 @@ def biophysical(args):
         # Take the pollinator abundance index and multiply it by the species
         # weight in the guilds table.
         abundance_total_raster = add_two_rasters(abundance_total_raster,
-            species_abundance, nodata, args['abundance_total'])
+            species_abundance, args['abundance_total'])
 
         farm_abundance = calculate_farm_abundance(species_abundance,
             args['ag_map'], guild_dict['alpha'],
@@ -86,7 +86,7 @@ def biophysical(args):
         # raster
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
         foraging_total_raster = add_two_rasters(farm_abundance,
-            foraging_total_raster, nodata, args['foraging_total'])
+            foraging_total_raster, args['foraging_total'])
 
     # Calculate the average foraging index based on the total
     # Divide the total pollination foraging index by the number of pollinators
@@ -286,7 +286,7 @@ def valuation(args):
 
         # Add the new farm_value_matrix to the farm value sum matrix.
         farm_value_sum = add_two_rasters(farm_value_sum, farm_value_raster,
-            -1.0, args['farm_value_sum'])
+            args['farm_value_sum'])
 
         LOGGER.debug('Calculating service value for %s', species)
         # Calculate sigma for the gaussian blur.  Sigma is based on the species
@@ -314,20 +314,24 @@ def valuation(args):
 
         # Add the new service value to the service value sum matrix
         service_value_sum = add_two_rasters(service_value_sum,
-            service_value_raster, -1.0, args['service_value_sum'])
+            service_value_raster, args['service_value_sum'])
 
     LOGGER.debug('Finished calculating service value')
 
 
-def add_two_rasters(raster_1, raster_2, nodata, out_uri):
-    """Add two rasters where pixels in raster_1 are not nodata.
+def add_two_rasters(raster_1, raster_2, out_uri):
+    """Add two rasters where pixels in raster_1 are not nodata.  Pixels are
+        considered to have a nodata value iff the pixel value in raster_1 is
+        nodata.  Raster_2's pixel value is not checked for nodata.
 
         raster_1 - a GDAL dataset
         raster_2 - a GDAL dataset
-        nodata - the nodata values for raster_1 and raster_2
         out_uri - the uri at which to save the resulting raster.
 
         Returns the resulting dataset."""
+
+    nodata = raster_1.GetRasterBand(1).GetNoDataValue()
+
     return raster_utils.vectorize_rasters(
         [raster_1, raster_2], lambda x, y: x + y if y != nodata else nodata,
         raster_out_uri=out_uri, nodata=nodata)
