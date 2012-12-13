@@ -82,31 +82,10 @@ def biophysical(args):
             args['ag_map'], guild_dict['alpha'],
             species_dict['farm_abundance'])
 
-#        # THIS IS TEMPORARY... REMOVE AFTER REFACTORING!
-#        pixel_size = abs(abundance_total_raster.GetGeoTransform()[1])
-#        sigma = float(guild_dict['alpha'] / (2 * pixel_size))
-#        LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
-#
-#        # Calculate the foraging ('farm abundance') index by applying a
-#        # gaussian filter to the foraging raster and then culling all pixels
-#        # that are not agricultural before saving it to the output raster.
-#        LOGGER.debug('Calculating %s foraging/farm abundance index', species)
-#        farm_abundance = raster_utils.gaussian_filter_dataset(
-#            species_abundance, sigma, species_dict['farm_abundance'], nodata)
-#
-#        # Mask the farm abundance raster according to whether the pixel is
-#        # agricultural.  If the pixel is agricultural, the value is preserved.
-#        # Otherwise, the value is set to nodata.
-#        farm_abundance_masked = raster_utils.vectorize_rasters(
-#            [farm_abundance, args['ag_map']],
-#            lambda x, y: x if y == 1.0 else nodata,
-#            raster_out_uri=species_dict['farm_abundance'],
-#            nodata=nodata)
-
         # Add the current foraging raster to the existing 'foraging_total'
         # raster
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
-        foraging_total_raster = add_two_rasters(farm_abundance_masked,
+        foraging_total_raster = add_two_rasters(farm_abundance,
             foraging_total_raster, nodata, args['foraging_total'])
 
     # Calculate the average foraging index based on the total
@@ -212,7 +191,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
         Returns a GDAL dataset of the farm abundance raster."""
 
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
-    sigma = float(guild_dict['alpha'] / (2 * pixel_size))
+    sigma = float(alpha / (2 * pixel_size))
     LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
 
     nodata = species_abundance.GetRasterBand(1).GetNoDataValue()
@@ -221,19 +200,17 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
     # Calculate the foraging ('farm abundance') index by applying a
     # gaussian filter to the foraging raster and then culling all pixels
     # that are not agricultural before saving it to the output raster.
-    LOGGER.debug('Calculating %s foraging/farm abundance index', species)
+    LOGGER.debug('Calculating foraging/farm abundance index')
     farm_abundance = raster_utils.gaussian_filter_dataset(
         species_abundance, sigma, uri, nodata)
 
     # Mask the farm abundance raster according to whether the pixel is
     # agricultural.  If the pixel is agricultural, the value is preserved.
     # Otherwise, the value is set to nodata.
-    farm_abundance_masked = raster_utils.vectorize_rasters(
-        [farm_abundance, args['ag_map']],
+    return raster_utils.vectorize_rasters(
+        [farm_abundance, ag_map],
         lambda x, y: x if y == 1.0 else nodata,
-        raster_out_uri=species_dict['farm_abundance'],
-        nodata=nodata)
-    pass
+        raster_out_uri=uri, nodata=nodata)
 
 
 def reclass_ag_raster(landuse, uri, ag_classes, nodata):
