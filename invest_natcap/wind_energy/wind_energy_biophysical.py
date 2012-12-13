@@ -151,8 +151,8 @@ def execute(args):
         
         # Try to handle the distance inputs and land datasource if they 
         # are present
-        try:
-            LOGGER.info('Trying to open the land polygon')
+        if args['distance_container']:
+            LOGGER.info('Handling distance parameters')
             land_polygon = ogr.Open(str(args['land_polygon_uri']))
 
             land_poly_uris = os.path.join(inter_dir, 'land_poly' + suffix)
@@ -165,9 +165,8 @@ def execute(args):
             biophysical_args['min_distance'] = float(args['min_distance']) 
             biophysical_args['max_distance'] = float(args['max_distance'])
 
-        except KeyError:
-            LOGGER.debug("Distance information not selected")
-
+        else:
+            LOGGER.info('Distance information not provided')
     except KeyError:
         LOGGER.debug("AOI argument was not selected")
         biophysical_args['bathymetry'] = bathymetry
