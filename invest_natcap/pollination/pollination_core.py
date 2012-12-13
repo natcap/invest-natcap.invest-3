@@ -1,12 +1,8 @@
 """InVEST Pollination model core function  module"""
 
-import invest_cython_core
 from invest_natcap import raster_utils
-from invest_natcap.invest_core import invest_core
 
 from osgeo import gdal
-import numpy as np
-import scipy.ndimage as ndimage
 
 import os.path
 import logging
@@ -84,18 +80,12 @@ def biophysical(args):
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
 
-        mapped_resource_rasters = {}
-        finished_rasters = {}
-
-        for resource, op in [('nesting', max), ('floral', sum)]:
-            # Calculate the attribute's resources
-            LOGGER.debug('Calculating %s resource raster', resource)
-            mapped_resource_rasters[resource] = map_attribute(
-                args['landuse'], args['landuse_attributes'],
-                guild_dict, args[resource + '_fields'],
-                args['species'][species][resource], op, 'GTiff')
-
-        finished_rasters['nesting'] = mapped_resource_rasters['nesting']
+        floral_raster = map_attribute(args['landuse'],
+            args['landuse_attributes'], guild_dict, args['floral_fields'],
+            species_dict['floral'], sum)
+        nesting_raster = map_attribute(args['landuse'],
+            args['landuse_attributes'], guild_dict, args['nesting_fields'],
+            species_dict['nesting'], max)
 
         # Now that the per-pixel nesting and floral resources have been
         # calculated, the floral resources still need to factor in
@@ -112,10 +102,8 @@ def biophysical(args):
         # dataset.
         LOGGER.debug('Applying neighborhood mappings to %s floral resources',
             species)
-        floral_raster = mapped_resource_rasters['floral'].GetRasterBand(1)
-        finished_rasters['floral'] = raster_utils.gaussian_filter_dataset(
-                mapped_resource_rasters['floral'], sigma,
-                args['species'][species]['floral'], nodata)
+        floral_raster = raster_utils.gaussian_filter_dataset(
+            floral_raster, sigma, species_dict['floral'], nodata)
 
         # Calculate the pollinator abundance index (using Math! to simplify the
         # equation in the documentation.  We're still waiting on Taylor
@@ -123,18 +111,18 @@ def biophysical(args):
         # Once the pollination supply has been calculated, we add it to the
         # total abundance matrix.
         LOGGER.debug('Calculating %s abundance index', species)
-        finished_rasters['supply'] = raster_utils.vectorize_rasters(
-            [mapped_resource_rasters['nesting'], finished_rasters['floral']],
-            lambda x, y: x*y if x != nodata else nodata,
-            raster_out_uri=args['species'][species]['species_abundance'],
+        species_abundance = raster_utils.vectorize_rasters(
+            [nesting_raster, floral_raster],
+            lambda x, y: x * y if x != nodata else nodata,
+            raster_out_uri=species_dict['species_abundance'],
             nodata=nodata)
 
         # Take the pollinator abundance index and multiply it by the species
         # weight in the guilds table.
         species_weight = guild_dict['species_weight']
         abundance_total_raster = raster_utils.vectorize_rasters(
-            [abundance_total_raster, finished_rasters['supply']],
-            lambda x, y: x + (y*species_weight) if x != nodata else nodata,
+            [abundance_total_raster, species_abundance],
+            lambda x, y: x + (y * species_weight) if x != nodata else nodata,
             raster_out_uri=args['abundance_total'],
             nodata=nodata)
 
@@ -142,40 +130,44 @@ def biophysical(args):
         # gaussian filter to the foraging raster and then culling all pixels
         # that are not agricultural before saving it to the output raster.
         LOGGER.debug('Calculating %s foraging/farm abundance index', species)
-        finished_rasters['foraging'] = raster_utils.gaussian_filter_dataset(
-            finished_rasters['supply'], sigma,
-            args['species'][species]['farm_abundance'], nodata)
+        farm_abundance = raster_utils.gaussian_filter_dataset(
+            species_abundance, sigma, species_dict['farm_abundance'], nodata)
 
-        finished_rasters['farm_abundance_masked'] = raster_utils.vectorize_rasters(
-            [finished_rasters['foraging'], args['ag_map']],
+        # Mask the farm abundance raster according to whether the pixel is
+        # agricultural.  If the pixel is agricultural, the value is preserved.
+        # Otherwise, the value is set to nodata.
+        farm_abundance_masked = raster_utils.vectorize_rasters(
+            [farm_abundance, args['ag_map']],
             lambda x, y: x if y == 1.0 else nodata,
-            raster_out_uri=args['species'][species]['farm_abundance'],
+            raster_out_uri=species_dict['farm_abundance'],
             nodata=nodata)
 
         # Add the current foraging raster to the existing 'foraging_total'
         # raster
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
         foraging_total_raster = raster_utils.vectorize_rasters(
-            [finished_rasters['farm_abundance_masked'], foraging_total_raster],
+            [farm_abundance_masked, foraging_total_raster],
             lambda x, y: x + y if x != nodata else nodata,
             raster_out_uri=args['foraging_total'], nodata=nodata)
 
     # Calculate the average foraging index based on the total
     # Divide the total pollination foraging index by the number of pollinators
     # to get the mean pollinator foraging index and save that to its raster.
+    LOGGER.debug('Calculating the mean foraging index across all species')
+
     num_species = float(len(args['species'].values()))
     LOGGER.debug('Number of species: %s', num_species)
+
     foraging_total_raster = raster_utils.vectorize_rasters(
         [foraging_total_raster],
         lambda x: x / num_species if x != nodata else nodata,
-        raster_out_uri = args['foraging_average'], nodata=nodata)
+        raster_out_uri=args['foraging_average'], nodata=nodata)
 
     # Calculate the mean pollinator supply (pollinator abundance) by taking the
     # abundance_total_matrix and dividing it by the number of pollinators.
     # Then, save the resulting matrix to its raster
     LOGGER.debug('Calculating mean pollinator supply')
-    abundance_total_matrix = raster_utils.vectorize_rasters(
-        [abundance_total_raster],
+    raster_utils.vectorize_rasters([abundance_total_raster],
         lambda x: x / num_species if x != nodata else nodata,
         raster_out_uri=args['abundance_total'], nodata=nodata)
 
@@ -275,7 +267,7 @@ def valuation(args):
         service_value_raster = raster_utils.vectorize_rasters(
             [args['ag_map'], service_value_raster],
             lambda x, y: 0.0 if x == 0 else y,
-            raster_out_uri = species_dict['service_value'], nodata=-1.0)
+            raster_out_uri=species_dict['service_value'], nodata=-1.0)
 
         # Add the new service value to the service value sum matrix
         service_value_sum = raster_utils.vectorize_rasters(
@@ -284,6 +276,47 @@ def valuation(args):
             raster_out_uri=args['service_value_sum'], nodata=-1.0)
 
     LOGGER.debug('Finished calculating service value')
+
+
+def add_two_rasters(raster_1, raster_2, nodata, out_uri):
+    """Add two rasters where pixels in raster_1 are not nodata.
+
+        raster_1 - a GDAL dataset
+        raster_2 - a GDAL dataset
+        nodata - the nodata values for raster_1 and raster_2
+        out_uri - the uri at which to save the resulting raster.
+
+        Returns the resulting dataset."""
+    pass
+
+
+def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
+    """Calculate the service raster.
+
+        rasters - a dictionary with these entries:
+            'farm_value' - a GDAL dataset.
+            'species_abundance' - a GDAL dataset.
+            'ag_map' - a GDAL dataset.  Values are either nodata, 0 (if not an
+                    ag pixel) or 1 (if an ag pixel).
+        nodata - the nodata value for output rasters.
+        sigma - the sigma to be used for the gaussian filter portion of
+            calculating the service raster.
+        part_wild - a number between 0 and 1 representing the proportion of all
+            pollination that is done by wild pollinators.
+        out_uris - a dictionary with these entries:
+            'species_value' - a URI.  The raster created at this URI will
+                represent the part of the farm's value that is attributed to the
+                current species.
+            'species_value_blurred' - a URI.  The raster created at this URI
+                will be a copy of the species_value raster that has had a
+                gaussian filter applied to it.  Sigma is used as the sigma input
+                to the gaussian filter.
+            'service_value' - a URI.  The raster created at this URI will be the
+                calculated service value raster.
+
+        Returns a GDAL dataset of the service value raster."""
+    pass
+
 
 def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     """Calculate the yield raster.
@@ -319,7 +352,7 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
 
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
-                  out_uri, list_op, raster_type):
+                  out_uri, list_op):
     """Make an intermediate raster where values are mapped from the base raster
         according to the mapping specified by key_field and value_field.
 
@@ -331,7 +364,6 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
         out_uri - a uri for the output dataset
         list_op - a python callable that takes a list of numerical arguments
             and returns a python scalar.  Examples: sum; max
-        raster_type - either 'MEM' or 'GTiff'
 
         returns nothing."""
 
@@ -345,7 +377,7 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     value_list = dict((r, guild_dict[r]) for r in resource_fields)
 
     reclass_rules = {base_nodata: -1}
-    for lulc, landcover_dict in lu_table_dict.iteritems():
+    for lulc in lu_table_dict.keys():
         resource_values = [value_list[r] * lu_table_dict[lulc][r] for r in
             resource_fields]
         reclass_rules[lulc] = list_op(resource_values)
@@ -353,14 +385,9 @@ def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
     # Use the rules dictionary to reclassify the LULC accordingly.  This
     # calls the cythonized functionality in raster_utils.
     out_raster = raster_utils.reclassify_by_dictionary(base_raster,
-        reclass_rules, out_uri, raster_type, -1, gdal.GDT_Float32)
+        reclass_rules, out_uri, 'GTiff', -1, gdal.GDT_Float32)
     return out_raster
 
-def make_raster_from_lulc(lulc_dataset, raster_uri):
-    LOGGER.debug('Creating new raster from LULC: %s', raster_uri)
-    dataset = invest_cython_core.newRasterFromBase(\
-        lulc_dataset, raster_uri, 'GTiff', -1, gdal.GDT_Float32)
-    return dataset
 
 def build_uri(directory, basename, suffix=[]):
     """Take the input directory and basename, inserting the provided suffixes

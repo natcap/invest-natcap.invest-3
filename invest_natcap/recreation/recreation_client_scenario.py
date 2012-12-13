@@ -146,6 +146,7 @@ def execute(args):
     sessid2 = urllib2.urlopen(request).read().strip()
 
     if sessid2 != sessid:
+        LOGGER.error("The first session id was %s the second session id was %s." % (repr(sessid2),repr(sessid)))
         raise ValueError,"Something weird happened the sessid didn't match."
     
     url = config["server"]+config["paths"]["relative"]["data"]+sessid+"/"+config["files"]["results"]
