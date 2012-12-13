@@ -96,18 +96,14 @@ def biophysical(args):
     num_species = float(len(args['species'].values()))
     LOGGER.debug('Number of species: %s', num_species)
 
-    foraging_total_raster = raster_utils.vectorize_rasters(
-        [foraging_total_raster],
-        lambda x: x / num_species if x != nodata else nodata,
-        raster_out_uri=args['foraging_average'], nodata=nodata)
+    # Calculate the mean foraging values per species.
+    LOGGER.debug('Calculating mean foraging score')
+    divide_raster(foraging_total_raster, num_species, args['foraging_average'])
 
     # Calculate the mean pollinator supply (pollinator abundance) by taking the
     # abundance_total_matrix and dividing it by the number of pollinators.
-    # Then, save the resulting matrix to its raster
     LOGGER.debug('Calculating mean pollinator supply')
-    raster_utils.vectorize_rasters([abundance_total_raster],
-        lambda x: x / num_species if x != nodata else nodata,
-        raster_out_uri=args['abundance_total'], nodata=nodata)
+    divide_raster(abundance_total_raster, num_species, args['abundance_total'])
 
     LOGGER.debug('Finished pollination biophysical calculations')
 
@@ -427,6 +423,23 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     # Apply the yield calculation to the foraging_average raster
     return raster_utils.vectorize_rasters([in_raster], calc_yield,
         raster_out_uri=out_uri, nodata=out_nodata)
+
+
+def divide_raster(raster, divisor, uri):
+    """Divide all non-nodata values in raster_1 by divisor and save the output
+        raster to uri.
+
+        raster - a GDAL dataset
+        divisor - the divisor (a python scalar)
+        uri - the uri to which to save the output raster.
+
+        Returns a GDAL dataset."""
+
+    nodata = raster.GetRasterBand(1).GetNoDataValue()
+
+    return raster_utils.vectorize_rasters(
+        [raster], lambda x: x / divisor if x != nodata else nodata,
+        raster_out_uri=uri, nodata=nodata)
 
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
