@@ -762,8 +762,8 @@ def valuation(args):
                     options = ['ALL_TOUCHED=TRUE']) 
 
     except KeyError:
-        LOGGER.debug('Cannot mask output by land polygon because it was not
-            provided as an input')
+        LOGGER.debug('Cannot mask output by land polygon because it was not'
+            'provided as an input')
 
     # Create the farm polygon output
     LOGGER.info('Creating Farm Polygon')
