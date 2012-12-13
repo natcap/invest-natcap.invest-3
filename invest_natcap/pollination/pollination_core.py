@@ -220,10 +220,8 @@ def valuation(args):
             args['wild_pollination_proportion'], -1.0)
 
         # Add the new farm_value_matrix to the farm value sum matrix.
-        farm_value_sum = raster_utils.vectorize_rasters(
-            [farm_value_raster, farm_value_sum],
-            lambda x, y: x + y if x != -1.0 else -1.0,
-            raster_out_uri=args['farm_value_sum'], nodata=-1.0)
+        farm_value_sum = add_two_rasters(farm_value_sum, farm_value_raster,
+            -1.0, args['farm_value_sum'])
 
         LOGGER.debug('Calculating service value for %s', species)
         # Calculate sigma for the gaussian blur.  Sigma is based on the species
