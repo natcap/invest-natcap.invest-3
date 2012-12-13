@@ -55,9 +55,9 @@ def biophysical(args):
 
     # Open the average foraging matrix for use in the loop over all species,
     # but first we need to ensure that the matrix is filled with 0's.
-    foraging_total_raster = raster_utils.vectorize_rasters([args['landuse']],
-        lambda x: 0.0 if x != lu_nodata else nodata,
-        raster_out_uri=args['foraging_average'], nodata=nodata)
+    foraging_total_raster = raster_utils.reclassify_by_dictionary(
+        args['landuse'], {}, args['foraging_average'], 'GTiff', nodata,
+        gdal.GDT_Float32, 0.0)
 
     # Open the abundance total raster for use in the loop over all species and
     # ensure that it's filled entirely with 0's.
