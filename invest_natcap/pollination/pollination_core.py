@@ -425,8 +425,6 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
         return (1.0 - v) + (v * (frm_avg / (frm_avg + k)))
 
     # Apply the yield calculation to the foraging_average raster
-#    invest_core.vectorize1ArgOp(in_raster.GetRasterBand(1), calc_yield,
-#        out_raster.GetRasterBand(1))
     return raster_utils.vectorize_rasters([in_raster], calc_yield,
         raster_out_uri=out_uri, nodata=out_nodata)
 
