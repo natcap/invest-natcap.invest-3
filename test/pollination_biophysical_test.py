@@ -193,3 +193,9 @@ class PollinationSmokeTest(PollinationBiophysicalTest):
         pollination_biophysical.execute(self.args)
         pollination_valuation.execute(self.value_args)
 
+    @unittest.skip('This takes too long.  Only run if you really mean it')
+    def test_1m_smoke(self):
+        self.args['workspace_dir'] = '/backup/manual-backup/pollination_test_workspace'
+        self.args['landuse_cur_uri'] = '/backup/manual-backup/lulc_1m.tif'
+        pollination_biophysical.execute(self.args)
+        pollination_valuation.execute(self.value_args)
