@@ -47,9 +47,6 @@ def biophysical(args):
     nodata = -1.0
     LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
 
-    lu_nodata = args['landuse'].GetRasterBand(1).GetNoDataValue()
-    LOGGER.debug('Landcover nodata=%s', lu_nodata)
-
     args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
         args['ag_classes'], nodata)
 
