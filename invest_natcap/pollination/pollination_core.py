@@ -157,6 +157,38 @@ def biophysical(args):
     LOGGER.debug('Finished pollination biophysical calculations')
 
 
+def calculate_abundance(landcover, guild, nesting_fields, floral_fields, uris):
+    """Calculate pollinator abundance on the landscape.
+
+        landcover - a GDAL dataset of the LULC.
+        guild - a dictionary containing information about the pollinator.  All
+            entries are required:
+            'alpha' - the typical foraging distance in m
+            'species_weight' - the relative weight
+            resource_n - One entry for each nesting field for each fieldname
+                denoted in nesting_fields.  This value must be either 0 and 1,
+                indicating whether the pollinator uses this nesting resource for
+                nesting sites.
+            resource_f - One entry for each floral field denoted in
+                floral_fields.  This value must be between 0 and 1,
+                representing the liklihood that this species will forage during
+                this season.
+        nesting_fields - a list of string fieldnames.  Used to extract nesting
+            fields from the guild dictionary, so fieldnames here must exist in
+            guild.
+        floral_fields - a list of string fieldnames.  Used to extract floral
+            season fields from the guild dictionary.  Fieldnames here must exist
+            in guild.
+        uris - a dictionary with these entries:
+            'nesting' - a URI to where the nesting raster will be saved.
+            'floral' - a URI to where the floral resource raster will be saved.
+            'species_abundance' - a URI to where the species abundance raster
+                will be saved.
+
+        Returns a GDAL dataset of the species abundance."""
+    pass
+
+
 def reclass_ag_raster(landuse, uri, ag_classes, nodata):
     """Reclassify the landuse raster into a raster demarcating the agricultural
         state of a given pixel.
