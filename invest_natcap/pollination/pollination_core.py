@@ -174,6 +174,8 @@ def reclass_ag_raster(landuse, uri, ag_classes, nodata):
         Returns a GDAL dataset of the ag raster."""
 
     # mask agricultural classes to ag_map.
+    LOGGER.debug('Starting to create an ag raster at %s. Nodata=%s',
+        uri, nodata)
     if len(ag_classes) > 0:
         LOGGER.debug('Agricultural classes: %s', ag_classes)
         reclass_rules = dict((r, 1) for r in ag_classes)
