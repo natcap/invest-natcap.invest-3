@@ -226,13 +226,13 @@ def valuation(args):
             raster_out_uri=args['farm_value_sum'], nodata=-1.0)
 
         LOGGER.debug('Calculating service value for %s', species)
-        # Open the species foraging matrix and then divide
-        # the yield matrix by the foraging matrix for this pollinator.
-        ratio_raster = raster_utils.vectorize_rasters(
-            [farm_value_raster, species_dict['farm_abundance']],
-            lambda x, y: x / y if x != -1.0 else -1.0,
-            raster_out_uri=species_dict['value_abundance_ratio'],
-            nodata=-1.0)
+#        # Open the species foraging matrix and then divide
+#        # the yield matrix by the foraging matrix for this pollinator.
+#        ratio_raster = raster_utils.vectorize_rasters(
+#            [farm_value_raster, species_dict['farm_abundance']],
+#            lambda x, y: x / y if x != -1.0 else -1.0,
+#            raster_out_uri=species_dict['value_abundance_ratio'],
+#            nodata=-1.0)
 
         # Calculate sigma for the gaussian blur.  Sigma is based on the species
         # alpha (from the guilds table) and twice the pixel size.
@@ -241,33 +241,49 @@ def valuation(args):
         sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
         LOGGER.debug('Pixel size: %s, sigma: %s')
 
-        LOGGER.debug('Applying the blur to the ratio matrix.')
-        blurred_ratio_raster = raster_utils.gaussian_filter_dataset(
-            ratio_raster, sigma, species_dict['value_abundance_ratio_blur'],
-            -1.0)
+        service_value_raster = calculate_service(
+            rasters={
+                'farm_value': farm_value_raster,
+                'farm_abundance': species_dict['farm_abundance'],
+                'species_abundance': species_dict['species_abundance'],
+                'ag_map': args['ag_map']
+            },
+            nodata=-1.0,
+            sigma=sigma,
+            part_wild=args['wild_pollination_proportion'],
+            out_uris={
+                'species_value': species_dict['value_abundance_ratio'],
+                'species_value_blurred': species_dict['value_abundance_ratio_blur'],
+                'service_value': species_dict['service_value']
+            })
 
-        v_c = args['wild_pollination_proportion']
+#        LOGGER.debug('Applying the blur to the ratio matrix.')
+#        blurred_ratio_raster = raster_utils.gaussian_filter_dataset(
+#            ratio_raster, sigma, species_dict['value_abundance_ratio_blur'],
+#            -1.0)
 
-        def ps_vectorized(sup_s, blurred_ratio):
-            """Apply the pollinator service value function.
-                sup_s - the species abundance matrix
-                blurred_ratio - the ratio of (yield/farm abundance) with a
-                    gaussian filter applied to it."""
-            if sup_s == in_nodata:
-                return out_nodata
-            return v_c * sup_s * blurred_ratio
-
-        # Vectorize the ps_vectorized function
-        service_value_raster = raster_utils.vectorize_rasters(
-            [species_dict['species_abundance'], blurred_ratio_raster],
-            ps_vectorized, raster_out_uri=species_dict['service_value'],
-            nodata=-1.0)
-
-        # Set all agricultural pixels to 0.  This is according to issue 761.
-        service_value_raster = raster_utils.vectorize_rasters(
-            [args['ag_map'], service_value_raster],
-            lambda x, y: 0.0 if x == 0 else y,
-            raster_out_uri=species_dict['service_value'], nodata=-1.0)
+#        v_c = args['wild_pollination_proportion']
+#
+#        def ps_vectorized(sup_s, blurred_ratio):
+#            """Apply the pollinator service value function.
+#                sup_s - the species abundance matrix
+#                blurred_ratio - the ratio of (yield/farm abundance) with a
+#                    gaussian filter applied to it."""
+#            if sup_s == in_nodata:
+#                return out_nodata
+#            return v_c * sup_s * blurred_ratio
+#
+#        # Vectorize the ps_vectorized function
+#        service_value_raster = raster_utils.vectorize_rasters(
+#            [species_dict['species_abundance'], blurred_ratio_raster],
+#            ps_vectorized, raster_out_uri=species_dict['service_value'],
+#            nodata=-1.0)
+#
+#        # Set all agricultural pixels to 0.  This is according to issue 761.
+#        service_value_raster = raster_utils.vectorize_rasters(
+#            [args['ag_map'], service_value_raster],
+#            lambda x, y: 0.0 if x == 0 else y,
+#            raster_out_uri=species_dict['service_value'], nodata=-1.0)
 
         # Add the new service value to the service value sum matrix
         service_value_sum = raster_utils.vectorize_rasters(
@@ -295,6 +311,7 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
 
         rasters - a dictionary with these entries:
             'farm_value' - a GDAL dataset.
+            'farm_abundance' - a GDAL dataset.
             'species_abundance' - a GDAL dataset.
             'ag_map' - a GDAL dataset.  Values are either nodata, 0 (if not an
                     ag pixel) or 1 (if an ag pixel).
@@ -315,7 +332,42 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
                 calculated service value raster.
 
         Returns a GDAL dataset of the service value raster."""
-    pass
+
+    # Open the species foraging matrix and then divide
+    # the yield matrix by the foraging matrix for this pollinator.
+    ratio_raster = raster_utils.vectorize_rasters(
+        [rasters['farm_value'], rasters['farm_abundance']],
+        lambda x, y: x / y if x != nodata else nodata,
+        raster_out_uri=out_uris['species_value'], nodata=nodata)
+
+    LOGGER.debug('Applying the blur to the ratio matrix.')
+    blurred_ratio_raster = raster_utils.gaussian_filter_dataset(
+        ratio_raster, sigma, out_uris['species_value_blurred'],
+        nodata)
+
+#    def ps_vectorized(sup_s, blurred_ratio):
+#        """Apply the pollinator service value function.
+#            sup_s - the species abundance matrix
+#            blurred_ratio - the ratio of (yield/farm abundance) with a
+#                gaussian filter applied to it."""
+#        if sup_s == in_nodata:
+#            return out_nodata
+#        return part_wild * sup_s * blurred_ratio
+
+    # Vectorize the ps_vectorized function
+    service_value_raster = raster_utils.vectorize_rasters(
+        [rasters['species_abundance'], blurred_ratio_raster],
+        lambda x, y: part_wild * x * y if x != nodata else nodata,
+        raster_out_uri=out_uris['service_value'],
+        nodata=nodata)
+
+    # Set all agricultural pixels to 0.  This is according to issue 761.
+    service_value_raster = raster_utils.vectorize_rasters(
+        [rasters['ag_map'], service_value_raster],
+        lambda x, y: 0.0 if x == 0 else y,
+        raster_out_uri=out_uris['service_value'], nodata=nodata)
+
+    return service_value_raster
 
 
 def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
