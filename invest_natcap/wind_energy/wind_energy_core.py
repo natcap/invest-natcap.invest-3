@@ -765,7 +765,7 @@ def valuation(args):
     LOGGER.info('Creating Farm Polygon')
     turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
     rotor_diameter= int(turbine_dict['rotor_diameter'])
-    roter_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
+    rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
     
     npv_ds = gdal.Open(npv_uri)
 
