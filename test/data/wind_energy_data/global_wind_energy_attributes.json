@@ -8,7 +8,7 @@
     "infield_cable_length":"0.91",
     "infield_cable_cost":"0.26",
     "mw_coef_ac":".81",
-    "mw_coef_cd":"1.09",
+    "mw_coef_dc":"1.09",
     "cable_coef_ac":"1.36",
     "cable_coef_dc":".89",
     "ac_dc_distance_break":"60",

@@ -525,10 +525,10 @@ def valuation(args):
     circuit_break = float(turbine_dict['ac_dc_distance_break'])
     # The coefficients for the AC/DC megawatt and cable cost from the CAP
     # function
-    mw_coef_ac = float(args['mw_coef_ac'])
-    mw_coef_dc = float(args['mw_coef_dc'])
-    cable_coef_ac = float(args['cable_coef_ac'])
-    cable_coef_dc = float(args['cable_coef_dc'])
+    mw_coef_ac = float(turbine_dict['mw_coef_ac'])
+    mw_coef_dc = float(turbine_dict['mw_coef_dc'])
+    cable_coef_ac = float(turbine_dict['cable_coef_ac'])
+    cable_coef_dc = float(turbine_dict['cable_coef_dc'])
 
     time = int(turbine_dict['time_period'])
 
