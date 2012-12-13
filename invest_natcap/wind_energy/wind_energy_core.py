@@ -525,10 +525,10 @@ def valuation(args):
     circuit_break = float(turbine_dict['ac_dc_distance_break'])
     # The coefficients for the AC/DC megawatt and cable cost from the CAP
     # function
-    mw_coef_ac = float(args['mw_coef_ac'])
-    mw_coef_dc = float(args['mw_coef_dc'])
-    cable_coef_ac = float(args['cable_coef_ac'])
-    cable_coef_dc = float(args['cable_coef_dc'])
+    mw_coef_ac = float(turbine_dict['mw_coef_ac'])
+    mw_coef_dc = float(turbine_dict['mw_coef_dc'])
+    cable_coef_ac = float(turbine_dict['cable_coef_ac'])
+    cable_coef_dc = float(turbine_dict['cable_coef_dc'])
 
     time = int(turbine_dict['time_period'])
 
@@ -750,17 +750,100 @@ def valuation(args):
         raster_utils.vectorize_points(
                 wind_energy_points, field, output_ds)
 
-    land_shape_layer = land_shape_ds.GetLayer()
-    for uri in uri_list:
-        dataset = gdal.Open(uri, gdal.GA_Update)
-        # Mask out the output rasters to make them more presentable by taking
-        # any overlap from the land polygon and setting those pixel values to
-        # nodata
-        gdal.RasterizeLayer(
-                dataset, [1], land_shape_layer, burn_values=[out_nodata], 
-                options = ['ALL_TOUCHED=TRUE']) 
+    try:
+        land_shape_layer = args['land_polygon'].GetLayer()
+        for uri in uri_list:
+            dataset = gdal.Open(uri, gdal.GA_Update)
+            # Mask out the output rasters to make them more presentable by taking
+            # any overlap from the land polygon and setting those pixel values to
+            # nodata
+            gdal.RasterizeLayer(
+                    dataset, [1], land_shape_layer, burn_values=[out_nodata], 
+                    options = ['ALL_TOUCHED=TRUE']) 
 
+    except KeyError:
+        LOGGER.debug('Cannot mask output by land polygon because it was not'
+            'provided as an input')
+
+    # Create the farm polygon output
+    LOGGER.info('Creating Farm Polygon')
+    turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
+    rotor_diameter= int(turbine_dict['rotor_diameter'])
+    rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
+    
+    npv_ds = gdal.Open(npv_uri)
+
+    # Get the geotransform for the output dataset as well as the x and y size of
+    # the raster so that we can determine the center coordinates of the dataset.
+    # This is where the farm polygon will be placed
+    npv_band = npv_ds.GetRasterBand(1)
+    gt = npv_ds.GetGeoTransform()
+    xsize = npv_band.XSize
+    ysize = npv_band.YSize
+    # Find the center x and y points by indexing into the grid
+    center_x = (xsize / 2) * gt[1] + gt[0]
+    center_y = (ysize / 2) * gt[5] + gt[3]
+    start_point = (center_x, center_y)
+    # Get the projection of the dataset
+    raster_wkt = dataset.GetProjection()
+    # Make a spatial reference from the projection to use for the farm polygon
+    spat_ref = osr.SpatialReference()
+    spat_ref.ImportFromWkt(raster_wkt)
+
+    farm_poly_uri = os.path.join(output_dir, 'wind_farm_poly.shp')
+    
+    if os.path.isfile(farm_poly_uri):
+        os.remove(farm_poly_uri)
+
+    num_circuits = math.ceil(number_turbines / turbines_per_circuit)
+    spacing_dist = rotor_diameter * rotor_diameter_factor
+
+    width = (num_circuits - 1) * spacing_dist
+    length = (turbines_per_circuit - 1) * spacing_dist
+
+    farm_poly = create_rectangular_polygon(
+            spat_ref, start_point, width, length, farm_poly_uri)
+    
+    LOGGER.info('Farm Polygon Created')
     LOGGER.info('Leaving Wind Energy Valuation Core')
+
+def create_rectangular_polygon(spat_ref, start_point, width, length, out_uri): 
+    
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    datasource = driver.CreateDataSource(out_uri)
+    
+    layer = datasource.CreateLayer('new_name', spat_ref, ogr.wkbPolygon)
+
+    field = ogr.FieldDefn('id', ogr.OFTReal)
+    layer.CreateField(field)
+
+    top_left = (start_point[0], start_point[1] + length)
+    top_right = (start_point[0] + width, start_point[1] + length)
+    bottom_right = (start_point[0] + width, start_point[1])
+    
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(start_point[0], start_point[1])
+    ring.AddPoint(top_left[0], top_left[1])
+    ring.AddPoint(top_right[0], top_right[1])
+    ring.AddPoint(bottom_right[0], bottom_right[1])
+    ring.CloseRings()
+
+    poly = ogr.Geometry(ogr.wkbPolygon)
+    poly.AddGeometry(ring)
+
+    print 'AREA: ' + str(poly.Area())
+
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometry(poly)
+    feature.SetField(0, 1)
+    layer.CreateFeature(feature)
+
+    feature = None
+    layer = None
+
+    datasource.SyncToDisk()
+
+    return datasource
 
 def point_to_polygon_distance(poly_ds, point_ds):
     """Calculates the distances from points in a point geometry shapefile to the
