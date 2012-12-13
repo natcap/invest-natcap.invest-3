@@ -278,6 +278,18 @@ def valuation(args):
     LOGGER.debug('Finished calculating service value')
 
 
+def add_two_rasters(raster_1, raster_2, nodata, out_uri):
+    """Add two rasters where pixels in raster_1 are not nodata.
+
+        raster_1 - a GDAL dataset
+        raster_2 - a GDAL dataset
+        nodata - the nodata values for raster_1 and raster_2
+        out_uri - the uri at which to save the resulting raster.
+
+        Returns the resulting dataset."""
+    pass
+
+
 def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
     """Calculate the service raster.
 
