@@ -61,9 +61,9 @@ def biophysical(args):
 
     # Open the abundance total raster for use in the loop over all species and
     # ensure that it's filled entirely with 0's.
-    abundance_total_raster = raster_utils.vectorize_rasters([args['landuse']],
-        lambda x: 0.0 if x != lu_nodata else nodata,
-        raster_out_uri=args['abundance_total'], nodata=nodata)
+    abundance_total_raster = raster_utils.reclassify_by_dictionary(
+        args['landuse'], {}, args['abundance_total'], 'GTiff', nodata,
+        gdal.GDT_Float32, 0.0)
 
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
