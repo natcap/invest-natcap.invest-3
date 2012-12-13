@@ -194,8 +194,10 @@ def valuation(args):
         args['species'][<species_name>]['farm_abundance'] - a GDAL dataset
         args['species'][<species_name>]['farm_value'] - a GDAL dataset
         args['species'][<species_name>]['service_value'] - a GDAL dataset
+        args['species'][<species_name>]['value_abundance_ratio'] - a URI
+        args['species'][<species_name>]['value_abundance_ratio_blur'] - a URI
         args['service_value_sum'] - a GDAL dataset
-        args['farm_value_sum'] - a GDAL dataset
+        args['farm_value_sum'] - a URI
         args['foraging_average'] - a GDAL dataset
         args['guilds'] - a fileio tablehandler class
         args['ag_map'] - a GDAL dataset
@@ -205,12 +207,11 @@ def valuation(args):
     LOGGER.debug('Starting valuation')
 
     # Open matrices for use later.
-    farm_value_sum_matrix = args['farm_value_sum'].GetRasterBand(1).\
-        ReadAsArray()
-    farm_value_sum_matrix.fill(0)
-    service_value_sum_matrix = args['service_value_sum'].GetRasterBand(1).\
-        ReadAsArray()
-    service_value_sum_matrix.fill(0)
+    farm_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
+        {}, args['farm_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+
+    service_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
+        {}, args['service_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
 
     # Define necessary scalars based on inputs.
     in_nodata = args['foraging_average'].GetRasterBand(1).GetNoDataValue()
@@ -222,41 +223,36 @@ def valuation(args):
         LOGGER.info('Calculating crop yield due to %s', species)
         # Apply the half-saturation yield function from the documentation and
         # write it to its raster
-#        calculate_yield(species_dict['farm_abundance'],
-#            species_dict['farm_value'],args['half_saturation'],
-#            args['wild_pollination_proportion'])
         farm_value_raster = calculate_yield(species_dict['farm_abundance'],
             species_dict['farm_value'], args['half_saturation'],
             args['wild_pollination_proportion'], -1.0)
-#        farm_value_matrix = species_dict['farm_value'].GetRasterBand(1).ReadAsArray()
-#        species_dict['farm_value'].GetRasterBand(1).WriteArray(farm_value_matrix)
 
         # Add the new farm_value_matrix to the farm value sum matrix.
-        farm_value_sum_matrix = clip_and_op(farm_value_sum_matrix,
-            farm_value_matrix, np.add, in_nodata, out_nodata)
+        farm_value_sum = raster_utils.vectorize_rasters(
+            [farm_value_raster, farm_value_sum],
+            lambda x, y: x + y if x != -1.0 else -1.0,
+            raster_out_uri=args['farm_value_sum'], nodata=-1.0)
 
         LOGGER.debug('Calculating service value for %s', species)
         # Open the species foraging matrix and then divide
         # the yield matrix by the foraging matrix for this pollinator.
-        species_farm_matrix = species_dict['farm_abundance'].GetRasterBand(1).\
-            ReadAsArray()
-        ratio_matrix = clip_and_op(farm_value_matrix, species_farm_matrix,
-            np.divide, in_nodata, out_nodata)
+        ratio_raster = raster_utils.vectorize_rasters(
+            [farm_value_raster, species_dict['farm_abundance']],
+            lambda x, y: x / y if x != -1.0 else -1.0,
+            raster_out_uri=species_dict['value_abundance_ratio'],
+            nodata=-1.0)
 
         # Calculate sigma for the gaussian blur.  Sigma is based on the species
         # alpha (from the guilds table) and twice the pixel size.
         guild_dict = args['guilds'].get_table_row('species', species)
-        pixel_size = abs(species_dict['farm_value'].GetGeoTransform()[1])
+        pixel_size = abs(farm_value_raster.GetGeoTransform()[1])
         sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
         LOGGER.debug('Pixel size: %s, sigma: %s')
 
         LOGGER.debug('Applying the blur to the ratio matrix.')
-        blurred_ratio_matrix = clip_and_op(ratio_matrix, sigma,
-            ndimage.gaussian_filter, in_nodata, out_nodata)
-
-        # Open necessary matrices
-        species_supply_matrix = species_dict['species_abundance'].\
-            GetRasterBand(1).ReadAsArray()
+        blurred_ratio_raster = raster_utils.gaussian_filter_dataset(
+            ratio_raster, sigma, species_dict['value_abundance_ratio_blur'],
+            -1.0)
 
         v_c = args['wild_pollination_proportion']
 
@@ -270,22 +266,23 @@ def valuation(args):
             return v_c * sup_s * blurred_ratio
 
         # Vectorize the ps_vectorized function
-        vOp = np.vectorize(ps_vectorized)
-        service_value_matrix = vOp(species_supply_matrix, blurred_ratio_matrix)
+        service_value_raster = raster_utils.vectorize_rasters(
+            [species_dict['species_abundance'], blurred_ratio_raster],
+            ps_vectorized, raster_out_uri=species_dict['service_value'],
+            nodata=-1.0)
 
         # Set all agricultural pixels to 0.  This is according to issue 761.
-        ag_matrix = args['ag_map'].GetRasterBand(1).ReadAsArray()
-        np.putmask(service_value_matrix, ag_matrix == 0, 0.0)
-        species_dict['service_value'].GetRasterBand(1).WriteArray(
-            service_value_matrix)
+        service_value_raster = raster_utils.vectorize_rasters(
+            [args['ag_map'], service_value_raster],
+            lambda x, y: 0.0 if x == 0 else y,
+            raster_out_uri = species_dict['service_value'], nodata=-1.0)
 
         # Add the new service value to the service value sum matrix
-        service_value_sum_matrix = clip_and_op(service_value_sum_matrix,
-            service_value_matrix, np.add, in_nodata, out_nodata)
+        service_value_sum = raster_utils.vectorize_rasters(
+            [service_value_sum, service_value_raster],
+            lambda x, y: x + y if y != -1.0 else -1.0,
+            raster_out_uri=args['service_value_sum'], nodata=-1.0)
 
-    # Write the pollination service value to its raster
-    args['service_value_sum'].GetRasterBand(1).WriteArray(service_value_sum_matrix)
-    args['farm_value_sum'].GetRasterBand(1).WriteArray(farm_value_sum_matrix)
     LOGGER.debug('Finished calculating service value')
 
 def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
@@ -319,38 +316,6 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
 #        out_raster.GetRasterBand(1))
     return raster_utils.vectorize_rasters([in_raster], calc_yield,
         raster_out_uri=out_uri, nodata=out_nodata)
-
-
-def clip_and_op(in_matrix, arg1, op, in_matrix_nodata=-1, out_matrix_nodata=-1, kwargs={}):
-    """Apply an operation to a matrix after the matrix is adjusted for nodata
-        values.  After the operation is complete, the matrix will have pixels
-        culled based on the input matrix's original values that were less than
-        0 (which assumes a nodata value of below zero).
-
-        in_matrix - a numpy matrix for use as the first argument to op
-        arg1 - an argument of whatever type is necessary for the second
-            argument of op
-        op - a python callable object with two arguments: in_matrix and arg1
-        in_matrix_nodata - a python int or float
-        out_matrix_nodata - a python int or float
-        kwargs={} - a python dictionary of keyword arguments to be passed in to
-            op when it is called.
-
-        returns a numpy matrix."""
-
-    # Making a copy of the in_matrix so as to avoid side effects from putmask
-    matrix = in_matrix.copy()
-
-    # Convert nodata values to 0
-    np.putmask(matrix, matrix == in_matrix_nodata, 0)
-
-    # Apply the operation specified by the user
-    filtered_matrix = op(matrix, arg1, **kwargs)
-
-    # Restore nodata values to their proper places.
-    np.putmask(filtered_matrix, in_matrix == in_matrix_nodata, out_matrix_nodata)
-
-    return filtered_matrix
 
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
