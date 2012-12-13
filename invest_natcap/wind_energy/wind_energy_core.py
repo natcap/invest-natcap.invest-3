@@ -750,16 +750,20 @@ def valuation(args):
         raster_utils.vectorize_points(
                 wind_energy_points, field, output_ds)
 
-    land_shape_layer = land_shape_ds.GetLayer()
-    for uri in uri_list:
-        dataset = gdal.Open(uri, gdal.GA_Update)
-        # Mask out the output rasters to make them more presentable by taking
-        # any overlap from the land polygon and setting those pixel values to
-        # nodata
-        gdal.RasterizeLayer(
-                dataset, [1], land_shape_layer, burn_values=[out_nodata], 
-                options = ['ALL_TOUCHED=TRUE']) 
+    try:
+        land_shape_layer = args['land_polygon'].GetLayer()
+        for uri in uri_list:
+            dataset = gdal.Open(uri, gdal.GA_Update)
+            # Mask out the output rasters to make them more presentable by taking
+            # any overlap from the land polygon and setting those pixel values to
+            # nodata
+            gdal.RasterizeLayer(
+                    dataset, [1], land_shape_layer, burn_values=[out_nodata], 
+                    options = ['ALL_TOUCHED=TRUE']) 
 
+    except KeyError:
+        LOGGER.debug('Cannot mask output by land polygon because it was not
+            provided as an input')
 
     # Create the farm polygon output
     LOGGER.info('Creating Farm Polygon')
