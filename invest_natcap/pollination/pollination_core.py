@@ -190,6 +190,8 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
 
         Returns a GDAL dataset of the farm abundance raster."""
 
+    LOGGER.debug('Starting to calculate farm abundance')
+
     pixel_size = abs(species_abundance.GetGeoTransform()[1])
     sigma = float(alpha / (2 * pixel_size))
     LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
@@ -207,6 +209,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
     # Mask the farm abundance raster according to whether the pixel is
     # agricultural.  If the pixel is agricultural, the value is preserved.
     # Otherwise, the value is set to nodata.
+    LOGGER.debug('Setting all agricultural pixels to 0')
     return raster_utils.vectorize_rasters(
         [farm_abundance, ag_map],
         lambda x, y: x if y == 1.0 else nodata,
