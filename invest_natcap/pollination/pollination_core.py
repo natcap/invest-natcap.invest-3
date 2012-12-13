@@ -250,10 +250,8 @@ def valuation(args):
             })
 
         # Add the new service value to the service value sum matrix
-        service_value_sum = raster_utils.vectorize_rasters(
-            [service_value_sum, service_value_raster],
-            lambda x, y: x + y if y != -1.0 else -1.0,
-            raster_out_uri=args['service_value_sum'], nodata=-1.0)
+        service_value_sum = add_two_rasters(service_value_sum,
+            service_value_raster, -1.0, args['service_value_sum'])
 
     LOGGER.debug('Finished calculating service value')
 
@@ -267,7 +265,9 @@ def add_two_rasters(raster_1, raster_2, nodata, out_uri):
         out_uri - the uri at which to save the resulting raster.
 
         Returns the resulting dataset."""
-    pass
+    return raster_utils.vectorize_rasters(
+        [raster_1, raster_2], lambda x, y: x + y if y != nodata else nodata,
+        raster_out_uri=out_uri, nodata=nodata)
 
 
 def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
