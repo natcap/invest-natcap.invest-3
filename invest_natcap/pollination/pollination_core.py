@@ -278,6 +278,34 @@ def valuation(args):
     LOGGER.debug('Finished calculating service value')
 
 
+def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
+    """Calculate the service raster.
+
+        rasters - a dictionary with these entries:
+            'farm_value' - a GDAL dataset.
+            'species_abundance' - a GDAL dataset.
+            'ag_map' - a GDAL dataset.  Values are either nodata, 0 (if not an
+                    ag pixel) or 1 (if an ag pixel).
+        nodata - the nodata value for output rasters.
+        sigma - the sigma to be used for the gaussian filter portion of
+            calculating the service raster.
+        part_wild - a number between 0 and 1 representing the proportion of all
+            pollination that is done by wild pollinators.
+        out_uris - a dictionary with these entries:
+            'species_value' - a URI.  The raster created at this URI will
+                represent the part of the farm's value that is attributed to the
+                current species.
+            'species_value_blurred' - a URI.  The raster created at this URI
+                will be a copy of the species_value raster that has had a
+                gaussian filter applied to it.  Sigma is used as the sigma input
+                to the gaussian filter.
+            'service_value' - a URI.  The raster created at this URI will be the
+                calculated service value raster.
+
+        Returns a GDAL dataset of the service value raster."""
+    pass
+
+
 def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
     """Calculate the yield raster.
 
