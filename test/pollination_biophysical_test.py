@@ -155,6 +155,20 @@ class PollinationValuationTest(PollinationTest):
         self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
             'valuation_output', 'with_ag_classes'))
 
+class UnifiedPollinationTest(PollinationTest):
+    def setUp(self):
+        PollinationTest.setUp(self)
+        self.args = {
+            'workspace_dir': self.workspace_dir,
+            'landuse_cur_uri': os.path.join(TEST_DATA_DIR, 'landuse_cur_200m.tif'),
+            'landuse_attributes_uri': os.path.join(TEST_DATA_DIR, 'LU.csv'),
+            'guilds_uri': self.guilds_uri,
+            'half_saturation': 0.125,
+            'wild_pollination_proportion': 1
+        }
+
+
+
 class PollinationSmokeTest(PollinationBiophysicalTest):
     """To only run this test class at the command line, do this:
        $ nosetests -vs pollination_biophysical_test.py:PollinationSmokeTest.test_ag_30m_smoke
