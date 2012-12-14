@@ -167,6 +167,17 @@ class UnifiedPollinationTest(PollinationTest):
             'wild_pollination_proportion': 1
         }
 
+    def test_regression(self):
+        pollination.execute(self.args)
+
+        intermediate_files = ['%s.tif' % '_'.join(filename) for filename in
+            [
+                [prefix, species, scenario]
+                for prefix in ['frm', 'hf', 'hn','sup']
+                for species in ['Apis', 'Bombus']
+                for scenario in ['cur']
+            ]
+        ]
 
 
 class PollinationSmokeTest(PollinationBiophysicalTest):
