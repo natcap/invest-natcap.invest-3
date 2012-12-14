@@ -109,7 +109,21 @@ def make_risk_euc(band, E, C, out_URI)
     #Vectorize raster using the layers list, and the vec_euc function
 
 def calc_E_value(ds, s_dicts, denom, out_path):
+    '''This will take in the stressor subdictionary for the given h,s pair and
+    calculate an "E raster" based on the numerical criteria and the raster
+    criteria. This will be combined with the C raster according to the risk
+    equation, and allow us to return a final risk raster. 
 
+    Input:
+        ds- The base (h, s) overlap raster which we should use for rasterizing
+            the numeric ratings data for combination with the raster ratings data.
+        s_dicts- A subdictionary containing two dictionaries 'Crit_Ratings' and
+            'Crit_Rasters' that contain all criteria rating data.
+        denom- The denominator for the E calculation equation. This should be
+            applied after all of the E numerator equations are summed.
+        out_path- The name (directory and filename) that should be used as the
+            URI when vectorizing the E raster.
+    '''
     new_ds = raster_utils.new_raster_from_base(ds, out_path, 'GTiff', 0,
                                 gdal.GDT_Float32)
     band, nodata = raster_utils.extract_band_and_nodata(new_ds)
@@ -141,5 +155,19 @@ def calc_E_value(ds, s_dicts, denom, out_path):
     #vectorize using the raster band as the base, and all potential rasters on top of that.
 
 def make_risk_mult(band, E, C, out_URI):
+    ''' This uses the multiplicative value of risk to produce a final risk
+    raster based off of the appropriate E and C rasters for that h-s combination.
 
-    
+    Input:
+        band- The h-s overlap band, potentially containing decayed stressor values.
+        E- A raster containing values calculated from the stressor criteria.
+            These criteria could potentially be either individual ratings, or have
+            come from spatially explicit rasters.
+        C- A raster containing values calculated from h-s criteria, and habitat
+            criteria. These could have come from either individual ratings or
+            spatially explicit rasters.
+        out_uri- The location into which the rasterized risk values should be
+            placed.
+    '''
+        
+
