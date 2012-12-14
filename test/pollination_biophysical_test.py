@@ -11,6 +11,7 @@ import invest_natcap.pollination.pollination_biophysical as\
     pollination_biophysical
 import invest_natcap.pollination.pollination_valuation as\
     pollination_valuation
+import invest_natcap.pollination.pollination as pollination
 import invest_natcap.pollination.pollination_core as pollination_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
