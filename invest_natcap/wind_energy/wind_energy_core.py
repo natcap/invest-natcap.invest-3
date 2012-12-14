@@ -847,8 +847,8 @@ def create_rectangular_polygon(spat_ref, start_point, x_len, y_len, out_uri):
   
     # Create the layer name from the uri paths basename without the extension
     uri_basename = os.path.basename(out_uri)
-    layer_name = os.path.splitext(uri_basename)
-
+    layer_name = os.path.splitext(uri_basename)[0]
+    
     layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     # Add a single ID field
@@ -871,6 +871,7 @@ def create_rectangular_polygon(spat_ref, start_point, x_len, y_len, out_uri):
 
     poly = ogr.Geometry(ogr.wkbPolygon)
     poly.AddGeometry(ring)
+    LOGGER.debug('Wind Farm Area: %s', poly.Area())
 
     # Create a new feature, setting the field and geometry
     feature = ogr.Feature(layer.GetLayerDefn())
@@ -882,7 +883,7 @@ def create_rectangular_polygon(spat_ref, start_point, x_len, y_len, out_uri):
     layer = None
 
     datasource.SyncToDisk()
-
+    LOGGER.info('Leaving create_rectangular_polygon')
     return datasource
 
 def point_to_polygon_distance(poly_ds, point_ds):
