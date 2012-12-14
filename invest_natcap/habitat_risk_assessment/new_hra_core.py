@@ -169,5 +169,17 @@ def make_risk_mult(band, E, C, out_URI):
         out_uri- The location into which the rasterized risk values should be
             placed.
     '''
-        
+    layers = [band, E, C]
 
+    def vec_mult(*pixels):
+        
+        base_p = 1
+        
+        #If any of these things are 0, should return a 0 instead of calculating
+        #an explicit risk value. This is good.
+        for p in pixels:
+            base_p = base_p * p
+        
+        return p
+
+    #Call vectorize using vec_mult and band as a base, and burning to out_URI
