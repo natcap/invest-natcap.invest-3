@@ -807,20 +807,43 @@ def valuation(args):
     LOGGER.info('Farm Polygon Created')
     LOGGER.info('Leaving Wind Energy Valuation Core')
 
-def create_rectangular_polygon(spat_ref, start_point, width, length, out_uri): 
+def create_rectangular_polygon(spat_ref, start_point, x_len, y_len, out_uri): 
+    """Create an OGR shapefile where the geometry is a rectangular polygon
+
+        spat_ref - a SpatialReference to use in creating the output shapefile
+            (required)
+        start_point - a tuple of floats indicating the bottom left corner of
+            where the rectangular polygon will be placed in space (required)
+        x_len - an integer value for the length of the rectangular polygon in
+            the X direction (required)
+        y_len - an integer value for the length of the rectangular polygon in
+            the Y direction (required)
+        out_uri - a string representing the file path to disk for the new
+            shapefile (required)
     
+        return - an OGR shapefile"""
+    LOGGER.info('Entering create_rectangular_polygon')
+
     driver = ogr.GetDriverByName('ESRI Shapefile')
     datasource = driver.CreateDataSource(out_uri)
-    
-    layer = datasource.CreateLayer('new_name', spat_ref, ogr.wkbPolygon)
+  
+    # Create the layer name from the uri paths basename without the extension
+    uri_basename = os.path.basename(out_uri)
+    layer_name = os.path.splitext(uri_basename)
 
+    layer = datasource.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
+
+    # Add a single ID field
     field = ogr.FieldDefn('id', ogr.OFTReal)
     layer.CreateField(field)
 
-    top_left = (start_point[0], start_point[1] + length)
-    top_right = (start_point[0] + width, start_point[1] + length)
-    bottom_right = (start_point[0] + width, start_point[1])
+    # Create the 3 other points that will make up the rectangular polygon 
+    top_left = (start_point[0], start_point[1] + y_len)
+    top_right = (start_point[0] + x_len, start_point[1] + y_len)
+    bottom_right = (start_point[0] + x_len, start_point[1])
     
+    # Create a ring geometry from the points which will be the geometry that
+    # gets added to the polygon geometry
     ring = ogr.Geometry(ogr.wkbLinearRing)
     ring.AddPoint(start_point[0], start_point[1])
     ring.AddPoint(top_left[0], top_left[1])
@@ -831,8 +854,7 @@ def create_rectangular_polygon(spat_ref, start_point, width, length, out_uri):
     poly = ogr.Geometry(ogr.wkbPolygon)
     poly.AddGeometry(ring)
 
-    print 'AREA: ' + str(poly.Area())
-
+    # Create a new feature, setting the field and geometry
     feature = ogr.Feature(layer.GetLayerDefn())
     feature.SetGeometry(poly)
     feature.SetField(0, 1)
