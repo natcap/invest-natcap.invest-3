@@ -750,6 +750,9 @@ def valuation(args):
         raster_utils.vectorize_points(
                 wind_energy_points, field, output_ds)
 
+        output_ds.FlushCache()
+        output_ds = None
+
     try:
         land_shape_layer = args['land_polygon'].GetLayer()
         for uri in uri_list:
@@ -759,7 +762,10 @@ def valuation(args):
             # nodata
             gdal.RasterizeLayer(
                     dataset, [1], land_shape_layer, burn_values=[out_nodata], 
-                    options = ['ALL_TOUCHED=TRUE']) 
+                    options = ['ALL_TOUCHED=TRUE'])
+
+            dataset.FlushCache()
+            dataset = None
 
     except KeyError:
         LOGGER.debug('Cannot mask output by land polygon because it was not'
