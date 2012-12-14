@@ -507,24 +507,29 @@ def valuation(args):
     foundation_cost = float(turbine_dict['foundation_cost'])
     # The cost of each turbine unit in millions of dollars
     unit_cost = float(turbine_dict['turbine_cost'])
-    # The installation cost as a percentage of final capital costs converted to
-    # a decimal
-    install_cost = float(turbine_dict['installation_cost']) / 100.00
-    # The miscellaneous costs as a percentage of CAPEX converted to a decimal
-    misc_capex_cost = float(turbine_dict['miscellaneous_capex_cost']) / 100.00
-    # The operations and maintenance costs as a percentage of CAPEX converted
-    # to a decimal
-    op_maint_cost = float(turbine_dict['operation_maintenance_cost']) / 100.00
-    # The distcount rate as a percentage converted to a decimal
-    discount_rate = float(turbine_dict['discount_rate']) / 100.00
-    # The cost to decommission the farm as a percentage of CAPEX converted to a
-    # decimal
-    decom = float(turbine_dict['decommission_cost']) / 100.00
+    # The installation cost as a decimal
+    install_cost = float(turbine_dict['installation_cost'])
+    # The miscellaneous costs as a decimal factore of CAPEX
+    misc_capex_cost = float(turbine_dict['miscellaneous_capex_cost'])
+    # The operations and maintenance costs as a decimal factor of CAPEX
+    op_maint_cost = float(turbine_dict['operation_maintenance_cost'])
+    # The distcount rate as a decimal
+    discount_rate = float(turbine_dict['discount_rate'])
+    # The cost to decommission the farm as a decmial factor of CAPEX
+    decom = float(turbine_dict['decommission_cost'])
     # The mega watt value for the turbines in MW
     mega_watt = float(turbine_dict['turbine_rated_pwr'])
     # The average land cable distance in km
     avg_grid_distance = float(turbine_dict['avg_grid_distance'])
-    
+    # The distance at which AC switches over to DC power
+    circuit_break = float(turbine_dict['ac_dc_distance_break'])
+    # The coefficients for the AC/DC megawatt and cable cost from the CAP
+    # function
+    mw_coef_ac = float(turbine_dict['mw_coef_ac'])
+    mw_coef_dc = float(turbine_dict['mw_coef_dc'])
+    cable_coef_ac = float(turbine_dict['cable_coef_ac'])
+    cable_coef_dc = float(turbine_dict['cable_coef_dc'])
+
     time = int(turbine_dict['time_period'])
 
     number_turbines = args['number_of_machines']
@@ -677,13 +682,12 @@ def valuation(args):
         # Initialize cable cost variable
         cable_cost = 0
 
-        # These constants are based on the literature from Rob's users guide on
-        # valuation. The break at 60 indicates the difference in using AC and
+        # The break at 'circuit_break' indicates the difference in using AC and
         # DC current systems
-        if total_cable_dist <= 60:
-            cable_cost = (.81 * total_mega_watt) + (1.36 * total_cable_dist)
+        if total_cable_dist <= circuit_break:
+            cable_cost = (mw_coef_ac * total_mega_watt) + (cable_coef_ac * total_cable_dist)
         else:
-            cable_cost = (1.09 * total_mega_watt) + (.89 * total_cable_dist)
+            cable_cost = (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist)
         
         # Compute the total CAP
         cap = cap_less_dist + cable_cost
@@ -746,17 +750,100 @@ def valuation(args):
         raster_utils.vectorize_points(
                 wind_energy_points, field, output_ds)
 
-    land_shape_layer = land_shape_ds.GetLayer()
-    for uri in uri_list:
-        dataset = gdal.Open(uri, gdal.GA_Update)
-        # Mask out the output rasters to make them more presentable by taking
-        # any overlap from the land polygon and setting those pixel values to
-        # nodata
-        gdal.RasterizeLayer(
-                dataset, [1], land_shape_layer, burn_values=[out_nodata], 
-                options = ['ALL_TOUCHED=TRUE']) 
+    try:
+        land_shape_layer = args['land_polygon'].GetLayer()
+        for uri in uri_list:
+            dataset = gdal.Open(uri, gdal.GA_Update)
+            # Mask out the output rasters to make them more presentable by taking
+            # any overlap from the land polygon and setting those pixel values to
+            # nodata
+            gdal.RasterizeLayer(
+                    dataset, [1], land_shape_layer, burn_values=[out_nodata], 
+                    options = ['ALL_TOUCHED=TRUE']) 
 
+    except KeyError:
+        LOGGER.debug('Cannot mask output by land polygon because it was not'
+            'provided as an input')
+
+    # Create the farm polygon output
+    LOGGER.info('Creating Farm Polygon')
+    turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
+    rotor_diameter= int(turbine_dict['rotor_diameter'])
+    rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
+    
+    npv_ds = gdal.Open(npv_uri)
+
+    # Get the geotransform for the output dataset as well as the x and y size of
+    # the raster so that we can determine the center coordinates of the dataset.
+    # This is where the farm polygon will be placed
+    npv_band = npv_ds.GetRasterBand(1)
+    gt = npv_ds.GetGeoTransform()
+    xsize = npv_band.XSize
+    ysize = npv_band.YSize
+    # Find the center x and y points by indexing into the grid
+    center_x = (xsize / 2) * gt[1] + gt[0]
+    center_y = (ysize / 2) * gt[5] + gt[3]
+    start_point = (center_x, center_y)
+    # Get the projection of the dataset
+    raster_wkt = dataset.GetProjection()
+    # Make a spatial reference from the projection to use for the farm polygon
+    spat_ref = osr.SpatialReference()
+    spat_ref.ImportFromWkt(raster_wkt)
+
+    farm_poly_uri = os.path.join(output_dir, 'wind_farm_poly.shp')
+    
+    if os.path.isfile(farm_poly_uri):
+        os.remove(farm_poly_uri)
+
+    num_circuits = math.ceil(number_turbines / turbines_per_circuit)
+    spacing_dist = rotor_diameter * rotor_diameter_factor
+
+    width = (num_circuits - 1) * spacing_dist
+    length = (turbines_per_circuit - 1) * spacing_dist
+
+    farm_poly = create_rectangular_polygon(
+            spat_ref, start_point, width, length, farm_poly_uri)
+    
+    LOGGER.info('Farm Polygon Created')
     LOGGER.info('Leaving Wind Energy Valuation Core')
+
+def create_rectangular_polygon(spat_ref, start_point, width, length, out_uri): 
+    
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    datasource = driver.CreateDataSource(out_uri)
+    
+    layer = datasource.CreateLayer('new_name', spat_ref, ogr.wkbPolygon)
+
+    field = ogr.FieldDefn('id', ogr.OFTReal)
+    layer.CreateField(field)
+
+    top_left = (start_point[0], start_point[1] + length)
+    top_right = (start_point[0] + width, start_point[1] + length)
+    bottom_right = (start_point[0] + width, start_point[1])
+    
+    ring = ogr.Geometry(ogr.wkbLinearRing)
+    ring.AddPoint(start_point[0], start_point[1])
+    ring.AddPoint(top_left[0], top_left[1])
+    ring.AddPoint(top_right[0], top_right[1])
+    ring.AddPoint(bottom_right[0], bottom_right[1])
+    ring.CloseRings()
+
+    poly = ogr.Geometry(ogr.wkbPolygon)
+    poly.AddGeometry(ring)
+
+    print 'AREA: ' + str(poly.Area())
+
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometry(poly)
+    feature.SetField(0, 1)
+    layer.CreateFeature(feature)
+
+    feature = None
+    layer = None
+
+    datasource.SyncToDisk()
+
+    return datasource
 
 def point_to_polygon_distance(poly_ds, point_ds):
     """Calculates the distances from points in a point geometry shapefile to the

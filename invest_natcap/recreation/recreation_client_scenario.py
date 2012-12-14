@@ -7,6 +7,8 @@ import time
 import logging
 import json
 
+import datetime
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -18,7 +20,7 @@ def execute(args):
     register_openers()
 
     #load configuration
-    configFileName=os.path.dirname(os.path.abspath(__file__))+os.sep+"config.json"
+    configFileName=os.path.dirname(os.path.abspath(__file__))+os.sep+"recreation_client_config.json"
     LOGGER.debug("Loading server configuration from %s." % configFileName)
     configFile=open(configFileName,'r')
     config=json.loads(configFile.read())
@@ -50,7 +52,7 @@ def execute(args):
                 os.path.exists(args["data_dir"]+fileName+".dbf") and \
                 os.path.exists(args["data_dir"]+fileName+".prj"):
                     LOGGER.info("Found %s predictor." % (fileName))
-                    predictors.append(fileName)
+                    predictors.append(str(fileName))
                 else:
                     LOGGER.error("Predictor %s is missing file(s)." % (fileName))
                     if not os.path.exists(args["data_dir"]+fileName+".shx"):
@@ -76,6 +78,7 @@ def execute(args):
         attachments[tsv+".tsv"]= open(args["data_dir"]+tsv+".tsv","rb")
         
     LOGGER.debug("Uploading predictors.")
+    LOGGER.debug ("Attachments: %s" % str(attachments.keys()))
     datagen, headers = multipart_encode(attachments)
     url = config["server"]+config["files"]["PHP"]["predictor"]
     request = urllib2.Request(url, datagen, headers)
@@ -145,13 +148,14 @@ def execute(args):
     sessid2 = urllib2.urlopen(request).read().strip()
 
     if sessid2 != sessid:
+        LOGGER.error("The first session id was %s the second session id was %s." % (repr(sessid2),repr(sessid)))
         raise ValueError,"Something weird happened the sessid didn't match."
     
     url = config["server"]+config["paths"]["relative"]["data"]+sessid+"/"+config["files"]["results"]
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
-    with open(args["workspace_dir"]+os.sep+config["files"]["results"], 'wb') as fp:
+    with open(args["workspace_dir"]+"results"+datetime.datetime.now().strftime("-%Y-%m-%d--%H_%M_%S")+".zip", 'wb') as fp:
       while True:
         chunk = req.read(CHUNK)
         if not chunk: break

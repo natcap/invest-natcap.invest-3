@@ -92,12 +92,16 @@ def execute(args):
 
     # Create a list of the valuation parameters we are looking for from the
     # input files 
-    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
+    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr',
+                                'turbines_per_circuit', 'rotor_diameter']
     valuation_global_params = [
             'discount_rate', 'time_period', 'infield_cable_cost', 
             'infield_cable_length', 'installation_cost',
             'miscellaneous_capex_cost', 'operation_maintenance_cost',
-            'decommission_cost']
+            'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
+            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc',
+            'rotor_diameter_factor']
+
     # Get the valuation turbine parameters from the CSV file
     LOGGER.info('Read in turbine information from CSV')
     val_turbine_param_file = open(args['turbine_parameters_uri'])
