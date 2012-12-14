@@ -179,6 +179,24 @@ class UnifiedPollinationTest(PollinationTest):
             ]
         ]
 
+        # Verify all intermediate files from biophysical
+        for filename in intermediate_files:
+            test_file = os.path.join(self.workspace_dir, 'intermediate', filename)
+            reg_file = os.path.join(TEST_DATA_DIR, 'biophysical_output', 'no_ag_classes',
+                'intermediate', filename)
+            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+
+        # Build up a list of all output files
+        output_files = ['%s_cur.tif' % '_'.join(filename) for filename in
+            ['sup_val_sum', 'sup_val_Apis', 'sup_val_Bombus']]
+
+        # Verify all output files from biophysical
+        for filename in output_files:
+            test_file = os.path.join(self.workspace_dir, 'output', filename)
+            reg_file = os.path.join(TEST_DATA_DIR, 'biophysical_output', 'no_ag_classes',
+                'output', filename)
+            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+
 
 class PollinationSmokeTest(PollinationBiophysicalTest):
     """To only run this test class at the command line, do this:
