@@ -47,108 +47,46 @@ def biophysical(args):
     nodata = -1.0
     LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
 
-    lu_nodata = args['landuse'].GetRasterBand(1).GetNoDataValue()
-    LOGGER.debug('Landcover nodata=%s', lu_nodata)
-
-    # mask agricultural classes to ag_map.
-    if len(args['ag_classes']) > 0:
-        LOGGER.debug('Agricultural classes: %s', args['ag_classes'])
-        reclass_rules = dict((r, 1) for r in args['ag_classes'])
-        default_value = 0.0
-    else:
-        LOGGER.debug('User did not define ag classes.')
-        reclass_rules = {}
-        default_value = 1.0
-
-    LOGGER.debug('Agricultural reclass map=%s', reclass_rules)
-    args['ag_map'] = raster_utils.reclassify_by_dictionary(args['landuse'],
-        reclass_rules, args['ag_map'], 'GTiff', nodata, gdal.GDT_Float32,
-        default_value=default_value)
+    args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
+        args['ag_classes'], nodata)
 
     # Open the average foraging matrix for use in the loop over all species,
     # but first we need to ensure that the matrix is filled with 0's.
-    foraging_total_raster = raster_utils.vectorize_rasters([args['landuse']],
-        lambda x: 0.0 if x != lu_nodata else nodata,
-        raster_out_uri=args['foraging_average'], nodata=nodata)
+    foraging_total_raster = raster_utils.reclassify_by_dictionary(
+        args['landuse'], {}, args['foraging_average'], 'GTiff', nodata,
+        gdal.GDT_Float32, 0.0)
 
     # Open the abundance total raster for use in the loop over all species and
     # ensure that it's filled entirely with 0's.
-    abundance_total_raster = raster_utils.vectorize_rasters([args['landuse']],
-        lambda x: 0.0 if x != lu_nodata else nodata,
-        raster_out_uri=args['abundance_total'], nodata=nodata)
+    abundance_total_raster = raster_utils.reclassify_by_dictionary(
+        args['landuse'], {}, args['abundance_total'], 'GTiff', nodata,
+        gdal.GDT_Float32, 0.0)
 
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
 
-        floral_raster = map_attribute(args['landuse'],
-            args['landuse_attributes'], guild_dict, args['floral_fields'],
-            species_dict['floral'], sum)
-        nesting_raster = map_attribute(args['landuse'],
+        species_abundance = calculate_abundance(args['landuse'],
             args['landuse_attributes'], guild_dict, args['nesting_fields'],
-            species_dict['nesting'], max)
-
-        # Now that the per-pixel nesting and floral resources have been
-        # calculated, the floral resources still need to factor in
-        # neighborhoods.
-        # The sigma size is 2 times the pixel size, presumable since the
-        # raster's pixel width is a radius for the gaussian blur when we want
-        # the diameter of the blur.
-        pixel_size = abs(args['landuse'].GetGeoTransform()[1])
-        sigma = float(guild_dict['alpha'] / (2 * pixel_size))
-        LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
-
-        # Fetch the floral resources raster and matrix from the args dictionary
-        # apply a gaussian filter and save the floral resources raster to the
-        # dataset.
-        LOGGER.debug('Applying neighborhood mappings to %s floral resources',
-            species)
-        floral_raster = raster_utils.gaussian_filter_dataset(
-            floral_raster, sigma, species_dict['floral'], nodata)
-
-        # Calculate the pollinator abundance index (using Math! to simplify the
-        # equation in the documentation.  We're still waiting on Taylor
-        # Rickett's reply to see if this is correct.
-        # Once the pollination supply has been calculated, we add it to the
-        # total abundance matrix.
-        LOGGER.debug('Calculating %s abundance index', species)
-        species_abundance = raster_utils.vectorize_rasters(
-            [nesting_raster, floral_raster],
-            lambda x, y: x * y if x != nodata else nodata,
-            raster_out_uri=species_dict['species_abundance'],
-            nodata=nodata)
+            args['floral_fields'], uris={
+                'nesting': species_dict['nesting'],
+                'floral': species_dict['floral'],
+                'species_abundance': species_dict['species_abundance']
+            })
 
         # Take the pollinator abundance index and multiply it by the species
         # weight in the guilds table.
-        species_weight = guild_dict['species_weight']
-        abundance_total_raster = raster_utils.vectorize_rasters(
-            [abundance_total_raster, species_abundance],
-            lambda x, y: x + (y * species_weight) if x != nodata else nodata,
-            raster_out_uri=args['abundance_total'],
-            nodata=nodata)
+        abundance_total_raster = add_two_rasters(abundance_total_raster,
+            species_abundance, args['abundance_total'])
 
-        # Calculate the foraging ('farm abundance') index by applying a
-        # gaussian filter to the foraging raster and then culling all pixels
-        # that are not agricultural before saving it to the output raster.
-        LOGGER.debug('Calculating %s foraging/farm abundance index', species)
-        farm_abundance = raster_utils.gaussian_filter_dataset(
-            species_abundance, sigma, species_dict['farm_abundance'], nodata)
-
-        # Mask the farm abundance raster according to whether the pixel is
-        # agricultural.  If the pixel is agricultural, the value is preserved.
-        # Otherwise, the value is set to nodata.
-        farm_abundance_masked = raster_utils.vectorize_rasters(
-            [farm_abundance, args['ag_map']],
-            lambda x, y: x if y == 1.0 else nodata,
-            raster_out_uri=species_dict['farm_abundance'],
-            nodata=nodata)
+        farm_abundance = calculate_farm_abundance(species_abundance,
+            args['ag_map'], guild_dict['alpha'],
+            species_dict['farm_abundance'])
 
         # Add the current foraging raster to the existing 'foraging_total'
         # raster
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
-        foraging_total_raster = raster_utils.vectorize_rasters(
-            [farm_abundance_masked, foraging_total_raster],
-            lambda x, y: x + y if x != nodata else nodata,
-            raster_out_uri=args['foraging_total'], nodata=nodata)
+        foraging_total_raster = add_two_rasters(farm_abundance,
+            foraging_total_raster, args['foraging_total'])
 
     # Calculate the average foraging index based on the total
     # Divide the total pollination foraging index by the number of pollinators
@@ -158,20 +96,151 @@ def biophysical(args):
     num_species = float(len(args['species'].values()))
     LOGGER.debug('Number of species: %s', num_species)
 
-    foraging_total_raster = raster_utils.vectorize_rasters(
-        [foraging_total_raster],
-        lambda x: x / num_species if x != nodata else nodata,
-        raster_out_uri=args['foraging_average'], nodata=nodata)
+    # Calculate the mean foraging values per species.
+    LOGGER.debug('Calculating mean foraging score')
+    divide_raster(foraging_total_raster, num_species, args['foraging_average'])
 
     # Calculate the mean pollinator supply (pollinator abundance) by taking the
     # abundance_total_matrix and dividing it by the number of pollinators.
-    # Then, save the resulting matrix to its raster
     LOGGER.debug('Calculating mean pollinator supply')
-    raster_utils.vectorize_rasters([abundance_total_raster],
-        lambda x: x / num_species if x != nodata else nodata,
-        raster_out_uri=args['abundance_total'], nodata=nodata)
+    divide_raster(abundance_total_raster, num_species, args['abundance_total'])
 
     LOGGER.debug('Finished pollination biophysical calculations')
+
+
+def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
+    floral_fields, uris):
+    """Calculate pollinator abundance on the landscape.
+
+        landuse - a GDAL dataset of the LULC.
+        lu_attr - a TableHandler
+        guild - a dictionary containing information about the pollinator.  All
+            entries are required:
+            'alpha' - the typical foraging distance in m
+            'species_weight' - the relative weight
+            resource_n - One entry for each nesting field for each fieldname
+                denoted in nesting_fields.  This value must be either 0 and 1,
+                indicating whether the pollinator uses this nesting resource for
+                nesting sites.
+            resource_f - One entry for each floral field denoted in
+                floral_fields.  This value must be between 0 and 1,
+                representing the liklihood that this species will forage during
+                this season.
+        nesting_fields - a list of string fieldnames.  Used to extract nesting
+            fields from the guild dictionary, so fieldnames here must exist in
+            guild.
+        floral_fields - a list of string fieldnames.  Used to extract floral
+            season fields from the guild dictionary.  Fieldnames here must exist
+            in guild.
+        uris - a dictionary with these entries:
+            'nesting' - a URI to where the nesting raster will be saved.
+            'floral' - a URI to where the floral resource raster will be saved.
+            'species_abundance' - a URI to where the species abundance raster
+                will be saved.
+
+        Returns a GDAL dataset of the species abundance."""
+    nodata = -1.0
+    floral_raster = map_attribute(landuse, lu_attr, guild, floral_fields,
+        uris['floral'], sum)
+    nesting_raster = map_attribute(landuse, lu_attr, guild, nesting_fields,
+        uris['nesting'], max)
+
+    # Now that the per-pixel nesting and floral resources have been
+    # calculated, the floral resources still need to factor in
+    # neighborhoods.
+    # The sigma size is 2 times the pixel size, presumable since the
+    # raster's pixel width is a radius for the gaussian blur when we want
+    # the diameter of the blur.
+    pixel_size = abs(landuse.GetGeoTransform()[1])
+    sigma = float(guild['alpha'] / (2 * pixel_size))
+    LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
+
+    # Fetch the floral resources raster and matrix from the args dictionary
+    # apply a gaussian filter and save the floral resources raster to the
+    # dataset.
+    LOGGER.debug('Applying neighborhood mappings to floral resources')
+    floral_raster = raster_utils.gaussian_filter_dataset(
+        floral_raster, sigma, uris['floral'], nodata)
+
+    # Calculate the pollinator abundance index (using Math! to simplify the
+    # equation in the documentation.  We're still waiting on Taylor
+    # Rickett's reply to see if this is correct.
+    # Once the pollination supply has been calculated, we add it to the
+    # total abundance matrix.
+    LOGGER.debug('Calculating abundance index')
+    species_weight = guild['species_weight']
+    return raster_utils.vectorize_rasters(
+        [nesting_raster, floral_raster],
+        lambda x, y: (x * y) * species_weight if x != nodata else nodata,
+        raster_out_uri=uris['species_abundance'], nodata=nodata)
+
+
+def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
+    """Calculate the farm abundance raster.
+
+        species_abundance - a GDAL dataset of species abundance.
+        ag_map - a GDAL dataset of values where ag pixels are 1 and non-ag
+            pixels are 0.
+        alpha - the typical foraging distance of the current pollinator.
+        uri - the output URI for the farm_abundance raster.
+
+        Returns a GDAL dataset of the farm abundance raster."""
+
+    LOGGER.debug('Starting to calculate farm abundance')
+
+    pixel_size = abs(species_abundance.GetGeoTransform()[1])
+    sigma = float(alpha / (2 * pixel_size))
+    LOGGER.debug('Pixel size: %s | sigma: %s', pixel_size, sigma)
+
+    nodata = species_abundance.GetRasterBand(1).GetNoDataValue()
+    LOGGER.debug('Using nodata value %s from species abundance raster', nodata)
+
+    # Calculate the foraging ('farm abundance') index by applying a
+    # gaussian filter to the foraging raster and then culling all pixels
+    # that are not agricultural before saving it to the output raster.
+    LOGGER.debug('Calculating foraging/farm abundance index')
+    farm_abundance = raster_utils.gaussian_filter_dataset(
+        species_abundance, sigma, uri, nodata)
+
+    # Mask the farm abundance raster according to whether the pixel is
+    # agricultural.  If the pixel is agricultural, the value is preserved.
+    # Otherwise, the value is set to nodata.
+    LOGGER.debug('Setting all agricultural pixels to 0')
+    return raster_utils.vectorize_rasters(
+        [farm_abundance, ag_map],
+        lambda x, y: x if y == 1.0 else nodata,
+        raster_out_uri=uri, nodata=nodata)
+
+
+def reclass_ag_raster(landuse, uri, ag_classes, nodata):
+    """Reclassify the landuse raster into a raster demarcating the agricultural
+        state of a given pixel.
+
+        landuse - a GDAL dataset.  The land use/land cover raster.
+        uri - the uri of the output, reclassified ag raster.
+        ag_classes - a list of landuse classes that are agricultural.  If an
+            empty list is provided, all landcover classes are considered to be
+            agricultural.
+        nodata - an int or float.
+
+        Returns a GDAL dataset of the ag raster."""
+
+    # mask agricultural classes to ag_map.
+    LOGGER.debug('Starting to create an ag raster at %s. Nodata=%s',
+        uri, nodata)
+    if len(ag_classes) > 0:
+        LOGGER.debug('Agricultural classes: %s', ag_classes)
+        reclass_rules = dict((r, 1) for r in ag_classes)
+        default_value = 0.0
+    else:
+        LOGGER.debug('User did not define ag classes.')
+        reclass_rules = {}
+        default_value = 1.0
+
+    LOGGER.debug('Agricultural reclass map=%s', reclass_rules)
+    return raster_utils.reclassify_by_dictionary(landuse,
+        reclass_rules, uri, 'GTiff', nodata, gdal.GDT_Float32,
+        default_value=default_value)
 
 
 def valuation(args):
@@ -205,10 +274,6 @@ def valuation(args):
     service_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
         {}, args['service_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
 
-    # Define necessary scalars based on inputs.
-    in_nodata = args['foraging_average'].GetRasterBand(1).GetNoDataValue()
-    out_nodata = in_nodata
-
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
 
@@ -220,20 +285,10 @@ def valuation(args):
             args['wild_pollination_proportion'], -1.0)
 
         # Add the new farm_value_matrix to the farm value sum matrix.
-        farm_value_sum = raster_utils.vectorize_rasters(
-            [farm_value_raster, farm_value_sum],
-            lambda x, y: x + y if x != -1.0 else -1.0,
-            raster_out_uri=args['farm_value_sum'], nodata=-1.0)
+        farm_value_sum = add_two_rasters(farm_value_sum, farm_value_raster,
+            args['farm_value_sum'])
 
         LOGGER.debug('Calculating service value for %s', species)
-        # Open the species foraging matrix and then divide
-        # the yield matrix by the foraging matrix for this pollinator.
-        ratio_raster = raster_utils.vectorize_rasters(
-            [farm_value_raster, species_dict['farm_abundance']],
-            lambda x, y: x / y if x != -1.0 else -1.0,
-            raster_out_uri=species_dict['value_abundance_ratio'],
-            nodata=-1.0)
-
         # Calculate sigma for the gaussian blur.  Sigma is based on the species
         # alpha (from the guilds table) and twice the pixel size.
         guild_dict = args['guilds'].get_table_row('species', species)
@@ -241,53 +296,45 @@ def valuation(args):
         sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
         LOGGER.debug('Pixel size: %s, sigma: %s')
 
-        LOGGER.debug('Applying the blur to the ratio matrix.')
-        blurred_ratio_raster = raster_utils.gaussian_filter_dataset(
-            ratio_raster, sigma, species_dict['value_abundance_ratio_blur'],
-            -1.0)
-
-        v_c = args['wild_pollination_proportion']
-
-        def ps_vectorized(sup_s, blurred_ratio):
-            """Apply the pollinator service value function.
-                sup_s - the species abundance matrix
-                blurred_ratio - the ratio of (yield/farm abundance) with a
-                    gaussian filter applied to it."""
-            if sup_s == in_nodata:
-                return out_nodata
-            return v_c * sup_s * blurred_ratio
-
-        # Vectorize the ps_vectorized function
-        service_value_raster = raster_utils.vectorize_rasters(
-            [species_dict['species_abundance'], blurred_ratio_raster],
-            ps_vectorized, raster_out_uri=species_dict['service_value'],
-            nodata=-1.0)
-
-        # Set all agricultural pixels to 0.  This is according to issue 761.
-        service_value_raster = raster_utils.vectorize_rasters(
-            [args['ag_map'], service_value_raster],
-            lambda x, y: 0.0 if x == 0 else y,
-            raster_out_uri=species_dict['service_value'], nodata=-1.0)
+        service_value_raster = calculate_service(
+            rasters={
+                'farm_value': farm_value_raster,
+                'farm_abundance': species_dict['farm_abundance'],
+                'species_abundance': species_dict['species_abundance'],
+                'ag_map': args['ag_map']
+            },
+            nodata=-1.0,
+            sigma=sigma,
+            part_wild=args['wild_pollination_proportion'],
+            out_uris={
+                'species_value': species_dict['value_abundance_ratio'],
+                'species_value_blurred': species_dict['value_abundance_ratio_blur'],
+                'service_value': species_dict['service_value']
+            })
 
         # Add the new service value to the service value sum matrix
-        service_value_sum = raster_utils.vectorize_rasters(
-            [service_value_sum, service_value_raster],
-            lambda x, y: x + y if y != -1.0 else -1.0,
-            raster_out_uri=args['service_value_sum'], nodata=-1.0)
+        service_value_sum = add_two_rasters(service_value_sum,
+            service_value_raster, args['service_value_sum'])
 
     LOGGER.debug('Finished calculating service value')
 
 
-def add_two_rasters(raster_1, raster_2, nodata, out_uri):
-    """Add two rasters where pixels in raster_1 are not nodata.
+def add_two_rasters(raster_1, raster_2, out_uri):
+    """Add two rasters where pixels in raster_1 are not nodata.  Pixels are
+        considered to have a nodata value iff the pixel value in raster_1 is
+        nodata.  Raster_2's pixel value is not checked for nodata.
 
         raster_1 - a GDAL dataset
         raster_2 - a GDAL dataset
-        nodata - the nodata values for raster_1 and raster_2
         out_uri - the uri at which to save the resulting raster.
 
         Returns the resulting dataset."""
-    pass
+
+    nodata = raster_1.GetRasterBand(1).GetNoDataValue()
+
+    return raster_utils.vectorize_rasters(
+        [raster_1, raster_2], lambda x, y: x + y if y != nodata else nodata,
+        raster_out_uri=out_uri, nodata=nodata)
 
 
 def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
@@ -295,6 +342,7 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
 
         rasters - a dictionary with these entries:
             'farm_value' - a GDAL dataset.
+            'farm_abundance' - a GDAL dataset.
             'species_abundance' - a GDAL dataset.
             'ag_map' - a GDAL dataset.  Values are either nodata, 0 (if not an
                     ag pixel) or 1 (if an ag pixel).
@@ -315,7 +363,39 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
                 calculated service value raster.
 
         Returns a GDAL dataset of the service value raster."""
-    pass
+
+    LOGGER.debug('Calculating the service value')
+
+    # Open the species foraging matrix and then divide
+    # the yield matrix by the foraging matrix for this pollinator.
+    LOGGER.debug('Calculating pollinator value to farms')
+    ratio_raster = raster_utils.vectorize_rasters(
+        [rasters['farm_value'], rasters['farm_abundance']],
+        lambda x, y: x / y if x != nodata else nodata,
+        raster_out_uri=out_uris['species_value'], nodata=nodata)
+
+    LOGGER.debug('Applying a gaussian filter to the ratio raster.')
+    blurred_ratio_raster = raster_utils.gaussian_filter_dataset(
+        ratio_raster, sigma, out_uris['species_value_blurred'],
+        nodata)
+
+    # Vectorize the ps_vectorized function
+    LOGGER.debug('Attributing farm value to the current species')
+    service_value_raster = raster_utils.vectorize_rasters(
+        [rasters['species_abundance'], blurred_ratio_raster],
+        lambda x, y: part_wild * x * y if x != nodata else nodata,
+        raster_out_uri=out_uris['service_value'],
+        nodata=nodata)
+
+    # Set all agricultural pixels to 0.  This is according to issue 761.
+    LOGGER.debug('Marking the value of all non-ag pixels as 0.0.')
+    service_value_raster = raster_utils.vectorize_rasters(
+        [rasters['ag_map'], service_value_raster],
+        lambda x, y: 0.0 if x == 0 else y,
+        raster_out_uri=out_uris['service_value'], nodata=nodata)
+
+    LOGGER.debug('Finished calculating service value')
+    return service_value_raster
 
 
 def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
@@ -345,10 +425,25 @@ def calculate_yield(in_raster, out_uri, half_sat, wild_poll, out_nodata):
         return (1.0 - v) + (v * (frm_avg / (frm_avg + k)))
 
     # Apply the yield calculation to the foraging_average raster
-#    invest_core.vectorize1ArgOp(in_raster.GetRasterBand(1), calc_yield,
-#        out_raster.GetRasterBand(1))
     return raster_utils.vectorize_rasters([in_raster], calc_yield,
         raster_out_uri=out_uri, nodata=out_nodata)
+
+
+def divide_raster(raster, divisor, uri):
+    """Divide all non-nodata values in raster_1 by divisor and save the output
+        raster to uri.
+
+        raster - a GDAL dataset
+        divisor - the divisor (a python scalar)
+        uri - the uri to which to save the output raster.
+
+        Returns a GDAL dataset."""
+
+    nodata = raster.GetRasterBand(1).GetNoDataValue()
+
+    return raster_utils.vectorize_rasters(
+        [raster], lambda x: x / divisor if x != nodata else nodata,
+        raster_out_uri=uri, nodata=nodata)
 
 
 def map_attribute(base_raster, attr_table, guild_dict, resource_fields,
