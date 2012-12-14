@@ -162,6 +162,7 @@ class UnifiedPollinationTest(PollinationTest):
             'workspace_dir': self.workspace_dir,
             'landuse_cur_uri': os.path.join(TEST_DATA_DIR, 'landuse_cur_200m.tif'),
             'landuse_attributes_uri': os.path.join(TEST_DATA_DIR, 'LU.csv'),
+            'do_valuation': False,
             'guilds_uri': self.guilds_uri,
             'half_saturation': 0.125,
             'wild_pollination_proportion': 1
