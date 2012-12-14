@@ -771,17 +771,21 @@ def valuation(args):
         LOGGER.debug('Cannot mask output by land polygon because it was not'
             'provided as an input')
 
-    # Create the farm polygon output
+    # Create the farm polygon shapefile, which is an example of how big the farm
+    # will be with a rough representation of its dimensions. 
     LOGGER.info('Creating Farm Polygon')
+    # The number of turbines allowed per circuit for infield cabling
     turbines_per_circuit = int(turbine_dict['turbines_per_circuit'])
+    # The rotor diameter of the turbines
     rotor_diameter= int(turbine_dict['rotor_diameter'])
+    # The rotor diameter factor is a rule by which to use in deciding how far
+    # apart the turbines should be spaced
     rotor_diameter_factor = int(turbine_dict['rotor_diameter_factor'])
-    
-    npv_ds = gdal.Open(npv_uri)
 
     # Get the geotransform for the output dataset as well as the x and y size of
     # the raster so that we can determine the center coordinates of the dataset.
-    # This is where the farm polygon will be placed
+    # This is where the farm polygon will be placed in space
+    npv_ds = gdal.Open(npv_uri)
     npv_band = npv_ds.GetRasterBand(1)
     gt = npv_ds.GetGeoTransform()
     xsize = npv_band.XSize
@@ -796,16 +800,24 @@ def valuation(args):
     spat_ref = osr.SpatialReference()
     spat_ref.ImportFromWkt(raster_wkt)
 
-    farm_poly_uri = os.path.join(output_dir, 'wind_farm_poly.shp')
+    # Calculate the number of circuits there will be based on the number of
+    # turbines and the number of turbines per circuit. If a fractional value is
+    # returned we want to round up and error on the side of having the farm be
+    # slightly larger
+    num_circuits = math.ceil(number_turbines / turbines_per_circuit)
+    # The distance needed between turbines
+    spacing_dist = rotor_diameter * rotor_diameter_factor
+
+    # Calculate the width
+    width = (num_circuits - 1) * spacing_dist
+    # Calculate the length 
+    length = (turbines_per_circuit - 1) * spacing_dist
+    
+    farm_poly_uri = os.path.join(output_dir,
+            'example_size_and_orientation_of_a_possible_wind_farm.shp')
     
     if os.path.isfile(farm_poly_uri):
         os.remove(farm_poly_uri)
-
-    num_circuits = math.ceil(number_turbines / turbines_per_circuit)
-    spacing_dist = rotor_diameter * rotor_diameter_factor
-
-    width = (num_circuits - 1) * spacing_dist
-    length = (turbines_per_circuit - 1) * spacing_dist
 
     farm_poly = create_rectangular_polygon(
             spat_ref, start_point, width, length, farm_poly_uri)
