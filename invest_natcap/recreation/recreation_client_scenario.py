@@ -7,6 +7,8 @@ import time
 import logging
 import json
 
+import datetime
+
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -153,7 +155,7 @@ def execute(args):
 
     req = urllib2.urlopen(url)
     CHUNK = 16 * 1024
-    with open(args["workspace_dir"]+os.sep+config["files"]["results"], 'wb') as fp:
+    with open(args["workspace_dir"]+"results"+datetime.datetime.now().strftime("-%Y-%m-%d--%H_%M_%S")+".zip", 'wb') as fp:
       while True:
         chunk = req.read(CHUNK)
         if not chunk: break
