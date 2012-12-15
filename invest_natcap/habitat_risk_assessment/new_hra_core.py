@@ -272,3 +272,8 @@ def make_risk_mult(band, E, C, out_URI):
         return p
 
     #Call vectorize using vec_mult and band as a base, and burning to out_URI
+
+#OKAY, NEW PLAN. SINCE WE KNOW THE EQ'S THAT WE NEED TO USE TO RASTERIZE ANYWAY,
+#JUST GET THEM ALL, AND RASTERIZE THEM AHEAD OF TIME, THEN THROW TO LISTS CONTAINED
+#IN DICTIONARIES, AS WELL AS THE DENOMS DICTIONARY.
+def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
