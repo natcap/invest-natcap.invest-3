@@ -1,0 +1,23 @@
+{
+    "id": "test_root",
+    "label": "test",
+    "targetScript": "",
+    "modelName": "",
+    "elements": [
+        {
+            "id": "container",
+            "type": "container",
+            "label": "",
+            "elements": [
+                "id": "test_label",
+                "type": "label",
+                "label": ""
+            ]
+        },
+        {
+            "id": "test_file",
+            "type": "file",
+            "defualtValue": ""
+        }
+    ]
+}
