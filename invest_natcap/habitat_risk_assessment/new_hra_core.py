@@ -282,6 +282,7 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         subdictionary and should be pre-summed together to get the numerator
         for that particular raster. )
 
+     Criteria Dicts:
         {h_s: {
             (hab1, stressA): [indiv num raster, crit raster1, crit raster2...],
             (hab2, stressA): [...] }
@@ -292,7 +293,11 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             (stress1): [indiv num raster, stress crit raster, ...]
             }
          }
-
+    
+    Denoms Dicts:
+        { (h, s): { 'E': Denominator,
+                    'C': Denominator    }
+        }
+    '''
                 
-            
-
+    
