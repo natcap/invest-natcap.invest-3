@@ -299,5 +299,18 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                     'C': Denominator    }
         }
     '''
-                
-    
+
+    denoms = {}
+    crit_lists = {}
+
+    for pair in h_s:
+        h, s = pair
+
+        #First, want to make a raster of added individual numerator criteria.
+        #We will pre-sum all r / (dq*w), and then vectorize that with the spatially
+        #explicit criteria later. Should be okay, as long as we keep the denoms
+        #separate until after all raster crits are added.
+        for crit in (h_s[pair]['Crit_Ratings'], hab[h]['Crit_Ratings'],
+                        stress[s]['Crit_Ratings']):
+            
+            
