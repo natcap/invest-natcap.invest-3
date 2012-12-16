@@ -277,3 +277,22 @@ def make_risk_mult(band, E, C, out_URI):
 #JUST GET THEM ALL, AND RASTERIZE THEM AHEAD OF TIME, THEN THROW TO LISTS CONTAINED
 #IN DICTIONARIES, AS WELL AS THE DENOMS DICTIONARY.
 def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
+    '''Want to return two dictionaries in the format of the following:
+        (Note: the individual num raster comes from the crit_ratings
+        subdictionary and should be pre-summed together to get the numerator
+        for that particular raster. )
+
+        {h_s: {
+            (hab1, stressA): [indiv num raster, crit raster1, crit raster2...],
+            (hab2, stressA): [...] }
+         h: {
+            (hab1): [indiv num raster, hab crit raster, ...],
+            ...}
+         s: {
+            (stress1): [indiv num raster, stress crit raster, ...]
+            }
+         }
+
+                
+            
+
