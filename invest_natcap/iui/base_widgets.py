@@ -903,6 +903,9 @@ class Container(QtGui.QGroupBox, DynamicGroup):
                         'image: url(%s/dialog-yes-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator {width: 12px; height: 12px;}')
 
+        if 'disabled' in self.attributes:
+            self.setEnabled(not self.attributes['disabled'])
+
     def toggleHiding(self, state):
         """Show or hide all sub-elements of container (if collapsible) as
             necessary.  This function is a callback for the toggled() signal.

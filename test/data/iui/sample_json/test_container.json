@@ -9,7 +9,8 @@
             "type": "container",
             "collapsible": true,
             "label": "",
-            "enabled": false,
+            "enabledBy": "test_file",
+            "disabled": true,
             "elements": [
                 {
                     "id": "test_label",
