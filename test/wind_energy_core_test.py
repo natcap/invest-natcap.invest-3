@@ -371,10 +371,11 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         self.assertEqual(expected_dict, result)
 
     def test_wind_energy_core_create_rectangular_polygon(self):
-        """A unit test that looks at the area and dimensions of a polygon"""
+        """A regression test for create_rectangular_polygon"""
         #raise SkipTest
 
-        # Dataset from regression directory is used for easy projection purposes
+        # Dataset from regression directory is used for its projection and to
+        # locate the polygon to a known point
         regression_dir = './data/wind_energy_regression_data/'
         dataset_uri = os.path.join(regression_dir, 'aoi_dist/density.tif')
         # Directory and path to save the created rectangular polygon
@@ -388,6 +389,8 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         if not os.path.isdir(test_dir):
             os.makedirs(test_dir)
         # If the file path for the output shape already exists, delete it
+        # because we cannot create a new polygon using the same name as an
+        # existing one
         if os.path.isfile(out_uri):
             os.remove(out_uri)
 
@@ -399,7 +402,8 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         spat_ref.ImportFromWkt(dataset_wkt)
 
         # To make sure we stay within the same projection scope, get the center
-        # point of the raster to be our starting point
+        # point of the raster to be our starting point. This should also ensure
+        # the two shapefiles being tested are in the same location
         band = dataset.GetRasterBand(1)
         gt = dataset.GetGeoTransform()
         xsize = band.XSize
@@ -425,10 +429,16 @@ class TestInvestWindEnergyCore(unittest.TestCase):
         feat = layer.GetFeature(0)
         geom = feat.GetGeometryRef()
 
+        # Check that the areas are the same
         self.assertEqual(geom.Area(), expected_area)
-        
+        # Do a general check that the shapefiles are the same
         invest_test_core.assertTwoShapesEqual(self, wind_farm, reg_ds)
 
-
+        geom = None
+        feat = None
+        layer = None
+        wind_farm = None
+        reg_ds = None
+        dataset = None
 
 
