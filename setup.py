@@ -46,7 +46,8 @@ packages = ['invest_natcap',
             'invest_natcap.coastal_vulnerability',
             'invest_natcap.overlap_analysis',
             'invest_natcap.wind_energy',
-            'invest_natcap.habitat_risk_assessment']
+            'invest_natcap.habitat_risk_assessment',
+            'invest_natcap.routing']
 
 #This makes a destination directory with the name invest_version_datetime.
 #Will make it easy to see the difference between different builds of the 
