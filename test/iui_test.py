@@ -24,7 +24,12 @@ class ContainerTest(unittest.TestCase):
         # 4.  Verify that the container is disabled.
 
         container = self.ui.allElements['container']
+        filefield = self.ui.allElements['test_file']
         print container
-        print container.isEnabled()
+        print 'enabled %s' % container.isEnabled()
         #container.toggleHiding(False)
-        print container.isEnabled()
+        filefield.setValue('aaa')
+        print 'enabled %s' % container.isEnabled()
+        print 'value %s' % filefield.value()
+        print filefield.setValue('')
+        print 'enabled %s' % container.isEnabled()
