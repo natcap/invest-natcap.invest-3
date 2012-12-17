@@ -37,7 +37,7 @@
                     "required": true,
                     "defaultValue": "../timber/input/plant_table.dbf",
                     "validateAs": { "type": "DBF",
-                    				"fieldsExist": ["PRICE", "T", "BCEF", "Parcel_ID". "Parcl_area", "Perc_harv",                                                     "Harv_mass", "Freq_harv", "Maint_cost", "Harv_cost", "Immed_harv"],
+                    				"fieldsExist": ["PRICE", "T", "BCEF", "Parcel_ID", "Parcl_area", "Perc_harv",                                                     "Harv_mass", "Freq_harv", "Maint_cost", "Harv_cost", "Immed_harv"],
                     				"restrictions": [{"field": "T",
                                     				"validateAs": {"type": "number",
                                                    				   "allowedValues": {"pattern":"^[0-9]+"}}},
