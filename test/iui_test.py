@@ -16,4 +16,15 @@ class ContainerTest(unittest.TestCase):
         self.ui = base_widgets.ExecRoot(container_test)
 
     def test_outside_element_toglling_container(self):
-        print self.ui
+        # Steps to check:
+        # 0.  Verify that the container is disabled
+        # 1.  Put something in the file field.
+        # 2.  Verify that the container is enabled
+        # 3.  Remove the contents of the file field
+        # 4.  Verify that the container is disabled.
+
+        container = self.ui.allElements['container']
+        print container
+        print container.isEnabled()
+        #container.toggleHiding(False)
+        print container.isEnabled()

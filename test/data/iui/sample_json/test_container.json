@@ -7,20 +7,29 @@
         {
             "id": "container",
             "type": "container",
+            "collapsible": true,
             "label": "",
+            "enabled": false,
             "elements": [
                 {
                     "id": "test_label",
                     "type": "label",
-                    "label": ""
+                    "label": "this is a test label"
                 }
             ]
         },
         {
-            "id": "test_file",
-            "type": "file",
-            "defualtValue": "",
-            "label": "none"
+            "id": "test_list",
+            "type": "list",
+            "elements": [
+                {
+                    "id": "test_file",
+                    "type": "file",
+                    "defaultValue": "",
+                    "validateAs": {"type": "disabled"},
+                    "label": "none"
+                }
+            ]
         }
     ]
 }
