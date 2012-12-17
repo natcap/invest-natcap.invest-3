@@ -10,7 +10,7 @@
             "collapsible": true,
             "label": "",
             "enabledBy": "test_file",
-            "disabled": true,
+            "enabled": false,
             "elements": [
                 {
                     "id": "test_label",

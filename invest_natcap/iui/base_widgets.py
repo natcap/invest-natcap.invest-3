@@ -747,7 +747,7 @@ class DynamicText(LabeledElement):
                 appropriately.
 
             returns nothing."""
-
+        print 'toggled!'
         self.setBGcolorSatisfied(True)  # assume valid until validation fails
         self.error_button.deactivate()
         if self.validator != None:
@@ -903,8 +903,8 @@ class Container(QtGui.QGroupBox, DynamicGroup):
                         'image: url(%s/dialog-yes-small.png);}'% IUI_DIR +
                         'QGroupBox::indicator {width: 12px; height: 12px;}')
 
-        if 'disabled' in self.attributes:
-            self.setEnabled(not self.attributes['disabled'])
+        if 'enabled' in self.attributes:
+            self.setEnabled(self.attributes['enabled'])
 
     def toggleHiding(self, state):
         """Show or hide all sub-elements of container (if collapsible) as
