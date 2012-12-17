@@ -2159,11 +2159,17 @@ class MainWindow(QtGui.QMainWindow):
         self.remove_lastrun.triggered.connect(self.ui.remove_lastrun)
 
 class ExecRoot(Root):
-    def __init__(self, uri, layout, object_registrar, main_window=None):
+    def __init__(self, uri, layout=None, object_registrar=None, main_window=None):
         if main_window == None:
             self.main_window = self
         else:
             self.main_window = main_window # a pointer
+
+        if layout == None:
+            layout = QtGui.QVBoxLayout()
+
+        if object_registrar == None:
+            object_registrar = ElementRegistrar(self)
 
         self.messageArea = MessageArea()
         self.messageArea.setError(False)
