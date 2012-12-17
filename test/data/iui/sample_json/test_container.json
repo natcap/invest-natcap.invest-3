@@ -9,9 +9,11 @@
             "type": "container",
             "label": "",
             "elements": [
-                "id": "test_label",
-                "type": "label",
-                "label": ""
+                {
+                    "id": "test_label",
+                    "type": "label",
+                    "label": ""
+                }
             ]
         },
         {
