@@ -19,7 +19,8 @@
         {
             "id": "test_file",
             "type": "file",
-            "defualtValue": ""
+            "defualtValue": "",
+            "label": "none"
         }
     ]
 }
