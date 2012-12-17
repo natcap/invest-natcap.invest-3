@@ -25,9 +25,20 @@
             the integer division operator and 'mod' is the integer remainder
             operation."""
 
+import os
+import logging
+
+from osgeo import gdal
+import numpy
+
+from invest_natcap import raster_utils
+logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
+    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+
+LOGGER = logging.getLogger('routing')
 
 def calculate_routing(
-    dem_uri, dataset_uri_list, op, workspace_dir, raster_out_uri,
+    dem_uri, dataset_uri_list, mass_balance_op, workspace_dir, raster_out_uri,
     out_nodata_value, aoi_uri = None):
 
     """This function will route flux across a landscape given a dem to
@@ -37,10 +48,10 @@ def calculate_routing(
 
         dem_uri - a URI to a DEM raster
         dataset_uri_list - a list of GDAL readable rasters that will be
-            used as input to the 'op' operation.  These datasets
+            used as input to the 'mass_balance_op' operation.  These datasets
             must be aligned with themselves and dem_uri.
-        op - a len(dataset_uri_list)+1 function that operates per pixel
-            on the aligned pixel stack from dataset_uri_list where the
+        mass_balance_op - a len(dataset_uri_list)+1 function that operates per
+            pixel on the aligned pixel stack from dataset_uri_list where the
             first input is the incoming flux from other contributing 
             nodes.
         workspace_dir - a directory that can be used for intermediate
@@ -55,4 +66,15 @@ def calculate_routing(
 
         returns nothing"""
 
-    pass
+    dem_dataset = gdal.Open(dem_uri)
+    dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
+    n_rows, n_cols = dem_band.YSize, dem_band.XSize
+
+    #1a) create AOI mask raster
+    aoi_mask_uri = os.path.join(workspace_dir, 'aoi_mask.tif')
+    #1b) calculate d-infinity flow direction
+    d_inf_dir_uri = os.path.join(workspace_dir, 'd_inf_dir.tif')
+    #2)  resolve undefined directions from d-infinity
+
+    #3)  calculate the flow graph
+    flow_graph_diagonals = numpy.array()
