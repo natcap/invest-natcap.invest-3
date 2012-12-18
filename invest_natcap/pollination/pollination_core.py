@@ -11,12 +11,19 @@ LOGGER = logging.getLogger('pollination_core')
 
 
 def execute_model(args):
+    """Execute the pollination model!
+
+        args - a dictionary with the following entries:
+            'landuse' - a GDAL dataset
+            'ag_map' - a URI to the location of the ag map to be created
+            'ag_classes' - a list of land cover codes."""
     LOGGER.debug('Starting unified pollination model core')
 
     nodata = -1.0
     LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
 
-    args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
+    # Create the ag map by reclassifying the landuse raster.
+    ag_map = reclass_ag_raster(args['landuse'], args['ag_map'],
         args['ag_classes'], nodata)
 
 def biophysical(args):
