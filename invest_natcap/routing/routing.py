@@ -81,6 +81,9 @@ def calculate_routing(
 
     #3)  calculate the flow graph
 
+    #TODO: placeholder
+    flow_direction_array = numpy.zeros((n_rows, n_cols))
+
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
     #    4 p 0
@@ -91,9 +94,34 @@ def calculate_routing(
     diagonal_offsets = [
         1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
     
+    #The number of diagonal offsets defines the neighbors, angle between them
+    #and the actual angle to point to the neighbor
+    n_neighbors = len(diagonal_offsets)
+    angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
+    angle_to_neighbor = [
+        i * angle_between_neighbors for i in range(n_neighbors)]
+
+
     #This is the array that's used to keep track of the connections. It's the
-    #diagonals of the matrix stored row-wise
-    flow_graph_diagonals = numpy.zeros((len(diagonal_offsets), n_elements))
+    #diagonals of the matrix stored row-wise.  We add an additional
+    flow_graph_diagonals = numpy.zeros((n_neighbors, n_elements+n_neighbors))
+
+    #Iterate over flow directions
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            for neighbor_index in range(n_neighbors):
+                flow_angle_to_neighbor = numpy.abs(
+                    angle_to_neighbor[neighbor_index] - 
+                    flow_direction_array[row_index, col_index])
+                if flow_angle_to_neighbor < angle_between_neighbors:
+                    #There's flow from the current cell to the neighbor
+                    flat_index = row_index * n_cols + col_index
+                    
+                    #TODO: calculate percent flow
+                    percent_flow = 1.0
+                    
+                    #set the edge weight
+                    flow_graph_diagonals[neighbor_index, flat_index+diagonal_offsets[neighbor_index]] = percent_flow
 
     #This builds the sparse adjaency matrix
     adjacency_matrix = scipy.sparse.spdiags(
