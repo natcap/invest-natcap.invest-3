@@ -1,5 +1,10 @@
 
+import os
 import logging
+import re
+
+from invest_natcap.invest_core import fileio as fileio
+from invest_natcap.pollination import pollination_core as pollination_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -33,7 +38,14 @@ def execute(args):
         landuse_scenarios.append('fut')
 
     for scenario in landuse_scenarios:
-        LOGGER.info('Starting pollination model for the %s scenario'. scenario)
+        LOGGER.info('Starting pollination model for the %s scenario', scenario)
+        biophysical_args = {
+            'paths': {
+                'workspace': workspace,
+                'intermediate': inter_dir,
+                'output': out_dir
+            }
+        }
 
         # Open a Table Handler for the land use attributes table and a different
         # table handler for the Guilds table.
