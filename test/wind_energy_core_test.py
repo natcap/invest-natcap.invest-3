@@ -221,7 +221,7 @@ class TestInvestWindEnergyCore(unittest.TestCase):
     def test_wind_energy_core_valuation_point_to_polygon_distance2(self):
         """A unit test for getting the shortest distance from a point geometry
             to another point geometry"""
-        #raise SkipTest
+        raise SkipTest
 
         regression_dir = './data/wind_energy_regression_data/val_grid'
         point_1_ds_uri = os.path.join(regression_dir, 'val_grid_point_projected.shp')
@@ -370,15 +370,75 @@ class TestInvestWindEnergyCore(unittest.TestCase):
 
         self.assertEqual(expected_dict, result)
 
+    def test_wind_energy_core_create_rectangular_polygon(self):
+        """A regression test for create_rectangular_polygon"""
+        #raise SkipTest
 
+        # Dataset from regression directory is used for its projection and to
+        # locate the polygon to a known point
+        regression_dir = './data/wind_energy_regression_data/'
+        dataset_uri = os.path.join(regression_dir, 'aoi_dist/density.tif')
+        # Directory and path to save the created rectangular polygon
+        test_dir = './data/test_out/wind_energy/valuation/create_rectangular_polygon'
+        out_uri = os.path.join(test_dir, 'wind_farm_poly.shp')
+        # The regression file to test against
+        reg_uri = os.path.join(regression_dir, 'wind_farm_poly.shp')
+        reg_ds = ogr.Open(reg_uri)
 
+        # If the output directory for the polygon does not exist, create it
+        if not os.path.isdir(test_dir):
+            os.makedirs(test_dir)
+        # If the file path for the output shape already exists, delete it
+        # because we cannot create a new polygon using the same name as an
+        # existing one
+        if os.path.isfile(out_uri):
+            os.remove(out_uri)
 
+        # Open the dataset and gets its projection as well known text, then make
+        # that into a spatial reference
+        dataset = gdal.Open(dataset_uri)
+        dataset_wkt = dataset.GetProjection()
+        spat_ref = osr.SpatialReference()
+        spat_ref.ImportFromWkt(dataset_wkt)
 
+        # To make sure we stay within the same projection scope, get the center
+        # point of the raster to be our starting point. This should also ensure
+        # the two shapefiles being tested are in the same location
+        band = dataset.GetRasterBand(1)
+        gt = dataset.GetGeoTransform()
+        xsize = band.XSize
+        ysize = band.YSize
+        point_x = (xsize / 2 ) * gt[1] + gt[0]
+        point_y = (ysize / 2 ) * gt[5] + gt[3]
 
+        start_point = (point_x, point_y)
+        
+        LOGGER.debug('Starting Point : %s', start_point)
+        
+        # A default length and width to test against
+        x_len = 2333
+        y_len = 5327
 
+        # What the area should be
+        expected_area = 12427891
 
+        wind_farm = wind_energy_core.create_rectangular_polygon(
+                        spat_ref, start_point, x_len, y_len, out_uri)
 
+        layer = wind_farm.GetLayer()
+        feat = layer.GetFeature(0)
+        geom = feat.GetGeometryRef()
 
+        # Check that the areas are the same
+        self.assertEqual(geom.Area(), expected_area)
+        # Do a general check that the shapefiles are the same
+        invest_test_core.assertTwoShapesEqual(self, wind_farm, reg_ds)
 
+        geom = None
+        feat = None
+        layer = None
+        wind_farm = None
+        reg_ds = None
+        dataset = None
 
 

@@ -1,12 +1,18 @@
 {
     "air_density":"1.225",
     "exponent_power_curve":"2",
-    "decommission_cost":"3.7"
-    "operation_maintenance_cost":"3.5",
-    "miscellaneous_capex_cost":"5.0",
-    "installation_cost":"20",
+    "decommission_cost":".037",
+    "operation_maintenance_cost":".035",
+    "miscellaneous_capex_cost":".05",
+    "installation_cost":".20",
     "infield_cable_length":"0.91",
     "infield_cable_cost":"0.26",
+    "mw_coef_ac":".81",
+    "mw_coef_dc":"1.09",
+    "cable_coef_ac":"1.36",
+    "cable_coef_dc":".89",
+    "ac_dc_distance_break":"60",
     "time_period":"20",
-    "discount_rate":"11.6"
+    "discount_rate":".116",
+    "rotor_diameter_factor":"7"
 }

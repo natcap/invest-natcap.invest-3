@@ -11,6 +11,7 @@ import invest_natcap.pollination.pollination_biophysical as\
     pollination_biophysical
 import invest_natcap.pollination.pollination_valuation as\
     pollination_valuation
+import invest_natcap.pollination.pollination as pollination
 import invest_natcap.pollination.pollination_core as pollination_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -155,6 +156,50 @@ class PollinationValuationTest(PollinationTest):
         self.assert_pollination_rasters(os.path.join(REGRESSION_FOLDER_BASE,
             'valuation_output', 'with_ag_classes'))
 
+class UnifiedPollinationTest(PollinationTest):
+    def setUp(self):
+        PollinationTest.setUp(self)
+        self.args = {
+            'workspace_dir': self.workspace_dir,
+            'landuse_cur_uri': os.path.join(TEST_DATA_DIR, 'landuse_cur_200m.tif'),
+            'landuse_attributes_uri': os.path.join(TEST_DATA_DIR, 'LU.csv'),
+            'do_valuation': False,
+            'guilds_uri': self.guilds_uri,
+            'half_saturation': 0.125,
+            'wild_pollination_proportion': 1
+        }
+
+    def test_regression(self):
+        pollination.execute(self.args)
+
+        intermediate_files = ['%s.tif' % '_'.join(filename) for filename in
+            [
+                [prefix, species, scenario]
+                for prefix in ['frm', 'hf', 'hn','sup']
+                for species in ['Apis', 'Bombus']
+                for scenario in ['cur']
+            ]
+        ]
+
+        # Verify all intermediate files from biophysical
+        for filename in intermediate_files:
+            test_file = os.path.join(self.workspace_dir, 'intermediate', filename)
+            reg_file = os.path.join(TEST_DATA_DIR, 'biophysical_output', 'no_ag_classes',
+                'intermediate', filename)
+            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+
+        # Build up a list of all output files
+        output_files = ['%s_cur.tif' % '_'.join(filename) for filename in
+            ['sup_val_sum', 'sup_val_Apis', 'sup_val_Bombus']]
+
+        # Verify all output files from biophysical
+        for filename in output_files:
+            test_file = os.path.join(self.workspace_dir, 'output', filename)
+            reg_file = os.path.join(TEST_DATA_DIR, 'biophysical_output', 'no_ag_classes',
+                'output', filename)
+            invest_test_core.assertTwoDatasetEqualURI(self, test_file, reg_file)
+
+
 class PollinationSmokeTest(PollinationBiophysicalTest):
     """To only run this test class at the command line, do this:
        $ nosetests -vs pollination_biophysical_test.py:PollinationSmokeTest.test_ag_30m_smoke
@@ -193,3 +238,9 @@ class PollinationSmokeTest(PollinationBiophysicalTest):
         pollination_biophysical.execute(self.args)
         pollination_valuation.execute(self.value_args)
 
+    @unittest.skip('This takes too long.  Only run if you really mean it')
+    def test_1m_smoke(self):
+        self.args['workspace_dir'] = '/backup/manual-backup/pollination_test_workspace'
+        self.args['landuse_cur_uri'] = '/backup/manual-backup/lulc_1m.tif'
+        pollination_biophysical.execute(self.args)
+        pollination_valuation.execute(self.value_args)

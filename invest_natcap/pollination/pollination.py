@@ -1,49 +1,19 @@
-"""InVEST Pollination model file handler module"""
 
-from osgeo import gdal
-
-from invest_natcap.pollination import pollination_core
-from invest_natcap.invest_core import fileio
-import invest_cython_core
-
-import os.path
-import re
 import logging
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('pollination_biophysical')
-
+LOGGER = logging.getLogger('pollination')
 
 def execute(args):
-    """Open files necessary for the biophysical portion of the pollination
-        model.
-
-        args - a python dictionary with at least the following components:
-        args['workspace_dir'] - a uri to the directory that will write output
-            and other temporary files during calculation (required)
-        args['landuse_cur_uri'] - a uri to an input land use/land cover raster
-        args['landuse_fut_uri'] - a uri to an input land use/land cover raster
-        args['landuse_attributes_uri'] - a uri to an input CSV containing data
-            on each class in the land use/land cover map (required).
-        args['guilds_uri'] - a uri to an input CSV table containing data on
-            each species or guild of pollinator to be modeled.
-        args['ag_classes'] - a python string of space-separated integers
-            representing land cover classes in the input land use/land cover
-            map where each class specified is agricultural.  This string may be
-            either a python string or a unicode string. (optional)
-        args['results_suffix'] - a python string that will be inserted into all
-            raster uri paths just before the file extension.
-
-        returns nothing."""
-
     workspace = args['workspace_dir']
 
     # If the user has not provided a results suffix, assume it to be an empty
     # string.
     try:
         suffix = args['results_suffix']
-    except:
+    except KeyError:
         suffix = ''
 
     # Check to see if each of the workspace folders exists.  If not, create the
@@ -63,17 +33,7 @@ def execute(args):
         landuse_scenarios.append('fut')
 
     for scenario in landuse_scenarios:
-        LOGGER.info('Starting pollination model for the %s scenario', scenario)
-        biophysical_args = {}  # Re-initialize the biophysical args
-        biophysical_args['paths'] = {
-            'workspace': workspace,
-            'intermediate': inter_dir,
-            'output': out_dir
-        }
-
-        # Open the landcover raster
-        biophysical_args['landuse'] = gdal.Open(
-            str(args['landuse_' + scenario +'_uri']), gdal.GA_ReadOnly)
+        LOGGER.info('Starting pollination model for the %s scenario'. scenario)
 
         # Open a Table Handler for the land use attributes table and a different
         # table handler for the Guilds table.
@@ -149,5 +109,3 @@ def execute(args):
                 raster_uri = pollination_core.build_uri(inter_dir, raster_name,
                     [scenario, suffix])
                 biophysical_args['species'][species][group] = raster_uri
-
-        pollination_core.biophysical(biophysical_args)

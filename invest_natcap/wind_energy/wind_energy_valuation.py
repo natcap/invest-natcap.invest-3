@@ -23,12 +23,15 @@ def execute(args):
     
         args[workspace_dir] - a python string which is the uri path to where the
             outputs will be saved (required)
-        args[aoi_uri] - a uri to an OGR datasource of type polygon covering the
-            area of interest. Must be projected in meters (required)
-        args[biophysical_data_uri] - a uri to an OGR datasource of type point
-            from the output of the biophysical model run (required) 
-        args[turbine_parameters_uri] - a uri to a CSV file that has the parameters
-            for the type of turbine (required)
+        args[aoi_uri] - a uri to an OGR datasource that is of type polygon and 
+            projected in linear units of meters. The polygon specifies the 
+            area of interest for the wind data points. The aoi should also 
+            cover a portion of the land polygon that is of interest for
+            calculating the near shore distances if the grid points input is not
+            provided (required)
+        args[turbine_parameters_uri] - a uri to a CSV file that holds the
+            turbines biophysical parameters as well as valuation parameters 
+            (required)
         args[grid_points_uri] - a uri to a CSV file that specifies the landing
             and grid point locations (optional)
         args[land_polygon_uri] - a uri to an OGR datasource of type polygon to
@@ -40,8 +43,11 @@ def execute(args):
             for the wind farm (required)
         args[dollar_per_kWh] - a float value for the amount of dollars per
             kilowatt hour (kWh) (required)
-        args[suffix] - a string for the suffix to be appended to the output
-            names (optional) 
+        args[avg_grid_distance] - a float for the average distance in kilometers
+            from a grid connection point to a land connection point 
+            (required if grid connection points are not provided)
+        args[suffix] - a String to append to the end of the output files
+            (optional)
     
         returns - nothing"""
 
@@ -69,7 +75,10 @@ def execute(args):
     valuation_args['suffix'] = suffix
 
     aoi = ogr.Open(str(args['aoi_uri']))
-    biophysical_points = ogr.Open(str(args['biophysical_data_uri']))
+    
+    biophysical_points_uri = os.path.join(
+            inter_dir, 'wind_points_reprojected.shp')
+    biophysical_points = ogr.Open(biophysical_points_uri)
     
     biophysical_points_proj = clip_and_project_datasource(
             biophysical_points, aoi, os.path.join(inter_dir, 'bio_points'))
@@ -81,16 +90,20 @@ def execute(args):
     # Dollar per kiloWatt hour
     valuation_args['dollar_per_kWh'] = float(args['dollar_per_kWh'])
 
-    LOGGER.info('Read in turbine information from CSV')
-    # Open the turbine CSV file 
-    
-    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
+    # Create a list of the valuation parameters we are looking for from the
+    # input files 
+    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr',
+                                'turbines_per_circuit', 'rotor_diameter']
     valuation_global_params = [
             'discount_rate', 'time_period', 'infield_cable_cost', 
             'infield_cable_length', 'installation_cost',
             'miscellaneous_capex_cost', 'operation_maintenance_cost',
-            'decommission_cost']
-    
+            'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
+            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc',
+            'rotor_diameter_factor']
+
+    # Get the valuation turbine parameters from the CSV file
+    LOGGER.info('Read in turbine information from CSV')
     val_turbine_param_file = open(args['turbine_parameters_uri'])
     val_turbine_reader = csv.reader(val_turbine_param_file)
     val_turbine_dict = {}
