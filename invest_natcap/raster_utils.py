@@ -1472,7 +1472,8 @@ def get_rat_as_dictionary(dataset):
 
     return rat_dictionary
 
-def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
+def gaussian_filter_dataset(
+    dataset, sigma, out_uri, out_nodata, temp_dir = None):
     """A memory efficient gaussian filter function that operates on 
        the dataset level and creates a new dataset that's filtered.
        It will treat any nodata value in dataset as 0, and re-nodata
@@ -1482,11 +1483,19 @@ def gaussian_filter_dataset(dataset, sigma, out_uri, out_nodata):
        sigma - the sigma value of a gaussian filter
        out_uri - the uri output of the filtered dataset
        out_nodata - the nodata value of dataset
+       temp_dir - (optional) the directory in which to store the memory
+           mapped arrays.  If left off will use the system temp
+           directory.  If defined the directory must exist on the
+           filesystem.
 
        returns the filtered dataset created at out_uri"""
 
-    LOGGER.info('setting up fiels in gaussian_filter_dataset')
-    temp_dir = tempfile.mkdtemp()
+    LOGGER.info('setting up files in gaussian_filter_dataset')
+
+    #Create a system temporary directory if one doesn't exist.
+    if temp_dir == None:
+        temp_dir = tempfile.mkdtemp()
+        
     source_filename = os.path.join(temp_dir, 'source.dat')
     mask_filename = os.path.join(temp_dir, 'mask.dat')
     dest_filename = os.path.join(temp_dir, 'dest.dat')
