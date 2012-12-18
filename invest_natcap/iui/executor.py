@@ -13,6 +13,7 @@ import shutil
 import codecs
 
 import invest_natcap
+import invest_natcap.iui
 from invest_natcap.invest_core import fileio as fileio
 
 LOGGER = invest_natcap.iui.get_ui_logger(None)

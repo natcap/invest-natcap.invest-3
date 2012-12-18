@@ -83,32 +83,41 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
     
        returns True if a and b are equal to each other"""
     
+    # Check that the shapefiles have the same number of layers
     layer_count = shape.GetLayerCount()
     layer_count_regression = shape_regression.GetLayerCount()
     unitTest.assertEqual(layer_count, layer_count_regression,
                      'The shapes DO NOT have the same number of layers')
+    
     for layer_num in range(layer_count):
+        # Get the current layer
         layer = shape.GetLayer(layer_num)
-        layer.ResetReading()
         layer_regression = shape_regression.GetLayer(layer_num)
+        # Check that each layer has the same number of features
         feat_count = layer.GetFeatureCount()
         feat_count_regression = layer_regression.GetFeatureCount()
         unitTest.assertEqual(feat_count, feat_count_regression,
                          'The layers DO NOT have the same number of features')
+        
+        # Get the first features of the layers and loop through all the features
         feat = layer.GetNextFeature()
         feat_regression = layer_regression.GetNextFeature()
         while feat is not None:
+            # Check that the field counts for the features are the same
             layer_def = layer.GetLayerDefn()
             layer_def_regression = layer_regression.GetLayerDefn()
             field_count = layer_def.GetFieldCount()
             field_count_regression = layer_def_regression.GetFieldCount()
             unitTest.assertEqual(field_count, field_count_regression,
                              'The shapes DO NOT have the same number of fields')
+            
             for fld_index in range(field_count):
+                # Check that the features have the same field values
                 field = feat.GetField(fld_index)
                 field_regression = feat_regression.GetField(fld_index)
                 unitTest.assertEqual(field, field_regression,
                                      'The field values DO NOT match')
+                # Check that the features have the same field name
                 field_ref = feat.GetFieldDefnRef(fld_index)
                 field_ref_regression = \
                     feat_regression.GetFieldDefnRef(fld_index)
@@ -116,12 +125,20 @@ def assertTwoShapesEqual(unitTest, shape, shape_regression):
                 field_name_regression = field_ref_regression.GetNameRef()
                 unitTest.assertEqual(field_name, field_name_regression, 
                                      'The fields DO NOT have the same name')
-            feat.Destroy()
-            feat_regression.Destroy()
+            # Check that the features have the same geometry and area
+            geom = feat.GetGeometryRef()    
+            geom_regression = feat_regression.GetGeometryRef()    
+            
+            unitTest.assertTrue(geom.Equals(geom_regression))
+            unitTest.assertEqual(geom.Area(), geom_regression.Area())
+            
+            feat = None
+            feat_regression = None
             feat = layer.GetNextFeature()
             feat_regression = layer_regression.GetNextFeature()
-    shape.Destroy()
-    shape_regression.Destroy()
+
+    shape = None
+    shape_regression = None
 
 def assertTwoCSVEqualURI(unitTest, aUri, bUri):
     """Tests if csv files a and b are 'almost equal' to each other on a per
