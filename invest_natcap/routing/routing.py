@@ -79,5 +79,6 @@ def calculate_routing(
 
     #3)  calculate the flow graph
 
-    #This is the array that's used to keep track of the connections
-    flow_graph_diagonals = numpy.zeros((n_rows * n_cols, 8))
+    #This is the array that's used to keep track of the connections. It's the
+    #diagonals of the matrix stored row-wise
+    flow_graph_diagonals = numpy.zeros((8, n_rows * n_cols))
