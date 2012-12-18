@@ -30,11 +30,12 @@ import logging
 
 from osgeo import gdal
 import numpy
+import scipy.sparse
 
 from invest_natcap import raster_utils
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+    %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('routing')
 
@@ -70,6 +71,7 @@ def calculate_routing(
     dem_dataset = gdal.Open(dem_uri)
     dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
     n_rows, n_cols = dem_band.YSize, dem_band.XSize
+    n_elements = n_rows * n_cols
 
     #1a) create AOI mask raster
     aoi_mask_uri = os.path.join(workspace_dir, 'aoi_mask.tif')
@@ -79,6 +81,20 @@ def calculate_routing(
 
     #3)  calculate the flow graph
 
+    #Diagonal offsets are based off the following index notation for neighbors
+    #    3 2 1
+    #    4 p 0
+    #    5 6 7
+    #i.e. the node to the right of p is index '0', the one to the lower right
+    #is '5' etc.
+    #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
+    diagonal_offsets = [
+        1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
+    
     #This is the array that's used to keep track of the connections. It's the
     #diagonals of the matrix stored row-wise
-    flow_graph_diagonals = numpy.zeros((8, n_rows * n_cols))
+    flow_graph_diagonals = numpy.zeros((len(diagonal_offsets), n_elements))
+
+    #This builds the sparse adjaency matrix
+    adjacency_matrix = scipy.sparse.spdiags(
+        flow_graph_diagonals, diagonal_offsets, n_elements, n_elements)
