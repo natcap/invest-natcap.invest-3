@@ -73,8 +73,6 @@ def execute_model(args):
 
     # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
-
-    for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
 
         species_abundance = calculate_abundance(args['landuse'],
@@ -83,7 +81,7 @@ def execute_model(args):
                 'nesting': species_dict['nesting'],
                 'floral': species_dict['floral'],
                 'species_abundance': species_dict['species_abundance'],
-                'temp': args['paths']['intermediate']
+                'temp': args['paths']['temp']
             })
 
         # Take the pollinator abundance index and multiply it by the species
