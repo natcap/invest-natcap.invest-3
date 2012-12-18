@@ -82,25 +82,18 @@ def execute(args):
 
         # Create a new raster for use as a raster of booleans, either 1 if the land
         # cover class is in the ag list, or 0 if the land cover class is not.
-        ag_map_uri = pollination_core.build_uri(inter_dir, 'agmap.tif', [scenario, suffix])
-        biophysical_args['ag_map'] = ag_map_uri
-#        biophysical_args['ag_map'] =\
-#            pollination_core.make_raster_from_lulc(biophysical_args['landuse'],
-#            ag_map_uri)
+        biophysical_args['ag_map'] = pollination_core.build_uri(
+            inter_dir, 'agmap.tif', [scenario, suffix])
 
         # Create a new raster for a mean of all foraging rasters.
-        frm_avg_uri = pollination_core.build_uri(out_dir, 'frm_tot.tif', [scenario, suffix])
-        biophysical_args['foraging_total'] = frm_avg_uri
-        frm_avg_uri = pollination_core.build_uri(out_dir, 'frm_avg.tif', [scenario, suffix])
-        biophysical_args['foraging_average'] = frm_avg_uri
-#        biophysical_args['foraging_average'] = pollination_core.\
-#            make_raster_from_lulc(biophysical_args['landuse'], frm_avg_uri)
+        biophysical_args['foraging_total'] = pollination_core.build_uri(
+            out_dir, 'frm_tot.tif', [scenario, suffix])
+        biophysical_args['foraging_average'] = pollination_core.build_uri(
+            out_dir, 'frm_avg.tif', [scenario, suffix])
 
         # Create a new raster for the total of all pollinator supply rasters.
-        sup_tot_uri = pollination_core.build_uri(out_dir, 'sup_tot.tif', [scenario, suffix])
-        biophysical_args['abundance_total'] = sup_tot_uri
-#        biophysical_args['abundance_total'] = pollination_core.\
-#            make_raster_from_lulc(biophysical_args['landuse'], sup_tot_uri)
+        biophysical_args['abundance_total'] = pollination_core.build_uri(
+            out_dir, 'sup_tot.tif', [scenario, suffix])
 
         # Fetch a list of all species from the guilds table.
         species_list = [row['species'] for row in guilds_handler.table]
