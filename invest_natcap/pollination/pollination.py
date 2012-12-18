@@ -114,3 +114,5 @@ def execute(args):
                 raster_uri = pollination_core.build_uri(inter_dir, raster_name,
                     [scenario, suffix])
                 biophysical_args['species'][species][group] = raster_uri
+
+        pollination_core.execute_model(biophysical_args)

@@ -10,6 +10,10 @@ import logging
 LOGGER = logging.getLogger('pollination_core')
 
 
+def execute_model(args):
+    LOGGER.debug('Starting unified pollination model core')
+    pass
+
 def biophysical(args):
     """Execute the biophysical component of the pollination model.
 
