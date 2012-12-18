@@ -299,18 +299,45 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
                     'C': Denominator    }
         }
     '''
-
+    temp_rast_dict = os.path.join(dir, 'Intermediate', 'Crit_Rasters')
     denoms = {}
-    crit_lists = {}
+    crit_lists = {'h_s': {}, 'h': {}, 's': {}}
 
     for pair in h_s:
         h, s = pair
+        denoms[pair]['E'], denoms[pair]['C'] = 0
+        crit_lists['h_s'][pair] = [] 
 
+        base_ds = h_s[pair]['DS']
+        base_band = base_ds.GetRasterBand(1)
+        base_array = base_band.ReadAsArray() 
         #First, want to make a raster of added individual numerator criteria.
         #We will pre-sum all r / (dq*w), and then vectorize that with the spatially
         #explicit criteria later. Should be okay, as long as we keep the denoms
         #separate until after all raster crits are added.
-        for crit in (h_s[pair]['Crit_Ratings'], hab[h]['Crit_Ratings'],
-                        stress[s]['Crit_Ratings']):
+
+        #Will need to do H_S/H and S separately so that the denoms can be properly
+        #assigned to E/C
+        for crit in h_s[pair]['Crit_Ratings']):
             
-            
+            r. = crit['Rating']
+            dq = ['DQ']
+            w = ['Weight']
+
+            crit_rate_numerator = r / (dq*w) 
+            denoms[pair]['C'] += 1 / (dq*w)
+
+            crit_C_uri = os.path.join(temp_raster_dict, pair + '_' + crit + \
+                                                '_' + 'C_Raster.tif')
+
+            c_ds = raster_utils.new_raster_from_base(base_ds, crit_C_uri, 'GTiff', 0,
+                                gdal.GDT_Float32)
+            band, nodata = raster_utils.extract_band_and_nodata(c_ds)
+            band.Fill(nodata)
+
+            burned_array = base_array * crit_rate_numerator
+            band.WriteArray(burned_array)
+
+            #Add the burned ds containing only the numerator burned ratings to
+            #the list in which all rasters will reside
+            crit_lists['h_s'][pair].append(c_ds)
