@@ -32,6 +32,7 @@ from osgeo import gdal
 import numpy
 
 from invest_natcap import raster_utils
+
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
@@ -77,4 +78,6 @@ def calculate_routing(
     #2)  resolve undefined directions from d-infinity
 
     #3)  calculate the flow graph
-    flow_graph_diagonals = numpy.array()
+
+    #This is the array that's used to keep track of the connections
+    flow_graph_diagonals = numpy.zeros((n_rows * n_cols, 8))
