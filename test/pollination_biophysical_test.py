@@ -172,16 +172,14 @@ class UnifiedPollinationTest(PollinationTest):
     def test_regression(self):
         pollination.execute(self.args)
 
-        intermediate_files = ['%s.tif' % '_'.join(filename) for filename in
-            [
-                [prefix, species, scenario]
-                for prefix in ['frm', 'hf', 'hn','sup']
-                for species in ['Apis', 'Bombus']
-                for scenario in ['cur']
-            ]
-        ]
+        intermediate_files = ['%s.tif' % '_'.join(filename) for filename in [
+            [prefix, species, scenario]
+            for prefix in ['frm', 'hf', 'hn','sup']
+            for species in ['Apis', 'Bombus']
+            for scenario in ['cur']]]
 
         # Verify all intermediate files from biophysical
+        LOGGER.debug('Checking intermediate files from biophysical')
         for filename in intermediate_files:
             test_file = os.path.join(self.workspace_dir, 'intermediate', filename)
             reg_file = os.path.join(TEST_DATA_DIR, 'biophysical_output', 'no_ag_classes',
@@ -193,6 +191,7 @@ class UnifiedPollinationTest(PollinationTest):
             ['sup_val_sum', 'sup_val_Apis', 'sup_val_Bombus']]
 
         # Verify all output files from biophysical
+        LOGGER.debug('Checking output files from biophysical')
         for filename in output_files:
             test_file = os.path.join(self.workspace_dir, 'output', filename)
             reg_file = os.path.join(TEST_DATA_DIR, 'biophysical_output', 'no_ag_classes',
