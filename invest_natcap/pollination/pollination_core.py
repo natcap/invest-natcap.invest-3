@@ -39,6 +39,8 @@ def biophysical(args):
             'workspace' - the workspace path
             'intermediate' - the intermediate folder path
             'output' - the output folder path
+            'temp' - a temp folder path.  This folder will be created and
+                deleted several times.
 
         returns nothing."""
 
@@ -70,7 +72,8 @@ def biophysical(args):
             args['floral_fields'], uris={
                 'nesting': species_dict['nesting'],
                 'floral': species_dict['floral'],
-                'species_abundance': species_dict['species_abundance']
+                'species_abundance': species_dict['species_abundance'],
+                'temp': args['paths']['intermediate']
             })
 
         # Take the pollinator abundance index and multiply it by the species
@@ -80,7 +83,7 @@ def biophysical(args):
 
         farm_abundance = calculate_farm_abundance(species_abundance,
             args['ag_map'], guild_dict['alpha'],
-            species_dict['farm_abundance'])
+            species_dict['farm_abundance'], args['paths']['intermediate'])
 
         # Add the current foraging raster to the existing 'foraging_total'
         # raster
@@ -137,6 +140,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
             'floral' - a URI to where the floral resource raster will be saved.
             'species_abundance' - a URI to where the species abundance raster
                 will be saved.
+            'temp' - a URI to a folder where temp files will be saved
 
         Returns a GDAL dataset of the species abundance."""
     nodata = -1.0
@@ -144,6 +148,9 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
         uris['floral'], sum)
     nesting_raster = map_attribute(landuse, lu_attr, guild, nesting_fields,
         uris['nesting'], max)
+
+    LOGGER.debug('Floral: %s', floral_raster)
+    LOGGER.debug('Nesting: %s', nesting_raster)
 
     # Now that the per-pixel nesting and floral resources have been
     # calculated, the floral resources still need to factor in
@@ -160,7 +167,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
     floral_raster = raster_utils.gaussian_filter_dataset(
-        floral_raster, sigma, uris['floral'], nodata)
+        floral_raster, sigma, uris['floral'], nodata, uris['temp'])
 
     # Calculate the pollinator abundance index (using Math! to simplify the
     # equation in the documentation.  We're still waiting on Taylor
@@ -175,7 +182,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
         raster_out_uri=uris['species_abundance'], nodata=nodata)
 
 
-def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
+def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     """Calculate the farm abundance raster.
 
         species_abundance - a GDAL dataset of species abundance.
@@ -183,6 +190,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
             pixels are 0.
         alpha - the typical foraging distance of the current pollinator.
         uri - the output URI for the farm_abundance raster.
+        temp_dir- the output folder for temp files
 
         Returns a GDAL dataset of the farm abundance raster."""
 
@@ -200,7 +208,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
     # that are not agricultural before saving it to the output raster.
     LOGGER.debug('Calculating foraging/farm abundance index')
     farm_abundance = raster_utils.gaussian_filter_dataset(
-        species_abundance, sigma, uri, nodata)
+        species_abundance, sigma, uri, nodata, temp_dir)
 
     # Mask the farm abundance raster according to whether the pixel is
     # agricultural.  If the pixel is agricultural, the value is preserved.
@@ -361,6 +369,7 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
                 to the gaussian filter.
             'service_value' - a URI.  The raster created at this URI will be the
                 calculated service value raster.
+            'temp' - a folder in which to store temp files.
 
         Returns a GDAL dataset of the service value raster."""
 
@@ -377,7 +386,7 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
     LOGGER.debug('Applying a gaussian filter to the ratio raster.')
     blurred_ratio_raster = raster_utils.gaussian_filter_dataset(
         ratio_raster, sigma, out_uris['species_value_blurred'],
-        nodata)
+        nodata, out_uris['temp'])
 
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
