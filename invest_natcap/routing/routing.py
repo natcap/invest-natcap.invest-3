@@ -33,6 +33,8 @@ import numpy
 import scipy.sparse
 
 from invest_natcap import raster_utils
+import invest_cython_core
+
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -73,15 +75,26 @@ def calculate_routing(
     n_rows, n_cols = dem_band.YSize, dem_band.XSize
     n_elements = n_rows * n_cols
 
+
     #1a) create AOI mask raster
     aoi_mask_uri = os.path.join(workspace_dir, 'aoi_mask.tif')
+
+
     #1b) calculate d-infinity flow direction
     d_inf_dir_uri = os.path.join(workspace_dir, 'd_inf_dir.tif')
-    #2)  resolve undefined directions from d-infinity
+    d_inf_dir_nodata = -1.0
 
-    #3)  calculate the flow graph
+    bounding_box = [0, 0, n_cols, n_rows]
 
-    #TODO: placeholder
+    flow_direction_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, d_inf_dir_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Float32)
+
+    invest_cython_core.flow_direction_inf(
+        dem_dataset, bounding_box, flow_direction_dataset)
+
+
+    #2)  calculate the flow graph
     flow_direction_array = numpy.zeros((n_rows, n_cols))
 
     #Diagonal offsets are based off the following index notation for neighbors
@@ -100,7 +113,6 @@ def calculate_routing(
     angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
     angle_to_neighbor = [
         i * angle_between_neighbors for i in range(n_neighbors)]
-
 
     #This is the array that's used to keep track of the connections. It's the
     #diagonals of the matrix stored row-wise.  We add an additional
