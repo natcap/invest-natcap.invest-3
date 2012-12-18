@@ -12,7 +12,12 @@ LOGGER = logging.getLogger('pollination_core')
 
 def execute_model(args):
     LOGGER.debug('Starting unified pollination model core')
-    pass
+
+    nodata = -1.0
+    LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
+
+    args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
+        args['ag_classes'], nodata)
 
 def biophysical(args):
     """Execute the biophysical component of the pollination model.
@@ -50,11 +55,11 @@ def biophysical(args):
 
     LOGGER.debug('Starting pollination biophysical calculations')
 
-    nodata = -1.0
-    LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
-
-    args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
-        args['ag_classes'], nodata)
+#    nodata = -1.0
+#    LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
+#
+#    args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
+#        args['ag_classes'], nodata)
 
     # Open the average foraging matrix for use in the loop over all species,
     # but first we need to ensure that the matrix is filled with 0's.

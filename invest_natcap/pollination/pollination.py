@@ -3,6 +3,8 @@ import os
 import logging
 import re
 
+from osgeo import gdal
+
 from invest_natcap.invest_core import fileio as fileio
 from invest_natcap.pollination import pollination_core as pollination_core
 
@@ -46,6 +48,10 @@ def execute(args):
                 'output': out_dir
             }
         }
+
+        # Open the landcover raster
+        biophysical_args['landuse'] = gdal.Open(
+            args['landuse_' + scenario +'_uri'].encode('utf-8'), gdal.GA_ReadOnly)
 
         # Open a Table Handler for the land use attributes table and a different
         # table handler for the Guilds table.
