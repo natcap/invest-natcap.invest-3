@@ -45,8 +45,10 @@ def execute(args):
             'paths': {
                 'workspace': workspace,
                 'intermediate': inter_dir,
-                'output': out_dir
-            }
+                'output': out_dir,
+                'temp': inter_dir
+            },
+            'do_valuation': args['do_valuation']
         }
 
         # Open the landcover raster
@@ -96,6 +98,10 @@ def execute(args):
             out_dir, 'frm_tot.tif', [scenario, suffix])
         biophysical_args['foraging_average'] = pollination_core.build_uri(
             out_dir, 'frm_avg.tif', [scenario, suffix])
+        biophysical_args['farm_value_sum'] = pollination_core.build_uri(
+            inter_dir, 'frm_val.tif', ['sum', scenario, suffix])
+        biophysical_args['service_value_sum'] = pollination_core.build_uri(
+            out_dir, 'sup_val.tif', ['sum', scenario, suffix])
 
         # Create a new raster for the total of all pollinator supply rasters.
         biophysical_args['abundance_total'] = pollination_core.build_uri(
