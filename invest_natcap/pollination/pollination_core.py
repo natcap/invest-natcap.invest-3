@@ -11,22 +11,6 @@ LOGGER = logging.getLogger('pollination_core')
 
 
 def execute_model(args):
-    """Execute the pollination model!
-
-        args - a dictionary with the following entries:
-            'landuse' - a GDAL dataset
-            'ag_map' - a URI to the location of the ag map to be created
-            'ag_classes' - a list of land cover codes."""
-    LOGGER.debug('Starting unified pollination model core')
-
-    nodata = -1.0
-    LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
-
-    # Create the ag map by reclassifying the landuse raster.
-    ag_map = reclass_ag_raster(args['landuse'], args['ag_map'],
-        args['ag_classes'], nodata)
-
-def biophysical(args):
     """Execute the biophysical component of the pollination model.
 
         args - a python dictionary with at least the following entries:
@@ -62,11 +46,11 @@ def biophysical(args):
 
     LOGGER.debug('Starting pollination biophysical calculations')
 
-#    nodata = -1.0
-#    LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
-#
-#    args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
-#        args['ag_classes'], nodata)
+    nodata = -1.0
+    LOGGER.debug('Using nodata value of %s for internal rasters', nodata)
+
+    args['ag_map'] = reclass_ag_raster(args['landuse'], args['ag_map'],
+        args['ag_classes'], nodata)
 
     # Open the average foraging matrix for use in the loop over all species,
     # but first we need to ensure that the matrix is filled with 0's.
@@ -79,6 +63,16 @@ def biophysical(args):
     abundance_total_raster = raster_utils.reclassify_by_dictionary(
         args['landuse'], {}, args['abundance_total'], 'GTiff', nodata,
         gdal.GDT_Float32, 0.0)
+
+    # Open matrices for use later.
+    farm_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
+        {}, args['farm_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+
+    service_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
+        {}, args['service_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+
+    # Loop through all species and calculate the pollinator service value
+    for species, species_dict in args['species'].iteritems():
 
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
@@ -106,6 +100,46 @@ def biophysical(args):
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
         foraging_total_raster = add_two_rasters(farm_abundance,
             foraging_total_raster, args['foraging_total'])
+
+        if args['do_valuation'] == True:
+            LOGGER.info('Calculating crop yield due to %s', species)
+            # Apply the half-saturation yield function from the documentation and
+            # write it to its raster
+            farm_value_raster = calculate_yield(species_dict['farm_abundance'],
+                species_dict['farm_value'], args['half_saturation'],
+                args['wild_pollination_proportion'], -1.0)
+
+            # Add the new farm_value_matrix to the farm value sum matrix.
+            farm_value_sum = add_two_rasters(farm_value_sum, farm_value_raster,
+                args['farm_value_sum'])
+
+            LOGGER.debug('Calculating service value for %s', species)
+            # Calculate sigma for the gaussian blur.  Sigma is based on the species
+            # alpha (from the guilds table) and twice the pixel size.
+            guild_dict = args['guilds'].get_table_row('species', species)
+            pixel_size = abs(farm_value_raster.GetGeoTransform()[1])
+            sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
+            LOGGER.debug('Pixel size: %s, sigma: %s')
+
+            service_value_raster = calculate_service(
+                rasters={
+                    'farm_value': farm_value_raster,
+                    'farm_abundance': species_dict['farm_abundance'],
+                    'species_abundance': species_dict['species_abundance'],
+                    'ag_map': args['ag_map']
+                },
+                nodata=-1.0,
+                sigma=sigma,
+                part_wild=args['wild_pollination_proportion'],
+                out_uris={
+                    'species_value': species_dict['value_abundance_ratio'],
+                    'species_value_blurred': species_dict['value_abundance_ratio_blur'],
+                    'service_value': species_dict['service_value']
+                })
+
+            # Add the new service value to the service value sum matrix
+            service_value_sum = add_two_rasters(service_value_sum,
+                service_value_raster, args['service_value_sum'])
 
     # Calculate the average foraging index based on the total
     # Divide the total pollination foraging index by the number of pollinators
