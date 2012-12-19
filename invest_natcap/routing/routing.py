@@ -137,8 +137,7 @@ def calculate_routing(
                 continue
             for neighbor_index in range(n_neighbors):
                 flow_angle_to_neighbor = numpy.abs(
-                    angle_to_neighbor[neighbor_index] - 
-                    flow_direction)
+                    angle_to_neighbor[neighbor_index] - flow_direction)
                 if flow_angle_to_neighbor < angle_between_neighbors:
                     #There's flow from the current cell to the neighbor
                     flat_index = row_index * n_cols + col_index
@@ -148,14 +147,17 @@ def calculate_routing(
                     #neighbor indexes are oriented 90 degrees and odd are 45
                     percent_flow = [0.0, 0.0]
                     if neighbor_index % 2 == 0:
-                        percent_flow[0] = numpy.tan(angle_between_neighbors)
-                    else:
                         percent_flow[0] = 1.0 - numpy.tan(
-                            numpy.pi/4.0 - angle_between_neighbors)
+                            flow_angle_to_neighbor)
+                    else:
+                        percent_flow[0] = numpy.tan(
+                            numpy.pi/4.0 - flow_angle_to_neighbor)
 
                     #Whatever's left will flow into the next clockwise pixel
                     percent_flow[1] = 1.0 - percent_flow[0]
                     
+                    LOGGER.debug(percent_flow)
+
                     #set the edge weight for the current and next edge
                     for edge_index in range(2):
                         #This lets the current index wrap around if we're at 
