@@ -48,8 +48,14 @@ def execute(args):
                 'output': out_dir,
                 'temp': inter_dir
             },
-            'do_valuation': args['do_valuation']
+            'do_valuation': args['do_valuation'],
         }
+
+        # If we're doing valuation, we also require certain other parameters to
+        # be present.
+        if args['do_valuation']:
+            for arg in ['half_saturation', 'wild_pollination_proportion']:
+                biophysical_args[arg] = args[arg]
 
         # Open the landcover raster
         biophysical_args['landuse'] = gdal.Open(
@@ -113,17 +119,23 @@ def execute(args):
         # Make new rasters for each species.  In this list of tuples, the first
         # value of each tuple is the args dictionary key, and the second value of
         # each tuple is the raster prefix.
-        species_rasters = [('nesting', 'hn'),
-                           ('floral', 'hf'),
-                           ('species_abundance', 'sup'),
-                           ('farm_abundance', 'frm')]
+
+        species_rasters = [
+            ('nesting', 'hn', inter_dir),
+            ('floral', 'hf', inter_dir),
+            ('species_abundance', 'sup', inter_dir),
+            ('farm_abundance', 'frm', inter_dir),
+            ('farm_value', 'frm_val', inter_dir),
+            ('value_abundance_ratio', 'val_sup_ratio', inter_dir),
+            ('value_abundance_ratio_blur', 'val_sup_ratio_blur', inter_dir),
+            ('service_value', 'sup_val', out_dir)]
 
         biophysical_args['species'] = {}
         for species in species_list:
             biophysical_args['species'][species] = {}
-            for group, prefix in species_rasters:
+            for group, prefix, folder in species_rasters:
                 raster_name = prefix + '_' + species + '.tif'
-                raster_uri = pollination_core.build_uri(inter_dir, raster_name,
+                raster_uri = pollination_core.build_uri(folder, raster_name,
                     [scenario, suffix])
                 biophysical_args['species'][species][group] = raster_uri
 
