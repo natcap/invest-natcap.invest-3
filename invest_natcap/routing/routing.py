@@ -131,10 +131,14 @@ def calculate_routing(
     #Iterate over flow directions
     for row_index in range(n_rows):
         for col_index in range(n_cols):
+            flow_direction = flow_direction_array[row_index, col_index]
+            #make sure the flow direction is defined, if not, skip this cell
+            if flow_direction == flow_nodata:
+                continue
             for neighbor_index in range(n_neighbors):
                 flow_angle_to_neighbor = numpy.abs(
                     angle_to_neighbor[neighbor_index] - 
-                    flow_direction_array[row_index, col_index])
+                    flow_direction)
                 if flow_angle_to_neighbor < angle_between_neighbors:
                     #There's flow from the current cell to the neighbor
                     flat_index = row_index * n_cols + col_index
