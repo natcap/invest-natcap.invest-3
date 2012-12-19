@@ -103,7 +103,7 @@ def execute_model(args):
             LOGGER.info('Calculating crop yield due to %s', species)
             # Apply the half-saturation yield function from the documentation and
             # write it to its raster
-            farm_value_raster = calculate_yield(species_dict['farm_abundance'],
+            farm_value_raster = calculate_yield(farm_abundance,
                 species_dict['farm_value'], args['half_saturation'],
                 args['wild_pollination_proportion'], -1.0)
 
@@ -122,8 +122,8 @@ def execute_model(args):
             service_value_raster = calculate_service(
                 rasters={
                     'farm_value': farm_value_raster,
-                    'farm_abundance': species_dict['farm_abundance'],
-                    'species_abundance': species_dict['species_abundance'],
+                    'farm_abundance': farm_abundance,
+                    'species_abundance': species_abundance,
                     'ag_map': args['ag_map']
                 },
                 nodata=-1.0,
@@ -132,7 +132,8 @@ def execute_model(args):
                 out_uris={
                     'species_value': species_dict['value_abundance_ratio'],
                     'species_value_blurred': species_dict['value_abundance_ratio_blur'],
-                    'service_value': species_dict['service_value']
+                    'service_value': species_dict['service_value'],
+                    'temp': args['paths']['temp']
                 })
 
             # Add the new service value to the service value sum matrix
@@ -438,6 +439,7 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
 
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
+    LOGGER.debug('Saving service value raster to %s', out_uris['service_value'])
     service_value_raster = raster_utils.vectorize_rasters(
         [rasters['species_abundance'], blurred_ratio_raster],
         lambda x, y: part_wild * x * y if x != nodata else nodata,
