@@ -14,6 +14,50 @@ logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
 LOGGER = logging.getLogger('pollination')
 
 def execute(args):
+    """Execute the pollination model from the topmost, user-accessible level.
+
+        args - a python dictionary with the following required inputs:
+            'workspace_dir' - a URI to the workspace folder.  Not required to
+                exist on disk.  Additional folders will be created inside of
+                this folder.  If there are any file name collisions, this model
+                will overwrite those files.
+            'landuse_cur_uri' - a URI to a GDAL raster on disk.
+            'do_valuation' - A boolean.  Indicates whether valuation should be
+                performed.  This applies to all scenarios.
+            'landuse_attributes_uri' - a URI to a CSV on disk.  See the
+                model's documentation for details on the structure of this
+                table.
+            'guilds_uri' - a URI to a CSV on disk.  See the model's
+                documentation for details on the structure of this table.
+
+        Additionally, the following args dictionary entries are optional, and
+        will affect the behavior of the model if provided:
+            'landuse_fut_uri' - (Optional) a URI to a GDAL dataset on disk.  If
+                this args dictionary entry is provided, this model will process
+                both the current and future scenarios.
+            'ag_classes' - (Optional) a space-separated list of land cover
+                classes that are to be considered as agricultural.  If this
+                input is not provided, all land cover classes are considered to
+                be agricultural.
+            'results_suffix' - (Optional) a string.  If provided, this string
+                will be inserted into the URI of each file created by this
+                model, right before the file extension.
+                Example:
+                    suffix = 'aaaa'
+                    file_uri = 'foo/bar.baz'
+                    file_with_suffix = 'foo/bar_aaaa.baz'
+
+        If args['do_valuation'] is set to True, the following args dictionary
+        entries are also required:
+            'half_saturation' - a number between 0 and 1 indicating the
+                half-saturation constant.  See the pollination documentation for
+                more information.
+            'wild_pollination_proportion' - a number between 0 and 1 indicating
+                the proportion of all pollinators that are wild.
+
+        This function has no return value, though it does save a number of
+        rasters to disk.  See the user's guide for details."""
+
     workspace = args['workspace_dir']
 
     # If the user has not provided a results suffix, assume it to be an empty
