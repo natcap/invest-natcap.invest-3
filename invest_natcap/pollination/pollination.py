@@ -27,7 +27,6 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-
     for folder in [inter_dir, out_dir]:
         if not os.path.isdir(folder):
             os.makedirs(folder)
@@ -41,6 +40,8 @@ def execute(args):
 
     for scenario in landuse_scenarios:
         LOGGER.info('Starting pollination model for the %s scenario', scenario)
+
+        # Create the args dictionary with a couple of statically defined values.
         biophysical_args = {
             'paths': {
                 'workspace': workspace,
@@ -58,28 +59,34 @@ def execute(args):
                 biophysical_args[arg] = args[arg]
 
         # Open the landcover raster
-        biophysical_args['landuse'] = gdal.Open(
-            args['landuse_' + scenario +'_uri'].encode('utf-8'), gdal.GA_ReadOnly)
+        uri = args['landuse_' + scenario +'_uri'].encode('utf-8')
+        LOGGER.debug('Opening landuse raster from %s', uri)
+        biophysical_args['landuse'] = gdal.Open(uri, gdal.GA_ReadOnly)
 
         # Open a Table Handler for the land use attributes table and a different
         # table handler for the Guilds table.
+        LOGGER.info('Opening landuse attributes table')
         att_table_handler = fileio.TableHandler(args['landuse_attributes_uri'])
+        biophysical_args['landuse_attributes'] = att_table_handler
+
         att_table_fields = att_table_handler.get_fieldnames()
         nesting_fields = [f[2:] for f in att_table_fields if re.match('^n_', f)]
         floral_fields = [f[2:] for f in att_table_fields if re.match('^f_', f)]
+        LOGGER.debug('Parsed nesting fields: %s', nesting_fields)
+        LOGGER.debug('Parsed floral fields: %s', floral_fields)
         biophysical_args['nesting_fields'] = nesting_fields
         biophysical_args['floral_fields'] = floral_fields
 
+        LOGGER.info('Opening guilds table')
         att_table_handler.set_field_mask('(^n_)|(^f_)', trim=2)
         guilds_handler = fileio.TableHandler(args['guilds_uri'])
         guilds_handler.set_field_mask('(^ns_)|(^fs_)', trim=3)
-
-        biophysical_args['landuse_attributes'] = att_table_handler
         biophysical_args['guilds'] = guilds_handler
 
         # Convert agricultural classes (a space-separated list of ints) into a
         # list of ints.  If the user has not provided a string list of ints, then
         # use an empty list instead.
+        LOGGER.info('Processing agricultural classes')
         try:
             # This approach will create a list with only ints, even if the user has
             # accidentally entered additional spaces.  Any other incorrect input
@@ -94,7 +101,10 @@ def execute(args):
         LOGGER.debug('Parsed ag classes: %s', ag_class_list)
         biophysical_args['ag_classes'] = ag_class_list
 
-        # Create a new raster for a mean of all foraging rasters.
+        # Defined which rasters need to be created at the global level (at the
+        # top level of the model dictionary).  the global_rasters list has this
+        # structure:
+        #   (model_args key, raster_uri base, folder to be saved to)
         global_rasters = [
             ('foraging_total', 'frm_tot', out_dir),
             ('foraging_average', 'frm_avg', out_dir),
@@ -103,9 +113,13 @@ def execute(args):
             ('abundance_total', 'sup_tot', out_dir),
             ('ag_map', 'agmap', inter_dir)]
 
+        # loop through the global rasters provided and actually create the uris,
+        # saving them to the model args dictionary.
+        LOGGER.info('Creating top-level raster URIs')
         for key, raster_base, folder in global_rasters:
             raster_uri = pollination_core.build_uri(
                 folder, '%s.tif' % raster_base, [scenario, suffix])
+            LOGGER.debug('%s: %s', key, raster_uri)
             biophysical_args[key] = raster_uri
 
         # Fetch a list of all species from the guilds table.
@@ -113,8 +127,8 @@ def execute(args):
 
         # Make new rasters for each species.  In this list of tuples, the first
         # value of each tuple is the args dictionary key, and the second value of
-        # each tuple is the raster prefix.
-
+        # each tuple is the raster prefix.  The third value is the folder in
+        # which the created raster should exist.
         species_rasters = [
             ('nesting', 'hn', inter_dir),
             ('floral', 'hf', inter_dir),
@@ -125,13 +139,18 @@ def execute(args):
             ('value_abundance_ratio_blur', 'val_sup_ratio_blur', inter_dir),
             ('service_value', 'sup_val', out_dir)]
 
+        # Loop through each species and define the necessary raster URIs, as
+        # defined by the species_rasters list.
+        LOGGER.info('Creating species-specific raster URIs')
         biophysical_args['species'] = {}
         for species in species_list:
+            LOGGER.info('Creating rasters for %s', species)
             biophysical_args['species'][species] = {}
             for group, prefix, folder in species_rasters:
                 raster_name = prefix + '_' + species + '.tif'
                 raster_uri = pollination_core.build_uri(folder, raster_name,
                     [scenario, suffix])
+                LOGGER.debug('%s: %s', group, raster_uri)
                 biophysical_args['species'][species][group] = raster_uri
 
         pollination_core.execute_model(biophysical_args)
