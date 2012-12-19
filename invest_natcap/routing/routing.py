@@ -92,10 +92,20 @@ def calculate_routing(
 
     invest_cython_core.flow_direction_inf(
         dem_dataset, bounding_box, flow_direction_dataset)
+    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
+        flow_direction_dataset)
 
+    #get a memory mapped flow direction array
+    flow_direction_filename = os.path.join(workspace_dir, 'flow_direction.dat')
+    flow_direction_array = numpy.memmap(
+        flow_direction_filename, dtype='float32', mode='w+', 
+        shape = (n_rows, n_cols))
+    LOGGER.info('load flow dataset into array')
+    for row_index in range(n_rows):
+        row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
+        flow_direction_array[row_index, :] = row_array
 
     #2)  calculate the flow graph
-    flow_direction_array = numpy.zeros((n_rows, n_cols))
 
     #Diagonal offsets are based off the following index notation for neighbors
     #    3 2 1
@@ -138,3 +148,5 @@ def calculate_routing(
     #This builds the sparse adjaency matrix
     adjacency_matrix = scipy.sparse.spdiags(
         flow_graph_diagonals, diagonal_offsets, n_elements, n_elements)
+
+    LOGGER.debug(flow_graph_diagonals)
