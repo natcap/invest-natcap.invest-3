@@ -160,9 +160,8 @@ def execute(args):
         # loop through the global rasters provided and actually create the uris,
         # saving them to the model args dictionary.
         LOGGER.info('Creating top-level raster URIs')
-        for key, raster_base, folder in global_rasters:
-            raster_uri = pollination_core.build_uri(
-                folder, '%s.tif' % raster_base, [scenario, suffix])
+        for key, base, folder in global_rasters:
+            raster_uri = build_uri(folder, '%s.tif' % base, [scenario, suffix])
             LOGGER.debug('%s: %s', key, raster_uri)
             biophysical_args[key] = raster_uri
 
@@ -192,9 +191,34 @@ def execute(args):
             biophysical_args['species'][species] = {}
             for group, prefix, folder in species_rasters:
                 raster_name = prefix + '_' + species + '.tif'
-                raster_uri = pollination_core.build_uri(folder, raster_name,
-                    [scenario, suffix])
+                raster_uri = build_uri(folder, raster_name, [scenario, suffix])
                 LOGGER.debug('%s: %s', group, raster_uri)
                 biophysical_args['species'][species][group] = raster_uri
 
         pollination_core.execute_model(biophysical_args)
+
+
+def build_uri(directory, basename, suffix=[]):
+    """Take the input directory and basename, inserting the provided suffixes
+        just before the file extension.  Each string in the suffix list will be
+        underscore-separated.
+
+        directory - a python string folder path
+        basename - a python string filename
+        suffix='' - a python list of python strings to be separated by
+            underscores and concatenated with the basename just before the
+            extension.
+
+        returns a python string of the complete path with the correct
+        filename."""
+
+    file_base, extension = os.path.splitext(basename)
+
+    # If a siffix is provided, we want the suffix to be prepended with an
+    # underscore, so as to separate the file basename and the suffix.  If a
+    # suffix is an empty string, ignore it.
+    if len(suffix) > 0:
+        suffix = '_' + '_'.join([s for s in suffix if s != ''])
+
+    new_filepath = file_base + suffix + extension
+    return os.path.join(directory, new_filepath)
