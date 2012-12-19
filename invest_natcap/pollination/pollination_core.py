@@ -10,7 +10,7 @@ import logging
 LOGGER = logging.getLogger('pollination_core')
 
 
-def biophysical(args):
+def execute_model(args):
     """Execute the biophysical component of the pollination model.
 
         args - a python dictionary with at least the following entries:
@@ -39,6 +39,8 @@ def biophysical(args):
             'workspace' - the workspace path
             'intermediate' - the intermediate folder path
             'output' - the output folder path
+            'temp' - a temp folder path.  This folder will be created and
+                deleted several times.
 
         returns nothing."""
 
@@ -62,6 +64,14 @@ def biophysical(args):
         args['landuse'], {}, args['abundance_total'], 'GTiff', nodata,
         gdal.GDT_Float32, 0.0)
 
+    # Open matrices for use later.
+    farm_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
+        {}, args['farm_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+
+    service_value_sum = raster_utils.reclassify_by_dictionary(args['ag_map'],
+        {}, args['service_value_sum'], 'GTiff', -1.0, gdal.GDT_Float32, 0.0)
+
+    # Loop through all species and calculate the pollinator service value
     for species, species_dict in args['species'].iteritems():
         guild_dict = args['guilds'].get_table_row('species', species)
 
@@ -70,7 +80,8 @@ def biophysical(args):
             args['floral_fields'], uris={
                 'nesting': species_dict['nesting'],
                 'floral': species_dict['floral'],
-                'species_abundance': species_dict['species_abundance']
+                'species_abundance': species_dict['species_abundance'],
+                'temp': args['paths']['temp']
             })
 
         # Take the pollinator abundance index and multiply it by the species
@@ -80,13 +91,54 @@ def biophysical(args):
 
         farm_abundance = calculate_farm_abundance(species_abundance,
             args['ag_map'], guild_dict['alpha'],
-            species_dict['farm_abundance'])
+            species_dict['farm_abundance'], args['paths']['intermediate'])
 
         # Add the current foraging raster to the existing 'foraging_total'
         # raster
         LOGGER.debug('Adding %s foraging abundance raster to total', species)
         foraging_total_raster = add_two_rasters(farm_abundance,
             foraging_total_raster, args['foraging_total'])
+
+        if args['do_valuation'] == True:
+            LOGGER.info('Calculating crop yield due to %s', species)
+            # Apply the half-saturation yield function from the documentation and
+            # write it to its raster
+            farm_value_raster = calculate_yield(farm_abundance,
+                species_dict['farm_value'], args['half_saturation'],
+                args['wild_pollination_proportion'], -1.0)
+
+            # Add the new farm_value_matrix to the farm value sum matrix.
+            farm_value_sum = add_two_rasters(farm_value_sum, farm_value_raster,
+                args['farm_value_sum'])
+
+            LOGGER.debug('Calculating service value for %s', species)
+            # Calculate sigma for the gaussian blur.  Sigma is based on the species
+            # alpha (from the guilds table) and twice the pixel size.
+            guild_dict = args['guilds'].get_table_row('species', species)
+            pixel_size = abs(farm_value_raster.GetGeoTransform()[1])
+            sigma = float(guild_dict['alpha'] / (pixel_size * 2.0))
+            LOGGER.debug('Pixel size: %s, sigma: %s')
+
+            service_value_raster = calculate_service(
+                rasters={
+                    'farm_value': farm_value_raster,
+                    'farm_abundance': farm_abundance,
+                    'species_abundance': species_abundance,
+                    'ag_map': args['ag_map']
+                },
+                nodata=-1.0,
+                sigma=sigma,
+                part_wild=args['wild_pollination_proportion'],
+                out_uris={
+                    'species_value': species_dict['value_abundance_ratio'],
+                    'species_value_blurred': species_dict['value_abundance_ratio_blur'],
+                    'service_value': species_dict['service_value'],
+                    'temp': args['paths']['temp']
+                })
+
+            # Add the new service value to the service value sum matrix
+            service_value_sum = add_two_rasters(service_value_sum,
+                service_value_raster, args['service_value_sum'])
 
     # Calculate the average foraging index based on the total
     # Divide the total pollination foraging index by the number of pollinators
@@ -137,6 +189,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
             'floral' - a URI to where the floral resource raster will be saved.
             'species_abundance' - a URI to where the species abundance raster
                 will be saved.
+            'temp' - a URI to a folder where temp files will be saved
 
         Returns a GDAL dataset of the species abundance."""
     nodata = -1.0
@@ -144,6 +197,9 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
         uris['floral'], sum)
     nesting_raster = map_attribute(landuse, lu_attr, guild, nesting_fields,
         uris['nesting'], max)
+
+    LOGGER.debug('Floral: %s', floral_raster)
+    LOGGER.debug('Nesting: %s', nesting_raster)
 
     # Now that the per-pixel nesting and floral resources have been
     # calculated, the floral resources still need to factor in
@@ -160,7 +216,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
     # dataset.
     LOGGER.debug('Applying neighborhood mappings to floral resources')
     floral_raster = raster_utils.gaussian_filter_dataset(
-        floral_raster, sigma, uris['floral'], nodata)
+        floral_raster, sigma, uris['floral'], nodata, uris['temp'])
 
     # Calculate the pollinator abundance index (using Math! to simplify the
     # equation in the documentation.  We're still waiting on Taylor
@@ -175,7 +231,7 @@ def calculate_abundance(landuse, lu_attr, guild, nesting_fields,
         raster_out_uri=uris['species_abundance'], nodata=nodata)
 
 
-def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
+def calculate_farm_abundance(species_abundance, ag_map, alpha, uri, temp_dir):
     """Calculate the farm abundance raster.
 
         species_abundance - a GDAL dataset of species abundance.
@@ -183,6 +239,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
             pixels are 0.
         alpha - the typical foraging distance of the current pollinator.
         uri - the output URI for the farm_abundance raster.
+        temp_dir- the output folder for temp files
 
         Returns a GDAL dataset of the farm abundance raster."""
 
@@ -200,7 +257,7 @@ def calculate_farm_abundance(species_abundance, ag_map, alpha, uri):
     # that are not agricultural before saving it to the output raster.
     LOGGER.debug('Calculating foraging/farm abundance index')
     farm_abundance = raster_utils.gaussian_filter_dataset(
-        species_abundance, sigma, uri, nodata)
+        species_abundance, sigma, uri, nodata, temp_dir)
 
     # Mask the farm abundance raster according to whether the pixel is
     # agricultural.  If the pixel is agricultural, the value is preserved.
@@ -361,6 +418,7 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
                 to the gaussian filter.
             'service_value' - a URI.  The raster created at this URI will be the
                 calculated service value raster.
+            'temp' - a folder in which to store temp files.
 
         Returns a GDAL dataset of the service value raster."""
 
@@ -377,10 +435,11 @@ def calculate_service(rasters, nodata, sigma, part_wild, out_uris):
     LOGGER.debug('Applying a gaussian filter to the ratio raster.')
     blurred_ratio_raster = raster_utils.gaussian_filter_dataset(
         ratio_raster, sigma, out_uris['species_value_blurred'],
-        nodata)
+        nodata, out_uris['temp'])
 
     # Vectorize the ps_vectorized function
     LOGGER.debug('Attributing farm value to the current species')
+    LOGGER.debug('Saving service value raster to %s', out_uris['service_value'])
     service_value_raster = raster_utils.vectorize_rasters(
         [rasters['species_abundance'], blurred_ratio_raster],
         lambda x, y: part_wild * x * y if x != nodata else nodata,

@@ -24,6 +24,7 @@ def assertTwoDatasetEqualURI(unitTest, aUri, bUri):
         
         returns True if a and b are equal to each other"""
 
+    logger.debug('Asserting datasets A: %s, B: %s', aUri, bUri)
     assertTwoDatasetsEqual(unitTest, gdal.Open(aUri), gdal.Open(bUri))
 
 def assertTwoDatasetsEqual(unitTest, a, b):
