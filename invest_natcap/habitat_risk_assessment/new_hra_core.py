@@ -316,17 +316,35 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         #explicit criteria later. Should be okay, as long as we keep the denoms
         #separate until after all raster crits are added.
 
-        #Will need to do H_S/H and S separately so that the denoms can be properly
-        #assigned to E/C
-        for crit in h_s[pair]['Crit_Ratings']):
+        '''The following handle the cases for each dictionary for rasterizing
+        the individual numerical criteria, and the raster criteria.'''
+
+        crit_rate_numerator = 0
+        #H-S dictionary, H dictionary, Numerical Criteria: should output a 
+        #single raster that equals to the sum of r/dq*w for all single number 
+        #criteria in both H and H-S
+        for crit in (h_s[pair]['Crit_Ratings'], h[pair]['Crit_Ratings']):
             
             r. = crit['Rating']
             dq = ['DQ']
             w = ['Weight']
 
-            crit_rate_numerator = r / (dq*w) 
+            crit_rate_numerator += r / (dq*w) 
             denoms[pair]['C'] += 1 / (dq*w)
 
+        single_crit_C_uri = os.path.join(temp_raster_dict, pair + 
+                                        '_Individs_C_Raster.tif')
+
+        c_ds = raster_utils.new_raster_from_base(base_ds, single_crit_C_uri,
+                                     'GTiff', 0, gdal.GDT_Float32)
+        band, nodata = raster_utils.extract_band_and_nodata(c_ds)
+        band.Fill(nodata)
+
+        i_burned_array = base_array * crit_rate_numerator
+        band.WriteArray(i_burned_array)
+
+
+'---------------------------------------------------------------------'
             crit_C_uri = os.path.join(temp_raster_dict, pair + '_' + crit + \
                                                 '_' + 'C_Raster.tif')
 
@@ -341,3 +359,5 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
             #Add the burned ds containing only the numerator burned ratings to
             #the list in which all rasters will reside
             crit_lists['h_s'][pair].append(c_ds)
+
+        #H-S dictionary
