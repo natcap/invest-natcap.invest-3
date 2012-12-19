@@ -119,7 +119,7 @@ def calculate_routing(
     
     #The number of diagonal offsets defines the neighbors, angle between them
     #and the actual angle to point to the neighbor
-    n_neighbors = len(diagonal_offsets)
+    n_neighbors = 8
     angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
     angle_to_neighbor = [
         i * angle_between_neighbors for i in range(n_neighbors)]
@@ -139,11 +139,30 @@ def calculate_routing(
                     #There's flow from the current cell to the neighbor
                     flat_index = row_index * n_cols + col_index
                     
-                    #TODO: calculate percent flow
-                    percent_flow = 1.0
+                    #Determine if the direction we're on is oriented at 90
+                    #degrees or 45 degrees.  Given our orientation even number
+                    #neighbor indexes are oriented 90 degrees and odd are 45
+                    percent_flow = [0.0, 0.0]
+                    if neighbor_index % 2 == 0:
+                        percent_flow[0] = numpy.tan(angle_between_neighbors)
+                    else:
+                        percent_flow[0] = 1.0 - numpy.tan(
+                            numpy.pi/4.0 - angle_between_neighbors)
+
+                    #Whatever's left will flow into the next clockwise pixel
+                    percent_flow[1] = 1.0 - percent_flow[0]
                     
-                    #set the edge weight
-                    flow_graph_diagonals[neighbor_index, flat_index+diagonal_offsets[neighbor_index]] = percent_flow
+                    #set the edge weight for the current and next edge
+                    for edge_index in range(2):
+                        #This lets the current index wrap around if we're at 
+                        #the last index and we we need to go to 0
+                        offset_index = (neighbor_index+edge_index) % n_neighbors
+                        flow_graph_diagonals[
+                            offset_index, flat_index +
+                            diagonal_offsets[offset_index]] = \
+                            percent_flow[edge_index]
+                    #We don't need to check any more edges
+                    break
 
     #This builds the sparse adjaency matrix
     adjacency_matrix = scipy.sparse.spdiags(
