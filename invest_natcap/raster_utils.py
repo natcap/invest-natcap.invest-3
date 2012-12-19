@@ -711,7 +711,7 @@ def aggregate_raster_values(raster, shapefile, shapefile_field, operation,
     #This should be a value that's not in shapefile[shapefile_field]
     mask_nodata = -1.0
     mask_dataset = new_raster_from_base(clipped_raster, 
-        temporary_mask_filename, 'GTiff', mask_nodata, gdal.GDT_Float32)
+        temporary_mask_filename, 'GTiff', mask_nodata, gdal.GDT_Int32)
 
     mask_band = mask_dataset.GetRasterBand(1)
     mask_band.Fill(mask_nodata)
