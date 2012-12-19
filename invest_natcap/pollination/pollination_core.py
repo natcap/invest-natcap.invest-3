@@ -13,33 +13,50 @@ def execute_model(args):
     """Execute the biophysical component of the pollination model.
 
         args - a python dictionary with at least the following entries:
-        args['landuse'] - a GDAL dataset
-        args['landuse_attributes'] - A fileio AbstractTableHandler object
-        args['guilds'] - A fileio AbstractTableHandler object
-        args['ag_classes'] - a python list of ints representing agricultural
-            classes in the landuse map.  This list may be empty to represent
-            the fact that no landuse classes are to be designated as strictly
-            agricultural.
-        args['ag_map'] - a GDAL dataset
-        args['species'] - a python dictionary with the following entries:
-        args['species'][species_name] - a python dictionary where 'species
-            name' is the string name of the pollinator species in question.
-            This dictionary should have the following contents:
-        args['species'][species_name]['floral'] - a GDAL dataset
-        args['species'][species_name]['nesting'] - a GDAL dataset
-        args['species'][species_name]['species_abundance'] - a GDAL dataset
-        args['species'][species_name]['farm_abundance'] - a GDAL dataset
-        args['nesting_fields'] - a python list of string nesting field
-            basenames
-        args['floral fields'] - a python list of string floral fields
-        args['foraging_average'] - a GDAL dataset
-        args['abundance_total'] - a GDAL dataset
-        args['paths'] - a dictionary with the following entries:
-            'workspace' - the workspace path
-            'intermediate' - the intermediate folder path
-            'output' - the output folder path
-            'temp' - a temp folder path.  This folder will be created and
-                deleted several times.
+            'landuse' - a GDAL dataset
+            'landuse_attributes' - A fileio AbstractTableHandler object
+            'guilds' - A fileio AbstractTableHandler object
+            'ag_classes' - a python list of ints representing agricultural
+                classes in the landuse map.  This list may be empty to represent
+                the fact that no landuse classes are to be designated as strictly
+                agricultural.
+            'nesting_fields' - a python list of string nesting fields
+            'floral fields' - a python list of string floral fields
+            'do_valuation' - a boolean indicating whether to do valuation
+            'paths' - a dictionary with the following entries:
+                'workspace' - the workspace path
+                'intermediate' - the intermediate folder path
+                'output' - the output folder path
+                'temp' - a temp folder path.
+
+        Additionally, the args dictionary should contain these URIs, which must
+        all be python strings of either type str or else utf-8 encoded unicode.
+            'ag_map' - a URI
+            'foraging_average' - a URI
+            'abundance_total' - a URI
+            'farm_value_sum' - a URI (Required if do_valuation == True)
+            'service_value_sum' - a URI (Required if do_valuation == True)
+
+        The args dictionary must also have a dictionary containing
+        species-specific information:
+            'species' - a python dictionary with a contained dictionary for each
+                species to be considered by the model.  The key to each
+                dictionary should be the species name.  For example:
+
+                    args['species']['Apis'] = { ... species_dictionary ... }
+
+                The species-specific dictionary must contain these elements:
+                    'floral' - a URI
+                    'nesting' - a URI
+                    'species_abundance' - a URI
+                    'farm_abundance' - a URI
+
+                If do_valuation == True, the following entries are also required
+                to be in the species-specific dictionary:
+                    'farm_value' - a URI
+                    'value_abundance_ratio' - a URI
+                    'value_abundance_ratio_blurred' - a URI
+                    'service_value' - a URI
 
         returns nothing."""
 
@@ -59,11 +76,13 @@ def execute_model(args):
     abundance_sum = raster_utils.reclassify_by_dictionary(ag_map, {},
         args['abundance_total'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
-    farm_value_sum = raster_utils.reclassify_by_dictionary(ag_map,
-        {}, args['farm_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
+    # We only need to create these rasters if we're doing valuation.
+    if args['do_valuation'] == True:
+        farm_value_sum = raster_utils.reclassify_by_dictionary(ag_map,
+            {}, args['farm_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
-    service_value_sum = raster_utils.reclassify_by_dictionary(ag_map,
-        {}, args['service_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
+        service_value_sum = raster_utils.reclassify_by_dictionary(ag_map,
+            {}, args['service_value_sum'], 'GTiff', nodata, gdal.GDT_Float32, 0.0)
 
 
     # Loop through all species and perform the necessary calculations.
