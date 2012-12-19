@@ -1486,16 +1486,18 @@ def gaussian_filter_dataset(
        temp_dir - (optional) the directory in which to store the memory
            mapped arrays.  If left off will use the system temp
            directory.  If defined the directory must exist on the
-           filesystem.
+           filesystem (a temporary folder will be created inside of temp_dir).
 
        returns the filtered dataset created at out_uri"""
 
     LOGGER.info('setting up files in gaussian_filter_dataset')
 
     #Create a system temporary directory if one doesn't exist.
-    if temp_dir == None:
-        temp_dir = tempfile.mkdtemp()
-        
+    #If the parameter temp_dir is None, the default tempfile location is used.
+    #If the parameter temp_dir is a folder, a temp folder is created inside of
+    #the defined folder.
+    temp_dir = tempfile.mkdtemp(dir=temp_dir)
+
     source_filename = os.path.join(temp_dir, 'source.dat')
     mask_filename = os.path.join(temp_dir, 'mask.dat')
     dest_filename = os.path.join(temp_dir, 'dest.dat')
