@@ -22,7 +22,7 @@ class TestRasterUtils(unittest.TestCase):
 
         output_uri = os.path.join(base_dir, 'out.tif')
 #        dem_uri = 'data/sediment_test_data/dem'
-        dem_uri = 'data/smooth_rasters/smoothbottom.tif'
+        dem_uri = 'data/smooth_rasters/smoothleft.tif'
         aoi_uri = 'data/sediment_test_data/watersheds.shp'
 
         out_nodata = -1.0
