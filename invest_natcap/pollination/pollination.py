@@ -94,24 +94,19 @@ def execute(args):
         LOGGER.debug('Parsed ag classes: %s', ag_class_list)
         biophysical_args['ag_classes'] = ag_class_list
 
-        # Create a new raster for use as a raster of booleans, either 1 if the land
-        # cover class is in the ag list, or 0 if the land cover class is not.
-        biophysical_args['ag_map'] = pollination_core.build_uri(
-            inter_dir, 'agmap.tif', [scenario, suffix])
-
         # Create a new raster for a mean of all foraging rasters.
-        biophysical_args['foraging_total'] = pollination_core.build_uri(
-            out_dir, 'frm_tot.tif', [scenario, suffix])
-        biophysical_args['foraging_average'] = pollination_core.build_uri(
-            out_dir, 'frm_avg.tif', [scenario, suffix])
-        biophysical_args['farm_value_sum'] = pollination_core.build_uri(
-            inter_dir, 'frm_val.tif', ['sum', scenario, suffix])
-        biophysical_args['service_value_sum'] = pollination_core.build_uri(
-            out_dir, 'sup_val.tif', ['sum', scenario, suffix])
+        global_rasters = [
+            ('foraging_total', 'frm_tot', out_dir),
+            ('foraging_average', 'frm_avg', out_dir),
+            ('farm_value_sum', 'frm_val_sum', inter_dir),
+            ('service_value_sum', 'sup_val_sum', out_dir),
+            ('abundance_total', 'sup_tot', out_dir),
+            ('ag_map', 'agmap', inter_dir)]
 
-        # Create a new raster for the total of all pollinator supply rasters.
-        biophysical_args['abundance_total'] = pollination_core.build_uri(
-            out_dir, 'sup_tot.tif', [scenario, suffix])
+        for key, raster_base, folder in global_rasters:
+            raster_uri = pollination_core.build_uri(
+                folder, '%s.tif' % raster_base, [scenario, suffix])
+            biophysical_args[key] = raster_uri
 
         # Fetch a list of all species from the guilds table.
         species_list = [row['species'] for row in guilds_handler.table]
