@@ -306,7 +306,9 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
     for pair in h_s:
         h, s = pair
         denoms[pair]['E'], denoms[pair]['C'] = 0
-        crit_lists['h_s'][pair] = [] 
+        ###########FIGURE OUT WHAT TO DO WITH THIS. DO IT BY H-S/H/S OR BY
+        ###########C/E/RECOVERY POTENTIAL?#################################
+        #########crit_lists['h_s'][pair] = []################
 
         base_ds = h_s[pair]['DS']
         base_band = base_ds.GetRasterBand(1)
@@ -343,6 +345,27 @@ def pre_calc_denoms_and_criteria(dir, h_s, hab, stress):
         i_burned_array = base_array * crit_rate_numerator
         band.WriteArray(i_burned_array)
 
+        #H-S dictionary, Raster Criteria: should output multiple rasters, each
+        #of which is reburned with the pixel value r, as r/dq*w.
+        for crit in h_s[pair]['Crit_Rasters']:
+
+            dq = crit['DQ']
+            w = crit['Weight']
+
+            denoms[pair]['C'] += 1/ (dq * w)
+
+            crit_C_uri = os.path.join(temp_raster_dict, pair + '_' + crit + \
+                                                '_' + 'C_Raster.tif')
+
+            c_ds = raster_utils.new_raster_from_base(base_ds, crit_C_uri, 'GTiff', 0,
+                                gdal.GDT_Float32)
+            band, nodata = raster_utils.extract_band_and_nodata(c_ds)
+            band.Fill(nodata)
+
+            edited__array = base_array. / (dq * w)
+            band.WriteArray(edited_array)
+
+            
 
 '---------------------------------------------------------------------'
             crit_C_uri = os.path.join(temp_raster_dict, pair + '_' + crit + \
