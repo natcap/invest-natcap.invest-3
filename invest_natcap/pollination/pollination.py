@@ -1,5 +1,12 @@
 
+import os
 import logging
+import re
+
+from osgeo import gdal
+
+from invest_natcap.invest_core import fileio as fileio
+from invest_natcap.pollination import pollination_core as pollination_core
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
      %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -33,7 +40,26 @@ def execute(args):
         landuse_scenarios.append('fut')
 
     for scenario in landuse_scenarios:
-        LOGGER.info('Starting pollination model for the %s scenario'. scenario)
+        LOGGER.info('Starting pollination model for the %s scenario', scenario)
+        biophysical_args = {
+            'paths': {
+                'workspace': workspace,
+                'intermediate': inter_dir,
+                'output': out_dir,
+                'temp': inter_dir
+            },
+            'do_valuation': args['do_valuation'],
+        }
+
+        # If we're doing valuation, we also require certain other parameters to
+        # be present.
+        if args['do_valuation']:
+            for arg in ['half_saturation', 'wild_pollination_proportion']:
+                biophysical_args[arg] = args[arg]
+
+        # Open the landcover raster
+        biophysical_args['landuse'] = gdal.Open(
+            args['landuse_' + scenario +'_uri'].encode('utf-8'), gdal.GA_ReadOnly)
 
         # Open a Table Handler for the land use attributes table and a different
         # table handler for the Guilds table.
@@ -70,25 +96,22 @@ def execute(args):
 
         # Create a new raster for use as a raster of booleans, either 1 if the land
         # cover class is in the ag list, or 0 if the land cover class is not.
-        ag_map_uri = pollination_core.build_uri(inter_dir, 'agmap.tif', [scenario, suffix])
-        biophysical_args['ag_map'] = ag_map_uri
-#        biophysical_args['ag_map'] =\
-#            pollination_core.make_raster_from_lulc(biophysical_args['landuse'],
-#            ag_map_uri)
+        biophysical_args['ag_map'] = pollination_core.build_uri(
+            inter_dir, 'agmap.tif', [scenario, suffix])
 
         # Create a new raster for a mean of all foraging rasters.
-        frm_avg_uri = pollination_core.build_uri(out_dir, 'frm_tot.tif', [scenario, suffix])
-        biophysical_args['foraging_total'] = frm_avg_uri
-        frm_avg_uri = pollination_core.build_uri(out_dir, 'frm_avg.tif', [scenario, suffix])
-        biophysical_args['foraging_average'] = frm_avg_uri
-#        biophysical_args['foraging_average'] = pollination_core.\
-#            make_raster_from_lulc(biophysical_args['landuse'], frm_avg_uri)
+        biophysical_args['foraging_total'] = pollination_core.build_uri(
+            out_dir, 'frm_tot.tif', [scenario, suffix])
+        biophysical_args['foraging_average'] = pollination_core.build_uri(
+            out_dir, 'frm_avg.tif', [scenario, suffix])
+        biophysical_args['farm_value_sum'] = pollination_core.build_uri(
+            inter_dir, 'frm_val.tif', ['sum', scenario, suffix])
+        biophysical_args['service_value_sum'] = pollination_core.build_uri(
+            out_dir, 'sup_val.tif', ['sum', scenario, suffix])
 
         # Create a new raster for the total of all pollinator supply rasters.
-        sup_tot_uri = pollination_core.build_uri(out_dir, 'sup_tot.tif', [scenario, suffix])
-        biophysical_args['abundance_total'] = sup_tot_uri
-#        biophysical_args['abundance_total'] = pollination_core.\
-#            make_raster_from_lulc(biophysical_args['landuse'], sup_tot_uri)
+        biophysical_args['abundance_total'] = pollination_core.build_uri(
+            out_dir, 'sup_tot.tif', [scenario, suffix])
 
         # Fetch a list of all species from the guilds table.
         species_list = [row['species'] for row in guilds_handler.table]
@@ -96,16 +119,24 @@ def execute(args):
         # Make new rasters for each species.  In this list of tuples, the first
         # value of each tuple is the args dictionary key, and the second value of
         # each tuple is the raster prefix.
-        species_rasters = [('nesting', 'hn'),
-                           ('floral', 'hf'),
-                           ('species_abundance', 'sup'),
-                           ('farm_abundance', 'frm')]
+
+        species_rasters = [
+            ('nesting', 'hn', inter_dir),
+            ('floral', 'hf', inter_dir),
+            ('species_abundance', 'sup', inter_dir),
+            ('farm_abundance', 'frm', inter_dir),
+            ('farm_value', 'frm_val', inter_dir),
+            ('value_abundance_ratio', 'val_sup_ratio', inter_dir),
+            ('value_abundance_ratio_blur', 'val_sup_ratio_blur', inter_dir),
+            ('service_value', 'sup_val', out_dir)]
 
         biophysical_args['species'] = {}
         for species in species_list:
             biophysical_args['species'][species] = {}
-            for group, prefix in species_rasters:
+            for group, prefix, folder in species_rasters:
                 raster_name = prefix + '_' + species + '.tif'
-                raster_uri = pollination_core.build_uri(inter_dir, raster_name,
+                raster_uri = pollination_core.build_uri(folder, raster_name,
                     [scenario, suffix])
                 biophysical_args['species'][species][group] = raster_uri
+
+        pollination_core.execute_model(biophysical_args)

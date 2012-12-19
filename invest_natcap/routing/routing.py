@@ -30,11 +30,14 @@ import logging
 
 from osgeo import gdal
 import numpy
+import scipy.sparse
 
 from invest_natcap import raster_utils
+import invest_cython_core
+
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
-    %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
+    %(message)s', lnevel=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('routing')
 
@@ -70,15 +73,103 @@ def calculate_routing(
     dem_dataset = gdal.Open(dem_uri)
     dem_band, dem_nodata = raster_utils.extract_band_and_nodata(dem_dataset)
     n_rows, n_cols = dem_band.YSize, dem_band.XSize
+    n_elements = n_rows * n_cols
+
 
     #1a) create AOI mask raster
     aoi_mask_uri = os.path.join(workspace_dir, 'aoi_mask.tif')
+
+
     #1b) calculate d-infinity flow direction
     d_inf_dir_uri = os.path.join(workspace_dir, 'd_inf_dir.tif')
-    #2)  resolve undefined directions from d-infinity
+    d_inf_dir_nodata = -1.0
 
-    #3)  calculate the flow graph
+    bounding_box = [0, 0, n_cols, n_rows]
+
+    flow_direction_dataset = raster_utils.new_raster_from_base(
+        dem_dataset, d_inf_dir_uri, 'GTiff', d_inf_dir_nodata,
+        gdal.GDT_Float32)
+
+    invest_cython_core.flow_direction_inf(
+        dem_dataset, bounding_box, flow_direction_dataset)
+    flow_band, flow_nodata = raster_utils.extract_band_and_nodata(
+        flow_direction_dataset)
+
+    #get a memory mapped flow direction array
+    flow_direction_filename = os.path.join(workspace_dir, 'flow_direction.dat')
+    flow_direction_array = numpy.memmap(
+        flow_direction_filename, dtype='float32', mode='w+', 
+        shape = (n_rows, n_cols))
+    LOGGER.info('load flow dataset into array')
+    for row_index in range(n_rows):
+        row_array = flow_band.ReadAsArray(0, row_index, n_cols, 1)
+        flow_direction_array[row_index, :] = row_array
+
+    #2)  calculate the flow graph
+
+    #Diagonal offsets are based off the following index notation for neighbors
+    #    3 2 1
+    #    4 p 0
+    #    5 6 7
+    #i.e. the node to the right of p is index '0', the one to the lower right
+    #is '5' etc.
+    #diagonal offsets index is 0, 1, 2, 3, 4, 5, 6, 7 from the figure above
+    diagonal_offsets = [
+        1, -n_cols+1, -n_cols, -n_cols-1, -1, n_cols-1, n_cols, n_cols+1]
+    
+    #The number of diagonal offsets defines the neighbors, angle between them
+    #and the actual angle to point to the neighbor
+    n_neighbors = 8
+    angle_between_neighbors = 2.0 * numpy.pi / n_neighbors
+    angle_to_neighbor = [
+        i * angle_between_neighbors for i in range(n_neighbors)]
 
     #This is the array that's used to keep track of the connections. It's the
-    #diagonals of the matrix stored row-wise
-    flow_graph_diagonals = numpy.zeros((8, n_rows * n_cols))
+    #diagonals of the matrix stored row-wise.  We add an additional
+    flow_graph_diagonals = numpy.zeros((n_neighbors, n_elements+n_neighbors))
+
+    #Iterate over flow directions
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
+            flow_direction = flow_direction_array[row_index, col_index]
+            #make sure the flow direction is defined, if not, skip this cell
+            if flow_direction == flow_nodata:
+                continue
+            for neighbor_index in range(n_neighbors):
+                flow_angle_to_neighbor = numpy.abs(
+                    angle_to_neighbor[neighbor_index] - 
+                    flow_direction)
+                if flow_angle_to_neighbor < angle_between_neighbors:
+                    #There's flow from the current cell to the neighbor
+                    flat_index = row_index * n_cols + col_index
+                    
+                    #Determine if the direction we're on is oriented at 90
+                    #degrees or 45 degrees.  Given our orientation even number
+                    #neighbor indexes are oriented 90 degrees and odd are 45
+                    percent_flow = [0.0, 0.0]
+                    if neighbor_index % 2 == 0:
+                        percent_flow[0] = numpy.tan(angle_between_neighbors)
+                    else:
+                        percent_flow[0] = 1.0 - numpy.tan(
+                            numpy.pi/4.0 - angle_between_neighbors)
+
+                    #Whatever's left will flow into the next clockwise pixel
+                    percent_flow[1] = 1.0 - percent_flow[0]
+                    
+                    #set the edge weight for the current and next edge
+                    for edge_index in range(2):
+                        #This lets the current index wrap around if we're at 
+                        #the last index and we we need to go to 0
+                        offset_index = (neighbor_index+edge_index) % n_neighbors
+                        flow_graph_diagonals[
+                            offset_index, flat_index +
+                            diagonal_offsets[offset_index]] = \
+                            percent_flow[edge_index]
+                    #We don't need to check any more edges
+                    break
+
+    #This builds the sparse adjaency matrix
+    adjacency_matrix = scipy.sparse.spdiags(
+        flow_graph_diagonals, diagonal_offsets, n_elements, n_elements)
+
+    LOGGER.debug(flow_graph_diagonals)
